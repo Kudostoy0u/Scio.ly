@@ -317,8 +317,8 @@ titles = {
     'physical properties': 'Materials Science',
     'anatomy - physiology': 'Anatomy - Cardiovascular',
     'anatomy - disease': 'Disease Detectives',
-    'potions and poisons': 'Chemistry Lab',
-    'potions & poisons': 'Chemistry Lab',
+    'potions and poisons': 'Potions and Poisons',
+    'potions & poisons': 'Potions and Poisons',
     'road maps': 'Road Scholar',
     'materials science graph': 'Materials Science',
     'materials science short answer': 'Materials Science',
@@ -821,7 +821,17 @@ titles = {
     'wind power short answer': 'Wind Power',
     'anatomy - research analysis- cytidine deaminase': 'Anatomy - Immune', # Could also be Cell Biology or Designer Genes
     'remote sensing acronym identification': 'Remote Sensing',
-    'the electromagnetic spectrum': 'Physics Lab' # Could also be Optics or Astronomy
+    'the electromagnetic spectrum': 'Physics Lab', # Could also be Optics or Astronomy
+    'science bowl': 'Data Science',
+    'crispr-cas': 'Designer Genes',
+    'anatomy - immune fill in the blank': 'Anatomy - Immune',
+    'game on b test': 'Game On',
+    'aquatic flora and fauna': 'Dynamic Planet - Earth\'s Fresh Waters',
+    'mammology': 'Ecology',
+    'anatomy - respiratory fill in the blank': 'Anatomy - Respiratory',
+    'designer genes free response': 'Designer Genes',
+    'archaeology': 'Fossils',
+    'astronomy - free response': 'Astronomy'
 }
 
 print("All values:", [*set([f for f in titles.values() if f is not None])])
@@ -946,7 +956,7 @@ for key, questions in combined_bank.items():
             if 'answers' in q:
                 # If answers is a list
                 if isinstance(q['answers'], list):
-                    q['answers'] = [1 if a == 'A' else 2 if a == 'B' else 3 if a == 'C' else 4 if a == 'D' else 5 if a == 'E' else 6 if a == 'F' else a for a in q['answers']]
+                    q['answers'] = [a if isinstance(a,int) or isinstance(a,list) or a is None else 1 if a.upper() == 'A' else 2 if a.upper() == 'B' else 3 if a.upper() == 'C' else 4 if a.upper() == 'D' else 5 if a.upper() == 'E' else 6 if a.upper(    ) == 'F' else a for a in q['answers']]
                     # Check if every answer is numeric or a numeric string.
                     all_numeric = all(
                         isinstance(a, (int, float)) or (isinstance(a, str) and a.strip().isdigit())
