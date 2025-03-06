@@ -288,7 +288,6 @@ export default function WelcomePage() {
   const [authInitialized, setAuthInitialized] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [historyData, setHistoryData] = useState<Record<string, HistoricalMetrics>>({});
-  const [showWeekly, setShowWeekly] = useState(false);
   // State for Recent Events tooltip/modal
   const [showEventsTooltip, setShowEventsTooltip] = useState(false);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
@@ -403,24 +402,30 @@ export default function WelcomePage() {
   };
 
   const generateWeeklyData = (): WeeklyData => {
+    // Get the last 7 days based on current date
     const days: DailyData[] = [];
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
-      const dayData = historyData[dateStr] || { questionsAttempted: 0 };
+      const dayData = historyData[dateStr] || { questionsAttempted: 0, correctAnswers: 0 };
       days.push({
         date: date.toLocaleDateString('en-US', { weekday: 'short' }),
         count: dayData.questionsAttempted || 0,
       });
     }
+
+    // Calculate weekly accuracy using the same date range
+    const weeklyAccuracy = calculateWeeklyAccuracy();
+    
     return {
       questions: days,
-      accuracy: metrics.accuracy,
+      accuracy: weeklyAccuracy,
     };
   };
 
   const getYAxisScale = () => {
+    // Use the same weekly data that's generated based on current date
     const weekData = generateWeeklyData().questions;
     const maxValue = Math.max(...weekData.map((day) => day.count), 1);
     const roundedMax = Math.ceil(maxValue / 5) * 5;
@@ -428,8 +433,35 @@ export default function WelcomePage() {
   };
 
   const calculateWeeklyAccuracy = (): number => {
-    const weekData = Object.entries(historyData).sort().slice(-7);
+    // Get the last 7 days based on current date
+    const last7Days: string[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      last7Days.push(dateStr);
+    }
+
+    // Filter history data to only include entries from the last 7 days
+    const weekData = last7Days
+      .map(dateStr => [dateStr, historyData[dateStr] || { questionsAttempted: 0, correctAnswers: 0 }] as [string, { questionsAttempted: number, correctAnswers: number }])
+      .filter(([, stats]) => stats.questionsAttempted > 0);
+
+    // Calculate accuracy from the filtered data
     const totals = weekData.reduce(
+      (acc, [, stats]) => ({
+        attempted: acc.attempted + (stats.questionsAttempted || 0),
+        correct: acc.correct + (stats.correctAnswers || 0),
+      }),
+      { attempted: 0, correct: 0 }
+    );
+    
+    return totals.attempted > 0 ? (totals.correct / totals.attempted) * 100 : 0;
+  };
+
+  const calculateAllTimeAccuracy = (): number => {
+    const allData = Object.entries(historyData);
+    const totals = allData.reduce(
       (acc, [, stats]) => ({
         attempted: acc.attempted + (stats.questionsAttempted || 0),
         correct: acc.correct + (stats.correctAnswers || 0),
@@ -520,10 +552,6 @@ export default function WelcomePage() {
       ? 'bg-gray-800 transition-all duration-1000 ease-in-out'
       : 'bg-white/95 shadow-[0_4px_12px_rgba(0,0,0,0.1)] transition-all duration-1000 ease-in-out';
 
-  // Prepare data for the mobile horizontal chart.
-  const weekData = generateWeeklyData().questions;
-  const maxCount = Math.max(...weekData.map((day) => day.count), 1);
-
   // Determine if we are on a mobile screen (width 1000 or less)
   const isMobile = windowWidth !== null && windowWidth <= 1000;
 
@@ -533,13 +561,14 @@ export default function WelcomePage() {
   };
 
   const UPDATE_INFO: UpdateInfo = {
-    date: "3/2/25",
+    date: "3/5/25",
     features: [
       "💾 Larger question bank!",
-      "✨ Brand new UI",
+      "✨ New UI and all-time accuracy tracking",
+      "🎯 New event! Potions & Poisons and more questions for Meteorology",
+      "📙Integrated Codebusters references"
     ],
     comingSoon: [
-      "🎯 Div B support, Potions & Poisons, Reach for the Stars",
       "📈 Less unanswerable questions, answer hallucinations"
     ]
   };
@@ -573,6 +602,40 @@ export default function WelcomePage() {
     } catch (error) {
       console.error(error);
       toast.error((error as Error).message);
+    }
+  };
+
+  // Handle paste event for test code input fields
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>, index: number) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').trim();
+    
+    // If the pasted data is empty, do nothing
+    if (!pastedData) return;
+    
+    // Create a new array with the pasted data distributed across the digits
+    const newDigits = [...testCodeDigits];
+    
+    // Fill in the digits starting from the current index
+    for (let i = 0; i < pastedData.length && index + i < newDigits.length; i++) {
+      const char = pastedData[i];
+      if (char.match(/^[A-Za-z0-9]$/)) {
+        newDigits[index + i] = char.toUpperCase();
+      }
+    }
+    
+    setTestCodeDigits(newDigits);
+    
+    // Focus the appropriate input after paste
+    const nextIndex = Math.min(index + pastedData.length, newDigits.length - 1);
+    const nextInput = document.getElementById(`digit-${nextIndex}`) as HTMLInputElement | null;
+    if (nextInput) {
+      nextInput.focus();
+    }
+    
+    // Auto-submit if all 6 boxes are filled
+    if (newDigits.every(digit => digit !== '')) {
+      handleLoadTest(newDigits.join(''));
     }
   };
 
@@ -626,6 +689,9 @@ export default function WelcomePage() {
       }
     }
   };
+
+  // Add new state for accuracy view
+  const [accuracyView, setAccuracyView] = useState<'daily' | 'weekly' | 'allTime'>('daily');
 
   return (
     <div className="relative w-100 overflow-x-hidden" style={{ minHeight: computedMinHeight }}>
@@ -838,12 +904,12 @@ export default function WelcomePage() {
                 Questions This Week
               </h2>
               <div className="flex flex-col space-y-3">
-                {weekData.map((day) => (
+                {generateWeeklyData().questions.map((day) => (
                   <div key={day.date} className="flex items-center">
                     <div className="w-16 text-sm">{day.date}</div>
                     <div className="flex-1 bg-gray-200 rounded h-4 relative">
                       <div
-                        style={{ width: `${(day.count / maxCount) * 100}%` }}
+                        style={{ width: `${(day.count / Math.max(...generateWeeklyData().questions.map(d => d.count), 1)) * 100}%` }}
                         className="bg-blue-500 h-4 rounded"
                       ></div>
                     </div>
@@ -856,18 +922,42 @@ export default function WelcomePage() {
             {/* Half Circle Accuracy Card */}
             <div className="perspective-1000 hover:-translate-y-1 transition-all duration-300">
               <div
-                className={`p-6 rounded-lg cursor-pointer transition-all duration-700 transform-style-3d ${
-                  showWeekly ? 'rotate-x-180' : ''
-                } ${cardStyle}`}
-                onClick={() => setShowWeekly(!showWeekly)}
+                className={`p-0 rounded-lg cursor-pointer transition-all duration-700 relative ${cardStyle}`}
+                style={{ 
+                  transformStyle: 'preserve-3d',
+                  transform: accuracyView === 'daily' 
+                    ? 'rotateX(0deg)' 
+                    : accuracyView === 'weekly' 
+                      ? 'rotateX(180deg)' 
+                      : 'rotateX(360deg)',
+                  minHeight: '300px'
+                }}
+                onClick={() => {
+                  if (accuracyView === 'daily') {
+                    setAccuracyView('weekly');
+                  } else if (accuracyView === 'weekly') {
+                    setAccuracyView('allTime');
+                  } else {
+                    setAccuracyView('daily');
+                  }
+                }}
               >
-                {/* Front - Daily Accuracy */}
-                <div className="backface-hidden w-full">
-                  <h2 className={`transition-colors duration-1000 ease-in-out text-xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                {/* Daily Accuracy */}
+                <div 
+                  className="absolute w-full h-full flex flex-col p-6"
+                  style={{ 
+                    backfaceVisibility: 'hidden',
+                    transform: 'rotateX(0deg)',
+                    opacity: accuracyView === 'daily' ? 1 : 0,
+                    visibility: accuracyView === 'daily' ? 'visible' : 'hidden',
+                    transition: 'opacity 0.3s, visibility 0.3s'
+                  }}
+                >
+                  <h2 className={`transition-colors duration-1000 ease-in-out text-xl font-semibold mb-2 text-left ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                     Daily Accuracy
                   </h2>
-                  <div className="relative flex items-center justify-center h-[200px]">
-                    <svg className="w-72 h-36" viewBox="0 0 100 60">
+                  <div className="flex items-center justify-center flex-grow">
+                    <svg className="w-72 h-40" viewBox="0 0 100 60">
                       <path
                         d="M5 50 A 45 45 0 0 1 95 50"
                         fill="none"
@@ -893,13 +983,23 @@ export default function WelcomePage() {
                     </svg>
                   </div>
                 </div>
-                {/* Back - Weekly Accuracy */}
-                <div className="absolute inset-0 rotate-x-180 backface-hidden w-full p-6">
-                  <h2 className={`transition-colors duration-1000 ease-in-out text-xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                
+                {/* Weekly Accuracy */}
+                <div 
+                  className="absolute w-full h-full flex flex-col p-6"
+                  style={{ 
+                    backfaceVisibility: 'hidden',
+                    transform: 'rotateX(180deg)',
+                    opacity: accuracyView === 'weekly' ? 1 : 0,
+                    visibility: accuracyView === 'weekly' ? 'visible' : 'hidden',
+                    transition: 'opacity 0.3s, visibility 0.3s'
+                  }}
+                >
+                  <h2 className={`transition-colors duration-1000 ease-in-out text-xl font-semibold mb-2 text-left ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                     Weekly Accuracy
                   </h2>
-                  <div className="relative flex items-center justify-center h-[200px]">
-                    <svg className="w-72 h-36" viewBox="0 0 100 60">
+                  <div className="flex items-center justify-center flex-grow">
+                    <svg className="w-72 h-40" viewBox="0 0 100 60">
                       <path
                         d="M5 50 A 45 45 0 0 1 95 50"
                         fill="none"
@@ -925,6 +1025,48 @@ export default function WelcomePage() {
                     </svg>
                   </div>
                 </div>
+
+                {/* All Time Accuracy */}
+                <div 
+                  className="absolute w-full h-full flex flex-col p-6"
+                  style={{ 
+                    backfaceVisibility: 'hidden',
+                    transform: 'rotateX(360deg)',
+                    opacity: accuracyView === 'allTime' ? 1 : 0,
+                    visibility: accuracyView === 'allTime' ? 'visible' : 'hidden',
+                    transition: 'opacity 0.3s, visibility 0.3s'
+                  }}
+                >
+                  <h2 className={`transition-colors duration-1000 ease-in-out text-xl font-semibold mb-2 text-left ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    All Time Accuracy
+                  </h2>
+                  <div className="flex items-center justify-center flex-grow">
+                    <svg className="w-72 h-40" viewBox="0 0 100 60">
+                      <path
+                        d="M5 50 A 45 45 0 0 1 95 50"
+                        fill="none"
+                        stroke={darkMode ? '#374151' : '#e2e8f0'}
+                        strokeWidth="8"
+                        strokeLinecap="round"
+                      />
+                      <motion.path
+                        d="M5 50 A 45 45 0 0 1 95 50"
+                        fill="none"
+                        stroke={darkMode ? '#60a5fa' : '#3b82f6'}
+                        strokeWidth="8"
+                        strokeLinecap="round"
+                        initial={{ pathLength: 0 }}
+                        animate={{ pathLength: calculateAllTimeAccuracy() / 100 }}
+                        transition={{ duration: 1, ease: 'easeOut' }}
+                      />
+                      <AnimatedAccuracy
+                        value={Math.round(calculateAllTimeAccuracy())}
+                        darkMode={darkMode}
+                        className="text-2xl font-bold"
+                      />
+                    </svg>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -940,38 +1082,53 @@ export default function WelcomePage() {
           {isMobile ? (
             <>
               <br/>
-              <div className="w-full shadow-[0_4px_12px_rgba(0,0,0,0.1)] rounded-lg overflow-hidden">
-                <div className={`w-full py-4 px-6 flex items-center justify-center transition-all duration-300 ${
-                  darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}
-                >
-                  <span className="text-2xl font-bold">Test share code</span>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="w-full shadow-[0_4px_12px_rgba(0,0,0,0.1)] rounded-lg overflow-hidden">
+                  <div className={`w-full py-4 px-6 flex items-center justify-center transition-all duration-300 ${
+                    darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}
+                  >
+                    <span className="text-2xl font-bold">Test share code</span>
+                  </div>
+                  <div className="grid grid-cols-6 w-full">
+                    {testCodeDigits.map((digit, index) => (
+                      <input
+                        key={index}
+                        id={`digit-${index}`}
+                        type="text"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleDigitChange(e, index)}
+                        onKeyDown={(e) => handleKeyDown(e, index)}
+                        onPaste={(e) => handlePaste(e, index)}
+                        className={`
+                          ${darkMode ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-700'}
+                          w-full aspect-square text-center text-4xl font-bold
+                          focus:outline-none
+                          ${index > 0 ? 'border-l border-gray-400' : ''}
+                        `}
+                        style={{ fontFamily: "'PT Sans Narrow', sans-serif" }}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="grid grid-cols-6 w-full">
-                  {testCodeDigits.map((digit, index) => (
-                    <input
-                      key={index}
-                      id={`digit-${index}`}
-                      type="text"
-                      maxLength={1}
-                      value={digit}
-                      onChange={(e) => handleDigitChange(e, index)}
-                      onKeyDown={(e) => handleKeyDown(e, index)}
-                      className={`
-                        ${darkMode ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-700'}
-                        w-full aspect-square text-center text-4xl font-bold
-                        focus:outline-none
-                        ${index > 0 ? 'border-l border-gray-400' : ''}
-                      `}
-                      style={{ fontFamily: "'PT Sans Narrow', sans-serif" }}
-                    />
-                  ))}
+                <div 
+                  onClick={() => router.push('/reports')}
+                  className={`w-full shadow-[0_4px_12px_rgba(0,0,0,0.1)] rounded-lg overflow-hidden cursor-pointer transition-all duration-300 ${
+                    darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'
+                  }`}
+                >
+                  <div className={`w-full h-full py-4 px-6 flex flex-col items-center justify-center transition-all duration-300 ${
+                    darkMode ? 'text-white' : 'text-black'}`}
+                  >
+                    <span className="text-2xl font-bold mb-2">Reports</span>
+                    <span className="text-sm text-center opacity-80">Check out recent question reports</span>
+                  </div>
                 </div>
               </div>
             </>
           ) : (
             <div className="flex w-full gap-4">
-              {/* Removed the practice button from here since it's now at the top */}
-              <div className="w-full flex shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
+              <div className="w-1/2 flex shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
                 <div className={`w-1/5 py-8 px-6 flex items-center justify-center transition-all duration-300 ${darkMode ? 'bg-gray-800 text-white border-white' : 'bg-white text-black border-black'} rounded-l-lg  border-r-4`}>
                   Test share code
                 </div>
@@ -985,6 +1142,7 @@ export default function WelcomePage() {
                         value={digit}
                         onChange={(e) => handleDigitChange(e, index)}
                         onKeyDown={(e) => handleKeyDown(e, index)}
+                        onPaste={(e) => handlePaste(e, index)}
                         className={
                           `${darkMode ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-700'} w-full h-full text-center text-4xl font-bold transform focus:outline-none ${index === 0 ? '' : 'border-l'} ${index === testCodeDigits.length - 1 ? 'rounded-tr-lg rounded-br-lg' : 'border-r'} border-gray-300 ${index < 3 ? 'border-b sm:border-b-0' : 'border-t sm:border-t-0'}`
                         }
@@ -992,6 +1150,19 @@ export default function WelcomePage() {
                       />
                     </div>
                   ))}
+                </div>
+              </div>
+              <div 
+                onClick={() => router.push('/reports')}
+                className={`w-1/2 shadow-[0_4px_12px_rgba(0,0,0,0.1)] rounded-lg cursor-pointer transition-all duration-300 ${
+                  darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'
+                }`}
+              >
+                <div className={`w-full h-full py-8 px-6 flex flex-col items-center justify-center transition-all duration-300 ${
+                  darkMode ? 'text-white' : 'text-black'}`}
+                >
+                  <span className="text-2xl font-bold mb-2">Recent Reports</span>
+                  <span className="text-lg opacity-80">Check out how the community has been fixing up the question base</span>
                 </div>
               </div>
             </div>
