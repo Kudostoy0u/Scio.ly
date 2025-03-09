@@ -78,7 +78,7 @@ export default function HomePage() {
   const metrics = [
     { number: "4.3K", label: "Practice tests scraped" },
     { number: "38.4K+", label: "Questions solved" },
-    { number: "22.9K", label: "Page views" }
+    { number: "32.7K", label: "Page views" }
   ];
 
   const handleThemeToggle = () => {
@@ -469,7 +469,7 @@ export default function HomePage() {
             }`}>
               <h3 className={`text-xl font-semibold mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>How is AI being used?</h3>
               <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
-                AI is primarily used for grading free response questions and providing detailed explanations. All questions are from real Science Olympiad tests - AI is not used to generate questions.
+                AI is primarily used for grading free response question, providing detailed explanations, and processing reports. All questions are from real Science Olympiad tests - AI is not used to generate questions.
               </p>
             </div>
             <div className={`rounded-xl p-6 border ${
@@ -489,7 +489,7 @@ export default function HomePage() {
             }`}>
               <h3 className={`text-xl font-semibold mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>How can I contribute?</h3>
               <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
-                Although there is no way to directly help us code the site, we welcome any help you can offer! You can help by sending feedback through our contact form. Use the Contact Us button to get started.
+                Although there is no way to directly help us code the site (yet), we welcome any help you can offer! You can help by sending feedback through our contact form. Use the Contact Us button to get started.
               </p>
             </div>
           </div>
@@ -590,7 +590,25 @@ export default function HomePage() {
         )}
       </button>
 
-      <style jsx global>{`
+      <style jsx>{`
+        :global(::-webkit-scrollbar) {
+          width: 8px;
+        }
+        :global(::-webkit-scrollbar-thumb) {
+          background: ${darkMode
+            ? 'linear-gradient(to bottom, rgb(36, 36, 36), rgb(111, 35, 72))'
+            : 'linear-gradient(to bottom, #3b82f6, #0ea5e9)'};
+          border-radius: 4px;
+        }
+        :global(::-webkit-scrollbar-thumb:hover) {
+          background: ${darkMode
+            ? 'linear-gradient(to bottom, rgb(23, 23, 23), rgb(83, 26, 54))'
+            : 'linear-gradient(to bottom, #2563eb, #0284c7)'};
+        }
+        :global(::-webkit-scrollbar-track) {
+          background: ${darkMode ? 'black' : '#f1f5f9'};
+        }
+
         @keyframes breathe {
           0% {
             transform: scale(1);
@@ -625,38 +643,6 @@ export default function HomePage() {
         
         .light-button-halo:hover {
           box-shadow: 0 0 20px 8px rgba(37, 99, 235, 0.3);
-        }
-
-        ::-webkit-scrollbar {
-          width: 8px;
-        }
-        
-        .dark-scrollbar::-webkit-scrollbar-thumb {
-          background: linear-gradient(to bottom, rgb(36, 36, 36), rgb(111, 35, 72));
-          border-radius: 4px;
-          transition: background 1s ease;
-        }
-        
-        .dark-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(to bottom, rgb(23, 23, 23), rgb(83, 26, 54));
-        }
-        
-        .dark-scrollbar::-webkit-scrollbar-track {
-          background: black;
-        }
-        
-        .light-scrollbar::-webkit-scrollbar-thumb {
-          background: linear-gradient(to bottom, rgb(219, 234, 254), rgb(96, 165, 250));
-          border-radius: 4px;
-          transition: background 1s ease;
-        }
-        
-        .light-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(to bottom, rgb(191, 219, 254), rgb(59, 130, 246));
-        }
-        
-        .light-scrollbar::-webkit-scrollbar-track {
-          background: #f1f5f9;
         }
       `}</style>
     </div>

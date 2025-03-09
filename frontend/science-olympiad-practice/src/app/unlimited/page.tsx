@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
-import { ToastContainer, toast } from 'react-toastify';
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { updateMetrics } from '@/app/utils/metrics';
 import { auth } from '@/lib/firebase';
@@ -10,26 +10,12 @@ import { useTheme } from '@/app/contexts/ThemeContext';
 import api from '../api';
 import MarkdownExplanation from '@/app/utils/MarkdownExplanation';
 import PDFViewer from '@/app/components/PDFViewer';
-
-interface Question {
-  question: string;
-  options?: string[];
-  // For multiple-choice questions, answers is typically an array of numbers (indexes, starting at 1);
-  // for free-response, it may be an array of keywords/strings.
-  answers: (number | string)[];
-  difficulty: number;
-}
+import ReportModal, { Question } from '@/app/components/ReportModal';
 
 interface RouterParams {
   eventName?: string;
   difficulty?: string;
   types?: string;
-}
-
-interface ReportModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (reason: string) => void;
 }
 
 interface ReportState {
@@ -56,52 +42,6 @@ const LoadingFallback = () => (
     <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
   </div>
 );
-
-const ReportModal = ({ isOpen, onClose, onSubmit }: ReportModalProps) => {
-  const [reason, setReason] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(reason);
-    setReason('');
-    onClose();
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96">
-        <h3 className="text-lg font-semibold mb-4 dark:text-white">Report Question</h3>
-        <form onSubmit={handleSubmit}>
-          <textarea
-            className="w-full p-2 border rounded-md mb-4 dark:bg-gray-700 dark:text-white"
-            rows={4}
-            placeholder="Please describe the issue with this question..."
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            required
-          />
-          <div className="flex justify-end space-x-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 rounded-md bg-red-500 text-white hover:bg-red-600"
-            >
-              Submit Report
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
 
 const ContestModal = ({ isOpen, onClose, onSubmit, darkMode }: ContestModalProps) => {
   const [reason, setReason] = useState('');
@@ -446,90 +386,40 @@ export default function UnlimitedPracticePage() {
     }
   };
 
-  const handleReport = async (reason: string) => {
+  const handleReport = async (reason: string, action: 'remove' | 'edit', editedQuestion?: string) => {
     if (reportState.questionIndex === null) return;
-
-    const questionData = data[reportState.questionIndex];
-    const mainWebhookUrl = "https://discord.com/api/webhooks/1339786241742344363/x2BYAebIvT34tovkpQV5Nq93GTEisQ78asFivqQApS0Q9xPmSeC6o_3CrKs1MWbRKhGh";
-    const summaryWebhookUrl = "https://discord.com/api/webhooks/1339794243467612170/Jeeq4QDsU5LMzN26bUX-e8Z_GzkvudeArmHPB7eAuswJw5PAY7Qgs050ueM51mO8xHMg";
-
-    const mainPayload = {
-      embeds: [{
-        title: "Question Report",
-        color: 0xFF0000,
-        fields: [
-          {
-            name: "Event",
-            value: routerData.eventName || "Unknown Event",
-            inline: true
-          },
-          {
-            name: "Question",
-            value: questionData.question
-          },
-          {
-            name: "Report Reason",
-            value: reason
-          },
-          {
-            name: "Question Data",
-            value: `\`\`\`json\n${JSON.stringify(questionData, null, 2)}\n\`\`\``
-          }
-        ],
-        timestamp: new Date().toISOString()
-      }]
-    };
-
-    const summaryPayload = {
-      embeds: [{
-        title: "❌ Question Reported",
-        description: questionData.question,
-        color: 0xFF0000,
-        fields: [
-          {
-            name: "Event",
-            value: routerData.eventName || "Unknown Event",
-            inline: true
-          }
-        ],
-        timestamp: new Date().toISOString()
-      }]
-    };
-
-    const toastId = toast.loading('Sending report...');
-
+    
+    // Close the modal first
+    setReportState({ isOpen: false, questionIndex: null });
+    
     try {
-      const [mainResponse, summaryResponse] = await Promise.all([
-        fetch(mainWebhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(mainPayload)
+      const question = data[reportState.questionIndex];
+      const endpoint = action === 'remove' ? '/api/report/remove' : '/api/report/edit';
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: question.question,
+          editedQuestion: editedQuestion,
+          event: routerData.eventName || 'Unknown Event',
+          reason
         }),
-        fetch(summaryWebhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(summaryPayload)
-        })
-      ]);
+      });
 
-      if (!mainResponse.ok || !summaryResponse.ok) {
-        throw new Error('Failed to send report');
+      const result = await response.json();
+      
+      // Show appropriate toast after modal is closed
+      if (result.success) {
+        toast.success(`${action === 'remove' ? 'Report' : 'Edit'} submitted successfully!`);
+      } else {
+        toast.error(result.message || 'Failed to submit report');
       }
-
-      toast.update(toastId, {
-        render: 'Report sent successfully! We will fix this question soon. Thank you!',
-        type: 'success',
-        isLoading: false,
-        autoClose: 3000
-      });
-    } catch (error) {
-      console.error('Error sending report:', error);
-      toast.update(toastId, {
-        render: 'Failed to send report. Please try again.',
-        type: 'error',
-        isLoading: false,
-        autoClose: 3000
-      });
+    } catch {
+      // Show error toast after modal is closed
+      toast.error('Failed to submit report. Please try again.');
     }
   };
 
@@ -992,6 +882,9 @@ Reason whether their answer is good or bad, then you must put a colon (:) follow
         isOpen={reportState.isOpen}
         onClose={() => setReportState({ isOpen: false, questionIndex: null })}
         onSubmit={handleReport}
+        darkMode={darkMode}
+        question={data[reportState.questionIndex ?? 0]}
+        event={routerData.eventName || 'Unknown Event'}
       />
       <ContestModal
         isOpen={contestState.isOpen}
@@ -999,18 +892,7 @@ Reason whether their answer is good or bad, then you must put a colon (:) follow
         onSubmit={handleContest}
         darkMode={darkMode}
       />
-      <ToastContainer
-        position="bottom-center"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme={darkMode ? "dark" : "light"}
-      />
+    
 
       {/* Add the reference button as sticky at the bottom */}
       {routerData.eventName === 'Codebusters' && (

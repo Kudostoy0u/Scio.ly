@@ -9,6 +9,7 @@ import AuthButton from '@/app/components/AuthButton';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { usePathname } from 'next/navigation';
+import dynamic from 'next/dynamic';
 
 interface ContactFormData {
   name: string;
@@ -16,6 +17,14 @@ interface ContactFormData {
   topic: string;
   message: string;
 }
+const PDFViewer = dynamic(() => import('@/app/components/PDFViewer'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-96">
+      <div className="animate-pulse">Loading PDF viewer...</div>
+    </div>
+  ),
+});
 
 const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: {
   isOpen: boolean;
@@ -46,7 +55,7 @@ const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]"
         onClick={(e) => {
           if (e.target === e.currentTarget) onClose();
         }}
@@ -332,6 +341,11 @@ export default function Header() {
               >
                 Practice
               </Link>
+              <PDFViewer 
+          pdfPath="/scioly-rules.pdf"
+          buttonText="Rulebook"
+          darkMode={darkMode}
+        />
               <button
                 onClick={() => setContactModalOpen(true)}
                 className={`transition-colors duration-1000 ease-in-out px-1 py-1 rounded-md text-sm ${linkColorClass}`}
@@ -394,6 +408,15 @@ export default function Header() {
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Practice
+                      </Link>
+                      <Link
+                        href="/rules"
+                        className={`block px-4 py-2 text-sm ${
+                          darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Rules
                       </Link>
                       <button
                         onClick={() => {
