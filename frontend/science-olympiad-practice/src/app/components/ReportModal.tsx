@@ -57,7 +57,7 @@ const ReportModal = ({ isOpen, onClose, onSubmit, darkMode, question, event }: R
           setFrqAnswer(answer);
         }
         
-        setDifficulty(question.difficulty || 0.5);
+        setDifficulty(question.difficulty === 0 ? 0.1 : question.difficulty || 0.5);
       } else {
         resetForm();
       }
@@ -77,7 +77,7 @@ const ReportModal = ({ isOpen, onClose, onSubmit, darkMode, question, event }: R
             question: editedQuestion,
             options: isFRQ ? undefined : editedOptions.length > 0 ? editedOptions : undefined,
             answers: isFRQ ? [frqAnswer] : editedOptions.length > 0 ? correctAnswers : [editedQuestion],
-            difficulty: difficulty
+            difficulty: difficulty === 0 ? 0.1 : difficulty
           },
           event: event,
           reason: reason
@@ -199,11 +199,30 @@ const ReportModal = ({ isOpen, onClose, onSubmit, darkMode, question, event }: R
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className={`rounded-lg p-6 w-[800px] max-w-full max-h-[90vh] overflow-y-auto transition-colors duration-300 ${
-          darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
-        }`}>
-          <h3 className="text-lg font-semibold mb-4">Report Question</h3>
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) handleClose();
+        }}
+      >
+        <div 
+          className={`rounded-lg p-6 w-[90%] sm:w-[800px] max-h-[90vh] overflow-y-auto mx-4 transition-colors duration-300 ${
+            darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Report Question</h3>
+            <button 
+              onClick={handleClose} 
+              className={`text-gray-500 hover:${darkMode ? 'text-gray-300' : 'text-gray-700'} transition-colors`}
+              aria-label="Close"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
               <label className="block mb-2 font-medium">Action</label>
@@ -262,7 +281,11 @@ const ReportModal = ({ isOpen, onClose, onSubmit, darkMode, question, event }: R
                         max="1"
                         step="0.01"
                         value={difficulty}
-                        onChange={(e) => setDifficulty(parseFloat(e.target.value))}
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value);
+                          // Ensure difficulty is at least 0.1 (10%)
+                          setDifficulty(value === 0 ? 0.1 : value);
+                        }}
                         className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
                         style={{
                           background: `linear-gradient(to right, 
