@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import api from '../api';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import Fuse from 'fuse.js';
+import { stringSimilarity } from 'string-similarity-js';
 import * as pdfjsLib from 'pdfjs-dist/webpack';
 
 
@@ -17,7 +17,6 @@ const genAI = new GoogleGenerativeAI(arr[Math.floor(Math.random() * arr.length)]
 
 interface ProcessedQuestions {
   questions: string[];  // Questions extracted from user input
-  rawText: string;
 }
 
 interface PlagiarismMatch {
@@ -156,14 +155,20 @@ export default function PlagiarismPage() {
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
       
-      const prompt = `Extract all questions from the following text. Return them in a JSON array format:
-      {
-        "questions": ["question1", "question2", ...],
-        "rawText": "original text"
-      }
-      
-      Text to process:
-      ${inputText}`;
+      const prompt = `Extract all questions from this Science Olympiad test content. It is the raw text from a PDF. Include:
+- Numbered questions
+- Short prompts (like "Name the element")
+- Fill-in-the-blank questions
+
+Return ONLY valid JSON in this exact format:
+{
+  "questions": ["question1", "question2", ...]
+}
+
+IMPORTANT: Make sure to escape all quotes and special characters in the JSON. Keep it simple and error-free. Don't include the point values or the question number.
+
+Text to analyze:
+${inputText}`;
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
@@ -172,28 +177,64 @@ export default function PlagiarismPage() {
       // Clean up the response text
       text = text.trim();
       text = text.replace(/```json\s*|\s*```/g, '');
-      text = text.trim();
       
+      // Additional cleaning to handle potential JSON formatting issues
       try {
-        const parsedResult = JSON.parse(text);
-        setInputtedQuestions(parsedResult);
+        // Try to extract JSON if it's wrapped in other text
+        const jsonMatch = text.match(/({[\s\S]*})/);
+        const jsonText = jsonMatch ? jsonMatch[0] : text;
+        
+        // Sometimes AI adds extra explanation text before or after the JSON
+        const cleanedText = jsonText.trim();
+        
+        console.log("Attempting to parse JSON:", cleanedText);
+        
+        const parsedResult = JSON.parse(cleanedText);
+        
+        // Ensure we have a questions array even if structure is different
+        let questions: string[] = [];
+        if (parsedResult.questions && Array.isArray(parsedResult.questions)) {
+          questions = parsedResult.questions as string[];
+        } else if (Array.isArray(parsedResult)) {
+          questions = parsedResult as string[];
+        } else {
+          // If neither format works, try to extract any array
+          const firstArrayKey = Object.keys(parsedResult).find(key => 
+            Array.isArray(parsedResult[key])
+          );
+          
+          if (firstArrayKey) {
+            questions = parsedResult[firstArrayKey] as string[];
+          } else {
+            throw new Error("Could not find questions array in the response");
+          }
+        }
+        
+        setInputtedQuestions({ questions });
 
-        // Initialize Fuse.js with official questions
-        const fuse = new Fuse(officialQuestions, {
-          includeScore: true,
-          threshold: 0.4,
-        });
-
-        // Check each inputted question for matches
+        // Use string-similarity-js to find matches
         const matches: PlagiarismMatch[] = [];
-        for (const question of parsedResult.questions) {
-          const searchResults = fuse.search(question);
-          if (searchResults.length > 0) {
-            const bestMatch = searchResults[0];
+        
+        for (const inputQuestion of questions) {
+          let bestMatchQuestion = '';
+          let bestMatchScore = 0;
+          
+          // Find the best match among official questions
+          for (const officialQuestion of officialQuestions) {
+            const similarityScore = stringSimilarity(inputQuestion, officialQuestion);
+            
+            if (similarityScore > bestMatchScore) {
+              bestMatchScore = similarityScore;
+              bestMatchQuestion = officialQuestion;
+            }
+          }
+          
+          // Only add matches that meet a minimum threshold (e.g., 0.3)
+          if (bestMatchScore > 0.3) {
             matches.push({
-              inputQuestion: question,
-              matchedQuestion: bestMatch.item,
-              similarity: 1 - (bestMatch.score || 0),
+              inputQuestion: inputQuestion,
+              matchedQuestion: bestMatchQuestion,
+              similarity: bestMatchScore,
             });
           }
         }
@@ -218,6 +259,7 @@ export default function PlagiarismPage() {
         <div className="text-center mb-4">
           <h1 className="text-2xl font-bold text-slate-800 mb-1">Science Olympiad Plagiarism Checker</h1>
           <p className="text-slate-600 text-sm">Check your work against official Science Olympiad questions</p>
+          <p className="text-amber-600 text-xs mt-1">Disclaimer: This tool may not work effectively with very long tests due to processing limitations.</p>
         </div>
         
         <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200 p-4 space-y-4 relative">
