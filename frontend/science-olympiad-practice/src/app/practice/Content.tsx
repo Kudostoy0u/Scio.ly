@@ -45,10 +45,16 @@ function EventDashboard() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
-    setSettings((prev) => ({
-      ...prev,
-      [id]: value,
-    }));
+    setSettings((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const validateTimeLimit = () => {
+    const timeLimit = Number(settings.timeLimit);
+    if (isNaN(timeLimit) || !Number.isInteger(timeLimit) || timeLimit < 1) {
+      toast.error('Time limit must be an integer greater than or equal to 1 minute.');
+      return false;
+    }
+    return true;
   };
 
   const handleCipherTypeChange = (cipher: string) => {
@@ -61,6 +67,10 @@ function EventDashboard() {
   const handleGenerateTest = () => {
     if (!selectedEvent) {
       toast.error('Please select an event first');
+      return;
+    }
+
+    if (!validateTimeLimit()) {
       return;
     }
 
@@ -119,6 +129,10 @@ function EventDashboard() {
   const handleUnlimited = () => {
     if (!selectedEvent) {
       toast.error('Please select an event first');
+      return;
+    }
+
+    if (!validateTimeLimit()) {
       return;
     }
 
