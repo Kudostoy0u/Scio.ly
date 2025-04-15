@@ -171,7 +171,6 @@ export default function UnlimitedPracticePage() {
       easy: 0.33,
       medium: 0.66,
       hard: 1.0,
-      sweatysweat: 1.2,
     };
     const difficultyValue = difficultyMap[routerParams.difficulty || 'easy'] || 0.33;
 
