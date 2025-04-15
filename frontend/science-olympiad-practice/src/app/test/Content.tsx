@@ -49,7 +49,8 @@ const arr = api.arr
 const difficultyMap: Record<string, number> = {
   easy: 0.33,
   medium: 0.66,
-  hard: 1.0,
+  hard: 0.8,
+  california: 1.0,
 };
 
 // Batch grading function for free-response questions using Gemini 2.0 Lite
@@ -224,8 +225,9 @@ export default function TestPage() {
           const questionDifficulty = q.difficulty ?? 0.5;
           return difficulty === 'any'
             ? true
-            : questionDifficulty >= difficultyValue - 0.33 &&
-                questionDifficulty <= difficultyValue;
+            : difficulty === 'california'
+              ? questionDifficulty >= difficultyValue - 0.2 && questionDifficulty <= difficultyValue
+              : questionDifficulty >= difficultyValue - 0.33 && questionDifficulty <= difficultyValue;
         });
         console.log(`Choosing from ${filteredQuestions?.length} questions...`)
         // Assign original indices to the filtered questions
@@ -1113,7 +1115,9 @@ Your response should contain ONLY the explanation and the "final answer index:" 
                         <div className="absolute bottom-2 right-2 w-20 h-2 rounded-full bg-gray-300 transition-all duration-1000 ease-in-out">
                           <div
                             className={`h-full rounded-full transition-all duration-1000 ease-in-out ${
-                              question.difficulty >= 0.66
+                              question.difficulty >= 0.8
+                                ? 'bg-purple-500'
+                                : question.difficulty >= 0.66
                                 ? 'bg-red-500'
                                 : question.difficulty >= 0.33
                                 ? 'bg-yellow-500'
