@@ -241,30 +241,34 @@ export default function Header() {
   const baseTextColorClass = darkMode ? 'text-white' : 'text-gray-900';
   
   // Determine link styles based on profile
-  const getLinkStyles = () => {
+  const getLinkStyles = (path: string) => {
+    const isActive = pathname === path;
     const base = `transition-colors duration-1000 ease-in-out px-1 py-1 rounded-md text-sm font-medium`;
     const hover = darkMode ? 'hover:opacity-80' : 'hover:opacity-80'; // Generic hover
+    const activeStyle = isActive ? (darkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white') : '';
 
     if (userProfile?.navbarStyle === 'rainbow') {
-      return `${base} bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 bg-clip-text text-transparent font-bold ${hover}`;
+      return `${base} ${activeStyle || 'bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 bg-clip-text text-transparent font-bold'} ${hover}`;
     } else if (userProfile?.navbarStyle === 'golden') {
-      return `${base} bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent font-semibold ${hover}`;
+      return `${base} ${activeStyle || 'bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent font-semibold'} ${hover}`;
     } else {
       // Default style
-      return `${base} ${darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'}`;
+      return `${base} ${activeStyle || (darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900')}`;
     }
   };
 
-  const linkStyles = getLinkStyles();
-  const mobileLinkStyles = (isDarkMode: boolean) => { // Mobile styles need separate handling
-     const baseMobile = 'block px-4 py-2 text-sm';
-      if (userProfile?.navbarStyle === 'rainbow') {
-          return `${baseMobile} bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 bg-clip-text text-transparent font-bold ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`;
-      } else if (userProfile?.navbarStyle === 'golden') {
-           return `${baseMobile} bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent font-semibold ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`;
-      } else {
-           return `${baseMobile} ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`;
-      }
+  const mobileLinkStyles = (isDarkMode: boolean, path: string) => { // Mobile styles need separate handling
+    const isActive = pathname === path;
+    const baseMobile = 'block px-4 py-2 text-sm';
+    const activeStyle = isActive ? (isDarkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white') : '';
+
+    if (userProfile?.navbarStyle === 'rainbow') {
+      return `${baseMobile} ${activeStyle || 'bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 bg-clip-text text-transparent font-bold'} ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`;
+    } else if (userProfile?.navbarStyle === 'golden') {
+      return `${baseMobile} ${activeStyle || 'bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent font-semibold'} ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`;
+    } else {
+      return `${baseMobile} ${activeStyle || (isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100')}`;
+    }
   };
 
   const handleContact = async (data: ContactFormData) => {
@@ -368,16 +372,16 @@ export default function Header() {
             
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-4">
-              <Link href="/dashboard" className={linkStyles}>
+              <Link href="/dashboard" className={getLinkStyles('/dashboard')}>
                 Dashboard
               </Link>
-              <Link href="/practice" className={linkStyles}>
+              <Link href="/practice" className={getLinkStyles('/practice')}>
                 Practice
               </Link>
-              <button onClick={() => setContactModalOpen(true)} className={linkStyles}>
+              <button onClick={() => setContactModalOpen(true)} className={getLinkStyles('')}>
                 Contact
               </button>
-              <Link href="/about" className={linkStyles}>
+              <Link href="/about" className={getLinkStyles('/about')}>
                 About Us
               </Link>
               <AuthButton />
@@ -413,14 +417,14 @@ export default function Header() {
                     >
                       <Link
                         href="/dashboard"
-                        className={mobileLinkStyles(darkMode)}
+                        className={mobileLinkStyles(darkMode, '/dashboard')}
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Dashboard
                       </Link>
                       <Link
                         href="/practice"
-                        className={mobileLinkStyles(darkMode)}
+                        className={mobileLinkStyles(darkMode, '/practice')}
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Practice
@@ -430,13 +434,13 @@ export default function Header() {
                           setMobileMenuOpen(false);
                           setContactModalOpen(true);
                         }}
-                        className={`w-full text-left ${mobileLinkStyles(darkMode)}`}
+                        className={`w-full text-left ${mobileLinkStyles(darkMode, '')}`}
                       >
                         Contact
                       </button>
                       <Link
                         href="/about"
-                        className={mobileLinkStyles(darkMode)}
+                        className={mobileLinkStyles(darkMode, '/about')}
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         About Us
