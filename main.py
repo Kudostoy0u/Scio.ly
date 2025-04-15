@@ -89,9 +89,7 @@ events = [
     "Sounds of Music",
     "Thermodynamics",
     "Wind Power",
-    "Potions and Poisons",
-    "Sigma"
-
+    "Potions and Poisons"
 ]
 def authenticate_google_drive():
     """Authenticates with Google Drive API and obtains token.json."""
