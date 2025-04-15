@@ -169,7 +169,7 @@ function EventDashboard() {
           { name: "Anatomy - Endocrine", category: "Life & Social Science" },
           { name: "Astronomy", category: "Earth and Space Science" },
           { name: "Chemistry Lab", category: "Physical Science & Chemistry" },
-          { name: "Circuit Lab", category: "Inquiry & Nature of Science" },
+          { name: "Circuit Lab", category: "Physical Science & Chemistry" },
           { name: "Codebusters", category: "Inquiry & Nature of Science" },
           { name: "Crime Busters", category: "Physical Science & Chemistry" },
           { name: "Disease Detectives", category: "Life & Social Science" },
