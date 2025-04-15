@@ -1156,7 +1156,8 @@ export default function WelcomePage() {
             >
               <div className="w-full h-full p-6 flex flex-col items-center md:items-start justify-center text-center md:text-left">
                 <span className="text-xl font-bold mb-1">Fun Zone</span>
-                <span className="text-sm opacity-90">Explore games and other fun activities.</span>
+                <span className="text-sm opacity-90">If anyone asks, you're learning science.</span>
+                <center><span className="text-xs opacity-90">If you do good, you might get something fun...</span></center>
               </div>
             </div>
           </div>
