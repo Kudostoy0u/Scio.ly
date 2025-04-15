@@ -61,7 +61,7 @@ export default function HomePage() {
     {
       icon: <FaBook className="w-8 h-8" />,
       title: "Comprehensive Coverage",
-      description: "Over 3000 questions across 24 Division C events, with Division B support coming soon"
+      description: "Over 3000 questions across 33 Division B and C events, with more being added soon"
     },
     {
       icon: <FaRobot className="w-8 h-8" />,
@@ -235,26 +235,6 @@ export default function HomePage() {
                 <li>• Entomology</li>
                 <li>• Geologic Mapping</li>
               </ul>
-            </div>
-          </div>
-
-          {/* Coming Soon Banner */}
-          <div className={`rounded-xl p-6 border ${
-            darkMode 
-              ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 border-blue-500/30' 
-              : 'bg-gradient-to-r from-blue-100 to-purple-100 border-blue-200'
-          }`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className={`text-xl font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Division B Support Coming Soon!</h3>
-                <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
-                  We&apos;re expanding our platform to support middle school Science Olympiad events.
-                  Stay tuned for updates!
-                </p>
-              </div>
-              <div className="hidden md:block">
-                <span className="text-5xl">🚀</span>
-              </div>
             </div>
           </div>
         </div>
