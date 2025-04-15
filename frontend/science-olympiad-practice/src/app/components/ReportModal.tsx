@@ -240,25 +240,23 @@ const ReportModal = ({ isOpen, onClose, onSubmit, darkMode, question, event }: R
                       className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
                       style={{
                         background: `linear-gradient(to right, 
-                          ${difficulty < 0.3 ? 'rgb(34, 197, 94)' : difficulty < 0.7 ? 'rgb(234, 179, 8)' : difficulty < 0.8 ? 'rgb(239, 68, 68)' : 'rgb(168, 85, 247)'} 0%, 
-                          ${difficulty < 0.3 ? 'rgb(34, 197, 94)' : difficulty < 0.7 ? 'rgb(234, 179, 8)' : difficulty < 0.8 ? 'rgb(239, 68, 68)' : 'rgb(168, 85, 247)'} ${difficulty * 100}%, 
+                          ${difficulty < 0.3 ? 'rgb(34, 197, 94)' : difficulty < 0.7 ? 'rgb(234, 179, 8)' : 'rgb(239, 68, 68)'} 0%, 
+                          ${difficulty < 0.3 ? 'rgb(34, 197, 94)' : difficulty < 0.7 ? 'rgb(234, 179, 8)' : 'rgb(239, 68, 68)'} ${difficulty * 100}%, 
                           rgb(209, 213, 219) ${difficulty * 100}%, 
                           rgb(209, 213, 219) 100%)`
                       }}
                     />
                   </div>
-                  <span className="text-sm w-10 font-bold">CALIFORNIA</span>
-                  <div className="ml-[+60px]">
-                    <div className={`${difficulty >= 0.8 ? 'w-25' : 'w-16'} text-center px-2 py-1 rounded text-xs ${
+                  <span className="text-sm w-10">Hard</span>
+                  <div className="ml-2">
+                    <div className={`w-16 text-center px-2 py-1 rounded text-xs ${
                       difficulty < 0.3 
                         ? darkMode ? 'bg-green-800 text-green-200' : 'bg-green-100 text-green-800'
                         : difficulty < 0.7 
                           ? darkMode ? 'bg-yellow-800 text-yellow-200' : 'bg-yellow-100 text-yellow-800'
-                          : difficulty < 0.8
-                            ? darkMode ? 'bg-red-800 text-red-200' : 'bg-red-100 text-red-800'
-                            : darkMode ? 'bg-purple-800 text-purple-200' : 'bg-purple-100 text-purple-800'
+                          : darkMode ? 'bg-red-800 text-red-200' : 'bg-red-100 text-red-800'
                     }`}>
-                      {difficulty < 0.3 ? 'Easy' : difficulty < 0.7 ? 'Medium' : difficulty < 0.8 ? 'Hard' : <span className="font-bold">CALIFORNIA</span>}
+                      {difficulty < 0.3 ? 'Easy' : difficulty < 0.7 ? 'Medium' : 'Hard'}
                     </div>
                   </div>
                 </div>

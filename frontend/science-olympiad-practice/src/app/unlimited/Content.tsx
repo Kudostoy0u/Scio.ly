@@ -755,9 +755,7 @@ Consider the nuances of a question, maybe it relies on previous (and unavailable
         <div className="absolute bottom-2 right-2 w-20 h-2 rounded-full bg-gray-300 transition-all duration-1000 ease-in-out">
           <div
             className={`h-full rounded-full transition-all duration-1000 ease-in-out ${
-              question.difficulty >= 0.9
-                ? 'bg-purple-500'
-                : question.difficulty >= 0.66
+              question.difficulty >= 0.66
                 ? 'bg-red-500'
                 : question.difficulty >= 0.33
                 ? 'bg-yellow-500'

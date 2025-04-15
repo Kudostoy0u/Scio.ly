@@ -133,9 +133,7 @@ const BlacklistedQuestionCard = ({ questionData, darkMode }: {
                   ? 'bg-green-500' 
                   : question.difficulty < 0.7 
                     ? 'bg-yellow-500' 
-                    : question.difficulty < 0.8
-                      ? 'bg-red-500'
-                      : 'bg-purple-500'
+                    : 'bg-red-500'
               }`}
               style={{ width: `${question.difficulty * 100}%` }}
             ></div>
@@ -145,9 +143,7 @@ const BlacklistedQuestionCard = ({ questionData, darkMode }: {
               ? 'Easy' 
               : question.difficulty < 0.7 
                 ? 'Medium' 
-                : question.difficulty < 0.8
-                  ? 'Hard'
-                  : 'CALIFORNIA'} ({Math.round(question.difficulty * 100)}%)
+                : 'Hard'} ({Math.round(question.difficulty * 100)}%)
           </span>
         </div>
       )}
@@ -239,9 +235,7 @@ const QuestionCard = ({ questionData, darkMode, type = 'normal', className }: {
                   ? 'bg-green-500' 
                   : question.difficulty < 0.7 
                     ? 'bg-yellow-500' 
-                    : question.difficulty < 0.8
-                      ? 'bg-red-500'
-                      : 'bg-purple-500'
+                    : 'bg-red-500'
               }`}
               style={{ width: `${question.difficulty * 100}%` }}
             ></div>
@@ -251,9 +245,7 @@ const QuestionCard = ({ questionData, darkMode, type = 'normal', className }: {
               ? 'Easy' 
               : question.difficulty < 0.7 
                 ? 'Medium' 
-                : question.difficulty < 0.8
-                  ? 'Hard'
-                  : 'CALIFORNIA'} ({Math.round(question.difficulty * 100)}%)
+                : 'Hard'} ({Math.round(question.difficulty * 100)}%)
           </span>
         </div>
       )}
