@@ -66,7 +66,7 @@ We encourage motivated indivduals to send PR requests for changes they'd like to
 **How else you can contribute:**
 
 * **Provide Feedback:** Use the "Contact Us" button on the website to share your thoughts, bug reports, feature requests, and general feedback. Your input helps us improve Scio.ly for everyone.
-* **Spread the Word:** Tell your Science Olympiad teammates, coaches, and friends about Scio.ly to help more students benefit from our platform.
+* **Spread the Word:** Tell your Science Olympiad teammates, coaches, and friends about Scio.ly to help more students benefit from our platform. 
 
 ## Frequently Asked Questions (from the website)
 
