@@ -1,15 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from "framer-motion"
 import { useTheme } from '@/app/contexts/ThemeContext';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { updateGamePoints } from '@/app/utils/gamepoints';
-
-interface BlackjackGameProps {
-  onGameEnd: () => void; // Define prop type for the callback
-}
+// import { useRouter } from 'next/navigation'; // Removed unused import
+import { motion, AnimatePresence } from 'framer-motion'; // For animations & Added AnimatePresence
+import { onAuthStateChanged, User } from 'firebase/auth'; // Import Firebase Auth
+import { auth } from '@/lib/firebase'; // Import auth instance
+import { updateGamePoints } from '@/app/utils/gamepoints'; // Import game points utility
 
 // --- Card Definitions ---
 
@@ -17,11 +14,16 @@ type Suit = 'Physics' | 'Chemistry' | 'Biology' | 'Astronomy';
 type Rank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
 
 interface Card {
+  id: string; // Unique ID for each card instance
   suit: Suit;
   rank: Rank;
   value: number; // Blackjack value
-  themeName: string; // e.g., "Hydrogen", "Newton"
-  suitIcon: string; // Emoji or symbol
+  themeName: string;
+  suitIcon: string;
+}
+
+interface BlackjackGameProps {
+  onGameEnd: () => void; // Callback to notify parent when a game round ends (e.g., to refetch balance)
 }
 
 // --- Game Constants ---
@@ -29,42 +31,30 @@ interface Card {
 const SUITS: Suit[] = ['Physics', 'Chemistry', 'Biology', 'Astronomy'];
 const RANKS: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 const SUIT_ICONS: Record<Suit, string> = {
-  Physics: '⚛️', // Atom Symbol
-  Chemistry: '🧪', // Test Tube
-  Biology: '🧬', // DNA
-  Astronomy: '🔭', // Telescope
+  Physics: '⚛️', Chemistry: '🧪', Biology: '🧬', Astronomy: '🔭',
 };
-
-// Map ranks to science themes and values
 const RANK_THEMES: Record<Rank, { themeName: string; value: number }> = {
-  '2': { themeName: 'Helium (He)', value: 2 },
-  '3': { themeName: 'Lithium (Li)', value: 3 },
-  '4': { themeName: 'Beryllium (Be)', value: 4 },
-  '5': { themeName: 'Boron (B)', value: 5 },
-  '6': { themeName: 'Carbon (C)', value: 6 },
-  '7': { themeName: 'Nitrogen (N)', value: 7 },
-  '8': { themeName: 'Oxygen (O)', value: 8 },
-  '9': { themeName: 'Fluorine (F)', value: 9 },
-  '10': { themeName: 'Neon (Ne)', value: 10 },
-  J: { themeName: 'Newton', value: 10 },
-  Q: { themeName: 'Curie', value: 10 },
-  K: { themeName: 'Darwin', value: 10 },
-  A: { themeName: 'Microscope', value: 11 }, // Ace value handled dynamically
+  '2': { themeName: 'Helium (He)', value: 2 }, '3': { themeName: 'Lithium (Li)', value: 3 },
+  '4': { themeName: 'Beryllium (Be)', value: 4 }, '5': { themeName: 'Boron (B)', value: 5 },
+  '6': { themeName: 'Carbon (C)', value: 6 }, '7': { themeName: 'Nitrogen (N)', value: 7 },
+  '8': { themeName: 'Oxygen (O)', value: 8 }, '9': { themeName: 'Fluorine (F)', value: 9 },
+  '10': { themeName: 'Neon (Ne)', value: 10 }, 'J': { themeName: 'Newton', value: 10 }, // Ace value handled dynamically
+  'Q': { themeName: 'Curie', value: 10 }, 'K': { themeName: 'Darwin', value: 10 },
+  'A': { themeName: 'Microscope', value: 11 },
 };
 
 // --- Utility Functions ---
 
 const createDeck = (): Card[] => {
   const deck: Card[] = [];
+  let idCounter = 0;
   for (const suit of SUITS) {
     for (const rank of RANKS) {
       const themeInfo = RANK_THEMES[rank];
       deck.push({
-        suit,
-        rank,
-        value: themeInfo.value,
-        themeName: themeInfo.themeName,
-        suitIcon: SUIT_ICONS[suit],
+        id: `card-${idCounter++}`,
+        suit, rank, value: themeInfo.value,
+        themeName: themeInfo.themeName, suitIcon: SUIT_ICONS[suit],
       });
     }
   }
@@ -89,7 +79,6 @@ const calculateHandValue = (hand: Card[]): number => {
       aceCount++;
     }
   }
-  // Adjust for Aces
   while (value > 21 && aceCount > 0) {
     value -= 10; // Change Ace value from 11 to 1
     aceCount--;
@@ -99,11 +88,15 @@ const calculateHandValue = (hand: Card[]): number => {
 
 // --- UI Components ---
 
-const CardDisplay = ({ card, hidden, darkMode }: { card: Card | null; hidden?: boolean; darkMode: boolean }) => {
-  const cardBaseStyle = `w-20 h-28 md:w-24 md:h-36 rounded-lg border p-2 flex flex-col justify-between shadow-md transition-all duration-300`;
+const CardDisplay = ({ card, hidden, darkMode }: {
+  card: Card | null;
+  hidden?: boolean;
+  darkMode: boolean;
+}) => {
+  const cardBaseStyle = `w-20 h-28 md:w-24 md:h-36 rounded-lg border p-1.5 flex flex-col justify-between shadow-md transition-all duration-300 relative overflow-hidden`; // Adjusted padding
   const cardDarkStyle = 'bg-gray-700 border-gray-500 text-white';
   const cardLightStyle = 'bg-white border-gray-300 text-gray-900';
-  const hiddenStyle = 'bg-gradient-to-br from-blue-400 to-purple-500 border-blue-600';
+  const hiddenStyle = 'bg-gradient-to-br from-teal-500 to-cyan-600 border-teal-700';
 
   if (hidden || !card) {
     return (
@@ -119,21 +112,23 @@ const CardDisplay = ({ card, hidden, darkMode }: { card: Card | null; hidden?: b
 
   return (
     <motion.div
+      layoutId={card.id} // Animate card movement
       className={`${cardBaseStyle} ${darkMode ? cardDarkStyle : cardLightStyle}`}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.5 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="text-left">
-        <div className={`font-bold text-lg ${rankColor}`}>{card.rank}</div>
-        <div className="text-xl">{card.suitIcon}</div>
+      <div className="flex justify-between items-start text-xs md:text-sm"> {/* Top row */}
+        <div className={`font-bold ${rankColor}`}>{card.rank}</div>
+        <div className="text-base md:text-lg">{card.suitIcon}</div>
       </div>
-      <div className={`text-center text-xs font-semibold break-words ${rankColor}`}>
+      <div className={`text-center text-[9px] md:text-[10px] font-semibold break-words leading-tight my-auto ${rankColor}`}> {/* Centered theme name */}
         {card.themeName}
       </div>
-      <div className="text-right rotate-180">
-        <div className={`font-bold text-lg ${rankColor}`}>{card.rank}</div>
-        <div className="text-xl">{card.suitIcon}</div>
+      <div className="flex justify-between items-end text-xs md:text-sm rotate-180"> {/* Bottom row (rotated) */}
+        <div className={`font-bold ${rankColor}`}>{card.rank}</div>
+        <div className="text-base md:text-lg">{card.suitIcon}</div>
       </div>
     </motion.div>
   );
@@ -143,327 +138,288 @@ const CardDisplay = ({ card, hidden, darkMode }: { card: Card | null; hidden?: b
 
 export default function BlackjackGame({ onGameEnd }: BlackjackGameProps) {
   const { darkMode } = useTheme();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null); // Firebase user
+
   const [deck, setDeck] = useState<Card[]>([]);
   const [playerHand, setPlayerHand] = useState<Card[]>([]);
-  const [dealerHand, setDealerHand] = useState<Card[]>([]); // Dealer's full hand
-  const [dealerVisibleHand, setDealerVisibleHand] = useState<Card[]>([]); // Cards visible to player
+  const [dealerHand, setDealerHand] = useState<Card[]>([]);
   const [playerScore, setPlayerScore] = useState(0);
-  const [dealerScore, setDealerScore] = useState(0); // Full score, revealed later
-  const [gameStatus, setGameStatus] = useState<'betting' | 'playerTurn' | 'dealerTurn' | 'gameOver'>('betting');
-  const [message, setMessage] = useState('Place your bet to start!'); // Game messages
-  const [gameOver, setGameOver] = useState(true); // Start in game over state
-  const [showHelpTooltip, setShowHelpTooltip] = useState(false); // State for help tooltip
+  const [dealerScore, setDealerScore] = useState(0);
+  const [gameStatus, setGameStatus] = useState<'betting' | 'playing' | 'playerWins' | 'dealerWins' | 'push' | 'playerBusts'>('betting');
+  const [message, setMessage] = useState('Place your bet!');
+  const [dealerHiddenCard, setDealerHiddenCard] = useState<Card | null>(null);
+  const [bet, setBet] = useState(1); // Default bet
+  // Note: Balance is managed in GamesDashboard. We just adjust points via updateGamePoints.
 
   // Listen for auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
     });
-    return () => unsubscribe(); // Cleanup subscription on unmount
+    return () => unsubscribe(); // Cleanup subscription
   }, []);
 
-  // Initialize game
+  // --- Game Flow Functions ---
+
   const startGame = useCallback(() => {
     const newDeck = shuffleDeck(createDeck());
-    const pHand: Card[] = [newDeck.pop()!, newDeck.pop()!];
-    const dHand: Card[] = [newDeck.pop()!, newDeck.pop()!];
+    const pHand: Card[] = [];
+    const dHand: Card[] = [];
+
+    // Deal initial hands
+    pHand.push(newDeck.pop()!);
+    const hiddenCard = newDeck.pop()!;
+    setDealerHiddenCard(hiddenCard); // Keep dealer's second card hidden initially
+    dHand.push(newDeck.pop()!); // Dealer shows one card
+    pHand.push(newDeck.pop()!);
 
     setDeck(newDeck);
     setPlayerHand(pHand);
     setDealerHand(dHand);
-    setDealerVisibleHand([dHand[0]]); // Show only the first dealer card
+    setGameStatus('playing');
+    setMessage('Your turn. Hit or Stand?');
 
-    const pScore = calculateHandValue(pHand);
-    setPlayerScore(pScore);
-    setDealerScore(calculateHandValue(dHand)); // Calculate full score but don't show yet
-
-    setGameOver(false);
+    // Calculate initial scores
+    const initialPlayerScore = calculateHandValue(pHand);
+    const initialDealerScore = calculateHandValue(dHand); // Only visible card
+    setPlayerScore(initialPlayerScore);
+    setDealerScore(initialDealerScore);
 
     // Check for immediate Blackjack
-    if (pScore === 21) {
-      setMessage('Blackjack! Player wins!');
-      setGameStatus('gameOver');
-      setDealerVisibleHand(dHand); // Reveal dealer hand on blackjack
-      setGameOver(true);
-    } else {
-      setMessage('Your turn. Hit or Stand?');
-      setGameStatus('playerTurn');
+    if (initialPlayerScore === 21) {
+      // Reveal dealer's hidden card for Blackjack check
+      const fullDealerHand = [dHand[0], hiddenCard];
+      const fullDealerScore = calculateHandValue(fullDealerHand);
+      setDealerHand(fullDealerHand); // Show both dealer cards now
+      setDealerScore(fullDealerScore);
+      setDealerHiddenCard(null); // Clear hidden card state
+
+      if (fullDealerScore === 21) {
+        setGameStatus('push');
+        setMessage('Push! Both have Blackjack!');
+        updateScore(0); // 0 points for push
+      } else {
+        setGameStatus('playerWins');
+        setMessage('Blackjack! You win!');
+        updateScore(bet); // +1 point for win (standard win, could adjust for BJ bonus)
+      }
     }
   }, []);
 
-  // Player hits
-  const hit = async () => {
-    if (gameStatus !== 'playerTurn' || gameOver) return;
+  const dealCard = (target: 'player' | 'dealer') => {
+    if (deck.length === 0) {
+        console.error("Deck is empty!"); // Handle reshuffling if needed
+        setMessage("Deck is empty!");
+        return null;
+    }
+    const card = deck.pop()!;
+    setDeck([...deck]); // Update deck state
 
-    const newDeck = [...deck];
-    const newCard = newDeck.pop();
-    if (!newCard) return; // Should not happen with a standard deck
-
-    const newHand = [...playerHand, newCard];
-    const newScore = calculateHandValue(newHand);
-
-    setDeck(newDeck);
-    setPlayerHand(newHand);
-    setPlayerScore(newScore);
-
-    if (newScore > 21) {
-      setMessage('Bust! Dealer wins.');
-      setGameStatus('gameOver');
-      setDealerVisibleHand(dealerHand); // Reveal dealer's hand
-      setGameOver(true);
-      // Update score and trigger callback on bust
-      console.log('Player busted. Updating game points...'); // DEBUG
-      await updateGamePoints(currentUser?.uid || null, -1); // Bust means -1 point
-      console.log('Game points update complete (bust).'); // DEBUG
-      console.log('Calling onGameEnd (fetchScore) after bust...'); // DEBUG
-      onGameEnd(); // Trigger score refresh
-      console.log('onGameEnd (fetchScore) called after bust.'); // DEBUG
-
-    } else if (newScore === 21) {
-        stand(); // Automatically stand on 21
+    if (target === 'player') {
+      setPlayerHand(prev => [...prev, card]);
+      return card;
     } else {
-      setMessage('Hit or Stand?');
+      setDealerHand(prev => [...prev, card]);
+      return card;
     }
   };
 
-  // Player stands -> Dealer's turn
-  const stand = () => {
-    if (gameStatus !== 'playerTurn' || gameOver) return;
-    setGameStatus('dealerTurn');
-    setMessage("Dealer's turn...");
-    setDealerVisibleHand(dealerHand); // Reveal dealer's hidden card
-    // Use setTimeout to allow player to see the revealed card before dealer acts
-    setTimeout(() => dealerPlays(dealerHand, deck), 1000);
+  const handleHit = () => {
+    if (gameStatus !== 'playing') return;
+    const newCard = dealCard('player');
+    if (newCard) {
+        const newScore = calculateHandValue([...playerHand, newCard]);
+        setPlayerScore(newScore);
+        if (newScore > 21) {
+            setGameStatus('playerBusts');
+            setMessage('You busted!');
+            updateScore(bet * -1); // -1 point for loss
+        }
+    }
   };
 
-  // Dealer logic - Refactored
-  const dealerPlays = (currentDealerHand: Card[], currentDeck: Card[]) => {
-    const hand = [...currentDealerHand]; // Use const
-    const tempDeck = [...currentDeck]; // Use const
-    let currentDealerScore = calculateHandValue(hand);
+  const handleStand = () => {
+    if (gameStatus !== 'playing') return;
 
-    const performDealerHit = () => {
-      if (currentDealerScore < 17) {
-        const newCard = tempDeck.pop();
-        if (!newCard) {
-          // Deck ran out, finalize with current hand
-          finalizeDealerTurn(hand, tempDeck);
-          return;
+    // Reveal dealer's hidden card and add it to hand
+    const currentDealerHand = [...dealerHand];
+    if (dealerHiddenCard) {
+        currentDealerHand.push(dealerHiddenCard);
+        setDealerHand(currentDealerHand);
+        setDealerHiddenCard(null);
+    }
+
+    const currentDealerScore = calculateHandValue(currentDealerHand);
+    setDealerScore(currentDealerScore);
+
+    // Dealer plays according to standard rules (hit until >= 17)
+    const dealerPlay = async () => {
+        let hand = [...currentDealerHand];
+        let score = calculateHandValue(hand);
+
+        while (score < 17) {
+            await new Promise(resolve => setTimeout(resolve, 700)); // Pause for effect
+            const newCard = dealCard('dealer');
+            if (newCard) {
+                hand = [...hand, newCard]; // Update local hand for loop condition
+                // Note: dealCard already updates state, but we need score locally
+                score = calculateHandValue(hand);
+                setDealerHand(hand); // Update state explicitly for each draw
+                setDealerScore(score);
+            } else {
+                break; // Stop if deck empty
+            }
         }
-        hand.push(newCard);
-        currentDealerScore = calculateHandValue(hand);
 
-        // Update UI progressively
-        setDealerHand([...hand]);
-        setDealerVisibleHand([...hand]);
-        // Optional: Update dealerScore state progressively for visual feedback, but we recalculate final score later
-        // setDealerScore(currentDealerScore);
-
-        // Schedule next check/hit
-        setTimeout(performDealerHit, 500);
-      } else {
-        // Dealer stands (score is 17 or more)
-        finalizeDealerTurn(hand, tempDeck);
-      }
+        // Determine winner after dealer finishes
+        determineWinner(playerScore, score);
     };
 
-    // Start the dealer's turn logic
-    performDealerHit();
+    dealerPlay();
   };
 
-  // New function to finalize dealer's turn and determine winner
-  const finalizeDealerTurn = (finalDealerHand: Card[], finalDeck: Card[]) => {
-    setDeck(finalDeck); // Update final deck state
-    const finalDealerScore = calculateHandValue(finalDealerHand);
-    setDealerHand(finalDealerHand); // Ensure final hand state is set
-    setDealerVisibleHand(finalDealerHand); // Ensure final visibility
-    setDealerScore(finalDealerScore); // Set final score state based on calculation
-
-    // Use a final timeout to ensure state updates have likely processed before determining winner
-    setTimeout(() => {
-        // Use the current playerScore state, which should be stable after player's turn
-        console.log(`Finalizing turn. Player score (state): ${playerScore}, Final Dealer Score: ${finalDealerScore}`); // DEBUG
-        determineWinner(playerScore, finalDealerScore); // Pass calculated final scores
-        setGameOver(true); // Set game over state here
-        setGameStatus('gameOver');
-    }, 2000); // Short delay
-  };
-
-  // Determine winner - Modified to rely only on arguments
-  const determineWinner = async (pScore: number, dScore: number) => {
-    // No longer need to setDealerVisibleHand or setDealerScore here,
-    // as finalizeDealerTurn handles the final state updates.
-
-    console.log(`Determining Winner. pScore Arg: ${pScore}, dScore Arg: ${dScore}`); // DEBUG
-
-    let pointsChange = 0;
-    let resultMessage = '';
-
-    // --- Logic MUST use pScore and dScore arguments --- 
-    if (pScore > 21) { // Should be caught by hit(), but double-check
-      resultMessage = 'Player Busts! Dealer wins.';
-      pointsChange = -1;
+  const determineWinner = (pScore: number, dScore: number) => {
+    if (pScore > 21) {
+      setGameStatus('playerBusts');
+      setMessage('You busted!');
+      updateScore(bet * -1);
     } else if (dScore > 21) {
-      resultMessage = 'Dealer Busts! Player wins.';
-      pointsChange = 1;
-    } else if (pScore === dScore) {
-      resultMessage = 'Push! It\'s a tie.';
-      pointsChange = 0;
+      setGameStatus('dealerWins'); // Dealer busting means player wins
+      setMessage('Dealer busted! You win!');
+      updateScore(bet);
     } else if (pScore > dScore) {
-      resultMessage = 'Player wins!';
-      pointsChange = 1;
-    } else { // dScore > pScore
-      resultMessage = 'Dealer wins.';
-      pointsChange = -1;
+      setGameStatus('playerWins');
+      setMessage('You win!');
+      updateScore(bet);
+    } else if (dScore > pScore) {
+      setGameStatus('dealerWins');
+      setMessage('Dealer wins!');
+      updateScore(bet * -1);
+    } else {
+      setGameStatus('push');
+      setMessage('Push!');
+      updateScore(0);
     }
-    // --- End argument-based logic ---
-
-    setMessage(resultMessage);
-
-    // Update game points in storage/db and wait for it to complete
-    console.log('Updating game points...', pointsChange); // DEBUG
-    await updateGamePoints(currentUser?.uid || null, pointsChange);
-    console.log('Game points update complete.'); // DEBUG
-
-    // Call the callback AFTER the score update is complete
-    console.log('Calling onGameEnd (fetchScore)...'); // DEBUG
-    onGameEnd();
-    console.log('onGameEnd (fetchScore) called.'); // DEBUG
   };
 
-  // Start a new game on mount or when game is over
-  useEffect(() => {
-    if (gameOver) {
-       // Optionally add a small delay before starting new game automatically
-       // Consider calling startGame() here directly if you want auto-restart
-    }
-     // Ensure game starts when component mounts if it's in gameOver state initially
-     if (gameOver && playerHand.length === 0 && dealerHand.length === 0) {
-        startGame();
-     }
-  }, [gameOver, startGame, playerHand.length, dealerHand.length]); // Added dependencies
+  const resetBetting = () => {
+    setPlayerHand([]);
+    setDealerHand([]);
+    setPlayerScore(0);
+    setDealerScore(0);
+    setDealerHiddenCard(null);
+    setGameStatus('betting');
+    setMessage('Place your bet for the next round!');
+    // Let parent know round ended so balance can update if necessary
+    onGameEnd();
+  };
 
-  const buttonStyle = `px-4 py-2 md:px-6 md:py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed`;
+  // Update score using Firebase function
+  const updateScore = async (points: number) => {
+    console.log(`Updating score by ${points} points.`); // DEBUG
+    if (currentUser) {
+      try {
+        await updateGamePoints(currentUser.uid, points);
+        console.log("Game points updated successfully.");
+      } catch (error) {
+        console.error("Error updating game points:", error);
+        // Handle error appropriately, maybe notify user
+      }
+    }
+  };
+
+  // Handle placing the bet and starting the game
+  const handleBet = () => {
+      // Basic validation (can add balance check if available)
+      if (bet <= 0) {
+          setMessage("Please enter a valid bet amount.");
+          return;
+      }
+      startGame(); // Start the game after bet is placed
+  };
+
+  // --- Render Logic ---
+
+  const renderHand = (hand: Card[], isDealer = false) => (
+    <div className="flex justify-center items-end flex-wrap gap-2 min-h-[10rem]">
+      <AnimatePresence>
+        {hand.map((card) => (
+          <CardDisplay
+            key={card.id}
+            card={card}
+            darkMode={darkMode}
+          />
+        ))}
+        {isDealer && dealerHiddenCard && (
+          <CardDisplay key="dealer-hidden" card={null} hidden darkMode={darkMode} />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+
+  const buttonStyle = `px-4 py-2 md:px-5 md:py-2.5 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base shadow-md`;
   const primaryButtonStyle = darkMode
-    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
-    : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white';
+    ? 'bg-gradient-to-r from-teal-600 to-cyan-600 text-white hover:from-teal-500 hover:to-cyan-500'
+    : 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-400 hover:to-cyan-400';
   const secondaryButtonStyle = darkMode
     ? 'bg-gray-600 hover:bg-gray-500 text-white'
     : 'bg-gray-200 hover:bg-gray-300 text-gray-800';
 
-
   return (
-    <div className={`p-4 md:p-8`}> {/* Simplified container */}
-
-      <div className="max-w-4xl mx-auto">
-
-        {/* Removed Back Button */}
-        {/* Removed Title */}
-
-        {/* Dealer's Area */}
-        <div className="mb-8 md:mb-12">
-          <h2 className="text-xl md:text-2xl font-semibold mb-3 text-center">Dealer&apos;s Hand {gameStatus === 'dealerTurn' || gameStatus === 'gameOver' ? `(${dealerScore})` : ''}</h2>
-          <div className="flex justify-center items-center gap-2 md:gap-4 min-h-[10rem] md:min-h-[12rem]">
-            {dealerVisibleHand.map((card, index) => (
-              <CardDisplay key={`dealer-${index}`} card={card} darkMode={darkMode} />
-            ))}
-            {/* Show hidden card placeholder */}
-            {gameStatus !== 'dealerTurn' && gameStatus !== 'gameOver' && dealerHand.length > 1 && (
-                 <CardDisplay card={null} hidden darkMode={darkMode} />
-            )}
-          </div>
-        </div>
-
-        {/* Player's Area */}
-        <div className="mb-8 md:mb-12">
-          <h2 className="text-xl md:text-2xl font-semibold mb-3 text-center">Your Hand ({playerScore})</h2>
-          <div className="flex justify-center items-center flex-wrap gap-2 md:gap-4 min-h-[10rem] md:min-h-[12rem]">
-            {playerHand.map((card, index) => (
-              <CardDisplay key={`player-${index}`} card={card} darkMode={darkMode} />
-            ))}
-          </div>
-        </div>
-
-        {/* Game Status Message */}
-        <div className="text-center text-lg md:text-xl font-medium mb-6 md:mb-8 h-8">
-          {message}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex justify-center gap-4 md:gap-6">
-          {gameOver ? (
-            <button
-              onClick={startGame}
-              className={`${buttonStyle} ${primaryButtonStyle}`}
-            >
-              New Game
-            </button>
-          ) : (
-            <>
-              <button
-                onClick={hit}
-                disabled={gameStatus !== 'playerTurn' || playerScore >= 21}
-                className={`${buttonStyle} ${secondaryButtonStyle}`}
-              >
-                Hit (Draw)
-              </button>
-              <button
-                onClick={stand}
-                disabled={gameStatus !== 'playerTurn'}
-                className={`${buttonStyle} ${secondaryButtonStyle}`}
-              >
-                Stand
-              </button>
-            </>
-          )}
-        </div>
+    <div className="flex flex-col items-center justify-between h-full p-4 md:p-6"> {/* Changed to flex column for vertical layout */}
+      
+      {/* Game Info Area */}
+      <div className={`w-full text-center mb-4 p-3 rounded-lg ${darkMode ? 'bg-gray-800/70' : 'bg-white/80 shadow-sm'}`}>
+        <p className="text-lg md:text-xl font-medium mb-1">{message}</p>
+        {gameStatus !== 'betting' && (
+            <div className="text-sm md:text-base">
+                <span>Dealer Score: {dealerHiddenCard ? dealerScore : calculateHandValue(dealerHand)}</span>
+                <span className="mx-3">|</span>
+                <span>Your Score: {playerScore}</span>
+             </div>
+        )}
       </div>
 
-      {/* Help Icon & Tooltip */}
-      <div className="fixed bottom-7 right-10 z-50">
-        <div
-          className={`relative flex items-center justify-center w-8 h-8 md:w-14 md:h-14 rounded-full cursor-help transition-colors ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
-          onMouseEnter={() => setShowHelpTooltip(true)}
-          onMouseLeave={() => setShowHelpTooltip(false)}
-        >
-          <span className="font-bold text-lg">?</span>
-          <AnimatePresence>
-            {showHelpTooltip && (
-              <motion.div
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-                className={`absolute bottom-full right-0 mb-2 w-64 p-3 rounded-lg shadow-xl text-sm ${darkMode ? 'bg-gray-700 text-gray-200' : 'bg-white text-gray-700 border border-gray-200'}`}
-              >
-                <p className="font-semibold mb-1">How to Play Blackjack:</p>
-                <p className="mb-2">
-                  Goal: Get closer to 21 than the dealer without going over.
-                </p>
-                <p className="mb-2">
-                  Hit: Draw another card.
-                </p>
-                <p className="mb-2">
-                  Stand: Keep your current hand.
-                </p>
-                 <p className="mb-2">
-                   Cards 2-10 are face value, J/Q/K are 10, Ace is 1 or 11.
-                 </p>
-                <a
-                  href="https://en.wikipedia.org/wiki/Blackjack"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`font-medium underline ${darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}
-                >
-                  Full Rules (Wikipedia)
-                </a>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+      {/* Dealer Area */}
+      <div className="w-full mb-4 md:mb-6">
+        <h2 className="text-xl md:text-2xl font-semibold mb-2 text-center">Dealer&apos;s Hand</h2>
+        {renderHand(dealerHand, true)}
       </div>
 
+      {/* Player Area */}
+      <div className="w-full mb-6 md:mb-8">
+        <h2 className="text-xl md:text-2xl font-semibold mb-2 text-center">Your Hand</h2>
+        {renderHand(playerHand)}
+      </div>
+
+      {/* Action/Betting Area */}
+      <div className="mt-auto w-full flex flex-col items-center gap-3 md:gap-4">
+        {gameStatus === 'betting' && (
+          <div className="flex items-center gap-3">
+            <label htmlFor="betAmount" className="font-semibold">Bet:</label>
+            <input
+              id="betAmount"
+              type="number"
+              value={bet}
+              onChange={(e) => setBet(Math.max(1, parseInt(e.target.value) || 1))} // Ensure positive bet
+              min="1"
+              className={`px-3 py-1 rounded border ${darkMode ? 'bg-gray-700 border-gray-500' : 'bg-white border-gray-300'} w-20 text-center`}
+            />
+            <button onClick={handleBet} className={`${buttonStyle} ${primaryButtonStyle}`}>Place Bet</button>
+          </div>
+        )}
+
+        {gameStatus === 'playing' && (
+          <div className="flex justify-center gap-3 md:gap-4">
+            <button onClick={handleHit} className={`${buttonStyle} ${primaryButtonStyle}`}>Hit</button>
+            <button onClick={handleStand} className={`${buttonStyle} ${secondaryButtonStyle}`}>Stand</button>
+          </div>
+        )}
+
+        {(gameStatus === 'playerWins' || gameStatus === 'dealerWins' || gameStatus === 'push' || gameStatus === 'playerBusts') && (
+          <button onClick={resetBetting} className={`${buttonStyle} ${primaryButtonStyle}`}>New Round</button>
+        )}
+      </div>
     </div>
   );
 }

@@ -14,13 +14,14 @@ import { useRouter } from 'next/navigation'; // Import useRouter for the back bu
 import { toast } from 'react-toastify'; // Import toast for notifications
 import { FaQuestionCircle } from 'react-icons/fa'; // Import question mark icon
 
-// Dynamically import game components to potentially improve initial load time
-const YanivGame = dynamic(() => import('./Yaniv'));
 // Add dynamic imports for the other games
 const BlackjackGame = dynamic(() => import('./Blackjack'));
 const CrazyEightsGame = dynamic(() => import('./CrazyEights'));
+const PokerGame = dynamic(() => import('./Poker'));
+const PlinkoGame = dynamic(() => import('./Plinko'));
 
-type GameSelection = 'yaniv' | 'blackjack' | 'crazyeights' | null;
+
+type GameSelection =  'blackjack' | 'crazyeights' | 'poker' | 'plinko' | null;
 
 export default function GamesDashboard() {
   const [selectedGame, setSelectedGame] = useState<GameSelection>(null);
@@ -192,10 +193,12 @@ export default function GamesDashboard() {
     const handleGameEnd = () => fetchData(currentUser); // Use fetchData as the callback
 
     switch (selectedGame) {
-      case 'yaniv':
-        return <YanivGame onGameEnd={handleGameEnd} />;
+      case 'plinko':
+        return <PlinkoGame onGameEnd={handleGameEnd} />;
       case 'blackjack':
         return <BlackjackGame onGameEnd={handleGameEnd} />;
+      case 'poker':
+        return <PokerGame onGameEnd={handleGameEnd} />;
       case 'crazyeights':
         return <CrazyEightsGame onGameEnd={handleGameEnd} />;
       default:
@@ -252,7 +255,7 @@ export default function GamesDashboard() {
                      ? 'bg-gray-800/95 text-gray-200 border border-gray-700' 
                      : 'bg-white/95 text-gray-700 border border-gray-200')
                  }>
-                   Your balance is the total number of practice questions answered correctly plus net score earned from games. Spend it here on cosmetic upgrades!
+                   Your balance is the total number of practice questions answered correctly plus net chips/points earned from games. Spend it here on cosmetic upgrades!
                  </div>
                )}
              </div>
@@ -269,10 +272,10 @@ export default function GamesDashboard() {
               className="flex flex-col items-center justify-center gap-6 md:gap-8 mt-10 md:mt-16"
             >
               <button
-                onClick={() => handleGameSelect('yaniv')}
+                onClick={() => handleGameSelect('plinko')}
                 className={`${buttonStyle} ${primaryButtonStyle}`}
               >
-                Play Yaniv ⚛️🧪🧬🔭
+                Play Plinko ⚛️🧪🧬🔭
               </button>
               <button
                 onClick={() => handleGameSelect('blackjack')}
@@ -285,6 +288,12 @@ export default function GamesDashboard() {
                 className={`${buttonStyle} ${secondaryButtonStyle}`}
               >
                 Play Crazy Eights 🤪8️⃣
+              </button>
+              <button
+                onClick={() => handleGameSelect('poker')}
+                className={`${buttonStyle} ${primaryButtonStyle}`}
+              >
+                Play Texas Hold &apos;em Poker 🧠💰
               </button>
 
               {/* Navbar Style Shop */}
@@ -362,6 +371,7 @@ export default function GamesDashboard() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
+              className="flex flex-col items-center justify-center w-full"
             >
               {renderGame()}
             </motion.div>
