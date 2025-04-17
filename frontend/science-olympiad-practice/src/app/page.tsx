@@ -391,9 +391,6 @@ export default function HomePage() {
             ))}
           </div>
           <div className="mt-12 flex justify-center gap-4">
-            <a href="https://github.com/NapervilleASK/Scio.ly" className={`${darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'} transition-colors`}>
-              <FaGithub className="w-6 h-6" />
-            </a>
             <a href="https://discord.gg/hXSkrD33gu" className={`${darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'} transition-colors`}>
               <FaDiscord className="w-6 h-6" />
             </a>
@@ -513,9 +510,6 @@ export default function HomePage() {
             <div>
               <h3 className={`font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Connect</h3>
               <div className="flex space-x-4">
-                <a href="https://github.com/NapervilleASK/Scio.ly" className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'} transition-colors`}>
-                  <FaGithub className="w-6 h-6" />
-                </a>
                 <a href="https://discord.gg/hXSkrD33gu" className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'} transition-colors`}>
                   <FaDiscord className="w-6 h-6" />
                 </a>
