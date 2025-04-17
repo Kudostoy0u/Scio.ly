@@ -2,12 +2,14 @@
 	"Anatomy - Endocrine": [
 	  "{\"question\":\"According to the study, which factors were NOT associated with the risk of prostate cancer?\",\"options\":[\"Height, weight and recreational and occupational physical activity\",\"Height, weight and tobacco use\",\"Height, weight and body mass index\",\"All of the above\"],\"answers\":[1],\"difficulty\":0.4,\"originalIndex\":11}",
 	  "{\"question\":\"According to the study mentioned in the text, what is the relative risk (RR) of prostate cancer for men who consume >6.4 grams of alcohol per week?\",\"options\":[\"RR = 1.5\",\"RR = 2.4\",\"RR = 3.1\",\"The study did not measure risk of prostate cancer in men who consume this amount of alcohol per week\"],\"answers\":[4],\"difficulty\":0.7,\"originalIndex\":7}",
-	  "{\"question\":\"According to the study mentioned in the text, what is the relative risk (RR) of prostate cancer for men who consume >20 grams of alcohol per week, compared with non-users?\",\"options\":[\"RR = 0.5\",\"RR = 1.1\",\"RR = 2.4\",\"RR = 3.1\"],\"answers\":[2],\"difficulty\":0.6,\"originalIndex\":6}"
+	  "{\"question\":\"According to the study mentioned in the text, what is the relative risk (RR) of prostate cancer for men who consume >20 grams of alcohol per week, compared with non-users?\",\"options\":[\"RR = 0.5\",\"RR = 1.1\",\"RR = 2.4\",\"RR = 3.1\"],\"answers\":[2],\"difficulty\":0.6,\"originalIndex\":6}",
+	  "{\"question\":\"(Endocrine System) Which of the following statements are true about how TSH affects the thyroid gland?\",\"options\":[\"TSH stimulates an increased iodination of tyrosine.\",\"The conformation of thyroid cells changes from columnar to cuboidal, causing the epithelium to fold into follicles.\",\"TSH stimulates a decreased size and increased secretory activity of thyroid cells.\",\"TSH increases the proteolysis of thyroglobulin, releasing thyroid hormone into the blood.\",\"TSH stimulates an increase in the activity of the iodide pump, which increases the rate of iodide trapping.\"],\"answers\":[1,4,5],\"difficulty\":0.7,\"originalIndex\":349}"
 	],
 	"Anatomy - Integumentary": [
 	  "{\"question\":\"Considering all the evidence, what should you tell the land of the Sebariferous?\",\"options\":[\"The killers were both Sebas!!\",\"The killers were both Iriferouses!!\",\"It was a collaboration!! One killer was a Seba and one killer was an Iriferous!!\",\"It was a conspiracy!! Nobody was the killer!!\"],\"answers\":[3],\"difficulty\":0.8}",
 	  "{\"question\":\"Proteins and Carbohydrates contain _______ calories\",\"options\":[\"4\",\"9\",\"5\",\"10\"],\"answers\":[1],\"difficulty\":0.7,\"originalIndex\":141}",
-	  "{\"question\":\"If a basalt were heated up until it melted thoroughly (no crystals left) and then was cooled very very slowly you would most likely get\",\"options\":[\"gabbro\",\"granite\",\"diorite\",\"obsidian\",\"andesite porphyry\"],\"answers\":[1],\"difficulty\":0.5}"
+	  "{\"question\":\"If a basalt were heated up until it melted thoroughly (no crystals left) and then was cooled very very slowly you would most likely get\",\"options\":[\"gabbro\",\"granite\",\"diorite\",\"obsidian\",\"andesite porphyry\"],\"answers\":[1],\"difficulty\":0.5}",
+	  "{\"question\":\"From the given modes of disease transmission, select the most prevalent method of spread for the conditions given in Questions 51 - 54. Enter only the letter of your choice.\\na) Not contagious \\nb) Spreads through contact \\nc) Airborne \\nd) Spreads through bodily fluids\\n\\nRingworm\",\"options\":[\"a\",\"b\",\"c\",\"d\"],\"answers\":[2],\"difficulty\":0.5,\"originalIndex\":435}"
 	],
 	"Anatomy - Muscular": [
 	  "{\"question\":\"An alpha helix has approximately how many amino acid residues per turn?\",\"options\":[\"3.0\",\"3.6\",\"4.2\",\"6.5\"],\"answers\":[2],\"difficulty\":0.7,\"originalIndex\":221}",
@@ -17,10 +19,16 @@
 	  "{\"question\":\"What is the term for a rigid structure that moves around a fixed point?\",\"options\":[\"Load\",\"Resistance\",\"Fulcrum\",\"Lever\"],\"answers\":[4],\"difficulty\":0.5,\"originalIndex\":504}",
 	  "{\"question\":\"True or False: Beta blockers can be used to treat the aforementioned condition?\",\"options\":[\"True\",\"False\"],\"answers\":[1],\"difficulty\":0.5,\"originalIndex\":854}",
 	  "{\"question\":\"Station 8: This species is known for their scars. What is the most likely cause of these scars?\",\"options\":[\"Territorial fights with other members of the species\",\"Encounters with predators\",\"Scraping against sharp ice/rock\",\"Parasitic infestations\",\"Human weapons like harpoons\",\"They aren’t scars, they’re unique markings and patterns on their fur\"],\"answers\":[1],\"difficulty\":0.6,\"originalIndex\":931}",
-	  "{\"question\":\"Station 10: All pinnipeds are marine. True or False?\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.2}"
+	  "{\"question\":\"Station 10: All pinnipeds are marine. True or False?\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.2}",
+	  "{\"question\":\"Station 1: At what age do pups of the species being identified typically begin to swim?\",\"options\":[\"1-2 weeks\",\"1-2 months\",\"3-4 months\",\"6 months\"],\"answers\":[1],\"difficulty\":0.5}",
+	  "{\"question\":\"ATP is ____ during the power stroke & then ___. Another ATP is released to _____ the crossbridge.\",\"options\":[\"Released, reattached, break\",\"Released, reattached, shift\",\"Attached, released, break\",\"Attached, released, shift\"],\"answers\":[3],\"difficulty\":0.6,\"originalIndex\":55}"
 	],
 	"Anatomy - Nervous": [
-	  "{\"question\":\"Could Patient B still draw the objects from memory?\",\"options\":[\"Yes\",\"No\"],\"answers\":[1],\"difficulty\":0.3,\"originalIndex\":26}"
+	  "{\"question\":\"Could Patient B still draw the objects from memory?\",\"options\":[\"Yes\",\"No\"],\"answers\":[1],\"difficulty\":0.3,\"originalIndex\":26}",
+	  "{\"question\":\"Experimental Design Test: According to the passage, what is the independent variable in this experiment?\",\"options\":[\"Number of items recalled\",\"Number of items in a group\",\"Time spent memorizing\",\"Type of items being memorized\"],\"answers\":[2],\"difficulty\":0.6,\"originalIndex\":535}"
+	],
+	"Anatomy - Sense Organs": [
+	  "{\"question\":\"According to this definition: “A pun is the usually humorous use of a word in such a way as to suggest two or more of its meanings or the meaning of another word similar in sound.”, is the following statement a pun? The Yellow Bellied Sapsucker hopes it could get food today, knock on wood.\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.2,\"originalIndex\":182}"
 	],
 	"Anatomy - Skeletal": [
 	  "{\"question\":\"In which numbered zone of the epiphyseal plate do chondrocytes first begin to die in large numbers?\",\"options\":[\"1\",\"2\",\"3\",\"4\",\"5\"],\"answers\":[4],\"difficulty\":0.5,\"originalIndex\":322}",
@@ -28,7 +36,8 @@
 	  "{\"question\":\"Which of the following is a subtype of cartoon? Select all that apply\",\"options\":[\"Fancy\",\"Rockets\",\"Ladders\",\"Spine\",\"Foil\"],\"answers\":[1,2,3,4,5],\"difficulty\":0.7,\"originalIndex\":110}",
 	  "{\"question\":\"In the instructions, a turtle has 4 side legs made of pipe cleaners. What type of anatomical structure can be represented by the pipe cleaners?\",\"options\":[\"Radius\",\"Ulna\",\"Femur\",\"Tibia\"],\"answers\":[3],\"difficulty\":0.6,\"originalIndex\":250}",
 	  "{\"question\":\"Since the tournament is... um... today, your coach tells you to quickly buy cures for POGGERS to protect your team. You walk to the nearby CVS to search for bone health medications and ﬁnd an array of ﬁve drugs. Which of the following medications would be useful against POGGERS?\",\"options\":[\"Denosumab: RANKL inhibitor, which blocks the binding of RANKL to RANK\",\"Vitamin D3 supplements\",\"Natpara: Parathyroid hormone analog\",\"Calcitonin supplements\",\"Clovia: Binds to OPG and sequesters it, preventing OPG from binding to RANKL\"],\"answers\":[1,4],\"difficulty\":0.7,\"originalIndex\":672}",
-	  "{\"question\":\"This is the hardest anatomy and physiology test you have ever taken.\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.1}"
+	  "{\"question\":\"This is the hardest anatomy and physiology test you have ever taken.\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.1}",
+	  "{\"question\":\"Finally, it appears that you have enough information to elucidate the mechanism of the POGGERS molecule. Which hormone is responsible for Carolyn's resistance to POGGERS?\",\"options\":[\"Parathyroid hormone\",\"Calcitonin\",\"Calcitriol\",\"Growth hormone\",\"Estrogen\"],\"answers\":[2],\"difficulty\":0.6}"
 	],
 	"Astronomy": [
 	  "{\"question\":\"From the Road Scholar test: A small UFO named Charlie could change his shape and color, but currently he looked a little bit like a green tea kettle. When was Charlie always blue? \",\"options\":[\"When he was curious and excited\",\"When he was upset\",\"When he was near National Monuments\",\"When he was being chased\"],\"answers\":[2],\"difficulty\":0.6}",
@@ -37,7 +46,9 @@
 	  "{\"question\":\"Would Satoru Gojo be able to destroy the Earth in a millisecond?\",\"options\":[\"Yes\",\"No\"],\"answers\":[2],\"difficulty\":1}",
 	  "{\"question\":\"Would Gojo’s star collapse into a black hole?\",\"options\":[\"Yes\",\"No\"],\"answers\":[2],\"difficulty\":1}",
 	  "{\"question\":\"You already have the following test scores: 84.5%, 82%, 78%, and 86%. What grade would you need on the next test to get a test average of 80%? ______% (tenth place)\",\"options\":[],\"answers\":[\"69.5\"],\"difficulty\":0.5}",
-	  "{\"question\":\"FREE POINTS???? What would Rick Astley do? (Mark ALL correct answers)\",\"options\":[\"He would never give us up.\",\"He would never let us down.\",\"He would never run around.\",\"He would never desert us.\"],\"answers\":[1,2,3,4],\"difficulty\":0.9}"
+	  "{\"question\":\"FREE POINTS???? What would Rick Astley do? (Mark ALL correct answers)\",\"options\":[\"He would never give us up.\",\"He would never let us down.\",\"He would never run around.\",\"He would never desert us.\"],\"answers\":[1,2,3,4],\"difficulty\":0.9}",
+	  "{\"question\":\"From the JS9 Investigation, select a possible set of coordinates for the largest cloud mass on the right of the central object.\",\"options\":[\"17:58:14.429, +66:38:08.80\",\"17:59:07.449, +66:41:01.64\",\"17:59:05.671, +66:34:47.67\",\"17:58:04.912, +66:34:45.46\"],\"answers\":[2],\"difficulty\":0.7,\"originalIndex\":93}",
+	  "{\"question\":\"________, a five-planet star system about 500 light-years from Earth in the constellation Cygnus. The five planets orbit this spectral ty\\n1/2 the size and mass of the sun.\",\"options\":[],\"answers\":[\"Kepler-186\"],\"difficulty\":0.1,\"originalIndex\":1185}"
 	],
 	"Chemistry Lab": [
 	  "{\"question\":\"In between the uncountable negative consequences of global warming and Carbon Dioxide release into the atmosphere, the acidification of oceans is a notable one that has been causing severe damage to the marine biota. To quantitatively understand this process, we must consider all the complex equilibrium equations that convert gaseous Carbon Dioxide into its acidic variants in solution. The following relevant equations are provided:\\nCO2 (g)  CO2  (aq)\\nCO2 (aq) + H2O (l)  H2CO3 (aq)\\nH2CO3 (aq)  H+ (aq) + HCO3- (aq)\\nHCO3- (aq)  H+ (aq) + CO32- (aq)\\nH2O (l)  H+ (aq) + OH- (aq)\\nThe equilibrium expression for the first reaction is given by Kgas= CO2/xCO2 in which xCO2is the molar fraction of Carbon Dioxide in the atmosphere.  In such complicated systems, more complex tools must be used to facilitate calculations.  Here we invoke charge and mass balance equations (and corresponding calculations).\\nf. [50 Points] Using the pH calculated in part d, determine αCO32- and use it to justify the approximation made in part d to find that result.\",\"options\":[],\"answers\":[\"2.8 x 10^-6.  Note that the molar fraction is very small when compared to other Carbonic Acid species, thus it can be neglected.\"],\"difficulty\":0.8,\"originalIndex\":382}",
@@ -49,7 +60,8 @@
 	  "{\"question\":\"At equilibrium what % of the mixture is NO? With reaction 2 NOCl(g) ↔ 2 NO(g) + Cl2(g), starting with 0.6 bar NOCl, 0.3 bar NO, and 0.2 bar Cl2?\",\"options\":[\"12.6%\",\"15.4%\",\"18.3%\",\"20.2%\"],\"answers\":[2],\"difficulty\":1,\"originalIndex\":900}",
 	  "{\"question\":\"Let's say you want to \\\"soften\\\" a sample of water in the lab by adding solid Na CO . The original 100. mL sample contains 0.030 M Ca  and 0.010 M Mg . You can assume that the volume of the sample doesn't change as the solid is added. What is [CO ] when calcium precipitation begins?\",\"options\":[\"9.3 * 10  M\",\"4.8 * 10  M\",\"2.9 * 10  M\",\"9.1 * 10  M\",\"None of the above\"],\"answers\":[3],\"difficulty\":0.1,\"originalIndex\":4949}",
 	  "{\"question\":\"What is the most likely substance that was analyzed in the mass spec?\",\"options\":[\"Oxandrolone (Oxandrin) (C​19​H​30​O​3​)\",\"Sertraline (Zoloft) (C​17​H​17​Cl​2​N)\",\"Benztropine (Cogentin) (C​21​H​25​NO)\",\"Butacaine (C​18​H​30​N​2​O​2​)\",\"Zolpidem (Ambien) (C​19​H​21​N​3​O)\"],\"answers\":[3],\"difficulty\":0.5,\"originalIndex\":3948}",
-	  "{\"question\":\"To determine the Ksp of calcium hydroxide, you perform the following procedure: Which of the following describes the solution in the 100-mL beaker at the end of Step #4?\",\"options\":[\"unsaturated\",\"saturated\",\"supersaturated\"],\"answers\":[1],\"difficulty\":0.4,\"originalIndex\":2593}"
+	  "{\"question\":\"To determine the Ksp of calcium hydroxide, you perform the following procedure: Which of the following describes the solution in the 100-mL beaker at the end of Step #4?\",\"options\":[\"unsaturated\",\"saturated\",\"supersaturated\"],\"answers\":[1],\"difficulty\":0.4,\"originalIndex\":2593}",
+	  "{\"question\":\"True or False: AC is more efficient than DC because it has lower transmission losses due to resistance.\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.1,\"originalIndex\":5401}"
 	],
 	"Codebusters": [
 	  "{\"question\":\"Decode this quote that was encoded using the Pollux cipher. You are given that 1=×, 2=●, 3=×, 4=–, 5=●, 6=–, and that this quote contains numbers. 62440649185430255758557699088608455095800481872554151868 30566356235944406728299732963669443298145835555873824 352522024969762194577627554744148850222647542388555\",\"options\":[],\"answers\":[\"LEARNFROMYESTERDAYLIVETODAYHOPETOMORROWTHEIMPORTANTTHINGISTONOTSTOPQUESTIONINGALBERTEINSTEIN\"],\"difficulty\":0.9,\"originalIndex\":2752}",
@@ -76,7 +88,12 @@
 	  "{\"question\":\"What is the identity of P6?\",\"options\":[\"Gypsum\",\"Calcium carbonate\",\"Vitamin C\",\"Cornstarch\"],\"answers\":[2],\"difficulty\":0.7}",
 	  "{\"question\":\"Who committed the crime?\",\"options\":[],\"answers\":[\"Variable; should be justified by the evidence presented\"],\"difficulty\":0.5,\"originalIndex\":347}",
 	  "{\"question\":\"What is the identity of P2?\",\"options\":[\"Sand\",\"Salt\",\"Sugar\",\"Sodium acetate\"],\"answers\":[3],\"difficulty\":0.7}",
-	  "{\"question\":\"What is the identity of mixture CS2?\",\"options\":[\"Salt and sugar\",\"Salt and sand\",\"Sand and gelatin\",\"Gelatin and sugar\"],\"answers\":[1],\"difficulty\":0.6}"
+	  "{\"question\":\"What is the identity of mixture CS2?\",\"options\":[\"Salt and sugar\",\"Salt and sand\",\"Sand and gelatin\",\"Gelatin and sugar\"],\"answers\":[1],\"difficulty\":0.6}",
+	  "{\"question\":\"What is the identity of M3?\",\"options\":[\"Zinc\",\"Copper\",\"Tin\",\"Iron\",\"Aluminum\"],\"answers\":[1],\"difficulty\":0.6,\"originalIndex\":466}",
+	  "{\"question\":\"Identify Liquid 3L, which was found near the medics:\",\"options\":[],\"answers\":[\"Lemon Mixture\"],\"difficulty\":0.5,\"originalIndex\":235}",
+	  "{\"question\":\"Identify Mixture 1M (3 components). This mixture was near the command tent.\",\"options\":[],\"answers\":[\"Vinegar\",\"Mixed Metal Particles\",\"Dirt/Geo rocks\"],\"difficulty\":0.5,\"originalIndex\":253}",
+	  "{\"question\":\"What is the identity of L3?\",\"options\":[\"Vinegar\",\"Ammonia\",\"Water\",\"Hydrogen peroxide\"],\"answers\":[3],\"difficulty\":0.5,\"originalIndex\":302}",
+	  "{\"question\":\"What is the identity of P8?\",\"options\":[\"Alka-Seltzer\",\"Gelatin\",\"Vitamin C\",\"Sodium acetate\"],\"answers\":[2],\"difficulty\":0.7,\"originalIndex\":452}"
 	],
 	"Disease Detectives": [
 	  "{\"question\":\"After you calculate the relative risk for each group of classes, which set of students seem to be particularly aﬀected?\",\"options\":[\"Spanish\",\"CS\",\"Math\",\"Art\"],\"answers\":[1],\"difficulty\":0.8}",
@@ -115,7 +132,9 @@
 	  "{\"question\":\"The following ecological pyramid of biomass is most likely found in which type of ecosystem?\",\"options\":[\"An ocean ecosystem\",\"A desert ecosystem\",\"A grassland ecosystem\",\"An ecosystem without decomposers\",\"An extremely cold ecosystem\"],\"answers\":[1],\"difficulty\":0.6}",
 	  "{\"question\":\"15. Convert 100 ppm to\",\"options\":[],\"answers\":[\"100 mg/L\"],\"difficulty\":0.7,\"originalIndex\":5353}",
 	  "{\"question\":\"Sunlight warms the Earth. Solar energy is best classified as...\",\"options\":[\"Radiation\",\"Kinetic\",\"Chemical potential\",\"Mechanical\",\"Gravitational\"],\"answers\":[1],\"difficulty\":0.5}",
-	  "{\"question\":\"Two individuals with IAi and IAIB genotypes are having a child together. What is the probability that their child would exhibit the B phenotype?\",\"options\":[\"0%\",\"25%\",\"50%\",\"100%\"],\"answers\":[2],\"difficulty\":0.6,\"originalIndex\":3257}"
+	  "{\"question\":\"Two individuals with IAi and IAIB genotypes are having a child together. What is the probability that their child would exhibit the B phenotype?\",\"options\":[\"0%\",\"25%\",\"50%\",\"100%\"],\"answers\":[2],\"difficulty\":0.6,\"originalIndex\":3257}",
+	  "{\"question\":\"Select every option that currently matches the pipe color with the substance that passes through it.\",\"options\":[\"Dark Blue; Potable Water\",\"Pink; Ozone\",\"Dark Brown; Sludge\",\"Dark Grey; Sewage\",\"Light Grey; Greywater\",\"Red; Chlorine Gas\"],\"answers\":[1,3,4,6],\"difficulty\":0.6,\"originalIndex\":2474}",
+	  "{\"question\":\"Isla Nublar - Case Study Questions: Who is the secondary consumer in your food chain?\",\"options\":[\"Organism A\",\"Organism B\",\"Organism C\",\"None of the above\"],\"answers\":[1],\"difficulty\":0.3,\"originalIndex\":294}"
 	],
 	"Entomology": [
 	  "{\"question\":\"Identify the following insect: a.  Super Family:\",\"options\":[],\"answers\":[\"asilidae\"],\"difficulty\":0.7,\"originalIndex\":180}",
@@ -123,7 +142,10 @@
 	  "{\"question\":\"What ecological roles does the specimen play in its environment? Select all that apply. (for Specimen C)\",\"options\":[\"Decomposer\",\"Pollinator\",\"Pest control\",\"Soil aerator\"],\"answers\":[1,4],\"difficulty\":0.5}",
 	  "{\"question\":\"Of families A, B, and C, which is the worst at jumping?\",\"options\":[\"Family A\",\"Family B\",\"Family C\"],\"answers\":[3],\"difficulty\":0.5}",
 	  "{\"question\":\"How do seasonal changes inﬂuence the activity or migration patterns of Insect X?\",\"options\":[\"Most species migrate south in winter to follow their hosts\",\"Larvae diapause in host bodies during colder months\",\"Adults hibernate during the cold season\",\"Insect X is exclusively active in tropical regions\"],\"answers\":[2],\"difficulty\":0.1}",
-	  "{\"question\":\"How do seasonal changes influence the activity or migration patterns of Insect X?\",\"options\":[\"Most species migrate south in winter to follow their hosts\",\"Larvae diapause in host bodies during colder months\",\"Adults hibernate during the cold season\",\"Insect X is exclusively active in tropical regions\"],\"answers\":[2],\"difficulty\":1}"
+	  "{\"question\":\"How do seasonal changes influence the activity or migration patterns of Insect X?\",\"options\":[\"Most species migrate south in winter to follow their hosts\",\"Larvae diapause in host bodies during colder months\",\"Adults hibernate during the cold season\",\"Insect X is exclusively active in tropical regions\"],\"answers\":[2],\"difficulty\":1}",
+	  "{\"question\":\"Each qualifying insect term is worth 5 points that use the letters provided (adjectives and qualifiers only 2 points). Letter: D\",\"options\":[],\"answers\":[\"Dragonfly\",\"Dung Beetle\"],\"difficulty\":0.5,\"originalIndex\":211}",
+	  "{\"question\":\"Odonata (Dragonflies and Damselflies):\\nHow did Species A get its common name?\",\"options\":[],\"answers\":[\"They appear to 'dance' in the air\"],\"difficulty\":0.8,\"originalIndex\":87}",
+	  "{\"question\":\"Identify the following insect: b.  Most of these specimen secrete ______________ because their diet is tree ________\",\"options\":[],\"answers\":[\"honeydew\"],\"difficulty\":0.7,\"originalIndex\":538}"
 	],
 	"Forensics": [
 	  "{\"question\":\"What is the critical angle for a glass with an index of refraction of 0.5 and the external medium is air?\",\"options\":[\"0\",\"30\",\"60\",\"90\"],\"answers\":[4],\"difficulty\":0.7,\"originalIndex\":933}",
@@ -137,7 +159,8 @@
 	  "{\"question\":\"What is Mr. Krabs transitioning the Krabby Patty to?\",\"options\":[\"A vegetarian restaurant\",\"A vegan restaurant\",\"A pescatarian restaurant\",\"A shellfish restaurant\"],\"answers\":[1],\"difficulty\":0.2,\"originalIndex\":2572}",
 	  "{\"question\":\"9f. After completing the previous steps from the previous parts (9a thru 9e), what lifting method would be best for you to use for the next step in development?\",\"options\":[\"Cyanoacrylate fuming\",\"Dusting with black granular powder\",\"Dusting with black magnetic powder\",\"Dusting with the fluorescent powder\",\"Ninhydrin\"],\"answers\":[1,2,3,4,5],\"difficulty\":0.7,\"originalIndex\":318}",
 	  "{\"question\":\"The identity of Unknown J is ____(12)____.\",\"options\":[],\"answers\":[\"Unknown J\"],\"difficulty\":0.5,\"originalIndex\":2776}",
-	  "{\"question\":\"Is Reuben clear?\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.5}"
+	  "{\"question\":\"Is Reuben clear?\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.5}",
+	  "{\"question\":\"UNKNOWN POWDER A, Location Found: Closet where Bowling Ball kept.  Powder Name: (Enter Findings From Wet Lab with Coach). Assume the powder found was Anhydrous Sodium Acetate\",\"options\":[\"Anhydrous Sodium Acetate\",\"Alka Seltzer\",\"Flour\",\"Vitamin C\",\"Corn Starch\",\"Baking Soda\"],\"answers\":[1],\"difficulty\":0.7,\"originalIndex\":2465}"
 	],
 	"Fossils": [
 	  "{\"question\":\"What is the stratigraphic age range of the specimen? (Options: Devonian to Holocene, Silurian to Holocene, Silurian to Cretaceous, Eocene to Holocene)\",\"options\":[\"Devonian to Holocene\",\"Silurian to Holocene\",\"Silurian to Cretaceous\",\"Eocene to Holocene\"],\"answers\":[2],\"difficulty\":0.6}",
@@ -159,7 +182,8 @@
 	  "{\"question\":\"On what continent are most of the fossils of the identified specimen found?\",\"options\":[\"North America\",\"South America\",\"Europe\",\"Asia\",\"Australia\",\"Africa\"],\"answers\":[6],\"difficulty\":0.4,\"originalIndex\":1198}",
 	  "{\"question\":\"Class Amphibia and Plesiosauria True or False\",\"options\":[\"True\",\"False\"],\"answers\":[1],\"difficulty\":0.5,\"originalIndex\":1246}",
 	  "{\"question\":\"True or False: There is a folk belief that carrying fossils of the specimen above could prevent rheumatism.\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.3,\"originalIndex\":1277}",
-	  "{\"question\":\"Barium-122 has a half-life of 2 minutes. A fresh sample weighing 80 g was obtained. If it takes 10 minutes to set up an experiment using barium-122, how much barium-122 will be left when the experiment begins?\",\"options\":[\"25 grams\",\"80 grams\",\"2.5 grams\",\"0.25 grams\",\"16 grams\"],\"answers\":[3],\"difficulty\":0.9,\"originalIndex\":1533}"
+	  "{\"question\":\"Barium-122 has a half-life of 2 minutes. A fresh sample weighing 80 g was obtained. If it takes 10 minutes to set up an experiment using barium-122, how much barium-122 will be left when the experiment begins?\",\"options\":[\"25 grams\",\"80 grams\",\"2.5 grams\",\"0.25 grams\",\"16 grams\"],\"answers\":[3],\"difficulty\":0.9,\"originalIndex\":1533}",
+	  "{\"question\":\"What type of ﬂower is D, E, and F? (Mark ALL correct answers)\",\"options\":[\"Angiosperm\",\"Gymnosperm\",\"Monocot\",\"Dicot\",\"Tricot\",\"Spores\"],\"answers\":[1,3,4],\"difficulty\":0.7,\"originalIndex\":1167}"
 	],
 	"Geologic Mapping": [
 	  "{\"question\":\"What was the panemone windmill used for?\",\"options\":[\"Grinding grain\",\"Driving ventilation in homes\",\"Powering small boats\",\"Producing textiles\",\"A and D\"],\"answers\":[5],\"difficulty\":1}",
@@ -182,7 +206,8 @@
 	  "{\"question\":\"Which of the following accurately lists the conventional “synoptic times” ?\",\"options\":[\"00Z, 03Z, 06Z, 09Z, 12Z, 15Z, 18Z, and 21Z\",\"10Z, 13Z, 16Z, 19Z, 112Z, 115Z, 118Z, and 121Z\",\"00P, 03P, 06P, 09P, 12Z, 15Z, 18Z, and 21Z\",\"10P, 13P, 16P, 19P, 112Z, 115Z, 118Z, and 121Z\"],\"answers\":[1],\"difficulty\":0.5,\"originalIndex\":713}",
 	  "{\"question\":\"Given: Climographs are used to depict a location’s average monthly temperature and rainfall over a period of a year. Which explanation best accounts for the difference between climograph data in Locations G and J.\",\"options\":[\"Location G is in the rain shadow of a mountain, and Location J is in a coastal area.\",\"Location J is in the rain shadow of a mountain, and Location G is in a coastal area.\",\"Location G is south of the equator, and Location J is north of the equator.\",\"Location G is north of the equator, and Location J is south of the equator.\"],\"answers\":[1],\"difficulty\":0.8,\"originalIndex\":606}",
 	  "{\"question\":\"For the following questions specify the climate zones as per Köppen classiﬁcation system. Please make sure all letters are in the correct case. C. Steppe/Semi-Arid climate cold\",\"options\":[],\"answers\":[\"BSk\"],\"difficulty\":0.7,\"originalIndex\":266}",
-	  "{\"question\":\"What shape is presented on the radar?\",\"options\":[\"Hook Echo\",\"Linear Echo\",\"Arch Echo\",\"Bow Echo\"],\"answers\":[4],\"difficulty\":0.6,\"originalIndex\":1502}"
+	  "{\"question\":\"What shape is presented on the radar?\",\"options\":[\"Hook Echo\",\"Linear Echo\",\"Arch Echo\",\"Bow Echo\"],\"answers\":[4],\"difficulty\":0.6,\"originalIndex\":1502}",
+	  "{\"question\":\"Which one of the following represents GRAUPEL?\",\"options\":[\"Sleet\",\"Hail\",\"Graupel\",\"Freezing rain\",\"None of the above\"],\"answers\":[3],\"difficulty\":1,\"originalIndex\":496}"
 	],
 	"Microbe Mission": [
 	  "{\"question\":\"What is the name of the procedure Sill is executing? (4)\",\"options\":[],\"answers\":[\"Serial Dilution\"],\"difficulty\":0.5,\"originalIndex\":23}",
@@ -191,7 +216,8 @@
 	  "{\"question\":\"Match the microorganisms with their characteristic: Rickettsia\",\"options\":[\"Much similar, contains one type of nucleic acid, do not reproduce by binary fission\",\"Gram+ arranged in chains\",\"Living organism, unicellular, motile, microscopic and show reproduction\",\"Grow atmospheric oxygen, visible without microscope, produces, disease\",\"Tiny organism, enable to grow outside living cells, retained by bacteria proof filters\"],\"answers\":[4],\"difficulty\":0.6}",
 	  "{\"question\":\"I. The final plate is 1:100,000 dilution.\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.4,\"originalIndex\":2476}",
 	  "{\"question\":\"In the provided test, which of the following infection is caused by penicillins used by its treatments?\",\"options\":[\"C. burnetii\",\"C. difficile\",\"C. trachomatis\",\"C. tetani\"],\"answers\":[2],\"difficulty\":0.8,\"originalIndex\":3019}",
-	  "{\"question\":\"Use the graph below to answer the questions. Include all units in your answers. Which of the following statements best summarizes the graph?\",\"options\":[\"Growth rate decreases as the temperature increases\",\"Growth rate increases as the temperature decreases\",\"Growth rate decreases as the temperature decreases\",\"Growth rate stays the same as the temperature increases\",\"Answer not given\"],\"answers\":[5],\"difficulty\":0.5,\"originalIndex\":1723}"
+	  "{\"question\":\"Use the graph below to answer the questions. Include all units in your answers. Which of the following statements best summarizes the graph?\",\"options\":[\"Growth rate decreases as the temperature increases\",\"Growth rate increases as the temperature decreases\",\"Growth rate decreases as the temperature decreases\",\"Growth rate stays the same as the temperature increases\",\"Answer not given\"],\"answers\":[5],\"difficulty\":0.5,\"originalIndex\":1723}",
+	  "{\"question\":\"Taking into account that there is some overlap of sizes between the various groups, number the following microbes from smallest (1) to largest (4).\",\"options\":[],\"answers\":[\"1. Prion, 2. Virus, 3. Prokaryote, 4. Eukaryote\"],\"difficulty\":0.8,\"originalIndex\":1242}"
 	],
 	"Optics": [
 	  "{\"question\":\"An electron in the hydrogen atom transitions from the n= 4 to the n= 2 energy state. Sunlight, which contains wavelengths of all the colors, f[]irst passes through an absorption f[]ilter with the same color in part (iii). That light then passes through a second f[]ilter. What color would we then observe if the second f[]ilter was colored Red?\",\"options\":[\"Red\",\"Black\",\"Cannot determine\"],\"answers\":[2],\"difficulty\":0.5,\"originalIndex\":883}",
@@ -200,7 +226,9 @@
 	  "{\"question\":\"If the energy of a photon is , what is the approximate frequency? Use  for Planck’s constant.\",\"options\":[\"1.66 e-14\",\"2.66 e-14\",\"3.66 e-14\",\"4.66 e-14\",\"5.66 e-14\"],\"answers\":[3],\"difficulty\":0.8}",
 	  "{\"question\":\"If the photon in the previous problem, with a frequency of 781.649 THz and energy of 3.23 eV, was the result of an atomic transitions, it would be:\",\"options\":[\"1 4\",\"1 6\",\"2  7\",\"2  9\",\"3  5\",\"3  6\"],\"answers\":[6],\"difficulty\":0.8}",
 	  "{\"question\":\"Use the following diagram of a wave. The vertical distance between which of the following pairs of points is the amplitude of the wave?\",\"options\":[\"O and A\",\"O and B\",\"O and C\",\"A and C\",\"B and C\",\"B and D\"],\"answers\":[2],\"difficulty\":0.3,\"originalIndex\":520}",
-	  "{\"question\":\"Use the following diagram of a wave. The vertical distance between which of the following pairs of points is the amplitude of the wave?\",\"options\":[\"O and A\",\"O and B\",\"O and C\",\"A and C\",\"B and C\",\"B and D\"],\"answers\":[2],\"difficulty\":0.3}"
+	  "{\"question\":\"Use the following diagram of a wave. The vertical distance between which of the following pairs of points is the amplitude of the wave?\",\"options\":[\"O and A\",\"O and B\",\"O and C\",\"A and C\",\"B and C\",\"B and D\"],\"answers\":[2],\"difficulty\":0.3}",
+	  "{\"question\":\"The following is an example of _________\",\"options\":[\"Diffuse reflection\",\"Mirror effect\",\"Specular reflection\",\"Naturalistic observation\"],\"answers\":[3],\"difficulty\":0.1,\"originalIndex\":146}",
+	  "{\"question\":\"What planet’s movement did not correspond to Newtonian Physics, but did to Einsteinian Physics?\",\"options\":[\"Jupiter\",\"Mercury\",\"Neptune\",\"Earth\",\"Pluto\"],\"answers\":[2],\"difficulty\":0.1,\"originalIndex\":2597}"
 	],
 	"Potions and Poisons": [
 	  "{\"question\":\"Given the previous information, would Dr. A have been able to give 12 mg of atropine and scopolamine to his participants without losing his job?\",\"options\":[],\"answers\":[\"No\"],\"difficulty\":0.9}",
@@ -224,7 +252,11 @@
 	  "{\"question\":\"The fattail scorpion is native to what continent?\",\"options\":[\"Europe\",\"Africa\",\"South America\",\"North America\"],\"answers\":[2],\"difficulty\":0.1,\"originalIndex\":258}",
 	  "{\"question\":\"Match the following facts to the poisonous animal:\\nFattail scorpion\",\"options\":[],\"answers\":[\"aka the “man-killer”\"],\"difficulty\":0.6,\"originalIndex\":824}",
 	  "{\"question\":\"a) Identify the organism with its common name\",\"options\":[],\"answers\":[\"Potato\"],\"difficulty\":0.9,\"originalIndex\":166}",
-	  "{\"question\":\"Mark the letter of the pH strip that corresponds to each substance:\\nWater\",\"options\":[],\"answers\":[\"7\"],\"difficulty\":0.2,\"originalIndex\":574}"
+	  "{\"question\":\"Mark the letter of the pH strip that corresponds to each substance:\\nWater\",\"options\":[],\"answers\":[\"7\"],\"difficulty\":0.2,\"originalIndex\":574}",
+	  "{\"question\":\"Two other spiders that have markings similar to the brown recluse spiders are ___ and ___.\",\"options\":[\"cellar spiders\",\"evening spiders\",\"morning spiders\",\"pirate spiders\"],\"answers\":[1,4],\"difficulty\":0.4}",
+	  "{\"question\":\"True or False: The Cane Toad can also be found in Northern Australia\",\"options\":[\"True\",\"False\"],\"answers\":[1],\"difficulty\":0.1}",
+	  "{\"question\":\"What is the chemical formula for Epsom salts?\",\"options\":[],\"answers\":[\"MgSO4\"],\"difficulty\":0.5,\"originalIndex\":79}",
+	  "{\"question\":\"Atropine isolated from Jimson weed has application in medicine. Which of the following is correct?\",\"options\":[\"It is used to help healing of sutures following open-heart surgery.\",\"It is used as an anesthetic during dental surgery.\",\"It is used for dilation of pupils during the eye surgery.\",\"It is used as a diuretic prior to prostate surgery.\"],\"answers\":[3],\"difficulty\":0.6,\"originalIndex\":815}"
 	],
 	"Reach for the Stars": [
 	  "{\"question\":\"Which of the following best describes the object from the previous image?\",\"options\":[\"Elliptical Galaxy\",\"Spiral Galaxy\",\"Irregular Galaxy\",\"Dwarf Irregular Galaxy\",\"Nebula\",\"Cloud Complex\"],\"answers\":[4],\"difficulty\":0.5}",
@@ -241,7 +273,8 @@
 	  "{\"question\":\"Pick the odd one out from the following answer choices.\",\"options\":[\"Guatemala City\",\"Kansas City\",\"Carson City\",\"Panama City\",\"New York City\",\"Vatican City\"],\"answers\":[2],\"difficulty\":0.1,\"originalIndex\":168}"
 	],
 	"Rocks and Minerals": [
-	  "{\"question\":\"What habit does sample Y exhibit?\",\"options\":[\"Rosette\",\"Druzy\",\"Hopper\",\"Geodic\",\"Pisolitic\"],\"answers\":[1],\"difficulty\":0.4}"
+	  "{\"question\":\"What habit does sample Y exhibit?\",\"options\":[\"Rosette\",\"Druzy\",\"Hopper\",\"Geodic\",\"Pisolitic\"],\"answers\":[1],\"difficulty\":0.4}",
+	  "{\"question\":\"Pressure increases at\",\"options\":[\"Greater depth\",\"Less depth\"],\"answers\":[1],\"difficulty\":0.5,\"originalIndex\":792}"
 	],
 	"Wind Power": [
 	  "{\"question\":\"Identify the parts of a wind turbine using the answer bank below: A, B, C, D, E, F, G, H. Answer Bank: Drive Shaft, Gearbox, Generator, High Speed Shaft, Hub, Rotating Bearing, Rotor Blades, Tower Support\",\"options\":[],\"answers\":[\"A: Rotor Blades\",\"B: Hub\",\"C: Rotating Bearing\",\"D: Gearbox\",\"E: High Speed Shaft\",\"F: Generator\",\"G: Drive Shaft\",\"H: Tower Support\"],\"difficulty\":0.1}",
