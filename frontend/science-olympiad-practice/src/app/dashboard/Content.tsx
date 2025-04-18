@@ -568,15 +568,15 @@ export default function WelcomePage() {
   };
 
   const UPDATE_INFO: UpdateInfo = {
-    date: "3/24/25",
+    date: "4/17//25",
     features: [
       "📈 Larger Test Bank!!!",
-      "✨ Potions and Poisons, RFTS have much larger question banks",
-      "🎯 Minor changes, bugfixes",
+      "✨ Explanation automatically considers your answer for accuracy",
+      "🎯 Small fixes",
     ],
     comingSoon: [
       "⏰ Division B/C toggle",
-      "⏰ Small Codebusters fixes"
+      "⏰ More tests for 2026 events"
     ]
   };
 
@@ -1126,7 +1126,7 @@ export default function WelcomePage() {
           </div>
           
           {/* --- Row of Action Buttons --- */} 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {/* Recent Reports Button */} 
             <div 
               onClick={() => router.push('/reports')}
@@ -1146,18 +1146,6 @@ export default function WelcomePage() {
               <div className={`w-full h-full p-6 flex flex-col items-center md:items-start justify-center text-center md:text-left ${darkMode ? 'text-white' : 'text-black'}`}>
                 <span className="text-xl font-bold mb-1">Bookmarked Questions</span>
                 <span className={`text-sm opacity-80 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>View and practice over your bookmarked questions.</span>
-              </div>
-            </div>
-
-            {/* Fun Zone Button (New) */} 
-            <div 
-              onClick={() => router.push('/fun')} // Placeholder link
-              className={`rounded-lg cursor-pointer transition-all duration-300 transform hover:-translate-y-1 shadow-lg ${darkMode ? 'bg-gradient-to-r from-purple-800 to-pink-800' : 'bg-gradient-to-r from-purple-500 to-pink-500'} text-white`}
-            >
-              <div className="w-full h-full p-6 flex flex-col items-center md:items-start justify-center text-center md:text-left">
-                <span className="text-xl font-bold mb-1">Fun Zone</span>
-                <span className="text-sm opacity-90">If anyone asks, you're learning science.</span>
-                <center><span className="text-xs opacity-90">If you do good, you might get something fun...</span></center>
               </div>
             </div>
           </div>
