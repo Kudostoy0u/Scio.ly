@@ -1,0 +1,24 @@
+name: Sync Upstream
+
+permissions: write-all              # grant write permission
+
+on: 
+  schedule:
+    - cron: '0 * * * *'             # scheduled for 00:00 every Monday
+  workflow_dispatch:                # trigger manually
+
+jobs:
+  sync-upstream:
+    runs-on: ubuntu-latest
+    steps: 
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: upstream             # set the branch to merge to
+          fetch-depth: 0 
+      - name: Sync Upstream
+        uses: zhangnew/sync-upstream@v1
+        with:
+          upstream: NapervilleASK/Scio.ly      # set the upstream repo
+          upstream-branch: main   # set the upstream branch to merge from
+          branch: upstream          # set the branch to merge to

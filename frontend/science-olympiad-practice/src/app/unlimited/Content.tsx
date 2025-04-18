@@ -50,13 +50,13 @@ Student Answer: ${userAnswer}
 
 Grade this response on a scale as follows:
 0: The answer is completely incorrect.
-0.5: The answer is partially correct. (BE STRINGENT ON THIS THIS MEANS THE STUDENT GOT SOME OF THE ANSWERS BUT NOT ALL)
+0.5: The answer is partially correct.
 1: The answer is fully correct.
 Provide only a single number (0, 0.5, or 1) as the score. Be lenient if the student technically fills the criteria`;
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=AIzaSyAkBDzzh7TQTJzmlLmzC7Yb5ls5SJqe05c`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${arr[Math.floor(Math.random() * arr.length)]}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -107,20 +107,6 @@ const isMultiSelectQuestion = (question: string, answers?: (number | string)[]):
   return false;
 };
 
-// Add this new function to check if a question has already been contested
-const hasQuestionBeenContested = (index: number): boolean => {
-  const contestedQuestions = JSON.parse(localStorage.getItem('contestedUnlimitedQuestions') || '[]');
-  return contestedQuestions.includes(index);
-};
-
-// Add this new function to mark a question as contested
-const markQuestionAsContested = (index: number): void => {
-  const contestedQuestions = JSON.parse(localStorage.getItem('contestedUnlimitedQuestions') || '[]');
-  if (!contestedQuestions.includes(index)) {
-    contestedQuestions.push(index);
-    localStorage.setItem('contestedUnlimitedQuestions', JSON.stringify(contestedQuestions));
-  }
-};
 
 export default function UnlimitedPracticePage() {
   const router = useRouter();
@@ -134,6 +120,7 @@ export default function UnlimitedPracticePage() {
   const [currentAnswer, setCurrentAnswer] = useState<(string | null)[]>([]);
   const [routerData, setRouterData] = useState<RouterParams>({});
   const { darkMode, setDarkMode } = useTheme();
+  const [isProcessingReport, setIsProcessingReport] = useState<Record<number, boolean>>({});
   const [reportState, setReportState] = useState<ReportState>({
     isOpen: false,
     questionIndex: null
@@ -347,9 +334,8 @@ export default function UnlimitedPracticePage() {
     
     try {
       const question = data[reportState.questionIndex];
-      const endpoint = action === 'remove' ? '/api/report/remove' : '/api/report/edit';
-      
-      const response = await fetch(endpoint, {
+
+      const response = await fetch('/api/report/edit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -378,7 +364,7 @@ export default function UnlimitedPracticePage() {
     }
   };
 
-  const getExplanation = async (index: number, question: Question) => {
+  const getExplanation = async (index: number, question: Question, userAnswer: (string | null)[] ) => {
     if (explanations[index]) return;
 
     const now = Date.now();
@@ -388,22 +374,25 @@ export default function UnlimitedPracticePage() {
     }
     setLastCallTime(now);
 
-    setLoadingExplanation(prev => ({ ...prev, [index]: true }));
+    setLoadingExplanation((prev) => ({ ...prev, [index]: true }));
 
     try {
-      const prompt = `Question: ${question.question}${question.options && question.options.length > 0 ? `\nOptions: ${question.options.join(', ')}` : ''}\nAnswer:${question.answers[0]}
-                      Solve this question. Start with the text "Explanation: ", providing a clear and informative explanation. Start off by giving a one paragraph explanation that leads to your answer, nothing else.`;
+      const isMCQ = question.options && question.options.length > 0;
+      const prompt = `You are ${userAnswer.length > 0 && userAnswer[0] ? "giving feedback on a student's response to a science olympiad question." : "explaining a reasoning process to solve a science olympiad question."} 
+      Question: ${question.question}${isMCQ ? `\nOptions: ${question?.options?.join(', ')}` : ''}\n ${userAnswer.length > 0 && userAnswer[0] ? "Student's answer:" + userAnswer.join(', ') : ""}
+      Provide provide a clear and informative reasoning to come to an answer to this question. \n
+      Start your output with "**Explanation:** ", end the explanation with "Final answer: [Answer]. \n
+      ${userAnswer.length > 0 && userAnswer[0] ? "Then, you must end your output with only CORRECT or INCORRECT, if the student's answer was correct or not." : ""}`;
 
-      console.log('Sending prompt:', prompt);
-
+      console.log('Sending explanation prompt:', prompt);
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyAkBDzzh7TQTJzmlLmzC7Yb5ls5SJqe05c`,
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + arr[Math.floor(Math.random() * arr.length)],
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }]
-          })
+          }),
         }
       );
 
@@ -414,69 +403,52 @@ export default function UnlimitedPracticePage() {
       }
 
       const data = await response.json();
-      if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+      const fullResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      console.log("API RESPONSE:", fullResponse)
+      if (!fullResponse) {
         throw new Error('Invalid response format from API');
       }
 
-      const explanation = data.candidates[0].content.parts[0].text;
-      setExplanations(prev => ({ ...prev, [index]: explanation }));
+      // Parse the response
+      const explanationText = fullResponse;
+      if (!explanationText.includes("INCORRECT") && explanationText.includes("CORRECT")) {
+        if (gradingResults[index] == 0) {
+          toast.success("Your answer was determined to be correct!");
+          const newQ = JSON.parse(JSON.stringify(question));
+          newQ.answers = userAnswer.filter(e=>e!=null)
+          await fetch('/api/report/edit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            question: question.question,
+            answer: question.answers,
+            originalQuestion: JSON.stringify(question),
+            editedQuestion: JSON.stringify(newQ),
+            event: routerData.eventName || 'Unknown Event',
+            reason: "",
+            bypass: true
+          }),
+        });
+        } 
+        setGradingResults(prev => ({ ...prev, [index]: 3 }));
+      }
+      setExplanations((prev) => ({ ...prev, [index]: explanationText.includes("INCORRECT") ? explanationText.slice(0, -10) : explanationText.includes("CORRECT") ? explanationText.slice(0, -8) : explanationText }));
+
     } catch (error) {
       console.error('Error in getExplanation:', error);
-      setExplanations(prev => ({
+      const errorMsg = `Failed to load explanation: ${(error as Error).message}`;
+      setExplanations((prev) => ({
         ...prev,
-        [index]: 'Failed to load explanation. Please try again later.'
+        [index]: errorMsg,
       }));
-      toast.error(`Failed to get explanation: ${(error as Error).message}`);
+      toast.error(errorMsg);
     } finally {
-      setLoadingExplanation(prev => ({ ...prev, [index]: false }));
+      setLoadingExplanation((prev) => ({ ...prev, [index]: false }));
     }
   };
 
-  const validateContest = async (question: Question, userAnswer: (string | null)[]): Promise<boolean> => {
-    if (!userAnswer.length) { 
-      return false
-    }
-    toast.info("Judging...")
-    const prompt = `You are grading a student's answer to a Science Olympiad question: ${question.question}.
-${question.options ? `Options: ${question.options.join(', ')}\n` : ''}
-
-Here's how they responded (if mcq, 1 based index): ${ userAnswer.filter(a => a !== null) }
-Share a reasoning process to determine whether or not their response is valid or invalid. When you finish, end on either "VALID" or "INVALID" or "BAD QUESTION", and that should be the end of your response, not even a period to end.
-Consider the nuances of a question, maybe it relies on previous (and unavailable) context, like when nouns are preceded by "the", in which case it is a bad question
-`;
-
-    try {
-      // AIzaSyAkBDzzh7TQTJzmlLmzC7Yb5ls5SJqe05c
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=` + arr[Math.floor(Math.random() * arr.length)],
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }]
-          })
-        }
-      );
-
-      if (!response.ok) {
-        console.error('Gemini API error:', await response.text());
-        return false;
-      }
-
-      const data = await response.json();
-      const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-      console.log(prompt)
-      console.log(question)
-      console.log(resultText)
-      if (resultText) {
-         return !resultText.endsWith("INVALID")
-      }
-      return false;
-    } catch (error) {
-      console.error('Error validating contest:', error);
-      return false;
-    }
-  };
 
   const handleBookmark = async (question: Question) => {
     if (!auth.currentUser) {
@@ -531,7 +503,45 @@ Consider the nuances of a question, maybe it relies on previous (and unavailable
       toast.error('Failed to remove bookmark');
     }
   };
+  const updateContext = (bool, msg) => {
+    (bool ? toast.success : toast.error)(msg);
+  }
+  // Function to handle direct report without modal
+  const handleDirectReport = async (index: number) => {
+    if (isProcessingReport[index]) return; // Prevent multiple clicks
+    setIsProcessingReport(prev => ({ ...prev, [index]: true }));
+    
+    try {
+      const question = data[index];
+      console.log(JSON.stringify({
+        question: question.question,
+        answer: question.answers,
+        originalQuestion: JSON.stringify(question),
+        event: routerData.eventName || 'Unknown Event',
+        reason: 'Direct report from test page' // Default reason
+      }))
+      const response = await fetch('/api/report/remove', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: question.question,
+          answer: question.answers,
+          originalQuestion: JSON.stringify(question),
+          event: routerData.eventName || 'Unknown Event',
+          reason: 'Direct report from test page' // Default reason
+        }),
+      });
 
+      const result = await response.json();
+      updateContext(result.success, result.success ? 'Question reported for removal!' : result.message || 'Failed to submit report');
+    } catch {
+      updateContext(false, 'Failed to submit report. Please try again.');
+    } finally {
+      setIsProcessingReport(prev => ({ ...prev, [index]: false }));
+    }
+  };
   const renderQuestion = (question: Question) => {
     const isMultiSelect = isMultiSelectQuestion(question.question, question.answers);
     const currentAnswers = currentAnswer || [];
@@ -545,55 +555,7 @@ Consider the nuances of a question, maybe it relies on previous (and unavailable
       }`}>
         <div className="flex justify-between items-start">
           <h3 className="font-semibold text-lg">Question</h3>
-          <div className="flex gap-2">
-            {isSubmitted && (
-              <button
-              onClick={async () => {
-                // Check if question has already been contested
-                if (hasQuestionBeenContested(currentQuestionIndex)) {
-                  toast.error('This question has already been contested', {
-                    autoClose: 5000
-                  });
-                  return;
-                }
-                
-                try {
-                  // Validate contest and wait for it to finish completely
-                  const isValid = await validateContest(data[currentQuestionIndex], currentAnswer ?? []);
-                  
-                  if (isValid) {
-                    setGradingResults(() => ({ [currentQuestionIndex]: 1 }));
-                    toast.success('Contest accepted! Your answer has been marked as correct.', {
-                      autoClose: 5000
-                    });
-                  } else {
-                    toast.error('Contest rejected. The original grade stands.', {
-                      autoClose: 5000
-                    });
-                  }
-                  
-                  // Mark as contested only after all notifications and processing is complete
-                  markQuestionAsContested(currentQuestionIndex);
-                } catch (error) {
-                  console.error('Error during contest validation:', error);
-                  toast.error('An error occurred during contest validation', {
-                    autoClose: 5000
-                  });
-                }
-              }}
-                className="text-gray-500 hover:text-blue-500 transition-colors duration-200"
-                title="Contest this question"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 57 57"
-                  fill="currentColor"
-                >
-                  <path d="M57,0h-8.837L18.171,29.992l-4.076-4.076l-1.345-4.034c-0.22-0.663-0.857-1.065-1.55-0.98 c-0.693,0.085-1.214,0.63-1.268,1.327l-0.572,7.438l5.982,5.982L4.992,46H2.274C1.02,46,0,47.02,0,48.274v6.452 C0,55.98,1.02,57,2.274,57h6.452C9.98,57,11,55.98,11,54.726v-3.421l10-10l6.021,6.021l6.866-1.145 c0.685-0.113,1.182-0.677,1.21-1.37c0.028-0.693-0.422-1.295-1.096-1.464l-3.297-0.824l-4.043-4.043L57,8.489V0z M9,54.726 C9,54.877,8.877,55,8.726,55H2.274C2.123,55,2,54.877,2,54.726v-6.452C2,48.123,2.123,48,2.274,48h0.718h5.734 C8.877,48,9,48.123,9,48.274v5.031V54.726z M11,48.477v-0.203C11,47.02,9.98,46,8.726,46H7.82l8.938-8.938l1.417,1.417l1.411,1.411 L11,48.477z M30.942,44.645l-3.235,0.54l-5.293-5.293l0,0l-2.833-2.833l-8.155-8.155l0.292-3.796l0.63,1.89l4.41,4.41l0,0 l4.225,4.225l8.699,8.699L30.942,44.645z M25.247,37.066l-2.822-2.822l-2.839-2.839L48.991,2h4.243L23.829,31.406 c-0.391,0.391-0.391,1.023,0,1.414c0.195,0.195,0.451,0.293,0.707,0.293s0.512-0.098,0.707-0.293L55,3.062v4.592L25.247,37.066z" />
-                </svg>
-              </button>
-            )}
+          <div className="flex gap-2 items-center">
             <button
               onClick={() => isBookmarked ? handleRemoveBookmark(question) : handleBookmark(question)}
               className={`text-gray-500 hover:text-yellow-500 transition-colors duration-200`}
@@ -615,25 +577,40 @@ Consider the nuances of a question, maybe it relies on previous (and unavailable
               </svg>
             </button>
             <button
-              onClick={() => setReportState({ isOpen: true, questionIndex: currentQuestionIndex })}
-              className="text-gray-500 hover:text-red-500 transition-colors duration-200"
-              title="Report this question"
+            onClick={() => setReportState({ isOpen: true, questionIndex: currentQuestionIndex })}
+            className="text-gray-500 hover:text-blue-500 transition-colors duration-200 p-1 rounded-full hover:bg-gray-500/20"
+            title="Suggest Edit"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </button>
+          <button
+          onClick={() => handleDirectReport(currentQuestionIndex)}
+          className={`text-gray-500 hover:text-red-500 transition-colors duration-200 p-1 rounded-full hover:bg-gray-500/20 ${isProcessingReport[currentQuestionIndex] ? 'opacity-50 cursor-not-allowed' : ''}`}
+          title="Report for removal"
+          disabled={isProcessingReport[currentQuestionIndex]}
+        >
+          {isProcessingReport[currentQuestionIndex] ? (
+            <div className="animate-spin rounded-full h-5 w-5 border-2 border-red-500 border-t-transparent"></div>
+          ) : (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                <line x1="12" y1="9" x2="12" y2="13" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-            </button>
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          )}
+        </button>
           </div>
         </div>
         <p className="mb-4 break-words whitespace-normal overflow-x-auto">
@@ -647,12 +624,14 @@ Consider the nuances of a question, maybe it relies on previous (and unavailable
                 key={idx}
                 className={`block p-2 rounded-md transition-colors duration-1000 ease-in-out ${
                   isSubmitted && currentAnswers.includes(option)
-                    ? gradingResults[currentQuestionIndex] === 1
+                    ? gradingResults[currentQuestionIndex] >= 1
                       ? darkMode ? 'bg-green-800' : 'bg-green-200'
                       : gradingResults[currentQuestionIndex] === 0
-                      ? darkMode ? 'bg-red-900' : 'bg-red-200'
-                      : darkMode ? 'bg-amber-400' : 'bg-amber-400'
-                    : darkMode ? 'bg-gray-700' : 'bg-gray-200'
+                        ? darkMode ? 'bg-red-900' : 'bg-red-200'
+                        : darkMode ? 'bg-amber-400' : 'bg-amber-400'
+                    : isSubmitted && question.options?.length && question.answers.indexOf(idx+1) != -1 && gradingResults[currentQuestionIndex] != 3
+                      ? darkMode ? 'bg-blue-700' : 'bg-blue-200'
+                      : darkMode ? 'bg-gray-700' : 'bg-gray-200'
                 } ${!isSubmitted && (darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-300')}`}
               >
                 <input
@@ -698,7 +677,7 @@ Consider the nuances of a question, maybe it relies on previous (and unavailable
               if (!currentAnswers[0]) {
                 resultText = 'Skipped';
                 resultColor = 'text-blue-500';
-              } else if (score === 1) {
+              } else if (score === 1 || score === 2 || score === 3) {
                 resultText = 'Correct!';
                 resultColor = 'text-green-600';
               } else if (score === 0) {
@@ -725,7 +704,7 @@ Consider the nuances of a question, maybe it relies on previous (and unavailable
             <div className="mt-2">
               {!explanations[currentQuestionIndex] ? (
                 <button
-                  onClick={() => getExplanation(currentQuestionIndex, question)}
+                  onClick={() => getExplanation(currentQuestionIndex, question, currentAnswers ?? [])}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-300 ${
                     darkMode
                       ? 'bg-gray-700 hover:bg-gray-600 text-blue-400'
