@@ -54,45 +54,6 @@
 		"original": "{\"question\":\"During what month of fetal development do fingerprints develop?\",\"options\":[\"3rd month\",\"4th month\",\"8th month\",\"6th month\"],\"answers\":[2],\"difficulty\":1,\"originalIndex\":239}",
 		"edited": "{\"question\":\"During what month of fetal development do fingerprints develop?\",\"options\":[\"3rd month\",\"4th month\",\"8th month\",\"6th month\"],\"answers\":[1],\"difficulty\":1}",
 		"timestamp": "2025-04-04T03:14:59.522Z"
-	  },
-	  {
-		"original": "{\"question\":\"True or False: Albinism is a condition resulting when melanocytes the skin loses its melanocytes or when its melanocytes stop producing melanin.\",\"options\":[\"True\",\"False\"],\"answers\":[1],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"True or False: Albinism is a condition resulting when melanocytes, stop producing melanin.\",\"options\":[\"True\",\"False\"],\"answers\":[1],\"difficulty\":0.5}",
-		"timestamp": "2025-04-06T19:38:07.562Z"
-	  },
-	  {
-		"original": "{\"question\":\"For all questions, the level of detail required will be at the standard of high school anatomy. What is the primary function of sebum?\",\"options\":[\"To lubricate and waterproof the skin and hair\",\"To provide a barrier against UV radiation\",\"To regulate body temperature\",\"To aid in vitamin D synthesis\"],\"answers\":[1],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"What is the primary function of sebum?\",\"options\":[\"To lubricate and waterproof the skin and hair\",\"To provide a barrier against UV radiation\",\"To regulate body temperature\",\"To aid in vitamin D synthesis\"],\"answers\":[1],\"difficulty\":0.22}",
-		"timestamp": "2025-04-06T19:44:57.193Z"
-	  },
-	  {
-		"original": "{\"question\":\"A [blank] deficiency can lead to redness and itching of the skin. Bubble in all that apply.\",\"options\":[\"Iron\",\"Zinc\",\"Protein\",\"Vitamin B12\",\"None of the above\"],\"answers\":[2,3],\"difficulty\":0.1}",
-		"edited": "{\"question\":\"A [blank] deficiency can lead to redness and itching of the skin. Bubble in all that apply.\",\"options\":[\"Iron\",\"Zinc\",\"Protein\",\"Vitamin B12\",\"None of the above\"],\"answers\":[2,3],\"difficulty\":0.89}",
-		"timestamp": "2025-04-12T01:21:38.706Z"
-	  }
-	],
-	"Anatomy - Muscular": [
-	  {
-		"original": "{\"question\":\"Station 2: When do adults of the species being identified usually vocalise?\",\"options\":[\"Winter\",\"Spring\",\"Summer\",\"Fall\"],\"answers\":[2],\"difficulty\":0.4}",
-		"edited": "{\"question\":\"Station 2: When do adults of the species being identified usually vocalise?\",\"options\":[\"Winter\",\"Spring\",\"Summer\",\"Fall\"],\"answers\":[2],\"difficulty\":0.4}",
-		"timestamp": "2025-04-07T18:10:25.788Z"
-	  },
-	  {
-		"original": "{\"question\":\"Now Ms. Onagires is teaching about levers! One of her favorite students, Anqi, refuses to learn about levers unless Ms. Onagires relates it to anatomy. Given the three actions, pick the choice that correctly classifies the lever system. A: Neck extension, B: Elbow flexion, C: Plantar flexion\",\"options\":[\"A: I B: II C: III\",\"A: I B: III C: II\",\"A: II B: I C: III\",\"A: II B: III C: I\",\"A: III B: I C: II\",\"A: III B: II C: I\"],\"answers\":[5],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"Now Ms. Onagires is teaching about levers! One of her favorite students, Anqi, refuses to learn about levers unless Ms. Onagires relates it to anatomy. Given the three actions, pick the choice that correctly classifies the lever system. A: Neck extension, B: Elbow flexion, C: Plantar flexion\",\"options\":[\"A: I B: II C: III\",\"A: I B: III C: II\",\"A: II B: I C: III\",\"A: II B: III C: I\",\"A: III B: I C: II\",\"A: III B: II C: I\"],\"answers\":[2],\"difficulty\":0.55}",
-		"timestamp": "2025-04-07T21:12:14.589Z"
-	  },
-	  {
-		"original": "{\"question\":\"ATP is ____ during the power stroke & then ___. Another ATP is released to _____ the crossbridge.\",\"options\":[\"Released, reattached, break\",\"Released, reattached, shift\",\"Attached, released, break\",\"Attached, released, shift\"],\"answers\":[3],\"difficulty\":0.6,\"originalIndex\":55}",
-		"edited": "{\"question\":\"ATP is ____ before the power stroke & then ___. Another ATP is released to _____ the crossbridge.\",\"options\":[\"Released, reattached, break\",\"Released, reattached, shift\",\"Attached, released, break\",\"Attached, released, shift\"],\"answers\":[3],\"difficulty\":0.6}",
-		"timestamp": "2025-04-12T02:06:55.305Z"
-	  }
-	],
-	"Anatomy - Nervous": [
-	  {
-		"original": "{\"question\":\"Experimental Design Test: According to the passage, what is the independent variable in this experiment?\",\"options\":[\"Number of items recalled\",\"Number of items in a group\",\"Time spent memorizing\",\"Type of items being memorized\"],\"answers\":[2],\"difficulty\":0.6,\"originalIndex\":535}",
-		"edited": "{\"question\":\"What is the threshold value for a neuron?\",\"options\":[\"0 mV\",\"-55 mV\",\"30 mV \",\"-95 mV\"],\"answers\":[2],\"difficulty\":0.26}",
-		"timestamp": "2025-04-17T01:28:10.568Z"
 	  }
 	],
 	"Anatomy - Skeletal": [
@@ -130,16 +91,6 @@
 		"original": "{\"question\":\"Which of the following statements are true?\",\"options\":[\"An average human has 12 ribs.\",\"Spinal stenosis may provoke leukemia.\",\"A Salter-Harris fracture is an injury to the growth plate area of a child’s bone.\",\"Torsion fractures are the most common type of fracture.\"],\"answers\":[3],\"difficulty\":0.5}",
 		"edited": "{\"question\":\"Which of the following statements are true?\",\"options\":[\"An average human has 12 ribs.\",\"Spinal stenosis may provoke leukemia.\",\"A Salter-Harris fracture is an injury to the growth plate area of a child’s bone.\",\"Torsion fractures are the most common type of fracture.\"],\"answers\":[1,3],\"difficulty\":0.5}",
 		"timestamp": "2025-03-28T15:04:07.106Z"
-	  },
-	  {
-		"original": "{\"question\":\"What is the total number of points for Division B as stated in the intro?\",\"options\":[\"85\",\"87\",\"89\",\"91\"],\"answers\":[3],\"difficulty\":0.3}",
-		"edited": "{\"question\":\"What is the total number of points for Division B as stated in the intro?\",\"options\":[\"85\",\"87\",\"89\",\"91\"],\"answers\":[3],\"difficulty\":0.3}",
-		"timestamp": "2025-04-07T13:47:56.912Z"
-	  },
-	  {
-		"original": "{\"question\":\"What percent of the body’s phosphate is stored in the skeleton?\",\"options\":[\"65%\",\"98%\",\"85%\",\"40%\"],\"answers\":[2],\"difficulty\":0.2}",
-		"edited": "{\"question\":\"What percent of the body’s phosphate is stored in the skeleton?\",\"options\":[\"65%\",\"98%\",\"85%\",\"40%\"],\"answers\":[3],\"difficulty\":0.2}",
-		"timestamp": "2025-04-11T05:40:28.979Z"
 	  }
 	],
 	"Astronomy": [
@@ -307,31 +258,6 @@
 		"original": "{\"question\":\"Now consider a Star C with absolute magnitude V = 0 mag, at a heliocentric distance of 100 pc, and a Star D with absolute magnitude V = -4 mag at a distance of 1 kpc. Rank the four stars (A,B,C,D) by their apparent V-band magnitudes, from brightest to faintest. (Star A has apparent magnitude V = 7 mag, Star B has apparent magnitude V = 12 mag.)\",\"options\":[\"B, C, D, A\",\"A, C, D, B\",\"A, B, C, D\",\"C, D, A, B\",\"D, C, A, B\",\"The correct answer is not listed above\"],\"answers\":[6],\"difficulty\":0.8}",
 		"edited": "{\"question\":\"Now consider a Star C with absolute magnitude V = 0 mag, at a heliocentric distance of 100 pc, and a Star D with absolute magnitude V = -4 mag at a distance of 1 kpc. Rank the four stars (A,B,C,D) by their apparent V-band magnitudes, from brightest to faintest. (Star A has apparent magnitude V = 7 mag, Star B has apparent magnitude V = 12 mag.)\",\"options\":[\"B, C, D, A\",\"A, C, D, B\",\"A, B, C, D\",\"C, D, A, B\",\"D, C, A, B\",\"The correct answer is not listed above\"],\"answers\":[4],\"difficulty\":0.8}",
 		"timestamp": "2025-04-05T12:20:15.108Z"
-	  },
-	  {
-		"original": "{\"question\":\"What role do the observed irregularities in the solar system play in developing models of planetary formation?\",\"options\":[\"They are irrelevant to models of planetary formation.\",\"They help conﬁrm models that lead to random encounters.\",\"They help reject models that allow for moons to have retrograde orbits.\",\"They indicate that the condensation model is the only possible explanation of how solar systems form.\"],\"answers\":[3],\"difficulty\":0.1}",
-		"edited": "{\"question\":\"What role do the observed irregularities in the solar system play in developing models of planetary formation?\",\"options\":[\"They are irrelevant to models of planetary formation.\",\"They help conﬁrm models that lead to random encounters.\",\"They help reject simplistic models of planetary formation.\",\"They indicate that the condensation model is the only possible explanation of how solar systems form.\"],\"answers\":[3],\"difficulty\":0.1}",
-		"timestamp": "2025-04-09T19:23:23.964Z"
-	  },
-	  {
-		"original": "{\"question\":\"Circle all true statements about M31 (Andromeda):\\na. Formed roughly 65 billion years ago\\nb. Most distant object in the night sky observable by naked eye\\nc. Merged with another galaxy approximately 100 million years ago, resulting in relatively young stellar population\\nd. Approximately 80% as massive as the Milky Way\",\"options\":[\"a. Formed roughly 65 billion years ago\",\"b. Most distant object in the night sky observable by naked eye\",\"c. Merged with another galaxy approximately 100 million years ago, resulting in relatively young stellar population\",\"d. Approximately 80% as massive as the Milky Way\"],\"answers\":[1,2,4],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"Check all true statements about M31 (Andromeda):\",\"options\":[\"a. Formed roughly 10 billion years ago\",\"b. Most distant object in the night sky observable by naked eye\",\"c. Merged with another galaxy approximately 100 million years ago, resulting in relatively young stellar population\",\"d. Approximately 80% as massive as the Milky Way\"],\"answers\":[1,2,4],\"difficulty\":0.5}",
-		"timestamp": "2025-04-10T20:01:36.221Z"
-	  },
-	  {
-		"original": "{\"question\":\"Roche-limit exceeding tidal forces can result in\\na. Explosion\\nb. Implosion\\nc. Spaghettiﬁcation\\nd. Ring-system formation\\ne. Tidal locking\",\"options\":[\"Explosion\",\"Implosion\",\"Spaghettiﬁcation\",\"Ring-system formation\",\"Tidal locking\"],\"answers\":[3,4],\"difficulty\":0.6}",
-		"edited": "{\"question\":\"Roche-limit exceeding tidal forces can result in a:\",\"options\":[\"Explosion\",\"Implosion\",\"Spaghettiﬁcation\",\"Ring-system formation\",\"Tidal locking\"],\"answers\":[3,4],\"difficulty\":0.66}",
-		"timestamp": "2025-04-10T20:02:19.465Z"
-	  },
-	  {
-		"original": "{\"question\":\"You’ve identified an O-type, an F-type, and an M-type star. Which star has the greatest stellar radius?\",\"options\":[\"O\",\"F\",\"M\",\"Not enough information provided\"],\"answers\":[1],\"difficulty\":0.6}",
-		"edited": "{\"question\":\"You’ve identified an O-type, an F-type, and an M-type star. Which star has the greatest stellar radius?\",\"options\":[\"O\",\"F\",\"M\",\"Not enough information provided\"],\"answers\":[4],\"difficulty\":0.6}",
-		"timestamp": "2025-04-10T20:13:38.260Z"
-	  },
-	  {
-		"original": "{\"question\":\"Mercury’s surface is characterized by\",\"options\":[\"Pyroclastic deposits\",\"Vents\",\"Hollows\",\"All of the above\"],\"answers\":[3,4],\"difficulty\":0.6}",
-		"edited": "{\"question\":\"Mercury’s surface is characterized by\",\"options\":[\"Pyroclastic deposits\",\"Vents\",\"Hollows\",\"All of the above\"],\"answers\":[4],\"difficulty\":0.6}",
-		"timestamp": "2025-04-10T20:25:41.711Z"
 	  }
 	],
 	"Chemistry Lab": [
@@ -389,23 +315,6 @@
 		"original": "{\"question\":\"Halogens: (check all that apply)\",\"options\":[\"Will not react with each other\",\"Are strong electron donors\",\"Form strong oxyacids of the formula HX3O\",\"Form strong covalent bond with Group 1A metals\"],\"answers\":[4],\"difficulty\":0.4,\"originalIndex\":1254}",
 		"edited": "{\"question\":\"Halogens: (check all that apply)\",\"options\":[\"Will not react with each other\",\"Are strong electron donors\",\"Form strong oxyacids of the formula HX3O\",\"Form strong ionic bonds with Group 1A metals\"],\"answers\":[4],\"difficulty\":0.4}",
 		"timestamp": "2025-04-04T16:19:01.644Z"
-	  },
-	  {
-		"original": "{\"question\":\"On a practical note carbonates in the solution need to be removed before titration and then the solution is subsequently alkalinized. Given that EDTA has pKa values of 0, 1.5, 2, 2.66, 6.16, 10.24, what pH should the solution be made: 0, 4, 7, 10, or 14? Ksp of Ca(OH)2 is 8 x 10^-6. You can assume that the upper bound of [M2+] is 3 mM and that Mg2+ concentration is negligible.\",\"options\":[\"0\",\"4\",\"7\",\"10\",\"14\"],\"answers\":[10],\"difficulty\":0.8}",
-		"edited": "{\"question\":\"On a practical note carbonates in the solution need to be removed before titration and then the solution is subsequently alkalinized. Given that EDTA has pKa values of 0, 1.5, 2, 2.66, 6.16, 10.24, what pH should the solution be made: 0, 4, 7, 10, or 14? Ksp of Ca(OH)2 is 8 x 10^-6. You can assume that the upper bound of [M2+] is 3 mM and that Mg2+ concentration is negligible.\",\"options\":[\"0\",\"4\",\"7\",\"10\",\"14\"],\"answers\":[2,4,10],\"difficulty\":0.8}",
-		"timestamp": "2025-04-13T03:15:18.090Z"
-	  }
-	],
-	"Circuit Lab": [
-	  {
-		"original": "{\"question\":\"In a circuit with a 20V battery and current of 10A, there are 3 resistors in series. One is 1 Ohm, one is .75 Ohm, what is the value of the third?\",\"options\":[\"0.10 Ohm\",\"0.25 Ohm\",\"0.65 Ohm\",\"0.75 Ohm\"],\"answers\":[1],\"difficulty\":0.6,\"originalIndex\":407}",
-		"edited": "{\"question\":\"In a circuit with a 20V battery and current of 10A, there are 3 resistors in series. One is 1 Ohm, one is .75 Ohm, what is the value of the third?\",\"options\":[\"0.10 Ohm\",\"0.25 Ohm\",\"0.65 Ohm\",\"0.75 Ohm\"],\"answers\":[2],\"difficulty\":0.1}",
-		"timestamp": "2025-04-07T16:31:55.359Z"
-	  },
-	  {
-		"original": "{\"question\":\"What are the 2 requirements for a circuit? Pick 2.\",\"options\":[\"There must be a closed conducting path\",\"There must be metal within the circuit\",\"There has to be a power source\",\"All parts of the circuit have to be touching each other\"],\"answers\":[1],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"What are the 2 requirements for a circuit? Pick 2.\",\"options\":[\"There must be a closed conducting path\",\"There must be metal within the circuit\",\"There has to be a power source\",\"All parts of the circuit have to be touching each other\"],\"answers\":[1,3],\"difficulty\":0.5}",
-		"timestamp": "2025-04-07T18:03:57.803Z"
 	  }
 	],
 	"Codebusters": [
@@ -465,93 +374,6 @@
 		"original": "{\"question\":\"What is the identity of mixture CS2?\",\"options\":[\"Salt and sugar\",\"Salt and sand\",\"Sand and gelatin\",\"Gelatin and sugar\"],\"answers\":[1],\"difficulty\":0.6}",
 		"edited": "{\"question\":\"What is the identity of mixture CS2? It is white, with a pH of almost exactly 7, and it consists of both cubic crystals, and hexagonal crystals.\",\"options\":[\"Salt and sugar\",\"Salt and sand\",\"Sand and gelatin\",\"Gelatin and sugar\"],\"answers\":[1],\"difficulty\":0.26}",
 		"timestamp": "2025-03-29T13:38:26.479Z"
-	  },
-	  {
-		"original": "{\"question\":\"What fiber smells like celery when burned?\",\"options\":[],\"answers\":[\"Acetate\"],\"difficulty\":0.5,\"originalIndex\":342}",
-		"edited": "{\"question\":\"What fiber smells like celery when burned?\",\"answers\":[\"Nylon\"],\"difficulty\":0.17}",
-		"timestamp": "2025-04-12T03:28:09.388Z"
-	  },
-	  {
-		"original": "{\"question\":\"Given that CS4 is lemon juice, who does CS4 implicate?\",\"options\":[\"Hermione\",\"Harry\",\"Ron\",\"Neville\",\"Cho\"],\"answers\":[5],\"difficulty\":0.6}",
-		"edited": "{\"question\":\"Given that CS4 is lemon juice, who does CS4 implicate?\",\"options\":[\"Hermione\",\"Harry\",\"Ron\",\"Neville\",\"I don't know\"],\"answers\":[],\"difficulty\":0.6}",
-		"timestamp": "2025-04-12T05:42:33.200Z"
-	  },
-	  {
-		"original": "{\"question\":\"Who does FP 1 (found at the crime scene) implicate?\",\"options\":[\"Harry\",\"Ron\",\"Hermione\",\"Cho\",\"Neville\"],\"answers\":[3],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"Who does FP 1 (found at the crime scene) implicate?\",\"options\":[\"Harry\",\"Ron\",\"Hermione\",\"Cho\",\"I don't know\"],\"answers\":[3],\"difficulty\":0.5}",
-		"timestamp": "2025-04-12T05:43:56.254Z"
-	  },
-	  {
-		"original": "{\"question\":\"The IOCI officers extracted a DNA sample (D1) from a partially eaten cookie found on the counter at the crime scene. Identity of DNA from Crime Scene D1\",\"options\":[],\"answers\":[\"Determine the identity of the DNA sample to identify suspects.\",\"Compare the DNA to DNA swabbed from mouths (D2) of Grand Moff Wilhuff Tarkin, DNA swabbed from mouths (D3) of The Caretaker, DNA swabbed from mouths (D4) of Bodhi Rook, DNA swabbed from mouths (D5) of Director Orson Krennic, DNA swabbed from mouths (D6) of Galen Erso.\"],\"difficulty\":0.8}",
-		"edited": "{\"question\":\"The IOCI officers extracted a DNA sample (D1) from a partially eaten cookie found on the counter at the crime scene. Identity of DNA from Crime Scene D1\",\"answers\":[\"No correct answer\"],\"difficulty\":1}",
-		"timestamp": "2025-04-12T05:47:00.935Z"
-	  },
-	  {
-		"original": "{\"question\":\"What is the identity of L3?\",\"options\":[\"Vinegar\",\"Ammonia\",\"Water\",\"Hydrogen peroxide\"],\"answers\":[3],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"What is the identity of L3?\",\"options\":[\"Vinegar\",\"Ammonia\",\"Water\",\"Unsure\"],\"answers\":[3],\"difficulty\":0.5}",
-		"timestamp": "2025-04-12T05:47:31.720Z"
-	  },
-	  {
-		"original": "{\"question\":\"Given that CS1 is calcium carbonate and gypsum, who does CS1 implicate?\",\"options\":[\"Harry and Neville\",\"Hermione and Ron\",\"Harry and Hermione\",\"Neville and Ron\"],\"answers\":[2],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"Given that CS1 is calcium carbonate and gypsum, who does CS1 implicate?\",\"options\":[\"Harry and Neville\",\"Hermione and Ron\",\"Harry and Hermione\",\"Unsure\"],\"answers\":[2],\"difficulty\":0.7}",
-		"timestamp": "2025-04-12T05:57:15.041Z"
-	  },
-	  {
-		"original": "{\"question\":\"What is the chemical formula of P3?\",\"options\":[\"C16H17NaO14\",\"C2H3NaO2\",\"NaHCO3\",\"CaCO3\"],\"answers\":[3],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"What is the chemical formula of P3?\",\"options\":[\"C16H17NaO14\",\"C2H3NaO2\",\"NaHCO3\",\"Unsure\"],\"answers\":[4],\"difficulty\":0.7}",
-		"timestamp": "2025-04-12T06:00:01.503Z"
-	  },
-	  {
-		"original": "{\"question\":\"What is the identity of P1?\",\"options\":[\"Gypsum\",\"Calcium carbonate\",\"Baking soda\",\"Sodium acetate\"],\"answers\":[1],\"difficulty\":0.6}",
-		"edited": "{\"question\":\"What is the identity of P1?\",\"options\":[\"Gypsum\",\"Calcium carbonate\",\"Baking soda\",\"Unsure\"],\"answers\":[],\"difficulty\":0.6}",
-		"timestamp": "2025-04-12T06:00:33.642Z"
-	  },
-	  {
-		"original": "{\"question\":\"When separating different colored markers into their components using paper chromatography, which is the better mobile phase, rubbing alcohol or water? Why?\",\"options\":[],\"answers\":[\"rubbing alcohol\",\"rubbing alcohol, it's nonpolar, and the dyes are nonpolar\"],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"When separating different colored markers into their components using paper chromatography, which is the better mobile phase, rubbing alcohol or water? Why?\",\"answers\":[\"Not enough information\"],\"difficulty\":0.7}",
-		"timestamp": "2025-04-12T06:02:32.435Z"
-	  },
-	  {
-		"original": "{\"question\":\"What is the identity of M3?\",\"options\":[\"Zinc\",\"Copper\",\"Tin\",\"Iron\",\"Aluminum\"],\"answers\":[1],\"difficulty\":0.6}",
-		"edited": "{\"question\":\"What is the identity of M3?\",\"options\":[\"Zinc\",\"Copper\",\"Tin\",\"Iron\",\"Unsure\"],\"answers\":[5],\"difficulty\":0.6}",
-		"timestamp": "2025-04-12T06:03:24.266Z"
-	  },
-	  {
-		"original": "{\"question\":\"From the crime scene scenario: what two categories were elves awarded points in?\",\"options\":[\"Best toy and best song\",\"Best cookies and best snowman\",\"Best toy using recycled material and best tasting Christmas cookies\",\"Best Christmas decorations and best wrapping\"],\"answers\":[3],\"difficulty\":0.3}",
-		"edited": "{\"question\":\"Incorrect\",\"options\":[\"Incorrect\"],\"answers\":[],\"difficulty\":1}",
-		"timestamp": "2025-04-12T17:16:45.809Z"
-	  },
-	  {
-		"original": "{\"question\":\"What is the identity of L1?\",\"options\":[\"Vinegar\",\"Lemon juice\",\"Ammonia\",\"Water\"],\"answers\":[2],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"What is the identity of L1?\",\"options\":[\"Vinegar\",\"Lemon juice\",\"Ammonia\",\"Water\"],\"answers\":[],\"difficulty\":0.7}",
-		"timestamp": "2025-04-12T17:17:38.405Z"
-	  },
-	  {
-		"original": "{\"question\":\"A piece of plastic was found by the stained walls. The plastic burns a yellow color and will sink in a brine solution. What is the identity of the plastic?\",\"options\":[\"PETE\",\"HDPE\",\"PVC\",\"PMMA\"],\"answers\":[1],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"A piece of plastic was found by the stained walls. The plastic burns a yellow color and will sink in a brine solution. What is the identity of the plastic?\",\"options\":[\"PETE\",\"HDPE\",\"PVC\",\"PMMA\"],\"answers\":[3],\"difficulty\":0.7}",
-		"timestamp": "2025-04-13T05:14:00.648Z"
-	  },
-	  {
-		"original": "{\"question\":\"What is P1 commonly used for?\",\"options\":[\"Building drywalls\",\"Heating vents\",\"Concrete\",\"Speakers\"],\"answers\":[1],\"difficulty\":0.5,\"originalIndex\":442}",
-		"edited": "{\"question\":\"What is P1, gypsum, commonly used for?\",\"options\":[\"Building drywalls\",\"Heating vents\",\"Concrete\",\"Speakers\"],\"answers\":[1],\"difficulty\":0.5}",
-		"timestamp": "2025-04-14T22:07:34.639Z"
-	  },
-	  {
-		"original": "{\"question\":\"What is the identity of CS7?\",\"options\":[\"PS\",\"PVC\",\"LDPE\",\"PETE\",\"PP\"],\"answers\":[3],\"difficulty\":0.5,\"originalIndex\":472}",
-		"edited": "{\"question\":\"What is the identity of CS7? (“dances” blue flame, candle wax smell)\",\"options\":[\"PS\",\"PVC\",\"LDPE\",\"PETE\",\"PP\"],\"answers\":[3],\"difficulty\":0.5}",
-		"timestamp": "2025-04-14T22:08:28.545Z"
-	  }
-	],
-	"Designer Genes": [
-	  {
-		"original": "{\"question\":\"In a newly discovered flower’s color is an autosomal trait where (R) red is dominant to (r) white. What would the phenotypic ratio be if these traits were codominant to each other?\",\"options\":[],\"answers\":[\"1 RR : 2 Rr : 1 rr\"],\"difficulty\":0.6,\"originalIndex\":2571}",
-		"edited": "{\"question\":\"In a newly discovered flower’s color is an autosomal trait where (R) red is dominant to (r) white. What would the phenotypic ratio be if these traits were codominant to each other?\",\"answers\":[\"1 RR : 2 Rr : 1 rr\"],\"difficulty\":0.6}",
-		"timestamp": "2025-04-13T18:48:24.197Z"
-	  },
-	  {
-		"original": "{\"question\":\"In mice, the gene for color coat (C) is dominant to the gene for albino (c), and gene for straight whiskers (S) is dominant to the gene for bent whiskers (s). Two heterozygous dominant mice are crossed CcSs x CcSs . What portion of the offspring would you expect to have bent whiskers?\",\"options\":[\"1/2\",\"1/16\",\"4/16\",\"2/16\"],\"answers\":[4],\"difficulty\":0.7,\"originalIndex\":2470}",
-		"edited": "{\"question\":\"In mice, the gene for color coat (C) is dominant to the gene for albino (c), and gene for straight whiskers (S) is dominant to the gene for bent whiskers (s). Two heterozygous dominant mice are crossed CcSs x CcSs . What portion of the offspring would you expect to have bent whiskers?\",\"options\":[\"1/2\",\"1/16\",\"4/16\",\"2/16\"],\"answers\":[3],\"difficulty\":0.7}",
-		"timestamp": "2025-04-14T23:16:24.774Z"
 	  }
 	],
 	"Disease Detectives": [
@@ -604,46 +426,6 @@
 		"original": "{\"question\":\"Over the next 12 months, 13,000 additional cases of RSV occurred in Athens and 4,000 additional cases of RSV occurred in Thessaloniki. What is the incidence of RSV over the last 12 months in Athens. Write your answer per 100,000 people.\",\"options\":[],\"answers\":[\"433.33\"],\"difficulty\":0.7}",
 		"edited": "{\"question\":\"Over the next 12 months, 13,000 additional cases of RSV occurred in Athens and 4,000 additional cases of RSV occurred in Thessaloniki. Provided that Athens has a total population of 3,100,000, calculate the incidence of RSV over the last 12 months in Athens. Write your answer per 100,000 people.\",\"answers\":[\"419.35\"],\"difficulty\":0.7}",
 		"timestamp": "2025-04-04T20:39:48.626Z"
-	  },
-	  {
-		"original": "{\"question\":\"A researcher asks participants to recall their alcohol consumption over the past ﬁve years. What type of bias is this?\",\"options\":[\"Selection bias\",\"Recall bias\",\"Performance bias\",\"Attrition bias\"],\"answers\":[2],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"A researcher asks participants to recall their alcohol consumption over the past ﬁve years. What type of bias is this?\",\"options\":[\"Selection bias\",\"Recall bias\",\"Performance bias\",\"Attrition bias\"],\"answers\":[2],\"difficulty\":0.18}",
-		"timestamp": "2025-04-07T18:30:17.866Z"
-	  },
-	  {
-		"original": "{\"question\":\"Who was the first to identify the bacteria responsible for the 1854 Broad Street Pump Cholera outbreak?\",\"options\":[\"Edward Jenner\",\"Joseph Goldberger\",\"Antonie van Leeuwenhoek\",\"Robert Koch\"],\"answers\":[4],\"difficulty\":0.8}",
-		"edited": "{\"question\":\"Who was the first to identify the bacteria responsible for the 1854 Broad Street Pump Cholera outbreak?\",\"options\":[\"Edward Jenner\",\"Joseph Goldberger\",\"Antonie van Leeuwenhoek\",\"John snow \"],\"answers\":[4],\"difficulty\":0.8}",
-		"timestamp": "2025-04-07T19:46:47.343Z"
-	  },
-	  {
-		"original": "{\"question\":\"If there were 40 new cases and 312 existing cases of disease Alpha over a 5 month time period and there were 108 new cases and 532 existing cases of disease Beta over a 1 year time period, which disease has a higher incidence rate and by how much? Giver your numerical answer and units.\",\"options\":[],\"answers\":[\"Alpha: 40/10000 per 5 months, Beta: 108/10000 per year, Alpha has higher incidence rate by 0.00483 cases/month\"],\"difficulty\":1}",
-		"edited": "{\"question\":\"If there were 40 new cases and 312 existing cases of disease Alpha over a 5 month time period and there were 108 new cases and 532 existing cases of disease Beta over a 1 year time period, which disease has a higher incidence rate and by how much? Giver your numerical answer and units.\",\"answers\":[\"Alpha: 40/10000 per 5 months, Beta: 108/10000 per year, Alpha has higher incidence rate by 0.00483 cases/month\"],\"difficulty\":1}",
-		"timestamp": "2025-04-09T01:56:56.335Z"
-	  },
-	  {
-		"original": "{\"question\":\"Which of the following matches a vaccine’s technical name to the diseases that it’s used to prevent?\",\"options\":[\"DTaP - Diphtheria, Tetanus, and Acellular Pertussis\",\"MMR - Measles, Mumps, and Rubella\",\"BCG - Botulism, Clostridium, Giardia\",\"PCV - Pneumonia, Bacterial meningitis\"],\"answers\":[2],\"difficulty\":0.1}",
-		"edited": "{\"question\":\"Which of the following matches a vaccine’s technical name to the diseases that it’s used to prevent?\",\"options\":[\"DTaP - Diphtheria, Tetanus, and Acellular Pertussis\",\"MMR - Measles, Mumps, and Rubella\",\"BCG - Botulism, Clostridium, Giardia\",\"PCV - Pneumonia, Bacterial meningitis\"],\"answers\":[1,2],\"difficulty\":0.33}",
-		"timestamp": "2025-04-09T19:11:29.001Z"
-	  },
-	  {
-		"original": "{\"question\":\"As mentioned above, food may become contaminated during growing, slaughtering, butchering, or processing. Listeriosis is caused by bacteria that infects cattle and can be spread to humans through contaminated milk. Which of the below terms refers to an infection that is spread from animals to humans?\",\"options\":[\"Vectorborne\",\"Zoonoses\",\"Chronic\",\"Acute\",\"None of the above\"],\"answers\":[2],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"As mentioned above, food may become contaminated during growing, slaughtering, butchering, or processing. Listeriosis is caused by bacteria that infects cattle and can be spread to humans through contaminated milk. Which of the below terms refers to an infection that is spread from animals to humans?\",\"options\":[\"Vectorborne\",\"Zoonoses\",\"Chronic\",\"Acute\",\"None of the above\"],\"answers\":[2],\"difficulty\":0.07}",
-		"timestamp": "2025-04-09T20:04:15.387Z"
-	  },
-	  {
-		"original": "{\"question\":\"Current CDC director:\",\"options\":[\"Rochelle Walensky\",\"Robert R. Redfield\",\"Anthony Fauci\",\"Florence Nightingale\",\"Lamuel Shattuck\"],\"answers\":[1],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"Current acting CDC director:\",\"options\":[\"Susan Monarez\",\"Robert R. Redfield\",\"Anthony Fauci\",\"Florence Nightingale\",\"Lamuel Shattuck\"],\"answers\":[1],\"difficulty\":0.5}",
-		"timestamp": "2025-04-10T19:11:13.718Z"
-	  },
-	  {
-		"original": "{\"question\":\"There’s been an outbreak of E. coli O26 in your local Chipotle restaurant. In a group of people who eat at this Chipotle, only a couple of them developed an illness. This proportion and analysis is known as ________.\",\"options\":[\"Infectivity\",\"Virulence\",\"Pathogenicity\",\"Prevalence\"],\"answers\":[1],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"There’s been an outbreak of E. coli O26 in your local Chipotle restaurant. In a group of people who eat at this Chipotle, only a couple of them developed an illness. This proportion and analysis is known as ________.\",\"options\":[\"Infectivity\",\"Virulence\",\"Pathogenicity\",\"Prevalence\"],\"answers\":[2],\"difficulty\":0.7}",
-		"timestamp": "2025-04-15T21:13:01.619Z"
-	  },
-	  {
-		"original": "{\"question\":\"The description provided outlines the physical characteristics and genetic makeup of the Argentinian mammarenavirus. Is this description primarily detailing the virus's *pathogenicity, infectivity, or virulence*?\",\"options\":[\"Pathogenicity\",\"Infectivity\",\"Virulence\"],\"answers\":[2],\"difficulty\":0.8,\"originalIndex\":407}",
-		"edited": "{\"question\":\"The description provided outlines the physical characteristics and genetic makeup of the Argentinian mammarenavirus. Is this description primarily detailing the virus's *pathogenicity, infectivity, or virulence*?\",\"options\":[\"Pathogenicity\",\"Infectivity\",\"Virulence\"],\"answers\":[2],\"difficulty\":0.8}",
-		"timestamp": "2025-04-16T16:36:33.009Z"
 	  }
 	],
 	"Dynamic Planet - Glaciers": [
@@ -721,53 +503,6 @@
 		"original": "{\"question\":\"The largest flooding events are thought to be caused by glacial activity.\",\"options\":[\"True\",\"False\"],\"answers\":[1],\"difficulty\":0.3,\"originalIndex\":769}",
 		"edited": "{\"question\":\"The largest flooding events are thought to be caused by glacial activity.\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.3}",
 		"timestamp": "2025-04-03T22:46:04.921Z"
-	  },
-	  {
-		"original": "{\"question\":\"If a glacier has a positive mass balance, it is:\",\"options\":[\"Advancing\",\"Retreating\",\"Not moving\",\"Sinking\"],\"answers\":[1],\"difficulty\":1,\"originalIndex\":475}",
-		"edited": "{\"question\":\"If a glacier has a positive mass balance, it is:\",\"options\":[\"Advancing\",\"Retreating\",\"Not moving\",\"Sinking\"],\"answers\":[1],\"difficulty\":0.44}",
-		"timestamp": "2025-04-15T01:56:26.071Z"
-	  },
-	  {
-		"original": "{\"question\":\"What geologic forces cracked and shifted the basalt layers at Isle Royale, tilting them upward?\",\"options\":[\"Erosion\",\"Volcanic eruptions\",\"Massive geologic forces\",\"Earthquakes\"],\"answers\":[3],\"difficulty\":0.4,\"originalIndex\":1452}",
-		"edited": "{\"question\":\"What geologic forces cracked and shifted the basalt layers at Isle Royale, tilting them upward?\",\"options\":[\"Erosion\",\"Volcanic eruptions\",\"Large-Scale Tectonic Activity\",\"Earthquakes\"],\"answers\":[3],\"difficulty\":0.4}",
-		"timestamp": "2025-04-15T02:13:23.337Z"
-	  },
-	  {
-		"original": "{\"question\":\"What is the primary cause of Ogvibes, the alternating light and dark bands in glacial ice?\",\"options\":[\"Seasonal motion\",\"Solar radiation\",\"Differences in ice density\",\"Variations in glacier velocity\"],\"answers\":[4],\"difficulty\":0.7,\"originalIndex\":1679}",
-		"edited": "{\"question\":\"What is the primary cause of Ogives, the alternating light and dark bands in glacial ice?\",\"options\":[\"Seasonal motion\",\"Solar radiation\",\"Differences in ice density\",\"Variations in glacier velocity\"],\"answers\":[4],\"difficulty\":0.7}",
-		"timestamp": "2025-04-15T20:58:05.006Z"
-	  },
-	  {
-		"original": "{\"question\":\"True or False 9: Glaciers can be affected by climate change\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.1}",
-		"edited": "{\"question\":\"True or False 9: Glaciers can be affected by climate change\",\"options\":[\"True\",\"False\"],\"answers\":[1],\"difficulty\":0.1}",
-		"timestamp": "2025-04-16T02:47:46.353Z"
-	  },
-	  {
-		"original": "{\"question\":\"Which of the following ice sheets was located next to the ice sheet that formed the Great Lakes?\",\"options\":[\"Laurentide\",\"Greenland\",\"Cordilleran\",\"Scandinavian\"],\"answers\":[1],\"difficulty\":0.6}",
-		"edited": "{\"question\":\"Which of the following ice sheets was located next to the ice sheet that formed the Great Lakes?\",\"options\":[\"Laurentide\",\"Greenland\",\"Cordilleran\",\"Scandinavian\"],\"answers\":[3],\"difficulty\":0.6}",
-		"timestamp": "2025-04-16T14:09:38.364Z"
-	  },
-	  {
-		"original": "{\"question\":\"How did the LPIA affect global biodiversity?\",\"options\":[\"New, cold-adapted life forms proliferated, increasing species richness.\",\"Sea level changes led to geographic separation of ocean ecoregions, increasing speciation.\",\"It drove marine life forms to evolve new adaptations to cold temperature.\",\"It had no significant impact on global biodiversity.\"],\"answers\":[4],\"difficulty\":0.6}",
-		"edited": "{\"question\":\"How did the LPIA affect global biodiversity?\",\"options\":[\"New, cold-adapted life forms proliferated, increasing species richness.\",\"Sea level changes led to geographic separation of ocean ecoregions, increasing speciation.\",\"It drove marine life forms to evolve new adaptations to cold temperature.\",\"All of the above\"],\"answers\":[4],\"difficulty\":0.6}",
-		"timestamp": "2025-04-16T14:20:15.344Z"
-	  },
-	  {
-		"original": "{\"question\":\"When Arctic sea ice melts, it exposes darker ocean water to sunlight. This dark water absorbs more heat than white ice, contributing to an additional warming ef[]ect. Which term best describes this phenomenon?\",\"options\":[\"Positive feedback loop\",\"Negative feedback loop\",\"Horizontal feedback loop\",\"Vertical feedback loop\"],\"answers\":[1],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"When Arctic sea ice melts, it exposes darker ocean water to sunlight. This dark water absorbs more heat than white ice, contributing to an additional warming effect. Which term best describes this phenomenon?\",\"options\":[\"Positive feedback loop\",\"Negative feedback loop\",\"Horizontal feedback loop\",\"Vertical feedback loop\"],\"answers\":[1],\"difficulty\":0.7}",
-		"timestamp": "2025-04-16T16:10:36.951Z"
-	  },
-	  {
-		"original": "{\"question\":\"What is the primary cause of Ogvibes, the alternating light and dark bands in glacial ice?\",\"options\":[\"Seasonal motion\",\"Solar radiation\",\"Differences in ice density\",\"Variations in glacier velocity\"],\"answers\":[4],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"What is the primary cause of Ogives, the alternating light and dark bands in glacial ice?\",\"options\":[\"Seasonal motion\",\"Solar radiation\",\"Differences in ice density\",\"Variations in glacier velocity\"],\"answers\":[4],\"difficulty\":0.7}",
-		"timestamp": "2025-04-16T17:30:33.951Z"
-	  }
-	],
-	"Dynamic Planet - Oceanography": [
-	  {
-		"original": "{\"question\":\"Tides: A solar eclipse. Does the condition in isolation act to increase, decrease, or does not affect tidal range?\",\"options\":[\"Increase\",\"Decrease\",\"No affect\"],\"answers\":[1],\"difficulty\":0.6}",
-		"edited": "{\"question\":\"Tides: A solar eclipse. Does the condition in isolation act to increase, decrease, or does not affect tidal range?\",\"options\":[\"Increase\",\"Decrease\",\"No effect\"],\"answers\":[1],\"difficulty\":0.47}",
-		"timestamp": "2025-04-10T19:52:07.258Z"
 	  }
 	],
 	"Ecology": [
@@ -945,16 +680,6 @@
 		"original": "{\"question\":\"Species that have smaller of[]spring allow for ___________.\",\"options\":[\"Further dispersal\",\"Dispersal close to birth place\",\"A shorter state of suspended growth\",\"Expedited growth in unfavorable conditions\"],\"answers\":[1],\"difficulty\":0.4}",
 		"edited": "{\"question\":\"Species that have smaller offspring allow for ___________.\",\"options\":[\"Further dispersal\",\"Dispersal close to birth place\",\"A shorter state of suspended growth\",\"Expedited growth in unfavorable conditions\"],\"answers\":[1],\"difficulty\":0.4}",
 		"timestamp": "2025-04-04T14:56:36.057Z"
-	  },
-	  {
-		"original": "{\"question\":\"How much of Earth’s surface do deserts cover?\",\"options\":[\"½\",\"⅓\",\"¼\",\"⅕\"],\"answers\":[5],\"difficulty\":0.1,\"originalIndex\":95}",
-		"edited": "{\"question\":\"How much of Earth’s surface do deserts cover?\",\"options\":[\"½\",\"⅓\",\"¼\",\"⅕\"],\"answers\":[2,5],\"difficulty\":0.1}",
-		"timestamp": "2025-04-11T13:58:27.797Z"
-	  },
-	  {
-		"original": "{\"question\":\"Which ecological term best describes the polar bears in the cartoon?\",\"options\":[\"herbivores\",\"parasites\",\"carnivores\",\"producers\"],\"answers\":[3],\"difficulty\":0.3}",
-		"edited": "{\"question\":\"Which ecological term best describes the polar bears in the cartoon?\",\"options\":[\"herbivores\",\"parasites\",\"carnivores\",\"producers\"],\"answers\":[3],\"difficulty\":0.1}",
-		"timestamp": "2025-04-12T16:29:08.527Z"
 	  }
 	],
 	"Entomology": [
@@ -997,46 +722,6 @@
 		"original": "{\"question\":\"Strepsiptera has…\",\"options\":[\"Refractive eyes\",\"Apposition eyes\",\"Aperture eyes\",\"Superposition eyes\"],\"answers\":[3],\"difficulty\":0.6,\"originalIndex\":27}",
 		"edited": "{\"question\":\"Strepsiptera has…\",\"options\":[\"Refractive eyes\",\"Apposition eyes\",\"Aperture eyes\",\"Superposition eyes\"],\"answers\":[3],\"difficulty\":1}",
 		"timestamp": "2025-04-04T19:14:46.029Z"
-	  },
-	  {
-		"original": "{\"question\":\"How do seasonal changes inﬂuence the activity or migration patterns of Insect X?\",\"options\":[\"Most species migrate south in winter to follow their hosts\",\"Larvae diapause in host bodies during colder months\",\"Adults hibernate during the cold season\",\"Insect X is exclusively active in tropical regions\"],\"answers\":[2],\"difficulty\":0.1}",
-		"edited": "{\"question\":\"No species x\\n\",\"options\":[\"Most species migrate south in winter to follow their hosts\",\"Larvae diapause in host bodies during colder months\",\"Adults hibernate during the cold season\",\"Insect X is exclusively active in tropical regions\"],\"answers\":[],\"difficulty\":1}",
-		"timestamp": "2025-04-10T18:43:13.699Z"
-	  },
-	  {
-		"original": "{\"question\":\"Silk is mainly produced by the larvae of insects undergoing incomplete metamorphosis\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":1}",
-		"edited": "{\"question\":\"Silk is mainly produced by the larvae of insects undergoing incomplete metamorphosis\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.26}",
-		"timestamp": "2025-04-10T18:51:41.233Z"
-	  },
-	  {
-		"original": "{\"question\":\"Silk production also occurs in which of the following groups? (Select all that apply)\",\"options\":[\"Formicidae\",\"Thysanura\",\"Phthiraptera\",\"Chrysopidae\",\"Gomphidae\"],\"answers\":[1,4],\"difficulty\":0.1}",
-		"edited": "{\"question\":\"Silk production also occurs in which of the following groups? (Select all that apply)\",\"options\":[\"Formicidae\",\"Thysanura\",\"Phthiraptera\",\"Chrysopidae\",\"Gomphidae\"],\"answers\":[1,2,4],\"difficulty\":0.41}",
-		"timestamp": "2025-04-10T18:55:22.470Z"
-	  },
-	  {
-		"original": "{\"question\":\"True/false: Flies are the most important pollinators\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"True/false: Flies are the most important pollinators\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.16}",
-		"timestamp": "2025-04-10T19:04:13.146Z"
-	  },
-	  {
-		"original": "{\"question\":\"Odonata (Dragonflies and Damselflies):\\nHow did Species A get its common name?\",\"options\":[],\"answers\":[\"They appear to 'dance' in the air\"],\"difficulty\":0.8,\"originalIndex\":87}",
-		"edited": "{\"question\":\"Odonata (Dragonflies and Damselflies):\\nHow did Species A get its common name?\",\"answers\":[\"They appear to 'dance' in the air\"],\"difficulty\":0.8}",
-		"timestamp": "2025-04-13T01:50:41.890Z"
-	  },
-	  {
-		"original": "{\"question\":\"Some members of the Order Dermaptera (earwigs) are ectoparasitic on mammals, and lack wings and eyes.\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.6,\"originalIndex\":595}",
-		"edited": "{\"question\":\"Some members of the Order Dermaptera (earwigs) are ectoparasitic on mammals, and lack wings and eyes.\",\"options\":[\"True\",\"False\"],\"answers\":[1],\"difficulty\":0.6}",
-		"timestamp": "2025-04-15T13:58:29.514Z"
-	  },
-	  {
-		"original": "{\"question\":\"Although there are dif[]erences among dif[]erent tympanal organs of insects there is a general characteristic def[]ning a tympanal organ. What is that general characteristic?\",\"options\":[\"Has a membrane over a air f[]lled space, supported with nerves from chordotonal sensory organ\",\"Thick, rigid membrane covering a f[]uid-f[]lled space, connected to muscles that allow the insect to control the vibration intensity.\",\"Flexible skin f[]ap that covers an air pocket, directly connected to the brain for instant sound processing.\",\"Multiple membranes stacked over an air-f[]lled cavity, each detecting dif[]erent sound frequencies like a musical instrument.\"],\"answers\":[1],\"difficulty\":0.7,\"originalIndex\":22}",
-		"edited": "{\"question\":\"Although there are differences among different tympanal organs of insects, there is a general characteristic that defines a tympanal organ. What is that general characteristic?\",\"options\":[\"Has a membrane over a air f[]lled space, supported with nerves from chordotonal sensory organ\",\"Thick, rigid membrane covering a f[]uid-f[]lled space, connected to muscles that allow the insect to control the vibration intensity.\",\"Flexible skin f[]ap that covers an air pocket, directly connected to the brain for instant sound processing.\",\"Multiple membranes stacked over an air-f[]lled cavity, each detecting dif[]erent sound frequencies like a musical instrument.\"],\"answers\":[1],\"difficulty\":0.75}",
-		"timestamp": "2025-04-16T20:04:04.402Z"
-	  },
-	  {
-		"original": "{\"question\":\"Define Heterotrophic Parasitoids.\",\"options\":[],\"answers\":[\"I don't know\"],\"difficulty\":0.8,\"originalIndex\":369}",
-		"edited": "{\"question\":\"Define Heterotrophic Parasitoids.\",\"answers\":[\"A heterotrophic parasitoid is an organism that feeds on another organism (the host) to survive and grow, and unlike parasites, it kills the host in the process.\"],\"difficulty\":0.8}",
-		"timestamp": "2025-04-17T14:56:29.435Z"
 	  }
 	],
 	"Forensics": [
@@ -1079,26 +764,6 @@
 		"original": "{\"question\":\"The medulla provides strength to the hair, as well as color and texture. True or False.\",\"options\":[\"True\",\"False\"],\"answers\":[1],\"difficulty\":0.3}",
 		"edited": "{\"question\":\"The medulla provides strength to the hair, as well as color and texture. True or False.\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.3}",
 		"timestamp": "2025-04-04T04:19:39.301Z"
-	  },
-	  {
-		"original": "{\"question\":\"In DNA base pairing, A can only pair with C, and G can only pair with T. True or False.\",\"options\":[\"True\",\"False\"],\"answers\":[1],\"difficulty\":0.3}",
-		"edited": "{\"question\":\"In DNA base pairing, A can only pair with C, and G can only pair with T. True or False.\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.3}",
-		"timestamp": "2025-04-15T17:49:15.009Z"
-	  },
-	  {
-		"original": "{\"question\":\"Would you approve of a blood transfusion with donor blood type O+ and recipient blood type A+?\",\"options\":[\"Approve\",\"Disapprove\"],\"answers\":[2],\"difficulty\":0.3,\"originalIndex\":2415}",
-		"edited": "{\"question\":\"Would you approve of a blood transfusion with donor blood type O+ and recipient blood type A+?\",\"options\":[\"Approve\",\"Disapprove\"],\"answers\":[1,2],\"difficulty\":0.3}",
-		"timestamp": "2025-04-15T21:47:56.072Z"
-	  },
-	  {
-		"original": "{\"question\":\"An unidentified plastic was found at the crime scene. When a flame test is conducted with this plastic, it smells like candle wax and burns slowly with a blue flame with a yellow tip. What plastic is this?\",\"options\":[\"HDPE\",\"PVC\",\"PS\",\"LDPE\"],\"answers\":[1],\"difficulty\":0.5,\"originalIndex\":2070}",
-		"edited": "{\"question\":\"An unidentified plastic was found at the crime scene. When a flame test is conducted with this plastic, it smells like candle wax and burns slowly with a blue flame with a yellow tip. What plastic is this?\",\"options\":[\"HDPE\",\"PVC\",\"PS\",\"LDPE\"],\"answers\":[4],\"difficulty\":0.5}",
-		"timestamp": "2025-04-16T18:59:16.294Z"
-	  },
-	  {
-		"original": "{\"question\":\"Would you approve of a blood transfusion with donor blood type O+ and recipient blood type A+?\",\"options\":[\"Approve\",\"Disapprove\"],\"answers\":[2],\"difficulty\":0.3}",
-		"edited": "{\"question\":\"Would you approve of a blood transfusion with donor blood type O+ and recipient blood type A+?\",\"options\":[\"Approve\",\"Disapprove\"],\"answers\":[1],\"difficulty\":0.3}",
-		"timestamp": "2025-04-16T19:59:36.068Z"
 	  }
 	],
 	"Fossils": [
@@ -1126,41 +791,6 @@
 		"original": "{\"question\":\"Which period are the fossils from Mazon Creek from?\",\"options\":[\"Pennsylvanian\",\"Californian\",\"Ordovician\",\"Triassic\",\"Eocene\"],\"answers\":[1],\"difficulty\":1,\"originalIndex\":49}",
 		"edited": "{\"question\":\"Which period are the fossils from Mazon Creek from?\",\"options\":[\"Pennsylvanian\",\"Californian\",\"Ordovician\",\"Triassic\",\"Carboniferous\"],\"answers\":[1],\"difficulty\":1}",
 		"timestamp": "2025-03-27T17:45:48.557Z"
-	  },
-	  {
-		"original": "{\"question\":\"Thanks to their hard, calcium carbonate ossicles and ancient geologic history, sea stars are common in the fossil record.\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.4}",
-		"edited": "{\"question\":\"Thanks to their hard, calcium carbonate ossicles and ancient geologic history, sea stars are common in the fossil record.\",\"options\":[\"True\",\"False\"],\"answers\":[1],\"difficulty\":0.4}",
-		"timestamp": "2025-04-06T19:25:23.311Z"
-	  },
-	  {
-		"original": "{\"question\":\"Station 12: How would you best describe the mode of life of A, C and E?\",\"options\":[\"vagrant\",\"planktonic\",\"sedentary\",\"infaunal\"],\"answers\":[3],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"Station 12: How would you best describe the mode of life of A, C and E?\",\"options\":[\"vagrant\",\"planktonic\",\"sedentary\",\"infaunal\"],\"answers\":[3],\"difficulty\":0.7}",
-		"timestamp": "2025-04-06T19:34:29.090Z"
-	  },
-	  {
-		"original": "{\"question\":\"Which of the following is NOT an indicator for the GOE (Great Oxygenation Event)\",\"options\":[\"Banded iron formation\",\"Isotopes\",\"Blue beds\",\"Red beds\"],\"answers\":[2],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"Which of the following is NOT an indicator for the GOE (Great Oxygenation Event)\",\"options\":[\"Banded iron formation\",\"Isotopes\",\"Blue beds\",\"Red beds\"],\"answers\":[3],\"difficulty\":0.7}",
-		"timestamp": "2025-04-10T14:00:45.877Z"
-	  },
-	  {
-		"original": "{\"question\":\"Are fossils of Skull C polyphyletic?\",\"options\":[\"Yes\",\"No\"],\"answers\":[1],\"difficulty\":0.5,\"originalIndex\":1168}",
-		"edited": "{\"question\":\"Are fossils of Skull C polyphyletic?\",\"options\":[\"Yes\",\"No\"],\"answers\":[1],\"difficulty\":0.5}",
-		"timestamp": "2025-04-11T00:42:48.627Z"
-	  },
-	  {
-		"original": "{\"question\":\"Choose the correct statement regarding Achilles ruptures.\",\"options\":[\"Typically occur in the highly vascularized region.\",\"8 cm - 10 cm to the osteotendinous junction.\",\"Tendinopathies often follow Achilles ruptures.\",\"A and B\",\"B, C\",\"A, B, C\",\"None of the above\"],\"answers\":[5],\"difficulty\":0.6}",
-		"edited": "{\"question\":\"Choose the correct statement regarding Achilles ruptures.\",\"options\":[\"Typically occur in the highly vascularized region.\",\"8 cm - 10 cm to the osteotendinous junction.\",\"Tendinopathies often follow Achilles ruptures.\",\"A and B\",\"B, C\",\"A, B, C\",\"None of the above\"],\"answers\":[7],\"difficulty\":1}",
-		"timestamp": "2025-04-11T17:03:07.978Z"
-	  },
-	  {
-		"original": "{\"question\":\"Are fossils of Skull C polyphyletic?\",\"options\":[\"Yes\",\"No\"],\"answers\":[1],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"Are fossils of Skull C polyphyletic?\",\"options\":[\"Yes\",\"No\"],\"answers\":[1],\"difficulty\":0.5}",
-		"timestamp": "2025-04-12T02:14:27.114Z"
-	  },
-	  {
-		"original": "{\"question\":\"Can a Homo sapiens fossil be found in LaBrea Tar Pits (Space H)?\",\"options\":[\"Yes\",\"No\"],\"answers\":[1],\"difficulty\":0.4,\"originalIndex\":471}",
-		"edited": "{\"question\":\"Can a Homo sapiens fossil be found in LaBrea Tar Pits (Space H)?\",\"options\":[\"Yes\",\"No\"],\"answers\":[2],\"difficulty\":0.4}",
-		"timestamp": "2025-04-14T03:13:20.324Z"
 	  }
 	],
 	"Geologic Mapping": [
@@ -1183,16 +813,6 @@
 		"original": "{\"question\":\"Select all of the following US states that are considered landlocked\",\"options\":[\"New Hampshire\",\"Tennessee\",\"Alabama\",\"West Virginia\",\"Arkansas\",\"Mississippi\"],\"answers\":[4,5],\"difficulty\":0.7}",
 		"edited": "{\"question\":\"Select all of the following US states that are considered landlocked\",\"options\":[\"New Hampshire\",\"Tennessee\",\"Alabama\",\"West Virginia\",\"Arkansas\",\"Mississippi\"],\"answers\":[2,4,5],\"difficulty\":0.7}",
 		"timestamp": "2025-04-05T01:12:38.687Z"
-	  },
-	  {
-		"original": "{\"question\":\"A bed of sedimentary rock has a thickness of 100 feet. On a horizontal plane, what is the apparent thickness of the bed when the dip is zero?\",\"options\":[\"10 feet\",\"20 feet\",\"0 feet\",\"30 feet\"],\"answers\":[3],\"difficulty\":0.6}",
-		"edited": "{\"question\":\"A bed of sedimentary rock has a thickness of 100 feet. On a horizontal plane, what is the apparent thickness of the bed when the dip is zero?\",\"options\":[\"10 feet\",\"20 feet\",\"100 feet\",\"30 feet\"],\"answers\":[3],\"difficulty\":0.6}",
-		"timestamp": "2025-04-07T19:46:16.348Z"
-	  },
-	  {
-		"original": "{\"question\":\"Which of the following statements about folding are correct? Select all that apply.\",\"options\":[\"Anticlines always have older rocks in the core.\",\"Dome structures plunge in multiple directions.\",\"Synclines are typically reversed faults.\",\"Basin structures are special types of synforms.\",\"Monoclines show offset but not necessarily faulting at depth.\",\"Chevron folds are restricted to subduction zone environments only.\"],\"answers\":[2,4,5],\"difficulty\":0.6}",
-		"edited": "{\"question\":\"Which of the following statements about folding are correct? Select all that apply.\",\"options\":[\"Anticlines always have older rocks in the core.\",\"Dome structures plunge in multiple directions.\",\"Synclines are typically reversed faults.\",\"Basin structures are special types of synforms.\",\"Monoclines show offset but not necessarily faulting at depth.\",\"Chevron folds are restricted to subduction zone environments only.\"],\"answers\":[1,2,4,5],\"difficulty\":0.6}",
-		"timestamp": "2025-04-12T13:10:28.724Z"
 	  }
 	],
 	"Materials Science": [
@@ -1215,26 +835,6 @@
 		"original": "{\"question\":\"What happens if clay is heated beyond 537 degrees Celsius?\",\"options\":[\"It vitrifies, forming a glass-like surface that adds strength to the clay\",\"It sinters, fusing the particles together to make the clay stronger\",\"It goes through a quartz inversion, making the clay slightly smaller, but stronger\",\"It goes through a quartz inversion, making the clay slightly larger, but more fragile\"],\"answers\":[3],\"difficulty\":0.6}",
 		"edited": "{\"question\":\"What happens if clay is heated beyond 537 degrees Celsius?\",\"options\":[\"It vitrifies, forming a glass-like surface that adds strength to the clay\",\"It sinters, fusing the particles together to make the clay stronger\",\"It goes through a quartz inversion, making the clay slightly smaller, but stronger\",\"It goes through a quartz inversion, making the clay slightly larger, but more fragile\"],\"answers\":[4],\"difficulty\":0.6}",
 		"timestamp": "2025-04-02T21:46:50.658Z"
-	  },
-	  {
-		"original": "{\"question\":\"A chemist prepares a sample of oxygen gas at a certain pressure, temperature and volume and then removes half of the gas molecules. How must the temperature be changed (as a multiple of T1) to keep the pressure and the volume the same?\",\"options\":[\"T2= 8T1\",\"T2= ¼ T1\",\"None of these\",\"T2= ½ T1\",\"T2= 4T1\",\"T2= 1/8 T1\",\"T2= 2T1\"],\"answers\":[4],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"A chemist prepares a sample of oxygen gas at a certain pressure, temperature and volume and then removes half of the gas molecules. How must the temperature be changed (as a multiple of T1) to keep the pressure and the volume the same?\",\"options\":[\"T2= 8T1\",\"T2= ¼ T1\",\"None of these\",\"T2= ½ T1\",\"T2= 4T1\",\"T2= 1/8 T1\",\"T2= 2T1\"],\"answers\":[7],\"difficulty\":0.7}",
-		"timestamp": "2025-04-07T11:19:09.674Z"
-	  },
-	  {
-		"original": "{\"question\":\"True or False? Measured fracture strengths for typical ceramic materials are predicted by the interatomic bonding forces and lattice structure.\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.6}",
-		"edited": "{\"question\":\"True or False? Measured fracture strengths for typical ceramic materials are predicted by the interatomic bonding forces and lattice structure.\",\"options\":[\"True\",\"False\"],\"answers\":[1],\"difficulty\":0.6}",
-		"timestamp": "2025-04-09T18:11:13.411Z"
-	  },
-	  {
-		"original": "{\"question\":\"What is the ratio of the value of hardness assigned to diamond in VHN divided by the value in Mohs?\",\"options\":[\"3\",\"10\",\"30\",\"1000\",\"None of the above\"],\"answers\":[5],\"difficulty\":0.8}",
-		"edited": "{\"question\":\"What is the ratio of the value of hardness assigned to diamond in VHN divided by the value in Mohs?\",\"options\":[\"3\",\"10\",\"30\",\"1000\",\"None of the above\"],\"answers\":[4],\"difficulty\":0.8}",
-		"timestamp": "2025-04-12T15:47:23.904Z"
-	  },
-	  {
-		"original": "{\"question\":\"A solution has a concentration of 0.018g/kg. What is its concentration in ppm?\",\"options\":[\"18\",\"1.8\",\"180\",\"0.18\",\"None of above\"],\"answers\":[18],\"difficulty\":0.6}",
-		"edited": "{\"question\":\"A solution has a concentration of 0.018g/kg. What is its concentration in ppm?\",\"options\":[\"18\",\"1.8\",\"180\",\"0.18\",\"None of above\"],\"answers\":[1,18],\"difficulty\":0.6}",
-		"timestamp": "2025-04-12T21:19:31.484Z"
 	  }
 	],
 	"Meteorology": [
@@ -1257,11 +857,6 @@
 		"original": "{\"question\":\"Hurricanes form around high pressure systems. True or False?\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":1}",
 		"edited": "{\"question\":\"Hurricanes form around high pressure systems. True or False?\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.1}",
 		"timestamp": "2025-04-04T19:32:46.105Z"
-	  },
-	  {
-		"original": "{\"question\":\"The most destructive weather element is...\",\"options\":[\"Lightning\",\"Tornados\",\"Large hail\",\"Flash flooding\"],\"answers\":[2],\"difficulty\":0.6}",
-		"edited": "{\"question\":\"The most destructive weather element is...\",\"options\":[\"Lightning\",\"Tornados\",\"Large hail\",\"Flash flooding\"],\"answers\":[4],\"difficulty\":0.6}",
-		"timestamp": "2025-04-09T16:53:41.753Z"
 	  }
 	],
 	"Microbe Mission": [
@@ -1359,61 +954,6 @@
 		"original": "{\"question\":\"Taking the 3 strains above, a student notices that the only difference between 2 of the strains is the presence of a plasmid. Which of the following are true? Select all that apply.\",\"options\":[\"Strain B is the strain with the plasmid, and Strain C is the one without\",\"The strain without the plasmid is considered a lactose prototroph\",\"The strain with the plasmid is considered a lactose auxotroph\",\"If the 2 observed strains were placed in close enough contact for conjugation, some colonies of each would be expected to grow in a minimal media\",\"The presence of the plasmid has the capability to change the bacterial strain’s Gram-staining result\"],\"answers\":[4],\"difficulty\":0.7}",
 		"edited": "{\"question\":\"Taking the 3 strains above, a student notices that the only difference between 2 of the strains is the presence of a plasmid. Which of the following are true? Select all that apply.\",\"options\":[\"Strain B is the strain with the plasmid, and Strain C is the one without\",\"The strain without the plasmid is considered a lactose prototroph\",\"The strain with the plasmid is considered a lactose auxotroph\",\"If the 2 observed strains were placed in close enough contact for conjugation, some colonies of each would be expected to grow in a minimal media\",\"The presence of the plasmid has the capability to change the bacterial strain’s Gram-staining result\"],\"answers\":[4],\"difficulty\":0.7}",
 		"timestamp": "2025-04-04T22:57:58.012Z"
-	  },
-	  {
-		"original": "{\"question\":\"In the provided test, which of the following is caused by the same virus that causes chickenpox and results in painful blisters to patient?\",\"options\":[\"Dysphagia\",\"Strep throat\",\"Histoplasmosis\",\"Trichinosis\"],\"answers\":[1],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"In the provided test, which of the following is caused by the same virus that causes chickenpox and results in painful blisters to patient?\",\"options\":[\"Dysphagia\",\"Histoplasmosis\",\"Trichinosis\",\"Shingles\"],\"answers\":[4],\"difficulty\":0.7}",
-		"timestamp": "2025-04-07T22:36:34.642Z"
-	  },
-	  {
-		"original": "{\"question\":\"Archaea include _____________\",\"options\":[\"Obligate and facultative anaerobes\",\"Mutualistic, parasitic and commensalistic bacteria\",\"Methanogens, halophiles and thermoacidophiles\",\"Gram-positive, gram-negative and wall-less bacteria\"],\"answers\":[3],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"Archaea include _____________\",\"options\":[\"Obligate and facultative anaerobes\",\"Mutualistic, parasitic and commensalistic bacteria\",\"Methanogens, halophiles and thermoacidophiles\",\"Gram-positive, gram-negative and wall-less bacteria\"],\"answers\":[3],\"difficulty\":0.45}",
-		"timestamp": "2025-04-07T22:38:36.140Z"
-	  },
-	  {
-		"original": "{\"question\":\"You wish to produce a 1/100 dilution. Which of the following methods will produce the desired dilution?\",\"options\":[\"A. Remove 1 ml from culture and add to 100 ml water.\",\"B. Remove 1 ml from culture and add to 9 ml water to make tube B. Remove 1 ml from tube B and add to 9 ml water to make tube C.\",\"C. Remove 1 ml from culture and add to 49 ml water to make tube B. Remove 1 ml from tube B and add to 49 ml water to make tube C.\",\"D. Remove 1 ml from culture and add to 74 ml water to make tube B. Remove 1 ml from tube B and add to 24 ml water to make tube C.\"],\"answers\":[3],\"difficulty\":0.8}",
-		"edited": "{\"question\":\"You wish to produce a 1/100 dilution. Which of the following methods will produce the desired dilution?\",\"options\":[\"A. Remove 1 ml from culture and add to 100 ml water.\",\"B. Remove 1 ml from culture and add to 9 ml water to make tube B. Remove 1 ml from tube B and add to 9 ml water to make tube C.\",\"C. Remove 1 ml from culture and add to 49 ml water to make tube B. Remove 1 ml from tube B and add to 49 ml water to make tube C.\",\"D. Remove 1 ml from culture and add to 74 ml water to make tube B. Remove 1 ml from tube B and add to 24 ml water to make tube C.\"],\"answers\":[2],\"difficulty\":0.8}",
-		"timestamp": "2025-04-08T07:10:03.895Z"
-	  },
-	  {
-		"original": "{\"question\":\"What is the role of endospores in bacterial survival?\",\"options\":[\"They enable rapid reproduction.\",\"They enable reproduction under harsh conditions.\",\"They increase metabolic activity.\",\"They facilitate nutrient uptake.\"],\"answers\":[2],\"difficulty\":0.1}",
-		"edited": "{\"question\":\"What is the role of endospores in bacterial survival?\",\"options\":[\"They enable reproduction under harsh conditions.\",\"They increase metabolic activity.\",\"They facilitate nutrient uptake.\",\"They help the bacteria withstand harsh conditions\"],\"answers\":[4],\"difficulty\":0.1}",
-		"timestamp": "2025-04-08T07:15:45.157Z"
-	  },
-	  {
-		"original": "{\"question\":\"Which of the following could be the bacteria mentioned above (select all that apply)?\",\"options\":[\"Streptococcus pyogenes\",\"Clostridium botulinum\",\"Vibrio cholerae\",\"Clostridium tetani\",\"Legionella pneumophila\"],\"answers\":[1,2,4],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"Which of the following could be the bacteria mentioned above (select all that apply)?\",\"options\":[\"Clostridium botulinum\",\"Vibrio cholerae\",\"Clostridium tetani\",\"Legionella pneumophila\",\"none of above no image to refer to\"],\"answers\":[],\"difficulty\":0.7}",
-		"timestamp": "2025-04-08T07:22:43.249Z"
-	  },
-	  {
-		"original": "{\"question\":\"You perform a serial dilution on a bacterial sample and plate 0.1 mL of the 10−6 dilution. After incubation, you count 135 colonies. What is the concentration of the original sample in CFU/mL?\",\"options\":[\"1.35×106\",\"1.35×107\",\"1.35×108\",\"1.35×109\"],\"answers\":[4],\"difficulty\":0.6}",
-		"edited": "{\"question\":\"You perform a serial dilution on a bacterial sample and plate 0.1 mL of the 10^−6 dilution. After incubation, you count 135 colonies. What is the concentration of the original sample in CFU/mL?\",\"options\":[\"1.35×10^6\",\"1.35×10^7\",\"1.35×10^8\",\"1.35×10^9\"],\"answers\":[4],\"difficulty\":0.6}",
-		"timestamp": "2025-04-09T11:31:35.447Z"
-	  },
-	  {
-		"original": "{\"question\":\"Can observe live specimens in normal color and background as they move about a slide.\",\"options\":[\"scanning electron microscope\",\"transmission electron microscope\",\"light microscope\",\"Both A & B\"],\"answers\":[3],\"difficulty\":0.4}",
-		"edited": "{\"question\":\"Can observe live specimens in normal color and background as they move about a slide.\",\"options\":[\"scanning electron microscope\",\"transmission electron microscope\",\"light microscope\",\"none of the above\"],\"answers\":[4],\"difficulty\":0.4}",
-		"timestamp": "2025-04-09T19:11:28.399Z"
-	  },
-	  {
-		"original": "{\"question\":\"Liquid culture is more suitable than agar for which of the following? (Select all that apply)\",\"options\":[\"Visualization of colonies\",\"Cultivation of large amounts of microbes\",\"Isolating pathogenic microbes from a sample\",\"Determining oxygen requirements of microbes in a sample\"],\"answers\":[2,4],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"Liquid culture is more suitable than agar for which of the following? (Select all that apply)\",\"options\":[\"Visualization of colonies\",\"Cultivation of large amounts of microbes\",\"Isolating pathogenic microbes from a sample\",\"Determining oxygen requirements of microbes in a sample\"],\"answers\":[2,3],\"difficulty\":0.7}",
-		"timestamp": "2025-04-09T22:51:36.921Z"
-	  },
-	  {
-		"original": "{\"question\":\"(TB #3) Serial diluf[]ons are of[]en performed to decrease cell concentraf[]ons enough to result in a countable number of colonies. If you performed a 1/50 diluf[]on two f[]mes in series, added 0.10 mL of the diluted sample to a plate, and counted 150 colonies on the resulf[]ng plate, what is the concentraf[]on of cells in the diluted sample?\",\"options\":[\"750 cells / mL\",\"37.5 cells / mL\",\"3,750,000 cells / mL\",\"75,000 cells / mL\"],\"answers\":[4],\"difficulty\":0.9}",
-		"edited": "{\"question\":\"(TB #3) Serial diluf[]ons are of[]en performed to decrease cell concentraf[]ons enough to result in a countable number of colonies. If you performed a 1/50 diluf[]on two f[]mes in series, added 0.10 mL of the diluted sample to a plate, and counted 150 colonies on the resulf[]ng plate, what is the concentraf[]on of cells in the diluted sample?\",\"options\":[\"750 cells / mL\",\"37.5 cells / mL\",\"3,750,000 cells / mL\",\"75,000 cells / mL\"],\"answers\":[3],\"difficulty\":0.9}",
-		"timestamp": "2025-04-12T14:39:12.403Z"
-	  },
-	  {
-		"original": "{\"question\":\"If the scale bar on a micrograph image measures 2 µm but the bacterial cell spans 3 units, how large is the bacteria in centimeters?\",\"options\":[],\"answers\":[\"3e-6\"],\"difficulty\":0.8}",
-		"edited": "{\"question\":\"If the scale bar on a micrograph image measures 2 µm but the bacterial cell spans 3 units, how large is the bacteria in centimeters?\",\"answers\":[\"6e-4\"],\"difficulty\":0.8}",
-		"timestamp": "2025-04-12T15:04:12.992Z"
-	  },
-	  {
-		"original": "{\"question\":\"As part of his Western Blot protocol, Arjun needs to count some cells in a hemocytometer to correctly seed a 6 well plate with ~300,000 cells/well. If Arjun is differentiating using Trypan Blue (which he has applied to his cells in a ratio of 1:1) and he counts 325 cells in the 5 sections of his device, calculate the cell concentration?\",\"options\":[\"1.9 x 104 cells/mL\",\"6.5 x 106 cells/mL\",\"9.9 x 105 cells/mL\",\"1.6 x 104 cells/mL\"],\"answers\":[3],\"difficulty\":0.1}",
-		"edited": "{\"question\":\"As part of his Western Blot protocol, Arjun needs to count some cells in a hemocytometer to correctly seed a 6 well plate with ~300,000 cells/well. If Arjun is differentiating using Trypan Blue (which he has applied to his cells in a ratio of 1:1) and he counts 325 cells in the 5 sections of his device, calculate the cell concentration?\",\"options\":[\"1.9 x 10^4 cells/mL\",\"6.5 x 10^6 cells/mL\",\"9.9 x 10^5 cells/mL\",\"1.6 x 10^4 cells/mL\"],\"answers\":[3],\"difficulty\":0.1}",
-		"timestamp": "2025-04-16T23:36:06.278Z"
 	  }
 	],
 	"Optics": [
@@ -1626,76 +1166,6 @@
 		"original": "{\"question\":\"What component of the human eye refracts light?\",\"options\":[\"retina\",\"iris\",\"lens\",\"cornea\",\"ciliary body\"],\"answers\":[4],\"difficulty\":0.5}",
 		"edited": "{\"question\":\"What component of the human eye refracts light?\",\"options\":[\"retina\",\"iris\",\"lens\",\"cornea\",\"ciliary body\"],\"answers\":[3,4],\"difficulty\":0.5}",
 		"timestamp": "2025-04-04T23:15:16.134Z"
-	  },
-	  {
-		"original": "{\"question\":\"(1 point) A light wave has a frequency of 6.02 · 1023 Hz. What is the energy of a single photon in this wave?\",\"options\":[\"6.63 · 10−34 J\",\"9.11 · 10−31 J\",\"4.98 · 10−16 J\",\"3.99 · 10−10 J\"],\"answers\":[3],\"difficulty\":0.6,\"originalIndex\":247}",
-		"edited": "{\"question\":\"(1 point) A light wave has a frequency of 6.02 · 1023 Hz. What is the energy of a single photon in this wave?\",\"options\":[\"6.63 · 10−34 J\",\"9.11 · 10−31 J\",\"4.98 · 10−16 J\",\"3.99 · 10−10 J\"],\"answers\":[4],\"difficulty\":0.6}",
-		"timestamp": "2025-04-05T23:42:53.226Z"
-	  },
-	  {
-		"original": "{\"question\":\"Who rediscovered the law of refraction in 1621?\",\"options\":[\"Galileo Galilei\",\"Joseph Lagrange\",\"Robert Hooke\",\"Willebrord Snellius\"],\"answers\":[4],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"Who rediscovered the law of refraction in 1621?\",\"options\":[\"Galileo Galilei\",\"Joseph Lagrange\",\"Robert Hooke\",\"Willebrord Snell\"],\"answers\":[4],\"difficulty\":0.5}",
-		"timestamp": "2025-04-09T22:38:52.293Z"
-	  },
-	  {
-		"original": "{\"question\":\"If a ray of light incident upon an isosceles prism (n=1.50) from air (n=1.00) with an apical angle of 50 degrees at 45 degrees to the normal, what is the resulting angle of refraction out of the prism?\",\"options\":[\"29.13\",\"30.13\",\"31.13\",\"32.13\",\"None of the above\"],\"answers\":[3],\"difficulty\":0.9}",
-		"edited": "{\"question\":\"If a ray of light incident upon an isosceles prism (n=1.50) from air (n=1.00) with an apical angle of 50 degrees at 55 degrees to the normal, what is the resulting angle of refraction out of the prism?\",\"options\":[\"29.13\",\"30.13\",\"31.13\",\"32.13\",\"None of the above\"],\"answers\":[3],\"difficulty\":0.9}",
-		"timestamp": "2025-04-11T14:11:16.582Z"
-	  },
-	  {
-		"original": "{\"question\":\"Given that the frequency of a radio wave is equal to the distance from the Earth's surface to the lower ionosphere, which of the following would this wave most likely be used for?\",\"options\":[\"Marine communications\",\"Telephone communications\",\"FM broadcasting\",\"AM broadcasting\"],\"answers\":[1],\"difficulty\":1}",
-		"edited": "{\"question\":\"Given that the frequency of a radio wave is equal to the distance from the Earth's surface to the lower ionosphere, which of the following would this wave most likely be used for?\",\"options\":[\"Marine communications\",\"Telephone communications\",\"FM broadcasting\",\"AM broadcasting\"],\"answers\":[4],\"difficulty\":1}",
-		"timestamp": "2025-04-11T14:15:13.911Z"
-	  },
-	  {
-		"original": "{\"question\":\"Suppose that ideally, Dave should be able to see objects 20 cm in front of him clearly. What is the optical power of a lens that his doctor should prescribe him?\",\"options\":[\"-2.0\",\"-3.0\",\"+2.0\",\"+3.0\"],\"answers\":[1],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"Suppose that ideally, Dave should be able to see objects 20 cm in front of him clearly. What is the optical power of a lens that his doctor should prescribe him?\",\"options\":[\"-2.0\",\"-3.0\",\"+2.0\",\"+5.0\"],\"answers\":[4],\"difficulty\":0.49}",
-		"timestamp": "2025-04-11T17:57:17.236Z"
-	  },
-	  {
-		"original": "{\"question\":\"The RGB combinations of two colors are C1 = (224, 175, 255) and C2 = (128, 0, 0). To the nearest integers, what is the RGB combination obtained by mixing C1 and C2 in a two-to-one ratio?\",\"options\":[\"(255, 175, 255)\",\"(199, 80, 244)\",\"(176, 88, 128)\",\"(192, 117, 170)\"],\"answers\":[3],\"difficulty\":0.1}",
-		"edited": "{\"question\":\"The RGB combinations of two colors are C1 = (224, 175, 255) and C2 = (128, 0, 0). To the nearest integers, what is the RGB combination obtained by mixing C1 and C2 in a two-to-one ratio?\",\"options\":[\"(255, 175, 255)\",\"(199, 80, 244)\",\"(176, 88, 128)\",\"(192, 117, 170)\"],\"answers\":[4],\"difficulty\":0.1}",
-		"timestamp": "2025-04-11T18:09:44.054Z"
-	  },
-	  {
-		"original": "{\"question\":\"If 550nm light is diffracted by a double slit spaced 1.5*10^-6m apart onto a screen placed 1m away, where is the first bright maxima located?\",\"options\":[\"39cm\",\"40cm\",\"41cm\",\"42cm\",\"None of the above\"],\"answers\":[1],\"difficulty\":0.8}",
-		"edited": "{\"question\":\"If 550nm light is diffracted by a double slit spaced 1.5*10^-6m apart onto a screen placed 1m away, where is the first bright maxima located?\",\"options\":[\"37cm\",\"40cm\",\"41cm\",\"42cm\",\"None of the above\"],\"answers\":[1],\"difficulty\":0.8}",
-		"timestamp": "2025-04-12T00:57:42.350Z"
-	  },
-	  {
-		"original": "{\"question\":\"Light is traveling through an unknown medium. If it takes 0.00000043s to travel 103m, through this medium, what is the index?\",\"options\":[\"0.84\",\"1.00\",\"1.18\",\"1.25\",\"1.41\"],\"answers\":[5],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"Light is traveling through an unknown medium. If it takes 0.00000043s to travel 103m, through this medium, what is the index?\",\"options\":[\"0.84\",\"1.00\",\"1.18\",\"1.25\",\"1.41\"],\"answers\":[4],\"difficulty\":0.7}",
-		"timestamp": "2025-04-12T01:34:42.760Z"
-	  },
-	  {
-		"original": "{\"question\":\"Assume that white light is diffracted by a diffraction grating with 650 lines/mm, how many full rainbows can be observed?\",\"options\":[\"4\",\"5\",\"6\",\"7\",\"Infinite\"],\"answers\":[1],\"difficulty\":0.8}",
-		"edited": "{\"question\":\"Assume that white light is diffracted by a diffraction grating with 650 lines/mm, how many full rainbows can be observed?\",\"options\":[\"2\",\"5\",\"6\",\"7\",\"Infinite\"],\"answers\":[1],\"difficulty\":0.8}",
-		"timestamp": "2025-04-13T15:16:13.438Z"
-	  },
-	  {
-		"original": "{\"question\":\"An object is placed between the focus and the center of curvature of a convex mirror. Select all true statements. (select all that apply)\",\"options\":[\"The image distance is less than the focal length\",\"The image is in front of the mirror\",\"The image is virtual\",\"The image is upright\",\"The image is larger\"],\"answers\":[1,2,3,4,5],\"difficulty\":0.2}",
-		"edited": "{\"question\":\"An object is placed between the focus and the center of curvature of a convex mirror. Select all true statements. (select all that apply)\",\"options\":[\"The image distance is less than the focal length\",\"The image is in front of the mirror\",\"The image is virtual\",\"The image is upright\",\"The image is larger\"],\"answers\":[1,3,4],\"difficulty\":0.2}",
-		"timestamp": "2025-04-15T19:09:14.370Z"
-	  },
-	  {
-		"original": "{\"question\":\"The speed of light in a material is 2 × 108 m/s. What is the material’s index of refraction?\",\"options\":[\"1.2\",\"1.5\",\"2.0\",\"0.75\"],\"answers\":[2],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"The speed of light in a material is 2 × 10^8 m/s. What is the material’s index of refraction?\",\"options\":[\"1.2\",\"1.5\",\"2.0\",\"0.75\"],\"answers\":[2],\"difficulty\":0.5}",
-		"timestamp": "2025-04-15T19:12:35.703Z"
-	  },
-	  {
-		"original": "{\"question\":\"According to the text, what is the estimated uncertainty when aligning a mirror using a protractor?\",\"options\":[\"±1°\",\"±5°\",\"±10°\",\"±20°\"],\"answers\":[2],\"difficulty\":0.4}",
-		"edited": "{\"question\":\"According to the text, what is the estimated uncertainty when aligning a mirror using a protractor?\",\"options\":[\"±1°\",\"±0.5°\",\"±10°\",\"±20°\"],\"answers\":[1,2],\"difficulty\":0.4}",
-		"timestamp": "2025-04-16T18:59:15.180Z"
-	  },
-	  {
-		"original": "{\"question\":\"A beam of light travels through a medium with index of refraction ni. It then enters a medium with index of refraction nr at an angle of incidence θi. For which of the following values of ni and nr will the angle of refraction be the greatest?\",\"options\":[\"ni = 1.00 and nr = 1.10\",\"ni = 1.10 and nr = 1.20\",\"ni = 1.20 and nr = 1.30\",\"ni = 1.30 and nr = 1.40\"],\"answers\":[1],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"A beam of light travels through a medium with index of refraction ni. It then enters a medium with index of refraction nr at an angle of incidence θi. For which of the following values of ni and nr will the angle of refraction be the greatest?\",\"options\":[\"ni = 1.00 and nr = 1.10\",\"ni = 1.10 and nr = 1.20\",\"ni = 1.20 and nr = 1.30\",\"ni = 1.30 and nr = 1.40\"],\"answers\":[4],\"difficulty\":0.39}",
-		"timestamp": "2025-04-16T19:03:18.999Z"
-	  },
-	  {
-		"original": "{\"question\":\"White light is first passed through a cyan filter. The filtered light is then passed through a magenta filter and finally mixed with green light. What is the resulting color of light after each stage in order?\",\"options\":[\"Cyan, magenta, green\",\"Red, blue, cyan\",\"Red, magenta, white\",\"Cyan, blue, cyan\"],\"answers\":[2],\"difficulty\":0.6}",
-		"edited": "{\"question\":\"White light is first passed through a cyan filter. The filtered light is then passed through a magenta filter and finally mixed with green light. What is the resulting color of light after each stage in order?\",\"options\":[\"Cyan, magenta, green\",\"Red, blue, cyan\",\"Red, magenta, white\",\"Cyan, blue, cyan\"],\"answers\":[4],\"difficulty\":0.66}",
-		"timestamp": "2025-04-17T01:37:38.773Z"
 	  }
 	],
 	"Potions and Poisons": [
@@ -1838,41 +1308,6 @@
 		"original": "{\"question\":\"True or False: The bond between the non-mental elements in a gas are usually covalent in character.\",\"options\":[\"True\",\"False\"],\"answers\":[1],\"difficulty\":0.7,\"originalIndex\":759}",
 		"edited": "{\"question\":\"True or False: The bond between the non-metal elements in a gas are usually covalent in character.\",\"options\":[\"True\",\"False\"],\"answers\":[1],\"difficulty\":0.28}",
 		"timestamp": "2025-04-05T03:25:41.809Z"
-	  },
-	  {
-		"original": "{\"question\":\"For questions 1–10, identify each substance or combination of substances as one of the following: a. Ionic compound b. Covalent compound c. Homogenous Mixture d. Heterogenous Mixture\\n\\n5. SnCl4\",\"options\":[\"Ionic compound\",\"Covalent compound\",\"Homogenous Mixture\",\"Heterogenous Mixture\"],\"answers\":[1],\"difficulty\":0.4}",
-		"edited": "{\"question\":\"For questions 1–10, identify each substance or combination of substances as one of the following: a. Ionic compound b. Covalent compound c. Homogenous Mixture d. Heterogenous Mixture\\n\\n5. SnCl4\",\"options\":[\"Ionic compound\",\"Covalent compound\",\"Homogenous Mixture\",\"Heterogenous Mixture\"],\"answers\":[2],\"difficulty\":0.4}",
-		"timestamp": "2025-04-05T22:54:56.695Z"
-	  },
-	  {
-		"original": "{\"question\":\"What color of paint is arsenic used in?\",\"options\":[\"Red\",\"Orange\",\"Yellow\",\"Green\"],\"answers\":[4],\"difficulty\":0.6}",
-		"edited": "{\"question\":\"What colors of paint was arsenic used in?\",\"options\":[\"Red\",\"Orange\",\"Yellow\",\"Green\"],\"answers\":[1,2,3,4],\"difficulty\":0.48}",
-		"timestamp": "2025-04-05T23:44:27.036Z"
-	  },
-	  {
-		"original": "{\"question\":\"What should be done if you splash a chemical in your eye in the lab?\",\"options\":[\"Tell your partner\",\"Tell the teacher\",\"Rinse your eye with water for at least 20 minutes\",\"Ignore it\"],\"answers\":[3],\"difficulty\":0.1}",
-		"edited": "{\"question\":\"What should be done if you splash a chemical in your eye in the lab?\",\"options\":[\"Tell your partner\",\"Tell the teacher\",\"Rinse your eye with water for at least 20 minutes\",\"Ignore it\"],\"answers\":[1,2,3],\"difficulty\":0.02}",
-		"timestamp": "2025-04-05T23:50:56.631Z"
-	  },
-	  {
-		"original": "{\"question\":\"The clinical term for too much calcium is:\",\"options\":[\"Hypocalcemia\",\"Osteopenia\",\"Hypernatremia\",\"Hypercalcemia\"],\"answers\":[4],\"difficulty\":0.4,\"originalIndex\":52}",
-		"edited": "{\"question\":\"The clinical term for too much calcium is:\",\"options\":[\"Hypocalcemia\",\"Osteopenia\",\"Hypernatremia\",\"Hypercalcemia\"],\"answers\":[4],\"difficulty\":1}",
-		"timestamp": "2025-04-07T21:13:59.140Z"
-	  },
-	  {
-		"original": "{\"question\":\"What plants are venomous?\",\"options\":[\"Castor Bean\",\"Poison Ivy\",\"Deadly Nightshade\",\"Jequirity Bean\",\"All of the Above\",\"None of the Above\"],\"answers\":[5],\"difficulty\":0.6,\"originalIndex\":233}",
-		"edited": "{\"question\":\"What plants are venomous?\",\"options\":[\"Castor Bean\",\"Poison Ivy\",\"Deadly Nightshade\",\"Jequirity Bean\",\"All of the Above\",\"None of the Above\"],\"answers\":[6],\"difficulty\":0.6}",
-		"timestamp": "2025-04-09T23:17:19.738Z"
-	  },
-	  {
-		"original": "{\"question\":\"What is the chemical formula for Epsom salts?\",\"options\":[],\"answers\":[\"MgSO4\"],\"difficulty\":0.5,\"originalIndex\":79}",
-		"edited": "{\"question\":\"What is the chemical formula for Epsom salts?\",\"answers\":[\"MgSO4*7H2O\"],\"difficulty\":0.5}",
-		"timestamp": "2025-04-09T23:20:22.917Z"
-	  },
-	  {
-		"original": "{\"question\":\"True or False: Mixing rubbing rubbing alcohol with bleach is unsafe because it can produce chloramine.\",\"options\":[\"True\",\"False\"],\"answers\":[1],\"difficulty\":0.4,\"originalIndex\":742}",
-		"edited": "{\"question\":\"True or False: Mixing rubbing rubbing alcohol with bleach is unsafe because it can produce chloramine.\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.4}",
-		"timestamp": "2025-04-09T23:27:15.575Z"
 	  }
 	],
 	"Reach for the Stars": [
@@ -1920,106 +1355,6 @@
 		"original": "{\"question\":\"True or false – planetary nebulae typically have a radius of 1 light year.\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.5}",
 		"edited": "{\"question\":\"True or false – planetary nebulae typically have a radius of 1 light year.\",\"options\":[\"True\",\"False\"],\"answers\":[1],\"difficulty\":0.5}",
 		"timestamp": "2025-03-31T17:43:08.675Z"
-	  },
-	  {
-		"original": "{\"question\":\"Which of the following lists spectral types in order from coolest to hottest\",\"options\":[\"CMKGFABO\",\"FGKMCABO\",\"BACOAFGKM\",\"OBAFGKMC\"],\"answers\":[4],\"difficulty\":0.9}",
-		"edited": "{\"question\":\"Which of the following lists spectral types in order from coolest to hottest\",\"options\":[\"CMKGFABO\",\"FGKMCABO\",\"BACOAFGKM\",\"OBAFGKMC\"],\"answers\":[1],\"difficulty\":0.9}",
-		"timestamp": "2025-04-09T00:52:58.625Z"
-	  },
-	  {
-		"original": "{\"question\":\"On a typical H-R Diagram, _______ is on the x-axis, while __________ is on the y-axis.\",\"options\":[\"Temperature, absolute magnitude\",\"Temperature, spectral class\",\"Luminosity, temperature\",\"Radius, temperature\"],\"answers\":[1],\"difficulty\":0.9}",
-		"edited": "{\"question\":\"On a typical H-R Diagram, _______ is on the x-axis, while __________ is on the y-axis.\",\"options\":[\"Temperature, absolute magnitude\",\"Temperature, spectral class\",\"Luminosity, temperature\",\"Radius, temperature\"],\"answers\":[1],\"difficulty\":0.1}",
-		"timestamp": "2025-04-09T21:49:06.684Z"
-	  },
-	  {
-		"original": "{\"question\":\"The Sun has a mass of\",\"options\":[\"1/10 of a solar mass\",\"1 solar mass\",\"10 solar masses\",\"100 solar masses\"],\"answers\":[2],\"difficulty\":0.3}",
-		"edited": "{\"question\":\"The Sun has a mass of\",\"options\":[\"1/10 of a solar mass\",\"1 solar mass\",\"10 solar masses\",\"100 solar masses\"],\"answers\":[2],\"difficulty\":1}",
-		"timestamp": "2025-04-09T21:49:09.137Z"
-	  },
-	  {
-		"original": "{\"question\":\"Refer to Star Chart #3. Which of the following times does this star chart represent for the Northern Hemisphere?\",\"options\":[\"Spring Equinox\",\"Summer Solstice\",\"Fall Equinox\",\"Winter Solstice\"],\"answers\":[4],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"Refer to Star Chart #3. Which of the following times does this star chart represent for the Northern Hemisphere?\",\"options\":[\"Spring Equinox\",\"Summer Solstice\",\"Fall Equinox\",\"Winter Solstice\"],\"answers\":[4],\"difficulty\":1}",
-		"timestamp": "2025-04-09T21:49:58.943Z"
-	  },
-	  {
-		"original": "{\"question\":\"The Big Dipper is a constellation. True or False?\",\"options\":[\"True\",\"False\"],\"answers\":[1],\"difficulty\":0.2}",
-		"edited": "{\"question\":\"The Big Dipper is a constellation. True or False?\",\"options\":[\"True\",\"False\"],\"answers\":[2],\"difficulty\":0.2}",
-		"timestamp": "2025-04-10T14:55:00.397Z"
-	  },
-	  {
-		"original": "{\"question\":\"What is a black hole?\",\"options\":[\"A region of spacetime where gravity is so strong that nothing, not even light, can escape\",\"A star that is the remnant of a low-mass star\",\"A star that is the remnant of a high-mass star that has exploded as a supernova\",\"A star that is still fusing hydrogen in its core\"],\"answers\":[1],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"What is a black hole?\",\"options\":[\"A region of spacetime where gravity is so strong that nothing, not even light, can escape\",\"A star that is the remnant of a low-mass star\",\"A star that is the remnant of a high-mass star that has exploded as a supernova\",\"A star that is still fusing hydrogen in its core\"],\"answers\":[1],\"difficulty\":0.1}",
-		"timestamp": "2025-04-11T15:41:31.177Z"
-	  },
-	  {
-		"original": "{\"question\":\"What is believed to be at the center of most galaxies?\",\"options\":[\"nebula\",\"supermassive black hole\",\"red supergiant\",\"supernova\"],\"answers\":[2],\"difficulty\":1}",
-		"edited": "{\"question\":\"What is believed to be at the center of most galaxies?\",\"options\":[\"nebula\",\"supermassive black hole\",\"red supergiant\",\"supernova\"],\"answers\":[2],\"difficulty\":0.29}",
-		"timestamp": "2025-04-11T19:20:11.596Z"
-	  },
-	  {
-		"original": "{\"question\":\"Arrange the different regions of the electromagnetic spectrum in order from longest to shortest wavelength.\",\"options\":[\"X-ray\",\"Gamma rays\",\"Radio waves\",\"Visible Light\"],\"answers\":[3],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"Which region of the electromagnetic spectrum has the longest wavelength?\",\"options\":[\"X-ray\",\"Gamma rays\",\"Radio waves\",\"Visible Light\"],\"answers\":[3],\"difficulty\":0.28}",
-		"timestamp": "2025-04-16T01:59:42.203Z"
-	  },
-	  {
-		"original": "{\"question\":\"(1) What does the constellation Aquila represent?\",\"options\":[\"A lion\",\"An eagle\",\"A queen\",\"A peacock\"],\"answers\":[2],\"difficulty\":1,\"originalIndex\":52}",
-		"edited": "{\"question\":\"(1) What does the constellation Aquila represent?\",\"options\":[\"A lion\",\"An eagle\",\"A queen\",\"A peacock\"],\"answers\":[2],\"difficulty\":0.37}",
-		"timestamp": "2025-04-15T16:56:07.666Z"
-	  },
-	  {
-		"original": "{\"question\":\"What spacecraft was the first to pass Io?\",\"options\":[\"Pioneer\",\"Galileo\",\"New Horizons\",\"Voyager\"],\"answers\":[1,4],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"What spacecraft was the first to pass Io?\",\"options\":[\"Pioneer\",\"Galileo\",\"New Horizons\",\"Voyager\"],\"answers\":[1],\"difficulty\":0.68}",
-		"timestamp": "2025-04-16T02:06:37.193Z"
-	  },
-	  {
-		"original": "{\"question\":\"Which of the following can trigger star formation? Circle all that apply (2 pt)\",\"options\":[\"Wind\",\"Snow\",\"Supernova-driven shock waves\",\"The sun\"],\"answers\":[3],\"difficulty\":0.6}",
-		"edited": "{\"question\":\"Which of the following can trigger star formation? Circle all that apply (2 pt)\",\"options\":[\"Wind\",\"Snow\",\"Supernova-driven shock waves\",\"The sun\"],\"answers\":[3],\"difficulty\":0.04}",
-		"timestamp": "2025-04-16T02:10:19.025Z"
-	  },
-	  {
-		"original": "{\"question\":\"Which star is the Ⅎ star in the constellation Gemini?\",\"options\":[\"Castor\",\"Pollux\",\"Alhena\",\"Propus\"],\"answers\":[2],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"Which star is in the constellation Gemini?\",\"options\":[\"Castor\",\"Pollux\",\"Alhena\",\"Propus\"],\"answers\":[2],\"difficulty\":0.7}",
-		"timestamp": "2025-04-17T02:06:56.420Z"
-	  },
-	  {
-		"original": "{\"question\":\"(1) What is the common name for NGC 6543?\",\"options\":[\"Cat’s Eye Nebula\",\"Gabriela Mistral Nebula\",\"The Oily Red Rose\",\"Herschel’s Nebula\"],\"answers\":[1],\"difficulty\":1}",
-		"edited": "{\"question\":\"(1) What is the common name for NGC 6543?\",\"options\":[\"Cat’s Eye Nebula\",\"Gabriela Mistral Nebula\",\"The Oily Red Rose\",\"Herschel’s Nebula\"],\"answers\":[1],\"difficulty\":0.64}",
-		"timestamp": "2025-04-17T02:09:53.657Z"
-	  },
-	  {
-		"original": "{\"question\":\"The most luminous stars are ________.\",\"options\":[\"Large and hot\",\"Large and cool\",\"Small and hot\",\"Small and cool\"],\"answers\":[1],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"The most luminous stars are ________.\",\"options\":[\"Large and hot\",\"Large and cool\",\"Small and hot\",\"Small and cool\"],\"answers\":[1],\"difficulty\":0.07}",
-		"timestamp": "2025-04-17T02:10:23.168Z"
-	  },
-	  {
-		"original": "{\"question\":\"Which of these telescopes would you use to get a good radio image?\",\"options\":[\"Hubble\",\"Spitzer\",\"Chandra\",\"Very Large Array\"],\"answers\":[4],\"difficulty\":1}",
-		"edited": "{\"question\":\"Which of these telescopes would you use to get a good radio image?\",\"options\":[\"Hubble\",\"Spitzer\",\"Chandra\",\"Very Large Array\"],\"answers\":[4],\"difficulty\":0.51}",
-		"timestamp": "2025-04-17T02:11:12.751Z"
-	  },
-	  {
-		"original": "{\"question\":\"In a white dwarf, what mechanism prevents it from collapsing under its own gravity?[1]\",\"options\":[\"Radiation pressure from ongoing nuclear fusion reactions in the core\",\"Neutron degeneracy pressure, which stabilizes the star\",\"Electron degeneracy pressure, which arises from closely packed electrons resisting further compression\",\"The intense outward pressure from helium fusion in the shell\"],\"answers\":[3],\"difficulty\":0.1}",
-		"edited": "{\"question\":\"In a white dwarf, what mechanism prevents it from collapsing under its own gravity?[1]\",\"options\":[\"Radiation pressure from ongoing nuclear fusion reactions in the core\",\"Neutron degeneracy pressure, which stabilizes the star\",\"Electron degeneracy pressure, which arises from closely packed electrons resisting further compression\",\"The intense outward pressure from helium fusion in the shell\"],\"answers\":[3],\"difficulty\":0.47}",
-		"timestamp": "2025-04-17T02:12:47.837Z"
-	  },
-	  {
-		"original": "{\"question\":\"If a star’s temperature was increased by a factor of 3, by what factor would the total energy emitted per unit surface area be increased?\\na. 9\\nb. 12\\nc. 81\\nd. 300\",\"options\":[\"9\",\"12\",\"81\",\"300\"],\"answers\":[3],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"If a star’s temperature was increased by a factor of 3, by what factor would the total energy emitted per unit surface area be increased?\\na. 9\\nb. 12\\nc. 81\\nd. 300\",\"options\":[\"9\",\"12\",\"81\",\"300\"],\"answers\":[3],\"difficulty\":0.75}",
-		"timestamp": "2025-04-17T02:18:08.696Z"
-	  },
-	  {
-		"original": "{\"question\":\"When the sun burns all of its hydrogen fuel, it will turn into a ?\",\"options\":[\"Neutron Star\",\"Planetary Nebula\",\"Black Hole\",\"Worm Hole\"],\"answers\":[2],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"When the sun burns all of its hydrogen fuel, it will turn into a ?\",\"options\":[\"Neutron Star\",\"Planetary Nebula\",\"Black Hole\",\"White dwarf\"],\"answers\":[4],\"difficulty\":0.26}",
-		"timestamp": "2025-04-17T02:23:41.257Z"
-	  },
-	  {
-		"original": "{\"question\":\"Why do T Tauri stars exhibit irregular variability in brightness?\",\"options\":[\"Because they are surrounded by protoplanetary disks\",\"Because they exhibit energetic outflows of Herbig-Haro objects\",\"Because of changes in their accretion rates and other stellar processes\",\"Because they are located in the Taurus constellation\"],\"answers\":[3],\"difficulty\":0.4}",
-		"edited": "{\"question\":\"Why do T Tauri stars exhibit irregular variability in brightness?\",\"options\":[\"Because they are surrounded by protoplanetary disks\",\"Because they exhibit energetic outflows of Herbig-Haro objects\",\"Because of changes in their accretion rates and other stellar processes\",\"Because they are located in the Taurus constellation\"],\"answers\":[3],\"difficulty\":0.72}",
-		"timestamp": "2025-04-17T02:27:47.407Z"
-	  },
-	  {
-		"original": "{\"question\":\"Black Hole Binary Systems were f[]rst observed by what observatory?[1.5]\",\"options\":[\"JSWT\",\"Spitzer\",\"LIGO\",\"Fermi\"],\"answers\":[3],\"difficulty\":0.1}",
-		"edited": "{\"question\":\"Black Hole Binary Systems were first observed by what observatory? [1.5]\",\"options\":[\"JSWT\",\"Spitzer\",\"LIGO\",\"Fermi\"],\"answers\":[3],\"difficulty\":0.1}",
-		"timestamp": "2025-04-17T02:31:03.756Z"
 	  }
 	],
 	"Remote Sensing": [
@@ -2027,11 +1362,6 @@
 		"original": "{\"question\":\"What state is Kansas City located in?\",\"options\":[\"Missouri\",\"Nebraska\",\"Kansas\",\"Virginia\"],\"answers\":[1],\"difficulty\":0.1,\"originalIndex\":673}",
 		"edited": "{\"question\":\"What state is Kansas City located in?\",\"options\":[\"Missouri\",\"Nebraska\",\"Kansas\",\"Virginia\"],\"answers\":[1,3],\"difficulty\":0.27}",
 		"timestamp": "2025-03-24T00:56:38.129Z"
-	  },
-	  {
-		"original": "{\"question\":\"Which of the following are possible treatments or preventions for HPV? (1 point)\",\"options\":[\"Cryotherapy\",\"HPV Vaccine\",\"Electrotherapy\",\"All of the above\"],\"answers\":[4],\"difficulty\":0.5}",
-		"edited": "{\"question\":\"Which of the following are possible treatments or preventions for HPV? (1 point)\",\"options\":[\"Cryotherapy\",\"HPV Vaccine\",\"Electrotherapy\",\"All of the above\"],\"answers\":[4],\"difficulty\":0.5}",
-		"timestamp": "2025-04-12T00:39:36.320Z"
 	  }
 	],
 	"Wind Power": [
@@ -2099,31 +1429,6 @@
 		"original": "{\"question\":\"[2] What is a significant environmental concern related to wind farms?\",\"options\":[\"High water consumption\",\"Greenhouse gas emissions\",\"Habitat disruption for birds and bats\",\"Noise pollution\"],\"answers\":[3],\"difficulty\":0.4}",
 		"edited": "{\"question\":\"What are the significant environmental concerns related to wind farms?\",\"options\":[\"Destruction of Habitats and Ecosystems\",\"Greenhouse gas emissions\",\"Habitat disruption for birds and bats\",\"Noise pollution\"],\"answers\":[1,3],\"difficulty\":0.28}",
 		"timestamp": "2025-04-02T19:23:46.034Z"
-	  },
-	  {
-		"original": "{\"question\":\"Where is the biggest wind farm in the world?\",\"options\":[\"Berlin\",\"Kent\",\"Tamil Nadu\",\"Egypt\"],\"answers\":[3],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"Where is the biggest wind farm in the world?\",\"options\":[\"Berlin\",\"Kent\",\"Jiuquan\",\"Egypt\"],\"answers\":[3],\"difficulty\":0.39}",
-		"timestamp": "2025-04-07T02:44:30.434Z"
-	  },
-	  {
-		"original": "{\"question\":\"How many operational OTEC plants are there currently in the world?\",\"options\":[\"1\",\"2\",\"4\",\"16\",\"73\"],\"answers\":[1],\"difficulty\":0.4}",
-		"edited": "{\"question\":\"How many operational OTEC plants are there currently in the world?\",\"options\":[\"1\",\"2\",\"4\",\"16\",\"73\"],\"answers\":[2],\"difficulty\":0.63}",
-		"timestamp": "2025-04-09T18:54:19.495Z"
-	  },
-	  {
-		"original": "{\"question\":\"Alicia is concerned about the impact of wind turbines on wildlife, particularly birds and bats. What has research shown to be a signiﬁcant environmental issue related to wind farms?\",\"options\":[\"Wind turbines disrupt migratory bird patterns and pose signiﬁcant risks of collision for birds and bats.\",\"Wind farms cause soil erosion that leads to habitat destruction for many species.\",\"The noise from wind turbines can severely impact marine life near oﬀshore wind farms.\",\"Wind farms lead to the displacement of large mammals in forested areas where turbines are built.\"],\"answers\":[1],\"difficulty\":0.7}",
-		"edited": "{\"question\":\"Alicia is concerned about the impact of wind turbines on wildlife, particularly birds and bats. What has research shown to be a signiﬁcant environmental issue related to wind farms?\",\"options\":[\"Wind turbines disrupt migratory bird patterns and pose signiﬁcant risks of barotrauma for birds and bats.\",\"Wind farms cause soil erosion that leads to habitat destruction for many species.\",\"The noise from wind turbines can severely impact marine life near oﬀshore wind farms.\",\"Wind farms lead to the displacement of large mammals in forested areas where turbines are built.\"],\"answers\":[1],\"difficulty\":0.28}",
-		"timestamp": "2025-04-09T19:10:13.681Z"
-	  },
-	  {
-		"original": "{\"question\":\"A Horizontal Axis Wind Turbine (HAWT) axis rotation is parallel/perpendicular to the ground, and a Vertical Axis Wind Turbine axis rotation is parallel/perpendicular to the ground. (Circle One for BOTH options)\",\"options\":[\"HAWT axis rotation is parallel, VAWT axis rotation is parallel\",\"HAWT axis rotation is parallel, VAWT axis rotation is perpendicular\",\"HAWT axis rotation is perpendicular, VAWT axis rotation is parallel\",\"HAWT axis rotation is perpendicular, VAWT axis rotation is perpendicular\"],\"answers\":[3],\"difficulty\":0.1}",
-		"edited": "{\"question\":\"Which statement is true regarding the HAWTs and VAWTs in relation to the direction of movement in terms of the horizontal axis of rotation?\",\"options\":[\"HAWT axis rotation is parallel, VAWT axis rotation is parallel\",\"HAWT axis rotation is parallel, VAWT axis rotation is perpendicular\",\"HAWT axis rotation is perpendicular, VAWT axis rotation is parallel\",\"HAWT axis rotation is perpendicular, VAWT axis rotation is perpendicular\"],\"answers\":[2],\"difficulty\":0.24}",
-		"timestamp": "2025-04-09T19:13:01.722Z"
-	  },
-	  {
-		"original": "{\"question\":\"Your friend Sigurd is trying to choose a location for his new farm. Which of the following devices would you suggest to help him?\",\"options\":[\"Thermometer\",\"Barometer\",\"Anemometer\",\"Manometer\",\"Hygrometer\"],\"answers\":[3],\"difficulty\":0.4}",
-		"edited": "{\"question\":\"Your friend Sigurd is trying to choose a location for his new wind farm. Which of the following devices would you suggest to help him?\",\"options\":[\"Thermometer\",\"Barometer\",\"Anemometer\",\"Manometer\",\"Hygrometer\"],\"answers\":[3],\"difficulty\":0.4}",
-		"timestamp": "2025-04-10T18:42:50.661Z"
 	  }
 	]
   }

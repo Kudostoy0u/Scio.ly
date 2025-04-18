@@ -75,7 +75,7 @@ const gradeFreeResponses = async (
   
   try {
     const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=" + arr[Math.floor(Math.random() * arr.length)],
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=AIzaSyAkBDzzh7TQTJzmlLmzC7Yb5ls5SJqe05c",
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -536,7 +536,7 @@ export default function TestPage() {
     }
   };
 
-  const getExplanation = async (index: number, question: Question, userAnswer: (string | null)[] ) => {
+  const getExplanation = async (index: number, question: Question) => {
     if (explanations[index]) return;
 
     const now = Date.now();
@@ -550,11 +550,16 @@ export default function TestPage() {
 
     try {
       const isMCQ = question.options && question.options.length > 0;
-      const prompt = `You are ${userAnswer.length > 0 && userAnswer[0] ? "giving feedback on a student's response to a science olympiad question." : "explaining a reasoning process to solve a science olympiad question."} 
-      Question: ${question.question}${isMCQ ? `\nOptions: ${question?.options?.join(', ')}` : ''}\n ${userAnswer.length > 0 && userAnswer[0] ? "Student's answer:" + userAnswer.join(', ') : ""}
-      Provide provide a clear and informative reasoning to come to an answer to this question. \n
-      Start your output with "**Explanation:** ", end the explanation with "Final answer: [Answer]. \n
-      ${userAnswer.length > 0 && userAnswer[0] ? "Then, you must end your output with only CORRECT or INCORRECT, if the student's answer was correct or not" : ""}`;
+      const prompt = `Question: ${question.question}${isMCQ ? `\nOptions: ${question?.options?.join(', ')}` : ''}
+Correct Answer(s) provided originally: ${question.answers.join(', ')}
+
+First, provide a clear and informative explanation for how to solve this question. Start the explanation with "Explanation: ".
+After the explanation, on a new line, state the final answer clearly. Use the format "final answer index: [answer]".
+For multiple choice questions, provide the 1-based index(es) of the correct option(s), separated by commas if multiple. For free response, provide the correct answer text.
+Example MCQ: final answer: 3
+Example Multi-Select MCQ: final answer: 1, 4
+Example FRQ: final answer: Photosynthesis
+Your response should contain ONLY the explanation and the "final answer index:" line.`;
 
       console.log('Sending explanation prompt:', prompt);
       const response = await fetch(
@@ -575,38 +580,90 @@ export default function TestPage() {
       }
 
       const data = await response.json();
+      console.log('API Response:', data);
+
       const fullResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      console.log("API RESPONSE:", fullResponse)
       if (!fullResponse) {
         throw new Error('Invalid response format from API');
       }
 
       // Parse the response
-      const explanationText = fullResponse;
-      if (!explanationText.includes("INCORRECT") && explanationText.includes("CORRECT")) {
-        if (gradingResults[index] == 0) {
-          toast.success("Your answer was determined to be correct!");
-          const newQ = JSON.parse(JSON.stringify(question));
-          newQ.answers = userAnswer.filter(e=>e!=null)
-          await fetch('/api/report/edit', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            question: question.question,
-            answer: question.answers,
-            originalQuestion: JSON.stringify(question),
-            editedQuestion: JSON.stringify(newQ),
-            event: routerData.eventName || 'Unknown Event',
-            reason: "",
-            bypass: true
-          }),
-        });
-        } 
-        setGradingResults(prev => ({ ...prev, [index]: 3 }));
+      let explanationText = fullResponse;
+      let finalAnswerText = '';
+      const answerMarker = 'final answer index:';
+      const answerIndex = fullResponse.toLowerCase().lastIndexOf(answerMarker);
+
+      if (answerIndex !== -1) {
+        explanationText = fullResponse.substring(0, answerIndex).trim();
+        // Remove "Explanation: " prefix if it exists
+        if (explanationText.toLowerCase().startsWith('explanation:')) {
+          explanationText = explanationText.substring(12).trim();
+        }
+        finalAnswerText = fullResponse.substring(answerIndex + answerMarker.length).trim();
+      } else {
+        // If marker not found, use the whole response as explanation and log a warning
+        console.warn("Could not find 'final answer:' marker in response:", fullResponse);
+        // Still remove "Explanation: " prefix
+        if (explanationText.toLowerCase().startsWith('explanation:')) {
+          explanationText = explanationText.substring(12).trim();
+        }
       }
-      setExplanations((prev) => ({ ...prev, [index]: explanationText.includes("INCORRECT") ? explanationText.slice(0, -10) : explanationText.includes("CORRECT") ? explanationText.slice(0, -8) : explanationText }));
+
+      setExplanations((prev) => ({ ...prev, [index]: explanationText }));
+
+      // Contest logic: Only run if submitted and final answer was found
+      if (isSubmitted && finalAnswerText) {
+        const userAnswer = userAnswers[index] || [];
+        if (userAnswer.length > 0) { // Only contest if user provided an answer
+          let aiAnswerMatchesUser = false;
+
+          if (isMCQ) {
+            // Ensure question.options exists before proceeding
+            if (question.options) {
+              // AI answer (1-based indices string, e.g., "1, 4") -> array of numbers [1, 4]
+              const aiIndices = finalAnswerText.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+
+              // User answer (option texts) -> array of 1-based indices
+              const userIndices = userAnswer
+                .map(ans => {
+                  // Use optional chaining for safety
+                  const idx = question.options?.indexOf(ans ?? "");
+                  return idx !== undefined && idx !== -1 ? idx + 1 : -1;
+                })
+                .filter(idx => idx > 0)
+                .sort((a, b) => a - b); // Sort for consistent comparison
+
+              // Sort AI indices too
+              aiIndices.sort((a, b) => a - b);
+
+              // Compare sorted arrays of indices
+              if (aiIndices.length === userIndices.length && aiIndices.every((val, i) => val === userIndices[i])) {
+                aiAnswerMatchesUser = true;
+              }
+            } else {
+              console.error("Contest check error: MCQ question missing options.");
+            }
+          } else { // Free Response
+            // Simple case-insensitive comparison for FRQ for now
+            if (userAnswer[0]?.toLowerCase() === finalAnswerText.toLowerCase()) {
+              aiAnswerMatchesUser = true;
+            }
+            // TODO: Potentially add more sophisticated FRQ matching later if needed
+          }
+
+          if (aiAnswerMatchesUser && gradingResults[index] !== 1 && gradingResults[index] !== 2) {
+            // If AI agrees with user and user was marked wrong/partial/unmarked
+            setGradingResults(prev => ({ ...prev, [index]: 2 }));
+            toast.success('Explanation confirmed your answer! Marked as correct.', { autoClose: 5000 });
+          } else if (!aiAnswerMatchesUser && gradingResults[index] === 2) {
+            // Optional: If AI *disagrees* and it was previously contested correct, revert?
+            // setGradingResults(prev => ({ ...prev, [index]: 0 })); // Or original grade
+            // toast.warn('Explanation differs from your answer. Reverting contest status.');
+          } else if (aiAnswerMatchesUser && (gradingResults[index] === 1 || gradingResults[index] === 2)) {
+             toast.info('Explanation confirms your answer was already correct.');
+          }
+        }
+      }
 
     } catch (error) {
       console.error('Error in getExplanation:', error);
@@ -917,7 +974,7 @@ export default function TestPage() {
                             <button
                               onClick={() => handleDirectReport(index)}
                               className={`text-gray-500 hover:text-red-500 transition-colors duration-200 p-1 rounded-full hover:bg-gray-500/20 ${isProcessingReport[index] ? 'opacity-50 cursor-not-allowed' : ''}`}
-                              title="Report for removal"
+                              title="Report for Removal"
                               disabled={isProcessingReport[index]}
                             >
                               {isProcessingReport[index] ? (
@@ -951,19 +1008,17 @@ export default function TestPage() {
                               <label
                                 key={optionIndex}
                                 className={`block p-2 rounded-md transition-colors duration-1000 ease-in-out ${
-                                  (gradingResults[index] ?? 0) == 3
-                                  ? currentAnswers.includes(option)
-                                    ? darkMode ? 'bg-green-800' : 'bg-green-200'
-                                    : darkMode ? 'bg-gray-700' : 'bg-gray-200'
+                                  (gradingResults[index] ?? 0) == 2
+                                  ? darkMode ? 'bg-green-800' : 'bg-green-200'
                                   : isSubmitted && currentAnswers.includes(option) && currentAnswers[0]
                                     ? question.options?.length && question.answers.indexOf(optionIndex+1) != -1
                                       ? darkMode ? 'bg-green-800' : 'bg-green-200'
                                       : darkMode ? 'bg-red-900' : 'bg-red-200'
                                     : isSubmitted && question.options?.length && question.answers.indexOf(optionIndex+1) != -1
                                       ? question.answers?.length == 1 && currentAnswers[0]
-                                        ? darkMode ? 'bg-green-800' : 'bg-green-200'
-                                        : darkMode ? 'bg-blue-700' : 'bg-blue-200'
-                                      : darkMode ? 'bg-gray-700' : 'bg-gray-200'
+                                      ? darkMode ? 'bg-green-800' : 'bg-green-200'
+                                      : darkMode ? 'bg-blue-700' : 'bg-blue-200'
+                                    : darkMode ? 'bg-gray-700' : 'bg-gray-200'
                                 } ${!isSubmitted && (darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-300')}`}
                               >
                                 <input
@@ -1001,7 +1056,7 @@ export default function TestPage() {
                               if (!currentAnswers[0]) {
                                 resultText = 'Skipped';
                                 resultColor = 'text-blue-500';
-                              } else if (score === 1 || score === 2 || score === 3) {
+                              } else if (score === 1 || score === 2) {
                                 resultText = 'Correct!';
                                 resultColor = 'text-green-600';
                               } else if (score === 0) {
@@ -1017,10 +1072,18 @@ export default function TestPage() {
                                 </p>
                               );
                             })()}
+                            <p className="text-sm mt-1">
+                              <strong>Correct Answer(s):</strong>{' '}
+                              {question.options?.length
+                                ? question.answers
+                                    .map((ans) => question.options?.[ans as number - 1])
+                                    .join(', ')
+                                : question.answers.join(', ')}
+                            </p>
                             <div className="mt-2">
                               {!explanations[index] ? (
                                 <button
-                                  onClick={() => getExplanation(index, question, currentAnswers ?? [])}
+                                  onClick={() => getExplanation(index, question)}
                                   className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-300 ${
                                     darkMode
                                       ? 'bg-gray-700 hover:bg-gray-600 text-blue-400'

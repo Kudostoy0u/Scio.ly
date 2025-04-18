@@ -9,6 +9,9 @@ import AuthButton from '@/app/components/AuthButton';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { usePathname } from 'next/navigation';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { getUserProfile, UserProfile } from '@/app/utils/userProfile';
 
 interface ContactFormData {
   name: string;
@@ -161,6 +164,7 @@ const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: {
 
 export default function Header() {
   const { darkMode } = useTheme();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -168,9 +172,20 @@ export default function Header() {
   const pathname = usePathname();
   const dropdownRef = useRef<HTMLDivElement>(null);
   
+  // Fetch user profile data
+  const fetchProfileData = async (user: User | null) => {
+    const profile = await getUserProfile(user?.uid || null);
+    setUserProfile(profile);
+    console.log("Header: Fetched profile:", profile); // DEBUG
+  };
 
-
-
+  // Listen for auth state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      fetchProfileData(user); // Fetch profile when user state changes
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Determine if we're on the homepage
   const isHomePage = pathname === '/';
@@ -229,13 +244,31 @@ export default function Header() {
   const getLinkStyles = (path: string) => {
     const isActive = pathname === path;
     const base = `transition-colors duration-1000 ease-in-out px-1 py-1 rounded-md text-sm font-medium`;
-    return `${base} ${darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'}`;
+    const hover = darkMode ? 'hover:opacity-80' : 'hover:opacity-80'; // Generic hover
+    const activeStyle = isActive ? (darkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white') : '';
+
+    if (userProfile?.navbarStyle === 'rainbow') {
+      return `${base} ${activeStyle || 'bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 bg-clip-text text-transparent font-bold'} ${hover}`;
+    } else if (userProfile?.navbarStyle === 'golden') {
+      return `${base} ${activeStyle || 'bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent font-semibold'} ${hover}`;
+    } else {
+      // Default style
+      return `${base} ${activeStyle || (darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900')}`;
+    }
   };
 
-  const linkStyles = getLinkStyles();
-  const mobileLinkStyles = (isDarkMode: boolean) => { // Mobile styles need separate handling
-     const baseMobile = 'block px-4 py-2 text-sm';
-     return `${baseMobile} ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`;
+  const mobileLinkStyles = (isDarkMode: boolean, path: string) => { // Mobile styles need separate handling
+    const isActive = pathname === path;
+    const baseMobile = 'block px-4 py-2 text-sm';
+    const activeStyle = isActive ? (isDarkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white') : '';
+
+    if (userProfile?.navbarStyle === 'rainbow') {
+      return `${baseMobile} ${activeStyle || 'bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 bg-clip-text text-transparent font-bold'} ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`;
+    } else if (userProfile?.navbarStyle === 'golden') {
+      return `${baseMobile} ${activeStyle || 'bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent font-semibold'} ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`;
+    } else {
+      return `${baseMobile} ${activeStyle || (isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100')}`;
+    }
   };
 
   const handleContact = async (data: ContactFormData) => {
