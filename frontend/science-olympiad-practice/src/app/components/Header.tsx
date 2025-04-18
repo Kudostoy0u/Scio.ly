@@ -228,14 +228,24 @@ export default function Header() {
   // Determine link styles based on profile
   const getLinkStyles = (path: string) => {
     const isActive = pathname === path;
-    const base = `transition-colors duration-1000 ease-in-out px-1 py-1 rounded-md text-sm font-medium`;
-    return `${base} ${darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'}`;
+    const base = `transition-all duration-1000 ease-in-out px-1 py-1 rounded-md text-sm font-medium`;
+    const activeStyles = isActive 
+      ? 'bg-blue-500 text-white px-3 py-3' 
+      : darkMode 
+        ? 'text-gray-300 hover:bg-blue-500 hover:text-white hover:px-3 hover:py-3' 
+        : 'text-gray-700 hover:bg-blue-500 hover:text-white hover:px-3 hover:py-3';
+    return `${base} ${activeStyles}`;
   };
 
-  const linkStyles = getLinkStyles();
-  const mobileLinkStyles = (isDarkMode: boolean) => { // Mobile styles need separate handling
-     const baseMobile = 'block px-4 py-2 text-sm';
-     return `${baseMobile} ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`;
+  const mobileLinkStyles = (path: string) => {
+    const isActive = pathname === path;
+    const baseMobile = 'block px-4 py-2 text-sm transition-all duration-1000 ease-in-out';
+    const activeStyles = isActive
+      ? 'bg-blue-500 text-white px-6 py-4'
+      : darkMode
+        ? 'text-gray-300 hover:bg-blue-500 hover:text-white hover:px-6 hover:py-4'
+        : 'text-gray-700 hover:bg-blue-500 hover:text-white hover:px-6 hover:py-4';
+    return `${baseMobile} ${activeStyles}`;
   };
 
   const handleContact = async (data: ContactFormData) => {
@@ -384,14 +394,14 @@ export default function Header() {
                     >
                       <Link
                         href="/dashboard"
-                        className={mobileLinkStyles(darkMode, '/dashboard')}
+                        className={mobileLinkStyles('/dashboard')}
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Dashboard
                       </Link>
                       <Link
                         href="/practice"
-                        className={mobileLinkStyles(darkMode, '/practice')}
+                        className={mobileLinkStyles('/practice')}
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Practice
@@ -401,13 +411,13 @@ export default function Header() {
                           setMobileMenuOpen(false);
                           setContactModalOpen(true);
                         }}
-                        className={`w-full text-left ${mobileLinkStyles(darkMode, '')}`}
+                        className={`w-full text-left ${mobileLinkStyles('')}`}
                       >
                         Contact
                       </button>
                       <Link
                         href="/about"
-                        className={mobileLinkStyles(darkMode, '/about')}
+                        className={mobileLinkStyles('/about')}
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         About Us

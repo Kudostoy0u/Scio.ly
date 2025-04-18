@@ -156,10 +156,10 @@ export default function AuthButton() {
     <>
       <button
         onClick={() => setShowSignInModal(true)}
-        className={`px-1 py-1 text-sm ${
+        className={`transition-all duration-1000 ease-in-out px-1 py-1 rounded-md text-sm font-medium ${
           darkMode 
-            ? 'text-blue-400 hover:text-blue-300' 
-            : 'text-blue-500 hover:text-blue-700'
+            ? 'text-blue-400 hover:bg-blue-500 hover:text-white hover:px-3 hover:py-3' 
+            : 'text-blue-500 hover:bg-blue-500 hover:text-white hover:px-3 hover:py-3'
         }`}
       >
         Sign In
