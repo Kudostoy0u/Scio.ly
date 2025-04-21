@@ -7,6 +7,7 @@
 
 /* Root Variables */
 :root {
+  --font-custom: 'Poppins', sans-serif !important;
   --background: #ffffff;
   --foreground: #171717;
 }
@@ -23,7 +24,7 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: "Poppins", sans-serif;
+  font-family: "Poppins", sans-serif !important;
 }
 
 /* Keyframes for the Background Wave Animation */

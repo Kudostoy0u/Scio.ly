@@ -21,6 +21,9 @@ export default {
           100: "#282C3E"
         }
       },
+      fontFamily: {
+        'Poppins': 'var(--font-custom)'
+      }
     },
   },
   plugins: [],

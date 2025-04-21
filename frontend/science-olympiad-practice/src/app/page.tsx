@@ -254,7 +254,7 @@ export default function HomePage() {
   ];
 
   return (
-    <div className={`relative ${darkMode ? 'bg-[#020617]' : 'bg-white'} transition-colors duration-300 cursor-default`}>
+    <div className={`relative font-Poppins ${darkMode ? 'bg-[#020617]' : 'bg-white'} transition-colors duration-300 cursor-default`}>
       <Header />
       {/* Updated Hero Section */}
       <section className="min-h-screen relative overflow-hidden">
