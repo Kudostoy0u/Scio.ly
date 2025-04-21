@@ -228,10 +228,10 @@ export default function Header() {
     const isActive = pathname === path;
     const base = `transition-all duration-1000 ease-in-out px-1 py-1 rounded-md text-sm font-medium`;
     const activeStyles = isActive 
-      ? 'bg-blue-500 text-white px-3 py-3' 
+      ? 'bg-blue-500 text-white md:px-3 md:py-3' 
       : darkMode 
-        ? 'text-gray-300 hover:bg-blue-500 hover:text-white hover:px-3 hover:py-3' 
-        : 'text-gray-700 hover:bg-blue-500 hover:text-white hover:px-3 hover:py-3';
+        ? 'text-gray-300 hover:bg-blue-500 hover:text-white md:hover:px-3 md:hover:py-3' 
+        : 'text-gray-700 hover:bg-blue-500 hover:text-white md:hover:px-3 md:hover:py-3';
     return `${base} ${activeStyles}`;
   };
 
@@ -239,10 +239,10 @@ export default function Header() {
     const isActive = pathname === path;
     const baseMobile = 'block px-4 py-2 text-sm transition-all duration-1000 ease-in-out';
     const activeStyles = isActive
-      ? 'bg-blue-500 text-white px-6 py-4'
+      ? 'bg-blue-500 text-white'
       : darkMode
-        ? 'text-gray-300 hover:bg-blue-500 hover:text-white hover:px-6 hover:py-4'
-        : 'text-gray-700 hover:bg-blue-500 hover:text-white hover:px-6 hover:py-4';
+        ? 'text-gray-300 hover:bg-blue-500 hover:text-white'
+        : 'text-gray-700 hover:bg-blue-500 hover:text-white';
     return `${baseMobile} ${activeStyles}`;
   };
 

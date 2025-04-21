@@ -834,7 +834,7 @@ export default function WelcomePage() {
                   </AnimatePresence>
                 ) : (
                   <div
-                    className="absolute left-0 top-[12vh] z-10"
+                    className="absolute top-0 left-[20vh] z-10"
                     onMouseEnter={() => setShowEventsTooltip(true)}
                     onMouseLeave={() => setShowEventsTooltip(false)}
                   >
