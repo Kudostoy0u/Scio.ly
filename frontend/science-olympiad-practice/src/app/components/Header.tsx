@@ -162,7 +162,6 @@ const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: {
 export default function Header() {
   const { darkMode } = useTheme();
   const [contactModalOpen, setContactModalOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
@@ -185,8 +184,7 @@ export default function Header() {
   };
   
   useEffect(() => {
-    setMounted(true);
-    
+
     // Add scroll event listener
     window.addEventListener('scroll', handleScroll);
     
@@ -213,7 +211,7 @@ export default function Header() {
   
   // The header should be transparent only on homepage when not scrolled
   // For /welcome page, it should always be opaque
-  const shouldBeTransparent = isHomePage && !scrolled && mounted;
+  const shouldBeTransparent = isHomePage && !scrolled;
   
   // Set background classes based on page and scroll state
   const navBgClass = shouldBeTransparent 

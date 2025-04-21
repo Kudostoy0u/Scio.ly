@@ -10,6 +10,8 @@ const genAI = new GoogleGenerativeAI(arr[Math.floor(Math.random() * arr.length)]
 export async function POST(request: NextRequest) {
   try {
     const { originalQuestion, originalQuestion: originalQuestionText, editedQuestion, event, reason, bypass } = await request.json();
+    console.log('Original question data:', originalQuestion);
+    console.log('Edited question data:', editedQuestion);
     let isValid = false;
     if (bypass) {
       isValid = true
@@ -40,7 +42,6 @@ export async function POST(request: NextRequest) {
     
     An edit should be REJECTED if:
     1. It introduces new errors or problems
-    2. It makes only trivial or cosmetic changes that don't meaningfully improve the question
     3. It significantly alters the intent or difficulty of the question without strong justification
     4. The original question was already adequate and the edit is unnecessary
     5. It changes correct answers to incorrect ones
@@ -49,10 +50,7 @@ export async function POST(request: NextRequest) {
     
     Reason through your evaluation step by step, then conclude with either "VALID" if the edit should be accepted or "INVALID" if it should be rejected, as the end of your response, not even a period after that.
     `;
-
     // Log the edited question to verify it contains the difficulty value
-    console.log('Edited question data:', editedQuestion);
-
     const result = await model.generateContent(prompt);
     const response = result.response.text().trim();
     

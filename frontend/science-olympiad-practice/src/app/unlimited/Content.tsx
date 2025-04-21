@@ -132,6 +132,9 @@ export default function UnlimitedPracticePage() {
   // Updated gradingResults now holds a numeric score.
   const [gradingResults, setGradingResults] = useState<{ [key: string]: number }>({});
   const [bookmarkedQuestions, setBookmarkedQuestions] = useState<Record<string, boolean>>({});
+  // State to track submitted reports and edits per question index
+  const [submittedReports, setSubmittedReports] = useState<Record<number, boolean>>({});
+  const [submittedEdits, setSubmittedEdits] = useState<Record<number, boolean>>({});
 
   // Fetch and filter questions on mount
   useEffect(() => {
@@ -329,13 +332,15 @@ export default function UnlimitedPracticePage() {
   const handleReport = async (reason: string, action: 'remove' | 'edit', editedQuestion?: string, originalQuestion?: string) => {
     if (reportState.questionIndex === null) return;
     
+    const indexToReport = reportState.questionIndex;
     // Close the modal first
     setReportState({ isOpen: false, questionIndex: null });
+    setIsProcessingReport(prev => ({ ...prev, [indexToReport]: true }));
     
     try {
-      const question = data[reportState.questionIndex];
-
-      const response = await fetch('/api/report/edit', {
+      const question = data[indexToReport];
+      const endpoint = action === 'remove' ? '/api/report/remove' : '/api/report/edit';
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -361,6 +366,14 @@ export default function UnlimitedPracticePage() {
     } catch {
       // Show error toast after modal is closed
       toast.error('Failed to submit report. Please try again.');
+    } finally {
+      setIsProcessingReport(prev => ({ ...prev, [indexToReport]: false }));
+      // Update submission status after attempt
+      if (action === 'remove') {
+        setSubmittedReports(prev => ({ ...prev, [indexToReport]: true }));
+      } else if (action === 'edit') {
+        setSubmittedEdits(prev => ({ ...prev, [indexToReport]: true }));
+      }
     }
   };
 
@@ -379,10 +392,11 @@ export default function UnlimitedPracticePage() {
     try {
       const isMCQ = question.options && question.options.length > 0;
       const prompt = `You are ${userAnswer.length > 0 && userAnswer[0] ? "giving feedback on a student's response to a science olympiad question." : "explaining a reasoning process to solve a science olympiad question."} 
-      Question: ${question.question}${isMCQ ? `\nOptions: ${question?.options?.join(', ')}` : ''}\n ${userAnswer.length > 0 && userAnswer[0] ? "Student's answer:" + userAnswer.join(', ') : ""}
-      Provide provide a clear and informative reasoning to come to an answer to this question. \n
-      Start your output with "**Explanation:** ", end the explanation with "Final answer: [Answer]. \n
-      ${userAnswer.length > 0 && userAnswer[0] ? "Then, you must end your output with only CORRECT or INCORRECT, if the student's answer was correct or not." : ""}`;
+      Question: ${question.question}${isMCQ ? `\\nOptions: ${question?.options?.join(', ')}` : ''}\n 
+      Provide a clear and informative reasoning to come to an answer to this question.
+      Start your output with "**Explanation:** ", end the explanation with "Final answer: [Answer].\\n"
+      ${isMCQ ? "\\nEnd your output with a new line 'Correct Indices: ' followed by a comma-separated list of the 0-indexed indices of the correct options." : ""}`;
+      // Removed the old logic for checking CORRECT/INCORRECT suffix as it's less reliable.
 
       console.log('Sending explanation prompt:', prompt);
       const response = await fetch(
@@ -409,32 +423,75 @@ export default function UnlimitedPracticePage() {
         throw new Error('Invalid response format from API');
       }
 
-      // Parse the response
-      const explanationText = fullResponse;
-      if (!explanationText.includes("INCORRECT") && explanationText.includes("CORRECT")) {
-        if (gradingResults[index] == 0) {
-          toast.success("Your answer was determined to be correct!");
-          const newQ = JSON.parse(JSON.stringify(question));
-          newQ.answers = userAnswer.filter(e=>e!=null)
-          await fetch('/api/report/edit', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            question: question.question,
-            answer: question.answers,
-            originalQuestion: JSON.stringify(question),
-            editedQuestion: JSON.stringify(newQ),
-            event: routerData.eventName || 'Unknown Event',
-            reason: "",
-            bypass: true
-          }),
-        });
-        } 
-        setGradingResults(prev => ({ ...prev, [index]: 3 }));
+      // Modified response parsing logic (similar to test/Content.tsx)
+      let explanationText = fullResponse;
+      const indicesMarker = 'Correct Indices: ';
+      const markerIndex = fullResponse.lastIndexOf(indicesMarker);
+
+      if (isMCQ && markerIndex !== -1) {
+        // Extract and parse indices if marker is found for MCQ
+        explanationText = fullResponse.substring(0, markerIndex).trim(); // Get text before marker
+        const indicesString = fullResponse.substring(markerIndex + indicesMarker.length).trim();
+        try {
+          const zeroBasedIndices = indicesString.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+          if (zeroBasedIndices.length > 0) {
+            const oneBasedIndices = zeroBasedIndices.map(i => i + 1);
+
+            // Compare new indices with existing ones
+            const currentAnswers = question.answers || [];
+            const answersChanged = !(
+              oneBasedIndices.length === currentAnswers.length &&
+              oneBasedIndices.every(val => currentAnswers.includes(val)) &&
+              currentAnswers.every(val => oneBasedIndices.includes(val))
+            );
+
+            if (answersChanged) {
+              console.log("Explanation suggested different answers, submitting auto-edit request.");
+              const newQ = { ...question, answers: oneBasedIndices };
+              try {
+                await fetch('/api/report/edit', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    question: question.question,
+                    answer: question.answers, // Original answers
+                    originalQuestion: JSON.stringify(question),
+                    editedQuestion: JSON.stringify(newQ),
+                    event: routerData.eventName || 'Unknown Event',
+                    reason: "Explanation corrected answers",
+                    bypass: true
+                  }),
+                });
+                // Update question data locally to reflect the change immediately
+                setData(prevData => {
+                  const newData = [...prevData];
+                  newData[index] = { ...newData[index], answers: oneBasedIndices };
+                  return newData;
+                });
+                // Trigger re-evaluation of the answer with the new correct answers
+                const newScore = await isCorrect({ ...question, answers: oneBasedIndices }, userAnswer);
+                setGradingResults(prev => ({ ...prev, [index]: newScore }));
+              } catch (editError) {
+                console.error("Failed to submit auto-edit request:", editError);
+                // Optional: Add toast notification for failed auto-edit
+              }
+            } else {
+              // If answers didn't change, just re-evaluate the score in case something was missed
+              const currentScore = await isCorrect(question, userAnswer);
+              if (currentScore !== gradingResults[index]) {
+                setGradingResults(prev => ({ ...prev, [index]: currentScore }));
+              }
+            }
+          }
+        } catch (parseError) {
+          console.error("Failed to parse correct indices:", parseError);
+          // Keep the full response as explanation in case of parsing error
+          explanationText = fullResponse;
+        }
       }
-      setExplanations((prev) => ({ ...prev, [index]: explanationText.includes("INCORRECT") ? explanationText.slice(0, -10) : explanationText.includes("CORRECT") ? explanationText.slice(0, -8) : explanationText }));
+      // Removed the old logic checking for "CORRECT" / "INCORRECT" suffix
+
+      setExplanations((prev) => ({ ...prev, [index]: explanationText }));
 
     } catch (error) {
       console.error('Error in getExplanation:', error);
@@ -446,6 +503,8 @@ export default function UnlimitedPracticePage() {
       toast.error(errorMsg);
     } finally {
       setLoadingExplanation((prev) => ({ ...prev, [index]: false }));
+      // Update submission status after attempt
+      setSubmittedReports(prev => ({ ...prev, [index]: true }));
     }
   };
 
@@ -508,7 +567,7 @@ export default function UnlimitedPracticePage() {
   }
   // Function to handle direct report without modal
   const handleDirectReport = async (index: number) => {
-    if (isProcessingReport[index]) return; // Prevent multiple clicks
+    if (isProcessingReport[index] || submittedReports[index]) return; // Prevent multiple clicks if already submitted
     setIsProcessingReport(prev => ({ ...prev, [index]: true }));
     
     try {
@@ -540,6 +599,8 @@ export default function UnlimitedPracticePage() {
       updateContext(false, 'Failed to submit report. Please try again.');
     } finally {
       setIsProcessingReport(prev => ({ ...prev, [index]: false }));
+      // Update submission status after attempt
+      setSubmittedReports(prev => ({ ...prev, [index]: true }));
     }
   };
   const renderQuestion = (question: Question) => {
@@ -578,8 +639,9 @@ export default function UnlimitedPracticePage() {
             </button>
             <button
             onClick={() => setReportState({ isOpen: true, questionIndex: currentQuestionIndex })}
-            className="text-gray-500 hover:text-blue-500 transition-colors duration-200 p-1 rounded-full hover:bg-gray-500/20"
+            className={`text-gray-500 hover:text-blue-500 transition-colors duration-200 p-1 rounded-full hover:bg-gray-500/20 ${isProcessingReport[currentQuestionIndex] || submittedEdits[currentQuestionIndex] ? 'opacity-50 cursor-not-allowed' : ''}`}
             title="Suggest Edit"
+            disabled={isProcessingReport[currentQuestionIndex] || submittedEdits[currentQuestionIndex]}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -588,9 +650,9 @@ export default function UnlimitedPracticePage() {
           </button>
           <button
           onClick={() => handleDirectReport(currentQuestionIndex)}
-          className={`text-gray-500 hover:text-red-500 transition-colors duration-200 p-1 rounded-full hover:bg-gray-500/20 ${isProcessingReport[currentQuestionIndex] ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`text-gray-500 hover:text-red-500 transition-colors duration-200 p-1 rounded-full hover:bg-gray-500/20 ${isProcessingReport[currentQuestionIndex] || submittedReports[currentQuestionIndex] ? 'opacity-50 cursor-not-allowed' : ''}`}
           title="Report for removal"
-          disabled={isProcessingReport[currentQuestionIndex]}
+          disabled={isProcessingReport[currentQuestionIndex] || submittedReports[currentQuestionIndex]}
         >
           {isProcessingReport[currentQuestionIndex] ? (
             <div className="animate-spin rounded-full h-5 w-5 border-2 border-red-500 border-t-transparent"></div>
@@ -626,11 +688,11 @@ export default function UnlimitedPracticePage() {
                   isSubmitted && currentAnswers.includes(option)
                     ? gradingResults[currentQuestionIndex] >= 1
                       ? darkMode ? 'bg-green-800' : 'bg-green-200'
-                      : gradingResults[currentQuestionIndex] === 0
+                      : !(question.options?.length && question.answers.indexOf(idx+1) != -1)
                         ? darkMode ? 'bg-red-900' : 'bg-red-200'
-                        : darkMode ? 'bg-amber-400' : 'bg-amber-400'
+                        : darkMode ? 'bg-green-800' : 'bg-green-200'
                     : isSubmitted && question.options?.length && question.answers.indexOf(idx+1) != -1 && gradingResults[currentQuestionIndex] != 3
-                      ? darkMode ? 'bg-blue-700' : 'bg-blue-200'
+                      ? darkMode ? 'bg-green-800' : 'bg-green-200'
                       : darkMode ? 'bg-gray-700' : 'bg-gray-200'
                 } ${!isSubmitted && (darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-300')}`}
               >

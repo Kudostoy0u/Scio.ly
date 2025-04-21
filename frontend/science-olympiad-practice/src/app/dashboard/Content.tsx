@@ -568,11 +568,10 @@ export default function WelcomePage() {
   };
 
   const UPDATE_INFO: UpdateInfo = {
-    date: "4/17//25",
+    date: "4/20//25",
     features: [
-      "📈 Larger Test Bank!!!",
-      "✨ Explanation automatically considers your answer for accuracy",
-      "🎯 Small fixes",
+      "✨ New UI",
+      "🎯 Better explanations, question reporting",
     ],
     comingSoon: [
       "⏰ Division B/C toggle",

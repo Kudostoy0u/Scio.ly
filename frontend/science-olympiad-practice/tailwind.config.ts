@@ -12,15 +12,18 @@ export default {
         background: "var(--background)",
         foreground: "var(--foreground)",
         regalblue: {
-          100: "#0D324D"
+          100: "#021524"
         },
         regalred: {
-          100: "#7F5A83"
+          100: "#452942"
         }, 
         palenight: {
           100: "#282C3E"
         }
       },
+      fontFamily: {
+        'Poppins': 'var(--font-custom)'
+      }
     },
   },
   plugins: [],

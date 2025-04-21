@@ -8,9 +8,10 @@ import {
   useMotionTemplate,
   useMotionValue,
   animate,
+  useInView,
 } from "framer-motion";
-import { useEffect, useRef } from "react";
-import { FiArrowRight } from "react-icons/fi";
+import { useEffect, useRef, useState } from "react";
+import { FiArrowRight, FiClock, FiTarget } from "react-icons/fi";
 import 'react-toastify/dist/ReactToastify.css';
 import Header from './components/Header';
 import Image from 'next/image';
@@ -20,10 +21,135 @@ import { Float, Points } from "@react-three/drei";
 
 const COLORS_TOP = ["#13FFAA", "#1E67C6", "#CE84CF", "#DD335C"];
 
+// Helper function to parse K notation
+const parseKValue = (value: string): number => {
+  if (value.endsWith('K')) {
+    return parseFloat(value.replace('K', '')) * 1000;
+  }
+  return parseFloat(value);
+};
+
+// Animated Counter Component
+function AnimatedCounter({ value, className }: { value: string; className?: string }) {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const count = useMotionValue(0);
+  const rounded = useMotionValue("0");
+  const targetValue = parseKValue(value);
+
+  useEffect(() => {
+    if (isInView) {
+      const controls = animate(count, targetValue, {
+        duration: 2,
+        ease: "easeOut",
+        onUpdate: (latest) => {
+          if (latest >= 1000) {
+            rounded.set((latest / 1000).toFixed(1) + "K");
+          } else {
+            rounded.set(latest.toFixed(0));
+          }
+        },
+      });
+      return () => controls.stop();
+    }
+  }, [isInView, count, rounded, targetValue]);
+
+  return (
+    <motion.span ref={ref} className={className}>
+      {rounded}
+    </motion.span>
+  );
+}
+
+// Sample Question Component
+function SampleQuestion() {
+  const { darkMode } = useTheme();
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const correctAnswer = "Triceps brachii"; // Updated correct answer to full text
+
+  // Options array without prefixes
+  const options = ['Deltoid', 'Triceps brachii', 'Brachialis', 'Pectoralis major'];
+
+  const handleAnswerClick = (option: string) => {
+    setSelectedAnswer(option);
+  };
+
+  const getOptionClasses = (option: string) => {
+    const baseClasses = `w-full text-left p-3 rounded-lg border transition-all duration-200 flex items-center gap-3 group transform hover:scale-[1.02] `;
+    const themeClasses = darkMode ? 'border-gray-700 text-white' : 'border-gray-300 text-gray-800';
+    const interactionClasses = selectedAnswer ? 'cursor-default' : 'cursor-default group-hover:scale-[1.02]';
+
+    if (!selectedAnswer) {
+      return `${baseClasses} ${themeClasses} ${interactionClasses} ${darkMode ? 'bg-gray-700/50 hover:bg-gray-600/50' : 'bg-gray-100 hover:bg-gray-200'}`;
+    }
+    if (option === selectedAnswer) {
+      return `${baseClasses} ${themeClasses} ${interactionClasses} ${
+        option === correctAnswer
+          ? 'bg-green-500/30 border-green-500'
+          : 'bg-red-500/30 border-red-500'
+      }`;
+    }
+    // Fade out unselected options
+    return `${baseClasses} ${themeClasses} ${interactionClasses} ${darkMode ? 'bg-gray-800/30 text-gray-500 border-gray-700/50' : 'bg-gray-50 text-gray-400 border-gray-200'}`;
+  };
+
+  const getRadioClasses = (option: string) => {
+    const baseRadioClasses = "h-4 w-4 rounded-full border-2 flex-shrink-0 transition-colors duration-200";
+
+    if (!selectedAnswer) {
+      // Before selection: Gray bg, gray border -> blue border (group hover) -> purple bg/border (self hover)
+      return `${baseRadioClasses} ${darkMode 
+        ? 'bg-gray-700 border-gray-600 group-hover:border-blue-500' 
+        : 'bg-gray-300 border-gray-400 group-hover:border-blue-500'}`;
+    }
+    if (option === selectedAnswer) {
+      // Selected: Green (correct) or Red (incorrect)
+      return `${baseRadioClasses} ${
+        option === correctAnswer
+          ? (darkMode ? 'border-green-500 bg-green-600' : 'border-green-600 bg-green-500')
+          : (darkMode ? 'border-red-500 bg-red-600' : 'border-red-600 bg-red-500')
+      }`;
+    }
+    // Faded for unselected after selection
+    return `${baseRadioClasses} ${darkMode ? 'border-gray-700 bg-gray-800 opacity-50' : 'border-gray-300 bg-gray-200 opacity-50'}`;
+  };
+
+  return (
+    <div className={`relative overflow-hidden rounded-xl p-6 border ${darkMode 
+      ? 'bg-gray-900 border-gray-800 shadow-lg shadow-blue-500/15 hover:shadow-xl hover:shadow-blue-400/20' 
+      : 'bg-white border-gray-200 shadow-lg shadow-blue-400/10 hover:shadow-xl hover:shadow-blue-400/15'
+    } animated-border-streak transition-shadow duration-300`}>
+      <h4 className={`text-lg font-semibold mb-1 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>Anatomy & Physiology - Muscular System</h4>
+      <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+        Which muscle acts as the primary antagonist to the biceps brachii during forearm flexion?
+      </p>
+      <div className="space-y-3 mb-4">
+        {options.map((optionText) => { // Use options array
+          return (
+            <button
+              key={optionText} // Use full text as key
+              onClick={() => handleAnswerClick(optionText)} // Pass full text
+              disabled={!!selectedAnswer}
+              className={getOptionClasses(optionText)}
+              
+            >
+              {/* Custom Radio Button */}
+              <span className={getRadioClasses(optionText)}></span>
+              <span>{optionText}</span> {/* Display full text */} 
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function HomePage() {
   const { darkMode, setDarkMode } = useTheme();
   const color = useMotionValue(COLORS_TOP[0]);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const [selectedStudyMode, setSelectedStudyMode] = useState<string | null>(null); // State for study mode
+  const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 minutes in seconds
 
   useEffect(() => {
     const controls = animate(color, COLORS_TOP, {
@@ -54,6 +180,25 @@ export default function HomePage() {
     document.documentElement.classList.toggle('light-scrollbar', !darkMode);
   }, [darkMode]);
 
+  // Countdown Timer Effect
+  useEffect(() => {
+    if (timeLeft <= 0) return; // Stop if time is up
+
+    const intervalId = setInterval(() => {
+      setTimeLeft((prevTime) => prevTime - 1);
+    }, 1000);
+
+    // Cleanup interval on component unmount or when time runs out
+    return () => clearInterval(intervalId);
+  }, [timeLeft]); // Rerun effect if timeLeft changes (needed for cleanup)
+
+  // Helper function to format time
+  const formatTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
   const backgroundImage = useMotionTemplate`radial-gradient(132% 132% at 50% 10%, rgba(2, 6, 23, 0.8) 50%, ${color})`;
   const border = useMotionTemplate`1px solid ${color}`;
   const boxShadow = useMotionTemplate`0px 4px 24px ${color}`;
@@ -66,7 +211,7 @@ export default function HomePage() {
     {
       icon: <FaRobot className="w-8 h-8" />,
       title: "AI Explanations",
-      description: "Get instant, detailed explanations for every question using our Gemini 2.0 system"
+      description: "Get instant, detailed explanations for every question using Google's Gemini 2.0"
     },
     {
       icon: <FaChartPie className="w-8 h-8" />,
@@ -75,18 +220,41 @@ export default function HomePage() {
     }
   ];
 
+  // Updated metrics data with raw numbers for animation
   const metrics = [
-    { number: "4.3K", label: "Practice tests scraped" },
-    { number: "38.4K", label: "Questions solved" },
-    { number: "3.5K", label: "Active users" }
+    { number: "5.3K", raw: 5300, label: "Practice tests worth of questions" },
+    { number: "93K", raw: 93000, label: "Questions solved" },
+    { number: "6.6K", raw: 6600, label: "Active users" }
   ];
 
   const handleThemeToggle = () => {
     setDarkMode(!darkMode);
   };
 
+  const titleGradient = `bg-gradient-to-r ${darkMode ? 'from-blue-400 via-cyan-400 to-green-400' : 'from-blue-600 via-cyan-500 to-green-500'} bg-clip-text text-transparent pb-1`;
+
+  // Helper for Study Mode Radio Button Classes
+  const getStudyModeRadioClasses = (mode: string) => {
+    const baseClasses = "mt-1.5 h-4 w-4 rounded-full border-2 flex-shrink-0 transition-colors duration-200";
+    const isSelected = selectedStudyMode === mode;
+
+    if (isSelected) {
+      return `${baseClasses} ${darkMode ? 'border-purple-500 bg-purple-600' : 'border-purple-600 bg-purple-500'}`; // Selected: Purple
+    } else {
+      // Not Selected: Gray -> Purple (self hover) - Removed group-hover blue
+      return `${baseClasses} ${darkMode ? 'border-gray-600 bg-gray-700 hover:bg-purple-600' : 'border-gray-400 bg-gray-300 hover:bg-purple-500'}`;
+    }
+  };
+
+  // Define study modes data
+  const studyModes = [
+    { id: 'timed', title: 'Timed Tests', description: 'Simulate competition conditions with customizable timed tests' },
+    { id: 'unlimited', title: 'Unlimited Practice', description: 'Practice endlessly with our question bank, filtered by difficulty' },
+    { id: 'shared', title: 'Shared Tests', description: 'Take tests shared by teammates or create your own to share' },
+  ];
+
   return (
-    <div className={`relative ${darkMode ? 'bg-[#020617]' : 'bg-white'} transition-colors duration-300`}>
+    <div className={`relative font-Poppins ${darkMode ? 'bg-[#020617]' : 'bg-white'} transition-colors duration-300 cursor-default`}>
       <Header />
       {/* Updated Hero Section */}
       <section className="min-h-screen relative overflow-hidden">
@@ -136,7 +304,7 @@ export default function HomePage() {
             <motion.h1 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`text-8xl font-bold mb-6 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}
+              className={`text-8xl font-bold mb-6 ${darkMode ? 'text-gray-100' : 'text-gray-900'} pb-1`}
             >
               Scio.ly
             </motion.h1>
@@ -175,80 +343,141 @@ export default function HomePage() {
       </section>
 
       {/* Main Features Section */}
-      <section className={`min-h-screen py-20 px-4 ${darkMode ? '' : 'bg-gray-50'}`}>
+      <motion.section
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.5 }}
+        className={`py-20 px-4 ${darkMode ? '' : 'bg-gray-50'}`}
+      >
         <div className="max-w-7xl mx-auto">
-          <h2 className={`text-4xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          <h2 className={`text-5xl font-bold mb-4 ${titleGradient}`}>
             Master Science Olympiad Events
           </h2>
-          <p className={`mb-12 max-w-2xl ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`mb-12 max-w-2xl ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             Stop wasting time searching for practice materials. Scio.ly provides a comprehensive, organized platform
-            carefully designed and crafted for Science Olympiad students – available to everyone, for free. 
+            carefully designed and crafted for Science Olympiad students – available to everyone, for free.
           </p>
 
-          {/* Feature Cards */}
+          {/* Feature Cards with animation */}
           <div className="grid md:grid-cols-3 gap-8 mb-16">
             {mainFeatures.map((feature, index) => (
-              <div key={index} 
-                className={`rounded-xl p-6 border transform transition-all duration-300 hover:scale-[1.02] ${
-                  darkMode 
-                    ? 'bg-gray-900/50 border-gray-800 hover:border-blue-500/30' 
-                    : 'bg-white border-gray-200 hover:border-blue-300 shadow-sm hover:shadow'
+              <div className="transform transition-all duration-300 hover:scale-[1.03]" key={index}>
+              <motion.div
+                key={index}
+                className={`rounded-xl p-6 border transform transition-all duration-300 ${
+                  darkMode
+                    ? 'bg-gray-900/50 border-gray-800 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/10'
+                    : 'bg-white border-gray-200 hover:border-blue-300 shadow-sm hover:shadow-md'
                 }`}
               >
                 <div className={`mb-4 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>{feature.icon}</div>
                 <h3 className={`text-xl font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{feature.title}</h3>
                 <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>{feature.description}</p>
+              </motion.div>
               </div>
             ))}
           </div>
 
-          {/* Event Categories */}
+          {/* Event Categories - Staggered Animation */}
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-            <div className={darkMode ? 'bg-green-500/10 rounded-lg p-4' : 'bg-green-50 rounded-lg p-4 border border-green-100'}>
-              <h4 className={darkMode ? 'text-green-400 font-semibold mb-2' : 'text-green-700 font-semibold mb-2'}>Life Science</h4>
-              <ul className={`text-sm space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                <li>• Anatomy & Physiology</li>
-                <li>• Microbe Mission</li>
-                <li>• Disease Detectives</li>
-              </ul>
-            </div>
-            <div className={darkMode ? 'bg-purple-500/10 rounded-lg p-4' : 'bg-purple-50 rounded-lg p-4 border border-purple-100'}>
-              <h4 className={darkMode ? 'text-purple-400 font-semibold mb-2' : 'text-purple-700 font-semibold mb-2'}>Earth & Space</h4>
-              <ul className={`text-sm space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                <li>• Astronomy</li>
-                <li>• Dynamic Planet</li>
-                <li>• Fossils</li>
-              </ul>
-            </div>
-            <div className={darkMode ? 'bg-blue-500/10 rounded-lg p-4' : 'bg-blue-50 rounded-lg p-4 border border-blue-100'}>
-              <h4 className={darkMode ? 'text-blue-400 font-semibold mb-2' : 'text-blue-700 font-semibold mb-2'}>Physical Science</h4>
-              <ul className={`text-sm space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                <li>• Wind Power</li>
-                <li>• Optics</li>
-                <li>• Chemistry Lab</li>
-              </ul>
-            </div>
-            <div className={darkMode ? 'bg-red-500/10 rounded-lg p-4' : 'bg-red-50 rounded-lg p-4 border border-red-100'}>
-              <h4 className={darkMode ? 'text-red-400 font-semibold mb-2' : 'text-red-700 font-semibold mb-2'}>New and FRQ-based</h4>
-              <ul className={`text-sm space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                <li>• Codebusters</li>
-                <li>• Entomology</li>
-                <li>• Geologic Mapping</li>
-              </ul>
-            </div>
+            {[...Array(4)].map((_, index) => (
+              <div key = {index} className = "hover:scale-[1.02] duration-300">
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true, amount: 0.5 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+                className={`rounded-lg p-4 border transition-colors duration-200 ${ // Base styles
+                  index === 0 ? (darkMode ? 'bg-green-500/10 border-green-500/20 hover:border-green-800' : 'bg-green-200 border-green-100 hover:border-green-500') :
+                  index === 1 ? (darkMode ? 'bg-purple-500/10 border-purple-500/20 hover:border-purple-800' : 'bg-purple-200 border-purple-100 hover:border-purple-500') :
+                  index === 2 ? (darkMode ? 'bg-blue-500/10 border-blue-500/20 hover:border-blue-800' : 'bg-blue-200 border-blue-100 hover:border-blue-500') :
+                  (darkMode ? 'bg-red-500/10 border-red-500/20 hover:border-red-800' : 'bg-red-200 border-red-100 hover:border-red-500')
+                }`}
+              >
+                <h4 className={
+                  index === 0 ? (darkMode ? 'text-green-400 font-semibold mb-2' : 'text-green-700 font-semibold mb-2') :
+                  index === 1 ? (darkMode ? 'text-purple-400 font-semibold mb-2' : 'text-purple-700 font-semibold mb-2') :
+                  index === 2 ? (darkMode ? 'text-blue-400 font-semibold mb-2' : 'text-blue-700 font-semibold mb-2') :
+                  (darkMode ? 'text-red-400 font-semibold mb-2' : 'text-red-700 font-semibold mb-2')
+                }>
+                  {index === 0 ? 'Life Science' : index === 1 ? 'Earth & Space' : index === 2 ? 'Physical Science' : 'New and FRQ-based'}
+                </h4>
+                <ul className={`text-sm space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {index === 0 ? ['• Anatomy & Physiology', '• Microbe Mission', '• Disease Detectives'].map(item => <li key={item}>{item}</li>) :
+                   index === 1 ? ['• Astronomy', '• Dynamic Planet', '• Fossils'].map(item => <li key={item}>{item}</li>) :
+                   index === 2 ? ['• Wind Power', '• Optics', '• Chemistry Lab'].map(item => <li key={item}>{item}</li>) :
+                   ['• Codebusters', '• Entomology', '• Geologic Mapping'].map(item => <li key={item}>{item}</li>)}
+                </ul>
+              </motion.div>
+              </div>
+            ))}
           </div>
         </div>
-      </section>
+      </motion.section>
+
+      {/* NEW Sample Question Section */}
+      <motion.section
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.1 }}
+        transition={{ duration: 0.5 }}
+        className={`py-20 px-4 ${darkMode ? 'bg-gray-900/60' : 'bg-gray-100'}`}
+      >
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          {/* Right Column: Text Content (Now first in source order) */}
+          <motion.div
+            initial={{ x: 50, opacity: 0 }}
+            whileInView={{ x: 0, opacity: 1 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.6 }}
+            className="md:order-2" // Keep it on the right visually on medium+ screens
+          >
+            <div className={`inline-block px-3 py-1 rounded-full text-sm mb-4 ${darkMode ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-600'}`}>
+              Hands-on Practice
+            </div>
+            <h2 className={`text-5xl font-bold mb-4 ${titleGradient}`}> 
+              Learn by Doing
+            </h2>
+            <p className={darkMode ? 'text-gray-300 mb-6' : 'text-gray-700 mb-6'}>
+              As Science Olympiad competitors ourselves, we wanted to learn our events beyond memorizing wiki facts. Scio.ly provides thousands of questions from past exams so you know exactly what to expect. 
+            </p>
+          </motion.div>
+
+          {/* Left Column: Sample Question (Now second in source order) */}
+          <motion.div
+            initial={{ x: -50, opacity: 0 }}
+            whileInView={{ x: 0, opacity: 1 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.6 }}
+            className="md:order-1" // Keep it on the left visually on medium+ screens
+          >
+            <SampleQuestion />
+          </motion.div>
+        </div>
+      </motion.section>
 
       {/* Resources Preview Section */}
-      <section className={`py-20 px-4 ${darkMode ? 'bg-gray-900/30' : 'bg-white'}`}>
+      <motion.section
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.5 }}
+        className={`py-20 px-4 ${darkMode ? 'bg-gray-900/30' : 'bg-white'}`}
+      >
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-12">
-            <div>
-              <div className="inline-block bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full text-sm mb-4">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <motion.div
+              initial={{ x: -50, opacity: 0 }}
+              whileInView={{ x: 0, opacity: 1 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.6 }}
+            >
+              <div className={`inline-block px-3 py-1 rounded-full text-sm mb-4 ${darkMode ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'}`}>
                 Test Features
               </div>
-              <h2 className={`text-3xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Everything You Need</h2>
+              <h2 className={`text-5xl leading-[7vh] font-bold mb-4 ${titleGradient}`}>Everything You Need</h2>
               <p className={darkMode ? 'text-gray-300 mb-6' : 'text-gray-700 mb-6'}>
                 Practice smarter with our comprehensive testing platform:
               </p>
@@ -257,17 +486,23 @@ export default function HomePage() {
                   <span className="text-green-400">✓</span> Share tests with teammates using unique codes
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="text-green-400">✓</span> Contest answers and get Gemini 2.0 explanations
+                  <span className="text-green-400">✓</span> Contest answers and Gemini 2.0 explanations
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="text-green-400">✓</span> Adaptive difficulty ratings
+                  <span className="text-green-400">✓</span> Customizable difficulty ratings
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="text-green-400">✓</span> Both MCQ and free response support
+                  <span className="text-green-400">✓</span> Both MCQ and FRQ support
                 </li>
               </ul>
-            </div>
-            <div className={`${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200 shadow-lg'} rounded-xl p-6 border overflow-hidden`}>
+            </motion.div>
+            <motion.div
+              initial={{ y: 0, opacity: 0 }}
+              whileInView={{ y: 0, opacity: 1 }}
+              className={`${darkMode 
+                ? 'bg-gray-900 border-gray-800 shadow-lg shadow-blue-500/15 hover:shadow-xl hover:shadow-blue-400/20' 
+                : 'bg-white border-gray-200 shadow-lg shadow-blue-400/10 hover:shadow-xl hover:shadow-blue-400/15'
+              } rounded-xl p-6 border overflow-hidden transform hover:scale-105 transition-all duration-300`}>
               <div className="flex flex-col h-full">
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center space-x-3">
@@ -279,89 +514,103 @@ export default function HomePage() {
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className={`rounded-lg p-4 ${darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white/90 shadow-sm border border-gray-200'}`}>
+                  <div className={`rounded-lg p-4 hover:scale-[1.02] duration-300 ${darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white/90 shadow-sm border border-gray-200'}`}>
                     <div className={`mb-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Questions</div>
                     <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>15</div>
                   </div>
-                  <div className={`rounded-lg p-4 ${darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white/90 shadow-sm border border-gray-200'}`}>
+                  <div className={`rounded-lg p-4 hover:scale-[1.02] duration-300 ${darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white/90 shadow-sm border border-gray-200'}`}>
                     <div className={`mb-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Time Limit</div>
                     <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>25:00</div>
                   </div>
-                  <div className={`rounded-lg p-4 ${darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white/90 shadow-sm border border-gray-200'}`}>
+                  <div className={`rounded-lg p-4 hover:scale-[1.02] duration-300 ${darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white/90 shadow-sm border border-gray-200'}`}>
                     <div className={`mb-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Difficulty</div>
                     <div className={`text-2xl font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>Mixed</div>
                   </div>
-                  <div className={`rounded-lg p-4 ${darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white/90 shadow-sm border border-gray-200'}`}>
+                  <div className={`rounded-lg p-4 hover:scale-[1.02] duration-300 ${darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white/90 shadow-sm border border-gray-200'}`}>
                     <div className={`mb-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Event</div>
-                    <div className={`text-2xl font-bold ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>Astronomy</div>
+                    <div className={`text-2xl font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>Ecology</div>
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Progress Section */}
-      <section className={`py-20 px-4 ${darkMode ? 'bg-gradient-to-br from-gray-900 to-gray-800' : 'bg-gradient-to-br from-blue-500/10 to-blue-600/20'}`}>
+      <motion.section
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.5 }}
+        className={`py-20 px-4 ${darkMode ? 'bg-gradient-to-br from-gray-900 to-gray-800' : 'bg-gradient-to-br from-blue-50/50 to-blue-100/50'}`}
+      >
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-12">
-            <div>
-              <div className={`inline-block px-3 py-1 rounded-full text-sm mb-4 ${darkMode ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-600 text-white'}`}>
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* Right Column: Text Content (Swapped) */}
+            <motion.div
+              initial={{ x: 50, opacity: 0 }} // Start from right
+              whileInView={{ x: 0, opacity: 1 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.6 }}
+              className="md:order-2" // Ensure it appears on the right on medium screens and up
+            >
+              <div className={`inline-block px-3 py-1 rounded-full text-sm mb-4 ${darkMode ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-600'}`}>
                 Practice Your Way
               </div>
-              <h2 className={`text-3xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Multiple Study Modes</h2>
+              <h2 className={`text-5xl font-bold mb-4 ${titleGradient}`}>Multiple Study Modes</h2>
               <p className={darkMode ? 'text-gray-400 mb-6' : 'text-gray-700 mb-6'}>
                 Choose how you want to practice:
               </p>
-              <ul className={`space-y-4 ${darkMode ? 'text-gray-400' : 'text-gray-700'}`}>
-                <li className="flex items-start gap-3">
-                  <span className={`${darkMode ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-600 text-white'} h-6 w-6 rounded-full flex items-center justify-center text-sm mt-1`}>→</span>
-                  <div>
-                    <strong className={darkMode ? 'text-white' : 'text-gray-900'}>Timed Tests</strong>
-                    <p>Simulate competition conditions with customizable timed tests</p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className={`${darkMode ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-600 text-white'} h-6 w-6 rounded-full flex items-center justify-center text-sm mt-1`}>→</span>
-                  <div>
-                    <strong className={darkMode ? 'text-white' : 'text-gray-900'}>Unlimited Practice</strong>
-                    <p>Practice endlessly with our question bank, filtered by difficulty</p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className={`${darkMode ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-600 text-white'} h-6 w-6 rounded-full flex items-center justify-center text-sm mt-1`}>→</span>
-                  <div>
-                    <strong className={darkMode ? 'text-white' : 'text-gray-900'}>Shared Tests</strong>
-                    <p>Take tests shared by teammates or create your own to share</p>
-                  </div>
-                </li>
+              <ul className={`space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-700'}`}>
+                {studyModes.map((mode) => (
+                  <li key={mode.id}>
+                    <button
+                      onClick={() => setSelectedStudyMode(mode.id)}
+                      className={`w-full flex items-start text-left gap-3 group p-3 rounded-lg transition-all duration-200 hover:scale-[1.02] ${selectedStudyMode === mode.id ? (darkMode ? 'bg-gray-700/30' : 'bg-gray-100') : ''} ${darkMode ? 'hover:bg-gray-700/20' : 'hover:bg-gray-50'}`}
+                    >
+                      {/* Custom Radio Button */}
+                      <span className={getStudyModeRadioClasses(mode.id)}></span>
+                      <div className="flex-1">
+                        <strong className={darkMode ? 'text-white' : 'text-gray-900'}>{mode.title}</strong>
+                        <p className="text-sm">{mode.description}</p>
+                      </div>
+                    </button>
+                  </li>
+                ))}
               </ul>
-            </div>
-            <div className={`rounded-xl p-6 border h-full ${
-              darkMode 
-                ? 'bg-gray-900 border-gray-800' 
-                : 'bg-white border-gray-200 shadow-sm'
-            }`}>
+            </motion.div>
+
+            {/* Left Column: Study Mode Cards (Swapped) */}
+            <motion.div
+              initial={{ x: -50, opacity: 0 }} // Start from left
+              whileInView={{ x: 0, opacity: 1 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.6 }}
+              className={`rounded-xl p-6 border h-full md:order-1 transition-shadow duration-300 ${ 
+                darkMode
+                  ? 'bg-gray-900/70 border-gray-800 shadow-lg shadow-blue-500/15 hover:shadow-xl hover:shadow-blue-400/20'
+                  : 'bg-white border-gray-200 shadow-lg shadow-blue-400/10 hover:shadow-xl hover:shadow-blue-400/15'
+              }`}>
               <div className="flex flex-col h-full space-y-4">
-                <div className={`p-6 rounded-lg flex-1 ${
-                  darkMode ? 'bg-blue-500/10' : 'bg-blue-50 border border-blue-100'
+                <div className={`p-6 rounded-lg flex-1 transition-all duration-300 transform hover:scale-[1.02] ${ // Reduced scale from 1.05
+                  darkMode ? 'bg-blue-500/10 hover:bg-blue-500/20 hover:shadow-md hover:shadow-blue-500/10' : 'bg-blue-50 border border-blue-100 hover:bg-blue-100 hover:shadow-lg hover:shadow-blue-500/10'
                 }`}>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className={darkMode ? 'text-blue-400 text-xl font-semibold' : 'text-blue-700 text-xl font-semibold'}>Timed Test</h3>
-                    <span className="text-2xl">⏱️</span>
+                    <FiClock className={`w-6 h-6 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
                   </div>
                   <div className="flex justify-between items-end">
                     <span className={darkMode ? 'text-gray-400 text-lg' : 'text-gray-600 text-lg'}>15 Questions</span>
-                    <span className={`text-2xl font-mono ${darkMode ? 'text-blue-300' : 'text-blue-600'}`}>25:00</span>
+                    <span className={`text-2xl font-mono ${darkMode ? 'text-blue-300' : 'text-blue-600'}`}>{formatTime(timeLeft)}</span>
                   </div>
                 </div>
-                <div className={`p-6 rounded-lg flex-1 ${
-                  darkMode ? 'bg-purple-500/10' : 'bg-purple-50 border border-purple-100'
+                <div className={`p-6 rounded-lg flex-1 transition-all duration-300 transform hover:scale-[1.02] ${ // Reduced scale from 1.05
+                  darkMode ? 'bg-purple-500/10 hover:bg-purple-500/20 hover:shadow-md hover:shadow-purple-500/10' : 'bg-purple-50 border border-purple-100 hover:bg-purple-100 hover:shadow-lg hover:shadow-purple-500/10'
                 }`}>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className={darkMode ? 'text-purple-400 text-xl font-semibold' : 'text-purple-700 text-xl font-semibold'}>Unlimited</h3>
-                    <span className="text-2xl">🎯</span>
+                    <FiTarget className={`w-6 h-6 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
                   </div>
                   <div className="flex justify-between items-end">
                     <span className={darkMode ? 'text-gray-400 text-lg' : 'text-gray-600 text-lg'}>No Limits</span>
@@ -369,34 +618,37 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      {/* Metrics Section */}
-      <section className={`py-20 px-4 ${
-        darkMode 
-          ? 'bg-gradient-to-br from-gray-900 to-gray-800/80' 
+      {/* Metrics Section - Updated */}
+      <motion.section
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.5 }}
+        className={`py-20 px-4 ${
+        darkMode
+          ? 'bg-gradient-to-br from-gray-900 via-[#020617] to-gray-900'
           : 'bg-gray-50'
       }`}>
-        <div className="max-w-7xl mx-auto text-center">
-          <h2 className={`text-3xl font-bold mb-12 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Trusted by students across the U.S.</h2>
+        <div className="max-w-7xl mx-auto text-left">
+          <h2 className={`text-5xl font-bold mb-12 ${titleGradient}`}>Trusted by Thousands</h2>
           <div className="grid md:grid-cols-3 gap-8">
             {metrics.map((metric, index) => (
-              <div key={index} className="p-6">
-                <div className={`text-4xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{metric.number}</div>
-                <div className={darkMode ? 'text-gray-300' : 'text-gray-600'}>{metric.label}</div>
+              <div key={index} className="p-6 border-l-4 border-blue-500/30 pl-6">
+                <AnimatedCounter
+                  value={metric.number}
+                  className={`text-5xl font-bold mb-2 block ${darkMode ? 'text-white' : 'text-gray-900'}`}
+                />
+                <div className={darkMode ? 'text-gray-400' : 'text-gray-600'}>{metric.label}</div>
               </div>
             ))}
           </div>
-          <div className="mt-12 flex justify-center gap-4">
-            <a href="https://discord.gg/hXSkrD33gu" className={`${darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'} transition-colors`}>
-              <FaDiscord className="w-6 h-6" />
-            </a>
-          </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Final CTA Section */}
       <section className={`py-20 px-4 ${
@@ -409,7 +661,7 @@ export default function HomePage() {
             Time to get practicing.
           </h2>
           <p className="text-lg mb-8 max-w-2xl mx-auto text-white/90">
-            Join hundreds of students improving their scores with our comprehensive platform.
+            Join thousands of students upping their knowledge and bringing back gold with our comprehensive platform.
           </p>
           <Link 
             href="/dashboard" 
@@ -425,53 +677,43 @@ export default function HomePage() {
       </section>
 
       {/* FAQ Section */}
-      <section className={`py-20 px-4 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <motion.section
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.1 }}
+        transition={{ duration: 0.5 }}
+        className={`py-20 px-4 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}
+      >
         <div className="max-w-7xl mx-auto">
-          <h2 className={`text-4xl font-bold mb-12 text-center ${darkMode ? 'text-white' : 'text-gray-900'}`}>Frequently Asked Questions</h2>
+          <h2 className={`text-5xl font-bold mb-16 text-center ${titleGradient}`}>Frequently Asked Questions</h2>
           <div className="grid md:grid-cols-2 gap-8">
-            <div className={`rounded-xl p-6 border ${
-              darkMode 
-                ? 'bg-gray-800/50 border-gray-700' 
-                : 'bg-white border-gray-200 shadow-sm'
-            }`}>
-              <h3 className={`text-xl font-semibold mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Where do the questions come from?</h3>
-              <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
-                Our questions are sourced from publicly available Science Olympiad tests and resources, ensuring a comprehensive and diverse question bank.
-              </p>
-            </div>
-            <div className={`rounded-xl p-6 border ${
-              darkMode 
-                ? 'bg-gray-800/50 border-gray-700' 
-                : 'bg-white border-gray-200 shadow-sm'
-            }`}>
-              <h3 className={`text-xl font-semibold mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>How is AI being used?</h3>
-              <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
-                AI is primarily used for grading free response question, providing detailed explanations, and processing reports. All questions are from real Science Olympiad tests - AI is not used to generate questions.
-              </p>
-            </div>
-            <div className={`rounded-xl p-6 border ${
-              darkMode 
-                ? 'bg-gray-800/50 border-gray-700' 
-                : 'bg-white border-gray-200 shadow-sm'
-            }`}>
-              <h3 className={`text-xl font-semibold mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Is this an official practice platform?</h3>
-              <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
-                No, Scio.ly is not not endorsed by Science Olympiad Inc. Our platform provides practice materials based on past exams but we do not make any guarantees about content on future exams.
-              </p>
-            </div>
-            <div className={`rounded-xl p-6 border ${
-              darkMode 
-                ? 'bg-gray-800/50 border-gray-700' 
-                : 'bg-white border-gray-200 shadow-sm'
-            }`}>
-              <h3 className={`text-xl font-semibold mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>How can I contribute?</h3>
-              <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
-                Although there is no way to directly help us code the site (yet), we welcome any help you can offer! You can help by sending feedback through our contact form. Use the Contact Us button to get started.
-              </p>
-            </div>
+            {[...Array(4)].map((_, index) => (
+              <motion.div
+                key={index}
+                whileHover={{ scale: 1.03, boxShadow: darkMode ? '0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2)' : '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)' }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                className={`rounded-xl p-6 border ${
+                darkMode
+                  ? 'bg-gray-800/50 border-gray-700'
+                  : 'bg-white border-gray-200 shadow-sm'
+              }`}>
+                <h3 className={`text-xl font-semibold mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {index === 0 ? 'Where do the questions come from?' :
+                   index === 1 ? 'How is AI being used?' :
+                   index === 2 ? 'Is this an official practice platform?' :
+                   'How can I contribute?'}
+                </h3>
+                <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
+                  {index === 0 ? 'Our questions are sourced from publicly available Science Olympiad tests and resources, ensuring a comprehensive and diverse question bank.' :
+                   index === 1 ? 'AI is primarily used for grading free response question, providing detailed explanations, and processing reports. All questions are from real Science Olympiad tests - AI is not used to generate questions.' :
+                   index === 2 ? 'No, Scio.ly is not not endorsed by Science Olympiad Inc. Our platform provides practice materials based on past exams but we do not make any guarantees about content on future exams.' :
+                   'We welcome contributions! Check out our GitHub repository to see how you can help improve the platform, suggest features, or report issues. You can also help by sending feedback through our contact form.'}
+                </p>
+              </motion.div>
+            ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Footer */}
       <footer className={`${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-gray-100 border-gray-200'} border-t`}>
@@ -531,33 +773,35 @@ export default function HomePage() {
         aria-label="Toggle dark mode"
       >
         {darkMode ? (
+          // Sun icon
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-6 w-6 text-yellow-400"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            strokeWidth={2}
           >
             <circle cx="12" cy="12" r="4" fill="currentColor"/>
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364-6.364l-1.414 1.414M7.05 16.95l-1.414 1.414M16.95 16.95l1.414 1.414M7.05 7.05L5.636 5.636"
+              d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707"
             />
           </svg>
         ) : (
+          // Moon icon
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-6 w-6 text-blue-600"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            strokeWidth={2}
           >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth={2}
               d="M20.354 15.354A9 9 0 1112 3v0a9 9 0 008.354 12.354z"
             />
           </svg>
