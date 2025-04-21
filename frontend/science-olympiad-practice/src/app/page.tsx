@@ -1,7 +1,7 @@
 "use client";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import {FaBook, FaRobot, FaChartPie, FaDiscord, FaGithub } from "react-icons/fa";
+import {FaBook, FaRobot, FaChartPie, FaDiscord} from "react-icons/fa";
 import { Stars } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import {
