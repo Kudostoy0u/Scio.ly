@@ -1,5 +1,6 @@
 /* postcss-import */
 @import url('https://fonts.googleapis.com/css2?family=PT+Sans+Narrow:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -22,7 +23,7 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: "Inter", sans-serif;
+  font-family: "Poppins", sans-serif;
 }
 
 /* Keyframes for the Background Wave Animation */
@@ -143,4 +144,37 @@ body {
 
 .rotate-x-180 {
   transform: rotateX(180deg);
+}
+
+/* New Border Streak Animation */
+@keyframes border-streak {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animated-border-streak::before {
+  content: '';
+  position: absolute;
+  inset: -2px; /* Controls border thickness */
+  z-index: -1; /* Place behind the main content */
+  background: conic-gradient(
+    from 90deg,
+    #0ea5e9, /* sky-500 */
+    #3b82f6, /* blue-500 */
+    #6366f1, /* indigo-500 */
+    transparent 30%,
+    transparent 70%,
+    #0ea5e9
+  );
+  border-radius: inherit; /* Match parent's border radius */
+  animation: border-streak 4s linear infinite;
+  /* Masking to create the border effect */
+  -webkit-mask: 
+     linear-gradient(#fff 0 0) content-box, 
+     linear-gradient(#fff 0 0);
+          mask: 
+     linear-gradient(#fff 0 0) content-box, 
+     linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
 }

@@ -10,7 +10,7 @@ const genAI = new GoogleGenerativeAI(arr[Math.floor(Math.random() * arr.length)]
 
 export async function POST(request: NextRequest) {
   try {
-    const { question, originalQuestion, event, answers } = await request.json();
+    const { question, originalQuestion, event } = await request.json();
     
     if (!question || !event) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -21,31 +21,27 @@ export async function POST(request: NextRequest) {
     
     const prompt = `
     You are evaluating a report for a Science Olympiad question. 
-    The user wants to remove this question (MCQ or FRQ) from the question bank.
+    The user wants to remove this question from the question bank.
     This is all the information the question has:
     
-    Question: ${question}
+    Question: ${originalQuestion}
     Event: ${event}
-    Answer: ${answers}
 
     Evaluate whether this question should be removed from the question bank for ${event}.
     
     A question should ONLY be removed if:
-    1. It is FUNDAMENTALLY FLAWED in a way that makes it IMPOSSIBLE to answer correctly
+    1. The question statement lacks information OR context (should be answerable standing alone) that is needed to answer the question, or the answer choices are unrelated to the question.
     2. It is completely inappropriate, offensive, or entirely unrelated to Science Olympiad
     3. The question makes no sense (What is it asking?)
     4. The question is not obviously a ${event} problem.
     
     A question should NOT be removed if:
-    1. It has minor issues that could be fixed with an edit
-    2. It's difficult but still answerable
-    3. It has formatting or clarity issues that could be improved
-    4. It's a valid question that the reporter simply doesn't like or finds challenging
+    1. It has formatting or clarity issues that could be improved
+    2. It's a valid question that the reporter simply doesn't like or finds challenging
     
-    IMPORTANT: If the question could be improved through editing rather than removed, you MUST reject the removal request.
-    
-    Reason through your evaluation step by step, then conclude with either "REMOVE" for removal or "KEEP" if it should not be removed, that should be the end of your response, no period.
+    Reason through your evaluation step by step, then conclude with either "REMOVE" for removal or "KEEP" if it is a promising question: that should be the end of your response, no period.
     `;
+    console.log(prompt)
     const result = await model.generateContent(prompt);
     const response = result.response.text().trim();
     console.log(response)
