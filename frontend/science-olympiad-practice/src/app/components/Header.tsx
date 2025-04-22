@@ -224,15 +224,26 @@ export default function Header() {
   const baseTextColorClass = darkMode ? 'text-white' : 'text-gray-900';
   
   // Determine link styles based on profile
-  const getLinkStyles = () => {
-    const base = `transition-colors duration-1000 ease-in-out px-1 py-1 rounded-md text-sm font-medium`;
-    return `${base} ${darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'}`;
+  const getLinkStyles = (path: string) => {
+    const isActive = pathname === path;
+    const base = `transition-all duration-1000 ease-in-out px-1 py-1 rounded-md text-sm font-medium`;
+    const activeStyles = isActive 
+      ? 'bg-blue-500 text-white md:px-3 md:py-3' 
+      : darkMode 
+        ? 'text-gray-300 hover:bg-blue-500 hover:text-white md:hover:px-3 md:hover:py-3' 
+        : 'text-gray-700 hover:bg-blue-500 hover:text-white md:hover:px-3 md:hover:py-3';
+    return `${base} ${activeStyles}`;
   };
 
-  const linkStyles = getLinkStyles();
-  const mobileLinkStyles = (isDarkMode: boolean) => { // Mobile styles need separate handling
-     const baseMobile = 'block px-4 py-2 text-sm';
-     return `${baseMobile} ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`;
+  const mobileLinkStyles = (path: string) => {
+    const isActive = pathname === path;
+    const baseMobile = 'block px-4 py-2 text-sm transition-all duration-1000 ease-in-out';
+    const activeStyles = isActive
+      ? 'bg-blue-500 text-white'
+      : darkMode
+        ? 'text-gray-300 hover:bg-blue-500 hover:text-white'
+        : 'text-gray-700 hover:bg-blue-500 hover:text-white';
+    return `${baseMobile} ${activeStyles}`;
   };
 
   const handleContact = async (data: ContactFormData) => {
@@ -336,16 +347,16 @@ export default function Header() {
             
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-4">
-              <Link href="/dashboard" className={linkStyles}>
+              <Link href="/dashboard" className={getLinkStyles('/dashboard')}>
                 Dashboard
               </Link>
-              <Link href="/practice" className={linkStyles}>
+              <Link href="/practice" className={getLinkStyles('/practice')}>
                 Practice
               </Link>
-              <button onClick={() => setContactModalOpen(true)} className={linkStyles}>
+              <button onClick={() => setContactModalOpen(true)} className={getLinkStyles('')}>
                 Contact
               </button>
-              <Link href="/about" className={linkStyles}>
+              <Link href="/about" className={getLinkStyles('/about')}>
                 About Us
               </Link>
               <AuthButton />
@@ -381,14 +392,14 @@ export default function Header() {
                     >
                       <Link
                         href="/dashboard"
-                        className={mobileLinkStyles(darkMode)}
+                        className={mobileLinkStyles('/dashboard')}
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Dashboard
                       </Link>
                       <Link
                         href="/practice"
-                        className={mobileLinkStyles(darkMode)}
+                        className={mobileLinkStyles('/practice')}
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Practice
@@ -398,13 +409,13 @@ export default function Header() {
                           setMobileMenuOpen(false);
                           setContactModalOpen(true);
                         }}
-                        className={`w-full text-left ${mobileLinkStyles(darkMode)}`}
+                        className={`w-full text-left ${mobileLinkStyles('')}`}
                       >
                         Contact
                       </button>
                       <Link
                         href="/about"
-                        className={mobileLinkStyles(darkMode)}
+                        className={mobileLinkStyles('/about')}
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         About Us

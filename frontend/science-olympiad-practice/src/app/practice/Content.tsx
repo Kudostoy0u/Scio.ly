@@ -45,10 +45,16 @@ function EventDashboard() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
-    setSettings((prev) => ({
-      ...prev,
-      [id]: value,
-    }));
+    setSettings((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const validateTimeLimit = () => {
+    const timeLimit = Number(settings.timeLimit);
+    if (isNaN(timeLimit) || !Number.isInteger(timeLimit) || timeLimit < 1) {
+      toast.error('Time limit must be an integer greater than or equal to 1 minute.');
+      return false;
+    }
+    return true;
   };
 
   const handleCipherTypeChange = (cipher: string) => {
@@ -61,6 +67,10 @@ function EventDashboard() {
   const handleGenerateTest = () => {
     if (!selectedEvent) {
       toast.error('Please select an event first');
+      return;
+    }
+
+    if (!validateTimeLimit()) {
       return;
     }
 
@@ -122,6 +132,10 @@ function EventDashboard() {
       return;
     }
 
+    if (!validateTimeLimit()) {
+      return;
+    }
+
     const selectedEventObj = events.find((event) => event.id === selectedEvent);
     if (!selectedEventObj) return;
 
@@ -169,7 +183,7 @@ function EventDashboard() {
           { name: "Anatomy - Endocrine", category: "Life & Social Science" },
           { name: "Astronomy", category: "Earth and Space Science" },
           { name: "Chemistry Lab", category: "Physical Science & Chemistry" },
-          { name: "Circuit Lab", category: "Inquiry & Nature of Science" },
+          { name: "Circuit Lab", category: "Physical Science & Chemistry" },
           { name: "Codebusters", category: "Inquiry & Nature of Science" },
           { name: "Crime Busters", category: "Physical Science & Chemistry" },
           { name: "Disease Detectives", category: "Life & Social Science" },

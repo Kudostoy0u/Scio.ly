@@ -834,7 +834,7 @@ export default function WelcomePage() {
                   </AnimatePresence>
                 ) : (
                   <div
-                    className="absolute left-0 top-[12vh] z-10"
+                    className="absolute top-0 left-[20vh] z-10"
                     onMouseEnter={() => setShowEventsTooltip(true)}
                     onMouseLeave={() => setShowEventsTooltip(false)}
                   >
@@ -984,7 +984,7 @@ export default function WelcomePage() {
                         d="M5 50 A 45 45 0 0 1 95 50"
                         fill="none"
                         stroke={darkMode ? '#60a5fa' : '#3b82f6'}
-                         strokeWidth="8"
+                        strokeWidth="8"
                         strokeLinecap="round"
                         initial={{ pathLength: 0 }}
                         animate={{ pathLength: metrics.accuracy / 100 }}
@@ -996,6 +996,9 @@ export default function WelcomePage() {
                         className="text-2xl font-bold"
                       />
                     </svg>
+                  </div>
+                  <div className="absolute bottom-2 right-2 text-blue-500 text-sm font-medium text-opacity-50">
+                    Click for more
                   </div>
                 </div>
                 

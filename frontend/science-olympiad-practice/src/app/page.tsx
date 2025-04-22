@@ -1,7 +1,7 @@
 "use client";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import {FaBook, FaRobot, FaChartPie, FaDiscord, FaGithub } from "react-icons/fa";
+import {FaBook, FaRobot, FaChartPie, FaDiscord} from "react-icons/fa";
 import { Stars } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import {
@@ -206,7 +206,7 @@ export default function HomePage() {
     {
       icon: <FaBook className="w-8 h-8" />,
       title: "Comprehensive Coverage",
-      description: "Over 3000 questions across 24 Division C events, with Division B support coming soon"
+      description: "Over 3000 questions across 33 Division B and C events, with more being added soon"
     },
     {
       icon: <FaRobot className="w-8 h-8" />,
@@ -647,7 +647,6 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-
         </div>
       </motion.section>
 
@@ -753,9 +752,6 @@ export default function HomePage() {
             <div>
               <h3 className={`font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Connect</h3>
               <div className="flex space-x-4">
-                <a href="https://github.com/NapervilleASK/Scio.ly" className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'} transition-colors`}>
-                  <FaGithub className="w-6 h-6" />
-                </a>
                 <a href="https://discord.gg/hXSkrD33gu" className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'} transition-colors`}>
                   <FaDiscord className="w-6 h-6" />
                 </a>
