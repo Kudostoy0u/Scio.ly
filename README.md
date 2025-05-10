@@ -7,7 +7,7 @@
 
 ## About Scio.ly
 
-Scio.ly is a comprehensive and free platform designed to revolutionize Science Olympiad preparation. Built by Science Olympiad alumni, we understand the challenges of finding quality practice materials and the importance of effective studying.  We've created Scio.ly to be the resource we wish we had during our Science Olympiad journey.
+Scio.ly is a comprehensive and free platform designed to revolutionize Science Olympiad preparation. Built by current Science Olympiad competitors, we understand the challenges of finding quality practice materials and the importance of effective studying.  We've created Scio.ly to be the resource we wish we had during our Science Olympiad journey.
 
 **Stop wasting time searching for practice materials.** Scio.ly provides a carefully organized platform with thousands of Science Olympiad questions, AI-powered explanations, and smart features to help you master your events and excel in competitions.
 
