@@ -228,10 +228,10 @@ export default function Header() {
     const isActive = pathname === path;
     const base = `transition-all duration-1000 ease-in-out px-1 py-1 rounded-md text-sm font-medium`;
     const activeStyles = isActive 
-      ? 'bg-blue-500 text-white md:px-3 md:py-3' 
+      ? 'text-white' 
       : darkMode 
-        ? 'text-gray-300 hover:bg-blue-500 hover:text-white md:hover:px-3 md:hover:py-3' 
-        : 'text-gray-700 hover:bg-blue-500 hover:text-white md:hover:px-3 md:hover:py-3';
+        ? 'text-gray-300 hover:text-white' 
+        : 'text-gray-700 hover:text-white';
     return `${base} ${activeStyles}`;
   };
 
@@ -241,8 +241,8 @@ export default function Header() {
     const activeStyles = isActive
       ? 'bg-blue-500 text-white'
       : darkMode
-        ? 'text-gray-300 hover:bg-blue-500 hover:text-white'
-        : 'text-gray-700 hover:bg-blue-500 hover:text-white';
+        ? 'text-gray-300 hover:text-white'
+        : 'text-gray-700 hover:text-white';
     return `${baseMobile} ${activeStyles}`;
   };
 

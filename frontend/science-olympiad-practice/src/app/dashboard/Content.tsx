@@ -13,8 +13,6 @@ import { User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import 'react-toastify/dist/ReactToastify.css';
-import { Dialog, Transition } from '@headlessui/react';
-import { Fragment } from 'react';
 import Header from '../components/Header';
 import api from '../api';
 
@@ -47,13 +45,6 @@ interface HistoricalMetrics {
   correctAnswers: number;
   eventsPracticed: string[];
 }
-
-interface UpdateInfo {
-  date: string;
-  features: string[];
-  comingSoon: string[];
-}
-
 
 const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: ContactModalProps) => {
   const [formData, setFormData] = useState<ContactFormData>({
@@ -292,9 +283,6 @@ export default function WelcomePage() {
   const [historyData, setHistoryData] = useState<Record<string, HistoricalMetrics>>({});
   // State for Recent Events tooltip/modal
   const [showEventsTooltip, setShowEventsTooltip] = useState(false);
-  const [showUpdatePopup, setShowUpdatePopup] = useState(false);
-  const [hasSeenUpdate, setHasSeenUpdate] = useState(false);
-  const [hasCheckedStorage, setHasCheckedStorage] = useState(false);
   const [loaded,setLoaded] = useState(false);
   // --- New: Compute window width and extra height on mobile ---
   const [windowWidth, setWindowWidth] = useState<number | null>(null);
@@ -390,13 +378,6 @@ export default function WelcomePage() {
 
     fetchData();
   }, [authInitialized, currentUser]);
-
-  useEffect(() => {
-    const hasSeenUpdateThisSession = sessionStorage.getItem('hasSeenUpdateThisSession');
-    setShowUpdatePopup(!hasSeenUpdateThisSession);
-    setHasSeenUpdate(!!hasSeenUpdateThisSession);
-    setHasCheckedStorage(true);
-  }, []);
 
   const metrics = {
     questionsAttempted: dailyStats.questionsAttempted,
@@ -567,23 +548,8 @@ export default function WelcomePage() {
     router.push('/practice'); // Navigate using router
   };
 
-  const UPDATE_INFO: UpdateInfo = {
-    date: "4/20//25",
-    features: [
-      "✨ New UI",
-      "🎯 Better explanations, question reporting",
-    ],
-    comingSoon: [
-      "⏰ Division B/C toggle",
-      "⏰ More tests for 2026 events"
-    ]
-  };
 
-  const handleCloseUpdatePopup = () => {
-    sessionStorage.setItem('hasSeenUpdateThisSession', 'true');
-    setShowUpdatePopup(false);
-    setHasSeenUpdate(true);
-  };
+
 
   // Add new state for six test code digits
   const [testCodeDigits, setTestCodeDigits] = useState(new Array(6).fill(''));
@@ -834,7 +800,7 @@ export default function WelcomePage() {
                   </AnimatePresence>
                 ) : (
                   <div
-                    className="absolute top-0 left-[20vh] z-10"
+                    className="absolute top-[12vh] left-[0vw] z-10"
                     onMouseEnter={() => setShowEventsTooltip(true)}
                     onMouseLeave={() => setShowEventsTooltip(false)}
                   >
@@ -996,9 +962,6 @@ export default function WelcomePage() {
                         className="text-2xl font-bold"
                       />
                     </svg>
-                  </div>
-                  <div className="absolute bottom-2 right-2 text-blue-500 text-sm font-medium text-opacity-50">
-                    Click for more
                   </div>
                 </div>
                 
@@ -1201,88 +1164,6 @@ export default function WelcomePage() {
         onSubmit={handleContact}
         darkMode={darkMode}
       />
-
-      <Transition show={hasCheckedStorage && showUpdatePopup && !hasSeenUpdate} as={Fragment}>
-        <Dialog
-          as="div"
-          className="fixed inset-0 z-50 overflow-y-auto"
-          onClose={handleCloseUpdatePopup}
-        >
-          <div className="min-h-screen px-4 text-center">
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0"
-              enterTo="opacity-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100"
-              leaveTo="opacity-0"
-            >
-              <div className="fixed inset-0 bg-black/30" />
-            </Transition.Child>
-
-            <span className="inline-block h-screen align-middle" aria-hidden="true">&#8203;</span>
-
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 scale-95"
-              enterTo="opacity-100 scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-95"
-            >
-              <div className={`inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform shadow-xl rounded-2xl ${
-                darkMode 
-                  ? 'bg-gray-800 text-white' 
-                  : 'bg-white text-gray-900'
-              }`}>
-                <Dialog.Title as="h3" className={`text-2xl font-bold mb-4 bg-gradient-to-r ${
-                  darkMode
-                    ? 'from-blue-300 via-green-300 to-red-300'
-                    : 'from-blue-500 to-cyan-500'
-                } bg-clip-text text-transparent`}>
-                  What&apos;s New - {UPDATE_INFO.date}
-                </Dialog.Title>
-
-                <div className="mt-4">
-                  <h4 className="text-lg font-semibold text-blue-500 mb-2">New Features</h4>
-                  <ul className="space-y-2 mb-6">
-                    {UPDATE_INFO.features.map((feature, index) => (
-                      <li key={index} className="flex items-center">
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <h4 className="text-lg font-semibold text-purple-500 mb-2">Coming Soon</h4>
-                  <ul className="space-y-2 mb-6">
-                    {UPDATE_INFO.comingSoon.map((feature, index) => (
-                      <li key={index} className="flex items-center">
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="mt-6">
-                  <button
-                    type="button"
-                    className={`w-full px-4 py-2 font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 ${
-                      darkMode
-                        ? 'bg-gradient-to-r from-regalblue-100 to-regalred-100 text-white'
-                        : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
-                    }`}
-                    onClick={handleCloseUpdatePopup}
-                  >
-                    Got it, thanks!
-                  </button>
-                </div>
-              </div>
-            </Transition.Child>
-          </div>
-        </Dialog>
-      </Transition>
 
       {/* Add styled scrollbar */}
       <style jsx global>{`
