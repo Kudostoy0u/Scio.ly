@@ -394,6 +394,23 @@ export default function AboutPage() {
           </div>
         </motion.section>
 
+        {/* Acknowledgement Section */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.75, duration: 0.8 }}
+          className={`mb-16 p-6 rounded-xl max-w-4xl mx-auto transition-colors duration-1000 ${
+            darkMode ? 'bg-gray-800/50 backdrop-blur-sm' : 'bg-white/90 shadow-lg backdrop-blur-sm'
+          }`}
+        >
+          <div className="flex items-center justify-center">
+            <span className="text-2xl mr-4">🚀</span>
+            <p className={`text-lg transition-colors duration-1000 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              Thanks to Alan Cai for contributing to the question bank!
+            </p>
+          </div>
+        </motion.section>
+
         {/* Contact CTA */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
