@@ -406,7 +406,7 @@ export default function AboutPage() {
           <div className="flex items-center justify-center">
             <span className="text-2xl mr-4">🚀</span>
             <p className={`text-lg transition-colors duration-1000 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-              Thanks to Alan Cai for contributing to the question bank!
+              Thanks to Alan Cai for contributing 20,000 past tests to the question bank!
             </p>
           </div>
         </motion.section>
