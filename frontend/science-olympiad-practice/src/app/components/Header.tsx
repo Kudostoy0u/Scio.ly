@@ -228,10 +228,10 @@ export default function Header() {
     const isActive = pathname === path;
     const base = `transition-all duration-1000 ease-in-out px-1 py-1 rounded-md text-sm font-medium`;
     const activeStyles = isActive 
-      ? 'text-white' 
+      ? '' 
       : darkMode 
-        ? 'text-gray-300 hover:text-white' 
-        : 'text-gray-700 hover:text-white';
+        ? 'text-gray-300' 
+        : 'text-gray-700';
     return `${base} ${activeStyles}`;
   };
 
@@ -239,10 +239,10 @@ export default function Header() {
     const isActive = pathname === path;
     const baseMobile = 'block px-4 py-2 text-sm transition-all duration-1000 ease-in-out';
     const activeStyles = isActive
-      ? 'bg-blue-500 text-white'
+      ? ''
       : darkMode
-        ? 'text-gray-300 hover:text-white'
-        : 'text-gray-700 hover:text-white';
+        ? 'text-gray-300'
+        : 'text-gray-700';
     return `${baseMobile} ${activeStyles}`;
   };
 
