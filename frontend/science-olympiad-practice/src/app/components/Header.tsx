@@ -228,7 +228,9 @@ export default function Header() {
     const isActive = pathname === path;
     const base = `transition-all duration-1000 ease-in-out px-1 py-1 rounded-md text-sm font-medium`;
     const activeStyles = isActive 
-      ? '' 
+      ? darkMode
+        ? 'text-gray-400 font-bold' 
+        : 'text-gray-800 font-bold'
       : darkMode 
         ? 'text-gray-300' 
         : 'text-gray-700';
