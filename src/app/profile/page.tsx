@@ -1,0 +1,276 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import { User } from '@supabase/supabase-js';
+import { useTheme } from '@/app/contexts/ThemeContext';
+import { Save, User as UserIcon } from 'lucide-react';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import Header from '@/app/components/Header';
+import Image from 'next/image';
+
+export default function ProfilePage() {
+  const { darkMode } = useTheme();
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [displayName, setDisplayName] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [authInitialized, setAuthInitialized] = useState(false);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const currentUser = session?.user || null;
+      setUser(currentUser);
+      setAuthInitialized(true);
+      
+      if (currentUser) {
+        // Load current display name
+        const { data } = await supabase
+          .from('users')
+          .select('display_name')
+          .eq('id', currentUser.id)
+          .single();
+        
+        if (data?.display_name) {
+          setDisplayName(data.display_name);
+        } else {
+          // Set default display name from user metadata
+          const defaultName = currentUser.user_metadata?.name || 
+                             currentUser.user_metadata?.full_name || 
+                             currentUser.email?.split('@')[0] || '';
+          setDisplayName(defaultName);
+        }
+      } else {
+        // Redirect to home if not authenticated
+        router.push('/');
+      }
+      
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [router]);
+
+  const handleSave = async () => {
+    if (!user) return;
+    
+    if (!displayName.trim()) {
+      toast.error('Display name cannot be empty');
+      return;
+    }
+
+    if (displayName.length > 50) {
+      toast.error('Display name must be 50 characters or less');
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .upsert({
+          id: user.id,
+          email: user.email || '',
+          display_name: displayName.trim(),
+          name: user.user_metadata?.name || user.user_metadata?.full_name || null,
+          photo_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+          created_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+
+      if (error) {
+        console.error('Error updating profile:', error);
+        toast.error('Failed to update profile. Please try again.');
+      } else {
+        toast.success('Profile updated successfully!');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error('An unexpected error occurred. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading || !authInitialized) {
+    return (
+      <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <Header />
+        <div className="pt-20 flex items-center justify-center min-h-[calc(100vh-5rem)]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // Will redirect to home
+  }
+
+  return (
+    <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <Header />
+      <ToastContainer theme={darkMode ? "dark" : "light"} />
+      
+      <div className="pt-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-2xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              Profile Settings
+            </h1>
+            <p className={`mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              Manage your account settings and preferences
+            </p>
+          </div>
+
+          {/* Profile Form */}
+          <div className={`rounded-lg p-6 ${
+            darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+          }`}>
+            {/* Profile Picture */}
+            <div className="flex items-center mb-6">
+              {user.user_metadata?.avatar_url || user.user_metadata?.picture ? (
+                <Image
+                  src={user.user_metadata.avatar_url || user.user_metadata.picture}
+                  alt="Profile"
+                  width={64}
+                  height={64}
+                  className="w-16 h-16 rounded-full"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center">
+                  <UserIcon className="w-8 h-8 text-white" />
+                </div>
+              )}
+              <div className="ml-4">
+                <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  Profile Picture
+                </h3>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {user.user_metadata?.avatar_url || user.user_metadata?.picture 
+                    ? 'Synced from your Google account' 
+                    : 'No profile picture available'
+                  }
+                </p>
+              </div>
+            </div>
+
+            {/* Email (Read-only) */}
+            <div className="mb-6">
+              <label className={`block text-sm font-medium mb-2 ${
+                darkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={user.email || ''}
+                disabled
+                className={`w-full px-3 py-2 rounded-lg border ${
+                  darkMode 
+                    ? 'bg-gray-700 border-gray-600 text-gray-400' 
+                    : 'bg-gray-100 border-gray-300 text-gray-500'
+                } cursor-not-allowed`}
+              />
+              <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                Email address cannot be changed
+              </p>
+            </div>
+
+            {/* Display Name */}
+            <div className="mb-6">
+              <label className={`block text-sm font-medium mb-2 ${
+                darkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                Display Name
+              </label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Enter your display name"
+                maxLength={50}
+                className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  darkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                }`}
+              />
+              <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                This is how your name will appear to other users ({displayName.length}/50)
+              </p>
+            </div>
+
+            {/* Save Button */}
+            <div className="flex justify-end">
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-lg transition-colors duration-200"
+              >
+                {saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Save Changes
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Account Information */}
+          <div className={`mt-6 rounded-lg p-6 ${
+            darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+          }`}>
+            <h3 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              Account Information
+            </h3>
+            
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Account Created
+                </span>
+                <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {new Date(user.created_at).toLocaleDateString()}
+                </span>
+              </div>
+              
+              <div className="flex justify-between">
+                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Last Sign In
+                </span>
+                <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString() : 'N/A'}
+                </span>
+              </div>
+              
+              <div className="flex justify-between">
+                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Email Confirmed
+                </span>
+                <span className={`text-sm ${
+                  user.email_confirmed_at 
+                    ? 'text-green-600' 
+                    : darkMode ? 'text-red-400' : 'text-red-600'
+                }`}>
+                  {user.email_confirmed_at ? 'Yes' : 'No'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="pb-8"></div>
+    </div>
+  );
+}
