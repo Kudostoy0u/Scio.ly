@@ -1,0 +1,12 @@
+-- Quotes table already exists in the database
+-- This migration is a no-op since the quotes table
+-- is already present in the database with the correct schema
+--
+-- The existing quotes table has the following structure:
+-- - id: uuid PRIMARY KEY DEFAULT gen_random_uuid()
+-- - author: text NOT NULL
+-- - quote: text NOT NULL
+-- - language: text NOT NULL
+-- - created_at: timestamp DEFAULT now()
+--
+-- No changes needed - schema is already correct

@@ -21,16 +21,27 @@ interface QuoteData {
   author: string;
   quote: string;
   encrypted: string;
-  cipherType: 'aristocrat' | 'patristocrat' | 'hill' | 'baconian' | 'porta';
+  cipherType: 'Random Aristocrat' | 'K1 Aristocrat' | 'K2 Aristocrat' | 'K3 Aristocrat' | 'Random Patristocrat' | 'K1 Patristocrat' | 'K2 Patristocrat' | 'K3 Patristocrat' | 'Caesar' | 'Atbash' | 'Affine' | 'Hill' | 'Baconian' | 'Porta' | 'Nihilist' | 'Fractionated Morse' | 'Columnar Transposition' | 'Xenocrypt';
   key?: string;
   matrix?: number[][];
   portaKeyword?: string;
+  nihilistKey?: string;
+  columnarKey?: string;
+  fractionatedKey?: string;
+  xenocryptKey?: string;
+  caesarShift?: number;
+  affineA?: number;
+  affineB?: number;
   solution?: { [key: string]: string };
   frequencyNotes?: { [key: string]: string };
   hillSolution?: {
     matrix: string[][];
     plaintext: { [key: number]: string };
   };
+  nihilistSolution?: { [key: number]: string };
+  fractionatedSolution?: { [key: number]: string };
+  columnarSolution?: { [key: number]: string };
+  xenocryptSolution?: { [key: number]: string };
   difficulty?: number;
 }
 
@@ -126,8 +137,10 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
         }
 
         const testParams = JSON.parse(localStorage.getItem('testParams') || '{}');
+        const quoteUUIDs = JSON.parse(localStorage.getItem('codebustersQuoteUUIDs') || '[]');
+        
         console.log('🔍 Making Codebusters API call with:', {
-          encryptedQuotes: currentEncryptedQuotes,
+          quoteUUIDs: quoteUUIDs,
           testParams: testParams,
           timeRemainingSeconds: currentTimeLeft
         });
@@ -136,7 +149,7 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            encryptedQuotes: currentEncryptedQuotes,
+            quoteUUIDs: quoteUUIDs,
             testParams: testParams,
             timeRemainingSeconds: currentTimeLeft
           })
@@ -274,25 +287,8 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
     }
   }, []);
 
-  // Generate share code when modal opens (only once)
-  useEffect(() => {
-    console.log('🔍 ShareModal generation trigger:', {
-      isOpen,
-      hasGenerated: hasGeneratedRef.current,
-      shareCode: !!shareCode,
-      isGenerating,
-      isCodebusters,
-      quotesLength: encryptedQuotes.length
-    });
-    
-    if (isOpen && !hasGeneratedRef.current && !shareCode && !isGenerating) {
-      console.log('✅ Modal opened, generating share code...');
-      generateShareCode();
-    } else {
-      console.log('❌ Not generating share code - conditions not met');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]); // Only depend on isOpen to prevent multiple calls
+  // Generate share code only when explicitly requested
+  // Removed automatic generation on modal open
 
   // Reset when modal closes
   useEffect(() => {
@@ -347,7 +343,15 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
               </button>
             </div>
           ) : (
-            <p>No code available</p>
+            <button
+              onClick={generateShareCode}
+              disabled={isGenerating || loadingGenerate}
+              className={`w-full px-4 py-2 rounded-md font-medium transition-colors border-2 border-blue-500 text-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:border-gray-400 disabled:text-gray-400 ${
+                darkMode ? 'hover:bg-blue-900/20' : ''
+              }`}
+            >
+              Generate Share Code
+            </button>
           )}
         </div>
         
@@ -365,7 +369,7 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
           <button
             onClick={loadSharedTest}
             disabled={loadingLoad}
-            className="w-full px-4 py-2 rounded-md bg-green-500 text-white hover:bg-green-600 disabled:opacity-50"
+            className="w-full px-4 py-2 rounded-md border-2 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 disabled:border-gray-400 disabled:text-gray-400 transition-colors"
           >
             {loadingLoad ? 'Loading...' : 'Load Shared Test'}
           </button>

@@ -6,7 +6,10 @@
     "dev": "next dev --turbopack",
     "build": "set NODE_ENV=production & next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
@@ -15,16 +18,19 @@
     "@google/genai": "^1.12.0",
     "@google/generative-ai": "^0.2.1",
     "@headlessui/react": "^2.2.0",
-    "@neondatabase/serverless": "^1.0.1",
     "@next/third-parties": "^15.2.0",
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "9.0.0-alpha.8",
     "@supabase/auth-ui-react": "^0.4.7",
     "@supabase/auth-ui-shared": "^0.1.8",
     "@supabase/supabase-js": "^2.53.0",
+    "@types/pg": "^8.15.5",
     "@types/uuid": "^10.0.0",
+    "@upstash/redis": "^1.35.3",
     "@vercel/analytics": "^1.5.0",
     "@vercel/kv": "^1.0.1",
+    "dotenv": "^17.2.1",
+    "drizzle-orm": "^0.44.4",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.4.7",
@@ -38,6 +44,7 @@
     "next-auth": "^4.24.11",
     "pg": "^8.16.3",
     "pnpm": "^9.15.6",
+    "postgres": "^3.4.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-icons": "^5.5.0",
@@ -47,8 +54,7 @@
     "string-similarity-js": "^2.1.4",
     "three": "^0.172.0",
     "uuid": "^11.1.0",
-    "vercel": "^41.4.1",
-    "xlsx": "^0.18.5"
+    "vercel": "^41.4.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.0",
@@ -57,6 +63,7 @@
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.0.4",
     "cross-env": "^7.0.3",
+    "drizzle-kit": "^0.31.4",
     "eslint": "^9.21.0",
     "eslint-config-next": "15.4.5",
     "postcss": "^8.5.3",

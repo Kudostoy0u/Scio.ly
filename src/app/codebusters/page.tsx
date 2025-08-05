@@ -5,7 +5,6 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useRouter } from 'next/navigation';
 import { FaShareAlt } from 'react-icons/fa';
-import * as XLSX from 'xlsx';
 
 import ShareModal from '@/app/components/ShareModal';
 import {
@@ -18,473 +17,35 @@ import {
   setupVisibilityHandling,
   clearTestSession
 } from '@/app/utils/timeManagement';
-
-interface QuoteData {
-    author: string;
-    quote: string;
-    encrypted: string;
-    cipherType: 'aristocrat' | 'patristocrat' | 'hill' | 'baconian' | 'porta';
-    key?: string;        // For aristocrat/patristocrat
-    matrix?: number[][]; // For hill
-    portaKeyword?: string; // For porta
-    solution?: { [key: string]: string };
-    frequencyNotes?: { [key: string]: string };
-    hillSolution?: {
-        matrix: string[][];
-        plaintext: { [key: number]: string };
-    };
-    difficulty?: number; // New field for difficulty
-}
-
-// Helper functions for both ciphers
-const mod26 = (n: number): number => ((n % 26) + 26) % 26;
-const letterToNumber = (letter: string): number => letter.toUpperCase().charCodeAt(0) - 65;
-const numberToLetter = (num: number): string => String.fromCharCode(mod26(num) + 65);
-
-// Format time function
-const formatTime = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
-};
-
-// Aristocrat cipher with unique mapping
-const encryptAristocrat = (text: string): { encrypted: string; key: string } => {
-    const generateKey = (): string => {
-        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-        const result = new Array(26);
-        let available = [...alphabet];
-        
-        // For each position in the alphabet
-        for (let i = 0; i < 26; i++) {
-            // Remove the current letter from available options
-            available = available.filter(char => char !== alphabet[i]);
-            
-            // Randomly select from remaining letters
-            const randomIndex = Math.floor(Math.random() * available.length);
-            result[i] = available[randomIndex];
-            
-            // Restore available letters except the one we just used
-            available = [...alphabet].filter(char => 
-                !result.includes(char) && char !== alphabet[i]
-            );
-        }
-        
-        return result.join('');
-    };
-
-    const key = generateKey();
-    const encrypted = text.toUpperCase().replace(/[A-Z]/g, char => 
-        key[letterToNumber(char)] || char
-    );
-
-    return { encrypted, key };
-};
-
-// Patristocrat cipher with unique mapping
-const encryptPatristocrat = (text: string): { encrypted: string; key: string } => {
-    const generateKey = (): string => {
-        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-        const result = new Array(26);
-        let available = [...alphabet];
-        
-        // For each position in the alphabet
-        for (let i = 0; i < 26; i++) {
-            // Remove the current letter from available options
-            available = available.filter(char => char !== alphabet[i]);
-            
-            // Randomly select from remaining letters
-            const randomIndex = Math.floor(Math.random() * available.length);
-            result[i] = available[randomIndex];
-            
-            // Restore available letters except the one we just used
-            available = [...alphabet].filter(char => 
-                !result.includes(char) && char !== alphabet[i]
-            );
-        }
-        
-        return result.join('');
-    };
-
-    const key = generateKey();
-    
-    // Remove all non-letters and convert to uppercase
-    const cleanText = text.toUpperCase().replace(/[^A-Z]/g, '');
-    
-    // Encrypt the cleaned text
-    const encryptedLetters = cleanText.split('').map(char => 
-        key[letterToNumber(char)] || char
-    );
-    
-    // Group into sets of 5 letters
-    const groupedText = encryptedLetters.reduce((acc: string[], letter: string, i: number) => {
-        const groupIndex = Math.floor(i / 5);
-        if (!acc[groupIndex]) {
-            acc[groupIndex] = '';
-        }
-        acc[groupIndex] += letter;
-        return acc;
-    }, []);
-
-    // Join groups with spaces
-    const encrypted = groupedText.join(' ');
-
-    return { encrypted, key };
-};
-
-// Hill cipher with 2x2 matrix
-const encryptHill = (text: string): { encrypted: string; matrix: number[][] } => {
-    // List of verified invertible matrices mod 26
-    const invertibleMatrices = [
-        [[3, 2], [5, 7]],   // det = 11
-        [[5, 3], [7, 2]],   // det = 11
-        [[7, 2], [3, 5]],   // det = 29
-        [[5, 7], [2, 3]],   // det = 1
-        [[3, 5], [2, 7]]    // det = 11
-    ];
-
-    // Select a random invertible matrix
-    const matrix = invertibleMatrices[Math.floor(Math.random() * invertibleMatrices.length)];
-    
-    // Clean and pad the text
-    const cleanText = text.replace(/[^A-Za-z]/g, '').toUpperCase();
-    const paddedText = cleanText.length % 2 === 0 ? cleanText : cleanText + 'X';
-    
-    let encrypted = '';
-    
-    // Encrypt pairs of letters
-    for (let i = 0; i < paddedText.length; i += 2) {
-        const pair = [letterToNumber(paddedText[i]), letterToNumber(paddedText[i + 1])];
-        
-        // Matrix multiplication
-        const encryptedPair = [
-            mod26(matrix[0][0] * pair[0] + matrix[0][1] * pair[1]),
-            mod26(matrix[1][0] * pair[0] + matrix[1][1] * pair[1])
-        ];
-        
-        encrypted += numberToLetter(encryptedPair[0]) + numberToLetter(encryptedPair[1]);
-    }
-    
-    // Add spaces every 5 characters for readability
-    encrypted = encrypted.match(/.{1,5}/g)?.join(' ') || encrypted;
-    
-    return { encrypted, matrix };
-};
-
-// Porta cipher encryption
-const encryptPorta = (text: string): { encrypted: string; keyword: string } => {
-    // Porta table - each row represents the substitution for a keyword letter
-    const portaTable = {
-        'A': 'NOPQRSTUVWXYZABCDEFGHIJKLM',
-        'B': 'OPQRSTUVWXYZABCDEFGHIJKLMN',
-        'C': 'PQRSTUVWXYZABCDEFGHIJKLMNO',
-        'D': 'QRSTUVWXYZABCDEFGHIJKLMNOP',
-        'E': 'RSTUVWXYZABCDEFGHIJKLMNOPQ',
-        'F': 'STUVWXYZABCDEFGHIJKLMNOPQR',
-        'G': 'TUVWXYZABCDEFGHIJKLMNOPQRS',
-        'H': 'UVWXYZABCDEFGHIJKLMNOPQRST',
-        'I': 'VWXYZABCDEFGHIJKLMNOPQRSTU',
-        'J': 'WXYZABCDEFGHIJKLMNOPQRSTUV',
-        'K': 'XYZABCDEFGHIJKLMNOPQRSTUVW',
-        'L': 'YZABCDEFGHIJKLMNOPQRSTUVWX',
-        'M': 'ZABCDEFGHIJKLMNOPQRSTUVWXY',
-        'N': 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-        'O': 'BCDEFGHIJKLMNOPQRSTUVWXYZA',
-        'P': 'CDEFGHIJKLMNOPQRSTUVWXYZAB',
-        'Q': 'DEFGHIJKLMNOPQRSTUVWXYZABC',
-        'R': 'EFGHIJKLMNOPQRSTUVWXYZABCD',
-        'S': 'FGHIJKLMNOPQRSTUVWXYZABCDE',
-        'T': 'GHIJKLMNOPQRSTUVWXYZABCDEF',
-        'U': 'HIJKLMNOPQRSTUVWXYZABCDEFG',
-        'V': 'IJKLMNOPQRSTUVWXYZABCDEFGH',
-        'W': 'JKLMNOPQRSTUVWXYZABCDEFGHI',
-        'X': 'KLMNOPQRSTUVWXYZABCDEFGHIJ',
-        'Y': 'LMNOPQRSTUVWXYZABCDEFGHIJK',
-        'Z': 'MNOPQRSTUVWXYZABCDEFGHIJKL'
-    };
-
-    // Generate a random 4-letter keyword
-    const keyword = Array.from({ length: 4 }, () => 
-        String.fromCharCode(65 + Math.floor(Math.random() * 26))
-    ).join('');
-
-    // Clean the text
-    const cleanText = text.toUpperCase().replace(/[^A-Z]/g, '');
-
-    // Encrypt the text
-    let encrypted = '';
-    for (let i = 0; i < cleanText.length; i++) {
-        const keywordChar = keyword[i % keyword.length];
-        const textChar = cleanText[i];
-        const row = portaTable[keywordChar];
-        const col = textChar.charCodeAt(0) - 65;
-        encrypted += row[col];
-    }
-
-    // Add spaces every 5 characters for readability
-    encrypted = encrypted.match(/.{1,5}/g)?.join(' ') || encrypted;
-
-    return { encrypted, keyword };
-};
-
-// Baconian cipher with 24-letter alphabet (I/J same, U/V same)
-const encryptBaconian = (text: string): { encrypted: string; } => {
-    // Baconian cipher mapping (24-letter alphabet)
-    const baconianMap: { [key: string]: string } = {
-        'A': 'AAAAA', 'B': 'AAAAB', 'C': 'AAABA', 'D': 'AAABB', 'E': 'AABAA',
-        'F': 'AABAB', 'G': 'AABBA', 'H': 'AABBB', 'I': 'ABAAA', 'J': 'ABAAA',
-        'K': 'ABAAB', 'L': 'ABABA', 'M': 'ABABB', 'N': 'ABBAA', 'O': 'ABBAB',
-        'P': 'ABBBA', 'Q': 'ABBBB', 'R': 'BAAAA', 'S': 'BAAAB', 'T': 'BAABA',
-        'U': 'BAABB', 'V': 'BAABB', 'W': 'BABAA', 'X': 'BABAB', 'Y': 'BABBA',
-        'Z': 'BABBB'
-    };
-
-    // Clean and convert the text
-    const cleanText = text.toUpperCase().replace(/[^A-Z\s.,!?]/g, '');
-    let encrypted = '';
-    let letterCount = 0;
-
-    // Process each character
-    for (let i = 0; i < cleanText.length; i++) {
-        const char = cleanText[i];
-        if (/[A-Z]/.test(char)) {
-            encrypted += baconianMap[char];
-            letterCount++;
-            // Add space after every 5 groups (25 letters) for readability
-            if (letterCount % 5 === 0) {
-                encrypted += ' ';
-            } else {
-                encrypted += ' ';
-            }
-        } else {
-            // Preserve spaces and punctuation
-            encrypted += char;
-        }
-    }
-
-    return { encrypted: encrypted.trim() };
-};
-
-// New helper function to calculate letter frequencies
-const getLetterFrequencies = (text: string): { [key: string]: number } => {
-    const frequencies: { [key: string]: number } = {};
-    // Initialize all letters to 0
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(letter => {
-        frequencies[letter] = 0;
-    });
-    // Count occurrences
-    text.split('').forEach(char => {
-        if (/[A-Z]/.test(char)) {
-            frequencies[char]++;
-        }
-    });
-    return frequencies;
-}; 
-
-// Frequency table component
-const FrequencyTable = ({ 
-    text, 
-    frequencyNotes,
-    onNoteChange,
-    quoteIndex
-}: { 
-    text: string;
-    frequencyNotes?: { [key: string]: string };
-    onNoteChange: (letter: string, note: string) => void;
-    quoteIndex: number;
-}) => {
-    const { darkMode } = useTheme();
-    const frequencies = getLetterFrequencies(text);
-    
-    return (
-        <div className={`mt-4 p-2 rounded ${darkMode ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
-            <p className={`text-sm mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Frequency Analysis</p>
-            <div className="flex flex-wrap gap-2">
-                {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => (
-                    <div key={letter} className="flex flex-col items-center min-w-[2rem]">
-                        <div className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>{letter}</div>
-                        <div className={`text-[10px] sm:text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{frequencies[letter]}</div>
-                        <input
-                            type="text"
-                            id={`frequency-${quoteIndex}-${letter}`}
-                            name={`frequency-${quoteIndex}-${letter}`}
-                            maxLength={1}
-                            value={frequencyNotes?.[letter] || ''}
-                            onChange={(e) => onNoteChange(letter, e.target.value)}
-                            className={`w-5 h-5 sm:w-6 sm:h-6 text-center border rounded text-xs sm:text-sm mt-1 ${
-                                darkMode 
-                                    ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
-                                    : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
-                            }`}
-                        />
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-// Hill cipher display component
-const HillDisplay = ({ 
-    text, 
-    matrix, 
-    quoteIndex,
-    solution,
-    onSolutionChange,
-    isTestSubmitted,
-    quotes 
-}: { 
-    text: string;
-    matrix: number[][];
-    quoteIndex: number;
-    solution?: { matrix: string[][]; plaintext: { [key: number]: string } };
-    onSolutionChange: (type: 'matrix' | 'plaintext', value: string[][] | { [key: number]: string }) => void;
-    isTestSubmitted: boolean;
-    quotes: QuoteData[];
-}) => {
-    const { darkMode } = useTheme();
-    const quote = quotes[quoteIndex];
-    
-    // Create a mapping of positions to correct letters, preserving spaces and punctuation
-    const correctMapping: { [key: number]: string } = {};
-    if (isTestSubmitted) {
-        const originalQuote = quote.quote.toUpperCase();
-        let plainTextIndex = 0;
-        
-        // Map each encrypted letter position to its corresponding plaintext letter
-        for (let i = 0; i < text.length; i++) {
-            if (/[A-Z]/.test(text[i])) {
-                while (plainTextIndex < originalQuote.length) {
-                    if (/[A-Z]/.test(originalQuote[plainTextIndex])) {
-                        correctMapping[i] = originalQuote[plainTextIndex];
-                        plainTextIndex++;
-                        break;
-                    }
-                    plainTextIndex++;
-                }
-            }
-        }
-    }
-
-    return (
-        <div className="font-mono">
-            {/* Matrix display section */}
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 mb-6">
-                <div>
-                    <p className={`text-sm mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Encryption Matrix:</p>
-                    <div className="grid grid-cols-2 gap-2">
-                        {matrix.map((row, i) => 
-                            row.map((num, j) => (
-                                <div key={`${i}-${j}`} className={`w-10 h-10 sm:w-12 sm:h-12 flex flex-col items-center justify-center border rounded ${
-                                    darkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'
-                                }`}>
-                                    <span className={`text-base sm:text-lg font-bold ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>{num}</span>
-                                    <span className={`text-[10px] sm:text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>({numberToLetter(num)})</span>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-                <div>
-                    <p className={`text-sm mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Decryption Matrix:</p>
-                    <div className="grid grid-cols-2 gap-2">
-                        {[0, 1].map(i => 
-                            [0, 1].map(j => (
-                                <input
-                                    key={`solution-${i}-${j}`}
-                                    type="text"
-                                    id={`hill-matrix-${i}-${j}`}
-                                    name={`hill-matrix-${i}-${j}`}
-                                    maxLength={2}
-                                    disabled={isTestSubmitted}
-                                    value={solution?.matrix?.[i]?.[j] || ''}
-                                    onChange={(e) => {
-                                        const newMatrix = solution?.matrix || [['', ''], ['', '']];
-                                        newMatrix[i][j] = e.target.value;
-                                        onSolutionChange('matrix', newMatrix);
-                                    }}
-                                    className={`w-10 h-10 sm:w-12 sm:h-12 text-center border rounded text-base sm:text-lg ${
-                                        darkMode 
-                                            ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
-                                            : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
-                                    }`}
-                                    placeholder="?"
-                                />
-                            ))
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Updated Encrypted text and solution section */}
-            <div className="flex flex-wrap gap-y-8 text-sm sm:text-base">
-                {text.split('').map((char, i) => {
-                    const isLetter = /[A-Z]/.test(char);
-                    const value = solution?.plaintext?.[i] || '';
-                    const correctLetter = isTestSubmitted && isLetter ? correctMapping[i] : '';
-                    const isCorrect = value.toUpperCase() === correctLetter;
-
-                    return (
-                        <div key={i} className="flex flex-col items-center mx-0.5">
-                            <span className={`text-base sm:text-lg ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>{char}</span>
-                            {isLetter && (
-                                <div className="relative h-12 sm:h-14">
-                                    <input
-                                        type="text"
-                                        id={`hill-plaintext-${quoteIndex}-${i}`}
-                                        name={`hill-plaintext-${quoteIndex}-${i}`}
-                                        maxLength={1}
-                                        disabled={isTestSubmitted}
-                                        value={value}
-                                        onChange={(e) => {
-                                            const newValue = e.target.value.toUpperCase();
-                                            const newPlaintext = { ...(solution?.plaintext || {}) };
-                                            newPlaintext[i] = newValue;
-                                            onSolutionChange('plaintext', newPlaintext);
-                                        }}
-                                        className={`w-5 h-5 sm:w-6 sm:h-6 text-center border rounded mt-1 text-xs sm:text-sm ${
-                                            darkMode 
-                                                ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
-                                                : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
-                                        } ${
-                                            isTestSubmitted
-                                                ? isCorrect
-                                                    ? 'border-green-500 bg-green-100/10'
-                                                    : 'border-red-500 bg-red-100/10'
-                                                : ''
-                                        }`}
-                                    />
-                                    {isTestSubmitted && !isCorrect && correctLetter && (
-                                        <div className={`absolute top-8 sm:top-10 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs ${
-                                            darkMode ? 'text-red-400' : 'text-red-600'
-                                        }`}>
-                                            {correctLetter}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                            {!isLetter && <div className="w-5 h-12 sm:w-6 sm:h-14 mt-1" />}
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* Show original quote after submission */}
-            {isTestSubmitted && (
-                <div className={`mt-8 p-4 rounded ${
-                    darkMode ? 'bg-gray-700/50' : 'bg-gray-50'
-                }`}>
-                    <p className={`text-sm mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        Original Quote:
-                    </p>
-                    <p className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                        {quote.quote}
-                    </p>
-                </div>
-            )}
-        </div>
-    );
-}; 
+import {
+  formatTime,
+  encryptK1Aristocrat,
+  encryptK2Aristocrat,
+  encryptK3Aristocrat,
+  encryptK1Patristocrat,
+  encryptK2Patristocrat,
+  encryptK3Patristocrat,
+  encryptRandomAristocrat,
+  encryptRandomPatristocrat,
+  encryptCaesar,
+  encryptAtbash,
+  encryptAffine,
+  encryptHill,
+  encryptPorta,
+  encryptBaconian,
+  encryptNihilist,
+  encryptFractionatedMorse,
+  encryptColumnarTransposition,
+  encryptXenocrypt
+} from './cipher-utils';
+import {
+  HillDisplay,
+  PortaDisplay,
+  SubstitutionDisplay,
+  FractionatedMorseDisplay,
+  BaconianDisplay
+} from './cipher-displays';
+import { QuoteData } from './types';
 
 export default function CodeBusters() {
     const { darkMode } = useTheme();
@@ -500,87 +61,135 @@ export default function CodeBusters() {
     const [inputCode, setInputCode] = useState<string>('');
     const [, setIsTimeSynchronized] = useState(false);
     const [, setSyncTimestamp] = useState<number | null>(null);
+    const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
 
-    // Handle checking answer for aristocrat/patristocrat cipher
-    const checkAristocratAnswer = useCallback((quoteIndex: number): boolean => {
+    // Handle checking answer for k1/k2/k3 variants/caesar/atbash/affine/xenocrypt ciphers
+    const checkSubstitutionAnswer = useCallback((quoteIndex: number): boolean => {
         const quote = quotes[quoteIndex];
-        if ((quote.cipherType !== 'aristocrat' && quote.cipherType !== 'patristocrat') || !quote.solution) return false;
+        if (!['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Xenocrypt', 'Nihilist', 'Fractionated Morse', 'Columnar Transposition'].includes(quote.cipherType) || !quote.solution) return false;
 
-        // Create a mapping from cipher text to plain text using the key
-        const correctMapping: { [key: string]: string } = {};
-        for (let i = 0; i < 26; i++) {
-            const plainLetter = String.fromCharCode(65 + i);
-            const cipherLetter = quote.key![i];
-            correctMapping[cipherLetter] = plainLetter;
+        // For caesar cipher
+        if (quote.cipherType === 'Caesar' && quote.caesarShift !== undefined) {
+            const shift = quote.caesarShift;
+            for (let i = 0; i < 26; i++) {
+                const plainLetter = String.fromCharCode(65 + i);
+                const cipherLetter = String.fromCharCode(((i + shift) % 26) + 65);
+                if (quote.solution[cipherLetter] !== plainLetter) return false;
+            }
+            return true;
         }
 
-        // Check if all mappings in the solution are correct
-        return Object.entries(quote.solution).every(([cipher, plain]) => 
-            correctMapping[cipher] === plain.toUpperCase()
-        );
+        // For atbash cipher
+        if (quote.cipherType === 'Atbash') {
+            const atbashMap = 'ZYXWVUTSRQPONMLKJIHGFEDCBA';
+            for (let i = 0; i < 26; i++) {
+                const plainLetter = String.fromCharCode(65 + i);
+                const cipherLetter = atbashMap[i];
+                if (quote.solution[cipherLetter] !== plainLetter) return false;
+            }
+            return true;
+        }
+
+        // For affine cipher
+        if (quote.cipherType === 'Affine' && quote.affineA !== undefined && quote.affineB !== undefined) {
+            const a = quote.affineA;
+            const b = quote.affineB;
+            for (let i = 0; i < 26; i++) {
+                const plainLetter = String.fromCharCode(65 + i);
+                const cipherLetter = String.fromCharCode(((a * i + b) % 26) + 65);
+                if (quote.solution[cipherLetter] !== plainLetter) return false;
+            }
+            return true;
+        }
+
+        // For fractionated morse cipher
+        if (quote.cipherType === 'Fractionated Morse') {
+            // Check if all cipher letters are correctly mapped to their triplets
+            for (const [cipherLetter, triplet] of Object.entries(quote.solution)) {
+                if (quote.fractionationTable && quote.fractionationTable[triplet] !== cipherLetter) return false;
+            }
+            return true;
+        }
+
+        // For other substitution ciphers (k1/k2/k3 variants, xenocrypt, nihilist, columnar transposition)
+        if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Xenocrypt', 'Nihilist', 'Columnar Transposition'].includes(quote.cipherType)) {
+            // Check if all cipher letters are correctly mapped
+            for (const [cipherLetter, plainLetter] of Object.entries(quote.solution)) {
+                if (quote.key && quote.key[plainLetter.charCodeAt(0) - 65] !== cipherLetter) return false;
+            }
+            return true;
+        }
+
+        return false;
     }, [quotes]);
 
     // Handle checking answer for Hill cipher
     const checkHillAnswer = useCallback((quoteIndex: number): boolean => {
         const quote = quotes[quoteIndex];
-        if (quote.cipherType !== 'hill' || !quote.hillSolution) return false;
-
-        // Convert the plaintext object to a string, preserving spaces and punctuation
-        const plaintext = quote.encrypted.split('').map((char, i) => 
-            /[A-Z]/.test(char) ? (quote.hillSolution?.plaintext?.[i] || '') : char
-        ).join('');
-
-        return plaintext.toUpperCase() === quote.quote.toUpperCase();
-    }, [quotes]);
-
-    // Handle checking answer for Porta cipher
-    const checkPortaAnswer = useCallback((quoteIndex: number): boolean => {
-        const quote = quotes[quoteIndex];
-        if (quote.cipherType !== 'porta' || !quote.solution) return false;
-
-        // Create a mapping of positions to correct letters from the original quote
-        const originalQuote = quote.quote.toUpperCase();
-        const correctMapping: { [key: number]: string } = {};
-        let letterIndex = 0;
+        if (quote.cipherType !== 'Hill' || !quote.hillSolution) return false;
         
-        // Map each position in the encrypted text to its corresponding position in the original quote
-        for (let i = 0; i < quote.encrypted.length; i++) {
-            if (/[A-Z]/.test(quote.encrypted[i])) {
-                while (letterIndex < originalQuote.length) {
-                    if (/[A-Z]/.test(originalQuote[letterIndex])) {
-                        correctMapping[i] = originalQuote[letterIndex];
-                        letterIndex++;
-                        break;
-                    }
-                    letterIndex++;
-                }
+        // Check if the matrix is correctly filled
+        const expectedMatrix = quote.matrix;
+        if (!expectedMatrix) return false;
+        
+        // Check each cell in the matrix
+        for (let i = 0; i < expectedMatrix.length; i++) {
+            for (let j = 0; j < expectedMatrix[i].length; j++) {
+                const expected = expectedMatrix[i][j].toString();
+                const actual = quote.hillSolution.matrix[i]?.[j] || '';
+                if (actual !== expected) return false;
             }
         }
-
-        // Check if all letters in the solution match the correct mapping
-        for (let i = 0; i < quote.encrypted.length; i++) {
-            if (/[A-Z]/.test(quote.encrypted[i])) {
-                const userAnswer = quote.solution[quote.encrypted[i]];
-                if (!userAnswer || userAnswer.toUpperCase() !== correctMapping[i]) {
-                    return false;
-                }
-            }
+        
+        // Check if the plaintext is correctly filled
+        const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+        for (let i = 0; i < expectedPlaintext.length; i++) {
+            const expected = expectedPlaintext[i];
+            const actual = quote.hillSolution.plaintext[i] || '';
+            if (actual !== expected) return false;
         }
-
+        
         return true;
     }, [quotes]);
 
-    // Update handleSubmitTest to include Porta cipher checking
+    const checkPortaAnswer = useCallback((quoteIndex: number): boolean => {
+        const quote = quotes[quoteIndex];
+        if (quote.cipherType !== 'Porta' || !quote.solution) return false;
+        
+        // Check if all cipher letters are correctly mapped
+        for (const [cipherLetter, plainLetter] of Object.entries(quote.solution)) {
+            if (quote.key && quote.key[plainLetter.charCodeAt(0) - 65] !== cipherLetter) return false;
+        }
+        return true;
+    }, [quotes]);
+
+    const checkBaconianAnswer = useCallback((quoteIndex: number): boolean => {
+        const quote = quotes[quoteIndex];
+        if (quote.cipherType !== 'Baconian' || !quote.solution) return false;
+        
+        // Check if all positions are correctly filled
+        const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+        for (let i = 0; i < expectedPlaintext.length; i++) {
+            const expected = expectedPlaintext[i];
+            const actual = quote.solution[i] || '';
+            if (actual !== expected) return false;
+        }
+        return true;
+    }, [quotes]);
+
+    // Update handleSubmitTest to include Baconian cipher checking
     const handleSubmitTest = useCallback(() => {
         let correctCount = 0;
         quotes.forEach((quote, index) => {
-            const isCorrect = quote.cipherType === 'aristocrat' || quote.cipherType === 'patristocrat'
-                ? checkAristocratAnswer(index)
-                : quote.cipherType === 'hill'
+            const isCorrect = ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine'].includes(quote.cipherType)
+                ? checkSubstitutionAnswer(index)
+                : quote.cipherType === 'Hill'
                     ? checkHillAnswer(index)
-                    : quote.cipherType === 'porta'
+                    : quote.cipherType === 'Porta'
                         ? checkPortaAnswer(index)
-                        : false;
+                        : quote.cipherType === 'Baconian'
+                            ? checkBaconianAnswer(index)
+                            : false;
             if (isCorrect) correctCount++;
         });
 
@@ -591,7 +200,7 @@ export default function CodeBusters() {
         
         // Mark test as submitted using new time management system
         markTestSubmitted();
-    }, [quotes, checkAristocratAnswer, checkHillAnswer, checkPortaAnswer]);
+    }, [quotes, checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer]);
 
     // Setup visibility handling for time management
     useEffect(() => {
@@ -601,17 +210,19 @@ export default function CodeBusters() {
 
     // Calculate progress for each quote
     const calculateQuoteProgress = (quote: QuoteData): number => {
-        if (quote.cipherType === 'aristocrat' || quote.cipherType === 'patristocrat') {
+        if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Nihilist', 'Fractionated Morse', 'Columnar Transposition', 'Xenocrypt'].includes(quote.cipherType)) {
             const totalLetters = [...new Set(quote.encrypted.match(/[A-Z]/g) || [])].length;
             const filledLetters = quote.solution ? Object.keys(quote.solution).length : 0;
             return totalLetters > 0 ? (filledLetters / totalLetters) * 100 : 0;
-        } else {
+        } else if (quote.cipherType === 'Hill') {
             // For Hill cipher
             const matrixProgress = quote.hillSolution?.matrix.reduce((acc, row) => 
                 acc + row.filter(cell => cell !== '').length, 0) || 0;
             const plaintextProgress = Object.keys(quote.hillSolution?.plaintext || {}).length / 
                 (quote.encrypted.match(/[A-Z]/g)?.length || 1);
             return ((matrixProgress / 4) * 50) + (plaintextProgress * 50); // Weight matrix and plaintext equally
+        } else {
+            return 0;
         }
     };
 
@@ -621,37 +232,56 @@ export default function CodeBusters() {
 
     // Load data from localStorage on component mount
     useEffect(() => {
+        // Prevent double loading
+        if (hasAttemptedLoad) {
+            console.log('🔍 Already attempted to load, skipping...');
+            return;
+        }
+        
         console.log('🔍 Codebusters page loading...');
+        setHasAttemptedLoad(true);
+        
         const testParamsStr = localStorage.getItem('testParams');
         const savedQuotes = localStorage.getItem('codebustersQuotes');
         const savedIsTestSubmitted = localStorage.getItem('codebustersIsTestSubmitted');
         const savedTestScore = localStorage.getItem('codebustersTestScore');
+        const forceRefresh = localStorage.getItem('codebustersForceRefresh');
         
         console.log('🔍 Codebusters localStorage data:', {
             testParamsStr: !!testParamsStr,
             savedQuotes: !!savedQuotes,
             savedIsTestSubmitted: !!savedIsTestSubmitted,
-            savedTestScore: !!savedTestScore
+            savedTestScore: !!savedTestScore,
+            forceRefresh: !!forceRefresh
         });
         
         // This is the primary loading logic. It relies on data being pre-loaded into localStorage.
         if (testParamsStr) {
             console.log('🔍 Found testParams, processing...');
-            if (savedQuotes) {
+            
+            // Check if we should force refresh (clear saved quotes and load fresh ones)
+            if (forceRefresh === 'true') {
+                console.log('🔍 Force refresh requested, clearing saved quotes and loading fresh ones...');
+                localStorage.removeItem('codebustersQuotes');
+                localStorage.removeItem('codebustersForceRefresh');
+                loadQuestionsFromRedis();
+            } else if (savedQuotes) {
                 console.log('🔍 Found saved quotes, parsing...');
                 try {
                     const parsedQuotes = JSON.parse(savedQuotes);
                     console.log('🔍 Successfully parsed quotes:', parsedQuotes.length);
                     setQuotes(parsedQuotes);
+                    setIsLoading(false);
                     toast.success('Test loaded successfully!');
                 } catch (error) {
                     console.error('Error parsing saved quotes:', error);
                     setError('Could not load test data. It might be corrupted.');
+                    setIsLoading(false);
                 }
             } else {
-                console.log('🔍 No saved quotes found, loading from Excel...');
+                console.log('🔍 No saved quotes found, loading from Redis...');
                 // If we have params but no quotes, it's a new test, not a shared one.
-                loadQuestionsFromExcel();
+                loadQuestionsFromRedis();
             }
 
             // Initialize time management system
@@ -736,12 +366,15 @@ export default function CodeBusters() {
             }
         }
 
-        console.log('🔍 Codebusters page loading complete, setting isLoading to false');
-        setIsLoading(false);
-    }, []);
+        console.log('🔍 Codebusters page loading complete');
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Function to load questions from Excel file
-    const loadQuestionsFromExcel = async () => {
+    // Function to load questions from Redis KV
+    const loadQuestionsFromRedis = async () => {
+        console.log('🔍 Starting loadQuestionsFromRedis...');
+        setIsLoading(true);
+        setError(null);
+        
         // Always reset the timer and submission state for a new test
         setTimeLeft(30 * 60); // Default 30 minutes
         setIsTestSubmitted(false);
@@ -755,100 +388,256 @@ export default function CodeBusters() {
             const testParamsStr = localStorage.getItem('testParams');
             if (!testParamsStr) {
                 setError('No test parameters found. Please configure a test from the practice page.');
+                setIsLoading(false);
                 return;
             }
 
             const testParams = JSON.parse(testParamsStr);
             const questionCount = parseInt(testParams.questionCount) || 10;
-            const cipherTypes = (testParams.cipherTypes || []).map((type: string) => type.toLowerCase());
-
-            // Load all quotes from Excel file
-            const response = await fetch('/quotes.xlsx');
-            const arrayBuffer = await response.arrayBuffer();
-            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            const data = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[];
-
-            // Filter and process quotes based on test parameters
-            const availableQuotes = data.map((row: Record<string, unknown>, index: number) => {
-                const quote = String(row.quote || row.Quote || '');
-                const author = String(row.author || row.Author || 'Unknown');
-                
-                return { quote, author, originalIndex: index };
-            }).filter(item => item.quote && item.author);
-
-            // Randomly select the specified number of questions
-            const selectedQuotes: { quote: string; author: string; originalIndex: number }[] = [];
-            const shuffledQuotes = [...availableQuotes].sort(() => Math.random() - 0.5);
+            let cipherTypes = (testParams.cipherTypes || testParams.subtopics || []).map((type: string) => type.toLowerCase());
             
-            const finalQuestionCount = Math.min(questionCount, shuffledQuotes.length);
+            // Map subtopic names to cipher type names for Codebusters
+            if (testParams.eventName === 'Codebusters') {
+                const subtopicToCipherMap: { [key: string]: string } = {
+                    // Handle lowercase versions (from old format)
+                    'k1 aristocrat': 'K1 Aristocrat',
+                    'k2 aristocrat': 'K2 Aristocrat',
+                    'k3 aristocrat': 'K3 Aristocrat',
+                    'k1 patristocrat': 'K1 Patristocrat',
+                    'k2 patristocrat': 'K2 Patristocrat',
+                    'k3 patristocrat': 'K3 Patristocrat',
+                    'random aristocrat': 'Random Aristocrat',
+                    'random patristocrat': 'Random Patristocrat',
+                    'caesar': 'Caesar',
+                    'atbash': 'Atbash',
+                    'affine': 'Affine',
+                    'hill': 'Hill',
+                    'baconian': 'Baconian',
+                    'porta': 'Porta',
+                    'nihilist': 'Nihilist',
+                    'fractionated morse': 'Fractionated Morse',
+                    'columnar transposition': 'Columnar Transposition',
+                    'xenocrypt': 'Xenocrypt',
+                    // Handle correct format (from practice page)
+                    'K1 Aristocrat': 'K1 Aristocrat',
+                    'K2 Aristocrat': 'K2 Aristocrat',
+                    'K3 Aristocrat': 'K3 Aristocrat',
+                    'K1 Patristocrat': 'K1 Patristocrat',
+                    'K2 Patristocrat': 'K2 Patristocrat',
+                    'K3 Patristocrat': 'K3 Patristocrat',
+                    'Random Aristocrat': 'Random Aristocrat',
+                    'Random Patristocrat': 'Random Patristocrat',
+                    'Caesar': 'Caesar',
+                    'Atbash': 'Atbash',
+                    'Affine': 'Affine',
+                    'Hill': 'Hill',
+                    'Baconian': 'Baconian',
+                    'Porta': 'Porta',
+                    'Nihilist': 'Nihilist',
+                    'Fractionated Morse': 'Fractionated Morse',
+                    'Columnar Transposition': 'Columnar Transposition',
+                    'Xenocrypt': 'Xenocrypt',
+                    // Handle standalone entries (should be mapped to Random variants)
+                    'aristocrat': 'Random Aristocrat',
+                    'patristocrat': 'Random Patristocrat'
+                };
             
-            for (let i = 0; i < finalQuestionCount; i++) {
-                selectedQuotes.push(shuffledQuotes[i]);
+                cipherTypes = cipherTypes.map(subtopic => 
+                    subtopicToCipherMap[subtopic] || subtopic
+                );
             }
 
-            // Process selected quotes with specified cipher types
-            const processedQuotes: QuoteData[] = [];
-            for (const item of selectedQuotes) {
-                const availableCipherTypes = cipherTypes && cipherTypes.length > 0 
-                    ? cipherTypes 
-                    : ['aristocrat', 'patristocrat', 'hill', 'porta', 'baconian'];
-                
+            // Determine cipher types in advance for each question
+            const division = testParams.division || 'any';
+            
+            // Define division-based cipher types
+            const divisionBCipherTypes = {
+                'B': ['K1 Aristocrat', 'K2 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'Random Patristocrat', 'Baconian', 'Fractionated Morse', 'Columnar Transposition', 'Xenocrypt', 'Porta', 'Nihilist', 'Atbash', 'Caesar', 'Affine'],
+                'C': ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Baconian', 'Xenocrypt', 'Fractionated Morse', 'Porta', 'Columnar Transposition', 'Nihilist', 'Hill']
+            };
+            
+            const availableCipherTypes = cipherTypes && cipherTypes.length > 0 
+                ? cipherTypes 
+                : (division === 'B' || division === 'C') 
+                    ? divisionBCipherTypes[division] 
+                    : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Hill', 'Porta', 'Baconian', 'Nihilist', 'Fractionated Morse', 'Columnar Transposition', 'Xenocrypt'];
+
+            // Determine cipher types for each question in advance
+            const questionCipherTypes: QuoteData['cipherType'][] = [];
+            for (let i = 0; i < questionCount; i++) {
                 const cipherType = availableCipherTypes[Math.floor(Math.random() * availableCipherTypes.length)] as QuoteData['cipherType'];
-                
-                let encrypted = '';
-                let key = '';
-                let matrix: number[][] | undefined;
-                let portaKeyword = '';
-                
+                questionCipherTypes.push(cipherType);
+            }
+
+            // Count xenocrypt vs non-xenocrypt questions
+            const xenocryptCount = questionCipherTypes.filter(type => type === 'Xenocrypt').length;
+            const nonXenocryptCount = questionCount - xenocryptCount;
+
+            // Fetch English quotes for non-xenocrypt questions
+            let englishQuotes: Array<{id: string, author: string, quote: string}> = [];
+            if (nonXenocryptCount > 0) {
+                const timestamp = Date.now(); // Add timestamp to prevent caching
+                const englishResponse = await fetch(`/api/quotes?language=en&t=${timestamp}`);
+                if (!englishResponse.ok) {
+                    throw new Error(`Failed to fetch English quotes: ${englishResponse.statusText}`);
+                }
+                const englishData = await englishResponse.json();
+                englishQuotes = englishData.quotes || [];
+            }
+
+            // Fetch Spanish quotes for xenocrypt questions
+            let spanishQuotes: Array<{id: string, author: string, quote: string}> = [];
+            if (xenocryptCount > 0) {
+                const timestamp = Date.now(); // Add timestamp to prevent caching
+                const spanishResponse = await fetch(`/api/quotes?language=es&t=${timestamp}`);
+                if (!spanishResponse.ok) {
+                    throw new Error(`Failed to fetch Spanish quotes: ${spanishResponse.statusText}`);
+                }
+                const spanishData = await spanishResponse.json();
+                spanishQuotes = spanishData.quotes || [];
+            }
+
+            // Prepare quotes for processing
+            const processedQuotes: QuoteData[] = [];
+            const quoteUUIDs: Array<{id: string, language: string, cipherType: string}> = [];
+            let englishQuoteIndex = 0;
+            let spanishQuoteIndex = 0;
+
+            for (let i = 0; i < questionCount; i++) {
+                const cipherType = questionCipherTypes[i];
+                let quoteData: { quote: string; author: string; originalIndex: number; isSpanish?: boolean; id?: string };
+
+                if (cipherType === 'Xenocrypt') {
+                    // Use Spanish quote for xenocrypt
+                    if (spanishQuoteIndex >= spanishQuotes.length) {
+                        throw new Error('Not enough Spanish quotes available for xenocrypt questions');
+                    }
+                    const spanishQuote = spanishQuotes[spanishQuoteIndex];
+                    quoteData = { 
+                        quote: spanishQuote.quote, 
+                        author: spanishQuote.author, 
+                        originalIndex: spanishQuoteIndex,
+                        isSpanish: true,
+                        id: spanishQuote.id
+                    };
+                    quoteUUIDs.push({ id: spanishQuote.id, language: 'es', cipherType });
+                    spanishQuoteIndex++;
+                } else {
+                    // Use English quote for non-xenocrypt
+                    if (englishQuoteIndex >= englishQuotes.length) {
+                        throw new Error('Not enough English quotes available for non-xenocrypt questions');
+                    }
+                    const englishQuote = englishQuotes[englishQuoteIndex];
+                    quoteData = { 
+                        quote: englishQuote.quote, 
+                        author: englishQuote.author, 
+                        originalIndex: englishQuoteIndex,
+                        isSpanish: false,
+                        id: englishQuote.id
+                    };
+                    quoteUUIDs.push({ id: englishQuote.id, language: 'en', cipherType });
+                    englishQuoteIndex++;
+                }
+
+                // Encrypt the quote based on cipher type
+                let cipherResult: { 
+                    encrypted: string; 
+                    key?: string; 
+                    matrix?: number[][]; 
+                    keyword?: string; 
+                    fractionationTable?: { [key: string]: string }; 
+                    shift?: number; 
+                    a?: number; 
+                    b?: number; 
+                };
+
                 switch (cipherType) {
-                    case 'aristocrat':
-                        const aristocratResult = encryptAristocrat(item.quote);
-                        encrypted = aristocratResult.encrypted;
-                        key = aristocratResult.key;
+                    case 'K1 Aristocrat':
+                        cipherResult = encryptK1Aristocrat(quoteData.quote);
                         break;
-                    case 'patristocrat':
-                        const patristocratResult = encryptPatristocrat(item.quote);
-                        encrypted = patristocratResult.encrypted;
-                        key = patristocratResult.key;
+                    case 'K2 Aristocrat':
+                        cipherResult = encryptK2Aristocrat(quoteData.quote);
                         break;
-                    case 'hill':
-                        const hillResult = encryptHill(item.quote);
-                        encrypted = hillResult.encrypted;
-                        matrix = hillResult.matrix;
+                    case 'K3 Aristocrat':
+                        cipherResult = encryptK3Aristocrat(quoteData.quote);
                         break;
-                    case 'porta':
-                        const portaResult = encryptPorta(item.quote);
-                        encrypted = portaResult.encrypted;
-                        portaKeyword = portaResult.keyword;
+                    case 'K1 Patristocrat':
+                        cipherResult = encryptK1Patristocrat(quoteData.quote);
                         break;
-                    case 'baconian':
-                        const baconianResult = encryptBaconian(item.quote);
-                        encrypted = baconianResult.encrypted;
+                    case 'K2 Patristocrat':
+                        cipherResult = encryptK2Patristocrat(quoteData.quote);
+                        break;
+                    case 'K3 Patristocrat':
+                        cipherResult = encryptK3Patristocrat(quoteData.quote);
+                        break;
+                    case 'Random Aristocrat':
+                        cipherResult = encryptRandomAristocrat(quoteData.quote);
+                        break;
+                    case 'Random Patristocrat':
+                        cipherResult = encryptRandomPatristocrat(quoteData.quote);
+                        break;
+                    case 'Caesar':
+                        cipherResult = encryptCaesar(quoteData.quote);
+                        break;
+                    case 'Atbash':
+                        cipherResult = encryptAtbash(quoteData.quote);
+                        break;
+                    case 'Affine':
+                        cipherResult = encryptAffine(quoteData.quote);
+                        break;
+                    case 'Hill':
+                        cipherResult = encryptHill(quoteData.quote);
+                        break;
+                    case 'Porta':
+                        cipherResult = encryptPorta(quoteData.quote);
+                        break;
+                    case 'Baconian':
+                        cipherResult = encryptBaconian(quoteData.quote);
+                        break;
+                    case 'Nihilist':
+                        cipherResult = encryptNihilist(quoteData.quote);
+                        break;
+                    case 'Fractionated Morse':
+                        cipherResult = encryptFractionatedMorse(quoteData.quote);
+                        break;
+                    case 'Columnar Transposition':
+                        cipherResult = encryptColumnarTransposition(quoteData.quote);
+                        break;
+                    case 'Xenocrypt':
+                        cipherResult = encryptXenocrypt(quoteData.quote);
                         break;
                     default:
-                        console.warn(`Unknown cipher type: ${cipherType}`);
-                        continue;
+                        throw new Error(`Unknown cipher type: ${cipherType}`);
                 }
-                
+
                 processedQuotes.push({
-                    author: item.author,
-                    quote: item.quote,
-                    encrypted,
+                    author: quoteData.author,
+                    quote: quoteData.quote,
+                    encrypted: cipherResult.encrypted,
                     cipherType,
-                    key: key || undefined,
-                    matrix,
-                    portaKeyword: portaKeyword || undefined,
+                    key: cipherResult.key || undefined,
+                    matrix: cipherResult.matrix || undefined,
+                    portaKeyword: cipherResult.keyword || undefined,
+                    fractionationTable: cipherResult.fractionationTable || undefined,
+                    caesarShift: cipherResult.shift || undefined,
+                    affineA: cipherResult.a || undefined,
+                    affineB: cipherResult.b || undefined,
                     difficulty: Math.random() * 0.8 + 0.2,
                 });
             }
 
+            // Store the quote UUIDs for sharing
+            localStorage.setItem('codebustersQuoteUUIDs', JSON.stringify(quoteUUIDs));
+            console.log('🔍 Stored quote UUIDs for sharing:', quoteUUIDs);
+
             setQuotes(processedQuotes);
+            setIsLoading(false);
+            console.log('🔍 Successfully loaded quotes:', processedQuotes.length);
         } catch (error) {
-            console.error('Error loading questions from Excel:', error);
-            setError('Failed to load questions from Excel file');
-            toast.error('Failed to load questions from Excel file');
+            console.error('Error loading questions from Redis:', error);
+            setError('Failed to load questions from Redis');
+            setIsLoading(false);
+            toast.error('Failed to load questions from Redis');
         }
     };
 
@@ -913,7 +702,16 @@ export default function CodeBusters() {
     const handleSolutionChange = (quoteIndex: number, cipherLetter: string, plainLetter: string) => {
         setQuotes(prev => prev.map((quote, index) => 
             index === quoteIndex 
-                ? { ...quote, solution: { ...quote.solution, [cipherLetter]: plainLetter } }
+                ? { ...quote, solution: { ...quote.solution, [cipherLetter]: plainLetter.toUpperCase() } }
+                : quote
+        ));
+    };
+
+    // Handle input change for baconian solution (uses position-based indexing)
+    const handleBaconianSolutionChange = (quoteIndex: number, position: number, plainLetter: string) => {
+        setQuotes(prev => prev.map((quote, index) => 
+            index === quoteIndex 
+                ? { ...quote, solution: { ...quote.solution, [position]: plainLetter.toUpperCase() } }
                 : quote
         ));
     };
@@ -943,331 +741,6 @@ export default function CodeBusters() {
                 }
                 : quote
         ));
-    };
-
-
-
-
-
-    // Component for displaying aristocrat/patristocrat cipher with input boxes
-    const AristocratDisplay = ({ text, quoteIndex, solution, frequencyNotes }: { 
-        text: string; 
-        quoteIndex: number;
-        solution?: { [key: string]: string };
-        frequencyNotes?: { [key: string]: string };
-    }) => {
-        // Create mapping for correct answers
-        const correctMapping: { [key: string]: string } = {};
-        if (isTestSubmitted && quotes[quoteIndex].key) {
-            for (let i = 0; i < 26; i++) {
-                const plainLetter = String.fromCharCode(65 + i);
-                const cipherLetter = quotes[quoteIndex].key![i];
-                correctMapping[cipherLetter] = plainLetter;
-            }
-        }
-
-        return (
-            <div className="font-mono">
-                <div className="flex flex-wrap gap-y-8 text-sm sm:text-base">
-                    {text.split('').map((char, i) => {
-                        const isLetter = /[A-Z]/.test(char);
-                        const value = solution?.[char] || '';
-                        const isCorrect = isLetter && value === correctMapping[char];
-                        const showCorrectAnswer = isTestSubmitted && isLetter;
-                        
-                        return (
-                            <div key={i} className="flex flex-col items-center mx-0.5">
-                                <span className={`text-base sm:text-lg ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>{char}</span>
-                                {isLetter && (
-                                    <div className="relative h-12 sm:h-14">
-                                        <input
-                                            type="text"
-                                            id={`aristocrat-${quoteIndex}-${i}`}
-                                            name={`aristocrat-${quoteIndex}-${i}`}
-                                            maxLength={1}
-                                            value={value}
-                                            disabled={isTestSubmitted}
-                                            onChange={(e) => handleSolutionChange(
-                                                quoteIndex,
-                                                char,
-                                                e.target.value
-                                            )}
-                                            className={`w-5 h-5 sm:w-6 sm:h-6 text-center border rounded mt-1 text-xs sm:text-sm ${
-                                                darkMode 
-                                                    ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
-                                                    : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
-                                            } ${
-                                                showCorrectAnswer
-                                                    ? isCorrect
-                                                        ? 'border-green-500 bg-green-100/10'
-                                                        : 'border-red-500 bg-red-100/10'
-                                                    : ''
-                                            }`}
-                                        />
-                                        {showCorrectAnswer && !isCorrect && (
-                                            <div className={`absolute top-8 sm:top-10 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs ${
-                                                darkMode ? 'text-red-400' : 'text-red-600'
-                                            }`}>
-                                                {correctMapping[char]}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                {!isLetter && <div className="w-5 h-12 sm:w-6 sm:h-14 mt-1" />}
-                            </div>
-                        );
-                    })}
-                </div>
-                <FrequencyTable 
-                    text={text}
-                    frequencyNotes={frequencyNotes}
-                    onNoteChange={(letter, note) => handleFrequencyNoteChange(quoteIndex, letter, note)}
-                    quoteIndex={quoteIndex}
-                />
-            </div>
-        );
-    };
-
-    // Update PortaDisplay component
-    const PortaDisplay = ({ 
-        text, 
-        keyword,
-        quoteIndex,
-        solution,
-        frequencyNotes,
-        isTestSubmitted,
-        darkMode 
-    }: { 
-        text: string;
-        keyword: string;
-        quoteIndex: number;
-        solution?: { [key: string]: string };
-        frequencyNotes?: { [key: string]: string };
-        isTestSubmitted: boolean;
-        darkMode: boolean;
-    }) => {
-        // Create mapping for correct answers
-        const originalQuote = quotes[quoteIndex].quote.toUpperCase();
-        const correctMapping: { [key: number]: string } = {};
-        let letterIndex = 0;
-        
-        // Map each position in the encrypted text to its corresponding position in the original quote
-        for (let i = 0; i < text.length; i++) {
-            if (/[A-Z]/.test(text[i])) {
-                while (letterIndex < originalQuote.length) {
-                    if (/[A-Z]/.test(originalQuote[letterIndex])) {
-                        correctMapping[i] = originalQuote[letterIndex];
-                        letterIndex++;
-                        break;
-                    }
-                    letterIndex++;
-                }
-            }
-        }
-        
-        return (
-            <div className="font-mono">
-                <div className={`mb-4 p-2 rounded ${darkMode ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
-                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        Keyword: <span className="font-bold">{keyword}</span>
-                    </p>
-                </div>
-                <div className="flex flex-wrap gap-y-8 text-sm sm:text-base">
-                    {text.split('').map((char, i) => {
-                        const isLetter = /[A-Z]/.test(char);
-                        const value = solution?.[char] || '';
-                        const correctLetter = correctMapping[i];
-                        const isCorrect = isLetter && value.toUpperCase() === correctLetter;
-                        
-                        return (
-                            <div key={i} className="flex flex-col items-center mx-0.5">
-                                <span className={`text-base sm:text-lg ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>{char}</span>
-                                {isLetter && (
-                                    <div className="relative h-12 sm:h-14">
-                                        <input
-                                            type="text"
-                                            id={`porta-${quoteIndex}-${i}`}
-                                            name={`porta-${quoteIndex}-${i}`}
-                                            maxLength={1}
-                                            disabled={isTestSubmitted}
-                                            value={value}
-                                            onChange={(e) => handleSolutionChange(
-                                                quoteIndex,
-                                                char,
-                                                e.target.value
-                                            )}
-                                            className={`w-5 h-5 sm:w-6 sm:h-6 text-center border rounded mt-1 text-xs sm:text-sm ${
-                                                darkMode 
-                                                    ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
-                                                    : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
-                                            } ${
-                                                isTestSubmitted
-                                                    ? isCorrect
-                                                        ? 'border-green-500 bg-green-100/10'
-                                                        : 'border-red-500 bg-red-100/10'
-                                                    : ''
-                                            }`}
-                                        />
-                                        {isTestSubmitted && !isCorrect && correctLetter && (
-                                            <div className={`absolute top-8 sm:top-10 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs ${
-                                                darkMode ? 'text-red-400' : 'text-red-600'
-                                            }`}>
-                                                {correctLetter}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                {!isLetter && <div className="w-5 h-12 sm:w-6 sm:h-14 mt-1" />}
-                            </div>
-                        );
-                    })}
-                </div>
-                <FrequencyTable 
-                    text={text}
-                    frequencyNotes={frequencyNotes}
-                    onNoteChange={(letter, note) => handleFrequencyNoteChange(quoteIndex, letter, note)}
-                    quoteIndex={quoteIndex}
-                />
-                
-                {/* Show original quote after submission */}
-                {isTestSubmitted && (
-                    <div className={`mt-8 p-4 rounded ${
-                        darkMode ? 'bg-gray-700/50' : 'bg-gray-50'
-                    }`}>
-                        <p className={`text-sm mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                            Original Quote:
-                        </p>
-                        <p className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                            {quotes[quoteIndex].quote}
-                        </p>
-                    </div>
-                )}
-            </div>
-        );
-    };
-
-    // Baconian cipher display component
-    const BaconianDisplay = ({ 
-        text, 
-        quoteIndex,
-        solution,
-        isTestSubmitted 
-    }: { 
-        text: string;
-        quoteIndex: number;
-        solution?: { [key: number]: string };
-        isTestSubmitted: boolean;
-    }) => {
-        const { darkMode } = useTheme();
-        
-        // Create mapping for correct answers
-        const correctMapping: { [key: number]: string } = {};
-        if (isTestSubmitted && quotes[quoteIndex].quote) {
-            const originalQuote = quotes[quoteIndex].quote.toUpperCase();
-            let originalIndex = 0;
-            
-            // Map each group of 5 letters to its corresponding plaintext letter
-            const groups = text.split(' ').filter(group => /^[AB]{5}$/.test(group));
-            let currentGroup = 0;
-            
-            while (originalIndex < originalQuote.length) {
-                if (/[A-Z]/.test(originalQuote[originalIndex])) {
-                    if (currentGroup < groups.length) {
-                        correctMapping[currentGroup] = originalQuote[originalIndex];
-                    }
-                    currentGroup++;
-                }
-                originalIndex++;
-            }
-        }
-        
-        return (
-            <div className="font-mono">
-                <div className={`mb-4 p-2 rounded ${darkMode ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
-                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        Note: Using 24-letter alphabet (I/J same, U/V same)
-                    </p>
-                </div>
-                <div className="flex flex-wrap gap-4">
-                    {text.split(' ').map((group, i) => {
-                        if (!/^[AB]{5}$/.test(group)) {
-                            // Handle non-Baconian groups (spaces, punctuation)
-                            return (
-                                <div key={i} className="flex items-center">
-                                    <span className={`text-base ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                                        {group}
-                                    </span>
-                                </div>
-                            );
-                        }
-
-                        const value = solution?.[i] || '';
-                        const correctLetter = correctMapping[i];
-                        const isCorrect = value === correctLetter;
-
-                        return (
-                            <div key={i} className="flex flex-col items-center">
-                                <div className={`text-xs sm:text-sm mb-1 font-mono ${
-                                    darkMode ? 'text-gray-400' : 'text-gray-600'
-                                }`}>
-                                    {group.split('').map((char, j) => (
-                                        <span key={j} className="mx-0.5">{char}</span>
-                                    ))}
-                                </div>
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        id={`baconian-${quoteIndex}-${i}`}
-                                        name={`baconian-${quoteIndex}-${i}`}
-                                        maxLength={1}
-                                        disabled={isTestSubmitted}
-                                        value={value}
-                                        onChange={(e) => {
-                                            const newValue = e.target.value.toUpperCase();
-                                            const newSolution = { ...(solution || {}) };
-                                            newSolution[i] = newValue;
-                                            handleSolutionChange(quoteIndex, i.toString(), newValue);
-                                        }}
-                                        className={`w-6 h-6 sm:w-7 sm:h-7 text-center border rounded text-sm ${
-                                            darkMode 
-                                                ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
-                                                : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
-                                        } ${
-                                            isTestSubmitted
-                                                ? isCorrect
-                                                    ? 'border-green-500 bg-green-100/10'
-                                                    : 'border-red-500 bg-red-100/10'
-                                                : ''
-                                        }`}
-                                    />
-                                    {isTestSubmitted && !isCorrect && correctLetter && (
-                                        <div className={`absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs ${
-                                            darkMode ? 'text-red-400' : 'text-red-600'
-                                        }`}>
-                                            {correctLetter}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-                
-                {/* Show original quote after submission */}
-                {isTestSubmitted && (
-                    <div className={`mt-12 p-4 rounded ${
-                        darkMode ? 'bg-gray-700/50' : 'bg-gray-50'
-                    }`}>
-                        <p className={`text-sm mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                            Original Quote:
-                        </p>
-                        <p className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                            {quotes[quoteIndex].quote}
-                        </p>
-                    </div>
-                )}
-            </div>
-        );
     };
 
     return (
@@ -1316,10 +789,15 @@ export default function CodeBusters() {
                             
                             // Clear all codebusters-related localStorage items
                             localStorage.removeItem('codebustersQuotes');
+                            localStorage.removeItem('codebustersQuoteIndices'); // Legacy
+                            localStorage.removeItem('codebustersQuoteUUIDs');
                             localStorage.removeItem('codebustersIsTestSubmitted');
                             localStorage.removeItem('codebustersTestScore');
                             localStorage.removeItem('codebustersTimeLeft');
                             localStorage.removeItem('shareCode');
+                            
+                            // Set force refresh flag to get new random quotes
+                            localStorage.setItem('codebustersForceRefresh', 'true');
                             
                             // Clear time management session completely
                             clearTestSession();
@@ -1413,7 +891,7 @@ export default function CodeBusters() {
                                             onClick={() => {
                                                 setError(null);
                                                 setIsLoading(true);
-                                                loadQuestionsFromExcel();
+                                                loadQuestionsFromRedis();
                                             }}
                                             className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
                                                 darkMode
@@ -1427,7 +905,7 @@ export default function CodeBusters() {
                                 </div>
                             </div>
                         )}
-                        {!isLoading && !error && quotes.length === 0 && (
+                        {!isLoading && !error && quotes.length === 0 && hasAttemptedLoad && (
                             <div className={`text-center py-12 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                                 <div className="flex flex-col items-center">
                                     <div className="text-6xl mb-4">📝</div>
@@ -1438,7 +916,7 @@ export default function CodeBusters() {
                         )}
                         
                         {/* Take together button - positioned right above questions */}
-                        {!isLoading && !error && quotes.length > 0 && (
+                        {!isLoading && !error && quotes.length > 0 && hasAttemptedLoad && (
                                                     <button
                             onClick={() => {
                                 console.log('🔍 CODEBUSTERS - Opening share modal with quotes:', {
@@ -1458,7 +936,7 @@ export default function CodeBusters() {
                             </button>
                         )}
                         
-                        {!isLoading && !error && quotes.map((item, index) => (
+                        {!isLoading && !error && hasAttemptedLoad && quotes.map((item, index) => (
                             <div 
                                 key={index} 
                                 className={`relative border p-4 rounded-lg shadow-sm transition-all duration-500 ease-in-out mb-6 ${
@@ -1479,14 +957,7 @@ export default function CodeBusters() {
                                     {item.author}
                                 </p>
 
-                                {(item.cipherType === 'aristocrat' || item.cipherType === 'patristocrat') ? (
-                                    <AristocratDisplay 
-                                        text={item.encrypted} 
-                                        quoteIndex={index}
-                                        solution={item.solution}
-                                        frequencyNotes={item.frequencyNotes}
-                                    />
-                                ) : item.cipherType === 'hill' ? (
+                                {item.cipherType === 'Hill' ? (
                                     <HillDisplay
                                         text={item.encrypted}
                                         matrix={item.matrix!}
@@ -1496,7 +967,7 @@ export default function CodeBusters() {
                                         isTestSubmitted={isTestSubmitted}
                                         quotes={quotes}
                                     />
-                                ) : item.cipherType === 'porta' ? (
+                                ) : item.cipherType === 'Porta' ? (
                                     <PortaDisplay
                                         text={item.encrypted}
                                         keyword={item.portaKeyword!}
@@ -1504,15 +975,47 @@ export default function CodeBusters() {
                                         solution={item.solution}
                                         frequencyNotes={item.frequencyNotes}
                                         isTestSubmitted={isTestSubmitted}
-                                        darkMode={darkMode}
+                                        quotes={quotes}
+                                        onSolutionChange={handleSolutionChange}
+                                        onFrequencyNoteChange={handleFrequencyNoteChange}
                                     />
-                                ) : (
+                                ) : item.cipherType === 'Baconian' ? (
                                     <BaconianDisplay
                                         text={item.encrypted}
                                         quoteIndex={index}
                                         solution={item.solution}
                                         isTestSubmitted={isTestSubmitted}
+                                        quotes={quotes}
+                                        onBaconianSolutionChange={handleBaconianSolutionChange}
                                     />
+                                ) : item.cipherType === 'Fractionated Morse' ? (
+                                    <FractionatedMorseDisplay
+                                        text={item.encrypted}
+                                        quoteIndex={index}
+                                        solution={item.solution}
+                                        fractionationTable={item.fractionationTable}
+                                        isTestSubmitted={isTestSubmitted}
+                                        quotes={quotes}
+                                        onSolutionChange={handleSolutionChange}
+                                    />
+                                ) : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Nihilist', 'Columnar Transposition', 'Xenocrypt'].includes(item.cipherType) ? (
+                                    <SubstitutionDisplay
+                                        text={item.encrypted}
+                                        quoteIndex={index}
+                                        solution={item.solution}
+                                        isTestSubmitted={isTestSubmitted}
+                                        cipherType={item.cipherType}
+                                        key={item.key}
+                                        caesarShift={item.caesarShift}
+                                        affineA={item.affineA}
+                                        affineB={item.affineB}
+                                        quotes={quotes}
+                                        onSolutionChange={handleSolutionChange}
+                                    />
+                                ) : (
+                                    <div className={`text-center py-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                        Unknown cipher type: {item.cipherType}
+                                    </div>
                                 )}
                                 
                                 {/* Difficulty Bar */}
@@ -1532,7 +1035,7 @@ export default function CodeBusters() {
                         ))}
                         
                         {/* Submit Button */}
-                        {!isLoading && !error && quotes.length > 0 && (
+                        {!isLoading && !error && quotes.length > 0 && hasAttemptedLoad && (
                             <div className="text-center mt-6">
                                 {!isTestSubmitted ? (
                                     <button
@@ -1661,7 +1164,7 @@ export default function CodeBusters() {
                     
                 </div>
             </div>
-            
+       it     
             {/* Toast Container */}
             <ToastContainer
                 position="top-right"

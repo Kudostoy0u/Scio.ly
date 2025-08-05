@@ -3,6 +3,7 @@ const API_BASE_URL = '/api'
 const api = {
     baseUrl: API_BASE_URL,
     questions: `${API_BASE_URL}/questions`,
+    questionsBatch: `${API_BASE_URL}/questions/batch`,
     events: `${API_BASE_URL}/meta/events`,
     tournaments: `${API_BASE_URL}/meta/tournaments`,
     subtopics: `${API_BASE_URL}/meta/subtopics`,

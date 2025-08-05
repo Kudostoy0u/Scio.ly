@@ -16,8 +16,6 @@ import EditQuestionModal from '@/app/components/EditQuestionModal';
 import ShareModal from '@/app/components/ShareModal';
 import { loadBookmarksFromSupabase } from '@/app/utils/bookmarks';
 import { Question } from '@/app/utils/geminiService';
-import { User } from '@supabase/supabase-js';
-import { getUserProfile } from '@/app/utils/userProfile';
 import {
   RouterParams,
   GradingResults,
@@ -842,19 +840,7 @@ export default function TestPage() {
     
     loadUserBookmarks();
   }, []);
-  // Fetch user profile data
-  const fetchProfileData = async (user: User | null) => {
-    const profile = await getUserProfile(user?.id || null);
-    console.log("Header: Fetched profile:", profile); // DEBUG
-  };
-  // Listen for auth state changes
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      const user = session?.user || null;
-      fetchProfileData(user); // Fetch profile when user state changes
-    });
-    return () => subscription.unsubscribe();
-  }, []);
+
 
   // Setup visibility handling for time management
   useEffect(() => {

@@ -1,0 +1,10 @@
+-- Tables already exist in the database
+-- This migration is a no-op since bookmarks, game_points, and user_stats tables
+-- are already present in the database with the correct schema
+-- 
+-- The existing tables have the following structure:
+-- - bookmarks: id, user_id, question_data, event_name, source, created_at
+-- - game_points: id, user_id, points, source, description, created_at  
+-- - user_stats: id, user_id, date, questions_attempted, correct_answers, events_practiced, event_questions, game_points, created_at
+--
+-- No changes needed - schema is already correct

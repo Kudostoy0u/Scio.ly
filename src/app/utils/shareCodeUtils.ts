@@ -10,7 +10,7 @@ export interface QuoteData {
   author: string;
   quote: string;
   encrypted: string;
-  cipherType: 'aristocrat' | 'patristocrat' | 'hill' | 'baconian' | 'porta';
+  cipherType: 'Random Aristocrat' | 'K1 Aristocrat' | 'K2 Aristocrat' | 'K3 Aristocrat' | 'Random Patristocrat' | 'K1 Patristocrat' | 'K2 Patristocrat' | 'K3 Patristocrat' | 'Caesar' | 'Atbash' | 'Affine' | 'Hill' | 'Baconian' | 'Porta' | 'Nihilist' | 'Fractionated Morse' | 'Columnar Transposition' | 'Xenocrypt';
   key?: string;        // For aristocrat/patristocrat
   matrix?: number[][]; // For hill
   portaKeyword?: string; // For porta
@@ -83,7 +83,13 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
         if (questionIds.length > 0) {
           try {
             console.log('🔍 Fetching questions by IDs:', questionIds);
-            const questionsResponse = await fetch(`${api.questions}?ids=${questionIds.join(',')}`);
+            const questionsResponse = await fetch(api.questionsBatch, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ ids: questionIds }),
+            });
             if (questionsResponse.ok) {
               const questionsData = await questionsResponse.json();
               if (questionsData.success && questionsData.data) {

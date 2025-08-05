@@ -29,10 +29,9 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-    // Store Codebusters-specific data in the same format as regular shares
+    // Store Codebusters-specific data with quote UUIDs and cipher types
     const dataToStore = {
       eventName: 'Codebusters',
-      encryptedQuotes: body.encryptedQuotes || [],
       testParams: body.testParams || {},
       timeRemainingSeconds: body.timeRemainingSeconds || null,
       createdAtMs: Date.now(),
@@ -43,10 +42,13 @@ export async function POST(request: NextRequest) {
       VALUES ($1, $2, $3, $4)
     `;
 
+    const quoteUUIDsData = body.quoteUUIDs || [];
+    console.log(`🔍 [CODEBUSTERS/SHARE/GENERATE] Storing ${quoteUUIDsData.length} quotes with UUIDs and cipher types:`, quoteUUIDsData);
+    
     await executeQuery(insertQuery, [
       shareCode,
-      "[]", // Empty array for indices column to satisfy not-null constraint
-      JSON.stringify(dataToStore),
+      JSON.stringify(quoteUUIDsData), // Store quote UUIDs in dedicated indices column
+      JSON.stringify(dataToStore), // Store other test params without duplicating UUIDs
       expiresAt.toISOString(),
     ]);
 

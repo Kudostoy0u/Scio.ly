@@ -217,9 +217,21 @@ function EventDashboard() {
     const selectedEventObj = events.find((event) => event.id === selectedEvent);
     if (!selectedEventObj) return;
 
-    // Disable unlimited practice for Codebusters
+    // For Codebusters, redirect to /codebusters instead of /unlimited
     if (selectedEventObj.name === 'Codebusters') {
-      toast.error('Unlimited practice is not available for Codebusters');
+      const testParams = {
+        eventName: selectedEventObj.name,
+        difficulties: settings.difficulties,
+        division: settings.division,
+        tournament: 'any', // Always use 'any' for privacy
+        subtopics: settings.subtopics,
+        types: settings.types,
+        questionCount: 1, // Ignore question count for codebusters unlimited
+      };
+
+      localStorage.setItem('testParams', JSON.stringify(testParams));
+      localStorage.removeItem('testQuestions');
+      router.push('/codebusters');
       return;
     }
 
@@ -242,6 +254,17 @@ function EventDashboard() {
 
   const selectEvent = (id: number) => {
     setSelectedEvent(id);
+    
+    // Auto-configure settings for Codebusters
+    const selectedEventObj = events.find((event) => event.id === id);
+    if (selectedEventObj?.name === 'Codebusters') {
+      setSettings(prev => ({
+        ...prev,
+        questionCount: 3,
+        types: 'frq-only',
+        division: 'C'
+      }));
+    }
   };
 
   const sortedEvents = [...events].sort((a, b) => {
@@ -391,7 +414,7 @@ function EventDashboard() {
           "Astronomy": ["Solar System", "Stars", "Galaxies", "Cosmology", "Instruments"],
           "Chemistry Lab": ["Stoichiometry", "Equilibrium", "Periodicity", "Redox Reactions", "Aqueous Solutions", "Acids and Bases", "Physical Properties", "Thermodynamics", "Gas Laws", "Kinetics", "Electrochemistry"],
           "Circuit Lab": ["Circuits", "Sensors", "Calibration", "Design", "Troubleshooting"],
-          "Codebusters": ["Aristocrat", "Patristocrat", "Hill", "Baconian", "Porta"],
+          "Codebusters": ["Random Aristocrat", "K1 Aristocrat", "K2 Aristocrat", "K3 Aristocrat", "Random Patristocrat", "K1 Patristocrat", "K2 Patristocrat", "K3 Patristocrat", "Caesar", "Atbash", "Affine", "Hill", "Baconian", "Porta", "Nihilist", "Fractionated Morse", "Columnar Transposition", "Xenocrypt"],
           "Crime Busters": ["Evidence Analysis", "Fingerprints", "DNA", "Toxicology", "Crime Scene"],
           "Designer Genes": ["Genetics", "DNA", "Proteins", "Evolution", "Population Genetics"],
           "Disease Detectives": ["Epidemiology", "Pathogens", "Prevention", "Outbreak Investigation", "Statistics"],
@@ -432,7 +455,31 @@ function EventDashboard() {
     if (selectedEvent && events.length > 0 && window.eventSubtopicsMapping) {
       const selectedEventObj = events.find(event => event.id === selectedEvent);
       if (selectedEventObj) {
-        const eventSubtopics = window.eventSubtopicsMapping[selectedEventObj.name] || [];
+        let eventSubtopics = window.eventSubtopicsMapping[selectedEventObj.name] || [];
+        
+        // Filter cipher types based on division for Codebusters
+        if (selectedEventObj.name === 'Codebusters') {
+          const divisionBCipherTypes = {
+            'B': [
+              'Random Aristocrat', 'K1 Aristocrat', 'K2 Aristocrat',
+              'Random Patristocrat', 'K1 Patristocrat', 'K2 Patristocrat',
+              'Baconian', 'Fractionated Morse', 'Columnar Transposition', 'Xenocrypt',
+              'Porta', 'Nihilist', 'Atbash', 'Caesar', 'Affine'
+            ],
+            'C': [
+              'Random Aristocrat', 'K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat',
+              'Random Patristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat',
+              'Baconian', 'Xenocrypt', 'Fractionated Morse', 'Porta',
+              'Columnar Transposition', 'Nihilist', 'Hill'
+            ]
+          };
+          
+          const currentDivision = settings.division;
+          if (currentDivision === 'B' || currentDivision === 'C') {
+            eventSubtopics = divisionBCipherTypes[currentDivision] || eventSubtopics;
+          }
+        }
+        
         setSubtopics(eventSubtopics);
         // Reset subtopics selection when event changes
         setSettings(prev => ({ ...prev, subtopics: [] }));
@@ -458,7 +505,37 @@ function EventDashboard() {
         });
       }
     }
-  }, [selectedEvent, events]);
+  }, [selectedEvent, events, settings.division]);
+
+  // Update subtopics when division changes for Codebusters
+  useEffect(() => {
+    if (selectedEvent && events.length > 0 && window.eventSubtopicsMapping) {
+      const selectedEventObj = events.find(event => event.id === selectedEvent);
+      if (selectedEventObj && selectedEventObj.name === 'Codebusters') {
+        const divisionBCipherTypes = {
+          'B': [
+            'Random Aristocrat', 'K1 Aristocrat', 'K2 Aristocrat',
+            'Random Patristocrat', 'K1 Patristocrat', 'K2 Patristocrat',
+            'Baconian', 'Fractionated Morse', 'Columnar Transposition', 'Xenocrypt',
+            'Porta', 'Nihilist', 'Atbash', 'Caesar', 'Affine'
+          ],
+          'C': [
+            'Random Aristocrat', 'K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat',
+            'Random Patristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat',
+            'Baconian', 'Xenocrypt', 'Fractionated Morse', 'Porta',
+            'Columnar Transposition', 'Nihilist', 'Hill'
+          ]
+        };
+        
+        const currentDivision = settings.division;
+        if (currentDivision === 'B' || currentDivision === 'C') {
+          setSubtopics(divisionBCipherTypes[currentDivision]);
+          // Reset subtopics selection when division changes
+          setSettings(prev => ({ ...prev, subtopics: [] }));
+        }
+      }
+    }
+  }, [settings.division, selectedEvent, events]);
 
   // Preselect and scroll to the event if a query parameter is provided.
   useEffect(() => {
@@ -656,7 +733,7 @@ function EventDashboard() {
                     id="sort"
                     value={sortOption}
                     onChange={(e) => setSortOption(e.target.value)}
-                    className={`text-sm rounded-md border-0 py-1.5 pl-3 pr-8 ${
+                    className={`text-xs rounded-md border-0 py-1.5 pl-3 pr-8 ${
                       darkMode 
                         ? 'bg-gray-700 text-white focus:ring-blue-500' 
                         : 'bg-gray-50 text-gray-900 focus:ring-blue-600'
@@ -829,7 +906,11 @@ function EventDashboard() {
                         disabled={Boolean(selectedEvent && events.find(event => event.id === selectedEvent)?.name === 'Codebusters')}
                         className={`flex-1 py-2 px-3 text-sm font-medium rounded-r-md border ${
                           Boolean(selectedEvent && events.find(event => event.id === selectedEvent)?.name === 'Codebusters')
-                            ? 'opacity-50 cursor-not-allowed ' + (darkMode ? 'border-gray-600 text-gray-500' : 'border-gray-300 text-gray-400')
+                            ? (settings.types === 'free-response' || settings.types === 'frq-only'
+                                ? darkMode
+                                  ? 'border-blue-500 bg-blue-500 text-white'
+                                  : 'border-blue-500 bg-blue-500 text-white'
+                                : 'opacity-50 cursor-not-allowed ' + (darkMode ? 'border-gray-600 text-gray-500' : 'border-gray-300 text-gray-400'))
                             : settings.types === 'free-response'
                               ? darkMode
                                 ? 'border-blue-500 bg-blue-500 text-white'
@@ -859,7 +940,6 @@ function EventDashboard() {
                         const availableDivisions = selectedEventObj?.divisions || ['B', 'C'];
                         const canShowB = availableDivisions.includes('B');
                         const canShowC = availableDivisions.includes('C');
-                        const canShowBoth = canShowB && canShowC;
 
                         return (
                           <>
@@ -883,18 +963,10 @@ function EventDashboard() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => canShowBoth ? setSettings(prev => ({ ...prev, division: 'any' })) : null}
-                              disabled={!canShowBoth}
-                              className={`px-3 py-2 text-sm font-medium border-t border-b ${
-                                !canShowBoth
-                                  ? 'opacity-50 cursor-not-allowed ' + (darkMode ? 'border-gray-600 text-gray-500' : 'border-gray-300 text-gray-400')
-                                  : settings.division === 'any'
-                                    ? darkMode
-                                      ? 'border-green-500 bg-green-500 text-white'
-                                      : 'border-green-500 bg-green-500 text-white'
-                                    : darkMode
-                                      ? 'border-gray-600 text-gray-300 hover:border-green-500 hover:text-green-400'
-                                      : 'border-gray-300 text-gray-700 hover:border-green-500 hover:text-green-600'
+                              onClick={() => setSettings(prev => ({ ...prev, division: 'any' }))}
+                              disabled={true}
+                              className={`px-3 py-2 text-sm font-medium border-t border-b opacity-50 cursor-not-allowed ${
+                                darkMode ? 'border-gray-600 text-gray-500' : 'border-gray-300 text-gray-400'
                               }`}
                             >
                               Both
@@ -1094,7 +1166,7 @@ function EventDashboard() {
                                             : 'bg-white border-gray-300 text-blue-600 focus:ring-blue-500'
                                         }`}
                                       />
-                                      <span className={`text-sm break-words ${
+                                      <span className={`text-xs break-words ${
                                         darkMode ? 'text-gray-300' : 'text-gray-700'
                                       }`}>
                                         {subtopic.charAt(0).toUpperCase() + subtopic.slice(1)}
@@ -1125,7 +1197,7 @@ function EventDashboard() {
                       onClick={() => {
                         toast.info('Tournament selection has been disabled for privacy reasons.');
                       }}
-                      className={`block w-full rounded-md border-0 py-1.5 px-3 opacity-50 cursor-not-allowed ${
+                      className={`block w-full rounded-md border-0 py-1.5 px-3 opacity-50 cursor-not-allowed text-xs ${
                         darkMode
                           ? 'bg-gray-800 text-gray-500'
                           : 'bg-gray-100 text-gray-500'
@@ -1151,16 +1223,16 @@ function EventDashboard() {
                     </button>
                     <button
                       onClick={handleUnlimited}
-                      disabled={Boolean(!selectedEvent || (selectedEvent && events.find(event => event.id === selectedEvent)?.name === 'Codebusters'))}
+                      disabled={Boolean(!selectedEvent)}
                       className={`py-3 px-4 rounded-lg font-medium transition-all duration-300 border-2 ${
-                        !selectedEvent || (selectedEvent && events.find(event => event.id === selectedEvent)?.name === 'Codebusters')
+                        !selectedEvent
                           ? 'opacity-50 cursor-not-allowed ' + (darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-500')
                           : darkMode
                             ? 'border-indigo-500 text-indigo-400 hover:bg-indigo-500 hover:text-white'
                             : 'border-indigo-500 text-indigo-600 hover:bg-indigo-500 hover:text-white'
                       }`}
                     >
-                      Unlimited Practice
+                      Unlimited
                     </button>
                   </div>
                 </div>

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeQuery } from '@/lib/neon';
+import { db } from '@/lib/db';
+import { questions } from '@/lib/db/schema';
 import { Question, QuestionFilters, CreateQuestionRequest, ApiResponse } from '@/lib/types/api';
 import { v4 as uuidv4 } from 'uuid';
+import { eq, and, or, gte, lte, sql } from 'drizzle-orm';
 
 // GET /api/questions - Fetch questions with filtering
 export async function GET(request: NextRequest) {
@@ -21,28 +23,20 @@ export async function GET(request: NextRequest) {
       limit: searchParams.get('limit') || undefined,
     };
 
-    // Build dynamic query
-    let query = "SELECT * FROM questions WHERE 1=1";
-    const params: unknown[] = [];
-    let paramIndex = 1;
+    // Build conditions array
+    const conditions = [];
 
     // Add filters
     if (filters.event) {
-      query += ` AND event = $${paramIndex}`;
-      params.push(filters.event);
-      paramIndex++;
+      conditions.push(eq(questions.event, filters.event));
     }
 
     if (filters.division) {
-      query += ` AND division = $${paramIndex}`;
-      params.push(filters.division);
-      paramIndex++;
+      conditions.push(eq(questions.division, filters.division));
     }
 
     if (filters.tournament) {
-      query += ` AND tournament ILIKE $${paramIndex}`;
-      params.push(`%${filters.tournament}%`);
-      paramIndex++;
+      conditions.push(sql`${questions.tournament} ILIKE ${`%${filters.tournament}%`}`);
     }
 
     // Handle subtopic filtering
@@ -54,62 +48,52 @@ export async function GET(request: NextRequest) {
     }
 
     if (subtopicsToFilter.length > 0) {
-      const subtopicConditions: string[] = [];
-      for (const subtopic of subtopicsToFilter) {
-        subtopicConditions.push(`subtopics @> $${paramIndex}`);
-        params.push(JSON.stringify([subtopic]));
-        paramIndex++;
-      }
-      query += ` AND (${subtopicConditions.join(' OR ')})`;
+      const subtopicConditions = subtopicsToFilter.map(subtopic => 
+        sql`${questions.subtopics} @> ${JSON.stringify([subtopic])}`
+      );
+      conditions.push(or(...subtopicConditions));
     }
 
     // Add question type filtering
     if (filters.question_type) {
       if (filters.question_type === 'mcq') {
-        query += " AND options IS NOT NULL AND options != '[]'::jsonb AND jsonb_array_length(options) > 0";
+        conditions.push(sql`${questions.options} IS NOT NULL AND ${questions.options} != '[]'::jsonb AND jsonb_array_length(${questions.options}) > 0`);
       } else if (filters.question_type === 'frq') {
-        query += " AND (options IS NULL OR options = '[]'::jsonb OR jsonb_array_length(options) = 0)";
+        conditions.push(sql`(${questions.options} IS NULL OR ${questions.options} = '[]'::jsonb OR jsonb_array_length(${questions.options}) = 0)`);
       }
     }
 
     if (filters.difficulty_min) {
       const difficulty = parseFloat(filters.difficulty_min);
       if (!isNaN(difficulty)) {
-        query += ` AND difficulty >= $${paramIndex}`;
-        params.push(difficulty);
-        paramIndex++;
+        conditions.push(gte(questions.difficulty, difficulty));
       }
     }
 
     if (filters.difficulty_max) {
       const difficulty = parseFloat(filters.difficulty_max);
       if (!isNaN(difficulty)) {
-        query += ` AND difficulty <= $${paramIndex}`;
-        params.push(difficulty);
-        paramIndex++;
+        conditions.push(lte(questions.difficulty, difficulty));
       }
     }
 
-    // Add ordering
-    query += " ORDER BY RANDOM()";
-
-    // Get total count first
-    const countQuery = query.replace("SELECT *", "SELECT COUNT(*)");
-    await executeQuery<{ count: string }>(countQuery, params);
-
-    // Apply limit
-    const limit = filters.limit ? parseInt(filters.limit) : 50;
-    if (limit > 0) {
-      query += ` LIMIT $${paramIndex}`;
-      params.push(limit);
+    // Build the query
+    let query = db.select().from(questions);
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
     }
 
-    // Execute main query
-    const questions = await executeQuery<Question>(query, params);
+    // Add ordering and limit
+    const limit = filters.limit ? parseInt(filters.limit) : 50;
+    query = query.orderBy(sql`RANDOM()`).limit(limit > 0 ? limit : 50);
+
+    // Execute query
+    const results = await query;
 
     const response: ApiResponse<Question[]> = {
       success: true,
-      data: questions,
+      data: results as Question[],
     };
 
     return NextResponse.json(response);
@@ -138,29 +122,19 @@ export async function POST(request: NextRequest) {
     }
 
     const id = uuidv4();
-    const optionsJSON = JSON.stringify(body.options || []);
-    const answersJSON = JSON.stringify(body.answers || []);
-    const subtopicsJSON = JSON.stringify(body.subtopics || []);
 
-    const query = `
-      INSERT INTO questions (id, question, tournament, division, options, answers, subtopics, difficulty, event)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *
-    `;
-
-    const params = [
+    const result = await db.insert(questions).values({
       id,
-      body.question,
-      body.tournament,
-      body.division,
-      optionsJSON,
-      answersJSON,
-      subtopicsJSON,
-      body.difficulty || 0.5,
-      body.event,
-    ];
+      question: body.question,
+      tournament: body.tournament,
+      division: body.division,
+      options: body.options || [],
+      answers: body.answers || [],
+      subtopics: body.subtopics || [],
+      difficulty: body.difficulty || 0.5,
+      event: body.event,
+    }).returning();
 
-    const result = await executeQuery<Question>(query, params);
     const question = result[0];
 
     if (!question) {
@@ -169,7 +143,7 @@ export async function POST(request: NextRequest) {
 
     const response: ApiResponse<Question> = {
       success: true,
-      data: question,
+      data: question as Question,
       message: 'Question created successfully',
     };
 
