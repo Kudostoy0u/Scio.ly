@@ -93,7 +93,7 @@ Our mascot is **Hylas the Cat**! 🐱
 
 ## License
 
-Copyright © 2025 Scio.ly. All rights reserved. Check LICENSE
+Copyright © 2025 Scio.ly. All rights reserved.
 
 ---
 
