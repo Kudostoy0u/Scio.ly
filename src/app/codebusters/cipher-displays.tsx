@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { QuoteData } from './types';
 import { getLetterFrequencies, numberToLetter } from './cipher-utils';
@@ -47,7 +47,7 @@ export const FrequencyTable = ({
     );
 };
 
-// Hill cipher display component
+// Hill 2x2 and Hill 3x3 cipher display component
 export const HillDisplay = ({ 
     text, 
     matrix, 
@@ -67,6 +67,23 @@ export const HillDisplay = ({
 }) => {
     const { darkMode } = useTheme();
     const quote = quotes[quoteIndex];
+    const is3x3 = quote.cipherType === 'Hill 3x3';
+    const matrixSize = is3x3 ? 3 : 2;
+    
+    // Auto-fill decryption matrix for 3x3 Hill ciphers
+    useEffect(() => {
+        if (is3x3 && quote.decryptionMatrix) {
+            const hasEmptyMatrix = !solution?.matrix || 
+                solution.matrix.every(row => row.every(cell => cell === ''));
+            
+            if (hasEmptyMatrix) {
+                const decryptionMatrix = quote.decryptionMatrix.map(row => 
+                    row.map(num => num.toString())
+                );
+                onSolutionChange('matrix', decryptionMatrix);
+            }
+        }
+    }, [is3x3, quote.decryptionMatrix, solution?.matrix, onSolutionChange]);
     
     // Create a mapping of positions to correct letters, preserving spaces and punctuation
     const correctMapping: { [key: number]: string } = {};
@@ -95,14 +112,14 @@ export const HillDisplay = ({
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 mb-6">
                 <div>
                     <p className={`text-sm mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Encryption Matrix:</p>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className={`grid gap-2 ${is3x3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
                         {matrix.map((row, i) => 
                             row.map((num, j) => (
                                 <div key={`${i}-${j}`} className={`w-10 h-10 sm:w-12 sm:h-12 flex flex-col items-center justify-center border rounded ${
                                     darkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'
                                 }`}>
                                     <span className={`text-base sm:text-lg font-bold ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>{num}</span>
-                                    <span className={`text-[10px] sm:text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>({numberToLetter(num)})</span>
+                                    <span className={`text-[10px] sm:text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{numberToLetter(num)}</span>
                                 </div>
                             ))
                         )}
@@ -110,30 +127,44 @@ export const HillDisplay = ({
                 </div>
                 <div>
                     <p className={`text-sm mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Decryption Matrix:</p>
-                    <div className="grid grid-cols-2 gap-2">
-                        {[0, 1].map(i => 
-                            [0, 1].map(j => (
-                                <input
-                                    key={`solution-${i}-${j}`}
-                                    type="text"
-                                    id={`hill-matrix-${i}-${j}`}
-                                    name={`hill-matrix-${i}-${j}`}
-                                    maxLength={2}
-                                    disabled={isTestSubmitted}
-                                    value={solution?.matrix?.[i]?.[j] || ''}
-                                    onChange={(e) => {
-                                        const newMatrix = solution?.matrix || [['', ''], ['', '']];
-                                        newMatrix[i][j] = e.target.value;
-                                        onSolutionChange('matrix', newMatrix);
-                                    }}
-                                    className={`w-10 h-10 sm:w-12 sm:h-12 text-center border rounded text-base sm:text-lg ${
-                                        darkMode 
-                                            ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
-                                            : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
-                                    }`}
-                                    placeholder="?"
-                                />
-                            ))
+                    <div className={`grid gap-2 ${is3x3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                        {Array.from({ length: matrixSize }, (_, i) => 
+                            Array.from({ length: matrixSize }, (_, j) => {
+                                const value = solution?.matrix?.[i]?.[j] || '';
+                                const numValue = parseInt(value) || 0;
+                                
+                                return is3x3 ? (
+                                    // For 3x3: display as read-only like encryption matrix
+                                    <div key={`solution-${i}-${j}`} className={`w-10 h-10 sm:w-12 sm:h-12 flex flex-col items-center justify-center border rounded ${
+                                        darkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'
+                                    }`}>
+                                        <span className={`text-base sm:text-lg font-bold ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>{value || '?'}</span>
+                                        <span className={`text-[10px] sm:text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{numberToLetter(numValue)}</span>
+                                    </div>
+                                ) : (
+                                    // For 2x2: editable input
+                                    <input
+                                        key={`solution-${i}-${j}`}
+                                        type="text"
+                                        id={`hill-matrix-${i}-${j}`}
+                                        name={`hill-matrix-${i}-${j}`}
+                                        maxLength={2}
+                                        disabled={isTestSubmitted}
+                                        value={value}
+                                        onChange={(e) => {
+                                            const newMatrix = solution?.matrix || Array.from({ length: matrixSize }, () => Array(matrixSize).fill(''));
+                                            newMatrix[i][j] = e.target.value;
+                                            onSolutionChange('matrix', newMatrix);
+                                        }}
+                                        className={`w-10 h-10 sm:w-12 sm:h-12 text-center border rounded text-base sm:text-lg ${
+                                            darkMode 
+                                                ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
+                                                : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
+                                        }`}
+                                        placeholder="?"
+                                    />
+                                );
+                            })
                         )}
                     </div>
                 </div>
@@ -656,7 +687,10 @@ export const FractionatedMorseDisplay = ({
     }
 
     // Get the actual triplets used in this cipher from the fractionation table
-    const usedTriplets = fractionationTable ? Object.keys(fractionationTable).sort() : [];
+    const usedTriplets = useMemo(() => 
+        fractionationTable ? Object.keys(fractionationTable).sort() : [], 
+        [fractionationTable]
+    );
     
     // Create reverse mapping from cipher letter to triplet
     const cipherToTriplet: { [key: string]: string } = {};
@@ -730,6 +764,8 @@ export const FractionatedMorseDisplay = ({
             onSolutionChange(quoteIndex, `replacement_${matchingTriplet}`, '');
         }
     };
+
+
 
     return (
         <div className="font-mono">
@@ -865,7 +901,7 @@ export const FractionatedMorseDisplay = ({
                             <div className={`font-mono text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                                 Morse: <span className="font-bold">{longestMorse}</span>
                             </div>
-                            <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                            <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-900'} break-all`}>
                                 Translation: <span className="font-bold">{translatedText}</span>
                             </div>
                         </div>
@@ -874,7 +910,7 @@ export const FractionatedMorseDisplay = ({
             })()}
 
             {/* Replacement Table */}
-            <div className={`mt-4 p-3 rounded border ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-300'}`}>
+            <div className={`mt-4 mb-4 p-3 rounded border ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-300'}`}>
                 <div className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                     Replacement Table
                 </div>
@@ -1148,6 +1184,171 @@ export const BaconianDisplay = ({
                     </p>
                     <p className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
                         {quotes[quoteIndex].quote}
+                    </p>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// Columnar Transposition display component
+export const NihilistDisplay = ({ 
+    text, 
+    polybiusKey,
+    cipherKey,
+    quoteIndex,
+    solution,
+    isTestSubmitted,
+    quotes,
+    onSolutionChange
+}: { 
+    text: string;
+    polybiusKey: string;
+    cipherKey: string;
+    quoteIndex: number;
+    solution?: { [key: number]: string };
+    isTestSubmitted: boolean;
+    quotes: QuoteData[];
+    onSolutionChange: (quoteIndex: number, position: number, plainLetter: string) => void;
+}) => {
+    const { darkMode } = useTheme();
+    const quote = quotes[quoteIndex];
+
+    // Split the ciphertext into two-digit groups
+    const numberGroups = text.split(' ').filter(group => group.length === 2);
+
+    // Create a mapping of positions to correct letters
+    const correctMapping: { [key: number]: string } = {};
+    if (isTestSubmitted) {
+        const originalQuote = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+        for (let i = 0; i < Math.min(numberGroups.length, originalQuote.length); i++) {
+            correctMapping[i] = originalQuote[i];
+        }
+    }
+
+    return (
+        <div className={`mt-4 ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+            {/* Keys Display */}
+            <div className={`mb-4 p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span className="font-semibold">Polybius Key: </span>
+                        <span className="font-mono">{polybiusKey}</span>
+                    </div>
+                    <div>
+                        <span className="font-semibold">Cipher Key: </span>
+                        <span className="font-mono">{cipherKey}</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Decryption Inputs */}
+            <div className="mb-4">
+                <div className="flex flex-wrap gap-2">
+                    {numberGroups.map((group, index) => (
+                        <div key={index} className="flex flex-col items-center">
+                            <div className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                {group}
+                            </div>
+                            <input
+                                type="text"
+                                maxLength={1}
+                                value={solution?.[index] || ''}
+                                onChange={(e) => onSolutionChange(quoteIndex, index, e.target.value.toUpperCase())}
+                                disabled={isTestSubmitted}
+                                className={`w-8 h-8 text-center border rounded text-sm ${
+                                    isTestSubmitted
+                                        ? correctMapping[index] === solution?.[index]
+                                            ? 'bg-green-100 border-green-500 text-green-800'
+                                            : 'bg-red-100 border-red-500 text-red-800'
+                                        : darkMode
+                                        ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500'
+                                        : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
+                                }`}
+                            />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export const ColumnarTranspositionDisplay = ({ 
+    text, 
+    quoteIndex,
+    solution,
+    isTestSubmitted,
+    quotes,
+    onSolutionChange
+}: { 
+    text: string;
+    quoteIndex: number;
+    solution?: { [key: string]: string };
+    isTestSubmitted: boolean;
+    quotes: QuoteData[];
+    onSolutionChange: (quoteIndex: number, cipherLetter: string, plainLetter: string) => void;
+}) => {
+    const { darkMode } = useTheme();
+
+    // Get the original quote length for the decrypted text input
+    const originalQuote = quotes[quoteIndex]?.quote || '';
+    const cleanOriginalLength = originalQuote.toUpperCase().replace(/[^A-Z]/g, '').length;
+    
+    // Get the current decrypted text from solution
+    const decryptedText = solution?.decryptedText || '';
+
+    return (
+        <div className="font-mono">
+            <div className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                Columnar Transposition Cipher
+            </div>
+
+            {/* Cipher text display */}
+            <div className={`mb-4 p-3 rounded border ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-300'}`}>
+                <div className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Cipher Text
+                </div>
+                <div className={`text-sm break-all font-mono ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                    {text.match(new RegExp(`.{1,${quotes[quoteIndex]?.key?.length || 5}}`, 'g'))?.join(' ') || text}
+                </div>
+            </div>
+
+            {/* Decrypted text input */}
+            <div className={`mb-4 p-3 rounded border ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-300'}`}>
+                <div className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Decrypted Text
+                </div>
+                <textarea
+                    value={decryptedText}
+                    onChange={(e) => {
+                        // Only allow letters and spaces, convert to uppercase
+                        const filteredValue = e.target.value.toUpperCase().replace(/[^A-Z\s]/g, '');
+                        onSolutionChange(quoteIndex, 'decryptedText', filteredValue);
+                    }}
+                    placeholder="Enter the decrypted text here..."
+                    className={`w-full h-24 p-2 text-sm font-mono resize-none ${
+                        darkMode 
+                            ? 'bg-gray-700 text-gray-300 border-gray-600' 
+                            : 'bg-white text-gray-900 border-gray-300'
+                    } border rounded focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                    disabled={isTestSubmitted}
+                />
+                <div className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Length: {decryptedText.length}/{cleanOriginalLength} characters
+                </div>
+            </div>
+
+            {/* Show original quote when test is submitted */}
+            {isTestSubmitted && (
+                <div className={`mt-4 p-4 rounded ${
+                    darkMode ? 'bg-gray-700/50' : 'bg-gray-50'
+                }`}>
+                    <p className={`text-sm mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        Original Quote:
+                    </p>
+                    <p className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                        {originalQuote}
                     </p>
                 </div>
             )}

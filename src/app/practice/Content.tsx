@@ -394,11 +394,6 @@ function EventDashboard() {
             divisions: ["B", "C"]
           },
           { 
-            name: "Crime Busters", 
-            subject: "Physical Science & Chemistry",
-            divisions: ["B"]
-          },
-          { 
             name: "Designer Genes", 
             subject: "Life & Social Science",
             divisions: ["C"]
@@ -488,7 +483,7 @@ function EventDashboard() {
           "Astronomy": ["Solar System", "Stars", "Galaxies", "Cosmology", "Instruments"],
           "Chemistry Lab": ["Stoichiometry", "Equilibrium", "Periodicity", "Redox Reactions", "Aqueous Solutions", "Acids and Bases", "Physical Properties", "Thermodynamics", "Gas Laws", "Kinetics", "Electrochemistry"],
           "Circuit Lab": ["Circuits", "Sensors", "Calibration", "Design", "Troubleshooting"],
-          "Codebusters": ["Random Aristocrat", "K1 Aristocrat", "K2 Aristocrat", "K3 Aristocrat", "Random Patristocrat", "K1 Patristocrat", "K2 Patristocrat", "K3 Patristocrat", "Caesar", "Atbash", "Affine", "Hill", "Baconian", "Porta", "Nihilist", "Fractionated Morse", "Columnar Transposition", "Xenocrypt"],
+          "Codebusters": ["Random Aristocrat", "K1 Aristocrat", "K2 Aristocrat", "K3 Aristocrat", "Random Patristocrat", "K1 Patristocrat", "K2 Patristocrat", "K3 Patristocrat", "Caesar", "Atbash", "Affine", "Hill 2x2", "Hill 3x3", "Baconian", "Porta", "Nihilist", "Fractionated Morse", "Columnar Transposition", "Xenocrypt"],
           "Crime Busters": ["Evidence Analysis", "Fingerprints", "DNA", "Toxicology", "Crime Scene"],
           "Designer Genes": ["Genetics", "DNA", "Proteins", "Evolution", "Population Genetics"],
           "Disease Detectives": ["Epidemiology", "Pathogens", "Prevention", "Outbreak Investigation", "Statistics"],
@@ -538,13 +533,13 @@ function EventDashboard() {
               'Random Aristocrat', 'K1 Aristocrat', 'K2 Aristocrat',
               'Random Patristocrat', 'K1 Patristocrat', 'K2 Patristocrat',
               'Baconian', 'Fractionated Morse', 'Columnar Transposition', 'Xenocrypt',
-              'Porta', 'Nihilist', 'Atbash', 'Caesar', 'Affine'
+              'Porta', 'Nihilist', 'Atbash', 'Caesar', 'Affine', 'Hill 2x2'
             ],
             'C': [
               'Random Aristocrat', 'K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat',
               'Random Patristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat',
               'Baconian', 'Xenocrypt', 'Fractionated Morse', 'Porta',
-              'Columnar Transposition', 'Nihilist', 'Hill'
+              'Columnar Transposition', 'Nihilist', 'Hill 2x2', 'Hill 3x3'
             ]
           };
           
@@ -606,13 +601,13 @@ function EventDashboard() {
             'Random Aristocrat', 'K1 Aristocrat', 'K2 Aristocrat',
             'Random Patristocrat', 'K1 Patristocrat', 'K2 Patristocrat',
             'Baconian', 'Fractionated Morse', 'Columnar Transposition', 'Xenocrypt',
-            'Porta', 'Nihilist', 'Atbash', 'Caesar', 'Affine'
+            'Porta', 'Nihilist', 'Atbash', 'Caesar', 'Affine', 'Hill 2x2'
           ],
           'C': [
             'Random Aristocrat', 'K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat',
             'Random Patristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat',
             'Baconian', 'Xenocrypt', 'Fractionated Morse', 'Porta',
-            'Columnar Transposition', 'Nihilist', 'Hill'
+            'Columnar Transposition', 'Nihilist', 'Hill 2x2', 'Hill 3x3'
           ]
         };
         

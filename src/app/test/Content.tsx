@@ -1117,10 +1117,10 @@ export default function TestPage() {
                   {isSubmitted ? (
                     <button
                       onClick={handleResetTest}
-                      className={`w-full px-4 py-2 font-semibold rounded-lg  transform hover:scale-105 ${
+                      className={`w-full px-4 py-2 font-semibold rounded-lg ${
                         darkMode
-                          ? 'bg-blue-600 text-white hover:bg-blue-700'
-                          : 'bg-blue-500 text-white hover:bg-blue-600'
+                          ? 'bg-gray-800 text-blue-300 border-2 border-blue-300 hover:bg-gray-700 hover:text-blue-200 hover:border-blue-200'
+                          : 'bg-gray-200 text-blue-700 border-2 border-blue-700 hover:bg-gray-100 hover:text-blue-600 hover:border-blue-600'
                       }`}
                     >
                       Reset Test
@@ -1128,10 +1128,10 @@ export default function TestPage() {
                   ) : (
                     <button
                       onClick={handleSubmit}
-                      className={`w-full px-4 py-2 font-semibold rounded-lg  transform hover:scale-105 ${
+                      className={`w-full px-4 py-2 font-semibold rounded-lg ${
                         darkMode
-                          ? 'bg-blue-600 text-white hover:bg-blue-700'
-                          : 'bg-blue-500 text-white hover:bg-blue-600'
+                          ? 'bg-gray-800 text-blue-300 border-2 border-blue-300 hover:bg-gray-700 hover:text-blue-200 hover:border-blue-200'
+                          : 'bg-gray-200 text-blue-700 border-2 border-blue-700 hover:bg-gray-100 hover:text-blue-600 hover:border-blue-600'
                       }`}>
                       Submit Answers
                     </button>

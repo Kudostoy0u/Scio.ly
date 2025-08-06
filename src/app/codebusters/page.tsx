@@ -15,7 +15,8 @@ import {
   markTestSubmitted,
   migrateFromLegacyStorage,
   setupVisibilityHandling,
-  clearTestSession
+  clearTestSession,
+  resetTestSession
 } from '@/app/utils/timeManagement';
 import {
   formatTime,
@@ -30,22 +31,27 @@ import {
   encryptCaesar,
   encryptAtbash,
   encryptAffine,
-  encryptHill,
+  encryptHill2x2,
+  encryptHill3x3,
   encryptPorta,
   encryptBaconian,
   encryptNihilist,
   encryptFractionatedMorse,
   encryptColumnarTransposition,
-  encryptXenocrypt
+  encryptXenocrypt,
+  mod26
 } from './cipher-utils';
 import {
   HillDisplay,
   PortaDisplay,
   SubstitutionDisplay,
   FractionatedMorseDisplay,
-  BaconianDisplay
+  BaconianDisplay,
+  ColumnarTranspositionDisplay,
+  NihilistDisplay
 } from './cipher-displays';
 import { QuoteData } from './types';
+import CipherInfoModal from './CipherInfoModal';
 
 // localStorage keys for different event types
 const NORMAL_EVENT_PREFERENCES = 'scio_normal_event_preferences';
@@ -101,6 +107,8 @@ export default function CodeBusters() {
     const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
     const [activeHints, setActiveHints] = useState<{[questionIndex: number]: boolean}>({});
     const [revealedLetters, setRevealedLetters] = useState<{[questionIndex: number]: {[letter: string]: string}}>({});
+    const [infoModalOpen, setInfoModalOpen] = useState(false);
+    const [selectedCipherType, setSelectedCipherType] = useState<string>('');
 
     // Handle checking answer for k1/k2/k3 variants/caesar/atbash/affine/xenocrypt ciphers
     const checkSubstitutionAnswer = useCallback((quoteIndex: number): boolean => {
@@ -165,7 +173,7 @@ export default function CodeBusters() {
     // Handle checking answer for Hill cipher
     const checkHillAnswer = useCallback((quoteIndex: number): boolean => {
         const quote = quotes[quoteIndex];
-        if (quote.cipherType !== 'Hill' || !quote.hillSolution) return false;
+        if ((quote.cipherType !== 'Hill 2x2' && quote.cipherType !== 'Hill 3x3') || !quote.hillSolution) return false;
         
         // Check if the matrix is correctly filled
         const expectedMatrix = quote.matrix;
@@ -222,7 +230,7 @@ export default function CodeBusters() {
         quotes.forEach((quote, index) => {
             const isCorrect = ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine'].includes(quote.cipherType)
                 ? checkSubstitutionAnswer(index)
-                : quote.cipherType === 'Hill'
+                : (quote.cipherType === 'Hill 2x2' || quote.cipherType === 'Hill 3x3')
                     ? checkHillAnswer(index)
                     : quote.cipherType === 'Porta'
                         ? checkPortaAnswer(index)
@@ -249,17 +257,28 @@ export default function CodeBusters() {
 
     // Calculate progress for each quote
     const calculateQuoteProgress = (quote: QuoteData): number => {
-        if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Nihilist', 'Fractionated Morse', 'Columnar Transposition', 'Xenocrypt'].includes(quote.cipherType)) {
+        if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Nihilist', 'Fractionated Morse', 'Xenocrypt'].includes(quote.cipherType)) {
             const totalLetters = [...new Set(quote.encrypted.match(/[A-Z]/g) || [])].length;
             const filledLetters = quote.solution ? Object.keys(quote.solution).length : 0;
             return totalLetters > 0 ? (filledLetters / totalLetters) * 100 : 0;
-        } else if (quote.cipherType === 'Hill') {
+        } else if (quote.cipherType === 'Hill 2x2' || quote.cipherType === 'Hill 3x3') {
             // For Hill cipher
+            const matrixSize = quote.cipherType === 'Hill 3x3' ? 9 : 4; // 3x3 = 9 cells, 2x2 = 4 cells
             const matrixProgress = quote.hillSolution?.matrix.reduce((acc, row) => 
                 acc + row.filter(cell => cell !== '').length, 0) || 0;
             const plaintextProgress = Object.keys(quote.hillSolution?.plaintext || {}).length / 
                 (quote.encrypted.match(/[A-Z]/g)?.length || 1);
-            return ((matrixProgress / 4) * 50) + (plaintextProgress * 50); // Weight matrix and plaintext equally
+            return ((matrixProgress / matrixSize) * 50) + (plaintextProgress * 50); // Weight matrix and plaintext equally
+        } else if (quote.cipherType === 'Columnar Transposition') {
+            // For Columnar Transposition, calculate progress based on decrypted text length
+            const originalLength = quote.quote.toUpperCase().replace(/[^A-Z]/g, '').length;
+            const decryptedLength = quote.solution?.decryptedText?.length || 0;
+            return originalLength > 0 ? (decryptedLength / originalLength) * 100 : 0;
+        } else if (quote.cipherType === 'Nihilist') {
+            // For Nihilist, calculate progress based on filled positions
+            const originalLength = quote.quote.toUpperCase().replace(/[^A-Z]/g, '').length;
+            const filledPositions = Object.keys(quote.nihilistSolution || {}).length;
+            return originalLength > 0 ? (filledPositions / originalLength) * 100 : 0;
         } else {
             return 0;
         }
@@ -290,11 +309,59 @@ export default function CodeBusters() {
             if (forceRefresh === 'true') {
                 localStorage.removeItem('codebustersQuotes');
                 localStorage.removeItem('codebustersForceRefresh');
-                loadQuestionsFromRedis();
+                loadQuestionsFromDatabase();
             } else if (savedQuotes) {
                 try {
                     const parsedQuotes = JSON.parse(savedQuotes);
-                    setQuotes(parsedQuotes);
+                    
+                    // Calculate decryption matrices for Hill 3x3 ciphers if not already present
+                    const processedQuotes = parsedQuotes.map(quote => {
+                        if (quote.cipherType === 'Hill 3x3' && quote.matrix && !quote.decryptionMatrix) {
+                            // Calculate determinant
+                            const det = mod26(
+                                quote.matrix[0][0] * (quote.matrix[1][1] * quote.matrix[2][2] - quote.matrix[1][2] * quote.matrix[2][1]) -
+                                quote.matrix[0][1] * (quote.matrix[1][0] * quote.matrix[2][2] - quote.matrix[1][2] * quote.matrix[2][0]) +
+                                quote.matrix[0][2] * (quote.matrix[1][0] * quote.matrix[2][1] - quote.matrix[1][1] * quote.matrix[2][0])
+                            );
+                            
+                            // Find modular multiplicative inverse of determinant
+                            let detInverse = 0;
+                            for (let i = 1; i < 26; i++) {
+                                if (mod26(det * i) === 1) {
+                                    detInverse = i;
+                                    break;
+                                }
+                            }
+                            
+                            // Calculate cofactor matrix
+                            const cofactors = [
+                                [mod26(quote.matrix[1][1] * quote.matrix[2][2] - quote.matrix[1][2] * quote.matrix[2][1]), 
+                                 mod26(-(quote.matrix[1][0] * quote.matrix[2][2] - quote.matrix[1][2] * quote.matrix[2][0])), 
+                                 mod26(quote.matrix[1][0] * quote.matrix[2][1] - quote.matrix[1][1] * quote.matrix[2][0])],
+                                [mod26(-(quote.matrix[0][1] * quote.matrix[2][2] - quote.matrix[0][2] * quote.matrix[2][1])), 
+                                 mod26(quote.matrix[0][0] * quote.matrix[2][2] - quote.matrix[0][2] * quote.matrix[2][0]), 
+                                 mod26(-(quote.matrix[0][0] * quote.matrix[2][1] - quote.matrix[0][1] * quote.matrix[2][0]))],
+                                [mod26(quote.matrix[0][1] * quote.matrix[1][2] - quote.matrix[0][2] * quote.matrix[1][1]), 
+                                 mod26(-(quote.matrix[0][0] * quote.matrix[1][2] - quote.matrix[0][2] * quote.matrix[1][0])), 
+                                 mod26(quote.matrix[0][0] * quote.matrix[1][1] - quote.matrix[0][1] * quote.matrix[1][0])]
+                            ];
+                            
+                            // Transpose and multiply by det inverse
+                            const decryptionMatrix = [
+                                [mod26(cofactors[0][0] * detInverse), mod26(cofactors[1][0] * detInverse), mod26(cofactors[2][0] * detInverse)],
+                                [mod26(cofactors[0][1] * detInverse), mod26(cofactors[1][1] * detInverse), mod26(cofactors[2][1] * detInverse)],
+                                [mod26(cofactors[0][2] * detInverse), mod26(cofactors[1][2] * detInverse), mod26(cofactors[2][2] * detInverse)]
+                            ];
+                            
+                            return {
+                                ...quote,
+                                decryptionMatrix
+                            };
+                        }
+                        return quote;
+                    });
+                    
+                    setQuotes(processedQuotes);
                     setIsLoading(false);
                     toast.success('Test loaded successfully!');
                 } catch (error) {
@@ -304,7 +371,7 @@ export default function CodeBusters() {
                 }
             } else {
                 // If we have params but no quotes, it's a new test, not a shared one.
-                loadQuestionsFromRedis();
+                loadQuestionsFromDatabase();
             }
 
             // Initialize time management system
@@ -377,8 +444,8 @@ export default function CodeBusters() {
 
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Function to load questions from Redis KV
-    const loadQuestionsFromRedis = async () => {
+    // Function to load questions from database
+    const loadQuestionsFromDatabase = async () => {
         setIsLoading(true);
         setError(null);
         
@@ -424,7 +491,7 @@ export default function CodeBusters() {
                     'caesar': 'Caesar',
                     'atbash': 'Atbash',
                     'affine': 'Affine',
-                    'hill': 'Hill',
+                    'hill': 'Hill 2x2',
                     'baconian': 'Baconian',
                     'porta': 'Porta',
                     'nihilist': 'Nihilist',
@@ -443,7 +510,7 @@ export default function CodeBusters() {
                     'Caesar': 'Caesar',
                     'Atbash': 'Atbash',
                     'Affine': 'Affine',
-                    'Hill': 'Hill',
+                    'Hill': 'Hill 2x2',
                     'Baconian': 'Baconian',
                     'Porta': 'Porta',
                     'Nihilist': 'Nihilist',
@@ -466,14 +533,14 @@ export default function CodeBusters() {
             // Define division-based cipher types
             const divisionBCipherTypes = {
                 'B': ['K1 Aristocrat', 'K2 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'Random Patristocrat', 'Baconian', 'Fractionated Morse', 'Columnar Transposition', 'Xenocrypt', 'Porta', 'Nihilist', 'Atbash', 'Caesar', 'Affine'],
-                'C': ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Baconian', 'Xenocrypt', 'Fractionated Morse', 'Porta', 'Columnar Transposition', 'Nihilist', 'Hill']
+                'C': ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Baconian', 'Xenocrypt', 'Fractionated Morse', 'Porta', 'Columnar Transposition', 'Nihilist', 'Hill 2x2', 'Hill 3x3']
             };
             
             const availableCipherTypes = cipherTypes && cipherTypes.length > 0 
                 ? cipherTypes 
                 : (division === 'B' || division === 'C') 
                     ? divisionBCipherTypes[division] 
-                    : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Hill', 'Porta', 'Baconian', 'Nihilist', 'Fractionated Morse', 'Columnar Transposition', 'Xenocrypt'];
+                    : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Hill 2x2', 'Hill 3x3', 'Porta', 'Baconian', 'Nihilist', 'Fractionated Morse', 'Columnar Transposition', 'Xenocrypt'];
 
             // Determine cipher types for each question in advance
             const questionCipherTypes: QuoteData['cipherType'][] = [];
@@ -498,7 +565,7 @@ export default function CodeBusters() {
                 }
                 const englishData = await englishResponse.json();
                 englishQuotes = englishData.data?.quotes || englishData.quotes || [];
-                console.log(`🔍 Fetched ${englishQuotes.length} English quotes for ${nonXenocryptCount} questions`);
+                // console.log(`🔍 Fetched ${englishQuotes.length} English quotes for ${nonXenocryptCount} questions`);
             }
 
             // Fetch Spanish quotes for xenocrypt questions
@@ -510,7 +577,7 @@ export default function CodeBusters() {
                 }
                 const spanishData = await spanishResponse.json();
                 spanishQuotes = spanishData.data?.quotes || spanishData.quotes || [];
-                console.log(`🔍 Fetched ${spanishQuotes.length} Spanish quotes for ${xenocryptCount} questions`);
+                // console.log(`🔍 Fetched ${spanishQuotes.length} Spanish quotes for ${xenocryptCount} questions`);
             }
 
             // Verify we have enough quotes before processing
@@ -531,6 +598,10 @@ export default function CodeBusters() {
 
             for (let i = 0; i < questionCount; i++) {
                 const cipherType = questionCipherTypes[i];
+                // Normalize cipher type to handle case sensitivity
+                const normalizedCipherType = cipherType.split(' ').map(word => 
+                    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                ).join(' ');
                 let quoteData: { quote: string; author: string; originalIndex: number; isSpanish?: boolean; id?: string };
 
                 if (cipherType === 'Xenocrypt') {
@@ -577,7 +648,7 @@ export default function CodeBusters() {
                     b?: number; 
                 };
 
-                switch (cipherType) {
+                switch (normalizedCipherType) {
                     case 'K1 Aristocrat':
                         cipherResult = encryptK1Aristocrat(quoteData.quote);
                         break;
@@ -611,8 +682,11 @@ export default function CodeBusters() {
                     case 'Affine':
                         cipherResult = encryptAffine(quoteData.quote);
                         break;
-                    case 'Hill':
-                        cipherResult = encryptHill(quoteData.quote);
+                                case 'Hill 2x2':
+                cipherResult = encryptHill2x2(quoteData.quote);
+                break;
+            case 'Hill 3x3':
+                cipherResult = encryptHill3x3(quoteData.quote);
                         break;
                     case 'Porta':
                         cipherResult = encryptPorta(quoteData.quote);
@@ -633,17 +707,20 @@ export default function CodeBusters() {
                         cipherResult = encryptXenocrypt(quoteData.quote);
                         break;
                     default:
-                        throw new Error(`Unknown cipher type: ${cipherType}`);
+                        throw new Error(`Unknown cipher type: ${cipherType} (normalized: ${normalizedCipherType})`);
                 }
 
                 processedQuotes.push({
                     author: quoteData.author,
                     quote: quoteData.quote,
                     encrypted: cipherResult.encrypted,
-                    cipherType,
+                    cipherType: normalizedCipherType,
                     key: cipherResult.key || undefined,
                     matrix: cipherResult.matrix || undefined,
+                    decryptionMatrix: 'decryptionMatrix' in cipherResult ? (cipherResult as { decryptionMatrix: number[][] }).decryptionMatrix : undefined,
                     portaKeyword: cipherResult.keyword || undefined,
+                    nihilistPolybiusKey: 'polybiusKey' in cipherResult ? (cipherResult as { polybiusKey: string }).polybiusKey : undefined,
+                    nihilistCipherKey: 'cipherKey' in cipherResult ? (cipherResult as { cipherKey: string }).cipherKey : undefined,
                     fractionationTable: cipherResult.fractionationTable || undefined,
                     caesarShift: cipherResult.shift || undefined,
                     affineA: cipherResult.a || undefined,
@@ -662,7 +739,10 @@ export default function CodeBusters() {
                     cipherType: quote.cipherType,
                     key: quote.key,
                     matrix: quote.matrix,
+                    decryptionMatrix: quote.decryptionMatrix,
                     portaKeyword: quote.portaKeyword,
+                    nihilistPolybiusKey: quote.nihilistPolybiusKey,
+                    nihilistCipherKey: quote.nihilistCipherKey,
                     fractionationTable: quote.fractionationTable,
                     caesarShift: quote.caesarShift,
                     affineA: quote.affineA,
@@ -675,10 +755,10 @@ export default function CodeBusters() {
             setQuotes(processedQuotes);
             setIsLoading(false);
         } catch (error) {
-            console.error('Error loading questions from Redis:', error);
-            setError('Failed to load questions from Redis');
+            console.error('Error loading questions from database:', error);
+            setError('Failed to load questions from database');
             setIsLoading(false);
-            toast.error('Failed to load questions from Redis');
+            toast.error('Failed to load questions from database');
         }
     };
 
@@ -784,19 +864,44 @@ export default function CodeBusters() {
         ));
     };
 
+    // Handle Nihilist cipher solution changes
+    const handleNihilistSolutionChange = (quoteIndex: number, position: number, plainLetter: string) => {
+        setQuotes(prev => prev.map((quote, index) => {
+            if (index === quoteIndex) {
+                return {
+                    ...quote,
+                    nihilistSolution: {
+                        ...quote.nihilistSolution,
+                        [position]: plainLetter
+                    }
+                };
+            }
+            return quote;
+        }));
+    };
+
     // Handle hint functionality
     const handleHintClick = (questionIndex: number) => {
         const quote = quotes[questionIndex];
         if (!quote) return;
 
-        // Toggle hint visibility for ciphers that have keywords/keys
-        if (['Porta', 'Caesar', 'Affine', 'Hill', 'Fractionated Morse'].includes(quote.cipherType)) {
-            setActiveHints(prev => ({
-                ...prev,
-                [questionIndex]: !prev[questionIndex]
-            }));
+        // Check if this cipher type has a crib available
+        const hintContent = getHintContent(quote);
+        const hasCrib = hintContent.includes('Crib:') && !hintContent.includes('No crib found');
+        
+        if (hasCrib) {
+            // If crib is not shown yet, show it
+            if (!activeHints[questionIndex]) {
+                setActiveHints(prev => ({
+                    ...prev,
+                    [questionIndex]: true
+                }));
+            } else {
+                // If crib is already shown, reveal a random letter
+                revealRandomLetter(questionIndex);
+            }
         } else {
-            // For substitution ciphers, reveal a random correct letter
+            // For ciphers without cribs, always reveal a random correct letter
             revealRandomLetter(questionIndex);
         }
     };
@@ -804,7 +909,7 @@ export default function CodeBusters() {
     // Reveal a random correct letter for substitution ciphers
     const revealRandomLetter = (questionIndex: number) => {
         const quote = quotes[questionIndex];
-        if (!quote || !quote.key) return;
+        if (!quote) return;
 
         // Get all cipher letters that haven't been revealed yet
         const availableLetters = quote.encrypted
@@ -848,6 +953,65 @@ export default function CodeBusters() {
             if (keyIndex !== -1) {
                 correctPlainLetter = String.fromCharCode(keyIndex + 65);
             }
+        } else if (quote.cipherType === 'Porta' && quote.portaKeyword) {
+            // For Porta cipher, find the position and get the corresponding plain letter
+            const cipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
+            const plainText = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+            const cipherIndex = cipherText.indexOf(randomCipherLetter);
+            
+            if (cipherIndex !== -1 && cipherIndex < plainText.length) {
+                // Get the corresponding plain letter from the original text
+                correctPlainLetter = plainText[cipherIndex];
+            }
+        } else if ((quote.cipherType === 'Hill 2x2' || quote.cipherType === 'Hill 3x3') && quote.matrix) {
+            // For Hill cipher, we need to decrypt using the matrix inverse
+            // This is complex, so we'll just reveal a letter from the original quote
+            const originalQuote = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+            const cipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
+            
+            // Find the position of the random cipher letter in the encrypted text
+            const cipherIndex = cipherText.indexOf(randomCipherLetter);
+            if (cipherIndex !== -1 && cipherIndex < originalQuote.length) {
+                correctPlainLetter = originalQuote[cipherIndex];
+            }
+        } else if (quote.cipherType === 'Fractionated Morse' && quote.fractionationTable) {
+            // For Fractionated Morse, reveal the triplet that maps to this cipher letter
+            for (const [triplet, letter] of Object.entries(quote.fractionationTable)) {
+                if (letter === randomCipherLetter) {
+                    // Instead of revealing a plain letter, reveal the triplet
+                    // This will be used to update the replacement table
+                    correctPlainLetter = triplet; // Store the triplet as the "plain letter"
+                    break;
+                }
+            }
+        } else if (quote.cipherType === 'Xenocrypt') {
+            // For Xenocrypt, handle Spanish text normalization
+            const normalizedOriginal = quote.quote.toUpperCase()
+                .replace(/Á/g, 'A')
+                .replace(/É/g, 'E')
+                .replace(/Í/g, 'I')
+                .replace(/Ó/g, 'O')
+                .replace(/Ú/g, 'U')
+                .replace(/Ü/g, 'U')
+                .replace(/Ñ/g, 'N')
+                .replace(/[^A-Z]/g, '');
+            const cipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
+            
+            // Find the position of the random cipher letter in the encrypted text
+            const cipherIndex = cipherText.indexOf(randomCipherLetter);
+            if (cipherIndex !== -1 && cipherIndex < normalizedOriginal.length) {
+                correctPlainLetter = normalizedOriginal[cipherIndex];
+            }
+        } else {
+            // For any other cipher type, try to find the letter from the original quote
+            const originalQuote = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+            const cipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
+            
+            // Find the position of the random cipher letter in the encrypted text
+            const cipherIndex = cipherText.indexOf(randomCipherLetter);
+            if (cipherIndex !== -1 && cipherIndex < originalQuote.length) {
+                correctPlainLetter = originalQuote[cipherIndex];
+            }
         }
 
         if (correctPlainLetter) {
@@ -860,17 +1024,42 @@ export default function CodeBusters() {
                 }
             }));
 
-            // Update the solution
-            setQuotes(prev => prev.map((q, index) => 
-                index === questionIndex 
-                    ? { ...q, solution: { ...q.solution, [randomCipherLetter]: correctPlainLetter } }
-                    : q
-            ));
+            // Update the solution - handle Fractionated Morse differently
+            setQuotes(prev => prev.map((q, index) => {
+                if (index === questionIndex) {
+                    if (q.cipherType === 'Fractionated Morse') {
+                        // For Fractionated Morse, update the replacement table AND the cipher inputs
+                        // The correctPlainLetter is actually a triplet
+                        const newSolution = { 
+                            ...q.solution, 
+                            [`replacement_${correctPlainLetter}`]: randomCipherLetter 
+                        };
+                        
+                        // Also update all cipher inputs that show this letter with the triplet
+                        newSolution[randomCipherLetter] = correctPlainLetter;
+                        
+                        return { 
+                            ...q, 
+                            solution: newSolution
+                        };
+                    } else {
+                        // For other ciphers, update normally
+                        return { 
+                            ...q, 
+                            solution: { ...q.solution, [randomCipherLetter]: correctPlainLetter } 
+                        };
+                    }
+                }
+                return q;
+            }));
         }
     };
 
     // Get hint content for different cipher types
     const getHintContent = (quote: QuoteData) => {
+        const cleanCipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
+        const cleanPlainText = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+        
         switch (quote.cipherType) {
             case 'Porta':
                 return quote.portaKeyword ? `Keyword: ${quote.portaKeyword}` : 'No keyword available';
@@ -880,13 +1069,149 @@ export default function CodeBusters() {
                 return quote.affineA !== undefined && quote.affineB !== undefined 
                     ? `a = ${quote.affineA}, b = ${quote.affineB}` 
                     : 'No coefficients available';
-            case 'Hill':
-                return quote.matrix ? `Matrix: [[${quote.matrix[0].join(', ')}], [${quote.matrix[1].join(', ')}]]` : 'No matrix available';
+            case 'Hill 2x2':
+            case 'Hill 3x3':
+                // Find a 2-letter crib from the cipher text
+                const hillCrib = find2LetterCrib(cleanCipherText, cleanPlainText);
+                return hillCrib ? `Crib: ${hillCrib.cipher} → ${hillCrib.plain}` : 'No 2-letter crib found';
             case 'Fractionated Morse':
-                return 'Letters map to Morse code triplets (dots, dashes, x)';
+                // Find a 3-letter crib from the cipher text
+                const morseCrib = find3LetterCrib(cleanCipherText, cleanPlainText);
+                return morseCrib ? `Crib: ${morseCrib.cipher} → ${morseCrib.plain}` : 'No 3-letter crib found';
+            case 'Baconian':
+                // Find a 5-letter crib from the cipher text
+                const baconianCrib = find5LetterCrib(cleanCipherText, cleanPlainText);
+                return baconianCrib ? `Crib: ${baconianCrib.cipher} → ${baconianCrib.plain}` : 'No 5-letter crib found';
+            case 'Nihilist':
+                // Find a single letter crib
+                const nihilistCrib = findSingleLetterCrib(cleanCipherText, cleanPlainText);
+                return nihilistCrib ? `Crib: ${nihilistCrib.cipher} → ${nihilistCrib.plain}` : 'No single letter crib found';
+            case 'Columnar Transposition':
+                // Find the longest word in the original quote
+                const words = quote.quote.toUpperCase().replace(/[^A-Z\s]/g, '').split(/\s+/).filter(word => word.length > 0);
+                const longestWord = words.reduce((longest, current) => 
+                    current.length > longest.length ? current : longest, '');
+                return longestWord ? `Crib: ${longestWord}` : 'No word crib found';
+            case 'Xenocrypt':
+                // Find a Spanish word crib
+                const xenocryptCrib = findSpanishWordCrib(cleanCipherText, cleanPlainText);
+                return xenocryptCrib ? `Crib: ${xenocryptCrib.cipher} → ${xenocryptCrib.plain}` : 'No Spanish word crib found';
+            case 'K1 Aristocrat':
+            case 'K2 Aristocrat':
+            case 'K3 Aristocrat':
+            case 'Random Aristocrat':
+            case 'K1 Patristocrat':
+            case 'K2 Patristocrat':
+            case 'K3 Patristocrat':
+            case 'Random Patristocrat':
+                // Find a word crib for aristocrat/patristocrat
+                const aristocratCrib = findWordCrib(cleanCipherText, cleanPlainText);
+                return aristocratCrib ? `Crib: ${aristocratCrib.cipher} → ${aristocratCrib.plain}` : 'No word crib found';
+            case 'Atbash':
+                // Find a single letter crib for atbash
+                const atbashCrib = findSingleLetterCrib(cleanCipherText, cleanPlainText);
+                return atbashCrib ? `Crib: ${atbashCrib.cipher} → ${atbashCrib.plain}` : 'No single letter crib found';
             default:
                 return 'Click for a random letter hint';
         }
+    };
+
+    // Helper functions to find cribs
+    const find2LetterCrib = (cipherText: string, plainText: string) => {
+        const commonPairs = ['TH', 'HE', 'AN', 'IN', 'ER', 'RE', 'ON', 'AT', 'ND', 'ST', 'ES', 'EN', 'OF', 'TE', 'ED', 'OR', 'TI', 'HI', 'AS', 'TO'];
+        
+        for (const pair of commonPairs) {
+            const plainIndex = plainText.indexOf(pair);
+            if (plainIndex !== -1 && plainIndex + 1 < cipherText.length) {
+                const cipherPair = cipherText.substring(plainIndex, plainIndex + 2);
+                return { cipher: cipherPair, plain: pair };
+            }
+        }
+        return null;
+    };
+
+    const find3LetterCrib = (cipherText: string, plainText: string) => {
+        const commonTriplets = ['THE', 'AND', 'FOR', 'ARE', 'BUT', 'NOT', 'YOU', 'ALL', 'CAN', 'HER', 'WAS', 'ONE', 'OUR', 'OUT', 'DAY', 'GET', 'HAS', 'HIM', 'HIS', 'HOW'];
+        
+        for (const triplet of commonTriplets) {
+            const plainIndex = plainText.indexOf(triplet);
+            if (plainIndex !== -1 && plainIndex + 2 < cipherText.length) {
+                const cipherTriplet = cipherText.substring(plainIndex, plainIndex + 3);
+                return { cipher: cipherTriplet, plain: triplet };
+            }
+        }
+        return null;
+    };
+
+    const find5LetterCrib = (cipherText: string, plainText: string) => {
+        const commonWords = ['THEIR', 'WOULD', 'THERE', 'COULD', 'THINK', 'AFTER', 'NEVER', 'ABOUT', 'AGAIN', 'BEFORE', 'LITTLE', 'SHOULD', 'BECAUSE'];
+        
+        for (const word of commonWords) {
+            const plainIndex = plainText.indexOf(word);
+            if (plainIndex !== -1 && plainIndex + 4 < cipherText.length) {
+                const cipherWord = cipherText.substring(plainIndex, plainIndex + 5);
+                return { cipher: cipherWord, plain: word };
+            }
+        }
+        return null;
+    };
+
+    const findSingleLetterCrib = (cipherText: string, plainText: string) => {
+        // Find the most frequent letter in the plain text
+        const letterCount: { [key: string]: number } = {};
+        for (const char of plainText) {
+            letterCount[char] = (letterCount[char] || 0) + 1;
+        }
+        
+        const mostFrequent = Object.entries(letterCount)
+            .sort(([,a], [,b]) => b - a)[0];
+        
+        if (mostFrequent) {
+            const [letter, count] = mostFrequent;
+            if (count > 1) {
+                const plainIndex = plainText.indexOf(letter);
+                if (plainIndex !== -1 && plainIndex < cipherText.length) {
+                    return { cipher: cipherText[plainIndex], plain: letter };
+                }
+            }
+        }
+        return null;
+    };
+
+    const findWordCrib = (cipherText: string, plainText: string) => {
+        const commonWords = ['THE', 'AND', 'THAT', 'HAVE', 'FOR', 'NOT', 'WITH', 'YOU', 'THIS', 'BUT', 'HIS', 'FROM', 'THEY', 'SAY', 'HER', 'SHE', 'WILL', 'ONE', 'ALL', 'WOULD', 'THERE', 'THEIR', 'WHAT', 'SO', 'UP', 'OUT', 'IF', 'ABOUT', 'WHO', 'GET', 'WHICH', 'GO', 'ME', 'WHEN', 'MAKE', 'CAN', 'LIKE', 'TIME', 'NO', 'JUST', 'HIM', 'KNOW', 'TAKE', 'PEOPLE', 'INTO', 'YEAR', 'YOUR', 'GOOD', 'SOME', 'COULD', 'THEM', 'SEE', 'OTHER', 'THAN', 'THEN', 'NOW', 'LOOK', 'ONLY', 'COME', 'ITS', 'OVER', 'THINK', 'ALSO', 'BACK', 'AFTER', 'USE', 'TWO', 'HOW', 'OUR', 'WORK', 'FIRST', 'WELL', 'WAY', 'EVEN', 'NEW', 'WANT', 'BECAUSE', 'ANY', 'THESE', 'GIVE', 'DAY', 'MOST', 'US'];
+        
+        for (const word of commonWords) {
+            const plainIndex = plainText.indexOf(word);
+            if (plainIndex !== -1 && plainIndex + word.length - 1 < cipherText.length) {
+                const cipherWord = cipherText.substring(plainIndex, plainIndex + word.length);
+                return { cipher: cipherWord, plain: word };
+            }
+        }
+        return null;
+    };
+
+    const findSpanishWordCrib = (cipherText: string, plainText: string) => {
+        // Normalize Spanish text for crib finding
+        const normalizedPlainText = plainText
+            .replace(/Á/g, 'A')
+            .replace(/É/g, 'E')
+            .replace(/Í/g, 'I')
+            .replace(/Ó/g, 'O')
+            .replace(/Ú/g, 'U')
+            .replace(/Ü/g, 'U')
+            .replace(/Ñ/g, 'N');
+        
+        const spanishWords = ['EL', 'LA', 'DE', 'QUE', 'Y', 'A', 'EN', 'UN', 'ES', 'SE', 'NO', 'TE', 'LO', 'LE', 'DA', 'SU', 'POR', 'SON', 'TRE', 'MAS', 'PARA', 'UNA', 'TAMBIEN', 'MI', 'PERO', 'SUS', 'ME', 'HA', 'SI', 'AL', 'COMO', 'BIEN', 'ESTA', 'ESTE', 'YA', 'CUANDO', 'TODO', 'ESTA', 'VAMOS', 'VER', 'DESPUES', 'HACE', 'DONDE', 'QUIEN', 'ESTAN', 'ASIA', 'HACIA', 'ESTOS', 'ESTAS', 'SINO', 'DURANTE', 'TODOS', 'PUEDE', 'TANTO', 'SIGLO', 'ANTES', 'MISMO', 'DESDE', 'PRIMERA', 'GRAN', 'PARTE', 'TODA', 'TENIA', 'TRES', 'SEGUN', 'MENOS', 'MUNDO', 'AÑO', 'BEN', 'MIENTRAS', 'CASO', 'NUNCA', 'PODER', 'OBRA', 'LUGAR', 'TAN', 'SEGURO', 'HORA', 'MANERA', 'AQUI', 'SER', 'DOS', 'PRIMERO', 'SOCIAL', 'REAL', 'FORMAR', 'TIEMPO', 'ELLA', 'MUCHO', 'GRUPO', 'SEGUIR', 'TIPO', 'ACTUAL', 'CONOCER', 'LADO', 'MOMENTO', 'MOSTRAR', 'PROBLEMA', 'SERVICIO', 'SENTIR', 'NACIONAL', 'HUMANO', 'SERIE', 'IMPORTANTE', 'CUERPO', 'ACTIVIDAD', 'PROCESO', 'INFORMACION', 'PRESENTAR', 'SISTEMA', 'POLITICO', 'ECONOMICO', 'CENTRO', 'COMUNIDAD', 'FINAL', 'RELACION', 'PROGRAMA', 'INTERES', 'NATURAL', 'CULTURA', 'PRODUCCION', 'AMERICA', 'CONDICION', 'PROYECTO', 'SOCIEDAD', 'ACTIVIDAD', 'ORGANIZACION', 'NECESARIO', 'DESARROLLO', 'PRESENTE', 'SITUACION', 'ESPECIAL', 'DIFERENTE', 'VARIO', 'SEGURO', 'ESPECIALMENTE', 'POSIBLE', 'ANTERIOR', 'PRINCIPAL', 'LARGO', 'CIENTIFICO', 'TECNICO', 'MEDICO', 'POLITICO', 'ECONOMICO', 'SOCIAL', 'CULTURAL', 'NATURAL', 'HISTORICO', 'GEOGRAFICO', 'LINGUISTICO', 'PSICOLOGICO', 'FILOSOFICO', 'MATEMATICO', 'FISICO', 'QUIMICO', 'BIOLOGICO', 'MEDICO', 'JURIDICO', 'MILITAR', 'RELIGIOSO', 'ARTISTICO', 'LITERARIO', 'MUSICAL', 'CINEMATOGRAFICO', 'TEATRAL', 'DANZARIO', 'PICTORICO', 'ESCULTORICO', 'ARQUITECTONICO', 'URBANISTICO', 'DISEÑADOR', 'INGENIERO', 'ARQUITECTO', 'MEDICO', 'ABOGADO', 'PROFESOR', 'MAESTRO', 'DOCTOR', 'INGENIERO', 'ARQUITECTO', 'ABOGADO', 'MEDICO', 'PROFESOR', 'MAESTRO', 'DOCTOR', 'INGENIERO', 'ARQUITECTO', 'ABOGADO', 'MEDICO', 'PROFESOR', 'MAESTRO', 'DOCTOR', 'INGENIERO', 'ARQUITECTO', 'ABOGADO', 'MEDICO', 'PROFESOR', 'MAESTRO', 'DOCTOR', 'INGENIERO', 'ARQUITECTO', 'ABOGADO', 'MEDICO', 'PROFESOR', 'MAESTRO', 'DOCTOR'];
+        
+        for (const word of spanishWords) {
+            const plainIndex = normalizedPlainText.indexOf(word);
+            if (plainIndex !== -1 && plainIndex + word.length - 1 < cipherText.length) {
+                const cipherWord = cipherText.substring(plainIndex, plainIndex + word.length);
+                return { cipher: cipherWord, plain: word };
+            }
+        }
+        return null;
     };
 
     return (
@@ -1039,7 +1364,7 @@ export default function CodeBusters() {
                                             onClick={() => {
                                                 setError(null);
                                                 setIsLoading(true);
-                                                loadQuestionsFromRedis();
+                                                loadQuestionsFromDatabase();
                                             }}
                                             className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
                                                 darkMode
@@ -1091,18 +1416,23 @@ export default function CodeBusters() {
                                         Question {index + 1}
                                     </h3>
                                     <div className="flex items-center gap-2">
+                                        <span className={`px-2 py-1 rounded text-sm ${
+                                            darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
+                                        }`}>
+                                            {item.cipherType.charAt(0).toUpperCase() + item.cipherType.slice(1)}
+                                        </span>
                                         <button
                                             onClick={() => handleHintClick(index)}
-                                            className={`p-2 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
+                                            className={`w-5 h-5 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center transition-all duration-200 hover:scale-110 ${
                                                 darkMode 
-                                                    ? 'bg-gray-600 border-blue-400 text-gray-300 hover:bg-gray-500' 
-                                                    : 'bg-gray-100 border-blue-500 text-gray-600 hover:bg-gray-200'
+                                                    ? 'bg-gray-600 border-gray-500 text-white' 
+                                                    : 'text-gray-600'
                                             }`}
                                             title="Get a hint"
                                         >
                                             <svg 
-                                                width="16" 
-                                                height="16" 
+                                                width="10" 
+                                                height="10" 
                                                 viewBox="0 0 24 24" 
                                                 fill="none" 
                                                 stroke="currentColor" 
@@ -1115,11 +1445,33 @@ export default function CodeBusters() {
                                                 <circle cx="12" cy="17" r="1"/>
                                             </svg>
                                         </button>
-                                        <span className={`px-2 py-1 rounded text-sm ${
-                                            darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
-                                        }`}>
-                                            {item.cipherType.charAt(0).toUpperCase() + item.cipherType.slice(1)}
-                                        </span>
+                                        <button
+                                            onClick={() => {
+                                                setSelectedCipherType(item.cipherType);
+                                                setInfoModalOpen(true);
+                                            }}
+                                            className={`w-5 h-5 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center transition-all duration-200 hover:scale-110 ${
+                                                darkMode 
+                                                    ? 'bg-gray-600 border-gray-500 text-white' 
+                                                    : 'text-gray-600'
+                                            }`}
+                                            title="Cipher information"
+                                        >
+                                            <svg 
+                                                width="10" 
+                                                height="10" 
+                                                viewBox="0 0 24 24" 
+                                                fill="none" 
+                                                stroke="currentColor" 
+                                                strokeWidth="2" 
+                                                strokeLinecap="round" 
+                                                strokeLinejoin="round"
+                                            >
+                                                <circle cx="12" cy="12" r="10"/>
+                                                <path d="M12 16v-4"/>
+                                                <path d="M12 8h.01"/>
+                                            </svg>
+                                        </button>
                                     </div>
                                 </div>
                                 <p className={`mb-4 break-words whitespace-normal overflow-x-auto ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
@@ -1158,7 +1510,7 @@ export default function CodeBusters() {
                                     </div>
                                 )}
 
-                                {item.cipherType === 'Hill' ? (
+                                {(item.cipherType === 'Hill 2x2' || item.cipherType === 'Hill 3x3') ? (
                                     <HillDisplay
                                         text={item.encrypted}
                                         matrix={item.matrix!}
@@ -1199,7 +1551,27 @@ export default function CodeBusters() {
                                         quotes={quotes}
                                         onSolutionChange={handleSolutionChange}
                                     />
-                                ) : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Nihilist', 'Columnar Transposition', 'Xenocrypt'].includes(item.cipherType) ? (
+                                ) : item.cipherType === 'Columnar Transposition' ? (
+                                    <ColumnarTranspositionDisplay
+                                        text={item.encrypted}
+                                        quoteIndex={index}
+                                        solution={item.solution}
+                                        isTestSubmitted={isTestSubmitted}
+                                        quotes={quotes}
+                                        onSolutionChange={handleSolutionChange}
+                                    />
+                                ) : item.cipherType === 'Nihilist' ? (
+                                    <NihilistDisplay
+                                        text={item.encrypted}
+                                        polybiusKey={item.nihilistPolybiusKey!}
+                                        cipherKey={item.nihilistCipherKey!}
+                                        quoteIndex={index}
+                                        solution={item.nihilistSolution}
+                                        isTestSubmitted={isTestSubmitted}
+                                        quotes={quotes}
+                                        onSolutionChange={handleNihilistSolutionChange}
+                                    />
+                                ) : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Xenocrypt'].includes(item.cipherType) ? (
                                     <SubstitutionDisplay
                                         text={item.encrypted}
                                         quoteIndex={index}
@@ -1242,29 +1614,46 @@ export default function CodeBusters() {
                                     <button
                                         onClick={handleSubmitTest}
                                         disabled={isTestSubmitted}
-                                        className={`w-full px-4 py-2 font-semibold rounded-lg transform hover:scale-105 ${
+                                        className={`w-full px-4 py-2 font-semibold rounded-lg ${
                                             darkMode
-                                                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                                : 'bg-blue-500 text-white hover:bg-blue-600'
+                                                ? 'bg-gray-800 text-blue-300 border-2 border-blue-300 hover:bg-gray-700 hover:text-blue-200 hover:border-blue-200'
+                                                : 'bg-gray-200 text-blue-700 border-2 border-blue-700 hover:bg-gray-100 hover:text-blue-600 hover:border-blue-600'
                                         }`}
                                     >
                                         Submit Answers
                                     </button>
                                 ) : (
-                                    <div className={`text-center p-4 rounded-lg ${
-                                        darkMode ? 'bg-gray-700' : 'bg-gray-100'
-                                    }`}>
-                                        <p className={`text-lg font-semibold ${
-                                            darkMode ? 'text-green-400' : 'text-green-600'
-                                        }`}>
-                                            Test Completed!
-                                        </p>
-                                        <p className={`text-sm mt-2 ${
-                                            darkMode ? 'text-gray-300' : 'text-gray-600'
-                                        }`}>
-                                            Use the reset button in the top right to start a new test.
-                                        </p>
-                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            // Clear all test data
+                                            localStorage.removeItem('codebustersQuotes');
+                                            localStorage.removeItem('codebustersTimeLeft');
+                                            localStorage.removeItem('codebustersIsTestSubmitted');
+                                            localStorage.removeItem('codebustersTestScore');
+                                            localStorage.removeItem('testParams');
+                                            
+                                            // Reset time management session
+                                            const timeLimit = JSON.parse(localStorage.getItem("testParams") ?? "{}")?.timeLimit || "15";
+                                            const eventName = JSON.parse(localStorage.getItem("testParams") ?? "{}")?.eventName || "Codebusters";
+                                            const newSession = resetTestSession(eventName, parseInt(timeLimit));
+                                            
+                                            // Update state with new session
+                                            setTimeLeft(newSession.timeState.timeLeft);
+                                            setIsTimeSynchronized(newSession.timeState.isTimeSynchronized);
+                                            setSyncTimestamp(newSession.timeState.syncTimestamp);
+                                            setIsTestSubmitted(false);
+                                            
+                                            // Reload the page to start fresh
+                                            window.location.reload();
+                                        }}
+                                        className={`w-full px-4 py-2 font-semibold rounded-lg ${
+                                            darkMode
+                                                ? 'bg-gray-800 text-blue-300 border-2 border-blue-300 hover:bg-gray-700 hover:text-blue-200 hover:border-blue-200'
+                                                : 'bg-gray-200 text-blue-700 border-2 border-blue-700 hover:bg-gray-100 hover:text-blue-600 hover:border-blue-600'
+                                        }`}
+                                    >
+                                        Reset Test
+                                    </button>
                                 )}
                             </div>
                         )}
@@ -1353,15 +1742,23 @@ export default function CodeBusters() {
                     )}
 
                     {/* Share Modal */}
-                                <ShareModal
-                isOpen={shareModalOpen}
-                onClose={() => setShareModalOpen(false)}
-                inputCode={inputCode}
-                setInputCode={setInputCode}
-                darkMode={darkMode}
-                isCodebusters={true}
-                encryptedQuotes={quotes}
-            />
+                    <ShareModal
+                        isOpen={shareModalOpen}
+                        onClose={() => setShareModalOpen(false)}
+                        inputCode={inputCode}
+                        setInputCode={setInputCode}
+                        darkMode={darkMode}
+                        isCodebusters={true}
+                        encryptedQuotes={quotes}
+                    />
+
+                    {/* Cipher Info Modal */}
+                    <CipherInfoModal
+                        isOpen={infoModalOpen}
+                        onClose={() => setInfoModalOpen(false)}
+                        cipherType={selectedCipherType}
+                        darkMode={darkMode}
+                    />
                     
                 </div>
             </div>

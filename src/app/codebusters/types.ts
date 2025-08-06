@@ -2,11 +2,13 @@ export interface QuoteData {
     author: string;
     quote: string;
     encrypted: string;
-    cipherType: 'Random Aristocrat' | 'K1 Aristocrat' | 'K2 Aristocrat' | 'K3 Aristocrat' | 'Random Patristocrat' | 'K1 Patristocrat' | 'K2 Patristocrat' | 'K3 Patristocrat' | 'Caesar' | 'Atbash' | 'Affine' | 'Hill' | 'Baconian' | 'Porta' | 'Nihilist' | 'Fractionated Morse' | 'Columnar Transposition' | 'Xenocrypt';
+    cipherType: 'Random Aristocrat' | 'K1 Aristocrat' | 'K2 Aristocrat' | 'K3 Aristocrat' | 'Random Patristocrat' | 'K1 Patristocrat' | 'K2 Patristocrat' | 'K3 Patristocrat' | 'Caesar' | 'Atbash' | 'Affine' | 'Hill 2x2' | 'Hill 3x3' | 'Baconian' | 'Porta' | 'Nihilist' | 'Fractionated Morse' | 'Columnar Transposition' | 'Xenocrypt';
     key?: string;        // For k1/k2/k3 variants/porta/nihilist
-    matrix?: number[][]; // For hill
+    matrix?: number[][]; // For hill 2x2
+    decryptionMatrix?: number[][]; // For hill 3x3
     portaKeyword?: string; // For porta
-    nihilistKey?: string; // For nihilist
+    nihilistPolybiusKey?: string; // For nihilist polybius key
+    nihilistCipherKey?: string; // For nihilist cipher key
     columnarKey?: string; // For columnar transposition
     fractionatedKey?: string; // For fractionated morse
     fractionationTable?: { [key: string]: string }; // For fractionated morse table
@@ -31,8 +33,10 @@ export interface CipherResult {
     encrypted: string;
     key?: string;
     matrix?: number[][];
+    decryptionMatrix?: number[][];
     portaKeyword?: string;
-    nihilistKey?: string;
+    nihilistPolybiusKey?: string;
+    nihilistCipherKey?: string;
     columnarKey?: string;
     fractionatedKey?: string;
     fractionationTable?: { [key: string]: string };
