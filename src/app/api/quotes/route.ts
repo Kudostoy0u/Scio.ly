@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { getQuotesByLanguage, ensureQuotesTableExists } from '@/lib/db/utils';
+import { getQuotesByLanguage } from '@/lib/db/utils';
 import { 
   handleApiError, 
   createSuccessResponse, 
@@ -21,13 +21,6 @@ const QuoteFiltersSchema = z.object({
 // Business logic functions
 const fetchQuotes = async (language: string, limit: number) => {
   const sanitizedLanguage = sanitizeInput(language);
-  
-  // Check if quotes table exists
-  const tableExists = await ensureQuotesTableExists();
-  if (!tableExists) {
-    throw new Error('Quotes table does not exist in the database. Please run database migrations.');
-  }
-  
   const quotes = await getQuotesByLanguage(sanitizedLanguage, limit);
   
   if (!quotes || quotes.length === 0) {

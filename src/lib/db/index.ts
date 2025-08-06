@@ -3,11 +3,7 @@ import postgres from 'postgres';
 import * as schema from './schema';
 
 // Connection pooling configuration for CockroachDB
-const connectionString = process.env.DATABASE_URL;
-
-if (!connectionString) {
-  throw new Error('DATABASE_URL environment variable is not set');
-}
+const connectionString = process.env.DATABASE_URL!;
 
 // Create connection pool with best practices for scalability
 const client = postgres(connectionString, {

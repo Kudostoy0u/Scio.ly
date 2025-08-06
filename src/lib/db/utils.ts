@@ -123,19 +123,18 @@ export async function getGamePointsCount(userId: string) {
 
 // Quotes operations
 export async function getQuotesByLanguage(language: string, limit?: number) {
-  try {
-    // Get total count first to determine how many to fetch
-    const totalCount = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(quotes)
-      .where(eq(quotes.language, language));
-    
-    const total = totalCount[0]?.count || 0;
-    
-    if (total === 0) {
-      console.log(`❌ No ${language} quotes found`);
-      return [];
-    }
+  // Get total count first to determine how many to fetch
+  const totalCount = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(quotes)
+    .where(eq(quotes.language, language));
+  
+  const total = totalCount[0]?.count || 0;
+  
+  if (total === 0) {
+    console.log(`❌ No ${language} quotes found`);
+    return [];
+  }
   
   // If no limit specified or limit is greater than total, return all
   if (!limit || limit >= total) {
@@ -168,10 +167,6 @@ export async function getQuotesByLanguage(language: string, limit?: number) {
   console.log(`🔀 Randomized ${shuffledQuotes.length} ${language} quotes (from ${sampleSize} sample)`);
   
   return shuffledQuotes;
-  } catch (error) {
-    console.error(`❌ Database error in getQuotesByLanguage for language ${language}:`, error);
-    throw new Error(`Failed to fetch quotes for language ${language}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
 }
 
 export async function getQuotesByIndices(indices: number[], language: string) {
@@ -197,17 +192,4 @@ export async function getQuotesByUUIDs(uuids: string[]) {
     .select()
     .from(quotes)
     .where(inArray(quotes.id, uuids));
-}
-
-// Helper function to ensure quotes table exists
-export async function ensureQuotesTableExists() {
-  try {
-    // Try to query the quotes table to see if it exists
-    await db.select({ count: sql<number>`count(*)` }).from(quotes);
-    console.log('✅ Quotes table exists');
-    return true;
-  } catch (error) {
-    console.error('❌ Quotes table does not exist or is not accessible:', error);
-    return false;
-  }
 } 
