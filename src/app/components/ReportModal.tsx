@@ -81,8 +81,7 @@ const ReportModal = ({ isOpen, onClose, onSubmit, darkMode, question, event }: R
         reason: reason
       };
 
-      // Log the edited question data to verify it contains the difficulty value
-      console.log('Sending edited question data:', editedQuestionData);
+      // Send the edited question data
 
       // Instead of making the API call directly, pass the data to the parent component
       

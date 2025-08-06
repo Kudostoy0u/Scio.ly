@@ -47,13 +47,50 @@ import {
 } from './cipher-displays';
 import { QuoteData } from './types';
 
+// localStorage keys for different event types
+const NORMAL_EVENT_PREFERENCES = 'scio_normal_event_preferences';
+const CODEBUSTERS_PREFERENCES = 'scio_codebusters_preferences';
+
+// Default values
+const NORMAL_DEFAULTS = {
+  questionCount: 10,
+  timeLimit: 15
+};
+
+const CODEBUSTERS_DEFAULTS = {
+  questionCount: 3,
+  timeLimit: 15
+};
+
+// Helper functions for localStorage
+const loadPreferences = (eventName: string) => {
+  const isCodebusters = eventName === 'Codebusters';
+  const key = isCodebusters ? CODEBUSTERS_PREFERENCES : NORMAL_EVENT_PREFERENCES;
+  const defaults = isCodebusters ? CODEBUSTERS_DEFAULTS : NORMAL_DEFAULTS;
+  
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      const preferences = JSON.parse(saved);
+      return {
+        questionCount: preferences.questionCount || defaults.questionCount,
+        timeLimit: preferences.timeLimit || defaults.timeLimit
+      };
+    }
+  } catch (error) {
+    console.error('Error loading preferences:', error);
+  }
+  
+  return defaults;
+};
+
 export default function CodeBusters() {
     const { darkMode } = useTheme();
     const router = useRouter();
     const [quotes, setQuotes] = useState<QuoteData[]>([]);
     const [isTestSubmitted, setIsTestSubmitted] = useState(false);
     const [testScore, setTestScore] = useState<number | null>(null);
-    const [timeLeft, setTimeLeft] = useState<number>(30 * 60); // 30 minutes in seconds
+    const [timeLeft, setTimeLeft] = useState<number>(CODEBUSTERS_DEFAULTS.timeLimit * 60); // Default time limit in seconds
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showPDFViewer, setShowPDFViewer] = useState(false);
@@ -62,6 +99,8 @@ export default function CodeBusters() {
     const [, setIsTimeSynchronized] = useState(false);
     const [, setSyncTimestamp] = useState<number | null>(null);
     const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
+    const [activeHints, setActiveHints] = useState<{[questionIndex: number]: boolean}>({});
+    const [revealedLetters, setRevealedLetters] = useState<{[questionIndex: number]: {[letter: string]: string}}>({});
 
     // Handle checking answer for k1/k2/k3 variants/caesar/atbash/affine/xenocrypt ciphers
     const checkSubstitutionAnswer = useCallback((quoteIndex: number): boolean => {
@@ -234,11 +273,9 @@ export default function CodeBusters() {
     useEffect(() => {
         // Prevent double loading
         if (hasAttemptedLoad) {
-            console.log('🔍 Already attempted to load, skipping...');
             return;
         }
         
-        console.log('🔍 Codebusters page loading...');
         setHasAttemptedLoad(true);
         
         const testParamsStr = localStorage.getItem('testParams');
@@ -247,29 +284,16 @@ export default function CodeBusters() {
         const savedTestScore = localStorage.getItem('codebustersTestScore');
         const forceRefresh = localStorage.getItem('codebustersForceRefresh');
         
-        console.log('🔍 Codebusters localStorage data:', {
-            testParamsStr: !!testParamsStr,
-            savedQuotes: !!savedQuotes,
-            savedIsTestSubmitted: !!savedIsTestSubmitted,
-            savedTestScore: !!savedTestScore,
-            forceRefresh: !!forceRefresh
-        });
-        
         // This is the primary loading logic. It relies on data being pre-loaded into localStorage.
         if (testParamsStr) {
-            console.log('🔍 Found testParams, processing...');
-            
             // Check if we should force refresh (clear saved quotes and load fresh ones)
             if (forceRefresh === 'true') {
-                console.log('🔍 Force refresh requested, clearing saved quotes and loading fresh ones...');
                 localStorage.removeItem('codebustersQuotes');
                 localStorage.removeItem('codebustersForceRefresh');
                 loadQuestionsFromRedis();
             } else if (savedQuotes) {
-                console.log('🔍 Found saved quotes, parsing...');
                 try {
                     const parsedQuotes = JSON.parse(savedQuotes);
-                    console.log('🔍 Successfully parsed quotes:', parsedQuotes.length);
                     setQuotes(parsedQuotes);
                     setIsLoading(false);
                     toast.success('Test loaded successfully!');
@@ -279,7 +303,6 @@ export default function CodeBusters() {
                     setIsLoading(false);
                 }
             } else {
-                console.log('🔍 No saved quotes found, loading from Redis...');
                 // If we have params but no quotes, it's a new test, not a shared one.
                 loadQuestionsFromRedis();
             }
@@ -287,9 +310,8 @@ export default function CodeBusters() {
             // Initialize time management system
             const testParams = JSON.parse(testParamsStr);
             const eventName = testParams.eventName || 'Codebusters';
-            const timeLimit = parseInt(testParams.timeLimit || '30');
-            
-            console.log('🔍 Initializing time management:', { eventName, timeLimit });
+            const preferences = loadPreferences(eventName);
+            const timeLimit = parseInt(testParams.timeLimit) || preferences.timeLimit;
             
             // Check if this is a fresh reset (no share code)
             const hasShareCode = localStorage.getItem('shareCode');
@@ -297,36 +319,30 @@ export default function CodeBusters() {
             let session;
             
             if (!hasShareCode) {
-                console.log('🔍 Fresh test or reset - migrating from legacy storage');
                 // Fresh test or reset - try to migrate from legacy storage first
                 session = migrateFromLegacyStorage(eventName, timeLimit);
                 
                 if (!session) {
-                    console.log('🔍 No legacy session, checking current session');
                     // Check if we have an existing session
                     session = getCurrentTestSession();
                     
                     if (!session) {
-                        console.log('🔍 No current session, initializing new session');
                         // New test - initialize session
                         session = initializeTestSession(eventName, timeLimit, false);
                     } else {
-                        console.log('🔍 Resuming existing session');
                         // Resume existing session
                         session = resumeTestSession();
                     }
                 }
             } else {
-                console.log('🔍 Shared test - using existing session');
                 // Shared test - use existing session or create new one
                 session = getCurrentTestSession();
                 
                 if (!session) {
-                    console.log('🔍 No session found, initializing shared test session');
                     // Initialize shared test session
                     session = initializeTestSession(eventName, timeLimit, true);
                 } else {
-                    console.log('🔍 Resuming existing shared session');
+                    // Resume existing shared session
                     // Resume existing session
                     session = resumeTestSession();
                 }
@@ -337,15 +353,8 @@ export default function CodeBusters() {
                 setIsTimeSynchronized(session.timeState.isTimeSynchronized);
                 setSyncTimestamp(session.timeState.syncTimestamp);
                 setIsTestSubmitted(session.isSubmitted);
-                
-                console.log('🕐 Codebusters time management initialized:', {
-                    timeLeft: session.timeState.timeLeft,
-                    isSynchronized: session.timeState.isTimeSynchronized,
-                    isSubmitted: session.isSubmitted
-                });
             }
         } else {
-            console.log('🔍 No test parameters found');
             // No test parameters found - show error
             setError('No test parameters found. Please configure a test from the practice page.');
         }
@@ -366,17 +375,19 @@ export default function CodeBusters() {
             }
         }
 
-        console.log('🔍 Codebusters page loading complete');
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Function to load questions from Redis KV
     const loadQuestionsFromRedis = async () => {
-        console.log('🔍 Starting loadQuestionsFromRedis...');
         setIsLoading(true);
         setError(null);
         
         // Always reset the timer and submission state for a new test
-        setTimeLeft(30 * 60); // Default 30 minutes
+        const testParamsStr = localStorage.getItem('testParams');
+        const testParams = testParamsStr ? JSON.parse(testParamsStr) : {};
+        const eventName = testParams.eventName || 'Codebusters';
+        const preferences = loadPreferences(eventName);
+        setTimeLeft(preferences.timeLimit * 60); // Use preferences for time limit
         setIsTestSubmitted(false);
         setTestScore(null);
         localStorage.removeItem('codebustersTimeLeft');
@@ -393,7 +404,9 @@ export default function CodeBusters() {
             }
 
             const testParams = JSON.parse(testParamsStr);
-            const questionCount = parseInt(testParams.questionCount) || 10;
+            const eventName = testParams.eventName || 'Codebusters';
+            const preferences = loadPreferences(eventName);
+            const questionCount = parseInt(testParams.questionCount) || preferences.questionCount;
             let cipherTypes = (testParams.cipherTypes || testParams.subtopics || []).map((type: string) => type.toLowerCase());
             
             // Map subtopic names to cipher type names for Codebusters
@@ -472,31 +485,44 @@ export default function CodeBusters() {
             // Count xenocrypt vs non-xenocrypt questions
             const xenocryptCount = questionCipherTypes.filter(type => type === 'Xenocrypt').length;
             const nonXenocryptCount = questionCount - xenocryptCount;
+            
+            console.log(`🔍 Quote requirements: ${nonXenocryptCount} English, ${xenocryptCount} Spanish, total: ${questionCount}`);
+            console.log(`🔍 Cipher types:`, questionCipherTypes);
 
             // Fetch English quotes for non-xenocrypt questions
             let englishQuotes: Array<{id: string, author: string, quote: string}> = [];
             if (nonXenocryptCount > 0) {
-                const timestamp = Date.now(); // Add timestamp to prevent caching
-                const englishResponse = await fetch(`/api/quotes?language=en&t=${timestamp}`);
+                const englishResponse = await fetch(`/api/quotes?language=en&limit=${nonXenocryptCount}`);
                 if (!englishResponse.ok) {
                     throw new Error(`Failed to fetch English quotes: ${englishResponse.statusText}`);
                 }
                 const englishData = await englishResponse.json();
-                englishQuotes = englishData.quotes || [];
+                englishQuotes = englishData.data?.quotes || englishData.quotes || [];
+                console.log(`🔍 Fetched ${englishQuotes.length} English quotes for ${nonXenocryptCount} questions`);
             }
 
             // Fetch Spanish quotes for xenocrypt questions
             let spanishQuotes: Array<{id: string, author: string, quote: string}> = [];
             if (xenocryptCount > 0) {
-                const timestamp = Date.now(); // Add timestamp to prevent caching
-                const spanishResponse = await fetch(`/api/quotes?language=es&t=${timestamp}`);
+                const spanishResponse = await fetch(`/api/quotes?language=es&limit=${xenocryptCount}`);
                 if (!spanishResponse.ok) {
                     throw new Error(`Failed to fetch Spanish quotes: ${spanishResponse.statusText}`);
                 }
                 const spanishData = await spanishResponse.json();
-                spanishQuotes = spanishData.quotes || [];
+                spanishQuotes = spanishData.data?.quotes || spanishData.quotes || [];
+                console.log(`🔍 Fetched ${spanishQuotes.length} Spanish quotes for ${xenocryptCount} questions`);
             }
 
+            // Verify we have enough quotes before processing
+            if (nonXenocryptCount > 0 && englishQuotes.length < nonXenocryptCount) {
+                throw new Error(`Not enough English quotes. Need ${nonXenocryptCount}, got ${englishQuotes.length}`);
+            }
+            if (xenocryptCount > 0 && spanishQuotes.length < xenocryptCount) {
+                throw new Error(`Not enough Spanish quotes. Need ${xenocryptCount}, got ${spanishQuotes.length}`);
+            }
+            
+            console.log(`🔍 Quote validation passed: ${englishQuotes.length} English, ${spanishQuotes.length} Spanish quotes available`);
+            
             // Prepare quotes for processing
             const processedQuotes: QuoteData[] = [];
             const quoteUUIDs: Array<{id: string, language: string, cipherType: string}> = [];
@@ -510,7 +536,7 @@ export default function CodeBusters() {
                 if (cipherType === 'Xenocrypt') {
                     // Use Spanish quote for xenocrypt
                     if (spanishQuoteIndex >= spanishQuotes.length) {
-                        throw new Error('Not enough Spanish quotes available for xenocrypt questions');
+                        throw new Error(`Not enough Spanish quotes available for xenocrypt questions. Need ${xenocryptCount}, got ${spanishQuotes.length}`);
                     }
                     const spanishQuote = spanishQuotes[spanishQuoteIndex];
                     quoteData = { 
@@ -525,7 +551,7 @@ export default function CodeBusters() {
                 } else {
                     // Use English quote for non-xenocrypt
                     if (englishQuoteIndex >= englishQuotes.length) {
-                        throw new Error('Not enough English quotes available for non-xenocrypt questions');
+                        throw new Error(`Not enough English quotes available for non-xenocrypt questions. Need ${nonXenocryptCount}, got ${englishQuotes.length}`);
                     }
                     const englishQuote = englishQuotes[englishQuoteIndex];
                     quoteData = { 
@@ -626,13 +652,28 @@ export default function CodeBusters() {
                 });
             }
 
-            // Store the quote UUIDs for sharing
-            localStorage.setItem('codebustersQuoteUUIDs', JSON.stringify(quoteUUIDs));
-            console.log('🔍 Stored quote UUIDs for sharing:', quoteUUIDs);
+            // Store the complete quote data for sharing (including encryption details)
+            const shareData = {
+                quoteUUIDs,
+                processedQuotes: processedQuotes.map(quote => ({
+                    author: quote.author,
+                    quote: quote.quote,
+                    encrypted: quote.encrypted,
+                    cipherType: quote.cipherType,
+                    key: quote.key,
+                    matrix: quote.matrix,
+                    portaKeyword: quote.portaKeyword,
+                    fractionationTable: quote.fractionationTable,
+                    caesarShift: quote.caesarShift,
+                    affineA: quote.affineA,
+                    affineB: quote.affineB,
+                    difficulty: quote.difficulty
+                }))
+            };
+            localStorage.setItem('codebustersShareData', JSON.stringify(shareData));
 
             setQuotes(processedQuotes);
             setIsLoading(false);
-            console.log('🔍 Successfully loaded quotes:', processedQuotes.length);
         } catch (error) {
             console.error('Error loading questions from Redis:', error);
             setError('Failed to load questions from Redis');
@@ -682,7 +723,7 @@ export default function CodeBusters() {
                 const newTimeLeft = Math.max(0, session.timeState.originalTimeAtSync - elapsedSeconds);
                 setTimeLeft(newTimeLeft);
                 updateTimeLeft(newTimeLeft);
-                console.log(`🕐 Timer sync: original=${session.timeState.originalTimeAtSync}s, elapsed=${elapsedSeconds}s, current=${newTimeLeft}s`);
+
             } else {
                 // Non-synchronized test - calculate based on test start time and pauses
                 const now = Date.now();
@@ -743,6 +784,111 @@ export default function CodeBusters() {
         ));
     };
 
+    // Handle hint functionality
+    const handleHintClick = (questionIndex: number) => {
+        const quote = quotes[questionIndex];
+        if (!quote) return;
+
+        // Toggle hint visibility for ciphers that have keywords/keys
+        if (['Porta', 'Caesar', 'Affine', 'Hill', 'Fractionated Morse'].includes(quote.cipherType)) {
+            setActiveHints(prev => ({
+                ...prev,
+                [questionIndex]: !prev[questionIndex]
+            }));
+        } else {
+            // For substitution ciphers, reveal a random correct letter
+            revealRandomLetter(questionIndex);
+        }
+    };
+
+    // Reveal a random correct letter for substitution ciphers
+    const revealRandomLetter = (questionIndex: number) => {
+        const quote = quotes[questionIndex];
+        if (!quote || !quote.key) return;
+
+        // Get all cipher letters that haven't been revealed yet
+        const availableLetters = quote.encrypted
+            .toUpperCase()
+            .split('')
+            .filter(char => /[A-Z]/.test(char))
+            .filter(char => !revealedLetters[questionIndex]?.[char]);
+
+        if (availableLetters.length === 0) return;
+
+        // Pick a random cipher letter
+        const randomCipherLetter = availableLetters[Math.floor(Math.random() * availableLetters.length)];
+        
+        // Get the correct plain letter for this cipher letter
+        let correctPlainLetter = '';
+        
+        if (quote.cipherType === 'Caesar' && quote.caesarShift !== undefined) {
+            const cipherIndex = randomCipherLetter.charCodeAt(0) - 65;
+            const plainIndex = (cipherIndex - quote.caesarShift + 26) % 26;
+            correctPlainLetter = String.fromCharCode(plainIndex + 65);
+        } else if (quote.cipherType === 'Atbash') {
+            const cipherIndex = randomCipherLetter.charCodeAt(0) - 65;
+            const plainIndex = 25 - cipherIndex;
+            correctPlainLetter = String.fromCharCode(plainIndex + 65);
+        } else if (quote.cipherType === 'Affine' && quote.affineA !== undefined && quote.affineB !== undefined) {
+            // For Affine cipher, we need to find the modular inverse
+            const cipherIndex = randomCipherLetter.charCodeAt(0) - 65;
+            // Find modular inverse of affineA mod 26
+            let aInverse = 1;
+            for (let i = 1; i < 26; i++) {
+                if ((quote.affineA * i) % 26 === 1) {
+                    aInverse = i;
+                    break;
+                }
+            }
+            const plainIndex = (aInverse * (cipherIndex - quote.affineB + 26)) % 26;
+            correctPlainLetter = String.fromCharCode(plainIndex + 65);
+        } else if (quote.key && ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat'].includes(quote.cipherType)) {
+            // For aristocrat/patristocrat ciphers, find the plain letter from the key
+            const keyIndex = quote.key.indexOf(randomCipherLetter);
+            if (keyIndex !== -1) {
+                correctPlainLetter = String.fromCharCode(keyIndex + 65);
+            }
+        }
+
+        if (correctPlainLetter) {
+            // Update revealed letters state
+            setRevealedLetters(prev => ({
+                ...prev,
+                [questionIndex]: {
+                    ...prev[questionIndex],
+                    [randomCipherLetter]: correctPlainLetter
+                }
+            }));
+
+            // Update the solution
+            setQuotes(prev => prev.map((q, index) => 
+                index === questionIndex 
+                    ? { ...q, solution: { ...q.solution, [randomCipherLetter]: correctPlainLetter } }
+                    : q
+            ));
+        }
+    };
+
+    // Get hint content for different cipher types
+    const getHintContent = (quote: QuoteData) => {
+        switch (quote.cipherType) {
+            case 'Porta':
+                return quote.portaKeyword ? `Keyword: ${quote.portaKeyword}` : 'No keyword available';
+            case 'Caesar':
+                return quote.caesarShift !== undefined ? `Shift: ${quote.caesarShift}` : 'No shift available';
+            case 'Affine':
+                return quote.affineA !== undefined && quote.affineB !== undefined 
+                    ? `a = ${quote.affineA}, b = ${quote.affineB}` 
+                    : 'No coefficients available';
+            case 'Hill':
+                return quote.matrix ? `Matrix: [[${quote.matrix[0].join(', ')}], [${quote.matrix[1].join(', ')}]]` : 'No matrix available';
+            case 'Fractionated Morse':
+                return 'Letters map to Morse code triplets (dots, dashes, x)';
+            default:
+                return 'Click for a random letter hint';
+        }
+    };
+
     return (
         <>
             <div className="relative min-h-screen">
@@ -785,12 +931,14 @@ export default function CodeBusters() {
                             // Get test params before clearing localStorage
                             const testParams = JSON.parse(localStorage.getItem('testParams') || '{}');
                             const eventName = testParams.eventName || 'Codebusters';
-                            const timeLimit = parseInt(testParams.timeLimit || '30');
+                            const preferences = loadPreferences(eventName);
+                            const timeLimit = parseInt(testParams.timeLimit) || preferences.timeLimit;
                             
                             // Clear all codebusters-related localStorage items
                             localStorage.removeItem('codebustersQuotes');
                             localStorage.removeItem('codebustersQuoteIndices'); // Legacy
-                            localStorage.removeItem('codebustersQuoteUUIDs');
+                            localStorage.removeItem('codebustersQuoteUUIDs'); // Legacy
+                            localStorage.removeItem('codebustersShareData');
                             localStorage.removeItem('codebustersIsTestSubmitted');
                             localStorage.removeItem('codebustersTestScore');
                             localStorage.removeItem('codebustersTimeLeft');
@@ -919,11 +1067,6 @@ export default function CodeBusters() {
                         {!isLoading && !error && quotes.length > 0 && hasAttemptedLoad && (
                                                     <button
                             onClick={() => {
-                                console.log('🔍 CODEBUSTERS - Opening share modal with quotes:', {
-                                    quotesLength: quotes.length,
-                                    quotes: quotes.slice(0, 2), // Log first 2 quotes for brevity
-                                    firstQuote: quotes[0]
-                                });
                                 setShareModalOpen(true);
                             }}
                             title="Share Test"
@@ -947,15 +1090,73 @@ export default function CodeBusters() {
                                     <h3 className={`font-semibold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                         Question {index + 1}
                                     </h3>
-                                    <span className={`px-2 py-1 rounded text-sm ${
-                                        darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
-                                    }`}>
-                                        {item.cipherType.charAt(0).toUpperCase() + item.cipherType.slice(1)}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => handleHintClick(index)}
+                                            className={`p-2 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
+                                                darkMode 
+                                                    ? 'bg-gray-600 border-blue-400 text-gray-300 hover:bg-gray-500' 
+                                                    : 'bg-gray-100 border-blue-500 text-gray-600 hover:bg-gray-200'
+                                            }`}
+                                            title="Get a hint"
+                                        >
+                                            <svg 
+                                                width="16" 
+                                                height="16" 
+                                                viewBox="0 0 24 24" 
+                                                fill="none" 
+                                                stroke="currentColor" 
+                                                strokeWidth="2" 
+                                                strokeLinecap="round" 
+                                                strokeLinejoin="round"
+                                            >
+                                                <circle cx="12" cy="12" r="10"/>
+                                                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                                                <circle cx="12" cy="17" r="1"/>
+                                            </svg>
+                                        </button>
+                                        <span className={`px-2 py-1 rounded text-sm ${
+                                            darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
+                                        }`}>
+                                            {item.cipherType.charAt(0).toUpperCase() + item.cipherType.slice(1)}
+                                        </span>
+                                    </div>
                                 </div>
                                 <p className={`mb-4 break-words whitespace-normal overflow-x-auto ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
                                     {item.author}
                                 </p>
+
+                                {/* Hint Card */}
+                                {activeHints[index] && (
+                                    <div className={`mb-4 p-3 rounded-lg border-l-4 ${
+                                        darkMode 
+                                            ? 'bg-blue-900/30 border-blue-400 text-blue-200' 
+                                            : 'bg-blue-50 border-blue-500 text-blue-700'
+                                    }`}>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <svg 
+                                                width="16" 
+                                                height="16" 
+                                                viewBox="0 0 24 24" 
+                                                fill="none" 
+                                                stroke="currentColor" 
+                                                strokeWidth="2" 
+                                                strokeLinecap="round" 
+                                                strokeLinejoin="round"
+                                            >
+                                                <path d="M9 12l2 2 4-4"/>
+                                                <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"/>
+                                                <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"/>
+                                                <path d="M13 12h3"/>
+                                                <path d="M8 12H5"/>
+                                            </svg>
+                                            <span className="font-semibold text-sm">Hint</span>
+                                        </div>
+                                        <p className="text-sm font-mono">
+                                            {getHintContent(item)}
+                                        </p>
+                                    </div>
+                                )}
 
                                 {item.cipherType === 'Hill' ? (
                                     <HillDisplay

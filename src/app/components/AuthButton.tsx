@@ -79,7 +79,6 @@ export default function AuthButton() {
       
       if (session?.user && !isOffline) {
         try {
-          console.log('👤 User signed in:', session.user.id, session.user.email);
           
           // Create or update user profile
           const { error } = await supabase

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeQuery } from '@/lib/neon';
+import { db } from '@/lib/db';
+import { shareCodes, questions } from '@/lib/db/schema';
+import { eq, inArray } from 'drizzle-orm';
 import { ShareCodeRequest, ShareCodeResponse } from '@/lib/types/api';
 
 // POST /api/share/generate - Generate a share code for test questions
@@ -16,10 +18,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate that all question IDs exist in the database
-    const placeholders = body.questionIds.map((_, index) => `$${index + 1}`).join(',');
-    const validationQuery = `SELECT id FROM questions WHERE id IN (${placeholders})`;
-    
-    const validQuestions = await executeQuery<{ id: string }>(validationQuery, body.questionIds);
+    const validQuestions = await db
+      .select({ id: questions.id })
+      .from(questions)
+      .where(inArray(questions.id, body.questionIds));
 
     if (validQuestions.length !== body.questionIds.length) {
       const response: ShareCodeResponse = {
@@ -41,8 +43,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if code already exists
-    const existingQuery = "SELECT id FROM share_codes WHERE code = $1";
-    const existingResult = await executeQuery(existingQuery, [shareCode]);
+    const existingResult = await db
+      .select({ id: shareCodes.id })
+      .from(shareCodes)
+      .where(eq(shareCodes.code, shareCode));
 
     if (existingResult.length > 0) {
       const response: ShareCodeResponse = {
@@ -60,24 +64,17 @@ export async function POST(request: NextRequest) {
       createdAtMs: Date.now(),
     };
 
-    const testParamsJSON = JSON.stringify(dataToStore);
-
     // Calculate expiration time (7 days from now)
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-    // Insert into database using existing schema (indices column for compatibility)
-    const insertQuery = `
-      INSERT INTO share_codes (code, indices, test_params_raw, expires_at) 
-      VALUES ($1, $2, $3, $4)
-    `;
-
-    await executeQuery(insertQuery, [
-      shareCode,
-      "[]", // Empty array for compatibility
-      testParamsJSON,
-      expiresAt.toISOString(),
-    ]);
+    // Insert into database using Drizzle ORM
+    await db.insert(shareCodes).values({
+      code: shareCode,
+      indices: [], // Empty array for compatibility
+      testParamsRaw: dataToStore,
+      expiresAt: expiresAt,
+    });
 
     // Return response in same format as JavaScript version
     const response: ShareCodeResponse = {

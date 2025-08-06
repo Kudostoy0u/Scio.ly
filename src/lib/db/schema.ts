@@ -58,6 +58,16 @@ export const quotes = pgTable('quotes', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+// Share codes table
+export const shareCodes = pgTable('share_codes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  code: text('code').notNull().unique(),
+  indices: jsonb('indices'),
+  testParamsRaw: jsonb('test_params_raw').notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 // Relations (for future use if needed)
 export const bookmarksRelations = relations(bookmarks, () => ({
   // user: one('users', {

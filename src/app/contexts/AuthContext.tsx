@@ -56,8 +56,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (error) {
         console.error('Error upserting user profile:', error);
-      } else {
-        console.log('User profile upserted successfully');
       }
     } catch (error) {
       console.error('Exception during user profile upsert:', error);

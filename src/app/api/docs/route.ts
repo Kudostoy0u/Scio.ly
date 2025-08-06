@@ -74,7 +74,7 @@ export async function GET() {
             <div class="param"><span class="param-name">subtopic/subtopics</span> <span class="param-type">(string/array)</span> - Filter by subtopic(s)</div>
             <div class="param"><span class="param-name">difficulty_min/max</span> <span class="param-type">(float)</span> - Difficulty range (0.0-1.0)</div>
             <div class="param"><span class="param-name">question_type</span> <span class="param-type">(string)</span> - Filter by question type: "mcq" for multiple choice, "frq" for free response</div>
-            <div class="param"><span class="param-name">limit</span> <span class="param-type">(integer)</span> - Maximum number of questions to return (default: 50)</div>
+            <div class="param"><span class="param-name">limit</span> <span class="param-type">(integer)</span> - Maximum number of questions to return (default: 50, max: 200)</div>
         </div>
         <div class="example">
             <strong>Example:</strong> <code>/api/questions?event=Chemistry%20Lab&division=C&question_type=mcq&limit=10</code>
@@ -206,12 +206,63 @@ export async function GET() {
         <span class="url">/api/codebusters/share/generate</span>
         <span class="feature-tag">Codebusters</span>
         <div class="description">Generate share code for Codebusters encrypted quotes</div>
+        <div class="params">
+            <strong>Body Parameters:</strong><br>
+            <div class="param"><span class="param-name">testParams</span> <span class="param-type">(object)</span> - Test configuration including cipherTypes array</div>
+            <div class="param"><span class="param-name">timeRemainingSeconds</span> <span class="param-type">(number)</span> - Time remaining for the test</div>
+            <div class="param"><span class="param-name">quoteUUIDs</span> <span class="param-type">(array)</span> - Array of quote objects with id, language, and cipherType</div>
+        </div>
+        <div class="example">
+            <strong>Example Request:</strong> <code>{"testParams": {"cipherTypes": ["Random Aristocrat", "Hill"]}, "timeRemainingSeconds": 3600, "quoteUUIDs": [{"id": "uuid1", "language": "en", "cipherType": "Random Aristocrat"}, {"id": "uuid2", "language": "en", "cipherType": "Hill"}]}</code><br>
+            <strong>Response:</strong> <code>{"success": true, "data": {"shareCode": "HGN2A8", "expiresAt": "2025-08-13T00:56:18.869Z"}}</code>
+        </div>
     </div>
 
     <div class="endpoint">
         <span class="method get">GET</span>
         <span class="url">/api/codebusters/share</span>
-        <div class="description">Retrieve Codebusters shared test data</div>
+        <div class="description">Retrieve Codebusters shared test data with encrypted quotes</div>
+        <div class="params">
+            <strong>Query Parameters:</strong><br>
+            <div class="param"><span class="param-name">code</span> <span class="param-type">(string)</span> - The 6-character share code</div>
+        </div>
+        <div class="example">
+            <strong>Example:</strong> <code>/api/codebusters/share?code=HGN2A8</code><br>
+            <strong>Response:</strong> <code>{"success": true, "encryptedQuotes": [{"author": "Marcus Aurelius", "quote": "Original text", "encrypted": "NVZCZ KW DFNVKDI...", "cipherType": "Random Aristocrat", "key": "OERPZSIVKXLBJDFTHCWNQGUAM", "difficulty": 0.41}], "testParams": {"cipherTypes": ["Random Aristocrat", "Hill"]}, "adjustedTimeRemaining": 3600}</code>
+        </div>
+        <div class="info-box">
+            <strong>Features:</strong> Uses UUID-based quote selection for consistency, supports multiple cipher types (Aristocrat, Patristocrat, Hill, Porta, Baconian, Caesar, Atbash, Affine, Nihilist, Fractionated Morse, Columnar Transposition, Xenocrypt), and integrates with the quotes database. Each quote is encrypted with its assigned cipher type and includes the decryption key.
+        </div>
+        <div class="info-box">
+            <strong>Supported Cipher Types:</strong><br>
+            • <strong>Aristocrat/Patristocrat:</strong> Substitution ciphers with unique key mapping<br>
+            • <strong>Hill:</strong> Matrix-based encryption with 2x2 matrix<br>
+            • <strong>Porta:</strong> Keyword-based substitution cipher<br>
+            • <strong>Baconian:</strong> Binary encoding (A=AAAAA, B=AAAAB, etc.)<br>
+            • <strong>Other Ciphers:</strong> Caesar, Atbash, Affine, Nihilist, Fractionated Morse, Columnar Transposition, Xenocrypt (all use Aristocrat encryption for consistency)
+        </div>
+    </div>
+
+    <h2>📚 Quotes Management</h2>
+    
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="url">/api/quotes</span>
+        <span class="feature-tag">Quotes</span>
+        <span class="feature-tag">Database</span>
+        <div class="description">Retrieve quotes from the database with language filtering.</div>
+        <div class="params">
+            <strong>Query Parameters:</strong><br>
+            <div class="param"><span class="param-name">language</span> <span class="param-type">(string)</span> - Filter quotes by language (default: 'en')</div>
+            <div class="param"><span class="param-name">limit</span> <span class="param-type">(integer)</span> - Maximum number of quotes to return (default: 50, max: 200)</div>
+        </div>
+        <div class="example">
+            <strong>Example:</strong> <code>/api/quotes?language=en&limit=10</code><br>
+            <strong>Response:</strong> <code>{"success": true, "data": {"quotes": [{"id": "uuid", "author": "Author Name", "quote": "Quote text", "language": "en", "created_at": "timestamp"}]}}</code>
+        </div>
+        <div class="info-box">
+            <strong>Integration:</strong> This endpoint is used by the Codebusters share functionality to retrieve quotes for encryption tests.
+        </div>
     </div>
 
     <div class="endpoint">

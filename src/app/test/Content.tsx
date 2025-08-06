@@ -150,7 +150,6 @@ export default function TestPage() {
 
       toast.success('Shared test loaded successfully!');
       localStorage.removeItem("loaded");
-      console.log('🔍 Loaded flag detected and cleared');
     }
     // Load user answers from localStorage if they exist
     const storedUserAnswers = localStorage.getItem('testUserAnswers');
@@ -171,21 +170,17 @@ export default function TestPage() {
   useEffect(() => {
     // Prevent multiple executions - only run once on mount
     if (fetchStartedRef.current) {
-      console.log('🔍 Skipping data fetch - already started fetching');
       return;
     }
     
     if (data.length > 0) {
-      console.log('🔍 Skipping data fetch - already have data');
       return;
     }
     
     if (isLoading === false) {
-      console.log('🔍 Skipping data fetch - loading already complete');
       return;
     }
     
-    console.log('🔍 Starting data fetch - data.length:', data.length, 'isLoading:', isLoading);
     fetchStartedRef.current = true;
 
     const storedParams = localStorage.getItem('testParams');
@@ -223,11 +218,7 @@ export default function TestPage() {
       setSyncTimestamp(session.timeState.syncTimestamp);
       setIsSubmitted(session.isSubmitted);
       
-      console.log('🕐 Time management initialized:', {
-        timeLeft: session.timeState.timeLeft,
-        isSynchronized: session.timeState.isTimeSynchronized,
-        isSubmitted: session.isSubmitted
-      });
+
     }
 
     // Check if we have stored questions
@@ -238,12 +229,7 @@ export default function TestPage() {
       const parsedQuestions = JSON.parse(storedQuestions);
       setData(parsedQuestions);
       
-      // 🔍 DEBUG: Log stored questions data
-      console.log('🔍 LOADED STORED QUESTIONS:');
-      console.log('🔍 FROM BOOKMARKS:', isFromBookmarks);
-      parsedQuestions.forEach((question, index) => {
-        console.log(`📝 Stored Question ${index + 1}:`, JSON.stringify(question, null, 2));
-      });
+      // Loaded stored questions data
       
       setIsLoading(false);
       return;
@@ -261,7 +247,6 @@ export default function TestPage() {
             const questions = eventBookmarks.map(b => b.question);
             setData(questions);
             localStorage.setItem('testQuestions', JSON.stringify(questions));
-            console.log(`🔍 LOADED ${questions.length} BOOKMARKED QUESTIONS FROM SUPABASE`);
           } else {
             setFetchError('No bookmarked questions found for this event.');
           }
@@ -280,7 +265,6 @@ export default function TestPage() {
     }
   
     const fetchData = async () => {
-      console.log('🔍 Starting fresh API fetch for questions...');
       try {
         const { questionCount } = routerParams;
         
@@ -289,9 +273,6 @@ export default function TestPage() {
         const params = buildApiParams(routerParams, requestCount);
         
         const apiUrl = `${api.questions}?${params}`;
-        console.log('Fetching from API:', apiUrl);
-        console.log('API params string:', params);
-        console.log('Router params:', routerParams);
         
         const response = await fetch(apiUrl);
         if (!response.ok) throw new Error('Failed to fetch data from API');
@@ -302,23 +283,13 @@ export default function TestPage() {
         }
         
         let questions: Question[] = apiResponse.data || [];
-        console.log(`API returned ${questions.length} questions`);
         
         // Filter out questions with completely missing or invalid answer structure
         questions = questions.filter(q => {
           // Only filter out questions that have no answers array at all or null answers
           const hasAnswerStructure = q.answers && Array.isArray(q.answers) && q.answers.length > 0;
-          
-          if (!hasAnswerStructure) {
-            console.log(`🚫 Filtered out question with no answer structure:`, q.id);
-          }
           return hasAnswerStructure;
         });
-        console.log(`After filtering questions with no answer structure: ${questions.length} questions`);
-        
-        // Removed question filtering - all questions are now included
-        
-        console.log(`No filtering applied: ${questions.length} questions`);
         
         // Shuffle and select the requested number of questions
         const shuffledQuestions = shuffleArray(questions);
@@ -336,14 +307,6 @@ export default function TestPage() {
         // Store questions for persistence
         localStorage.setItem('testQuestions', JSON.stringify(questionsWithIndex));
         setData(questionsWithIndex);
-        
-        console.log(`Selected ${questionsWithIndex.length} questions for test`);
-        
-        // 🔍 DEBUG: Log complete JSON for each question
-        console.log('🔍 COMPLETE QUESTION DATA:');
-        questionsWithIndex.forEach((question, index) => {
-          console.log(`📝 Question ${index + 1}:`, JSON.stringify(question, null, 2));
-        });
       } catch (error) {
         console.error(error);
         setFetchError('Failed to load questions. Please try again later.');
@@ -429,12 +392,7 @@ export default function TestPage() {
       if (question.options && question.options.length) {
         mcqTotal++;
         
-        // 🔍 DEBUG: Log MCQ grading
-        console.log(`🎯 Grading MCQ ${i + 1}:`);
-        console.log('  Question:', question.question.substring(0, 50) + '...');
-        console.log('  User answer:', answer);
-        console.log('  Question answers:', question.answers);
-        console.log('  Question options:', question.options);
+        // Grade MCQ
         
         // Simple matching for MCQ
         const correct = Array.isArray(question.answers)
@@ -449,8 +407,7 @@ export default function TestPage() {
           })
           .filter(idx => idx >= 0);
         
-        // Debug logging
-        console.log('  User numeric answers:', userNumericAnswers);
+
         
         // Handle both string and number answers from backend
         const correctAnswers = correct.map(ans => {
@@ -470,7 +427,6 @@ export default function TestPage() {
         
         // If no valid correct answers found, mark as ungraded (skip scoring)
         if (correctAnswers.length === 0) {
-          console.log('  ⚠️ No valid correct answers found - skipping scoring');
           continue;
         }
         
@@ -490,11 +446,9 @@ export default function TestPage() {
           mcqScore++;
           // Store the grade for this question
           setGradingResults(prev => ({ ...prev, [i]: 1 }));
-          console.log('  ✅ CORRECT!');
         } else {
           // Store that this question was incorrect
           setGradingResults(prev => ({ ...prev, [i]: 0 }));
-          console.log('  ❌ INCORRECT!');
         }
       } else {
         // For FRQ
@@ -513,7 +467,6 @@ export default function TestPage() {
               studentAnswer: answer[0] as string
             });
           } else {
-            console.log(`⚠️ FRQ ${i + 1} has no valid correct answer - skipping AI grading`);
             // Mark as ungraded since we can't grade it
             setGradingResults(prev => ({ ...prev, [i]: 0.5 })); // Give partial credit for attempt
           }
@@ -1020,17 +973,6 @@ export default function TestPage() {
                                 key={optionIndex}
                                                         className={`block p-2 rounded-md  ${
                           (() => {
-                            // 🔍 DEBUG: Log answer coloring logic
-                            if (isSubmitted) {
-                              console.log(`🎨 Answer coloring for Q${index + 1}, option ${optionIndex + 1} (${option}):`);
-                              console.log(`  gradingResults[${index}]:`, gradingResults[index]);
-                              console.log(`  question.answers:`, question.answers);
-                              console.log(`  currentAnswers:`, currentAnswers);
-                              console.log(`  optionIndex:`, optionIndex);
-                              console.log(`  is correct answer?:`, question.answers.includes(option));
-                              console.log(`  user selected?:`, currentAnswers.includes(option));
-                            }
-                            
                             // Simplified coloring logic
                             if (!isSubmitted) {
                               return darkMode ? 'bg-gray-700' : 'bg-gray-200';

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeQuery } from '@/lib/neon';
+import { db } from '@/lib/db';
+import { shareCodes } from '@/lib/db/schema';
+import { eq, gt, and, lte } from 'drizzle-orm';
 import { ShareCodeData } from '@/lib/types/api';
 
 interface TestParamsRaw {
@@ -26,16 +28,13 @@ export async function GET(request: NextRequest) {
     console.log(`🔍 [SHARE/GET] Looking up share code: ${code}`);
 
     // Get share code data, ensuring it hasn't expired
-    const query = `
-      SELECT test_params_raw, expires_at 
-      FROM share_codes 
-      WHERE code = $1 AND expires_at > CURRENT_TIMESTAMP
-    `;
-
-    const result = await executeQuery<{
-      test_params_raw: TestParamsRaw; // JSONB column returns object, not string
-      expires_at: string;
-    }>(query, [code]);
+    const result = await db
+      .select({
+        testParamsRaw: shareCodes.testParamsRaw,
+        expiresAt: shareCodes.expiresAt
+      })
+      .from(shareCodes)
+      .where(and(eq(shareCodes.code, code), gt(shareCodes.expiresAt, new Date())));
 
     if (result.length === 0) {
       console.log(`❌ [SHARE/GET] Share code not found or expired: ${code}`);
@@ -49,8 +48,8 @@ export async function GET(request: NextRequest) {
     const shareData = result[0];
     
     try {
-      // test_params_raw is already a JSON object (JSONB column)
-      const testParamsRaw = shareData.test_params_raw;
+      // testParamsRaw is already a JSON object (JSONB column)
+      const testParamsRaw = shareData.testParamsRaw as TestParamsRaw;
       
       if (!testParamsRaw) {
         console.log(`❌ [SHARE/GET] No data found for code: ${code}`);
@@ -61,7 +60,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(response, { status: 500 });
       }
       
-      console.log(`✅ [SHARE/GET] Found share code: ${code}, expires: ${shareData.expires_at}`);
+      console.log(`✅ [SHARE/GET] Found share code: ${code}, expires: ${shareData.expiresAt}`);
       
       const response: ShareCodeData = {
         success: true,
@@ -97,8 +96,7 @@ export async function DELETE() {
   try {
     console.log('🧹 [SHARE/CLEANUP] Starting cleanup of expired share codes');
 
-    const query = "DELETE FROM share_codes WHERE expires_at <= CURRENT_TIMESTAMP";
-    await executeQuery(query);
+    await db.delete(shareCodes).where(lte(shareCodes.expiresAt, new Date()));
 
     // Note: Neon doesn't return rowsAffected in serverless mode
     console.log('🧹 [SHARE/CLEANUP] Cleanup completed');

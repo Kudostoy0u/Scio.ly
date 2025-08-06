@@ -1,10 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { questions } from '@/lib/db/schema';
-import { Question, ApiResponse } from '@/lib/types/api';
+import { Question } from '@/lib/types/api';
 import { v4 as uuidv4 } from 'uuid';
 import { eq, and, or, gte, lte, sql, SQL } from 'drizzle-orm';
 import { z } from 'zod';
+import { 
+  handleApiError, 
+  createSuccessResponse, 
+  parseRequestBody,
+  logApiRequest,
+  logApiResponse,
+  ApiError
+} from '@/lib/api/utils';
 
 // Database result type
 type DatabaseQuestion = {
@@ -48,52 +56,6 @@ const CreateQuestionSchema = z.object({
 // Types
 type ValidatedQuestionFilters = z.infer<typeof QuestionFiltersSchema>;
 type ValidatedCreateQuestion = z.infer<typeof CreateQuestionSchema>;
-
-// Error handling utilities
-class ApiError extends Error {
-  constructor(
-    public statusCode: number,
-    message: string,
-    public code?: string
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
-
-const handleApiError = (error: unknown): NextResponse => {
-  console.error('API Error:', error);
-  
-  if (error instanceof ApiError) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message,
-        code: error.code,
-      },
-      { status: error.statusCode }
-    );
-  }
-  
-  if (error instanceof z.ZodError) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Invalid request data',
-        details: error.issues,
-      },
-      { status: 400 }
-    );
-  }
-  
-  return NextResponse.json(
-    {
-      success: false,
-      error: 'Internal server error',
-    },
-    { status: 500 }
-  );
-};
 
 // Query building utilities
 class QueryBuilder {
@@ -169,25 +131,21 @@ class QueryBuilder {
 
   setLimit(limit: string | undefined): this {
     const parsedLimit = limit ? parseInt(limit) : 50;
-    this.limit = parsedLimit > 0 ? parsedLimit : 50;
+    // Ensure limit is between 1 and 200
+    this.limit = Math.min(Math.max(parsedLimit > 0 ? parsedLimit : 50, 1), 200);
     return this;
   }
 
   build() {
-    let query = db.select().from(questions);
-    
-    if (this.conditions.length > 0) {
-      const whereCondition = this.conditions.length === 1 
-        ? this.conditions[0] 
-        : and(...this.conditions);
-      
-      if (whereCondition) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (query as any) = query.where(whereCondition);
-      }
+    if (this.conditions.length === 0) {
+      return db.select().from(questions).orderBy(this.orderBy).limit(this.limit);
     }
     
-    return query.orderBy(this.orderBy).limit(this.limit);
+    const whereCondition = this.conditions.length === 1 
+      ? this.conditions[0] 
+      : and(...this.conditions);
+    
+    return db.select().from(questions).where(whereCondition).orderBy(this.orderBy).limit(this.limit);
   }
 }
 
@@ -294,38 +252,39 @@ const createQuestion = async (data: ValidatedCreateQuestion): Promise<Question> 
 
 // API Handlers
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  logApiRequest('GET', '/api/questions', Object.fromEntries(request.nextUrl.searchParams));
+  
   try {
     const searchParams = request.nextUrl.searchParams;
     const filters = parseAndValidateFilters(searchParams);
     
     const questions = await fetchQuestions(filters);
     
-    const response: ApiResponse<Question[]> = {
-      success: true,
-      data: questions,
-    };
-    
-    return NextResponse.json(response);
+    const response = createSuccessResponse(questions);
+    logApiResponse('GET', '/api/questions', 200, Date.now() - startTime);
+    return response;
   } catch (error) {
-    return handleApiError(error);
+    const response = handleApiError(error);
+    logApiResponse('GET', '/api/questions', response.status, Date.now() - startTime);
+    return response;
   }
 }
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  logApiRequest('POST', '/api/questions');
+  
   try {
-    const body = await request.json();
-    const validatedData = CreateQuestionSchema.parse(body);
-    
+    const validatedData = await parseRequestBody(request, CreateQuestionSchema);
     const question = await createQuestion(validatedData);
     
-    const response: ApiResponse<Question> = {
-      success: true,
-      data: question,
-      message: 'Question created successfully',
-    };
-    
-    return NextResponse.json(response, { status: 201 });
+    const response = createSuccessResponse(question, 'Question created successfully');
+    logApiResponse('POST', '/api/questions', 201, Date.now() - startTime);
+    return response;
   } catch (error) {
-    return handleApiError(error);
+    const response = handleApiError(error);
+    logApiResponse('POST', '/api/questions', response.status, Date.now() - startTime);
+    return response;
   }
 }

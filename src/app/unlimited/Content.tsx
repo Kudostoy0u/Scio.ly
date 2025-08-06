@@ -74,7 +74,6 @@ export default function UnlimitedPracticePage() {
   useEffect(() => {
     // Prevent multiple executions - only run once on mount
     if (data.length > 0 || isLoading === false) {
-      console.log('🔍 UNLIMITED - Skipping data fetch - already loaded or loading complete');
       return;
     }
 
@@ -94,11 +93,7 @@ export default function UnlimitedPracticePage() {
       const parsedQuestions = JSON.parse(storedQuestions);
       setData(parsedQuestions);
       
-      // 🔍 DEBUG: Log stored questions data
-      console.log('🔍 UNLIMITED - LOADED STORED QUESTIONS:');
-      parsedQuestions.forEach((question, index) => {
-        console.log(`📝 Stored Question ${index + 1}:`, JSON.stringify(question, null, 2));
-      });
+      // Loaded stored questions data
 
       setIsLoading(false);
       return;
@@ -109,7 +104,6 @@ export default function UnlimitedPracticePage() {
 
 
     const fetchData = async () => {
-      console.log('🔍 UNLIMITED - Starting fresh API fetch for questions...');
       try {
         // const { types } = routerParams; // Unused variable
         
@@ -117,7 +111,6 @@ export default function UnlimitedPracticePage() {
         const params = buildApiParams(routerParams, 1000);
         
         const apiUrl = `${api.questions}?${params}`;
-        console.log('Fetching from API for unlimited practice:', apiUrl);
         
         const response = await fetch(apiUrl);
         if (!response.ok) throw new Error('Failed to fetch data from API');
@@ -128,21 +121,10 @@ export default function UnlimitedPracticePage() {
         }
         
         const questions: Question[] = apiResponse.data || [];
-        console.log(`API returned ${questions.length} questions for unlimited practice`);
-        
-        // Removed question filtering - all questions are now included
-        
-        console.log(`No filtering applied: ${questions.length} questions for unlimited practice`);
         
         // Store for persistence
         localStorage.setItem('unlimitedQuestions', JSON.stringify(questions));
         setData(questions);
-        
-        // 🔍 DEBUG: Log complete JSON for each question
-        console.log('🔍 UNLIMITED PRACTICE - COMPLETE QUESTION DATA:');
-        questions.forEach((question, index) => {
-          console.log(`📝 Question ${index + 1}:`, JSON.stringify(question, null, 2));
-        });
       } catch (error) {
         console.error(error);
         setFetchError('Failed to load questions. Please try again later.');

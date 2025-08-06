@@ -658,8 +658,6 @@ export const FractionatedMorseDisplay = ({
     // Get the actual triplets used in this cipher from the fractionation table
     const usedTriplets = fractionationTable ? Object.keys(fractionationTable).sort() : [];
     
-    console.log('Fractionation table debug:', { fractionationTable, usedTriplets });
-    
     // Create reverse mapping from cipher letter to triplet
     const cipherToTriplet: { [key: string]: string } = {};
     if (fractionationTable) {
@@ -679,8 +677,6 @@ export const FractionatedMorseDisplay = ({
     // Handle replacement table input changes
     const handleReplacementTableChange = (triplet: string, newLetter: string) => {
         if (!fractionationTable) return;
-        
-        console.log('Replacement table change:', { triplet, newLetter, fractionationTable });
         
         // The letter typed in the replacement table should match the cipher letter
         // So we fill all instances of that letter with the morse code triplet

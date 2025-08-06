@@ -11,15 +11,27 @@ export interface QuoteData {
   quote: string;
   encrypted: string;
   cipherType: 'Random Aristocrat' | 'K1 Aristocrat' | 'K2 Aristocrat' | 'K3 Aristocrat' | 'Random Patristocrat' | 'K1 Patristocrat' | 'K2 Patristocrat' | 'K3 Patristocrat' | 'Caesar' | 'Atbash' | 'Affine' | 'Hill' | 'Baconian' | 'Porta' | 'Nihilist' | 'Fractionated Morse' | 'Columnar Transposition' | 'Xenocrypt';
-  key?: string;        // For aristocrat/patristocrat
+  key?: string;        // For aristocrat/patristocrat/porta/nihilist/columnar/xenocrypt
   matrix?: number[][]; // For hill
   portaKeyword?: string; // For porta
+  nihilistKey?: string; // For nihilist
+  columnarKey?: string; // For columnar transposition
+  fractionatedKey?: string; // For fractionated morse
+  fractionationTable?: { [key: string]: string }; // For fractionated morse table
+  xenocryptKey?: string; // For xenocrypt
+  caesarShift?: number; // For caesar cipher
+  affineA?: number; // For affine cipher (a value)
+  affineB?: number; // For affine cipher (b value)
   solution?: { [key: string]: string };
   frequencyNotes?: { [key: string]: string };
   hillSolution?: {
     matrix: string[][];
     plaintext: { [key: number]: string };
   };
+  nihilistSolution?: { [key: number]: string }; // For nihilist
+  fractionatedSolution?: { [key: number]: string }; // For fractionated morse
+  columnarSolution?: { [key: number]: string }; // For columnar transposition
+  xenocryptSolution?: { [key: number]: string }; // For xenocrypt
   difficulty?: number; // New field for difficulty
 }
 
@@ -42,10 +54,10 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
       const data = await response.json();
       console.log('🔍 Codebusters API Response:', data);
       
-      if (data.success && data.encryptedQuotes && data.testParams) {
-        console.log('🔍 Successfully got encrypted quotes from codebusters endpoint:', data.encryptedQuotes.length, 'quotes');
+      if (data.success && data.data && data.data.quotes && data.data.testParams) {
+        console.log('🔍 Successfully got encrypted quotes from codebusters endpoint:', data.data.quotes.length, 'quotes');
         // Store test parameters
-        localStorage.setItem('testParams', JSON.stringify(data.testParams));
+        localStorage.setItem('testParams', JSON.stringify(data.data.testParams));
         
         // Time synchronization will be handled by the new time management system
         console.log('🕐 Codebusters time sync will be handled by new time management system');
@@ -53,9 +65,9 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
         return {
           success: true,
           eventName: 'Codebusters',
-          testParams: data.testParams,
-          encryptedQuotes: data.encryptedQuotes,
-          adjustedTimeRemaining: data.adjustedTimeRemaining
+          testParams: data.data.testParams,
+          encryptedQuotes: data.data.quotes,
+          adjustedTimeRemaining: data.data.timeRemainingSeconds
         };
       }
     }

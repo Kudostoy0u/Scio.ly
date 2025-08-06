@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeQuery } from '@/lib/neon';
+import { db } from '@/lib/db';
+import { shareCodes } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 // POST /api/codebusters/share/generate - Generate Codebusters-specific share code
 export async function POST(request: NextRequest) {
@@ -15,8 +17,10 @@ export async function POST(request: NextRequest) {
     shareCode = shareCode.toUpperCase(); // 6-character code, no prefix
 
     // Check if code already exists
-    const existingQuery = "SELECT id FROM share_codes WHERE code = $1";
-    const existingResult = await executeQuery(existingQuery, [shareCode]);
+    const existingResult = await db
+      .select({ id: shareCodes.id })
+      .from(shareCodes)
+      .where(eq(shareCodes.code, shareCode));
 
     if (existingResult.length > 0) {
       return NextResponse.json({
@@ -37,20 +41,15 @@ export async function POST(request: NextRequest) {
       createdAtMs: Date.now(),
     };
 
-    const insertQuery = `
-      INSERT INTO share_codes (code, indices, test_params_raw, expires_at) 
-      VALUES ($1, $2, $3, $4)
-    `;
-
-    const quoteUUIDsData = body.quoteUUIDs || [];
-    console.log(`🔍 [CODEBUSTERS/SHARE/GENERATE] Storing ${quoteUUIDsData.length} quotes with UUIDs and cipher types:`, quoteUUIDsData);
+    const shareData = body.shareData || {};
+    console.log(`🔍 [CODEBUSTERS/SHARE/GENERATE] Storing complete share data with ${shareData.processedQuotes?.length || 0} quotes`);
     
-    await executeQuery(insertQuery, [
-      shareCode,
-      JSON.stringify(quoteUUIDsData), // Store quote UUIDs in dedicated indices column
-      JSON.stringify(dataToStore), // Store other test params without duplicating UUIDs
-      expiresAt.toISOString(),
-    ]);
+    await db.insert(shareCodes).values({
+      code: shareCode,
+      indices: shareData, // Store complete share data including encryption details
+      testParamsRaw: dataToStore, // Store other test params
+      expiresAt: expiresAt,
+    });
 
     console.log(`✅ [CODEBUSTERS/SHARE/GENERATE] Generated code: ${shareCode}`);
 

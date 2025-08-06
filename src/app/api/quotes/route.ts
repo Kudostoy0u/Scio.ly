@@ -1,28 +1,56 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
 import { getQuotesByLanguage } from '@/lib/db/utils';
+import { 
+  handleApiError, 
+  createSuccessResponse, 
+  parseQueryParams,
+  logApiRequest,
+  logApiResponse,
+  sanitizeInput
+} from '@/lib/api/utils';
 
+// Validation schemas
+const QuoteFiltersSchema = z.object({
+  language: z.string().min(1, 'Language is required').default('en'),
+  limit: z.coerce.number().int().positive().max(200).optional().default(50),
+});
+
+// Types - ValidatedQuoteFilters is inferred from the schema
+
+// Business logic functions
+const fetchQuotes = async (language: string, limit: number) => {
+  const sanitizedLanguage = sanitizeInput(language);
+  const quotes = await getQuotesByLanguage(sanitizedLanguage, limit);
+  
+  if (!quotes || quotes.length === 0) {
+    throw new Error(`No quotes found for language: ${sanitizedLanguage}`);
+  }
+  
+  return quotes.map(quote => ({
+    id: quote.id,
+    author: quote.author,
+    quote: quote.quote
+  }));
+};
+
+// API Handlers
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  logApiRequest('GET', '/api/quotes', Object.fromEntries(request.nextUrl.searchParams));
+  
   try {
-    const { searchParams } = new URL(request.url);
-    const language = searchParams.get('language') || 'en';
+    const searchParams = request.nextUrl.searchParams;
+    const filters = parseQueryParams(searchParams, QuoteFiltersSchema);
     
-    // Fetch quotes from database
-    const quotes = await getQuotesByLanguage(language);
+    const quotes = await fetchQuotes(filters.language, filters.limit);
     
-    if (!quotes || quotes.length === 0) {
-      return NextResponse.json({ error: 'No quotes found for language: ' + language }, { status: 404 });
-    }
-    
-    // Transform to match expected format
-    const formattedQuotes = quotes.map(quote => ({
-      id: quote.id,
-      author: quote.author,
-      quote: quote.quote
-    }));
-    
-    return NextResponse.json({ quotes: formattedQuotes });
+    const response = createSuccessResponse({ quotes });
+    logApiResponse('GET', '/api/quotes', 200, Date.now() - startTime);
+    return response;
   } catch (error) {
-    console.error('Error fetching quotes from database:', error);
-    return NextResponse.json({ error: 'Failed to fetch quotes' }, { status: 500 });
+    const response = handleApiError(error);
+    logApiResponse('GET', '/api/quotes', response.status, Date.now() - startTime);
+    return response;
   }
 } 

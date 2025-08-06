@@ -12,13 +12,14 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  webpack: (
-    config,
-    {}
-  ) => {
-    config.externals.push({ canvas: 'commonjs canvas' })
-    return config
-  }
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
+      },
+    },
+  },
 };
 
 export default nextConfig;

@@ -33,6 +33,50 @@ interface Settings {
   subtopics: string[];
 }
 
+// localStorage keys for different event types
+const NORMAL_EVENT_PREFERENCES = 'scio_normal_event_preferences';
+const CODEBUSTERS_PREFERENCES = 'scio_codebusters_preferences';
+
+// Default values
+const NORMAL_DEFAULTS = {
+  questionCount: 10,
+  timeLimit: 15
+};
+
+const CODEBUSTERS_DEFAULTS = {
+  questionCount: 3,
+  timeLimit: 15
+};
+
+// Helper functions for localStorage
+const savePreferences = (eventName: string, questionCount: number, timeLimit: number) => {
+  const isCodebusters = eventName === 'Codebusters';
+  const key = isCodebusters ? CODEBUSTERS_PREFERENCES : NORMAL_EVENT_PREFERENCES;
+  const preferences = { questionCount, timeLimit };
+  localStorage.setItem(key, JSON.stringify(preferences));
+};
+
+const loadPreferences = (eventName: string) => {
+  const isCodebusters = eventName === 'Codebusters';
+  const key = isCodebusters ? CODEBUSTERS_PREFERENCES : NORMAL_EVENT_PREFERENCES;
+  const defaults = isCodebusters ? CODEBUSTERS_DEFAULTS : NORMAL_DEFAULTS;
+  
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      const preferences = JSON.parse(saved);
+      return {
+        questionCount: preferences.questionCount || defaults.questionCount,
+        timeLimit: preferences.timeLimit || defaults.timeLimit
+      };
+    }
+  } catch (error) {
+    console.error('Error loading preferences:', error);
+  }
+  
+  return defaults;
+};
+
 function EventDashboard() {
   const router = useRouter();
   const { darkMode } = useTheme();
@@ -49,8 +93,8 @@ function EventDashboard() {
   const difficultyDropdownRef = useRef<HTMLDivElement>(null);
 
   const [settings, setSettings] = useState<Settings>({
-    questionCount: 10,
-    timeLimit: 15,
+    questionCount: NORMAL_DEFAULTS.questionCount,
+    timeLimit: NORMAL_DEFAULTS.timeLimit,
     difficulties: [],
     types: 'multiple-choice',
     division: 'any',
@@ -70,7 +114,24 @@ function EventDashboard() {
     const { id, value } = e.target;
     // Skip tournament changes since it's disabled
     if (id === 'tournament') return;
+    
     setSettings((prev) => ({ ...prev, [id]: value }));
+    
+    // Save preferences when question count or time limit changes
+    if (id === 'questionCount' || id === 'timeLimit') {
+      const selectedEventObj = selectedEvent ? events.find(event => event.id === selectedEvent) : null;
+      if (selectedEventObj) {
+        const newValue = id === 'questionCount' ? parseInt(value) : parseInt(value);
+        const currentValue = id === 'questionCount' ? settings.questionCount : settings.timeLimit;
+        
+        // Only save if the value actually changed
+        if (newValue !== currentValue) {
+          const newQuestionCount = id === 'questionCount' ? newValue : settings.questionCount;
+          const newTimeLimit = id === 'timeLimit' ? newValue : settings.timeLimit;
+          savePreferences(selectedEventObj.name, newQuestionCount, newTimeLimit);
+        }
+      }
+    }
   };
 
   const validateTimeLimit = () => {
@@ -258,11 +319,24 @@ function EventDashboard() {
     // Auto-configure settings for Codebusters
     const selectedEventObj = events.find((event) => event.id === id);
     if (selectedEventObj?.name === 'Codebusters') {
+      // Load saved preferences for Codebusters or use defaults
+      const preferences = loadPreferences('Codebusters');
       setSettings(prev => ({
         ...prev,
-        questionCount: 3,
+        questionCount: preferences.questionCount,
+        timeLimit: preferences.timeLimit,
         types: 'frq-only',
         division: 'C'
+      }));
+    } else if (selectedEventObj) {
+      // Load saved preferences for normal events or use defaults
+      const preferences = loadPreferences(selectedEventObj.name);
+      setSettings(prev => ({
+        ...prev,
+        questionCount: preferences.questionCount,
+        timeLimit: preferences.timeLimit,
+        types: 'multiple-choice',
+        division: 'any'
       }));
     }
   };
@@ -438,7 +512,7 @@ function EventDashboard() {
         // Don't set subtopics initially - wait for event selection
         setSubtopics([]);
 
-        console.log(`Loaded ${eventsWithIds.length} approved events`);
+
       } catch (err) {
         console.error('Error fetching data:', err);
         setError('Failed to load events. Please try again later.');
@@ -506,6 +580,21 @@ function EventDashboard() {
       }
     }
   }, [selectedEvent, events, settings.division]);
+
+  // Load preferences when an event is selected
+  useEffect(() => {
+    if (selectedEvent && events.length > 0) {
+      const selectedEventObj = events.find(event => event.id === selectedEvent);
+      if (selectedEventObj) {
+        const preferences = loadPreferences(selectedEventObj.name);
+        setSettings(prev => ({
+          ...prev,
+          questionCount: preferences.questionCount,
+          timeLimit: preferences.timeLimit
+        }));
+      }
+    }
+  }, [selectedEvent, events]);
 
   // Update subtopics when division changes for Codebusters
   useEffect(() => {

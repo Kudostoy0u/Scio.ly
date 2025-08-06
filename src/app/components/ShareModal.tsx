@@ -62,11 +62,6 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
   isCodebusters = false,
   encryptedQuotes = []
 }) => {
-  console.log('ShareModal render:', { 
-    isOpen, 
-    isCodebusters, 
-    hasQuotes: encryptedQuotes.length
-  });
   const [loadingGenerate, setLoadingGenerate] = useState(false);
   const [loadingLoad, setLoadingLoad] = useState(false);
   const [shareCode, setShareCode] = useState<string | null>(null);
@@ -86,7 +81,6 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
   const generateShareCode = useCallback(async () => {
     // Prevent multiple simultaneous generations
     if (isGenerating || hasGeneratedRef.current) {
-      console.log('Share code generation already in progress or completed');
       return;
     }
 
@@ -123,48 +117,30 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
 
       if (currentIsCodebusters) {
         // Codebusters share code generation
-        console.log('🔍 CODEBUSTERS SHARE DEBUG:', {
-          quotesLength: currentEncryptedQuotes.length,
-          timeLeft: currentTimeLeft,
-          isTimeSynchronized: currentIsTimeSynchronized,
-          quotes: currentEncryptedQuotes
-        });
-        
         if (currentEncryptedQuotes.length === 0) {
-          console.log('❌ No quotes available for Codebusters share');
           toast.error('No quotes available to share');
           return;
         }
 
         const testParams = JSON.parse(localStorage.getItem('testParams') || '{}');
-        const quoteUUIDs = JSON.parse(localStorage.getItem('codebustersQuoteUUIDs') || '[]');
-        
-        console.log('🔍 Making Codebusters API call with:', {
-          quoteUUIDs: quoteUUIDs,
-          testParams: testParams,
-          timeRemainingSeconds: currentTimeLeft
-        });
+        const shareData = JSON.parse(localStorage.getItem('codebustersShareData') || '{}');
 
         const response = await fetch(api.codebustersShareGenerate, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            quoteUUIDs: quoteUUIDs,
+            shareData: shareData,
             testParams: testParams,
             timeRemainingSeconds: currentTimeLeft
           })
         });
 
-        console.log('🔍 Codebusters API response status:', response.status);
-
         if (!response.ok) {
           const errorData = await response.json();
-          console.log('❌ Codebusters API error:', errorData);
           throw new Error(errorData.error || 'Failed to generate share code');
         }
 
         const data = await response.json();
-        console.log('✅ Codebusters share code generated:', data);
         
         // Only set the code if this is still the current request
         if (currentRequestId === generationRequestId.current) {
@@ -293,7 +269,6 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
   // Reset when modal closes
   useEffect(() => {
     if (!isOpen) {
-      console.log('Modal closed, resetting state...');
       hasGeneratedRef.current = false;
       setShareCode(null);
       setIsGenerating(false);
@@ -395,7 +370,7 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
   );
   
   if (!propsEqual) {
-    console.log('ShareModal props changed, re-rendering');
+    // Props changed, re-rendering
   }
   
   return propsEqual;
