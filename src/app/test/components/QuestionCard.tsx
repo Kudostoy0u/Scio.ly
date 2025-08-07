@@ -18,6 +18,7 @@ interface QuestionCardProps {
   loadingExplanation: Record<number, boolean>;
   submittedReports: Record<number, boolean>;
   submittedEdits: Record<number, boolean>;
+  gradingFRQs: Record<number, boolean>;
   onAnswerChange: (index: number, answer: string | null, multiselect?: boolean) => void;
   onBookmarkChange: (questionText: string, isBookmarked: boolean) => void;
   onReportSubmitted: (index: number) => void;
@@ -40,6 +41,7 @@ export default function QuestionCard({
   loadingExplanation,
   submittedReports,
   submittedEdits,
+  gradingFRQs,
   onAnswerChange,
   onBookmarkChange,
   onReportSubmitted,
@@ -172,37 +174,47 @@ export default function QuestionCard({
 
       {isSubmitted && (
         <>
-          {(() => {
-            const score = gradingResults[index] ?? 0;
-            let resultText = '';
-            let resultColor = '';
-            if (!currentAnswers[0]) {
-              resultText = 'Skipped';
-              resultColor = 'text-blue-500';
-            } else if (score === 1 || score === 2 || score === 3) {
-              resultText = 'Correct!';
-              resultColor = 'text-green-600';
-            } else if (score === 0) {
-              resultText = 'Wrong!';
-              resultColor = 'text-red-600';
-            } else {
-              resultText = 'Partial Credit';
-              resultColor = 'text-amber-400';
-            }
-            return (
-              <>
-                <p className={`mt-2 font-semibold ${resultColor}`}>
-                  {resultText}
-                </p>
-                {!question.options?.length && (
-                  <p className="text-sm mt-1">
-                    <strong>Correct Answer(s):</strong>{' '}
-                    {question.answers.join(', ')}
-                  </p>
-                )}
-              </>
-            );
-          })()}
+                     {(() => {
+             const score = gradingResults[index] ?? 0;
+             const isGrading = gradingFRQs[index];
+             
+             if (isGrading) {
+               return (
+                 <p className="mt-2 font-semibold text-blue-500">
+                   Grading...
+                 </p>
+               );
+             }
+             
+             let resultText = '';
+             let resultColor = '';
+             if (!currentAnswers[0]) {
+               resultText = 'Skipped';
+               resultColor = 'text-blue-500';
+             } else if (score === 1 || score === 2 || score === 3) {
+               resultText = 'Correct!';
+               resultColor = 'text-green-600';
+             } else if (score === 0) {
+               resultText = 'Wrong!';
+               resultColor = 'text-red-600';
+             } else {
+               resultText = 'Partial Credit';
+               resultColor = 'text-amber-400';
+             }
+             return (
+               <>
+                 <p className={`mt-2 font-semibold ${resultColor}`}>
+                   {resultText}
+                 </p>
+                 {!question.options?.length && (
+                   <p className="text-sm mt-1">
+                     <strong>Correct Answer(s):</strong>{' '}
+                     {question.answers.join(', ')}
+                   </p>
+                 )}
+               </>
+             );
+           })()}
           
           <div className="mt-2">
             {!explanations[index] ? (

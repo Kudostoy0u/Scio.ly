@@ -24,6 +24,7 @@ export default function TestPage() {
       explanations,
     loadingExplanation,
       gradingResults,
+    gradingFRQs,
     isMounted,
     shareModalOpen,
     inputCode,
@@ -126,6 +127,7 @@ export default function TestPage() {
                       loadingExplanation={loadingExplanation}
                       submittedReports={submittedReports}
                       submittedEdits={submittedEdits}
+                      gradingFRQs={gradingFRQs}
                       onAnswerChange={handleAnswerChange}
                             onBookmarkChange={handleBookmarkChange}
                             onReportSubmitted={handleReportSubmitted}
