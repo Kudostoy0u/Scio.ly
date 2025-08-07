@@ -457,7 +457,8 @@ export function useTestState() {
       gradingResults,
       setGradingResults,
       userAnswers,
-      RATE_LIMIT_DELAY
+      RATE_LIMIT_DELAY,
+      true
     );
   };
 

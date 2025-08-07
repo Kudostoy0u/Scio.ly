@@ -270,7 +270,8 @@ export default function UnlimitedPracticePage() {
       gradingResults,
       setGradingResults,
       undefined, // no userAnswers for unlimited
-      RATE_LIMIT_DELAY
+      RATE_LIMIT_DELAY,
+      true
     );
 
     await originalGetExplanation();
@@ -625,7 +626,7 @@ export default function UnlimitedPracticePage() {
                   {!isSubmitted ? (
                     <button
                       onClick={handleSubmit}
-                      className={`w-full mt-6 px-4 py-2 font-semibold rounded-lg  transform hover:scale-105 ${
+                      className={`w-full mt-6 px-4 py-2 font-semibold rounded-lg ${
                         darkMode
                           ? 'bg-blue-600 text-white hover:bg-blue-700'
                           : 'bg-blue-500 text-white hover:bg-blue-600'
@@ -636,7 +637,7 @@ export default function UnlimitedPracticePage() {
                   ) : (
                     <button
                       onClick={handleNext}
-                      className={`w-full mt-6 px-4 py-2 font-semibold rounded-lg  transform hover:scale-105 ${
+                      className={`w-full mt-6 px-4 py-2 font-semibold rounded-lg ${
                         darkMode
                           ? 'bg-blue-600 text-white hover:bg-blue-700'
                           : 'bg-blue-500 text-white hover:bg-blue-600'
@@ -653,7 +654,7 @@ export default function UnlimitedPracticePage() {
           {/* Back Button (bottom-left) */}
           <button
             onClick={handleResetTest}
-            className={`fixed bottom-8 left-8 p-4 rounded-full shadow-lg transition-transform duration-300 hover:scale-110  ${
+            className={`fixed bottom-8 left-8 p-4 rounded-full shadow-lg ${
               darkMode
                 ? 'bg-blue-600 hover:bg-blue-700'
                 : 'bg-blue-500 hover:bg-blue-600'

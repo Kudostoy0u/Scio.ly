@@ -210,7 +210,8 @@ export const getExplanation = async (
   gradingResults: GradingResults,
   setGradingResults: React.Dispatch<React.SetStateAction<GradingResults>>,
   userAnswers?: Record<number, (string | null)[] | null>,
-  RATE_LIMIT_DELAY: number = 2000
+  RATE_LIMIT_DELAY: number = 2000,
+  streaming: boolean = true
 ) => {
   if (explanations[index]) return;
 
@@ -226,7 +227,166 @@ export const getExplanation = async (
   try {
     const isMCQ = question.options && question.options.length > 0;
 
-    console.log('Requesting explanation from Express API');
+    console.log('Requesting explanation from API', { streaming });
+    if (streaming) {
+      const response = await fetch(api.geminiExplain, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: question,
+          userAnswer: userAnswer,
+          event: routerData.eventName || 'Science Olympiad',
+          streaming: true,
+        })
+      });
+
+      if (!response.ok || !response.body) {
+        const errorText = await response.text();
+        console.error('API Response error:', errorText);
+        throw new Error(`Failed to fetch explanation: ${response.status} ${response.statusText}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let aggregatedText = '';
+      let finalCorrectIndices: number[] | undefined;
+
+             const processEvent = (rawEvent: string) => {
+        // Parse SSE frame
+        const lines = rawEvent.split('\n').filter(Boolean);
+        let eventType = 'message';
+        let dataLine = '';
+        for (const line of lines) {
+          if (line.startsWith('event:')) eventType = line.slice(6).trim();
+          if (line.startsWith('data:')) dataLine += line.slice(5).trim();
+        }
+
+        if (eventType === 'chunk') {
+          // Directly append the markdown text chunk
+          const text = dataLine.replace(/\\n/g, '\n');
+          aggregatedText += text;
+          setExplanations(prev => ({ ...prev, [index]: aggregatedText }));
+        } else if (eventType === 'final') {
+          try {
+            const payload = JSON.parse(dataLine);
+            if (payload && Array.isArray(payload.correctIndices)) {
+              finalCorrectIndices = payload.correctIndices as number[];
+            }
+            // Use the aggregated text from streaming, not the JSON explanation
+            if (payload && typeof payload.explanation === 'string' && !aggregatedText) {
+              // Only use JSON explanation if we didn't get streaming text
+              aggregatedText = payload.explanation;
+              setExplanations(prev => ({ ...prev, [index]: aggregatedText }));
+            }
+          } catch (e) {
+            console.warn('Failed to parse final payload:', e);
+          }
+        }
+      };
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let sepIndex;
+        while ((sepIndex = buffer.indexOf('\n\n')) !== -1) {
+          const frame = buffer.slice(0, sepIndex);
+          buffer = buffer.slice(sepIndex + 2);
+          if (frame.trim()) processEvent(frame);
+        }
+      }
+      // Handle any trailing frame
+      if (buffer.trim()) processEvent(buffer);
+
+      // After streaming done, optionally apply correctIndices logic below
+      const correctIndices = finalCorrectIndices;
+      
+      // Ensure we have the final explanation text
+      let explanationText = aggregatedText.trim();
+      
+      if (isMCQ && correctIndices && correctIndices.length > 0) {
+        // Same logic as non-streaming path below to update answers and grading
+        try {
+          const suggestedIndices = correctIndices.filter(n => !isNaN(n));
+          if (suggestedIndices.length > 0) {
+            const correctedAnswers = suggestedIndices;
+            const currentAnswers = question.answers || [];
+            const normalizedCurrentAnswers = currentAnswers.map(ans => 
+              typeof ans === 'string' ? parseInt(ans) : ans
+            ).filter(n => typeof n === 'number' && !isNaN(n));
+            const normalizedNewAnswers = correctedAnswers;
+            const answersChanged = !(
+              normalizedNewAnswers.length === normalizedCurrentAnswers.length &&
+              normalizedNewAnswers.every(val => normalizedCurrentAnswers.includes(val)) &&
+              normalizedCurrentAnswers.every(val => normalizedNewAnswers.includes(val))
+            );
+
+            if (answersChanged) {
+              const newQ = { ...question, answers: correctedAnswers } as Question;
+              try {
+                await fetch(api.reportEdit, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    question: question.question,
+                    answer: question.answers,
+                    originalQuestion: question,
+                    editedQuestion: newQ,
+                    event: routerData.eventName || 'Unknown Event',
+                    reason: 'Explanation corrected answers',
+                    bypass: false
+                  }),
+                });
+              } catch (editError) {
+                console.error('Failed to submit auto-edit request:', editError);
+              }
+
+              setData(prevData => {
+                const newData = [...prevData];
+                newData[index] = { ...newData[index], answers: correctedAnswers };
+
+                if (userAnswers) {
+                  const currentUserAnswers = userAnswers[index] || [];
+                  const isMulti = isMultiSelectQuestion(newData[index].question, correctedAnswers);
+                  const userNumericAnswers = currentUserAnswers
+                    .map(ans => {
+                      const idx = newData[index].options?.indexOf(ans ?? '');
+                      return idx !== undefined && idx >= 0 ? idx : -1;
+                    })
+                    .filter(idx => idx >= 0);
+
+                  let isNowCorrect = false;
+                  if (isMulti) {
+                    isNowCorrect = correctedAnswers.every(correctAns => userNumericAnswers.includes(correctAns)) &&
+                                   userNumericAnswers.length === correctedAnswers.length;
+                  } else {
+                    isNowCorrect = correctedAnswers.includes(userNumericAnswers[0]);
+                  }
+
+                  if (isNowCorrect && (gradingResults[index] ?? 0) !== 1) {
+                    setGradingResults(prev => ({ ...prev, [index]: 1 }));
+                  } else if (!isNowCorrect && gradingResults[index] === 1) {
+                    setGradingResults(prev => ({ ...prev, [index]: 0 }));
+                  }
+                }
+
+                return newData;
+              });
+            }
+          }
+        } catch (parseError) {
+          console.error('Failed to process correct indices:', parseError);
+          explanationText = aggregatedText;
+        }
+      }
+
+      // Ensure explanation text is set at the end
+      setExplanations(prev => ({ ...prev, [index]: explanationText || aggregatedText }));
+      return;
+    }
+
+    // Non-streaming fallback
     const response = await fetch(api.geminiExplain, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
