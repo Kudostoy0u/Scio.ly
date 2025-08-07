@@ -90,7 +90,7 @@ export default function CodeBusters() {
         handleFrequencyNoteChange, 
         handleHillSolutionChange, 
         handleNihilistSolutionChange 
-    } = useSolutionHandlers(setQuotes);
+    } = useSolutionHandlers(quotes, setQuotes);
     const { totalProgress } = useProgressCalculation(quotes);
 
     // Setup visibility handling for time management

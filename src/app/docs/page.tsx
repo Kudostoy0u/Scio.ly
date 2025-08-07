@@ -33,7 +33,7 @@ export default function DocsPage() {
       <Header />
 
       {/* Main Content */}
-      <main className="relative z-10 pt-36 px-4 sm:px-6 lg:px-8 w-full">
+      <main className="relative z-10 pt-20 px-4 sm:px-6 lg:px-8 w-full">
         <div
           className={`p-8 rounded-xl ${
             darkMode ? 'bg-gray-800/50 backdrop-blur-sm' : 'bg-white/90 shadow-lg backdrop-blur-sm'
@@ -97,7 +97,7 @@ export default function DocsPage() {
                        darkMode ? 'text-gray-300' : 'text-gray-700'
                      }`}>
                        Required: Event name<br/>
-                       Optional: Division Difficulty Subtopic
+                       Optional: Division, Difficulty, Subtopic
                      </td>
                    </tr>
                                      <tr className={`${
@@ -117,7 +117,7 @@ export default function DocsPage() {
                        darkMode ? 'text-gray-300' : 'text-gray-700'
                      }`}>
                        Required: Event name<br/>
-                       Optional: Division Difficulty Subtopic
+                       Optional: Division, Difficulty, Subtopic
                      </td>
                    </tr>
                                      <tr className={`${
@@ -136,7 +136,7 @@ export default function DocsPage() {
                      <td className={`border px-4 py-3 ${
                        darkMode ? 'text-gray-300' : 'text-gray-700'
                      }`}>
-                       Required: Question ID Your answer
+                       Required: Question ID, Your answer
                      </td>
                    </tr>
                                      <tr className={`${

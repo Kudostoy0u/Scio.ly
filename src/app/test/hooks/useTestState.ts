@@ -108,8 +108,6 @@ export function useTestState() {
     
     if (session) {
       setTimeLeft(session.timeState.timeLeft);
-      setIsTimeSynchronized(session.timeState.isTimeSynchronized);
-      setSyncTimestamp(session.timeState.syncTimestamp);
       setIsSubmitted(session.isSubmitted);
     }
 
@@ -235,7 +233,7 @@ export function useTestState() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, isSubmitted, handleSubmit]);
+  }, [timeLeft, isSubmitted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Setup visibility handling
   useEffect(() => {
@@ -440,8 +438,6 @@ export function useTestState() {
     const newSession = resetTestSession(eventName, parseInt(timeLimit));
     
     setTimeLeft(newSession.timeState.timeLeft);
-    setIsTimeSynchronized(newSession.timeState.isTimeSynchronized);
-    setSyncTimestamp(newSession.timeState.syncTimestamp);
     
     window.location.reload();
   };

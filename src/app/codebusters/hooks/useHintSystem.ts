@@ -1,3 +1,4 @@
+'use client';
 import { useCallback } from 'react';
 import { QuoteData } from '../types';
 
@@ -9,84 +10,60 @@ export const useHintSystem = (
   setRevealedLetters: (letters: {[questionIndex: number]: {[letter: string]: string}}) => void,
   setQuotes: (quotes: QuoteData[]) => void
 ) => {
-  // Helper functions to find cribs
   const find2LetterCrib = (cipherText: string, plainText: string) => {
-    const commonPairs = ['TH', 'HE', 'AN', 'IN', 'ER', 'RE', 'ON', 'AT', 'ND', 'ST', 'ES', 'EN', 'OF', 'TE', 'ED', 'OR', 'TI', 'HI', 'AS', 'TO'];
-    
-    for (const pair of commonPairs) {
-      const plainIndex = plainText.indexOf(pair);
-      if (plainIndex !== -1 && plainIndex + 1 < cipherText.length) {
-        const cipherPair = cipherText.substring(plainIndex, plainIndex + 2);
-        return { cipher: cipherPair, plain: pair };
+    for (let i = 0; i < cipherText.length - 1; i++) {
+      const crib = cipherText.substring(i, i + 2);
+      if (plainText.includes(crib)) {
+        return crib;
       }
     }
     return null;
   };
 
   const find3LetterCrib = (cipherText: string, plainText: string) => {
-    const commonTriplets = ['THE', 'AND', 'FOR', 'ARE', 'BUT', 'NOT', 'YOU', 'ALL', 'CAN', 'HER', 'WAS', 'ONE', 'OUR', 'OUT', 'DAY', 'GET', 'HAS', 'HIM', 'HIS', 'HOW'];
-    
-    for (const triplet of commonTriplets) {
-      const plainIndex = plainText.indexOf(triplet);
-      if (plainIndex !== -1 && plainIndex + 2 < cipherText.length) {
-        const cipherTriplet = cipherText.substring(plainIndex, plainIndex + 3);
-        return { cipher: cipherTriplet, plain: triplet };
+    for (let i = 0; i < cipherText.length - 2; i++) {
+      const crib = cipherText.substring(i, i + 3);
+      if (plainText.includes(crib)) {
+        return crib;
       }
     }
     return null;
   };
 
   const find5LetterCrib = (cipherText: string, plainText: string) => {
-    const commonWords = ['THEIR', 'WOULD', 'THERE', 'COULD', 'THINK', 'AFTER', 'NEVER', 'ABOUT', 'AGAIN', 'BEFORE', 'LITTLE', 'SHOULD', 'BECAUSE'];
-    
-    for (const word of commonWords) {
-      const plainIndex = plainText.indexOf(word);
-      if (plainIndex !== -1 && plainIndex + 4 < cipherText.length) {
-        const cipherWord = cipherText.substring(plainIndex, plainIndex + 5);
-        return { cipher: cipherWord, plain: word };
+    for (let i = 0; i < cipherText.length - 4; i++) {
+      const crib = cipherText.substring(i, i + 5);
+      if (plainText.includes(crib)) {
+        return crib;
       }
     }
     return null;
   };
 
   const findSingleLetterCrib = (cipherText: string, plainText: string) => {
-    // Find the most frequent letter in the plain text
-    const letterCount: { [key: string]: number } = {};
-    for (const char of plainText) {
-      letterCount[char] = (letterCount[char] || 0) + 1;
-    }
-    
-    const mostFrequent = Object.entries(letterCount)
-      .sort(([,a], [,b]) => b - a)[0];
-    
-    if (mostFrequent) {
-      const [letter, count] = mostFrequent;
-      if (count > 1) {
-        const plainIndex = plainText.indexOf(letter);
-        if (plainIndex !== -1 && plainIndex < cipherText.length) {
-          return { cipher: cipherText[plainIndex], plain: letter };
-        }
+    for (let i = 0; i < cipherText.length; i++) {
+      const crib = cipherText[i];
+      if (plainText.includes(crib)) {
+        return crib;
       }
     }
     return null;
   };
 
   const findWordCrib = (cipherText: string, plainText: string) => {
-    const commonWords = ['THE', 'AND', 'THAT', 'HAVE', 'FOR', 'NOT', 'WITH', 'YOU', 'THIS', 'BUT', 'HIS', 'FROM', 'THEY', 'SAY', 'HER', 'SHE', 'WILL', 'ONE', 'ALL', 'WOULD', 'THERE', 'THEIR', 'WHAT', 'SO', 'UP', 'OUT', 'IF', 'ABOUT', 'WHO', 'GET', 'WHICH', 'GO', 'ME', 'WHEN', 'MAKE', 'CAN', 'LIKE', 'TIME', 'NO', 'JUST', 'HIM', 'KNOW', 'TAKE', 'PEOPLE', 'INTO', 'YEAR', 'YOUR', 'GOOD', 'SOME', 'COULD', 'THEM', 'SEE', 'OTHER', 'THAN', 'THEN', 'NOW', 'LOOK', 'ONLY', 'COME', 'ITS', 'OVER', 'THINK', 'ALSO', 'BACK', 'AFTER', 'USE', 'TWO', 'HOW', 'OUR', 'WORK', 'FIRST', 'WELL', 'WAY', 'EVEN', 'NEW', 'WANT', 'BECAUSE', 'ANY', 'THESE', 'GIVE', 'DAY', 'MOST', 'US'];
-    
-    for (const word of commonWords) {
-      const plainIndex = plainText.indexOf(word);
-      if (plainIndex !== -1 && plainIndex + word.length - 1 < cipherText.length) {
-        const cipherWord = cipherText.substring(plainIndex, plainIndex + word.length);
-        return { cipher: cipherWord, plain: word };
+    const words = plainText.split(' ').filter(word => word.length > 2);
+    for (const word of words) {
+      if (cipherText.includes(word)) {
+        return word;
       }
     }
     return null;
   };
 
   const findSpanishWordCrib = (cipherText: string, plainText: string) => {
-    // Normalize Spanish text for crib finding
-    const normalizedPlainText = plainText
+    // Normalize Spanish text for comparison
+    const normalizedPlain = plainText
+      .toUpperCase()
       .replace(/Á/g, 'A')
       .replace(/É/g, 'E')
       .replace(/Í/g, 'I')
@@ -95,104 +72,46 @@ export const useHintSystem = (
       .replace(/Ü/g, 'U')
       .replace(/Ñ/g, 'N');
     
-    const spanishWords = ['EL', 'LA', 'DE', 'QUE', 'Y', 'A', 'EN', 'UN', 'ES', 'SE', 'NO', 'TE', 'LO', 'LE', 'DA', 'SU', 'POR', 'SON', 'TRE', 'MAS', 'PARA', 'UNA', 'TAMBIEN', 'MI', 'PERO', 'SUS', 'ME', 'HA', 'SI', 'AL', 'COMO', 'BIEN', 'ESTA', 'ESTE', 'YA', 'CUANDO', 'TODO', 'ESTA', 'VAMOS', 'VER', 'DESPUES', 'HACE', 'DONDE', 'QUIEN', 'ESTAN', 'ASIA', 'HACIA', 'ESTOS', 'ESTAS', 'SINO', 'DURANTE', 'TODOS', 'PUEDE', 'TANTO', 'SIGLO', 'ANTES', 'MISMO', 'DESDE', 'PRIMERA', 'GRAN', 'PARTE', 'TODA', 'TENIA', 'TRES', 'SEGUN', 'MENOS', 'MUNDO', 'AÑO', 'BEN', 'MIENTRAS', 'CASO', 'NUNCA', 'PODER', 'OBRA', 'LUGAR', 'TAN', 'SEGURO', 'HORA', 'MANERA', 'AQUI', 'SER', 'DOS', 'PRIMERO', 'SOCIAL', 'REAL', 'FORMAR', 'TIEMPO', 'ELLA', 'MUCHO', 'GRUPO', 'SEGUIR', 'TIPO', 'ACTUAL', 'CONOCER', 'LADO', 'MOMENTO', 'MOSTRAR', 'PROBLEMA', 'SERVICIO', 'SENTIR', 'NACIONAL', 'HUMANO', 'SERIE', 'IMPORTANTE', 'CUERPO', 'ACTIVIDAD', 'PROCESO', 'INFORMACION', 'PRESENTAR', 'SISTEMA', 'POLITICO', 'ECONOMICO', 'CENTRO', 'COMUNIDAD', 'FINAL', 'RELACION', 'PROGRAMA', 'INTERES', 'NATURAL', 'CULTURA', 'PRODUCCION', 'AMERICA', 'CONDICION', 'PROYECTO', 'SOCIEDAD', 'ACTIVIDAD', 'ORGANIZACION', 'NECESARIO', 'DESARROLLO', 'PRESENTE', 'SITUACION', 'ESPECIAL', 'DIFERENTE', 'VARIO', 'SEGURO', 'ESPECIALMENTE', 'POSIBLE', 'ANTERIOR', 'PRINCIPAL', 'LARGO', 'CIENTIFICO', 'TECNICO', 'MEDICO', 'POLITICO', 'ECONOMICO', 'SOCIAL', 'CULTURAL', 'NATURAL', 'HISTORICO', 'GEOGRAFICO', 'LINGUISTICO', 'PSICOLOGICO', 'FILOSOFICO', 'MATEMATICO', 'FISICO', 'QUIMICO', 'BIOLOGICO', 'MEDICO', 'JURIDICO', 'MILITAR', 'RELIGIOSO', 'ARTISTICO', 'LITERARIO', 'MUSICAL', 'CINEMATOGRAFICO', 'TEATRAL', 'DANZARIO', 'PICTORICO', 'ESCULTORICO', 'ARQUITECTONICO', 'URBANISTICO', 'DISEÑADOR', 'INGENIERO', 'ARQUITECTO', 'MEDICO', 'ABOGADO', 'PROFESOR', 'MAESTRO', 'DOCTOR', 'INGENIERO', 'ARQUITECTO', 'ABOGADO', 'MEDICO', 'PROFESOR', 'MAESTRO', 'DOCTOR', 'INGENIERO', 'ARQUITECTO', 'ABOGADO', 'MEDICO', 'PROFESOR', 'MAESTRO', 'DOCTOR', 'INGENIERO', 'ARQUITECTO', 'ABOGADO', 'MEDICO', 'PROFESOR', 'MAESTRO', 'DOCTOR', 'INGENIERO', 'ARQUITECTO', 'ABOGADO', 'MEDICO', 'PROFESOR', 'MAESTRO', 'DOCTOR'];
-    
-    for (const word of spanishWords) {
-      const plainIndex = normalizedPlainText.indexOf(word);
-      if (plainIndex !== -1 && plainIndex + word.length - 1 < cipherText.length) {
-        const cipherWord = cipherText.substring(plainIndex, plainIndex + word.length);
-        return { cipher: cipherWord, plain: word };
+    const words = normalizedPlain.split(' ').filter(word => word.length > 2);
+    for (const word of words) {
+      if (cipherText.includes(word)) {
+        return word;
       }
     }
     return null;
   };
 
-  // Get hint content for different cipher types
-  const getHintContent = useCallback((quote: QuoteData) => {
-    const cleanCipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
-    const cleanPlainText = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
-    
-    switch (quote.cipherType) {
-      case 'Porta':
-        return quote.portaKeyword ? `Keyword: ${quote.portaKeyword}` : 'No keyword available';
-      case 'Caesar':
-        return quote.caesarShift !== undefined ? `Shift: ${quote.caesarShift}` : 'No shift available';
-      case 'Affine':
-        return quote.affineA !== undefined && quote.affineB !== undefined 
-          ? `a = ${quote.affineA}, b = ${quote.affineB}` 
-          : 'No coefficients available';
-      case 'Hill 2x2':
-      case 'Hill 3x3':
-        // Find a 2-letter crib from the cipher text
-        const hillCrib = find2LetterCrib(cleanCipherText, cleanPlainText);
-        return hillCrib ? `Crib: ${hillCrib.cipher} → ${hillCrib.plain}` : 'No 2-letter crib found';
-      case 'Fractionated Morse':
-        // Find a 3-letter crib from the cipher text
-        const morseCrib = find3LetterCrib(cleanCipherText, cleanPlainText);
-        return morseCrib ? `Crib: ${morseCrib.cipher} → ${morseCrib.plain}` : 'No 3-letter crib found';
-      case 'Baconian':
-        // Find a 5-letter crib from the cipher text
-        const baconianCrib = find5LetterCrib(cleanCipherText, cleanPlainText);
-        return baconianCrib ? `Crib: ${baconianCrib.cipher} → ${baconianCrib.plain}` : 'No 5-letter crib found';
-      case 'Nihilist':
-        // Find a single letter crib
-        const nihilistCrib = findSingleLetterCrib(cleanCipherText, cleanPlainText);
-        return nihilistCrib ? `Crib: ${nihilistCrib.cipher} → ${nihilistCrib.plain}` : 'No single letter crib found';
-      case 'Columnar Transposition':
-        // Find the longest word in the original quote
-        const words = quote.quote.toUpperCase().replace(/[^A-Z\s]/g, '').split(/\s+/).filter(word => word.length > 0);
-        const longestWord = words.reduce((longest, current) => 
-          current.length > longest.length ? current : longest, '');
-        return longestWord ? `Crib: ${longestWord}` : 'No word crib found';
-      case 'Xenocrypt':
-        // Find a Spanish word crib
-        const xenocryptCrib = findSpanishWordCrib(cleanCipherText, cleanPlainText);
-        return xenocryptCrib ? `Crib: ${xenocryptCrib.cipher} → ${xenocryptCrib.plain}` : 'No Spanish word crib found';
-      case 'K1 Aristocrat':
-      case 'K2 Aristocrat':
-      case 'K3 Aristocrat':
-      case 'Random Aristocrat':
-      case 'K1 Patristocrat':
-      case 'K2 Patristocrat':
-      case 'K3 Patristocrat':
-      case 'Random Patristocrat':
-        // Find a word crib for aristocrat/patristocrat
-        const aristocratCrib = findWordCrib(cleanCipherText, cleanPlainText);
-        return aristocratCrib ? `Crib: ${aristocratCrib.cipher} → ${aristocratCrib.plain}` : 'No word crib found';
-      case 'Atbash':
-        // Find a single letter crib for atbash
-        const atbashCrib = findSingleLetterCrib(cleanCipherText, cleanPlainText);
-        return atbashCrib ? `Crib: ${atbashCrib.cipher} → ${atbashCrib.plain}` : 'No single letter crib found';
-      default:
-        return 'Click for a random letter hint';
+  // Get hint content for a specific quote
+  const getHintContent = useCallback((quote: QuoteData): string => {
+    if (!quote) return 'No hint available';
+
+    const cipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
+    const plainText = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+
+    // Try different crib finding strategies
+    let crib = find5LetterCrib(cipherText, plainText);
+    if (crib) return `Crib: ${crib}`;
+
+    crib = find3LetterCrib(cipherText, plainText);
+    if (crib) return `Crib: ${crib}`;
+
+    crib = find2LetterCrib(cipherText, plainText);
+    if (crib) return `Crib: ${crib}`;
+
+    crib = findWordCrib(cipherText, plainText);
+    if (crib) return `Crib: ${crib}`;
+
+    // For Spanish text (Xenocrypt)
+    if (quote.cipherType === 'Xenocrypt') {
+      crib = findSpanishWordCrib(cipherText, plainText);
+      if (crib) return `Crib: ${crib}`;
     }
+
+    crib = findSingleLetterCrib(cipherText, plainText);
+    if (crib) return `Crib: ${crib}`;
+
+    return 'No crib found';
   }, []);
-
-  // Handle hint functionality
-  const handleHintClick = useCallback((questionIndex: number) => {
-    const quote = quotes[questionIndex];
-    if (!quote) return;
-
-    // Check if this cipher type has a crib available
-    const hintContent = getHintContent(quote);
-    const hasCrib = hintContent.includes('Crib:') && !hintContent.includes('No crib found');
-    
-    if (hasCrib) {
-      // If crib is not shown yet, show it
-      if (!activeHints[questionIndex]) {
-        setActiveHints({
-          ...activeHints,
-          [questionIndex]: true
-        });
-      } else {
-        // If crib is already shown, reveal a random letter
-        revealRandomLetter(questionIndex);
-      }
-    } else {
-      // For ciphers without cribs, always reveal a random correct letter
-      revealRandomLetter(questionIndex);
-    }
-  }, [quotes, activeHints, setActiveHints, getHintContent, revealRandomLetter]);
 
   // Reveal a random correct letter for substitution ciphers
   const revealRandomLetter = useCallback((questionIndex: number) => {
@@ -290,58 +209,91 @@ export const useHintSystem = (
       if (cipherIndex !== -1 && cipherIndex < normalizedOriginal.length) {
         correctPlainLetter = normalizedOriginal[cipherIndex];
       }
-    } else {
-      // For any other cipher type, try to find the letter from the original quote
-      const originalQuote = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+    } else if (quote.cipherType === 'Baconian') {
+      // For Baconian cipher, reveal the binary pattern that maps to this cipher letter
       const cipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
-      
-      // Find the position of the random cipher letter in the encrypted text
+      const plainText = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
       const cipherIndex = cipherText.indexOf(randomCipherLetter);
-      if (cipherIndex !== -1 && cipherIndex < originalQuote.length) {
-        correctPlainLetter = originalQuote[cipherIndex];
+      
+      if (cipherIndex !== -1 && cipherIndex < plainText.length) {
+        // Get the corresponding plain letter from the original text
+        correctPlainLetter = plainText[cipherIndex];
+      }
+    } else if (quote.cipherType === 'Nihilist' && (quote.nihilistPolybiusKey || quote.nihilistCipherKey)) {
+      // For Nihilist cipher, reveal the position-based mapping
+      const cipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
+      const plainText = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+      const cipherIndex = cipherText.indexOf(randomCipherLetter);
+      
+      if (cipherIndex !== -1 && cipherIndex < plainText.length) {
+        // Get the corresponding plain letter from the original text
+        correctPlainLetter = plainText[cipherIndex];
+      }
+    } else if (quote.cipherType === 'Columnar Transposition' && quote.columnarKey) {
+      // For Columnar Transposition, reveal the position-based mapping
+      const cipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
+      const plainText = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+      const cipherIndex = cipherText.indexOf(randomCipherLetter);
+      
+      if (cipherIndex !== -1 && cipherIndex < plainText.length) {
+        // Get the corresponding plain letter from the original text
+        correctPlainLetter = plainText[cipherIndex];
       }
     }
 
+    // Update the revealed letters state
     if (correctPlainLetter) {
-      // Update revealed letters state
-      setRevealedLetters(prev => ({
-        ...prev,
+      const newRevealedLetters = {
+        ...revealedLetters,
         [questionIndex]: {
-          ...prev[questionIndex],
+          ...revealedLetters[questionIndex],
           [randomCipherLetter]: correctPlainLetter
         }
-      }));
+      };
+      setRevealedLetters(newRevealedLetters);
 
-      // Update the solution - handle Fractionated Morse differently
-      setQuotes(prev => prev.map((q, index) => {
-        if (index === questionIndex) {
-          if (q.cipherType === 'Fractionated Morse') {
-            // For Fractionated Morse, update the replacement table AND the cipher inputs
-            // The correctPlainLetter is actually a triplet
-            const newSolution = { 
-              ...q.solution, 
-              [`replacement_${correctPlainLetter}`]: randomCipherLetter 
-            };
-            
-            // Also update all cipher inputs that show this letter with the triplet
-            newSolution[randomCipherLetter] = correctPlainLetter;
-            
-            return { 
-              ...q, 
-              solution: newSolution
-            };
-          } else {
-            // For other ciphers, update normally
-            return { 
-              ...q, 
-              solution: { ...q.solution, [randomCipherLetter]: correctPlainLetter } 
-            };
-          }
+      // Update the quotes state to reflect the revealed letter
+      const newQuotes = quotes.map((q, idx) => {
+        if (idx === questionIndex) {
+          return {
+            ...q,
+            solution: {
+              ...q.solution,
+              [randomCipherLetter]: correctPlainLetter
+            }
+          };
         }
         return q;
-      }));
+      });
+      setQuotes(newQuotes);
     }
   }, [quotes, revealedLetters, setRevealedLetters, setQuotes]);
+
+  // Handle hint functionality
+  const handleHintClick = useCallback((questionIndex: number) => {
+    const quote = quotes[questionIndex];
+    if (!quote) return;
+
+    // Check if this cipher type has a crib available
+    const hintContent = getHintContent(quote);
+    const hasCrib = hintContent.includes('Crib:') && !hintContent.includes('No crib found');
+    
+    if (hasCrib) {
+      // If crib is not shown yet, show it
+      if (!activeHints[questionIndex]) {
+        setActiveHints({
+          ...activeHints,
+          [questionIndex]: true
+        });
+      } else {
+        // If crib is already shown, reveal a random letter
+        revealRandomLetter(questionIndex);
+      }
+    } else {
+      // For ciphers without cribs, always reveal a random correct letter
+      revealRandomLetter(questionIndex);
+    }
+  }, [quotes, activeHints, setActiveHints, getHintContent, revealRandomLetter]);
 
   return {
     getHintContent,
