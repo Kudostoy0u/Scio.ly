@@ -90,7 +90,7 @@ export default function AboutPage() {
                 onClick={toggleMascotCaption}
               >
                 <Image
-                  src="/ASK.png"
+                  src="/about/hylas.png"
                   alt="ASK - Science Olympiad mascot"
                   fill
                   style={{ objectFit: 'cover', objectPosition: 'center 70%' }}
