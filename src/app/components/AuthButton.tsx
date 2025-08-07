@@ -27,6 +27,48 @@ export default function AuthButton() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
+  // Load cached user data from localStorage on mount
+  useEffect(() => {
+    try {
+      const cachedUserData = localStorage.getItem('scio_user_data');
+      if (cachedUserData) {
+        const parsedData = JSON.parse(cachedUserData);
+        
+        if (parsedData.user) {
+          setUser(parsedData.user);
+          setDisplayName(parsedData.displayName);
+          setLoading(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading cached user data:', error);
+      clearUserFromLocalStorage();
+    }
+  }, []);
+
+  // Save user data to localStorage
+  const saveUserToLocalStorage = (userData: User, displayNameData: string | null) => {
+    try {
+      const userDataToSave = {
+        user: userData,
+        displayName: displayNameData,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('scio_user_data', JSON.stringify(userDataToSave));
+    } catch (error) {
+      console.error('Error saving user data to localStorage:', error);
+    }
+  };
+
+  // Clear user data from localStorage
+  const clearUserFromLocalStorage = () => {
+    try {
+      localStorage.removeItem('scio_user_data');
+    } catch (error) {
+      console.error('Error clearing user data from localStorage:', error);
+    }
+  };
+
   // Handle online/offline status
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -55,7 +97,12 @@ export default function AuthButton() {
           .single();
         if (data?.display_name) {
           setDisplayName(data.display_name);
+          saveUserToLocalStorage(user, data.display_name);
+        } else {
+          saveUserToLocalStorage(user, null);
         }
+      } else {
+        clearUserFromLocalStorage();
       }
       setLoading(false);
     });
@@ -74,7 +121,12 @@ export default function AuthButton() {
           .single();
         if (data?.display_name) {
           setDisplayName(data.display_name);
+          saveUserToLocalStorage(session.user, data.display_name);
+        } else {
+          saveUserToLocalStorage(session.user, null);
         }
+      } else {
+        clearUserFromLocalStorage();
       }
       
       if (session?.user && !isOffline) {
@@ -223,6 +275,7 @@ export default function AuthButton() {
       if (error) {
         console.error('Error signing out:', error);
       } else {
+        clearUserFromLocalStorage();
         setIsDropdownOpen(false);
         window.location.reload();
       }
@@ -301,7 +354,7 @@ export default function AuthButton() {
         </button>
 
         {isDropdownOpen && (
-          <div className={`absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 z-50 border ${
+          <div className={`absolute right-0 mt-2 min-w-48 max-w-64 rounded-md shadow-lg py-1 z-50 border ${
             darkMode 
               ? 'bg-gray-800 border-gray-600' 
               : 'bg-white border-gray-200'
@@ -311,10 +364,10 @@ export default function AuthButton() {
                 ? 'text-gray-200 border-gray-600' 
                 : 'text-gray-700 border-gray-100'
             }`}>
-              <div className="font-medium">
+              <div className="font-medium truncate">
                 {displayName || user.user_metadata?.name || user.user_metadata?.full_name || 'User'}
               </div>
-              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{user.email}</div>
+              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} break-all`}>{user.email}</div>
             </div>
             <Link
               href="/leaderboard"

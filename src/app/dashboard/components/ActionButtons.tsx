@@ -104,7 +104,7 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
             <div className="flex-1">
               <h3 className="text-xl font-bold mb-1">Load Test with Code</h3>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2 md:flex md:space-x-2 md:grid-cols-none">
               {testCodeDigits.map((digit, index) => (
                 <input
                   key={index}

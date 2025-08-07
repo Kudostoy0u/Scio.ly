@@ -242,7 +242,7 @@ export default function HomePage() {
                 className="absolute top-0 left-0 w-48 h-48 lg:w-64 lg:h-64 z-30"
               >
                 <Image
-                  src="/scrapbook-1.png"
+                  src="/scrapbook/scrapbook-1.png"
                   alt="Naperville North Science Olympiad team"
                   fill
                   className="rounded-2xl shadow-2xl object-cover transform hover:scale-105 transition-transform duration-300"
@@ -258,7 +258,7 @@ export default function HomePage() {
                 className="absolute top-16 right-0 w-48 h-48 lg:w-64 lg:h-64 z-20"
               >
                 <Image
-                  src="/scrapbook-2.png"
+                  src="/scrapbook/scrapbook-2.png"
                   alt="Neuqua Valley Science Olympiad team"
                   fill
                   className="rounded-2xl shadow-2xl object-cover transform hover:scale-105 transition-transform duration-300"
@@ -273,7 +273,7 @@ export default function HomePage() {
                 className="absolute bottom-[-50px] left-16 w-48 h-48 lg:w-64 lg:h-64 z-10"
               >
                 <Image
-                  src="/scrapbook-3.jpg"
+                  src="/scrapbook/scrapbook-3.jpg"
                   alt="Neuqua Valley Science Olympiad competition"
                   fill
                   className="rounded-2xl shadow-2xl object-cover transform hover:scale-105 transition-transform duration-300"

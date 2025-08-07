@@ -8,7 +8,7 @@ import { useTheme } from '@/app/contexts/ThemeContext';
 import Header from '@/app/components/Header';
 import { clearTestSession } from '@/app/utils/timeManagement';
 import { Event, Settings } from '../types';
-import { NORMAL_DEFAULTS, loadPreferences, savePreferences } from '../utils';
+import { NORMAL_DEFAULTS, savePreferences } from '../utils';
 import EventList from './EventList';
 import TestConfiguration from './TestConfiguration';
 

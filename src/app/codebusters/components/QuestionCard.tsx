@@ -1,0 +1,249 @@
+import React from 'react';
+import { QuoteData } from '../types';
+import {
+  HillDisplay,
+  PortaDisplay,
+  SubstitutionDisplay,
+  FractionatedMorseDisplay,
+  BaconianDisplay,
+  ColumnarTranspositionDisplay,
+  NihilistDisplay
+} from './cipher-displays';
+
+interface QuestionCardProps {
+  item: QuoteData;
+  index: number;
+  darkMode: boolean;
+  isTestSubmitted: boolean;
+  quotes: QuoteData[];
+  activeHints: {[questionIndex: number]: boolean};
+  getHintContent: (quote: QuoteData) => string;
+  handleHintClick: (questionIndex: number) => void;
+  setSelectedCipherType: (type: string) => void;
+  setInfoModalOpen: (open: boolean) => void;
+  handleSolutionChange: (quoteIndex: number, cipherLetter: string, plainLetter: string) => void;
+  handleBaconianSolutionChange: (quoteIndex: number, position: number, plainLetter: string) => void;
+  handleFrequencyNoteChange: (quoteIndex: number, letter: string, note: string) => void;
+  handleHillSolutionChange: (quoteIndex: number, type: 'matrix' | 'plaintext', value: string[][] | { [key: number]: string }) => void;
+  handleNihilistSolutionChange: (quoteIndex: number, position: number, plainLetter: string) => void;
+}
+
+export const QuestionCard: React.FC<QuestionCardProps> = ({
+  item,
+  index,
+  darkMode,
+  isTestSubmitted,
+  quotes,
+  activeHints,
+  getHintContent,
+  handleHintClick,
+  setSelectedCipherType,
+  setInfoModalOpen,
+  handleSolutionChange,
+  handleBaconianSolutionChange,
+  handleFrequencyNoteChange,
+  handleHillSolutionChange,
+  handleNihilistSolutionChange
+}) => {
+  return (
+    <div 
+      className={`relative border p-4 rounded-lg shadow-sm transition-all duration-500 ease-in-out mb-6 ${
+        darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-black'
+      }`}
+    >
+      <div className="flex justify-between items-start">
+        <h3 className={`font-semibold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          Question {index + 1}
+        </h3>
+        <div className="flex items-center gap-2">
+          <span className={`px-2 py-1 rounded text-sm ${
+            darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
+          }`}>
+            {item.cipherType.charAt(0).toUpperCase() + item.cipherType.slice(1)}
+          </span>
+          <button
+            onClick={() => handleHintClick(index)}
+            className={`w-5 h-5 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center transition-all duration-200 hover:scale-110 ${
+              darkMode 
+                ? 'bg-gray-600 border-gray-500 text-white' 
+                : 'text-gray-600'
+            }`}
+            title="Get a hint"
+          >
+            <svg 
+              width="10" 
+              height="10" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+              <circle cx="12" cy="17" r="1"/>
+            </svg>
+          </button>
+          <button
+            onClick={() => {
+              setSelectedCipherType(item.cipherType);
+              setInfoModalOpen(true);
+            }}
+            className={`w-5 h-5 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center transition-all duration-200 hover:scale-110 ${
+              darkMode 
+                ? 'bg-gray-600 border-gray-500 text-white' 
+                : 'text-gray-600'
+            }`}
+            title="Cipher information"
+          >
+            <svg 
+              width="10" 
+              height="10" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 16v-4"/>
+              <path d="M12 8h.01"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <p className={`mb-4 break-words whitespace-normal overflow-x-auto ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+        {item.author}
+      </p>
+
+      {/* Hint Card */}
+      {activeHints[index] && (
+        <div className={`mb-4 p-3 rounded-lg border-l-4 ${
+          darkMode 
+            ? 'bg-blue-900/30 border-blue-400 text-blue-200' 
+            : 'bg-blue-50 border-blue-500 text-blue-700'
+        }`}>
+          <div className="flex items-center gap-2 mb-2">
+            <svg 
+              width="16" 
+              height="16" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <path d="M9 12l2 2 4-4"/>
+              <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"/>
+              <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"/>
+              <path d="M13 12h3"/>
+              <path d="M8 12H5"/>
+            </svg>
+            <span className="font-semibold text-sm">Hint</span>
+          </div>
+          <p className="text-sm font-mono">
+            {getHintContent(item)}
+          </p>
+        </div>
+      )}
+
+      {(item.cipherType === 'Hill 2x2' || item.cipherType === 'Hill 3x3') ? (
+        <HillDisplay
+          text={item.encrypted}
+          matrix={item.matrix!}
+          quoteIndex={index}
+          solution={item.hillSolution}
+          onSolutionChange={(type, value) => handleHillSolutionChange(index, type, value)}
+          isTestSubmitted={isTestSubmitted}
+          quotes={quotes}
+        />
+      ) : item.cipherType === 'Porta' ? (
+        <PortaDisplay
+          text={item.encrypted}
+          keyword={item.portaKeyword!}
+          quoteIndex={index}
+          solution={item.solution}
+          frequencyNotes={item.frequencyNotes}
+          isTestSubmitted={isTestSubmitted}
+          quotes={quotes}
+          onSolutionChange={handleSolutionChange}
+          onFrequencyNoteChange={handleFrequencyNoteChange}
+        />
+      ) : item.cipherType === 'Baconian' ? (
+        <BaconianDisplay
+          text={item.encrypted}
+          quoteIndex={index}
+          solution={item.solution}
+          isTestSubmitted={isTestSubmitted}
+          quotes={quotes}
+          onBaconianSolutionChange={handleBaconianSolutionChange}
+        />
+      ) : item.cipherType === 'Fractionated Morse' ? (
+        <FractionatedMorseDisplay
+          text={item.encrypted}
+          quoteIndex={index}
+          solution={item.solution}
+          fractionationTable={item.fractionationTable}
+          isTestSubmitted={isTestSubmitted}
+          quotes={quotes}
+          onSolutionChange={handleSolutionChange}
+        />
+      ) : item.cipherType === 'Columnar Transposition' ? (
+        <ColumnarTranspositionDisplay
+          text={item.encrypted}
+          quoteIndex={index}
+          solution={item.solution}
+          isTestSubmitted={isTestSubmitted}
+          quotes={quotes}
+          onSolutionChange={handleSolutionChange}
+        />
+      ) : item.cipherType === 'Nihilist' ? (
+        <NihilistDisplay
+          text={item.encrypted}
+          polybiusKey={item.nihilistPolybiusKey!}
+          cipherKey={item.nihilistCipherKey!}
+          quoteIndex={index}
+          solution={item.nihilistSolution}
+          isTestSubmitted={isTestSubmitted}
+          quotes={quotes}
+          onSolutionChange={handleNihilistSolutionChange}
+        />
+      ) : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Xenocrypt'].includes(item.cipherType) ? (
+        <SubstitutionDisplay
+          text={item.encrypted}
+          quoteIndex={index}
+          solution={item.solution}
+          isTestSubmitted={isTestSubmitted}
+          cipherType={item.cipherType}
+          key={item.key}
+          caesarShift={item.caesarShift}
+          affineA={item.affineA}
+          affineB={item.affineB}
+          quotes={quotes}
+          onSolutionChange={handleSolutionChange}
+        />
+      ) : (
+        <div className={`text-center py-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          Unknown cipher type: {item.cipherType}
+        </div>
+      )}
+      
+      {/* Difficulty Bar */}
+      <div className="absolute bottom-2 right-2 w-20 h-2 rounded-full bg-gray-300">
+        <div
+          className={`h-full rounded-full ${
+            (item.difficulty || 0.5) >= 0.66
+              ? 'bg-red-500'
+              : (item.difficulty || 0.5) >= 0.33
+              ? 'bg-yellow-500'
+              : 'bg-green-500'
+          }`}
+          style={{ width: `${(item.difficulty || 0.5) * 100}%` }}
+        ></div>
+      </div>
+    </div>
+  );
+};

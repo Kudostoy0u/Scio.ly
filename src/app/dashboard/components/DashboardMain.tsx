@@ -17,7 +17,7 @@ import { ContactFormData, Metrics, DailyData, WeeklyData } from '../types';
 import WelcomeMessage from './WelcomeMessage';
 import MetricsCard from './MetricsCard';
 import ActionButtons from './ActionButtons';
-import NumberAnimation from './NumberAnimation';
+
 import AnimatedAccuracy from './AnimatedAccuracy';
 
 export default function DashboardMain() {

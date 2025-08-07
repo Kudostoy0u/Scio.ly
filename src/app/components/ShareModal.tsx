@@ -147,6 +147,15 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
         if (currentRequestId === generationRequestId.current) {
           setShareCode(data.data.shareCode);
           hasGeneratedRef.current = true;
+          
+          // Automatically copy the generated share code to clipboard
+          try {
+            await navigator.clipboard.writeText(data.data.shareCode);
+            toast.success('Share code copied to clipboard!');
+          } catch (error) {
+            console.error('Failed to copy share code to clipboard:', error);
+            // Don't show error toast as the main functionality still works
+          }
         }
       } else {
         // Regular test share code generation
@@ -199,6 +208,15 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
         if (currentRequestId === generationRequestId.current) {
           setShareCode(data.data.shareCode);
           hasGeneratedRef.current = true;
+          
+          // Automatically copy the generated share code to clipboard
+          try {
+            await navigator.clipboard.writeText(data.data.shareCode);
+            toast.success('Share code copied to clipboard!');
+          } catch (error) {
+            console.error('Failed to copy share code to clipboard:', error);
+            // Don't show error toast as the main functionality still works
+          }
         }
       }
     } catch (error) {

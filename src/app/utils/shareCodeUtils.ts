@@ -163,10 +163,19 @@ export const handleShareCodeRedirect = async (code: string): Promise<boolean> =>
     return false;
   }
 
-  // 3. Set up local storage based on the test type
+  // 3. Copy the share code to clipboard and show success notification
+  try {
+    await navigator.clipboard.writeText(code);
+    toast.success('Share code copied to clipboard!');
+  } catch (error) {
+    console.error('Failed to copy share code to clipboard:', error);
+    // Don't show error toast as the main functionality still works
+  }
+
+  // 4. Set up local storage based on the test type
   localStorage.setItem('testParams', JSON.stringify(result.testParams));
 
-  // 4. Initialize time management session
+  // 5. Initialize time management session
   const eventName = result.eventName || 'Unknown Event';
   const timeLimit = parseInt(result.testParams.timeLimit as string || '30');
   const isSharedTest = true;
@@ -174,7 +183,7 @@ export const handleShareCodeRedirect = async (code: string): Promise<boolean> =>
   
   initializeTestSession(eventName, timeLimit, isSharedTest, sharedTimeRemaining);
   
-  // 5. Redirect to the correct page
+  // 6. Redirect to the correct page
   if (result.eventName === 'Codebusters') {
     if (result.encryptedQuotes) {
       localStorage.setItem('codebustersQuotes', JSON.stringify(result.encryptedQuotes));

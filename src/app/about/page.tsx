@@ -2,152 +2,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import Header from '@/app/components/Header';
 import Image from 'next/image';
-
-
-interface ContactFormData {
-  name: string;
-  email: string;
-  topic: string;
-  message: string;
-}
-
-// Contact Modal Component
-const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (data: ContactFormData) => void;
-  darkMode: boolean;
-}) => {
-  const [formData, setFormData] = useState<ContactFormData>({
-    name: '',
-    email: '',
-    topic: 'suggestion',
-    message: ''
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-    setFormData({ name: '', email: '', topic: 'suggestion', message: '' });
-    onClose();
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <AnimatePresence>
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) onClose();
-        }}
-      >
-        <div
-          className={`rounded-lg p-6 w-[90%] sm:w-[600px] max-h-[90vh] overflow-y-auto mx-4 ${
-            darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
-          }`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Contact Us</h2>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <p className="mb-4 text-sm">
-            Contact us about anything: suggestions, bugs, assistance, and more!
-          </p>
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Name (will not be shown publicly)</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className={`w-full p-2 rounded-md ${
-                    darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
-                  } border`}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Email (will not be shown publicly)</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className={`w-full p-2 rounded-md ${
-                    darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
-                  } border`}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Topic</label>
-                <select
-                  value={formData.topic}
-                  onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
-                  className={`w-full p-2 rounded-md ${
-                    darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
-                  } border`}
-                >
-                  <option value="suggestion">Suggestion</option>
-                  <option value="bug">Website Bug</option>
-                  <option value="question">Question</option>
-                  <option value="mistake">Mistake in Question</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Message</label>
-                <textarea
-                  value={formData.message}
-                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  rows={4}
-                  className={`w-full p-2 rounded-md ${
-                    darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
-                  } border`}
-                  required
-                />
-              </div>
-              <div className="flex justify-end space-x-4">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className={`px-4 py-2 rounded-md ${
-                    darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600"
-                >
-                  Submit
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-      </div>
-    </AnimatePresence>
-  );
-};
+import { useRouter } from 'next/navigation';
 
 export default function AboutPage() {
   const { darkMode } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const [contactModalOpen, setContactModalOpen] = useState(false);
   const [showMascotCaption, setShowMascotCaption] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
@@ -169,26 +34,6 @@ export default function AboutPage() {
     document.documentElement.classList.toggle('light-scrollbar', !darkMode);
   }, [darkMode]);
 
-  const handleContact = async (data: ContactFormData) => {
-    try {
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      
-      if (response.ok) {
-        setContactModalOpen(false);
-      }
-    } catch (error) {
-      console.error('Error sending contact form:', error);
-    }
-  };
-
-
-
   const toggleMascotCaption = () => {
     // Only toggle if on mobile
     if (isMobile) {
@@ -208,14 +53,6 @@ export default function AboutPage() {
       ></div>
 
       <Header />
-      
-      {/* Contact Modal */}
-      <ContactModal 
-        isOpen={contactModalOpen} 
-        onClose={() => setContactModalOpen(false)} 
-        onSubmit={handleContact}
-        darkMode={darkMode}
-      />
 
       {/* Main Content */}
       <main className="relative z-10 pt-36 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
@@ -304,7 +141,7 @@ export default function AboutPage() {
               }`}>
                 <div className="flex justify-center mb-3">
                   <Image 
-                    src="/file.svg" 
+                    src="/about/file.svg" 
                     alt="PDF Files" 
                     width={50} 
                     height={50} 
@@ -325,7 +162,7 @@ export default function AboutPage() {
               }`}>
                 <div className="flex justify-center mb-3">
                   <Image 
-                    src="/google-icon.png" 
+                    src="/about/google-icon.png" 
                     alt="Google Gemini 2.5" 
                     width={50} 
                     height={50} 
@@ -345,13 +182,13 @@ export default function AboutPage() {
               }`}>
                 <div className="flex justify-center mb-3 space-x-2">
                   <Image 
-                    src={darkMode ? "/cog-white.png" : "/cog-black.png"} 
+                    src={darkMode ? "/about/cog-white.png" : "/about/cog-black.png"} 
                     alt="Processing" 
                     width={40} 
                     height={40} 
                   />
                   <Image 
-                    src="/postgresql-icon.png" 
+                    src="/about/postgresql-icon.png" 
                     alt="PostgreSQL" 
                     width={40} 
                     height={40} 
@@ -371,13 +208,13 @@ export default function AboutPage() {
               }`}>
                 <div className="flex justify-center mb-3 space-x-2">
                   <Image 
-                    src={darkMode ? "/vercel-white.png" : "/vercel-icon.svg"} 
+                    src={darkMode ? "/about/vercel-white.png" : "/about/vercel-icon.svg"} 
                     alt="Vercel" 
                     width={35} 
                     height={35} 
                   />
                   <Image 
-                    src={darkMode ? "/nextjs-white.png" : "/nextjs-black.png"} 
+                    src={darkMode ? "/about/nextjs-white.png" : "/about/nextjs-black.png"} 
                     alt="Next.js Frontend" 
                     width={35} 
                     height={35} 
@@ -401,28 +238,28 @@ export default function AboutPage() {
               </h3>
               <div className="flex justify-center items-center space-x-4">
                 <Image 
-                  src="/postgresql-icon.png" 
+                  src="/about/postgresql-icon.png" 
                   alt="PostgreSQL" 
                   width={50} 
                   height={50} 
                 />
                 <span className="text-2xl">→</span>
                 <Image 
-                  src="/golang.png" 
-                  alt="Go Backend" 
+                  src="/about/drizzle-icon.png" 
+                  alt="Drizzle ORM" 
                   width={50} 
                   height={50} 
                 />
                 <span className="text-2xl">→                </span>
                 <Image 
-                  src={darkMode ? "/nextjs-white.png" : "/nextjs-black.png"} 
+                  src={darkMode ? "/about/nextjs-white.png" : "/about/nextjs-black.png"} 
                   alt="Next.js" 
                   width={50} 
                   height={50} 
                 />
               </div>
               <p className={`text-center mt-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                PostgreSQL feeds Go API, which serves data to Next.js frontend
+                Drizzle ORM provides a type-safe interface for interacting with PostgreSQL, which serves data to Next.js frontend
               </p>
             </div>
 
@@ -475,21 +312,21 @@ export default function AboutPage() {
           <div className="grid grid-cols-2 gap-8 max-w-md mx-auto">
             <div className="flex justify-center">
               <Image 
-                src={darkMode ? "/nextjs-white.png" : "/nextjs-black.png"} 
+                src={darkMode ? "/about/nextjs-white.png" : "/about/nextjs-black.png"} 
                 alt="Next.js" 
                 width={70} 
                 height={70} 
               />
             </div>
             <div className="flex justify-center">
-              <Image src="/typescript-icon.png" alt="TypeScript" width={60} height={60} />
+              <Image src="/about/typescript-icon.png" alt="TypeScript" width={70} height={20} />
             </div>
             <div className="flex justify-center">
-              <Image src="/supabase-icon.png" alt="Supabase" width={60} height={60} />
+              <Image src="/about/supabase-icon.png" alt="Supabase" width={60} height={60} />
             </div>
             <div className="flex justify-center">
               <Image 
-                src={darkMode ? "/vercel-white.png" : "/vercel-icon.svg"} 
+                src={darkMode ? "/about/vercel-white.png" : "/about/vercel-icon.svg"} 
                 alt="Vercel" 
                 width={70} 
                 height={70} 
@@ -530,14 +367,12 @@ export default function AboutPage() {
                 ? 'bg-blue-600 text-white shadow-lg hover:bg-blue-700' 
                 : 'bg-blue-500 text-white shadow-lg hover:bg-blue-600'
             }`}
-            onClick={() => setContactModalOpen(true)}
+            onClick={() => router.push('/contact')}
           >
             Contact Us
           </button>
         </section>
       </main>
-
-
 
       <style jsx>{`
         :global(::-webkit-scrollbar) {

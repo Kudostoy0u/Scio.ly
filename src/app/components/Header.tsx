@@ -131,8 +131,8 @@ export default function Header() {
               <Link href="/dashboard" className={getLinkStyles('/dashboard')}>
                 Dashboard
               </Link>
-              <Link href="/leaderboard" className={getLinkStyles('/leaderboard')}>
-                Leaderboards
+              <Link href="/docs" className={getLinkStyles('/docs')}>
+                Docs
               </Link>
               <Link href="/about" className={getLinkStyles('/about')}>
                 About
@@ -204,8 +204,8 @@ export default function Header() {
                   <Link href="/dashboard" className={mobileLinkStyles('/dashboard')} onClick={closeMobileMenu}>
                     Dashboard
                   </Link>
-                  <Link href="/leaderboard" className={mobileLinkStyles('/leaderboard')} onClick={closeMobileMenu}>
-                    Leaderboards
+                  <Link href="/docs" className={mobileLinkStyles('/docs')} onClick={closeMobileMenu}>
+                    Docs
                   </Link>
                   <Link href="/about" className={mobileLinkStyles('/about')} onClick={closeMobileMenu}>
                     About
