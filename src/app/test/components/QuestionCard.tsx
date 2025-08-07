@@ -190,9 +190,17 @@ export default function QuestionCard({
               resultColor = 'text-amber-400';
             }
             return (
-              <p className={`mt-2 font-semibold ${resultColor}`}>
-                {resultText}
-              </p>
+              <>
+                <p className={`mt-2 font-semibold ${resultColor}`}>
+                  {resultText}
+                </p>
+                {!question.options?.length && (
+                  <p className="text-sm mt-1">
+                    <strong>Correct Answer(s):</strong>{' '}
+                    {question.answers.join(', ')}
+                  </p>
+                )}
+              </>
             );
           })()}
           

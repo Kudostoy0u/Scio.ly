@@ -73,7 +73,7 @@ export const gradeFreeResponses = async (
     const response = await fetch(api.geminiGradeFreeResponses, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ freeResponses })
+      body: JSON.stringify({ responses: freeResponses })
     });
     
     if (!response.ok) {
@@ -107,7 +107,7 @@ export const gradeWithGemini = async (
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        freeResponses: [{
+        responses: [{
           question: question,
           correctAnswers: correctAnswers,
           studentAnswer: userAnswer
