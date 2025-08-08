@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeQuery } from '@/lib/neon';
+import { client } from '@/lib/db';
 import { ApiResponse, ReportRemoveRequest } from '@/lib/types/api';
 import { geminiService } from '@/lib/services/gemini';
 
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
           VALUES ($1, $2, CURRENT_TIMESTAMP)
         `;
         
-        await executeQuery(insertQuery, [
+        await client.unsafe(insertQuery, [
           body.event,
           questionDataJSON,
         ]);
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
         const questionId = body.question.id;
         if (questionId) {
           try {
-            await executeQuery("DELETE FROM questions WHERE id = $1", [questionId]);
+            await client.unsafe("DELETE FROM questions WHERE id = $1", [questionId as unknown as string]);
             console.log('📝 [REPORT/REMOVE] Removed question from main table');
           } catch (error) {
             console.log('Question might not exist in main table:', error);

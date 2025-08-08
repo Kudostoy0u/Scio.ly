@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeQuery } from '@/lib/neon';
 import { Question, ApiResponse } from '@/lib/types/api';
+import { client } from '@/lib/db';
 
 // POST /api/questions/batch - Fetch multiple questions by IDs
 export async function POST(request: NextRequest) {
@@ -23,7 +23,20 @@ export async function POST(request: NextRequest) {
     // Add the IDs array as the last parameter for ordering
     const params = [...ids, ids];
 
-    const questions = await executeQuery<Question>(query, params);
+    const rows = await client.unsafe<Array<any>>(query, params as (string | number | boolean | null)[]);
+    const questions = rows.map((row: any) => ({
+      id: row.id,
+      question: row.question,
+      tournament: row.tournament,
+      division: row.division,
+      options: Array.isArray(row.options) ? row.options : [],
+      answers: Array.isArray(row.answers) ? row.answers : [],
+      subtopics: Array.isArray(row.subtopics) ? row.subtopics : [],
+      difficulty: typeof row.difficulty === 'number' ? row.difficulty : Number(row.difficulty ?? 0.5),
+      event: row.event,
+      created_at: row.createdAt ?? row.created_at,
+      updated_at: row.updatedAt ?? row.updated_at,
+    })) as Question[];
 
     const response: ApiResponse<Question[]> = {
       success: true,

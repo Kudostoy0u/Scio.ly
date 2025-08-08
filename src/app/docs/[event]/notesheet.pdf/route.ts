@@ -6,13 +6,18 @@ import React from 'react';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(_req: Request, { params }: { params: { event: string } }) {
-  const evt = getEventBySlug(params.event);
+export async function GET(_req: Request, context: any) {
+  const { event } = context.params as { event: string };
+  const evt = getEventBySlug(event);
   if (!evt || !evt.notesheetAllowed) {
     return new NextResponse('Notesheet not available for this event', { status: 404 });
   }
 
-  const stream = await renderToStream(React.createElement(NotesheetDocument, { evt }));
+  const element = React.createElement(
+    NotesheetDocument as unknown as React.ComponentType<{ evt: unknown }>,
+    { evt }
+  ) as unknown as React.ReactElement<import('@react-pdf/renderer').DocumentProps>;
+  const stream = await renderToStream(element);
   return new NextResponse(stream as unknown as ReadableStream, {
     status: 200,
     headers: {

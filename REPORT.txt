@@ -1,0 +1,96 @@
+
+### What the site does today (rendering/data)
+- **App Router with many Client Components**: Many top-level pages/components begin with `use client` (e.g., `app/page.tsx`, `leaderboard/page.tsx`, `plagiarism/page.tsx`, most dashboard/practice/test components). This forces full client rendering and larger JS bundles.
+- **Data fetching pattern**: Client components frequently call internal REST endpoints under `/api` (see `app/api.ts`) to read/write:
+  - Questions, edits, sharing, Gemini endpoints, blacklists, etc. (`src/app/api/**/route.ts` using Drizzle/Cockroach on the server).
+  - Client-only flows lean on `localStorage` and client timers (e.g., `test` and `codebusters`).
+- **Auth**: Supabase runs entirely client-side via `@supabase/supabase-js` with anon key (`src/lib/supabase.ts`) and `AuthContext` tracking client session. No server-side session is injected into pages.
+- **Docs**: The `/docs` area is already server-rendered (no `use client`), uses `generateStaticParams`, and reads markdown from Supabase Storage or local files with `server-only` utilities.
+- **Routes**: API route handlers are server-side but have no cache directives. PDF generation route for notesheet is server-side stream.
+
+### Should we adopt SSR? Yes — selectively
+You’ll get clear benefits by moving the initial paint and data loading for non–highly-interactive pages to the server, while keeping heavy interactivity on the client. This improves TTFB/SEO, reduces JS sent to the browser, and simplifies data flows by avoiding client→API roundtrips where not needed.
+
+### Recommended extent (by area)
+- **Marketing and static pages (convert to Server Components)**
+  - `app/page.tsx` (home), `about/page.tsx`, `legal/*`, `contact/page.tsx`
+  - Remove `use client` at the page level. Extract only interactive widgets (carousels, toasts, motion) into child Client Components.
+  - Benefit: much smaller JS on first load, faster TTFB and SEO without changing UX.
+
+- **Docs (keep SSR/SSG; add light caching)**
+  - Already SSR. Add per-page revalidation for storage-backed markdown:
+    - Add `export const revalidate = 300` (or 600) in `docs` pages.
+  - Keep notesheet PDF `route.ts` as-is.
+
+- **Dashboard (mixed: SSR for data, client for animations)**
+  - `dashboard/page.tsx` currently renders a Client Component that fetches client-side. Convert to a Server Component that fetches the user’s stats server-side and passes props down to existing animated Client Components.
+  - Requires server-side session via Supabase SSR helper (see “Auth changes” below).
+  - Benefit: eliminates waterfalls and improves perceived load; better maintainability.
+
+- **Practice configuration (SSR initial options; keep UI client)**
+  - Fetch non-user-specific lists (events, subtopics, tournaments from `/api/meta/*`) on the server in the page, pass as props to the current interactive UI.
+  - Benefit: removes first client fetch and stabilizes initial render.
+
+- **Test runner `/test` (client-first UI, server-prepared data)**
+  - Keep the runner UI client for timers, local state, and heavy interactions.
+  - Change the “start test” flow to pass test params via URL/searchParams (or a Server Action) instead of `localStorage`.
+  - Prepare question set server-side (either in the test page RSC or via a redirect to `/test/[sessionId]` that loads SSR). Hydrate client with preloaded questions.
+  - Benefit: no client fetch on mount; reproducible sessions; simpler maintainability.
+
+- **Leaderboards (SSR data + client interactions)**
+  - `leaderboard/page.tsx` and `leaderboard/[code]/page.tsx` fetch entirely client-side via Supabase. Move initial user/board/member queries to server using Supabase SSR with cookies, render table SSR, and keep join/create actions as server actions or API calls.
+  - Set the segment as dynamic (per-user, no caching): `export const dynamic = 'force-dynamic'` or leverage session-aware caching disabled by default.
+  - Benefit: faster first view, consistent auth gating, reduced client JS.
+
+- **Codebusters and Plagiarism tools (stay client-first)**
+  - These pages are highly interactive, use Web Workers, PDFs, and frequent local state. Keep client-rendered, but you can still SSR a skeleton shell if desired.
+
+### Auth changes to enable SSR
+- Introduce Supabase SSR (`@supabase/ssr` or `@supabase/auth-helpers-nextjs`) to create a server client with cookies in RSC and route handlers.
+- Inject the server session into pages/layout (optionally via a lightweight server Context) and adapt `AuthContext` to accept a preloaded user (avoid double fetching).
+- This unlocks SSR for user pages (dashboard, leaderboard, profile) while still honoring RLS.
+
+### Data layer and caching
+- For internal UI, prefer calling `db` directly in Server Components (e.g., `src/lib/db`) instead of going through `/api` where feasible. Keep `/api` for external/public or mutation endpoints.
+- Add cache hints where appropriate:
+  - Static/marketing: default SSG or `revalidate: 3600`.
+  - Docs: `revalidate: 300-600`.
+  - User pages: dynamic per session (`dynamic = 'force-dynamic'`) or no-store fetches.
+- For API routes used by browsers, explicitly set dynamic behavior; avoid accidental caching for mutations. Leave DB-backed API routes on Node runtime (not Edge).
+
+### Maintainability impact
+- Fewer client fetches and less “prop drilling via localStorage” reduces coupling and complexity.
+- Server Components co-locate data queries with views, removing duplicative DTOs and client error handling for initial loads.
+- Smaller client bundles and fewer waterfalls improve performance without adding runtime libs.
+
+### Migration steps (safe order)
+1) Convert marketing pages to Server Components; extract interactive subcomponents as client.  
+2) Add `revalidate` to docs pages; keep current logic.  
+3) Introduce Supabase SSR; hydrate user in server; adapt `AuthContext` to use preloaded user.  
+4) Dashboard: fetch stats server-side; keep animated widgets client.  
+5) Leaderboard: SSR initial data; keep mutations as RPC/server actions.  
+6) Practice/Test: pass params via URL or Server Action; server-generate questions; hydrate client runner.  
+
+### Risks
+- Auth refactor requires careful cookie/session handling; test RLS thoroughly.
+- Increased server load from SSR; mitigate with caching for non-personalized content.
+
+### Bottom line
+- **Yes, adopt SSR broadly for landing, docs, and initial data on user pages.**
+- **Keep highly interactive flows client-first but server-preload data.**
+- **Introduce Supabase SSR to unlock reliable, fast per-user SSR.**
+
+- **Immediate wins**: Convert top-level marketing pages from `use client` to Server Components; add docs revalidation.  
+- **Next wins**: SSR dashboard/leaderboards with Supabase SSR; refactor test initialization away from `localStorage` to URL/server session.
+
+- **Expected impact**:
+  - Faster first paint and better SEO on public pages.
+  - Reduced client JS and fewer waterfalls on user pages.
+  - Cleaner data boundaries and easier long-term maintenance.
+
+- **No changes required to your existing API for phase 1**; later phases can bypass some `/api` reads in favor of server-side `db` calls.
+
+Summary
+- Many page-level `use client` flags force full client rendering and client→API waterfalls.
+- Adopt SSR for marketing/docs now; introduce Supabase SSR and move initial data fetches for dashboard/leaderboard to the server; keep interactive runners client but server-preload their data.
+- Add `revalidate` to docs; mark per-user pages dynamic; gradually replace internal reads to hit `db` in Server Components.

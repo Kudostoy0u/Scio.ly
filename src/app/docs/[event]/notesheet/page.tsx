@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { getEventBySlug } from '@/app/docs/utils/events2026';
 
-const PDFViewer = dynamic(() => import('@react-pdf/renderer').then(m => m.PDFViewer), { ssr: false });
+const PDFViewer = dynamic(() => import('@/app/docs/components/react-pdf-client').then(m => m.PDFViewer), { ssr: false });
 const DocumentComp = dynamic(() => import('@/app/docs/components/NotesheetDocument').then(m => m.NotesheetDocument), { ssr: false });
 
 export default function NotesheetPreview() {
@@ -18,7 +18,6 @@ export default function NotesheetPreview() {
         <h1 className="text-2xl font-semibold mb-4">{evt.name} – Sample Notesheet</h1>
         <div className="h-[80vh] border rounded">
           <PDFViewer width="100%" height="100%" showToolbar>
-            {/* @ts-expect-error async dynamic */}
             <DocumentComp evt={evt} />
           </PDFViewer>
         </div>

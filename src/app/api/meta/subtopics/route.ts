@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeQuery } from '@/lib/neon';
 import { ApiResponse } from '@/lib/types/api';
+import { client } from '@/lib/db';
 
 // GET /api/meta/subtopics - Get all distinct subtopics (optionally filtered by event)
 export async function GET(request: NextRequest) {
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     query += " ORDER BY subtopic";
 
-    const result = await executeQuery<{ subtopic: string }>(query, params);
+    const result = await client.unsafe<Array<{ subtopic: string }>>(query, params as (string | number | boolean | null)[]);
     const subtopics = result.map(row => row.subtopic);
 
     const response: ApiResponse<string[]> = {

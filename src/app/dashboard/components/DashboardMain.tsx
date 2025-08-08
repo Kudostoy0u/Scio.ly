@@ -81,7 +81,7 @@ export default function DashboardMain() {
           }
 
           // Fetch historical data for charts
-          const { data: historicalData } = await supabase
+          const { data: historicalData } = await (supabase as any)
             .from('user_activity')
             .select('created_at, questions_attempted, correct_answers')
             .eq('user_id', user.id)

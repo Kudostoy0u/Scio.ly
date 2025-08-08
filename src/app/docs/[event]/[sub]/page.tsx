@@ -5,8 +5,6 @@ import { getAnyEventMarkdown } from '@/app/docs/utils/storage';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-type Params = { params: { event: string; sub: string } };
-
 export function generateStaticParams() {
   const params: Array<{ event: string; sub: string }> = [];
   for (const slug of getEventBySlug.allSlugs()) {
@@ -18,10 +16,11 @@ export function generateStaticParams() {
   return params;
 }
 
-export default async function EventSubsectionPage({ params }: Params) {
-  const evt = getEventBySlug(params.event);
+export default async function EventSubsectionPage({ params }: { params: Promise<{ event: string; sub: string }> }) {
+  const { event, sub: subSlug } = await params;
+  const evt = getEventBySlug(event);
   if (!evt || !evt.subsections) return notFound();
-  const sub = evt.subsections.find(s => s.slug === params.sub);
+  const sub = evt.subsections.find(s => s.slug === subSlug);
   if (!sub) return notFound();
 
   const md = await getAnyEventMarkdown(`${evt.slug}/${sub.slug}`);

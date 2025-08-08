@@ -2,54 +2,13 @@
 
 import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import api from '../api';
+import { QuestionItem } from './components/QuestionItem';
+import { PlagiarismModal } from './components/PlagiarismModal';
+import { ExtractedQuestion, ProcessedQuestions, OfficialQuestion, PlagiarismMatch, QuestionPlagiarismSummary } from './types';
 
 // PDF processing will be handled by the backend API instead of client-side
 
-interface ExtractedQuestion {
-  question: string;
-  options: string[] | null;
-  type: 'mcq' | 'frq';
-}
-
-interface ProcessedQuestions {
-  questions: ExtractedQuestion[];
-}
-
-interface OfficialQuestion {
-  id: string;
-  question: string;
-  options: string[];
-  answers: string[];
-  tournament: string;
-  division: string;
-  event: string;
-  subtopics: string[];
-  difficulty: number;
-}
-
-interface PlagiarismMatch {
-  inputQuestion: ExtractedQuestion;
-  matchedQuestion: OfficialQuestion;
-  similarity: number;
-  matchType: 'question' | 'options';
-}
-
-interface QuestionPlagiarismSummary {
-  question: ExtractedQuestion;
-  questionIndex: number;
-  matches: PlagiarismMatch[];
-  highRiskMatches: PlagiarismMatch[];
-  mediumRiskMatches: PlagiarismMatch[];
-  lowRiskMatches: PlagiarismMatch[];
-  totalMatches: number;
-  highestSimilarity: number;
-}
-
-interface ModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  summary: QuestionPlagiarismSummary | null;
-}
+// types moved to ./types
 
 // Helper functions moved outside component to prevent re-creation on every render
 const getSimilarityColor = (similarity: number) => {
@@ -80,8 +39,8 @@ const getRiskText = (riskLevel: string | null) => {
   return 'No Risk';
 };
 
-// Memoized Modal component to prevent unnecessary re-renders
-const PlagiarismModal = memo(({ isOpen, onClose, summary }: ModalProps) => {
+// Memoized Modal component (moved to components) retained here for backward compatibility export if needed
+const PlagiarismModalLegacy = memo(({ isOpen, onClose, summary }: { isOpen: boolean; onClose: () => void; summary: QuestionPlagiarismSummary | null }) => {
   if (!isOpen || !summary) return null;
 
   // All data is pre-calculated - zero processing needed
@@ -218,9 +177,13 @@ const PlagiarismModal = memo(({ isOpen, onClose, summary }: ModalProps) => {
                           <span className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-full border border-slate-200">
                             📚 Division {match.matchedQuestion.division}
                           </span>
-                          <span className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-full border border-slate-200">
-                            ⭐ Difficulty: {(match.matchedQuestion.difficulty * 100).toFixed(0)}%
-                          </span>
+                           <span className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-full border border-slate-200">
+                             ⭐ Difficulty: {(() => {
+                               const value = Number(match.matchedQuestion.difficulty);
+                               if (Number.isFinite(value)) return (value * 100).toFixed(0) + '%';
+                               return '—';
+                             })()}
+                           </span>
                         </div>
                       </div>
                   </div>
@@ -239,10 +202,10 @@ const PlagiarismModal = memo(({ isOpen, onClose, summary }: ModalProps) => {
   );
 });
 
-PlagiarismModal.displayName = 'PlagiarismModal';
+PlagiarismModalLegacy.displayName = 'PlagiarismModalLegacy';
 
 // Memoized Question Item component to prevent re-renders
-const QuestionItem = memo(({ 
+const QuestionItemLegacy = memo(({ 
   question, 
   index, 
   questionSummaries, 
@@ -366,7 +329,7 @@ const QuestionItem = memo(({
   );
 });
 
-QuestionItem.displayName = 'QuestionItem';
+QuestionItemLegacy.displayName = 'QuestionItemLegacy';
 
 // Web Worker for fuzzy matching
 const createFuzzyMatchingWorker = () => {
@@ -830,7 +793,7 @@ export default function PlagiarismPage() {
         setIsAnalyzing(false);
         setHasAnalyzed(true);
           
-          // Clean up worker
+           // Clean up worker
           if (workerRef.current) {
             workerRef.current.terminate();
             workerRef.current = null;

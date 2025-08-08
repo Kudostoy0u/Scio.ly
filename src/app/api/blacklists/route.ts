@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeQuery } from '@/lib/neon';
 import { ApiResponse, BlacklistRequest } from '@/lib/types/api';
+import { client } from '@/lib/db';
 
 // GET /api/blacklists - Get blacklisted questions (optionally filtered by event)
 export async function GET(request: NextRequest) {
@@ -22,12 +22,12 @@ export async function GET(request: NextRequest) {
 
     console.log(`🔍 [BLACKLIST/GET] Executing query: ${query} with params:`, params);
 
-    const result = await executeQuery<{
+    const result = await client.unsafe<Array<{
       id: string;
       event: string;
       question_data: string;
       created_at: string;
-    }>(query, params);
+    }>>(query, params as (string | number | boolean | null)[]);
 
     if (event) {
       // Return just the blacklist array for specific event
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
         VALUES ($1, $2, CURRENT_TIMESTAMP)
       `;
       
-      await executeQuery(insertQuery, [
+       await client.unsafe(insertQuery, [
         body.event,
         questionDataJSON,
       ]);
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
       const questionId = body.questionData.id;
       if (questionId) {
         try {
-          await executeQuery("DELETE FROM questions WHERE id = $1", [questionId]);
+          await client.unsafe("DELETE FROM questions WHERE id = $1", [questionId as unknown as string]);
         } catch (error) {
           // Log error but don't fail the request
           console.log('Question might not exist in main table:', error);

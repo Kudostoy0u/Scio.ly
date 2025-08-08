@@ -1,5 +1,6 @@
 "use client";
 import { Page, Text, Document, StyleSheet, View } from '@react-pdf/renderer';
+import type { DocumentProps } from '@react-pdf/renderer';
 import type { DocsEvent } from '@/app/docs/utils/events2026';
 
 const styles = StyleSheet.create({
@@ -34,7 +35,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export function NotesheetDocument({ evt }: { evt: DocsEvent }) {
+export function NotesheetDocument({ evt }: { evt: DocsEvent }): React.ReactElement<DocumentProps> {
   return (
     <Document>
       <Page size="LETTER" style={styles.page}>

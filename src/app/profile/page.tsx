@@ -28,7 +28,7 @@ export default function ProfilePage() {
       
       if (currentUser) {
         // Load current display name
-        const { data } = await supabase
+        const { data } = await (supabase as any)
           .from('users')
           .select('display_name')
           .eq('id', currentUser.id)
@@ -70,7 +70,7 @@ export default function ProfilePage() {
     setSaving(true);
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('users')
         .upsert({
           id: user.id,
@@ -79,7 +79,7 @@ export default function ProfilePage() {
           name: user.user_metadata?.name || user.user_metadata?.full_name || null,
           photo_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
           created_at: new Date().toISOString(),
-        }, { onConflict: 'id' });
+        } as any, { onConflict: 'id' });
 
       if (error) {
         console.error('Error updating profile:', error);

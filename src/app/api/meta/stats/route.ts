@@ -1,30 +1,31 @@
 import { NextResponse } from 'next/server';
-import { executeQuery } from '@/lib/neon';
 import { ApiResponse, StatsResponse, EventStat, DivisionStat } from '@/lib/types/api';
+import { db } from '@/lib/db';
+import { questions } from '@/lib/db/schema';
+import { count, desc, sql } from 'drizzle-orm';
 
 // GET /api/meta/stats - Get question statistics
 export async function GET() {
   try {
     // Get total count
-    const totalQuery = "SELECT COUNT(*) as total FROM questions";
-    const totalResult = await executeQuery<{ total: string }>(totalQuery);
-    const total = parseInt(totalResult[0]?.total || '0');
+    const totalRes = await db.select({ total: count() }).from(questions);
+    const total = Number(totalRes[0]?.total || 0);
 
     // Get event stats
-    const eventQuery = "SELECT event, COUNT(*) as count FROM questions GROUP BY event ORDER BY count DESC";
-    const eventResult = await executeQuery<{ event: string; count: string }>(eventQuery);
-    const byEvent: EventStat[] = eventResult.map(row => ({
-      event: row.event,
-      count: row.count,
-    }));
+    const eventResult = await db
+      .select({ event: questions.event, count: sql<number>`count(*)` })
+      .from(questions)
+      .groupBy(questions.event)
+      .orderBy(desc(sql`count(*)`));
+    const byEvent: EventStat[] = eventResult.map(row => ({ event: row.event, count: String(row.count) }));
 
     // Get division stats
-    const divisionQuery = "SELECT division, COUNT(*) as count FROM questions GROUP BY division ORDER BY count DESC";
-    const divisionResult = await executeQuery<{ division: string; count: string }>(divisionQuery);
-    const byDivision: DivisionStat[] = divisionResult.map(row => ({
-      division: row.division,
-      count: row.count,
-    }));
+    const divisionResult = await db
+      .select({ division: questions.division, count: sql<number>`count(*)` })
+      .from(questions)
+      .groupBy(questions.division)
+      .orderBy(desc(sql`count(*)`));
+    const byDivision: DivisionStat[] = divisionResult.map(row => ({ division: row.division, count: String(row.count) }));
 
     const statsData: StatsResponse = {
       total,

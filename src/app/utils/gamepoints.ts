@@ -40,7 +40,7 @@ export const updateGamePoints = async (
     const today = new Date().toISOString().split('T')[0];
     try {
       // Update the user_stats table with the new game points
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('user_stats')
         .upsert({
           user_id: userId,
@@ -50,7 +50,7 @@ export const updateGamePoints = async (
           events_practiced: updatedMetrics.eventsPracticed,
           event_questions: updatedMetrics.eventQuestions,
           game_points: updatedMetrics.gamePoints
-        }, { 
+        } as any, { 
           onConflict: 'user_id,date' 
         })
         .select()
@@ -62,7 +62,7 @@ export const updateGamePoints = async (
       }
 
       // Also record the game point transaction
-      await supabase
+      await (supabase as any)
         .from('game_points')
         .insert({
           user_id: userId,
@@ -114,7 +114,7 @@ export const setGamePoints = async (
     const pointsDifference = newScore - currentMetrics.gamePoints;
 
     // Update the user_stats table with the new game points
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase as any)
       .from('user_stats')
       .upsert({
         user_id: userId,
@@ -124,7 +124,7 @@ export const setGamePoints = async (
         events_practiced: currentMetrics.eventsPracticed,
         event_questions: currentMetrics.eventQuestions,
         game_points: newScore
-      }, { 
+      } as any, { 
         onConflict: 'user_id,date' 
       });
 
@@ -135,7 +135,7 @@ export const setGamePoints = async (
 
     // Record the game point transaction if there's a change
     if (pointsDifference !== 0) {
-      await supabase
+      await (supabase as any)
         .from('game_points')
         .insert({
           user_id: userId,
@@ -162,7 +162,7 @@ export const getTotalGamePoints = async (userId: string): Promise<number> => {
   if (!userId) return 0;
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('game_points')
       .select('points')
       .eq('user_id', userId);
@@ -196,7 +196,7 @@ export const getGamePointHistory = async (userId: string, limit: number = 50): P
   if (!userId) return [];
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('game_points')
       .select('*')
       .eq('user_id', userId)

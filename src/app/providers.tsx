@@ -1,7 +1,6 @@
 'use client';
 
-import { SessionProvider } from 'next-auth/react';
-
+// Placeholder provider to avoid bundling next-auth (not used currently)
 export function Providers({ children }: { children: React.ReactNode }) {
-  return <SessionProvider>{children}</SessionProvider>;
-} 
+  return <>{children}</>;
+}

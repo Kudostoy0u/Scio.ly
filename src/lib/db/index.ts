@@ -5,12 +5,20 @@ import * as schema from './schema';
 // Connection pooling configuration for CockroachDB
 const connectionString = process.env.DATABASE_URL!;
 
-// Create connection pool with best practices for scalability
 const client = postgres(connectionString, {
   max: 20, // Maximum number of connections in the pool
   idle_timeout: 20, // Close idle connections after 20 seconds
   connect_timeout: 10, // Connection timeout in seconds
-  ssl: { rejectUnauthorized: false }, // CockroachDB requires SSL
+  // Enforce base64 CA via PGSSLROOTCERT for all environments (treat as production)
+  ssl: (() => {
+    const b64 = process.env.PGSSLROOTCERT;
+    if (!b64) {
+      throw new Error('PGSSLROOTCERT (base64-encoded CA) is required');
+    }
+    const ca = Buffer.from(b64, 'base64').toString('utf8');
+
+    return { rejectUnauthorized: true, ca } as const;
+  })(),
   // CockroachDB specific optimizations
   prepare: true, // Enable prepared statements for better performance
   max_lifetime: 60 * 30, // Close connections after 30 minutes

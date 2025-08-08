@@ -19,7 +19,10 @@ export class GeminiService {
     if (this.aiClients.length === 0) {
       console.warn('No Gemini API keys provided, AI features will be disabled');
     } else {
-      console.log(`Initialized Gemini client with ${this.aiClients.length} API keys`);
+      // Only relax logging in non-production; otherwise treat like production
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`Initialized Gemini client with ${this.aiClients.length} API keys`);
+      }
     }
   }
 

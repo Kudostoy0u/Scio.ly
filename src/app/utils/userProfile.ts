@@ -46,7 +46,7 @@ export const getUserProfile = async (userId: string | null): Promise<UserProfile
   }
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('users')
       .select('navbar_style, has_unlocked_golden, has_unlocked_rainbow')
       .eq('id', userId)
@@ -100,7 +100,7 @@ export const updateUserProfile = async (userId: string | null, updates: Partial<
       updateData.has_unlocked_rainbow = updates.hasUnlockedRainbow;
     }
 
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('users')
       .update(updateData)
       .eq('id', userId);

@@ -1,10 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 import { Database } from './types/database'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://qzwdlqeicmcaoggdavdm.supabase.co'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6d2RscWVpY21jYW9nZ2RhdmRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwNjQ1MTQsImV4cCI6MjA2OTY0MDUxNH0.-b8RDZFGrJekuDCTQtXayaozxyfwoOV4RLf_jOORYkk'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient<Database>(supabaseUrl || 'http://localhost', supabaseAnonKey || 'anon', {
   auth: {
     autoRefreshToken: true,
     persistSession: true,

@@ -1,5 +1,5 @@
 
-import { testConnection } from '@/lib/neon';
+import { testConnection } from '@/lib/db';
 import { geminiService } from '@/lib/services/gemini';
 import { 
   createSuccessResponse, 
@@ -42,7 +42,7 @@ const performHealthCheck = async (): Promise<HealthData> => {
     services: {
       database: {
         status: dbHealthy ? 'connected' : 'disconnected',
-        provider: 'Neon PostgreSQL',
+        provider: 'PostgreSQL',
       },
       ai: {
         status: aiHealthy ? 'available' : 'unavailable',
@@ -83,7 +83,7 @@ export async function GET() {
       status: 'error',
       timestamp: new Date().toISOString(),
       services: {
-        database: { status: 'disconnected', provider: 'Neon PostgreSQL' },
+        database: { status: 'disconnected', provider: 'PostgreSQL' },
         ai: { status: 'unavailable', provider: 'Gemini 2.5 Flash Lite' },
       },
       version: '2.0.0-typescript',

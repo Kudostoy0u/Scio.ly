@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
-import { executeQuery } from '@/lib/neon';
 import { ApiResponse } from '@/lib/types/api';
+import { db } from '@/lib/db';
+import { questions } from '@/lib/db/schema';
+import { client } from '@/lib/db';
 
 // GET /api/report/all - Get all reports (edits and blacklists)
 export async function GET() {
@@ -9,14 +11,14 @@ export async function GET() {
 
     // Get all edits
     const editsQuery = "SELECT * FROM edits ORDER BY updated_at DESC";
-    const editsResult = await executeQuery<{
+    const editsResult = await client.unsafe<Array<{
       id: string;
       event: string;
       original_question: string;
       edited_question: string;
       reason: string;
       updated_at: string;
-    }>(editsQuery);
+    }>>(editsQuery);
 
           const edits: Record<string, Array<{
         original: Record<string, unknown>;
@@ -45,13 +47,13 @@ export async function GET() {
 
     // Get all blacklists
     const blacklistsQuery = "SELECT * FROM blacklists ORDER BY created_at DESC";
-    const blacklistsResult = await executeQuery<{
+    const blacklistsResult = await client.unsafe<Array<{
       id: string;
       event: string;
       question_data: string;
       reason: string;
       created_at: string;
-    }>(blacklistsQuery);
+    }>>(blacklistsQuery);
 
           const blacklists: Record<string, unknown[]> = {};
 

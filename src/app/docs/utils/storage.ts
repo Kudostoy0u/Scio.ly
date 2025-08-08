@@ -1,11 +1,12 @@
 import 'server-only';
-import { supabase } from '@/lib/supabase';
 
 const BUCKET = 'docs';
 
 export async function ensureDocsBucket(): Promise<void> {
   // Best-effort: try to create the bucket if it doesn't exist
   try {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return;
+    const { supabase } = await import('@/lib/supabase');
     const { error } = await supabase.storage.createBucket(BUCKET, { public: true, fileSizeLimit: 5 * 1024 * 1024 });
     if (error && !String(error.message || '').includes('already exists')) {
       // Silently ignore to avoid blocking UX
@@ -18,6 +19,8 @@ export async function ensureDocsBucket(): Promise<void> {
 
 export async function getEventMarkdown(slug: string): Promise<string | null> {
   const path = `2026/${slug}.md`;
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null;
+  const { supabase } = await import('@/lib/supabase');
   const { data, error } = await supabase.storage.from(BUCKET).download(path);
   if (error || !data) return null;
   const text = await data.text();
@@ -25,9 +28,11 @@ export async function getEventMarkdown(slug: string): Promise<string | null> {
 }
 
 export async function saveEventMarkdown(slug: string, content: string): Promise<{ ok: boolean; message?: string }> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return { ok: false, message: 'Supabase not configured' };
   await ensureDocsBucket();
   const path = `2026/${slug}.md`;
   const blob = new Blob([content], { type: 'text/markdown' });
+  const { supabase } = await import('@/lib/supabase');
   const { error } = await supabase.storage.from(BUCKET).upload(path, blob, { upsert: true, contentType: 'text/markdown' });
   if (error) return { ok: false, message: error.message };
   return { ok: true };

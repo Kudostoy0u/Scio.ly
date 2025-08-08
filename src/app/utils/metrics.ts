@@ -43,7 +43,7 @@ export const getDailyMetrics = async (userId: string | null): Promise<DailyMetri
   const today = new Date().toISOString().split('T')[0];
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('user_stats')
       .select('*')
       .eq('user_id', userId)
@@ -80,7 +80,7 @@ export const getWeeklyMetrics = async (userId: string | null): Promise<DailyMetr
   const weekAgoString = weekAgo.toISOString().split('T')[0];
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('user_stats')
       .select('*')
       .eq('user_id', userId)
@@ -124,7 +124,7 @@ export const getMonthlyMetrics = async (userId: string | null): Promise<DailyMet
   const monthAgoString = monthAgo.toISOString().split('T')[0];
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('user_stats')
       .select('*')
       .eq('user_id', userId)
@@ -192,7 +192,7 @@ export const updateMetrics = async (
   
   try {
     // Get current stats for today
-    const { data: currentData, error: fetchError } = await supabase
+    const { data: currentData, error: fetchError } = await (supabase as any)
       .from('user_stats')
       .select('*')
       .eq('user_id', userId)
@@ -238,9 +238,9 @@ export const updateMetrics = async (
       game_points: currentStats.game_points
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('user_stats')
-      .upsert(updatedStats, { 
+      .upsert(updatedStats as any, { 
         onConflict: 'user_id,date' 
       })
       .select()

@@ -160,7 +160,7 @@ export default function HomePage() {
                 <div className={`p-8 rounded-2xl border h-[300px] flex flex-col items-center text-center ${darkMode ? 'bg-gray-800/50 border-gray-700/50' : 'bg-white border-gray-200 shadow-lg'}`}>
                   <FaFlask className={`text-4xl mb-4 ${titleColor}`} />
                   <h3 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Full Coverage</h3>
-                  <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'} flex-grow`}>We&apos;ve aquired over a thousand tournaments worth of questions for use on this platform - much more than is publicly available </p>
+                  <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'} flex-grow`}>We&apos;ve acquired over a thousand tournaments worth of questions for use on this platform - much more than is publicly available</p>
                 </div>
               </div>
               {/* Feature 2 */}
@@ -336,7 +336,7 @@ export default function HomePage() {
                 <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
                   {index === 0 ? 'Our questions are sourced from publicly available Science Olympiad tests and resources, ensuring a comprehensive and diverse question bank.' :
                    index === 1 ? 'AI is primarily used for grading free response question, providing detailed explanations, and processing reports. All questions are from real Science Olympiad tests - AI is not used to generate questions.' :
-                   index === 2 ? 'No, Scio.ly is not not endorsed by Science Olympiad Inc. Our platform provides practice materials based on past exams but we do not make any guarantees about content on future exams.' :
+                   index === 2 ? 'No, Scio.ly is not endorsed by Science Olympiad Inc. Our platform provides practice materials based on past exams but we do not make any guarantees about content on future exams.' :
                    'We welcome contributions! Check out our GitHub repository to see how you can help improve the platform, suggest features, or report issues. You can also help by sending feedback through our contact form.'}
                 </p>
               </motion.div>

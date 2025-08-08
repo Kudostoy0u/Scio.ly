@@ -18,7 +18,7 @@ export const loadBookmarksFromSupabase = async (userId: string): Promise<Bookmar
   if (!userId) return [];
   
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('bookmarks')
       .select('*')
       .eq('user_id', userId)
@@ -54,7 +54,7 @@ export const addBookmark = async (
 
   try {
     // Check if bookmark already exists
-    const { data: existingBookmarks, error: fetchError } = await supabase
+    const { data: existingBookmarks, error: fetchError } = await (supabase as any)
       .from('bookmarks')
       .select('id')
       .eq('user_id', userId)
@@ -73,7 +73,7 @@ export const addBookmark = async (
     }
 
     // Add new bookmark
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('bookmarks')
       .insert({
         user_id: userId,
@@ -98,7 +98,7 @@ export const removeBookmark = async (
   if (!userId) return;
 
   try {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('bookmarks')
       .delete()
       .eq('user_id', userId)

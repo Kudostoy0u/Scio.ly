@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
-import { executeQuery } from '@/lib/neon';
 import { ApiResponse } from '@/lib/types/api';
+import { db } from '@/lib/db';
+import { questions } from '@/lib/db/schema';
+import { asc } from 'drizzle-orm';
 
 // GET /api/meta/tournaments - Get all distinct tournaments
 export async function GET() {
   try {
-    const query = "SELECT DISTINCT tournament FROM questions ORDER BY tournament";
-    const result = await executeQuery<{ tournament: string }>(query);
-    
-    const tournaments = result.map(row => row.tournament);
+    const rows = await db.select({ tournament: questions.tournament }).from(questions).groupBy(questions.tournament).orderBy(asc(questions.tournament));
+    const tournaments = rows.map(r => r.tournament);
 
     const response: ApiResponse<string[]> = {
       success: true,

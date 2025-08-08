@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { FaFileAlt, FaBookmark, FaDiscord, FaBook, FaUsers } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import { handleShareCodeRedirect } from '@/app/utils/shareCodeUtils';
 
 interface ActionButtonsProps {
   darkMode: boolean;
@@ -20,17 +21,8 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
 
   const handleLoadTest = async (code: string) => {
     try {
-      const response = await fetch(`/api/test/${code}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.exists) {
-          router.push(`/test?code=${code}`);
-        } else {
-          toast.error('Test not found. Please check your code.');
-        }
-      } else {
-        toast.error('Failed to load test. Please try again.');
-      }
+      // Use centralized share-code handling which fetches, prepares state, and redirects appropriately
+      await handleShareCodeRedirect(code);
     } catch (error) {
       console.error('Error loading test:', error);
       toast.error('An error occurred while loading the test.');
@@ -40,10 +32,15 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>, index: number) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text');
-    const digits = pastedData.replace(/\D/g, '').split('').slice(0, 6);
+    // Keep only alphanumeric characters and uppercase them
+    const chars = pastedData
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .toUpperCase()
+      .split('')
+      .slice(0, 6);
     
     const newDigits = [...testCodeDigits];
-    digits.forEach((digit, i) => {
+    chars.forEach((digit, i) => {
       if (index + i < 6) {
         newDigits[index + i] = digit;
       }
@@ -58,8 +55,9 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
   };
 
   const handleDigitChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
-    const value = e.target.value;
-    if (value.length > 1) return; // Only allow single digit
+    // Only allow a single alphanumeric character; auto-capitalize letters
+    const sanitized = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    const value = sanitized.slice(0, 1);
     
     const newDigits = [...testCodeDigits];
     newDigits[index] = value;
@@ -115,7 +113,7 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
                   onChange={(e) => handleDigitChange(e, index)}
                   onPaste={(e) => handlePaste(e, index)}
                   onKeyDown={(e) => handleKeyDown(e, index)}
-                  className={`w-10 h-10 text-center text-sm font-bold border-2 rounded-lg ${
+                  className={`w-10 h-10 text-center text-sm font-bold border-2 rounded-lg uppercase ${
                     darkMode
                       ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-500'
                       : 'bg-gray-50 border-gray-300 text-gray-900 focus:border-blue-500'

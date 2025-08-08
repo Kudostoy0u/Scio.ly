@@ -24,12 +24,11 @@ export default function ProfileSettings({ onClose }: { onClose: () => void }) {
       const { data } = await supabase
         .from('users')
         .select('display_name')
-        .eq('id', user.id)
+        .match({ email: user.email || '' })
         .single();
 
-      if (data?.display_name) {
-        setDisplayName(data.display_name);
-      }
+      const dn = (data as any)?.display_name as string | undefined;
+      if (dn) setDisplayName(dn);
     }
     setLoading(false);
   };
@@ -40,8 +39,8 @@ export default function ProfileSettings({ onClose }: { onClose: () => void }) {
     setSaving(true);
     const { error } = await supabase
       .from('users')
-      .update({ display_name: displayName || null })
-      .eq('id', user.id);
+      .update({ display_name: (displayName || null) } as any)
+      .match({ email: user.email || '' });
 
     if (!error) {
       onClose();

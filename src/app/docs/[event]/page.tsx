@@ -5,14 +5,13 @@ import { getAnyEventMarkdown } from '@/app/docs/utils/storage';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-type Params = { params: { event: string } };
-
 export function generateStaticParams() {
   return getEventBySlug.allSlugs().map(slug => ({ event: slug }));
 }
 
-export default async function EventDocsPage({ params }: Params) {
-  const evt = getEventBySlug(params.event);
+export default async function EventDocsPage({ params }: any) {
+  const { event } = (await params) as { event: string };
+  const evt = getEventBySlug(event);
   if (!evt) return notFound();
   const md = await getAnyEventMarkdown(evt.slug);
 

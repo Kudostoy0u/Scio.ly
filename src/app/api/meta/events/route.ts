@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
-import { executeQuery } from '@/lib/neon';
+import { db } from '@/lib/db';
+import { questions } from '@/lib/db/schema';
+import { asc } from 'drizzle-orm';
 import { ApiResponse } from '@/lib/types/api';
 
 // GET /api/meta/events - Get all distinct events
 export async function GET() {
   try {
-    const query = "SELECT DISTINCT event FROM questions ORDER BY event";
-    const result = await executeQuery<{ event: string }>(query);
-    
-    const events = result.map(row => row.event);
+    const rows = await db.select({ event: questions.event }).from(questions).groupBy(questions.event).orderBy(asc(questions.event));
+    const events = rows.map(r => r.event);
 
     const response: ApiResponse<string[]> = {
       success: true,

@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 type AuthContextType = {
   user: User | null;
   loading: boolean;
-  supabase: SupabaseClient;
+  supabase: SupabaseClient<any, 'public', any>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -48,11 +48,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase
         .from('users')
         .upsert({
-          id: user.id,
+          id: String(user.id),
           email: user.email || '',
           name: user.user_metadata?.name || user.user_metadata?.full_name || null,
           photo_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
-        }, { onConflict: 'id' });
+        } as any, { onConflict: 'id' });
       
       if (error) {
         console.error('Error upserting user profile:', error);
@@ -62,10 +62,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const value = {
+  const value: AuthContextType = {
     user,
     loading,
-    supabase
+    supabase: supabase as unknown as SupabaseClient<any, 'public', any>
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

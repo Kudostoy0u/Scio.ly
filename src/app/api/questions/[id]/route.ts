@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeQuery } from '@/lib/neon';
+import { db } from '@/lib/db';
+import { questions } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 import { Question, UpdateQuestionRequest, ApiResponse } from '@/lib/types/api';
 
 // GET /api/questions/[id] - Fetch a specific question
@@ -10,8 +12,7 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const query = "SELECT * FROM questions WHERE id = $1";
-    const result = await executeQuery<Question>(query, [id]);
+    const result = await db.select().from(questions).where(eq(questions.id, id));
 
     if (result.length === 0) {
       const response: ApiResponse = {
@@ -21,10 +22,21 @@ export async function GET(
       return NextResponse.json(response, { status: 404 });
     }
 
-    const response: ApiResponse<Question> = {
-      success: true,
-      data: result[0],
-    };
+    const row = result[0] as any;
+    const normalized: Question = {
+      id: row.id,
+      question: row.question,
+      tournament: row.tournament,
+      division: row.division,
+      options: Array.isArray(row.options) ? row.options : [],
+      answers: Array.isArray(row.answers) ? row.answers : [],
+      subtopics: Array.isArray(row.subtopics) ? row.subtopics : [],
+      difficulty: typeof row.difficulty === 'number' ? row.difficulty : Number(row.difficulty ?? 0.5),
+      event: row.event,
+      created_at: row.createdAt ?? row.created_at,
+      updated_at: row.updatedAt ?? row.updated_at,
+    } as any;
+    const response: ApiResponse<Question> = { success: true, data: normalized };
 
     return NextResponse.json(response);
   } catch (error) {
@@ -47,24 +59,8 @@ export async function PUT(
     const updates: UpdateQuestionRequest = await request.json();
 
     // Build update query dynamically
-    const setClause: string[] = [];
-    const queryParams: unknown[] = [];
-    let paramIndex = 1;
-
-    for (const [key, value] of Object.entries(updates)) {
-      if (key !== 'id' && value !== undefined) {
-        if (key === 'options' || key === 'answers' || key === 'subtopics') {
-          setClause.push(`${key} = $${paramIndex}`);
-          queryParams.push(JSON.stringify(value));
-        } else {
-          setClause.push(`${key} = $${paramIndex}`);
-          queryParams.push(value);
-        }
-        paramIndex++;
-      }
-    }
-
-    if (setClause.length === 0) {
+    const entries = Object.entries(updates).filter(([k, v]) => k !== 'id' && v !== undefined);
+    if (entries.length === 0) {
       const response: ApiResponse = {
         success: false,
         error: 'No valid fields to update',
@@ -72,19 +68,19 @@ export async function PUT(
       return NextResponse.json(response, { status: 400 });
     }
 
-    setClause.push('updated_at = CURRENT_TIMESTAMP');
-    queryParams.push(id);
+    const payload: Partial<typeof questions.$inferInsert> = {};
+    for (const [key, value] of entries) {
+      if (key === 'options' || key === 'answers' || key === 'subtopics') {
+        (payload as any)[key] = value;
+      } else {
+        (payload as any)[key] = value as any;
+      }
+    }
+    (payload as any).updatedAt = new Date();
 
-    const query = `
-      UPDATE questions 
-      SET ${setClause.join(', ')} 
-      WHERE id = $${paramIndex} 
-      RETURNING *
-    `;
+    const updated = await db.update(questions).set(payload).where(eq(questions.id, id)).returning();
 
-    const result = await executeQuery<Question>(query, queryParams);
-
-    if (result.length === 0) {
+    if (updated.length === 0) {
       const response: ApiResponse = {
         success: false,
         error: 'Question not found',
@@ -92,9 +88,23 @@ export async function PUT(
       return NextResponse.json(response, { status: 404 });
     }
 
+    const row = updated[0] as any;
+    const normalized: Question = {
+      id: row.id,
+      question: row.question,
+      tournament: row.tournament,
+      division: row.division,
+      options: Array.isArray(row.options) ? row.options : [],
+      answers: Array.isArray(row.answers) ? row.answers : [],
+      subtopics: Array.isArray(row.subtopics) ? row.subtopics : [],
+      difficulty: typeof row.difficulty === 'number' ? row.difficulty : Number(row.difficulty ?? 0.5),
+      event: row.event,
+      created_at: row.createdAt ?? row.created_at,
+      updated_at: row.updatedAt ?? row.updated_at,
+    } as any;
     const response: ApiResponse<Question> = {
       success: true,
-      data: result[0],
+      data: normalized,
       message: 'Question updated successfully',
     };
 
@@ -117,15 +127,8 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    const query = "DELETE FROM questions WHERE id = $1";
-    await executeQuery(query, [id]);
-
-    // Note: Neon doesn't return rowsAffected like standard PostgreSQL
-    // We'll check if the question existed first
-    const checkQuery = "SELECT id FROM questions WHERE id = $1";
-    const checkResult = await executeQuery(checkQuery, [id]);
-
-    if (checkResult.length > 0) {
+    const deleted = await db.delete(questions).where(eq(questions.id, id)).returning({ id: questions.id });
+    if (deleted.length === 0) {
       const response: ApiResponse = {
         success: false,
         error: 'Question not found',

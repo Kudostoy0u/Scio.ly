@@ -85,7 +85,7 @@ export default function LeaderboardPage() {
     }
     
     // Load user profile with display name
-    const { data: userProfile } = await supabase
+    const { data: userProfile } = await (supabase as any)
       .from('users')
       .select('display_name')
       .eq('id', authUser.id)
@@ -99,7 +99,7 @@ export default function LeaderboardPage() {
       });
     }
     
-    const { data: leaderboardData, error: leaderboardError } = await supabase
+    const { data: leaderboardData, error: leaderboardError } = await (supabase as any)
       .from('leaderboard_members')
       .select(`
         leaderboard_id,
@@ -144,7 +144,7 @@ export default function LeaderboardPage() {
   };
 
   const loadLeaderboardMembers = async (leaderboardId: string) => {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('leaderboard_members')
       .select(`
         user_id,
@@ -225,9 +225,9 @@ export default function LeaderboardPage() {
   const handleSetDisplayName = async () => {
     if (!displayName.trim()) return;
     
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('users')
-      .update({ display_name: displayName.trim() })
+      .update({ display_name: displayName.trim() } as any)
       .eq('id', user?.id);
       
     if (!error) {

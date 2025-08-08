@@ -93,11 +93,12 @@ export default function AuthButton() {
         const { data } = await supabase
           .from('users')
           .select('display_name')
-          .eq('id', user.id)
+          .match({ email: user.email || '' })
           .single();
-        if (data?.display_name) {
-          setDisplayName(data.display_name);
-          saveUserToLocalStorage(user, data.display_name);
+        const dn = (data as any)?.display_name as string | undefined;
+        if (dn) {
+          setDisplayName(dn);
+          saveUserToLocalStorage(user, dn);
         } else {
           saveUserToLocalStorage(user, null);
         }
@@ -117,11 +118,12 @@ export default function AuthButton() {
         const { data } = await supabase
           .from('users')
           .select('display_name')
-          .eq('id', session.user.id)
+          .match({ email: session.user.email || '' })
           .single();
-        if (data?.display_name) {
-          setDisplayName(data.display_name);
-          saveUserToLocalStorage(session.user, data.display_name);
+        const dn2 = (data as any)?.display_name as string | undefined;
+        if (dn2) {
+          setDisplayName(dn2);
+          saveUserToLocalStorage(session.user, dn2);
         } else {
           saveUserToLocalStorage(session.user, null);
         }
@@ -136,12 +138,12 @@ export default function AuthButton() {
           const { error } = await supabase
             .from('users')
             .upsert({
-              id: session.user.id,
+              id: String(session.user.id),
               email: session.user.email || '',
               name: session.user.user_metadata?.name || session.user.user_metadata?.full_name || null,
               photo_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null,
               created_at: new Date().toISOString(),
-            }, { onConflict: 'id' });
+            } as any, { onConflict: 'id' });
           
           if (error) {
             console.error('❌ Error upserting user:', error);

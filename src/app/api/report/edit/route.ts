@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeQuery } from '@/lib/neon';
+import { client } from '@/lib/db';
 import { ApiResponse, ReportEditRequest } from '@/lib/types/api';
 import { geminiService } from '@/lib/services/gemini';
 
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
           SELECT id FROM edits 
           WHERE event = $1 AND original_question = $2
         `;
-        const existingResult = await executeQuery<{ id: string }>(existingQuery, [body.event, originalJSON]);
+        const existingResult = await client.unsafe<Array<{ id: string }>>(existingQuery, [body.event, originalJSON]);
 
         if (existingResult.length > 0) {
           // Update existing edit
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
             SET edited_question = $1, updated_at = CURRENT_TIMESTAMP 
             WHERE id = $2
           `;
-          await executeQuery(updateQuery, [editedJSON, existingResult[0].id]);
+          await client.unsafe(updateQuery, [editedJSON, existingResult[0].id]);
           console.log('📝 [REPORT/EDIT] Updated existing edit in database');
         } else {
           // Create new edit
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
             INSERT INTO edits (event, original_question, edited_question) 
             VALUES ($1, $2, $3)
           `;
-          await executeQuery(insertQuery, [body.event, originalJSON, editedJSON]);
+          await client.unsafe(insertQuery, [body.event, originalJSON, editedJSON]);
           console.log('📝 [REPORT/EDIT] Created new edit in database');
         }
 
