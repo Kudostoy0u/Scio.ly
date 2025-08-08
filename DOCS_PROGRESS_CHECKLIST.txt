@@ -1,0 +1,49 @@
+Internal Docs Progress Checklist – 2026 (Do NOT publish or expose)
+
+Legend:
+- [Outline] = Local markdown outline available in src/app/docs/content/2026
+- [None]    = No local markdown present
+- [Complete]= Comprehensive, robust doc (none at present)
+
+- [Outline] Anatomy and Physiology (Div B/C) — src/app/docs/content/2026/anatomy-and-physiology.md
+- [Outline] Dynamic Planet (Div B/C) — src/app/docs/content/2026/dynamic-planet.md
+- [Outline] Codebusters (Div B/C) — src/app/docs/content/2026/codebusters.md
+
+- [None] Disease Detectives (Div B/C)
+- [None] Entomology (Div B/C)
+- [None] Heredity (Div B)
+- [None] Water Quality (Div B/C)
+- [None] Meteorology (Div B)
+- [None] Remote Sensing (Div B/C)
+- [None] Rocks and Minerals (Div B/C)
+- [None] Solar System (Div B)
+- [None] Circuit Lab (Div B/C)
+- [None] Crime Busters (Div B)
+- [None] Hovercraft (Div B/C)
+- [None] Machines (Div B/C)
+- [None] Potions and Poisons (Div B)
+- [None] Boomilever (Div B/C)
+- [None] Helicopter (Div B/C)
+- [None] Mission Possible (Div B)
+- [None] Scrambler (Div B)
+- [None] Experimental Design (Div B/C)
+- [None] Metric Mastery (Div B)
+- [None] Write It Do It (Div B)
+- [None] Astronomy (Div C)
+- [None] Designer Genes (Div C)
+- [None] Chemistry Lab (Div C)
+- [None] Forensics (Div C)
+- [None] Materials Science (Div C)
+- [None] Electric Vehicle (Div C)
+- [None] Robot Tour (Div C)
+- [None] Bungee Drop (Div C)
+- [None] Engineering CAD (Div C)
+
+Summary:
+- Complete: 0
+- Outline: 3 (Anatomy and Physiology, Dynamic Planet, Codebusters)
+- None: 29
+
+Notes:
+- Some events have strong external wiki pages, but internal status here tracks local markdown presence only. When promoting an event to [Complete], ensure it is self-contained with strategies, examples, references, and exam-style drills.
+

@@ -19,6 +19,7 @@
     "@google/generative-ai": "^0.2.1",
     "@headlessui/react": "^2.2.7",
     "@next/third-parties": "^15.4.5",
+    "@react-pdf/renderer": "^4.3.0",
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "9.0.0-alpha.8",
     "@supabase/auth-ui-react": "^0.4.7",
@@ -60,6 +61,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
+    "@tailwindcss/typography": "^0.5.16",
     "@types/estree": "^1.0.8",
     "@types/node": "^20.19.9",
     "@types/react": "^19.1.9",

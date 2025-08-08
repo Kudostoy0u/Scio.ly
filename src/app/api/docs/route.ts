@@ -52,7 +52,7 @@ export async function GET() {
     <h1>🧪 Science Olympiad API Documentation</h1>
     
     <div class="info-box">
-        <strong>Base URL:</strong> <code>http://scioly-api.vercel.app</code><br>
+        <strong>Base URL:</strong> <code>https://scio.ly/</code><br>
         <strong>Version:</strong> 1.0.0<br>
         <strong>Description:</strong> Comprehensive API for Science Olympiad question management, AI-powered features, and collaborative testing<br>
         <strong>Question Types:</strong> Questions can be filtered by type - "mcq" for multiple choice questions with options, "frq" for free response questions without options

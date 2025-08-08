@@ -207,7 +207,7 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
         
         {/* Scio.ly Docs Button */}
         <motion.div 
-          onClick={() => toast.info('Coming soon!', { position: 'top-right' })}
+          onClick={() => router.push('/docs')}
           className={`rounded-lg cursor-pointer ${cardStyle} hover:border-gray-600`}
         >
           <div className={`w-full h-full p-6 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'}`}>

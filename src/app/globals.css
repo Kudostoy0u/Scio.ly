@@ -206,3 +206,17 @@ body {
   -webkit-mask-composite: xor;
           mask-composite: exclude;
 }
+
+/* Markdown (prose) fallback styles – ensures readable headings even if the typography plugin isn't picked up yet */
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+.prose h1 { font-size: 2rem; }
+.prose h2 { font-size: 1.5rem; }
+.prose h3 { font-size: 1.25rem; }
+.prose p, .prose li { font-size: 1rem; line-height: 1.7; }
+.prose ul { list-style: disc; padding-left: 1.25rem; }
+.prose ol { list-style: decimal; padding-left: 1.25rem; }
