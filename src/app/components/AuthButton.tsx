@@ -8,6 +8,7 @@ import { Eye, EyeOff, X, Settings, Trophy } from 'lucide-react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import Image from 'next/image';
 import Link from 'next/link';
+import { SocialAuth } from '@supabase/auth-ui-react';
 
 export default function AuthButton() {
   const { darkMode } = useTheme();
@@ -252,35 +253,21 @@ export default function AuthButton() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}${window.location.pathname}`
-        }
-      });
-      
-      if (error) {
-        console.error('Error signing in:', error);
-      } else {
-        setShowSignInModal(false);
-      }
-    } catch (error) {
-      console.error('Error signing in:', error);
-    }
-  };
-
   const handleSignOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Error signing out:', error);
-      } else {
-        clearUserFromLocalStorage();
-        setIsDropdownOpen(false);
-        window.location.reload();
-      }
+      // Fast local clear to avoid stale UI when session is expired or network is slow
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+      clearUserFromLocalStorage();
+      setUser(null);
+      setIsDropdownOpen(false);
+
+      // Attempt global sign-out in the background; if it fails, UI is still cleared
+      supabase.auth.signOut({ scope: 'global' }).catch((err) => {
+        console.warn('Non-fatal global sign-out issue:', err);
+      });
+
+      // Hard reload to ensure all client state is reset
+      window.location.reload();
     } catch (error) {
       console.error('Error signing out:', error);
     }
@@ -622,27 +609,32 @@ export default function AuthButton() {
                     </div>
                   </div>
 
-                  <button
-                    onClick={handleGoogleSignIn}
-                    className={`w-full mt-4 border rounded-lg px-4 py-2 flex items-center justify-center space-x-3 transition-colors duration-200 ${
-                      darkMode 
-                        ? 'bg-gray-700 hover:bg-gray-600 border-gray-600' 
-                        : 'bg-white hover:bg-gray-50 border-gray-300'
-                    }`}
-                  >
-                    <Image
-                      src="/google-icon.png"
-                      alt="Google"
-                      width={20}
-                      height={20}
-                      className="w-5 h-5"
-                    />
-                    <span className={`font-medium ${
-                      darkMode ? 'text-gray-200' : 'text-gray-700'
-                    }`}>
-                      Google
-                    </span>
-                  </button>
+                  {/* Supabase SocialAuth button for Google. Styling of modal preserved; button keeps default look */}
+                  <div className="mt-4">
+                    {(() => {
+                      const base = 'w-full rounded-lg px-4 py-2 flex items-center justify-center gap-3 transition-colors duration-200 border font-medium focus:outline-none focus:ring-2 focus:ring-blue-500';
+                      const themed = darkMode
+                        ? 'bg-gray-700 hover:bg-gray-600 border-gray-600 text-gray-100 shadow disabled:opacity-100 disabled:bg-gray-700 disabled:text-gray-100 disabled:border-gray-600'
+                        : 'bg-white hover:bg-gray-50 border-gray-300 text-gray-900 shadow-sm disabled:opacity-100 disabled:bg-white disabled:text-gray-900 disabled:border-gray-300';
+                      const buttonClass = `${base} ${themed}`;
+
+                      return (
+                        <SocialAuth
+                          supabaseClient={supabase}
+                          providers={['google']}
+                          redirectTo={typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : undefined}
+                          appearance={{
+                            className: {
+                              container: 'w-full',
+                              button: buttonClass,
+                              anchor: 'w-full',
+                              divider: 'hidden',
+                            },
+                          }}
+                        />
+                      );
+                    })()}
+                  </div>
                 </div>
 
                 <div className="mt-4 text-center">

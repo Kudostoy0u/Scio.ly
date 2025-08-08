@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 
 interface Question {
+  id?: string;
   question: string;
   options?: string[];
   answers: (string | number)[];
@@ -53,21 +54,32 @@ export const addBookmark = async (
   if (!userId) return;
 
   try {
-    // Check if bookmark already exists
-    const { data: existingBookmarks, error: fetchError } = await (supabase as any)
-      .from('bookmarks')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('event_name', eventName)
-      .eq('source', source)
-      .eq('question_data->>question', question.question);
+    // Check if bookmark already exists (prefer question id when present)
+    let exists = false;
 
-    if (fetchError) {
-      console.error('Error checking existing bookmarks:', fetchError);
-      return;
+    if (question.id) {
+      const { data, error } = await supabase
+        .from('bookmarks')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('event_name', eventName)
+        .eq('source', source)
+        .eq('question_data->>id', question.id);
+      if (error) throw error;
+      exists = !!(data && data.length > 0);
+    } else {
+      const { data, error } = await supabase
+        .from('bookmarks')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('event_name', eventName)
+        .eq('source', source)
+        .eq('question_data->>question', question.question);
+      if (error) throw error;
+      exists = !!(data && data.length > 0);
     }
 
-    if (existingBookmarks && existingBookmarks.length > 0) {
+    if (exists) {
       console.log('Bookmark already exists');
       return;
     }
@@ -98,15 +110,22 @@ export const removeBookmark = async (
   if (!userId) return;
 
   try {
-    const { error } = await (supabase as any)
-      .from('bookmarks')
-      .delete()
-      .eq('user_id', userId)
-      .eq('source', source)
-      .eq('question_data->>question', question.question);
-
-    if (error) {
-      console.error('Error removing bookmark:', error);
+    if (question.id) {
+      const { error } = await supabase
+        .from('bookmarks')
+        .delete()
+        .eq('user_id', userId)
+        .eq('source', source)
+        .eq('question_data->>id', question.id);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from('bookmarks')
+        .delete()
+        .eq('user_id', userId)
+        .eq('source', source)
+        .eq('question_data->>question', question.question);
+      if (error) throw error;
     }
   } catch (error) {
     console.error('Error removing bookmark:', error);
