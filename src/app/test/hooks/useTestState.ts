@@ -52,6 +52,7 @@ export function useTestState() {
   const [submittedEdits, setSubmittedEdits] = useState<Record<number, boolean>>({});
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [gradingFRQs, setGradingFRQs] = useState<Record<number, boolean>>({});
 
   // Initialize component
   useEffect(() => {
@@ -382,6 +383,11 @@ export function useTestState() {
     }
     
     if (frqsToGrade.length > 0) {
+      // Set loading state for FRQ questions
+      frqsToGrade.forEach(item => {
+        setGradingFRQs(prev => ({ ...prev, [item.index]: true }));
+      });
+      
       try {
         const scores = await gradeFreeResponses(
           frqsToGrade.map(item => ({
@@ -394,6 +400,7 @@ export function useTestState() {
         scores.forEach((score, idx) => {
           const questionIndex = frqsToGrade[idx].index;
           setGradingResults(prev => ({ ...prev, [questionIndex]: score }));
+          setGradingFRQs(prev => ({ ...prev, [questionIndex]: false }));
           
           if (score >= 0.5) {
             mcqScore += score;
@@ -404,6 +411,7 @@ export function useTestState() {
         console.error("Error grading FRQs:", error);
         frqsToGrade.forEach(item => {
           setGradingResults(prev => ({ ...prev, [item.index]: 0 }));
+          setGradingFRQs(prev => ({ ...prev, [item.index]: false }));
         });
       }
     }
@@ -457,7 +465,8 @@ export function useTestState() {
       gradingResults,
       setGradingResults,
       userAnswers,
-      RATE_LIMIT_DELAY
+      RATE_LIMIT_DELAY,
+      true
     );
   };
 
@@ -647,6 +656,7 @@ export function useTestState() {
     explanations,
     loadingExplanation,
     gradingResults,
+    gradingFRQs,
     isMounted,
     shareModalOpen,
     inputCode,

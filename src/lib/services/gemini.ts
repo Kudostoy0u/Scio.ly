@@ -46,6 +46,11 @@ export class GeminiService {
     const response = await ai.models.generateContent({
       model,
       contents: prompt,
+      config: {
+        temperature: 0.1, // Low temperature for more deterministic responses
+        topP: 0.8,
+        topK: 40,
+      },
     });
 
     return response.text || '';
@@ -65,11 +70,52 @@ export class GeminiService {
       config: {
         responseMimeType: "application/json",
         responseSchema: schema,
+        temperature: 0.1, // Low temperature for consistent structured output
+        topP: 0.8,
+        topK: 40,
       },
     });
 
     const text = response.text || '{}';
     return JSON.parse(text) as Record<string, unknown>;
+  }
+
+  // Stream structured content: yields partial JSON-safe text and emits final parsed object at end
+  public async *streamStructuredContent(
+    prompt: string,
+    schema: unknown,
+    model: string = 'gemini-2.5-flash'
+  ): AsyncGenerator<{ type: 'text'; chunk: string } | { type: 'final'; data: Record<string, unknown> }, void, unknown> {
+    const ai = this.getCurrentClient();
+    const stream = await ai.models.generateContentStream({
+      model,
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: schema,
+        temperature: 0.1, // Low temperature for consistent streaming
+        topP: 0.8,
+        topK: 40,
+      },
+    });
+
+    let fullText = '';
+    for await (const part of stream) {
+      const piece = part.text || '';
+      if (piece) {
+        fullText += piece;
+        // Emit as plain text chunks so the client can progressively render
+        yield { type: 'text', chunk: piece };
+      }
+    }
+    // Try to parse final JSON
+    try {
+      const parsed = (fullText ? JSON.parse(fullText) : {}) as Record<string, unknown>;
+      yield { type: 'final', data: parsed };
+    } catch {
+      // Fallback to empty object if parsing failed
+      yield { type: 'final', data: {} };
+    }
   }
 
   // Suggest edit for a question
@@ -224,6 +270,75 @@ Provide a comprehensive, educational explanation that helps students understand 
     };
 
     return await this.generateStructuredContent(prompt, schema);
+  }
+
+  // Stream explain for progressive UI
+  public async *streamExplain(
+    question: Record<string, unknown>,
+    userAnswer: unknown,
+    event: string
+  ): AsyncGenerator<{ type: 'text'; chunk: string } | { type: 'final'; data: Record<string, unknown> }, void, unknown> {
+    // First, stream plain markdown explanation
+    const ai = this.getCurrentClient();
+    const explanationPrompt = `You are an expert Science Olympiad tutor. Provide concise, clear explanations.
+
+QUESTION: ${JSON.stringify(question)}
+EVENT: ${event}
+
+REQUIREMENTS:
+1. Brief overview of the topic/concept
+2. Why the correct answer is right (be specific)
+3. Why each wrong answer is wrong (be specific)
+4. Keep explanations concise and focused
+
+FORMAT:
+- Use **bold** for key terms and concepts
+- Use simple line breaks between sections
+- NO bullet points, numbered lists, or complex markdown
+- NO LaTeX, code blocks, or special formatting
+- End with "Correct answer: **[answer]**" format
+- Keep each section brief and to the point
+
+Focus on clarity and accuracy over length.`;
+
+    const stream = await ai.models.generateContentStream({
+      model: 'gemini-2.5-flash',
+      contents: explanationPrompt,
+      config: {
+        temperature: 0.1, // Low temperature for consistent explanations
+        topP: 0.8,
+        topK: 40,
+      },
+    });
+
+    let fullExplanation = '';
+    for await (const part of stream) {
+      const piece = part.text || '';
+      if (piece) {
+        fullExplanation += piece;
+        yield { type: 'text', chunk: piece };
+      }
+    }
+
+    // After streaming, get structured data for correct indices
+    try {
+      const structuredResult = await this.explain(question, userAnswer, event);
+      yield { 
+        type: 'final', 
+        data: {
+          explanation: fullExplanation,
+          correctIndices: structuredResult.correctIndices
+        }
+      };
+    } catch {
+      // If structured call fails, just return the explanation
+      yield { 
+        type: 'final', 
+        data: {
+          explanation: fullExplanation
+        }
+      };
+    }
   }
 
   // Grade free response questions
