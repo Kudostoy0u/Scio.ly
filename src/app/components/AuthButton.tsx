@@ -251,25 +251,6 @@ export default function AuthButton() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}${window.location.pathname}`
-        }
-      });
-      
-      if (error) {
-        console.error('Error signing in:', error);
-      } else {
-        setShowSignInModal(false);
-      }
-    } catch (error) {
-      console.error('Error signing in:', error);
-    }
-  };
-
   const handleSignOut = async () => {
     try {
       // Fast local clear to avoid stale UI when session is expired or network is slow

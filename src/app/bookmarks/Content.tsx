@@ -8,6 +8,9 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { loadBookmarksFromSupabase, removeBookmark } from '@/app/utils/bookmarks';
 import Header from '../components/Header';
+import { supabase } from '@/lib/supabase';
+import { clearTestSession } from '@/app/utils/timeManagement';
+import { ArrowRight, Trash2 } from 'lucide-react';
 
 interface Question {
   question: string;
@@ -138,30 +141,62 @@ export default function Content() {
     }
   };
 
-  const handleTakeTimedTest = (eventName: string, questions: BookmarkedQuestion[]) => {
-    // Store bookmarked questions for timed test mode
-    localStorage.setItem('testQuestions', JSON.stringify(questions.map(q => q.question)));
-    localStorage.setItem('testParams', JSON.stringify({
-      eventName: eventName,
-      questionCount: questions.length.toString(),
-      timeLimit: '30', // Default time limit
-      types: 'multiple-choice' // Default type
-    }));
-    localStorage.setItem('testFromBookmarks', 'true'); // Flag to indicate test is from bookmarks
-    router.push('/test');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleTakeTimedTest = (eventName: string, _questions: BookmarkedQuestion[]) => {
+    // Repurposed to CLEAR ALL for this event (rightmost button)
+    (async () => {
+      if (!user) {
+        toast.info('Please sign in to manage bookmarks');
+        return;
+      }
+      try {
+        const { error } = await supabase
+          .from('bookmarks')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('event_name', eventName);
+        if (error) throw error;
+
+        setBookmarkedQuestions(prev => {
+          const updated = { ...prev };
+          delete updated[eventName];
+          return updated;
+        });
+        toast.success('Cleared all bookmarks for this event');
+      } catch (err) {
+        console.error('Error clearing bookmarks:', err);
+        toast.error('Failed to clear bookmarks');
+      }
+    })();
   };
 
   const handleTakeQuickTest = (eventName: string, questions: BookmarkedQuestion[]) => {
-    // Store bookmarked questions for quick test mode (no timer)
-    localStorage.setItem('testQuestions', JSON.stringify(questions.map(q => q.question)));
-    localStorage.setItem('testParams', JSON.stringify({
-      eventName: eventName,
-      questionCount: questions.length.toString(),
-      timeLimit: '0', // No time limit for quick test
-      types: 'multiple-choice' // Default type
-    }));
-    localStorage.setItem('testFromBookmarks', 'true'); // Flag to indicate test is from bookmarks
-    router.push('/test');
+    // Generate a clean test with these questions (no timer)
+    try {
+      // Clear any previous session/state to avoid "Skipped" artifacts
+      clearTestSession();
+      localStorage.removeItem('testUserAnswers');
+      localStorage.removeItem('testSubmitted');
+      localStorage.removeItem('contestedQuestions');
+      localStorage.removeItem('testFromBookmarks');
+
+      // Compute time: 5 minutes per question, minimum 5 minutes
+      const questionCount = Math.max(1, questions.length);
+      const timeLimitMinutes = Math.max(5, questionCount * 5);
+
+      localStorage.setItem('testQuestions', JSON.stringify(questions.map(q => q.question)));
+      localStorage.setItem('testParams', JSON.stringify({
+        eventName: eventName,
+        questionCount: questionCount.toString(),
+        timeLimit: String(timeLimitMinutes),
+        types: 'multiple-choice'
+      }));
+      localStorage.setItem('testFromBookmarks', 'true');
+      router.push('/test');
+    } catch (err) {
+      console.error('Error starting test from bookmarks:', err);
+      toast.error('Failed to start test');
+    }
   };
 
   const toggleEventDropdown = (eventName: string) => {
@@ -299,10 +334,7 @@ export default function Content() {
                           <div className={`md:hidden mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                             <p>{questions.length} question{questions.length !== 1 ? 's' : ''}</p>
                           </div>
-                          {/* Action buttons hint */}
-                          <div className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                            <p>→ Quick Test • ✓ Timed Test</p>
-                          </div>
+                          {/* Hint removed per request */}
                         </div>
                         {/* Chevron Icon */}
                         <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 transition-transform duration-300 ${openEvents[eventName] ? 'rotate-180' : ''} ${darkMode ? 'text-gray-400' : 'text-gray-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -314,29 +346,21 @@ export default function Content() {
                     <div className="flex">
                       <button
                         onClick={() => handleTakeQuickTest(eventName, questions)}
-                        aria-label={`Take quick test with ${eventName} questions`}
+                        aria-label="Generate test"
                         className={`w-16 flex items-center justify-center transition-all duration-300 ease-in-out group ${
-                          darkMode
-                            ? 'bg-gray-600 hover:bg-blue-500'
-                            : 'bg-gray-200 hover:bg-blue-500'
+                          darkMode ? 'bg-gray-600 hover:bg-blue-500' : 'bg-gray-200 hover:bg-blue-500'
                         }`}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-all duration-300 ease-in-out group-hover:translate-x-1 ${darkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-600 group-hover:text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                        </svg>
+                        <ArrowRight className={`h-6 w-6 transition-all duration-300 group-hover:translate-x-1 ${darkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-600 group-hover:text-white'}`} />
                       </button>
                       <button
                         onClick={() => handleTakeTimedTest(eventName, questions)}
-                        aria-label={`Take timed test with ${eventName} questions`}
+                        aria-label="Unbookmark all"
                         className={`w-16 flex items-center justify-center transition-all duration-300 ease-in-out group ${
-                          darkMode
-                            ? 'bg-gray-600 hover:bg-green-500'
-                            : 'bg-gray-200 hover:bg-green-500'
+                          darkMode ? 'bg-gray-600 hover:bg-red-600' : 'bg-gray-200 hover:bg-red-600'
                         }`}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-all duration-300 ease-in-out group-hover:translate-x-1 ${darkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-600 group-hover:text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                        <Trash2 className={`h-6 w-6 transition-all duration-300 ${darkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-600 group-hover:text-white'}`} />
                       </button>
                     </div>
                   </div>
