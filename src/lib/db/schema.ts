@@ -68,6 +68,23 @@ export const shareCodes = pgTable('share_codes', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+// Edits table
+export const edits = pgTable('edits', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  event: text('event').notNull(),
+  originalQuestion: jsonb('original_question').notNull(),
+  editedQuestion: jsonb('edited_question').notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Blacklists table
+export const blacklists = pgTable('blacklists', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  event: text('event').notNull(),
+  questionData: jsonb('question_data').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Relations (for future use if needed)
 export const bookmarksRelations = relations(bookmarks, () => ({
   // user: one('users', {

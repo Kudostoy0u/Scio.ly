@@ -5,32 +5,32 @@ export interface Database {
         Row: {
           id: string
           email: string
-          name: string | null
+          username: string
+          first_name: string | null
+          last_name: string | null
+          display_name: string | null
           photo_url: string | null
           created_at: string
-          navbar_style: 'default' | 'golden' | 'rainbow'
-          has_unlocked_golden: boolean
-          has_unlocked_rainbow: boolean
         }
         Insert: {
           id: string
           email: string
-          name?: string | null
+          username: string
+          first_name?: string | null
+          last_name?: string | null
+          display_name?: string | null
           photo_url?: string | null
           created_at?: string
-          navbar_style?: 'default' | 'golden' | 'rainbow'
-          has_unlocked_golden?: boolean
-          has_unlocked_rainbow?: boolean
         }
         Update: {
           id?: string
           email?: string
-          name?: string | null
+          username?: string
+          first_name?: string | null
+          last_name?: string | null
+          display_name?: string | null
           photo_url?: string | null
           created_at?: string
-          navbar_style?: 'default' | 'golden' | 'rainbow'
-          has_unlocked_golden?: boolean
-          has_unlocked_rainbow?: boolean
         }
       }
       user_stats: {

@@ -94,3 +94,11 @@ Summary
 - Many page-level `use client` flags force full client rendering and client→API waterfalls.
 - Adopt SSR for marketing/docs now; introduce Supabase SSR and move initial data fetches for dashboard/leaderboard to the server; keep interactive runners client but server-preload their data.
 - Add `revalidate` to docs; mark per-user pages dynamic; gradually replace internal reads to hit `db` in Server Components.
+
+\[x] Add revalidation to docs pages (`docs/[event]/page.tsx`, `docs/[event]/[sub]/page.tsx`)
+\[x] Convert legal pages to Server Components by removing `use client` and ThemeContext dependency at page level (`legal/privacy/page.tsx`, `legal/terms/page.tsx`)
+\[x] Convert marketing pages (home, about, contact) to server pages with client subcomponents for interactive pieces
+\[x] Introduce Supabase SSR and inject server session
+\[x] Dashboard: server-fetch initial data, keep animations client
+\[x] Leaderboard: server-render initial data; keep mutations via RPC/server actions
+\[x] Practice/Test: pass params via cookies; server-generate question sets and hydrate client; keep clean URLs (/test, /unlimited)
