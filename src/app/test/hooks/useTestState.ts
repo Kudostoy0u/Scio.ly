@@ -28,13 +28,14 @@ import {
   setupVisibilityHandling
 } from '@/app/utils/timeManagement';
 import api from '../../api';
+import { getEventOfflineQuestions } from '@/app/utils/storage';
 
-export function useTestState() {
+export function useTestState({ initialData, initialRouterData }: { initialData?: any[]; initialRouterData?: any } = {}) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const fetchStartedRef = useRef(false);
-  const [data, setData] = useState<Question[]>([]);
-  const [routerData, setRouterData] = useState<RouterParams>({});
+  const [data, setData] = useState<Question[]>(Array.isArray(initialData) ? initialData as Question[] : []);
+  const [routerData, setRouterData] = useState<RouterParams>(initialRouterData || {});
   const [userAnswers, setUserAnswers] = useState<Record<number, (string | null)[] | null>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -83,13 +84,13 @@ export function useTestState() {
     
     fetchStartedRef.current = true;
 
+    // Prefer initialRouterData from server. Fallback to localStorage.
     const storedParams = localStorage.getItem('testParams');
-    if (!storedParams) {
+    const routerParams = initialRouterData || (storedParams ? JSON.parse(storedParams) : {});
+    if (!routerParams || Object.keys(routerParams).length === 0) {
       router.push('/');
       return;
     }
-  
-    const routerParams = JSON.parse(storedParams);
     setRouterData(routerParams);
   
     const eventName = routerParams.eventName || 'Unknown Event';
@@ -115,6 +116,12 @@ export function useTestState() {
     const storedQuestions = localStorage.getItem('testQuestions');
     const isFromBookmarks = localStorage.getItem('testFromBookmarks') === 'true';
     
+    if (Array.isArray(initialData) && initialData.length > 0) {
+      setData(initialData as Question[]);
+      setIsLoading(false);
+      return;
+    }
+
     if (storedQuestions) {
       const parsedQuestions = JSON.parse(storedQuestions);
       setData(parsedQuestions);
@@ -157,9 +164,27 @@ export function useTestState() {
         const params = buildApiParams(routerParams, requestCount);
         const apiUrl = `${api.questions}?${params}`;
         
-        const response = await fetch(apiUrl);
-        if (!response.ok) throw new Error('Failed to fetch data from API');
-        const apiResponse = await response.json();
+        let response: Response | null = null;
+        try {
+          response = await fetch(apiUrl);
+        } catch {
+          response = null;
+        }
+        let apiResponse: any = null;
+        if (response && response.ok) {
+          apiResponse = await response.json();
+        } else {
+          // Try offline cache for this event
+          const evt = routerParams.eventName as string | undefined;
+          if (evt) {
+            const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            const cached = await getEventOfflineQuestions(slug);
+            if (Array.isArray(cached) && cached.length > 0) {
+              apiResponse = { success: true, data: cached };
+            }
+          }
+          if (!apiResponse) throw new Error('Failed to load questions.');
+        }
         
         if (!apiResponse.success) {
           throw new Error(apiResponse.error || 'API request failed');
@@ -193,7 +218,7 @@ export function useTestState() {
     };
   
     fetchData();
-  }, [data.length, isLoading, router]);
+  }, [data.length, isLoading, router, initialData, initialRouterData]);
 
   // Timer logic
   useEffect(() => {

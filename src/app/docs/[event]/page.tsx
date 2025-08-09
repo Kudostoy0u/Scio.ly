@@ -2,8 +2,9 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getEventBySlug } from '@/app/docs/utils/events2026';
 import { getAnyEventMarkdown } from '@/app/docs/utils/storage';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { DocsMarkdown } from '@/app/docs/components/DocsMarkdown';
+
+export const revalidate = 600;
 
 export function generateStaticParams() {
   return getEventBySlug.allSlugs().map(slug => ({ event: slug }));
@@ -39,7 +40,7 @@ export default async function EventDocsPage({ params }: any) {
         <div className="sticky top-24 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400">On this page</h2>
-            <Link href={`/docs/${evt.slug}/edit`} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">Edit</Link>
+            <Link href={`/docs/${evt.slug}/edit`} className="text-xs font-medium hover:underline text-blue-600 dark:text-blue-400">Edit</Link>
           </div>
           <nav className="text-sm">
             <ul className="space-y-1">
@@ -53,85 +54,81 @@ export default async function EventDocsPage({ params }: any) {
         </div>
       </aside>
 
-      <article className="prose dark:prose-invert max-w-none lg:col-span-9">
-        <h1>{evt.name} – Division {evt.division.join(' / ')}</h1>
-        <p className="text-sm -mt-4 text-gray-500">2026 season</p>
+      <article className="lg:col-span-9 space-y-10">
+        <header className="space-y-1">
+          <h1 className="text-3xl font-bold text-black dark:text-gray-100">{evt.name} – Division {evt.division.join(' / ')}</h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400">2026 season</p>
+        </header>
 
         <section>
-          <h2>Overview</h2>
-          {md ? (
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                h1: ({ children }) => <h1 id={slugify(String(children))}>{children}</h1>,
-                h2: ({ children }) => <h2 id={slugify(String(children))}>{children}</h2>,
-                h3: ({ children }) => <h3 id={slugify(String(children))}>{children}</h3>,
-                h4: ({ children }) => <h4 id={slugify(String(children))}>{children}</h4>,
-                h5: ({ children }) => <h5 id={slugify(String(children))}>{children}</h5>,
-                h6: ({ children }) => <h6 id={slugify(String(children))}>{children}</h6>,
-              }}
-            >
-              {md}
-            </ReactMarkdown>
-          ) : (
-            <>
-              <p>{evt.overview}</p>
-              <ul>
-                {evt.keyTopics.map(t => (<li key={t}>{t}</li>))}
-              </ul>
-            </>
-          )}
+          <div>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Overview</h2>
+            {md ? (
+              <DocsMarkdown content={md} withHeadingIds />
+            ) : (
+              <div className="prose prose-slate max-w-none">
+                <p>{evt.overview}</p>
+                <ul>
+                  {evt.keyTopics.map(t => (<li key={t}>{t}</li>))}
+                </ul>
+              </div>
+            )}
+          </div>
           {evt.materialsNote && (
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2"><strong>Allowed materials:</strong> {evt.materialsNote}</p>
           )}
         </section>
 
         {evt.subsections && evt.subsections.length > 0 && (
-          <section>
-            <h2>Subsections</h2>
-            <ul>
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Subsections</h2>
+              <Link href={`/docs/${evt.slug}/edit`} className="text-sm font-medium hover:underline text-blue-600 dark:text-blue-400">Edit main</Link>
+            </div>
+            <ul className={`divide-y divide-gray-200 dark:divide-gray-800 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800`}>
               {evt.subsections.map(s => (
-                <li key={s.slug}>
-                  <Link href={`/docs/${evt.slug}/${s.slug}`} className="text-blue-600 dark:text-blue-400 hover:underline">{s.title}</Link>
+                <li key={s.slug} className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900">
+                  <Link href={`/docs/${evt.slug}/${s.slug}`} className="hover:underline text-blue-600 dark:text-blue-400">{s.title}</Link>
+                  <Link href={`/docs/${evt.slug}/${s.slug}/edit`} className="text-xs font-medium text-gray-700 dark:text-gray-300 hover:underline">Quick edit</Link>
                 </li>
               ))}
             </ul>
           </section>
         )}
 
-      <section>
-        <h2>Official references</h2>
-        <ul>
-          {evt.links.map(link => (
-            <li key={link.url}>
-              <a href={link.url} target="_blank" rel="noopener noreferrer">{link.label}</a>
-            </li>
-          ))}
-        </ul>
-      </section>
+        <section>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Official references</h2>
+          <ul className="list-disc pl-5 space-y-1 text-gray-900 dark:text-gray-100">
+            {evt.links.map(link => (
+              <li key={link.url}>
+                <a className="hover:underline text-blue-600 dark:text-blue-400" href={link.url} target="_blank" rel="noopener noreferrer">{link.label}</a>
+              </li>
+            ))}
+          </ul>
+        </section>
 
         {evt.notesheetAllowed && (
-          <section id="notesheet">
-            <h2>Sample notesheet</h2>
-            <p>Download a printable, rule-compliant sample notesheet. Customize with your notes.</p>
+          <section id="notesheet" className="space-y-2">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Sample notesheet</h2>
+            <p className="text-gray-700 dark:text-gray-300">Download a printable, rule-compliant sample notesheet. Customize with your notes.</p>
             <div className="flex gap-3">
-              <Link className="btn btn-primary" href={`/docs/${evt.slug}/notesheet.pdf`} prefetch={false}>
+              <Link className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" href={`/docs/${evt.slug}/notesheet.pdf`} prefetch={false}>
                 Download PDF
               </Link>
-              <Link className="btn" href={`/docs/${evt.slug}/notesheet`} prefetch={false}>
+              <Link className={`px-4 py-2 rounded border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800`} href={`/docs/${evt.slug}/notesheet`} prefetch={false}>
                 Preview in browser
               </Link>
             </div>
           </section>
         )}
 
-        <section>
-          <h2>Study roadmap</h2>
-          <ol>
+        <section className="space-y-2">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Study roadmap</h2>
+          <ol className="list-decimal pl-5 text-gray-900 dark:text-gray-100">
             {evt.studyRoadmap.map(step => (<li key={step}>{step}</li>))}
           </ol>
-          <div className="mt-4">
-            <Link href={`/docs/${evt.slug}/edit`} className="text-blue-600 dark:text-blue-400 hover:underline">Contribute edits</Link>
+          <div className="mt-2">
+            <Link href={`/docs/${evt.slug}/edit`} className="hover:underline text-blue-600 dark:text-blue-400">Contribute edits</Link>
           </div>
         </section>
       </article>

@@ -10,7 +10,7 @@ import ShareModal from '@/app/components/ShareModal';
 import { useTestState } from './hooks/useTestState';
 import { TestLayout, TestHeader, ProgressBar, QuestionCard, TestFooter } from './components';
 
-export default function TestPage() {
+export default function TestPage({ initialData, initialRouterData }: { initialData?: any[]; initialRouterData?: any }) {
   const { darkMode } = useTheme();
   const {
     // State
@@ -50,7 +50,7 @@ export default function TestPage() {
     setShareModalOpen,
     setInputCode,
     setIsEditModalOpen
-  } = useTestState();
+  } = useTestState({ initialData, initialRouterData });
 
   if (!isMounted) {
     return null;

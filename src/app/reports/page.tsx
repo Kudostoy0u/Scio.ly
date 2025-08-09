@@ -45,13 +45,12 @@ const parseQuestion = (questionData: string | unknown): Question | null => {
       };
     }
   } else if (typeof questionData === 'object' && questionData !== null) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const q = questionData as any;
+    const q = questionData as Partial<Question>;
     return {
-      question: q.question || 'Unknown question',
-      options: q.options || [],
-      answers: q.answers || [],
-      difficulty: typeof q.difficulty === 'number' ? q.difficulty : 0.5
+      question: (q.question as string) || 'Unknown question',
+      options: (q.options as string[]) || [],
+      answers: (q.answers as (number | string)[]) || [],
+      difficulty: typeof q.difficulty === 'number' ? (q.difficulty as number) : 0.5
     };
   }
   return null;

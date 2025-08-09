@@ -3,9 +3,12 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/app/contexts/ThemeContext';
+import Header from '@/app/components/Header';
 
 export default function JoinLeaderboardPage({ params }: { params: Promise<{ code: string }> }) {
   const router = useRouter();
+  const { darkMode } = useTheme();
   const [code, setCode] = useState<string | null>(null);
 
   useEffect(() => {
@@ -47,10 +50,13 @@ export default function JoinLeaderboardPage({ params }: { params: Promise<{ code
   }, [joinLeaderboard, code]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-lg">Joining leaderboard...</p>
+    <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <Header />
+      <div className="pt-20 flex items-center justify-center min-h-[calc(100vh-5rem)]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className={`text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>Joining leaderboard...</p>
+        </div>
       </div>
     </div>
   );

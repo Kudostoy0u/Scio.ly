@@ -1,24 +1,36 @@
 import { NextResponse } from 'next/server';
 import { ApiResponse } from '@/lib/types/api';
 import { db } from '@/lib/db';
-import { questions } from '@/lib/db/schema';
-import { client } from '@/lib/db';
+import { edits as editsTable, blacklists as blacklistsTable } from '@/lib/db/schema';
+import { desc } from 'drizzle-orm';
+
+// Helper to handle jsonb (object) or string-encoded JSON seamlessly
+function parseMaybeJson(value: unknown): Record<string, unknown> {
+  if (value === null || value === undefined) return {};
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : { value: parsed as unknown } as Record<string, unknown>;
+    } catch {
+      return { value } as Record<string, unknown>;
+    }
+  }
+  if (typeof value === 'object') {
+    return value as Record<string, unknown>;
+  }
+  return { value } as Record<string, unknown>;
+}
 
 // GET /api/report/all - Get all reports (edits and blacklists)
 export async function GET() {
   try {
     console.log('🔍 [REPORT/ALL] Fetching all reports');
 
-    // Get all edits
-    const editsQuery = "SELECT * FROM edits ORDER BY updated_at DESC";
-    const editsResult = await client.unsafe<Array<{
-      id: string;
-      event: string;
-      original_question: string;
-      edited_question: string;
-      reason: string;
-      updated_at: string;
-    }>>(editsQuery);
+    // Get all edits via Drizzle
+    const editsResult = await db
+      .select()
+      .from(editsTable)
+      .orderBy(desc(editsTable.updatedAt));
 
           const edits: Record<string, Array<{
         original: Record<string, unknown>;
@@ -31,29 +43,20 @@ export async function GET() {
         edits[row.event] = [];
       }
       
-      try {
-        const originalObj = JSON.parse(row.original_question);
-        const editedObj = JSON.parse(row.edited_question);
-        
-        edits[row.event].push({
-          original: originalObj,
-          edited: editedObj,
-          timestamp: row.updated_at,
-        });
-      } catch (error) {
-        console.log('Failed to parse edit JSON:', error);
-      }
+      const originalObj = parseMaybeJson(row.originalQuestion);
+      const editedObj = parseMaybeJson(row.editedQuestion);
+      edits[row.event].push({
+        original: originalObj,
+        edited: editedObj,
+        timestamp: String(row.updatedAt),
+      });
     }
 
-    // Get all blacklists
-    const blacklistsQuery = "SELECT * FROM blacklists ORDER BY created_at DESC";
-    const blacklistsResult = await client.unsafe<Array<{
-      id: string;
-      event: string;
-      question_data: string;
-      reason: string;
-      created_at: string;
-    }>>(blacklistsQuery);
+    // Get all blacklists via Drizzle
+    const blacklistsResult = await db
+      .select()
+      .from(blacklistsTable)
+      .orderBy(desc(blacklistsTable.createdAt));
 
           const blacklists: Record<string, unknown[]> = {};
 
@@ -62,12 +65,8 @@ export async function GET() {
         blacklists[row.event] = [];
       }
       
-      try {
-        const questionObj = JSON.parse(row.question_data);
-        blacklists[row.event].push(questionObj);
-      } catch (error) {
-        console.log('Failed to parse blacklist JSON:', error);
-      }
+      const questionObj = parseMaybeJson(row.questionData);
+      blacklists[row.event].push(questionObj);
     }
 
     console.log(`✅ [REPORT/ALL] Found edits for ${Object.keys(edits).length} events, blacklists for ${Object.keys(blacklists).length} events`);

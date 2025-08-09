@@ -1,6 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse, BlacklistRequest } from '@/lib/types/api';
-import { client } from '@/lib/db';
+import { db } from '@/lib/db';
+import { blacklists as blacklistsTable, questions as questionsTable } from '@/lib/db/schema';
+import { desc, eq } from 'drizzle-orm';
+
+// Helper to handle jsonb (object) or string-encoded JSON seamlessly
+function parseMaybeJson(value: unknown): Record<string, unknown> {
+  if (value === null || value === undefined) return {};
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : { value: parsed as unknown } as Record<string, unknown>;
+    } catch {
+      return { value } as Record<string, unknown>;
+    }
+  }
+  if (typeof value === 'object') {
+    return value as Record<string, unknown>;
+  }
+  return { value } as Record<string, unknown>;
+}
 
 // GET /api/blacklists - Get blacklisted questions (optionally filtered by event)
 export async function GET(request: NextRequest) {
@@ -10,24 +29,13 @@ export async function GET(request: NextRequest) {
 
     console.log(`🔍 [BLACKLIST/GET] Request received - Event: ${event}`);
 
-    let query = "SELECT * FROM blacklists";
-    const params: unknown[] = [];
+    console.log(`🔍 [BLACKLIST/GET] Executing Drizzle query`);
 
-    if (event) {
-      query += " WHERE event = $1";
-      params.push(event);
-    }
-
-    query += " ORDER BY created_at DESC";
-
-    console.log(`🔍 [BLACKLIST/GET] Executing query: ${query} with params:`, params);
-
-    const result = await client.unsafe<Array<{
-      id: string;
-      event: string;
-      question_data: string;
-      created_at: string;
-    }>>(query, params as (string | number | boolean | null)[]);
+    const result = await db
+      .select()
+      .from(blacklistsTable)
+      .where(event ? eq(blacklistsTable.event, event) : undefined as unknown as never)
+      .orderBy(desc(blacklistsTable.createdAt));
 
     if (event) {
       // Return just the blacklist array for specific event
@@ -36,14 +44,11 @@ export async function GET(request: NextRequest) {
       
       for (const row of result) {
         rowCount++;
-        console.log(`📝 [BLACKLIST/GET] Row ${rowCount} - Event: ${row.event}, QuestionData: ${row.question_data}`);
+        const preview = typeof row.questionData === 'string' ? row.questionData.slice(0, 80) : JSON.stringify(row.questionData).slice(0, 80);
+        console.log(`📝 [BLACKLIST/GET] Row ${rowCount} - Event: ${row.event}, QuestionData: ${preview}`);
         
-        try {
-          const questionObj = JSON.parse(row.question_data);
-          blacklist.push(questionObj);
-        } catch (error) {
-          console.log(`❌ [BLACKLIST/GET] Failed to parse JSON for row ${rowCount}:`, error);
-        }
+        const questionObj = parseMaybeJson(row.questionData);
+        blacklist.push(questionObj);
       }
 
       console.log(`✅ [BLACKLIST/GET] Found ${blacklist.length} blacklist items for event ${event}`);
@@ -59,18 +64,15 @@ export async function GET(request: NextRequest) {
       
       for (const row of result) {
         rowCount++;
-        console.log(`📝 [BLACKLIST/GET] Row ${rowCount} - Event: ${row.event}, QuestionData: ${row.question_data}`);
+        const preview = typeof row.questionData === 'string' ? row.questionData.slice(0, 80) : JSON.stringify(row.questionData).slice(0, 80);
+        console.log(`📝 [BLACKLIST/GET] Row ${rowCount} - Event: ${row.event}, QuestionData: ${preview}`);
         
         if (!blacklists[row.event]) {
           blacklists[row.event] = [];
         }
         
-        try {
-          const questionObj = JSON.parse(row.question_data);
-          blacklists[row.event].push(questionObj);
-        } catch (error) {
-          console.log(`❌ [BLACKLIST/GET] Failed to parse JSON for row ${rowCount}:`, error);
-        }
+        const questionObj = parseMaybeJson(row.questionData);
+        blacklists[row.event].push(questionObj);
       }
 
       console.log(`✅ [BLACKLIST/GET] Found blacklists for ${Object.keys(blacklists).length} events`);
@@ -107,22 +109,16 @@ export async function POST(request: NextRequest) {
 
     // Start transaction-like operations (Neon doesn't support transactions in serverless)
     try {
-      // Add to blacklist
-      const insertQuery = `
-        INSERT INTO blacklists (event, question_data, created_at) 
-        VALUES ($1, $2, CURRENT_TIMESTAMP)
-      `;
-      
-       await client.unsafe(insertQuery, [
-        body.event,
-        questionDataJSON,
-      ]);
+      // Add to blacklist via Drizzle
+      await db
+        .insert(blacklistsTable)
+        .values({ event: body.event, questionData: JSON.parse(questionDataJSON) });
 
       // Remove from main questions table if it exists
       const questionId = body.questionData.id;
       if (questionId) {
         try {
-          await client.unsafe("DELETE FROM questions WHERE id = $1", [questionId as unknown as string]);
+          await db.delete(questionsTable).where(eq(questionsTable.id, questionId as unknown as string));
         } catch (error) {
           // Log error but don't fail the request
           console.log('Question might not exist in main table:', error);

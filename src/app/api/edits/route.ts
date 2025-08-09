@@ -1,7 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { client } from '@/lib/db';
+import { db } from '@/lib/db';
 import { ApiResponse, EditRequest } from '@/lib/types/api';
 import { geminiService } from '@/lib/services/gemini';
+import { edits as editsTable } from '@/lib/db/schema';
+import { desc, eq, and } from 'drizzle-orm';
+
+// Helper to handle jsonb (object) or string-encoded JSON seamlessly
+function parseMaybeJson(value: unknown): Record<string, unknown> {
+  if (value === null || value === undefined) return {};
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : { value: parsed as unknown } as Record<string, unknown>;
+    } catch {
+      return { value } as Record<string, unknown>;
+    }
+  }
+  if (typeof value === 'object') {
+    return value as Record<string, unknown>;
+  }
+  return { value } as Record<string, unknown>;
+}
 
 // GET /api/edits - Get edits (optionally filtered by event)
 export async function GET(request: NextRequest) {
@@ -11,26 +30,13 @@ export async function GET(request: NextRequest) {
 
     console.log(`🔍 [EDIT/GET] Request received - Event: ${event}`);
 
-    let query = "SELECT * FROM edits";
-    const params: unknown[] = [];
+    console.log(`🔍 [EDIT/GET] Executing Drizzle query`);
 
-    if (event) {
-      query += " WHERE event = $1";
-      params.push(event);
-    }
-
-    query += " ORDER BY updated_at DESC";
-
-    console.log(`🔍 [EDIT/GET] Executing query: ${query} with params:`, params);
-
-    const result = await client.unsafe<Array<{
-      id: string;
-      event: string;
-      original_question: string;
-      edited_question: string;
-      reason: string;
-      updated_at: string;
-    }>>(query, params as (string | number | boolean | null)[]);
+    const result = await db
+      .select()
+      .from(editsTable)
+      .where(event ? eq(editsTable.event, event) : undefined as unknown as never)
+      .orderBy(desc(editsTable.updatedAt));
 
     if (event) {
       // Return edits array for specific event
@@ -43,20 +49,17 @@ export async function GET(request: NextRequest) {
       let rowCount = 0;
       for (const row of result) {
         rowCount++;
-        console.log(`📝 [EDIT/GET] Row ${rowCount} - Event: ${row.event}, Original: ${row.original_question}, Edited: ${row.edited_question}`);
+        const originalPreview = typeof row.originalQuestion === 'string' ? row.originalQuestion.slice(0, 80) : JSON.stringify(row.originalQuestion).slice(0, 80);
+        const editedPreview = typeof row.editedQuestion === 'string' ? row.editedQuestion.slice(0, 80) : JSON.stringify(row.editedQuestion).slice(0, 80);
+        console.log(`📝 [EDIT/GET] Row ${rowCount} - Event: ${row.event}, Original: ${originalPreview}, Edited: ${editedPreview}`);
         
-        try {
-          const originalObj = JSON.parse(row.original_question);
-          const editedObj = JSON.parse(row.edited_question);
-          
-          edits.push({
-            original: originalObj,
-            edited: editedObj,
-            timestamp: row.updated_at,
-          });
-        } catch {
-          console.log(`❌ [EDIT/GET] Failed to parse JSON for row ${rowCount}`);
-        }
+        const originalObj = parseMaybeJson(row.originalQuestion);
+        const editedObj = parseMaybeJson(row.editedQuestion);
+        edits.push({
+          original: originalObj,
+          edited: editedObj,
+          timestamp: String(row.updatedAt),
+        });
       }
 
       console.log(`✅ [EDIT/GET] Found ${edits.length} edits for event ${event}`);
@@ -76,24 +79,21 @@ export async function GET(request: NextRequest) {
       let rowCount = 0;
       for (const row of result) {
         rowCount++;
-        console.log(`📝 [EDIT/GET] Row ${rowCount} - Event: ${row.event}, Original: ${row.original_question}, Edited: ${row.edited_question}`);
+        const originalPreview = typeof row.originalQuestion === 'string' ? row.originalQuestion.slice(0, 80) : JSON.stringify(row.originalQuestion).slice(0, 80);
+        const editedPreview = typeof row.editedQuestion === 'string' ? row.editedQuestion.slice(0, 80) : JSON.stringify(row.editedQuestion).slice(0, 80);
+        console.log(`📝 [EDIT/GET] Row ${rowCount} - Event: ${row.event}, Original: ${originalPreview}, Edited: ${editedPreview}`);
         
         if (!edits[row.event]) {
           edits[row.event] = [];
         }
         
-        try {
-          const originalObj = JSON.parse(row.original_question);
-          const editedObj = JSON.parse(row.edited_question);
-          
-          edits[row.event].push({
-            original: originalObj,
-            edited: editedObj,
-            timestamp: row.updated_at,
-          });
-        } catch {
-          console.log(`❌ [EDIT/GET] Failed to parse JSON for row ${rowCount}`);
-        }
+        const originalObj = parseMaybeJson(row.originalQuestion);
+        const editedObj = parseMaybeJson(row.editedQuestion);
+        edits[row.event].push({
+          original: originalObj,
+          edited: editedObj,
+          timestamp: String(row.updatedAt),
+        });
       }
 
       console.log(`✅ [EDIT/GET] Found edits for ${Object.keys(edits).length} events`);
@@ -176,28 +176,23 @@ export async function POST(request: NextRequest) {
 
       try {
         // Check if edit already exists
-        const existingQuery = `
-          SELECT id FROM edits 
-          WHERE event = $1 AND original_question = $2
-        `;
-        const existingResult = await client.unsafe<Array<{ id: string }>>(existingQuery, [body.event, originalJSON]);
+        // Check if edit already exists
+        const existing = await db
+          .select({ id: editsTable.id })
+          .from(editsTable)
+          .where(and(eq(editsTable.event, body.event), eq(editsTable.originalQuestion, JSON.parse(originalJSON))))
+          .limit(1);
 
-        if (existingResult.length > 0) {
-          // Update existing edit
-          const updateQuery = `
-            UPDATE edits 
-            SET edited_question = $1, updated_at = CURRENT_TIMESTAMP 
-            WHERE id = $2
-          `;
-          await client.unsafe(updateQuery, [editedJSON, existingResult[0].id]);
+        if (existing.length > 0) {
+          await db
+            .update(editsTable)
+            .set({ editedQuestion: JSON.parse(editedJSON), updatedAt: new Date() })
+            .where(eq(editsTable.id, existing[0].id));
           console.log('📝 [EDIT/SUBMIT] Updated existing edit in database');
         } else {
-          // Create new edit
-          const insertQuery = `
-            INSERT INTO edits (event, original_question, edited_question) 
-            VALUES ($1, $2, $3)
-          `;
-          await client.unsafe(insertQuery, [body.event, originalJSON, editedJSON]);
+          await db
+            .insert(editsTable)
+            .values({ event: body.event, originalQuestion: JSON.parse(originalJSON), editedQuestion: JSON.parse(editedJSON) });
           console.log('📝 [EDIT/SUBMIT] Created new edit in database');
         }
 

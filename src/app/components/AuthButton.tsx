@@ -8,7 +8,7 @@ import { Eye, EyeOff, X, Settings, Trophy } from 'lucide-react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import Image from 'next/image';
 import Link from 'next/link';
-import { SocialAuth } from '@supabase/auth-ui-react';
+// Removed SocialAuth to use a custom-styled Google button
 
 export default function AuthButton() {
   const { darkMode } = useTheme();
@@ -21,12 +21,22 @@ export default function AuthButton() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
+  const [authSuccess, setAuthSuccess] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [displayName, setDisplayName] = useState<string | null>(null);
+  const [oauthLoading, setOauthLoading] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
+  const subtleLinkClass = darkMode
+    ? 'text-blue-300 hover:text-blue-200'
+    : 'text-blue-500 hover:text-blue-600';
 
   // Load cached user data from localStorage on mount
   useEffect(() => {
@@ -135,16 +145,25 @@ export default function AuthButton() {
       if (session?.user && !isOffline) {
         try {
           
-          // Create or update user profile
+          // Create or update user profile (reworked schema)
+          const emailLocal = (session.user.email || '').split('@')[0] || 'user';
+          const fullName: string | undefined = session.user.user_metadata?.name || session.user.user_metadata?.full_name || undefined;
+          const username = emailLocal;
+
+          const upsertRow: Record<string, unknown> = {
+            id: String(session.user.id),
+            email: session.user.email || '',
+            username,
+            photo_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null,
+            created_at: new Date().toISOString(),
+          };
+          if (fullName && fullName.trim()) {
+            upsertRow.display_name = fullName.trim();
+          }
+
           const { error } = await supabase
             .from('users')
-            .upsert({
-              id: String(session.user.id),
-              email: session.user.email || '',
-              name: session.user.user_metadata?.name || session.user.user_metadata?.full_name || null,
-              photo_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null,
-              created_at: new Date().toISOString(),
-            } as any, { onConflict: 'id' });
+            .upsert(upsertRow as any, { onConflict: 'id' });
           
           if (error) {
             console.error('❌ Error upserting user:', error);
@@ -171,14 +190,33 @@ export default function AuthButton() {
 
     setAuthLoading(true);
     setAuthError('');
+    setAuthSuccess('');
 
     try {
       if (authMode === 'signup') {
+        if (!firstName || !lastName) {
+          setAuthError('Please enter your first and last name');
+          return;
+        }
+        if (!confirmPassword) {
+          setAuthError('Please confirm your password');
+          return;
+        }
+        if (confirmPassword !== password) {
+          setAuthError('Passwords do not match');
+          return;
+        }
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}${window.location.pathname}`
+            emailRedirectTo: `${window.location.origin}${window.location.pathname}`,
+            data: {
+              first_name: firstName,
+              last_name: lastName,
+              name: `${firstName} ${lastName}`.trim(),
+              full_name: `${firstName} ${lastName}`.trim(),
+            },
           }
         });
         
@@ -197,9 +235,12 @@ export default function AuthButton() {
           if (data.user && data.user.email_confirmed_at) {
             setAuthError('An account with this email already exists. Please sign in instead.');
           } else {
-            setAuthError('Check your email for confirmation link!');
+            setAuthSuccess('Check your email for the confirmation link. Don\'t forget to check your spam folder.');
             setEmail('');
             setPassword('');
+            setConfirmPassword('');
+            setFirstName('');
+            setLastName('');
           }
         }
       } else {
@@ -253,6 +294,27 @@ export default function AuthButton() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    try {
+      setOauthLoading(true);
+      const redirectTo = typeof window !== 'undefined'
+        ? `${window.location.origin}${window.location.pathname}`
+        : undefined;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo },
+      });
+      if (error) {
+        setAuthError(error.message);
+      }
+    } catch (err) {
+      setAuthError(`An unexpected error occurred: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      // Usually redirects immediately; this is just to satisfy UI states in non-redirect environments
+      setOauthLoading(false);
+    }
+  };
+
   const handleSignOut = async () => {
     try {
       // Fast local clear to avoid stale UI when session is expired or network is slow
@@ -277,8 +339,12 @@ export default function AuthButton() {
     setEmail('');
     setPassword('');
     setAuthError('');
+    setAuthSuccess('');
     setResetEmailSent(false);
     setAuthMode('signin');
+    setFirstName('');
+    setLastName('');
+    setConfirmPassword('');
   };
 
   // Close dropdown when clicking outside
@@ -287,15 +353,30 @@ export default function AuthButton() {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
       }
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        setShowSignInModal(false);
-        resetForm();
-      }
     }
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+    const compute = () => {
+      const el = triggerRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const top = rect.bottom + 8;
+      const tentativeLeft = rect.right - 240; // assume ~240px width
+      const left = Math.max(8, Math.min(tentativeLeft, window.innerWidth - 248));
+      setDropdownPos({ top, left });
+    };
+    compute();
+    window.addEventListener('resize', compute);
+    window.addEventListener('scroll', compute, true);
+    return () => {
+      window.removeEventListener('resize', compute);
+      window.removeEventListener('scroll', compute, true);
+    };
+  }, [isDropdownOpen]);
 
   if (loading) {
     return (
@@ -309,6 +390,7 @@ export default function AuthButton() {
     return (
       <div className="relative" ref={dropdownRef}>
         <button
+          ref={triggerRef}
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           className={`flex items-center space-x-2 border rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-200 ${
             darkMode 
@@ -342,55 +424,28 @@ export default function AuthButton() {
           </svg>
         </button>
 
-        {isDropdownOpen && (
-          <div className={`absolute right-0 mt-2 min-w-48 max-w-64 rounded-md shadow-lg py-1 z-50 border ${
-            darkMode 
-              ? 'bg-gray-800 border-gray-600' 
-              : 'bg-white border-gray-200'
-          }`}>
-            <div className={`px-4 py-2 text-sm border-b ${
-              darkMode 
-                ? 'text-gray-200 border-gray-600' 
-                : 'text-gray-700 border-gray-100'
-            }`}>
-              <div className="font-medium truncate">
-                {displayName || user.user_metadata?.name || user.user_metadata?.full_name || 'User'}
-              </div>
+        {isDropdownOpen && dropdownPos && createPortal(
+          <div
+            ref={dropdownRef}
+            style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, minWidth: 192, zIndex: 10000 }}
+            className={`rounded-md shadow-lg py-1 border ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}
+          >
+            <div className={`px-4 py-2 text-sm border-b ${darkMode ? 'text-gray-200 border-gray-600' : 'text-gray-700 border-gray-100'}`}>
+              <div className="font-medium truncate">{displayName || user.user_metadata?.name || user.user_metadata?.full_name || 'User'}</div>
               <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} break-all`}>{user.email}</div>
             </div>
-            <Link
-              href="/leaderboard"
-              className={`block w-full text-left px-4 py-2 text-sm transition-colors duration-200 flex items-center gap-2 ${
-                darkMode 
-                  ? 'text-gray-200 hover:bg-gray-700' 
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
+            <Link href="/leaderboard" className={`block w-full text-left px-4 py-2 text-sm transition-colors duration-200 flex items-center gap-2 ${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
               <Trophy className="w-4 h-4" />
               Leaderboards
             </Link>
-            <Link
-              href="/profile"
-              className={`block w-full text-left px-4 py-2 text-sm transition-colors duration-200 flex items-center gap-2 ${
-                darkMode 
-                  ? 'text-gray-200 hover:bg-gray-700' 
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
+            <Link href="/profile" className={`block w-full text-left px-4 py-2 text-sm transition-colors duration-200 flex items-center gap-2 ${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
               <Settings className="w-4 h-4" />
               Profile Settings
             </Link>
-            <button
-              onClick={handleSignOut}
-              className={`block w-full text-left px-4 py-2 text-sm transition-colors duration-200 ${
-                darkMode 
-                  ? 'text-gray-200 hover:bg-gray-700' 
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
+            <button onClick={handleSignOut} className={`block w-full text-left px-4 py-2 text-sm transition-colors duration-200 ${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
               Sign out
             </button>
-          </div>
+          </div>, document.body
         )}
       </div>
     );
@@ -423,12 +478,14 @@ export default function AuthButton() {
             justifyContent: 'center',
             padding: '1rem'
           }}
+          onMouseDown={() => { setShowSignInModal(false); resetForm(); }}
         >
           <div
             ref={modalRef}
-            className={`rounded-lg p-6 w-full max-w-md ${
+            className={`relative rounded-lg p-6 w-full max-w-md ${
               darkMode ? 'bg-gray-800' : 'bg-white'
             }`}
+            onMouseDown={(e) => e.stopPropagation()}
           >
             {/* Close button */}
             <button
@@ -477,7 +534,7 @@ export default function AuthButton() {
                 </div>
 
                 {authError && (
-                  <div className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">
+                  <div className="text-red-500 text-sm bg-red-400 p-3 rounded-lg">
                     {authError}
                   </div>
                 )}
@@ -507,7 +564,7 @@ export default function AuthButton() {
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="text-blue-600 hover:text-blue-700 text-sm"
+                    className={`${subtleLinkClass} text-sm`}
                   >
                     Back to Sign In
                   </button>
@@ -516,6 +573,34 @@ export default function AuthButton() {
             ) : (
               <>
                 <form onSubmit={(e) => { e.preventDefault(); handleEmailPasswordAuth(); }} className="space-y-4">
+                  {authMode === 'signup' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input
+                        type="text"
+                        placeholder="First name"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                          darkMode 
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                            : 'border-gray-300 text-gray-900 placeholder-gray-500'
+                        }`}
+                        required
+                      />
+                      <input
+                        type="text"
+                        placeholder="Last name"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                          darkMode 
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                            : 'border-gray-300 text-gray-900 placeholder-gray-500'
+                        }`}
+                        required
+                      />
+                    </div>
+                  )}
                   <div>
                     <input
                       type="email"
@@ -560,9 +645,33 @@ export default function AuthButton() {
                     </button>
                   </div>
 
+                  {authMode === 'signup' && (
+                    <div>
+                      <input
+                        type="password"
+                        placeholder="Confirm password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                          darkMode 
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                            : 'border-gray-300 text-gray-900 placeholder-gray-500'
+                        }`}
+                        required
+                        minLength={6}
+                      />
+                    </div>
+                  )}
+
                   {authError && (
-                    <div className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">
+                    <div className="text-white text-sm bg-red-400 p-3 rounded-lg">
                       {authError}
+                    </div>
+                  )}
+
+                  {authSuccess && (
+                    <div className="text-green-700 text-sm bg-green-50 p-3 rounded-lg">
+                      {authSuccess}
                     </div>
                   )}
 
@@ -589,7 +698,7 @@ export default function AuthButton() {
                           setAuthMode('reset');
                           setAuthError('');
                         }}
-                        className="text-blue-600 hover:text-blue-700 text-sm"
+                        className={`${subtleLinkClass} text-sm`}
                       >
                         Forgot your password?
                       </button>
@@ -609,31 +718,20 @@ export default function AuthButton() {
                     </div>
                   </div>
 
-                  {/* Supabase SocialAuth button for Google. Styling of modal preserved; button keeps default look */}
                   <div className="mt-4">
-                    {(() => {
-                      const base = 'w-full rounded-lg px-4 py-2 flex items-center justify-center gap-3 transition-colors duration-200 border font-medium focus:outline-none focus:ring-2 focus:ring-blue-500';
-                      const themed = darkMode
-                        ? 'bg-gray-700 hover:bg-gray-600 border-gray-600 text-gray-100 shadow disabled:opacity-100 disabled:bg-gray-700 disabled:text-gray-100 disabled:border-gray-600'
-                        : 'bg-white hover:bg-gray-50 border-gray-300 text-gray-900 shadow-sm disabled:opacity-100 disabled:bg-white disabled:text-gray-900 disabled:border-gray-300';
-                      const buttonClass = `${base} ${themed}`;
-
-                      return (
-                        <SocialAuth
-                          supabaseClient={supabase}
-                          providers={['google']}
-                          redirectTo={typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : undefined}
-                          appearance={{
-                            className: {
-                              container: 'w-full',
-                              button: buttonClass,
-                              anchor: 'w-full',
-                              divider: 'hidden',
-                            },
-                          }}
-                        />
-                      );
-                    })()}
+                    <button
+                      type="button"
+                      onClick={handleGoogleSignIn}
+                      disabled={oauthLoading || isOffline}
+                      className={`w-full rounded-lg px-4 py-2 flex items-center justify-center gap-3 transition-colors duration-200 border font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        darkMode
+                          ? 'bg-gray-700 hover:bg-gray-600 border-gray-600 text-gray-100 shadow disabled:opacity-100 disabled:bg-gray-700 disabled:text-gray-100 disabled:border-gray-600'
+                          : 'bg-white hover:bg-gray-50 border-gray-300 text-gray-900 shadow-sm disabled:opacity-100 disabled:bg-white disabled:text-gray-900 disabled:border-gray-300'
+                      }`}
+                    >
+                      <Image src="/about/google-icon.png" alt="Google" width={18} height={18} />
+                      {oauthLoading ? 'Connecting…' : 'Continue with Google'}
+                    </button>
                   </div>
                 </div>
 
@@ -643,7 +741,7 @@ export default function AuthButton() {
                       setAuthMode(authMode === 'signin' ? 'signup' : 'signin');
                       setAuthError('');
                     }}
-                    className="text-blue-600 hover:text-blue-700 text-sm"
+                    className={`${subtleLinkClass} text-sm`}
                   >
                     {authMode === 'signin' 
                       ? "Don't have an account? Sign up" 

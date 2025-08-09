@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { client } from '@/lib/db';
+import { db } from '@/lib/db';
 import { ApiResponse, ReportEditRequest } from '@/lib/types/api';
 import { geminiService } from '@/lib/services/gemini';
+import { edits as editsTable } from '@/lib/db/schema';
+import { and, eq } from 'drizzle-orm';
 
 // POST /api/report/edit - Report and validate an edit
 export async function POST(request: NextRequest) {
@@ -62,28 +64,22 @@ export async function POST(request: NextRequest) {
 
       try {
         // Check if edit already exists
-        const existingQuery = `
-          SELECT id FROM edits 
-          WHERE event = $1 AND original_question = $2
-        `;
-        const existingResult = await client.unsafe<Array<{ id: string }>>(existingQuery, [body.event, originalJSON]);
+        const existing = await db
+          .select({ id: editsTable.id })
+          .from(editsTable)
+          .where(and(eq(editsTable.event, body.event), eq(editsTable.originalQuestion, JSON.parse(originalJSON))))
+          .limit(1);
 
-        if (existingResult.length > 0) {
-          // Update existing edit
-          const updateQuery = `
-            UPDATE edits 
-            SET edited_question = $1, updated_at = CURRENT_TIMESTAMP 
-            WHERE id = $2
-          `;
-          await client.unsafe(updateQuery, [editedJSON, existingResult[0].id]);
+        if (existing.length > 0) {
+          await db
+            .update(editsTable)
+            .set({ editedQuestion: JSON.parse(editedJSON), updatedAt: new Date() })
+            .where(eq(editsTable.id, existing[0].id));
           console.log('📝 [REPORT/EDIT] Updated existing edit in database');
         } else {
-          // Create new edit
-          const insertQuery = `
-            INSERT INTO edits (event, original_question, edited_question) 
-            VALUES ($1, $2, $3)
-          `;
-          await client.unsafe(insertQuery, [body.event, originalJSON, editedJSON]);
+          await db
+            .insert(editsTable)
+            .values({ event: body.event, originalQuestion: JSON.parse(originalJSON), editedQuestion: JSON.parse(editedJSON) });
           console.log('📝 [REPORT/EDIT] Created new edit in database');
         }
 

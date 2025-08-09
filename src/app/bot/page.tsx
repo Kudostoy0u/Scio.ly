@@ -435,7 +435,7 @@ export default function DocsPage() {
             }`}>
               <p><strong>Bot developer:</strong> Matthew (Discord: mat_thew0812)</p>
               <p><strong>Bot API and questions from:</strong> Scio.ly</p>
-              <p>Thanks to Alan (Discord: alaninnovates) for helping to set up the Bot, and Peter (Discord: bearasauras) for funding the project!</p>
+              <p>Special thanks to Alan (Discord: alaninnovates) for helping to set up the bot.</p>
             </div>
           </div>
         </div>

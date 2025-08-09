@@ -2,16 +2,13 @@ import { supabase } from '@/lib/supabase';
 
 // Define the structure of the user's profile data
 export interface UserProfile {
-  navbarStyle?: 'default' | 'golden' | 'rainbow';
-  hasUnlockedGolden?: boolean;
-  hasUnlockedRainbow?: boolean;
+  firstName?: string | null;
+  lastName?: string | null;
+  username?: string | null;
+  displayName?: string | null;
 }
 
-const defaultProfile: UserProfile = {
-  navbarStyle: 'default',
-  hasUnlockedGolden: false,
-  hasUnlockedRainbow: false,
-};
+const defaultProfile: UserProfile = {};
 
 // --- Local Storage Functions for Anonymous Users ---
 
@@ -48,7 +45,7 @@ export const getUserProfile = async (userId: string | null): Promise<UserProfile
   try {
     const { data, error } = await (supabase as any)
       .from('users')
-      .select('navbar_style, has_unlocked_golden, has_unlocked_rainbow')
+      .select('first_name, last_name, username, display_name')
       .eq('id', userId)
       .single();
 
@@ -59,9 +56,10 @@ export const getUserProfile = async (userId: string | null): Promise<UserProfile
 
     if (data) {
       return {
-        navbarStyle: data.navbar_style as 'default' | 'golden' | 'rainbow',
-        hasUnlockedGolden: data.has_unlocked_golden,
-        hasUnlockedRainbow: data.has_unlocked_rainbow,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        username: data.username,
+        displayName: data.display_name,
       };
     }
 
@@ -89,16 +87,11 @@ export const updateUserProfile = async (userId: string | null, updates: Partial<
   // Logged-in user: Update Supabase
   try {
     const updateData: Record<string, unknown> = {};
-    
-    if (updates.navbarStyle !== undefined) {
-      updateData.navbar_style = updates.navbarStyle;
-    }
-    if (updates.hasUnlockedGolden !== undefined) {
-      updateData.has_unlocked_golden = updates.hasUnlockedGolden;
-    }
-    if (updates.hasUnlockedRainbow !== undefined) {
-      updateData.has_unlocked_rainbow = updates.hasUnlockedRainbow;
-    }
+
+    if (updates.firstName !== undefined) updateData.first_name = updates.firstName;
+    if (updates.lastName !== undefined) updateData.last_name = updates.lastName;
+    if (updates.username !== undefined) updateData.username = updates.username;
+    if (updates.displayName !== undefined) updateData.display_name = updates.displayName;
 
     const { error } = await (supabase as any)
       .from('users')

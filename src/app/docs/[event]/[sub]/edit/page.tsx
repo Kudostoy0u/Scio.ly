@@ -6,39 +6,11 @@ import { getEventMarkdown } from '@/app/docs/utils/storageClient';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-const starter = (name: string) => `# ${name} (2026)
-
-## Overview
-
-Provide a concise summary of this event, key skills, and what to expect on test day.
-
-## Key Topics
-
-- Topic 1
-- Topic 2
-- Topic 3
-
-## Study Roadmap
-
-1. Read official rules
-2. Build a reference/notesheet (if allowed)
-3. Drill practice problems and past tests
-
-## Allowed Materials
-
-Summarize what you can bring (notesheet, binder, calculator). Verify in official rules.
-
-## Curated Resources
-
-- SciOly Wiki: 
-- Practice sets: 
-- Videos: 
-`;
-
-export default function EditEventDocsPage() {
-  const { event } = useParams<{ event: string }>();
+export default function EditSubsectionDocsPage() {
+  const { event, sub } = useParams<{ event: string; sub: string }>();
   const router = useRouter();
   const evt = useMemo(() => getEventBySlug(event as string), [event]);
+  const subsection = useMemo(() => evt?.subsections?.find(s => s.slug === (sub as string)), [evt, sub]);
   const [md, setMd] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving] = useState(false);
@@ -48,16 +20,18 @@ export default function EditEventDocsPage() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      if (!evt) return;
-      const existing = await getEventMarkdown(evt.slug);
+      if (!evt || !subsection) return;
+      const slug = `${evt.slug}/${subsection.slug}`;
+      const existing = await getEventMarkdown(slug);
       if (!mounted) return;
-      setMd(existing ?? starter(evt.name));
+      const starter = `# ${evt.name} – ${subsection.title} (2026)\n\n## Overview\n\nStart the outline for this subsection here.\n`;
+      setMd(existing ?? starter);
       setLoading(false);
     })();
-    return () => { mounted = false; }
-  }, [evt]);
+    return () => { mounted = false; };
+  }, [evt, subsection]);
 
-  if (!evt) return null;
+  if (!evt || !subsection) return null;
 
   async function onSave() {
     // Temporarily disabled; show toast and do nothing
@@ -73,12 +47,12 @@ export default function EditEventDocsPage() {
     <div className="pt-24 pb-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-semibold">Edit Docs – {evt.name}</h1>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Edit Docs – {evt.name} / {subsection.title}</h1>
           <div className="flex gap-2">
             <button className={`px-3 py-1 rounded border border-gray-300 dark:border-gray-700 ${tab==='edit'?'bg-gray-100 dark:bg-gray-800':''}`} onClick={()=>setTab('edit')}>Edit</button>
             <button className={`px-3 py-1 rounded border border-gray-300 dark:border-gray-700 ${tab==='preview'?'bg-gray-100 dark:bg-gray-800':''}`} onClick={()=>setTab('preview')}>Preview</button>
             <button className="px-4 py-1 rounded bg-blue-600 text-white disabled:opacity-50" onClick={onSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
-            <button className="px-3 py-1 rounded border border-gray-300 dark:border-gray-700" onClick={()=>router.push(`/docs/${evt.slug}`)}>Back</button>
+            <button className="px-3 py-1 rounded border border-gray-300 dark:border-gray-700" onClick={()=>router.push(`/docs/${evt.slug}/${subsection.slug}`)}>Back</button>
           </div>
         </div>
         {message && <p className="text-sm mb-3 text-gray-700 dark:text-gray-300">{message}</p>}

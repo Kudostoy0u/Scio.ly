@@ -48,7 +48,7 @@ export const getDailyMetrics = async (userId: string | null): Promise<DailyMetri
       .select('*')
       .eq('user_id', userId)
       .eq('date', today)
-      .single();
+      .maybeSingle();
 
     if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
       console.error('Error getting metrics:', error);
@@ -173,7 +173,8 @@ export const updateMetrics = async (
     const updatedStats: DailyMetrics = {
       ...currentStats,
       questionsAttempted: currentStats.questionsAttempted + (updates.questionsAttempted || 0),
-      correctAnswers: currentStats.correctAnswers + (updates.correctAnswers || 0),
+      // round fractional to nearest integer when aggregating for cards
+      correctAnswers: currentStats.correctAnswers + Math.round(updates.correctAnswers || 0),
       eventsPracticed: updates.eventName && !currentStats.eventsPracticed.includes(updates.eventName)
         ? [...currentStats.eventsPracticed, updates.eventName]
         : currentStats.eventsPracticed,
@@ -197,7 +198,7 @@ export const updateMetrics = async (
       .select('*')
       .eq('user_id', userId)
       .eq('date', today)
-      .single();
+      .maybeSingle();
 
     let currentStats: {
       questions_attempted: number;
@@ -232,7 +233,8 @@ export const updateMetrics = async (
       user_id: userId,
       date: today,
       questions_attempted: currentStats.questions_attempted + (updates.questionsAttempted || 0),
-      correct_answers: currentStats.correct_answers + (updates.correctAnswers || 0),
+      // persist rounded integer correct for dashboard
+      correct_answers: currentStats.correct_answers + Math.round(updates.correctAnswers || 0),
       events_practiced: updatedEventsPracticed,
       event_questions: updatedEventQuestions,
       game_points: currentStats.game_points

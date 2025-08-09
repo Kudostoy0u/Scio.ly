@@ -39,6 +39,11 @@ export default function MetricsCard({
     }
   };
 
+  const toSentenceCase = (input: string) => {
+    if (!input) return input;
+    return input.charAt(0) + input.slice(1).toLowerCase();
+  };
+
   return (
     <div className="perspective-1000 hover:scale-[1.02] transition-transform duration-300">
       <div
@@ -50,13 +55,13 @@ export default function MetricsCard({
             : view === 'weekly' 
               ? 'rotateX(180deg)' 
               : 'rotateX(360deg)',
-          minHeight: '140px'
+          minHeight: '125px'
         }}
         onClick={handleClick}
       >
         {/* Daily View */}
         <div 
-          className="absolute w-full h-full flex flex-col p-6"
+          className="absolute w-full h-full flex flex-col px-6 pt-6"
           style={{ 
             backfaceVisibility: 'hidden',
             transform: 'rotateX(0deg)',
@@ -65,14 +70,14 @@ export default function MetricsCard({
           }}
         >
           <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-            {title}
+            {`${toSentenceCase(title)} today`}
           </h3>
           <NumberAnimation value={dailyValue} className={`text-4xl font-bold ${color}`} />
         </div>
         
         {/* Weekly View */}
         <div 
-          className="absolute w-full h-full flex flex-col p-6"
+          className="absolute w-full h-full flex flex-col px-6 pt-6 pb-3"
           style={{ 
             backfaceVisibility: 'hidden',
             transform: 'rotateX(180deg)',
@@ -81,14 +86,14 @@ export default function MetricsCard({
           }}
         >
           <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-            Weekly {title}
+            {`${toSentenceCase(title)} this week`}
           </h3>
           <NumberAnimation value={weeklyValue} className={`text-4xl font-bold ${color}`} />
         </div>
 
         {/* All Time View */}
         <div 
-          className="absolute w-full h-full flex flex-col p-6"
+          className="absolute w-full h-full flex flex-col px-6 pt-6 pb-3"
           style={{ 
             backfaceVisibility: 'hidden',
             transform: 'rotateX(360deg)',
@@ -97,7 +102,7 @@ export default function MetricsCard({
           }}
         >
           <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-            All Time {title}
+            {`${toSentenceCase(title)} all-time`}
           </h3>
           <NumberAnimation value={allTimeValue} className={`text-4xl font-bold ${color}`} />
         </div>

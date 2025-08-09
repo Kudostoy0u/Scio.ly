@@ -1,16 +1,27 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/react"
 import { GoogleAnalytics } from '@next/third-parties/google'
+import Script from 'next/script'
 import "./globals.css";
 import { ThemeProvider } from '@/app/contexts/ThemeContext';
+import { Providers } from './providers';
 import { AuthProvider } from './contexts/AuthContext';
+import { getServerUser } from '@/lib/supabaseServer';
+import { cookies } from 'next/headers';
+import ThemeColorMeta from '@/app/components/ThemeColorMeta';
 
 export const metadata: Metadata = {
   title: 'Scio.ly',
   description: "Scio.ly provides a comprehensive test-taking platform carefully designed and crafted for Science Olympiad students – available to everyone, for free.",
 
   icons: {
-    icon: "/site-logo.png"
+    icon: "/site-logo.png",
+    apple: [
+      { url: "/AppIcons/Assets.xcassets/AppIcon.appiconset/120.png", sizes: "120x120", type: "image/png" },
+      { url: "/AppIcons/Assets.xcassets/AppIcon.appiconset/152.png", sizes: "152x152", type: "image/png" },
+      { url: "/AppIcons/Assets.xcassets/AppIcon.appiconset/167.png", sizes: "167x167", type: "image/png" },
+      { url: "/AppIcons/Assets.xcassets/AppIcon.appiconset/180.png", sizes: "180x180", type: "image/png" }
+    ]
   },
   keywords: ['Science Olympiad', 'Scioly practice tests', 'Scioly practice', 'Scioly tests', 'Biodiversity'],
   metadataBase: new URL("https://scio.ly"),
@@ -50,29 +61,43 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  
+  const user = await getServerUser();
+  // Determine initial theme preference from cookie (SSR-safe)
+  const cookieStore = await cookies();
+  const themeCookie = cookieStore.get('theme')?.value;
+  const initialDarkMode = themeCookie === 'dark' ? true : themeCookie === 'light' ? false : false;
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/site-logo.png" sizes="any" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <meta name="theme-color" content="${initialDarkMode ? '#020617' : '#f9fafb'}" />
       </head>
       <body  
         className={`font-Poppins antialiased overflow-x-hidden`}
         suppressHydrationWarning
       >
-        <ThemeProvider>
-          <AuthProvider>
-            {children}
+        <ThemeProvider initialDarkMode={initialDarkMode}>
+          <AuthProvider initialUser={user}>
+            <Providers>
+              <ThemeColorMeta />
+              {children}
+            </Providers>
           </AuthProvider>
         </ThemeProvider>
         <Analytics />
         <GoogleAnalytics gaId="G-P9SVV3TY4G" />
-        <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "f5838db0caa649f9a42aeb710f79a241"}'></script>
+        <Script
+          src="https://static.cloudflareinsights.com/beacon.min.js"
+          strategy="afterInteractive"
+          defer
+          data-cf-beacon='{"token": "f5838db0caa649f9a42aeb710f79a241"}'
+        />
       </body>
     </html>
   );

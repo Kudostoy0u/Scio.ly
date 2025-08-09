@@ -20,18 +20,28 @@ import ActionButtons from './ActionButtons';
 
 import AnimatedAccuracy from './AnimatedAccuracy';
 
-export default function DashboardMain() {
+type HistoryData = Record<string, { questionsAttempted: number; correctAnswers: number; eventsPracticed?: string[] }>;
+
+export default function DashboardMain({
+  initialUser,
+  initialMetrics,
+  initialHistoryData,
+}: {
+  initialUser?: User | null;
+  initialMetrics?: { questionsAttempted: number; correctAnswers: number; eventsPracticed: string[]; accuracy: number };
+  initialHistoryData?: { historicalData: DailyData[]; historyData: HistoryData };
+}) {
   const router = useRouter();
   const { darkMode, setDarkMode } = useTheme();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(initialUser ?? null);
   const [metrics, setMetrics] = useState<Metrics>({
-    questionsAttempted: 0,
-    correctAnswers: 0,
-    eventsPracticed: [],
-    accuracy: 0
+    questionsAttempted: initialMetrics?.questionsAttempted ?? 0,
+    correctAnswers: initialMetrics?.correctAnswers ?? 0,
+    eventsPracticed: initialMetrics?.eventsPracticed ?? [],
+    accuracy: initialMetrics?.accuracy ?? 0
   });
-  const [historicalData, setHistoricalData] = useState<DailyData[]>([]);
-  const [historyData, setHistoryData] = useState<Record<string, { questionsAttempted: number; correctAnswers: number }>>({});
+  const [historicalData, setHistoricalData] = useState<DailyData[]>(initialHistoryData?.historicalData ?? []);
+  const [historyData, setHistoryData] = useState<HistoryData>(initialHistoryData?.historyData ?? {});
   const [contactModalOpen, setContactModalOpen] = useState(false);
 
   // View states for metrics cards
@@ -40,10 +50,10 @@ export default function DashboardMain() {
   const [eventsView, setEventsView] = useState<'daily' | 'weekly' | 'allTime'>('daily');
   const [accuracyView, setAccuracyView] = useState<'daily' | 'weekly' | 'allTime'>('daily');
 
-  // Card style for consistent theming
+  // Card style for consistent theming (no shadow)
   const cardStyle = darkMode 
-    ? 'bg-gray-800 border border-gray-700 shadow-lg' 
-    : 'bg-white border border-gray-200 shadow-lg';
+    ? 'bg-gray-800 border border-gray-700' 
+    : 'bg-white border border-gray-200';
 
   // Responsive design - keeping for future use
   // const [isMobile, setIsMobile] = useState(false);
@@ -62,13 +72,15 @@ export default function DashboardMain() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Get current user
+        // Always get the client-side user to ensure an authenticated session for RLS
         const { data: { user } } = await supabase.auth.getUser();
-        setCurrentUser(user);
+        const effectiveUser = user || initialUser || null;
+        setCurrentUser(effectiveUser);
+        if (!effectiveUser) return;
 
-        if (user) {
+        if (!initialMetrics) {
           // Fetch daily metrics
-          const dailyMetrics = await getDailyMetrics(user.id);
+          const dailyMetrics = await getDailyMetrics(effectiveUser.id);
           if (dailyMetrics) {
             const accuracy = dailyMetrics.questionsAttempted > 0
               ? (dailyMetrics.correctAnswers / dailyMetrics.questionsAttempted) * 100
@@ -80,27 +92,28 @@ export default function DashboardMain() {
             });
           }
 
-          // Fetch historical data for charts
+          // Fetch historical data for charts from user_stats (by day)
           const { data: historicalData } = await (supabase as any)
-            .from('user_activity')
-            .select('created_at, questions_attempted, correct_answers')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: true });
+            .from('user_stats')
+            .select('date, questions_attempted, correct_answers, events_practiced')
+            .eq('user_id', effectiveUser.id)
+            .order('date', { ascending: true });
 
           if (historicalData) {
-            const processedData = historicalData.map(item => ({
-              date: new Date(item.created_at).toISOString().split('T')[0],
+            const processedData = historicalData.map((item: any) => ({
+              date: item.date,
               count: item.questions_attempted || 0
             }));
             setHistoricalData(processedData);
 
             // Create history data object for charts
-            const historyObj: Record<string, { questionsAttempted: number; correctAnswers: number }> = {};
-            historicalData.forEach(item => {
-              const dateStr = new Date(item.created_at).toISOString().split('T')[0];
+            const historyObj: HistoryData = {};
+            (historicalData as any[]).forEach((item: any) => {
+              const dateStr = item.date;
               historyObj[dateStr] = {
                 questionsAttempted: item.questions_attempted || 0,
-                correctAnswers: item.correct_answers || 0
+                correctAnswers: item.correct_answers || 0,
+                eventsPracticed: item.events_practiced || []
               };
             });
             setHistoryData(historyObj);
@@ -111,7 +124,44 @@ export default function DashboardMain() {
       }
     };
 
-    fetchData();
+    if (!initialMetrics || !initialHistoryData) {
+      fetchData();
+    }
+  }, [initialUser, initialMetrics, initialHistoryData]);
+
+  // Refresh metrics when auth state changes on the client
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setCurrentUser(session.user);
+        // Force refresh of metrics/history
+        (async () => {
+          const daily = await getDailyMetrics(session.user.id);
+          if (daily) {
+            const accuracy = daily.questionsAttempted > 0 ? (daily.correctAnswers / daily.questionsAttempted) * 100 : 0;
+            setMetrics({ ...daily, accuracy });
+          }
+          const { data: historicalData } = await (supabase as any)
+            .from('user_stats')
+            .select('date, questions_attempted, correct_answers, events_practiced')
+            .eq('user_id', session.user.id)
+            .order('date', { ascending: true });
+          if (historicalData) {
+            setHistoricalData(historicalData.map((item: any) => ({ date: item.date, count: item.questions_attempted || 0 })));
+            const historyObj: Record<string, { questionsAttempted: number; correctAnswers: number; eventsPracticed?: string[] }> = {};
+            (historicalData as any[]).forEach((item: any) => {
+              historyObj[item.date] = {
+                questionsAttempted: item.questions_attempted || 0,
+                correctAnswers: item.correct_answers || 0,
+                eventsPracticed: item.events_practiced || []
+              };
+            });
+            setHistoryData(historyObj);
+          }
+        })();
+      }
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   const generateWeeklyData = (): WeeklyData => {
@@ -175,7 +225,8 @@ export default function DashboardMain() {
   const calculateAllTimeAccuracy = (): number => {
     if (historicalData.length === 0) return 0;
     const totalQuestions = historicalData.reduce((sum, item) => sum + item.count, 0);
-    return totalQuestions > 0 ? (metrics.correctAnswers / totalQuestions) * 100 : 0;
+    const totalCorrect = Object.values(historyData).reduce((sum, d) => sum + (d?.correctAnswers || 0), 0);
+    return totalQuestions > 0 ? (totalCorrect / totalQuestions) * 100 : 0;
   };
 
   const handleContact = async (data: ContactFormData) => {
@@ -199,23 +250,41 @@ export default function DashboardMain() {
   };
 
   const calculateWeeklyCorrect = (): number => {
-    // This would need to be calculated based on weekly correct answers
-    // For now, returning a placeholder
-    return Math.floor(calculateWeeklyQuestions() * 0.75); // 75% accuracy estimate
+    const last7Days: string[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      last7Days.push(date.toISOString().split('T')[0]);
+    }
+    return last7Days.reduce((sum, d) => sum + (historyData[d]?.correctAnswers || 0), 0);
   };
 
   const calculateAllTimeCorrect = (): number => {
-    return metrics.correctAnswers;
+    return Object.values(historyData).reduce((sum, d) => sum + (d?.correctAnswers || 0), 0);
   };
 
   const calculateWeeklyEvents = (): number => {
-    // This would need to be calculated based on weekly events practiced
-    // For now, returning a deterministic value based on daily events
-    return Math.min(metrics.eventsPracticed.length, 3); // Use daily events count, capped at 3
+    const last7Days: string[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      last7Days.push(date.toISOString().split('T')[0]);
+    }
+    const setUnique = new Set<string>();
+    last7Days.forEach(d => {
+      (historyData[d]?.eventsPracticed || []).forEach(ev => setUnique.add(ev));
+    });
+    return setUnique.size;
   };
 
   const calculateAllTimeEvents = (): number => {
-    return metrics.eventsPracticed.length;
+    const all = new Set<string>();
+    Object.values(historyData).forEach(day => {
+      (day.eventsPracticed || []).forEach(ev => all.add(ev));
+    });
+    // Fallback to today's if history empty
+    if (all.size === 0) return metrics.eventsPracticed.length;
+    return all.size;
   };
 
   return (
@@ -523,29 +592,7 @@ export default function DashboardMain() {
         darkMode={darkMode}
       />
 
-      {/* Add styled scrollbar */}
-      <style jsx global>{`
-        ::-webkit-scrollbar {
-          width: 8px;
-          ${darkMode
-            ? 'background: black;'
-            : 'background: white;'
-          }
-        }
-
-        ::-webkit-scrollbar-thumb {
-          background: ${darkMode
-            ? '#374151'
-            : '#3b82f6'};
-          border-radius: 4px;
-          transition: background 1s ease;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-          background: ${darkMode
-            ? '#1f2937'
-            : '#2563eb'};
-        }
-      `}</style>
+      {/* Global scrollbar theme is centralized in globals.css */}
       <br/><br/>
       
     </div>

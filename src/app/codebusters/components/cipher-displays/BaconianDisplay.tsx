@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { QuoteData } from '../../types';
 
@@ -21,6 +21,34 @@ export const BaconianDisplay = ({
     onBaconianSolutionChange
 }: BaconianDisplayProps) => {
     const { darkMode } = useTheme();
+    
+    // Precompute groups/tokens once per text
+    const parsedGroups = useMemo(() => {
+        const groups: string[] = [];
+        let currentGroup = '';
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            if (char === 'A' || char === 'B') {
+                currentGroup += char;
+                if (currentGroup.length === 5) {
+                    groups.push(currentGroup);
+                    currentGroup = '';
+                }
+            } else if (char === ' ') {
+                continue;
+            } else {
+                if (currentGroup.length > 0) {
+                    groups.push(currentGroup);
+                    currentGroup = '';
+                }
+                groups.push(char);
+            }
+        }
+        if (currentGroup.length > 0) {
+            groups.push(currentGroup);
+        }
+        return groups;
+    }, [text]);
     
     // Create mapping for correct answers
     const correctMapping: { [key: number]: string } = {};
@@ -76,35 +104,7 @@ export const BaconianDisplay = ({
                 </p>
             </div>
             <div className="flex flex-wrap gap-4">
-                {(() => {
-                    // Split text into groups of 5 letters
-                    const groups: string[] = [];
-                    let currentGroup = '';
-                    
-                    for (let i = 0; i < text.length; i++) {
-                        const char = text[i];
-                        if (char === 'A' || char === 'B') {
-                            currentGroup += char;
-                            if (currentGroup.length === 5) {
-                                groups.push(currentGroup);
-                                currentGroup = '';
-                            }
-                        } else if (char === ' ') {
-                            continue;
-                        } else {
-                            if (currentGroup.length > 0) {
-                                groups.push(currentGroup);
-                                currentGroup = '';
-                            }
-                            groups.push(char);
-                        }
-                    }
-                    
-                    if (currentGroup.length > 0) {
-                        groups.push(currentGroup);
-                    }
-                    
-                    return groups.map((group, i) => {
+                {parsedGroups.map((group, i) => {
                         if (!/^[AB]{5}$/.test(group)) {
                             return (
                                 <div key={i} className="flex items-center">
@@ -138,7 +138,17 @@ export const BaconianDisplay = ({
                                         value={value}
                                         onChange={(e) => {
                                             const newValue = e.target.value.toUpperCase();
-                                            onBaconianSolutionChange(quoteIndex, i, newValue);
+                                            // Sync the same letter across all identical 5-bit groups
+                                            if (/^[AB]{5}$/.test(group)) {
+                                                const targetGroup = group;
+                                                parsedGroups.forEach((g, idx) => {
+                                                    if (g === targetGroup) {
+                                                        onBaconianSolutionChange(quoteIndex, idx, newValue);
+                                                    }
+                                                });
+                                            } else {
+                                                onBaconianSolutionChange(quoteIndex, i, newValue);
+                                            }
                                         }}
                                         className={`w-6 h-6 sm:w-7 sm:h-7 text-center border rounded text-sm ${
                                             darkMode 
@@ -162,8 +172,7 @@ export const BaconianDisplay = ({
                                 </div>
                             </div>
                         );
-                    });
-                })()}
+                })}
             </div>
             
             {/* Show original quote after submission */}

@@ -8,6 +8,7 @@ import { updateMetrics } from '@/app/utils/metrics';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import api from '../api';
+import { getEventOfflineQuestions } from '@/app/utils/storage';
 import MarkdownExplanation from '@/app/utils/MarkdownExplanation';
 import PDFViewer from '@/app/components/PDFViewer';
 import QuestionActions from '@/app/components/QuestionActions';
@@ -43,7 +44,7 @@ const LoadingFallback = () => (
 
 
 
-export default function UnlimitedPracticePage() {
+export default function UnlimitedPracticePage({ initialRouterData }: { initialRouterData?: any }) {
   const router = useRouter();
 
   const [data, setData] = useState<Question[]>([]);
@@ -53,7 +54,7 @@ export default function UnlimitedPracticePage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   // For the current question, the answer is stored as an array.
   const [currentAnswer, setCurrentAnswer] = useState<(string | null)[]>([]);
-  const [routerData, setRouterData] = useState<RouterParams>({});
+  const [routerData, setRouterData] = useState<RouterParams>(initialRouterData || {});
   const { darkMode } = useTheme();
 
   const [explanations, setExplanations] = useState<Explanations>({});
@@ -78,13 +79,11 @@ export default function UnlimitedPracticePage() {
     }
 
     const storedParams = localStorage.getItem('testParams');
-    if (!storedParams) {
-      // Handle the case where params are not in localStorage (e.g., redirect)
+    const routerParams = initialRouterData || (storedParams ? JSON.parse(storedParams) : {});
+    if (!routerParams || Object.keys(routerParams).length === 0) {
       router.push('/');
       return;
     }
-
-    const routerParams = JSON.parse(storedParams);
     setRouterData(routerParams);
 
     // Check if we have stored questions
@@ -112,9 +111,26 @@ export default function UnlimitedPracticePage() {
         
         const apiUrl = `${api.questions}?${params}`;
         
-        const response = await fetch(apiUrl);
-        if (!response.ok) throw new Error('Failed to fetch data from API');
-        const apiResponse = await response.json();
+        let response: Response | null = null;
+        try {
+          response = await fetch(apiUrl);
+        } catch {
+          response = null;
+        }
+        let apiResponse: any = null;
+        if (response && response.ok) {
+          apiResponse = await response.json();
+        } else {
+          const evt = routerParams.eventName as string | undefined;
+          if (evt) {
+            const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            const cached = await getEventOfflineQuestions(slug);
+            if (Array.isArray(cached) && cached.length > 0) {
+              apiResponse = { success: true, data: cached };
+            }
+          }
+          if (!apiResponse) throw new Error('Failed to fetch data from API');
+        }
         
         if (!apiResponse.success) {
           throw new Error(apiResponse.error || 'API request failed');
@@ -222,16 +238,15 @@ export default function UnlimitedPracticePage() {
       
       setGradingResults((prev) => ({ ...prev, [currentQuestionIndex]: score }));
 
-      // Only count if there's an actual answer, and for multi-select, only count as correct if score is exactly 1
+      // Only count if there's an actual answer. Partial credit contributes fractionally; skipped does not count
       const wasAttempted = currentAnswer.length > 0 && currentAnswer[0] !== null && currentAnswer[0] !== '';
-      const isMultiSelect = currentQuestion.answers.length > 1 && currentQuestion.options;
-      const isCorrectAnswer = isMultiSelect ? score === 1 : score >= 0.5;
       
               const { data: { user } } = await supabase.auth.getUser();
         await updateMetrics(user?.id || null, {
         questionsAttempted: wasAttempted ? 1 : 0,
-        correctAnswers: wasAttempted && isCorrectAnswer ? 1 : 0,
-        eventName: routerData.eventName || undefined,
+        // Round fractional to nearest integer for dashboard cards per requirement
+        correctAnswers: wasAttempted ? Math.round(score) : 0,
+        eventName: wasAttempted ? (routerData.eventName || undefined) : undefined,
       });
     } catch (error) {
       console.error('Error updating metrics:', error);
@@ -307,7 +322,6 @@ export default function UnlimitedPracticePage() {
     setSubmittedEdits(prev => ({ ...prev, [index]: true }));
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleQuestionRemoved = (_questionIndex: number) => {
     // For unlimited practice, we just move to the next question
     // since there's only one question shown at a time

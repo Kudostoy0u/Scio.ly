@@ -36,7 +36,6 @@ class GeminiService {
     return keys[Math.floor(Math.random() * keys.length)];
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private async callGemini(_prompt: string): Promise<string> {
     // This method is deprecated - geminiService now uses Express API endpoints
     // Keeping for backward compatibility but should not be used

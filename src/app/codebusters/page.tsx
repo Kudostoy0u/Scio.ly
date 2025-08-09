@@ -16,6 +16,8 @@ import {
 } from '@/app/utils/timeManagement';
 import CipherInfoModal from './CipherInfoModal';
 import { loadQuestionsFromDatabase } from './services/questionLoader';
+import { supabase } from '@/lib/supabase';
+import { updateMetrics } from '@/app/utils/metrics';
 
 // Import hooks
 import { 
@@ -91,7 +93,7 @@ export default function CodeBusters() {
         handleHillSolutionChange, 
         handleNihilistSolutionChange 
     } = useSolutionHandlers(quotes, setQuotes);
-    const { totalProgress } = useProgressCalculation(quotes);
+    const { totalProgress, calculateQuoteProgress } = useProgressCalculation(quotes);
 
     // Setup visibility handling for time management
     useEffect(() => {
@@ -100,8 +102,9 @@ export default function CodeBusters() {
     }, []);
 
     // Handle test submission
-    const handleSubmitTest = useCallback(() => {
+    const handleSubmitTest = useCallback(async () => {
         let correctCount = 0;
+        // Legacy correctness for UI percent
         quotes.forEach((quote, index) => {
             const isCorrect = ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine'].includes(quote.cipherType)
                 ? checkSubstitutionAnswer(index)
@@ -115,14 +118,48 @@ export default function CodeBusters() {
             if (isCorrect) correctCount++;
         });
 
-        // Calculate score as percentage
+        // Calculate UI score as percentage
         const score = (correctCount / quotes.length) * 100;
         setTestScore(score);
         setIsTestSubmitted(true);
         
         // Mark test as submitted using new time management system
         markTestSubmitted();
-    }, [quotes, checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer, setTestScore, setIsTestSubmitted]);
+
+        // Metrics: weighted by difficulty with fractional credit from progress
+        const difficultyToPoints = (d: number | undefined): number => {
+            const diff = typeof d === 'number' ? d : 0.5;
+            if (diff >= 0.7) return 3;
+            if (diff >= 0.4) return 2;
+            return 1;
+        };
+
+        // Compute via per-quote progress
+        let attemptedPoints = 0;
+        let earnedPoints = 0;
+        quotes.forEach((q) => {
+            const points = difficultyToPoints((q as any).difficulty);
+            const pct = Math.max(0, Math.min(100, calculateQuoteProgress(q)));
+            const fraction = pct / 100;
+            if (fraction > 0) {
+                attemptedPoints += points;
+                earnedPoints += points * fraction;
+            }
+        });
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await updateMetrics(user.id, {
+                    questionsAttempted: Math.round(attemptedPoints),
+                    correctAnswers: earnedPoints, // rounding handled inside updateMetrics
+                    eventName: 'Codebusters'
+                });
+            }
+        } catch (e) {
+            console.error('Failed to update metrics for Codebusters:', e);
+        }
+    }, [quotes, checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer, setTestScore, setIsTestSubmitted, calculateQuoteProgress]);
 
     // Handle time management
     useEffect(() => {
@@ -289,30 +326,7 @@ export default function CodeBusters() {
                     }`}
                 ></div>
 
-                {/* Add styled scrollbar */}
-                <style jsx global>{`
-                    ::-webkit-scrollbar {
-                        width: 8px;
-                        transition: background 1s ease;
-                        ${darkMode
-                            ? 'background: black;'
-                            : 'background: white;'
-                        }
-                    }
-
-                    ::-webkit-scrollbar-thumb {
-                        background: ${darkMode
-                            ? '#374151'
-                            : '#3b82f6'};
-                        border-radius: 4px;
-                        transition: background 1s ease;
-                    }
-                    ::-webkit-scrollbar-thumb:hover {
-                        background: ${darkMode
-                            ? '#1f2937'
-                            : '#2563eb'};
-                    }
-                `}</style>
+                {/* Global scrollbar theme is centralized in globals.css */}
 
                 {/* Page Content */}
                 <div className="relative flex flex-col items-center p-6">

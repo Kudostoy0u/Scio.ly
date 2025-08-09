@@ -5,46 +5,80 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom Scrollbar Styles */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+/* Centralized Scrollbar Theme (auto-hide when not scrolling) */
+/* WebKit-based browsers */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+/* Default track (light) on root scrollbars */
+html::-webkit-scrollbar-track { background: #ffffff; }
+body::-webkit-scrollbar-track { background: #ffffff; }
+::-webkit-scrollbar-thumb {
+  background: #9ca3af; /* gray-400 */
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280; /* gray-500 */
+}
+/* Dark mode */
+.dark ::-webkit-scrollbar-thumb {
+  background: #6b7280; /* gray-500 */
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #4b5563; /* gray-600 */
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+/* Firefox */
+/* Firefox: default on root */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #9ca3af #ffffff; /* thumb | track */
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 3px;
+/* Dark mode: track matches theme-color (force override) */
+/* Non-dynamic theme: use a consistent per-context color driven by data-scrollbar-context */
+/* Front page ("/"), match exact background */
+html[data-scrollbar-context="home"]::-webkit-scrollbar-track { background: #ffffff !important; }
+html.dark[data-scrollbar-context="home"]::-webkit-scrollbar-track { background: #020617 !important; }
+html.dark[data-scrollbar-context="nav"]::-webkit-scrollbar-track { background: #111827 !important; }
+
+/* Firefox per-context track on root */
+html[data-scrollbar-context="home"] { scrollbar-color: #9ca3af #ffffff !important; }
+html.dark[data-scrollbar-context="home"] { scrollbar-color: #6b7280 #020617 !important; }
+html.dark[data-scrollbar-context="nav"] { scrollbar-color: #6b7280 #111827 !important; }
+
+/* Fallback: honor explicit scrollbar classes toggled by pages/components */
+html.dark-scrollbar::-webkit-scrollbar-track,
+body.dark-scrollbar::-webkit-scrollbar-track { background: #111827 !important; }
+html.light-scrollbar::-webkit-scrollbar-track,
+body.light-scrollbar::-webkit-scrollbar-track { background: #ffffff !important; }
+html.dark-scrollbar { scrollbar-color: #6b7280 #111827 !important; }
+html.light-scrollbar { scrollbar-color: #9ca3af #ffffff !important; }
+
+/* Auto-hide behavior (WebKit) */
+html {
+  scrollbar-gutter: stable;
+}
+body::-webkit-scrollbar {
+  opacity: 0;
+}
+body:hover::-webkit-scrollbar,
+body:active::-webkit-scrollbar,
+body:focus::-webkit-scrollbar {
+  opacity: 1;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
-
-/* Dark mode scrollbar */
-.dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #4b5563;
-}
-
-.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
-}
-
-/* Root Variables */
+/* Root Variables — follow app theme (html.dark), not system */
 :root {
   --font-custom: 'Poppins', sans-serif !important;
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #000000; /* Ensure true black in light mode */
 }
 
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 /* Body Styling */

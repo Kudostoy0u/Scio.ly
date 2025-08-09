@@ -8,6 +8,9 @@ import { useTheme } from '@/app/contexts/ThemeContext';
 export default function ProfileSettings({ onClose }: { onClose: () => void }) {
   const { darkMode } = useTheme();
   const [displayName, setDisplayName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
@@ -23,12 +26,18 @@ export default function ProfileSettings({ onClose }: { onClose: () => void }) {
     if (user) {
       const { data } = await supabase
         .from('users')
-        .select('display_name')
+        .select('display_name, first_name, last_name, username')
         .match({ email: user.email || '' })
         .single();
 
       const dn = (data as any)?.display_name as string | undefined;
+      const fn = (data as any)?.first_name as string | undefined;
+      const ln = (data as any)?.last_name as string | undefined;
+      const un = (data as any)?.username as string | undefined;
       if (dn) setDisplayName(dn);
+      if (fn) setFirstName(fn);
+      if (ln) setLastName(ln);
+      if (un) setUsername(un);
     }
     setLoading(false);
   };
@@ -39,7 +48,12 @@ export default function ProfileSettings({ onClose }: { onClose: () => void }) {
     setSaving(true);
     const { error } = await supabase
       .from('users')
-      .update({ display_name: (displayName || null) } as any)
+      .update({
+        display_name: (displayName || null),
+        first_name: (firstName || null),
+        last_name: (lastName || null),
+        username: username || (user.email?.split('@')[0] || 'user')
+      } as any)
       .match({ email: user.email || '' });
 
     if (!error) {
@@ -83,6 +97,58 @@ export default function ProfileSettings({ onClose }: { onClose: () => void }) {
             />
             <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               This name will be shown on leaderboards
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                First Name
+              </label>
+              <input
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  darkMode
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                    : 'border-gray-300 text-gray-900 placeholder-gray-500'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                Last Name
+              </label>
+              <input
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  darkMode
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                    : 'border-gray-300 text-gray-900 placeholder-gray-500'
+                }`}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              Username
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                darkMode
+                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                  : 'border-gray-300 text-gray-900 placeholder-gray-500'
+              }`}
+            />
+            <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              If blank, we’ll default to your email before the @
             </p>
           </div>
 

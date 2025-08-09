@@ -101,6 +101,31 @@ export default function TestConfiguration({
     onSettingsChange({ ...settings, difficulties: newDifficulties });
   };
 
+  // Persist division and question types in localStorage
+  useEffect(() => {
+    if (selectedEvent && selectedEvent.name !== 'Codebusters') {
+      // Division
+      const availableDivisions = selectedEvent.divisions || ['B', 'C'];
+      const canShowB = availableDivisions.includes('B');
+      const canShowC = availableDivisions.includes('C');
+      const normalizedDivision = settings.division === 'any'
+        ? (canShowB && canShowC ? 'any' : (canShowC ? 'C' : 'B'))
+        : (settings.division === 'B' && !canShowB)
+          ? 'C'
+          : (settings.division === 'C' && !canShowC)
+            ? 'B'
+            : settings.division;
+
+      localStorage.setItem('defaultDivision', normalizedDivision);
+
+      // Question types
+      const normalizedTypes = ['multiple-choice', 'both', 'free-response'].includes(settings.types)
+        ? settings.types
+        : 'multiple-choice';
+      localStorage.setItem('defaultQuestionTypes', normalizedTypes);
+    }
+  }, [settings.division, settings.types, selectedEvent]);
+
   const getDifficultyDisplayText = () => {
     if (settings.difficulties.length === 0) return 'All Difficulties';
     if (settings.difficulties.length === 1) return settings.difficulties[0];
@@ -205,7 +230,10 @@ export default function TestConfiguration({
             }`}>
               <button
                 type="button"
-                onClick={() => onSettingsChange({ ...settings, types: 'multiple-choice' })}
+                  onClick={() => {
+                    onSettingsChange({ ...settings, types: 'multiple-choice' });
+                    localStorage.setItem('defaultQuestionTypes', 'multiple-choice');
+                  }}
                 disabled={isCodebusters}
                 className={`flex-1 py-2 px-3 text-sm font-medium rounded-l-md border ${
                   isCodebusters
@@ -223,7 +251,10 @@ export default function TestConfiguration({
               </button>
               <button
                 type="button"
-                onClick={() => onSettingsChange({ ...settings, types: 'both' })}
+                  onClick={() => {
+                    onSettingsChange({ ...settings, types: 'both' });
+                    localStorage.setItem('defaultQuestionTypes', 'both');
+                  }}
                 disabled={isCodebusters}
                 className={`px-3 py-2 text-sm font-medium border-t border-b border-l border-r ${
                   isCodebusters
@@ -241,7 +272,10 @@ export default function TestConfiguration({
               </button>
               <button
                 type="button"
-                onClick={() => onSettingsChange({ ...settings, types: 'free-response' })}
+                  onClick={() => {
+                    onSettingsChange({ ...settings, types: 'free-response' });
+                    localStorage.setItem('defaultQuestionTypes', 'free-response');
+                  }}
                 disabled={isCodebusters}
                 className={`flex-1 py-2 px-3 text-sm font-medium rounded-r-md border ${
                   isCodebusters
@@ -283,7 +317,11 @@ export default function TestConfiguration({
                   <>
                     <button
                       type="button"
-                      onClick={() => canShowB ? onSettingsChange({ ...settings, division: 'B' }) : null}
+                      onClick={() => {
+                        if (!canShowB) return;
+                        onSettingsChange({ ...settings, division: 'B' });
+                        localStorage.setItem('defaultDivision', 'B');
+                      }}
                       disabled={!canShowB}
                       className={`flex-1 py-2 px-3 text-sm font-medium rounded-l-md border ${
                         !canShowB
@@ -301,7 +339,11 @@ export default function TestConfiguration({
                     </button>
                     <button
                       type="button"
-                      onClick={() => (canShowB && canShowC) ? onSettingsChange({ ...settings, division: 'any' }) : null}
+                      onClick={() => {
+                        if (!(canShowB && canShowC)) return;
+                        onSettingsChange({ ...settings, division: 'any' });
+                        localStorage.setItem('defaultDivision', 'any');
+                      }}
                       disabled={!(canShowB && canShowC)}
                       className={`px-3 py-2 text-sm font-medium border-t border-b border-l border-r ${
                         !(canShowB && canShowC)
@@ -319,7 +361,11 @@ export default function TestConfiguration({
                     </button>
                     <button
                       type="button"
-                      onClick={() => canShowC ? onSettingsChange({ ...settings, division: 'C' }) : null}
+                      onClick={() => {
+                        if (!canShowC) return;
+                        onSettingsChange({ ...settings, division: 'C' });
+                        localStorage.setItem('defaultDivision', 'C');
+                      }}
                       disabled={!canShowC}
                       className={`flex-1 py-2 px-3 text-sm font-medium rounded-r-md border ${
                         !canShowC

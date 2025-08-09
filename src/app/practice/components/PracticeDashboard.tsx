@@ -36,6 +36,8 @@ export default function PracticeDashboard() {
     if (typeof window !== 'undefined') {
       const storedQuestionCount = localStorage.getItem('defaultQuestionCount');
       const storedTimeLimit = localStorage.getItem('defaultTimeLimit');
+      const storedDivision = localStorage.getItem('defaultDivision') || 'any';
+      const storedQuestionTypes = localStorage.getItem('defaultQuestionTypes') || 'multiple-choice';
       
       const questionCount = storedQuestionCount ? parseInt(storedQuestionCount) : NORMAL_DEFAULTS.questionCount;
       const timeLimit = storedTimeLimit ? parseInt(storedTimeLimit) : NORMAL_DEFAULTS.timeLimit;
@@ -43,7 +45,11 @@ export default function PracticeDashboard() {
       setSettings(prev => ({
         ...prev,
         questionCount: isNaN(questionCount) ? NORMAL_DEFAULTS.questionCount : questionCount,
-        timeLimit: isNaN(timeLimit) ? NORMAL_DEFAULTS.timeLimit : timeLimit
+        timeLimit: isNaN(timeLimit) ? NORMAL_DEFAULTS.timeLimit : timeLimit,
+        division: (storedDivision === 'B' || storedDivision === 'C' || storedDivision === 'any') ? storedDivision as any : 'any',
+        types: (storedQuestionTypes === 'multiple-choice' || storedQuestionTypes === 'both' || storedQuestionTypes === 'free-response')
+          ? storedQuestionTypes as any
+          : 'multiple-choice'
       }));
     }
   }, []);
@@ -106,7 +112,7 @@ export default function PracticeDashboard() {
       difficulties: settings.difficulties,
       types: settings.types,
       division: settings.division,
-      tournament: 'any', // Always use 'any' for privacy
+      tournament: 'any',
       subtopics: settings.subtopics,
     };
 
@@ -114,10 +120,21 @@ export default function PracticeDashboard() {
     localStorage.removeItem('testQuestions');
     localStorage.removeItem('testUserAnswers');
 
-    // Redirect to Codebusters page if Codebusters is selected
     if (selectedEventObj.name === 'Codebusters') {
       router.push('/codebusters');
     } else {
+      try {
+        const cookiePayload = encodeURIComponent(JSON.stringify({
+          eventName: selectedEventObj.name,
+          questionCount: settings.questionCount,
+          timeLimit: settings.timeLimit,
+          types: settings.types,
+          division: settings.division,
+          subtopics: settings.subtopics,
+        }));
+        // 10 minutes expiry
+        document.cookie = `scio_test_params=${cookiePayload}; Path=/; Max-Age=600; SameSite=Lax`;
+      } catch {}
       router.push('/test');
     }
   };
@@ -140,24 +157,18 @@ export default function PracticeDashboard() {
     // Clear any existing test session
     clearTestSession();
 
-    // Build query parameters for unlimited mode
-    const params = new URLSearchParams({
-      event: selectedEventObj.name,
-      mode: 'unlimited',
-      types: settings.types,
-      division: settings.division
-    });
-
-    if (settings.difficulties.length > 0) {
-      params.append('difficulties', settings.difficulties.join(','));
-    }
-
-    if (settings.subtopics.length > 0) {
-      params.append('subtopics', settings.subtopics.join(','));
-    }
-
-    // Navigate to unlimited page
-    router.push(`/unlimited?${params.toString()}`);
+    // Store params in cookie for clean URL navigation
+    try {
+      const cookiePayload = encodeURIComponent(JSON.stringify({
+        eventName: selectedEventObj.name,
+        types: settings.types,
+        division: settings.division,
+        difficulties: settings.difficulties,
+        subtopics: settings.subtopics,
+      }));
+      document.cookie = `scio_unlimited_params=${cookiePayload}; Path=/; Max-Age=600; SameSite=Lax`;
+    } catch {}
+    router.push('/unlimited');
   };
 
   const selectEvent = (id: number) => {
@@ -181,25 +192,45 @@ export default function PracticeDashboard() {
           if (!codebustersTimeLimit) {
             localStorage.setItem('codebustersTimeLimit', '15');
           }
-          
+          // Sync division with normal events' selection
+          const savedDivision = (() => {
+            const stored = localStorage.getItem('defaultDivision');
+            return stored === 'B' || stored === 'C' || stored === 'any' ? stored : 'any';
+          })();
+          const availableDivisions = selectedEventObj.divisions || ['B', 'C'];
+          const canShowB = availableDivisions.includes('B');
+          const canShowC = availableDivisions.includes('C');
+          const divisionForEvent = (() => {
+            if (savedDivision === 'any') {
+              return (canShowB && canShowC) ? 'any' : (canShowC ? 'C' : 'B');
+            }
+            if (savedDivision === 'B' && !canShowB) return 'C';
+            if (savedDivision === 'C' && !canShowC) return 'B';
+            return savedDivision;
+          })();
+
           setSettings(prev => ({
             ...prev,
             questionCount: isNaN(questionCount) ? 3 : questionCount,
             timeLimit: isNaN(timeLimit) ? 15 : timeLimit,
             difficulties: [],
             types: 'free-response',
-            division: selectedEventObj.divisions?.includes('B') ? 'B' : 'C',
+            division: divisionForEvent as any,
             subtopics: []
           }));
         } else {
           // Fallback for server-side rendering
+          const availableDivisions = selectedEventObj.divisions || ['B', 'C'];
+          const canShowB = availableDivisions.includes('B');
+          const canShowC = availableDivisions.includes('C');
+          const divisionForEvent = (canShowB && canShowC) ? 'any' : (canShowC ? 'C' : 'B');
           setSettings(prev => ({
             ...prev,
             questionCount: 3,
             timeLimit: 15,
             difficulties: [],
             types: 'free-response',
-            division: selectedEventObj.divisions?.includes('B') ? 'B' : 'C',
+            division: divisionForEvent as any,
             subtopics: []
           }));
         }
@@ -217,14 +248,35 @@ export default function PracticeDashboard() {
           const parsed = stored ? parseInt(stored) : NORMAL_DEFAULTS.timeLimit;
           return isNaN(parsed) ? NORMAL_DEFAULTS.timeLimit : parsed;
         })();
+        const savedDivision = (() => {
+          if (typeof window === 'undefined') return 'any';
+          const stored = localStorage.getItem('defaultDivision');
+          return stored === 'B' || stored === 'C' || stored === 'any' ? stored : 'any';
+        })();
+        const savedTypes = (() => {
+          if (typeof window === 'undefined') return 'multiple-choice';
+          const stored = localStorage.getItem('defaultQuestionTypes');
+          return stored === 'multiple-choice' || stored === 'both' || stored === 'free-response' ? stored : 'multiple-choice';
+        })();
+        const availableDivisions = selectedEventObj.divisions || ['B', 'C'];
+        const canShowB = availableDivisions.includes('B');
+        const canShowC = availableDivisions.includes('C');
+        const divisionForEvent = (() => {
+          if (savedDivision === 'any') {
+            return (canShowB && canShowC) ? 'any' : (canShowC ? 'C' : 'B');
+          }
+          if (savedDivision === 'B' && !canShowB) return 'C';
+          if (savedDivision === 'C' && !canShowC) return 'B';
+          return savedDivision;
+        })();
         
         setSettings(prev => ({
           ...prev,
           questionCount: defaultQuestionCount,
           timeLimit: defaultTimeLimit,
           difficulties: [],
-          types: 'multiple-choice',
-          division: selectedEventObj.divisions?.includes('B') ? 'B' : 'C',
+          types: savedTypes as any,
+          division: divisionForEvent as any,
           subtopics: []
         }));
       }
@@ -506,28 +558,6 @@ export default function PracticeDashboard() {
 
       <ToastContainer theme={darkMode ? "dark" : "light"} />
       <style jsx global>{`
-          ::-webkit-scrollbar {
-            width: 8px;
-            transition: background 1s ease;
-            ${darkMode
-              ? 'background: black;'
-              : 'background: white;'
-            }
-          }
-
-          ::-webkit-scrollbar-thumb {
-            background: ${darkMode
-              ? '#374151'
-              : '#3b82f6'};
-            border-radius: 4px;
-            transition: background 1s ease;
-          }     
-          ::-webkit-scrollbar-thumb:hover {
-            background: ${darkMode
-              ? '#1f2937'
-              : '#2563eb'};
-          }
-          
           /* Handle long words by breaking them */
           .break-words {
             word-break: break-word;

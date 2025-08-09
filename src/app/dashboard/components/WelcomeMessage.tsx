@@ -1,34 +1,90 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 import { WelcomeMessageProps } from '../types';
 
 export default function WelcomeMessage({ darkMode, currentUser, setDarkMode }: WelcomeMessageProps) {
+  const [greetingName, setGreetingName] = useState<string>('');
+
+  useEffect(() => {
+    const resolveName = async () => {
+      // 1) Try users table: first_name, then display_name
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const userId = user?.id || currentUser?.id || null;
+        const email = user?.email || currentUser?.email || '';
+        if (userId) {
+          const { data } = await supabase
+            .from('users')
+            .select('first_name, display_name')
+            .eq('id', userId)
+            .single();
+          const first = (data as any)?.first_name as string | undefined;
+          const display = (data as any)?.display_name as string | undefined;
+          if (first && first.trim()) {
+            setGreetingName(first.trim());
+            return;
+          }
+          if (display && display.trim()) {
+            setGreetingName(display.trim().split(' ')[0]);
+            return;
+          }
+        }
+
+        // 2) Fallback to auth metadata first_name/name
+        const mFirst = (currentUser?.user_metadata?.first_name as string | undefined) ||
+          ((currentUser?.user_metadata?.name as string | undefined) || (currentUser?.user_metadata?.full_name as string | undefined) || '')
+            .split(' ').filter(Boolean)[0];
+        if (mFirst) {
+          setGreetingName(mFirst);
+          return;
+        }
+
+        // 3) Fallback to email local part
+        if (email) {
+          setGreetingName(email.split('@')[0]);
+          return;
+        }
+        setGreetingName('');
+      } catch {
+        // Fallbacks only
+        const email = currentUser?.email || '';
+        const fallback = (currentUser?.user_metadata?.first_name as string | undefined) ||
+          ((currentUser?.user_metadata?.name as string | undefined) || (currentUser?.user_metadata?.full_name as string | undefined) || '')
+            .split(' ').filter(Boolean)[0] ||
+          (email ? email.split('@')[0] : '');
+        setGreetingName(fallback);
+      }
+    };
+    resolveName();
+  }, [currentUser]);
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className={`rounded-lg p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg border ${
+      className={`rounded-lg p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'} border ${
         darkMode ? 'border-gray-700' : 'border-gray-200'
       }`}
     >
       <div className="flex items-center justify-between">
         <div>
           <h1 className={`text-3xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            Welcome back{currentUser?.email ? `, ${currentUser.email.split('@')[0]}` : ''}! 👋
+            Welcome back{greetingName ? `, ${greetingName}` : ''}! 👋
           </h1>
           <p className={`text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
             Ready to tackle some Science Olympiad questions?
           </p>
         </div>
         
-        {/* Theme Toggle */}
+        {/* Desktop-only theme toggle button */}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setDarkMode(!darkMode)}
-          className={`p-3 rounded-lg transition-colors ${
+          className={`hidden md:block p-3 rounded-lg transition-colors ${
             darkMode 
               ? 'bg-gray-700 hover:bg-gray-600 text-white' 
               : 'bg-gray-100 hover:bg-gray-200 text-gray-700'

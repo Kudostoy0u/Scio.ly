@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { client } from '@/lib/db';
+import { db } from '@/lib/db';
 import { ApiResponse, ReportRemoveRequest } from '@/lib/types/api';
 import { geminiService } from '@/lib/services/gemini';
+import { blacklists as blacklistsTable, questions as questionsTable } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 // POST /api/report/remove - Report a question for removal
 export async function POST(request: NextRequest) {
@@ -50,22 +52,16 @@ export async function POST(request: NextRequest) {
       const questionDataJSON = JSON.stringify(body.question);
 
       try {
-        // Add to blacklist
-        const insertQuery = `
-          INSERT INTO blacklists (event, question_data, created_at) 
-          VALUES ($1, $2, CURRENT_TIMESTAMP)
-        `;
-        
-        await client.unsafe(insertQuery, [
-          body.event,
-          questionDataJSON,
-        ]);
+        // Add to blacklist via Drizzle
+        await db
+          .insert(blacklistsTable)
+          .values({ event: body.event, questionData: JSON.parse(questionDataJSON) });
 
         // Remove from main questions table if it exists
         const questionId = body.question.id;
         if (questionId) {
           try {
-            await client.unsafe("DELETE FROM questions WHERE id = $1", [questionId as unknown as string]);
+            await db.delete(questionsTable).where(eq(questionsTable.id, questionId as unknown as string));
             console.log('📝 [REPORT/REMOVE] Removed question from main table');
           } catch (error) {
             console.log('Question might not exist in main table:', error);

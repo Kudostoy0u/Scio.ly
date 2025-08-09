@@ -141,7 +141,6 @@ export default function Content() {
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleTakeTimedTest = (eventName: string, _questions: BookmarkedQuestion[]) => {
     // Repurposed to CLEAR ALL for this event (rightmost button)
     (async () => {

@@ -40,7 +40,7 @@ export const updateGamePoints = async (
     const today = new Date().toISOString().split('T')[0];
     try {
       // Update the user_stats table with the new game points
-      const { error } = await (supabase as any)
+    const { error } = await (supabase as any)
         .from('user_stats')
         .upsert({
           user_id: userId,
@@ -51,7 +51,7 @@ export const updateGamePoints = async (
           event_questions: updatedMetrics.eventQuestions,
           game_points: updatedMetrics.gamePoints
         } as any, { 
-          onConflict: 'user_id,date' 
+        onConflict: 'user_id,date' 
         })
         .select()
         .single();

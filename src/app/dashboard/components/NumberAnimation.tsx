@@ -1,42 +1,69 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NumberAnimationProps } from '../types';
 
 export default function NumberAnimation({ value, className }: NumberAnimationProps) {
   const [isMounted, setIsMounted] = useState(false);
-  const [displayValue, setDisplayValue] = useState(0); // Start with 0 to avoid hydration mismatch
+  const [displayValue, setDisplayValue] = useState(0);
+  const prevValueRef = useRef<number | null>(null);
+  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
-    setDisplayValue(value); // Set the initial value after mounting
-  }, [value]);
+  }, []);
 
   useEffect(() => {
     if (!isMounted) return;
 
-    let start = 0;
-    const end = value;
-    const duration = 1000;
-    const increment = end / (duration / 16);
+    const prev = prevValueRef.current;
+    prevValueRef.current = value;
 
-    const timer = setInterval(() => {
-      start += increment;
-      if (start >= end) {
-        setDisplayValue(end);
-        clearInterval(timer);
+    // On first mount, set directly to avoid any flicker
+    if (prev === null) {
+      setDisplayValue(value);
+      return;
+    }
+
+    // Cancel any running animation
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+
+    const startValue = prev;
+    const endValue = value;
+    if (startValue === endValue) return;
+
+    const duration = 600; // ms
+    const startTime = performance.now();
+
+    const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+
+    const tick = (now: number) => {
+      const elapsed = now - startTime;
+      const t = Math.min(1, elapsed / duration);
+      const eased = easeOut(t);
+      const current = Math.round(startValue + (endValue - startValue) * eased);
+      setDisplayValue(current);
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(tick);
       } else {
-        setDisplayValue(Math.floor(start));
+        rafRef.current = null;
       }
-    }, 16);
+    };
 
-    return () => clearInterval(timer);
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
   }, [value, isMounted]);
 
-  // Return the value directly if not mounted (server-side rendering)
   if (!isMounted) {
+    // Match server-rendered value to avoid hydration mismatch
     return <span className={className}>{value}</span>;
   }
 
   return <span className={className}>{displayValue}</span>;
-} 
+}

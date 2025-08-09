@@ -12,8 +12,8 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+export function AuthProvider({ children, initialUser }: { children: ReactNode, initialUser?: User | null }) {
+  const [user, setUser] = useState<User | null>(initialUser ?? null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,8 +29,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // Initial load
+    // Initial load (skip if initialUser was provided by server)
     const getInitialSession = async () => {
+      if (initialUser) {
+        setLoading(false);
+        return;
+      }
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
       setLoading(false);
@@ -41,18 +45,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [initialUser]);
 
   const upsertUserProfile = async (user: User) => {
     try {
+      const emailLocal = (user.email || '').split('@')[0] || 'user';
+      const fullName: string | undefined = (user.user_metadata?.name as string | undefined) || (user.user_metadata?.full_name as string | undefined) || undefined;
+      const username = emailLocal;
+
+      const upsertRow: Record<string, unknown> = {
+        id: String(user.id),
+        email: user.email || '',
+        username,
+        photo_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+      };
+      if (fullName && fullName.trim()) {
+        upsertRow.display_name = fullName.trim();
+      }
+
       const { error } = await supabase
         .from('users')
-        .upsert({
-          id: String(user.id),
-          email: user.email || '',
-          name: user.user_metadata?.name || user.user_metadata?.full_name || null,
-          photo_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
-        } as any, { onConflict: 'id' });
+        .upsert(upsertRow as any, { onConflict: 'id' });
       
       if (error) {
         console.error('Error upserting user profile:', error);
