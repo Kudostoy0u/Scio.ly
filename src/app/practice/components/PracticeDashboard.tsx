@@ -28,7 +28,8 @@ export default function PracticeDashboard() {
     types: 'multiple-choice',
     division: 'any',
     tournament: '',
-    subtopics: []
+    subtopics: [],
+    idPercentage: 10,
   });
 
   // Load localStorage values after component mounts (client-side only)
@@ -114,6 +115,7 @@ export default function PracticeDashboard() {
       division: settings.division,
       tournament: 'any',
       subtopics: settings.subtopics,
+      idPercentage: settings.idPercentage,
     };
 
     localStorage.setItem('testParams', JSON.stringify(testParams));
@@ -131,6 +133,7 @@ export default function PracticeDashboard() {
           types: settings.types,
           division: settings.division,
           subtopics: settings.subtopics,
+          idPercentage: settings.idPercentage,
         }));
         // 10 minutes expiry
         document.cookie = `scio_test_params=${cookiePayload}; Path=/; Max-Age=600; SameSite=Lax`;
@@ -165,6 +168,7 @@ export default function PracticeDashboard() {
         division: settings.division,
         difficulties: settings.difficulties,
         subtopics: settings.subtopics,
+        idPercentage: settings.idPercentage,
       }));
       document.cookie = `scio_unlimited_params=${cookiePayload}; Path=/; Max-Age=600; SameSite=Lax`;
     } catch {}

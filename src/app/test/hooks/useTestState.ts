@@ -78,7 +78,24 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
 
   // Load test data
   useEffect(() => {
-    if (fetchStartedRef.current || data.length > 0 || isLoading === false) {
+    console.log('[TEST] useEffect triggered', { 
+      fetchStarted: fetchStartedRef.current, 
+      dataLength: data.length, 
+      isLoading, 
+      hasInitialData: !!initialData,
+      hasInitialRouterData: !!initialRouterData 
+    });
+    
+    // Clear any existing bookmarked state that might interfere
+    localStorage.removeItem('testFromBookmarks');
+    
+    // Reset fetchStartedRef if we have router data but no data yet
+    if (initialRouterData && Object.keys(initialRouterData).length > 0 && data.length === 0) {
+      fetchStartedRef.current = false;
+    }
+    
+    if (fetchStartedRef.current || data.length > 0) {
+      console.log('[TEST] early return', { reason: fetchStartedRef.current ? 'fetchStarted' : 'dataLength' });
       return;
     }
     
@@ -139,7 +156,9 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           if (eventBookmarks.length > 0) {
             const questions = eventBookmarks.map(b => b.question);
             setData(questions);
-            localStorage.setItem('testQuestions', JSON.stringify(questions));
+            // Strip imageData to avoid quota issues
+            const serialized = JSON.stringify(questions, (key, value) => key === 'imageData' ? undefined : value);
+            localStorage.setItem('testQuestions', serialized);
           } else {
             setFetchError('No bookmarked questions found for this event.');
           }
@@ -159,58 +178,93 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   
     const fetchData = async () => {
       try {
-        const { questionCount } = routerParams;
-        const requestCount = Math.max(parseInt(questionCount || '10') * 3, 50);
-        const params = buildApiParams(routerParams, requestCount);
-        const apiUrl = `${api.questions}?${params}`;
-        
-        let response: Response | null = null;
-        try {
-          response = await fetch(apiUrl);
-        } catch {
-          response = null;
-        }
-        let apiResponse: any = null;
-        if (response && response.ok) {
-          apiResponse = await response.json();
-        } else {
-          // Try offline cache for this event
-          const evt = routerParams.eventName as string | undefined;
-          if (evt) {
-            const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-            const cached = await getEventOfflineQuestions(slug);
-            if (Array.isArray(cached) && cached.length > 0) {
-              apiResponse = { success: true, data: cached };
+        const total = parseInt(routerParams.questionCount || '10');
+        const idPctRaw = (routerParams as any).idPercentage;
+        const idPct = typeof idPctRaw !== 'undefined' ? Math.max(0, Math.min(100, parseInt(idPctRaw))) : 0;
+        const idCount = Math.round((idPct / 100) * total);
+        const baseCount = Math.max(0, total - idCount);
+        console.log('[IDGEN][test] start', { event: routerParams.eventName, total, idPct, baseCount, idCount, types: routerParams.types });
+
+        let selectedQuestions: Question[] = [];
+
+        // 1) Base (non-ID) questions from regular endpoint
+        if (baseCount > 0) {
+          const requestCount = Math.max(baseCount * 3, 50);
+          const params = buildApiParams({ ...routerParams }, requestCount);
+          const apiUrl = `${api.questions}?${params}`;
+          console.log('[IDGEN][test] fetching base questions', { requestCount, apiUrl });
+
+          let response: Response | null = null;
+          try { response = await fetch(apiUrl); } catch { response = null; }
+          let apiResponse: any = null;
+          if (response && response.ok) {
+            apiResponse = await response.json();
+            console.log('[IDGEN][test] base questions response ok', { count: Array.isArray(apiResponse?.data) ? apiResponse.data.length : 'n/a' });
+          } else {
+            const evt = routerParams.eventName as string | undefined;
+            if (evt) {
+              const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+              const cached = await getEventOfflineQuestions(slug);
+              if (Array.isArray(cached) && cached.length > 0) {
+                apiResponse = { success: true, data: cached };
+                console.log('[IDGEN][test] using cached base questions', { count: cached.length });
+              }
             }
+            if (!apiResponse) throw new Error('Failed to load questions.');
           }
-          if (!apiResponse) throw new Error('Failed to load questions.');
+          const questions: Question[] = (apiResponse.data || []).filter((q: any) => q.answers && Array.isArray(q.answers) && q.answers.length > 0);
+          selectedQuestions = shuffleArray(questions).slice(0, baseCount);
+          console.log('[IDGEN][test] selected base questions', { selected: selectedQuestions.length });
         }
-        
-        if (!apiResponse.success) {
-          throw new Error(apiResponse.error || 'API request failed');
+
+        // 2) ID questions (blind to filters)
+        if (idCount > 0 && routerParams.eventName === 'Rocks and Minerals') {
+          const preferFRQ = routerParams.types !== 'multiple-choice';
+          const idUrl = `${api.rocksRandom}?count=${idCount}`;
+          console.log('[IDGEN][test] fetching id questions', { idUrl, preferFRQ });
+          const resp = await fetch(idUrl);
+          const { success, data, namePool } = await resp.json();
+          if (success) {
+            console.log('[IDGEN][test] id endpoint success', { rows: Array.isArray(data) ? data.length : 'n/a', namePoolSize: Array.isArray(namePool) ? namePool.length : 'n/a' });
+            const idQuestions: Question[] = data.map((item: any) => {
+              const imgs: string[] = Array.isArray(item.images) ? item.images : [];
+              const chosenImg = imgs.length ? imgs[Math.floor(Math.random() * imgs.length)] : undefined;
+              if (preferFRQ) {
+                return {
+                  question: 'Identify the mineral shown in the image.',
+                  answers: item.names,
+                  difficulty: 0.5,
+                  event: 'Rocks and Minerals',
+                  imageData: chosenImg,
+                };
+              }
+              const correct = item.names[0];
+              const distractors = shuffleArray((namePool as string[]).filter(n => !item.names.includes(n))).slice(0, 3);
+              const options = shuffleArray([correct, ...distractors]);
+              const correctIndex = options.indexOf(correct);
+              return {
+                question: 'Identify the mineral shown in the image.',
+                options,
+                answers: [correctIndex],
+                difficulty: 0.5,
+                event: 'Rocks and Minerals',
+                imageData: chosenImg,
+              };
+            });
+            selectedQuestions = selectedQuestions.concat(idQuestions);
+            console.log('[IDGEN][test] combined final questions', { total: selectedQuestions.length });
+          } else {
+            console.warn('[IDGEN][test] id endpoint returned failure');
+          }
         }
-        
-        let questions: Question[] = apiResponse.data || [];
-        questions = questions.filter(q => {
-          const hasAnswerStructure = q.answers && Array.isArray(q.answers) && q.answers.length > 0;
-          return hasAnswerStructure;
-        });
-        
-        const shuffledQuestions = shuffleArray(questions);
-        const selectedQuestions = shuffledQuestions.slice(
-          0,
-          parseInt(questionCount || '10')
-        );
-        
-        const questionsWithIndex = selectedQuestions.map((q, idx) => ({
-          ...q,
-          originalIndex: idx
-        }));
-        
-        localStorage.setItem('testQuestions', JSON.stringify(questionsWithIndex));
+
+        const questionsWithIndex = selectedQuestions.map((q, idx) => ({ ...q, originalIndex: idx }));
+        // Avoid localStorage quota issues by stripping large image blobs
+        const serialized = JSON.stringify(questionsWithIndex, (key, value) => key === 'imageData' ? undefined : value);
+        localStorage.setItem('testQuestions', serialized);
         setData(questionsWithIndex);
       } catch (error) {
-        console.error(error);
+        console.error('[IDGEN][test] error', error);
         setFetchError('Failed to load questions. Please try again later.');
       } finally {
         setIsLoading(false);
@@ -218,7 +272,8 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     };
   
     fetchData();
-  }, [data.length, isLoading, router, initialData, initialRouterData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router, initialData, initialRouterData]);
 
   // Timer logic
   useEffect(() => {

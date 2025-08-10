@@ -14,6 +14,7 @@ export interface Settings {
   division: string;
   tournament: string;
   subtopics: string[];
+  idPercentage?: number; // Rocks & Minerals: % of ID questions
 }
 
 // Extend window interface for event subtopics mapping

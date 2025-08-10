@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { updateMetrics } from '@/app/utils/metrics';
@@ -15,6 +15,7 @@ import QuestionActions from '@/app/components/QuestionActions';
 import EditQuestionModal from '@/app/components/EditQuestionModal';
 import { loadBookmarksFromSupabase } from '@/app/utils/bookmarks';
 import { Question } from '@/app/utils/geminiService';
+import { shuffleArray } from '@/app/utils/questionUtils';
 import {
   RouterParams,
   GradingResults,
@@ -70,6 +71,12 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  
+  // For lazy loading ID questions
+  const [idQuestionIndices, setIdQuestionIndices] = useState<Set<number>>(new Set());
+  const [idQuestionCache, setIdQuestionCache] = useState<Map<number, Question>>(new Map());
+  const [namePool, setNamePool] = useState<string[]>([]);
+  const [isLoadingIdQuestion, setIsLoadingIdQuestion] = useState(false);
 
   // Fetch and filter questions on mount
   useEffect(() => {
@@ -104,12 +111,10 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
 
     const fetchData = async () => {
       try {
-        // const { types } = routerParams; // Unused variable
-        
-        // Request a large number of questions for unlimited practice
+        // Request a large number of questions for unlimited practice (non-ID)
         const params = buildApiParams(routerParams, 1000);
-        
         const apiUrl = `${api.questions}?${params}`;
+        console.log('[IDGEN][unlimited] start', { event: routerParams.eventName, types: routerParams.types, url: apiUrl, idPct: (routerParams as any).idPercentage });
         
         let response: Response | null = null;
         try {
@@ -120,6 +125,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
         let apiResponse: any = null;
         if (response && response.ok) {
           apiResponse = await response.json();
+          console.log('[IDGEN][unlimited] base ok', { count: Array.isArray(apiResponse?.data) ? apiResponse.data.length : 'n/a' });
         } else {
           const evt = routerParams.eventName as string | undefined;
           if (evt) {
@@ -127,6 +133,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             const cached = await getEventOfflineQuestions(slug);
             if (Array.isArray(cached) && cached.length > 0) {
               apiResponse = { success: true, data: cached };
+              console.log('[IDGEN][unlimited] using cached base', { count: cached.length });
             }
           }
           if (!apiResponse) throw new Error('Failed to fetch data from API');
@@ -135,14 +142,66 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
         if (!apiResponse.success) {
           throw new Error(apiResponse.error || 'API request failed');
         }
-        
-        const questions: Question[] = apiResponse.data || [];
-        
-        // Store for persistence
-        localStorage.setItem('unlimitedQuestions', JSON.stringify(questions));
-        setData(questions);
+        const baseQuestions: Question[] = apiResponse.data || [];
+
+        // For Rocks & Minerals, create placeholders for ID questions
+        let finalQuestions: Question[] = baseQuestions;
+        const idPct = (routerParams as any).idPercentage;
+        if (routerParams.eventName === 'Rocks and Minerals' && typeof idPct !== 'undefined' && parseInt(idPct) > 0) {
+          const pct = Math.max(0, Math.min(100, parseInt(idPct)));
+          const totalQuestionsCount = pct === 100 ? 1000 : baseQuestions.length;
+          const idCount = Math.round((pct / 100) * totalQuestionsCount);
+          const baseCount = totalQuestionsCount - idCount;
+          
+          console.log('[IDGEN][unlimited] preparing lazy load', { pct, totalQuestionsCount, idCount, baseCount });
+          
+          // Create placeholder questions for ID positions
+          const idPlaceholders: Question[] = Array.from({ length: idCount }, (_, i) => ({
+            question: '[Loading ID Question...]',
+            answers: [],
+            difficulty: 0.5,
+            event: 'Rocks and Minerals',
+            _isIdPlaceholder: true,
+            _placeholderId: i,
+          } as any));
+          
+          // Mix base questions and placeholders with proper shuffling
+          if (pct === 100) {
+            finalQuestions = idPlaceholders;
+          } else {
+            const trimmedBase = baseQuestions.slice(0, baseCount);
+            // Create array with base questions and placeholders, then shuffle properly
+            const combined = [...trimmedBase, ...idPlaceholders];
+            finalQuestions = shuffleArray(combined);
+          }
+          
+          // Track which indices are ID questions
+          const idIndices = new Set<number>();
+          finalQuestions.forEach((q, idx) => {
+            if ((q as any)._isIdPlaceholder) {
+              idIndices.add(idx);
+            }
+          });
+          setIdQuestionIndices(idIndices);
+          
+          // Fetch name pool for distractors
+          fetch(`${api.rocksRandom}?count=1`)
+            .then(res => res.json())
+            .then(({ namePool: pool }) => {
+              if (Array.isArray(pool)) {
+                setNamePool(pool);
+                console.log('[IDGEN][unlimited] name pool loaded', { size: pool.length });
+              }
+            })
+            .catch(err => console.error('[IDGEN][unlimited] failed to load name pool', err));
+        }
+
+        // Strip image blobs to avoid quota issues; images are embedded per question at render-time already
+        const serialized = JSON.stringify(finalQuestions, (key, value) => key === 'imageData' ? undefined : value);
+        localStorage.setItem('unlimitedQuestions', serialized);
+        setData(finalQuestions);
       } catch (error) {
-        console.error(error);
+        console.error('[IDGEN][unlimited] error', error);
         setFetchError('Failed to load questions. Please try again later.');
       } finally {
         setIsLoading(false);
@@ -184,8 +243,76 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     };
   }, []);
 
+  // Function to load ID question on demand
+  const loadIdQuestion = useCallback(async (index: number) => {
+    if (!idQuestionIndices.has(index) || idQuestionCache.has(index)) {
+      return;
+    }
+    
+    setIsLoadingIdQuestion(true);
+    try {
+      console.log('[IDGEN][unlimited] loading ID question for index', index);
+      const resp = await fetch(`${api.rocksRandom}?count=1`);
+      const { success, data } = await resp.json();
+      
+      if (success && data.length > 0) {
+        const item = data[0];
+        const imgs: string[] = Array.isArray(item.images) ? item.images : [];
+        const chosenImg = imgs.length ? imgs[Math.floor(Math.random() * imgs.length)] : undefined;
+        
+        // Determine if this should be MCQ or FRQ
+        const types = routerData.types || 'multiple-choice';
+        let question: Question;
+        
+        if (types === 'free-response' || (types === 'both' && Math.random() < 0.5)) {
+          question = {
+            question: 'Identify the mineral shown in the image.',
+            answers: item.names,
+            difficulty: 0.5,
+            event: 'Rocks and Minerals',
+            imageData: chosenImg,
+          };
+        } else {
+          const correct = item.names[0];
+          const distractors = shuffleArray(namePool.filter(n => !item.names.includes(n))).slice(0, 3);
+          const options = shuffleArray([correct, ...distractors]);
+          const correctIndex = options.indexOf(correct);
+          question = {
+            question: 'Identify the mineral shown in the image.',
+            options,
+            answers: [correctIndex],
+            difficulty: 0.5,
+            event: 'Rocks and Minerals',
+            imageData: chosenImg,
+          };
+        }
+        
+        // Update cache and data array
+        setIdQuestionCache(prev => new Map(prev).set(index, question));
+        setData(prev => {
+          const newData = [...prev];
+          newData[index] = question;
+          return newData;
+        });
+        
+        console.log('[IDGEN][unlimited] loaded ID question', { index, type: question.options ? 'MCQ' : 'FRQ' });
+      }
+    } catch (error) {
+      console.error('[IDGEN][unlimited] failed to load ID question', error);
+    } finally {
+      setIsLoadingIdQuestion(false);
+    }
+  }, [idQuestionIndices, idQuestionCache, namePool, routerData.types]);
+
+  // Load ID question when navigating to one
+  useEffect(() => {
+    if (idQuestionIndices.has(currentQuestionIndex) && !idQuestionCache.has(currentQuestionIndex)) {
+      loadIdQuestion(currentQuestionIndex);
+    }
+  }, [currentQuestionIndex, idQuestionIndices, idQuestionCache, loadIdQuestion]);
+
   // Grab the current question (if available)
-  const currentQuestion = data[currentQuestionIndex];
+  const currentQuestion = idQuestionCache.get(currentQuestionIndex) || data[currentQuestionIndex];
 
   // Update the answer for the current question.
   // For checkboxes (multiselect) the answer array is updated;
@@ -407,9 +534,21 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             onQuestionRemoved={handleQuestionRemoved}
           />
         </div>
-        <p className="mb-4 break-words whitespace-normal overflow-x-auto">
-          {question.question}
-        </p>
+        {isLoadingIdQuestion && idQuestionIndices.has(currentQuestionIndex) ? (
+          <div className="flex items-center justify-center h-32 mb-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+          </div>
+        ) : (
+          <>
+            {question.imageData && (
+              <div className="mb-4 w-full flex justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={question.imageData} alt="Mineral" className="max-h-64 rounded-md border" />
+              </div>
+            )}
+            <p className="mb-4 break-words whitespace-normal overflow-x-auto">{question.question}</p>
+          </>
+        )}
 
         {question.options && question.options.length > 0 ? (
           <div className="space-y-2">

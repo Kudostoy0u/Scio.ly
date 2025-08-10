@@ -118,18 +118,23 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
     darkMode ? 'text-gray-500' : 'text-gray-400'
   }`;
 
+  // Disable bookmarking for ID questions (questions with imageData)
+  const isIdQuestion = !!question.imageData;
+  
   if (compact) {
     return (
       <div className="flex items-center space-x-1">
-        <BookmarkManager
-          question={question}
-          isBookmarked={isBookmarked}
-          eventName={eventName}
-          source={source}
-          onBookmarkChange={onBookmarkChange}
-          darkMode={darkMode}
-          size="sm"
-        />
+        {!isIdQuestion && (
+          <BookmarkManager
+            question={question}
+            isBookmarked={isBookmarked}
+            eventName={eventName}
+            source={source}
+            onBookmarkChange={onBookmarkChange}
+            darkMode={darkMode}
+            size="sm"
+          />
+        )}
         
         <button
           onClick={onEdit}
@@ -158,15 +163,17 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
 
   return (
     <div className="flex items-center space-x-2">
-      <BookmarkManager
-        question={question}
-        isBookmarked={isBookmarked}
-        eventName={eventName}
-        source={source}
-        onBookmarkChange={onBookmarkChange}
-        darkMode={darkMode}
-        showLabel={true}
-      />
+      {!isIdQuestion && (
+        <BookmarkManager
+          question={question}
+          isBookmarked={isBookmarked}
+          eventName={eventName}
+          source={source}
+          onBookmarkChange={onBookmarkChange}
+          darkMode={darkMode}
+          showLabel={true}
+        />
+      )}
       
       <button
         onClick={onEdit}

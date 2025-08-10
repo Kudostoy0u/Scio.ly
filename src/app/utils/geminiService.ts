@@ -12,6 +12,7 @@ export interface Question {
   subject?: string;
   subtopic?: string;
   event?: string;
+  imageData?: string; // optional data URL for ID questions
 }
 
 export interface EditSuggestion {

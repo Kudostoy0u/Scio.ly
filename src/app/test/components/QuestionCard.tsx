@@ -84,9 +84,13 @@ export default function QuestionCard({
         />
       </div>
       
-      <p className="mb-4 break-words whitespace-normal overflow-x-auto">
-        {question.question}
-      </p>
+      {question.imageData && (
+        <div className="mb-4 w-full flex justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={question.imageData} alt="Mineral" className="max-h-64 rounded-md border" />
+        </div>
+      )}
+      <p className="mb-4 break-words whitespace-normal overflow-x-auto">{question.question}</p>
 
       {question.options && question.options.length > 0 ? (
         <div className="space-y-2">
