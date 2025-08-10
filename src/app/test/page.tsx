@@ -23,6 +23,7 @@ export default async function Page() {
   const types = parsed?.types as string | undefined;
   const division = parsed?.division as string | undefined;
   const subtopics = Array.isArray(parsed?.subtopics) ? parsed.subtopics as string[] : undefined;
+  const idPercentage = typeof parsed?.idPercentage !== 'undefined' ? Number(parsed.idPercentage) : undefined;
 
   let initialData: any[] | undefined = undefined;
   let initialRouterData:
@@ -33,6 +34,7 @@ export default async function Page() {
         types?: string;
         division?: string;
         subtopics?: string[];
+        idPercentage?: number;
       }
     | undefined = undefined;
 
@@ -66,6 +68,7 @@ export default async function Page() {
           types,
           division,
           subtopics,
+          idPercentage,
         };
       }
     } catch {
@@ -73,5 +76,16 @@ export default async function Page() {
     }
   }
 
-  return <Content initialData={initialData} initialRouterData={initialRouterData} />;
+// Always forward the router data even if server fetch failed
+const baseRouterData = {
+  eventName,
+  questionCount,
+  timeLimit,
+  types,
+  division,
+  subtopics,
+  idPercentage,
+};
+
+return <Content initialData={initialData} initialRouterData={{ ...(initialRouterData || {}), ...baseRouterData }} />;
 }

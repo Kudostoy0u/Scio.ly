@@ -262,6 +262,7 @@ export default function TestConfiguration({
   }, []);
 
   const isCodebusters = selectedEvent?.name === 'Codebusters';
+  const isRocks = selectedEvent?.name === 'Rocks and Minerals';
 
   return (
     <div 
@@ -422,6 +423,28 @@ export default function TestConfiguration({
               </button>
             </div>
           </div>
+
+          {/* Identification slider for Rocks & Minerals */}
+          {isRocks && (
+            <div>
+              <label htmlFor="idPercentage" className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                ID Questions (% of total)
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  id="idPercentage"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={settings.idPercentage ?? 10}
+                  onChange={(e) => onSettingsChange({ ...settings, idPercentage: parseInt(e.target.value) })}
+                  className="flex-1"
+                />
+                <span className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{settings.idPercentage ?? 10}%</span>
+              </div>
+            </div>
+          )}
 
           {/* Division Toggle */}
           <div>
