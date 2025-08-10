@@ -5,9 +5,9 @@ export default function PrivacyPolicyPage() {
   return (
     <ThemeSection className="min-h-screen">
       <Header />
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
         <h1 className="text-4xl font-bold mb-8">Privacy Policy</h1>
-        <div className="prose prose-lg max-w-none">
+        <div className="prose prose-lg prose-slate max-w-none dark:prose-invert dark:prose-headings:text-gray-100 dark:prose-p:text-gray-300 dark:prose-li:text-gray-300 dark:prose-strong:text-gray-100">
           <p>Last updated: July 26, 2024</p>
           <h2 className="text-2xl font-semibold mt-8 mb-4">1. Introduction</h2>
           <p>
