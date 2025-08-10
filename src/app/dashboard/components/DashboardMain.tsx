@@ -321,6 +321,9 @@ export default function DashboardMain({
               </motion.button>
             </div>
           </div>
+          
+          {/* 1-Click Practice Favorites */}
+          <FavoriteConfigs darkMode={darkMode} />
 
           {/* Metrics Section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -569,10 +572,6 @@ export default function DashboardMain({
             </div>
           </div>
 
-
-
-          {/* 1-Click Practice Favorites */}
-          <FavoriteConfigs darkMode={darkMode} />
 
           {/* Action Buttons */}
           <ActionButtons darkMode={darkMode} />
