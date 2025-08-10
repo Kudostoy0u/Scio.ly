@@ -53,7 +53,50 @@ export default function PracticeDashboard() {
           : 'multiple-choice'
       }));
     }
-  }, []);
+  }, []); // Remove events dependency to prevent infinite re-renders
+
+  // Handle URL parameters from favorites separately
+  useEffect(() => {
+    if (typeof window !== 'undefined' && events.length > 0) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const fromFavorites = urlParams.get('fromFavorites');
+      
+      if (fromFavorites === 'true') {
+        const event = urlParams.get('event');
+        const division = urlParams.get('division');
+        const questionCount = urlParams.get('questionCount');
+        const timeLimit = urlParams.get('timeLimit');
+        const difficulties = urlParams.get('difficulties');
+        const types = urlParams.get('types');
+        // const tournament = urlParams.get('tournament'); // Not used in current implementation
+        const subtopics = urlParams.get('subtopics');
+
+        // Find the event by name
+        if (event) {
+          const eventObj = events.find(e => e.name === event);
+          if (eventObj) {
+            setSelectedEvent(eventObj.id);
+          }
+        }
+
+        // Update settings with URL parameters
+        if (questionCount || timeLimit || division || types || difficulties || subtopics) {
+          setSettings(prev => ({
+            ...prev,
+            questionCount: questionCount ? parseInt(questionCount) : prev.questionCount,
+            timeLimit: timeLimit ? parseInt(timeLimit) : prev.timeLimit,
+            division: division || prev.division,
+            types: types || prev.types,
+            difficulties: difficulties ? difficulties.split(',').filter(d => d.trim()) : prev.difficulties,
+            subtopics: subtopics ? subtopics.split(',').filter(s => s.trim()) : prev.subtopics
+          }));
+        }
+
+        // Clear URL parameters after loading
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, [events]);
 
   // This function is no longer needed as it's handled in TestConfiguration component
   // const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {

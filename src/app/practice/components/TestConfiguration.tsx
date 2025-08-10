@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Event, Settings } from '../types';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { toast } from 'react-toastify';
+import { FaHeart } from 'react-icons/fa';
+import { loadFavoriteConfigs, saveFavoriteConfigs, areCookiesEnabled } from '@/lib/cookies';
 
 interface TestConfigurationProps {
   selectedEvent: Event | null;
@@ -23,6 +25,7 @@ export default function TestConfiguration({
   const { darkMode } = useTheme();
   const [isSubtopicDropdownOpen, setIsSubtopicDropdownOpen] = useState(false);
   const [isDifficultyDropdownOpen, setIsDifficultyDropdownOpen] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
   const subtopicDropdownRef = useRef<HTMLDivElement>(null);
   const difficultyDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -132,6 +135,115 @@ export default function TestConfiguration({
     return `${settings.difficulties.length} selected`;
   };
 
+  // Check if current configuration is already a favorite
+  const checkIfFavorite = useCallback(() => {
+    if (!selectedEvent || typeof window === 'undefined') return;
+    
+    const favorites = loadFavoriteConfigs();
+    const currentConfig = {
+      event: selectedEvent.name,
+      division: settings.division,
+      time: settings.timeLimit,
+      number: settings.questionCount,
+      difficulty: settings.difficulties.join(', '),
+      settings: { ...settings }
+    };
+    
+    const isAlreadyFavorite = favorites.some((fav: any) => 
+      fav.event === currentConfig.event &&
+      fav.division === currentConfig.division &&
+      fav.time === currentConfig.time &&
+      fav.number === currentConfig.number &&
+      fav.difficulty === currentConfig.difficulty
+    );
+    
+    setIsFavorite(isAlreadyFavorite);
+  }, [selectedEvent, settings]);
+
+  // Save current configuration as favorite
+  const handleSaveAsFavorite = async () => {
+    if (!selectedEvent) {
+      toast.error('Please select an event first');
+      return;
+    }
+
+    if (typeof window === 'undefined') {
+      toast.error('Cannot save favorites in server-side rendering');
+      return;
+    }
+
+    // Check if cookies are enabled
+    if (!areCookiesEnabled()) {
+      toast.error('Cookies are disabled. Please enable cookies to save favorite configurations.');
+      return;
+    }
+
+    const configName = prompt('Enter a name for this configuration:');
+    if (!configName || configName.trim() === '') return;
+
+    try {
+      console.log('[TestConfiguration] Saving favorite configuration...');
+      console.log('[TestConfiguration] Current settings:', settings);
+      console.log('[TestConfiguration] Selected event:', selectedEvent);
+      
+      const newFavorite = {
+        id: Date.now().toString(),
+        name: configName.trim(),
+        event: selectedEvent.name,
+        division: settings.division,
+        time: settings.timeLimit,
+        number: settings.questionCount,
+        difficulty: settings.difficulties.join(', ') || 'All Difficulties',
+        types: settings.types,
+        subtopics: settings.subtopics,
+        tournament: settings.tournament,
+        settings: { ...settings }
+      };
+
+      console.log('[TestConfiguration] New favorite object:', newFavorite);
+
+      // Load existing favorites
+      const existingFavorites = loadFavoriteConfigs();
+      console.log('[TestConfiguration] Existing favorites:', existingFavorites);
+
+      // Check if this configuration already exists
+      const existingIndex = existingFavorites.findIndex(fav => 
+        fav.name === newFavorite.name && 
+        fav.event === newFavorite.event &&
+        fav.division === newFavorite.division
+      );
+
+      if (existingIndex !== -1) {
+        // Update existing favorite
+        existingFavorites[existingIndex] = newFavorite;
+        console.log('[TestConfiguration] Updated existing favorite at index:', existingIndex);
+      } else {
+        // Add new favorite
+        existingFavorites.push(newFavorite);
+        console.log('[TestConfiguration] Added new favorite, total count:', existingFavorites.length);
+      }
+
+      // Save to cookies
+      const saveSuccess = saveFavoriteConfigs(existingFavorites);
+      console.log('[TestConfiguration] Save to cookies success:', saveSuccess);
+
+      if (saveSuccess) {
+        toast.success(`Configuration "${configName.trim()}" saved to favorites!`);
+        setIsFavorite(true);
+      } else {
+        toast.error('Failed to save configuration to favorites');
+      }
+    } catch (error) {
+      console.error('[TestConfiguration] Error saving favorite:', error);
+      toast.error('Error saving configuration to favorites');
+    }
+  };
+
+  // Check favorites when settings or event changes
+  useEffect(() => {
+    checkIfFavorite();
+  }, [selectedEvent, settings, checkIfFavorite]);
+
   // Click outside detection for dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -160,13 +272,26 @@ export default function TestConfiguration({
       }`}
     >
       <div className="p-6 flex-1 flex flex-col">
-        <h3 className={`text-xl font-semibold mb-6 ${
-          darkMode 
-            ? 'text-white' 
-            : 'text-gray-900'
-        }`}>
-          Test Configuration
-        </h3>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className={`text-xl font-semibold ${
+            darkMode 
+              ? 'text-white' 
+              : 'text-gray-900'
+          }`}>
+            Test Configuration
+          </h3>
+          <button
+            onClick={() => handleSaveAsFavorite()}
+            className={`p-2 rounded-full transition-colors duration-200 ${
+              isFavorite 
+                ? 'text-red-500 hover:text-red-600' 
+                : 'text-gray-400 hover:text-red-500'
+            }`}
+            title={isFavorite ? 'Remove from favorites' : 'Save as favorite'}
+          >
+            <FaHeart className={`text-xl ${isFavorite ? 'fill-current' : ''}`} />
+          </button>
+        </div>
         <div className="space-y-5 flex-1">
           {/* Number of Questions and Time Limit on same line */}
           <div className="grid grid-cols-2 gap-3">

@@ -9,6 +9,14 @@ export const supabase = createClient<Database>(supabaseUrl || 'http://localhost'
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true
+  },
+  db: {
+    schema: 'public'
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'supabase-js/2.0.0'
+    }
   }
 })
 

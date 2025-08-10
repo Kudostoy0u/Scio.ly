@@ -55,7 +55,7 @@ export default function QuestionCard({
 
   return (
     <div
-      className={`relative border p-4 rounded-lg shadow-sm transition-all duration-500 ease-in-out mb-6 ${
+      className={`relative border px-4 pt-4 pb-6 rounded-lg shadow-sm transition-all duration-500 ease-in-out mb-6 ${
         darkMode
           ? 'bg-gray-700 border-gray-600 text-white'
           : 'bg-gray-50 border-gray-300 text-black'
@@ -252,7 +252,7 @@ export default function QuestionCard({
       <br />
       
       {/* Difficulty Bar */}
-      <div className="absolute bottom-2 right-2 w-20 h-2 rounded-full bg-gray-300">
+      <div className="absolute bottom-1.5 right-2 w-20 h-2 rounded-full bg-gray-300">
         <div
           className={`h-full rounded-full ${
             question.difficulty >= 0.66
