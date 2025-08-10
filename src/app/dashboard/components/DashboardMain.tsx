@@ -16,6 +16,8 @@ import { handleContactSubmission } from '@/app/utils/contactUtils';
 import { ContactFormData, Metrics, DailyData, WeeklyData } from '../types';
 import WelcomeMessage from './WelcomeMessage';
 import MetricsCard from './MetricsCard';
+import CombinedMetricsCard from './CombinedMetricsCard';
+import FavoriteConfigs from './FavoriteConfigs';
 import ActionButtons from './ActionButtons';
 
 import AnimatedAccuracy from './AnimatedAccuracy';
@@ -31,6 +33,7 @@ export default function DashboardMain({
   initialMetrics?: { questionsAttempted: number; correctAnswers: number; eventsPracticed: string[]; accuracy: number };
   initialHistoryData?: { historicalData: DailyData[]; historyData: HistoryData };
 }) {
+  console.log('[DashboardMain] Component rendering...');
   const router = useRouter();
   const { darkMode, setDarkMode } = useTheme();
   const [currentUser, setCurrentUser] = useState<User | null>(initialUser ?? null);
@@ -45,10 +48,9 @@ export default function DashboardMain({
   const [contactModalOpen, setContactModalOpen] = useState(false);
 
   // View states for metrics cards
-  const [questionsView, setQuestionsView] = useState<'daily' | 'weekly' | 'allTime'>('daily');
-  const [correctView, setCorrectView] = useState<'daily' | 'weekly' | 'allTime'>('daily');
   const [eventsView, setEventsView] = useState<'daily' | 'weekly' | 'allTime'>('daily');
   const [accuracyView, setAccuracyView] = useState<'daily' | 'weekly' | 'allTime'>('daily');
+  const [combinedView, setCombinedView] = useState<'daily' | 'weekly' | 'allTime'>('daily');
 
   // Card style for consistent theming (no shadow)
   const cardStyle = darkMode 
@@ -321,28 +323,17 @@ export default function DashboardMain({
           </div>
 
           {/* Metrics Section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {/* Questions Attempted Card */}
-            <MetricsCard
-              title="Questions Attempted"
-              dailyValue={metrics.questionsAttempted}
-              weeklyValue={calculateWeeklyQuestions()}
-              allTimeValue={calculateAllTimeQuestions()}
-              view={questionsView}
-              onViewChange={setQuestionsView}
-              color="text-blue-600"
-              darkMode={darkMode}
-            />
-
-            {/* Correct Answers Card */}
-            <MetricsCard
-              title="Correct Answers"
-              dailyValue={metrics.correctAnswers}
-              weeklyValue={calculateWeeklyCorrect()}
-              allTimeValue={calculateAllTimeCorrect()}
-              view={correctView}
-              onViewChange={setCorrectView}
-              color="text-green-600"
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            {/* Combined Questions & Correct Answers Card */}
+            <CombinedMetricsCard
+              dailyQuestions={metrics.questionsAttempted}
+              weeklyQuestions={calculateWeeklyQuestions()}
+              allTimeQuestions={calculateAllTimeQuestions()}
+              dailyCorrect={metrics.correctAnswers}
+              weeklyCorrect={calculateWeeklyCorrect()}
+              allTimeCorrect={calculateAllTimeCorrect()}
+              view={combinedView}
+              onViewChange={setCombinedView}
               darkMode={darkMode}
             />
 
@@ -579,6 +570,9 @@ export default function DashboardMain({
           </div>
 
 
+
+          {/* 1-Click Practice Favorites */}
+          <FavoriteConfigs darkMode={darkMode} />
 
           {/* Action Buttons */}
           <ActionButtons darkMode={darkMode} />
