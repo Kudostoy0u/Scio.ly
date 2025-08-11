@@ -87,7 +87,7 @@ export default function Header() {
       setCanPromptInstall(true);
       try {
         (window as any).__deferredInstallPrompt__ = event;
-        console.log('[PWA] beforeinstallprompt fired and deferred');
+    
       } catch {}
     };
     const onInstalled = () => {
@@ -96,9 +96,10 @@ export default function Header() {
       setShowInstallModal(false);
       try {
         delete (window as any).__deferredInstallPrompt__;
-        console.log('[PWA] appinstalled');
+    
       } catch {}
     };
+    // silently handle PWA without noisy logs
     window.addEventListener('beforeinstallprompt', beforeInstall);
     window.addEventListener('appinstalled', onInstalled);
     return () => {
@@ -114,7 +115,7 @@ export default function Header() {
       installPromptRef.current = deferred;
       setCanPromptInstall(true);
       try {
-        console.log('[PWA] recovered deferred beforeinstallprompt from window');
+      
       } catch {}
     }
   }, []);
@@ -399,10 +400,10 @@ export default function Header() {
                               if (!installPromptRef.current) return;
                               try {
                                 installPromptRef.current.prompt();
-                                const choice = await installPromptRef.current.userChoice?.catch(() => null);
-                                console.log('[PWA] userChoice:', choice);
-                              } catch (err) {
-                                console.log('[PWA] prompt error:', err);
+                                await installPromptRef.current.userChoice?.catch(() => null);
+                                
+                              } catch {
+                                
                               }
                               installPromptRef.current = null;
                               setCanPromptInstall(false);

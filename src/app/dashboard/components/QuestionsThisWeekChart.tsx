@@ -170,17 +170,22 @@ export default function QuestionsThisWeekChart({
     return max;
   }, [gridData]);
 
+  // Heatmap color palette with improved contrast in dark mode
+  const heatmapPalette = useMemo(() => ({
+    empty: darkMode ? '#374151' : '#e5e7eb', // gray-700 vs gray-200
+    border: darkMode ? '#4b5563' : '#d1d5db', // gray-600 vs gray-300
+    levels: darkMode
+      // darker-to-brighter greens on dark bg for clear separation
+      ? ['#14532d', '#166534', '#22c55e', '#86efac']
+      // light mode retains existing scheme
+      : ['#bbf7d0', '#86efac', '#22c55e', '#166534']
+  }), [darkMode]);
+
   const getCellColor = (v: number) => {
-    if (v <= 0) return darkMode ? '#1f2937' : '#e5e7eb';
+    if (v <= 0) return heatmapPalette.empty;
     if (maxValueInGrid <= 1) return '#22c55e';
     const level = Math.min(4, Math.ceil((v / maxValueInGrid) * 4));
-    switch (level) {
-      case 1: return '#bbf7d0';
-      case 2: return '#86efac';
-      case 3: return '#22c55e';
-      case 4: return '#166534';
-      default: return '#22c55e';
-    }
+    return heatmapPalette.levels[level - 1] ?? '#22c55e';
   };
 
   useEffect(() => {
@@ -226,7 +231,7 @@ export default function QuestionsThisWeekChart({
   return (
     <div className={`p-6 rounded-lg ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`} style={{ height: 300 }}>
       <div className="flex items-center justify-between mb-2">
-        <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Questions Answered This Week</h2>
+        <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Questions Answered</h2>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setChartType('line')}
@@ -278,6 +283,8 @@ export default function QuestionsThisWeekChart({
                           width: `${cellSizePx}px`,
                           height: `${cellSizePx}px`,
                           backgroundColor: isFuture ? 'transparent' : getCellColor(cell.value),
+                          border: isFuture ? 'none' : `1px solid ${heatmapPalette.border}`,
+                          borderRadius: 3,
                         }}
                       />
                       {!isFuture && (

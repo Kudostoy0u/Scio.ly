@@ -113,7 +113,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
         // Request a large number of questions for unlimited practice (non-ID)
         const params = buildApiParams(routerParams, 1000);
         const apiUrl = `${api.questions}?${params}`;
-        console.log('[IDGEN][unlimited] start', { event: routerParams.eventName, types: routerParams.types, url: apiUrl, idPct: (routerParams as any).idPercentage });
+        
         
         let response: Response | null = null;
         try {
@@ -124,7 +124,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
         let apiResponse: any = null;
         if (response && response.ok) {
           apiResponse = await response.json();
-          console.log('[IDGEN][unlimited] base ok', { count: Array.isArray(apiResponse?.data) ? apiResponse.data.length : 'n/a' });
+          
         } else {
           const evt = routerParams.eventName as string | undefined;
           if (evt) {
@@ -132,7 +132,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             const cached = await getEventOfflineQuestions(slug);
             if (Array.isArray(cached) && cached.length > 0) {
               apiResponse = { success: true, data: cached };
-              console.log('[IDGEN][unlimited] using cached base', { count: cached.length });
+              
             }
           }
           if (!apiResponse) throw new Error('Failed to fetch data from API');
@@ -152,7 +152,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           const idCount = Math.round((pct / 100) * totalQuestionsCount);
           const baseCount = totalQuestionsCount - idCount;
           
-          console.log('[IDGEN][unlimited] preparing lazy load', { pct, totalQuestionsCount, idCount, baseCount });
+          
           
           // Create placeholder questions for ID positions
           const idPlaceholders: Question[] = Array.from({ length: idCount }, (_, i) => ({
@@ -189,18 +189,18 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             .then(({ namePool: pool }) => {
               if (Array.isArray(pool)) {
                 setNamePool(pool);
-                console.log('[IDGEN][unlimited] name pool loaded', { size: pool.length });
+                
               }
             })
-            .catch(err => console.error('[IDGEN][unlimited] failed to load name pool', err));
+            .catch(() => {});
         }
 
         // Strip image blobs to avoid quota issues; images are embedded per question at render-time already
         const serialized = JSON.stringify(finalQuestions, (key, value) => key === 'imageData' ? undefined : value);
         localStorage.setItem('unlimitedQuestions', serialized);
         setData(finalQuestions);
-      } catch (error) {
-        console.error('[IDGEN][unlimited] error', error);
+      } catch {
+        
         setFetchError('Failed to load questions. Please try again later.');
       } finally {
         setIsLoading(false);
@@ -253,7 +253,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     
     setIsLoadingIdQuestion(true);
     try {
-      console.log('[IDGEN][unlimited] loading ID question for index', index);
+      
       const resp = await fetch(`${api.rocksRandom}?count=1`);
       const { success, data } = await resp.json();
       
@@ -297,10 +297,10 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           return newData;
         });
         
-        console.log('[IDGEN][unlimited] loaded ID question', { index, type: question.options ? 'MCQ' : 'FRQ' });
+        
       }
-    } catch (error) {
-      console.error('[IDGEN][unlimited] failed to load ID question', error);
+    } catch {
+      
     } finally {
       setIsLoadingIdQuestion(false);
     }
@@ -356,14 +356,11 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
 
     try {
       // 🔍 DEBUG: Log submission details
-      console.log('🔴 SUBMITTING UNLIMITED QUESTION:');
-      console.log('  Question:', JSON.stringify(currentQuestion, null, 2));
-      console.log('  User answer:', currentAnswer);
-      console.log('  Current question index:', currentQuestionIndex);
+      
       
       const score = await isCorrect(currentQuestion, currentAnswer);
       
-      console.log('  Calculated score:', score);
+      
       
       setGradingResults((prev) => ({ ...prev, [currentQuestionIndex]: score }));
 
@@ -387,7 +384,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
   const handleNext = () => {
     if (data.length > 0) { // Ensure there are questions to pick from
       const randomIndex = Math.floor(Math.random() * data.length);
-      console.log(randomIndex)
+      
       setCurrentQuestionIndex(randomIndex);
       setCurrentAnswer([]);
       setIsSubmitted(false);
@@ -563,13 +560,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
                   (() => {
                     // 🔍 DEBUG: Log answer coloring logic for unlimited
                     if (isSubmitted) {
-                      console.log(`🎨 UNLIMITED Answer coloring for option ${idx + 1} (${option}):`);
-                      console.log(`  gradingResults[currentQuestionIndex]:`, gradingResults[currentQuestionIndex]);
-                      console.log(`  question.answers:`, question.answers);
-                      console.log(`  currentAnswers:`, currentAnswers);
-                      console.log(`  idx:`, idx);
-                      console.log(`  is correct answer?:`, question.answers.indexOf(idx) !== -1);
-                      console.log(`  user selected?:`, currentAnswers.includes(option));
+                      
                     }
                     
                     // Handle both string and number answers from backend (same logic as test page)
@@ -754,6 +745,17 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             </h1>
           </header>
 
+          {/* Inline back link to Practice */}
+          <div className="w-full max-w-3xl -mt-2">
+            <button
+              onClick={handleResetTest}
+              className="group inline-flex items-center text-sm font-medium text-black hover:text-black"
+            >
+              <span className="transition-transform duration-200 group-hover:-translate-x-1">←</span>
+              <span className="ml-2">Go back</span>
+            </button>
+          </div>
+
           <main
             className={`w-full max-w-3xl rounded-lg shadow-md p-6 mt-4  ${
               darkMode ? 'bg-gray-800' : 'bg-white'
@@ -808,30 +810,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             )}
           </main>
 
-          {/* Back Button (bottom-left) */}
-          <button
-            onClick={handleResetTest}
-            className={`fixed bottom-8 left-8 p-4 rounded-full shadow-lg ${
-              darkMode
-                ? 'bg-blue-600 hover:bg-blue-700'
-                : 'bg-blue-500 hover:bg-blue-600'
-            } text-white`}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-          </button>
+          {/* No floating back button */}
 
 
         </div>

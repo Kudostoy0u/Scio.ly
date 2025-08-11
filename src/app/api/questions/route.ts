@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { questions } from '@/lib/db/schema';
 import { Question } from '@/lib/types/api';
 import { v4 as uuidv4 } from 'uuid';
-import { eq, and, or, gte, lte, sql, SQL } from 'drizzle-orm';
+import { eq, and, or, gte, lte, lt, sql, SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { 
   handleApiError, 
@@ -61,7 +61,6 @@ type ValidatedCreateQuestion = z.infer<typeof CreateQuestionSchema>;
 class QueryBuilder {
   private conditions: SQL[] = [];
   private limit = 50;
-  private orderBy = sql`RANDOM()`;
 
   addCondition(condition: SQL): this {
     this.conditions.push(condition);
@@ -136,16 +135,13 @@ class QueryBuilder {
     return this;
   }
 
-  build() {
-    if (this.conditions.length === 0) {
-      return db.select().from(questions).orderBy(this.orderBy).limit(this.limit);
-    }
-    
-    const whereCondition = this.conditions.length === 1 
-      ? this.conditions[0] 
-      : and(...this.conditions);
-    
-    return db.select().from(questions).where(whereCondition).orderBy(this.orderBy).limit(this.limit);
+  getWhereCondition(): SQL | undefined {
+    if (this.conditions.length === 0) return undefined;
+    return this.conditions.length === 1 ? this.conditions[0] : and(...this.conditions);
+  }
+
+  getLimit(): number {
+    return this.limit;
   }
 }
 
@@ -220,11 +216,50 @@ const fetchQuestions = async (filters: ValidatedQuestionFilters): Promise<Questi
   
   queryBuilder.addDifficultyRange(filters.difficulty_min, filters.difficulty_max);
   queryBuilder.setLimit(filters.limit);
-  
-  const query = queryBuilder.build();
-  const results = await query;
-  
-  return results.map(transformDatabaseResult);
+
+  // Two-phase indexed random selection using random_f with fallback
+  const whereCondition = queryBuilder.getWhereCondition();
+  const limit = queryBuilder.getLimit();
+  const r = Math.random();
+
+  try {
+    const first = await db
+      .select()
+      .from(questions)
+      .where(
+        whereCondition
+          ? and(whereCondition, gte(questions.randomF, r))
+          : gte(questions.randomF, r)
+      )
+      .orderBy(questions.randomF)
+      .limit(limit);
+
+    if (first.length >= limit) {
+      return first.map(transformDatabaseResult);
+    }
+
+    const remaining = limit - first.length;
+    const second = await db
+      .select()
+      .from(questions)
+      .where(
+        whereCondition
+          ? and(whereCondition, lt(questions.randomF, r))
+          : lt(questions.randomF, r)
+      )
+      .orderBy(questions.randomF)
+      .limit(remaining);
+
+    return [...first, ...second].map(transformDatabaseResult);
+  } catch (err) {
+    console.log('Error fetching questions', err);
+    // Fallback while migrations roll out: random() sort
+    const base = whereCondition
+      ? db.select().from(questions).where(whereCondition).orderBy(sql`RANDOM()`).limit(limit)
+      : db.select().from(questions).orderBy(sql`RANDOM()`).limit(limit);
+    const rows = await base;
+    return rows.map(transformDatabaseResult);
+  }
 };
 
 const createQuestion = async (data: ValidatedCreateQuestion): Promise<Question> => {
@@ -240,6 +275,7 @@ const createQuestion = async (data: ValidatedCreateQuestion): Promise<Question> 
     answers: data.answers,
     subtopics: data.subtopics,
     difficulty: data.difficulty.toString(),
+    // randomF will default to random() via schema
   }).returning();
   
   const question = result[0];

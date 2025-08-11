@@ -57,8 +57,29 @@ export const updateGamePoints = async (
         .single();
 
       if (error) {
-        console.error('Error updating game points in Supabase:', error);
-        return null;
+        if ((error as any).status && [401, 403].includes((error as any).status)) {
+          try { await supabase.auth.refreshSession(); } catch {}
+          const retry = await (supabase as any)
+            .from('user_stats')
+            .upsert({
+              user_id: userId,
+              date: today,
+              questions_attempted: updatedMetrics.questionsAttempted,
+              correct_answers: updatedMetrics.correctAnswers,
+              events_practiced: updatedMetrics.eventsPracticed,
+              event_questions: updatedMetrics.eventQuestions,
+              game_points: updatedMetrics.gamePoints
+            } as any, { onConflict: 'user_id,date' })
+            .select()
+            .single();
+          if (retry.error) {
+            console.error('Error updating game points in Supabase after refresh:', retry.error);
+            return null;
+          }
+        } else {
+          console.error('Error updating game points in Supabase:', error);
+          return null;
+        }
       }
 
       // Also record the game point transaction

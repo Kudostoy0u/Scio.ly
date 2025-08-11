@@ -19,6 +19,7 @@ export default async function DashboardContent() {
         historyData: Record<string, { questionsAttempted: number; correctAnswers: number }>;
       }
     | undefined = undefined;
+  let initialGreetingName: string | undefined = undefined;
 
   if (user) {
     const supabase = await createSupabaseServerClient();
@@ -68,6 +69,25 @@ export default async function DashboardContent() {
 
       initialHistoryData = { historicalData, historyData };
     }
+
+    // Resolve greeting name server-side in the same flow as metrics
+    try {
+      const { data: profile } = await (supabase as any)
+        .from('users')
+        .select('first_name, display_name')
+        .eq('id', user.id)
+        .maybeSingle();
+      const first: string | undefined = (profile as any)?.first_name;
+      const display: string | undefined = (profile as any)?.display_name;
+      const chosen = (first && first.trim())
+        ? first.trim()
+        : (display && display.trim())
+          ? display.trim().split(' ')[0]
+          : undefined;
+      if (chosen) {
+        initialGreetingName = chosen;
+      }
+    } catch {}
   }
   // If no user, let client load from localStorage. We avoid server fetching.
 
@@ -76,6 +96,7 @@ export default async function DashboardContent() {
       initialUser={user}
       initialMetrics={initialMetrics}
       initialHistoryData={initialHistoryData}
+      initialGreetingName={initialGreetingName}
     />
   );
 }

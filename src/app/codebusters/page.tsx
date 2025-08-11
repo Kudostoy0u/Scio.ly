@@ -35,7 +35,6 @@ import {
   ShareButton, 
   QuestionCard, 
   SubmitButton, 
-  FloatingButtons, 
   PDFModal 
 } from './components';
 
@@ -327,6 +326,17 @@ export default function CodeBusters() {
                         onReset={handleReset}
                     />
 
+                    {/* Inline back link to Practice */}
+                    <div className="w-full max-w-3xl mt-0 mb-3">
+                      <button
+                        onClick={handleBack}
+                        className={`group inline-flex items-center text-base font-medium ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}
+                      >
+                        <span className="transition-transform duration-200 group-hover:-translate-x-1">←</span>
+                        <span className="ml-2">Go back</span>
+                      </button>
+                    </div>
+
                     {/* Smooth Progress Bar */}
                     <div
                         className={`${isTestSubmitted ? '' : 'sticky top-6'
@@ -392,15 +402,12 @@ export default function CodeBusters() {
                                 darkMode={darkMode}
                                 onSubmit={handleSubmitTest}
                                 onReset={handleTestReset}
+                                onGoBack={handleGoToPractice}
                             />
                         )}
                     </main>
 
-                    <FloatingButtons 
-                        darkMode={darkMode}
-                        onBack={handleBack}
-                        onShowPDF={() => setShowPDFViewer(true)}
-                    />
+                    {/* Reference button remains available via modal trigger elsewhere if needed */}
                     
                     {/* Custom PDF Modal */}
                     <PDFModal 

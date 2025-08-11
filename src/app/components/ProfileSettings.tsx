@@ -57,6 +57,16 @@ export default function ProfileSettings({ onClose }: { onClose: () => void }) {
       .match({ email: user.email || '' });
 
     if (!error) {
+      // Update local cache and broadcast so greeting updates immediately
+      try {
+        const first = (firstName || '').trim();
+        const display = (displayName || '').trim();
+        const chosen = first || (display ? display.split(' ')[0] : '');
+        if (chosen) {
+          localStorage.setItem('scio_display_name', chosen);
+          try { window.dispatchEvent(new CustomEvent('scio-display-name-updated', { detail: chosen })); } catch {}
+        }
+      } catch {}
       onClose();
     }
     setSaving(false);

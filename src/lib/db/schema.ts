@@ -1,4 +1,5 @@
-import { pgTable, uuid, text, timestamp, jsonb, numeric } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, jsonb, numeric, doublePrecision } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 // Questions table
 export const questions = pgTable('questions', {
@@ -11,6 +12,7 @@ export const questions = pgTable('questions', {
   subtopics: jsonb('subtopics').default('[]'),
   difficulty: numeric('difficulty').default('0.5'),
   event: text('event').notNull(),
+  randomF: doublePrecision('random_f').notNull().default(sql`random()`),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -21,6 +23,7 @@ export const quotes = pgTable('quotes', {
   author: text('author').notNull(),
   quote: text('quote').notNull(),
   language: text('language').notNull(),
+  randomF: doublePrecision('random_f').notNull().default(sql`random()`),
   createdAt: timestamp('created_at').defaultNow(),
 });
 

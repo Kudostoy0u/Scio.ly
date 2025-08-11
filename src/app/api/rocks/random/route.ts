@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
-import { client, db } from '@/lib/db';
-import { sql } from 'drizzle-orm';
+import { client } from '@/lib/db';
 
 type DBRow = { id: string; names: string[]; image_urls: string[] };
 

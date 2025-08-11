@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import { Event, Settings } from '../types';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { toast } from 'react-toastify';
+import { Heart } from 'lucide-react';
+import { isConfigFavorited, toggleFavoriteConfig, getFavoriteConfigs } from '@/app/utils/favorites';
 
 interface TestConfigurationProps {
   selectedEvent: Event | null;
@@ -25,6 +27,58 @@ export default function TestConfiguration({
   const [isDifficultyDropdownOpen, setIsDifficultyDropdownOpen] = useState(false);
   const subtopicDropdownRef = useRef<HTMLDivElement>(null);
   const difficultyDropdownRef = useRef<HTMLDivElement>(null);
+
+  function FavoriteHeart({ selectedEventName, settings }: { selectedEventName: string | null; settings: Settings }) {
+    const [favorited, setFavorited] = useState(false);
+
+    useEffect(() => {
+      if (!selectedEventName) {
+        setFavorited(false);
+        return;
+      }
+      try {
+        setFavorited(
+          isConfigFavorited({ eventName: selectedEventName, settings })
+        );
+      } catch {}
+      // Re-evaluate when settings change
+    }, [selectedEventName, settings]);
+
+    const toggle = () => {
+      if (!selectedEventName) return;
+      // Enforce max of 4: if trying to add a new favorite when already at 4, show error and do nothing
+      const already = isConfigFavorited({ eventName: selectedEventName, settings });
+      if (!already) {
+        try {
+          const count = getFavoriteConfigs().length;
+          if (count >= 4) {
+            toast.error('Maximum of 4 favorites reached. Unfavorite a configuration to add a new one.');
+            return;
+          }
+        } catch {}
+      }
+      const { favorited: nowFav } = toggleFavoriteConfig({ eventName: selectedEventName, settings });
+      setFavorited(nowFav);
+    };
+
+    return (
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={!selectedEventName}
+        className={`p-2 rounded-md border transition-colors ${
+          !selectedEventName
+            ? (darkMode ? 'opacity-50 border-gray-700 text-gray-500' : 'opacity-50 border-gray-200 text-gray-400')
+            : favorited
+              ? (darkMode ? 'border-pink-500 text-pink-400 hover:bg-pink-500/10' : 'border-pink-500 text-pink-600 hover:bg-pink-100')
+              : (darkMode ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-200 text-gray-700 hover:bg-gray-100')
+        }`}
+        title={favorited ? 'Remove from favorites' : 'Add to favorites'}
+      >
+        <Heart className={`w-5 h-5 ${favorited ? 'fill-current' : ''}`} />
+      </button>
+    );
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
@@ -160,13 +214,16 @@ export default function TestConfiguration({
       }`}
     >
       <div className="p-6 flex-1 flex flex-col">
-        <h3 className={`text-xl font-semibold mb-6 ${
+        <div className="flex items-start justify-between mb-6">
+          <h3 className={`text-xl font-semibold ${
           darkMode 
             ? 'text-white' 
             : 'text-gray-900'
         }`}>
-          Test Configuration
-        </h3>
+            Test Configuration
+          </h3>
+          <FavoriteHeart selectedEventName={selectedEvent?.name || null} settings={settings} />
+        </div>
         <div className="space-y-5 flex-1">
           {/* Number of Questions and Time Limit on same line */}
           <div className="grid grid-cols-2 gap-3">
