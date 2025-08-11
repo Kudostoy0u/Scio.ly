@@ -28,6 +28,7 @@ export default function Header() {
 
   // Determine if we're on the homepage
   const isHomePage = pathname === '/';
+  const isDashboard = pathname?.startsWith('/dashboard');
   
   // Handle scroll events to change header appearance
   const handleScroll = () => {
@@ -205,7 +206,7 @@ export default function Header() {
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center h-16 px-4 sm:px-6">
             <div className="flex items-center space-x-2">
-              <Link href="/dashboard" className="flex items-center">
+              <Link href={isDashboard ? '/' : '/dashboard'} className="flex items-center">
                 <Image
                   src="/site-logo.png"
                   alt="Scio.ly Logo"

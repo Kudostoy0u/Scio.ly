@@ -127,6 +127,57 @@ export default function DashboardMain({
           return;
         }
 
+        // Logged-in: seed UI instantly from localStorage cache, then refresh from Supabase
+        try {
+          const todayKey = new Date().toISOString().split('T')[0];
+          const raw = typeof window !== 'undefined' ? localStorage.getItem(`metrics_${todayKey}`) : null;
+          if (raw) {
+            const parsed = JSON.parse(raw) as { questionsAttempted?: number; correctAnswers?: number; eventsPracticed?: string[] };
+            const q = parsed.questionsAttempted || 0;
+            const c = parsed.correctAnswers || 0;
+            setMetrics({
+              questionsAttempted: q,
+              correctAnswers: c,
+              eventsPracticed: parsed.eventsPracticed || [],
+              accuracy: q > 0 ? (c / q) * 100 : 0,
+            });
+          }
+          // Also seed history from local to avoid empty charts
+          const localHistoryEntries: Array<{ date: string; questions_attempted: number; correct_answers: number; events_practiced: string[] }>= [];
+          if (typeof window !== 'undefined') {
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i) || '';
+              if (key.startsWith('metrics_')) {
+                const date = key.replace('metrics_', '');
+                try {
+                  const rawItem = localStorage.getItem(key);
+                  if (!rawItem) continue;
+                  const parsed = JSON.parse(rawItem) as { questionsAttempted?: number; correctAnswers?: number; eventsPracticed?: string[] };
+                  localHistoryEntries.push({
+                    date,
+                    questions_attempted: parsed.questionsAttempted || 0,
+                    correct_answers: parsed.correctAnswers || 0,
+                    events_practiced: parsed.eventsPracticed || [],
+                  });
+                } catch {}
+              }
+            }
+          }
+          if (localHistoryEntries.length > 0) {
+            localHistoryEntries.sort((a, b) => a.date.localeCompare(b.date));
+            setHistoricalData(localHistoryEntries.map(item => ({ date: item.date, count: item.questions_attempted || 0 })));
+            const historyObj: HistoryData = {} as any;
+            localHistoryEntries.forEach(item => {
+              historyObj[item.date] = {
+                questionsAttempted: item.questions_attempted || 0,
+                correctAnswers: item.correct_answers || 0,
+                eventsPracticed: item.events_practiced || [],
+              };
+            });
+            setHistoryData(historyObj);
+          }
+        } catch {}
+
         if (!initialMetrics) {
           // Fetch daily metrics
           const dailyMetrics = await getDailyMetrics(effectiveUser.id);
@@ -185,6 +236,22 @@ export default function DashboardMain({
         setCurrentUser(session.user);
         // Force refresh of metrics/history
         (async () => {
+          // Seed from local cache immediately for smoother UX
+          try {
+            const todayKey = new Date().toISOString().split('T')[0];
+            const raw = typeof window !== 'undefined' ? localStorage.getItem(`metrics_${todayKey}`) : null;
+            if (raw) {
+              const parsed = JSON.parse(raw) as { questionsAttempted?: number; correctAnswers?: number; eventsPracticed?: string[] };
+              const q = parsed.questionsAttempted || 0;
+              const c = parsed.correctAnswers || 0;
+              setMetrics({
+                questionsAttempted: q,
+                correctAnswers: c,
+                eventsPracticed: parsed.eventsPracticed || [],
+                accuracy: q > 0 ? (c / q) * 100 : 0,
+              });
+            }
+          } catch {}
           const daily = await getDailyMetrics(session.user.id);
           if (daily) {
             const accuracy = daily.questionsAttempted > 0 ? (daily.correctAnswers / daily.questionsAttempted) * 100 : 0;

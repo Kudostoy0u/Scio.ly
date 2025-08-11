@@ -1,15 +1,19 @@
 import { createClient } from '@supabase/supabase-js'
 import { Database } from './types/database'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+// Declare minimal process typing so TS is happy, while keeping Next's env inlining intact
+declare const process: { env: { NEXT_PUBLIC_SUPABASE_URL?: string; NEXT_PUBLIC_SUPABASE_ANON_KEY?: string } };
 
-export const supabase = createClient<Database>(supabaseUrl || 'http://localhost', supabaseAnonKey || 'anon', {
+const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim();
+const supabaseAnonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim();
+
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true
-  }
+  },
+  db: { schema: 'public' }
 })
 
 // Helper function to get current user

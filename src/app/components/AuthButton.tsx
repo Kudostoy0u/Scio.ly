@@ -50,10 +50,18 @@ export default function AuthButton() {
           setDisplayName(parsedData.displayName);
           setLoading(false);
         }
+      } else {
+        // If we have no cached user, consult a lightweight flag to avoid layout jank
+        const cachedLoggedIn = localStorage.getItem('scio_is_logged_in');
+        if (cachedLoggedIn !== '1') {
+          // Not logged in → render Sign In immediately (no spinner)
+          setLoading(false);
+        }
       }
     } catch (error) {
       console.error('Error loading cached user data:', error);
       clearUserFromLocalStorage();
+      setLoading(false);
     }
   }, []);
 
@@ -66,6 +74,8 @@ export default function AuthButton() {
         timestamp: Date.now()
       };
       localStorage.setItem('scio_user_data', JSON.stringify(userDataToSave));
+      localStorage.setItem('scio_is_logged_in', '1');
+      // scio_display_name is managed separately from a dedicated first-name resolver
     } catch (error) {
       console.error('Error saving user data to localStorage:', error);
     }
@@ -75,6 +85,8 @@ export default function AuthButton() {
   const clearUserFromLocalStorage = () => {
     try {
       localStorage.removeItem('scio_user_data');
+      localStorage.setItem('scio_is_logged_in', '0');
+      localStorage.removeItem('scio_display_name');
     } catch (error) {
       console.error('Error clearing user data from localStorage:', error);
     }
@@ -103,16 +115,24 @@ export default function AuthButton() {
         // Load display name
         const { data } = await supabase
           .from('users')
-          .select('display_name')
+          .select('display_name, first_name')
           .match({ email: user.email || '' })
-          .single();
+          .maybeSingle();
         const dn = (data as any)?.display_name as string | undefined;
+        const fn = (data as any)?.first_name as string | undefined;
         if (dn) {
           setDisplayName(dn);
           saveUserToLocalStorage(user, dn);
         } else {
           saveUserToLocalStorage(user, null);
         }
+
+        // Resolve first name for dashboard cache
+        const metaFirst = (user.user_metadata?.first_name as string | undefined) ||
+          ((user.user_metadata?.name as string | undefined) || (user.user_metadata?.full_name as string | undefined) || '')
+            .split(' ').filter(Boolean)[0];
+        const firstNameForCache = (fn && fn.trim()) || (metaFirst && metaFirst.trim()) || (dn && dn.split(' ')[0]) || (user.email?.split('@')[0] || '');
+        try { if (firstNameForCache) localStorage.setItem('scio_display_name', firstNameForCache); } catch {}
       } else {
         clearUserFromLocalStorage();
       }
@@ -128,16 +148,24 @@ export default function AuthButton() {
         // Load display name on auth change
         const { data } = await supabase
           .from('users')
-          .select('display_name')
+          .select('display_name, first_name')
           .match({ email: session.user.email || '' })
-          .single();
+          .maybeSingle();
         const dn2 = (data as any)?.display_name as string | undefined;
+        const fn2 = (data as any)?.first_name as string | undefined;
         if (dn2) {
           setDisplayName(dn2);
           saveUserToLocalStorage(session.user, dn2);
         } else {
           saveUserToLocalStorage(session.user, null);
         }
+
+        // Resolve first name for dashboard cache
+        const metaFirst2 = (session.user.user_metadata?.first_name as string | undefined) ||
+          ((session.user.user_metadata?.name as string | undefined) || (session.user.user_metadata?.full_name as string | undefined) || '')
+            .split(' ').filter(Boolean)[0];
+        const firstNameForCache2 = (fn2 && fn2.trim()) || (metaFirst2 && metaFirst2.trim()) || (dn2 && dn2.split(' ')[0]) || (session.user.email?.split('@')[0] || '');
+        try { if (firstNameForCache2) localStorage.setItem('scio_display_name', firstNameForCache2); } catch {}
       } else {
         clearUserFromLocalStorage();
       }

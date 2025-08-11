@@ -6,7 +6,14 @@ import { supabase } from '@/lib/supabase';
 import { WelcomeMessageProps } from '../types';
 
 export default function WelcomeMessage({ darkMode, currentUser, setDarkMode }: WelcomeMessageProps) {
-  const [greetingName, setGreetingName] = useState<string>('');
+  const [greetingName, setGreetingName] = useState<string>(() => {
+    try {
+      const cachedFirst = typeof window !== 'undefined' ? localStorage.getItem('scio_display_name') : null;
+      if (cachedFirst && cachedFirst.trim()) return cachedFirst.trim();
+      // Avoid using username/email; we will resolve asynchronously to a first name if available
+    } catch {}
+    return '';
+  });
 
   useEffect(() => {
     const resolveName = async () => {
@@ -24,38 +31,54 @@ export default function WelcomeMessage({ darkMode, currentUser, setDarkMode }: W
           const first = (data as any)?.first_name as string | undefined;
           const display = (data as any)?.display_name as string | undefined;
           if (first && first.trim()) {
-            setGreetingName(first.trim());
+            const name = first.trim();
+            setGreetingName(name);
+            try { localStorage.setItem('scio_display_name', name); } catch {}
             return;
           }
           if (display && display.trim()) {
-            setGreetingName(display.trim().split(' ')[0]);
+            const name = display.trim().split(' ')[0];
+            setGreetingName(name);
+            try { localStorage.setItem('scio_display_name', name); } catch {}
             return;
           }
         }
 
-        // 2) Fallback to auth metadata first_name/name
-        const mFirst = (currentUser?.user_metadata?.first_name as string | undefined) ||
+        // 2) Fallback to auth metadata first_name/name (prefer auth user, then currentUser)
+        const authFirst = (user?.user_metadata?.first_name as string | undefined) ||
+          ((user?.user_metadata?.name as string | undefined) || (user?.user_metadata?.full_name as string | undefined) || '')
+            .split(' ').filter(Boolean)[0];
+        const propFirst = (currentUser?.user_metadata?.first_name as string | undefined) ||
           ((currentUser?.user_metadata?.name as string | undefined) || (currentUser?.user_metadata?.full_name as string | undefined) || '')
             .split(' ').filter(Boolean)[0];
-        if (mFirst) {
-          setGreetingName(mFirst);
+        const metaFirst = authFirst || propFirst;
+        if (metaFirst && metaFirst.trim()) {
+          setGreetingName(metaFirst.trim());
+          try { localStorage.setItem('scio_display_name', metaFirst.trim()); } catch {}
           return;
         }
 
         // 3) Fallback to email local part
         if (email) {
-          setGreetingName(email.split('@')[0]);
+          const fallback = email.split('@')[0];
+          if (fallback) {
+            setGreetingName(fallback);
+            try { localStorage.setItem('scio_display_name', fallback); } catch {}
+          }
           return;
         }
-        setGreetingName('');
+        // No-op if nothing resolved; preserve any existing cached name to avoid clearing UI
       } catch {
         // Fallbacks only
         const email = currentUser?.email || '';
-        const fallback = (currentUser?.user_metadata?.first_name as string | undefined) ||
+        const metaFirst = (currentUser?.user_metadata?.first_name as string | undefined) ||
           ((currentUser?.user_metadata?.name as string | undefined) || (currentUser?.user_metadata?.full_name as string | undefined) || '')
-            .split(' ').filter(Boolean)[0] ||
-          (email ? email.split('@')[0] : '');
-        setGreetingName(fallback);
+            .split(' ').filter(Boolean)[0];
+        const fallback = metaFirst || (email ? email.split('@')[0] : '');
+        if (fallback) {
+          setGreetingName(fallback);
+          try { localStorage.setItem('scio_display_name', fallback); } catch {}
+        }
       }
     };
     resolveName();
@@ -72,7 +95,11 @@ export default function WelcomeMessage({ darkMode, currentUser, setDarkMode }: W
       <div className="flex items-center justify-between">
         <div>
           <h1 className={`text-3xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            Welcome back{greetingName ? `, ${greetingName}` : ''}! 👋
+            Welcome back
+            <span suppressHydrationWarning>
+              {greetingName ? `, ${greetingName}` : ''}
+            </span>
+            ! 👋
           </h1>
           <p className={`text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
             Ready to tackle some Science Olympiad questions?

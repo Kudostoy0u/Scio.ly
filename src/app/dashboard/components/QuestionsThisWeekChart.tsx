@@ -42,7 +42,7 @@ export default function QuestionsThisWeekChart({
       d.setDate(d.getDate() - i);
       const key = d.toISOString().split('T')[0];
       const label = d.toLocaleDateString('en-US', { weekday: 'short' });
-      const value = historyData[key]?.questionsAttempted ?? 0;
+      const value = historyData[key]?.correctAnswers ?? 0;
       days.push({ label, key, value });
     }
     return days;
@@ -60,8 +60,8 @@ export default function QuestionsThisWeekChart({
       d2.setDate(now.getDate() - 7 - i);
       const k1 = d1.toISOString().split('T')[0];
       const k2 = d2.toISOString().split('T')[0];
-      current += historyData[k1]?.questionsAttempted ?? 0;
-      previous += historyData[k2]?.questionsAttempted ?? 0;
+      current += historyData[k1]?.correctAnswers ?? 0;
+      previous += historyData[k2]?.correctAnswers ?? 0;
     }
     return { current, previous };
   }, [historyData]);
@@ -72,8 +72,8 @@ export default function QuestionsThisWeekChart({
     const yesterday = new Date(now);
     yesterday.setDate(now.getDate() - 1);
     const yKey = yesterday.toISOString().split('T')[0];
-    const today = historyData[todayKey]?.questionsAttempted ?? 0;
-    const y = historyData[yKey]?.questionsAttempted ?? 0;
+    const today = historyData[todayKey]?.correctAnswers ?? 0;
+    const y = historyData[yKey]?.correctAnswers ?? 0;
     return { today, yesterday: y };
   }, [historyData]);
 
@@ -93,7 +93,7 @@ export default function QuestionsThisWeekChart({
       d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1))
     ) {
       const key = new Date(d).toISOString().split('T')[0];
-      currentMonth += historyData[key]?.questionsAttempted ?? 0;
+      currentMonth += historyData[key]?.correctAnswers ?? 0;
     }
 
     // Sum previous month
@@ -103,7 +103,7 @@ export default function QuestionsThisWeekChart({
       d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1))
     ) {
       const key = new Date(d).toISOString().split('T')[0];
-      previousMonth += historyData[key]?.questionsAttempted ?? 0;
+      previousMonth += historyData[key]?.correctAnswers ?? 0;
     }
     return { currentMonth, previousMonth };
   }, [historyData]);
@@ -135,7 +135,7 @@ export default function QuestionsThisWeekChart({
   }), [darkMode, last7Days, sharedTheme.foreColor]);
 
   const lineSeries = useMemo(() => ([
-    { name: 'Questions', data: last7Days.map(d => d.value) },
+    { name: 'Answered', data: last7Days.map(d => d.value) },
   ]), [last7Days]);
 
   // Build a GitHub-style 7 x N grid (rows: Sun-Sat, cols: weeks)
@@ -144,17 +144,18 @@ export default function QuestionsThisWeekChart({
     const endWeekday = today.getDay();
     const rows = 7;
     const cols = weeksCount;
-    const matrix: Array<Array<{ date: Date; key: string; value: number }>> = [];
+    const matrix: Array<Array<{ date: Date; key: string; value: number; isFuture: boolean }>> = [];
 
     for (let r = 0; r < rows; r++) {
-      const row: Array<{ date: Date; key: string; value: number }> = [];
+      const row: Array<{ date: Date; key: string; value: number; isFuture: boolean }> = [];
       for (let c = 0; c < cols; c++) {
         const colShiftDays = (cols - 1 - c) * 7 + (endWeekday - r);
         const cellDate = new Date(today);
         cellDate.setDate(today.getDate() - colShiftDays);
         const key = cellDate.toISOString().split('T')[0];
-        const value = colShiftDays < 0 ? 0 : (historyData[key]?.questionsAttempted ?? 0);
-        row.push({ date: cellDate, key, value });
+        const isFuture = colShiftDays < 0;
+        const value = isFuture ? 0 : (historyData[key]?.correctAnswers ?? 0);
+        row.push({ date: cellDate, key, value, isFuture });
       }
       matrix.push(row);
     }
@@ -225,7 +226,7 @@ export default function QuestionsThisWeekChart({
   return (
     <div className={`p-6 rounded-lg ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`} style={{ height: 300 }}>
       <div className="flex items-center justify-between mb-2">
-        <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Questions This Week</h2>
+        <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Questions Answered This Week</h2>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setChartType('line')}
@@ -267,24 +268,27 @@ export default function QuestionsThisWeekChart({
             >
               {gridData.flatMap((row, rIdx) =>
                 row.map((cell, cIdx) => {
-                  const label = `${cell.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${cell.value} questions`;
+                  const label = `${cell.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${cell.value} answered`;
+                  const isFuture = cell.isFuture;
                   return (
                     <div key={`${rIdx}-${cIdx}`} className="relative group">
                       <div
-                        aria-label={label}
+                        aria-label={isFuture ? undefined : label}
                         style={{
                           width: `${cellSizePx}px`,
                           height: `${cellSizePx}px`,
-                          backgroundColor: getCellColor(cell.value),
+                          backgroundColor: isFuture ? 'transparent' : getCellColor(cell.value),
                         }}
                       />
-                      <div
-                        className={`pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded px-2 py-1 text-xs border shadow transition-opacity ${
-                          darkMode ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-900 border-gray-200'
-                        } opacity-0 group-hover:opacity-100`}
-                      >
-                        {label}
-                      </div>
+                      {!isFuture && (
+                        <div
+                          className={`pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded px-2 py-1 text-xs border shadow transition-opacity ${
+                            darkMode ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-900 border-gray-200'
+                          } opacity-0 group-hover:opacity-100`}
+                        >
+                          {label}
+                        </div>
+                      )}
                     </div>
                   );
                 })

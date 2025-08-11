@@ -37,13 +37,38 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode, i
       }
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
+      // Session health check: attempt a lightweight RPC to verify RLS/session; if 401/404, recover
+      try {
+        const { error } = await supabase.from('user_stats').select('user_id').limit(1);
+        if (error && (error as any).status && [401, 403, 404].includes((error as any).status)) {
+          await supabase.auth.refreshSession();
+          const { data: refreshed } = await supabase.auth.getSession();
+          setUser(refreshed.session?.user ?? null);
+        }
+      } catch {
+        // Ignore network errors here
+      }
       setLoading(false);
     };
 
     getInitialSession();
 
+    // Recover from stale sessions on tab focus
+    const onFocus = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+        const { error } = await supabase.from('users').select('id').eq('id', session.user.id).limit(1).maybeSingle();
+        if (error && (error as any).status && [401, 403, 404].includes((error as any).status)) {
+          await supabase.auth.refreshSession();
+        }
+      } catch {}
+    };
+    window.addEventListener('focus', onFocus);
+
     return () => {
       subscription.unsubscribe();
+      window.removeEventListener('focus', onFocus);
     };
   }, [initialUser]);
 

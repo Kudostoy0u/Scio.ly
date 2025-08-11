@@ -58,15 +58,20 @@ export const getDailyMetrics = async (userId: string | null): Promise<DailyMetri
     }
 
     if (data) {
-      return {
+      const synced: DailyMetrics = {
         questionsAttempted: data.questions_attempted,
         correctAnswers: data.correct_answers,
         eventsPracticed: data.events_practiced || [],
         eventQuestions: data.event_questions || {},
         gamePoints: data.game_points
       };
+      // Sync local cache for instant UI on next load
+      saveLocalMetrics(synced);
+      return synced;
     }
 
+    // Ensure local cache reflects zeros for today if no row yet
+    saveLocalMetrics(defaultMetrics);
     return defaultMetrics;
   } catch (error) {
     console.error('Error getting metrics:', error);

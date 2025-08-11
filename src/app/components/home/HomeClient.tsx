@@ -385,8 +385,6 @@ export default function HomeClient() {
           </div>
           <div className={`mt-8 pt-8 border-t text-sm ${darkMode ? 'border-gray-800 text-gray-400' : 'border-gray-200 text-gray-600'} flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0`}>
             <p>© {new Date().getFullYear()} Scio.ly. All rights reserved.</p>
-            <span className="hidden sm:inline mx-2">|</span>
-            <p>Made with ❤️ by Kundan Baliga and Aiden Xie</p>
           </div>
         </div>
       </footer>

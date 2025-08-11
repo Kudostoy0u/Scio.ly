@@ -5,6 +5,7 @@ import { useTheme } from '@/app/contexts/ThemeContext';
 import Header from '@/app/components/Header';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { Rocket, Lightbulb } from 'lucide-react';
 
 export default function AboutClientPage() {
   const { darkMode } = useTheme();
@@ -52,7 +53,7 @@ export default function AboutClientPage() {
               <h2 className={`text-3xl font-bold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Our Story</h2>
               <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} space-y-4`}>
                 <p>
-                  Hey! We&apos;re Aiden and Kundan. We experienced firsthand the challenge of finding high-quality, centralized practice materials for Science Olympiad. After spent countless hours searching for past tests, we decided to build the platform we wished we had: a comprehensive, accessible, and user-friendly test-taking plattform that would empower students to excel.
+                  Hey! We&apos;re Aiden and Kundan. We experienced firsthand the challenge of finding high-quality, centralized practice materials for Science Olympiad. After spent countless hours searching for past tests, we decided to build the platform we wished we had: a comprehensive, accessible, and user-friendly test-taking platform that would empower students to excel.
                 </p>
               </div>
             </div>
@@ -66,6 +67,27 @@ export default function AboutClientPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section className={`mb-16 p-6 rounded-xl max-w-4xl mx-auto ${darkMode ? 'bg-gray-800/50 backdrop-blur-sm' : 'bg-white/90 shadow-lg backdrop-blur-sm'}`}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+            <div className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100/60'} p-5 rounded-lg flex items-start gap-4`}>
+              <div className={`${darkMode ? 'bg-yellow-500/10' : 'bg-yellow-100'} rounded-full p-3 flex items-center justify-center`}>
+                <Lightbulb className="w-7 h-7 text-yellow-500" aria-hidden="true" />
+              </div>
+              <p className={`${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                <span className="font-semibold">Thanks to Steven</span> for coming up with the idea for Scio.ly and helping us start it!
+              </p>
+            </div>
+            <div className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100/60'} p-5 rounded-lg flex items-start gap-4`}>
+              <div className={`${darkMode ? 'bg-blue-500/10' : 'bg-blue-100'} rounded-full p-3 flex items-center justify-center`}>
+                <Rocket className="w-7 h-7 text-blue-500" aria-hidden="true" />
+              </div>
+              <p className={`${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                <span className="font-semibold">Thanks to Alan</span> for providing <span className="font-semibold">1.1K tournaments</span> for our questions database!
+              </p>
             </div>
           </div>
         </section>
