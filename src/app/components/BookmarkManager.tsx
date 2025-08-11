@@ -16,6 +16,7 @@ export interface Question {
   subject?: string;
   subtopic?: string;
   id?: string;
+  imageUrl?: string;
   imageData?: string;
 }
 

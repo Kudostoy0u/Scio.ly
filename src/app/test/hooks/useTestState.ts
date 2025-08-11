@@ -11,7 +11,6 @@ import {
   GradingResults,
   Explanations,
   LoadingExplanation,
-  isMultiSelectQuestion,
   gradeFreeResponses,
   buildApiParams,
   shuffleArray,
@@ -157,9 +156,8 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           if (eventBookmarks.length > 0) {
             const questions = eventBookmarks.map(b => b.question);
             setData(questions);
-            // Strip imageData to avoid quota issues
-            const serialized = JSON.stringify(questions, (key, value) => key === 'imageData' ? undefined : value);
-            localStorage.setItem('testQuestions', serialized);
+            // Store questions with imageData intact (CDN URLs are small)
+            localStorage.setItem('testQuestions', JSON.stringify(questions));
           } else {
             setFetchError('No bookmarked questions found for this event.');
           }
@@ -263,9 +261,8 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         // Final shuffle safeguard in case only base or only ID questions were loaded
         const shuffledFinal = shuffleArray(selectedQuestions);
         const questionsWithIndex = shuffledFinal.map((q, idx) => ({ ...q, originalIndex: idx }));
-        // Avoid localStorage quota issues by stripping large image blobs
-        const serialized = JSON.stringify(questionsWithIndex, (key, value) => key === 'imageData' ? undefined : value);
-        localStorage.setItem('testQuestions', serialized);
+        // Store questions with imageData intact (CDN URLs are small)
+        localStorage.setItem('testQuestions', JSON.stringify(questionsWithIndex));
         setData(questionsWithIndex);
       } catch (error) {
         console.error('[IDGEN][test] error', error);
@@ -335,9 +332,9 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         const bookmarkMap: Record<string, boolean> = {};
         bookmarks.forEach(bookmark => {
           if (bookmark.source === 'test') {
-            const key = (bookmark.question as any).imageData
-              ? `id:${(bookmark.question as any).imageData}`
-              : bookmark.question.question;
+                         const key = (bookmark.question as any).imageData
+               ? `id:${(bookmark.question as any).imageData}`
+               : bookmark.question.question;
             bookmarkMap[key] = true;
           }
         });

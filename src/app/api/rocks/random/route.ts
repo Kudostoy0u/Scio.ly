@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { client, db } from '@/lib/db';
 import { sql } from 'drizzle-orm';
 
-type DBRow = { id: string; names: string[] };
+type DBRow = { id: string; names: string[]; image_urls: string[] };
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,29 +10,14 @@ export async function GET(req: NextRequest) {
     const count = Math.max(1, Math.min(100, parseInt(searchParams.get('count') || '1')));
     console.log('[API] GET /api/rocks/random', { count });
 
-    // Fetch random rows
+    // Fetch random rows with image URLs
     const rows = await client<DBRow[]>`
-      SELECT id, names
+      SELECT id, names, image_urls
       FROM rocksandminerals
       ORDER BY random()
       LIMIT ${count}
     `;
     console.log('[API] /api/rocks/random minerals', { rows: rows.length });
-
-    // Fetch up to 3 images per mineral
-    const mineralIds = rows.map(r => r.id);
-    const imgRows = mineralIds.length
-      ? (await db.execute(sql`
-          SELECT mineral_id, image_bytes
-          FROM rock_images
-          WHERE mineral_id IN (${sql.join(mineralIds.map((id) => sql`${id}`), sql`, `)})
-        `)) as unknown as { mineral_id: string; image_bytes: Buffer }[]
-      : [];
-    console.log('[API] /api/rocks/random images', { minerals: mineralIds.length, images: imgRows.length });
-    const idToImages: Record<string, string[]> = {};
-    for (const r of imgRows) {
-      (idToImages[r.mineral_id] ||= []).push(`data:image/*;base64,${Buffer.from(r.image_bytes).toString('base64')}`);
-    }
 
     // Build a name pool for MCQ distractors
     const namePoolRows = await client<{ name: string }[]>`
@@ -44,7 +29,7 @@ export async function GET(req: NextRequest) {
     const data = rows.map(r => ({
       id: r.id,
       names: r.names,
-      images: idToImages[r.id] || [],
+      images: r.image_urls || [],
     }));
 
     return new Response(JSON.stringify({ success: true, data, namePool }), {

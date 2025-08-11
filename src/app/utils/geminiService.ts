@@ -12,7 +12,8 @@ export interface Question {
   subject?: string;
   subtopic?: string;
   event?: string;
-  imageData?: string; // optional data URL for ID questions
+  imageUrl?: string; // optional Cloudinary URL for ID questions (legacy)
+  imageData?: string; // optional CDN URL for ID questions (new)
 }
 
 export interface EditSuggestion {

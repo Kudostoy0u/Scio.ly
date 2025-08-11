@@ -6,7 +6,7 @@ interface Question {
   options?: string[];
   answers: (string | number)[];
   difficulty: number;
-  imageData?: string;
+  imageUrl?: string;
 }
 
 interface BookmarkedQuestion {
@@ -69,7 +69,7 @@ export const addBookmark = async (
       if (error) throw error;
       exists = !!(data && data.length > 0);
     } else {
-      // For image ID questions, include imageData in uniqueness check
+      // For image ID questions, include imageUrl in uniqueness check
       let query = (supabase as any)
         .from('bookmarks')
         .select('id')
@@ -77,8 +77,8 @@ export const addBookmark = async (
         .eq('event_name', eventName)
         .eq('source', source)
         .eq('question_data->>question', question.question);
-      if (question.imageData) {
-        query = query.eq('question_data->>imageData', question.imageData);
+      if (question.imageUrl) {
+        query = query.eq('question_data->>imageUrl', question.imageUrl);
       }
       const { data, error } = await query;
       if (error) throw error;
@@ -131,8 +131,8 @@ export const removeBookmark = async (
         .eq('user_id', userId)
         .eq('source', source)
         .eq('question_data->>question', question.question);
-      if (question.imageData) {
-        query = query.eq('question_data->>imageData', question.imageData);
+      if (question.imageUrl) {
+        query = query.eq('question_data->>imageUrl', question.imageUrl);
       }
       const { error } = await query;
       if (error) throw error;

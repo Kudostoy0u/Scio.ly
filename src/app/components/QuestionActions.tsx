@@ -118,8 +118,8 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
     darkMode ? 'text-gray-500' : 'text-gray-400'
   }`;
 
-  // Detect ID questions (questions with imageData)
-  const isIdQuestion = !!(question as any).imageData;
+      // Detect ID questions (questions with imageData)
+    const isIdQuestion = !!(question as any).imageData;
   
   if (compact) {
     return (
