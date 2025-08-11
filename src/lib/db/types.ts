@@ -1,1 +1,0 @@
-// Removed: Cockroach types for bookmarks, game points, and user stats.

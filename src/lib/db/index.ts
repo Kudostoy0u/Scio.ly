@@ -46,7 +46,6 @@ export async function closeConnection(): Promise<void> {
   await client.end();
 }
 
-// Export schema and types
+// Export schema and utilities
 export * from './schema';
-export * from './types';
-export * from './utils'; 
+export * from './utils';
