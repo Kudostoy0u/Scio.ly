@@ -1,8 +1,7 @@
 'use client';
 import React, { useEffect, useCallback } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
 
 import ShareModal from '@/app/components/ShareModal';
@@ -119,43 +118,35 @@ export default function CodeBusters() {
         });
 
         // Calculate UI score as percentage
-        const score = (correctCount / quotes.length) * 100;
+        const score = (correctCount / Math.max(1, quotes.length)) * 100;
         setTestScore(score);
         setIsTestSubmitted(true);
         
         // Mark test as submitted using new time management system
         markTestSubmitted();
 
-        // Metrics: weighted by difficulty with fractional credit from progress
-        const difficultyToPoints = (d: number | undefined): number => {
-            const diff = typeof d === 'number' ? d : 0.5;
-            if (diff >= 0.7) return 3;
-            if (diff >= 0.4) return 2;
-            return 1;
-        };
-
-        // Compute via per-quote progress
+        // Metrics: Codebusters weighting: 20 * difficulty, skipped don’t count, correct only when fully correct
         let attemptedPoints = 0;
-        let earnedPoints = 0;
+        let correctPoints = 0;
         quotes.forEach((q) => {
-            const points = difficultyToPoints((q as any).difficulty);
+            const diff = typeof (q as any).difficulty === 'number' ? (q as any).difficulty : 0.5;
+            const weight = Math.round(20 * Math.max(0, Math.min(1, diff)));
             const pct = Math.max(0, Math.min(100, calculateQuoteProgress(q)));
-            const fraction = pct / 100;
-            if (fraction > 0) {
-                attemptedPoints += points;
-                earnedPoints += points * fraction;
+            if (pct > 0) {
+                attemptedPoints += weight;
+                // fractional correctness credit: weight * percent solved
+                correctPoints += weight * (pct / 100);
             }
         });
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                await updateMetrics(user.id, {
-                    questionsAttempted: Math.round(attemptedPoints),
-                    correctAnswers: earnedPoints, // rounding handled inside updateMetrics
-                    eventName: 'Codebusters'
-                });
-            }
+            await updateMetrics(user?.id || null, {
+                questionsAttempted: Math.round(attemptedPoints),
+                // fractional credit on correctness: weight * percent solved, rounded for storage
+                correctAnswers: Math.round(correctPoints),
+                eventName: 'Codebusters'
+            });
         } catch (e) {
             console.error('Failed to update metrics for Codebusters:', e);
         }
@@ -440,19 +431,7 @@ export default function CodeBusters() {
                 </div>
             </div>
             
-            {/* Toast Container */}
-            <ToastContainer
-                position="top-right"
-                autoClose={3000}
-                hideProgressBar={false}
-                newestOnTop
-                closeOnClick
-                rtl={false}
-                pauseOnFocusLoss
-                draggable
-                pauseOnHover
-                theme={darkMode ? "dark" : "light"}
-            />
+            {/* Global ToastContainer handles notifications */}
         </>
     );
 }

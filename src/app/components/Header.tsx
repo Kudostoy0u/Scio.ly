@@ -6,8 +6,7 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import AuthButton from '@/app/components/AuthButton';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+// ToastContainer is globally provided in Providers
 import { usePathname } from 'next/navigation';
 import { Upload, SquarePlus, Chrome as ChromeIcon, Smartphone, MonitorSmartphone, CheckCircle2, AlertTriangle, X as CloseIcon, Compass } from 'lucide-react';
 import { FaFirefoxBrowser } from 'react-icons/fa';
@@ -197,7 +196,7 @@ export default function Header() {
 
   return (
     <>
-      <ToastContainer theme={darkMode || shouldBeTransparent ? "dark" : "light"} />
+      {/* Global ToastContainer handles notifications */}
 
       <nav
         className={`fixed top-0 left-0 right-0 z-50 ${showBlur ? 'backdrop-blur-sm' : ''} border-b`}
@@ -206,7 +205,7 @@ export default function Header() {
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center h-16 px-4 sm:px-6">
             <div className="flex items-center space-x-2">
-              <Link href={isStandalone ? '/dashboard' : '/'} className="flex items-center">
+              <Link href="/dashboard" className="flex items-center">
                 <Image
                   src="/site-logo.png"
                   alt="Scio.ly Logo"

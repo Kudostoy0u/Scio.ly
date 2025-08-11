@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
-import { client } from '@/lib/db';
+import { client, db } from '@/lib/db';
+import { sql } from 'drizzle-orm';
 
 type DBRow = { id: string; names: string[] };
 
@@ -21,11 +22,11 @@ export async function GET(req: NextRequest) {
     // Fetch up to 3 images per mineral
     const mineralIds = rows.map(r => r.id);
     const imgRows = mineralIds.length
-      ? await client<{ mineral_id: string; image_bytes: Buffer }[]>`
-        SELECT mineral_id, image_bytes
-        FROM rock_images
-        WHERE mineral_id IN (${client.unsafe(mineralIds.map(id => `'${id}'`).join(','))})
-      `
+      ? (await db.execute(sql`
+          SELECT mineral_id, image_bytes
+          FROM rock_images
+          WHERE mineral_id IN (${sql.join(mineralIds.map((id) => sql`${id}`), sql`, `)})
+        `)) as unknown as { mineral_id: string; image_bytes: Buffer }[]
       : [];
     console.log('[API] /api/rocks/random images', { minerals: mineralIds.length, images: imgRows.length });
     const idToImages: Record<string, string[]> = {};

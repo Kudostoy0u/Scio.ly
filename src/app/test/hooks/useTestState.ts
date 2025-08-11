@@ -15,7 +15,8 @@ import {
   gradeFreeResponses,
   buildApiParams,
   shuffleArray,
-  getExplanation
+  getExplanation,
+  calculateMCQScore
 } from '@/app/utils/questionUtils';
 import {
   getCurrentTestSession,
@@ -251,14 +252,17 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
                 imageData: chosenImg,
               };
             });
-            selectedQuestions = selectedQuestions.concat(idQuestions);
-            console.log('[IDGEN][test] combined final questions', { total: selectedQuestions.length });
+            // Combine and shuffle so ID questions are interspersed, not appended at the end
+            selectedQuestions = shuffleArray(selectedQuestions.concat(idQuestions));
+            console.log('[IDGEN][test] combined & shuffled final questions', { total: selectedQuestions.length });
           } else {
             console.warn('[IDGEN][test] id endpoint returned failure');
           }
         }
 
-        const questionsWithIndex = selectedQuestions.map((q, idx) => ({ ...q, originalIndex: idx }));
+        // Final shuffle safeguard in case only base or only ID questions were loaded
+        const shuffledFinal = shuffleArray(selectedQuestions);
+        const questionsWithIndex = shuffledFinal.map((q, idx) => ({ ...q, originalIndex: idx }));
         // Avoid localStorage quota issues by stripping large image blobs
         const serialized = JSON.stringify(questionsWithIndex, (key, value) => key === 'imageData' ? undefined : value);
         localStorage.setItem('testQuestions', serialized);
@@ -331,7 +335,10 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         const bookmarkMap: Record<string, boolean> = {};
         bookmarks.forEach(bookmark => {
           if (bookmark.source === 'test') {
-            bookmarkMap[bookmark.question.question] = true;
+            const key = (bookmark.question as any).imageData
+              ? `id:${(bookmark.question as any).imageData}`
+              : bookmark.question.question;
+            bookmarkMap[key] = true;
           }
         });
         setBookmarkedQuestions(bookmarkMap);
@@ -386,16 +393,19 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     }
     
     const frqsToGrade: FRQToGrade[] = [];
-    let mcqScore = 0;
-    let mcqTotal = 0;
+    let mcqScore = 0; // fractional correctness sum
+    let mcqTotal = 0; // number of attempted questions
     
     for (let i = 0; i < data.length; i++) {
       const question = data[i];
       const answer = userAnswers[i] || [];
       
-      if (gradingResults[i] === 1) {
-        mcqScore += 1;
-        mcqTotal += 1;
+      if (typeof gradingResults[i] === 'number') {
+        const scoreVal = gradingResults[i];
+        if (scoreVal > 0) {
+          mcqTotal += 1; // attempted
+          mcqScore += Math.max(0, Math.min(1, scoreVal)); // fractional correctness
+        }
         continue;
       }
       
@@ -426,21 +436,13 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           continue;
         }
         
-        if (
-          (isMultiSelectQuestion(question.question, question.answers) &&
-            correctAnswers.every(correctAns => 
-              answer.some(ans => ans === correctAns)
-            ) &&
-            answer.length === correctAnswers.length)
-          ||
-          (!isMultiSelectQuestion(question.question, question.answers) &&
-            answer.some(ans => ans !== null && correctAnswers.includes(ans)))
-        ) {
-          mcqScore++;
-          setGradingResults(prev => ({ ...prev, [i]: 1 }));
-        } else {
-          setGradingResults(prev => ({ ...prev, [i]: 0 }));
+        // Compute fractional score for MCQ using shared helper
+        const frac = calculateMCQScore(question, answer);
+        if (frac > 0) {
+          mcqTotal += 1; // attempted only if any selection and some credit
         }
+        mcqScore += Math.max(0, Math.min(1, frac));
+        setGradingResults(prev => ({ ...prev, [i]: frac }));
       } else {
         if (answer[0] !== null) {
           const hasValidFRQAnswers = question.answers && 
@@ -482,10 +484,9 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           setGradingResults(prev => ({ ...prev, [questionIndex]: score }));
           setGradingFRQs(prev => ({ ...prev, [questionIndex]: false }));
           
-          if (score >= 0.5) {
-            mcqScore += score;
-            mcqTotal += 1;
-          }
+          // Attempted if answered; add fractional correctness
+          mcqTotal += 1;
+          mcqScore += Math.max(0, Math.min(1, score));
         });
       } catch (error) {
         console.error("Error grading FRQs:", error);
@@ -501,8 +502,8 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     localStorage.removeItem('testFromBookmarks');
     
     const { data: { user } } = await supabase.auth.getUser();
-    if (user && routerData.eventName) {
-      updateMetrics(user.id, {
+    if (routerData.eventName) {
+      updateMetrics(user?.id || null, {
         questionsAttempted: mcqTotal,
         correctAnswers: Math.round(mcqScore),
         eventName: routerData.eventName
@@ -720,8 +721,9 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     router.push('/practice');
   };
 
+  const getBookmarkKey = (q: Question): string => (q as any).imageData ? `id:${(q as any).imageData}` : q.question;
   const isQuestionBookmarked = (question: Question): boolean => {
-    return bookmarkedQuestions[question.question] || false;
+    return bookmarkedQuestions[getBookmarkKey(question)] || false;
   };
 
   return {

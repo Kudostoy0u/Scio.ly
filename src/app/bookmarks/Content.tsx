@@ -4,8 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useTheme } from '@/app/contexts/ThemeContext';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from 'react-toastify';
 import { loadBookmarksFromSupabase, removeBookmark } from '@/app/utils/bookmarks';
 import Header from '../components/Header';
 import { supabase } from '@/lib/supabase';
@@ -384,7 +383,7 @@ export default function Content() {
           </div>
         </div>
       </div>
-      <ToastContainer theme={darkMode ? "dark" : "light"} />
+      {/* Global ToastContainer handles notifications */}
     </div>
   );
 } 

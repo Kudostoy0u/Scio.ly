@@ -6,6 +6,7 @@ interface Question {
   options?: string[];
   answers: (string | number)[];
   difficulty: number;
+  imageData?: string;
 }
 
 interface BookmarkedQuestion {
@@ -68,13 +69,18 @@ export const addBookmark = async (
       if (error) throw error;
       exists = !!(data && data.length > 0);
     } else {
-      const { data, error } = await supabase
+      // For image ID questions, include imageData in uniqueness check
+      let query = (supabase as any)
         .from('bookmarks')
         .select('id')
         .eq('user_id', userId)
         .eq('event_name', eventName)
         .eq('source', source)
         .eq('question_data->>question', question.question);
+      if (question.imageData) {
+        query = query.eq('question_data->>imageData', question.imageData);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       exists = !!(data && data.length > 0);
     }
@@ -119,12 +125,16 @@ export const removeBookmark = async (
         .eq('question_data->>id', question.id);
       if (error) throw error;
     } else {
-      const { error } = await supabase
+      let query = (supabase as any)
         .from('bookmarks')
         .delete()
         .eq('user_id', userId)
         .eq('source', source)
         .eq('question_data->>question', question.question);
+      if (question.imageData) {
+        query = query.eq('question_data->>imageData', question.imageData);
+      }
+      const { error } = await query;
       if (error) throw error;
     }
   } catch (error) {

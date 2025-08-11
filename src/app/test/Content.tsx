@@ -1,8 +1,7 @@
 'use client';
 import React from 'react';
 import { FaShareAlt } from "react-icons/fa";
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+// ToastContainer is globally provided in Providers
 import { useTheme } from '@/app/contexts/ThemeContext';
 import PDFViewer from '@/app/components/PDFViewer';
 import EditQuestionModal from '@/app/components/EditQuestionModal';
@@ -183,18 +182,7 @@ export default function TestPage({ initialData, initialRouterData }: { initialDa
         </div>
       )}
 
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme={darkMode ? "dark" : "light"}
-      />
+      {/* Global ToastContainer handles notifications */}
     </>
   );
 }

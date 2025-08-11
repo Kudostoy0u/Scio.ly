@@ -16,6 +16,7 @@ export interface Question {
   subject?: string;
   subtopic?: string;
   id?: string;
+  imageData?: string;
 }
 
 interface BookmarkManagerProps {
@@ -60,13 +61,14 @@ const BookmarkManager: React.FC<BookmarkManagerProps> = ({
     setIsProcessing(true);
 
     try {
+      const key = question.imageData ? `id:${question.imageData}` : question.question;
       if (isBookmarked) {
         await removeBookmark(user.id, question, source);
-        onBookmarkChange(question.question, false);
+        onBookmarkChange(key, false);
         toast.success('Bookmark removed!');
       } else {
         await addBookmark(user.id, question, eventName, source);
-        onBookmarkChange(question.question, true);
+        onBookmarkChange(key, true);
         toast.success('Question bookmarked!');
       }
     } catch (error) {

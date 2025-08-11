@@ -6,7 +6,7 @@ import { FaBook, FaPen, FaDiscord, FaInstagram, FaGithub, FaFlask, FaBrain, FaUs
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from 'next/navigation';
 import { FiArrowRight } from "react-icons/fi";
-import 'react-toastify/dist/ReactToastify.css';
+// Toast styles are injected globally by Providers
 import Header from '../../components/Header';
 import Image from 'next/image';
 import { useTheme } from '../../contexts/ThemeContext';

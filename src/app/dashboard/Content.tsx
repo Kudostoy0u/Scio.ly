@@ -69,6 +69,7 @@ export default async function DashboardContent() {
       initialHistoryData = { historicalData, historyData };
     }
   }
+  // If no user, let client load from localStorage. We avoid server fetching.
 
   return (
     <DashboardMain

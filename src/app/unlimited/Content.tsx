@@ -2,8 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState, useCallback } from 'react';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+// ToastContainer is globally provided in Providers
 import { updateMetrics } from '@/app/utils/metrics';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/app/contexts/ThemeContext';
@@ -223,7 +222,10 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
         const bookmarkMap: Record<string, boolean> = {};
         bookmarks.forEach(bookmark => {
           if (bookmark.source === 'unlimited') {
-            bookmarkMap[bookmark.question.question] = true;
+            const key = (bookmark.question as any).imageData
+              ? `id:${(bookmark.question as any).imageData}`
+              : bookmark.question.question;
+            bookmarkMap[key] = true;
           }
         });
         
@@ -367,12 +369,13 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
 
       // Only count if there's an actual answer. Partial credit contributes fractionally; skipped does not count
       const wasAttempted = currentAnswer.length > 0 && currentAnswer[0] !== null && currentAnswer[0] !== '';
+      // Allow fractional correctness for MCQ multiselect or FRQ
+      const fractionalCorrect = Math.max(0, Math.min(1, score));
       
-              const { data: { user } } = await supabase.auth.getUser();
-        await updateMetrics(user?.id || null, {
+      const { data: { user } } = await supabase.auth.getUser();
+      await updateMetrics(user?.id || null, {
         questionsAttempted: wasAttempted ? 1 : 0,
-        // Round fractional to nearest integer for dashboard cards per requirement
-        correctAnswers: wasAttempted ? Math.round(score) : 0,
+        correctAnswers: wasAttempted ? fractionalCorrect : 0,
         eventName: wasAttempted ? (routerData.eventName || undefined) : undefined,
       });
     } catch (error) {
@@ -434,10 +437,10 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
 
 
   // Helper functions for managing bookmarks and submissions
-  const handleBookmarkChange = (questionText: string, isBookmarked: boolean) => {
+  const handleBookmarkChange = (key: string, isBookmarked: boolean) => {
     setBookmarkedQuestions(prev => ({
       ...prev,
-      [questionText]: isBookmarked
+      [key]: isBookmarked
     }));
   };
 
@@ -506,7 +509,8 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
   const renderQuestion = (question: Question) => {
     const isMultiSelect = isMultiSelectQuestion(question.question, question.answers);
     const currentAnswers = currentAnswer || [];
-    const isBookmarked = bookmarkedQuestions[question.question] || false;
+    const key = (question as any).imageData ? `id:${(question as any).imageData}` : question.question;
+    const isBookmarked = bookmarkedQuestions[key] || false;
 
     return (
       <div className={`relative border p-4 rounded-lg shadow-sm transition-all duration-500 ease-in-out ${
@@ -860,7 +864,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
         />
       )}
 
-      <ToastContainer theme={`${darkMode ? "dark" : "light"}`}/>
+      {/* Global ToastContainer handles notifications */}
     </>
   );
 }

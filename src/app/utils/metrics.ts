@@ -11,7 +11,7 @@ export interface DailyMetrics {
 
 const getLocalMetrics = (): DailyMetrics => {
   const today = new Date().toISOString().split('T')[0];
-  const localStats = localStorage.getItem(`metrics_${today}`);
+  const localStats = typeof window !== 'undefined' ? localStorage.getItem(`metrics_${today}`) : null;
   const defaultMetrics = {
     questionsAttempted: 0,
     correctAnswers: 0,
@@ -24,7 +24,9 @@ const getLocalMetrics = (): DailyMetrics => {
 
 const saveLocalMetrics = (metrics: DailyMetrics) => {
   const today = new Date().toISOString().split('T')[0];
-  localStorage.setItem(`metrics_${today}`, JSON.stringify(metrics));
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(`metrics_${today}`, JSON.stringify(metrics));
+  }
 };
 
 export const getDailyMetrics = async (userId: string | null): Promise<DailyMetrics | null> => {
@@ -168,20 +170,23 @@ export const updateMetrics = async (
     eventName?: string;
   }
 ): Promise<DailyMetrics | null> => {
+  // Normalize incoming values to integers for storage/leaderboards
+  const attemptedDelta = Math.round(updates.questionsAttempted || 0);
+  const correctDelta = Math.round(updates.correctAnswers || 0);
   if (!userId) {
     const currentStats = getLocalMetrics();
     const updatedStats: DailyMetrics = {
       ...currentStats,
-      questionsAttempted: currentStats.questionsAttempted + (updates.questionsAttempted || 0),
-      // round fractional to nearest integer when aggregating for cards
-      correctAnswers: currentStats.correctAnswers + Math.round(updates.correctAnswers || 0),
+      questionsAttempted: currentStats.questionsAttempted + attemptedDelta,
+      // Preserve fractional credit locally for anonymous users
+      correctAnswers: currentStats.correctAnswers + (updates.correctAnswers || 0),
       eventsPracticed: updates.eventName && !currentStats.eventsPracticed.includes(updates.eventName)
         ? [...currentStats.eventsPracticed, updates.eventName]
         : currentStats.eventsPracticed,
       eventQuestions: {
         ...currentStats.eventQuestions,
-        ...(updates.eventName && updates.questionsAttempted ? {
-          [updates.eventName]: (currentStats.eventQuestions?.[updates.eventName] || 0) + updates.questionsAttempted
+        ...(updates.eventName && attemptedDelta ? {
+          [updates.eventName]: (currentStats.eventQuestions?.[updates.eventName] || 0) + attemptedDelta
         } : {})
       }
     };
@@ -224,17 +229,16 @@ export const updateMetrics = async (
 
     const updatedEventQuestions = {
       ...currentStats.event_questions,
-      ...(updates.eventName && updates.questionsAttempted ? {
-        [updates.eventName]: (currentStats.event_questions?.[updates.eventName] || 0) + updates.questionsAttempted
+      ...(updates.eventName && attemptedDelta ? {
+        [updates.eventName]: (currentStats.event_questions?.[updates.eventName] || 0) + attemptedDelta
       } : {})
     };
 
     const updatedStats = {
       user_id: userId,
       date: today,
-      questions_attempted: currentStats.questions_attempted + (updates.questionsAttempted || 0),
-      // persist rounded integer correct for dashboard
-      correct_answers: currentStats.correct_answers + Math.round(updates.correctAnswers || 0),
+      questions_attempted: currentStats.questions_attempted + attemptedDelta,
+      correct_answers: currentStats.correct_answers + correctDelta,
       events_practiced: updatedEventsPracticed,
       event_questions: updatedEventQuestions,
       game_points: currentStats.game_points
@@ -252,14 +256,20 @@ export const updateMetrics = async (
       console.error('Error updating metrics:', error);
       return null;
     }
+    // Mirror to localStorage for identical anonymous experience
+    saveLocalMetrics({
+      questionsAttempted: updatedStats.questions_attempted,
+      // Persist the rounded integer daily for parity with DB
+      correctAnswers: updatedStats.correct_answers,
+      eventsPracticed: updatedStats.events_practiced,
+      eventQuestions: updatedStats.event_questions,
+      gamePoints: updatedStats.game_points,
+    });
 
-    // Also update leaderboard stats
-    if (updates.questionsAttempted || updates.correctAnswers) {
+    // Also update leaderboard stats (centralized here)
+    if (attemptedDelta || correctDelta) {
       try {
-        await updateLeaderboardStats(
-          updates.questionsAttempted || 0,
-          updates.correctAnswers || 0
-        );
+        await updateLeaderboardStats(attemptedDelta, correctDelta);
       } catch (leaderboardError) {
         console.error('Error updating leaderboard stats:', leaderboardError);
         // Don't fail the whole operation if leaderboard update fails

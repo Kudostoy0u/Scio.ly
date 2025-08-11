@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { getDailyMetrics } from '@/app/utils/metrics';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { User } from '@supabase/supabase-js';
-import 'react-toastify/dist/ReactToastify.css';
+// Toast styles are injected globally by Providers
 import Header from '../../components/Header';
 import ContactModal from '@/app/components/ContactModal';
 import { handleContactSubmission } from '@/app/utils/contactUtils';
@@ -17,6 +17,7 @@ import { ContactFormData, Metrics, DailyData, WeeklyData } from '../types';
 import WelcomeMessage from './WelcomeMessage';
 import MetricsCard from './MetricsCard';
 import ActionButtons from './ActionButtons';
+import QuestionsThisWeekChart from './QuestionsThisWeekChart';
 
 import AnimatedAccuracy from './AnimatedAccuracy';
 
@@ -76,7 +77,55 @@ export default function DashboardMain({
         const { data: { user } } = await supabase.auth.getUser();
         const effectiveUser = user || initialUser || null;
         setCurrentUser(effectiveUser);
-        if (!effectiveUser) return;
+        if (!effectiveUser) {
+          // Anonymous fallback: load metrics from localStorage
+          const dailyMetrics = await getDailyMetrics(null);
+          if (dailyMetrics) {
+            const accuracy = dailyMetrics.questionsAttempted > 0
+              ? (dailyMetrics.correctAnswers / dailyMetrics.questionsAttempted) * 100
+              : 0;
+            setMetrics({ ...dailyMetrics, accuracy });
+          }
+
+          // Build historical data from localStorage keys metrics_<date>
+          try {
+            const localHistoryEntries: Array<{ date: string; questions_attempted: number; correct_answers: number; events_practiced: string[] }>= [];
+            for (let i = 0; typeof window !== 'undefined' && i < localStorage.length; i++) {
+              const key = localStorage.key(i) || '';
+              if (key.startsWith('metrics_')) {
+                const date = key.replace('metrics_', '');
+                try {
+                  const raw = localStorage.getItem(key);
+                  if (!raw) continue;
+                  const parsed = JSON.parse(raw) as { questionsAttempted?: number; correctAnswers?: number; eventsPracticed?: string[] };
+                  localHistoryEntries.push({
+                    date,
+                    questions_attempted: parsed.questionsAttempted || 0,
+                    correct_answers: parsed.correctAnswers || 0,
+                    events_practiced: parsed.eventsPracticed || []
+                  });
+                } catch {}
+              }
+            }
+
+            localHistoryEntries.sort((a, b) => a.date.localeCompare(b.date));
+            const processedData = localHistoryEntries.map(item => ({ date: item.date, count: item.questions_attempted || 0 }));
+            setHistoricalData(processedData);
+
+            const historyObj: HistoryData = {} as any;
+            localHistoryEntries.forEach(item => {
+              historyObj[item.date] = {
+                questionsAttempted: item.questions_attempted || 0,
+                correctAnswers: item.correct_answers || 0,
+                eventsPracticed: item.events_practiced || []
+              };
+            });
+            setHistoryData(historyObj);
+          } catch {
+            // ignore local parsing errors
+          }
+          return;
+        }
 
         if (!initialMetrics) {
           // Fetch daily metrics
@@ -187,13 +236,7 @@ export default function DashboardMain({
     };
   };
 
-  const getYAxisScale = () => {
-    // Use the same weekly data that's generated based on current date
-    const weekData = generateWeeklyData().questions;
-    const maxValue = Math.max(...weekData.map((day) => day.count), 1);
-    const roundedMax = Math.ceil(maxValue / 5) * 5;
-    return Array.from({ length: 5 }, (_, i) => Math.round(roundedMax * (1 - i / 4)));
-  };
+  // removed: getYAxisScale (legacy bar chart)
 
   const calculateWeeklyAccuracy = (): number => {
     // Get the last 7 days based on current date
@@ -361,70 +404,7 @@ export default function DashboardMain({
 
           {/* Recent Activity */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Desktop Vertical Chart */}
-            <div className={`hidden sm:block p-6 rounded-lg ${cardStyle}`}>
-              <h2 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                Questions This Week
-              </h2>
-              <div className="relative h-[200px] flex items-end justify-between px-12">
-                {/* Y-axis */}
-                <div className="absolute left-0 top-0 h-full flex flex-col justify-between">
-                  {getYAxisScale().map((tick, index) => (
-                    <div key={`y-axis-${index}`} className="flex items-center">
-                      <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {tick}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                {/* Vertical Bars */}
-                {generateWeeklyData().questions.map((day, index) => (
-                  <div key={index} className="flex flex-col items-center group">
-                    <div className="relative">
-                      <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <div
-                          className={`px-2 py-1 rounded text-sm border ${
-                            darkMode ? 'bg-gray-800 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-200'
-                          }`}
-                        >
-                          {day.count} questions
-                        </div>
-                      </div>
-                      <div
-                        className={`w-12 bg-blue-500 rounded-t-md transition-colors duration-300 group-hover:bg-blue-400`}
-                        style={{
-                          height: `${(day.count / Math.max(getYAxisScale()[0], 1)) * 160}px`,
-                        }}
-                      />
-                    </div>
-                    <span className={`text-sm mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {day.date}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Mobile Horizontal Chart */}
-            <div className={`block sm:hidden p-6 rounded-lg ${cardStyle} ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              <h2 className="text-xl font-semibold mb-4">
-                Questions This Week
-              </h2>
-              <div className="flex flex-col space-y-3">
-                {generateWeeklyData().questions.map((day) => (
-                  <div key={day.date} className="flex items-center">
-                    <div className="w-16 text-sm">{day.date}</div>
-                    <div className="flex-1 bg-gray-200 rounded h-4 relative">
-                      <div
-                        style={{ width: `${(day.count / Math.max(...generateWeeklyData().questions.map(d => d.count), 1)) * 100}%` }}
-                        className="bg-blue-500 h-4 rounded"
-                      ></div>
-                    </div>
-                    <div className="w-12 text-right text-sm ml-2">{day.count}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <QuestionsThisWeekChart historyData={historyData} darkMode={darkMode} />
 
             {/* Half Circle Accuracy Card */}
             <div className="perspective-1000 hover:scale-[1.02] transition-transform duration-300">

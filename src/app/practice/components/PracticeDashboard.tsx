@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from 'react-toastify';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import Header from '@/app/components/Header';
 import { clearTestSession } from '@/app/utils/timeManagement';
@@ -560,7 +559,7 @@ export default function PracticeDashboard() {
         </svg>
       </button>
 
-      <ToastContainer theme={darkMode ? "dark" : "light"} />
+      {/* Global ToastContainer handles notifications */}
       <style jsx global>{`
           /* Handle long words by breaking them */
           .break-words {

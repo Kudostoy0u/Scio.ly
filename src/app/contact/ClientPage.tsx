@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { Send, Mail, MessageCircle, User } from 'lucide-react';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from 'react-toastify';
 import Header from '@/app/components/Header';
 import { handleContactSubmission } from '@/app/utils/contactUtils';
 
@@ -55,7 +54,7 @@ export default function ContactClientPage() {
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <Header />
-      <ToastContainer theme={darkMode ? 'dark' : 'light'} />
+      {/* Global ToastContainer handles notifications */}
       <div className="pt-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">
           <div className="mb-8">

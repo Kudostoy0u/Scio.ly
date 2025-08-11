@@ -14,12 +14,10 @@ This project has been migrated from Neon database to CockroachDB using Drizzle O
 ### 2. Database Schema
 - **Location**: `src/lib/db/schema.ts`
 - **Tables**: 
-  - `bookmarks` - User bookmarks for questions
-  - `game_points` - Game points earned by users
-  - `user_stats` - Daily user statistics
   - `questions` - Science Olympiad questions
   - `quotes` - Quotes for Codebusters cipher tests
-- **Excluded**: Users and leaderboards (delegated to Supabase)
+  - `share_codes`, `edits`, `blacklists` - App data not tied to user accounts
+- **Excluded**: Users, leaderboards, bookmarks, game points, and user stats (delegated to Supabase)
 
 ### 3. Connection Configuration
 - **File**: `src/lib/db/index.ts`
@@ -33,7 +31,7 @@ This project has been migrated from Neon database to CockroachDB using Drizzle O
 
 ### 4. Database Utilities
 - **File**: `src/lib/db/utils.ts`
-- **Functions**: CRUD operations for bookmarks, game points, user stats, and quotes
+- **Functions**: Quotes access only (bookmarks, game points, and user stats moved to Supabase)
 - **Features**: Type-safe operations with Drizzle ORM
 
 ### 5. API Routes Updated
@@ -81,42 +79,17 @@ export default defineConfig({
 ### Basic Database Operations
 ```typescript
 import { db } from '@/lib/db';
-import { bookmarks, gamePoints, userStats } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { quotes } from '@/lib/db/schema';
 
-// Query bookmarks
-const userBookmarks = await db
+// Query quotes
+const englishQuotes = await db
   .select()
-  .from(bookmarks)
-  .where(eq(bookmarks.userId, userId));
-
-// Insert game points
-await db.insert(gamePoints).values({
-  userId: 'user-id',
-  points: 100,
-  source: 'practice',
-  description: 'Completed practice session'
-});
+  .from(quotes);
 ```
 
 ### Using Utility Functions
 ```typescript
-import { 
-  createBookmark, 
-  getBookmarksByUserId, 
-  createGamePoint 
-} from '@/lib/db/utils';
-
-// Create bookmark
-await createBookmark({
-  userId: 'user-id',
-  questionData: { /* question data */ },
-  eventName: 'Anatomy',
-  source: 'practice'
-});
-
-// Get user bookmarks
-const bookmarks = await getBookmarksByUserId('user-id');
+// Bookmarks, game points, and user stats are managed via Supabase client now.
 ```
 
 ## Migration Commands

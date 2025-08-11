@@ -118,52 +118,12 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
     darkMode ? 'text-gray-500' : 'text-gray-400'
   }`;
 
-  // Disable bookmarking for ID questions (questions with imageData)
-  const isIdQuestion = !!question.imageData;
+  // Detect ID questions (questions with imageData)
+  const isIdQuestion = !!(question as any).imageData;
   
   if (compact) {
     return (
       <div className="flex items-center space-x-1">
-        {!isIdQuestion && (
-          <BookmarkManager
-            question={question}
-            isBookmarked={isBookmarked}
-            eventName={eventName}
-            source={source}
-            onBookmarkChange={onBookmarkChange}
-            darkMode={darkMode}
-            size="sm"
-          />
-        )}
-        
-        <button
-          onClick={onEdit}
-          disabled={isSubmittedEdit}
-          className={`${buttonClass} ${isSubmittedEdit ? disabledClass : 'hover:text-blue-500'}`}
-          title={isSubmittedEdit ? 'Edit already submitted' : 'Edit question'}
-        >
-          <FaEdit className="w-4 h-4" />
-        </button>
-        
-        <button
-          onClick={handleDirectReport}
-          disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed}
-          className={`${buttonClass} ${(isSubmittedReport || hasRemovalFailed || isRemovalFailed) ? disabledClass : 'hover:text-red-500'}`}
-          title={isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : 'Remove question'}
-        >
-          {isProcessingDirectReport ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
-          ) : (
-            <FaTrash className="w-4 h-4" />
-          )}
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center space-x-2">
-      {!isIdQuestion && (
         <BookmarkManager
           question={question}
           isBookmarked={isBookmarked}
@@ -171,41 +131,81 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
           source={source}
           onBookmarkChange={onBookmarkChange}
           darkMode={darkMode}
-          showLabel={true}
+          size="sm"
         />
+        {!isIdQuestion && (
+          <>
+            <button
+              onClick={onEdit}
+              disabled={isSubmittedEdit}
+              className={`${buttonClass} ${isSubmittedEdit ? disabledClass : 'hover:text-blue-500'}`}
+              title={isSubmittedEdit ? 'Edit already submitted' : 'Edit question'}
+            >
+              <FaEdit className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleDirectReport}
+              disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed}
+              className={`${buttonClass} ${(isSubmittedReport || hasRemovalFailed || isRemovalFailed) ? disabledClass : 'hover:text-red-500'}`}
+              title={isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : 'Remove question'}
+            >
+              {isProcessingDirectReport ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
+              ) : (
+                <FaTrash className="w-4 h-4" />
+              )}
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center space-x-2">
+      <BookmarkManager
+        question={question}
+        isBookmarked={isBookmarked}
+        eventName={eventName}
+        source={source}
+        onBookmarkChange={onBookmarkChange}
+        darkMode={darkMode}
+        showLabel={true}
+      />
+      {!isIdQuestion && (
+        <>
+          <button
+            onClick={onEdit}
+            disabled={isSubmittedEdit}
+            className={`${buttonClass} ${isSubmittedEdit ? disabledClass : 'hover:text-blue-500'}`}
+            title={isSubmittedEdit ? 'Edit already submitted' : 'Edit question'}
+          >
+            <div className="flex items-center space-x-1">
+              <FaEdit className="w-4 h-4" />
+              <span className="text-sm">
+                {isSubmittedEdit ? 'Edit Submitted' : 'Edit'}
+              </span>
+            </div>
+          </button>
+          <button
+            onClick={handleDirectReport}
+            disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed}
+            className={`${buttonClass} ${(isSubmittedReport || hasRemovalFailed || isRemovalFailed) ? disabledClass : 'hover:text-red-600'}`}
+            title={isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : 'Quick remove question'}
+          >
+            <div className="flex items-center space-x-1">
+              {isProcessingDirectReport ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
+              ) : (
+                <FaTrash className="w-4 h-4" />
+              )}
+              <span className="text-sm">
+                {isProcessingDirectReport ? 'Removing...' : hasRemovalFailed || isRemovalFailed ? 'Failed' : 'Remove'}
+              </span>
+            </div>
+          </button>
+        </>
       )}
-      
-      <button
-        onClick={onEdit}
-        disabled={isSubmittedEdit}
-        className={`${buttonClass} ${isSubmittedEdit ? disabledClass : 'hover:text-blue-500'}`}
-        title={isSubmittedEdit ? 'Edit already submitted' : 'Edit question'}
-      >
-        <div className="flex items-center space-x-1">
-          <FaEdit className="w-4 h-4" />
-          <span className="text-sm">
-            {isSubmittedEdit ? 'Edit Submitted' : 'Edit'}
-          </span>
-        </div>
-      </button>
-      
-      <button
-        onClick={handleDirectReport}
-        disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed}
-        className={`${buttonClass} ${(isSubmittedReport || hasRemovalFailed || isRemovalFailed) ? disabledClass : 'hover:text-red-600'}`}
-        title={isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : 'Quick remove question'}
-      >
-        <div className="flex items-center space-x-1">
-          {isProcessingDirectReport ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
-          ) : (
-            <FaTrash className="w-4 h-4" />
-          )}
-          <span className="text-sm">
-            {isProcessingDirectReport ? 'Removing...' : hasRemovalFailed || isRemovalFailed ? 'Failed' : 'Remove'}
-          </span>
-        </div>
-      </button>
     </div>
   );
 };
