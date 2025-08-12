@@ -93,7 +93,8 @@ export default function PracticeDashboard() {
         } catch {}
       }
 
-      if (hasCodebustersProgress) {
+      // Also consider current session state for Codebusters
+      if (hasCodebustersProgress || (session && session.eventName === 'Codebusters')) {
         const params = localStorage.getItem('testParams');
         const eventName = (() => { try { return (params ? JSON.parse(params).eventName : undefined) || 'Codebusters'; } catch { return 'Codebusters'; }})();
         setContinueInfo({ eventName, route: '/codebusters' });

@@ -93,7 +93,6 @@ export const useCodebustersState = () => {
           const parsedQuotes = JSON.parse(savedQuotes);
           setQuotes(parsedQuotes);
           setIsLoading(false);
-          toast.success('Test loaded successfully!');
         } catch (error) {
           console.error('Error parsing saved quotes:', error);
           setError('Could not load test data. It might be corrupted.');

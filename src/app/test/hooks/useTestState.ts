@@ -60,7 +60,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     setIsMounted(true);
     if (localStorage.getItem("loaded")) {
       localStorage.removeItem('testUserAnswers')
-      toast.success('Shared test loaded successfully!');
+      // Do not toast on resume/share-load; keep UX quiet
       localStorage.removeItem("loaded");
     }
     

@@ -243,15 +243,12 @@ export default function CodeBusters() {
         window.location.reload();
     }, [loadPreferences]);
 
-    // Handle back navigation
+    // Handle back navigation: preserve Codebusters progress for resume banner on Practice
     const handleBack = useCallback(() => {
-        // Clear unlimited practice-related localStorage items
-        localStorage.removeItem('unlimitedQuestions');
-        localStorage.removeItem('testParams');
-        localStorage.removeItem('codebustersQuotes');
-        localStorage.removeItem('codebustersTimeLeft');
-        localStorage.removeItem('codebustersIsTestSubmitted');
-        localStorage.removeItem('codebustersTestScore');
+        try {
+            // Only clear unrelated unlimited cache; keep Codebusters keys and testParams so Practice can detect progress
+            localStorage.removeItem('unlimitedQuestions');
+        } catch {}
         router.push('/practice');
     }, [router]);
 

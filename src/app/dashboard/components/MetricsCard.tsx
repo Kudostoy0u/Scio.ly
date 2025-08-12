@@ -70,7 +70,7 @@ export default function MetricsCard({
   };
 
   return (
-    <div className="perspective-1000 hover:scale-[1.02] transition-transform duration-300">
+    <div className="perspective-1000 hover:scale-[1.02] transition-transform duration-300 text-center">
       <div
         className={`p-0 rounded-lg cursor-pointer transition-transform duration-700 relative ${cardStyle}`}
         style={{ 
