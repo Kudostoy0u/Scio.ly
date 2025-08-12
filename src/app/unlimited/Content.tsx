@@ -143,10 +143,11 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
         }
         const baseQuestions: Question[] = apiResponse.data || [];
 
-        // For Rocks & Minerals, create placeholders for ID questions
+        // For ID-enabled events (Rocks & Minerals, Entomology), create placeholders for ID questions
         let finalQuestions: Question[] = baseQuestions;
         const idPct = (routerParams as any).idPercentage;
-        if (routerParams.eventName === 'Rocks and Minerals' && typeof idPct !== 'undefined' && parseInt(idPct) > 0) {
+        const supportsId = routerParams.eventName === 'Rocks and Minerals' || routerParams.eventName === 'Entomology';
+        if (supportsId && typeof idPct !== 'undefined' && parseInt(idPct) > 0) {
           const pct = Math.max(0, Math.min(100, parseInt(idPct)));
           const totalQuestionsCount = pct === 100 ? 1000 : baseQuestions.length;
           const idCount = Math.round((pct / 100) * totalQuestionsCount);
@@ -159,7 +160,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             question: '[Loading ID Question...]',
             answers: [],
             difficulty: 0.5,
-            event: 'Rocks and Minerals',
+            event: routerParams.eventName,
             _isIdPlaceholder: true,
             _placeholderId: i,
           } as any));
@@ -185,11 +186,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           
           // Fetch name pool for distractors
           // Load name pool from the event's endpoint if available
-          const poolEndpoint = routerParams.eventName === 'Rocks and Minerals'
-            ? api.rocksRandom
-            : routerParams.eventName === 'Entomology'
-              ? api.entomologyRandom
-              : api.rocksRandom;
+          const poolEndpoint = routerParams.eventName === 'Rocks and Minerals' ? api.rocksRandom : api.entomologyRandom;
           fetch(`${poolEndpoint}?count=1`)
             .then(res => res.json())
             .then(({ namePool: pool }) => {

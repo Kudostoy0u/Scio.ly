@@ -166,7 +166,9 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         const total = parseInt(routerParams.questionCount || '10');
         const idPctRaw = (routerParams as any).idPercentage;
         const idPct = typeof idPctRaw !== 'undefined' ? Math.max(0, Math.min(100, parseInt(idPctRaw))) : 0;
-        const idCount = Math.round((idPct / 100) * total);
+        const supportsId = routerParams.eventName === 'Rocks and Minerals' || routerParams.eventName === 'Entomology';
+        const requestedIdCount = Math.round((idPct / 100) * total);
+        const idCount = supportsId ? requestedIdCount : 0;
         const baseCount = Math.max(0, total - idCount);
         
 
@@ -210,8 +212,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
             routerParams.eventName === 'Entomology' ? api.entomologyRandom :
             null;
           if (!idEndpoint) {
-            console.warn('[IDGEN][test] no id endpoint for event', routerParams.eventName);
-            throw new Error('No ID endpoint for event');
+            console.warn('[IDGEN][test] no id endpoint for event (ignored)', routerParams.eventName);
           }
           const idUrl = `${idEndpoint}?count=${idCount}`;
           console.log('[IDGEN][test] fetching id questions', { idUrl, preferFRQ });
