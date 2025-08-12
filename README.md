@@ -3,7 +3,7 @@
 # Scio.ly - The Ultimate Science Olympiad Practice Platform
 **Making Science Olympiad practice accessible to everyone.**
 
-[**Visit Scio.ly Now**](https://scio.ly)
+[**Visit Scio.ly Now!**](https://scio.ly)
 
 ## About Scio.ly
 

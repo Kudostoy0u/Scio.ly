@@ -337,7 +337,7 @@ export default function HomeClient() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/about" className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'} `}>
+                  <Link href="/contact" className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'} `}>
                     Contact
                   </Link>
                 </li>
@@ -356,7 +356,7 @@ export default function HomeClient() {
                   <FaDiscord className="w-6 h-6" />
                 </a>
                 <a 
-                  href="https://www.instagram.com/scienceolympiad" 
+                  href="https://www.instagram.com/Scio.ly" 
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'} `}
@@ -374,7 +374,7 @@ export default function HomeClient() {
                   <FaGithub className="w-6 h-6" />
                 </a>
                 <a 
-                  href="mailto:kudosbeluga@gmail.com" 
+                  href="mailto:team.scio.ly@gmail.com" 
                   className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'} `}
                   aria-label="Email"
                 >
