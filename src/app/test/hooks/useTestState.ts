@@ -217,9 +217,17 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         }
 
         // 2) ID questions (blind to filters)
-        if (idCount > 0 && routerParams.eventName === 'Rocks and Minerals') {
+        if (idCount > 0) {
           const preferFRQ = routerParams.types !== 'multiple-choice';
-          const idUrl = `${api.rocksRandom}?count=${idCount}`;
+          const idEndpoint =
+            routerParams.eventName === 'Rocks and Minerals' ? api.rocksRandom :
+            routerParams.eventName === 'Entomology' ? api.entomologyRandom :
+            null;
+          if (!idEndpoint) {
+            console.warn('[IDGEN][test] no id endpoint for event', routerParams.eventName);
+            throw new Error('No ID endpoint for event');
+          }
+          const idUrl = `${idEndpoint}?count=${idCount}`;
           console.log('[IDGEN][test] fetching id questions', { idUrl, preferFRQ });
           const resp = await fetch(idUrl);
           const { success, data, namePool } = await resp.json();
@@ -228,12 +236,19 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
             const idQuestions: Question[] = data.map((item: any) => {
               const imgs: string[] = Array.isArray(item.images) ? item.images : [];
               const chosenImg = imgs.length ? imgs[Math.floor(Math.random() * imgs.length)] : undefined;
-              if (preferFRQ) {
+              const isEnt = routerParams.eventName === 'Entomology';
+              const frqPrompt = isEnt ? 'Identify the scientific name of the insect.' : 'Identify the mineral shown in the image.';
+              const mcqPrompt = frqPrompt;
+
+              const typesSel = (routerParams.types as string) || 'multiple-choice';
+              const isFRQ = typesSel === 'free-response' || (typesSel === 'both' && Math.random() < 0.5);
+
+              if (isFRQ) {
                 return {
-                  question: 'Identify the mineral shown in the image.',
+                  question: frqPrompt,
                   answers: item.names,
                   difficulty: 0.5,
-                  event: 'Rocks and Minerals',
+                  event: routerParams.eventName || 'Rocks and Minerals',
                   imageData: chosenImg,
                 };
               }
@@ -242,11 +257,11 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
               const options = shuffleArray([correct, ...distractors]);
               const correctIndex = options.indexOf(correct);
               return {
-                question: 'Identify the mineral shown in the image.',
+                question: mcqPrompt,
                 options,
                 answers: [correctIndex],
                 difficulty: 0.5,
-                event: 'Rocks and Minerals',
+                event: routerParams.eventName || 'Rocks and Minerals',
                 imageData: chosenImg,
               };
             });

@@ -151,6 +151,7 @@ export default function TestConfiguration({
 
   const isCodebusters = selectedEvent?.name === 'Codebusters';
   const isRocks = selectedEvent?.name === 'Rocks and Minerals';
+  const isEntomology = selectedEvent?.name === 'Entomology';
 
   return (
     <div 
@@ -299,8 +300,8 @@ export default function TestConfiguration({
             </div>
           </div>
 
-          {/* Identification slider for Rocks & Minerals */}
-          {isRocks && (
+          {/* Identification slider for events with image ID (Rocks & Minerals, Entomology) */}
+          {(isRocks || isEntomology) && (
             <div>
               <label htmlFor="idPercentage" className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 ID Questions (% of total)

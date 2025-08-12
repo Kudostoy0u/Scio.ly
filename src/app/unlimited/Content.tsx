@@ -184,7 +184,13 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           setIdQuestionIndices(idIndices);
           
           // Fetch name pool for distractors
-          fetch(`${api.rocksRandom}?count=1`)
+          // Load name pool from the event's endpoint if available
+          const poolEndpoint = routerParams.eventName === 'Rocks and Minerals'
+            ? api.rocksRandom
+            : routerParams.eventName === 'Entomology'
+              ? api.entomologyRandom
+              : api.rocksRandom;
+          fetch(`${poolEndpoint}?count=1`)
             .then(res => res.json())
             .then(({ namePool: pool }) => {
               if (Array.isArray(pool)) {
@@ -254,7 +260,12 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     setIsLoadingIdQuestion(true);
     try {
       console.log('[IDGEN][unlimited] loading ID question for index', index);
-      const resp = await fetch(`${api.rocksRandom}?count=1`);
+      const endpoint = routerData.eventName === 'Rocks and Minerals'
+        ? api.rocksRandom
+        : routerData.eventName === 'Entomology'
+          ? api.entomologyRandom
+          : api.rocksRandom;
+      const resp = await fetch(`${endpoint}?count=1`);
       const { success, data } = await resp.json();
       
       if (success && data.length > 0) {
@@ -266,12 +277,15 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
         const types = routerData.types || 'multiple-choice';
         let question: Question;
         
+        const isEnt = routerData.eventName === 'Entomology';
+        const frqPrompt = isEnt ? 'Identify the scientific name shown in the image.' : 'Identify the mineral shown in the image.';
+        const mcqPrompt = frqPrompt;
         if (types === 'free-response' || (types === 'both' && Math.random() < 0.5)) {
           question = {
-            question: 'Identify the mineral shown in the image.',
+            question: frqPrompt,
             answers: item.names,
             difficulty: 0.5,
-            event: 'Rocks and Minerals',
+            event: routerData.eventName || 'Rocks and Minerals',
             imageData: chosenImg,
           };
         } else {
@@ -280,11 +294,11 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           const options = shuffleArray([correct, ...distractors]);
           const correctIndex = options.indexOf(correct);
           question = {
-            question: 'Identify the mineral shown in the image.',
+            question: mcqPrompt,
             options,
             answers: [correctIndex],
             difficulty: 0.5,
-            event: 'Rocks and Minerals',
+            event: routerData.eventName || 'Rocks and Minerals',
             imageData: chosenImg,
           };
         }
