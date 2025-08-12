@@ -265,6 +265,29 @@ export default function DashboardMain({
             });
             setHistoryData(historyObj);
           }
+
+          // Also refresh greeting name immediately after sign-in
+          try {
+            const { data } = await (supabase as any)
+              .from('users')
+              .select('first_name, display_name')
+              .eq('id', session.user.id)
+              .maybeSingle();
+            const first: string | undefined = (data as any)?.first_name;
+            const display: string | undefined = (data as any)?.display_name;
+            const chosen = (first && first.trim())
+              ? first.trim()
+              : (display && display.trim())
+                ? display.trim().split(' ')[0]
+                : (session.user.email?.split('@')[0] || '');
+            if (chosen) {
+              setGreetingName(chosen);
+              try {
+                localStorage.setItem('scio_display_name', chosen);
+                window.dispatchEvent(new CustomEvent('scio-display-name-updated', { detail: chosen }));
+              } catch {}
+            }
+          } catch {}
         })();
       }
     });

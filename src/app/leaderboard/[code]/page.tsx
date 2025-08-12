@@ -2,13 +2,14 @@
 
 import { useEffect, useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/app/contexts/AuthContext';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import Header from '@/app/components/Header';
 
 export default function JoinLeaderboardPage({ params }: { params: Promise<{ code: string }> }) {
   const router = useRouter();
   const { darkMode } = useTheme();
+  const { client } = useAuth();
   const [code, setCode] = useState<string | null>(null);
 
   useEffect(() => {
@@ -22,7 +23,7 @@ export default function JoinLeaderboardPage({ params }: { params: Promise<{ code
   const joinLeaderboard = useCallback(async () => {
     if (!code) return;
     
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await client.auth.getUser();
     
     if (!user) {
       // Redirect to home with join code in query params
@@ -31,7 +32,7 @@ export default function JoinLeaderboardPage({ params }: { params: Promise<{ code
     }
 
     // Try to join the leaderboard
-    const { error } = await supabase.rpc('join_leaderboard_by_code', { 
+    const { error } = await client.rpc('join_leaderboard_by_code', { 
       p_join_code: code.toUpperCase() 
     });
 

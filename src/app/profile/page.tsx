@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/app/contexts/AuthContext';
 import { User } from '@supabase/supabase-js';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { Save, User as UserIcon } from 'lucide-react';
@@ -13,6 +13,7 @@ import Image from 'next/image';
 export default function ProfilePage() {
   const { darkMode } = useTheme();
   const router = useRouter();
+  const { user: ctxUser, client } = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -25,36 +26,13 @@ export default function ProfilePage() {
   const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
-    // Eagerly read current session so we don't wait indefinitely
+    // Sync from context
+    const supabase = client as any;
+    const currentUser = ctxUser || null;
+    setUser(currentUser);
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const currentUser = session?.user || null;
-      setUser(currentUser);
       if (currentUser) {
-        // Load current profile fields
-        const { data } = await (supabase as any)
-          .from('users')
-          .select('display_name, first_name, last_name, username, photo_url')
-          .eq('id', currentUser.id)
-          .maybeSingle();
-        const defaultName = currentUser.user_metadata?.name || currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || '';
-        setDisplayName(data?.display_name || defaultName || '');
-        setFirstName(data?.first_name || '');
-        setLastName(data?.last_name || '');
-        setUsername(data?.username || (currentUser.email?.split('@')[0] || ''));
-        setPhotoUrl(data?.photo_url || currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || null);
-      }
-      setAuthInitialized(true);
-      setLoading(false);
-    })();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const currentUser = session?.user || null;
-      setUser(currentUser);
-      setAuthInitialized(true);
-      
-      if (currentUser) {
-        const { data } = await (supabase as any)
+        const { data } = await supabase
           .from('users')
           .select('display_name, first_name, last_name, username, photo_url')
           .eq('id', currentUser.id)
@@ -66,15 +44,12 @@ export default function ProfilePage() {
         setUsername(data?.username || (currentUser.email?.split('@')[0] || ''));
         setPhotoUrl(data?.photo_url || currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || null);
       } else {
-        // Redirect to home if not authenticated
         router.push('/');
       }
-      
+      setAuthInitialized(true);
       setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [router]);
+    })();
+  }, [router, ctxUser, client]);
 
   const handleSave = async () => {
     if (!user) return;
@@ -87,7 +62,7 @@ export default function ProfilePage() {
     setSaving(true);
 
     try {
-      const { error } = await (supabase as any)
+      const { error } = await (client as any)
         .from('users')
         .upsert({
           id: user.id,
@@ -135,7 +110,7 @@ export default function ProfilePage() {
       const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
       const path = `users/${user.id}.${fileExt}`;
       // Upload with upsert
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, {
+      const { error: uploadError } = await client.storage.from('avatars').upload(path, file, {
         cacheControl: '3600',
         upsert: true,
       });
@@ -144,11 +119,11 @@ export default function ProfilePage() {
         toast.error('Failed to upload image. Ensure the avatars bucket exists and is public.');
         return;
       }
-      const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(path);
+      const { data: publicUrlData } = client.storage.from('avatars').getPublicUrl(path);
       const publicUrl = publicUrlData.publicUrl;
       setPhotoUrl(publicUrl);
       // Persist photo_url
-      await (supabase as any)
+      await (client as any)
         .from('users')
         .update({ photo_url: publicUrl } as any)
         .eq('id', user.id);

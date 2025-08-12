@@ -2,16 +2,17 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { Eye, EyeOff, X, Settings, Trophy } from 'lucide-react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useAuth } from '@/app/contexts/AuthContext';
 // Removed SocialAuth to use a custom-styled Google button
 
 export default function AuthButton() {
   const { darkMode } = useTheme();
+  const { user: ctxUser, client } = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -38,48 +39,14 @@ export default function AuthButton() {
     ? 'text-blue-300 hover:text-blue-200'
     : 'text-blue-500 hover:text-blue-600';
 
-  // Load cached user data from localStorage on mount
+  // Sync with centralized auth context; avoid localStorage hacks
   useEffect(() => {
-    try {
-      const cachedUserData = localStorage.getItem('scio_user_data');
-      if (cachedUserData) {
-        const parsedData = JSON.parse(cachedUserData);
-        
-        if (parsedData.user) {
-          setUser(parsedData.user);
-          setDisplayName(parsedData.displayName);
-          setLoading(false);
-        }
-      } else {
-        // If we have no cached user, consult a lightweight flag to avoid layout jank
-        const cachedLoggedIn = localStorage.getItem('scio_is_logged_in');
-        if (cachedLoggedIn !== '1') {
-          // Not logged in → render Sign In immediately (no spinner)
-          setLoading(false);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading cached user data:', error);
-      clearUserFromLocalStorage();
-      setLoading(false);
-    }
-  }, []);
+    setUser(ctxUser ?? null);
+    setLoading(false);
+  }, [ctxUser]);
 
   // Save user data to localStorage
-  const saveUserToLocalStorage = (userData: User, displayNameData: string | null) => {
-    try {
-      const userDataToSave = {
-        user: userData,
-        displayName: displayNameData,
-        timestamp: Date.now()
-      };
-      localStorage.setItem('scio_user_data', JSON.stringify(userDataToSave));
-      localStorage.setItem('scio_is_logged_in', '1');
-      // scio_display_name is managed separately from a dedicated first-name resolver
-    } catch (error) {
-      console.error('Error saving user data to localStorage:', error);
-    }
-  };
+  
 
   // Clear user data from localStorage
   const clearUserFromLocalStorage = () => {
@@ -87,9 +54,7 @@ export default function AuthButton() {
       localStorage.removeItem('scio_user_data');
       localStorage.setItem('scio_is_logged_in', '0');
       localStorage.removeItem('scio_display_name');
-    } catch (error) {
-      console.error('Error clearing user data from localStorage:', error);
-    }
+    } catch {}
   };
 
   // Handle online/offline status
@@ -108,102 +73,22 @@ export default function AuthButton() {
   }, []);
 
   useEffect(() => {
-    // Get current user on mount
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      setUser(user);
-      if (user) {
-        // Load display name
-        const { data } = await supabase
+    let active = true;
+    const supabase = client;
+    (async () => {
+      try {
+        const { data: profile } = await supabase
           .from('users')
           .select('display_name, first_name')
-          .match({ email: user.email || '' })
+          .eq('id', ctxUser?.id || '')
           .maybeSingle();
-        const dn = (data as any)?.display_name as string | undefined;
-        const fn = (data as any)?.first_name as string | undefined;
-        if (dn) {
-          setDisplayName(dn);
-          saveUserToLocalStorage(user, dn);
-        } else {
-          saveUserToLocalStorage(user, null);
-        }
-
-        // Resolve first name for dashboard cache
-        const metaFirst = (user.user_metadata?.first_name as string | undefined) ||
-          ((user.user_metadata?.name as string | undefined) || (user.user_metadata?.full_name as string | undefined) || '')
-            .split(' ').filter(Boolean)[0];
-        const firstNameForCache = (fn && fn.trim()) || (metaFirst && metaFirst.trim()) || (dn && dn.split(' ')[0]) || (user.email?.split('@')[0] || '');
-        try { if (firstNameForCache) localStorage.setItem('scio_display_name', firstNameForCache); } catch {}
-      } else {
-        clearUserFromLocalStorage();
-      }
-      setLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-      
-      if (session?.user) {
-        // Load display name on auth change
-        const { data } = await supabase
-          .from('users')
-          .select('display_name, first_name')
-          .match({ email: session.user.email || '' })
-          .maybeSingle();
-        const dn2 = (data as any)?.display_name as string | undefined;
-        const fn2 = (data as any)?.first_name as string | undefined;
-        if (dn2) {
-          setDisplayName(dn2);
-          saveUserToLocalStorage(session.user, dn2);
-        } else {
-          saveUserToLocalStorage(session.user, null);
-        }
-
-        // Resolve first name for dashboard cache
-        const metaFirst2 = (session.user.user_metadata?.first_name as string | undefined) ||
-          ((session.user.user_metadata?.name as string | undefined) || (session.user.user_metadata?.full_name as string | undefined) || '')
-            .split(' ').filter(Boolean)[0];
-        const firstNameForCache2 = (fn2 && fn2.trim()) || (metaFirst2 && metaFirst2.trim()) || (dn2 && dn2.split(' ')[0]) || (session.user.email?.split('@')[0] || '');
-        try { if (firstNameForCache2) localStorage.setItem('scio_display_name', firstNameForCache2); } catch {}
-      } else {
-        clearUserFromLocalStorage();
-      }
-      
-      if (session?.user && !isOffline) {
-        try {
-          
-          // Create or update user profile (reworked schema)
-          const emailLocal = (session.user.email || '').split('@')[0] || 'user';
-          const fullName: string | undefined = session.user.user_metadata?.name || session.user.user_metadata?.full_name || undefined;
-          const username = emailLocal;
-
-          const upsertRow: Record<string, unknown> = {
-            id: String(session.user.id),
-            email: session.user.email || '',
-            username,
-            photo_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null,
-            created_at: new Date().toISOString(),
-          };
-          if (fullName && fullName.trim()) {
-            upsertRow.display_name = fullName.trim();
-          }
-
-          const { error } = await supabase
-            .from('users')
-            .upsert(upsertRow as any, { onConflict: 'id' });
-          
-          if (error) {
-            console.error('❌ Error upserting user:', error);
-          }
-        } catch (error) {
-          console.error('❌ Error accessing Supabase:', error);
-        }
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [isOffline]);
+        if (!active) return;
+        const dn = (profile as any)?.display_name as string | undefined;
+        if (dn) setDisplayName(dn);
+      } catch {}
+    })();
+    return () => { active = false; };
+  }, [client, ctxUser?.id]);
 
   const handleEmailPasswordAuth = async () => {
     if (!email || !password) {
@@ -234,7 +119,7 @@ export default function AuthButton() {
           setAuthError('Passwords do not match');
           return;
         }
-        const { data, error } = await supabase.auth.signUp({
+        const { data, error } = await client.auth.signUp({
           email,
           password,
           options: {
@@ -272,7 +157,7 @@ export default function AuthButton() {
           }
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { error } = await client.auth.signInWithPassword({
           email,
           password
         });
@@ -306,7 +191,7 @@ export default function AuthButton() {
     setAuthError('');
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await client.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`
       });
       
@@ -328,7 +213,7 @@ export default function AuthButton() {
       const redirectTo = typeof window !== 'undefined'
         ? `${window.location.origin}${window.location.pathname}`
         : undefined;
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error } = await client.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo },
       });
@@ -346,13 +231,13 @@ export default function AuthButton() {
   const handleSignOut = async () => {
     try {
       // Fast local clear to avoid stale UI when session is expired or network is slow
-      await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+      await client.auth.signOut({ scope: 'local' }).catch(() => undefined);
       clearUserFromLocalStorage();
       setUser(null);
       setIsDropdownOpen(false);
 
       // Attempt global sign-out in the background; if it fails, UI is still cleared
-      supabase.auth.signOut({ scope: 'global' }).catch((err) => {
+      client.auth.signOut({ scope: 'global' }).catch((err) => {
         console.warn('Non-fatal global sign-out issue:', err);
       });
 

@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import { Trophy, Users, Plus, LogOut, Copy, Check, User } from 'lucide-react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { useRouter } from 'next/navigation';
 import Header from '@/app/components/Header';
+import { useAuth } from '@/app/contexts/AuthContext';
 
 interface Leaderboard {
   id: string;
@@ -37,6 +37,7 @@ interface UserProfile {
 export default function LeaderboardClientPage() {
   const { darkMode } = useTheme();
   const router = useRouter();
+  const { user: authUser, client, loading: authLoading } = useAuth();
   const [leaderboards, setLeaderboards] = useState<Leaderboard[]>([]);
   const [selectedLeaderboard, setSelectedLeaderboard] = useState<string | null>(null);
   const [members, setMembers] = useState<LeaderboardMember[]>([]);
@@ -53,9 +54,10 @@ export default function LeaderboardClientPage() {
   const [hasJoinedPublic, setHasJoinedPublic] = useState<boolean>(false);
 
   useEffect(() => {
+    if (authLoading) return;
     loadUserAndLeaderboards();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authLoading]);
 
   useEffect(() => {
     if (selectedLeaderboard) {
@@ -71,7 +73,7 @@ export default function LeaderboardClientPage() {
   }, [leaderboards, selectedLeaderboard]);
 
   const loadUserAndLeaderboards = async () => {
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const supabase = client as any;
     if (!authUser) {
       setLoading(false);
       router.replace('/');
@@ -79,7 +81,7 @@ export default function LeaderboardClientPage() {
     }
     
     // Load user profile with display name
-    const { data: userProfile } = await (supabase as any)
+    const { data: userProfile } = await supabase
       .from('users')
       .select('display_name')
       .eq('id', authUser.id)
@@ -93,7 +95,7 @@ export default function LeaderboardClientPage() {
       });
     }
     
-    const { data: leaderboardData, error: leaderboardError } = await (supabase as any)
+    const { data: leaderboardData, error: leaderboardError } = await supabase
       .from('leaderboard_members')
       .select(`
         leaderboard_id,
@@ -125,7 +127,7 @@ export default function LeaderboardClientPage() {
 
     // Fetch global/public leaderboard definition for the card if not joined
     try {
-      const { data: pubLb } = await (supabase as any)
+      const { data: pubLb } = await supabase
         .from('leaderboards')
         .select('id,name,description,is_public,join_code,reset_frequency,created_by')
         .eq('is_public', true)
@@ -139,7 +141,8 @@ export default function LeaderboardClientPage() {
   };
 
   const loadLeaderboardMembers = async (leaderboardId: string) => {
-    const { data, error } = await (supabase as any)
+    const supabase = client as any;
+    const { data, error } = await supabase
       .from('leaderboard_members')
       .select(`
         user_id,
@@ -190,7 +193,7 @@ export default function LeaderboardClientPage() {
       setShowDisplayNameModal(true);
       return;
     }
-    const { error } = await supabase.rpc('join_public_leaderboard');
+    const { error } = await client.rpc('join_public_leaderboard');
     if (error) {
       console.error('Error joining public leaderboard:', error);
     } else {
@@ -206,7 +209,7 @@ export default function LeaderboardClientPage() {
       return;
     }
     
-    const { error } = await supabase.rpc('join_leaderboard_by_code', { p_join_code: joinCode });
+    const { error } = await client.rpc('join_leaderboard_by_code', { p_join_code: joinCode });
     if (error) {
       console.error('Error joining private leaderboard:', error);
     } else {
@@ -219,7 +222,7 @@ export default function LeaderboardClientPage() {
   const handleSetDisplayName = async () => {
     if (!displayName.trim()) return;
     
-    const { error } = await (supabase as any)
+    const { error } = await (client as any)
       .from('users')
       .update({ display_name: displayName.trim() } as any)
       .eq('id', user?.id);
@@ -230,12 +233,12 @@ export default function LeaderboardClientPage() {
       
       // Continue with pending action - directly call RPC since we now have display name
       if (pendingLeaderboardAction === 'public') {
-        const { error: joinError } = await supabase.rpc('join_public_leaderboard');
+        const { error: joinError } = await client.rpc('join_public_leaderboard');
         if (!joinError) {
           await loadUserAndLeaderboards();
         }
       } else if (pendingLeaderboardAction === 'private' && joinCode) {
-        const { error: joinError } = await supabase.rpc('join_leaderboard_by_code', { p_join_code: joinCode });
+        const { error: joinError } = await client.rpc('join_leaderboard_by_code', { p_join_code: joinCode });
         if (!joinError) {
           setShowJoinModal(false);
           setJoinCode('');
@@ -247,7 +250,7 @@ export default function LeaderboardClientPage() {
   };
 
   const leaveLeaderboard = async (leaderboardId: string) => {
-    const { error } = await supabase.rpc('leave_leaderboard', { p_leaderboard_id: leaderboardId });
+    const { error } = await client.rpc('leave_leaderboard', { p_leaderboard_id: leaderboardId });
     if (!error) {
       await loadUserAndLeaderboards();
       setSelectedLeaderboard(null);
@@ -535,6 +538,7 @@ export default function LeaderboardClientPage() {
 
 function CreateLeaderboardModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const { darkMode } = useTheme();
+  const { client } = useAuth();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [resetFrequency, setResetFrequency] = useState('month');
@@ -542,7 +546,7 @@ function CreateLeaderboardModal({ onClose, onCreated }: { onClose: () => void; o
 
   const handleCreate = async () => {
     setCreating(true);
-    const { data, error } = await supabase.rpc('create_private_leaderboard', {
+    const { data, error } = await client.rpc('create_private_leaderboard', {
       p_name: name,
       p_description: description,
       p_reset_frequency: resetFrequency

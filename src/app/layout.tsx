@@ -9,7 +9,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { getServerUser } from '@/lib/supabaseServer';
 import { cookies } from 'next/headers';
 import ThemeColorMeta from '@/app/components/ThemeColorMeta';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
+// import { createSupabaseServerClient } from '@/lib/supabaseServer';
 
 export const metadata: Metadata = {
   title: 'Scio.ly',
@@ -73,30 +73,8 @@ export default async function RootLayout({
   const themeCookie = cookieStore.get('theme')?.value;
   const initialDarkMode = themeCookie === 'dark' ? true : themeCookie === 'light' ? false : false;
 
-  // Seed display name into localStorage ASAP on the client to avoid reload flicker
-  let initialDisplayFirstName: string | null = null;
-  if (user) {
-    try {
-      const supabase = await createSupabaseServerClient();
-      const { data } = await (supabase as any)
-        .from('users')
-        .select('first_name, display_name')
-        .eq('id', user.id)
-        .maybeSingle();
-      const dbFirst: string | undefined = (data as any)?.first_name;
-      const dbDisplay: string | undefined = (data as any)?.display_name;
-      const metaFirst: string | undefined = (user.user_metadata?.first_name as string | undefined)
-        || ((user.user_metadata?.name as string | undefined) || (user.user_metadata?.full_name as string | undefined) || '')
-          .split(' ').filter(Boolean)[0];
-      initialDisplayFirstName = (dbFirst && dbFirst.trim())
-        ? dbFirst.trim()
-        : (dbDisplay && dbDisplay.trim())
-          ? dbDisplay.trim().split(' ')[0]
-          : (metaFirst && metaFirst.trim())
-            ? metaFirst.trim()
-            : null;
-    } catch {}
-  }
+  // Keep layout lean; AuthProvider will resolve user on client
+  const initialDisplayFirstName: string | null = null;
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -112,14 +90,7 @@ export default async function RootLayout({
         data-scio-display-name={initialDisplayFirstName || undefined}
         suppressHydrationWarning
       >
-        {/* Seed greeting name as early as possible on the client after body starts */}
-        {initialDisplayFirstName ? (
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `try{localStorage.setItem('scio_display_name', ${JSON.stringify(initialDisplayFirstName)});window.dispatchEvent(new CustomEvent('scio-display-name-updated',{detail:${JSON.stringify(initialDisplayFirstName)}}));}catch{}`,
-            }}
-          />
-        ) : null}
+        {/* AuthProvider centralizes session; no extra seeding here */}
         <ThemeProvider initialDarkMode={initialDarkMode}>
           <AuthProvider initialUser={user}>
             <Providers>
