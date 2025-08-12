@@ -45,32 +45,18 @@ export const getDailyMetrics = async (userId: string | null): Promise<DailyMetri
   const today = new Date().toISOString().split('T')[0];
 
   try {
-    const { data, error } = await (supabase as any)
-      .from('user_stats')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('date', today)
-      .maybeSingle();
-
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
-      console.error('Error getting metrics:', error);
-      return defaultMetrics;
-    }
-
-    if (data) {
+    const row = await fetchDailyUserStatsRow(userId, today);
+    if (row) {
       const synced: DailyMetrics = {
-        questionsAttempted: data.questions_attempted,
-        correctAnswers: data.correct_answers,
-        eventsPracticed: data.events_practiced || [],
-        eventQuestions: data.event_questions || {},
-        gamePoints: data.game_points
+        questionsAttempted: row.questions_attempted,
+        correctAnswers: row.correct_answers,
+        eventsPracticed: row.events_practiced || [],
+        eventQuestions: row.event_questions || {},
+        gamePoints: row.game_points,
       };
-      // Sync local cache for instant UI on next load
       saveLocalMetrics(synced);
       return synced;
     }
-
-    // Ensure local cache reflects zeros for today if no row yet
     saveLocalMetrics(defaultMetrics);
     return defaultMetrics;
   } catch (error) {
@@ -87,19 +73,9 @@ export const getWeeklyMetrics = async (userId: string | null): Promise<DailyMetr
   const weekAgoString = weekAgo.toISOString().split('T')[0];
 
   try {
-    const { data, error } = await (supabase as any)
-      .from('user_stats')
-      .select('*')
-      .eq('user_id', userId)
-      .gte('date', weekAgoString);
-
-    if (error) {
-      console.error('Error getting weekly metrics:', error);
-      return null;
-    }
-
+    const data = await fetchUserStatsSince(userId, weekAgoString);
     // Aggregate the weekly data
-    const aggregated = data.reduce((acc, day) => ({
+    const aggregated = data.reduce((acc: DailyMetrics, day) => ({
       questionsAttempted: acc.questionsAttempted + day.questions_attempted,
       correctAnswers: acc.correctAnswers + day.correct_answers,
       eventsPracticed: [...new Set([...acc.eventsPracticed, ...(day.events_practiced || [])])],
@@ -111,8 +87,8 @@ export const getWeeklyMetrics = async (userId: string | null): Promise<DailyMetr
     }), {
       questionsAttempted: 0,
       correctAnswers: 0,
-      eventsPracticed: [],
-      eventQuestions: {},
+      eventsPracticed: [] as string[],
+      eventQuestions: {} as Record<string, number>,
       gamePoints: 0
     });
 
@@ -131,19 +107,9 @@ export const getMonthlyMetrics = async (userId: string | null): Promise<DailyMet
   const monthAgoString = monthAgo.toISOString().split('T')[0];
 
   try {
-    const { data, error } = await (supabase as any)
-      .from('user_stats')
-      .select('*')
-      .eq('user_id', userId)
-      .gte('date', monthAgoString);
-
-    if (error) {
-      console.error('Error getting monthly metrics:', error);
-      return null;
-    }
-
+    const data = await fetchUserStatsSince(userId, monthAgoString);
     // Aggregate the monthly data
-    const aggregated = data.reduce((acc, day) => ({
+    const aggregated = data.reduce((acc: DailyMetrics, day) => ({
       questionsAttempted: acc.questionsAttempted + day.questions_attempted,
       correctAnswers: acc.correctAnswers + day.correct_answers,
       eventsPracticed: [...new Set([...acc.eventsPracticed, ...(day.events_practiced || [])])],
@@ -155,8 +121,8 @@ export const getMonthlyMetrics = async (userId: string | null): Promise<DailyMet
     }), {
       questionsAttempted: 0,
       correctAnswers: 0,
-      eventsPracticed: [],
-      eventQuestions: {},
+      eventsPracticed: [] as string[],
+      eventQuestions: {} as Record<string, number>,
       gamePoints: 0
     });
 
@@ -203,12 +169,7 @@ export const updateMetrics = async (
   
   try {
     // Get current stats for today
-    const { data: currentData, error: fetchError } = await (supabase as any)
-      .from('user_stats')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('date', today)
-      .maybeSingle();
+    const currentData = await fetchDailyUserStatsRow(userId, today);
 
     let currentStats: {
       questions_attempted: number;
@@ -224,7 +185,7 @@ export const updateMetrics = async (
       game_points: 0
     };
 
-    if (currentData && !fetchError) {
+    if (currentData) {
       currentStats = currentData;
     }
 
@@ -249,17 +210,31 @@ export const updateMetrics = async (
       game_points: currentStats.game_points
     };
 
-    const { data, error } = await (supabase as any)
-      .from('user_stats')
-      .upsert(updatedStats as any, { 
-        onConflict: 'user_id,date' 
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating metrics:', error);
-      return null;
+    let data;
+    {
+      const { data: upserted, error } = await (supabase as any)
+        .from('user_stats')
+        .upsert(updatedStats as any, { onConflict: 'user_id,date' })
+        .select()
+        .single();
+      if (error && (error as any).status && [401, 403].includes((error as any).status)) {
+        try { await supabase.auth.refreshSession(); } catch {}
+        const retry = await (supabase as any)
+          .from('user_stats')
+          .upsert(updatedStats as any, { onConflict: 'user_id,date' })
+          .select()
+          .single();
+        if (retry.error) {
+          console.error('Error updating metrics after refresh:', retry.error);
+          return null;
+        }
+        data = retry.data;
+      } else if (error) {
+        console.error('Error updating metrics:', error);
+        return null;
+      } else {
+        data = upserted;
+      }
     }
     // Mirror to localStorage for identical anonymous experience
     saveLocalMetrics({
@@ -293,3 +268,56 @@ export const updateMetrics = async (
     return null;
   }
 };
+
+// ---------- Internal helpers with auth refresh & retry ----------
+
+type UserStatsRow = {
+  user_id: string;
+  date: string;
+  questions_attempted: number;
+  correct_answers: number;
+  events_practiced: string[];
+  event_questions: Record<string, number>;
+  game_points: number;
+};
+
+export async function fetchDailyUserStatsRow(userId: string, date: string): Promise<UserStatsRow | null> {
+  const exec = async () => (supabase as any)
+    .from('user_stats')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('date', date)
+    .maybeSingle();
+
+  let { data, error } = await exec();
+  if (error && (error as any).status && [401, 403].includes((error as any).status)) {
+    try { await supabase.auth.refreshSession(); } catch {}
+    const retry = await exec();
+    data = retry.data; error = retry.error;
+  }
+  if (error && (error as any).code !== 'PGRST116') {
+    console.error('Error fetching daily user_stats row:', error);
+    return null;
+  }
+  return data || null;
+}
+
+export async function fetchUserStatsSince(userId: string, fromDate: string): Promise<UserStatsRow[]> {
+  const exec = async () => (supabase as any)
+    .from('user_stats')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('date', fromDate);
+
+  let { data, error } = await exec();
+  if (error && (error as any).status && [401, 403].includes((error as any).status)) {
+    try { await supabase.auth.refreshSession(); } catch {}
+    const retry = await exec();
+    data = retry.data; error = retry.error;
+  }
+  if (error) {
+    console.error('Error fetching user_stats since date:', error);
+    return [];
+  }
+  return data || [];
+}

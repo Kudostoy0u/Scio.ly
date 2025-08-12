@@ -13,6 +13,11 @@ interface MetricsCardProps {
   onViewChange: (view: 'daily' | 'weekly' | 'allTime') => void;
   color: string;
   darkMode: boolean;
+  // Optional denominators to render as fraction (numerator/denominator)
+  dailyDenominator?: number;
+  weeklyDenominator?: number;
+  allTimeDenominator?: number;
+  formatAsFraction?: boolean;
 }
 
 export default function MetricsCard({
@@ -23,7 +28,11 @@ export default function MetricsCard({
   view,
   onViewChange,
   color,
-  darkMode
+  darkMode,
+  dailyDenominator,
+  weeklyDenominator,
+  allTimeDenominator,
+  formatAsFraction
 }: MetricsCardProps) {
   const cardStyle = darkMode
     ? 'bg-gray-800 border-gray-700 text-white'
@@ -44,6 +53,22 @@ export default function MetricsCard({
     return input.charAt(0) + input.slice(1).toLowerCase();
   };
 
+  const getDisplay = (currentView: 'daily' | 'weekly' | 'allTime') => {
+    if (!formatAsFraction) {
+      const value = currentView === 'daily' ? dailyValue : currentView === 'weekly' ? weeklyValue : allTimeValue;
+      return <NumberAnimation value={value} className={`text-4xl font-bold ${color}`} />;
+    }
+    const numerator = currentView === 'daily' ? dailyValue : currentView === 'weekly' ? weeklyValue : allTimeValue;
+    const denominator = currentView === 'daily' ? (dailyDenominator ?? 0) : currentView === 'weekly' ? (weeklyDenominator ?? 0) : (allTimeDenominator ?? 0);
+    return (
+      <div className={`text-4xl font-bold ${color}`}>
+        <span>{numerator}</span>
+        <span className={darkMode ? 'text-gray-300' : 'text-gray-500'}>/</span>
+        <span className="text-blue-600">{denominator}</span>
+      </div>
+    );
+  };
+
   return (
     <div className="perspective-1000 hover:scale-[1.02] transition-transform duration-300">
       <div
@@ -55,7 +80,7 @@ export default function MetricsCard({
             : view === 'weekly' 
               ? 'rotateX(180deg)' 
               : 'rotateX(360deg)',
-          minHeight: '125px'
+          minHeight: '140px'
         }}
         onClick={handleClick}
       >
@@ -72,7 +97,7 @@ export default function MetricsCard({
           <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
             {`${toSentenceCase(title)} today`}
           </h3>
-          <NumberAnimation value={dailyValue} className={`text-4xl font-bold ${color}`} />
+          {getDisplay('daily')}
         </div>
         
         {/* Weekly View */}
@@ -88,7 +113,7 @@ export default function MetricsCard({
           <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
             {`${toSentenceCase(title)} this week`}
           </h3>
-          <NumberAnimation value={weeklyValue} className={`text-4xl font-bold ${color}`} />
+          {getDisplay('weekly')}
         </div>
 
         {/* All Time View */}
@@ -104,7 +129,7 @@ export default function MetricsCard({
           <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
             {`${toSentenceCase(title)} all-time`}
           </h3>
-          <NumberAnimation value={allTimeValue} className={`text-4xl font-bold ${color}`} />
+          {getDisplay('allTime')}
         </div>
       </div>
     </div>

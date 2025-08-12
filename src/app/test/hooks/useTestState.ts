@@ -68,23 +68,10 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     if (storedUserAnswers) {
       setUserAnswers(JSON.parse(storedUserAnswers));
     }
-    
-    return () => {
-      if (!localStorage.getItem('testSubmitted')) {
-        localStorage.removeItem('testUserAnswers');
-      }
-    };
   }, []);
 
   // Load test data
   useEffect(() => {
-    console.log('[TEST] useEffect triggered', { 
-      fetchStarted: fetchStartedRef.current, 
-      dataLength: data.length, 
-      isLoading, 
-      hasInitialData: !!initialData,
-      hasInitialRouterData: !!initialRouterData 
-    });
     
     // Clear any existing bookmarked state that might interfere
     localStorage.removeItem('testFromBookmarks');
@@ -95,7 +82,6 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     }
     
     if (fetchStartedRef.current || data.length > 0) {
-      console.log('[TEST] early return', { reason: fetchStartedRef.current ? 'fetchStarted' : 'dataLength' });
       return;
     }
     
@@ -182,7 +168,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         const idPct = typeof idPctRaw !== 'undefined' ? Math.max(0, Math.min(100, parseInt(idPctRaw))) : 0;
         const idCount = Math.round((idPct / 100) * total);
         const baseCount = Math.max(0, total - idCount);
-        console.log('[IDGEN][test] start', { event: routerParams.eventName, total, idPct, baseCount, idCount, types: routerParams.types });
+        
 
         let selectedQuestions: Question[] = [];
 
@@ -191,14 +177,14 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           const requestCount = Math.max(baseCount * 3, 50);
           const params = buildApiParams({ ...routerParams }, requestCount);
           const apiUrl = `${api.questions}?${params}`;
-          console.log('[IDGEN][test] fetching base questions', { requestCount, apiUrl });
+          
 
           let response: Response | null = null;
           try { response = await fetch(apiUrl); } catch { response = null; }
           let apiResponse: any = null;
           if (response && response.ok) {
             apiResponse = await response.json();
-            console.log('[IDGEN][test] base questions response ok', { count: Array.isArray(apiResponse?.data) ? apiResponse.data.length : 'n/a' });
+            
           } else {
             const evt = routerParams.eventName as string | undefined;
             if (evt) {
@@ -206,14 +192,14 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
               const cached = await getEventOfflineQuestions(slug);
               if (Array.isArray(cached) && cached.length > 0) {
                 apiResponse = { success: true, data: cached };
-                console.log('[IDGEN][test] using cached base questions', { count: cached.length });
+                
               }
             }
             if (!apiResponse) throw new Error('Failed to load questions.');
           }
           const questions: Question[] = (apiResponse.data || []).filter((q: any) => q.answers && Array.isArray(q.answers) && q.answers.length > 0);
           selectedQuestions = shuffleArray(questions).slice(0, baseCount);
-          console.log('[IDGEN][test] selected base questions', { selected: selectedQuestions.length });
+          
         }
 
         // 2) ID questions (blind to filters)
@@ -232,7 +218,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           const resp = await fetch(idUrl);
           const { success, data, namePool } = await resp.json();
           if (success) {
-            console.log('[IDGEN][test] id endpoint success', { rows: Array.isArray(data) ? data.length : 'n/a', namePoolSize: Array.isArray(namePool) ? namePool.length : 'n/a' });
+            
             const idQuestions: Question[] = data.map((item: any) => {
               const imgs: string[] = Array.isArray(item.images) ? item.images : [];
               const chosenImg = imgs.length ? imgs[Math.floor(Math.random() * imgs.length)] : undefined;
@@ -269,7 +255,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
             selectedQuestions = shuffleArray(selectedQuestions.concat(idQuestions));
             console.log('[IDGEN][test] combined & shuffled final questions', { total: selectedQuestions.length });
           } else {
-            console.warn('[IDGEN][test] id endpoint returned failure');
+            
           }
         }
 
@@ -279,8 +265,8 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         // Store questions with imageData intact (CDN URLs are small)
         localStorage.setItem('testQuestions', JSON.stringify(questionsWithIndex));
         setData(questionsWithIndex);
-      } catch (error) {
-        console.error('[IDGEN][test] error', error);
+      } catch {
+        
         setFetchError('Failed to load questions. Please try again later.');
       } finally {
         setIsLoading(false);
@@ -386,16 +372,6 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   const handleSubmit = useCallback(async () => {
     setIsSubmitted(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    
-    console.log('🔴 SUBMITTING TEST:');
-    console.log('  Total questions:', data.length);
-    console.log('  User answers:', userAnswers);
-    console.log('  Questions data:', data.map((q, i) => ({
-      index: i,
-      question: q.question.substring(0, 50) + '...',
-      answers: q.answers,
-      options: q.options
-    })));
     
     interface FRQToGrade {
       index: number;

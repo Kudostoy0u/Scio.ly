@@ -8,8 +8,10 @@ import Header from '@/app/components/Header';
 import { clearTestSession } from '@/app/utils/timeManagement';
 import { Event, Settings } from '../types';
 import { NORMAL_DEFAULTS, savePreferences } from '../utils';
+import { buildTestParams, saveTestParams } from '@/app/utils/testParams';
 import EventList from './EventList';
 import TestConfiguration from './TestConfiguration';
+import { ArrowUpRight } from 'lucide-react';
 
 export default function PracticeDashboard() {
   const router = useRouter();
@@ -19,6 +21,7 @@ export default function PracticeDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sortOption, setSortOption] = useState('alphabetical');
+  const [continueInfo, setContinueInfo] = useState<{ eventName: string; route: '/test' | '/codebusters' } | null>(null);
 
   const [settings, setSettings] = useState<Settings>({
     questionCount: NORMAL_DEFAULTS.questionCount,
@@ -54,6 +57,62 @@ export default function PracticeDashboard() {
     }
   }, []);
 
+  // Detect if there is a test in progress with at least one answer
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      // Prefer session info for event name and submission state
+      const sessionStr = localStorage.getItem('currentTestSession');
+      const session = sessionStr ? JSON.parse(sessionStr) as { eventName?: string; isSubmitted?: boolean } : null;
+      if (session && session.isSubmitted) {
+        setContinueInfo(null);
+        return;
+      }
+
+      // General tests: check answered state
+      const testAnswersStr = localStorage.getItem('testUserAnswers');
+      const testAnswers = testAnswersStr ? JSON.parse(testAnswersStr) as Record<string, (string | null)[]> : null;
+      const hasGeneralProgress = !!testAnswers && Object.values(testAnswers).some(arr => Array.isArray(arr) ? arr.some(v => v && String(v).length > 0) : !!testAnswersStr);
+
+      // Codebusters: check any solution/notes fields populated
+      const cbQuotesStr = localStorage.getItem('codebustersQuotes');
+      let hasCodebustersProgress = false;
+      if (cbQuotesStr) {
+        try {
+          const quotes = JSON.parse(cbQuotesStr) as Array<any>;
+          hasCodebustersProgress = Array.isArray(quotes) && quotes.some(q => {
+            const hasSolution = !!(q && q.solution && Object.values(q.solution).some((v) => typeof v === 'string' && v.length > 0));
+            const hasHill = !!(q && q.hillSolution && q.hillSolution.plaintext && Object.values(q.hillSolution.plaintext).some((v) => typeof v === 'string' && v.length > 0));
+            const hasNihilist = !!(q && q.nihilistSolution && Object.values(q.nihilistSolution).some((v) => typeof v === 'string' && v.length > 0));
+            const hasFractionated = !!(q && q.fractionatedSolution && Object.values(q.fractionatedSolution).some((v) => typeof v === 'string' && v.length > 0));
+            const hasColumnar = !!(q && q.columnarSolution && Object.values(q.columnarSolution).some((v) => typeof v === 'string' && v.length > 0));
+            const hasXeno = !!(q && q.xenocryptSolution && Object.values(q.xenocryptSolution).some((v) => typeof v === 'string' && v.length > 0));
+            const hasNotes = !!(q && q.frequencyNotes && Object.values(q.frequencyNotes).some((v) => typeof v === 'string' && v.length > 0));
+            return hasSolution || hasHill || hasNihilist || hasFractionated || hasColumnar || hasXeno || hasNotes;
+          });
+        } catch {}
+      }
+
+      if (hasCodebustersProgress) {
+        const params = localStorage.getItem('testParams');
+        const eventName = (() => { try { return (params ? JSON.parse(params).eventName : undefined) || 'Codebusters'; } catch { return 'Codebusters'; }})();
+        setContinueInfo({ eventName, route: '/codebusters' });
+        return;
+      }
+
+      if (hasGeneralProgress) {
+        const params = localStorage.getItem('testParams');
+        const eventName = (() => { try { return (params ? JSON.parse(params).eventName : undefined) || 'Practice Test'; } catch { return 'Practice Test'; }})();
+        setContinueInfo({ eventName, route: '/test' });
+        return;
+      }
+
+      setContinueInfo(null);
+    } catch {
+      setContinueInfo(null);
+    }
+  }, []);
+
   // This function is no longer needed as it's handled in TestConfiguration component
   // const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
   //   const { id, value } = e.target;
@@ -78,65 +137,21 @@ export default function PracticeDashboard() {
     // Clear any existing time management session
     clearTestSession();
 
-    // Check if Codebusters is selected
+    // ensure no stale sessions affect timer
+    try { clearTestSession(); } catch {}
+    const testParams = buildTestParams(selectedEventObj.name, settings);
+    saveTestParams(testParams);
     if (selectedEventObj.name === 'Codebusters') {
-
-      const testParams = {
-        eventName: selectedEventObj.name,
-        questionCount: settings.questionCount,
-        timeLimit: settings.timeLimit,
-        difficulties: settings.difficulties,
-        types: settings.types,
-        division: settings.division,
-        tournament: 'any', // Always use 'any' for privacy
-        subtopics: settings.subtopics,
-        cipherTypes: settings.subtopics.length > 0 ? settings.subtopics : [] // For backward compatibility with existing codebusters logic
-      };
-
-      localStorage.setItem('testParams', JSON.stringify(testParams));
-      localStorage.removeItem('testQuestions');
-      localStorage.removeItem('testUserAnswers');
-      localStorage.removeItem('codebustersQuotes');
-      localStorage.removeItem('codebustersIsTestSubmitted');
-      localStorage.removeItem('codebustersTestScore');
-      localStorage.removeItem('codebustersTimeLeft');
-      localStorage.removeItem('shareCode');
-      router.push('/codebusters');
-      return;
-    }
-
-    const testParams = {
-      eventName: selectedEventObj.name,
-      questionCount: settings.questionCount,
-      timeLimit: settings.timeLimit,
-      difficulties: settings.difficulties,
-      types: settings.types,
-      division: settings.division,
-      tournament: 'any',
-      subtopics: settings.subtopics,
-      idPercentage: settings.idPercentage,
-    };
-
-    localStorage.setItem('testParams', JSON.stringify(testParams));
-    localStorage.removeItem('testQuestions');
-    localStorage.removeItem('testUserAnswers');
-
-    if (selectedEventObj.name === 'Codebusters') {
+      // clear codebusters legacy local keys for safety
+      try {
+        localStorage.removeItem('codebustersQuotes');
+        localStorage.removeItem('codebustersIsTestSubmitted');
+        localStorage.removeItem('codebustersTestScore');
+        localStorage.removeItem('codebustersTimeLeft');
+        localStorage.removeItem('shareCode');
+      } catch {}
       router.push('/codebusters');
     } else {
-      try {
-        const cookiePayload = encodeURIComponent(JSON.stringify({
-          eventName: selectedEventObj.name,
-          questionCount: settings.questionCount,
-          timeLimit: settings.timeLimit,
-          types: settings.types,
-          division: settings.division,
-          subtopics: settings.subtopics,
-          idPercentage: settings.idPercentage,
-        }));
-        // 10 minutes expiry
-        document.cookie = `scio_test_params=${cookiePayload}; Path=/; Max-Age=600; SameSite=Lax`;
-      } catch {}
       router.push('/test');
     }
   };
@@ -504,7 +519,22 @@ export default function PracticeDashboard() {
               </svg>
             </button>
           </div>
-          <p className={`mt-2  ${
+          {continueInfo && (
+            <button
+              type="button"
+              onClick={() => router.push(continueInfo.route)}
+              className={`mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm ${
+                darkMode
+                  ? 'bg-transparent border-yellow-500/60 text-yellow-300 hover:border-yellow-400'
+                  : 'bg-transparent border-yellow-500/70 text-yellow-700 hover:border-yellow-500'
+              }`}
+            >
+              <span>{`Continue test for ${continueInfo.eventName}?`}</span>
+              <ArrowUpRight className="w-4 h-4" />
+            </button>
+          )}
+
+          <p className={`mt-2 ${
             darkMode ? 'text-gray-400' : 'text-gray-600'
           }`}>
             Select an event from the 2026 events list and configure your practice session
@@ -534,30 +564,7 @@ export default function PracticeDashboard() {
         </div>
       </main>
 
-      {/* Back Button (bottom-left) */}
-      <button
-        onClick={() => router.push('/dashboard')}
-        className={`fixed bottom-8 left-8 p-4 rounded-full shadow-lg transition-transform duration-300 hover:scale-110  ${
-          darkMode
-            ? 'bg-blue-600 hover:bg-blue-700'
-            : 'bg-blue-500 hover:bg-blue-600'
-        } text-white z-50`}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M10 19l-7-7m0 0l7-7m-7 7h18"
-          />
-        </svg>
-      </button>
+      {/* No floating back button on practice page */}
 
       {/* Global ToastContainer handles notifications */}
       <style jsx global>{`

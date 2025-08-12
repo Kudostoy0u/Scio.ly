@@ -68,6 +68,17 @@ export default function TestPage({ initialData, initialRouterData }: { initialDa
           onReset={handleResetTest}
         />
 
+        {/* Inline back link to Practice */}
+        <div className="w-full max-w-3xl mt-0.5 mb-5">
+          <button
+            onClick={handleBackToMain}
+            className={`group inline-flex items-center text-base font-medium ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <span className="transition-transform duration-200 group-hover:-translate-x-1">←</span>
+            <span className="ml-2">Go back</span>
+          </button>
+        </div>
+
         <ProgressBar
           answeredCount={Object.keys(userAnswers).length}
           totalCount={data.length}

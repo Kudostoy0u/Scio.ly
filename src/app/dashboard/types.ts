@@ -34,6 +34,7 @@ export interface WelcomeMessageProps {
   darkMode: boolean;
   currentUser: User | null;
   setDarkMode: (value: boolean) => void;
+  greetingName?: string;
 }
 
 export interface NumberAnimationProps {

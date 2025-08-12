@@ -18,6 +18,7 @@ import WelcomeMessage from './WelcomeMessage';
 import MetricsCard from './MetricsCard';
 import ActionButtons from './ActionButtons';
 import QuestionsThisWeekChart from './QuestionsThisWeekChart';
+import FavoriteConfigsCard from './FavoriteConfigsCard';
 
 import AnimatedAccuracy from './AnimatedAccuracy';
 
@@ -27,10 +28,12 @@ export default function DashboardMain({
   initialUser,
   initialMetrics,
   initialHistoryData,
+  initialGreetingName,
 }: {
   initialUser?: User | null;
   initialMetrics?: { questionsAttempted: number; correctAnswers: number; eventsPracticed: string[]; accuracy: number };
   initialHistoryData?: { historicalData: DailyData[]; historyData: HistoryData };
+  initialGreetingName?: string;
 }) {
   const router = useRouter();
   const { darkMode, setDarkMode } = useTheme();
@@ -44,11 +47,10 @@ export default function DashboardMain({
   const [historicalData, setHistoricalData] = useState<DailyData[]>(initialHistoryData?.historicalData ?? []);
   const [historyData, setHistoryData] = useState<HistoryData>(initialHistoryData?.historyData ?? {});
   const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [greetingName, setGreetingName] = useState<string>(initialGreetingName || '');
 
   // View states for metrics cards
-  const [questionsView, setQuestionsView] = useState<'daily' | 'weekly' | 'allTime'>('daily');
   const [correctView, setCorrectView] = useState<'daily' | 'weekly' | 'allTime'>('daily');
-  const [eventsView, setEventsView] = useState<'daily' | 'weekly' | 'allTime'>('daily');
   const [accuracyView, setAccuracyView] = useState<'daily' | 'weekly' | 'allTime'>('daily');
 
   // Card style for consistent theming (no shadow)
@@ -127,68 +129,25 @@ export default function DashboardMain({
           return;
         }
 
-        // Logged-in: seed UI instantly from localStorage cache, then refresh from Supabase
-        try {
-          const todayKey = new Date().toISOString().split('T')[0];
-          const raw = typeof window !== 'undefined' ? localStorage.getItem(`metrics_${todayKey}`) : null;
-          if (raw) {
-            const parsed = JSON.parse(raw) as { questionsAttempted?: number; correctAnswers?: number; eventsPracticed?: string[] };
-            const q = parsed.questionsAttempted || 0;
-            const c = parsed.correctAnswers || 0;
-            setMetrics({
-              questionsAttempted: q,
-              correctAnswers: c,
-              eventsPracticed: parsed.eventsPracticed || [],
-              accuracy: q > 0 ? (c / q) * 100 : 0,
-            });
-          }
-          // Also seed history from local to avoid empty charts
-          const localHistoryEntries: Array<{ date: string; questions_attempted: number; correct_answers: number; events_practiced: string[] }>= [];
-          if (typeof window !== 'undefined') {
-            for (let i = 0; i < localStorage.length; i++) {
-              const key = localStorage.key(i) || '';
-              if (key.startsWith('metrics_')) {
-                const date = key.replace('metrics_', '');
-                try {
-                  const rawItem = localStorage.getItem(key);
-                  if (!rawItem) continue;
-                  const parsed = JSON.parse(rawItem) as { questionsAttempted?: number; correctAnswers?: number; eventsPracticed?: string[] };
-                  localHistoryEntries.push({
-                    date,
-                    questions_attempted: parsed.questionsAttempted || 0,
-                    correct_answers: parsed.correctAnswers || 0,
-                    events_practiced: parsed.eventsPracticed || [],
-                  });
-                } catch {}
-              }
-            }
-          }
-          if (localHistoryEntries.length > 0) {
-            localHistoryEntries.sort((a, b) => a.date.localeCompare(b.date));
-            setHistoricalData(localHistoryEntries.map(item => ({ date: item.date, count: item.questions_attempted || 0 })));
-            const historyObj: HistoryData = {} as any;
-            localHistoryEntries.forEach(item => {
-              historyObj[item.date] = {
-                questionsAttempted: item.questions_attempted || 0,
-                correctAnswers: item.correct_answers || 0,
-                eventsPracticed: item.events_practiced || [],
-              };
-            });
-            setHistoryData(historyObj);
-          }
-        } catch {}
-
-        if (!initialMetrics) {
+        {
           // Fetch daily metrics
           const dailyMetrics = await getDailyMetrics(effectiveUser.id);
           if (dailyMetrics) {
             const accuracy = dailyMetrics.questionsAttempted > 0
               ? (dailyMetrics.correctAnswers / dailyMetrics.questionsAttempted) * 100
               : 0;
-            
-            setMetrics({
-              ...dailyMetrics,
-              accuracy
+            // Avoid state churn if identical to current values
+            setMetrics(prev => {
+              const next = { ...dailyMetrics, accuracy };
+              if (
+                prev.questionsAttempted === next.questionsAttempted &&
+                prev.correctAnswers === next.correctAnswers &&
+                prev.accuracy === next.accuracy &&
+                (prev.eventsPracticed || []).join('|') === (next.eventsPracticed || []).join('|')
+              ) {
+                return prev;
+              }
+              return next;
             });
           }
 
@@ -204,7 +163,11 @@ export default function DashboardMain({
               date: item.date,
               count: item.questions_attempted || 0
             }));
-            setHistoricalData(processedData);
+            setHistoricalData(prev => {
+              const sameLength = prev.length === processedData.length;
+              const same = sameLength && prev.every((p, i) => p.date === processedData[i].date && p.count === processedData[i].count);
+              return same ? prev : processedData;
+            });
 
             // Create history data object for charts
             const historyObj: HistoryData = {};
@@ -216,18 +179,46 @@ export default function DashboardMain({
                 eventsPracticed: item.events_practiced || []
               };
             });
-            setHistoryData(historyObj);
+            setHistoryData(prev => {
+              const keysPrev = Object.keys(prev);
+              const keysNext = Object.keys(historyObj);
+              const sameKeys = keysPrev.length === keysNext.length && keysPrev.every(k => keysNext.includes(k));
+              const sameValues = sameKeys && keysPrev.every(k => {
+                const a = prev[k]; const b = historyObj[k];
+                return (
+                  (a?.questionsAttempted || 0) === (b?.questionsAttempted || 0) &&
+                  (a?.correctAnswers || 0) === (b?.correctAnswers || 0) &&
+                  (a?.eventsPracticed || []).join('|') === (b?.eventsPracticed || []).join('|')
+                );
+              });
+              return sameValues ? prev : historyObj;
+            });
           }
+
+          // Fetch preferred greeting name in the same flow as metrics
+          try {
+            const { data } = await (supabase as any)
+              .from('users')
+              .select('first_name, display_name')
+              .eq('id', effectiveUser.id)
+              .maybeSingle();
+            const first: string | undefined = (data as any)?.first_name;
+            const display: string | undefined = (data as any)?.display_name;
+            const chosen = (first && first.trim()) ? first.trim() : (display && display.trim()) ? display.trim().split(' ')[0] : '';
+            if (chosen) {
+              setGreetingName(prev => prev || chosen);
+              try { localStorage.setItem('scio_display_name', chosen); } catch {}
+            }
+          } catch {}
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       }
     };
 
-    if (!initialMetrics || !initialHistoryData) {
-      fetchData();
-    }
-  }, [initialUser, initialMetrics, initialHistoryData]);
+    // Always fetch after mount to revalidate session and prevent stale zero-state
+    fetchData();
+  }, [initialUser]);
 
   // Refresh metrics when auth state changes on the client
   useEffect(() => {
@@ -373,29 +364,7 @@ export default function DashboardMain({
     return Object.values(historyData).reduce((sum, d) => sum + (d?.correctAnswers || 0), 0);
   };
 
-  const calculateWeeklyEvents = (): number => {
-    const last7Days: string[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      last7Days.push(date.toISOString().split('T')[0]);
-    }
-    const setUnique = new Set<string>();
-    last7Days.forEach(d => {
-      (historyData[d]?.eventsPracticed || []).forEach(ev => setUnique.add(ev));
-    });
-    return setUnique.size;
-  };
-
-  const calculateAllTimeEvents = (): number => {
-    const all = new Set<string>();
-    Object.values(historyData).forEach(day => {
-      (day.eventsPracticed || []).forEach(ev => all.add(ev));
-    });
-    // Fallback to today's if history empty
-    if (all.size === 0) return metrics.eventsPracticed.length;
-    return all.size;
-  };
+  // Events cards were removed; corresponding calculators no longer needed
 
   return (
     <div className="relative min-h-screen">
@@ -415,7 +384,7 @@ export default function DashboardMain({
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             {/* Welcome Message - Takes 2/3 on desktop */}
             <div className="lg:col-span-2">
-              <WelcomeMessage darkMode={darkMode} currentUser={currentUser} setDarkMode={setDarkMode} />
+              <WelcomeMessage darkMode={darkMode} currentUser={currentUser} setDarkMode={setDarkMode} greetingName={greetingName} />
             </div>
             
             {/* Practice Button - Takes 1/3 on desktop */}
@@ -431,22 +400,11 @@ export default function DashboardMain({
           </div>
 
           {/* Metrics Section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {/* Questions Attempted Card */}
-            <MetricsCard
-              title="Questions Attempted"
-              dailyValue={metrics.questionsAttempted}
-              weeklyValue={calculateWeeklyQuestions()}
-              allTimeValue={calculateAllTimeQuestions()}
-              view={questionsView}
-              onViewChange={setQuestionsView}
-              color="text-blue-600"
-              darkMode={darkMode}
-            />
-
-            {/* Correct Answers Card */}
-            <MetricsCard
-              title="Correct Answers"
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            {/* Correct / Attempted merged */}
+            <div className="md:col-span-1">
+              <MetricsCard
+              title="Questions Correct"
               dailyValue={metrics.correctAnswers}
               weeklyValue={calculateWeeklyCorrect()}
               allTimeValue={calculateAllTimeCorrect()}
@@ -454,19 +412,16 @@ export default function DashboardMain({
               onViewChange={setCorrectView}
               color="text-green-600"
               darkMode={darkMode}
-            />
+              dailyDenominator={metrics.questionsAttempted}
+              weeklyDenominator={calculateWeeklyQuestions()}
+              allTimeDenominator={calculateAllTimeQuestions()}
+              formatAsFraction={true}
+              />
+            </div>
 
-            {/* Events Practiced Card */}
-            <MetricsCard
-              title="Events Practiced"
-              dailyValue={metrics.eventsPracticed.length}
-              weeklyValue={calculateWeeklyEvents()}
-              allTimeValue={calculateAllTimeEvents()}
-              view={eventsView}
-              onViewChange={setEventsView}
-              color="text-purple-600"
-              darkMode={darkMode}
-            />
+            <div className="md:col-span-3">
+              <FavoriteConfigsCard />
+            </div>
           </div>
 
           {/* Recent Activity */}

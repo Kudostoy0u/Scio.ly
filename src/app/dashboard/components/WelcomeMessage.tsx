@@ -2,87 +2,81 @@
 
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { WelcomeMessageProps } from '../types';
 
-export default function WelcomeMessage({ darkMode, currentUser, setDarkMode }: WelcomeMessageProps) {
+export default function WelcomeMessage({ darkMode, currentUser: _currentUser, setDarkMode, greetingName: greetingNameProp }: WelcomeMessageProps) {
   const [greetingName, setGreetingName] = useState<string>(() => {
+    // Depend on localStorage primarily; avoid deriving from email/username
     try {
       const cachedFirst = typeof window !== 'undefined' ? localStorage.getItem('scio_display_name') : null;
       if (cachedFirst && cachedFirst.trim()) return cachedFirst.trim();
-      // Avoid using username/email; we will resolve asynchronously to a first name if available
     } catch {}
     return '';
   });
 
+  // If a prop is provided from DashboardMain, prefer it and sync to localStorage
   useEffect(() => {
-    const resolveName = async () => {
-      // 1) Try users table: first_name, then display_name
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        const userId = user?.id || currentUser?.id || null;
-        const email = user?.email || currentUser?.email || '';
-        if (userId) {
-          const { data } = await supabase
-            .from('users')
-            .select('first_name, display_name')
-            .eq('id', userId)
-            .single();
-          const first = (data as any)?.first_name as string | undefined;
-          const display = (data as any)?.display_name as string | undefined;
-          if (first && first.trim()) {
-            const name = first.trim();
-            setGreetingName(name);
-            try { localStorage.setItem('scio_display_name', name); } catch {}
-            return;
-          }
-          if (display && display.trim()) {
-            const name = display.trim().split(' ')[0];
-            setGreetingName(name);
-            try { localStorage.setItem('scio_display_name', name); } catch {}
-            return;
-          }
-        }
+    if (greetingNameProp && greetingNameProp.trim()) {
+      setGreetingName(prev => prev || greetingNameProp.trim());
+      try { localStorage.setItem('scio_display_name', greetingNameProp.trim()); } catch {}
+    }
+  }, [greetingNameProp]);
 
-        // 2) Fallback to auth metadata first_name/name (prefer auth user, then currentUser)
-        const authFirst = (user?.user_metadata?.first_name as string | undefined) ||
-          ((user?.user_metadata?.name as string | undefined) || (user?.user_metadata?.full_name as string | undefined) || '')
-            .split(' ').filter(Boolean)[0];
-        const propFirst = (currentUser?.user_metadata?.first_name as string | undefined) ||
-          ((currentUser?.user_metadata?.name as string | undefined) || (currentUser?.user_metadata?.full_name as string | undefined) || '')
-            .split(' ').filter(Boolean)[0];
-        const metaFirst = authFirst || propFirst;
-        if (metaFirst && metaFirst.trim()) {
-          setGreetingName(metaFirst.trim());
-          try { localStorage.setItem('scio_display_name', metaFirst.trim()); } catch {}
-          return;
-        }
+  useEffect(() => {
+    // On mount, prefer local cache
+    try {
+      const cached = localStorage.getItem('scio_display_name');
+      if (cached && cached.trim()) setGreetingName(cached.trim());
+    } catch {}
 
-        // 3) Fallback to email local part
-        if (email) {
-          const fallback = email.split('@')[0];
-          if (fallback) {
-            setGreetingName(fallback);
-            try { localStorage.setItem('scio_display_name', fallback); } catch {}
-          }
-          return;
-        }
-        // No-op if nothing resolved; preserve any existing cached name to avoid clearing UI
-      } catch {
-        // Fallbacks only
-        const email = currentUser?.email || '';
-        const metaFirst = (currentUser?.user_metadata?.first_name as string | undefined) ||
-          ((currentUser?.user_metadata?.name as string | undefined) || (currentUser?.user_metadata?.full_name as string | undefined) || '')
-            .split(' ').filter(Boolean)[0];
-        const fallback = metaFirst || (email ? email.split('@')[0] : '');
-        if (fallback) {
-          setGreetingName(fallback);
-          try { localStorage.setItem('scio_display_name', fallback); } catch {}
-        }
-      }
+    // Listen for explicit updates from login/profile flows
+    const onNameUpdated = (e: Event) => {
+      const ce = e as CustomEvent<string>;
+      const next = (typeof ce.detail === 'string' ? ce.detail : null) || (() => {
+        try { return localStorage.getItem('scio_display_name'); } catch { return null; }
+      })();
+      if (next && next.trim()) setGreetingName(next.trim());
     };
-    resolveName();
-  }, [currentUser]);
+    window.addEventListener('scio-display-name-updated' as any, onNameUpdated as any);
+
+    // Multiple short retries to catch SSR/CSR seeding sequence
+    const attempts = [0, 60, 120, 240];
+    const timers: any[] = [];
+    attempts.forEach(ms => {
+      const t = setTimeout(() => {
+        try {
+          const cached = localStorage.getItem('scio_display_name');
+          if (cached && cached.trim()) setGreetingName(prev => prev || cached.trim());
+        } catch {}
+      }, ms);
+      timers.push(t);
+    });
+
+    return () => {
+      window.removeEventListener('scio-display-name-updated' as any, onNameUpdated as any);
+      timers.forEach(t => clearTimeout(t));
+    };
+  }, []);
+
+  // Keep cache fresh when name is set
+  useEffect(() => {
+    if (greetingName) {
+      try { localStorage.setItem('scio_display_name', greetingName); } catch {}
+    }
+  }, [greetingName]);
+
+  // Update on window focus
+  useEffect(() => {
+    const onFocus = () => {
+      try {
+        const cached = localStorage.getItem('scio_display_name');
+        if (cached && cached.trim()) setGreetingName((prev) => prev || cached.trim());
+      } catch {}
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
+  const resolvedName = (greetingNameProp && greetingNameProp.trim()) || (greetingName && greetingName.trim()) || '';
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -96,9 +90,7 @@ export default function WelcomeMessage({ darkMode, currentUser, setDarkMode }: W
         <div>
           <h1 className={`text-3xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             Welcome back
-            <span suppressHydrationWarning>
-              {greetingName ? `, ${greetingName}` : ''}
-            </span>
+            <span key={resolvedName}>{resolvedName ? `, ${resolvedName}` : ''}</span>
             ! 👋
           </h1>
           <p className={`text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>

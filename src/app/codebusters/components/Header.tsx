@@ -24,7 +24,7 @@ export const Header: React.FC<HeaderProps> = ({ darkMode, timeLeft, onReset }) =
         </svg>
       </button>
       
-      <header className="w-full max-w-3xl flex justify-between items-center py-4">
+      <header className="w-full max-w-3xl flex justify-between items-center pt-3 pb-0">
         <div className="flex items-center">
           <h1 className={`text-2xl font-extrabold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
             Scio.ly: Codebusters
