@@ -117,27 +117,24 @@ export const resumeTestSession = (): TestSession | null => {
   
   // Update last activity
   session.lastActivity = now;
-  
+
+  // If we were paused, first account for pause duration to avoid any visual jump
+  if (!timeState.isTimeSynchronized && timeState.isPaused && timeState.lastPauseTime) {
+    const pauseDuration = now - timeState.lastPauseTime;
+    timeState.totalPausedTime += pauseDuration;
+    timeState.isPaused = false;
+    timeState.lastPauseTime = null;
+  }
+
   // Calculate current time left based on session state
   if (timeState.isTimeSynchronized && timeState.syncTimestamp && timeState.originalTimeAtSync) {
     // Synchronized test - calculate based on original sync point
     const elapsedMs = now - timeState.syncTimestamp;
     const elapsedSeconds = Math.floor(elapsedMs / 1000);
     timeState.timeLeft = Math.max(0, timeState.originalTimeAtSync - elapsedSeconds);
-  } else if (timeState.testStartTime) {
-    // Non-synchronized test - calculate based on test start time and pauses
-    const totalElapsedMs = now - timeState.testStartTime - timeState.totalPausedTime;
-    const totalElapsedSeconds = Math.floor(totalElapsedMs / 1000);
-    const originalTimeLimit = session.timeLimit * 60;
-    timeState.timeLeft = Math.max(0, originalTimeLimit - totalElapsedSeconds);
-  }
-  
-  // Resume from pause if applicable
-  if (timeState.isPaused && timeState.lastPauseTime) {
-    const pauseDuration = now - timeState.lastPauseTime;
-    timeState.totalPausedTime += pauseDuration;
-    timeState.isPaused = false;
-    timeState.lastPauseTime = null;
+  } else {
+    // Non-synchronized test - do NOT adjust timeLeft here (freeze while away)
+    // timeLeft will continue decrementing only while the test page is mounted
   }
   
   saveTestSession(session);

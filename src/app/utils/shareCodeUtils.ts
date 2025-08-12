@@ -42,6 +42,7 @@ export interface ShareCodeResult {
   questions?: Record<string, unknown>[];
   encryptedQuotes?: QuoteData[];
   adjustedTimeRemaining?: number;
+  createdAtMs?: number;
   error?: string;
 }
 
@@ -59,15 +60,15 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
         // Store test parameters
         localStorage.setItem('testParams', JSON.stringify(data.data.testParams));
         
-        // Time synchronization will be handled by the new time management system
-        console.log('🕐 Codebusters time sync will be handled by new time management system');
+        // Time synchronization will be handled using createdAtMs
         
         return {
           success: true,
           eventName: 'Codebusters',
           testParams: data.data.testParams,
           encryptedQuotes: data.data.quotes,
-          adjustedTimeRemaining: data.data.timeRemainingSeconds
+          adjustedTimeRemaining: data.data.timeRemainingSeconds,
+          createdAtMs: data.data.createdAtMs
         };
       }
     }
@@ -87,8 +88,7 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
         // Store test parameters
         localStorage.setItem('testParams', JSON.stringify(testParams));
         
-        // Time synchronization will be handled by the new time management system
-        console.log('🕐 Regular test time sync will be handled by new time management system');
+        // Time synchronization will be handled using createdAtMs
         
         // Fetch the actual questions using the questionIds
         const questionIds = data.data.questionIds || [];
@@ -111,7 +111,8 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
                   eventName: testParams.eventName,
                   testParams: testParams,
                   questions: questionsData.data,
-                  adjustedTimeRemaining: data.data.timeRemainingSeconds
+                  adjustedTimeRemaining: data.data.timeRemainingSeconds,
+                  createdAtMs: data.data.createdAtMs
                 };
               }
             }
@@ -125,7 +126,8 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
           eventName: testParams.eventName,
           testParams: testParams,
           questions: [],
-          adjustedTimeRemaining: data.data.timeRemainingSeconds
+          adjustedTimeRemaining: data.data.timeRemainingSeconds,
+          createdAtMs: data.data.createdAtMs
         };
       }
     }
@@ -179,9 +181,24 @@ export const handleShareCodeRedirect = async (code: string): Promise<boolean> =>
   const eventName = result.eventName || 'Unknown Event';
   const timeLimit = parseInt(result.testParams.timeLimit as string || '30');
   const isSharedTest = true;
-  const sharedTimeRemaining = result.adjustedTimeRemaining;
-  
-  initializeTestSession(eventName, timeLimit, isSharedTest, sharedTimeRemaining);
+  const baseRemaining = typeof result.adjustedTimeRemaining === 'number' ? result.adjustedTimeRemaining : null;
+  const createdAt = typeof result.createdAtMs === 'number' ? result.createdAtMs : null;
+
+  let sharedTimeRemaining: number | undefined = undefined;
+  if (baseRemaining !== null && createdAt !== null) {
+    const now = Date.now();
+    const elapsedSeconds = Math.floor((now - createdAt) / 1000);
+    sharedTimeRemaining = Math.max(0, baseRemaining - elapsedSeconds);
+  } else if (baseRemaining !== null) {
+    sharedTimeRemaining = baseRemaining;
+  } else if (createdAt !== null) {
+    // Fallback: if share didn't include remaining time, approximate from full time limit minus elapsed
+    const now = Date.now();
+    const elapsedSeconds = Math.floor((now - createdAt) / 1000);
+    sharedTimeRemaining = Math.max(0, (timeLimit * 60) - elapsedSeconds);
+  }
+
+  initializeTestSession(eventName, timeLimit, isSharedTest, sharedTimeRemaining ?? undefined);
   
   // 6. Redirect to the correct page
   if (result.eventName === 'Codebusters') {

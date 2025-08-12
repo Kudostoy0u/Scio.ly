@@ -139,6 +139,7 @@ export async function GET(request: NextRequest) {
           quotes: finalProcessedQuotes,
           testParams: testParams,
           timeRemainingSeconds: testParamsRaw.timeRemainingSeconds,
+          createdAtMs: testParamsRaw.createdAtMs || Date.now(),
         },
       });
     } catch (error) {

@@ -315,7 +315,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     } finally {
       setIsLoadingIdQuestion(false);
     }
-  }, [idQuestionIndices, idQuestionCache, namePool, routerData.types]);
+  }, [idQuestionIndices, idQuestionCache, namePool, routerData]);
 
   // Load ID question when navigating to one
   useEffect(() => {

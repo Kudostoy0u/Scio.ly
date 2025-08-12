@@ -229,7 +229,7 @@ export default function QuestionsThisWeekChart({
   );
 
   return (
-    <div className={`p-6 rounded-lg ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`} style={{ height: 300 }}>
+    <div className={`p-6 rounded-lg ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'} flex flex-col h-[360px] md:h-[300px]`}>
       <div className="flex items-center justify-between mb-2">
         <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Questions Answered</h2>
         <div className="flex items-center gap-2">
@@ -254,8 +254,8 @@ export default function QuestionsThisWeekChart({
         {chip('This month', monthDelta, monthDelta >= 0 ? ArrowUpRight : ArrowDownRight)}
       </div>
 
-      <div className="w-full h-[calc(100%-88px)] flex-1" ref={wrapperRef}>
-        <div className="w-full h-full" ref={chartAreaRef}>
+      <div className="w-full flex-1 min-h-0" ref={wrapperRef}>
+        <div className="w-full h-full overflow-hidden" ref={chartAreaRef}>
           {chartType === 'line' ? (
             <ReactApexChart options={lineOptions} series={lineSeries} type="area" height={"100%"} width={"100%"} />
           ) : (

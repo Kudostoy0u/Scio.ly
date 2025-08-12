@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FaRegClipboard } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import api from '../api';
+import type { QuoteData as CodebustersQuoteData } from '@/app/codebusters/types';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -14,37 +15,10 @@ interface ShareModalProps {
   isTimeSynchronized?: boolean;
   syncTimestamp?: number | null;
   isCodebusters?: boolean;
-  encryptedQuotes?: QuoteData[];
+  encryptedQuotes?: CodebustersQuoteData[];
 }
 
-interface QuoteData {
-  author: string;
-  quote: string;
-  encrypted: string;
-  cipherType: 'Random Aristocrat' | 'K1 Aristocrat' | 'K2 Aristocrat' | 'K3 Aristocrat' | 'Random Patristocrat' | 'K1 Patristocrat' | 'K2 Patristocrat' | 'K3 Patristocrat' | 'Caesar' | 'Atbash' | 'Affine' | 'Hill 2x2' | 'Hill 3x3' | 'Baconian' | 'Porta' | 'Nihilist' | 'Fractionated Morse' | 'Columnar Transposition' | 'Xenocrypt';
-  key?: string;
-  matrix?: number[][];
-  portaKeyword?: string;
-      nihilistPolybiusKey?: string;
-    nihilistCipherKey?: string;
-  columnarKey?: string;
-  fractionatedKey?: string;
-  xenocryptKey?: string;
-  caesarShift?: number;
-  affineA?: number;
-  affineB?: number;
-  solution?: { [key: string]: string };
-  frequencyNotes?: { [key: string]: string };
-  hillSolution?: {
-    matrix: string[][];
-    plaintext: { [key: number]: string };
-  };
-  nihilistSolution?: { [key: number]: string };
-  fractionatedSolution?: { [key: number]: string };
-  columnarSolution?: { [key: number]: string };
-  xenocryptSolution?: { [key: number]: string };
-  difficulty?: number;
-}
+// Note: CodebustersQuoteData type is imported and used for encryptedQuotes
 
 interface QuestionWithId {
   id: string;
@@ -69,7 +43,7 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
   const [isGenerating, setIsGenerating] = useState(false);
   const hasGeneratedRef = useRef(false);
   const generationRequestId = useRef(0);
-  const currentEncryptedQuotesRef = useRef(encryptedQuotes);
+  const currentEncryptedQuotesRef = useRef<CodebustersQuoteData[] | undefined>(encryptedQuotes);
   const currentIsCodebustersRef = useRef(isCodebusters);
   const hasHandledRedirectRef = useRef(false);
 
@@ -98,22 +72,31 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
       
       // For Codebusters, get time information from the current test session
       let currentTimeLeft: number | null = null;
-      let currentIsTimeSynchronized: boolean = false;
-      let currentSyncTimestamp: number | null = null;
+      // We no longer use sync metadata for generation; we persist the displayed remaining time only
+      // capture sync fields but do not use; present for potential extension
+      void isTimeSynchronized;
+      void syncTimestamp;
       
       if (currentIsCodebusters) {
         // Get time from the time management system for Codebusters
         const timeSession = JSON.parse(localStorage.getItem('currentTestSession') || '{}');
         if (timeSession && timeSession.timeState) {
           currentTimeLeft = timeSession.timeState.timeLeft;
-          currentIsTimeSynchronized = timeSession.timeState.isTimeSynchronized;
-          currentSyncTimestamp = timeSession.timeState.syncTimestamp;
+          // no-op: captured via void above
         }
       } else {
-        // For regular tests, use props if available (for backward compatibility)
-        currentTimeLeft = timeLeft || null;
-        currentIsTimeSynchronized = isTimeSynchronized || false;
-        currentSyncTimestamp = syncTimestamp || null;
+        // For regular tests, prefer time from session; fallback to prop
+        try {
+          const timeSession = JSON.parse(localStorage.getItem('currentTestSession') || '{}');
+          if (timeSession && timeSession.timeState && typeof timeSession.timeState.timeLeft === 'number') {
+            currentTimeLeft = timeSession.timeState.timeLeft;
+          } else {
+            currentTimeLeft = typeof timeLeft === 'number' ? timeLeft : null;
+          }
+        } catch {
+          currentTimeLeft = typeof timeLeft === 'number' ? timeLeft : null;
+        }
+        // no-op: captured via void above
       }
 
       if (currentIsCodebusters) {
@@ -178,14 +161,8 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
         }
         
         const testParams = JSON.parse(testParamsRaw);
-        let currentTimeRemaining = currentTimeLeft;
-        if (currentIsTimeSynchronized && currentSyncTimestamp) {
-          const now = Date.now();
-          const elapsedMs = now - currentSyncTimestamp;
-          const elapsedSeconds = Math.floor(elapsedMs / 1000);
-          const originalTimeAtSync = parseInt(localStorage.getItem('originalSyncTime') || '0');
-          currentTimeRemaining = Math.max(0, originalTimeAtSync - elapsedSeconds);
-        }
+        // For our time model, just persist the current displayed timeLeft as remaining
+        const currentTimeRemaining = (typeof currentTimeLeft === 'number') ? currentTimeLeft : null;
 
         const response = await fetch(api.shareGenerate, {
           method: 'POST',

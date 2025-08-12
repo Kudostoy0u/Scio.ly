@@ -66,11 +66,28 @@ export const useSolutionHandlers = (
     }));
   }, [setQuotes]);
 
+  // Handle Checkerboard cipher solution changes (position-based like Nihilist)
+  const handleCheckerboardSolutionChange = useCallback((quoteIndex: number, position: number, plainLetter: string) => {
+    setQuotes((prevQuotes) => prevQuotes.map((quote, index) => {
+      if (index === quoteIndex) {
+        return {
+          ...quote,
+          checkerboardSolution: {
+            ...(quote.checkerboardSolution || {}),
+            [position]: plainLetter.toUpperCase()
+          }
+        };
+      }
+      return quote;
+    }));
+  }, [setQuotes]);
+
   return {
     handleSolutionChange,
     handleBaconianSolutionChange,
     handleFrequencyNoteChange,
     handleHillSolutionChange,
-    handleNihilistSolutionChange
+    handleNihilistSolutionChange,
+    handleCheckerboardSolutionChange
   };
 };

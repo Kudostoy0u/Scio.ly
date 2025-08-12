@@ -11,7 +11,9 @@ import {
   updateTimeLeft,
   markTestSubmitted,
   setupVisibilityHandling,
-  clearTestSession
+    clearTestSession,
+    pauseTestSession,
+    resumeFromPause
 } from '@/app/utils/timeManagement';
 import CipherInfoModal from './CipherInfoModal';
 import { loadQuestionsFromDatabase } from './services/questionLoader';
@@ -75,7 +77,7 @@ export default function CodeBusters() {
     } = useCodebustersState();
 
     // Use custom hooks for functionality
-    const { checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer } = useAnswerChecking(quotes);
+    const { checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer, checkCheckerboardAnswer } = useAnswerChecking(quotes);
     const { getHintContent, handleHintClick } = useHintSystem(
         quotes, 
         activeHints, 
@@ -89,7 +91,8 @@ export default function CodeBusters() {
         handleBaconianSolutionChange, 
         handleFrequencyNoteChange, 
         handleHillSolutionChange, 
-        handleNihilistSolutionChange 
+        handleNihilistSolutionChange,
+        handleCheckerboardSolutionChange
     } = useSolutionHandlers(quotes, setQuotes);
     const { totalProgress, calculateQuoteProgress } = useProgressCalculation(quotes);
 
@@ -97,6 +100,18 @@ export default function CodeBusters() {
     useEffect(() => {
         const cleanup = setupVisibilityHandling();
         return cleanup;
+    }, []);
+
+    // Pause timer when navigating away/unmounting
+    useEffect(() => {
+        return () => {
+            try { pauseTestSession(); } catch {}
+        };
+    }, []);
+
+    // Ensure we resume from pause on mount so the ticker runs while on page
+    useEffect(() => {
+        try { resumeFromPause(); } catch {}
     }, []);
 
     // Handle test submission
@@ -112,7 +127,9 @@ export default function CodeBusters() {
                         ? checkPortaAnswer(index)
                         : quote.cipherType === 'Baconian'
                             ? checkBaconianAnswer(index)
-                            : false;
+                            : quote.cipherType === 'Checkerboard'
+                                ? checkCheckerboardAnswer(index)
+                                : false;
             if (isCorrect) correctCount++;
         });
 
@@ -149,7 +166,7 @@ export default function CodeBusters() {
         } catch (e) {
             console.error('Failed to update metrics for Codebusters:', e);
         }
-    }, [quotes, checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer, setTestScore, setIsTestSubmitted, calculateQuoteProgress]);
+    }, [quotes, checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer, checkCheckerboardAnswer, setTestScore, setIsTestSubmitted, calculateQuoteProgress]);
 
     // Handle time management
     useEffect(() => {
@@ -184,13 +201,9 @@ export default function CodeBusters() {
                 setTimeLeft(newTimeLeft);
                 updateTimeLeft(newTimeLeft);
 
-            } else {
-                // Non-synchronized test - calculate based on test start time and pauses
-                const now = Date.now();
-                const totalElapsedMs = now - (session.timeState.testStartTime || now) - session.timeState.totalPausedTime;
-                const totalElapsedSeconds = Math.floor(totalElapsedMs / 1000);
-                const originalTimeLimit = session.timeLimit * 60;
-                const newTimeLeft = Math.max(0, originalTimeLimit - totalElapsedSeconds);
+            } else if (!session.timeState.isPaused) {
+                // Non-synchronized test - decrement from stored timeLeft only while mounted/not paused
+                const newTimeLeft = Math.max(0, (session.timeState.timeLeft || 0) - 1);
                 setTimeLeft(newTimeLeft);
                 updateTimeLeft(newTimeLeft);
             }
@@ -246,6 +259,8 @@ export default function CodeBusters() {
     // Handle back navigation: preserve Codebusters progress for resume banner on Practice
     const handleBack = useCallback(() => {
         try {
+            // Ensure timer is paused when exiting
+            pauseTestSession();
             // Only clear unrelated unlimited cache; keep Codebusters keys and testParams so Practice can detect progress
             localStorage.removeItem('unlimitedQuestions');
         } catch {}
@@ -389,6 +404,7 @@ export default function CodeBusters() {
                                 handleFrequencyNoteChange={handleFrequencyNoteChange}
                                 handleHillSolutionChange={handleHillSolutionChange}
                                 handleNihilistSolutionChange={handleNihilistSolutionChange}
+                                handleCheckerboardSolutionChange={handleCheckerboardSolutionChange}
                             />
                         ))}
                         
@@ -421,7 +437,7 @@ export default function CodeBusters() {
                         setInputCode={setInputCode}
                         darkMode={darkMode}
                         isCodebusters={true}
-                        encryptedQuotes={quotes}
+                        encryptedQuotes={quotes as any}
                     />
 
                     {/* Cipher Info Modal */}

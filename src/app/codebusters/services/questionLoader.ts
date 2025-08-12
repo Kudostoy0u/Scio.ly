@@ -18,7 +18,8 @@ import {
   encryptNihilist,
   encryptFractionatedMorse,
   encryptColumnarTransposition,
-  encryptXenocrypt
+  encryptXenocrypt,
+  encryptCheckerboard
 } from '../cipher-utils';
 
 export const loadQuestionsFromDatabase = async (
@@ -83,6 +84,7 @@ export const loadQuestionsFromDatabase = async (
         'fractionated morse': 'Fractionated Morse',
         'columnar transposition': 'Columnar Transposition',
         'xenocrypt': 'Xenocrypt',
+        'checkerboard': 'Checkerboard',
         // Handle correct format (from practice page)
         'K1 Aristocrat': 'K1 Aristocrat',
         'K2 Aristocrat': 'K2 Aristocrat',
@@ -102,6 +104,7 @@ export const loadQuestionsFromDatabase = async (
         'Fractionated Morse': 'Fractionated Morse',
         'Columnar Transposition': 'Columnar Transposition',
         'Xenocrypt': 'Xenocrypt',
+        'Checkerboard': 'Checkerboard',
         // Handle standalone entries (should be mapped to Random variants)
         'aristocrat': 'Random Aristocrat',
         'patristocrat': 'Random Patristocrat'
@@ -117,8 +120,8 @@ export const loadQuestionsFromDatabase = async (
     
     // Define division-based cipher types
     const divisionBCipherTypes = {
-      'B': ['K1 Aristocrat', 'K2 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'Random Patristocrat', 'Baconian', 'Fractionated Morse', 'Columnar Transposition', 'Xenocrypt', 'Porta', 'Nihilist', 'Atbash', 'Caesar', 'Affine'],
-      'C': ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Baconian', 'Xenocrypt', 'Fractionated Morse', 'Porta', 'Columnar Transposition', 'Nihilist', 'Hill 2x2', 'Hill 3x3']
+      'B': ['K1 Aristocrat', 'K2 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'Random Patristocrat', 'Baconian', 'Fractionated Morse', 'Columnar Transposition', 'Xenocrypt', 'Porta', 'Nihilist', 'Atbash', 'Caesar', 'Affine', 'Checkerboard'],
+      'C': ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Baconian', 'Xenocrypt', 'Fractionated Morse', 'Porta', 'Columnar Transposition', 'Nihilist', 'Hill 2x2', 'Hill 3x3', 'Checkerboard']
     };
     
     const availableCipherTypes = cipherTypes && cipherTypes.length > 0 
@@ -289,6 +292,9 @@ export const loadQuestionsFromDatabase = async (
         case 'Xenocrypt':
           cipherResult = encryptXenocrypt(quoteData.quote);
           break;
+        case 'Checkerboard':
+          cipherResult = encryptCheckerboard(quoteData.quote);
+          break;
         default:
           throw new Error(`Unknown cipher type: ${cipherType} (normalized: ${normalizedCipherType})`);
       }
@@ -304,6 +310,9 @@ export const loadQuestionsFromDatabase = async (
         portaKeyword: cipherResult.keyword || undefined,
         nihilistPolybiusKey: 'polybiusKey' in cipherResult ? (cipherResult as { polybiusKey: string }).polybiusKey : undefined,
         nihilistCipherKey: 'cipherKey' in cipherResult ? (cipherResult as { cipherKey: string }).cipherKey : undefined,
+        checkerboardKeyword: (cipherResult as any).checkerboardKeyword,
+        checkerboardR1: (cipherResult as any).checkerboardR1,
+        checkerboardR2: (cipherResult as any).checkerboardR2,
         fractionationTable: cipherResult.fractionationTable || undefined,
         caesarShift: cipherResult.shift || undefined,
         affineA: cipherResult.a || undefined,
@@ -326,6 +335,9 @@ export const loadQuestionsFromDatabase = async (
         portaKeyword: quote.portaKeyword,
         nihilistPolybiusKey: quote.nihilistPolybiusKey,
         nihilistCipherKey: quote.nihilistCipherKey,
+            checkerboardKeyword: (quote as any).checkerboardKeyword,
+            checkerboardR1: (quote as any).checkerboardR1,
+            checkerboardR2: (quote as any).checkerboardR2,
         fractionationTable: quote.fractionationTable,
         caesarShift: quote.caesarShift,
         affineA: quote.affineA,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Trophy, Users, Plus, LogOut, Copy, Check, User } from 'lucide-react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { useRouter } from 'next/navigation';
@@ -53,6 +53,51 @@ export default function LeaderboardClientPage() {
   const [publicLeaderboard, setPublicLeaderboard] = useState<Leaderboard | null>(null);
   const [hasJoinedPublic, setHasJoinedPublic] = useState<boolean>(false);
 
+  // Memoized loader for members to satisfy hook dependencies and build order
+  const loadLeaderboardMembers = useCallback(async (leaderboardId: string) => {
+    const supabase = client as any;
+    const { data, error } = await supabase
+      .from('leaderboard_members')
+      .select(`
+        user_id,
+        questions_attempted,
+        correct_answers,
+        accuracy_percentage,
+        users!inner(email, display_name)
+      `)
+      .eq('leaderboard_id', leaderboardId)
+      .order('correct_answers', { ascending: false })
+      .order('accuracy_percentage', { ascending: false });
+
+    if (error) {
+      console.error('Error loading members:', error);
+      return;
+    }
+
+    if (data) {
+      interface MemberData {
+        user_id: string;
+        questions_attempted: number | null;
+        correct_answers: number | null;
+        accuracy_percentage: number | null;
+        users: { email: string; display_name: string | null } | { email: string; display_name: string | null }[];
+      }
+      const membersWithRank = (data as MemberData[]).map((member, index) => {
+        const userData = Array.isArray(member.users) ? member.users[0] : member.users;
+        return {
+          user_id: member.user_id,
+          questions_attempted: member.questions_attempted || 0,
+          correct_answers: member.correct_answers || 0,
+          accuracy_percentage: member.accuracy_percentage || 0,
+          display_name: userData?.display_name || null,
+          email: userData?.email || '',
+          rank: index + 1
+        } as LeaderboardMember;
+      });
+      setMembers(membersWithRank);
+    }
+  }, [client]);
+
   useEffect(() => {
     if (authLoading) return;
     loadUserAndLeaderboards();
@@ -63,7 +108,7 @@ export default function LeaderboardClientPage() {
     if (selectedLeaderboard) {
       loadLeaderboardMembers(selectedLeaderboard);
     }
-  }, [selectedLeaderboard]);
+  }, [selectedLeaderboard, loadLeaderboardMembers]);
 
   // Ensure a selection exists when data loads/changes
   useEffect(() => {
@@ -140,51 +185,7 @@ export default function LeaderboardClientPage() {
     setLoading(false);
   };
 
-  const loadLeaderboardMembers = async (leaderboardId: string) => {
-    const supabase = client as any;
-    const { data, error } = await supabase
-      .from('leaderboard_members')
-      .select(`
-        user_id,
-        questions_attempted,
-        correct_answers,
-        accuracy_percentage,
-        users!inner(email, display_name)
-      `)
-      .eq('leaderboard_id', leaderboardId)
-      .order('correct_answers', { ascending: false })
-      .order('accuracy_percentage', { ascending: false });
-
-    if (error) {
-      console.error('Error loading members:', error);
-      return;
-    }
-
-    if (data) {
-      interface MemberData {
-        user_id: string;
-        questions_attempted: number | null;
-        correct_answers: number | null;
-        accuracy_percentage: number | null;
-        users: { email: string; display_name: string | null } | { email: string; display_name: string | null }[];
-      }
-      
-      const membersWithRank = data.map((member: MemberData, index: number) => {
-        // Handle both array and object cases for users data
-        const userData = Array.isArray(member.users) ? member.users[0] : member.users;
-        return {
-          user_id: member.user_id,
-          questions_attempted: member.questions_attempted || 0,
-          correct_answers: member.correct_answers || 0,
-          accuracy_percentage: member.accuracy_percentage || 0,
-          display_name: userData?.display_name || null,
-          email: userData?.email || '',
-          rank: index + 1
-        } as LeaderboardMember;
-      });
-      setMembers(membersWithRank);
-    }
-  };
+  
 
   const joinPublicLeaderboard = async () => {
     // Check if user has display name

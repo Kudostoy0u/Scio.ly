@@ -36,6 +36,49 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
   // Get cipher info based on type
   const getCipherInfo = (): CipherInfo => {
     switch (cipherType) {
+      case 'Checkerboard':
+        return {
+          name: 'Straddling Checkerboard (Monome-Dinome)',
+          description: 'Variable-length numeric substitution. Most-frequent letters get single digits (top row). All others get two-digit codes starting with one of two row digits (R1, R2). Commonly I/J may be combined if desired; our generator uses 26 letters by default.',
+          solvingMethod: [
+            'Build mixed alphabet from keyword: write unique keyword letters, then remaining A–Z (optionally combine I/J).',
+            'Pick two distinct “row digits” R1 and R2 (0–9). Label columns 0..9; leave top-row columns at R1 and R2 blank.',
+            'Fill top row left→right skipping the two blanks. These letters encode as single digits = their column.',
+            'Fill remaining letters into two more rows headed by R1 and R2 across columns 0..9. A letter here encodes as RkC (two digits).',
+            'Decode stream: read next digit d; if d equals R1 or R2, read one more digit to get RkC; otherwise d is a top-row letter.'
+          ].join(' '),
+          examples: [
+            'Keyword CRYPTO → mixed alphabet; choose R1=3, R2=7. Top row fills all columns except 3 and 7. Rows 3 and 7 fill remaining letters.',
+            'Decode example tokens: 34→row 3 col 4, 31→row 3 col 1, 38→row 3 col 8, 6→top-row col 6.'
+          ],
+          tips: [
+            'R1/R2 always mark the start of a pair; scan the stream by that rule.',
+            'Top-row letters are more common due to single-digit mapping.',
+            'Use frequency and word shapes (like THE, AND) on the decoded positions.',
+            'If using I/J combined, remember J→I when interpreting plaintext.',
+            'Reconstruct the board visually—columns 0..9 with blanks at R1, R2 in the top row.'
+          ],
+          commonMistakes: [
+            'Treating R1 or R2 as a single-digit letter.',
+            'Not skipping R1/R2 columns while filling top row.',
+            'Forgetting I/J policy when matching cribs.',
+            'Assuming fixed R1/R2; they can be any two distinct digits.'
+          ],
+          resources: {
+            tables: (
+              <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                <h4 className="font-semibold mb-2">Board Layout Reference</h4>
+                <div className="text-sm space-y-1">
+                  <div>Columns: 0 1 2 3 4 5 6 7 8 9 (top row blanks at R1 and R2)</div>
+                  <div>Top row: single digits (skip R1, R2)</div>
+                  <div>Row R1: two-digit codes R1C</div>
+                  <div>Row R2: two-digit codes R2C</div>
+                  <div className="text-xs opacity-80">Note: If I/J combined is used, treat J as I.</div>
+                </div>
+              </div>
+            )
+          }
+        };
       case 'Random Aristocrat':
         return {
           name: 'Random Aristocrat',

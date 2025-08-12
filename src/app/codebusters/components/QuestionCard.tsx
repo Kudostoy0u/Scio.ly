@@ -7,7 +7,8 @@ import {
   FractionatedMorseDisplay,
   BaconianDisplay,
   ColumnarTranspositionDisplay,
-  NihilistDisplay
+  NihilistDisplay,
+  CheckerboardDisplay
 } from './cipher-displays';
 
 interface QuestionCardProps {
@@ -26,6 +27,7 @@ interface QuestionCardProps {
   handleFrequencyNoteChange: (quoteIndex: number, letter: string, note: string) => void;
   handleHillSolutionChange: (quoteIndex: number, type: 'matrix' | 'plaintext', value: string[][] | { [key: number]: string }) => void;
   handleNihilistSolutionChange: (quoteIndex: number, position: number, plainLetter: string) => void;
+  handleCheckerboardSolutionChange: (quoteIndex: number, position: number, plainLetter: string) => void;
 }
 
 export const QuestionCard: React.FC<QuestionCardProps> = ({
@@ -43,7 +45,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   handleBaconianSolutionChange,
   handleFrequencyNoteChange,
   handleHillSolutionChange,
-  handleNihilistSolutionChange
+  handleNihilistSolutionChange,
+  handleCheckerboardSolutionChange
 }) => {
   return (
     <div 
@@ -62,13 +65,18 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             {item.cipherType.charAt(0).toUpperCase() + item.cipherType.slice(1)}
           </span>
           <button
-            onClick={() => handleHintClick(index)}
-            className={`w-5 h-5 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center transition-all duration-200 hover:scale-110 ${
+            onClick={() => { if (isTestSubmitted) return; handleHintClick(index); }}
+            disabled={isTestSubmitted}
+            className={`w-5 h-5 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center transition-all duration-200 ${
+              isTestSubmitted
+                ? 'opacity-50 cursor-not-allowed'
+                : 'hover:scale-110'
+            } ${
               darkMode 
                 ? 'bg-gray-600 border-gray-500 text-white' 
                 : 'text-gray-600'
             }`}
-            title="Get a hint"
+            title={isTestSubmitted ? 'Hints are disabled after submission' : 'Get a hint'}
           >
             <svg 
               width="10" 
@@ -119,7 +127,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       </p>
 
       {/* Hint Card */}
-      {activeHints[index] && (
+      {activeHints[index] && !isTestSubmitted && (
         <div className={`mb-4 p-3 rounded-lg border-l-4 ${
           darkMode 
             ? 'bg-blue-900/30 border-blue-400 text-blue-200' 
@@ -210,6 +218,18 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           isTestSubmitted={isTestSubmitted}
           quotes={quotes}
           onSolutionChange={handleNihilistSolutionChange}
+        />
+      ) : item.cipherType === 'Checkerboard' ? (
+        <CheckerboardDisplay
+          text={item.encrypted}
+          keyword={item.checkerboardKeyword!}
+          r1={item.checkerboardR1!}
+          r2={item.checkerboardR2!}
+          quoteIndex={index}
+          solution={item.checkerboardSolution}
+          isTestSubmitted={isTestSubmitted}
+          quotes={quotes}
+          onSolutionChange={handleCheckerboardSolutionChange}
         />
       ) : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Xenocrypt'].includes(item.cipherType) ? (
         <SubstitutionDisplay

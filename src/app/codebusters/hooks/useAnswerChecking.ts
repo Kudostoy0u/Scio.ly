@@ -116,10 +116,23 @@ export const useAnswerChecking = (quotes: QuoteData[]) => {
     return true;
   }, [quotes]);
 
+  const checkCheckerboardAnswer = useCallback((quoteIndex: number): boolean => {
+    const quote = quotes[quoteIndex];
+    if (quote.cipherType !== 'Checkerboard' || !quote.checkerboardSolution) return false;
+    const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+    for (let i = 0; i < expectedPlaintext.length; i++) {
+      const expected = expectedPlaintext[i];
+      const actual = quote.checkerboardSolution[i] || '';
+      if (actual !== expected) return false;
+    }
+    return true;
+  }, [quotes]);
+
   return {
     checkSubstitutionAnswer,
     checkHillAnswer,
     checkPortaAnswer,
-    checkBaconianAnswer
+    checkBaconianAnswer,
+    checkCheckerboardAnswer
   };
 };

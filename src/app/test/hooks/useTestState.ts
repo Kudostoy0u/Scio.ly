@@ -25,7 +25,9 @@ import {
   markTestSubmitted,
   resetTestSession,
   migrateFromLegacyStorage,
-  setupVisibilityHandling
+    setupVisibilityHandling,
+    pauseTestSession,
+    resumeFromPause
 } from '@/app/utils/timeManagement';
 import api from '../../api';
 import { getEventOfflineQuestions } from '@/app/utils/storage';
@@ -278,7 +280,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, initialData, initialRouterData]);
 
-  // Timer logic
+  // Timer logic (for non-shared tests, decrement from stored timeLeft only while mounted)
   useEffect(() => {
     if (timeLeft === null || isSubmitted) return;
 
@@ -305,12 +307,8 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         const newTimeLeft = Math.max(0, session.timeState.originalTimeAtSync - elapsedSeconds);
         setTimeLeft(newTimeLeft);
         updateTimeLeft(newTimeLeft);
-      } else {
-        const now = Date.now();
-        const totalElapsedMs = now - (session.timeState.testStartTime || now) - session.timeState.totalPausedTime;
-        const totalElapsedSeconds = Math.floor(totalElapsedMs / 1000);
-        const originalTimeLimit = session.timeLimit * 60;
-        const newTimeLeft = Math.max(0, originalTimeLimit - totalElapsedSeconds);
+      } else if (!session.timeState.isPaused) {
+        const newTimeLeft = Math.max(0, (session.timeState.timeLeft || 0) - 1);
         setTimeLeft(newTimeLeft);
         updateTimeLeft(newTimeLeft);
       }
@@ -323,6 +321,18 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   useEffect(() => {
     const cleanup = setupVisibilityHandling();
     return cleanup;
+  }, []);
+
+  // Pause timer when leaving the page/component
+  useEffect(() => {
+    return () => {
+      try { pauseTestSession(); } catch {}
+    };
+  }, []);
+
+  // On mount, ensure we clear paused state so ticking resumes
+  useEffect(() => {
+    try { resumeFromPause(); } catch {}
   }, []);
 
   // Load user bookmarks
@@ -707,6 +717,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   }, []);
 
   const handleBackToMain = () => {
+    try { pauseTestSession(); } catch {}
     router.push('/practice');
   };
 

@@ -79,10 +79,25 @@ export const NihilistDisplay = ({
                                         : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
                                 }`}
                             />
+                            {isTestSubmitted && (
+                                <div className={`mt-1 text-[10px] ${
+                                    (solution?.[index] || '').toUpperCase() === (correctMapping[index] || '')
+                                        ? 'text-green-600'
+                                        : 'text-gray-500'
+                                }`}>
+                                    {(correctMapping[index] || '').toUpperCase()}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
             </div>
+        {isTestSubmitted && (
+            <div className={`mt-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-800'}`}>
+                <div className="font-semibold">Original quote:</div>
+                <div className="whitespace-pre-wrap mt-1">{quote.quote}</div>
+            </div>
+        )}
         </div>
     );
 };

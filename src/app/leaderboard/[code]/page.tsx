@@ -42,7 +42,7 @@ export default function JoinLeaderboardPage({ params }: { params: Promise<{ code
     } else {
       router.push('/leaderboard');
     }
-  }, [code, router]);
+  }, [code, router, client]);
 
   useEffect(() => {
     if (code) {

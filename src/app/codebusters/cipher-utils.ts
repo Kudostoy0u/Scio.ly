@@ -931,3 +931,89 @@ export const getLetterFrequencies = (text: string): { [key: string]: number } =>
     });
     return frequencies;
 }; 
+
+// Straddling Checkerboard (Monome-Dinome) cipher
+// Returns: encrypted numeric string, plus board parameters so solvers can reconstruct
+export const encryptCheckerboard = (text: string): {
+    encrypted: string;
+    checkerboardKeyword: string;
+    checkerboardR1: number;
+    checkerboardR2: number;
+} => {
+    // 1) Build mixed alphabet from a keyword (I/J combined for 25 letters or keep 26; we keep 26 and allow J)
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const keywords = [
+        'CRYPTO', 'SCIENCE', 'ALGORITHM', 'CIPHER', 'KEYWORD', 'SECURITY', 'PUZZLE', 'ENIGMA', 'MATRIX', 'VECTOR'
+    ];
+    const checkerboardKeyword = keywords[Math.floor(Math.random() * keywords.length)];
+    const used = new Set<string>();
+    const mixed: string[] = [];
+    for (const ch of checkerboardKeyword.toUpperCase()) {
+        if (/[A-Z]/.test(ch) && !used.has(ch)) {
+            used.add(ch);
+            mixed.push(ch);
+        }
+    }
+    for (const ch of alphabet) {
+        if (!used.has(ch)) {
+            used.add(ch);
+            mixed.push(ch);
+        }
+    }
+
+    // 2) Choose two distinct straddle digits R1 and R2
+    const digits = [0,1,2,3,4,5,6,7,8,9];
+    const checkerboardR1 = digits.splice(Math.floor(Math.random() * digits.length), 1)[0];
+    const checkerboardR2 = digits.splice(Math.floor(Math.random() * digits.length), 1)[0];
+
+    // 3) Layout board: columns 0..9; top row skips columns R1 and R2
+    // Top row gets single-digit mappings; remaining letters spill into two extra rows prefixed by R1 and R2
+    const topRow: (string | null)[] = new Array(10).fill(null);
+    const rowR1: string[] = new Array(10).fill('');
+    const rowR2: string[] = new Array(10).fill('');
+
+    let mixedIndex = 0;
+    // Fill top row excluding R1/R2
+    for (let c = 0; c < 10 && mixedIndex < mixed.length; c++) {
+        if (c === checkerboardR1 || c === checkerboardR2) continue;
+        topRow[c] = mixed[mixedIndex++];
+        if (mixedIndex >= mixed.length) break;
+    }
+    // Remaining to row R1 then row R2 by columns 0..9
+    for (let c = 0; c < 10 && mixedIndex < mixed.length; c++) {
+        rowR1[c] = mixed[mixedIndex++] || '';
+    }
+    for (let c = 0; c < 10 && mixedIndex < mixed.length; c++) {
+        rowR2[c] = mixed[mixedIndex++] || '';
+    }
+
+    // Build letter → code map
+    const letterToCode: Record<string, string> = {};
+    for (let c = 0; c < 10; c++) {
+        const ch = topRow[c];
+        if (ch && ch.length === 1) {
+            letterToCode[ch] = String(c);
+        }
+    }
+    for (let c = 0; c < 10; c++) {
+        const ch = rowR1[c];
+        if (ch && ch.length === 1) {
+            letterToCode[ch] = `${checkerboardR1}${c}`;
+        }
+    }
+    for (let c = 0; c < 10; c++) {
+        const ch = rowR2[c];
+        if (ch && ch.length === 1) {
+            letterToCode[ch] = `${checkerboardR2}${c}`;
+        }
+    }
+
+    // Encode
+    const cleanText = text.toUpperCase().replace(/[^A-Z]/g, '');
+    let encryptedDigits = '';
+    for (const ch of cleanText) {
+        const code = letterToCode[ch];
+        if (code) encryptedDigits += code;
+    }
+    return { encrypted: encryptedDigits, checkerboardKeyword, checkerboardR1, checkerboardR2 };
+};

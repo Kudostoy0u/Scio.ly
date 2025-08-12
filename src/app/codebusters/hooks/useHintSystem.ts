@@ -85,6 +85,16 @@ export const useHintSystem = (
   const getHintContent = useCallback((quote: QuoteData): string => {
     if (!quote) return 'No hint available';
 
+    // Special handling: Checkerboard numeric stream
+    if (quote.cipherType === 'Checkerboard') {
+      const r1 = (quote as any).checkerboardR1 as number;
+      const r2 = (quote as any).checkerboardR2 as number;
+      const keyword = (quote as any).checkerboardKeyword as string;
+      if (typeof r1 === 'number' && typeof r2 === 'number') {
+        return `Digits ${r1} and ${r2} start two-digit codes. Keyword: ${keyword}. Top row letters are single-digit columns except ${r1}, ${r2}.`;
+      }
+    }
+
     const cipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
     const plainText = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
 
@@ -141,6 +151,64 @@ export const useHintSystem = (
   const revealRandomLetter = useCallback((questionIndex: number) => {
     const quote = quotes[questionIndex];
     if (!quote) return;
+
+    // Checkerboard: reveal a random unsolved token's plaintext
+    if (quote.cipherType === 'Checkerboard') {
+      const r1 = (quote as any).checkerboardR1 as number;
+      const r2 = (quote as any).checkerboardR2 as number;
+      const digits = quote.encrypted.replace(/\s+/g, '').split('');
+      const tokens: string[] = [];
+      for (let i = 0; i < digits.length; i++) {
+        const d = parseInt(digits[i], 10);
+        if (d === r1 || d === r2) {
+          tokens.push(digits[i] + (digits[i + 1] || ''));
+          i++;
+        } else {
+          tokens.push(digits[i]);
+        }
+      }
+      const plain = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+      const current = (quote as any).checkerboardSolution || {};
+      const candidates: number[] = [];
+      for (let i = 0; i < Math.min(tokens.length, plain.length); i++) {
+        if (!current[i] || current[i].length === 0) {
+          candidates.push(i);
+        }
+      }
+      if (candidates.length > 0) {
+        const target = candidates[Math.floor(Math.random() * candidates.length)];
+        const newQuotes = quotes.map((q, idx) => {
+          if (idx !== questionIndex) return q;
+          const prev = (q as any).checkerboardSolution || {};
+          return { ...q, checkerboardSolution: { ...prev, [target]: plain[target] } } as QuoteData;
+        });
+        setQuotes(newQuotes);
+      }
+      return;
+    }
+
+    // Nihilist: reveal a random unsolved group position's plaintext
+    if (quote.cipherType === 'Nihilist') {
+      const groups = quote.encrypted.trim().split(/\s+/).filter(g => g.length > 0);
+      const plain = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+      const current = quote.nihilistSolution || {};
+      const candidates: number[] = [];
+      for (let i = 0; i < Math.min(groups.length, plain.length); i++) {
+        if (!current[i] || current[i].length === 0) {
+          candidates.push(i);
+        }
+      }
+      if (candidates.length > 0) {
+        const target = candidates[Math.floor(Math.random() * candidates.length)];
+        const newQuotes = quotes.map((q, idx) => {
+          if (idx !== questionIndex) return q;
+          const prev = q.nihilistSolution || {};
+          return { ...q, nihilistSolution: { ...prev, [target]: plain[target] } } as QuoteData;
+        });
+        setQuotes(newQuotes);
+      }
+      return;
+    }
 
     // Baconian: sequentially reveal letters starting right after the crib, and sync identical 5-bit groups
     if (quote.cipherType === 'Baconian') {
@@ -317,7 +385,7 @@ export const useHintSystem = (
       if (cipherIndex !== -1 && cipherIndex < normalizedOriginal.length) {
         correctPlainLetter = normalizedOriginal[cipherIndex];
       }
-    } else if (quote.cipherType === 'Nihilist' && (quote.nihilistPolybiusKey || quote.nihilistCipherKey)) {
+    } else if ((quote as any).nihilistPolybiusKey || (quote as any).nihilistCipherKey) {
       // For Nihilist cipher, reveal the position-based mapping
       const cipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
       const plainText = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');

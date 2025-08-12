@@ -7,3 +7,4 @@ export { FractionatedMorseDisplay } from './FractionatedMorseDisplay';
 export { BaconianDisplay } from './BaconianDisplay';
 export { NihilistDisplay } from './NihilistDisplay';
 export { ColumnarTranspositionDisplay } from './ColumnarTranspositionDisplay';
+export { CheckerboardDisplay } from './CheckerboardDisplay';

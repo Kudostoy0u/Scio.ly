@@ -625,7 +625,8 @@ export default function TestConfiguration({
                             "Columnar Transposition",
                             "Nihilist",
                             "Hill 2x2",
-                            "Hill 3x3"
+                            "Hill 3x3",
+                            "Checkerboard"
                           ];
                           
                           const divisionBCipherTypes = [
@@ -644,7 +645,8 @@ export default function TestConfiguration({
                             "Atbash",
                             "Caesar",
                             "Affine",
-                            "Hill 2x2"
+                            "Hill 2x2",
+                            "Checkerboard"
                           ];
                           
                           const cipherTypes = settings.division === 'C' ? divisionCipherTypes : divisionBCipherTypes;
