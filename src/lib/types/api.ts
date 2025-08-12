@@ -12,6 +12,7 @@ export interface Question {
   event: string;
   created_at?: string;
   updated_at?: string;
+  base52?: string;
 }
 
 export interface CreateQuestionRequest {

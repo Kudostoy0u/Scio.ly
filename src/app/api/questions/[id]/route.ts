@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { questions } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { Question, UpdateQuestionRequest, ApiResponse } from '@/lib/types/api';
 
 // GET /api/questions/[id] - Fetch a specific question
@@ -12,9 +12,20 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const result = await db.select().from(questions).where(eq(questions.id, id));
+    // Compute stable rank using the same ordering as base52 decode endpoint
+    const rows = await db.execute(sql`
+      WITH ordered AS (
+        SELECT
+          q.*, 
+          ROW_NUMBER() OVER (ORDER BY q.created_at ASC NULLS LAST, q.id ASC) AS rn
+        FROM ${questions} AS q
+      )
+      SELECT * FROM ordered WHERE id = ${id}
+    `);
 
-    if (result.length === 0) {
+    const row = Array.isArray(rows) ? (rows as any[])[0] : (rows as any).rows?.[0];
+
+    if (!row) {
       const response: ApiResponse = {
         success: false,
         error: 'Question not found',
@@ -22,7 +33,22 @@ export async function GET(
       return NextResponse.json(response, { status: 404 });
     }
 
-    const row = result[0] as any;
+    // Base52 encoding for 5 characters
+    const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+    const BASE = ALPHABET.length; // 52
+    const CODE_LENGTH = 5;
+    const encodeBase52 = (index: number): string => {
+      let n = index;
+      let out = '';
+      for (let i = 0; i < CODE_LENGTH; i++) {
+        out = ALPHABET[n % BASE] + out;
+        n = Math.floor(n / BASE);
+      }
+      return out;
+    };
+
+    const rn = Number(row.rn) || 1;
+    const base52 = encodeBase52(rn - 1);
     const normalized: Question = {
       id: row.id,
       question: row.question,
@@ -35,6 +61,8 @@ export async function GET(
       event: row.event,
       created_at: row.createdAt ?? row.created_at,
       updated_at: row.updatedAt ?? row.updated_at,
+      // Attach short code
+      base52,
     } as any;
     const response: ApiResponse<Question> = { success: true, data: normalized };
 
