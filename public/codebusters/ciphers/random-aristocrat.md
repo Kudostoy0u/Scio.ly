@@ -13,16 +13,11 @@ What this means in practice
 - Once you assign a few high-confidence letters (like E, T, A), you can propagate constraints and fill more of the mapping quickly.
 - A correct mapping never contradicts itself: a letter can’t map to two different letters, and two letters can’t map to the same letter.
 
-## How It Works (Encryption/Decryption)
-Encryption
-1) Generate a random key: a permutation of A..Z (e.g., Plain: ABCDEFGHIJKLMNOPQRSTUVWXYZ → Cipher: QWERTYUIOPASDFGHJKLZXCVBNM).
-2) Replace each plaintext letter by its ciphertext counterpart using the key.
-3) Leave spaces and punctuation unchanged (unless instructions say otherwise).
-
-Decryption
-1) Invert the key (e.g., if P→C encrypts, then C→P decrypts).
-2) Replace each ciphertext letter using the inverse mapping.
-3) Spaces/punctuation pass through unchanged.
+## How Decryption Works
+1) Maintain a mapping table C→P (cipher to plain) and ensure one-to-one consistency.  
+2) Use patterns (A/I, THE/AND/OF/TO, apostrophes, -ING) to hypothesize letters.  
+3) Fill the table as hypotheses are confirmed; propagate across the whole text.  
+4) Continue until the plaintext reads cleanly.
 
 Because the key is consistent across the entire text, a single correct mapping instance works everywhere.
 
@@ -125,79 +120,40 @@ Example 3: Apostrophe
 Example 4: -ING ending
 - Cipher word `PRCZG`: last three letters `CZG` repeat in other words of length ≥4; hypothesize `CZG` → ING. Map C→I, Z→N, G→G. Verify consistency across text.
 
-## Worked Example (Full Walkthrough)
-Ciphertext
+## Worked example (full decryption)
+Cipher (grouped per word lines for readability):
 ```
-QZK XQ BQF, QZK XQ BQF; UZ QZK XQ BQF.
+E A D C X V D C E
+X J C
+D A E X
+U C G W X V K W T
+F C A F T C
+G I C
+U C G W X V K W T T Q
+U I A H C L.
 ```
-Observation
-- Short repeated phrase `QZK XQ BQF` appears three times → good crib candidate.
-- Pattern: `3-2-3` letters with spaces and punctuation preserved.
 
-Hypothesis: “THE TO END” style? Try high-frequency words of 3-2-3 length: THE TO MAN, THE IN END, YOU TO SEE, etc.
-Test “YOU TO SEE” (common, fits pronoun + TO + verb):
-- QZK → YOU → Q→Y, Z→O, K→U
-- XQ → TO → X→T, Q→O (but Q already → Y from YOU).
+Goal:
+```
+Sometimes the most beautiful people are beautifully broken. (Robert M. Drake)
+```
 
-Contradiction: Q already mapped to Y; can’t also map to O. Discard “YOU TO SEE”.
+Step 1: Single-letter words and common function words
+- Single-letter words likely A or I → here we see standalone `X` and `C`. Try X→A, C→I (or vice versa) and test both paths against other words.
+- Short words like “THE”, “ARE”, “THEM”, “YOU”, “WE” emerge from patterns across lines; use cross-checking to settle A/I roles.
 
-Try “THE TO END”:
-- QZK → THE → Q→T, Z→H, K→E
-- XQ  → TO  → X→T, Q→O (contradiction again: Q can’t be both T and O). Discard.
+Step 2: Build mapping C→P progressively
+- From consistent pattern fits (three-letter “THE”, frequent endings, repeated phrase `U C G W X V K W T`), a coherent mapping emerges without contradictions.
 
-Try “YOU WE YOU” (structure fits 3-2-3, though odd):
-- QZK → YOU → Q→Y, Z→O, K→U
-- XQ  → WE  → X→W, Q→E (Q mapped to Y earlier, contradiction). Discard.
+Step 3: Decrypt fully with the completed mapping
+```
+SOMETIMES THE MOST BEAUTIFUL PEOPLE ARE BEAUTIFULLY BROKEN.
 
-Try “ALL IS ALL” (common proverb shape):
-- QZK → ALL → Q→A, Z→L, K→L
-- XQ  → IS  → X→I, Q→S (but Q→A already). Discard.
-
-Try “MEN AT MEN” (still odd):
-Better approach: Frequency within the phrase: `Q` appears 3× as first letter. Common first letters for 3-letter words include T, A, I, O, W, Y. Consider “TIS ** TIS; ** TIS” antiquated? Unlikely.
-
-Alternate approach: guess repeated 3-letter word is “ALL”, “THE”, “YOU”, “NOT”, “MAN”, “SHE”, “HER”. Check punctuation variant `, ;` suggests a rhetorical repetition like “X and X; so X.” Another common triplet is “ONE” or “ANY”.
-
-Try “ONE BY ONE” (3-2-3 and a classic rhetorical form):
-- QZK → ONE → Q→O, Z→N, K→E
-- XQ  → BY  → X→B, Q→Y (fits; Q→O already, contradiction). Discard.
-
-Try “EYE TO EYE” (proverb):
-- QZK → EYE → Q→E, Z→Y, K→E (consistent inside word)
-- XQ  → TO  → X→T, Q→O (contradiction again: Q can’t be E and O). Discard.
-
-Try “NOW OR NOW”:
-- QZK → NOW → Q→N, Z→O, K→W
-- XQ  → OR  → X→O, Q→R (Q already N). Discard.
-
-At this point, consider systematic search: list common 3-2-3 idioms. Another classic is “MAN TO MAN”. Test it:
-- QZK → MAN → Q→M, Z→A, K→N
-- XQ  → TO  → X→T, Q→O (Q already M). Discard.
-
-Try “WAR IS WAR”:
-- QZK → WAR → Q→W, Z→A, K→R
-- XQ  → IS  → X→I, Q→S (Q already W). Discard.
-
-Try “ALL IS ALL”: already failed. Consider “FUN IS FUN”, “ART IS ART”, “LAW IS LAW”. Try “LAW IS LAW”:
-- QZK → LAW → Q→L, Z→A, K→W
-- XQ  → IS  → X→I, Q→S (Q already L). Discard.
-
-Try “EVE IS EVE”:
-- QZK → EVE → Q→E, Z→V, K→E
-- XQ  → IS  → X→I, Q→S (Q already E). Discard.
-
-When guesses stall, pivot: look at the final clause `UZ QZK XQ BQF.` — the leading `UZ` could be “SO”, “AS”, “IF”, “IN”, “WE”, “BE”, “BY”, etc. If `UZ=SO`, then U→S, Z→O. That gives `QZK` → Q O/E? Wait we had Z→O → `QOK`. Does “QOK” fit common 3-letter words? Maybe “YOU” if Q→Y and K→U, but then Z→O means O in the middle, okay “YOU”. Then `XQ` must be “TO” (X→T, Q→O). Consistent with `UZ=SO`? U→S, Z→O is fine.
-
-Let’s adopt: U→S, Z→O. Then `QZK` = Q O K. Try “YOU”: Q→Y, K→U.
-`XQ` then “TO”: X→T, Q→O (but Q→Y just set). Contradiction.
-
-Try `UZ=AS` (U→A, Z→S). Then `QZK` = Q S K. Try “THE”: Q→T, S→H, K→E. That sets Z→S conflicts later? Z maps to S (cipher→plain), that’s okay if unique.
-
-Check full phrase with these tentative mappings:
-`QZK XQ BQF, QZK XQ BQF; UZ QZK XQ BQF.` → “THE TO ?E?, THE TO ?E?; AS THE TO ?E?”.
-`BQF` with our partial mapping has B→?, Q→T, F→? → “?T?”. Common 3-letter words ending T? include “GET”, “SET”, “LET”, “MET”, “BET”. After “THE TO ___” a verb like “GET/SET/LET/SEE” fits; SEE maps ? T ? incorrectly, so not SEE. “LET” fits pattern _ E T (middle E), but we have ? T ? (T middle). So try “SET”: S E T → cipher must be B Q F → B→S, Q→E (but Q→T from THE). Contradiction.
-
-This example demonstrates how to systematically try candidates, enforce one-to-one mapping, and abandon paths quickly upon contradiction. Real solves often pivot earlier to other clues (double letters, different word positions) and come back once more letters are fixed.
+(ROBERT M. DRAKE)
+```
+Notes
+- Spaces and punctuation are preserved in Aristocrats; only letters are substituted.
+- Validate by re-encrypting the plaintext using your recovered mapping to ensure one-to-one consistency.
 
 ## Advanced Techniques
 - Multiple hypotheses: Keep 2–3 plausible mappings in parallel until more evidence arrives; just ensure you never merge conflicting assignments.

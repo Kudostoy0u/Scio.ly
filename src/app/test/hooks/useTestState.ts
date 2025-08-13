@@ -702,9 +702,9 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
             handleEditSubmitted(questionIndex);
           }
         }
-        return { success: true, message: result.reason || 'Edit submitted successfully!', reason: result.reason || 'Edit submitted successfully!' };
+        return { success: true, message: result.message || 'Edit submitted successfully!', reason: result.message || 'Edit submitted successfully!' };
       } else {
-        return { success: false, message: result.reason || 'Failed to submit edit', reason: result.reason || 'Failed to submit edit' };
+        return { success: false, message: result.message || 'Failed to submit edit', reason: result.message || 'Failed to submit edit' };
       }
     } catch (error) {
       console.error('Error submitting edit:', error);

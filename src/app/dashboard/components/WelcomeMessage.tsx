@@ -82,7 +82,7 @@ export default function WelcomeMessage({ darkMode, currentUser: _currentUser, se
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className={`rounded-lg p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'} border ${
+      className={`rounded-lg p-6 h-[136px] ${darkMode ? 'bg-gray-800' : 'bg-white'} border ${
         darkMode ? 'border-gray-700' : 'border-gray-200'
       }`}
     >

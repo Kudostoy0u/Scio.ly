@@ -51,6 +51,32 @@ Division C common adds: K3 monoalphabetic, Hill 2×2 (encrypt/decrypt; 3×3 give
 
 ## Solving playbook by cipher
 
+### Cipher reference index (links to full guides)
+Each link opens our in-depth, decryption-focused guide for that cipher. Divisions reflect what is typically used in practice selection for B vs C.
+
+| Cipher | Division(s) | Guide |
+|---|---|---|
+| Random Aristocrat | B & C | [/codebusters/ciphers/random-aristocrat.md](/codebusters/ciphers/random-aristocrat.md) |
+| K1 Aristocrat | B & C | [/codebusters/ciphers/k1-aristocrat.md](/codebusters/ciphers/k1-aristocrat.md) |
+| K2 Aristocrat | B & C | [/codebusters/ciphers/k2-aristocrat.md](/codebusters/ciphers/k2-aristocrat.md) |
+| K3 Aristocrat | C | [/codebusters/ciphers/k3-aristocrat.md](/codebusters/ciphers/k3-aristocrat.md) |
+| Random Patristocrat | B & C | [/codebusters/ciphers/random-patristocrat.md](/codebusters/ciphers/random-patristocrat.md) |
+| K1 Patristocrat | B & C | [/codebusters/ciphers/k1-patristocrat.md](/codebusters/ciphers/k1-patristocrat.md) |
+| K2 Patristocrat | B & C | [/codebusters/ciphers/k2-patristocrat.md](/codebusters/ciphers/k2-patristocrat.md) |
+| K3 Patristocrat | C | [/codebusters/ciphers/k3-patristocrat.md](/codebusters/ciphers/k3-patristocrat.md) |
+| Caesar | B | [/codebusters/ciphers/caesar.md](/codebusters/ciphers/caesar.md) |
+| Atbash | B | [/codebusters/ciphers/atbash.md](/codebusters/ciphers/atbash.md) |
+| Affine | B | [/codebusters/ciphers/affine.md](/codebusters/ciphers/affine.md) |
+| Baconian | B & C | [/codebusters/ciphers/baconian.md](/codebusters/ciphers/baconian.md) |
+| Porta | B & C | [/codebusters/ciphers/porta.md](/codebusters/ciphers/porta.md) |
+| Nihilist | B & C | [/codebusters/ciphers/nihilist.md](/codebusters/ciphers/nihilist.md) |
+| Fractionated Morse | B & C | [/codebusters/ciphers/fractionated-morse.md](/codebusters/ciphers/fractionated-morse.md) |
+| Columnar Transposition | B & C | [/codebusters/ciphers/columnar-transposition.md](/codebusters/ciphers/columnar-transposition.md) |
+| Checkerboard | B & C | [/codebusters/ciphers/checkerboard.md](/codebusters/ciphers/checkerboard.md) |
+| Hill 2×2 | B & C | [/codebusters/ciphers/hill-2x2.md](/codebusters/ciphers/hill-2x2.md) |
+| Hill 3×3 | C | [/codebusters/ciphers/hill-3x3.md](/codebusters/ciphers/hill-3x3.md) |
+| Xenocrypt (Spanish) | B & C | [/codebusters/ciphers/xenocrypt.md](/codebusters/ciphers/xenocrypt.md) |
+
 ### Substitution (Aristocrats/Patristocrats)
 - Single‑letter words: A, I (poetry may include O). Short words and triads: THE, AND, OF, TO, IN, THAT
 - Frequency: ETAOIN SHRDLU; consider text length before over‑relying on frequency

@@ -13,16 +13,11 @@ What this means in practice
 - Solve like an English Aristocrat but use Spanish frequency and vocabulary.
 - Single-letter words are rare; focus on articles/prepositions/conjunctions.
 
-## How It Works (Encryption/Decryption)
-Encryption
-1) Normalize Spanish plaintext: uppercase A–Z; á→A, é→E, í→I, ó→O, ú→U, ü→U; ñ→N.
-2) Generate a random permutation of A..Z as the key.
-3) Replace each plaintext letter with its ciphertext counterpart via the key.
-4) Preserve spaces and punctuation.
-
-Decryption
-1) Invert the key mapping (cipher→plain).
-2) Substitute each letter back; spaces/punctuation remain as-is.
+## How Decryption Works
+1) Normalize accents mentally (á→A, …; ñ→N) when testing cribs.  
+2) Build a cipher→plain mapping using Spanish cribs (QUE/DE/CON/POR/LOS/LAS/UNA/ES/EST).  
+3) Enforce one-to-one consistency and propagate across the whole text.  
+4) Iterate with frequency and morphology cues (-CION, -IDAD, -MENTE) until fluent Spanish appears.
 
 Because the mapping is consistent, one correct letter guess propagates everywhere.
 
@@ -106,17 +101,27 @@ Example 3: -CION ending
 ## Worked Example (Full Walkthrough)
 Ciphertext
 ```
-QZK XQ BQF, QZK XQ BQF; UZ QZK XQ BQF.
+WN FRWWRIN VRGRQR RE WNSAHN VGRB RX AETBGPNW RE RW NGPR
 ```
-Observation
-- Repeated 3-2-3 structure; suspect Spanish analogs like “QUE ES QUE; … QUE ES QUE.”
-Test “QUE ES QUE”:
-- QZK → QUE → Q→Q, Z→U, K→E
-- XQ → ES  → X→E, Q→S (conflict: Q→Q and Q→S). Try other pairs.
 
-Try “QUE DE QUE”:
-- XQ → DE → X→D, Q→E
-Check consistency elsewhere; continue iterating with DEL/CON/POR until a consistent mapping emerges.
+Target plaintext
+```
+LA BELLEZA PERECE EN LA VIDA, PERO ES INMORTAL EN EL ARTE. (Leonardo Da Vinci)
+```
+
+Step 1: High-value words and structure
+- The phrase structure suggests a comma in the Spanish original; function words like LA/EN/EL/ES are likely.  
+- Single-letter words are rare; focus on two-letter determiners EL/LA and prepositions EN.
+
+Step 2: Build mapping with cribs
+- Try mapping patterns for LA, EN, EL, ES across the text; check one-to-one consistency.  
+- As consistent pairs accumulate (e.g., L→W, A→N for an instance of LA, etc.), propagate throughout to reveal BELLEZA, PERECE, VIDA, PERO, INMORTAL, ARTE.
+
+Step 3: Complete decryption
+```
+LA BELLEZA PERECE EN LA VIDA, PERO ES INMORTAL EN EL ARTE.
+```
+Add attribution and normalize accents in the final rendering if desired.
 
 ## Advanced Techniques
 - Thematic cribs: Function words and Latin-rooted nouns/adjectives; leverage -CION, -MENTE, -IDAD.

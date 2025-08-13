@@ -1,0 +1,40 @@
+'use client';
+
+import Image from 'next/image';
+import { useTheme } from '@/app/contexts/ThemeContext';
+
+export default function Loading() {
+  const { darkMode } = useTheme();
+  const isStandalone = typeof window !== 'undefined' && (
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+    (navigator as any).standalone
+  );
+
+  if (!isStandalone) return null;
+
+  return (
+    <div className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <Image
+        src="/site-logo.png"
+        alt="Scio.ly"
+        width={96}
+        height={96}
+        className="rounded-lg shadow-sm"
+        priority
+      />
+      <div className={`mt-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Loading…</div>
+      <div className="mt-4 h-1.5 w-40 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+        <div className="h-full w-1/3 rounded-full bg-blue-600 animate-[scio-loading_1.2s_ease-in-out_infinite]" />
+      </div>
+      <style jsx>{`
+        @keyframes scio-loading {
+          0% { transform: translateX(-100%); }
+          50% { transform: translateX(100%); }
+          100% { transform: translateX(100%); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+

@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
         
         const response: ApiResponse = {
           success: true,
-          message: 'Question edit saved and applied',
+          message: aiReason || 'Question edit saved and applied',
           data: {
             reason: aiReason,
           },
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
       console.log('❌ [REPORT/EDIT] Edit rejected by AI validation');
       const response: ApiResponse = {
         success: false,
-        message: 'Edit was not accepted',
+        message: aiReason || 'Edit was not accepted',
         data: {
           reason: aiReason,
         },

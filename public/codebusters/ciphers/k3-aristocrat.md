@@ -34,17 +34,10 @@ S→S, C→C, I→I, E→E, N→N, A→A, B→B, D→D, F→F, G→G, H→H, J�
 ```
 In this toy example the rows are identical, producing identity mapping on those indices; in real cases, the two keyed rows may not align, producing a non-trivial permutation.
 
-## How It Works (Encryption/Decryption)
-Encryption (K3)
-1) Build keyed plain alphabet (top) and keyed cipher alphabet (bottom).  
-2) For each plaintext letter P, find its index i in the keyed plain alphabet.  
-3) Output the i-th letter of the keyed cipher alphabet.  
-4) Preserve spaces/punctuation.
-
-Decryption (K3)
-1) For each ciphertext letter C, find index i in the keyed cipher alphabet.  
-2) Output the i-th letter of the keyed plain alphabet.  
-3) Preserve spaces/punctuation.
+## How Decryption Works (K3 only)
+1) Reconstruct/assume both keyed rows: top (keyed plain), bottom (keyed cipher).  
+2) For each ciphertext letter C, find its index i in the bottom row; output the top-row letter at index i.  
+3) Preserve spaces and punctuation.
 
 ## Solving Method (Step-by-Step)
 Approach overview: Derive consistent mapping pairs from patterns, then reconstruct both rows by aligning indices. The keyword reveals itself at the start of either row as letters finalize.
@@ -66,14 +59,38 @@ Approach overview: Derive consistent mapping pairs from patterns, then reconstru
 - Complete both rows and read the plaintext.  
 - Verify by re-encrypting with both keyed rows to ensure a consistent round trip.
 
-## Worked Example (Mini)
-Suppose partial pairs suggest the following columns are filled (toy data):
+## Worked example (full decryption)
+Ciphertext:
 ```
-Index:  0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
-Top:    S  C  I  E  N  A  B  D  F  G   H  J  K  L  M  O  P  Q  R  T  U  V  W  X  Y  Z
-Bottom: C  E  S  N  I  A  B  D  F  H   G  J  K  L  M  O  P  Q  R  T  U  V  W  X  Y  Z
+AFOMDBA BQNCAVR.
 ```
-Top begins with keyword SCIEN..., bottom begins with CESNI...; the recovered keyword could be “SCIENCE” for both rows. Confirm by trying additional letters.
+
+Target plaintext:
+```
+EDUCATE THYSELF. (Lailah Gifty Akita)
+```
+
+Step 1: Align letters and collect pairs (P→C)
+Ignoring spaces/punctuation, the consistent pairs include:
+```
+E→A, D→F, U→O, C→M, A→D, T→B, H→Q, Y→N, S→C, L→V, F→R
+```
+
+Step 2: Reconstruct both keyed rows
+- Place each pair as a column: top row gets the plaintext letter; bottom row gets the ciphertext letter in the same column.  
+- Complete each row by appending remaining letters A–Z after a deduplicated keyword prefix. One valid pair of row keywords consistent with the mapping is:
+```
+Top (keyed plain) keyword: EDUCATEH YSLF
+Bot (keyed cipher) keyword: AFOMDBA BQNCVR
+```
+(Spaces just for readability; deduplicate letters, then append unused A–Z.)
+
+Step 3: Decrypt by index
+- For each ciphertext letter, find its index in the bottom row; read the top-row letter at that index. The result is:
+```
+EDUCATE THYSELF.
+```
+Add attribution to match the full quote.
 
 ## Advanced Tips (K3-specific)
 - Dual reconstruction: If one row stalls, fill the other. Any confirmed P↔C pair fixes a column in both rows.  
@@ -91,10 +108,10 @@ Top begins with keyword SCIEN..., bottom begins with CESNI...; the recovered key
 - Decrypt: C at index i in keyedCipher → P = keyedPlain[i].  
 - Reconstruct 26 columns; keyword shows at row starts.
 
-## Practice Exercises
-1) With keyword “SCIENCE”, construct both keyed rows and encrypt: ATTACKATDAWN.  
-2) From partial P↔C pairs, fill columns and guess whether one or two keywords are being used.  
-3) Prove your solution by re-encrypting the plaintext and matching the original ciphertext.
+## Practice Exercises (Decryption Only)
+1) From partial P↔C pairs, fill columns and decide whether one or two keywords are being used.  
+2) Complete both rows and decrypt a sentence.  
+3) Verify by re-encrypting with your recovered rows to check consistency.
 
 ## Pseudocode (Reference)
 ```text

@@ -58,7 +58,7 @@ export default function FavoriteConfigsCard() {
         <div className="flex-none min-w-[110px]">
           <h3 className={`${darkMode ? 'text-white' : 'text-gray-800'} text-lg font-semibold leading-tight`}>
             <span className="block">Favorited</span>
-            <span className="block">Configurations</span>
+            <span className="block">Configs</span>
           </h3>
         </div>
 

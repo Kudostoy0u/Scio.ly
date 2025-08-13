@@ -39,10 +39,12 @@ self.addEventListener('fetch', (event) => {
   if (isApi || isDocument) {
     event.respondWith(
       fetch(request).catch(async () => {
-        // Offline fallback only for navigations
+        // Offline fallback for navigations
         if (isDocument) {
-          const cached = await caches.match('/');
-          if (cached) return cached;
+          const offlinePage = await caches.match('/offline');
+          if (offlinePage) return offlinePage;
+          const cachedHome = await caches.match('/');
+          if (cachedHome) return cachedHome;
         }
         return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
       })
@@ -66,6 +68,43 @@ self.addEventListener('fetch', (event) => {
       })
     );
     return;
+  }
+});
+
+// Background Sync handler (one-off)
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'scio-sync') {
+    event.waitUntil(
+      caches.open(CACHE_NAME).then(async (cache) => {
+        try {
+          const resp = await fetch('/');
+          if (resp && resp.ok) {
+            cache.put('/', resp.clone());
+          }
+        } catch {}
+      })
+    );
+  }
+});
+
+// Periodic Background Sync handler (if supported)
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'scio-periodic') {
+    event.waitUntil(
+      caches.open(CACHE_NAME).then(async (cache) => {
+        try {
+          const urls = ['/', '/manifest.webmanifest'];
+          await Promise.all(urls.map(async (url) => {
+            try {
+              const resp = await fetch(url, { cache: 'no-store' });
+              if (resp && resp.ok) {
+                cache.put(url, resp.clone());
+              }
+            } catch {}
+          }));
+        } catch {}
+      })
+    );
   }
 });
 

@@ -1,7 +1,7 @@
 # Nihilist Cipher
 
 ## Explanation
-The Nihilist cipher (aka Nihilist substitution) encodes text by converting letters to Polybius-square coordinates, converting a separate cipher keyword to numbers using the same square, creating a running key by repeating those keyword numbers, and then combining (adding) the plaintext numbers with the running-key numbers to form the ciphertext numbers. Decryption reverses by subtracting the running key from the ciphertext numbers and translating numbers back to letters via the same Polybius square.
+The Nihilist cipher (aka Nihilist substitution) represents letters as Polybius-square coordinates, converts a cipher keyword to numbers using the same square, creates a running key by repeating those keyword numbers, and then combines numbers. For solving, we only need the reverse: subtract the running-key numbers from the ciphertext numbers and translate results back to letters via the same Polybius square.
 
 In Codebusters, the standard approach uses a 5×5 Polybius square (25-letter alphabet) with I/J combined (or similar instruction). Always follow the event instructions for alphabet and formatting. Spaces/punctuation are usually removed before conversion.
 
@@ -13,11 +13,10 @@ Key components
 
 ## Algorithm Overview
 1) Build 5×5 Polybius square with a Polybius key (I/J combined).  
-2) Convert plaintext (letters only, I/J merged) to Polybius coordinates (two-digit numbers, 1–5 row then 1–5 column).  
-3) Convert cipher keyword letters to Polybius numbers.  
-4) Create a running key by repeating the cipher key numbers to match the plaintext-number stream length.  
-5) Encryption: combine plaintext-number pairs and running-key pairs (digit-wise addition without carry is common; follow event rules).  
-6) Decryption: subtract running-key pairs from ciphertext pairs (digit-wise, borrowing as needed) and convert numbers back to letters via the Polybius square.
+2) Convert cipher keyword letters to Polybius numbers (using the same square).  
+3) Create a running key by repeating the cipher key numbers to match the ciphertext length (in pairs).  
+4) Decrypt: subtract the running-key pairs from the ciphertext pairs (per contest rule; typically per-digit mod 10 or decimal subtraction — follow event instructions).  
+5) Map resulting pairs back to letters via the Polybius square.
 
 ## Polybius Square Construction (5×5)
 - Alphabet (25 letters): A B C D E F G H I/J K L M N O P Q R S T U V W X Y Z  
@@ -60,47 +59,49 @@ Plain length = 7 pairs → need 7 key pairs
 Cipher key numbers repeated: 13 24 11 34 13 24 11  
 Align pairwise with plaintext numbers.
 
-## Combining Numbers
-Common contest rule: digit-wise addition without carry (mod 10 per digit). Confirm with your event rules.  
-- Example: 11 + 13 → 24 (1+1=2, 1+3=4).  
-- If using pure decimal addition (less common), adjust accordingly.
-
-Encryption example (digit-wise add)
-Plain: 11 12 13 15 12 22 44  
-Key:   13 24 11 34 13 24 11  
-Add →  24 36 24 49 25 46 55
-
-Ciphertext numbers: 24 36 24 49 25 46 55
-
-Decryption example (digit-wise subtract)
-Cipher: 24 36 24 49 25 46 55  
-Key:    13 24 11 34 13 24 11  
-Sub →   11 12 13 15 12 22 44  → map via square → SECRETO
+## Combining/Subtracting Numbers (contest rule)
+Most Codebusters uses digit-wise, per-digit arithmetic without carry (i.e., mod 10 per digit). Some sources use true decimal addition/subtraction. Your event will specify which to apply. The decryption procedure is the same idea: subtract the repeated key pairs from the ciphertext pairs using the chosen rule, then map the results through the Polybius square.
 
 ## Formatting and Output
 - Numbers typically printed as two digits per letter (e.g., 24 36 24 …).  
 - Grouping (e.g., 10 pairs per line) is for readability only.  
 - Plaintext spacing/punctuation often removed before encoding; follow problem instructions.
 
-## Worked, End-to-End Example
-Polybius key: SECURITY  
-Cipher key: CASH  
-Plaintext: MENSAJE (Spanish example; normalize J→I)
+## Worked Example (Decryption, end-to-end)
+Polybius key: VERTICAL  
+Cipher key: CELO  
+Ciphertext (pairs):
+```
+72 34 65 64 35 27 54 98 76 55 75 56 72 24 46 74 43 54 48 98 64 64 76 58 44 35 74 65 63 33 37 58 52 67 74 86 42 27 35 57 76
+```
 
-1) Build square (as above).  
-2) Normalize plaintext: MENSAIE (J→I)  
-Map to numbers via square:  
-- M=42, E=12, N=43, S=11, A=24, I=21, E=12  
-Plain: 42 12 43 11 24 21 12
+1) Build the 5×5 Polybius square with key “VERTICAL” (I/J combined), filling row-wise with deduplicated key letters then the remaining alphabet:
+```
+Row\Col  1  2  3  4  5
+1        V  E  R  T  I
+2        C  A  L  B  D
+3        F  G  H  K  M
+4        N  O  P  Q  S
+5        U  W  X  Y  Z
+```
 
-3) Cipher key to numbers: C=13, A=24, S=11, H=34 → 13 24 11 34  
-Running key (repeat): 13 24 11 34 13 24 11
+2) Convert cipher key “CELO” to numbers using the same square:
+```
+C→21, E→12, L→23, O→42  →  running key pattern: 21 12 23 42 (repeat)
+```
 
-4) Encrypt (digit-wise add without carry):  
-42+13=55, 12+24=36, 43+11=54, 11+34=45, 24+13=37, 21+24=45, 12+11=23  
-Cipher: 55 36 54 45 37 45 23
+3) Repeat the running key numbers to the ciphertext length.
 
-5) Decrypt: subtract running key and map numbers back to letters in the same square.
+4) Subtract running-key pairs from ciphertext pairs using your contest’s subtraction rule (digit-wise without carry is common; some contests use decimal subtraction). The resulting pairs map back through the square to letters.
+
+Resulting plaintext:
+```
+SANCTIFY YOURSELF AND YOU WILL SANCTIFY SOCIETY
+
+(FRANCIS OF ASSISI)
+```
+Restore standard capitalization and punctuation as needed:
+“Sanctify yourself and you will sanctify society.” — Francis of Assisi
 
 ## Solving Nihilist (Contest Strategy)
 1) If both keys (Polybius and cipher key) are unknown
@@ -132,10 +133,10 @@ Cipher: 55 36 54 45 37 45 23
 
 ## Quick Reference
 - Build 5×5 Polybius with key; I/J combined.  
-- Plain → Polybius numbers; Key → Polybius numbers.  
+- Key → Polybius numbers (same square).  
 - Running key: repeat key numbers to match length.  
-- Encrypt: digit-wise add without carry; Decrypt: digit-wise subtract.  
-- Map via the same square for both directions.
+- Decrypt: subtract running key from ciphertext pairs (follow contest rule).  
+- Map via the same square to letters.
 
 ## Practice Exercises
 1) With Polybius key “SECURITY” and cipher key “CASH”, encrypt “SECRETO”.  
@@ -149,75 +150,49 @@ alphabet = "ABCDEFGHIKLMNOPQRSTUVWXYZ" // I/J combined
 
 function buildPolybius(key):
   used = set()
-  grid = [] // 5x5
-  // add key letters
+  grid = [] // 5x5 row-major
   for ch in key:
     ch = normalizeIJ(ch)
     if ch in alphabet and ch not in used:
-      append ch to grid
-      used.add(ch)
-  // fill remaining
+      append ch to grid; used.add(ch)
   for ch in alphabet:
-    if ch not in used:
-      append ch to grid
-  return grid (row-major 25 entries)
+    if ch not in used: append ch to grid
+  return grid // 25 letters
 
-function letterToCoords(ch, grid):
-  ch = normalizeIJ(ch)
-  idx = indexOf(grid, ch)
-  row = floor(idx / 5) + 1
-  col = (idx % 5) + 1
-  return (row, col) // as digits 1..5
-
-function wordToPairs(word, grid):
+function letterToPairs(word, grid): // for building key numbers
   pairs = []
   for ch in word:
     if 'A'<=ch<='Z':
-      (r,c) = letterToCoords(ch, grid)
-      pairs.append(10*r + c) // e.g., 11..55
+      idx = indexOf(grid, normalizeIJ(ch))
+      r = floor(idx/5)+1; c = (idx%5)+1
+      pairs.append(10*r + c)
   return pairs
 
-function repeatPairs(pairs, length):
+function repeatPairs(pairs, L):
   out = []
-  for i in 0..length-1:
-    out.append(pairs[i % len(pairs)])
+  for i in 0..L-1: out.append(pairs[i % len(pairs)])
   return out
 
-// per-digit add without carry
-function addPairs(a, b):
-  ar = floor(a/10), ac = a%10
-  br = floor(b/10), bc = b%10
-  return 10*((ar+br)%10) + ((ac+bc)%10)
+// Choose subtraction rule per contest
+function subDigitwise(a,b):
+  ar=floor(a/10); ac=a%10
+  br=floor(b/10); bc=b%10
+  return 10*((ar-br+10)%10) + ((ac-bc+10)%10)
 
-function subPairs(a, b):
-  ar = floor(a/10), ac = a%10
-  br = floor(b/10), bc = b%10
-  rr = (ar - br + 10) % 10
-  rc = (ac - bc + 10) % 10
-  return 10*rr + rc
-
-function encryptNihilist(plain, polyKey, cipherKey):
+function decryptNihilist(cipherPairs, polyKey, cipherKey, mode="digit"):
   grid = buildPolybius(polyKey)
-  P = wordToPairs(normalize(plain), grid)
-  K = wordToPairs(cipherKey, grid)
-  R = repeatPairs(K, len(P))
-  C = []
-  for i in 0..len(P)-1:
-    C.append(addPairs(P[i], R[i]))
-  return C
-
-function decryptNihilist(cipherPairs, polyKey, cipherKey):
-  grid = buildPolybius(polyKey)
-  K = wordToPairs(cipherKey, grid)
+  K = letterToPairs(cipherKey, grid)
   R = repeatPairs(K, len(cipherPairs))
   P = []
   for i in 0..len(cipherPairs)-1:
-    P.append(subPairs(cipherPairs[i], R[i]))
-  // map back to letters
+    if mode=="digit": v = subDigitwise(cipherPairs[i], R[i])
+    else: v = (cipherPairs[i] - R[i] + 100) % 100  // decimal variant
+    P.append(v)
+  // map back
   out = ""
   for v in P:
-    row = floor(v/10)-1; col = (v%10)-1
-    out += grid[5*row + col]
+    r = floor(v/10)-1; c=(v%10)-1
+    out += grid[5*r + c]
   return out
 ```
 

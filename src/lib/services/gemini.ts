@@ -263,7 +263,7 @@ CRITICAL VALIDATION GUIDELINES
 
 OUTPUT
 - Decide isValid (true/false).
-- Provide a concise reason that references your verification (if answers changed, mention your check of original vs new answers).
+- Provide a concise reason in no more than two sentences that references your verification (if answers changed, mention your check of original vs new answers). Keep it readable and specific.
 `;
 console.log(prompt);
 

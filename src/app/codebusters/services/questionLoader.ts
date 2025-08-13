@@ -1,4 +1,5 @@
 import { QuoteData } from '../types';
+import { getEventOfflineQuestions } from '@/app/utils/storage';
 import {
   encryptK1Aristocrat,
   encryptK2Aristocrat,
@@ -144,26 +145,39 @@ export const loadQuestionsFromDatabase = async (
     console.log(`🔍 Quote requirements: ${nonXenocryptCount} English, ${xenocryptCount} Spanish, total: ${questionCount}`);
     console.log(`🔍 Cipher types:`, questionCipherTypes);
 
-    // Fetch English quotes for non-xenocrypt questions
+    // Fetch quotes (prefer network, fall back to offline store)
     let englishQuotes: Array<{id: string, author: string, quote: string}> = [];
-    if (nonXenocryptCount > 0) {
-      const englishResponse = await fetch(`/api/quotes?language=en&limit=${nonXenocryptCount}`);
-      if (!englishResponse.ok) {
-        throw new Error(`Failed to fetch English quotes: ${englishResponse.statusText}`);
-      }
-      const englishData = await englishResponse.json();
-      englishQuotes = englishData.data?.quotes || englishData.quotes || [];
-    }
-
-    // Fetch Spanish quotes for xenocrypt questions
     let spanishQuotes: Array<{id: string, author: string, quote: string}> = [];
-    if (xenocryptCount > 0) {
-      const spanishResponse = await fetch(`/api/quotes?language=es&limit=${xenocryptCount}`);
-      if (!spanishResponse.ok) {
-        throw new Error(`Failed to fetch Spanish quotes: ${spanishResponse.statusText}`);
+    try {
+      if (nonXenocryptCount > 0) {
+        const englishResponse = await fetch(`/api/quotes?language=en&limit=${Math.min(nonXenocryptCount, 200)}`);
+        if (!englishResponse.ok) throw new Error('en failed');
+        const englishData = await englishResponse.json();
+        englishQuotes = englishData.data?.quotes || englishData.quotes || [];
       }
-      const spanishData = await spanishResponse.json();
-      spanishQuotes = spanishData.data?.quotes || spanishData.quotes || [];
+      if (xenocryptCount > 0) {
+        const spanishResponse = await fetch(`/api/quotes?language=es&limit=${Math.min(xenocryptCount, 200)}`);
+        if (!spanishResponse.ok) throw new Error('es failed');
+        const spanishData = await spanishResponse.json();
+        spanishQuotes = spanishData.data?.quotes || spanishData.quotes || [];
+      }
+    } catch {
+      // Offline fallback: use stored quotes pool
+      const stored = await getEventOfflineQuestions('codebusters');
+      const storedEn = Array.isArray(stored?.en) ? stored.en : [];
+      const storedEs = Array.isArray(stored?.es) ? stored.es : [];
+      if (nonXenocryptCount > 0) {
+        if (storedEn.length < nonXenocryptCount) {
+          throw new Error(`Not enough offline English quotes. Need ${nonXenocryptCount}, got ${storedEn.length}`);
+        }
+        englishQuotes = storedEn.slice(0, nonXenocryptCount);
+      }
+      if (xenocryptCount > 0) {
+        if (storedEs.length < xenocryptCount) {
+          throw new Error(`Not enough offline Spanish quotes. Need ${xenocryptCount}, got ${storedEs.length}`);
+        }
+        spanishQuotes = storedEs.slice(0, xenocryptCount);
+      }
     }
 
     // Verify we have enough quotes before processing

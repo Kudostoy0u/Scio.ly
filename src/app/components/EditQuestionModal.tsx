@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { geminiService, EditSuggestion, Question } from '@/app/utils/geminiService';
-import { FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+// Removed in-modal success/failure icons for optimistic flow
 
 interface EditQuestionModalProps {
   isOpen: boolean;
@@ -33,8 +33,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
   const [reason, setReason] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isFRQ, setIsFRQ] = useState(false);
-  const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [submissionMessage, setSubmissionMessage] = useState('');
+  // Optimistic flow: no in-modal success/failure screen
   const [originalOptionCount, setOriginalOptionCount] = useState(0);
   
   // AI suggestion states
@@ -84,8 +83,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
     setSuggestions(null);
     setShowSuggestions(false);
     setIsLoadingSuggestions(false);
-    setSubmissionStatus('idle');
-    setSubmissionMessage('');
+    // No in-modal status when optimistic
     setOriginalOptionCount(0);
   };
 
@@ -173,7 +171,6 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
     if (!question) return;
 
     setIsProcessing(true);
-    setSubmissionStatus('idle');
 
     try {
       const editedQuestionData: Question = {
@@ -189,20 +186,24 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
         subtopic: question.subtopic
       };
 
-      const result = await onSubmit(editedQuestionData, reason, question);
-      if (result.success) {
-        setSubmissionStatus('success');
-        setSubmissionMessage(result.reason ||  'Edit submitted successfully!');
-        toast.success(result.message || 'Edit submitted successfully!');
-      } else {
-        setSubmissionStatus('error');
-        setSubmissionMessage(result.reason || 'Failed to submit edit.');
-        toast.error(result.message || 'Failed to submit edit.');
-      }
+      toast.info('Judging edits');
+      // Fire-and-forget submission; close modal immediately
+      const submitPromise = onSubmit(editedQuestionData, reason, question);
+      handleClose();
+      submitPromise
+        .then((result) => {
+          if (result.success) {
+            toast.success(result.message || 'Edit accepted');
+          } else {
+            toast.error(result.message || 'Edit rejected');
+          }
+        })
+        .catch((error) => {
+          console.error('Error processing edit:', error);
+          toast.error('An unexpected error occurred.');
+        });
     } catch (error) {
       console.error('Error processing edit:', error);
-      setSubmissionStatus('error');
-      setSubmissionMessage('An unexpected error occurred. Please try again.');
       toast.error('An unexpected error occurred.');
     } finally {
       setIsProcessing(false);
@@ -265,27 +266,6 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
           </button>
         </div>
 
-        {submissionStatus !== 'idle' ? (
-          <div className="text-center p-6">
-            {submissionStatus === 'success' ? (
-              <FaCheckCircle className="text-green-500 text-6xl mx-auto mb-4" />
-            ) : (
-              <FaTimesCircle className="text-red-500 text-6xl mx-auto mb-4" />
-            )}
-            <h4 className={`text-xl font-semibold mb-2 ${submissionStatus === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-              {submissionStatus === 'success' ? 'Success!' : 'Failure'}
-            </h4>
-            <p className="mb-6">{submissionMessage}</p>
-            <button
-              onClick={handleClose}
-              className={`w-full px-4 py-2 rounded-md text-white ${
-                darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
-              }`}
-            >
-              I understand
-            </button>
-          </div>
-        ) : (
           <form onSubmit={handleSubmit}>
             {/* AI Suggestions Section */}
             <div className={`mb-6 p-4 rounded-lg border ${
@@ -575,7 +555,6 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
               </button>
             </div>
           </form>
-        )}
       </div>
     </div>
   );

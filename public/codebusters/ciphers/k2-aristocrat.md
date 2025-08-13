@@ -3,7 +3,7 @@
 ## Explanation
 K2 Aristocrat is a monoalphabetic substitution cipher where the CIPHERTEXT alphabet is keyed by a keyword and the PLAINTEXT alphabet remains the normal A–Z. Spaces and punctuation are preserved. The same mapping applies throughout the text.
 
-Conceptually: index letters against two rows. The top row is the standard plaintext alphabet (A–Z). The bottom row is the keyed cipher alphabet. To encrypt, find the plaintext letter in the top row and output the letter directly beneath it in the bottom row. Decryption reverses that via the bottom row index.
+Conceptually: index letters against two rows. The top row is the standard plaintext alphabet (A–Z). The bottom row is the keyed cipher alphabet. To decrypt, take ciphertext letter C, find its index in the bottom row, and output the letter at that index in the top row.
 
 Why this matters
 - Knowing it’s K2 tells you the plain alphabet is the normal A–Z, while the cipher alphabet is the keyed variant.  
@@ -36,17 +36,11 @@ Notes
 - Some letters may map to themselves (e.g., T→T) depending on the keyword.  
 - Mapping is a permutation; each plain letter maps to a unique cipher letter.
 
-## How It Works (Encryption/Decryption)
-Encryption (K2)
-1) Plain alphabet = A–Z. Cipher alphabet = keyed(keyword).  
-2) For each plaintext letter P, find its index i in A–Z.  
-3) Output the i-th letter of the keyed cipher alphabet.  
+## How Decryption Works (K2 only)
+1) Reconstruct or assume the keyed cipher alphabet (bottom row).  
+2) For each ciphertext letter C, find index i in the bottom row.  
+3) Output A–Z[i].  
 4) Preserve spaces/punctuation.
-
-Decryption (K2)
-1) For each ciphertext letter C, find index i in the keyed cipher alphabet.  
-2) Output A–Z[i].  
-3) Preserve spaces/punctuation.
 
 ## Solving Method (Step-by-Step)
 Approach overview: Deduce letter mappings from patterns, reconstruct the keyed cipher row (bottom row), and read off the keyword from its beginning.
@@ -67,26 +61,43 @@ Approach overview: Deduce letter mappings from patterns, reconstruct the keyed c
 - Finish the mapping and decrypt the text.  
 - Re-encrypt the plaintext with your recovered keyword to confirm.
 
-## Worked Example (Mini)
-Keyword: SCIENCE (keyed cipher as above)
-
-Encrypt “MEET”
+## Worked example (decryption and keyword recovery)
+Ciphertext:
 ```
-M (A–Z idx 12) → bottom[12] = K
-E (idx 4)      → bottom[4]  = N
-E (idx 4)      → bottom[4]  = N
-T (idx 19)     → bottom[19] = T
-Cipher: KNNT
+ZSLI AFWQGHK? CK C ZSGI TWQGHK, C'O EDS JIJW.
 ```
 
-Decrypt “SGHS”
+Target plaintext:
 ```
-S in bottom → index 0 → top[0] = A
-G in bottom → index 9 → top[9] = J
-H in bottom → index 10 → top[10] = K
-S in bottom → index 0 → top[0] = A
-Plain: AJKA (nonsense here; example is illustrative—use full context to refine mappings)
+Know thyself? If I knew myself, I'd run away. — Johann Wolfgang von Goethe
 ```
+
+Step 1: Build mapping from aligned plaintext/ciphertext
+- Remove punctuation for alignment checks (keep for final output). Map A–Z positions to observed cipher letters.
+- Partial bottom row (indexed by A..Z on the top row; unknown = ·):
+```
+idx:  A  B  C  D  E  F  G  H  I  J  K  L  M  N  O  P  Q  R  S  T  U  V  W  X  Y  Z
+bot:  J  ·  ·  O  G  K  ·  F  C  ·  Z  H  T  S  L  ·  ·  E  Q  A  D  ·  I  ·  W  ·
+```
+
+Step 2: Complete the bottom row as a keyword-first, then A–Z tail
+- Fill the remaining letters so that the bottom row is a deduplicated keyword prefix followed by unused letters in alphabetical order. One valid completion consistent with all observed pairs is:
+```
+JNPOGKRFCUZHTSLVYEQADBIMWX
+```
+
+Step 3: Read a valid keyword
+- The deduplicated keyword is the initial segment of the bottom row up to where the alphabetical tail begins. A compatible recovered keyword (one of many that generate the same row) is:
+```
+JNPOGKRFCUZHTSLVYEQAD
+```
+
+Step 4: Decrypt using the completed bottom row
+- For each ciphertext letter, find its index in the bottom row and output the A..Z letter at that index. This yields:
+```
+KNOW THYSELF? IF I KNEW MYSELF, I'D RUN AWAY.
+```
+Add attribution to match the full quote.
 
 ## Advanced Tips (K2-specific)
 - Bottom-row keyword: In K2, the keyword is literally visible at the start of the cipher alphabet row as you reconstruct it.  
@@ -104,10 +115,10 @@ Plain: AJKA (nonsense here; example is illustrative—use full context to refine
 - Decrypt: C at index i in keyedCipher → P = A–Z[i].  
 - Reconstruct bottom row and read keyword prefix.
 
-## Practice Exercises
-1) With keyword “KEY”, build the K2 bottom row and encrypt: ATTACKATDAWN.  
-2) From a partial mapping table, complete the keyed cipher row and recover the keyword.  
-3) Decrypt a sentence when only 10 mappings are known by leveraging word patterns.
+## Practice Exercises (Decryption Only)
+1) From partial pairs P↔C, place cipher letters on the bottom row under A..Z and complete the row.  
+2) Read a deduplicated keyword from the completed row and decrypt a sentence.  
+3) Use word patterns (THE/AND/OF/TO) to seed mappings and finish the row.
 
 ## Pseudocode (Reference)
 ```text
