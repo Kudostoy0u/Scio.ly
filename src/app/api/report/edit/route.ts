@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { ApiResponse, ReportEditRequest } from '@/lib/types/api';
 import { geminiService } from '@/lib/services/gemini';
-import { edits as editsTable } from '@/lib/db/schema';
+import { edits as editsTable, questions as questionsTable } from '@/lib/db/schema';
 import { and, eq } from 'drizzle-orm';
 
 // POST /api/report/edit - Report and validate an edit
@@ -84,10 +84,65 @@ export async function POST(request: NextRequest) {
         }
 
         console.log('✅ [REPORT/EDIT] Edit successfully saved to database');
+
+        // Auto-apply to questions table
+        const original = body.originalQuestion as Record<string, unknown>;
+        const edited = body.editedQuestion as Record<string, unknown>;
+
+        // Prefer ID if present, otherwise try to locate question by content and event
+        const event = body.event;
+        let targetId: string | undefined = (original.id as string | undefined) || (edited.id as string | undefined);
+        if (!targetId) {
+          // Locate by original content first
+          const conditions: any[] = [
+            eq(questionsTable.question, String(original.question || '')),
+            eq(questionsTable.event, String(event)),
+          ];
+          if (original.tournament) conditions.push(eq(questionsTable.tournament, String(original.tournament)));
+          if (original.division) conditions.push(eq(questionsTable.division, String(original.division)));
+          const found = await db.select({ id: questionsTable.id }).from(questionsTable).where(and(...conditions)).limit(1);
+          targetId = found[0]?.id as string | undefined;
+          if (!targetId) {
+            // Fallback: try via edited content
+            const cond2: any[] = [
+              eq(questionsTable.question, String(edited.question || '')),
+              eq(questionsTable.event, String(event)),
+            ];
+            if (edited.tournament) cond2.push(eq(questionsTable.tournament, String(edited.tournament)));
+            if (edited.division) cond2.push(eq(questionsTable.division, String(edited.division)));
+            const found2 = await db.select({ id: questionsTable.id }).from(questionsTable).where(and(...cond2)).limit(1);
+            targetId = found2[0]?.id as string | undefined;
+          }
+        }
+
+        if (targetId) {
+          const payload: Partial<typeof questionsTable.$inferInsert> = {
+            question: String(edited.question || ''),
+            tournament: String(edited.tournament || ''),
+            division: String(edited.division || ''),
+            event: String(event || edited.event || ''),
+            options: Array.isArray(edited.options) ? (edited.options as unknown[]) : [],
+            answers: Array.isArray(edited.answers) ? (edited.answers as unknown[]) : [],
+            subtopics: Array.isArray((edited as any).subtopics)
+              ? ((edited as any).subtopics as unknown[])
+              : (edited as any).subtopic
+                ? [String((edited as any).subtopic)]
+                : [],
+            difficulty: typeof (edited as any).difficulty === 'number'
+              ? (edited as any).difficulty.toString()
+              : typeof (edited as any).difficulty === 'string'
+                ? String((edited as any).difficulty)
+                : '0.5',
+          } as any;
+          await db.update(questionsTable).set({ ...(payload as any), updatedAt: new Date() }).where(eq(questionsTable.id, targetId));
+          console.log('🧩 [REPORT/EDIT] Applied edit to questions table for id:', targetId);
+        } else {
+          console.log('⚠️ [REPORT/EDIT] Could not locate target question to auto-apply edit');
+        }
         
         const response: ApiResponse = {
           success: true,
-          message: 'Question edit saved',
+          message: 'Question edit saved and applied',
           data: {
             reason: aiReason,
           },

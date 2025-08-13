@@ -36,29 +36,52 @@ K⁻¹ (3x3) overview
 
 In contest settings, K⁻¹ is typically given to you; use it as the encryption key for decryption.
 
-## How Encryption Works (3x3)
-Given K and plaintext vector P=[p1;p2;p3], compute C = K·P (mod 26). Map c1,c2,c3 back to letters.
-
-Worked example (illustrative)
-Let K = [ [6,24,1], [13,16,10], [20,17,15] ]. This is a classic invertible key.
-- det(K) ≡ 25 (mod 26), gcd(25,26)=1 → invertible.
-
-Encrypt ACT (A=0, C=2, T=19): P=[0;2;19]
-- c1 = 6·0 + 24·2 + 1·19 = 0 + 48 + 19 = 67 ≡ 15 → P
-- c2 = 13·0 + 16·2 + 10·19 = 0 + 32 + 190 = 222 ≡ 14 → O
-- c3 = 20·0 + 17·2 + 15·19 = 0 + 34 + 285 = 319 ≡ 7 → H
-Cipher: POH.
-
 ## How Decryption Works (3x3)
 With K⁻¹ (given or computed), compute P = K⁻¹·C (mod 26).
 
-Continuing the example, suppose K⁻¹ is known (for the above K):
-K⁻¹ ≡ [ [8,5,10], [21,8,21], [21,12,8] ] (mod 26)  
-Decrypt POH (P=15,O=14,H=7) → C=[15;14;7]
-- p1 = 8·15 + 5·14 + 10·7 = 120 + 70 + 70 = 260 ≡ 0 → A
-- p2 = 21·15 + 8·14 + 21·7 = 315 + 112 + 147 = 574 ≡ 2 → C
-- p3 = 21·15 + 12·14 + 8·7 = 315 + 168 + 56 = 539 ≡ 19 → T
-Recovered: ACT.
+Worked example (full decryption with provided matrices)
+Ciphertext (grouped for readability):
+```
+HJLBEL IIWSHL MYHDZJ WAHWTU KSSTBN EYROGA NRNXOX
+```
+
+Given
+```
+Encryption matrix K   = [ [18,  4, 21],
+                          [16, 23, 11],
+                          [ 3,  8, 23] ]   // (S E V; Q X L; D I X)
+
+Decryption matrix K⁻¹ = [ [ 7, 14,  5],
+                          [ 5, 13, 22],
+                          [ 3, 14, 20] ]   // provided in contest
+```
+
+Steps
+1) Normalize to letters A–Z, uppercase; remove spaces/punctuation.  
+2) Map A→0, …, Z→25.  
+3) Split the ciphertext into 3-letter blocks; form column vectors C=[c1;c2;c3].  
+4) For each block, compute P = K⁻¹·C (mod 26) and map back to letters.
+
+First two blocks (shown step-by-step)
+- Block 1: "HJL" → [7;9;11]
+  - p = K⁻¹·C = [ 7·7 +14·9 + 5·11,
+                  5·7 +13·9 +22·11,
+                  3·7 +14·9 +20·11 ] (mod 26)
+           = [230, 394, 367] ≡ [22, 4, 3] → W E D
+- Block 2: "BEL" → [1;4;11]
+  - p = [ 7·1 +14·4 + 5·11,
+          5·1 +13·4 +22·11,
+          3·1 +14·4 +20·11 ] (mod 26)
+    = [118, 299, 279] ≡ [14, 13, 19] → O N T
+
+Continuing through all blocks yields:
+```
+WE DONT SEE THINGS AS THEY ARE WE SEE THEM AS WE ARE
+```
+Restore punctuation/case:
+```
+We don't see things as they are, we see them as we are. (Anaïs Nin)
+```
 
 ## Computing K⁻¹ (3x3) Outline
 If K⁻¹ is not provided:
@@ -98,39 +121,16 @@ Caution: Always reduce after each operation; handle negatives mod 26 by adding 2
 - Using a non-invertible K (det not coprime with 26).
 
 ## Quick Reference
-- Encrypt: C = K·P (mod 26).  
 - Decrypt: P = K⁻¹·C (mod 26).  
 - K⁻¹ = det⁻¹ · adj(K) (mod 26).  
 - Division C: K⁻¹ commonly provided; use directly.
 
-## Practice Exercises
-1) Verify that det([ [6,24,1], [13,16,10], [20,17,15] ]) ≡ 25 (mod 26).  
-2) Encrypt “ACT” with the K above to get POH.  
-3) Decrypt POH with K⁻¹ to recover ACT.  
-4) Construct a random invertible 3×3 K (mod 26) and compute K⁻¹ by hand (small entries recommended).
+## Practice Exercises (Decryption Only)
+1) Given K⁻¹, decrypt two 3-letter blocks and validate against a guessed word.  
+2) With three independent plaintext–ciphertext blocks, solve for K and confirm det(K) is invertible.  
+3) Confirm that your K⁻¹ is truly the inverse by checking K·K⁻¹ ≡ I (mod 26).
 
 ## Pseudocode (Reference)
-Encryption
-```text
-alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-function idx(ch): return ord(ch)-ord('A')
-function vec3(a,b,c): return [a,b,c]
-function mul3(K, P):
-  return [ (K[0][0]*P[0] + K[0][1]*P[1] + K[0][2]*P[2]) % 26,
-           (K[1][0]*P[0] + K[1][1]*P[1] + K[1][2]*P[2]) % 26,
-           (K[2][0]*P[0] + K[2][1]*P[1] + K[2][2]*P[2]) % 26 ]
-
-function encrypt3x3(text, K):
-  P = normalize(text)
-  while len(P) % 3 != 0: P += 'X'
-  out = ""
-  for i in range(0, len(P), 3):
-    v = vec3(idx(P[i]), idx(P[i+1]), idx(P[i+2]))
-    w = mul3(K, v)
-    out += alphabet[w[0]] + alphabet[w[1]] + alphabet[w[2]]
-  return out
-```
-
 Decryption (provided K⁻¹)
 ```text
 function decrypt3x3(text, Kinv):

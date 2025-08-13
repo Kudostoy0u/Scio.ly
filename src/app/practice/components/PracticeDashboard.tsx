@@ -22,6 +22,8 @@ export default function PracticeDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [sortOption, setSortOption] = useState('alphabetical');
   const [continueInfo, setContinueInfo] = useState<{ eventName: string; route: '/test' | '/codebusters' } | null>(null);
+  const [panelHeight, setPanelHeight] = useState<number | null>(null);
+  const [isLarge, setIsLarge] = useState<boolean>(false);
 
   const [settings, setSettings] = useState<Settings>({
     questionCount: NORMAL_DEFAULTS.questionCount,
@@ -58,6 +60,68 @@ export default function PracticeDashboard() {
   }, []);
 
   // Detect if there is a test in progress with at least one answer
+  useEffect(() => {
+    // Track viewport size to switch behavior on mobile vs desktop
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const apply = () => setIsLarge(mq.matches);
+    try {
+      mq.addEventListener('change', apply);
+    } catch {
+      // Safari fallback
+      mq.addListener(apply);
+    }
+    apply();
+    return () => {
+      try {
+        mq.removeEventListener('change', apply);
+      } catch {
+        mq.removeListener(apply);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    // Sync Available Events panel height to EXACT Test Configuration height
+    if (typeof window === 'undefined') return;
+    const target = document.querySelector('[data-test-config]') as HTMLElement | null;
+    if (!target) return;
+    const update = () => {
+      try {
+        const rect = target.getBoundingClientRect();
+        if (rect && rect.height > 0) setPanelHeight(rect.height);
+      } catch {}
+    };
+    update();
+    let ro: ResizeObserver | null = null;
+    try {
+      ro = new ResizeObserver(() => update());
+      ro.observe(target);
+    } catch {
+      // Fallback: listen to window resize
+      window.addEventListener('resize', update);
+    }
+    return () => {
+      if (ro) {
+        try { ro.disconnect(); } catch {}
+      } else {
+        window.removeEventListener('resize', update);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    // Recompute on theme/layout shifts that might affect sizes
+    const t = setTimeout(() => {
+      const target = document.querySelector('[data-test-config]') as HTMLElement | null;
+      if (target) {
+        const rect = target.getBoundingClientRect();
+        if (rect && rect.height > 0) setPanelHeight(rect.height);
+      }
+    }, 0);
+    return () => clearTimeout(t);
+  }, [darkMode, selectedEvent]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
@@ -561,24 +625,31 @@ export default function PracticeDashboard() {
 
         <div className="flex flex-col lg:flex-row gap-8 items-stretch">
           {/* Event List */}
-          <EventList
-            events={events}
-            selectedEvent={selectedEvent}
-            sortOption={sortOption}
-            onEventSelect={selectEvent}
-            onSortChange={setSortOption}
-            loading={loading}
-            error={error}
-          />
+          <div
+            className="flex-none lg:flex-1 overflow-hidden"
+            style={{ height: isLarge && panelHeight ? `${panelHeight}px` : '32vh' }}
+          >
+            <EventList
+              events={events}
+              selectedEvent={selectedEvent}
+              sortOption={sortOption}
+              onEventSelect={selectEvent}
+              onSortChange={setSortOption}
+              loading={loading}
+              error={error}
+            />
+          </div>
 
           {/* Test Configuration */}
-          <TestConfiguration
-            selectedEvent={selectedEventObj || null}
-            settings={settings}
-            onSettingsChange={setSettings}
-            onGenerateTest={handleGenerateTest}
-            onUnlimited={handleUnlimited}
-          />
+          <div className="w-full lg:w-auto">
+            <TestConfiguration
+              selectedEvent={selectedEventObj || null}
+              settings={settings}
+              onSettingsChange={setSettings}
+              onGenerateTest={handleGenerateTest}
+              onUnlimited={handleUnlimited}
+            />
+          </div>
         </div>
       </main>
 
@@ -603,6 +674,23 @@ export default function PracticeDashboard() {
           input[type="checkbox"] {
             flex-shrink: 0;
             margin-top: 0.125rem;
+          }
+
+          /* Responsive shared panel height for Practice panels */
+          .practice-panel {
+            height: 85vh;
+          }
+          @media (min-width: 640px) {
+            .practice-panel { height: 86vh; }
+          }
+          @media (min-width: 1024px) {
+            .practice-panel { height: 88vh; }
+          }
+          @media (min-width: 1280px) {
+            .practice-panel { height: 82vh; }
+          }
+          @media (min-width: 1536px) {
+            .practice-panel { height: 80vh; }
           }
         `}</style>
     </div>

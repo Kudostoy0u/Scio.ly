@@ -27,7 +27,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
 }) => {
   const [editedQuestion, setEditedQuestion] = useState('');
   const [editedOptions, setEditedOptions] = useState<string[]>([]);
-  const [correctAnswers, setCorrectAnswers] = useState<number[]>([]);
+  const [correctAnswers, setCorrectAnswers] = useState<number[]>([]); // zero-based indices for MCQ
   const [frqAnswer, setFrqAnswer] = useState('');
   const [difficulty, setDifficulty] = useState(0.5);
   const [reason, setReason] = useState('');
@@ -35,6 +35,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
   const [isFRQ, setIsFRQ] = useState(false);
   const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [submissionMessage, setSubmissionMessage] = useState('');
+  const [originalOptionCount, setOriginalOptionCount] = useState(0);
   
   // AI suggestion states
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
@@ -45,6 +46,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
     if (question && isOpen) {
       resetForm();
       setEditedQuestion(question.question);
+      setOriginalOptionCount(Array.isArray(question.options) ? question.options.length : 0);
       
       // Determine if this is a free response question
       const hasMCQOptions = question.options && question.options.length > 0;
@@ -52,8 +54,13 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
       
       if (hasMCQOptions) {
         setEditedOptions([...question.options!]);
-        // Don't pre-select correct answers - let user choose
-        setCorrectAnswers([]);
+        // If answers are editable (test submitted), pre-select correct answers (zero-based indices)
+        if (canEditAnswers) {
+          const indices = computeCorrectAnswerIndices(question.options!, question.answers ?? []);
+          setCorrectAnswers(indices);
+        } else {
+          setCorrectAnswers([]);
+        }
       } else {
         const answer = Array.isArray(question.answers) && question.answers.length > 0
           ? String(question.answers[0])
@@ -63,7 +70,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
       
       setDifficulty(question.difficulty === 0 ? 0.1 : question.difficulty || 0.5);
     }
-  }, [question, isOpen]);
+  }, [question, isOpen, canEditAnswers]);
 
   const resetForm = () => {
     setEditedQuestion('');
@@ -79,6 +86,27 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
     setIsLoadingSuggestions(false);
     setSubmissionStatus('idle');
     setSubmissionMessage('');
+    setOriginalOptionCount(0);
+  };
+
+  const computeCorrectAnswerIndices = (options: string[], answers: unknown[]): number[] => {
+    if (!Array.isArray(options) || options.length === 0 || !Array.isArray(answers)) return [];
+    // Strict zero-based: accept numeric (or numeric-string) indices within [0, options.length)
+    const zeroBasedNums = answers
+      .map(a => (typeof a === 'number' ? a : (typeof a === 'string' && /^\d+$/.test(a) ? parseInt(a, 10) : null)))
+      .filter((n): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n < options.length);
+    if (zeroBasedNums.length > 0) {
+      return Array.from(new Set(zeroBasedNums)).sort((a, b) => a - b);
+    }
+    // Otherwise, match by exact option text (case-insensitive)
+    const lowerOptions = options.map(o => o.toLowerCase());
+    const indices = answers
+      .map(a => {
+        const idx = lowerOptions.indexOf(String(a).toLowerCase());
+        return idx >= 0 ? idx : null;
+      })
+      .filter((x): x is number => typeof x === 'number');
+    return Array.from(new Set(indices)).sort((a, b) => a - b);
   };
 
   const handleClose = () => {
@@ -119,11 +147,11 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
       
       // Only set correct answers if user can edit them (test has been submitted)
       if (canEditAnswers) {
-        // Convert suggested answers to indices
-        const answerIndices = suggestions.suggestedAnswers.map(a => 
-          typeof a === 'string' ? parseInt(a) : a
+        const indices = computeCorrectAnswerIndices(
+          suggestions.suggestedOptions,
+          suggestions.suggestedAnswers as unknown[]
         );
-        setCorrectAnswers(answerIndices);
+        setCorrectAnswers(indices);
       }
     } else {
       setIsFRQ(true);
@@ -182,13 +210,21 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
   };
 
   const addOption = () => {
+    if (originalOptionCount > 0 && editedOptions.length >= originalOptionCount) {
+      toast.info(`You cannot add more than ${originalOptionCount} options for this question.`);
+      return;
+    }
     setEditedOptions([...editedOptions, '']);
   };
 
   const removeOption = (index: number) => {
     const newOptions = editedOptions.filter((_, i) => i !== index);
     setEditedOptions(newOptions);
-    setCorrectAnswers(correctAnswers.filter(ans => ans !== index + 1));
+    // Adjust zero-based correct answer indices after removal
+    const adjusted = correctAnswers
+      .filter(ans => ans !== index)
+      .map(ans => (ans > index ? ans - 1 : ans));
+    setCorrectAnswers(Array.from(new Set(adjusted)).sort((a, b) => a - b));
   };
 
   const updateOption = (index: number, value: string) => {
@@ -198,11 +234,10 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
   };
 
   const toggleCorrectAnswer = (index: number) => {
-    const answerIndex = index + 1;
-    if (correctAnswers.includes(answerIndex)) {
-      setCorrectAnswers(correctAnswers.filter(a => a !== answerIndex));
+    if (correctAnswers.includes(index)) {
+      setCorrectAnswers(correctAnswers.filter(a => a !== index));
     } else {
-      setCorrectAnswers([...correctAnswers, answerIndex].sort((a, b) => a - b));
+      setCorrectAnswers([...correctAnswers, index].sort((a, b) => a - b));
     }
   };
 
@@ -443,11 +478,11 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
                     </p>
                   )}
                   <div className="space-y-2">
-                    {editedOptions.map((option, index) => (
+                      {editedOptions.map((option, index) => (
                       <div key={index} className="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          checked={correctAnswers.includes(index + 1)}
+                          checked={correctAnswers.includes(index)}
                           onChange={() => canEditAnswers && toggleCorrectAnswer(index)}
                           className={`mr-2 ${!canEditAnswers ? 'cursor-not-allowed opacity-50' : ''}`}
                           disabled={!canEditAnswers}

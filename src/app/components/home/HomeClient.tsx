@@ -12,7 +12,7 @@ import Image from 'next/image';
 import { useTheme } from '../../contexts/ThemeContext';
 import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
-import testimonialsData from '../../json/testimonials.json';
+import testimonialsData from '../../../../public/testimonials.json';
 
 export default function HomeClient() {
   const { darkMode } = useTheme();

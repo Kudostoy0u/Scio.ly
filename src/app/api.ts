@@ -19,6 +19,7 @@ const api = {
     reportEdit: `${API_BASE_URL}/report/edit`,
     reportRemove: `${API_BASE_URL}/report/remove`,
     reportAll: `${API_BASE_URL}/report/all`,
+    admin: `${API_BASE_URL}/admin`,
     
     // Gemini AI endpoints
     geminiSuggestEdit: `${API_BASE_URL}/gemini/suggest-edit`,

@@ -210,11 +210,11 @@ export default function TestConfiguration({
   return (
     <div 
       data-test-config
-      className={`w-full lg:w-96 rounded-xl flex-shrink-0 flex flex-col max-h-[80vh] ${
+      className={`w-full lg:w-96 rounded-xl flex-shrink-0 flex flex-col ${
         darkMode ? 'bg-palenight-100' : 'bg-white shadow-md'
       }`}
     >
-      <div className="p-6 flex-1 flex flex-col min-h-0 overflow-y-auto">
+      <div className="p-6 flex-1 flex flex-col min-h-0 overflow-visible">
         <div className="flex items-start justify-between mb-6">
           <h3 className={`text-xl font-semibold ${
           darkMode 
@@ -702,42 +702,10 @@ export default function TestConfiguration({
             </div>
           </div>
 
-          {/* Tournaments Dropdown */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${
-              darkMode ? 'text-gray-300' : 'text-gray-700'
-            }`}>
-              Tournaments
-            </label>
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => toast.info('Disabled for privacy reasons')}
-                className={`w-full flex justify-between items-center px-3 py-1.5 rounded-md border-0 opacity-50 cursor-not-allowed ${
-                  darkMode ? 'bg-gray-800 text-gray-500' : 'bg-gray-100 text-gray-400'
-                } shadow-sm`}
-                title="Disabled for privacy reasons"
-              >
-                <span>All Tournaments</span>
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
+          
 
           {/* Action Buttons */}
-          <div className="flex gap-3 mt-auto">
+          <div className="flex gap-3 mt-6 lg:mt-auto">
             <button
               onClick={onGenerateTest}
               disabled={!selectedEvent}

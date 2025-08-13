@@ -53,11 +53,9 @@ const BookmarkedQuestionDisplay = ({ bookmarkedQuestion, darkMode, onRemove }: {
       {question.options && question.options.length > 0 && (
         <div className="space-y-2 mb-3">
           {question.options.map((option, idx) => {
-            // Check if the current option is a correct answer
-            // Handles both index-based (number) and text-based (string) answers
-            const isCorrect = question.answers.includes(idx + 1) || // Check if index (1-based) is in answers
-                              (typeof question.answers[0] === 'string' && // Check if answers are strings
-                               question.answers.includes(option)); // Check if option text is in answers
+            // Strict zero-based: numeric indices or text match
+            const isCorrect = question.answers.includes(idx) ||
+                              (typeof question.answers[0] === 'string' && question.answers.includes(option));
             
             return (
               <div 

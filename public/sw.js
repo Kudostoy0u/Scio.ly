@@ -1,8 +1,9 @@
-const CACHE_NAME = 'scio-shell-v2';
+const CACHE_NAME = 'scio-shell-v3';
 const SHELL_ASSETS = [
   '/',
   '/manifest.webmanifest',
-  '/site-logo.png'
+  '/site-logo.png',
+  '/offline'
 ];
 
 self.addEventListener('install', (event) => {

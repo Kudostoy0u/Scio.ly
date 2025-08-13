@@ -8,7 +8,7 @@ import { useTheme } from '@/app/contexts/ThemeContext';
 import AuthButton from '@/app/components/AuthButton';
 // ToastContainer is globally provided in Providers
 import { usePathname } from 'next/navigation';
-import { Upload, SquarePlus, Chrome as ChromeIcon, Smartphone, MonitorSmartphone, CheckCircle2, AlertTriangle, X as CloseIcon, Compass } from 'lucide-react';
+import { Upload, SquarePlus, Chrome as ChromeIcon, Smartphone, MonitorSmartphone, CheckCircle2, AlertTriangle, X as CloseIcon, Compass, Download } from 'lucide-react';
 import { FaFirefoxBrowser } from 'react-icons/fa';
 
 export default function Header() {
@@ -263,21 +263,34 @@ export default function Header() {
                   </svg>
                 )}
               </button>
-              {!isStandalone && (
-              <button
-                onClick={() => setShowInstallModal(true)}
-                className={`p-2 rounded-md transition-colors duration-200 ${
-                  shouldBeTransparent
-                    ? 'hover:text-gray-700 text-gray-300 backdrop-blur-sm'
-                    : '' } ${darkMode
-                      ? 'text-gray-300 hover:text-white'
-                      : 'text-gray-700 hover:text-gray-900'
-                }`}
-                aria-label="Install app"
-              >
-                {/* lucide upload icon path */}
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              </button>
+              {isStandalone ? (
+                <Link
+                  href="/offline"
+                  className={`p-2 rounded-md transition-colors duration-200 ${
+                    shouldBeTransparent
+                      ? 'hover:text-gray-700 text-gray-300 backdrop-blur-sm'
+                      : '' } ${darkMode
+                        ? 'text-gray-300 hover:text-white'
+                        : 'text-gray-700 hover:text-gray-900'
+                  }`}
+                  aria-label="Offline downloads"
+                >
+                  <Download className="w-5 h-5" />
+                </Link>
+              ) : (
+                <button
+                  onClick={() => setShowInstallModal(true)}
+                  className={`p-2 rounded-md transition-colors duration-200 ${
+                    shouldBeTransparent
+                      ? 'hover:text-gray-700 text-gray-300 backdrop-blur-sm'
+                      : '' } ${darkMode
+                        ? 'text-gray-300 hover:text-white'
+                        : 'text-gray-700 hover:text-gray-900'
+                  }`}
+                  aria-label="Install app"
+                >
+                  <Upload className="w-5 h-5" />
+                </button>
               )}
               <button
                 onClick={() => setMobileMenuOpen(prev => !prev)}

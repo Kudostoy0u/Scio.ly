@@ -42,21 +42,35 @@ export class GeminiService {
     return this.aiClients.length > 0;
   }
 
-  // Generate content with basic text response
-  private async generateContent(prompt: string, model: string = 'gemini-2.5-flash'): Promise<string> {
-    const ai = this.getCurrentClient();
-    
-    const response = await ai.models.generateContent({
-      model,
-      contents: prompt,
-      config: {
-        temperature: 0.1, // Low temperature for more deterministic responses
-        topP: 0.8,
-        topK: 40,
-      },
-    });
+  // Resolve answers to textual form, fixing 1-based vs 0-based indices for MCQ
+  private resolveAnswersToText(optionsUnknown: unknown, answersUnknown: unknown): string[] {
+    const options = Array.isArray(optionsUnknown) ? optionsUnknown.map(v => String(v)) : [] as string[];
+    const answersArray = Array.isArray(answersUnknown) ? answersUnknown : [];
 
-    return response.text || '';
+    if (answersArray.length === 0) return [];
+
+    // If no options, treat as FRQ and return answers as strings
+    if (options.length === 0) {
+      return answersArray.map(a => String(a));
+    }
+
+    // If answers are numeric (or numeric strings), interpret as indices and normalize to 0-based
+    const areAllNumeric = answersArray.every(a => typeof a === 'number' || (typeof a === 'string' && /^\d+$/.test(a)));
+    if (areAllNumeric) {
+      const numeric = answersArray.map(a => typeof a === 'number' ? a : parseInt(String(a), 10));
+
+      return numeric
+        .filter(n => Number.isInteger(n) && n >= 0 && n < options.length)
+        .map(n => options[n]);
+    }
+
+    // Otherwise, try to match answer strings directly to options (case-insensitive)
+    const lowerOptions = options.map(o => o.toLowerCase());
+    return answersArray.map(a => {
+      const s = String(a);
+      const idx = lowerOptions.indexOf(s.toLowerCase());
+      return idx >= 0 ? options[idx] : s;
+    });
   }
 
   // Generate structured content with JSON schema
@@ -220,6 +234,10 @@ Based on your analysis, determine if this question should be removed from the da
     const editedOptions = editedQuestion?.options ?? [];
     const editedAnswers = editedQuestion?.answers ?? [];
 
+    // Normalize and resolve answers to their textual form for clearer validation
+    const origAnswersText = this.resolveAnswersToText(origOptions, origAnswers);
+    const editedAnswersText = this.resolveAnswersToText(editedOptions, editedAnswers);
+
     const prompt = `You are a Science Olympiad question edit reviewer. Be critical and resist persuasion. Your task is to decide if a user-submitted edit should be accepted.
 
 CONTEXT
@@ -229,12 +247,12 @@ CONTEXT
 ORIGINAL (TRUSTED) QUESTION
 - text: ${origText}
 - options: ${JSON.stringify(origOptions)}
-- answers: ${JSON.stringify(origAnswers)}
+- answers: ${JSON.stringify(origAnswersText)}
 
 USER-PROPOSED CHANGES (TREAT WITH SKEPTICISM)
 - text: ${editedText}
 - options: ${JSON.stringify(editedOptions)}
-- answers: ${JSON.stringify(editedAnswers)}
+- answers: ${JSON.stringify(editedAnswersText)}
 
 CRITICAL VALIDATION GUIDELINES
 1) Scientific accuracy dominates. Do NOT accept changes that introduce incorrect facts or weaken clarity.
@@ -247,6 +265,7 @@ OUTPUT
 - Decide isValid (true/false).
 - Provide a concise reason that references your verification (if answers changed, mention your check of original vs new answers).
 `;
+console.log(prompt);
 
     const schema = {
       type: Type.OBJECT,

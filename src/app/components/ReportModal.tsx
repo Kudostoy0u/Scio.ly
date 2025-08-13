@@ -41,10 +41,11 @@ const ReportModal = ({ isOpen, onClose, onSubmit, darkMode, question, event }: R
         if (hasMCQOptions) {
           // Handle MCQ
           setEditedOptions(question.options || []);
-          const answers = question.options 
-            ? question.answers.map(a => typeof a === 'string' ? parseInt(a) : a)
-            : [];
-          setCorrectAnswers(answers);
+          // Strict zero-based: accept numeric (or numeric-string) indices in range
+          const nums = (question.answers || [])
+            .map(a => (typeof a === 'number' ? a : (typeof a === 'string' && /^\d+$/.test(a) ? parseInt(a, 10) : null)))
+            .filter((n): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n < (question.options?.length || 0));
+          setCorrectAnswers(nums);
         } else {
           // Handle FRQ
           const answer = Array.isArray(question.answers) && question.answers.length > 0
@@ -149,8 +150,11 @@ const ReportModal = ({ isOpen, onClose, onSubmit, darkMode, question, event }: R
   const removeOption = (index: number) => {
     const newOptions = editedOptions.filter((_, i) => i !== index);
     setEditedOptions(newOptions);
-    // Update correct answers to remove any that reference the removed option
-    setCorrectAnswers(correctAnswers.filter(ans => ans !== index + 1));
+    // Update correct answers (zero-based) to remove or shift after removal
+    setCorrectAnswers(prev => {
+      const filtered = prev.filter(ans => ans !== index).map(ans => (ans > index ? ans - 1 : ans));
+      return Array.from(new Set(filtered)).sort((a, b) => a - b);
+    });
   };
 
   const updateOption = (index: number, value: string) => {
@@ -160,11 +164,10 @@ const ReportModal = ({ isOpen, onClose, onSubmit, darkMode, question, event }: R
   };
 
   const toggleCorrectAnswer = (index: number) => {
-    const answerIndex = index + 1; // 1-based indexing
-    if (correctAnswers.includes(answerIndex)) {
-      setCorrectAnswers(correctAnswers.filter(a => a !== answerIndex));
+    if (correctAnswers.includes(index)) {
+      setCorrectAnswers(correctAnswers.filter(a => a !== index));
     } else {
-      setCorrectAnswers([...correctAnswers, answerIndex].sort((a, b) => a - b));
+      setCorrectAnswers([...correctAnswers, index].sort((a, b) => a - b));
     }
   };
 
@@ -287,7 +290,7 @@ const ReportModal = ({ isOpen, onClose, onSubmit, darkMode, question, event }: R
                       <div key={index} className="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          checked={correctAnswers.includes(index + 1)}
+                          checked={correctAnswers.includes(index)}
                           onChange={() => toggleCorrectAnswer(index)}
                           className="mr-2"
                         />

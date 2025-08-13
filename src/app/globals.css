@@ -69,6 +69,26 @@ body:focus::-webkit-scrollbar {
   opacity: 1;
 }
 
+/* Practice page Available Events: always show scrollbar for the list pane */
+.practice-events-scroll {
+  scrollbar-gutter: stable;
+}
+.practice-events-scroll::-webkit-scrollbar {
+  opacity: 1 !important;
+}
+/* Hide native scrollbar visuals inside the practice events container to ensure our custom bar dominates */
+.practice-events-scroll > div::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+}
+/* Utility to hide native scrollbar for any targeted element (WebKit + Firefox) */
+.native-scroll-hidden {
+  scrollbar-width: none; /* Firefox */
+}
+.native-scroll-hidden::-webkit-scrollbar {
+  display: none; /* WebKit */
+}
+
 /* Root Variables — follow app theme (html.dark), not system */
 :root {
   --font-custom: 'Poppins', sans-serif !important;

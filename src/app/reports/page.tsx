@@ -83,7 +83,7 @@ const BlacklistedQuestionCard = ({ questionData, darkMode }: {
           <h4 className="font-medium mb-2">Options:</h4>
           <div className="space-y-2">
             {question.options.map((option, idx) => {
-              const isCorrect = question.answers.includes(idx + 1) || 
+              const isCorrect = question.answers.includes(idx) || 
                                (typeof question.answers[0] === 'string' && 
                                 question.answers.includes(option));
               
@@ -185,7 +185,7 @@ const QuestionCard = ({ questionData, darkMode, type = 'normal', className }: {
           <h4 className="font-medium mb-2">Options:</h4>
           <div className="space-y-2">
             {question.options.map((option, idx) => {
-              const isCorrect = question.answers.includes(idx + 1) || 
+              const isCorrect = question.answers.includes(idx) || 
                                (typeof question.answers[0] === 'string' && 
                                 question.answers.includes(option));
               

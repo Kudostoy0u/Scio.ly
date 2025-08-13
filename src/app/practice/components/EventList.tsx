@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Event } from '../types';
 import { useTheme } from '@/app/contexts/ThemeContext';
 
@@ -67,7 +68,7 @@ export default function EventList({
   }
 
   return (
-    <div className={`flex-1 rounded-xl overflow-hidden flex flex-col max-h-[80vh] ${
+    <div className={`h-full rounded-xl flex flex-col ${
       darkMode ? 'bg-palenight-100' : 'bg-white shadow-md'
     }`}>
       <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
@@ -97,8 +98,9 @@ export default function EventList({
           </select>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-3 min-h-0 custom-scrollbar">
-        <ul className="space-y-2">
+      <div className="flex-1 overflow-hidden p-3 min-h-0 practice-events-scroll relative">
+        <ScrollBarAlwaysVisible>
+          <ul className="space-y-2">
           {sortedEvents.map((event) => (
             <li
               key={event.id}
@@ -137,8 +139,81 @@ export default function EventList({
               </div>
             </li>
           ))}
-        </ul>
+          </ul>
+        </ScrollBarAlwaysVisible>
       </div>
     </div>
   );
 } 
+
+function ScrollBarAlwaysVisible({ children }: { children: ReactNode }) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [thumbTop, setThumbTop] = useState(0);
+  const [thumbHeight, setThumbHeight] = useState(0);
+  const [isScrollable, setIsScrollable] = useState(false);
+
+  const recalc = () => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const trackHeight = el.clientHeight; // visible area height
+    const total = el.scrollHeight;
+    const minThumb = 24; // px
+    const hasOverflow = total > trackHeight + 1; // tolerate off-by-1
+    setIsScrollable(hasOverflow);
+
+    if (!hasOverflow) {
+      setThumbHeight(0);
+      setThumbTop(0);
+      return;
+    }
+
+    const computedThumbHeight = Math.max(minThumb, Math.floor((trackHeight / total) * trackHeight));
+    const maxScroll = Math.max(1, total - trackHeight);
+    const maxTop = Math.max(0, trackHeight - computedThumbHeight);
+
+    let newTop = Math.round((el.scrollTop / maxScroll) * maxTop);
+    if (el.scrollTop >= maxScroll - 1) newTop = maxTop; // clamp at bottom to avoid gap
+
+    setThumbHeight(computedThumbHeight);
+    setThumbTop(newTop);
+  };
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    recalc();
+    const onScroll = () => recalc();
+    el.addEventListener('scroll', onScroll, { passive: true });
+    let ro: ResizeObserver | null = null;
+    try {
+      ro = new ResizeObserver(() => recalc());
+      ro.observe(el);
+    } catch {}
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      if (ro) {
+        try { ro.disconnect(); } catch {}
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    recalc();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+
+  return (
+    <div ref={scrollContainerRef} className="h-full overflow-y-auto pr-2 native-scroll-hidden relative">
+      {children}
+      {isScrollable && (
+        <div className="pointer-events-none absolute inset-y-0 right-1 w-1.5">
+          <div className="absolute inset-y-0 right-0 w-1.5 rounded-full bg-gray-200 dark:bg-gray-700" />
+          <div
+            className="absolute right-0 w-1.5 rounded-full bg-gray-400 dark:bg-gray-500"
+            style={{ top: `${thumbTop}px`, height: `${thumbHeight}px` }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
