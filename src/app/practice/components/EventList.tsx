@@ -67,7 +67,7 @@ export default function EventList({
   }
 
   return (
-    <div className={`flex-1 rounded-xl overflow-hidden flex flex-col ${
+    <div className={`flex-1 rounded-xl overflow-hidden flex flex-col max-h-[80vh] ${
       darkMode ? 'bg-palenight-100' : 'bg-white shadow-md'
     }`}>
       <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">

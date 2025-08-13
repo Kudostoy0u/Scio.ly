@@ -5,6 +5,9 @@ import { getEventBySlug } from '@/app/docs/utils/events2026';
 import { getEventMarkdown } from '@/app/docs/utils/storageClient';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 export default function EditSubsectionDocsPage() {
   const { event, sub } = useParams<{ event: string; sub: string }>();
@@ -62,7 +65,9 @@ export default function EditSubsectionDocsPage() {
           <textarea className="w-full h-[70vh] border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded p-3 font-mono text-sm text-gray-900 dark:text-gray-100" value={md} onChange={e=>setMd(e.target.value)} />
         ) : (
           <div className="prose prose-slate dark:prose-invert max-w-none border border-gray-200 dark:border-gray-800 rounded p-4">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{md}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex] as any}>
+              {md}
+            </ReactMarkdown>
           </div>
         )}
       </div>

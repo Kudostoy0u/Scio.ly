@@ -175,7 +175,22 @@ export default function PracticeDashboard() {
     // Clear any existing test session
     clearTestSession();
 
-    // Store params in cookie for clean URL navigation
+    // Special behavior for Codebusters: treat as creating a test with 1 question
+    if (selectedEventObj.name === 'Codebusters') {
+      const cbParams = buildTestParams(selectedEventObj.name, { ...settings, questionCount: 1 });
+      saveTestParams(cbParams);
+      try {
+        localStorage.removeItem('codebustersQuotes');
+        localStorage.removeItem('codebustersIsTestSubmitted');
+        localStorage.removeItem('codebustersTestScore');
+        localStorage.removeItem('codebustersTimeLeft');
+        localStorage.removeItem('shareCode');
+      } catch {}
+      router.push('/codebusters');
+      return;
+    }
+
+    // Default Unlimited behavior for non-Codebusters events
     try {
       const cookiePayload = encodeURIComponent(JSON.stringify({
         eventName: selectedEventObj.name,
@@ -524,14 +539,16 @@ export default function PracticeDashboard() {
             <button
               type="button"
               onClick={() => router.push(continueInfo.route)}
-              className={`mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm ${
+              className={`mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm group transition-colors ${
                 darkMode
                   ? 'bg-transparent border-yellow-500/60 text-yellow-300 hover:border-yellow-400'
                   : 'bg-transparent border-yellow-500/70 text-yellow-700 hover:border-yellow-500'
               }`}
             >
               <span>{`Continue test for ${continueInfo.eventName}?`}</span>
-              <ArrowUpRight className="w-4 h-4" />
+              <ArrowUpRight
+                className="w-4 h-4 transform transition-transform duration-200 rotate-45 group-hover:rotate-0"
+              />
             </button>
           )}
 
@@ -542,7 +559,7 @@ export default function PracticeDashboard() {
           </p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8 h-[calc(120vh+200px)] lg:h-[calc(110vh-200px)]">
+        <div className="flex flex-col lg:flex-row gap-8 items-stretch">
           {/* Event List */}
           <EventList
             events={events}

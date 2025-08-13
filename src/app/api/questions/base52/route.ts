@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     const res = createSuccessResponse({ index, code });
     logApiResponse('GET', '/api/questions/base52', 200, Date.now() - start);
     return res;
-  } catch (err) {
+  } catch {
     const res = createErrorResponse('Failed to generate base52 code', 500, 'ENCODE_ERROR');
     logApiResponse('GET', '/api/questions/base52', 500, Date.now() - start);
     return res;

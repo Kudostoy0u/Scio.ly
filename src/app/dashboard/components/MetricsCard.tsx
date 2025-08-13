@@ -35,8 +35,8 @@ export default function MetricsCard({
   formatAsFraction
 }: MetricsCardProps) {
   const cardStyle = darkMode
-    ? 'bg-gray-800 border-gray-700 text-white'
-    : 'bg-white border-gray-200 text-gray-900';
+    ? 'bg-gray-800 border border-gray-700 text-white'
+    : 'bg-white border border-gray-200 text-gray-900';
 
   const handleClick = () => {
     if (view === 'daily') {
@@ -72,7 +72,7 @@ export default function MetricsCard({
   return (
     <div className="perspective-1000 hover:scale-[1.02] transition-transform duration-300 text-center">
       <div
-        className={`p-0 rounded-lg cursor-pointer transition-transform duration-700 relative ${cardStyle}`}
+        className={`p-0 h-32 rounded-lg cursor-pointer transition-transform duration-700 relative ${cardStyle}`}
         style={{ 
           transformStyle: 'preserve-3d',
           transform: view === 'daily' 
@@ -80,13 +80,13 @@ export default function MetricsCard({
             : view === 'weekly' 
               ? 'rotateX(180deg)' 
               : 'rotateX(360deg)',
-          minHeight: '140px'
+          minHeight: '120px'
         }}
         onClick={handleClick}
       >
         {/* Daily View */}
         <div 
-          className="absolute w-full h-full flex flex-col px-6 pt-6"
+          className="absolute w-full flex flex-col px-6 pt-6 pb-3"
           style={{ 
             backfaceVisibility: 'hidden',
             transform: 'rotateX(0deg)',
@@ -94,8 +94,8 @@ export default function MetricsCard({
             visibility: view === 'daily' ? 'visible' : 'hidden',
           }}
         >
-          <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-            {`${toSentenceCase(title)} today`}
+          <h3 className={`text-lg mb-2 font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+            {`Daily ${toSentenceCase(title)}`}
           </h3>
           {getDisplay('daily')}
         </div>
@@ -111,7 +111,7 @@ export default function MetricsCard({
           }}
         >
           <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-            {`${toSentenceCase(title)} this week`}
+            {`Weekly ${toSentenceCase(title)}`}
           </h3>
           {getDisplay('weekly')}
         </div>
@@ -127,7 +127,7 @@ export default function MetricsCard({
           }}
         >
           <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-            {`${toSentenceCase(title)} all-time`}
+            {`All-time ${toSentenceCase(title)}`}
           </h3>
           {getDisplay('allTime')}
         </div>

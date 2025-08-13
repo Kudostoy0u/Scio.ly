@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { questions } from '@/lib/db/schema';
-import { and, asc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { createErrorResponse, createSuccessResponse, logApiRequest, logApiResponse } from '@/lib/api/utils';
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     });
     logApiResponse('GET', `/api/questions/base52/${code}`, 200, Date.now() - start);
     return res;
-  } catch (err) {
+  } catch {
     const res = createErrorResponse('Failed to decode or lookup question', 400, 'DECODE_OR_LOOKUP_ERROR');
     logApiResponse('GET', `/api/questions/base52/${code}`, 400, Date.now() - start);
     return res;

@@ -340,7 +340,9 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
           <button
             onClick={loadSharedTest}
             disabled={loadingLoad}
-            className="w-full px-4 py-2 rounded-md border-2 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 disabled:border-gray-400 disabled:text-gray-400 transition-colors"
+            className={`w-full px-4 py-2 rounded-md font-medium transition-colors border-2 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 disabled:border-gray-400 disabled:text-gray-400 ${
+              darkMode ? 'hover:bg-green-900/20' : ''
+            }`}
           >
             {loadingLoad ? 'Loading...' : 'Load Shared Test'}
           </button>

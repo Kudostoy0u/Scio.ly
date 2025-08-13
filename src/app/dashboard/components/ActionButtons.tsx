@@ -16,8 +16,8 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
   const [testCodeDigits, setTestCodeDigits] = useState(['', '', '', '', '', '']);
   
   const cardStyle = darkMode
-    ? 'bg-gray-800 border-gray-700 text-white'
-    : 'bg-white border-gray-200 text-gray-900';
+    ? 'bg-gray-800 border border-gray-700 text-white'
+    : 'bg-white border border-gray-200 text-gray-900';
 
   const handleLoadTest = async (code: string) => {
     try {

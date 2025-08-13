@@ -210,11 +210,11 @@ export default function TestConfiguration({
   return (
     <div 
       data-test-config
-      className={`w-full lg:w-96 rounded-xl flex-shrink-0 flex flex-col ${
+      className={`w-full lg:w-96 rounded-xl flex-shrink-0 flex flex-col max-h-[80vh] ${
         darkMode ? 'bg-palenight-100' : 'bg-white shadow-md'
       }`}
     >
-      <div className="p-6 flex-1 flex flex-col">
+      <div className="p-6 flex-1 flex flex-col min-h-0 overflow-y-auto">
         <div className="flex items-start justify-between mb-6">
           <h3 className={`text-xl font-semibold ${
           darkMode 

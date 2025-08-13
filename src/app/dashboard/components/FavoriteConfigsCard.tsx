@@ -52,8 +52,8 @@ export default function FavoriteConfigsCard() {
   };
 
   return (
-    <div className={`hidden md:flex md:col-span-2 rounded-lg ${cardStyle} p-6`}>
-      <div className="flex flex-row w-full items-center gap-4">
+    <div className={`hidden md:flex md:col-span-2 rounded-lg ${cardStyle} pl-5 pr-5 h-32 overflow-hidden`}>
+      <div className="flex flex-row w-full items-center gap-4 h-full">
         {/* Left: Title/Description */}
         <div className="flex-none min-w-[110px]">
           <h3 className={`${darkMode ? 'text-white' : 'text-gray-800'} text-lg font-semibold leading-tight`}>
@@ -63,13 +63,13 @@ export default function FavoriteConfigsCard() {
         </div>
 
         {/* Right: One row, four columns */}
-        <div className="flex-1">
-          <div className="grid grid-cols-4 gap-4">
+        <div className="flex-1 h-full">
+          <div className="grid grid-cols-4 gap-4 h-full items-center">
             {Array.from({ length: 4 }).map((_, idx) => {
               const fav = favorites[idx];
               if (!fav) {
                 return (
-                  <div key={`placeholder-${idx}`} className={`hidden md:flex items-center justify-center rounded-md h-24 ${darkMode ? 'bg-gray-900/30 border border-gray-800' : 'bg-gray-50/60 border border-gray-200'}`}>
+                  <div key={`placeholder-${idx}`} className={`hidden md:flex items-center justify-center rounded-md h-[80%] ${darkMode ? 'bg-gray-900/30 border border-gray-800' : 'bg-gray-50/60 border border-gray-200'}`}>
                     <span className={`${darkMode ? 'text-gray-400' : 'text-gray-500'} text-xs`}>No favorited configuration</span>
                   </div>
                 );
@@ -79,7 +79,7 @@ export default function FavoriteConfigsCard() {
                 key={`fav-${idx}`}
                 role="button"
                 tabIndex={0}
-                className={`relative group rounded-md overflow-hidden h-24 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'} border ${darkMode ? 'border-gray-700' : 'border-gray-200'} cursor-pointer`}
+                className={`relative group rounded-md overflow-hidden h-[80%] ${darkMode ? 'bg-gray-900' : 'bg-gray-50'} border ${darkMode ? 'border-gray-700' : 'border-gray-200'} cursor-pointer`}
                 onClick={() => startFromConfig(fav)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startFromConfig(fav); } }}
               >

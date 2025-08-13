@@ -39,6 +39,7 @@ import {
   SubmitButton, 
   PDFModal 
 } from './components';
+import { FileText } from 'lucide-react';
 
 export default function CodeBusters() {
     const { darkMode } = useTheme();
@@ -420,8 +421,22 @@ export default function CodeBusters() {
                         )}
                     </main>
 
-                    {/* Reference button remains available via modal trigger elsewhere if needed */}
-                    
+                    {/* Floating PDF reference button (bottom-right) */}
+                    <div className="fixed bottom-8 right-8 z-50">
+                      <button
+                        onClick={() => setShowPDFViewer(true)}
+                        className={`p-3 rounded-full shadow-lg transition-all duration-300 hover:scale-110 ${
+                          darkMode
+                            ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
+                            : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+                        }`}
+                        title="Codebusters Reference"
+                        aria-label="Open Codebusters Reference"
+                      >
+                        <FileText className="h-5 w-5" />
+                      </button>
+                    </div>
+
                     {/* Custom PDF Modal */}
                     <PDFModal 
                         showPDFViewer={showPDFViewer}

@@ -26,26 +26,68 @@ export default async function EventSubsectionPage({ params }: { params: Promise<
 
   const md = await getAnyEventMarkdown(`${evt.slug}/${sub.slug}`);
 
+  const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-');
+  const extractToc = (content: string | null) => {
+    if (!content) return [] as { level: number; text: string; id: string }[];
+    const normalized = content
+      .replace(/\\\[([\s\S]*?)\\\]/g, (_, inner) => `$$${inner}$$`)
+      .replace(/\\\(([^]*?)\\\)/g, (_, inner) => `$${inner}$`);
+    const lines = normalized.split('\n');
+    const items: { level: number; text: string; id: string }[] = [];
+    const idCounts: Record<string, number> = {};
+    for (const line of lines) {
+      const m = /^(#{1,6})\s+(.+)$/.exec(line.trim());
+      if (m) {
+        const level = m[1].length;
+        const text = m[2].replace(/[#*`_]/g, '').trim();
+        const base = slugify(text);
+        const n = (idCounts[base] ?? 0) + 1;
+        idCounts[base] = n;
+        const id = n > 1 ? `${base}-${n}` : base;
+        items.push({ level, text, id });
+      }
+    }
+    return items;
+  };
+  const toc = extractToc(md);
+
   return (
-    <div className="pt-24 pb-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-semibold text-black dark:text-gray-100">{evt.name} – {sub.title}</h1>
-          <Link
-            href={`/docs/${evt.slug}/${sub.slug}/edit`}
-            className="text-sm font-medium hover:underline text-blue-600 dark:text-blue-400"
-          >
-            Edit
-          </Link>
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <aside className="lg:col-span-3 order-last lg:order-first">
+        <div className="sticky top-24 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400">On this page</h2>
+            <Link href={`/docs/${evt.slug}/${sub.slug}/edit`} className="text-xs font-medium hover:underline text-blue-600 dark:text-blue-400">Edit</Link>
+          </div>
+          <nav className="text-sm">
+            <ul className="space-y-2">
+              {toc.map(item => (
+                <li key={item.id} className={item.level === 2 ? 'ml-0' : item.level === 3 ? 'ml-4' : item.level >= 4 ? 'ml-8' : ''}>
+                  <a href={`#${item.id}`} className="hover:underline block py-0.5" onClick={(e) => {
+                    e.preventDefault();
+                    const el = document.getElementById(item.id);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}>{item.text}</a>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
+      </aside>
+
+      <article className="lg:col-span-9 space-y-10">
+        <header className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-black dark:text-gray-100">{sub.title}</h1>
+          <Link href={`/docs/${evt.slug}/${sub.slug}/edit`} className="text-sm font-medium hover:underline text-blue-600 dark:text-blue-400">Edit</Link>
+        </header>
         {md ? (
-          <DocsMarkdown content={md} />
+          <DocsMarkdown content={md} withHeadingIds />
         ) : (
           <div className={`rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4`}>
             <p className={`text-sm text-gray-600 dark:text-gray-400`}>No content yet. Be the first to contribute!</p>
           </div>
         )}
-      </div>
+      </article>
     </div>
   );
 }
