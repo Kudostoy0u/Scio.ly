@@ -27,4 +27,46 @@ export async function getEventOfflineQuestions(
   });
 }
 
+// Returns all slugs that have been downloaded to IndexedDB
+export async function listDownloadedEventSlugs(): Promise<string[]> {
+  const db = await openDB();
+  return await new Promise<string[]>((resolve, reject) => {
+    try {
+      const tx = db.transaction('events', 'readonly');
+      const store = tx.objectStore('events');
+      const req = (store as any).getAllKeys ? (store as any).getAllKeys() : null;
+      if (req) {
+        req.onsuccess = () => resolve((req.result as IDBValidKey[]).map(String));
+        req.onerror = () => reject(req.error);
+      } else {
+        // Fallback for very old browsers: iterate with a cursor
+        const keys: string[] = [];
+        const cursorReq = store.openKeyCursor();
+        cursorReq.onsuccess = (event: any) => {
+          const cursor = event.target.result as IDBCursor | null;
+          if (cursor) {
+            keys.push(String(cursor.key));
+            cursor.continue();
+          } else {
+            resolve(keys);
+          }
+        };
+        cursorReq.onerror = () => reject(cursorReq.error);
+      }
+    } catch (e) {
+      reject(e as any);
+    }
+  });
+}
+
+export async function hasOfflineEvent(slug: string): Promise<boolean> {
+  const db = await openDB();
+  return await new Promise<boolean>((resolve, reject) => {
+    const tx = db.transaction('events', 'readonly');
+    const req = tx.objectStore('events').get(slug);
+    req.onsuccess = () => resolve(typeof req.result !== 'undefined' && req.result !== null);
+    req.onerror = () => reject(req.error);
+  });
+}
+
 

@@ -12,6 +12,9 @@ interface EventListProps {
   onSortChange: (option: string) => void;
   loading: boolean;
   error: string | null;
+  // When offline, non-downloaded events should be disabled
+  isOffline?: boolean;
+  downloadedSlugs?: Set<string>;
 }
 
 export default function EventList({
@@ -21,7 +24,9 @@ export default function EventList({
   onEventSelect,
   onSortChange,
   loading,
-  error
+  error,
+  isOffline = false,
+  downloadedSlugs
 }: EventListProps) {
   const { darkMode } = useTheme();
 
@@ -101,12 +106,18 @@ export default function EventList({
       <div className="flex-1 overflow-hidden p-3 min-h-0 practice-events-scroll relative">
         <ScrollBarAlwaysVisible>
           <ul className="space-y-2">
-          {sortedEvents.map((event) => (
+          {sortedEvents.map((event) => {
+            const slug = event.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            const isDownloaded = downloadedSlugs ? downloadedSlugs.has(slug) : true;
+            const isDisabled = isOffline && !isDownloaded;
+            return (
             <li
               key={event.id}
               id={`event-${event.id}`}
-              onClick={() => onEventSelect(event.id)}
-              className={`p-4 rounded-lg cursor-pointer transition-all duration-200 ${
+              onClick={() => { if (!isDisabled) onEventSelect(event.id); }}
+              className={`p-4 rounded-lg transition-all duration-200 ${
+                isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+              } ${
                 selectedEvent === event.id
                   ? darkMode
                     ? 'bg-blue-600/20 border-l-4 border-blue-500'
@@ -128,6 +139,11 @@ export default function EventList({
                   }`}>
                     {event.subject}
                   </span>
+                  {isOffline && !isDownloaded && (
+                    <span className={`text-xs px-2 py-0.5 rounded ${darkMode ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-600'}`}>
+                      Not downloaded
+                    </span>
+                  )}
                   {event.divisions && (
                     <span className={`text-xs px-3 py-1 rounded-full ${
                       darkMode ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-600'
@@ -138,7 +154,8 @@ export default function EventList({
                 </div>
               </div>
             </li>
-          ))}
+            );
+          })}
           </ul>
         </ScrollBarAlwaysVisible>
       </div>

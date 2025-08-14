@@ -8,11 +8,15 @@ import { buildTestParams, saveTestParams } from '@/app/utils/testParams';
 import { clearTestSession } from '@/app/utils/timeManagement';
 import type { Settings } from '@/app/practice/types';
 import { Hourglass, BookCheck, Play, Trash2 } from 'lucide-react';
+import { listDownloadedEventSlugs } from '@/app/utils/storage';
+import { toast } from 'react-toastify';
 
 export default function FavoriteConfigsCard() {
   const { darkMode } = useTheme();
   const router = useRouter();
   const [favorites, setFavorites] = useState<FavoriteConfig[]>([]);
+  const [isOffline, setIsOffline] = useState<boolean>(false);
+  const [downloadedSet, setDownloadedSet] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     try {
@@ -25,7 +29,22 @@ export default function FavoriteConfigsCard() {
       }
     };
     window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    // Setup offline state and downloaded events
+    const updateOnline = () => setIsOffline(!navigator.onLine);
+    updateOnline();
+    window.addEventListener('online', updateOnline);
+    window.addEventListener('offline', updateOnline);
+    (async () => {
+      try {
+        const keys = await listDownloadedEventSlugs();
+        setDownloadedSet(new Set(keys));
+      } catch {}
+    })();
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('online', updateOnline);
+      window.removeEventListener('offline', updateOnline);
+    };
   }, []);
 
   const cardStyle = darkMode
@@ -34,6 +53,13 @@ export default function FavoriteConfigsCard() {
 
   const startFromConfig = (config: FavoriteConfig) => {
     const { eventName, settings } = config;
+    if (isOffline) {
+      const slug = eventName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      if (!downloadedSet.has(slug)) {
+        toast.error('This event is not downloaded for offline use. Go to Offline page to download it.');
+        return;
+      }
+    }
     try { clearTestSession(); } catch {}
     const testParams = buildTestParams(eventName, settings);
     saveTestParams(testParams);

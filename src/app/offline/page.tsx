@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import api from '../api';
 import Header from '@/app/components/Header';
+import { listDownloadedEventSlugs } from '@/app/utils/storage';
 
 type EventOption = { name: string; slug: string };
 
@@ -76,6 +77,15 @@ export default function OfflinePage() {
     ];
     const list: EventOption[] = approvedEvents.map((name) => ({ name, slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-') }));
     setEvents(list);
+    // Seed downloaded map from IndexedDB
+    (async () => {
+      try {
+        const keys = await listDownloadedEventSlugs();
+        const flags: Record<string, boolean> = {};
+        keys.forEach((k) => { flags[String(k)] = true; });
+        setDownloaded(flags);
+      } catch {}
+    })();
   }, []);
 
   const handleDownloadEvent = async (evt: EventOption) => {

@@ -12,6 +12,7 @@ import { buildTestParams, saveTestParams } from '@/app/utils/testParams';
 import EventList from './EventList';
 import TestConfiguration from './TestConfiguration';
 import { ArrowUpRight } from 'lucide-react';
+import { listDownloadedEventSlugs } from '@/app/utils/storage';
 
 export default function PracticeDashboard() {
   const router = useRouter();
@@ -24,6 +25,8 @@ export default function PracticeDashboard() {
   const [continueInfo, setContinueInfo] = useState<{ eventName: string; route: '/test' | '/codebusters' } | null>(null);
   const [panelHeight, setPanelHeight] = useState<number | null>(null);
   const [isLarge, setIsLarge] = useState<boolean>(false);
+  const [isOffline, setIsOffline] = useState<boolean>(false);
+  const [downloadedSet, setDownloadedSet] = useState<Set<string>>(new Set());
 
   const [settings, setSettings] = useState<Settings>({
     questionCount: NORMAL_DEFAULTS.questionCount,
@@ -57,6 +60,24 @@ export default function PracticeDashboard() {
           : 'multiple-choice'
       }));
     }
+  }, []);
+
+  // Detect offline and load downloaded event slugs
+  useEffect(() => {
+    const updateOnline = () => setIsOffline(!navigator.onLine);
+    updateOnline();
+    window.addEventListener('online', updateOnline);
+    window.addEventListener('offline', updateOnline);
+    (async () => {
+      try {
+        const keys = await listDownloadedEventSlugs();
+        setDownloadedSet(new Set(keys));
+      } catch {}
+    })();
+    return () => {
+      window.removeEventListener('online', updateOnline);
+      window.removeEventListener('offline', updateOnline);
+    };
   }, []);
 
   // Detect if there is a test in progress with at least one answer
@@ -199,6 +220,14 @@ export default function PracticeDashboard() {
       return;
     }
 
+    if (isOffline) {
+      const slug = selectedEventObj.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      if (!downloadedSet.has(slug)) {
+        toast.error('This event is not downloaded for offline use. Go to Offline page to download it.');
+        return;
+      }
+    }
+
     // Clear any existing time management session
     clearTestSession();
 
@@ -231,6 +260,14 @@ export default function PracticeDashboard() {
     if (!selectedEventObj) {
       toast.error('Selected event not found');
       return;
+    }
+
+    if (isOffline) {
+      const slug = selectedEventObj.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      if (!downloadedSet.has(slug)) {
+        toast.error('This event is not downloaded for offline use. Go to Offline page to download it.');
+        return;
+      }
     }
 
     // Save preferences
@@ -637,6 +674,8 @@ export default function PracticeDashboard() {
               onSortChange={setSortOption}
               loading={loading}
               error={error}
+              isOffline={isOffline}
+              downloadedSlugs={downloadedSet}
             />
           </div>
 
