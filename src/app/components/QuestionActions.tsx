@@ -20,7 +20,6 @@ interface QuestionActionsProps {
   isSubmittedReport?: boolean;
   isSubmittedEdit?: boolean;
   onReportSubmitted?: (index: number) => void;
-  onEditSubmitted?: (index: number) => void;
   isSubmitted?: boolean;
   onEdit?: () => void;
   onQuestionRemoved?: (questionIndex: number) => void;
@@ -39,9 +38,6 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
   isSubmittedReport = false,
   isSubmittedEdit = false,
   onReportSubmitted,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onEditSubmitted,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   isSubmitted = false,
   onEdit,
   onQuestionRemoved,
@@ -49,11 +45,23 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
 }) => {
   const [isProcessingDirectReport, setIsProcessingDirectReport] = useState(false);
   const [hasRemovalFailed, setHasRemovalFailed] = useState(false);
+  const [isOffline, setIsOffline] = useState<boolean>(false);
 
   // Reset hasRemovalFailed when questionIndex changes (new question)
   useEffect(() => {
     setHasRemovalFailed(false);
   }, [questionIndex]);
+
+  useEffect(() => {
+    const apply = () => setIsOffline(typeof navigator !== 'undefined' ? !navigator.onLine : false);
+    apply();
+    window.addEventListener('online', apply);
+    window.addEventListener('offline', apply);
+    return () => {
+      window.removeEventListener('online', apply);
+      window.removeEventListener('offline', apply);
+    };
+  }, []);
 
   const handleDirectReport = async () => {
     if (isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed) return;
@@ -118,9 +126,10 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
     darkMode ? 'text-gray-500' : 'text-gray-400'
   }`;
 
-      // Detect ID questions (questions with imageData)
-    const isIdQuestion = !!(question as any).imageData;
-  
+  // Detect ID questions (questions with imageData)
+  const isIdQuestion = !!(question as any).imageData;
+  const shouldDisableActions = isSubmitted || isOffline;
+
   if (compact) {
     return (
       <div className="flex items-center space-x-1">
@@ -137,17 +146,17 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
           <>
             <button
               onClick={onEdit}
-              disabled={isSubmittedEdit}
-              className={`${buttonClass} ${isSubmittedEdit ? disabledClass : 'hover:text-blue-500'}`}
-              title={isSubmittedEdit ? 'Edit already submitted' : 'Edit question'}
+              disabled={isSubmittedEdit || shouldDisableActions}
+              className={`${buttonClass} ${(isSubmittedEdit || shouldDisableActions) ? disabledClass : 'hover:text-blue-500'}`}
+              title={isSubmittedEdit ? 'Edit already submitted' : shouldDisableActions ? 'Unavailable offline/after submission' : 'Edit question'}
             >
               <FaEdit className="w-4 h-4" />
             </button>
             <button
               onClick={handleDirectReport}
-              disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed}
-              className={`${buttonClass} ${(isSubmittedReport || hasRemovalFailed || isRemovalFailed) ? disabledClass : 'hover:text-red-500'}`}
-              title={isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : 'Remove question'}
+              disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions}
+              className={`${buttonClass} ${(isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions) ? disabledClass : 'hover:text-red-500'}`}
+              title={isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : shouldDisableActions ? 'Unavailable offline/after submission' : 'Remove question'}
             >
               {isProcessingDirectReport ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
@@ -176,9 +185,9 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
         <>
           <button
             onClick={onEdit}
-            disabled={isSubmittedEdit}
-            className={`${buttonClass} ${isSubmittedEdit ? disabledClass : 'hover:text-blue-500'}`}
-            title={isSubmittedEdit ? 'Edit already submitted' : 'Edit question'}
+            disabled={isSubmittedEdit || shouldDisableActions}
+            className={`${buttonClass} ${(isSubmittedEdit || shouldDisableActions) ? disabledClass : 'hover:text-blue-500'}`}
+            title={isSubmittedEdit ? 'Edit already submitted' : shouldDisableActions ? 'Unavailable offline/after submission' : 'Edit question'}
           >
             <div className="flex items-center space-x-1">
               <FaEdit className="w-4 h-4" />
@@ -189,9 +198,9 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
           </button>
           <button
             onClick={handleDirectReport}
-            disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed}
-            className={`${buttonClass} ${(isSubmittedReport || hasRemovalFailed || isRemovalFailed) ? disabledClass : 'hover:text-red-600'}`}
-            title={isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : 'Quick remove question'}
+            disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions}
+            className={`${buttonClass} ${(isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions) ? disabledClass : 'hover:text-red-600'}`}
+            title={isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : shouldDisableActions ? 'Unavailable offline/after submission' : 'Quick remove question'}
           >
             <div className="flex items-center space-x-1">
               {isProcessingDirectReport ? (

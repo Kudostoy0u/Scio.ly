@@ -145,7 +145,7 @@ export default function EventList({
                     </span>
                   )}
                   {event.divisions && (
-                    <span className={`text-xs px-3 py-1 rounded-full ${
+                    <span className={`hidden lg:inline-block text-xs px-3 py-1 rounded-full ${
                       darkMode ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-600'
                     }`}>
                       Div {event.divisions.join(', ')}
@@ -161,13 +161,15 @@ export default function EventList({
       </div>
     </div>
   );
-} 
+  }
 
 function ScrollBarAlwaysVisible({ children }: { children: ReactNode }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const thumbRef = useRef<HTMLDivElement>(null);
   const [thumbTop, setThumbTop] = useState(0);
   const [thumbHeight, setThumbHeight] = useState(0);
   const [isScrollable, setIsScrollable] = useState(false);
+  const rafPendingRef = useRef(false);
 
   const recalc = () => {
     const el = scrollContainerRef.current;
@@ -181,6 +183,10 @@ function ScrollBarAlwaysVisible({ children }: { children: ReactNode }) {
     if (!hasOverflow) {
       setThumbHeight(0);
       setThumbTop(0);
+      if (thumbRef.current) {
+        thumbRef.current.style.height = '0px';
+        thumbRef.current.style.transform = 'translateY(0px)';
+      }
       return;
     }
 
@@ -193,13 +199,24 @@ function ScrollBarAlwaysVisible({ children }: { children: ReactNode }) {
 
     setThumbHeight(computedThumbHeight);
     setThumbTop(newTop);
+    if (thumbRef.current) {
+      thumbRef.current.style.transform = `translateY(${newTop}px)`;
+      thumbRef.current.style.height = `${computedThumbHeight}px`;
+    }
   };
 
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
     recalc();
-    const onScroll = () => recalc();
+    const onScroll = () => {
+      if (rafPendingRef.current) return;
+      rafPendingRef.current = true;
+      requestAnimationFrame(() => {
+        rafPendingRef.current = false;
+        recalc();
+      });
+    };
     el.addEventListener('scroll', onScroll, { passive: true });
     let ro: ResizeObserver | null = null;
     try {
@@ -216,18 +233,20 @@ function ScrollBarAlwaysVisible({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     recalc();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   });
 
   return (
-    <div ref={scrollContainerRef} className="h-full overflow-y-auto pr-2 native-scroll-hidden relative">
-      {children}
+    <div className="h-full relative">
+      <div ref={scrollContainerRef} className="h-full overflow-y-auto pr-2 native-scroll-hidden">
+        {children}
+      </div>
       {isScrollable && (
         <div className="pointer-events-none absolute inset-y-0 right-1 w-1.5">
           <div className="absolute inset-y-0 right-0 w-1.5 rounded-full bg-gray-200 dark:bg-gray-700" />
           <div
-            className="absolute right-0 w-1.5 rounded-full bg-gray-400 dark:bg-gray-500"
-            style={{ top: `${thumbTop}px`, height: `${thumbHeight}px` }}
+            ref={thumbRef}
+            className="absolute right-0 w-1.5 rounded-full bg-gray-400 dark:bg-gray-500 will-change-transform"
+            style={{ transform: `translateY(${thumbTop}px)`, height: `${thumbHeight}px` }}
           />
         </div>
       )}

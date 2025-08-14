@@ -195,7 +195,14 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
               const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
               const cached = await getEventOfflineQuestions(slug);
               if (Array.isArray(cached) && cached.length > 0) {
-                apiResponse = { success: true, data: cached };
+                // Respect question type selection when offline
+                const typesSel = (routerParams.types as string) || 'multiple-choice';
+                const filtered = typesSel === 'multiple-choice'
+                  ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
+                  : typesSel === 'free-response'
+                    ? cached.filter((q: any) => !Array.isArray(q.options) || q.options.length === 0)
+                    : cached;
+                apiResponse = { success: true, data: filtered };
                 
               }
             }
@@ -469,7 +476,58 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         setGradingFRQs(prev => ({ ...prev, [item.index]: true }));
       });
       
-      try {
+      // Fuzzy grading fallback for offline or API failure
+      const fuzzyGrade = (student: string, corrects: (string | number)[]): number => {
+        const normalize = (s: string) => s
+          .toLowerCase()
+          .normalize('NFKD')
+          .replace(/[^a-z0-9\s]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        const levenshtein = (a: string, b: string): number => {
+          const m = a.length, n = b.length;
+          if (m === 0) return n;
+          if (n === 0) return m;
+          const prev: number[] = Array.from({ length: n + 1 }, (_, j) => j);
+          for (let i = 1; i <= m; i++) {
+            let lastDiag = i - 1;
+            prev[0] = i;
+            for (let j = 1; j <= n; j++) {
+              const temp = prev[j];
+              const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+              prev[j] = Math.min(
+                prev[j] + 1,
+                prev[j - 1] + 1,
+                lastDiag + cost
+              );
+              lastDiag = temp;
+            }
+          }
+          return prev[n];
+        };
+        const s = normalize(student);
+        if (!s) return 0;
+        let best = 0;
+        for (const ans of corrects) {
+          const a = normalize(String(ans));
+          if (!a) continue;
+          if (s === a) return 1;
+          if (a.includes(s) || s.includes(a)) best = Math.max(best, 0.85);
+          const dist = levenshtein(s, a);
+          const maxLen = Math.max(s.length, a.length);
+          if (maxLen > 0) {
+            const sim = 1 - dist / maxLen;
+            best = Math.max(best, sim);
+          }
+        }
+        if (best >= 0.9) return 1;
+        if (best >= 0.75) return 0.75;
+        if (best >= 0.6) return 0.5;
+        if (best >= 0.45) return 0.25;
+        return 0;
+      };
+
+      const gradeViaApi = async () => {
         const scores = await gradeFreeResponses(
           frqsToGrade.map(item => ({
             question: item.question,
@@ -477,22 +535,34 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
             studentAnswer: item.studentAnswer
           }))
         );
-        
         scores.forEach((score, idx) => {
           const questionIndex = frqsToGrade[idx].index;
           setGradingResults(prev => ({ ...prev, [questionIndex]: score }));
           setGradingFRQs(prev => ({ ...prev, [questionIndex]: false }));
-          
-          // Attempted if answered; add fractional correctness
           mcqTotal += 1;
           mcqScore += Math.max(0, Math.min(1, score));
         });
-      } catch (error) {
-        console.error("Error grading FRQs:", error);
+      };
+
+      const gradeViaFuzzy = async () => {
         frqsToGrade.forEach(item => {
-          setGradingResults(prev => ({ ...prev, [item.index]: 0 }));
+          const score = fuzzyGrade(item.studentAnswer, item.correctAnswers);
+          setGradingResults(prev => ({ ...prev, [item.index]: score }));
           setGradingFRQs(prev => ({ ...prev, [item.index]: false }));
+          mcqTotal += 1;
+          mcqScore += Math.max(0, Math.min(1, score));
         });
+      };
+
+      const online = typeof navigator !== 'undefined' ? navigator.onLine : true;
+      if (!online) {
+        await gradeViaFuzzy();
+      } else {
+        try {
+          await gradeViaApi();
+        } catch {
+          await gradeViaFuzzy();
+        }
       }
     }
     

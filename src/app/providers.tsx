@@ -15,9 +15,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     const register = async () => {
       try {
         // Ensure scope covers the whole app
-        const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-        // Optional: update SW in background
-        try { reg.update(); } catch {}
+        await navigator.serviceWorker.register('/sw.js', { scope: '/' });
       } catch {
         // ignore
       }

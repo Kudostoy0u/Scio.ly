@@ -12,7 +12,7 @@ import { buildTestParams, saveTestParams } from '@/app/utils/testParams';
 import EventList from './EventList';
 import TestConfiguration from './TestConfiguration';
 import { ArrowUpRight } from 'lucide-react';
-import { listDownloadedEventSlugs } from '@/app/utils/storage';
+import { listDownloadedEventSlugs, subscribeToDownloads, hasOfflineEvent } from '@/app/utils/storage';
 
 export default function PracticeDashboard() {
   const router = useRouter();
@@ -68,15 +68,23 @@ export default function PracticeDashboard() {
     updateOnline();
     window.addEventListener('online', updateOnline);
     window.addEventListener('offline', updateOnline);
-    (async () => {
+    
+    const loadDownloadedSlugs = async () => {
       try {
         const keys = await listDownloadedEventSlugs();
         setDownloadedSet(new Set(keys));
       } catch {}
-    })();
+    };
+    
+    loadDownloadedSlugs();
+    
+    // Subscribe to cross-tab download updates for immediate UI sync
+    const unsubscribe = subscribeToDownloads(loadDownloadedSlugs);
+    
     return () => {
       window.removeEventListener('online', updateOnline);
       window.removeEventListener('offline', updateOnline);
+      try { unsubscribe(); } catch {}
     };
   }, []);
 
@@ -222,12 +230,23 @@ export default function PracticeDashboard() {
 
     if (isOffline) {
       const slug = selectedEventObj.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      if (!downloadedSet.has(slug)) {
-        toast.error('This event is not downloaded for offline use. Go to Offline page to download it.');
-        return;
-      }
+      // Use real-time check instead of stale state
+      (async () => {
+        const hasDownloaded = await hasOfflineEvent(slug);
+        if (!hasDownloaded) {
+          toast.error('This event is not downloaded for offline use. Go to Offline page to download it.');
+          return;
+        }
+        // Continue with test generation
+        proceedWithTest(selectedEventObj);
+      })();
+      return;
     }
+    
+    proceedWithTest(selectedEventObj);
+  };
 
+  const proceedWithTest = (selectedEventObj: Event) => {
     // Clear any existing time management session
     clearTestSession();
 
@@ -264,12 +283,23 @@ export default function PracticeDashboard() {
 
     if (isOffline) {
       const slug = selectedEventObj.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      if (!downloadedSet.has(slug)) {
-        toast.error('This event is not downloaded for offline use. Go to Offline page to download it.');
-        return;
-      }
+      // Use real-time check instead of stale state
+      (async () => {
+        const hasDownloaded = await hasOfflineEvent(slug);
+        if (!hasDownloaded) {
+          toast.error('This event is not downloaded for offline use. Go to Offline page to download it.');
+          return;
+        }
+        // Continue with unlimited practice
+        proceedWithUnlimited();
+      })();
+      return;
     }
+    
+    proceedWithUnlimited();
+  };
 
+  const proceedWithUnlimited = () => {
     // Save preferences
     savePreferences(selectedEventObj.name, settings.questionCount, settings.timeLimit);
 
@@ -664,7 +694,7 @@ export default function PracticeDashboard() {
           {/* Event List */}
           <div
             className="flex-none lg:flex-1 overflow-hidden"
-            style={{ height: isLarge && panelHeight ? `${panelHeight}px` : '32vh' }}
+            style={{ height: isLarge && panelHeight ? `${panelHeight}px` : '48vh' }}
           >
             <EventList
               events={events}

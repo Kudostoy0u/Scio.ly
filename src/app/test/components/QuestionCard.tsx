@@ -45,7 +45,7 @@ export default function QuestionCard({
   onAnswerChange,
   onBookmarkChange,
   onReportSubmitted,
-  onEditSubmitted,
+  onEditSubmitted: _onEditSubmitted,
   onEdit,
   onQuestionRemoved,
   onGetExplanation
@@ -77,7 +77,6 @@ export default function QuestionCard({
           isSubmittedReport={submittedReports[index]}
           isSubmittedEdit={submittedEdits[index]}
           onReportSubmitted={onReportSubmitted}
-          onEditSubmitted={onEditSubmitted}
           isSubmitted={isSubmitted}
           onEdit={() => onEdit(question)}
           onQuestionRemoved={onQuestionRemoved}
@@ -229,7 +228,7 @@ export default function QuestionCard({
                     ? 'bg-gray-700 hover:bg-gray-600 text-blue-400'
                     : 'bg-blue-50 hover:bg-blue-100 text-blue-600'
                 }`}
-                disabled={loadingExplanation[index]}
+                disabled={loadingExplanation[index] || isSubmitted}
               >
                 {loadingExplanation[index] ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>

@@ -122,7 +122,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           response = null;
         }
         let apiResponse: any = null;
-        if (response && response.ok) {
+          if (response && response.ok) {
           apiResponse = await response.json();
           
         } else {
@@ -131,7 +131,14 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
             const cached = await getEventOfflineQuestions(slug);
             if (Array.isArray(cached) && cached.length > 0) {
-              apiResponse = { success: true, data: cached };
+              // Respect selected question types when offline
+              const typesSel = (routerParams.types as string) || 'multiple-choice';
+              const filtered = typesSel === 'multiple-choice'
+                ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
+                : typesSel === 'free-response'
+                  ? cached.filter((q: any) => !Array.isArray(q.options) || q.options.length === 0)
+                  : cached;
+              apiResponse = { success: true, data: filtered };
               
             }
           }
@@ -540,7 +547,6 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             isSubmittedReport={submittedReports[currentQuestionIndex]}
             isSubmittedEdit={submittedEdits[currentQuestionIndex]}
             onReportSubmitted={handleReportSubmitted}
-            onEditSubmitted={handleEditSubmitted}
             isSubmitted={isSubmitted}
             onEdit={() => handleEditOpen(question)}
             onQuestionRemoved={handleQuestionRemoved}

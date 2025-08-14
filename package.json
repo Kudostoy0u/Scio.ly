@@ -13,6 +13,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "dexie": "^4.0.8",
     "@google/genai": "^1.13.0",
     "@next/third-parties": "^15.4.6",
     "@react-pdf/renderer": "^4.3.0",

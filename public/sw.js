@@ -3,7 +3,13 @@ const SHELL_ASSETS = [
   '/',
   '/manifest.webmanifest',
   '/site-logo.png',
-  '/offline'
+  '/offline',
+  // Precache key app pages for offline shell routing
+  '/dashboard',
+  '/practice',
+  '/test',
+  '/unlimited',
+  '/codebusters'
 ];
 
 self.addEventListener('install', (event) => {
@@ -33,40 +39,70 @@ self.addEventListener('fetch', (event) => {
 
   const isApi = url.pathname.startsWith('/api/');
   const isDocument = request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html');
-  const isAsset = ['image', 'style', 'script', 'font'].includes(request.destination);
+  const isAsset = ['image', 'style', 'script', 'font'].includes(request.destination) || url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/_next/image');
 
-  // Network-first for documents and API requests; do not cache API responses
-  if (isApi || isDocument) {
-    event.respondWith(
-      fetch(request).catch(async () => {
-        // Offline fallback for navigations
-        if (isDocument) {
-          const offlinePage = await caches.match('/offline');
-          if (offlinePage) return offlinePage;
-          const cachedHome = await caches.match('/');
-          if (cachedHome) return cachedHome;
-        }
-        return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
-      })
-    );
+  // Network-first for API requests; for documents prefer cached shell when offline
+  if (isApi) {
+    event.respondWith(fetch(request).catch(() => new Response('Offline', { status: 503, statusText: 'Service Unavailable' })));
     return;
   }
 
-  // Cache-first for static assets only; never cache errors/opaque
+  if (isDocument) {
+    event.respondWith((async () => {
+      try {
+        const res = await fetch(request);
+        // Cache successful document responses for offline reuse
+        if (res && res.ok && res.type === 'basic') {
+          const cache = await caches.open(CACHE_NAME);
+          cache.put(request, res.clone());
+        }
+        return res;
+      } catch {
+        // Prefer cached page, then home shell, then offline page
+        const cachedDoc = await caches.match(request);
+        if (cachedDoc) return cachedDoc;
+        const cachedHome = await caches.match('/');
+        if (cachedHome) return cachedHome;
+        const offlinePage = await caches.match('/offline');
+        if (offlinePage) return offlinePage;
+        return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
+      }
+    })());
+    return;
+  }
+
+  // Cache-first for static assets; on offline miss, return safe fallbacks
   if (isAsset) {
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        if (cached) return cached;
-        return fetch(request).then(async (res) => {
-          if (res && res.ok && res.type === 'basic') {
-            const resClone = res.clone();
-            const cache = await caches.open(CACHE_NAME);
-            cache.put(request, resClone);
-          }
-          return res;
-        });
-      })
-    );
+    event.respondWith((async () => {
+      const cached = await caches.match(request);
+      if (cached) return cached;
+      try {
+        const res = await fetch(request);
+        if (res && res.ok && res.type === 'basic') {
+          const resClone = res.clone();
+          const cache = await caches.open(CACHE_NAME);
+          cache.put(request, resClone);
+        }
+        return res;
+      } catch {
+        // Fallbacks when offline and not cached
+        if (request.destination === 'image' || url.pathname.startsWith('/_next/image')) {
+          const fallback = await caches.match('/site-logo.png');
+          if (fallback) return fallback;
+          return new Response('', { status: 200, headers: { 'content-type': 'image/png' } });
+        }
+        if (request.destination === 'style') {
+          return new Response('', { status: 200, headers: { 'content-type': 'text/css' } });
+        }
+        if (request.destination === 'script' || url.pathname.startsWith('/_next/static/')) {
+          return new Response('', { status: 200, headers: { 'content-type': 'application/javascript' } });
+        }
+        if (request.destination === 'font') {
+          return new Response('', { status: 200 });
+        }
+        return new Response('', { status: 200 });
+      }
+    })());
     return;
   }
 });

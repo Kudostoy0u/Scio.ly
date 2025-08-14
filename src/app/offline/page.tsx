@@ -4,42 +4,11 @@ import { useEffect, useState } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import api from '../api';
 import Header from '@/app/components/Header';
-import { listDownloadedEventSlugs } from '@/app/utils/storage';
+import { listDownloadedEventSlugs, saveOfflineEvent, subscribeToDownloads } from '@/app/utils/storage';
 
 type EventOption = { name: string; slug: string };
 
-// Minimal IndexedDB helper
-function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open('scio-offline', 1);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains('events')) db.createObjectStore('events');
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function saveEventQuestions(slug: string, questions: unknown) {
-  const db = await openDB();
-  await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction('events', 'readwrite');
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.objectStore('events').put(questions as any, slug);
-  });
-}
-
-async function saveCodebustersQuotes(quotes: { en: any[]; es: any[] }) {
-  const db = await openDB();
-  await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction('events', 'readwrite');
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.objectStore('events').put(quotes as any, 'codebusters');
-  });
-}
+// Save helpers now use normalized stores via saveOfflineEvent
 
 // Removed unused loadEventQuestions helper
 
@@ -78,14 +47,43 @@ export default function OfflinePage() {
     const list: EventOption[] = approvedEvents.map((name) => ({ name, slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-') }));
     setEvents(list);
     // Seed downloaded map from IndexedDB
+    let cancelled = false;
     (async () => {
+      try {
+        const keys = await listDownloadedEventSlugs();
+        if (cancelled) return;
+        const flags: Record<string, boolean> = {};
+        keys.forEach((k) => { flags[String(k)] = true; });
+        setDownloaded(flags);
+      } catch {}
+    })();
+    // Subscribe to cross-tab download updates for immediate UI sync
+    const unsubscribe = subscribeToDownloads(async () => {
       try {
         const keys = await listDownloadedEventSlugs();
         const flags: Record<string, boolean> = {};
         keys.forEach((k) => { flags[String(k)] = true; });
         setDownloaded(flags);
       } catch {}
-    })();
+    });
+    return () => { 
+      cancelled = true; 
+      try { unsubscribe(); } catch {} 
+    };
+  }, []);
+
+  // Also re-read downloaded flags when page regains focus
+  useEffect(() => {
+    const onFocus = async () => {
+      try {
+        const keys = await listDownloadedEventSlugs();
+        const flags: Record<string, boolean> = {};
+        keys.forEach((k) => { flags[String(k)] = true; });
+        setDownloaded(flags);
+      } catch {}
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, []);
 
   const handleDownloadEvent = async (evt: EventOption) => {
@@ -101,14 +99,14 @@ export default function OfflinePage() {
         const esData = await esResp.json();
         const enQuotes = enData.data?.quotes || enData.quotes || [];
         const esQuotes = esData.data?.quotes || esData.quotes || [];
-        await saveCodebustersQuotes({ en: enQuotes, es: esQuotes });
+        await saveOfflineEvent('codebusters', { en: enQuotes, es: esQuotes });
       } else {
         const params = new URLSearchParams({ event: evt.name, limit: '1000' });
         const res = await fetch(`${api.questions}?${params.toString()}`);
         if (!res.ok) throw new Error(`Failed to download ${evt.name}`);
         const data = await res.json();
         const questions = data?.data ?? [];
-        await saveEventQuestions(evt.slug, questions);
+        await saveOfflineEvent(evt.slug, questions);
       }
       setDownloaded((prev) => ({ ...prev, [evt.slug]: true }));
       setStatus(`Downloaded ${evt.name}.`);
