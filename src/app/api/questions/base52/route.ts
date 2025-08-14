@@ -3,7 +3,7 @@ import { createErrorResponse, createSuccessResponse, logApiRequest, logApiRespon
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 const BASE = ALPHABET.length; // 52
-const CODE_LENGTH = 5;
+const CODE_LENGTH = 4;
 
 function encodeBase52(index: number): string {
   if (!Number.isInteger(index) || index < 0) {
@@ -15,9 +15,7 @@ function encodeBase52(index: number): string {
     out = ALPHABET[n % BASE] + out;
     n = Math.floor(n / BASE);
   }
-  if (n > 0) {
-    throw new Error(`Index too large for ${CODE_LENGTH}-char base52`);
-  }
+  if (n > 0) throw new Error(`Index too large for ${CODE_LENGTH}-char base52`);
   return out;
 }
 
@@ -35,8 +33,9 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('Invalid index', 400, 'INVALID_INDEX');
     }
 
-    const code = encodeBase52(index);
-    const res = createSuccessResponse({ index, code });
+    const type = request.nextUrl.searchParams.get('type') === 'I' ? 'I' : 'S';
+    const code = encodeBase52(index) + type; // append type suffix
+    const res = createSuccessResponse({ index, code, type });
     logApiResponse('GET', '/api/questions/base52', 200, Date.now() - start);
     return res;
   } catch {

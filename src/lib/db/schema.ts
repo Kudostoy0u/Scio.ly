@@ -53,4 +53,21 @@ export const blacklists = pgTable('blacklists', {
   questionData: jsonb('question_data').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+// ID Events table (image-based identification questions)
+export const idEvents = pgTable('id_events', {
+  id: uuid('id').primaryKey(),
+  question: text('question').notNull(),
+  tournament: text('tournament').notNull(),
+  division: text('division').notNull(),
+  options: jsonb('options').default('[]'),
+  answers: jsonb('answers').notNull(),
+  subtopics: jsonb('subtopics').default('[]'),
+  difficulty: numeric('difficulty').default('0.5'),
+  event: text('event').notNull(),
+  images: jsonb('images').default('[]').notNull(),
+  randomF: doublePrecision('random_f').notNull().default(sql`random()`),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
  

@@ -213,64 +213,55 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           
         }
 
-        // 2) ID questions (blind to filters)
+        // 2) ID questions from new endpoint for supported events
         if (idCount > 0) {
-          const preferFRQ = routerParams.types !== 'multiple-choice';
-          const idEndpoint =
-            routerParams.eventName === 'Rocks and Minerals' ? api.rocksRandom :
-            routerParams.eventName === 'Entomology' ? api.entomologyRandom :
-            null;
-          if (!idEndpoint) {
-            console.warn('[IDGEN][test] no id endpoint for event (ignored)', routerParams.eventName);
-          }
-          const idUrl = `${idEndpoint}?count=${idCount}`;
-          console.log('[IDGEN][test] fetching id questions', { idUrl, preferFRQ });
-          const resp = await fetch(idUrl);
-          const { success, data, namePool } = await resp.json();
-          if (success) {
-            
-            const idQuestions: Question[] = data.map((item: any) => {
-              const imgs: string[] = Array.isArray(item.images) ? item.images : [];
-              const chosenImg = imgs.length ? imgs[Math.floor(Math.random() * imgs.length)] : undefined;
-              const isEnt = routerParams.eventName === 'Entomology';
-              const frqPrompt = isEnt ? 'Identify the scientific name of the insect.' : 'Identify the mineral shown in the image.';
-              const mcqPrompt = frqPrompt;
-
-              const typesSel = (routerParams.types as string) || 'multiple-choice';
-              const isFRQ = typesSel === 'free-response' || (typesSel === 'both' && Math.random() < 0.5);
-
-              if (isFRQ) {
-                return {
-                  question: frqPrompt,
-                  answers: item.names,
-                  difficulty: 0.5,
-                  event: routerParams.eventName || 'Rocks and Minerals',
-                  imageData: chosenImg,
-                };
-              }
-              const correct = item.names[0];
-              const distractors = shuffleArray((namePool as string[]).filter(n => !item.names.includes(n))).slice(0, 3);
-              const options = shuffleArray([correct, ...distractors]);
-              const correctIndex = options.indexOf(correct);
-              return {
-                question: mcqPrompt,
-                options,
-                answers: [correctIndex],
-                difficulty: 0.5,
-                event: routerParams.eventName || 'Rocks and Minerals',
-                imageData: chosenImg,
-              };
-            });
-            // Combine and shuffle so ID questions are interspersed, not appended at the end
-            selectedQuestions = shuffleArray(selectedQuestions.concat(idQuestions));
-            console.log('[IDGEN][test] combined & shuffled final questions', { total: selectedQuestions.length });
-          } else {
-            
-          }
+          const params = new URLSearchParams();
+          params.set('event', routerParams.eventName);
+          params.set('limit', String(Math.max(idCount * 3, 50)));
+          const resp = await fetch(`${api.idQuestions}?${params.toString()}`);
+          const json = await resp.json();
+          const source: any[] = Array.isArray(json?.data) ? json.data : [];
+          // Filter by types (MCQ/FRQ)
+          const typesSel = (routerParams.types as string) || 'multiple-choice';
+          const filtered = source.filter((row: any) => {
+            const isMcq = Array.isArray(row.options) && row.options.length > 0;
+            if (typesSel === 'multiple-choice') return isMcq;
+            if (typesSel === 'free-response') return !isMcq;
+            return true; // both
+          });
+          const idQuestions: Question[] = filtered.map((row: any) => ({
+            question: row.question,
+            options: row.options || [],
+            answers: row.answers || [],
+            difficulty: row.difficulty ?? 0.5,
+            event: row.event,
+            imageData: Array.isArray(row.images) && row.images.length ? row.images[Math.floor(Math.random()*row.images.length)] : undefined,
+          }));
+          // Take only up to idCount
+          const pickedId = shuffleArray(idQuestions).slice(0, idCount);
+          // If not enough ID questions, we'll fill with base later
+          selectedQuestions = selectedQuestions.concat(pickedId);
         }
 
-        // Final shuffle safeguard in case only base or only ID questions were loaded
-        const shuffledFinal = shuffleArray(selectedQuestions);
+        // Top-up with base questions if we still don't have enough
+        if (selectedQuestions.length < total && baseCount > 0) {
+          const need = total - selectedQuestions.length;
+          const requestCount = Math.max(need * 3, 50);
+          const params2 = buildApiParams({ ...routerParams }, requestCount);
+          const apiUrl2 = `${api.questions}?${params2}`;
+          const r2 = await fetch(apiUrl2).catch(() => null);
+          const j2 = r2 && r2.ok ? await r2.json() : null;
+          const extras: Question[] = (j2?.data || []).filter((q: any) => q.answers && Array.isArray(q.answers) && q.answers.length > 0);
+          selectedQuestions = selectedQuestions.concat(shuffleArray(extras).slice(0, need));
+        }
+
+        // De-duplicate and shuffle
+        const seen = new Set<string>();
+        const keyOf = (q: Question) => (q as any).imageData ? `id:${(q as any).imageData}` : q.question;
+        const dedup = selectedQuestions.filter(q => {
+          const k = keyOf(q); if (seen.has(k)) return false; seen.add(k); return true;
+        });
+        const shuffledFinal = shuffleArray(dedup).slice(0, total);
         const questionsWithIndex = shuffledFinal.map((q, idx) => ({ ...q, originalIndex: idx }));
         // Store questions with imageData intact (CDN URLs are small)
         localStorage.setItem('testQuestions', JSON.stringify(questionsWithIndex));
