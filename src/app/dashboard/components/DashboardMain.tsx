@@ -151,7 +151,7 @@ export default function DashboardMain({
           setHistoricalData(historicalData);
           setHistoryData(historyData as any);
 
-          let name = getLocalGreetingName();
+          const name = getLocalGreetingName();
           if (name) {
             setGreetingName(prev => prev || name);
           } else {
@@ -164,13 +164,29 @@ export default function DashboardMain({
                 setGreetingName(fromMeta);
               }
             } catch {}
-            // If no cached name, fetch from server once and seed localStorage
-            try {
-              await syncLocalFromSupabase(effectiveUser.id);
-              name = getLocalGreetingName();
-              if (name) setGreetingName(name);
-            } catch {}
           }
+
+          // Always run a background sync from Supabase to populate ALL history into localStorage
+          try {
+            await syncLocalFromSupabase(effectiveUser.id);
+          } catch {}
+
+          // After sync completes, refresh from localStorage
+          try {
+            const localAfter = getLocalDailyMetrics();
+            const accAfter = localAfter.questionsAttempted > 0 ? (localAfter.correctAnswers / localAfter.questionsAttempted) * 100 : 0;
+            setMetrics({
+              questionsAttempted: localAfter.questionsAttempted,
+              correctAnswers: localAfter.correctAnswers,
+              eventsPracticed: localAfter.eventsPracticed,
+              accuracy: accAfter,
+            });
+            const { historicalData, historyData } = getLocalHistory();
+            setHistoricalData(historicalData);
+            setHistoryData(historyData as any);
+            const nm = getLocalGreetingName();
+            if (nm) setGreetingName(prev => prev || nm);
+          } catch {}
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);

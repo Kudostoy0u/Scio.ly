@@ -1,7 +1,7 @@
 'use client';
 
 import type { DailyMetrics } from './metrics';
-import { fetchDailyUserStatsRow } from './metrics';
+import { fetchDailyUserStatsRow, fetchUserStatsSince } from './metrics';
 
 // Keys
 const DISPLAY_NAME_KEY = 'scio_display_name';
@@ -85,21 +85,44 @@ export function getLocalHistory(): {
 
 // Optional sync from Supabase to localStorage at login
 export async function syncLocalFromSupabase(userId: string): Promise<void> {
+  // 1) Sync ALL historical user_stats rows into localStorage for heatmap/weekly/all-time
+  try {
+    // Use an early epoch to fetch all rows; server will return only this user's data
+    const allRows = await fetchUserStatsSince(userId, '1970-01-01');
+    if (Array.isArray(allRows)) {
+      allRows.forEach((row: any) => {
+        try {
+          const key = `metrics_${row.date}`;
+          const payload: DailyMetrics = {
+            questionsAttempted: row.questions_attempted || 0,
+            correctAnswers: row.correct_answers || 0,
+            eventsPracticed: row.events_practiced || [],
+            eventQuestions: row.event_questions || {},
+            gamePoints: row.game_points || 0,
+          };
+          localStorage.setItem(key, JSON.stringify(payload));
+        } catch {}
+      });
+    }
+  } catch {}
+
+  // 2) Also ensure today's row is mirrored (in case the above returned none for today yet)
   try {
     const today = getTodayKey();
     const row = await fetchDailyUserStatsRow(userId, today);
     if (row) {
-      setLocalDailyMetrics({
+      const payload: DailyMetrics = {
         questionsAttempted: row.questions_attempted || 0,
         correctAnswers: row.correct_answers || 0,
         eventsPracticed: row.events_practiced || [],
         eventQuestions: row.event_questions || {},
         gamePoints: row.game_points || 0,
-      });
+      };
+      localStorage.setItem(`metrics_${today}`, JSON.stringify(payload));
     }
   } catch {}
 
-  // Also sync greeting name
+  // 3) Also sync greeting name
   try {
     const { supabase } = await import('@/lib/supabase');
     const { data: profile } = await supabase
