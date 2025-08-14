@@ -181,31 +181,27 @@ export const syncDashboardData = async (userId: string | null): Promise<Dashboar
     try {
       if (!userId) {
         console.warn('No userId provided for greeting name sync');
-        return;
-      }
-      
-      if (typeof userId !== 'string' || userId.trim() === '') {
+      } else if (typeof userId !== 'string' || userId.trim() === '') {
         console.warn('Invalid userId for greeting name sync:', userId);
-        return;
-      }
-      
-      console.log('Fetching user profile for greeting name, userId:', userId);
-      const { data: profile } = await supabase
-        .from('users')
-        .select('first_name, display_name')
-        .eq('id', userId.trim())
-        .maybeSingle();
-      
-      const firstName = (profile as any)?.first_name as string | undefined;
-      const displayName = (profile as any)?.display_name as string | undefined;
-      const chosen = (firstName && firstName.trim())
-        ? firstName.trim()
-        : (displayName && displayName.trim())
-          ? displayName.trim().split(' ')[0]
-          : '';
-      
-      if (chosen) {
-        setLocalGreetingName(chosen);
+      } else {
+        console.log('Fetching user profile for greeting name, userId:', userId);
+        const { data: profile } = await supabase
+          .from('users')
+          .select('first_name, display_name')
+          .eq('id', userId.trim())
+          .maybeSingle();
+        
+        const firstName = (profile as any)?.first_name as string | undefined;
+        const displayName = (profile as any)?.display_name as string | undefined;
+        const chosen = (firstName && firstName.trim())
+          ? firstName.trim()
+          : (displayName && displayName.trim())
+            ? displayName.trim().split(' ')[0]
+            : '';
+        
+        if (chosen) {
+          setLocalGreetingName(chosen);
+        }
       }
     } catch {}
 
