@@ -1,5 +1,3 @@
-# Anatomy – Immune (2026)
-
 ## Overview
 Innate and adaptive immunity components and mechanisms.
 

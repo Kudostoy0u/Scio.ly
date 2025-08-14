@@ -1,11 +1,3 @@
-# Experimental Design (2026)
-
-Divisions: B, C  
-Type: Lab/Inquiry  
-Participants: 2–3  
-Approx. Time: 50 minutes  
-Allowed Materials: Usually no external notes; materials provided; confirm rules
-
 ## Overview
 Design and conduct an experiment from provided materials, analyze data, and write a structured lab report under time constraints.
 

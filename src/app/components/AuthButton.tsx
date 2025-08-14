@@ -232,7 +232,13 @@ export default function AuthButton() {
     try {
       // Fast local clear to avoid stale UI when session is expired or network is slow
       await client.auth.signOut({ scope: 'local' }).catch(() => undefined);
-      clearUserFromLocalStorage();
+      // Reset all local state except theme
+      try {
+        const { resetAllLocalStorageExceptTheme } = await import('@/app/utils/localState');
+        resetAllLocalStorageExceptTheme();
+      } catch {
+        clearUserFromLocalStorage();
+      }
       setUser(null);
       setIsDropdownOpen(false);
 

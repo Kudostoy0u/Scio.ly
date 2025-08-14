@@ -1,5 +1,3 @@
-# Anatomy – Lymphatic/Immune (2026)
-
 ## Overview
 Lymphatic drainage and immune system basics (innate/adaptive).
 

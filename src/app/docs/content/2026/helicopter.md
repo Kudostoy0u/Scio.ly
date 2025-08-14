@@ -1,10 +1,3 @@
-# Helicopter (2026)
-
-Divisions: B, C  
-Type: Build (Flight)  
-Participants: 2  
-Allowed Materials: Device, rubber motors, eye protection, logs; impound rules
-
 ## Overview
 Rubber-powered helicopter for maximum flight time; optimize rotor design, mass, and rubber winding strategy.
 

@@ -1,11 +1,3 @@
-# Forensics (2026)
-
-Division: C  
-Type: Lab  
-Participants: 2  
-Approx. Time: 50 minutes  
-Allowed Materials: Safety goggles; notes/binder per rules
-
 ## Overview
 Forensic analysis of unknowns and trace evidence with reasoning and report writing.
 

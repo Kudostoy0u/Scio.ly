@@ -1,10 +1,3 @@
-# Robot Tour (2026)
-
-Division: C  
-Type: Build (Autonomous)  
-Participants: 2  
-Allowed Materials: Components per rules; logs; safety; impound
-
 ## Overview
 Autonomous robot navigates a course to reach a target within constraints.
 

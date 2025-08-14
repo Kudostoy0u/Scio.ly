@@ -1,11 +1,3 @@
-# Write It Do It (2026)
-
-Division: B  
-Type: Inquiry/Communication  
-Participants: 2  
-Approx. Time: per host  
-Allowed Materials: Paper/pencil provided
-
 ## Overview
 One partner writes instructions to recreate a structure; the other partner builds from the written instructions.
 

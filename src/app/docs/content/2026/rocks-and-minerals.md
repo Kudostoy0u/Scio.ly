@@ -1,11 +1,3 @@
-# Rocks and Minerals (2026)
-
-Divisions: B, C  
-Type: Study (ID)  
-Participants: 2–3  
-Approx. Time: 50 minutes  
-Allowed Materials: Field guide/binder (confirm)
-
 ## Overview
 Identification and classification of minerals and rocks; properties, formation processes, uses, and environmental aspects. Emphasis on rapid ID with justification, process reasoning, and applied geology.
 

@@ -1,5 +1,3 @@
-# Dynamic Planet – Tectonics (2026)
-
 ## Overview
 Plate tectonics explains the distribution of earthquakes, volcanoes, mountains, ocean basins, and many resources. This section covers plate types and boundaries, subduction and orogeny, hotspots and plumes, seafloor spreading and magnetic anomalies, isostasy, basic seismology, and hazard interpretation.
 

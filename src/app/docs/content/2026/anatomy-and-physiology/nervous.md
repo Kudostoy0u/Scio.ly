@@ -1,5 +1,3 @@
-# Anatomy – Nervous (2026)
-
 ## Overview
 CNS/PNS anatomy; neuron physiology; synaptic transmission and reflexes.
 

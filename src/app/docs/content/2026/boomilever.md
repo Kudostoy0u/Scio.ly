@@ -1,10 +1,3 @@
-# Boomilever (2026)
-
-Divisions: B, C  
-Type: Build  
-Participants: 2  
-Allowed Materials: Device within specs; eye protection; impound per rules
-
 ## Overview
 Design and construct a cantilevered structure to support maximum load relative to mass (efficiency).
 

@@ -1,11 +1,3 @@
-# Materials Science (2026)
-
-Division: C  
-Type: Study/Applied  
-Participants: 2–3  
-Approx. Time: 50 minutes  
-Allowed Materials: Notes/binder and calculator (confirm)
-
 ## Overview
 Structure–property relationships; polymers, metals, ceramics; testing and failure analysis. Focus on microstructure control, mechanical behavior, processing–structure–properties–performance chain, and applied problem solving.
 

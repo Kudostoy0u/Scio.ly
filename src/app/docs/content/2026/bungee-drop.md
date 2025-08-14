@@ -1,10 +1,3 @@
-# Bungee Drop (2026)
-
-Division: C  
-Type: Build/Prediction  
-Participants: 2  
-Allowed Materials: Device/cord per rules; calculator; safety
-
 ## Overview
 Predict length of elastic cord to minimize error of drop distance with a given mass.
 

@@ -1,5 +1,3 @@
-# Anatomy – Skeletal (2026)
-
 ## Overview
 Bones, joints, cartilage; functions: support, protection, movement, storage, hematopoiesis.
 

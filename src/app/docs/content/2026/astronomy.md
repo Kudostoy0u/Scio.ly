@@ -1,11 +1,3 @@
-# Astronomy (2026)
-
-Division: C  
-Type: Study (Data/Images)  
-Participants: 2–3  
-Approx. Time: 50 minutes  
-Allowed Materials: Binder/notes, Class I calculator (confirm)
-
 ## Overview
 Competition astrophysics with emphasis on stellar structure and evolution, HR diagrams, spectra/photometry, distance ladder and standard candles, galaxy properties, and cosmology basics. Strong focus on interpreting plots (HR/CM diagrams, spectra, light curves) and performing fast calculations.
 

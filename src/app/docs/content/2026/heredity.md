@@ -1,11 +1,3 @@
-# Heredity (2026)
-
-Division: B  
-Type: Study  
-Participants: 2–3  
-Approx. Time: 50 minutes  
-Allowed Materials: Notesheet/binder and Class I calculator (confirm rules)
-
 ## Overview
 Foundations of classical and molecular genetics: inheritance patterns, probability, pedigrees, DNA → RNA → protein basics.
 

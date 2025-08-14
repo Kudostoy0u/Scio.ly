@@ -1,5 +1,3 @@
-# Anatomy – Respiratory (2026)
-
 ## Overview
 Airway anatomy, gas exchange, mechanics, volumes, and control.
 

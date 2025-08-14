@@ -1,11 +1,3 @@
-# Water Quality (2026)
-
-Divisions: B, C  
-Type: Hybrid (Study + Data)  
-Participants: 2–3  
-Approx. Time: 50 minutes  
-Allowed Materials: Notes/binder and Class I calculator (confirm rules)
-
 ## Overview
 Aquatic ecology, limnology, and water chemistry with data interpretation and potential bioindicator identification.
 

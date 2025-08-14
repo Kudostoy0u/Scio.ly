@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { FaPen } from 'react-icons/fa';
 import { toast } from 'react-toastify';
-import { supabase } from '@/lib/supabase';
-import { getDailyMetrics } from '@/app/utils/metrics';
+import { getLocalDailyMetrics, getLocalHistory, getLocalGreetingName, setLocalGreetingName, syncLocalFromSupabase } from '@/app/utils/localState';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { User } from '@supabase/supabase-js';
 // Toast styles are injected globally by Providers
@@ -14,138 +13,11 @@ import Header from '../../components/Header';
 import ContactModal from '@/app/components/ContactModal';
 import { handleContactSubmission } from '@/app/utils/contactUtils';
 import { ContactFormData, Metrics, DailyData, WeeklyData } from '../types';
-import dynamic from 'next/dynamic';
-
-const WelcomeMessage = dynamic(() => import('./WelcomeMessage'), { ssr: false, loading: () => (
-  <div className="rounded-lg p-6 border dark:border-gray-700 border-gray-200 bg-white dark:bg-gray-800 animate-pulse">
-    <div className="flex items-center justify-between">
-      <div className="space-y-2">
-        <div className="h-8 w-64 rounded bg-gray-200 dark:bg-gray-700" />
-        <div className="h-4 w-80 rounded bg-gray-200 dark:bg-gray-700" />
-      </div>
-      <div className="hidden md:block p-6 rounded-lg bg-gray-100 dark:bg-gray-700" />
-    </div>
-  </div>
-) });
-
-const MetricsCard = dynamic(() => import('./MetricsCard'), { ssr: false, loading: () => (
-  <div className="perspective-1000 transition-transform duration-300 text-center">
-    <div className="p-0 h-32 rounded-lg relative border dark:border-gray-700 border-gray-200 bg-white dark:bg-gray-800">
-      <div className="absolute w-full h-full flex flex-col px-6 pt-6 pb-3">
-        <div className="h-5 w-40 mb-2 rounded bg-gray-200 dark:bg-gray-700" />
-        <div className="h-9 w-24 rounded bg-gray-200 dark:bg-gray-700 self-center" />
-      </div>
-    </div>
-  </div>
-) });
-
-const FavoriteConfigsCard = dynamic(() => import('./FavoriteConfigsCard'), { ssr: false, loading: () => (
-  <div className="hidden md:flex md:col-span-2 rounded-lg border dark:border-gray-700 border-gray-200 bg-white dark:bg-gray-800 pl-5 pr-5 h-32 overflow-hidden animate-pulse">
-    <div className="flex flex-row w-full items-center gap-4 h-full">
-      <div className="flex-none min-w-[110px]">
-        <div className="h-4 w-20 rounded bg-gray-200 dark:bg-gray-700 mb-2" />
-        <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-700" />
-      </div>
-      <div className="flex-1 h-full">
-        <div className="grid grid-cols-4 gap-4 h-full items-center">
-          {Array.from({ length: 4 }).map((_, idx) => (
-            <div key={idx} className="hidden md:flex items-center justify-center rounded-md h-[80%] bg-gray-50/60 dark:bg-gray-900/30 border dark:border-gray-800 border-gray-200" />
-          ))}
-        </div>
-      </div>
-    </div>
-  </div>
-) });
-
-const QuestionsThisWeekChart = dynamic(() => import('./QuestionsThisWeekChart'), { ssr: false, loading: () => (
-  <div className="p-6 rounded-lg border dark:border-gray-700 border-gray-200 bg-white dark:bg-gray-800 flex flex-col h-[360px] md:h-[300px] animate-pulse">
-    <div className="flex items-center justify-between mb-2">
-      <div className="h-6 w-48 rounded bg-gray-200 dark:bg-gray-700" />
-      <div className="flex items-center gap-2">
-        <div className="h-8 w-16 rounded-md bg-gray-200 dark:bg-gray-700" />
-        <div className="h-8 w-20 rounded-md bg-gray-200 dark:bg-gray-700" />
-      </div>
-    </div>
-    <div className="mb-2 flex flex-wrap items-center gap-2">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="h-6 w-24 rounded-full bg-gray-200 dark:bg-gray-700" />
-      ))}
-    </div>
-    <div className="w-full flex-1 min-h-0 rounded bg-gray-200 dark:bg-gray-700" />
-  </div>
-) });
-
-const ActionButtons = dynamic(() => import('./ActionButtons'), { ssr: false, loading: () => (
-  <>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 animate-pulse">
-      <div className="rounded-lg border dark:border-gray-700 border-gray-200 bg-white dark:bg-gray-800">
-        <div className="w-full h-full p-6 flex items-center gap-4">
-          <div className="p-3 rounded-lg bg-gray-200 dark:bg-gray-700 w-12 h-12" />
-          <div className="flex-1 space-y-2">
-            <div className="h-6 w-48 rounded bg-gray-200 dark:bg-gray-700" />
-            <div className="h-4 w-72 rounded bg-gray-200 dark:bg-gray-700" />
-          </div>
-          <div className="grid grid-cols-3 gap-2 md:flex md:space-x-2 md:grid-cols-none">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-700" />
-            ))}
-          </div>
-        </div>
-      </div>
-      <div className="rounded-lg border dark:border-gray-700 border-gray-200 bg-white dark:bg-gray-800">
-        <div className="w-full h-full p-6 flex items-center gap-4">
-          <div className="p-3 rounded-lg bg-gray-200 dark:bg-gray-700 w-12 h-12" />
-          <div className="flex-1 space-y-2">
-            <div className="h-6 w-56 rounded bg-gray-200 dark:bg-gray-700" />
-            <div className="h-4 w-64 rounded bg-gray-200 dark:bg-gray-700" />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 animate-pulse">
-      <div className="rounded-lg border dark:border-gray-700 border-gray-200 bg-white dark:bg-gray-800">
-        <div className="w-full h-full p-6 flex items-center gap-4">
-          <div className="p-3 rounded-lg bg-gray-200 dark:bg-gray-700 w-12 h-12" />
-          <div className="flex-1 space-y-2">
-            <div className="h-6 w-52 rounded bg-gray-200 dark:bg-gray-700" />
-            <div className="h-4 w-72 rounded bg-gray-200 dark:bg-gray-700" />
-          </div>
-        </div>
-      </div>
-      <div className="rounded-lg border dark:border-gray-700 border-gray-200 bg-white dark:bg-gray-800">
-        <div className="w-full h-full p-6 flex items-center gap-4">
-          <div className="p-3 rounded-lg bg-gray-200 dark:bg-gray-700 w-12 h-12" />
-          <div className="flex-1 space-y-2">
-            <div className="h-6 w-52 rounded bg-gray-200 dark:bg-gray-700" />
-            <div className="h-4 w-72 rounded bg-gray-200 dark:bg-gray-700" />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 animate-pulse">
-      <div className="rounded-lg border dark:border-gray-700 border-gray-200 bg-white dark:bg-gray-800">
-        <div className="w-full h-full p-6 flex items-center gap-4">
-          <div className="p-3 rounded-lg bg-gray-200 dark:bg-gray-700 w-12 h-12" />
-          <div className="flex-1 space-y-2">
-            <div className="h-6 w-56 rounded bg-gray-200 dark:bg-gray-700" />
-            <div className="h-4 w-64 rounded bg-gray-200 dark:bg-gray-700" />
-          </div>
-        </div>
-      </div>
-      <div className="rounded-lg border dark:border-gray-700 border-gray-200 bg-white dark:bg-gray-800">
-        <div className="w-full h-full p-6 flex items-center gap-4">
-          <div className="p-3 rounded-lg bg-gray-200 dark:bg-gray-700 w-12 h-12" />
-          <div className="flex-1 space-y-2">
-            <div className="h-6 w-52 rounded bg-gray-200 dark:bg-gray-700" />
-            <div className="h-4 w-72 rounded bg-gray-200 dark:bg-gray-700" />
-          </div>
-        </div>
-      </div>
-    </div>
-  </>
-) });
+  import WelcomeMessage from './WelcomeMessage';
+import MetricsCard from './MetricsCard';
+import FavoriteConfigsCard from './FavoriteConfigsCard';
+import QuestionsThisWeekChart from './QuestionsThisWeekChart';
+import ActionButtons from './ActionButtons';
 
 import AnimatedAccuracy from './AnimatedAccuracy';
 
@@ -153,8 +25,8 @@ type HistoryData = Record<string, { questionsAttempted: number; correctAnswers: 
 
 export default function DashboardMain({
   initialUser,
-  initialMetrics,
-  initialHistoryData,
+  initialMetrics: _initialMetrics,
+  initialHistoryData: _initialHistoryData,
   initialGreetingName,
 }: {
   initialUser?: User | null;
@@ -165,16 +37,18 @@ export default function DashboardMain({
   const router = useRouter();
   const { darkMode, setDarkMode } = useTheme();
   const [currentUser, setCurrentUser] = useState<User | null>(initialUser ?? null);
+  const initLocal = getLocalDailyMetrics();
   const [metrics, setMetrics] = useState<Metrics>({
-    questionsAttempted: initialMetrics?.questionsAttempted ?? 0,
-    correctAnswers: initialMetrics?.correctAnswers ?? 0,
-    eventsPracticed: initialMetrics?.eventsPracticed ?? [],
-    accuracy: initialMetrics?.accuracy ?? 0
+    questionsAttempted: initLocal.questionsAttempted,
+    correctAnswers: initLocal.correctAnswers,
+    eventsPracticed: initLocal.eventsPracticed,
+    accuracy: initLocal.questionsAttempted > 0 ? (initLocal.correctAnswers / initLocal.questionsAttempted) * 100 : 0
   });
-  const [historicalData, setHistoricalData] = useState<DailyData[]>(initialHistoryData?.historicalData ?? []);
-  const [historyData, setHistoryData] = useState<HistoryData>(initialHistoryData?.historyData ?? {});
+  const historyInit = getLocalHistory();
+  const [historicalData, setHistoricalData] = useState<DailyData[]>(historyInit.historicalData ?? []);
+  const [historyData, setHistoryData] = useState<HistoryData>((historyInit.historyData as any) ?? {});
   const [contactModalOpen, setContactModalOpen] = useState(false);
-  const [greetingName, setGreetingName] = useState<string>(initialGreetingName || '');
+  const [greetingName, setGreetingName] = useState<string>(initialGreetingName || getLocalGreetingName() || '');
 
   // View states for metrics cards
   const [correctView, setCorrectView] = useState<'daily' | 'weekly' | 'allTime'>('daily');
@@ -203,18 +77,22 @@ export default function DashboardMain({
     const fetchData = async () => {
       try {
         // Always get the client-side user to ensure an authenticated session for RLS
+        const { supabase } = await import('@/lib/supabase');
         const { data: { user } } = await supabase.auth.getUser();
         const effectiveUser = user || initialUser || null;
         setCurrentUser(effectiveUser);
         if (!effectiveUser) {
           // Anonymous fallback: load metrics from localStorage
-          const dailyMetrics = await getDailyMetrics(null);
-          if (dailyMetrics) {
-            const accuracy = dailyMetrics.questionsAttempted > 0
-              ? (dailyMetrics.correctAnswers / dailyMetrics.questionsAttempted) * 100
-              : 0;
-            setMetrics({ ...dailyMetrics, accuracy });
-          }
+          const localDaily = getLocalDailyMetrics();
+          const accuracyAnon = localDaily.questionsAttempted > 0
+            ? (localDaily.correctAnswers / localDaily.questionsAttempted) * 100
+            : 0;
+          setMetrics({
+            questionsAttempted: localDaily.questionsAttempted,
+            correctAnswers: localDaily.correctAnswers,
+            eventsPracticed: localDaily.eventsPracticed,
+            accuracy: accuracyAnon,
+          });
 
           // Build historical data from localStorage keys metrics_<date>
           try {
@@ -257,86 +135,42 @@ export default function DashboardMain({
         }
 
         {
-          // Fetch daily metrics
-          const dailyMetrics = await getDailyMetrics(effectiveUser.id);
-          if (dailyMetrics) {
-            const accuracy = dailyMetrics.questionsAttempted > 0
-              ? (dailyMetrics.correctAnswers / dailyMetrics.questionsAttempted) * 100
-              : 0;
-            // Avoid state churn if identical to current values
-            setMetrics(prev => {
-              const next = { ...dailyMetrics, accuracy };
-              if (
-                prev.questionsAttempted === next.questionsAttempted &&
-                prev.correctAnswers === next.correctAnswers &&
-                prev.accuracy === next.accuracy &&
-                (prev.eventsPracticed || []).join('|') === (next.eventsPracticed || []).join('|')
-              ) {
-                return prev;
+          // Local-first for signed-in too
+          const localSigned = getLocalDailyMetrics();
+          const accSigned = localSigned.questionsAttempted > 0
+            ? (localSigned.correctAnswers / localSigned.questionsAttempted) * 100
+            : 0;
+          setMetrics({
+            questionsAttempted: localSigned.questionsAttempted,
+            correctAnswers: localSigned.correctAnswers,
+            eventsPracticed: localSigned.eventsPracticed,
+            accuracy: accSigned,
+          });
+
+          const { historicalData, historyData } = getLocalHistory();
+          setHistoricalData(historicalData);
+          setHistoryData(historyData as any);
+
+          let name = getLocalGreetingName();
+          if (name) {
+            setGreetingName(prev => prev || name);
+          } else {
+            // Derive from user metadata as an immediate fallback
+            try {
+              const metaName: string | undefined = (effectiveUser.user_metadata?.name || effectiveUser.user_metadata?.full_name || effectiveUser.user_metadata?.given_name || '') as string;
+              const fromMeta = (metaName || '').trim().split(' ')[0] || (effectiveUser.email?.split('@')[0] || '').trim();
+              if (fromMeta) {
+                setLocalGreetingName(fromMeta);
+                setGreetingName(fromMeta);
               }
-              return next;
-            });
+            } catch {}
+            // If no cached name, fetch from server once and seed localStorage
+            try {
+              await syncLocalFromSupabase(effectiveUser.id);
+              name = getLocalGreetingName();
+              if (name) setGreetingName(name);
+            } catch {}
           }
-
-          // Fetch historical data for charts from user_stats (by day)
-          const { data: historicalData } = await (supabase as any)
-            .from('user_stats')
-            .select('date, questions_attempted, correct_answers, events_practiced')
-            .eq('user_id', effectiveUser.id)
-            .order('date', { ascending: true });
-
-          if (historicalData) {
-            const processedData = historicalData.map((item: any) => ({
-              date: item.date,
-              count: item.questions_attempted || 0
-            }));
-            setHistoricalData(prev => {
-              const sameLength = prev.length === processedData.length;
-              const same = sameLength && prev.every((p, i) => p.date === processedData[i].date && p.count === processedData[i].count);
-              return same ? prev : processedData;
-            });
-
-            // Create history data object for charts
-            const historyObj: HistoryData = {};
-            (historicalData as any[]).forEach((item: any) => {
-              const dateStr = item.date;
-              historyObj[dateStr] = {
-                questionsAttempted: item.questions_attempted || 0,
-                correctAnswers: item.correct_answers || 0,
-                eventsPracticed: item.events_practiced || []
-              };
-            });
-            setHistoryData(prev => {
-              const keysPrev = Object.keys(prev);
-              const keysNext = Object.keys(historyObj);
-              const sameKeys = keysPrev.length === keysNext.length && keysPrev.every(k => keysNext.includes(k));
-              const sameValues = sameKeys && keysPrev.every(k => {
-                const a = prev[k]; const b = historyObj[k];
-                return (
-                  (a?.questionsAttempted || 0) === (b?.questionsAttempted || 0) &&
-                  (a?.correctAnswers || 0) === (b?.correctAnswers || 0) &&
-                  (a?.eventsPracticed || []).join('|') === (b?.eventsPracticed || []).join('|')
-                );
-              });
-              return sameValues ? prev : historyObj;
-            });
-          }
-
-          // Fetch preferred greeting name in the same flow as metrics
-          try {
-            const { data } = await (supabase as any)
-              .from('users')
-              .select('first_name, display_name')
-              .eq('id', effectiveUser.id)
-              .maybeSingle();
-            const first: string | undefined = (data as any)?.first_name;
-            const display: string | undefined = (data as any)?.display_name;
-            const chosen = (first && first.trim()) ? first.trim() : (display && display.trim()) ? display.trim().split(' ')[0] : '';
-            if (chosen) {
-              setGreetingName(prev => prev || chosen);
-              try { localStorage.setItem('scio_display_name', chosen); } catch {}
-            }
-          } catch {}
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -349,7 +183,10 @@ export default function DashboardMain({
 
   // Refresh metrics when auth state changes on the client
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    let unsub: (() => void) | undefined;
+    (async () => {
+      const { supabase } = await import('@/lib/supabase');
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setCurrentUser(session.user);
         // Force refresh of metrics/history
@@ -370,55 +207,22 @@ export default function DashboardMain({
               });
             }
           } catch {}
-          const daily = await getDailyMetrics(session.user.id);
-          if (daily) {
-            const accuracy = daily.questionsAttempted > 0 ? (daily.correctAnswers / daily.questionsAttempted) * 100 : 0;
-            setMetrics({ ...daily, accuracy });
-          }
-          const { data: historicalData } = await (supabase as any)
-            .from('user_stats')
-            .select('date, questions_attempted, correct_answers, events_practiced')
-            .eq('user_id', session.user.id)
-            .order('date', { ascending: true });
-          if (historicalData) {
-            setHistoricalData(historicalData.map((item: any) => ({ date: item.date, count: item.questions_attempted || 0 })));
-            const historyObj: Record<string, { questionsAttempted: number; correctAnswers: number; eventsPracticed?: string[] }> = {};
-            (historicalData as any[]).forEach((item: any) => {
-              historyObj[item.date] = {
-                questionsAttempted: item.questions_attempted || 0,
-                correctAnswers: item.correct_answers || 0,
-                eventsPracticed: item.events_practiced || []
-              };
-            });
-            setHistoryData(historyObj);
-          }
-
-          // Also refresh greeting name immediately after sign-in
-          try {
-            const { data } = await (supabase as any)
-              .from('users')
-              .select('first_name, display_name')
-              .eq('id', session.user.id)
-              .maybeSingle();
-            const first: string | undefined = (data as any)?.first_name;
-            const display: string | undefined = (data as any)?.display_name;
-            const chosen = (first && first.trim())
-              ? first.trim()
-              : (display && display.trim())
-                ? display.trim().split(' ')[0]
-                : (session.user.email?.split('@')[0] || '');
-            if (chosen) {
-              setGreetingName(chosen);
-              try {
-                localStorage.setItem('scio_display_name', chosen);
-                window.dispatchEvent(new CustomEvent('scio-display-name-updated', { detail: chosen }));
-              } catch {}
-            }
-          } catch {}
+          // After login, optionally sync local from server in background once
+          try { await syncLocalFromSupabase(session.user.id); } catch {}
+          const localAfter = getLocalDailyMetrics();
+          const accAfter = localAfter.questionsAttempted > 0 ? (localAfter.correctAnswers / localAfter.questionsAttempted) * 100 : 0;
+          setMetrics({ questionsAttempted: localAfter.questionsAttempted, correctAnswers: localAfter.correctAnswers, eventsPracticed: localAfter.eventsPracticed, accuracy: accAfter });
+          const { historicalData, historyData } = getLocalHistory();
+          setHistoricalData(historicalData);
+          setHistoryData(historyData as any);
+          const nm = getLocalGreetingName();
+          if (nm) setGreetingName(nm);
         })();
       }
     });
-    return () => subscription.unsubscribe();
+      unsub = () => subscription.unsubscribe();
+    })();
+    return () => { if (unsub) unsub(); };
   }, []);
 
   const generateWeeklyData = (): WeeklyData => {
@@ -541,7 +345,7 @@ export default function DashboardMain({
             <div className="flex">
               <motion.button
                 onClick={() => router.push('/practice')}
-                className="rounded-lg w-full h-[136px] py-7 px-6 text-white text-center flex flex-col items-center justify-center bg-blue-600"
+                className="rounded-lg w-full h-32 py-7 px-6 text-white text-center flex flex-col items-center justify-center bg-blue-600"
               >
                 <FaPen className="text-3xl" />
                 <span className="text-xl font-bold">Practice</span>

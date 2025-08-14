@@ -1,10 +1,3 @@
-# Mission Possible (2026)
-
-Division: B  
-Type: Build (Rube Goldberg)  
-Participants: 2  
-Allowed Materials: Device components per rules; logs; eye protection; impound
-
 ## Overview
 Device performs prescribed tasks via energy transfers and mechanisms with reliability and compliance.
 

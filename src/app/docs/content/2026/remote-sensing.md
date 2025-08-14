@@ -1,11 +1,3 @@
-# Remote Sensing (2026)
-
-Divisions: B, C  
-Type: Study (Data/Imagery)  
-Participants: 2–3  
-Approx. Time: 50 minutes  
-Allowed Materials: Binder/notes and Class I calculator (confirm)
-
 ## Overview
 Interpretation of Earth-observing imagery and sensor data: bands, indices, signatures, and applications.
 

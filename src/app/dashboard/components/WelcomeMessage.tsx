@@ -82,7 +82,7 @@ export default function WelcomeMessage({ darkMode, currentUser: _currentUser, se
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className={`rounded-lg p-6 h-[136px] ${darkMode ? 'bg-gray-800' : 'bg-white'} border ${
+      className={`rounded-lg p-6 h-32 ${darkMode ? 'bg-gray-800' : 'bg-white'} border ${
         darkMode ? 'border-gray-700' : 'border-gray-200'
       }`}
     >
@@ -93,7 +93,7 @@ export default function WelcomeMessage({ darkMode, currentUser: _currentUser, se
             <span key={resolvedName}>{resolvedName ? `, ${resolvedName}` : ''}</span>
             ! 👋
           </h1>
-          <p className={`text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          <p className={`md:text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
             Ready to tackle some Science Olympiad questions?
           </p>
         </div>

@@ -91,10 +91,10 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
       const result = await response.json();
       if (result.success) {
         toast.success(result.data.reason || 'Question removed successfully!');
-        // Call the callback to remove the question from the list
-        onQuestionRemoved?.(questionIndex);
-        // Call the report submitted callback
+        // First mark this index as submitted (applies to the removed item only)
         onReportSubmitted?.(questionIndex);
+        // Then remove the question so the next one is not affected
+        onQuestionRemoved?.(questionIndex);
       } else {
         toast.error(result.data.reason || 'Failed to remove question');
         setHasRemovalFailed(true);

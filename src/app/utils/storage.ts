@@ -13,13 +13,16 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-export async function getEventOfflineQuestions(slug: string): Promise<any[] | null> {
+export async function getEventOfflineQuestions(
+  slug: string
+): Promise<any[] | { en: any[]; es: any[] } | null> {
   const db = await openDB();
-  return await new Promise<any[]>((resolve, reject) => {
+  type CodebustersOfflineQuotes = { en: any[]; es: any[] };
+  return await new Promise<any[] | CodebustersOfflineQuotes | null>((resolve, reject) => {
     const tx = db.transaction('events', 'readonly');
     tx.onerror = () => reject(tx.error);
     const req = tx.objectStore('events').get(slug);
-    req.onsuccess = () => resolve((req.result as any[]) || null);
+    req.onsuccess = () => resolve((req.result as any) || null);
     req.onerror = () => reject(req.error);
   });
 }

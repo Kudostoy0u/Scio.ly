@@ -1,13 +1,3 @@
-# Entomology (2026)
-
-Divisions: B, C  
-Type: Study (Taxonomy)  
-Participants: 2–3  
-Approx. Time: 50 minutes  
-Allowed Materials: Field guide/binder per rules; hand lens if permitted
-
-> Community-maintained. Update ID list and images for current season.
-
 ## Overview
 Identification and biology of insects by order (and families where applicable), including anatomy, life cycles, ecology, and importance.
 

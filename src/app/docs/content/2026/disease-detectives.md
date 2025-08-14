@@ -1,13 +1,3 @@
-# Disease Detectives (2026)
-
-Divisions: B, C  
-Type: Study  
-Participants: 2–3  
-Approx. Time: 50 minutes  
-Allowed Materials: Typically reference notesheet/binder and Class I calculator (confirm current manual)
-
-> Community-maintained. Update with current CDC frameworks and rule clarifications.
-
 ## DESCRIPTION
 Participants apply investigative and analytical skills to the scientific study of disease, injury, health, and disability in populations or groups of people. Unlike clinical medicine, which focuses on the health of individuals, Disease Detectives emphasizes population-level thinking: identifying patterns, comparing risks across groups, evaluating evidence, and recommending control and prevention strategies. Questions are designed to be process-oriented and assess how you evaluate, interpret, and synthesize information rather than how many pathogen facts you can recall.
 

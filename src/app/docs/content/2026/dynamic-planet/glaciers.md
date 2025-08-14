@@ -1,5 +1,3 @@
-# Dynamic Planet – Glaciers (2026)
-
 ## Overview
 Glaciers form where snowfall persists and compacts into ice, flow under their own weight, and sculpt landscapes through erosion and deposition. This section covers formation, thermal regimes, motion, mass balance and ELA, glacial hydrology, landforms, climate links, and practical calculations.
 

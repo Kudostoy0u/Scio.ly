@@ -1,11 +1,3 @@
-# Meteorology (2026)
-
-Division: B  
-Type: Study  
-Participants: 2–3  
-Approx. Time: 50 minutes  
-Allowed Materials: Notesheet/binder, Class I calculator (confirm)
-
 ## Overview
 Atmospheric science with data interpretation: clouds, fronts, severe weather, climatology basics.
 

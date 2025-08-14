@@ -1,5 +1,3 @@
-# Anatomy – Muscular (2026)
-
 ## Overview
 Muscle tissue types and physiology of contraction; roles in movement and posture.
 

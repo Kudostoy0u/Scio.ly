@@ -1,10 +1,3 @@
-# Electric Vehicle (2026)
-
-Division: C  
-Type: Build (Vehicle)  
-Participants: 2  
-Allowed Materials: Device components per rules; eye protection; impound
-
 ## Overview
 Battery-powered vehicle travels a specified distance accurately and consistently.
 

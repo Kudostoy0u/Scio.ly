@@ -1,5 +1,3 @@
-# Dynamic Planet – Oceanography (2026)
-
 ## DESCRIPTION (Scope and Depth)
 Teams will complete tasks related to physical and geological oceanography. At a textbook level, that means connecting fundamental conservation laws and forces (momentum, mass, energy; pressure gradients, Coriolis, buoyancy) to the observed structure of the ocean—from surface waves and tides to wind‑driven gyres and the abyssal overturning circulation. Geological oceanography underpins the setting: continental margins, abyssal plains, mid‑ocean ridges, fracture zones, and trenches, as well as sedimentary processes and coastal geomorphology.
 

@@ -1,11 +1,3 @@
-# Machines (2026)
-
-Divisions: B, C  
-Type: Study/Problem Solving  
-Participants: 2–3  
-Approx. Time: 50 minutes  
-Allowed Materials: Notes and Class I calculator (confirm)
-
 ## Overview
 Simple machines, power, torque, and mechanical advantage with quantitative and conceptual problems. Emphasis on multi-stage systems, efficiency, and error-aware calculations.
 

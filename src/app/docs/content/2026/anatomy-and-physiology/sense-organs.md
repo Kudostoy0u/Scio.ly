@@ -1,5 +1,3 @@
-# Anatomy – Special Senses (2026)
-
 ## Overview
 Vision, hearing, equilibrium, taste, and smell; transduction and pathways.
 

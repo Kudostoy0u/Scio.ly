@@ -1,11 +1,3 @@
-# Chemistry Lab (2026)
-
-Division: C  
-Type: Lab/Theory  
-Participants: 2  
-Approx. Time: 50 minutes  
-Allowed Materials: Goggles; Class I calculator; notes per rules
-
 ## Overview
 Advanced chemistry: stoichiometry, equilibrium, kinetics, thermodynamics, acid–base, and lab techniques. Emphasis on fast, unit-checked calculations; safe technique; and clear, concise reasoning.
 

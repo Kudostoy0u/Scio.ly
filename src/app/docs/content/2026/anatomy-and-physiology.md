@@ -1,13 +1,3 @@
-# Anatomy & Physiology (2026)
-
-Divisions: B, C  
-Type: Study  
-Participants: 2–3  
-Approx. Time: 50 minutes  
-Allowed Materials: Typically one binder/notesheet per rules and a Class I calculator (confirm current manual)
-
-> Community-maintained. Update for subtopic rotations and rule clarifications.
-
 ## Overview
 Comprehensive human biology emphasizing system anatomy, histology, physiology, and pathology. Integrates structure–function relationships and clinical scenarios.
 

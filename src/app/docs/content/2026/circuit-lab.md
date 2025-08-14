@@ -1,11 +1,3 @@
-# Circuit Lab (2026)
-
-Divisions: B, C  
-Type: Lab/Theory  
-Participants: 2  
-Approx. Time: 50 minutes  
-Allowed Materials: Non-programmable calculator; notes per rules; basic tools/meters if allowed
-
 ## Overview
 DC/AC fundamentals with analysis and measurements: Ohm’s law, KCL/KVL, series/parallel, transient basics.
 

@@ -1,8 +1,3 @@
-# Anatomy – Endocrine (2026)
-
-## Overview
-Hormone-producing glands, signaling pathways, and feedback regulation.
-
 ## High-Yield Topics
 - Pituitary (anterior/posterior), hypothalamic control, axes (HPT, HPA, HPG)
 - Thyroid/parathyroid; adrenal cortex/medulla; pancreas (islets)

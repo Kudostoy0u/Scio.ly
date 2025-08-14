@@ -1,10 +1,3 @@
-# Engineering CAD (2026)
-
-Division: C  
-Type: CAD/Modeling  
-Participants: 1–2  
-Allowed Materials: Laptops/mice per host; software per guidance
-
 ## Overview
 Model parts/assemblies to specification in a provided CAD environment with time constraints.
 

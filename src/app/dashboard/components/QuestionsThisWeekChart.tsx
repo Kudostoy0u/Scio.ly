@@ -15,7 +15,17 @@ export default function QuestionsThisWeekChart({
   historyData: Record<string, HistoryRecord>;
   darkMode: boolean;
 }) {
-  const [chartType, setChartType] = useState<'line' | 'heatmap'>('line');
+  const [chartType, setChartType] = useState<'line' | 'heatmap'>(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('scio_chart_type') : null;
+      return (saved === 'line' || saved === 'heatmap') ? saved : 'heatmap';
+    } catch {
+      return 'heatmap';
+    }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('scio_chart_type', chartType); } catch {}
+  }, [chartType]);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const chartAreaRef = useRef<HTMLDivElement | null>(null);
   const [containerWidth, setContainerWidth] = useState<number>(0);
@@ -175,8 +185,8 @@ export default function QuestionsThisWeekChart({
     empty: darkMode ? '#374151' : '#e5e7eb', // gray-700 vs gray-200
     border: darkMode ? '#4b5563' : '#d1d5db', // gray-600 vs gray-300
     levels: darkMode
-      // darker-to-brighter greens on dark bg for clear separation
-      ? ['#14532d', '#166534', '#22c55e', '#86efac']
+      // inverted so higher values are darker in dark mode
+      ? ['#86efac', '#22c55e', '#166534', '#14532d']
       // light mode retains existing scheme
       : ['#bbf7d0', '#86efac', '#22c55e', '#166534']
   }), [darkMode]);
@@ -255,7 +265,7 @@ export default function QuestionsThisWeekChart({
       </div>
 
       <div className="w-full flex-1 min-h-0" ref={wrapperRef}>
-        <div className="w-full h-full overflow-hidden" ref={chartAreaRef}>
+        <div className={`w-full h-full ${chartType === 'heatmap' ? 'overflow-visible' : 'overflow-hidden'}`} ref={chartAreaRef}>
           {chartType === 'line' ? (
             <ReactApexChart options={lineOptions} series={lineSeries} type="area" height={"100%"} width={"100%"} />
           ) : (
@@ -275,6 +285,11 @@ export default function QuestionsThisWeekChart({
                 row.map((cell, cIdx) => {
                   const label = `${cell.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${cell.value} answered`;
                   const isFuture = cell.isFuture;
+                   const tooltipAlignClass = cIdx >= weeksCount - 1
+                     ? 'right-0 translate-x-0'
+                     : cIdx === 0
+                       ? 'left-0 translate-x-0'
+                       : 'left-1/2 -translate-x-1/2';
                   return (
                     <div key={`${rIdx}-${cIdx}`} className="relative group">
                       <div
@@ -289,7 +304,7 @@ export default function QuestionsThisWeekChart({
                       />
                       {!isFuture && (
                         <div
-                          className={`pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded px-2 py-1 text-xs border shadow transition-opacity ${
+                          className={`pointer-events-none absolute -top-8 ${tooltipAlignClass} whitespace-nowrap rounded px-2 py-1 text-xs border shadow transition-opacity ${
                             darkMode ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-900 border-gray-200'
                           } opacity-0 group-hover:opacity-100`}
                         >

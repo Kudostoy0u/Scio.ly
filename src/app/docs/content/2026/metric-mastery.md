@@ -1,11 +1,3 @@
-# Metric Mastery (2026)
-
-Division: B  
-Type: Study/Estimation  
-Participants: 2–3  
-Approx. Time: 50 minutes  
-Allowed Materials: Typically calculator as allowed
-
 ## Overview
 Metric unit conversions, measurement estimation, instrument reading, and significant figures.
 

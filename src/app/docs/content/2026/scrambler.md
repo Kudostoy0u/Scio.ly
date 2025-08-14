@@ -1,10 +1,3 @@
-# Scrambler (2026)
-
-Division: B  
-Type: Build (Vehicle)  
-Participants: 2  
-Allowed Materials: Device; egg protection; eye protection; impound per rules
-
 ## Overview
 Device transports an egg to a target distance quickly and accurately with no breakage.
 

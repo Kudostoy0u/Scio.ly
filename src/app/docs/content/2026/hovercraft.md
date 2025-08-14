@@ -1,10 +1,3 @@
-# Hovercraft (2026)
-
-Divisions: B, C (Trial in some years)  
-Type: Build  
-Participants: 2  
-Allowed Materials: Device + tools per rules; eye protection; logs/impound as required
-
 ## Overview
 Construct a small hovercraft within specs to achieve best performance/time. Emphasis on stable lift, efficient thrust, and control.
 

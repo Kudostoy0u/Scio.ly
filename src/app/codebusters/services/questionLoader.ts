@@ -164,8 +164,10 @@ export const loadQuestionsFromDatabase = async (
     } catch {
       // Offline fallback: use stored quotes pool
       const stored = await getEventOfflineQuestions('codebusters');
-      const storedEn = Array.isArray(stored?.en) ? stored.en : [];
-      const storedEs = Array.isArray(stored?.es) ? stored.es : [];
+      const isLangObject = (val: unknown): val is { en: any[]; es: any[] } =>
+        !!val && typeof val === 'object' && Array.isArray((val as any).en) && Array.isArray((val as any).es);
+      const storedEn = isLangObject(stored) ? stored.en : Array.isArray(stored) ? stored : [];
+      const storedEs = isLangObject(stored) ? stored.es : [];
       if (nonXenocryptCount > 0) {
         if (storedEn.length < nonXenocryptCount) {
           throw new Error(`Not enough offline English quotes. Need ${nonXenocryptCount}, got ${storedEn.length}`);

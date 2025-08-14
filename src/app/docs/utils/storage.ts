@@ -42,10 +42,41 @@ export async function getLocalEventMarkdown(slug: string): Promise<string | null
   try {
     const parts = slug.split('/');
     const pathMod = await import('node:path');
-    const { readFile } = await import('node:fs/promises');
-    const filePath = pathMod.join(process.cwd(), 'src', 'app', 'docs', 'content', '2026', ...parts) + '.md';
-    const buf = await readFile(filePath);
-    return buf.toString('utf-8');
+    const { readFile, access } = await import('node:fs/promises');
+    const { constants } = await import('node:fs');
+
+    const candidatePaths: string[] = [];
+    // Default location under content
+    candidatePaths.push(
+      pathMod.join(process.cwd(), 'src', 'app', 'docs', 'content', '2026', ...parts) + '.md'
+    );
+
+    // Special handling for Codebusters ciphers which currently live under public/codebusters/ciphers
+    if (parts[0] === 'codebusters' && parts.length >= 2) {
+      const cipher = parts[1];
+      // Optional content locations if moved into docs/content
+      candidatePaths.push(
+        pathMod.join(process.cwd(), 'src', 'app', 'docs', 'content', '2026', 'codebusters', `${cipher}.md`)
+      );
+      candidatePaths.push(
+        pathMod.join(process.cwd(), 'src', 'app', 'docs', 'content', '2026', 'codebusters', 'ciphers', `${cipher}.md`)
+      );
+      // Current public location fallback
+      candidatePaths.push(
+        pathMod.join(process.cwd(), 'public', 'codebusters', 'ciphers', `${cipher}.md`)
+      );
+    }
+
+    for (const filePath of candidatePaths) {
+      try {
+        await access(filePath, constants.R_OK);
+        const buf = await readFile(filePath);
+        return buf.toString('utf-8');
+      } catch {
+        // try next candidate
+      }
+    }
+    return null;
   } catch {
     return null;
   }

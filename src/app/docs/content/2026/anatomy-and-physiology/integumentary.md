@@ -1,5 +1,3 @@
-# Anatomy – Integumentary (2026)
-
 ## Overview
 Skin layers and appendages; barriers, thermoregulation, and healing.
 

@@ -1,11 +1,3 @@
-# Solar System (2026)
-
-Division: B  
-Type: Study  
-Participants: 2–3  
-Approx. Time: 50 minutes  
-Allowed Materials: Binder/notes and Class I calculator (confirm)
-
 ## Overview
 Planetary science: bodies, geology, atmospheres, dynamics, and missions.
 

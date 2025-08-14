@@ -1,8 +1,3 @@
-# Anatomy – Digestive (2026)
-
-## Overview
-GI tract organs and accessory glands; digestion, absorption, and microbiome.
-
 ## High-Yield Topics
 - Anatomy: mouth→esophagus→stomach→SI (duodenum/jejunum/ileum)→LI→rectum
 - Accessory: liver, gallbladder, pancreas; bile and enzymes

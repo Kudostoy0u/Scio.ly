@@ -1,5 +1,3 @@
-# Dynamic Planet – Earth’s Fresh Waters (2026)
-
 ## Overview
 Comprehensive hydrology across surface and subsurface waters: drainage basins and river systems, lake dynamics and mixing regimes, groundwater flow and storage, sediment transport, floods, deltas, and human impacts on water quantity and quality. Emphasis on maps, cross-sections, and quantitative reasoning.
 

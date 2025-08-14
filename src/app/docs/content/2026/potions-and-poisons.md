@@ -1,11 +1,3 @@
-# Potions and Poisons (2026)
-
-Division: B  
-Type: Study/Chemistry  
-Participants: 2–3  
-Approx. Time: 50 minutes  
-Allowed Materials: Notes and safety as required
-
 ## Overview
 Chemistry of household substances and toxins: identification, reactions, safety, and SDS literacy.
 
