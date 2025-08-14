@@ -110,7 +110,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
 
     const fetchData = async () => {
       try {
-        // Request a large number of questions for unlimited practice (non-ID)
+        // Request a large number of base questions
         const params = buildApiParams(routerParams, 1000);
         const apiUrl = `${api.questions}?${params}`;
         
@@ -184,16 +184,43 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           });
           setIdQuestionIndices(idIndices);
           
-          // Fetch name pool for distractors
-          // Load name pool from the event's endpoint if available
-          const poolEndpoint = routerParams.eventName === 'Rocks and Minerals' ? api.rocksRandom : api.entomologyRandom;
-          fetch(`${poolEndpoint}?count=1`)
-            .then(res => res.json())
-            .then(({ namePool: pool }) => {
-              if (Array.isArray(pool)) {
-                setNamePool(pool);
-                
-              }
+          // Preload ID questions for replacements from new endpoint
+          const idParams = new URLSearchParams();
+          idParams.set('event', routerParams.eventName);
+          idParams.set('limit', String(Math.max(idCount * 3, 50)));
+          fetch(`${api.idQuestions}?${idParams.toString()}`)
+            .then(r => r.json())
+            .then(j => {
+              const src = Array.isArray(j?.data) ? j.data : [];
+              // Filter by types
+              const typesSel = (routerParams.types as string) || 'multiple-choice';
+              const filtered = src.filter((row: any) => {
+                const isMcq = Array.isArray(row.options) && row.options.length > 0;
+                if (typesSel === 'multiple-choice') return isMcq;
+                if (typesSel === 'free-response') return !isMcq;
+                return true;
+              });
+              // Cache a pool for on-demand replacements
+              const pool = filtered.map((row: any) => ({
+                question: row.question,
+                options: row.options || [],
+                answers: row.answers || [],
+                difficulty: row.difficulty ?? 0.5,
+                event: row.event,
+                imageData: Array.isArray(row.images) && row.images.length ? row.images[Math.floor(Math.random()*row.images.length)] : undefined,
+              } as Question));
+              setNamePool(pool.map(q => q.question)); // not used, but maintained
+              // Pre-fill some placeholders immediately
+              setIdQuestionCache(prev => {
+                const m = new Map(prev);
+                const picks = [...pool];
+                let idx = 0;
+                for (let i of idIndices.values()) {
+                  if (idx >= picks.length) break;
+                  m.set(i, picks[idx++]);
+                }
+                return m;
+              });
             })
             .catch(() => {});
         }

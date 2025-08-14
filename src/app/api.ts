@@ -16,6 +16,7 @@ const api = {
     shareGenerate: `${API_BASE_URL}/share/generate`,
     codebustersShare: `${API_BASE_URL}/codebusters/share`,
     codebustersShareGenerate: `${API_BASE_URL}/codebusters/share/generate`,
+    idQuestions: `${API_BASE_URL}/id-questions`,
     reportEdit: `${API_BASE_URL}/report/edit`,
     reportRemove: `${API_BASE_URL}/report/remove`,
     reportAll: `${API_BASE_URL}/report/all`,

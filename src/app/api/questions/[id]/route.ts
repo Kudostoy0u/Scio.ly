@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { questions } from '@/lib/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { eq, lt, and, count, isNull, isNotNull } from 'drizzle-orm';
 import { Question, UpdateQuestionRequest, ApiResponse } from '@/lib/types/api';
 
 // GET /api/questions/[id] - Fetch a specific question
@@ -12,18 +12,14 @@ export async function GET(
   try {
     const { id } = await params;
 
-    // Compute stable rank using the same ordering as base52 decode endpoint
-    const rows = await db.execute(sql`
-      WITH ordered AS (
-        SELECT
-          q.*, 
-          ROW_NUMBER() OVER (ORDER BY q.created_at ASC NULLS LAST, q.id ASC) AS rn
-        FROM ${questions} AS q
-      )
-      SELECT * FROM ordered WHERE id = ${id}
-    `);
+    // Load the question
+    const rows = await db
+      .select()
+      .from(questions)
+      .where(eq(questions.id, id))
+      .limit(1);
 
-    const row = Array.isArray(rows) ? (rows as any[])[0] : (rows as any).rows?.[0];
+    const row = (rows as any[])[0];
 
     if (!row) {
       const response: ApiResponse = {
@@ -33,22 +29,44 @@ export async function GET(
       return NextResponse.json(response, { status: 404 });
     }
 
-    // Base52 encoding for 5 characters
+    // Compute stable rank without raw SQL: created_at ASC NULLS LAST, then id ASC
+    const createdAtVal: Date | null = row.createdAt ?? row.created_at ?? null;
+    let earlierCount = 0;
+    let tieCount = 0;
+    if (createdAtVal) {
+      const a = await db.select({ c: count() }).from(questions).where(lt(questions.createdAt, createdAtVal));
+      const b = await db
+        .select({ c: count() })
+        .from(questions)
+        .where(and(eq(questions.createdAt, createdAtVal), lt(questions.id, id)));
+      earlierCount = Number(a[0]?.c || 0);
+      tieCount = Number(b[0]?.c || 0);
+    } else {
+      const a = await db.select({ c: count() }).from(questions).where(isNotNull(questions.createdAt));
+      const b = await db
+        .select({ c: count() })
+        .from(questions)
+        .where(and(isNull(questions.createdAt), lt(questions.id, id)));
+      earlierCount = Number(a[0]?.c || 0);
+      tieCount = Number(b[0]?.c || 0);
+    }
+    const rn = earlierCount + tieCount + 1;
+
+    // Base52 encoding for 4 characters + type suffix 'S'
     const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
     const BASE = ALPHABET.length; // 52
-    const CODE_LENGTH = 5;
+    const CORE_LENGTH = 4;
     const encodeBase52 = (index: number): string => {
       let n = index;
       let out = '';
-      for (let i = 0; i < CODE_LENGTH; i++) {
+      for (let i = 0; i < CORE_LENGTH; i++) {
         out = ALPHABET[n % BASE] + out;
         n = Math.floor(n / BASE);
       }
       return out;
     };
 
-    const rn = Number(row.rn) || 1;
-    const base52 = encodeBase52(rn - 1);
+    const base52 = encodeBase52(rn - 1) + 'S';
     const normalized: Question = {
       id: row.id,
       question: row.question,
