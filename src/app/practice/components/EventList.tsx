@@ -164,6 +164,7 @@ export default function EventList({
   }
 
 function ScrollBarAlwaysVisible({ children }: { children: ReactNode }) {
+  const { darkMode } = useTheme();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const thumbRef = useRef<HTMLDivElement>(null);
   const [thumbTop, setThumbTop] = useState(0);
@@ -242,10 +243,14 @@ function ScrollBarAlwaysVisible({ children }: { children: ReactNode }) {
       </div>
       {isScrollable && (
         <div className="pointer-events-none absolute inset-y-0 right-1 w-1.5">
-          <div className="absolute inset-y-0 right-0 w-1.5 rounded-full bg-gray-200 dark:bg-gray-700" />
+          <div className={`absolute inset-y-0 right-0 w-1.5 rounded-full ${
+            darkMode ? 'bg-gray-700' : 'bg-gray-200'
+          }`} />
           <div
             ref={thumbRef}
-            className="absolute right-0 w-1.5 rounded-full bg-gray-400 dark:bg-gray-500 will-change-transform"
+            className={`absolute right-0 w-1.5 rounded-full will-change-transform ${
+              darkMode ? 'bg-gray-500' : 'bg-gray-400'
+            }`}
             style={{ transform: `translateY(${thumbTop}px)`, height: `${thumbHeight}px` }}
           />
         </div>
