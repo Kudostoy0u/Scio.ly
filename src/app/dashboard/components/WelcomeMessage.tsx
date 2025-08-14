@@ -4,15 +4,20 @@ import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { WelcomeMessageProps } from '../types';
 
-export default function WelcomeMessage({ darkMode, currentUser: _currentUser, setDarkMode, greetingName: greetingNameProp }: WelcomeMessageProps) {
-  const [greetingName, setGreetingName] = useState<string>(() => {
-    // Depend on localStorage primarily; avoid deriving from email/username
-    try {
-      const cachedFirst = typeof window !== 'undefined' ? localStorage.getItem('scio_display_name') : null;
-      if (cachedFirst && cachedFirst.trim()) return cachedFirst.trim();
-    } catch {}
-    return '';
-  });
+export default function WelcomeMessage({ darkMode, currentUser: _currentUser, setDarkMode, greetingName: greetingNameProp, isLoading: _isLoading }: WelcomeMessageProps) {
+  const [greetingName, setGreetingName] = useState<string>('');
+
+  // Initialize greeting name from localStorage on mount (client-side only)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('scio_display_name');
+        if (cached && cached.trim()) {
+          setGreetingName(cached.trim());
+        }
+      } catch {}
+    }
+  }, []);
 
   // If a prop is provided from DashboardMain, prefer it and sync to localStorage
   useEffect(() => {
@@ -22,14 +27,8 @@ export default function WelcomeMessage({ darkMode, currentUser: _currentUser, se
     }
   }, [greetingNameProp]);
 
+  // Listen for explicit updates from login/profile flows
   useEffect(() => {
-    // On mount, prefer local cache
-    try {
-      const cached = localStorage.getItem('scio_display_name');
-      if (cached && cached.trim()) setGreetingName(cached.trim());
-    } catch {}
-
-    // Listen for explicit updates from login/profile flows
     const onNameUpdated = (e: Event) => {
       const ce = e as CustomEvent<string>;
       const next = (typeof ce.detail === 'string' ? ce.detail : null) || (() => {
@@ -39,22 +38,8 @@ export default function WelcomeMessage({ darkMode, currentUser: _currentUser, se
     };
     window.addEventListener('scio-display-name-updated' as any, onNameUpdated as any);
 
-    // Multiple short retries to catch SSR/CSR seeding sequence
-    const attempts = [0, 60, 120, 240];
-    const timers: any[] = [];
-    attempts.forEach(ms => {
-      const t = setTimeout(() => {
-        try {
-          const cached = localStorage.getItem('scio_display_name');
-          if (cached && cached.trim()) setGreetingName(prev => prev || cached.trim());
-        } catch {}
-      }, ms);
-      timers.push(t);
-    });
-
     return () => {
       window.removeEventListener('scio-display-name-updated' as any, onNameUpdated as any);
-      timers.forEach(t => clearTimeout(t));
     };
   }, []);
 
@@ -65,18 +50,18 @@ export default function WelcomeMessage({ darkMode, currentUser: _currentUser, se
     }
   }, [greetingName]);
 
-  // Update on window focus
-  useEffect(() => {
-    const onFocus = () => {
-      try {
-        const cached = localStorage.getItem('scio_display_name');
-        if (cached && cached.trim()) setGreetingName((prev) => prev || cached.trim());
-      } catch {}
-    };
-    window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
-  }, []);
-  const resolvedName = (greetingNameProp && greetingNameProp.trim()) || (greetingName && greetingName.trim()) || '';
+  // Determine the final greeting name - prioritize localStorage over props to prevent flickering
+  const resolvedName = (() => {
+    // If we have a name in localStorage, use it immediately (prevents flickering)
+    if (greetingName && greetingName.trim()) {
+      return greetingName.trim();
+    }
+    // Fall back to prop if no localStorage name
+    if (greetingNameProp && greetingNameProp.trim()) {
+      return greetingNameProp.trim();
+    }
+    return '';
+  })();
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

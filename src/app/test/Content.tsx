@@ -1,16 +1,31 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaShareAlt } from "react-icons/fa";
 // ToastContainer is globally provided in Providers
 import { useTheme } from '@/app/contexts/ThemeContext';
-import PDFViewer from '@/app/components/PDFViewer';
 import EditQuestionModal from '@/app/components/EditQuestionModal';
 import ShareModal from '@/app/components/ShareModal';
 import { useTestState } from './hooks/useTestState';
 import { TestLayout, TestHeader, ProgressBar, QuestionCard, TestFooter } from './components';
+import { FloatingActionButtons } from '@/app/components/FloatingActionButtons';
 
-export default function TestPage({ initialData, initialRouterData }: { initialData?: any[]; initialRouterData?: any }) {
+export default function TestContent({ initialData, initialRouterData }: { initialData?: any[]; initialRouterData?: any }) {
   const { darkMode } = useTheme();
+  const [isOffline, setIsOffline] = useState(false);
+  
+  // Detect offline status
+  useEffect(() => {
+    const updateOnline = () => setIsOffline(!navigator.onLine);
+    updateOnline();
+    window.addEventListener('online', updateOnline);
+    window.addEventListener('offline', updateOnline);
+    
+    return () => {
+      window.removeEventListener('online', updateOnline);
+      window.removeEventListener('offline', updateOnline);
+    };
+  }, []);
+
   const {
     // State
     isLoading,
@@ -65,7 +80,6 @@ export default function TestPage({ initialData, initialRouterData }: { initialDa
           timeLeft={timeLeft}
           darkMode={darkMode}
           isFromBookmarks={isFromBookmarks}
-          onReset={handleResetTest}
         />
 
         {/* Inline back link to Practice */}
@@ -92,10 +106,15 @@ export default function TestPage({ initialData, initialRouterData }: { initialDa
           >
           <button
             onClick={() => setShareModalOpen(true)}
-            title="Share Test"
+            disabled={isOffline}
+            title={isOffline ? "Share feature not available offline" : "Share Test"}
             className="absolute"
           >
-            <div className="flex justify-between text-blue-400">
+            <div className={`flex justify-between transition-all duration-200 ${
+              isOffline 
+                ? 'text-gray-400 cursor-not-allowed' 
+                : 'text-blue-400 hover:text-blue-500'
+            }`}>
               <FaShareAlt className="transition-all duration-500 mt-0.5" />
               <p>&nbsp;&nbsp;Take together</p>
           </div>
@@ -145,6 +164,7 @@ export default function TestPage({ initialData, initialRouterData }: { initialDa
                       onEdit={handleEditOpen}
                             onQuestionRemoved={handleQuestionRemoved}
                       onGetExplanation={handleGetExplanation}
+                      isOffline={isOffline}
                     />
                     );
                   })}
@@ -182,16 +202,17 @@ export default function TestPage({ initialData, initialRouterData }: { initialDa
         />
       )}
 
-      {/* Add the reference button as sticky at the bottom */}
-      {routerData.eventName === 'Codebusters' && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-30 mb-2">
-          <PDFViewer 
-            pdfPath="/2024_Div_C_Resource.pdf" 
-            buttonText="Codebusters Reference" 
-            darkMode={darkMode} 
-          />
-        </div>
-      )}
+      {/* Floating Action Buttons */}
+      <FloatingActionButtons
+        darkMode={darkMode}
+        onReset={handleResetTest}
+        showReferenceButton={routerData.eventName === 'Codebusters'}
+        onShowReference={() => {
+          // Handle reference button click for codebusters
+          window.open('/2024_Div_C_Resource.pdf', '_blank');
+        }}
+        eventName={routerData.eventName}
+      />
 
       {/* Global ToastContainer handles notifications */}
     </>

@@ -291,15 +291,15 @@ export default function PracticeDashboard() {
           return;
         }
         // Continue with unlimited practice
-        proceedWithUnlimited();
+        proceedWithUnlimited(selectedEventObj);
       })();
       return;
     }
     
-    proceedWithUnlimited();
+    proceedWithUnlimited(selectedEventObj);
   };
 
-  const proceedWithUnlimited = () => {
+  const proceedWithUnlimited = (selectedEventObj: Event) => {
     // Save preferences
     savePreferences(selectedEventObj.name, settings.questionCount, settings.timeLimit);
 

@@ -77,7 +77,7 @@ export default function AboutClientPage() {
           <h2 className={`text-3xl font-bold mb-6 text-center ${darkMode ? 'text-white' : 'text-gray-900'}`}>Our Methodology</h2>
           <div className="max-w-4xl mx-auto">
             <p className={`text-center text-lg mb-8 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-              We sourced thousands of previous Science Olympiad tournament archives from friends and associates in test trading. Then, we ran PDF and .docx files through extensive processing and the latest Gemini 2.5 models to extract questions and get answers, which are served through a Golang API.
+              We sourced thousands of previous Science Olympiad tournament archives from associates in test trading. Then, we ran PDF and .docx files through processing and the latest Gemini 2.5 models to extract questions and get answers, which are served through a custom API.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <div className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100/50'} p-4 rounded-lg text-center`}>

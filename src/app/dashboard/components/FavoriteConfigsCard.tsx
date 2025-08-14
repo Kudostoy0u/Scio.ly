@@ -78,8 +78,9 @@ export default function FavoriteConfigsCard() {
   };
 
   return (
-    <div className={`hidden md:flex md:col-span-2 rounded-lg ${cardStyle} pl-5 pr-5 h-32 overflow-hidden`}>
-      <div className="flex flex-row w-full items-center gap-4 h-full">
+    <div className={`rounded-lg ${cardStyle} pl-5 pr-5 h-32 overflow-hidden`}>
+      {/* Desktop Layout - Horizontal with title on left, configs on right */}
+      <div className="hidden md:flex flex-row w-full items-center gap-4 h-full">
         {/* Left: Title/Description */}
         <div className="flex-none min-w-[110px]">
           <h3 className={`${darkMode ? 'text-white' : 'text-gray-800'} text-lg font-semibold leading-tight`}>
@@ -95,8 +96,8 @@ export default function FavoriteConfigsCard() {
               const fav = favorites[idx];
               if (!fav) {
                 return (
-                  <div key={`placeholder-${idx}`} className={`hidden md:flex items-center justify-center rounded-md h-[80%] ${darkMode ? 'bg-gray-900/30 border border-gray-800' : 'bg-gray-50/60 border border-gray-200'}`}>
-                    <span className={`${darkMode ? 'text-gray-400' : 'text-gray-500'} text-xs`}>No favorited configuration</span>
+                  <div key={`placeholder-${idx}`} className={`flex items-center justify-center rounded-md h-[80%] ${darkMode ? 'bg-gray-900/30 border border-gray-800' : 'bg-gray-50/60 border border-gray-200'}`}>
+                    <span className={`${darkMode ? 'text-gray-400' : 'text-gray-500'} text-xs text-center px-2`}>No favorited configuration</span>
                   </div>
                 );
               }
@@ -140,6 +141,68 @@ export default function FavoriteConfigsCard() {
           </div>
         </div>
       </div>
+
+             {/* Mobile Layout - Vertical with centered title and four configs */}
+       <div className="flex md:hidden flex-col w-full h-full pb-6">
+         {/* Title centered at top */}
+         <div className="flex justify-center pt-3 pb-4">
+           <h3 className={`${darkMode ? 'text-white' : 'text-gray-800'} text-lg font-semibold text-center`}>
+             Favorited Configs
+           </h3>
+         </div>
+
+         {/* Two configs in single row */}
+         <div className="flex-1 px-2 pb-2">
+           <div className="grid grid-cols-2 gap-2 h-full text-xs">
+            {Array.from({ length: 2 }).map((_, idx) => {
+              const fav = favorites[idx];
+                             if (!fav) {
+                 return (
+                   <div key={`mobile-placeholder-${idx}`} className={`flex items-center justify-center rounded-md h-full ${darkMode ? 'bg-gray-900/30 border border-gray-800' : 'bg-gray-50/60 border border-gray-200'}`}>
+                     <span className={`${darkMode ? 'text-gray-400' : 'text-gray-500'} text-[10px] text-center px-1`}>Empty</span>
+                   </div>
+                 );
+               }
+               return (
+               <div
+                 key={`mobile-fav-${idx}`}
+                 role="button"
+                 tabIndex={0}
+                 className={`relative group rounded-md overflow-hidden h-full ${darkMode ? 'bg-gray-900' : 'bg-gray-50'} border ${darkMode ? 'border-gray-700' : 'border-gray-200'} cursor-pointer`}
+                onClick={() => startFromConfig(fav)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startFromConfig(fav); } }}
+              >
+                <div className="absolute inset-0 p-1 flex flex-col items-start justify-between text-left">
+                  <div className={`text-[10px] font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} break-words leading-tight`}>{fav.eventName}</div>
+                  <div className="w-full">
+                    <ConfigSummaryGrid settings={fav.settings} darkMode={darkMode} isMobile={true} />
+                  </div>
+                </div>
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors" />
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); startFromConfig(fav); }}
+                    className="p-1 rounded-full border border-white/70 text-white hover:border-white"
+                    title="Start"
+                  >
+                    <Play className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleRemove(fav); }}
+                    className="p-1 rounded-full border border-white/70 text-white hover:border-white"
+                    title="Remove"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -148,23 +211,28 @@ export default function FavoriteConfigsCard() {
 
 // summarizeSettings retained historically; currently unused after grid redesign
 
-function ConfigSummaryGrid({ settings, darkMode }: { settings: Settings; darkMode: boolean }) {
+function ConfigSummaryGrid({ settings, darkMode, isMobile = false }: { settings: Settings; darkMode: boolean; isMobile?: boolean }) {
   const typeLabel = settings.types === 'both' ? 'MCQ+FRQ' : settings.types === 'free-response' ? 'FRQ' : 'MCQ';
   const divLabel = settings.division === 'any' ? 'Div B/C' : `Div ${settings.division}`;
+  const textSize = isMobile ? 'text-[8px]' : 'text-xs';
+  const iconSize = isMobile ? 'w-2 h-2' : 'w-3.5 h-3.5';
+  const gap = isMobile ? 'gap-0.5' : 'gap-1';
+  const gridGap = isMobile ? 'gap-x-1 gap-y-0.5' : 'gap-x-3 gap-y-1';
+  
   return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-1">
-      <div className="flex items-center gap-1 text-xs">
-        <BookCheck className={`w-3.5 h-3.5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
+    <div className={`grid grid-cols-2 ${gridGap} mt-1`}>
+      <div className={`flex items-center ${gap} text-xs`}>
+        <BookCheck className={`${iconSize} ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
         <span className={`${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{settings.questionCount}</span>
         <span className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>qs</span>
       </div>
-      <div className="flex items-center gap-1 text-xs">
-        <Hourglass className={`w-3.5 h-3.5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
+      <div className={`flex items-center ${gap} ${textSize}`}>
+        <Hourglass className={`${iconSize} ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
         <span className={`${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{settings.timeLimit}</span>
         <span className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>min</span>
       </div>
-      <div className={`text-xs ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{typeLabel}</div>
-      <div className={`text-xs ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{divLabel}</div>
+      <div className={`${textSize} ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{typeLabel}</div>
+      <div className={`${textSize} ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{divLabel}</div>
     </div>
   );
 }

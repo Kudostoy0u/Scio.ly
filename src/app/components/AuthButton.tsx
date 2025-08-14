@@ -77,10 +77,15 @@ export default function AuthButton() {
     const supabase = client;
     (async () => {
       try {
+        // Only make the query if we have a valid user ID
+        if (!ctxUser?.id || typeof ctxUser.id !== 'string' || ctxUser.id.trim() === '') {
+          return;
+        }
+        
         const { data: profile } = await supabase
           .from('users')
           .select('display_name, first_name')
-          .eq('id', ctxUser?.id || '')
+          .eq('id', ctxUser.id)
           .maybeSingle();
         if (!active) return;
         const dn = (profile as any)?.display_name as string | undefined;
@@ -234,7 +239,7 @@ export default function AuthButton() {
       await client.auth.signOut({ scope: 'local' }).catch(() => undefined);
       // Reset all local state except theme
       try {
-        const { resetAllLocalStorageExceptTheme } = await import('@/app/utils/localState');
+        const { resetAllLocalStorageExceptTheme } = await import('@/app/utils/dashboardData');
         resetAllLocalStorageExceptTheme();
       } catch {
         clearUserFromLocalStorage();

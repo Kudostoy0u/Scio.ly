@@ -26,6 +26,7 @@ interface QuestionCardProps {
   onEdit: (question: Question) => void;
   onQuestionRemoved: (questionIndex: number) => void;
   onGetExplanation: (index: number, question: Question, userAnswer: (string | null)[]) => void;
+  isOffline?: boolean;
 }
 
 export default function QuestionCard({
@@ -48,7 +49,8 @@ export default function QuestionCard({
   onEditSubmitted: _onEditSubmitted,
   onEdit,
   onQuestionRemoved,
-  onGetExplanation
+  onGetExplanation,
+  isOffline
 }: QuestionCardProps) {
   const isMultiSelect = isMultiSelectQuestion(question.question, question.answers);
   const currentAnswers = userAnswers || [];
@@ -228,7 +230,7 @@ export default function QuestionCard({
                     ? 'bg-gray-700 hover:bg-gray-600 text-blue-400'
                     : 'bg-blue-50 hover:bg-blue-100 text-blue-600'
                 }`}
-                disabled={loadingExplanation[index] || isSubmitted}
+                disabled={loadingExplanation[index] || isOffline}
               >
                 {loadingExplanation[index] ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>

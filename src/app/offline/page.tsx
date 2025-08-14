@@ -8,10 +8,6 @@ import { listDownloadedEventSlugs, saveOfflineEvent, subscribeToDownloads } from
 
 type EventOption = { name: string; slug: string };
 
-// Save helpers now use normalized stores via saveOfflineEvent
-
-// Removed unused loadEventQuestions helper
-
 export default function OfflinePage() {
   const { darkMode } = useTheme();
   const [events, setEvents] = useState<EventOption[]>([]);
@@ -25,27 +21,53 @@ export default function OfflinePage() {
       'Anatomy - Nervous',
       'Anatomy - Endocrine',
       'Anatomy - Sense Organs',
+      // 'Anatomy - Cardiovascular',
+      // 'Anatomy - Digestive',
+      // 'Anatomy - Excretory',
+      // 'Anatomy - Immune',
+      // 'Anatomy - Integumentary',
+      // 'Anatomy - Lymphatic',
+      // 'Anatomy - Muscular',
+      // 'Anatomy - Respiratory',
+      // 'Anatomy - Skeletal',
       'Astronomy',
+      // 'Boomilever',
+      // 'Bungee Drop',
       'Chemistry Lab',
       'Circuit Lab',
       'Codebusters',
+      // 'Crime Busters',
       'Designer Genes',
       'Disease Detectives',
+      // 'Dynamic Planet - Earth Fresh Waters',
+      // 'Dynamic Planet - Glaciers',
       'Dynamic Planet - Oceanography',
+      // 'Dynamic Planet - Tectonics',
+      // 'Electric Vehicle',
+      // 'Engineering CAD',
       'Entomology',
+      // 'Experimental Design',
       'Forensics',
+      // 'Helicopter',
       'Heredity',
+        // 'Hovercraft',
+        // 'Machines',
       'Materials Science',
       'Meteorology',
       'Metric Mastery',
+      // 'Mission Possible',
       'Potions and Poisons',
       'Remote Sensing',
+      // 'Robot Tour',
       'Rocks and Minerals',
+      // 'Scrambler',
       'Solar System',
       'Water Quality - Freshwater',
+      // 'Write It Do It',
     ];
     const list: EventOption[] = approvedEvents.map((name) => ({ name, slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-') }));
     setEvents(list);
+    
     // Seed downloaded map from IndexedDB
     let cancelled = false;
     (async () => {
@@ -57,6 +79,7 @@ export default function OfflinePage() {
         setDownloaded(flags);
       } catch {}
     })();
+    
     // Subscribe to cross-tab download updates for immediate UI sync
     const unsubscribe = subscribeToDownloads(async () => {
       try {

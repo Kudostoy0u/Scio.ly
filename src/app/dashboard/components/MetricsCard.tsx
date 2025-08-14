@@ -18,6 +18,7 @@ interface MetricsCardProps {
   weeklyDenominator?: number;
   allTimeDenominator?: number;
   formatAsFraction?: boolean;
+  isLoading?: boolean;
 }
 
 export default function MetricsCard({
@@ -32,7 +33,8 @@ export default function MetricsCard({
   dailyDenominator,
   weeklyDenominator,
   allTimeDenominator,
-  formatAsFraction
+  formatAsFraction,
+  isLoading
 }: MetricsCardProps) {
   const cardStyle = darkMode
     ? 'bg-gray-800 border border-gray-700 text-white'
@@ -54,6 +56,11 @@ export default function MetricsCard({
   };
 
   const getDisplay = (currentView: 'daily' | 'weekly' | 'allTime') => {
+    // Only show loading if we don't have any data yet
+    const hasData = dailyValue > 0 || weeklyValue > 0 || allTimeValue > 0;
+    if (isLoading && !hasData) {
+      return <div className={`text-4xl font-bold ${color}`}>...</div>;
+    }
     if (!formatAsFraction) {
       const value = currentView === 'daily' ? dailyValue : currentView === 'weekly' ? weeklyValue : allTimeValue;
       return <NumberAnimation value={value} className={`text-4xl font-bold ${color}`} />;

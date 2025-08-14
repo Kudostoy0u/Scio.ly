@@ -147,14 +147,22 @@ export default function ContactClientPage() {
               <div className="flex items-center gap-3">
                 <Mail className={`${darkMode ? 'text-gray-400' : 'text-gray-600'} w-5 h-5`} />
                 <div>
-                  <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Email Support</p>
+                  <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <a href="mailto:team.scio.ly@gmail.com" className={`underline transition-colors ${darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}>
+                      Email Support
+                    </a>
+                  </p>
                   <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>We typically respond within 24 hours</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <MessageCircle className={`${darkMode ? 'text-gray-400' : 'text-gray-600'} w-5 h-5`} />
                 <div>
-                  <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Community Support</p>
+                  <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <a href="https://discord.gg/hXSkrD33gu" target="_blank" rel="noopener noreferrer" className={`underline transition-colors ${darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}>
+                      Community Support
+                    </a>
+                  </p>
                   <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Join our Discord server for community help and discussions</p>
                 </div>
               </div>

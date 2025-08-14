@@ -68,8 +68,21 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
   // After login (including Google OAuth), sync profile names in `users` table
   useEffect(() => {
     const syncProfileFromAuth = async () => {
-      if (!user) return;
-      if (hasSyncedRef.current === user.id) return;
+      console.log('syncProfileFromAuth called with user:', user);
+      if (!user) {
+        console.log('No user, returning early');
+        return;
+      }
+      if (hasSyncedRef.current === user.id) {
+        console.log('Already synced for user ID:', user.id);
+        return;
+      }
+
+      // Validate user object has required fields
+      if (!user.id || typeof user.id !== 'string' || user.id.trim() === '') {
+        console.warn('Invalid user ID for profile sync:', user.id);
+        return;
+      }
 
       try {
         const isGoogle = (user as any)?.app_metadata?.provider === 'google'
@@ -83,6 +96,7 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
           .maybeSingle();
 
         if (readError) {
+          console.warn('Error reading existing profile:', readError);
           // Non-fatal; continue with sensible defaults
         }
 
@@ -110,7 +124,7 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
         }
 
         const email = user.email || (existing?.email ?? '');
-        const username = existing?.username || (email ? email.split('@')[0] : null);
+        const username = existing?.username || (email ? email.split('@')[0] : 'user_' + user.id.slice(0, 8));
         const displayName = existing?.display_name || full || given || null;
         const photoUrl = existing?.photo_url || meta.avatar_url || meta.picture || null;
 
@@ -120,19 +134,67 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
         const shouldFillMissing = !isGoogle && (!existing?.first_name || !existing?.last_name);
 
         if (!existing || shouldForceUpdateNames || shouldFillMissing || !existing.display_name || !existing.username || !existing.photo_url) {
-          const upsertPayload: Record<string, any> = {
-            id: user.id,
-            email,
-          };
-          if (shouldForceUpdateNames || (!existing?.first_name && firstName !== null)) upsertPayload.first_name = firstName;
-          if (shouldForceUpdateNames || (!existing?.last_name && lastName !== undefined)) upsertPayload.last_name = (lastName ?? null);
-          if (!existing?.display_name && displayName !== undefined) upsertPayload.display_name = displayName;
-          if (!existing?.username && username) upsertPayload.username = username;
-          if (!existing?.photo_url && photoUrl) upsertPayload.photo_url = photoUrl;
+          // Ensure we have valid required fields
+          if (!user.id || !email || !username) {
+            console.warn('Missing required user fields for upsert:', { id: user.id, email, username });
+            return;
+          }
 
-          await (supabase as any)
-            .from('users')
-            .upsert(upsertPayload as any, { onConflict: 'id' });
+          // Additional validation
+          if (typeof user.id !== 'string' || user.id.trim() === '' || 
+              typeof email !== 'string' || email.trim() === '' ||
+              typeof username !== 'string' || username.trim() === '') {
+            console.warn('Invalid field types or empty values for upsert:', { 
+              id: user.id, idType: typeof user.id, 
+              email, emailType: typeof email, 
+              username, usernameType: typeof username 
+            });
+            return;
+          }
+
+          const upsertPayload: Record<string, any> = {
+            id: user.id.trim(),
+            email: email.trim(),
+            username: username.trim(),
+          };
+          
+          // Only add fields that have valid values
+          if (shouldForceUpdateNames || (!existing?.first_name && firstName !== null)) {
+            if (firstName !== null && firstName !== undefined) {
+              upsertPayload.first_name = firstName;
+            }
+          }
+          if (shouldForceUpdateNames || (!existing?.last_name && lastName !== undefined)) {
+            if (lastName !== undefined) {
+              upsertPayload.last_name = lastName;
+            }
+          }
+          if (!existing?.display_name && displayName !== undefined) {
+            if (displayName !== null && displayName !== undefined) {
+              upsertPayload.display_name = displayName;
+            }
+          }
+          if (!existing?.photo_url && photoUrl) {
+            if (photoUrl !== null && photoUrl !== undefined) {
+              upsertPayload.photo_url = photoUrl;
+            }
+          }
+
+          // Always attempt upsert if we have the required fields
+          try {
+            console.log('Attempting upsert with payload:', upsertPayload);
+            const { error: upsertError } = await (supabase as any)
+              .from('users')
+              .upsert(upsertPayload as any, { onConflict: 'id' });
+            
+            if (upsertError) {
+              console.warn('Failed to upsert user profile:', upsertError);
+            } else {
+              console.log('Successfully upserted user profile');
+            }
+          } catch (error) {
+            console.warn('Error upserting user profile:', error);
+          }
         }
 
         hasSyncedRef.current = user.id;

@@ -3,10 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import type { HistoryRecord } from '@/app/utils/dashboardData';
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false }) as any;
-
-type HistoryRecord = { questionsAttempted: number; correctAnswers: number; eventsPracticed?: string[] };
 
 export default function QuestionsThisWeekChart({
   historyData,
@@ -23,21 +22,27 @@ export default function QuestionsThisWeekChart({
       return 'heatmap';
     }
   });
+
   useEffect(() => {
     try { localStorage.setItem('scio_chart_type', chartType); } catch {}
   }, [chartType]);
+
+  // Responsive sizing
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const chartAreaRef = useRef<HTMLDivElement | null>(null);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [chartAreaHeight, setChartAreaHeight] = useState<number>(0);
+  
   const targetCellSizePx = 22; // desired square size
   const gapPx = 2; // space between squares
   const minCols = 10;
+  
   const weeksCount = useMemo(() => {
     if (containerWidth <= 0) return 5;
     const cols = Math.floor((containerWidth + gapPx) / (targetCellSizePx + gapPx));
     return Math.max(minCols, cols);
   }, [containerWidth]);
+  
   const cellSizePx = useMemo(() => {
     if (containerWidth <= 0) return targetCellSizePx;
     const widthConstrained = Math.floor((containerWidth - (weeksCount - 1) * gapPx) / weeksCount);
@@ -45,6 +50,7 @@ export default function QuestionsThisWeekChart({
     return Math.max(6, Math.min(widthConstrained, heightConstrained));
   }, [containerWidth, weeksCount, chartAreaHeight]);
 
+  // Line chart data - last 7 days
   const last7Days = useMemo(() => {
     const days: { label: string; key: string; value: number }[] = [];
     for (let i = 6; i >= 0; i--) {
@@ -52,14 +58,14 @@ export default function QuestionsThisWeekChart({
       d.setDate(d.getDate() - i);
       const key = d.toISOString().split('T')[0];
       const label = d.toLocaleDateString('en-US', { weekday: 'short' });
-      const value = historyData[key]?.correctAnswers ?? 0;
+      const value = historyData[key]?.questionsAttempted ?? 0;
       days.push({ label, key, value });
     }
     return days;
   }, [historyData]);
 
+  // Weekly totals (current week vs previous week)
   const weeklyTotals = useMemo(() => {
-    // Current week total (last 7 days) vs previous 7 days
     const now = new Date();
     let current = 0;
     let previous = 0;
@@ -70,23 +76,25 @@ export default function QuestionsThisWeekChart({
       d2.setDate(now.getDate() - 7 - i);
       const k1 = d1.toISOString().split('T')[0];
       const k2 = d2.toISOString().split('T')[0];
-      current += historyData[k1]?.correctAnswers ?? 0;
-      previous += historyData[k2]?.correctAnswers ?? 0;
+      current += historyData[k1]?.questionsAttempted ?? 0;
+      previous += historyData[k2]?.questionsAttempted ?? 0;
     }
     return { current, previous };
   }, [historyData]);
 
+  // Today's totals (today vs yesterday)
   const todayTotals = useMemo(() => {
     const now = new Date();
     const todayKey = now.toISOString().split('T')[0];
     const yesterday = new Date(now);
     yesterday.setDate(now.getDate() - 1);
     const yKey = yesterday.toISOString().split('T')[0];
-    const today = historyData[todayKey]?.correctAnswers ?? 0;
-    const y = historyData[yKey]?.correctAnswers ?? 0;
+    const today = historyData[todayKey]?.questionsAttempted ?? 0;
+    const y = historyData[yKey]?.questionsAttempted ?? 0;
     return { today, yesterday: y };
   }, [historyData]);
 
+  // Monthly totals (current month vs previous month)
   const monthTotals = useMemo(() => {
     const now = new Date();
     const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
@@ -103,7 +111,7 @@ export default function QuestionsThisWeekChart({
       d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1))
     ) {
       const key = new Date(d).toISOString().split('T')[0];
-      currentMonth += historyData[key]?.correctAnswers ?? 0;
+      currentMonth += historyData[key]?.questionsAttempted ?? 0;
     }
 
     // Sum previous month
@@ -113,11 +121,12 @@ export default function QuestionsThisWeekChart({
       d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1))
     ) {
       const key = new Date(d).toISOString().split('T')[0];
-      previousMonth += historyData[key]?.correctAnswers ?? 0;
+      previousMonth += historyData[key]?.questionsAttempted ?? 0;
     }
     return { currentMonth, previousMonth };
   }, [historyData]);
 
+  // Calculate percentage changes
   const getDelta = (current: number, previous: number) => {
     if (current === 0 && previous === 0) return 0;
     if (previous === 0) return 100; // treat as full increase from zero
@@ -128,6 +137,7 @@ export default function QuestionsThisWeekChart({
   const todayDelta = getDelta(todayTotals.today, todayTotals.yesterday);
   const monthDelta = getDelta(monthTotals.currentMonth, monthTotals.previousMonth);
 
+  // Chart configuration
   const sharedTheme = {
     foreColor: darkMode ? '#e5e7eb' : '#111827',
   } as const;
@@ -148,7 +158,7 @@ export default function QuestionsThisWeekChart({
     { name: 'Answered', data: last7Days.map(d => d.value) },
   ]), [last7Days]);
 
-  // Build a GitHub-style 7 x N grid (rows: Sun-Sat, cols: weeks)
+  // Heatmap grid data
   const gridData = useMemo(() => {
     const today = new Date();
     const endWeekday = today.getDay();
@@ -164,7 +174,7 @@ export default function QuestionsThisWeekChart({
         cellDate.setDate(today.getDate() - colShiftDays);
         const key = cellDate.toISOString().split('T')[0];
         const isFuture = colShiftDays < 0;
-        const value = isFuture ? 0 : (historyData[key]?.correctAnswers ?? 0);
+        const value = isFuture ? 0 : (historyData[key]?.questionsAttempted ?? 0);
         row.push({ date: cellDate, key, value, isFuture });
       }
       matrix.push(row);
@@ -180,13 +190,13 @@ export default function QuestionsThisWeekChart({
     return max;
   }, [gridData]);
 
-  // Heatmap color palette with improved contrast in dark mode
+  // Heatmap color palette
   const heatmapPalette = useMemo(() => ({
     empty: darkMode ? '#374151' : '#e5e7eb', // gray-700 vs gray-200
     border: darkMode ? '#4b5563' : '#d1d5db', // gray-600 vs gray-300
     levels: darkMode
-      // inverted so higher values are darker in dark mode
-      ? ['#86efac', '#22c55e', '#166534', '#14532d']
+      // lighter shades for more questions in dark mode
+      ? ['#14532d', '#166534', '#22c55e', '#86efac']
       // light mode retains existing scheme
       : ['#bbf7d0', '#86efac', '#22c55e', '#166534']
   }), [darkMode]);
@@ -198,6 +208,7 @@ export default function QuestionsThisWeekChart({
     return heatmapPalette.levels[level - 1] ?? '#22c55e';
   };
 
+  // Responsive resize handling
   useEffect(() => {
     const RO = (typeof ResizeObserver !== 'undefined') ? ResizeObserver : (window as any).ResizeObserver;
     if (wrapperRef.current) {
@@ -210,7 +221,9 @@ export default function QuestionsThisWeekChart({
       });
       ro.observe(el);
       setContainerWidth(el.clientWidth);
+      
       const cleanup1 = () => ro.disconnect();
+      
       // also observe chart area height
       if (chartAreaRef.current) {
         const ca = chartAreaRef.current;
@@ -285,11 +298,11 @@ export default function QuestionsThisWeekChart({
                 row.map((cell, cIdx) => {
                   const label = `${cell.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${cell.value} answered`;
                   const isFuture = cell.isFuture;
-                   const tooltipAlignClass = cIdx >= weeksCount - 1
-                     ? 'right-0 translate-x-0'
-                     : cIdx === 0
-                       ? 'left-0 translate-x-0'
-                       : 'left-1/2 -translate-x-1/2';
+                  const tooltipAlignClass = cIdx >= weeksCount - 1
+                    ? 'right-0 translate-x-0'
+                    : cIdx === 0
+                      ? 'left-0 translate-x-0'
+                      : 'left-1/2 -translate-x-1/2';
                   return (
                     <div key={`${rIdx}-${cIdx}`} className="relative group">
                       <div

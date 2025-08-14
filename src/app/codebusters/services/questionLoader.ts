@@ -145,29 +145,33 @@ export const loadQuestionsFromDatabase = async (
     console.log(`🔍 Quote requirements: ${nonXenocryptCount} English, ${xenocryptCount} Spanish, total: ${questionCount}`);
     console.log(`🔍 Cipher types:`, questionCipherTypes);
 
-    // Fetch quotes (prefer network, fall back to offline store)
+    // Fetch quotes (check offline first, then try network)
     let englishQuotes: Array<{id: string, author: string, quote: string}> = [];
     let spanishQuotes: Array<{id: string, author: string, quote: string}> = [];
-    try {
-      if (nonXenocryptCount > 0) {
-        const englishResponse = await fetch(`/api/quotes?language=en&limit=${Math.min(nonXenocryptCount, 200)}`);
-        if (!englishResponse.ok) throw new Error('en failed');
-        const englishData = await englishResponse.json();
-        englishQuotes = englishData.data?.quotes || englishData.quotes || [];
-      }
-      if (xenocryptCount > 0) {
-        const spanishResponse = await fetch(`/api/quotes?language=es&limit=${Math.min(xenocryptCount, 200)}`);
-        if (!spanishResponse.ok) throw new Error('es failed');
-        const spanishData = await spanishResponse.json();
-        spanishQuotes = spanishData.data?.quotes || spanishData.quotes || [];
-      }
-    } catch {
-      // Offline fallback: use stored quotes pool
+    
+    // Check if we're offline first
+    const isOffline = !navigator.onLine;
+    if (isOffline) {
+      // Use offline data immediately when offline
       const stored = await getEventOfflineQuestions('codebusters');
+      console.log('🔍 Retrieved codebusters data from IndexedDB:', stored);
+      console.log('🔍 Data type:', typeof stored);
+      console.log('🔍 Is array:', Array.isArray(stored));
+      if (stored && typeof stored === 'object') {
+        console.log('🔍 Has en property:', 'en' in stored);
+        console.log('🔍 Has es property:', 'es' in stored);
+        console.log('🔍 en length:', Array.isArray((stored as any).en) ? (stored as any).en.length : 'not array');
+        console.log('🔍 es length:', Array.isArray((stored as any).es) ? (stored as any).es.length : 'not array');
+      }
+      
       const isLangObject = (val: unknown): val is { en: any[]; es: any[] } =>
         !!val && typeof val === 'object' && Array.isArray((val as any).en) && Array.isArray((val as any).es);
       const storedEn = isLangObject(stored) ? stored.en : Array.isArray(stored) ? stored : [];
       const storedEs = isLangObject(stored) ? stored.es : [];
+      
+      console.log('🔍 Parsed storedEn length:', storedEn.length);
+      console.log('🔍 Parsed storedEs length:', storedEs.length);
+      
       if (nonXenocryptCount > 0) {
         if (storedEn.length < nonXenocryptCount) {
           throw new Error(`Not enough offline English quotes. Need ${nonXenocryptCount}, got ${storedEn.length}`);
@@ -179,6 +183,55 @@ export const loadQuestionsFromDatabase = async (
           throw new Error(`Not enough offline Spanish quotes. Need ${xenocryptCount}, got ${storedEs.length}`);
         }
         spanishQuotes = storedEs.slice(0, xenocryptCount);
+      }
+    } else {
+      // Online: try API first, fallback to offline
+      try {
+        if (nonXenocryptCount > 0) {
+          const englishResponse = await fetch(`/api/quotes?language=en&limit=${Math.min(nonXenocryptCount, 200)}`);
+          if (!englishResponse.ok) throw new Error('en failed');
+          const englishData = await englishResponse.json();
+          englishQuotes = englishData.data?.quotes || englishData.quotes || [];
+        }
+        if (xenocryptCount > 0) {
+          const spanishResponse = await fetch(`/api/quotes?language=es&limit=${Math.min(xenocryptCount, 200)}`);
+          if (!spanishResponse.ok) throw new Error('es failed');
+          const spanishData = await spanishResponse.json();
+          spanishQuotes = spanishData.data?.quotes || spanishData.quotes || [];
+        }
+      } catch {
+        // Fallback to offline data
+        const stored = await getEventOfflineQuestions('codebusters');
+        console.log('🔍 Fallback: Retrieved codebusters data from IndexedDB:', stored);
+        console.log('🔍 Fallback: Data type:', typeof stored);
+        console.log('🔍 Fallback: Is array:', Array.isArray(stored));
+        if (stored && typeof stored === 'object') {
+          console.log('🔍 Fallback: Has en property:', 'en' in stored);
+          console.log('🔍 Fallback: Has es property:', 'es' in stored);
+          console.log('🔍 Fallback: en length:', Array.isArray((stored as any).en) ? (stored as any).en.length : 'not array');
+          console.log('🔍 Fallback: es length:', Array.isArray((stored as any).es) ? (stored as any).es.length : 'not array');
+        }
+        
+        const isLangObject = (val: unknown): val is { en: any[]; es: any[] } =>
+          !!val && typeof val === 'object' && Array.isArray((val as any).en) && Array.isArray((val as any).es);
+        const storedEn = isLangObject(stored) ? stored.en : Array.isArray(stored) ? stored : [];
+        const storedEs = isLangObject(stored) ? stored.es : [];
+        
+        console.log('🔍 Fallback: Parsed storedEn length:', storedEn.length);
+        console.log('🔍 Fallback: Parsed storedEs length:', storedEs.length);
+        
+        if (nonXenocryptCount > 0) {
+          if (storedEn.length < nonXenocryptCount) {
+            throw new Error(`Not enough offline English quotes. Need ${nonXenocryptCount}, got ${storedEn.length}`);
+          }
+          englishQuotes = storedEn.slice(0, nonXenocryptCount);
+        }
+        if (xenocryptCount > 0) {
+          if (storedEs.length < xenocryptCount) {
+            throw new Error(`Not enough offline Spanish quotes. Need ${xenocryptCount}, got ${storedEs.length}`);
+          }
+          spanishQuotes = storedEs.slice(0, xenocryptCount);
+        }
       }
     }
 

@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
@@ -39,12 +39,26 @@ import {
   SubmitButton, 
   PDFModal 
 } from './components';
-import { FileText } from 'lucide-react';
+import { FloatingActionButtons } from '@/app/components/FloatingActionButtons';
 
 export default function CodeBusters() {
     const { darkMode } = useTheme();
     const router = useRouter();
+    const [isOffline, setIsOffline] = useState(false);
     
+    // Detect offline status
+    useEffect(() => {
+        const updateOnline = () => setIsOffline(!navigator.onLine);
+        updateOnline();
+        window.addEventListener('online', updateOnline);
+        window.addEventListener('offline', updateOnline);
+        
+        return () => {
+            window.removeEventListener('online', updateOnline);
+            window.removeEventListener('offline', updateOnline);
+        };
+    }, []);
+
     // Use custom hooks for state management
     const {
         quotes,
@@ -336,7 +350,6 @@ export default function CodeBusters() {
                     <Header 
                         darkMode={darkMode}
                         timeLeft={timeLeft}
-                        onReset={handleReset}
                     />
 
                     {/* Inline back link to Practice */}
@@ -384,7 +397,7 @@ export default function CodeBusters() {
                         
                         {/* Take together button - positioned right above questions */}
                         {!isLoading && !error && quotes.length > 0 && hasAttemptedLoad && (
-                            <ShareButton onShare={() => setShareModalOpen(true)} />
+                            <ShareButton onShare={() => setShareModalOpen(true)} isOffline={isOffline} />
                         )}
                         
                         {!isLoading && !error && hasAttemptedLoad && quotes.map((item, index) => (
@@ -421,21 +434,14 @@ export default function CodeBusters() {
                         )}
                     </main>
 
-                    {/* Floating PDF reference button (bottom-right) */}
-                    <div className="fixed bottom-8 right-8 z-50">
-                      <button
-                        onClick={() => setShowPDFViewer(true)}
-                        className={`p-3 rounded-full shadow-lg transition-all duration-300 hover:scale-110 ${
-                          darkMode
-                            ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
-                            : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-                        }`}
-                        title="Codebusters Reference"
-                        aria-label="Open Codebusters Reference"
-                      >
-                        <FileText className="h-5 w-5" />
-                      </button>
-                    </div>
+                    {/* Floating Action Buttons */}
+                    <FloatingActionButtons
+                        darkMode={darkMode}
+                        onReset={handleReset}
+                        showReferenceButton={true}
+                        onShowReference={() => setShowPDFViewer(true)}
+                        eventName="Codebusters"
+                    />
 
                     {/* Custom PDF Modal */}
                     <PDFModal 

@@ -91,12 +91,18 @@ export default function TestConfiguration({
       }
       if (questionCount < 1) {
         onSettingsChange({ ...settings, questionCount: 1 });
+        // Save to localStorage even for minimum value
+        if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
+          localStorage.setItem('defaultQuestionCount', '1');
+        } else if (selectedEvent && selectedEvent.name === 'Codebusters') {
+          localStorage.setItem('codebustersQuestionCount', '1');
+        }
         return;
       }
       onSettingsChange({ ...settings, questionCount });
       
-      // Save to localStorage for all events except Codebusters
-      if (selectedEvent && selectedEvent.name !== 'Codebusters') {
+      // Save to localStorage - if no event selected, assume general event
+      if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
         localStorage.setItem('defaultQuestionCount', questionCount.toString());
       } else if (selectedEvent && selectedEvent.name === 'Codebusters') {
         localStorage.setItem('codebustersQuestionCount', questionCount.toString());
@@ -105,17 +111,28 @@ export default function TestConfiguration({
       const timeLimit = parseInt(value);
       if (timeLimit < 1) {
         onSettingsChange({ ...settings, timeLimit: 1 });
+        // Save to localStorage even for minimum value
+        if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
+          localStorage.setItem('defaultTimeLimit', '1');
+        } else if (selectedEvent && selectedEvent.name === 'Codebusters') {
+          localStorage.setItem('codebustersTimeLimit', '1');
+        }
       } else if (timeLimit > 120) {
         onSettingsChange({ ...settings, timeLimit: 120 });
+        // Save to localStorage even for maximum value
+        if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
+          localStorage.setItem('defaultTimeLimit', '120');
+        } else if (selectedEvent && selectedEvent.name === 'Codebusters') {
+          localStorage.setItem('codebustersTimeLimit', '120');
+        }
       } else {
         onSettingsChange({ ...settings, timeLimit });
-      }
-      
-      // Save to localStorage for all events except Codebusters
-      if (selectedEvent && selectedEvent.name !== 'Codebusters') {
-        localStorage.setItem('defaultTimeLimit', timeLimit.toString());
-      } else if (selectedEvent && selectedEvent.name === 'Codebusters') {
-        localStorage.setItem('codebustersTimeLimit', timeLimit.toString());
+        // Save to localStorage - if no event selected, assume general event
+        if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
+          localStorage.setItem('defaultTimeLimit', timeLimit.toString());
+        } else if (selectedEvent && selectedEvent.name === 'Codebusters') {
+          localStorage.setItem('codebustersTimeLimit', timeLimit.toString());
+        }
       }
     } else {
       onSettingsChange({
@@ -157,9 +174,9 @@ export default function TestConfiguration({
 
   // Persist division and question types in localStorage
   useEffect(() => {
-    if (selectedEvent && selectedEvent.name !== 'Codebusters') {
+    if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
       // Division
-      const availableDivisions = selectedEvent.divisions || ['B', 'C'];
+      const availableDivisions = selectedEvent?.divisions || ['B', 'C'];
       const canShowB = availableDivisions.includes('B');
       const canShowC = availableDivisions.includes('C');
       const normalizedDivision = settings.division === 'any'
@@ -291,7 +308,10 @@ export default function TestConfiguration({
                 type="button"
                   onClick={() => {
                     onSettingsChange({ ...settings, types: 'multiple-choice' });
-                    localStorage.setItem('defaultQuestionTypes', 'multiple-choice');
+                    // Save to localStorage - if no event selected, assume general event
+                    if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
+                      localStorage.setItem('defaultQuestionTypes', 'multiple-choice');
+                    }
                   }}
                 disabled={isCodebusters}
                 className={`flex-1 py-2 px-3 text-sm font-medium rounded-l-md border ${
@@ -312,7 +332,10 @@ export default function TestConfiguration({
                 type="button"
                   onClick={() => {
                     onSettingsChange({ ...settings, types: 'both' });
-                    localStorage.setItem('defaultQuestionTypes', 'both');
+                    // Save to localStorage - if no event selected, assume general event
+                    if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
+                      localStorage.setItem('defaultQuestionTypes', 'both');
+                    }
                   }}
                 disabled={isCodebusters}
                 className={`px-3 py-2 text-sm font-medium border-t border-b border-l border-r ${
@@ -333,7 +356,10 @@ export default function TestConfiguration({
                 type="button"
                   onClick={() => {
                     onSettingsChange({ ...settings, types: 'free-response' });
-                    localStorage.setItem('defaultQuestionTypes', 'free-response');
+                    // Save to localStorage - if no event selected, assume general event
+                    if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
+                      localStorage.setItem('defaultQuestionTypes', 'free-response');
+                    }
                   }}
                 disabled={isCodebusters}
                 className={`flex-1 py-2 px-3 text-sm font-medium rounded-r-md border ${
@@ -401,7 +427,10 @@ export default function TestConfiguration({
                       onClick={() => {
                         if (!canShowB) return;
                         onSettingsChange({ ...settings, division: 'B' });
-                        localStorage.setItem('defaultDivision', 'B');
+                        // Save to localStorage - if no event selected, assume general event
+                        if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
+                          localStorage.setItem('defaultDivision', 'B');
+                        }
                       }}
                       disabled={!canShowB}
                       className={`flex-1 py-2 px-3 text-sm font-medium rounded-l-md border ${
@@ -423,7 +452,10 @@ export default function TestConfiguration({
                       onClick={() => {
                         if (!(canShowB && canShowC)) return;
                         onSettingsChange({ ...settings, division: 'any' });
-                        localStorage.setItem('defaultDivision', 'any');
+                        // Save to localStorage - if no event selected, assume general event
+                        if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
+                          localStorage.setItem('defaultDivision', 'any');
+                        }
                       }}
                       disabled={!(canShowB && canShowC)}
                       className={`px-3 py-2 text-sm font-medium border-t border-b border-l border-r ${
@@ -445,7 +477,10 @@ export default function TestConfiguration({
                       onClick={() => {
                         if (!canShowC) return;
                         onSettingsChange({ ...settings, division: 'C' });
-                        localStorage.setItem('defaultDivision', 'C');
+                        // Save to localStorage - if no event selected, assume general event
+                        if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
+                          localStorage.setItem('defaultDivision', 'C');
+                        }
                       }}
                       disabled={!canShowC}
                       className={`flex-1 py-2 px-3 text-sm font-medium rounded-r-md border ${

@@ -182,14 +182,12 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           const params = buildApiParams({ ...routerParams }, requestCount);
           const apiUrl = `${api.questions}?${params}`;
           
-
-          let response: Response | null = null;
-          try { response = await fetch(apiUrl); } catch { response = null; }
           let apiResponse: any = null;
-          if (response && response.ok) {
-            apiResponse = await response.json();
-            
-          } else {
+          
+          // Check if we're offline first
+          const isOffline = !navigator.onLine;
+          if (isOffline) {
+            // Use offline data immediately when offline
             const evt = routerParams.eventName as string | undefined;
             if (evt) {
               const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -203,24 +201,63 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
                     ? cached.filter((q: any) => !Array.isArray(q.options) || q.options.length === 0)
                     : cached;
                 apiResponse = { success: true, data: filtered };
-                
               }
             }
-            if (!apiResponse) throw new Error('Failed to load questions.');
+            if (!apiResponse) throw new Error('No offline data available for this event. Please download it first.');
+          } else {
+            // Online: try API first, fallback to offline
+            let response: Response | null = null;
+            try { response = await fetch(apiUrl); } catch { response = null; }
+            
+            if (response && response.ok) {
+              apiResponse = await response.json();
+            } else {
+              // Fallback to offline data
+              const evt = routerParams.eventName as string | undefined;
+              if (evt) {
+                const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                const cached = await getEventOfflineQuestions(slug);
+                if (Array.isArray(cached) && cached.length > 0) {
+                  // Respect question type selection when offline
+                  const typesSel = (routerParams.types as string) || 'multiple-choice';
+                  const filtered = typesSel === 'multiple-choice'
+                    ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
+                    : typesSel === 'free-response'
+                      ? cached.filter((q: any) => !Array.isArray(q.options) || q.options.length === 0)
+                      : cached;
+                  apiResponse = { success: true, data: filtered };
+                }
+              }
+              if (!apiResponse) throw new Error('Failed to load questions.');
+            }
           }
+          
           const questions: Question[] = (apiResponse.data || []).filter((q: any) => q.answers && Array.isArray(q.answers) && q.answers.length > 0);
           selectedQuestions = shuffleArray(questions).slice(0, baseCount);
-          
         }
 
         // 2) ID questions from new endpoint for supported events
         if (idCount > 0) {
-          const params = new URLSearchParams();
-          params.set('event', routerParams.eventName);
-          params.set('limit', String(Math.max(idCount * 3, 50)));
-          const resp = await fetch(`${api.idQuestions}?${params.toString()}`);
-          const json = await resp.json();
-          const source: any[] = Array.isArray(json?.data) ? json.data : [];
+          const isOffline = !navigator.onLine;
+          let source: any[] = [];
+          
+          if (isOffline) {
+            // When offline, ID questions are not available - we'll fill with base questions later
+            console.log('ID questions not available in offline mode');
+          } else {
+            // Online: try to fetch ID questions
+            try {
+              const params = new URLSearchParams();
+              params.set('event', routerParams.eventName);
+              params.set('limit', String(Math.max(idCount * 3, 50)));
+              const resp = await fetch(`${api.idQuestions}?${params.toString()}`);
+              const json = await resp.json();
+              source = Array.isArray(json?.data) ? json.data : [];
+            } catch {
+              console.log('Failed to fetch ID questions, continuing without them');
+            }
+          }
+          
           // Filter by types (MCQ/FRQ)
           const typesSel = (routerParams.types as string) || 'multiple-choice';
           const filtered = source.filter((row: any) => {
@@ -246,13 +283,25 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         // Top-up with base questions if we still don't have enough
         if (selectedQuestions.length < total && baseCount > 0) {
           const need = total - selectedQuestions.length;
-          const requestCount = Math.max(need * 3, 50);
-          const params2 = buildApiParams({ ...routerParams }, requestCount);
-          const apiUrl2 = `${api.questions}?${params2}`;
-          const r2 = await fetch(apiUrl2).catch(() => null);
-          const j2 = r2 && r2.ok ? await r2.json() : null;
-          const extras: Question[] = (j2?.data || []).filter((q: any) => q.answers && Array.isArray(q.answers) && q.answers.length > 0);
-          selectedQuestions = selectedQuestions.concat(shuffleArray(extras).slice(0, need));
+          const isOffline = !navigator.onLine;
+          
+          if (isOffline) {
+            // When offline, we can't fetch more questions - just use what we have
+            console.log(`Offline mode: only ${selectedQuestions.length} questions available, need ${total}`);
+          } else {
+            // Online: try to fetch more questions
+            try {
+              const requestCount = Math.max(need * 3, 50);
+              const params2 = buildApiParams({ ...routerParams }, requestCount);
+              const apiUrl2 = `${api.questions}?${params2}`;
+              const r2 = await fetch(apiUrl2).catch(() => null);
+              const j2 = r2 && r2.ok ? await r2.json() : null;
+              const extras: Question[] = (j2?.data || []).filter((q: any) => q.answers && Array.isArray(q.answers) && q.answers.length > 0);
+              selectedQuestions = selectedQuestions.concat(shuffleArray(extras).slice(0, need));
+            } catch {
+              console.log('Failed to fetch additional questions for top-up');
+            }
+          }
         }
 
         // De-duplicate and shuffle
@@ -409,8 +458,6 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
       if (!answer.length || !answer[0]) continue;
       
       if (question.options && question.options.length) {
-        mcqTotal++;
-        
         const correct = Array.isArray(question.answers)
           ? question.answers
           : [question.answers];
@@ -433,11 +480,13 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           continue;
         }
         
+        // Count as attempted if there's an answer, regardless of correctness
+        if (answer.length > 0 && answer[0] !== null) {
+          mcqTotal += 1;
+        }
+        
         // Compute fractional score for MCQ using shared helper
         const frac = calculateMCQScore(question, answer);
-        if (frac > 0) {
-          mcqTotal += 1; // attempted only if any selection and some credit
-        }
         mcqScore += Math.max(0, Math.min(1, frac));
         setGradingResults(prev => ({ ...prev, [i]: frac }));
       } else {

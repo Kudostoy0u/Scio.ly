@@ -5,7 +5,7 @@ import { sql, and, gte, lt } from 'drizzle-orm';
 import { z } from 'zod';
 import { createSuccessResponse, handleApiError, logApiRequest, logApiResponse } from '@/lib/api/utils';
 
-type DBRow = typeof idEvents.$inferSelect & { created_at?: Date; updated_at?: Date };
+
 
 const Filters = z.object({
   event: z.string().optional(),

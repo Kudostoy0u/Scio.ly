@@ -41,11 +41,25 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
   const [loadingLoad, setLoadingLoad] = useState(false);
   const [shareCode, setShareCode] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
   const hasGeneratedRef = useRef(false);
   const generationRequestId = useRef(0);
   const currentEncryptedQuotesRef = useRef<CodebustersQuoteData[] | undefined>(encryptedQuotes);
   const currentIsCodebustersRef = useRef(isCodebusters);
   const hasHandledRedirectRef = useRef(false);
+
+  // Detect offline status
+  useEffect(() => {
+    const updateOnline = () => setIsOffline(!navigator.onLine);
+    updateOnline();
+    window.addEventListener('online', updateOnline);
+    window.addEventListener('offline', updateOnline);
+    
+    return () => {
+      window.removeEventListener('online', updateOnline);
+      window.removeEventListener('offline', updateOnline);
+    };
+  }, []);
 
   // Update refs when props change
   useEffect(() => {
@@ -316,12 +330,12 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
           ) : (
             <button
               onClick={generateShareCode}
-              disabled={isGenerating || loadingGenerate}
+              disabled={isGenerating || loadingGenerate || isOffline}
               className={`w-full px-4 py-2 rounded-md font-medium transition-colors border-2 border-blue-500 text-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:border-gray-400 disabled:text-gray-400 ${
                 darkMode ? 'hover:bg-blue-900/20' : ''
               }`}
             >
-              Generate Share Code
+              {isOffline ? 'Share Not Available Offline' : 'Generate Share Code'}
             </button>
           )}
         </div>
@@ -339,12 +353,12 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
           />
           <button
             onClick={loadSharedTest}
-            disabled={loadingLoad}
+            disabled={loadingLoad || isOffline}
             className={`w-full px-4 py-2 rounded-md font-medium transition-colors border-2 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 disabled:border-gray-400 disabled:text-gray-400 ${
               darkMode ? 'hover:bg-green-900/20' : ''
             }`}
           >
-            {loadingLoad ? 'Loading...' : 'Load Shared Test'}
+            {loadingLoad ? 'Loading...' : isOffline ? 'Load Not Available Offline' : 'Load Shared Test'}
           </button>
         </div>
       </div>

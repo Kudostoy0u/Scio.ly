@@ -9,7 +9,6 @@ import { useTheme } from '@/app/contexts/ThemeContext';
 import api from '../api';
 import { getEventOfflineQuestions } from '@/app/utils/storage';
 import MarkdownExplanation from '@/app/utils/MarkdownExplanation';
-import PDFViewer from '@/app/components/PDFViewer';
 import QuestionActions from '@/app/components/QuestionActions';
 import EditQuestionModal from '@/app/components/EditQuestionModal';
 import { loadBookmarksFromSupabase } from '@/app/utils/bookmarks';
@@ -114,18 +113,12 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
         const params = buildApiParams(routerParams, 1000);
         const apiUrl = `${api.questions}?${params}`;
         
-        
-        let response: Response | null = null;
-        try {
-          response = await fetch(apiUrl);
-        } catch {
-          response = null;
-        }
         let apiResponse: any = null;
-          if (response && response.ok) {
-          apiResponse = await response.json();
-          
-        } else {
+        
+        // Check if we're offline first
+        const isOffline = !navigator.onLine;
+        if (isOffline) {
+          // Use offline data immediately when offline
           const evt = routerParams.eventName as string | undefined;
           if (evt) {
             const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -139,10 +132,39 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
                   ? cached.filter((q: any) => !Array.isArray(q.options) || q.options.length === 0)
                   : cached;
               apiResponse = { success: true, data: filtered };
-              
             }
           }
-          if (!apiResponse) throw new Error('Failed to fetch data from API');
+          if (!apiResponse) throw new Error('No offline data available for this event. Please download it first.');
+        } else {
+          // Online: try API first, fallback to offline
+          let response: Response | null = null;
+          try {
+            response = await fetch(apiUrl);
+          } catch {
+            response = null;
+          }
+          
+          if (response && response.ok) {
+            apiResponse = await response.json();
+          } else {
+            // Fallback to offline data
+            const evt = routerParams.eventName as string | undefined;
+            if (evt) {
+              const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+              const cached = await getEventOfflineQuestions(slug);
+              if (Array.isArray(cached) && cached.length > 0) {
+                // Respect selected question types when offline
+                const typesSel = (routerParams.types as string) || 'multiple-choice';
+                const filtered = typesSel === 'multiple-choice'
+                  ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
+                  : typesSel === 'free-response'
+                    ? cached.filter((q: any) => !Array.isArray(q.options) || q.options.length === 0)
+                    : cached;
+                apiResponse = { success: true, data: filtered };
+              }
+            }
+            if (!apiResponse) throw new Error('Failed to fetch data from API');
+          }
         }
         
         if (!apiResponse.success) {
@@ -222,7 +244,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
                 const m = new Map(prev);
                 const picks = [...pool];
                 let idx = 0;
-                for (let i of idIndices.values()) {
+                for (const i of idIndices.values()) {
                   if (idx >= picks.length) break;
                   m.set(i, picks[idx++]);
                 }
@@ -860,21 +882,6 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
         </div>
       </div>
 
-
-
-    
-
-      {/* Add the reference button as sticky at the bottom */}
-      {routerData.eventName === 'Codebusters' && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-30 mb-2">
-          <PDFViewer 
-            pdfPath="/2024_Div_C_Resource.pdf" 
-            buttonText="Codebusters Reference" 
-            darkMode={darkMode} 
-          />
-        </div>
-      )}
-      
       {editingQuestion && (
         <EditQuestionModal
           isOpen={isEditModalOpen}

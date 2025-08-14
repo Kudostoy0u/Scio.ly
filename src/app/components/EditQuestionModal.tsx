@@ -120,12 +120,6 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
       const suggestion = await geminiService.suggestQuestionEdit(question, reason);
       setSuggestions(suggestion);
       setShowSuggestions(true);
-      
-      if (suggestion.confidence > 0.7) {
-        toast.success('High-confidence suggestions generated!');
-      } else {
-        toast.info('Suggestions generated. Please review carefully.');
-      }
     } catch (error) {
       console.error('Failed to get suggestions:', error);
       toast.error('Failed to generate suggestions. Please continue manually.');
