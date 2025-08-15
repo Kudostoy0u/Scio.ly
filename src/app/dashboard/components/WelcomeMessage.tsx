@@ -67,13 +67,13 @@ export default function WelcomeMessage({ darkMode, currentUser: _currentUser, se
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className={`rounded-lg p-6 pt-5 md:pt-6 h-32 ${darkMode ? 'bg-gray-800' : 'bg-white'} border ${
+      className={`rounded-lg p-6 pt-5 md:pt-7 h-32 ${darkMode ? 'bg-gray-800' : 'bg-white'} border ${
         darkMode ? 'border-gray-700' : 'border-gray-200'
       }`}
     >
       <div className="flex items-center justify-between">
         <div>
-          <h1 className={`text-3xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          <h1 className={`text-3xl font-bold mb-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             {/* Mobile: show "Hi," only when a name is present; otherwise keep default */}
             <span className="md:hidden">
               {resolvedName

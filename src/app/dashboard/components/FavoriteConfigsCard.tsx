@@ -143,17 +143,17 @@ export default function FavoriteConfigsCard() {
       </div>
 
              {/* Mobile Layout - Vertical with centered title and four configs */}
-       <div className="flex md:hidden flex-col w-full h-full pb-6">
+       <div className="flex md:hidden flex-col w-full h-full pb-2">
          {/* Title centered at top */}
-         <div className="flex justify-center pt-3 pb-4">
+         <div className="flex justify-center pt-4 pb-2 px-4">
            <h3 className={`${darkMode ? 'text-white' : 'text-gray-800'} text-lg font-semibold text-center`}>
              Favorited Configs
            </h3>
          </div>
 
          {/* Two configs in single row */}
-         <div className="flex-1 px-2 pb-2">
-           <div className="grid grid-cols-2 gap-2 h-full text-xs">
+         <div className="flex-1 px-3 pb-1">
+           <div className="grid grid-cols-2 gap-3 h-full text-xs">
             {Array.from({ length: 2 }).map((_, idx) => {
               const fav = favorites[idx];
                              if (!fav) {
@@ -172,8 +172,8 @@ export default function FavoriteConfigsCard() {
                 onClick={() => startFromConfig(fav)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startFromConfig(fav); } }}
               >
-                <div className="absolute inset-0 p-1 flex flex-col items-start justify-between text-left">
-                  <div className={`text-[10px] font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} break-words leading-tight`}>{fav.eventName}</div>
+                <div className="absolute inset-0 p-1.5 flex flex-col items-start justify-between text-left">
+                  <div className={`text-[11px] font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} break-words leading-tight`}>{fav.eventName}</div>
                   <div className="w-full">
                     <ConfigSummaryGrid settings={fav.settings} darkMode={darkMode} isMobile={true} />
                   </div>
@@ -214,14 +214,14 @@ export default function FavoriteConfigsCard() {
 function ConfigSummaryGrid({ settings, darkMode, isMobile = false }: { settings: Settings; darkMode: boolean; isMobile?: boolean }) {
   const typeLabel = settings.types === 'both' ? 'MCQ+FRQ' : settings.types === 'free-response' ? 'FRQ' : 'MCQ';
   const divLabel = settings.division === 'any' ? 'Div B/C' : `Div ${settings.division}`;
-  const textSize = isMobile ? 'text-[8px]' : 'text-xs';
-  const iconSize = isMobile ? 'w-2 h-2' : 'w-3.5 h-3.5';
+  const textSize = isMobile ? 'text-[9px]' : 'text-xs';
+  const iconSize = isMobile ? 'w-2.5 h-2.5' : 'w-3.5 h-3.5';
   const gap = isMobile ? 'gap-0.5' : 'gap-1';
   const gridGap = isMobile ? 'gap-x-1 gap-y-0.5' : 'gap-x-3 gap-y-1';
   
   return (
     <div className={`grid grid-cols-2 ${gridGap} mt-1`}>
-      <div className={`flex items-center ${gap} text-xs`}>
+      <div className={`flex items-center ${gap} ${textSize}`}>
         <BookCheck className={`${iconSize} ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
         <span className={`${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{settings.questionCount}</span>
         <span className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>qs</span>

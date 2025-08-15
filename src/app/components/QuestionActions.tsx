@@ -20,7 +20,7 @@ interface QuestionActionsProps {
   isSubmittedReport?: boolean;
   isSubmittedEdit?: boolean;
   onReportSubmitted?: (index: number) => void;
-  isSubmitted?: boolean;
+  _isSubmitted?: boolean;
   onEdit?: () => void;
   onQuestionRemoved?: (questionIndex: number) => void;
   isRemovalFailed?: boolean;
@@ -38,7 +38,7 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
   isSubmittedReport = false,
   isSubmittedEdit = false,
   onReportSubmitted,
-  isSubmitted = false,
+  _isSubmitted = false,
   onEdit,
   onQuestionRemoved,
   isRemovalFailed = false
@@ -128,7 +128,7 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
 
   // Detect ID questions (questions with imageData)
   const isIdQuestion = !!(question as any).imageData;
-  const shouldDisableActions = isSubmitted || isOffline;
+  const shouldDisableActions = isOffline;
 
   if (compact) {
     return (
@@ -148,7 +148,7 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
               onClick={onEdit}
               disabled={isSubmittedEdit || shouldDisableActions}
               className={`${buttonClass} ${(isSubmittedEdit || shouldDisableActions) ? disabledClass : 'hover:text-blue-500'}`}
-              title={isSubmittedEdit ? 'Edit already submitted' : shouldDisableActions ? 'Unavailable offline/after submission' : 'Edit question'}
+              title={isSubmittedEdit ? 'Edit already submitted' : shouldDisableActions ? 'Unavailable offline' : 'Edit question'}
             >
               <FaEdit className="w-4 h-4" />
             </button>
@@ -156,7 +156,7 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
               onClick={handleDirectReport}
               disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions}
               className={`${buttonClass} ${(isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions) ? disabledClass : 'hover:text-red-500'}`}
-              title={isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : shouldDisableActions ? 'Unavailable offline/after submission' : 'Remove question'}
+              title={isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : shouldDisableActions ? 'Unavailable offline' : 'Remove question'}
             >
               {isProcessingDirectReport ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
@@ -187,7 +187,7 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
             onClick={onEdit}
             disabled={isSubmittedEdit || shouldDisableActions}
             className={`${buttonClass} ${(isSubmittedEdit || shouldDisableActions) ? disabledClass : 'hover:text-blue-500'}`}
-            title={isSubmittedEdit ? 'Edit already submitted' : shouldDisableActions ? 'Unavailable offline/after submission' : 'Edit question'}
+            title={isSubmittedEdit ? 'Edit already submitted' : shouldDisableActions ? 'Unavailable offline' : 'Edit question'}
           >
             <div className="flex items-center space-x-1">
               <FaEdit className="w-4 h-4" />
@@ -200,7 +200,7 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
             onClick={handleDirectReport}
             disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions}
             className={`${buttonClass} ${(isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions) ? disabledClass : 'hover:text-red-600'}`}
-            title={isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : shouldDisableActions ? 'Unavailable offline/after submission' : 'Quick remove question'}
+            title={isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : shouldDisableActions ? 'Unavailable offline' : 'Quick remove question'}
           >
             <div className="flex items-center space-x-1">
               {isProcessingDirectReport ? (

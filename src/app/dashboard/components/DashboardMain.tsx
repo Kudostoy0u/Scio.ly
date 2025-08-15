@@ -209,10 +209,19 @@ export default function DashboardMain({
             <div className="lg:col-span-1">
               <motion.button
                 onClick={() => router.push('/practice')}
-                className="rounded-lg w-full h-32 py-7 px-6 text-white text-center flex flex-col items-center justify-center bg-blue-600"
+                className="rounded-lg w-full h-32 py-7 px-6 text-white text-center flex flex-col items-center justify-center bg-blue-600 relative overflow-hidden group"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                <FaPen className="text-3xl" />
-                <span className="text-xl font-bold">Practice</span>
+                {/* Pencil Icon */}
+                <div className="absolute inset-0 flex items-center justify-center transition-all duration-600 ease-in-out -translate-y-4 group-hover:translate-y-0">
+                  <FaPen className="text-3xl transition-all duration-600 ease-in-out group-hover:rotate-[-270deg]" />
+                </div>
+                
+                {/* Practice Text */}
+                <span className="text-xl font-bold absolute inset-0 flex items-center justify-center transition-opacity duration-300 group-hover:opacity-0 translate-y-4">
+                  Practice
+                </span>
               </motion.button>
             </div>
           </div>

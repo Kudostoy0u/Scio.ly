@@ -74,7 +74,7 @@ export default function EventList({
 
   return (
     <div className={`h-full rounded-xl flex flex-col ${
-      darkMode ? 'bg-palenight-100' : 'bg-white shadow-md'
+      darkMode ? 'bg-gray-800' : 'bg-white shadow-md'
     }`}>
       <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
         <h3 className={`font-medium ${
@@ -128,13 +128,13 @@ export default function EventList({
               }`}
             >
               <div className="flex justify-between items-center">
-                <h4 className={`font-medium text-base ${
+                <h4 className={`font-medium text-base md:text-base text-sm ${
                   darkMode ? 'text-white' : 'text-gray-900'
                 }`}>
                   {event.name}
                 </h4>
                 <div className="flex items-center space-x-2">
-                  <span className={`text-xs px-3 py-1 rounded-full ${
+                  <span className={`text-xs md:text-xs text-[10px] px-3 py-1 rounded-full ${
                     darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
                   }`}>
                     {event.subject}

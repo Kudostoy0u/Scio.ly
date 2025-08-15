@@ -93,7 +93,7 @@ export default function MetricsCard({
       >
         {/* Daily View */}
         <div 
-          className="absolute w-full flex flex-col px-6 pt-6 pb-3"
+          className="absolute w-full h-full flex flex-col px-6 pt-4"
           style={{ 
             backfaceVisibility: 'hidden',
             transform: 'rotateX(0deg)',
@@ -101,7 +101,7 @@ export default function MetricsCard({
             visibility: view === 'daily' ? 'visible' : 'hidden',
           }}
         >
-          <h3 className={`text-lg mb-2 font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+          <h3 className={`text-lg mb-4 font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
             {`Daily ${toSentenceCase(title)}`}
           </h3>
           {getDisplay('daily')}
@@ -109,7 +109,7 @@ export default function MetricsCard({
         
         {/* Weekly View */}
         <div 
-          className="absolute w-full h-full flex flex-col px-6 pt-6 pb-3"
+          className="absolute w-full h-full flex flex-col px-6 pt-4"
           style={{ 
             backfaceVisibility: 'hidden',
             transform: 'rotateX(180deg)',
@@ -117,7 +117,7 @@ export default function MetricsCard({
             visibility: view === 'weekly' ? 'visible' : 'hidden',
           }}
         >
-          <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+          <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
             {`Weekly ${toSentenceCase(title)}`}
           </h3>
           {getDisplay('weekly')}
@@ -125,7 +125,7 @@ export default function MetricsCard({
 
         {/* All Time View */}
         <div 
-          className="absolute w-full h-full flex flex-col px-6 pt-6 pb-3"
+          className="absolute w-full h-full flex flex-col px-6 pt-4"
           style={{ 
             backfaceVisibility: 'hidden',
             transform: 'rotateX(360deg)',
@@ -133,7 +133,7 @@ export default function MetricsCard({
             visibility: view === 'allTime' ? 'visible' : 'hidden',
           }}
         >
-          <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+          <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
             {`All-time ${toSentenceCase(title)}`}
           </h3>
           {getDisplay('allTime')}

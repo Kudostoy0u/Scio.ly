@@ -228,7 +228,7 @@ export default function TestConfiguration({
     <div 
       data-test-config
       className={`w-full lg:w-96 rounded-xl flex-shrink-0 flex flex-col ${
-        darkMode ? 'bg-palenight-100' : 'bg-white shadow-md'
+        darkMode ? 'bg-gray-800' : 'bg-white shadow-md'
       }`}
     >
       <div className="p-6 flex-1 flex flex-col min-h-0 overflow-visible">
