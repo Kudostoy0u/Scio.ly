@@ -815,7 +815,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           <div className="w-full max-w-3xl -mt-2">
             <button
               onClick={handleResetTest}
-              className="group inline-flex items-center text-sm font-medium text-black hover:text-black"
+              className={`group inline-flex items-center text-base font-medium ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}
             >
               <span className="transition-transform duration-200 group-hover:-translate-x-1">←</span>
               <span className="ml-2">Go back</span>
@@ -843,18 +843,18 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             ) : !currentQuestion ? (
               <div>No questions available.</div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {renderQuestion(currentQuestion)}
 
                 {/* Action Button */}
-                <div className="mt-6 text-center">
+                <div className="text-center">
                   {!isSubmitted ? (
                     <button
                       onClick={handleSubmit}
-                      className={`w-full mt-6 px-4 py-2 font-semibold rounded-lg ${
+                      className={`w-full px-4 py-2 font-semibold rounded-lg border-2 transition-colors ${
                         darkMode
-                          ? 'bg-blue-600 text-white hover:bg-blue-700'
-                          : 'bg-blue-500 text-white hover:bg-blue-600'
+                          ? 'bg-transparent text-blue-300 border-blue-300 hover:text-blue-200 hover:border-blue-200'
+                          : 'bg-transparent text-blue-700 border-blue-700 hover:text-blue-600 hover:border-blue-600'
                       }`}
                     >
                       {currentAnswer.length === 0 || currentAnswer[0] === null || currentAnswer[0] === '' ? 'Skip Question' : 'Check Answer'}
@@ -862,10 +862,10 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
                   ) : (
                     <button
                       onClick={handleNext}
-                      className={`w-full mt-6 px-4 py-2 font-semibold rounded-lg ${
+                      className={`w-full px-4 py-2 font-semibold rounded-lg border-2 transition-colors ${
                         darkMode
-                          ? 'bg-blue-600 text-white hover:bg-blue-700'
-                          : 'bg-blue-500 text-white hover:bg-blue-600'
+                          ? 'bg-transparent text-blue-300 border-blue-300 hover:text-blue-200 hover:border-blue-200'
+                          : 'bg-transparent text-blue-700 border-blue-700 hover:text-blue-600 hover:border-blue-600'
                       }`}
                     >
                       Next Question

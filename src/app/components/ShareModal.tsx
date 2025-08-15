@@ -293,7 +293,7 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
   return (
     <div
       style={{ display: isOpen ? 'flex' : 'none' }}
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
       onClick={onClose}
     >
       <div
@@ -302,10 +302,11 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
       >
         <button
           onClick={onClose}
-          className="absolute top-2 right-2 text-xl font-bold"
-          style={{ color: darkMode ? 'white' : '#4A5568' }}
+          className={`absolute top-4 right-4 text-gray-500 hover:${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
         >
-          &times;
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </button>
         <h3 className="text-lg font-semibold mb-4">Share Test</h3>
         
