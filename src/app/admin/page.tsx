@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import api from '@/app/api';
+import PasswordAuth from './PasswordAuth';
 
 type EditRow = {
   id: string;
@@ -69,17 +70,23 @@ export default function AdminPage() {
   const [tab, setTab] = useState<'edits' | 'removed'>('edits');
   const [bulkBusy, setBulkBusy] = useState<Record<string, boolean>>({});
   const [bulkMessage, setBulkMessage] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [adminPassword, setAdminPassword] = useState<string>('');
 
   const bg = darkMode ? 'bg-gray-900' : 'bg-gray-50';
   const card = darkMode ? 'bg-gray-800' : 'bg-white';
   const border = darkMode ? 'border-gray-700' : 'border-gray-200';
   const muted = darkMode ? 'text-gray-300' : 'text-gray-700';
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(api.admin);
+      const res = await fetch(api.admin, {
+        headers: {
+          'X-Admin-Password': adminPassword,
+        },
+      });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Failed to load');
       setData(json.data as AdminOverview);
@@ -88,11 +95,18 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
+  }, [adminPassword]);
+
+  const handleAuthenticated = (password: string) => {
+    setAdminPassword(password);
+    setIsAuthenticated(true);
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (isAuthenticated) {
+      fetchData();
+    }
+  }, [isAuthenticated, adminPassword, fetchData]);
 
   const groupedEdits = useMemo(() => {
     const map: Record<string, EditRow[]> = {};
@@ -121,7 +135,10 @@ export default function AdminPage() {
     try {
       const res = await fetch(api.admin, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Admin-Password': adminPassword,
+        },
         body: JSON.stringify({ id, action }),
       });
       const json = await res.json().catch(() => ({ success: false, error: 'Empty response' }));
@@ -153,7 +170,10 @@ export default function AdminPage() {
     try {
       const res = await fetch(api.admin, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Admin-Password': adminPassword,
+        },
         body: JSON.stringify({ action }),
       });
       const json = await res.json().catch(() => ({ success: false, error: 'Empty response' }));
@@ -167,6 +187,11 @@ export default function AdminPage() {
       setBulkBusy(prev => ({ ...prev, [action]: false }));
     }
   };
+
+  // Show password authentication if not authenticated
+  if (!isAuthenticated) {
+    return <PasswordAuth onAuthenticated={handleAuthenticated} />;
+  }
 
   return (
     <div className={`min-h-screen ${bg}`}>
@@ -216,7 +241,7 @@ export default function AdminPage() {
                     // Reuse bulk API for undo all edits
                     setBulkBusy(prev => ({ ...prev, undoAllEdits: true } as any));
                     try {
-                      const res = await fetch(api.admin, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'undoAllEdits' }) });
+                      const res = await fetch(api.admin, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword }, body: JSON.stringify({ action: 'undoAllEdits' }) });
                       const json = await res.json().catch(() => ({ success: false, error: 'Empty response' }));
                       if (!json.success) throw new Error(json.error || 'Action failed');
                       setBulkMessage(json.message || 'Done');
@@ -271,7 +296,7 @@ export default function AdminPage() {
                     // Undo all removes (restore all)
                     setBulkBusy(prev => ({ ...prev, restoreAllRemoved: true } as any));
                     try {
-                      const res = await fetch(api.admin, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'restoreAllRemoved' }) });
+                      const res = await fetch(api.admin, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword }, body: JSON.stringify({ action: 'restoreAllRemoved' }) });
                       const json = await res.json().catch(() => ({ success: false, error: 'Empty response' }));
                       if (!json.success) throw new Error(json.error || 'Action failed');
                       setBulkMessage(json.message || 'Done');

@@ -6,6 +6,7 @@ import { useTheme } from '@/app/contexts/ThemeContext';
 import { useRouter } from 'next/navigation';
 import Header from '@/app/components/Header';
 import { useAuth } from '@/app/contexts/AuthContext';
+import Image from 'next/image';
 
 interface Leaderboard {
   id: string;
@@ -22,6 +23,7 @@ interface LeaderboardMember {
   user_id: string;
   display_name: string | null;
   email: string;
+  photo_url: string | null;
   questions_attempted: number;
   correct_answers: number;
   accuracy_percentage: number;
@@ -63,7 +65,7 @@ export default function LeaderboardClientPage() {
         questions_attempted,
         correct_answers,
         accuracy_percentage,
-        users!inner(email, display_name)
+        users!inner(email, display_name, photo_url)
       `)
       .eq('leaderboard_id', leaderboardId)
       .order('correct_answers', { ascending: false })
@@ -80,7 +82,7 @@ export default function LeaderboardClientPage() {
         questions_attempted: number | null;
         correct_answers: number | null;
         accuracy_percentage: number | null;
-        users: { email: string; display_name: string | null } | { email: string; display_name: string | null }[];
+        users: { email: string; display_name: string | null; photo_url: string | null } | { email: string; display_name: string | null; photo_url: string | null }[];
       }
       const membersWithRank = (data as MemberData[]).map((member, index) => {
         const userData = Array.isArray(member.users) ? member.users[0] : member.users;
@@ -91,6 +93,7 @@ export default function LeaderboardClientPage() {
           accuracy_percentage: member.accuracy_percentage || 0,
           display_name: userData?.display_name || null,
           email: userData?.email || '',
+          photo_url: userData?.photo_url || null,
           rank: index + 1
         } as LeaderboardMember;
       });
@@ -415,8 +418,25 @@ export default function LeaderboardClientPage() {
                             {member.rank! > 3 && member.rank}
                           </td>
                           <td className="py-3 px-4 font-medium">
-                            {member.display_name || member.email.split('@')[0]}
-                            {member.user_id === user?.id && ' (You)'}
+                            <div className="flex items-center gap-3">
+                              {member.photo_url ? (
+                                <Image
+                                  src={member.photo_url}
+                                  alt="Profile"
+                                  width={24}
+                                  height={24}
+                                  className="w-6 h-6 rounded-full"
+                                />
+                              ) : (
+                                <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs">
+                                  {(member.display_name || member.email || 'U')[0].toUpperCase()}
+                                </div>
+                              )}
+                              <span>
+                                {member.display_name || member.email.split('@')[0]}
+                                {member.user_id === user?.id && ' (You)'}
+                              </span>
+                            </div>
                           </td>
                           <td className="text-right py-3 px-4">{member.correct_answers}</td>
                           <td className="text-right py-3 px-4">{member.questions_attempted}</td>

@@ -27,6 +27,7 @@ export default function AuthButton() {
   const [showPassword, setShowPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [displayName, setDisplayName] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -45,6 +46,27 @@ export default function AuthButton() {
     setLoading(false);
   }, [ctxUser]);
 
+  // Load cached profile picture immediately on mount
+  useEffect(() => {
+    if (ctxUser?.id) {
+      // Try to load cached profile picture immediately
+      try {
+        const cachedPhotoUrl = localStorage.getItem(`scio_profile_photo_${ctxUser.id}`);
+        if (cachedPhotoUrl) {
+          setPhotoUrl(cachedPhotoUrl);
+          // Preload the cached image to ensure it's ready
+          preloadImage(cachedPhotoUrl).catch(() => {
+            // If cached image fails to load, remove it from cache
+            localStorage.removeItem(`scio_profile_photo_${ctxUser.id}`);
+            setPhotoUrl(null);
+          });
+        }
+              } catch {
+          // Ignore localStorage errors
+        }
+    }
+  }, [ctxUser?.id]);
+
   // Save user data to localStorage
   
 
@@ -54,6 +76,10 @@ export default function AuthButton() {
       localStorage.removeItem('scio_user_data');
       localStorage.setItem('scio_is_logged_in', '0');
       localStorage.removeItem('scio_display_name');
+      // Clear cached profile photo
+      if (user?.id) {
+        localStorage.removeItem(`scio_profile_photo_${user.id}`);
+      }
     } catch {}
   };
 
@@ -72,6 +98,16 @@ export default function AuthButton() {
     };
   }, []);
 
+  // Preload profile image to prevent jittery transitions
+  const preloadImage = (url: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const img = document.createElement('img');
+      img.onload = () => resolve();
+      img.onerror = () => reject();
+      img.src = url;
+    });
+  };
+
   useEffect(() => {
     let active = true;
     const supabase = client;
@@ -84,12 +120,28 @@ export default function AuthButton() {
         
         const { data: profile } = await supabase
           .from('users')
-          .select('display_name, first_name')
+          .select('display_name, first_name, photo_url')
           .eq('id', ctxUser.id)
           .maybeSingle();
         if (!active) return;
         const dn = (profile as any)?.display_name as string | undefined;
         if (dn) setDisplayName(dn);
+        const photo = (profile as any)?.photo_url as string | undefined;
+        if (photo) {
+          try {
+            // Cache the photo URL immediately
+            localStorage.setItem(`scio_profile_photo_${ctxUser.id}`, photo);
+            
+            // Preload the image before setting it
+            await preloadImage(photo);
+            if (active) {
+              setPhotoUrl(photo);
+            }
+          } catch {
+            // If image fails to load, remove from cache
+            localStorage.removeItem(`scio_profile_photo_${ctxUser.id}`);
+          }
+        }
       } catch {}
     })();
     return () => { active = false; };
@@ -322,7 +374,15 @@ export default function AuthButton() {
               : 'bg-white hover:bg-gray-50 border-gray-300 text-gray-700'
           }`}
         >
-          {user.user_metadata?.avatar_url || user.user_metadata?.picture ? (
+          {photoUrl ? (
+            <Image
+              src={photoUrl}
+              alt="Profile"
+              width={24}
+              height={24}
+              className="w-6 h-6 rounded-full"
+            />
+          ) : user.user_metadata?.avatar_url || user.user_metadata?.picture ? (
             <Image
               src={user.user_metadata.avatar_url || user.user_metadata.picture}
               alt="Profile"
