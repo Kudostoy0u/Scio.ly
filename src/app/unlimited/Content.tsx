@@ -596,7 +596,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             isSubmittedReport={submittedReports[currentQuestionIndex]}
             isSubmittedEdit={submittedEdits[currentQuestionIndex]}
             onReportSubmitted={handleReportSubmitted}
-            isSubmitted={isSubmitted}
+            _isSubmitted={isSubmitted}
             onEdit={() => handleEditOpen(question)}
             onQuestionRemoved={handleQuestionRemoved}
           />

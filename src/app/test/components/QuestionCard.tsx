@@ -79,7 +79,7 @@ export default function QuestionCard({
           isSubmittedReport={submittedReports[index]}
           isSubmittedEdit={submittedEdits[index]}
           onReportSubmitted={onReportSubmitted}
-          isSubmitted={isSubmitted}
+          _isSubmitted={isSubmitted}
           onEdit={() => onEdit(question)}
           onQuestionRemoved={onQuestionRemoved}
         />
