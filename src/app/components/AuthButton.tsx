@@ -450,7 +450,7 @@ export default function AuthButton() {
 
       {showSignInModal && createPortal(
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-[9999]" 
+          className="fixed inset-0 z-[9999]" 
           style={{ 
             position: 'fixed', 
             top: 0, 
@@ -460,7 +460,8 @@ export default function AuthButton() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '1rem'
+            padding: '1rem',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)'
           }}
           onMouseDown={() => { setShowSignInModal(false); resetForm(); }}
         >

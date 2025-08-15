@@ -522,7 +522,7 @@ export default function PracticeDashboard() {
             divisions: ["B"]
           },
           { 
-            name: "Materials Science - General", 
+            name: "Materials Science - Nanomaterials", 
             subject: "Physical Science & Chemistry",
             divisions: ["C"]
           },

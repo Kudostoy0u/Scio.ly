@@ -45,7 +45,7 @@ export const FloatingActionButtons: React.FC<FloatingActionButtonsProps> = ({
       </button>
 
       {/* Mobile Buttons Container */}
-      <div className="md:hidden fixed bottom-4 right-4 z-50 flex flex-col gap-4">
+      <div className="md:hidden fixed bottom-8 right-4 z-50 flex flex-col gap-4">
         {/* Mobile Reset Button */}
         <button
           onClick={onReset}

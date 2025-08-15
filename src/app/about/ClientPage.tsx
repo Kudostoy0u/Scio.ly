@@ -58,12 +58,19 @@ export default function AboutClientPage() {
               </div>
             </div>
             <div className="md:w-1/2 flex justify-center items-center">
-              <div className="relative w-80 h-80 rounded-2xl overflow-hidden group cursor-pointer" onClick={toggleMascotCaption}>
-                <Image src="/about/hylas.png" alt="ASK - Science Olympiad mascot" fill style={{ objectFit: 'cover', objectPosition: 'center 70%' }} className={`rounded-2xl transition-transform duration-300 ${isMobile && showMascotCaption ? 'scale-105' : 'group-hover:scale-105'}`} />
-                <div className={`absolute inset-0 bg-black transition-all duration-300 flex items-end justify-center rounded-2xl ${isMobile && showMascotCaption ? 'bg-opacity-40' : 'bg-opacity-0 group-hover:bg-opacity-40'}`}>
-                  <div className={`text-white text-center p-4 transition-transform duration-300 ${isMobile && showMascotCaption ? 'translate-y-0' : 'translate-y-full group-hover:translate-y-0'}`}>
+              <div className="relative group cursor-pointer overflow-hidden rounded-2xl">
+                <Image 
+                  src="/about/hylas.png" 
+                  alt="Hylas the Cat - Our mascot" 
+                  width={320} 
+                  height={320} 
+                  className="w-80 h-80 object-cover transition-transform duration-300 group-hover:scale-110"
+                  style={{ objectPosition: 'center 80%' }}
+                />
+                <div className="absolute bottom-0 left-0 right-0 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300" style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}>
+                  <div className="text-white text-center p-4">
                     <p className="font-bold text-lg">Hylas the Cat</p>
-                    <p>Our coolest mascot</p>
+                    <p>Our coolest mascot!</p>
                   </div>
                 </div>
               </div>
