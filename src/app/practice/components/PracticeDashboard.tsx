@@ -522,7 +522,7 @@ export default function PracticeDashboard() {
             divisions: ["B"]
           },
           { 
-            name: "Materials Science", 
+            name: "Materials Science - General", 
             subject: "Physical Science & Chemistry",
             divisions: ["C"]
           },
@@ -589,7 +589,7 @@ export default function PracticeDashboard() {
           "Entomology": ["Insect Anatomy", "Life Cycles", "Behavior", "Classification", "Ecology"],
           "Forensics": ["Evidence Analysis", "Fingerprints", "DNA", "Toxicology", "Crime Scene"],
           "Heredity": ["Genetics", "DNA", "Proteins", "Evolution", "Population Genetics"],
-          "Materials Science": ["Structure", "Properties", "Processing", "Applications", "Testing"],
+          "Materials Science - Nanomaterials": ["Basics","Quantum Effects","Properties","Classification","Carbon Nanomaterials","Specific Types","Synthesis Methods","Top-Down","Bottom-Up","Microscopy","Spectroscopy","Analysis Techniques","Physical Properties","Mechanical Properties","Thermal Properties","Electronics","Biomedical","Energy","Materials"],
           "Meteorology": ["Weather Systems", "Clouds", "Precipitation", "Temperature", "Pressure"],
           "Metric Mastery": ["Estimation", "Orders of Magnitude", "Problem Solving", "Scientific Reasoning", "Calculations"],
           "Potions and Poisons": ["Toxicology", "Pharmacology", "Dosage", "Symptoms", "Antidotes"],
