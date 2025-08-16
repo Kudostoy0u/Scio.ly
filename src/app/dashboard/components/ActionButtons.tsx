@@ -176,7 +176,7 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
             <div className="flex-1">
               <h3 className="text-xl font-bold mb-1">Scio.ly for Teams</h3>
               <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                Collaborative features for teams and organizations
+                Collaborative features for your Science Olympiad team
               </p>
             </div>
           </div>

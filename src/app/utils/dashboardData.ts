@@ -97,7 +97,26 @@ const fetchUserStatsSince = async (userId: string, fromDate: string): Promise<an
 
   let { data, error } = await exec();
   if (error && (error as any).status && [401, 403].includes((error as any).status)) {
-    try { await supabase.auth.refreshSession(); } catch {}
+    try { 
+      await supabase.auth.refreshSession(); 
+    } catch {
+      // If refresh fails, clear cookies and try again
+      if (typeof window !== 'undefined') {
+        const supabaseCookieNames = [
+          'sb-access-token', 'sb-refresh-token', 'supabase-auth-token',
+          'supabase-auth-refresh-token', 'supabase-auth-token-expires',
+          'supabase-auth-refresh-token-expires', 'supabase-auth-token-type',
+          'supabase-auth-token-user-id', 'supabase-auth-token-session-id',
+          'supabase-auth-token-provider-token', 'supabase-auth-token-provider-refresh-token'
+        ];
+        
+        supabaseCookieNames.forEach(cookieName => {
+          document.cookie = cookieName + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+          document.cookie = cookieName + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + window.location.hostname + ';';
+          document.cookie = cookieName + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.' + window.location.hostname + ';';
+        });
+      }
+    }
     const retry = await exec();
     data = retry.data; error = retry.error;
   }
@@ -118,7 +137,26 @@ const fetchDailyUserStatsRow = async (userId: string, date: string): Promise<any
 
   let { data, error } = await exec();
   if (error && (error as any).status && [401, 403].includes((error as any).status)) {
-    try { await supabase.auth.refreshSession(); } catch {}
+    try { 
+      await supabase.auth.refreshSession(); 
+    } catch {
+      // If refresh fails, clear cookies and try again
+      if (typeof window !== 'undefined') {
+        const supabaseCookieNames = [
+          'sb-access-token', 'sb-refresh-token', 'supabase-auth-token',
+          'supabase-auth-refresh-token', 'supabase-auth-token-expires',
+          'supabase-auth-refresh-token-expires', 'supabase-auth-token-type',
+          'supabase-auth-token-user-id', 'supabase-auth-token-session-id',
+          'supabase-auth-token-provider-token', 'supabase-auth-token-provider-refresh-token'
+        ];
+        
+        supabaseCookieNames.forEach(cookieName => {
+          document.cookie = cookieName + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+          document.cookie = cookieName + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + window.location.hostname + ';';
+          document.cookie = cookieName + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.' + window.location.hostname + ';';
+        });
+      }
+    }
     const retry = await exec();
     data = retry.data; error = retry.error;
   }

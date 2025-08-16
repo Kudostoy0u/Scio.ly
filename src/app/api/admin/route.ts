@@ -5,6 +5,15 @@ import { ApiResponse } from '@/lib/types/api';
 import { and, desc, eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
+// Admin password for authentication
+const ADMIN_PASSWORD = 'alancaithegoat';
+
+// Function to check admin password
+function checkAdminPassword(request: NextRequest): boolean {
+  const password = request.headers.get('X-Admin-Password');
+  return password === ADMIN_PASSWORD;
+}
+
 type AdminAction =
   | 'undoEdit'
   | 'undoAllEdits'
@@ -78,7 +87,12 @@ function buildQuestionPayload(
 }
 
 // GET /api/admin - Overview: list all edits and blacklists with IDs
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Check admin password
+  if (!checkAdminPassword(request)) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const [edits, blacklists] = await Promise.all([
       db.select().from(editsTable).orderBy(desc(editsTable.updatedAt)),
@@ -164,6 +178,11 @@ export async function GET() {
 
 // POST /api/admin - Perform actions (undo/edit/delete)
 export async function POST(request: NextRequest) {
+  // Check admin password
+  if (!checkAdminPassword(request)) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const action: AdminAction = body.action;

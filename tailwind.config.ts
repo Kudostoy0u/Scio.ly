@@ -15,9 +15,6 @@ export default {
         },
         regalred: {
           100: "#452942"
-        }, 
-        palenight: {
-          100: "#282C3E"
         }
       },
       fontFamily: {

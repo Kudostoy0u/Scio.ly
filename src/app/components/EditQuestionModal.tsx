@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import { Bot } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { geminiService, EditSuggestion, Question } from '@/app/utils/geminiService';
 // Removed in-modal success/failure icons for optimistic flow
 
@@ -25,6 +27,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
   question,
   canEditAnswers = true // Default to true for backward compatibility
 }) => {
+
   const [editedQuestion, setEditedQuestion] = useState('');
   const [editedOptions, setEditedOptions] = useState<string[]>([]);
   const [correctAnswers, setCorrectAnswers] = useState<number[]>([]); // zero-based indices for MCQ
@@ -154,7 +157,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
     }
 
     // Add AI reasoning to user's reason
-    const aiReason = `\n\nAI Suggestions Applied:\n${suggestions.reasoning || 'No reasoning provided'}`;
+    const aiReason = `${suggestions.reasoning || 'No reasoning provided'}`;
     setReason(prev => prev + aiReason);
     
     toast.success('AI suggestions applied! Please review and adjust as needed.');
@@ -182,7 +185,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
 
       toast.info('Judging edits');
       // Fire-and-forget submission; close modal immediately
-      const submitPromise = onSubmit(editedQuestionData, reason, question);
+      const submitPromise = onSubmit(editedQuestionData, reason.trim() || "User did not specify a reason", question);
       handleClose();
       submitPromise
         .then((result) => {
@@ -238,7 +241,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
       style={{ display: isOpen ? 'flex' : 'none' }}
       onClick={handleClose}
     >
@@ -262,67 +265,114 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
 
           <form onSubmit={handleSubmit}>
             {/* AI Suggestions Section */}
-            <div className={`mb-6 p-4 rounded-lg border ${
-              darkMode ? 'bg-gray-700 border-gray-600' : 'bg-blue-50 border-blue-200'
-            }`}>
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-medium text-blue-600 dark:text-blue-400">AI-Powered Suggestions</h4>
-                <button
-                  type="button"
-                  onClick={handleGetSuggestions}
-                  disabled={isLoadingSuggestions || !question}
-                  className={`px-3 py-1 rounded-md text-sm  ${
-                    isLoadingSuggestions
-                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                      : darkMode
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                        : 'bg-blue-500 hover:bg-blue-600 text-white'
-                  }`}
-                >
-                  {isLoadingSuggestions ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                      <span>Analyzing...</span>
+            {!showSuggestions ? (
+              <div className={`mb-6 p-4 rounded-xl border-2 shadow-sm ${
+                darkMode ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-600' : 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-lg ${
+                      darkMode ? 'bg-blue-600/20' : 'bg-blue-100'
+                    }`}>
+                      <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      </svg>
                     </div>
-                  ) : (
-                    'Get AI Suggestions'
-                  )}
-                </button>
+                    <div>
+                      <h4 className="font-semibold text-blue-600 dark:text-blue-400">AI-Powered Suggestions</h4>
+                      <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Get intelligent recommendations for improving this question</p>
+                    </div>
+                  </div>
+                  <motion.button
+                    type="button"
+                    onClick={handleGetSuggestions}
+                    disabled={isLoadingSuggestions || !question}
+                    className={`relative overflow-hidden rounded-lg border-2 ${
+                      darkMode
+                        ? 'bg-transparent text-blue-400 border-blue-400 hover:text-blue-300 hover:border-blue-300'
+                        : 'bg-transparent text-blue-600 border-blue-600 hover:text-blue-500 hover:border-blue-500'
+                    } ${isLoadingSuggestions ? 'cursor-not-allowed' : ''}`}
+                    animate={{
+                      width: isLoadingSuggestions ? 48 : "auto",
+                      minWidth: isLoadingSuggestions ? 48 : "auto"
+                    }}
+                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                  >
+                    <div className="flex items-center px-3 py-2">
+                      <motion.div
+                        animate={{
+                          x: isLoadingSuggestions ? 0 : 0,
+                          scale: 1
+                        }}
+                        transition={{ duration: 0.5, ease: "easeInOut" }}
+                      >
+                        <Bot className={`w-5 h-5 ${isLoadingSuggestions ? 'animate-spin' : ''} ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                      </motion.div>
+                      
+                      <AnimatePresence>
+                        {!isLoadingSuggestions && (
+                          <motion.span
+                            initial={{ opacity: 1, width: "auto" }}
+                            exit={{ opacity: 0, width: 0 }}
+                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                            className="text-sm font-medium ml-2 overflow-hidden whitespace-nowrap"
+                          >
+                            Get Suggestions
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </motion.button>
+                </div>
               </div>
-
-              {showSuggestions && suggestions && (
-                <div className="space-y-3">
-                  <div className={`p-3 rounded-md ${
-                    darkMode ? 'bg-gray-600' : 'bg-white'
-                  }`}>
-                    <p className="text-sm font-medium mb-2">Suggested Improvements:</p>
-                    <p className={`text-sm mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-700'}`}>
-                      {suggestions.reasoning || 'No reasoning provided'}
-                    </p>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className={`text-xs px-2 py-1 rounded-full ${
+            ) : (
+              suggestions && (
+                <div className={`mb-6 p-4 rounded-lg border ${
+                  darkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-white/80 border-blue-200'
+                }`}>
+                  <div className="flex items-start space-x-3 mb-3">
+                    <div className={`p-1.5 rounded-full ${
+                      darkMode ? 'bg-green-600/20' : 'bg-green-100'
+                    }`}>
+                      <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold mb-2 text-green-600 dark:text-green-400">Suggested Improvements:</p>
+                      <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                        {suggestions.reasoning || 'No reasoning provided'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-600">
+                    <div className="flex items-center space-x-2">
+                      <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${
                         (suggestions.confidence || 0) > 0.8
-                          ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-300'
                           : (suggestions.confidence || 0) > 0.6
-                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200'
-                            : 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200'
+                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-300'
+                            : 'bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-300'
                       }`}>
                         {Math.round((suggestions.confidence || 0) * 100)}% confidence
                       </span>
-                      
-                      <button
-                        type="button"
-                        onClick={applySuggestions}
-                        className="px-3 py-1 text-xs rounded-md bg-green-500 hover:bg-green-600 text-white "
-                      >
-                        Apply Suggestions
-                      </button>
                     </div>
+                    
+                    <button
+                      type="button"
+                      onClick={applySuggestions}
+                      className="px-4 py-2 text-sm rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition-colors duration-200 flex items-center space-x-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Apply Suggestions</span>
+                    </button>
                   </div>
                 </div>
-              )}
-            </div>
+              )
+            )}
 
             <div className="space-y-4">
               {/* Question Text */}
@@ -503,7 +553,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
 
               {/* Reason for Edit */}
               <div>
-                <label className="block mb-2 font-medium">Reason for Edit</label>
+                <label className="block mb-2 font-medium">Reason for Edit (optional)</label>
                 <textarea
                   className={`w-full p-3 border rounded-md  ${
                     darkMode 
@@ -511,10 +561,9 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
                       : 'bg-white text-gray-900 border-gray-300 focus:border-blue-400'
                   }`}
                   rows={3}
-                  placeholder="Please explain why you're making this edit..."
+                  placeholder="Please explain why you're making this edit... (optional)"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  required
                 />
               </div>
             </div>

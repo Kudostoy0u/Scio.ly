@@ -180,6 +180,7 @@ export default function Content() {
       const questionCount = Math.max(1, questions.length);
       const timeLimitMinutes = Math.max(5, questionCount * 5);
 
+      // Set data in both localStorage and cookie for compatibility
       localStorage.setItem('testQuestions', JSON.stringify(questions.map(q => q.question)));
       localStorage.setItem('testParams', JSON.stringify({
         eventName: eventName,
@@ -188,6 +189,16 @@ export default function Content() {
         types: 'multiple-choice'
       }));
       localStorage.setItem('testFromBookmarks', 'true');
+      
+      // Set cookie for server-side rendering
+      const testParams = {
+        eventName: eventName,
+        questionCount: questionCount.toString(),
+        timeLimit: String(timeLimitMinutes),
+        types: 'multiple-choice'
+      };
+      document.cookie = `scio_test_params=${encodeURIComponent(JSON.stringify(testParams))}; path=/; max-age=300`;
+      
       router.push('/test');
     } catch (err) {
       console.error('Error starting test from bookmarks:', err);

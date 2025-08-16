@@ -50,10 +50,7 @@ export default function MetricsCard({
     }
   };
 
-  const toSentenceCase = (input: string) => {
-    if (!input) return input;
-    return input.charAt(0) + input.slice(1).toLowerCase();
-  };
+
 
   const getDisplay = (currentView: 'daily' | 'weekly' | 'allTime') => {
     // Only show loading if we don't have any data yet
@@ -93,7 +90,7 @@ export default function MetricsCard({
       >
         {/* Daily View */}
         <div 
-          className="absolute w-full h-full flex flex-col px-6 pt-4"
+          className="absolute w-full h-full flex flex-col px-6 pt-4 md:pt-6"
           style={{ 
             backfaceVisibility: 'hidden',
             transform: 'rotateX(0deg)',
@@ -101,15 +98,15 @@ export default function MetricsCard({
             visibility: view === 'daily' ? 'visible' : 'hidden',
           }}
         >
-          <h3 className={`text-lg mb-4 font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-            {`Daily ${toSentenceCase(title)}`}
+          <h3 className={`text-lg md:text-xl mb-4 md:mb-2 font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+            {`Daily ${title}`}
           </h3>
           {getDisplay('daily')}
         </div>
         
         {/* Weekly View */}
         <div 
-          className="absolute w-full h-full flex flex-col px-6 pt-4"
+          className="absolute w-full h-full flex flex-col px-6 pt-4 md:pt-6"
           style={{ 
             backfaceVisibility: 'hidden',
             transform: 'rotateX(180deg)',
@@ -117,15 +114,15 @@ export default function MetricsCard({
             visibility: view === 'weekly' ? 'visible' : 'hidden',
           }}
         >
-          <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-            {`Weekly ${toSentenceCase(title)}`}
+          <h3 className={`text-lg md:text-xl font-semibold mb-4 md:mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+            {`Weekly ${title}`}
           </h3>
           {getDisplay('weekly')}
         </div>
 
         {/* All Time View */}
         <div 
-          className="absolute w-full h-full flex flex-col px-6 pt-4"
+          className="absolute w-full h-full flex flex-col px-6 pt-4 md:pt-6"
           style={{ 
             backfaceVisibility: 'hidden',
             transform: 'rotateX(360deg)',
@@ -133,8 +130,8 @@ export default function MetricsCard({
             visibility: view === 'allTime' ? 'visible' : 'hidden',
           }}
         >
-          <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-            {`All-time ${toSentenceCase(title)}`}
+          <h3 className={`text-lg md:text-xl font-semibold mb-4 md:mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+            {`All-time ${title}`}
           </h3>
           {getDisplay('allTime')}
         </div>

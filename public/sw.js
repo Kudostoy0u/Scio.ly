@@ -3,18 +3,22 @@ const SHELL_ASSETS = [
   '/',
   '/manifest.webmanifest',
   '/site-logo.png',
-  '/offline',
-  // Precache key app pages for offline shell routing
-  '/dashboard',
-  '/practice',
-  '/test',
-  '/unlimited',
-  '/codebusters'
+  '/offline/'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ASSETS))
+    caches.open(CACHE_NAME).then((cache) => {
+      // Cache essential assets with error handling
+      return Promise.allSettled(
+        SHELL_ASSETS.map(url => 
+          cache.add(url).catch(err => {
+            console.warn(`Failed to cache ${url}:`, err);
+            return null;
+          })
+        )
+      );
+    })
   );
   self.skipWaiting();
 });
