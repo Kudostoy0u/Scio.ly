@@ -28,14 +28,24 @@ export default function ThemeColorMeta() {
     const meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
     if (!meta) return;
     const isHome = pathname === '/';
+    const isPractice = pathname === '/practice';
+    const isTest = pathname?.startsWith('/test');
+    const isCodebusters = pathname === '/codebusters';
+    const isUnlimited = pathname === '/unlimited';
 
     // Helper: RGB -> hex string
     const toHex = (n: number) => n.toString(16).padStart(2, '0');
     const rgbToHex = (r: number, g: number, b: number) => `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 
-    // Default colors (non-home or light mode behavior)
+    if (isTest || isCodebusters || isUnlimited || isPractice) {
+      const color = darkMode ? '#111827' /* gray-900 */ : '#f9fafb' /* gray-50 */;
+      meta.setAttribute('content', color);
+      return;
+    }
+
+    // Default colors (other pages)
     if (!isHome) {
-      const color = darkMode ? '#111827' /* gray-900 */ : '#ffffff';
+      const color = darkMode ? '#111827' /* gray-900 */ : '#f9fafb';
       meta.setAttribute('content', color);
       return;
     }

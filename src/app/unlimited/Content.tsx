@@ -2,10 +2,12 @@
 
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState, useCallback } from 'react';
+import { RefreshCcw } from 'lucide-react';
 // ToastContainer is globally provided in Providers
 import { updateMetrics } from '@/app/utils/metrics';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/app/contexts/ThemeContext';
+import Header from '@/app/components/Header';
 import api from '../api';
 import { getEventOfflineQuestions } from '@/app/utils/storage';
 import MarkdownExplanation from '@/app/utils/MarkdownExplanation';
@@ -778,6 +780,91 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     );
   };
 
+  const reloadQuestions = async () => {
+    setIsLoading(true);
+    setFetchError(null);
+    setCurrentAnswer([]);
+    setCurrentQuestionIndex(0);
+    setGradingResults({});
+    setIsSubmitted(false);
+    setExplanations({});
+    
+    // Clear unlimited practice-related localStorage items
+    localStorage.removeItem('unlimitedQuestions');
+    localStorage.removeItem('contestedUnlimitedQuestions');
+    
+    try {
+      // Request a large number of base questions
+      const params = buildApiParams(routerData, 1000);
+      const apiUrl = `${api.questions}?${params}`;
+      
+      let apiResponse: any = null;
+      
+      // Check if we're offline first
+      const isOffline = !navigator.onLine;
+      if (isOffline) {
+        // Use offline data immediately when offline
+        const evt = routerData.eventName as string | undefined;
+        if (evt) {
+          const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          const cached = await getEventOfflineQuestions(slug);
+          if (Array.isArray(cached) && cached.length > 0) {
+            // Respect selected question types when offline
+            const typesSel = (routerData.types as string) || 'multiple-choice';
+            const filtered = typesSel === 'multiple-choice'
+              ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
+              : typesSel === 'free-response'
+                ? cached.filter((q: any) => !Array.isArray(q.options) || q.options.length === 0)
+                : cached;
+            apiResponse = { success: true, data: filtered };
+          }
+        }
+        if (!apiResponse) throw new Error('No offline data available for this event. Please download it first.');
+      } else {
+        // Online: try API first, fallback to offline
+        let response: Response | null = null;
+        try {
+          response = await fetch(apiUrl);
+        } catch {
+          response = null;
+        }
+        
+        if (response && response.ok) {
+          apiResponse = await response.json();
+        } else {
+          // Fallback to offline data
+          const evt = routerData.eventName as string | undefined;
+          if (evt) {
+            const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            const cached = await getEventOfflineQuestions(slug);
+            if (Array.isArray(cached) && cached.length > 0) {
+              // Respect selected question types when offline
+              const typesSel = (routerData.types as string) || 'multiple-choice';
+              const filtered = typesSel === 'multiple-choice'
+                ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
+                : typesSel === 'free-response'
+                  ? cached.filter((q: any) => !Array.isArray(q.options) || q.options.length === 0)
+                  : cached;
+              apiResponse = { success: true, data: filtered };
+            }
+          }
+          if (!apiResponse) throw new Error('Failed to load questions.');
+        }
+      }
+      
+      const allQuestions = apiResponse.data || [];
+      const questions = shuffleArray(allQuestions) as Question[];
+      setData(questions);
+      localStorage.setItem('unlimitedQuestions', JSON.stringify(questions));
+      
+    } catch (error) {
+      console.error('Error reloading questions:', error);
+      setFetchError('Failed to reload questions. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleResetTest = () => {
     setCurrentAnswer([]);
     setCurrentQuestionIndex(0);
@@ -796,6 +883,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
 
   return (
     <>
+      <Header />
       <div className="relative min-h-screen">
         {/* Background */}
         <div
@@ -804,11 +892,21 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           }`}
         ></div>
 
-        <div className="relative flex flex-col items-center p-6 ">
+        <div className="relative flex flex-col items-center p-6 pt-20">
           <header className="w-full max-w-3xl flex justify-between items-center py-4 ">
-            <h1 className={`text-2xl font-extrabold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-              Scio.ly: {routerData.eventName || 'Loading...'}
+            <h1 className={`text-3xl font-extrabold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+              {routerData.eventName || 'Loading...'}
             </h1>
+            <button
+              onClick={reloadQuestions}
+              title="Reset Questions"
+              className={`flex items-center transition-all duration-200 ${
+                darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <RefreshCcw className="w-4 h-4 mr-2" />
+              <span className="text-sm">Reset</span>
+            </button>
           </header>
 
           {/* Inline back link to Practice */}

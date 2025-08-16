@@ -19,8 +19,8 @@ export default function TestHeader({
     <>
       <header className="w-full max-w-3xl flex justify-between items-center pt-3">
         <div className="flex items-center">
-          <h1 className={`text-2xl font-extrabold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-            Scio.ly: {eventName || 'Loading...'}
+          <h1 className={`text-3xl font-extrabold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+            {eventName || 'Loading...'}
             {isFromBookmarks && (
               <span className={`ml-2 text-sm font-normal ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
                 (Bookmarked)

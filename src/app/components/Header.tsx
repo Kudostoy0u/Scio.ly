@@ -29,14 +29,23 @@ export default function Header() {
   // Determine if we're on the homepage
   const isHomePage = pathname === '/';
   const isDashboard = pathname?.startsWith('/dashboard');
+  const isTestPage = pathname?.startsWith('/test') || pathname?.startsWith('/codebusters') || pathname?.startsWith('/unlimited');
   
   // Handle scroll events to change header appearance
   const handleScroll = () => {
-    const threshold = 300; // px until fully opaque
     const currentY = window.scrollY || 0;
-    const progress = Math.min(currentY / threshold, 1);
-    setScrollOpacity(progress);
-    setScrolled(currentY > threshold);
+    
+    if (isTestPage) {
+      // For test pages, we don't need to track scroll opacity separately
+      // as it's handled directly in the computedOpacity calculation
+      setScrolled(currentY > 100);
+    } else {
+      // For other pages, use the original logic
+      const threshold = 300; // px until fully opaque
+      const progress = Math.min(currentY / threshold, 1);
+      setScrollOpacity(progress);
+      setScrolled(currentY > threshold);
+    }
   };
   
   useEffect(() => {
@@ -50,7 +59,7 @@ export default function Header() {
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [isFirefox]);
+  }, [isFirefox, isTestPage]);
 
   // Detect environment for PWA instructions
   useEffect(() => {
@@ -173,7 +182,18 @@ export default function Header() {
   const shouldBeTransparent = isHomePage && !scrolled;
   // Compute dynamic background/border opacity for smooth fade on homepage
   const targetOpacity = 0.95;
-  const computedOpacity = isHomePage ? Math.min(scrollOpacity * targetOpacity, targetOpacity) : targetOpacity;
+  let computedOpacity;
+  
+  if (isTestPage) {
+    // For test pages, fade out the header as user scrolls down
+    const fadeThreshold = 100; // px until header starts fading
+    const fadeProgress = Math.max(0, Math.min(1, (window.scrollY - fadeThreshold) / 100));
+    computedOpacity = Math.max(0, 1 - fadeProgress); // Allow complete transparency
+  } else if (isHomePage) {
+    computedOpacity = Math.min(scrollOpacity * targetOpacity, targetOpacity);
+  } else {
+    computedOpacity = targetOpacity;
+  }
   const backgroundColor = darkMode
     ? `rgba(17, 24, 39, ${computedOpacity})` // gray-900
     : `rgba(255, 255, 255, ${computedOpacity})`;
@@ -182,7 +202,7 @@ export default function Header() {
     : darkMode
       ? `rgba(31, 41, 55, ${computedOpacity})` // gray-800
       : `rgba(229, 231, 235, ${computedOpacity})`; // gray-200
-  const showBlur = !isHomePage || computedOpacity > 0.02;
+  const showBlur = (!isHomePage && !isTestPage) || (computedOpacity > 0.02 && !isTestPage);
 
   // Set a static scrollbar context for CSS to style the track consistently
   useEffect(() => {
@@ -201,8 +221,12 @@ export default function Header() {
       {/* Global ToastContainer handles notifications */}
 
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 ${showBlur ? 'backdrop-blur-sm' : ''} border-b`}
-        style={{ backgroundColor, borderBottomColor: borderColor }}
+        className={`fixed top-0 left-0 right-0 z-50 ${showBlur ? 'backdrop-blur-sm' : ''} border-b transition-opacity duration-300`}
+        style={{ 
+          backgroundColor, 
+          borderBottomColor: borderColor,
+          opacity: isTestPage ? computedOpacity : 1
+        }}
       >
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center h-16 px-4 sm:px-6">

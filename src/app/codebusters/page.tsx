@@ -3,6 +3,8 @@ import React, { useEffect, useCallback, useState } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
+import { RefreshCcw } from 'lucide-react';
+import MainHeader from '@/app/components/Header';
 
 import ShareModal from '@/app/components/ShareModal';
 import {
@@ -19,6 +21,7 @@ import CipherInfoModal from './CipherInfoModal';
 import { loadQuestionsFromDatabase } from './services/questionLoader';
 import { supabase } from '@/lib/supabase';
 import { updateMetrics } from '@/app/utils/metrics';
+import { QuoteData } from './types';
 
 // Import hooks
 import { 
@@ -45,6 +48,7 @@ export default function CodeBusters() {
     const { darkMode } = useTheme();
     const router = useRouter();
     const [isOffline, setIsOffline] = useState(false);
+    const [isResetting, setIsResetting] = useState(false);
     
     // Detect offline status
     useEffect(() => {
@@ -267,9 +271,35 @@ export default function CodeBusters() {
         // Initialize a fresh session with the correct time limit
         initializeTestSession(eventName, timeLimit, false);
         
-        // Reload the page to start fresh
-        window.location.reload();
-    }, [loadPreferences]);
+        // Set resetting state and update other state
+        setIsResetting(true);
+        setIsTestSubmitted(false);
+        setTestScore(0);
+        setTimeLeft(timeLimit * 60);
+        
+        // Use the original loader but with a custom callback to avoid clearing quotes immediately
+        const customSetLoading = (loading: boolean) => {
+            // Don't set loading to true during reset to keep old quotes visible
+            if (!loading) {
+                setIsLoading(false);
+            }
+        };
+        
+        const customSetQuotes = (newQuotes: QuoteData[]) => {
+            setQuotes(newQuotes);
+            setIsResetting(false);
+        };
+        
+        loadQuestionsFromDatabase(
+            customSetLoading,
+            setError,
+            customSetQuotes,
+            setTimeLeft,
+            setIsTestSubmitted,
+            setTestScore,
+            loadPreferences
+        );
+    }, [loadPreferences, setQuotes, setIsTestSubmitted, setTestScore, setTimeLeft, setError, setIsLoading]);
 
     // Handle back navigation: preserve Codebusters progress for resume banner on Practice
     const handleBack = useCallback(() => {
@@ -321,9 +351,35 @@ export default function CodeBusters() {
         // Initialize a fresh session with the correct time limit
         initializeTestSession(eventName, timeLimit, false);
         
-        // Reload the page to start fresh
-        window.location.reload();
-    }, [loadPreferences]);
+        // Set resetting state and update other state
+        setIsResetting(true);
+        setIsTestSubmitted(false);
+        setTestScore(0);
+        setTimeLeft(timeLimit * 60);
+        
+        // Use the original loader but with a custom callback to avoid clearing quotes immediately
+        const customSetLoading = (loading: boolean) => {
+            // Don't set loading to true during reset to keep old quotes visible
+            if (!loading) {
+                setIsLoading(false);
+            }
+        };
+        
+        const customSetQuotes = (newQuotes: QuoteData[]) => {
+            setQuotes(newQuotes);
+            setIsResetting(false);
+        };
+        
+        loadQuestionsFromDatabase(
+            customSetLoading,
+            setError,
+            customSetQuotes,
+            setTimeLeft,
+            setIsTestSubmitted,
+            setTestScore,
+            loadPreferences
+        );
+    }, [loadPreferences, setQuotes, setIsTestSubmitted, setTestScore, setTimeLeft, setError, setIsLoading]);
 
     // Load questions if needed
     useEffect(() => {
@@ -335,6 +391,7 @@ export default function CodeBusters() {
 
     return (
         <>
+            <MainHeader />
             <div className="relative min-h-screen">
                 {/* Background */}
                 <div
@@ -346,7 +403,7 @@ export default function CodeBusters() {
                 {/* Global scrollbar theme is centralized in globals.css */}
 
                 {/* Page Content */}
-                <div className="relative flex flex-col items-center p-6">
+                <div className="relative flex flex-col items-center p-6 pt-20">
                     <Header 
                         darkMode={darkMode}
                         timeLeft={timeLeft}
@@ -365,7 +422,7 @@ export default function CodeBusters() {
 
                     {/* Smooth Progress Bar */}
                     <div
-                        className={`${isTestSubmitted ? '' : 'sticky top-6'
+                        className={`${isTestSubmitted ? '' : 'sticky top-4'
                         } z-10 w-full max-w-3xl bg-white border-2 border-gray-300 rounded-full h-5 mb-6 shadow-lg`}
                     >
                         <div
@@ -380,7 +437,7 @@ export default function CodeBusters() {
                         }`}
                     >
                         <LoadingState 
-                            isLoading={isLoading}
+                            isLoading={isLoading && !isResetting}
                             error={error}
                             darkMode={darkMode}
                             onRetry={handleRetry}
@@ -390,17 +447,22 @@ export default function CodeBusters() {
                         <EmptyState 
                             darkMode={darkMode}
                             hasAttemptedLoad={hasAttemptedLoad}
-                            isLoading={isLoading}
+                            isLoading={isLoading && !isResetting}
                             error={error}
                             quotes={quotes}
                         />
                         
                         {/* Take together button - positioned right above questions */}
                         {!isLoading && !error && quotes.length > 0 && hasAttemptedLoad && (
-                            <ShareButton onShare={() => setShareModalOpen(true)} isOffline={isOffline} />
+                            <ShareButton 
+                                onShare={() => setShareModalOpen(true)} 
+                                onReset={handleReset}
+                                isOffline={isOffline} 
+                                darkMode={darkMode}
+                            />
                         )}
                         
-                        {!isLoading && !error && hasAttemptedLoad && quotes.map((item, index) => (
+                        {!isLoading && !error && hasAttemptedLoad && quotes.length > 0 && quotes.map((item, index) => (
                             <QuestionCard
                                 key={index}
                                 item={item}
@@ -423,7 +485,7 @@ export default function CodeBusters() {
                         ))}
                         
                         {/* Submit Button */}
-                        {!isLoading && !error && quotes.length > 0 && hasAttemptedLoad && (
+                        {!isLoading && !error && quotes.length > 0 && hasAttemptedLoad && !isResetting && (
                             <SubmitButton 
                                 isTestSubmitted={isTestSubmitted}
                                 darkMode={darkMode}
@@ -437,7 +499,6 @@ export default function CodeBusters() {
                     {/* Floating Action Buttons */}
                     <FloatingActionButtons
                         darkMode={darkMode}
-                        onReset={handleReset}
                         showReferenceButton={true}
                         onShowReference={() => setShowPDFViewer(true)}
                         eventName="Codebusters"

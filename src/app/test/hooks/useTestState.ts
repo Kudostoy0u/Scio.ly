@@ -56,6 +56,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [gradingFRQs, setGradingFRQs] = useState<Record<number, boolean>>({});
+  const [isResetting, setIsResetting] = useState(false);
 
   // Initialize component
   useEffect(() => {
@@ -653,6 +654,130 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     }
   }, [data, userAnswers, gradingResults, routerData]);
 
+  const reloadQuestions = async () => {
+    setIsResetting(true);
+    setFetchError(null);
+    
+    try {
+      const total = parseInt(routerData.questionCount || '10');
+      const idPctRaw = (routerData as any).idPercentage;
+      const idPct = typeof idPctRaw !== 'undefined' ? Math.max(0, Math.min(100, parseInt(idPctRaw))) : 0;
+      const supportsId = routerData.eventName === 'Rocks and Minerals' || routerData.eventName === 'Entomology';
+      const requestedIdCount = Math.round((idPct / 100) * total);
+      const idCount = supportsId ? requestedIdCount : 0;
+      const baseCount = Math.max(0, total - idCount);
+
+      let selectedQuestions: Question[] = [];
+
+      // 1) Base (non-ID) questions from regular endpoint
+      if (baseCount > 0) {
+        const requestCount = Math.max(baseCount, 50);
+        const params = buildApiParams({ ...routerData }, requestCount);
+        const apiUrl = `${api.questions}?${params}`;
+        
+        let apiResponse: any = null;
+        
+        // Check if we're offline first
+        const isOffline = !navigator.onLine;
+        if (isOffline) {
+          // Use offline data immediately when offline
+          const evt = routerData.eventName as string | undefined;
+          if (evt) {
+            const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            const cached = await getEventOfflineQuestions(slug);
+            if (Array.isArray(cached) && cached.length > 0) {
+              // Respect question type selection when offline
+              const typesSel = (routerData.types as string) || 'multiple-choice';
+              const filtered = typesSel === 'multiple-choice'
+                ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
+                : typesSel === 'free-response'
+                  ? cached.filter((q: any) => !Array.isArray(q.options) || q.options.length === 0)
+                  : cached;
+              apiResponse = { success: true, data: filtered };
+            }
+          }
+          if (!apiResponse) throw new Error('No offline data available for this event. Please download it first.');
+        } else {
+          // Online: try API first, fallback to offline
+          let response: Response | null = null;
+          try { response = await fetch(apiUrl); } catch { response = null; }
+          
+          if (response && response.ok) {
+            apiResponse = await response.json();
+          } else {
+            // Fallback to offline data
+            const evt = routerData.eventName as string | undefined;
+            if (evt) {
+              const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+              const cached = await getEventOfflineQuestions(slug);
+              if (Array.isArray(cached) && cached.length > 0) {
+                // Respect question type selection when offline
+                const typesSel = (routerData.types as string) || 'multiple-choice';
+                const filtered = typesSel === 'multiple-choice'
+                  ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
+                  : typesSel === 'free-response'
+                    ? cached.filter((q: any) => !Array.isArray(q.options) || q.options.length === 0)
+                    : cached;
+                apiResponse = { success: true, data: filtered };
+              }
+            }
+            if (!apiResponse) throw new Error('Failed to load questions.');
+          }
+        }
+        
+        const allQuestions = apiResponse.data || [];
+        const questions: Question[] = allQuestions;
+        selectedQuestions = shuffleArray(questions).slice(0, baseCount);
+      }
+
+      // 2) ID questions from new endpoint for supported events
+      if (idCount > 0) {
+        const isOffline = !navigator.onLine;
+        let source: any[] = [];
+        
+        if (isOffline) {
+          // When offline, ID questions are not available - we'll fill with base questions later
+          console.log('ID questions not available in offline mode');
+        } else {
+          try {
+            const idParams = buildApiParams({ ...routerData, idQuestions: true } as any, Math.max(idCount, 20));
+            const idApiUrl = `${api.questions}?${idParams}`;
+            const response = await fetch(idApiUrl);
+            
+            if (response.ok) {
+              const idResponse = await response.json();
+              source = idResponse.data || [];
+            }
+          } catch (error) {
+            console.error('Failed to fetch ID questions:', error);
+          }
+        }
+        
+        if (source.length > 0) {
+          const idQuestions = shuffleArray(source).slice(0, idCount);
+          selectedQuestions = [...selectedQuestions, ...idQuestions];
+        } else if (idCount > 0) {
+          // If we couldn't get ID questions, fill with more base questions
+          console.log(`Filling ${idCount} ID slots with base questions`);
+          const additionalBaseCount = Math.min(idCount, selectedQuestions.length);
+          const additionalQuestions = shuffleArray(selectedQuestions).slice(0, additionalBaseCount);
+          selectedQuestions = [...selectedQuestions, ...additionalQuestions];
+        }
+      }
+
+      // Final shuffle and set data
+      const finalQuestions = shuffleArray(selectedQuestions);
+      setData(finalQuestions);
+      localStorage.setItem('testQuestions', JSON.stringify(finalQuestions));
+      
+    } catch (error) {
+      console.error('Error reloading questions:', error);
+      setFetchError('Failed to reload questions. Please try again.');
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   const handleResetTest = () => {
     setIsSubmitted(false);
     setUserAnswers({});
@@ -670,7 +795,8 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     
     setTimeLeft(newSession.timeState.timeLeft);
     
-    window.location.reload();
+    // Reload questions instead of reloading the page
+    reloadQuestions();
   };
 
   const handleGetExplanation = (index: number, question: Question, userAnswer: (string | null)[]) => {
@@ -889,6 +1015,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     submittedEdits,
     isEditModalOpen,
     editingQuestion,
+    isResetting,
     
     // Handlers
     handleAnswerChange,

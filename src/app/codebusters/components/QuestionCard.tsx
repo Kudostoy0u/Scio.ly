@@ -50,7 +50,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 }) => {
   return (
     <div 
-      className={`relative border p-4 rounded-lg shadow-sm transition-all duration-500 ease-in-out mb-6 ${
+      className={`relative border p-4 rounded-lg transition-all duration-500 ease-in-out mb-6 ${
         darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-black'
       }`}
     >
