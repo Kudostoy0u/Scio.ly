@@ -31,8 +31,6 @@ const api = {
     geminiGradeFreeResponses: `${API_BASE_URL}/gemini/grade-free-responses`,
     geminiExtractQuestions: `${API_BASE_URL}/gemini/extract-questions`,
     processPdf: `${API_BASE_URL}/process-pdf`,
-    rocksRandom: `${API_BASE_URL}/rocks/random`,
-  entomologyRandom: `${API_BASE_URL}/entomology/random`,
     
     arr: JSON.parse(process.env.NEXT_PUBLIC_API_KEYS || "[]"),
     // Legacy support - keep for backward compatibility
