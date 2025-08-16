@@ -178,7 +178,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
 
         // 1) Base (non-ID) questions from regular endpoint
         if (baseCount > 0) {
-          const requestCount = Math.max(baseCount * 3, 50);
+          const requestCount = Math.max(baseCount, 50);
           const params = buildApiParams({ ...routerParams }, requestCount);
           const apiUrl = `${api.questions}?${params}`;
           
@@ -232,7 +232,9 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
             }
           }
           
-          const questions: Question[] = (apiResponse.data || []).filter((q: any) => q.answers && Array.isArray(q.answers) && q.answers.length > 0);
+          const allQuestions = apiResponse.data || [];
+          const questions: Question[] = allQuestions; // Removed quality filtering - assume all questions are high quality
+          console.log(`Question filtering: ${allQuestions.length} total questions, ${questions.length} questions after filtering (quality filtering removed)`);
           selectedQuestions = shuffleArray(questions).slice(0, baseCount);
         }
 
@@ -249,7 +251,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
             try {
               const params = new URLSearchParams();
               params.set('event', routerParams.eventName);
-              params.set('limit', String(Math.max(idCount * 3, 50)));
+              params.set('limit', String(Math.max(idCount, 50)));
               const resp = await fetch(`${api.idQuestions}?${params.toString()}`);
               const json = await resp.json();
               source = Array.isArray(json?.data) ? json.data : [];
@@ -291,12 +293,12 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           } else {
             // Online: try to fetch more questions
             try {
-              const requestCount = Math.max(need * 3, 50);
+              const requestCount = Math.max(need, 50);
               const params2 = buildApiParams({ ...routerParams }, requestCount);
               const apiUrl2 = `${api.questions}?${params2}`;
               const r2 = await fetch(apiUrl2).catch(() => null);
               const j2 = r2 && r2.ok ? await r2.json() : null;
-              const extras: Question[] = (j2?.data || []).filter((q: any) => q.answers && Array.isArray(q.answers) && q.answers.length > 0);
+              const extras: Question[] = (j2?.data || []); // Removed quality filtering - assume all questions are high quality
               selectedQuestions = selectedQuestions.concat(shuffleArray(extras).slice(0, need));
             } catch {
               console.log('Failed to fetch additional questions for top-up');
@@ -304,14 +306,45 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           }
         }
 
-        // De-duplicate and shuffle
-        const seen = new Set<string>();
-        const keyOf = (q: Question) => (q as any).imageData ? `id:${(q as any).imageData}` : q.question;
-        const dedup = selectedQuestions.filter(q => {
-          const k = keyOf(q); if (seen.has(k)) return false; seen.add(k); return true;
-        });
-        const shuffledFinal = shuffleArray(dedup).slice(0, total);
+        // No deduplication needed - all questions are unique
+        const shuffledFinal = shuffleArray(selectedQuestions).slice(0, total);
+        console.log(`Final questions after slicing to ${total}: ${shuffledFinal.length} questions`);
         const questionsWithIndex = shuffledFinal.map((q, idx) => ({ ...q, originalIndex: idx }));
+        
+        // ========================================
+        // TEMPORARY FIX: Replace delta symbols with en dashes
+        // WARNING: This is a temporary workaround for delta symbol display issues
+        // TODO: Remove this script once proper delta symbol handling is implemented
+        // ========================================
+        questionsWithIndex.forEach(question => {
+          // Replace delta symbols (Δ or ∆) between numbers with en dashes (–)
+          const deltaToEnDash = (text: string) => {
+            return text.replace(/(\d+)\s*[Δ∆]\s*(\d+)/g, '$1–$2');
+          };
+          
+          // Apply to question text
+          if (question.question) {
+            question.question = deltaToEnDash(question.question);
+          }
+          
+          // Apply to options
+          if (Array.isArray(question.options)) {
+            question.options = question.options.map(option => 
+              typeof option === 'string' ? deltaToEnDash(option) : option
+            );
+          }
+          
+          // Apply to answers
+          if (Array.isArray(question.answers)) {
+            question.answers = question.answers.map(answer => 
+              typeof answer === 'string' ? deltaToEnDash(answer) : answer
+            );
+          }
+        });
+        // ========================================
+        // END TEMPORARY FIX
+        // ========================================
+        
         // Store questions with imageData intact (CDN URLs are small)
         localStorage.setItem('testQuestions', JSON.stringify(questionsWithIndex));
         setData(questionsWithIndex);

@@ -17,6 +17,7 @@ export default function FavoriteConfigsCard() {
   const [favorites, setFavorites] = useState<FavoriteConfig[]>([]);
   const [isOffline, setIsOffline] = useState<boolean>(false);
   const [downloadedSet, setDownloadedSet] = useState<Set<string>>(new Set());
+  const [selectedMobileCard, setSelectedMobileCard] = useState<number | null>(null);
 
   useEffect(() => {
     try {
@@ -46,6 +47,23 @@ export default function FavoriteConfigsCard() {
       window.removeEventListener('offline', updateOnline);
     };
   }, []);
+
+  // Global click handler to close selected card when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (selectedMobileCard !== null) {
+        setSelectedMobileCard(null);
+      }
+    };
+
+    if (selectedMobileCard !== null) {
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [selectedMobileCard]);
 
   const cardStyle = darkMode
     ? 'bg-gray-800 border border-gray-700'
@@ -145,14 +163,14 @@ export default function FavoriteConfigsCard() {
              {/* Mobile Layout - Vertical with centered title and four configs */}
        <div className="flex md:hidden flex-col w-full h-full pb-2">
          {/* Title centered at top */}
-         <div className="flex justify-center pt-4 pb-2 px-4">
+         <div className="flex justify-center pt-4 pb-1 px-4">
            <h3 className={`${darkMode ? 'text-white' : 'text-gray-800'} text-lg font-semibold text-center`}>
              Favorited Configs
            </h3>
          </div>
 
          {/* Two configs in single row */}
-         <div className="flex-1 px-3 pb-1">
+         <div className="flex-1 px-1" onClick={() => setSelectedMobileCard(null)}>
            <div className="grid grid-cols-2 gap-3 h-full text-xs">
             {Array.from({ length: 2 }).map((_, idx) => {
               const fav = favorites[idx];
@@ -169,8 +187,8 @@ export default function FavoriteConfigsCard() {
                  role="button"
                  tabIndex={0}
                  className={`relative group rounded-md overflow-hidden h-full ${darkMode ? 'bg-gray-900' : 'bg-gray-50'} border ${darkMode ? 'border-gray-700' : 'border-gray-200'} cursor-pointer`}
-                onClick={() => startFromConfig(fav)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startFromConfig(fav); } }}
+                onClick={(e) => { e.stopPropagation(); setSelectedMobileCard(selectedMobileCard === idx ? null : idx); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedMobileCard(selectedMobileCard === idx ? null : idx); } }}
               >
                 <div className="absolute inset-0 p-1.5 flex flex-col items-start justify-between text-left">
                   <div className={`text-[11px] font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} break-words leading-tight`}>{fav.eventName}</div>
@@ -178,8 +196,8 @@ export default function FavoriteConfigsCard() {
                     <ConfigSummaryGrid settings={fav.settings} darkMode={darkMode} isMobile={true} />
                   </div>
                 </div>
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors" />
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                <div className={`absolute inset-0 transition-colors ${selectedMobileCard === idx ? 'bg-black/50' : 'bg-black/0'}`} />
+                <div className={`absolute inset-0 transition-opacity flex items-center justify-center gap-1 ${selectedMobileCard === idx ? 'opacity-100' : 'opacity-0'} ${selectedMobileCard === idx ? 'pointer-events-auto' : 'pointer-events-none'}`}>
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); startFromConfig(fav); }}
