@@ -575,9 +575,9 @@ export default function PracticeDashboard() {
 
         // Define event-specific subtopics based on the provided mapping
         const eventSubtopics: Record<string, string[]> = {
-          "Anatomy - Nervous": ["Brain", "Spinal Cord", "Nerves", "Reflexes", "Neurotransmitters"],
-          "Anatomy - Endocrine": ["Hormones", "Glands", "Regulation", "Feedback", "Development"],
-          "Anatomy - Sense Organs": ["Eyes", "Ears", "Nose", "Tongue", "Skin"],
+          "Anatomy - Nervous": ["Brain Anatomy", "Spinal Cord", "Cranial Nerves", "Peripheral Nervous System", "Autonomic Nervous System", "Neurons", "Synapses", "Neurotransmitters", "Reflexes", "Sensory Pathways", "Motor Pathways", "Brain Functions"],
+          "Anatomy - Endocrine": ["Pituitary Gland", "Thyroid Gland", "Adrenal Glands", "Pancreas", "Gonads", "Hormones", "Hormone Regulation", "Endocrine Disorders", "Metabolism", "Growth and Development", "Stress Response", "Reproductive Endocrinology"],
+          "Anatomy - Sense Organs": ["Eye Anatomy", "Eye Physiology", "Ear Anatomy", "Ear Physiology", "Olfactory System", "Integumentary System", "Visual Pathway", "Hearing Physiology", "Balance (Equilibrium)", "Sensory Receptors", "Nervous System Anatomy", "Nervous System Physiology"],
           "Astronomy": ["Solar System", "Stars", "Galaxies", "Cosmology", "Instruments"],
           "Chemistry Lab": ["Stoichiometry", "Equilibrium", "Periodicity", "Redox Reactions", "Aqueous Solutions", "Acids and Bases", "Physical Properties", "Thermodynamics", "Gas Laws", "Kinetics", "Electrochemistry"],
           "Circuit Lab": ["Circuits", "Sensors", "Calibration", "Design", "Troubleshooting"],
@@ -585,7 +585,7 @@ export default function PracticeDashboard() {
           "Crime Busters": ["Evidence Analysis", "Fingerprints", "DNA", "Toxicology", "Crime Scene"],
           "Designer Genes": ["Genetics", "DNA", "Proteins", "Evolution", "Population Genetics"],
           "Disease Detectives": ["Epidemiology", "Pathogens", "Prevention", "Outbreak Investigation", "Statistics"],
-          "Dynamic Planet - Oceanography": ["Ocean Circulation", "Marine Life", "Chemistry", "Geology", "Climate"],
+          "Dynamic Planet - Oceanography": ["Plate Tectonics", "Earthquakes", "Volcanoes", "Mountain Building", "Ocean Basins", "Continental Drift", "Seafloor Spreading", "Subduction", "Faulting", "Folding", "Geologic Time", "Rock Deformation"],
           "Entomology": ["Insect Anatomy", "Life Cycles", "Behavior", "Classification", "Ecology"],
           "Forensics": ["Evidence Analysis", "Fingerprints", "DNA", "Toxicology", "Crime Scene"],
           "Heredity": ["Genetics", "DNA", "Proteins", "Evolution", "Population Genetics"],

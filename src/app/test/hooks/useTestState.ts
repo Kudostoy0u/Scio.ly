@@ -168,7 +168,12 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         const total = parseInt(routerParams.questionCount || '10');
         const idPctRaw = (routerParams as any).idPercentage;
         const idPct = typeof idPctRaw !== 'undefined' ? Math.max(0, Math.min(100, parseInt(idPctRaw))) : 0;
-        const supportsId = routerParams.eventName === 'Rocks and Minerals' || routerParams.eventName === 'Entomology';
+        const supportsId = routerParams.eventName === 'Rocks and Minerals' || 
+                          routerParams.eventName === 'Entomology' ||
+                          routerParams.eventName === 'Anatomy - Nervous' ||
+                          routerParams.eventName === 'Anatomy - Endocrine' ||
+                          routerParams.eventName === 'Anatomy - Sense Organs' ||
+                          routerParams.eventName === 'Dynamic Planet - Oceanography';
         const requestedIdCount = Math.round((idPct / 100) * total);
         const idCount = supportsId ? requestedIdCount : 0;
         const baseCount = Math.max(0, total - idCount);
@@ -250,6 +255,12 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
               const params = new URLSearchParams();
               params.set('event', routerParams.eventName);
               params.set('limit', String(Math.max(idCount * 3, 50)));
+              
+              // Add subtopic filter if specified
+              if (routerParams.subtopics && routerParams.subtopics.length > 0) {
+                params.set('subtopics', routerParams.subtopics.join(','));
+              }
+              
               const resp = await fetch(`${api.idQuestions}?${params.toString()}`);
               const json = await resp.json();
               source = Array.isArray(json?.data) ? json.data : [];

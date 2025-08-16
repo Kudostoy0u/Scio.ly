@@ -172,10 +172,15 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
         }
         const baseQuestions: Question[] = apiResponse.data || [];
 
-        // For ID-enabled events (Rocks & Minerals, Entomology), create placeholders for ID questions
+        // For ID-enabled events, create placeholders for ID questions
         let finalQuestions: Question[] = baseQuestions;
         const idPct = (routerParams as any).idPercentage;
-        const supportsId = routerParams.eventName === 'Rocks and Minerals' || routerParams.eventName === 'Entomology';
+        const supportsId = routerParams.eventName === 'Rocks and Minerals' || 
+                          routerParams.eventName === 'Entomology' ||
+                          routerParams.eventName === 'Anatomy - Nervous' ||
+                          routerParams.eventName === 'Anatomy - Endocrine' ||
+                          routerParams.eventName === 'Anatomy - Sense Organs' ||
+                          routerParams.eventName === 'Dynamic Planet - Oceanography';
         if (supportsId && typeof idPct !== 'undefined' && parseInt(idPct) > 0) {
           const pct = Math.max(0, Math.min(100, parseInt(idPct)));
           const totalQuestionsCount = pct === 100 ? 1000 : baseQuestions.length;
@@ -217,6 +222,12 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           const idParams = new URLSearchParams();
           idParams.set('event', routerParams.eventName);
           idParams.set('limit', String(Math.max(idCount * 3, 50)));
+          
+          // Add subtopic filter if specified
+          if (routerParams.subtopics && routerParams.subtopics.length > 0) {
+            idParams.set('subtopics', routerParams.subtopics.join(','));
+          }
+          
           fetch(`${api.idQuestions}?${idParams.toString()}`)
             .then(r => r.json())
             .then(j => {
@@ -313,48 +324,68 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     setIsLoadingIdQuestion(true);
     try {
       console.log('[IDGEN][unlimited] loading ID question for index', index);
-      const endpoint = routerData.eventName === 'Rocks and Minerals'
-        ? api.rocksRandom
-        : routerData.eventName === 'Entomology'
-          ? api.entomologyRandom
-          : api.rocksRandom;
-      const resp = await fetch(`${endpoint}?count=1`);
+      
+      // Use the centralized id-questions endpoint for all ID events
+      const params = new URLSearchParams();
+      params.set('event', routerData.eventName);
+      params.set('limit', '1');
+      
+      // Add subtopic filter if specified
+      if (routerData.subtopics && routerData.subtopics.length > 0) {
+        params.set('subtopics', routerData.subtopics.join(','));
+      }
+      
+      const resp = await fetch(`${api.idQuestions}?${params.toString()}`);
       const { success, data } = await resp.json();
       
-      if (success && data.length > 0) {
-        const item = data[0];
-        const imgs: string[] = Array.isArray(item.images) ? item.images : [];
-        const chosenImg = imgs.length ? imgs[Math.floor(Math.random() * imgs.length)] : undefined;
-        
-        // Determine if this should be MCQ or FRQ
-        const types = routerData.types || 'multiple-choice';
-        let question: Question;
-        
-        const isEnt = routerData.eventName === 'Entomology';
-        const frqPrompt = isEnt ? 'Identify the scientific name shown in the image.' : 'Identify the mineral shown in the image.';
-        const mcqPrompt = frqPrompt;
-        if (types === 'free-response' || (types === 'both' && Math.random() < 0.5)) {
-          question = {
-            question: frqPrompt,
-            answers: item.names,
-            difficulty: 0.5,
-            event: routerData.eventName || 'Rocks and Minerals',
-            imageData: chosenImg,
-          };
-        } else {
-          const correct = item.names[0];
-          const distractors = shuffleArray(namePool.filter(n => !item.names.includes(n))).slice(0, 3);
-          const options = shuffleArray([correct, ...distractors]);
-          const correctIndex = options.indexOf(correct);
-          question = {
-            question: mcqPrompt,
-            options,
-            answers: [correctIndex],
-            difficulty: 0.5,
-            event: routerData.eventName || 'Rocks and Minerals',
-            imageData: chosenImg,
-          };
-        }
+              if (success && data.length > 0) {
+          const item = data[0];
+          const imgs: string[] = Array.isArray(item.images) ? item.images : [];
+          const chosenImg = imgs.length ? imgs[Math.floor(Math.random() * imgs.length)] : undefined;
+          
+          // Determine if this should be MCQ or FRQ
+          const types = routerData.types || 'multiple-choice';
+          let question: Question;
+          
+          // Handle different event types
+          const isEnt = routerData.eventName === 'Entomology';
+          const isRocks = routerData.eventName === 'Rocks and Minerals';
+          const isAnatomy = routerData.eventName?.startsWith('Anatomy');
+          const isDyplan = routerData.eventName?.startsWith('Dynamic Planet');
+          
+          let frqPrompt = 'Identify the specimen shown in the image.';
+          if (isEnt) {
+            frqPrompt = 'Identify the scientific name shown in the image.';
+          } else if (isRocks) {
+            frqPrompt = 'Identify the mineral shown in the image.';
+          } else if (isAnatomy) {
+            frqPrompt = 'Identify the anatomical structure shown in the image.';
+          } else if (isDyplan) {
+            frqPrompt = 'Identify the geological feature shown in the image.';
+          }
+          
+          if (types === 'free-response' || (types === 'both' && Math.random() < 0.5)) {
+            question = {
+              question: frqPrompt,
+              answers: item.answers || item.names || [],
+              difficulty: item.difficulty ?? 0.5,
+              event: routerData.eventName || 'Unknown Event',
+              imageData: chosenImg,
+            };
+          } else {
+            const correct = (item.answers && item.answers.length > 0) ? item.answers[0] : (item.names && item.names.length > 0) ? item.names[0] : '';
+            const distractors = shuffleArray(namePool.filter(n => !item.answers?.includes(n) && !item.names?.includes(n))).slice(0, 3);
+            const options = shuffleArray([correct, ...distractors]);
+            const correctIndex = options.indexOf(correct);
+            question = {
+              question: frqPrompt,
+              options,
+              answers: [correctIndex],
+              difficulty: item.difficulty ?? 0.5,
+              event: routerData.eventName || 'Unknown Event',
+              imageData: chosenImg,
+            };
+          }
         
         // Update cache and data array
         setIdQuestionCache(prev => new Map(prev).set(index, question));
