@@ -36,7 +36,7 @@ export default function PracticeDashboard() {
     division: 'any',
     tournament: '',
     subtopics: [],
-    idPercentage: 10,
+    idPercentage: 0,
   });
 
   // Load localStorage values after component mounts (client-side only)
@@ -50,7 +50,7 @@ export default function PracticeDashboard() {
       
       const questionCount = storedQuestionCount ? parseInt(storedQuestionCount) : NORMAL_DEFAULTS.questionCount;
       const timeLimit = storedTimeLimit ? parseInt(storedTimeLimit) : NORMAL_DEFAULTS.timeLimit;
-      const idPercentage = storedIdPercentage ? parseInt(storedIdPercentage) : 10;
+      const idPercentage = storedIdPercentage ? parseInt(storedIdPercentage) : 0;
       
       setSettings(prev => ({
         ...prev,
@@ -60,7 +60,7 @@ export default function PracticeDashboard() {
         types: (storedQuestionTypes === 'multiple-choice' || storedQuestionTypes === 'both' || storedQuestionTypes === 'free-response')
           ? storedQuestionTypes as any
           : 'multiple-choice',
-        idPercentage: isNaN(idPercentage) ? 10 : idPercentage
+        idPercentage: isNaN(idPercentage) ? 0 : idPercentage
       }));
     }
   }, []);
@@ -427,10 +427,10 @@ export default function PracticeDashboard() {
           return stored === 'multiple-choice' || stored === 'both' || stored === 'free-response' ? stored : 'multiple-choice';
         })();
         const savedIdPercentage = (() => {
-          if (typeof window === 'undefined') return 10;
+          if (typeof window === 'undefined') return 0;
           const stored = localStorage.getItem('defaultIdPercentage');
-          const parsed = stored ? parseInt(stored) : 10;
-          return isNaN(parsed) ? 10 : parsed;
+          const parsed = stored ? parseInt(stored) : 0;
+          return isNaN(parsed) ? 0 : parsed;
         })();
         const availableDivisions = selectedEventObj.divisions || ['B', 'C'];
         const canShowB = availableDivisions.includes('B');

@@ -139,7 +139,7 @@ export default function HomeClient() {
             >
               <div className="relative">
                 <Image
-                  src="/frontpage1.jpg"
+                  src="/frontpage.jpg"
                   alt="Students taking Science Olympiad test"
                   width={600}
                   height={1000}

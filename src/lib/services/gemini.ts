@@ -77,13 +77,14 @@ export class GeminiService {
   private async generateStructuredContent(
     prompt: string, 
     schema: unknown, 
-    model: string = 'gemini-2.5-flash'
+    model: string = 'gemini-2.5-flash',
+    contents?: any
   ): Promise<Record<string, unknown>> {
     const ai = this.getCurrentClient();
     
     const response = await ai.models.generateContent({
       model,
-      contents: prompt,
+      contents: contents || prompt,
       config: {
         responseMimeType: "application/json",
         responseSchema: schema,
@@ -278,13 +279,74 @@ console.log(prompt);
     return await this.generateStructuredContent(prompt, schema);
   }
 
+  // Helper method to fetch image and convert to base64
+  private async fetchImageAsBase64(imageUrl: string): Promise<string> {
+    try {
+      const response = await fetch(imageUrl);
+      const arrayBuffer = await response.arrayBuffer();
+      const base64 = Buffer.from(arrayBuffer).toString('base64');
+      return base64;
+    } catch (error) {
+      console.error('Failed to fetch image:', error);
+      throw new Error('Failed to fetch image for explanation');
+    }
+  }
+
   // Explain question with step-by-step reasoning
   public async explain(
     question: Record<string, unknown>,
     userAnswer: unknown,
     event: string
   ): Promise<Record<string, unknown>> {
-    const prompt = `You are an expert Science Olympiad tutor providing detailed explanations for questions. Your job is to help students understand how to solve this question step-by-step.
+    const hasImage = question.imageData && typeof question.imageData === 'string';
+    
+    let prompt: string;
+    let contents: any;
+
+    if (hasImage) {
+      // For picture-based questions, include the image in the prompt
+      prompt = `You are an expert Science Olympiad tutor providing detailed explanations for questions with images. Your job is to help students understand how to solve this question step-by-step.
+
+QUESTION TO EXPLAIN: ${JSON.stringify(question)}
+EVENT: ${event}
+
+IMPORTANT: This question includes an image that you should reference in your explanation. The image contains visual information that is essential for understanding and answering the question correctly.
+
+EXPLANATION REQUIREMENTS:
+1. First, describe what you see in the image and how it relates to the question
+2. Break down the problem into logical steps, referencing specific visual elements from the image
+3. Explain the scientific concepts involved, connecting them to the visual evidence
+4. Clearly identify the correct answer(s) and explain how the image supports this answer
+5. Briefly address why other options are wrong, using evidence from the image when applicable
+6. Use language appropriate for Science Olympiad students
+7. Be specific about visual details, patterns, or features in the image that are relevant to the answer
+
+Provide a comprehensive, educational explanation that helps students understand both the answer and the scientific reasoning behind it, with clear references to the visual information provided.`;
+
+      try {
+        const imageBase64 = await this.fetchImageAsBase64(question.imageData as string);
+        contents = [
+          {
+            role: 'user',
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  mimeType: 'image/jpeg',
+                  data: imageBase64
+                }
+              }
+            ]
+          }
+        ];
+      } catch (error) {
+        // If image fetch fails, fall back to text-only explanation
+        console.warn('Failed to fetch image, falling back to text-only explanation:', error);
+        contents = prompt;
+      }
+    } else {
+      // For text-only questions, use the original prompt
+      prompt = `You are an expert Science Olympiad tutor providing detailed explanations for questions. Your job is to help students understand how to solve this question step-by-step.
 
 QUESTION TO EXPLAIN: ${JSON.stringify(question)}
 EVENT: ${event}
@@ -299,6 +361,9 @@ EXPLANATION REQUIREMENTS:
 
 Provide a comprehensive, educational explanation that helps students understand both the answer and the scientific reasoning behind it.`;
 
+      contents = prompt;
+    }
+
     const schema = {
       type: Type.OBJECT,
       properties: {
@@ -311,7 +376,7 @@ Provide a comprehensive, educational explanation that helps students understand 
       propertyOrdering: ["explanation", "correctIndices"],
     };
 
-    return await this.generateStructuredContent(prompt, schema);
+    return await this.generateStructuredContent(prompt, schema, 'gemini-2.5-flash', contents);
   }
 
   // Stream explain for progressive UI
@@ -322,7 +387,62 @@ Provide a comprehensive, educational explanation that helps students understand 
   ): AsyncGenerator<{ type: 'text'; chunk: string } | { type: 'final'; data: Record<string, unknown> }, void, unknown> {
     // First, stream plain markdown explanation
     const ai = this.getCurrentClient();
-    const explanationPrompt = `You are an expert Science Olympiad tutor. Provide concise, clear explanations.
+    const hasImage = question.imageData && typeof question.imageData === 'string';
+    
+    let explanationPrompt: string;
+    let contents: any;
+
+    if (hasImage) {
+      // For picture-based questions, include the image in the prompt
+      explanationPrompt = `You are an expert Science Olympiad tutor. Provide concise, clear explanations for questions with images.
+
+QUESTION: ${JSON.stringify(question)}
+EVENT: ${event}
+
+IMPORTANT: This question includes an image that you should reference in your explanation. The image contains visual information that is essential for understanding and answering the question correctly.
+
+REQUIREMENTS:
+1. First, briefly describe what you see in the image and how it relates to the question
+2. Brief overview of the topic/concept, connecting it to the visual evidence
+3. Why the correct answer is right (be specific, reference the image)
+4. Why each wrong answer is wrong (be specific, use evidence from the image when applicable)
+5. Keep explanations concise and focused
+
+FORMAT:
+- Use **bold** for key terms and concepts
+- Use simple line breaks between sections
+- NO bullet points, numbered lists, or complex markdown
+- NO LaTeX, code blocks, or special formatting
+- End with "Correct answer: **[answer]**" format
+- Keep each section brief and to the point
+- Be specific about visual details, patterns, or features in the image that are relevant
+
+Focus on clarity and accuracy over length, with clear references to the visual information provided.`;
+
+      try {
+        const imageBase64 = await this.fetchImageAsBase64(question.imageData as string);
+        contents = [
+          {
+            role: 'user',
+            parts: [
+              { text: explanationPrompt },
+              {
+                inlineData: {
+                  mimeType: 'image/jpeg',
+                  data: imageBase64
+                }
+              }
+            ]
+          }
+        ];
+      } catch (error) {
+        // If image fetch fails, fall back to text-only explanation
+        console.warn('Failed to fetch image for streaming, falling back to text-only explanation:', error);
+        contents = explanationPrompt;
+      }
+    } else {
+      // For text-only questions, use the original prompt
+      explanationPrompt = `You are an expert Science Olympiad tutor. Provide concise, clear explanations.
 
 QUESTION: ${JSON.stringify(question)}
 EVENT: ${event}
@@ -343,9 +463,12 @@ FORMAT:
 
 Focus on clarity and accuracy over length.`;
 
+      contents = explanationPrompt;
+    }
+
     const stream = await ai.models.generateContentStream({
       model: 'gemini-2.5-flash',
-      contents: explanationPrompt,
+      contents: contents,
       config: {
         temperature: 0.1, // Low temperature for consistent explanations
         topP: 0.8,

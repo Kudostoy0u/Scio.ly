@@ -402,7 +402,7 @@ export default function TestConfiguration({
                   step={1}
                   value={(() => {
                     const questionCount = isNaN(settings.questionCount) ? 1 : Math.max(1, settings.questionCount);
-                    return Math.round((settings.idPercentage ?? 10) * questionCount / 100);
+                    return Math.round((settings.idPercentage ?? 0) * questionCount / 100);
                   })()}
                   onChange={(e) => {
                     const questionCount = isNaN(settings.questionCount) ? 1 : Math.max(1, settings.questionCount);
@@ -427,12 +427,12 @@ export default function TestConfiguration({
                       darkMode ? '#3b82f6' : '#2563eb'
                     } ${(() => {
                       const questionCount = isNaN(settings.questionCount) ? 1 : Math.max(1, settings.questionCount);
-                      return Math.round((settings.idPercentage ?? 10) * questionCount / 100) / questionCount * 100;
+                      return Math.round((settings.idPercentage ?? 0) * questionCount / 100) / questionCount * 100;
                     })()}%, ${
                       darkMode ? '#4b5563' : '#e5e7eb'
                     } ${(() => {
                       const questionCount = isNaN(settings.questionCount) ? 1 : Math.max(1, settings.questionCount);
-                      return Math.round((settings.idPercentage ?? 10) * questionCount / 100) / questionCount * 100;
+                      return Math.round((settings.idPercentage ?? 0) * questionCount / 100) / questionCount * 100;
                     })()}%, ${
                       darkMode ? '#4b5563' : '#e5e7eb'
                     } 100%)`
@@ -441,7 +441,7 @@ export default function TestConfiguration({
                 <span className={`text-sm font-medium min-w-[3rem] text-center ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   {(() => {
                     const questionCount = isNaN(settings.questionCount) ? 1 : Math.max(1, settings.questionCount);
-                    return `${Math.round((settings.idPercentage ?? 10) * questionCount / 100)}/${questionCount}`;
+                    return `${Math.round((settings.idPercentage ?? 0) * questionCount / 100)}/${questionCount}`;
                   })()}
                 </span>
               </div>

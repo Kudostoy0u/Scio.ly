@@ -12,7 +12,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: 'https://scio.ly/dashboard',
       lastModified: new Date(),
       changeFrequency: 'daily',
-      priority: 0.6,
+      priority: 0.4,
     },
     {
       url: 'https://scio.ly/practice',
@@ -20,5 +20,23 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'daily',
       priority: 0.4,
     },
+    {
+      url: 'https://scio.ly/about',
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.4,
+    },
+    {
+      url: 'https://scio.ly/contact',
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.2,
+    },
+    {
+      url: 'https://scio.ly/practice',
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.4,
+    }
   ]
 }
