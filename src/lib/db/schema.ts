@@ -70,4 +70,13 @@ export const idEvents = pgTable('id_events', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
+
+// Base52 codes table for efficient question lookups
+export const base52Codes = pgTable('base52_codes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  code: text('code').notNull().unique(),
+  questionId: uuid('question_id').notNull(),
+  tableName: text('table_name').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
  

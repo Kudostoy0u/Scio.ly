@@ -13,7 +13,7 @@ export interface Question {
   imageData?: string; // Optional CDN URL for ID questions
   created_at?: string;
   updated_at?: string;
-  base52?: string;
+  base52?: string; // 5-character code: CXYZD where D is S (standard) or P (picture)
 }
 
 export interface CreateQuestionRequest {
@@ -191,4 +191,28 @@ export interface StatsResponse {
   total: number;
   byEvent: EventStat[];
   byDivision: DivisionStat[];
+}
+
+// Base52 code types
+export interface Base52GenerateRequest {
+  questionIds: string[];
+  table?: 'questions' | 'idEvents';
+}
+
+export interface Base52GenerateResponse {
+  success: boolean;
+  data?: {
+    codes: Record<string, string>;
+    table: 'questions' | 'idEvents';
+  };
+  error?: string;
+}
+
+export interface Base52LookupResponse {
+  success: boolean;
+  data?: {
+    question: Record<string, unknown>;
+    table: 'questions' | 'idEvents';
+  };
+  error?: string;
 }

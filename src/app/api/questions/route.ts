@@ -146,19 +146,33 @@ class QueryBuilder {
 }
 
 // Data transformation utilities
-const transformDatabaseResult = (result: DatabaseQuestion): Question => ({
-  id: result.id,
-  question: result.question,
-  tournament: result.tournament,
-  division: result.division,
-  event: result.event,
-  difficulty: result.difficulty ? parseFloat(result.difficulty) : 0.5,
-  options: Array.isArray(result.options) ? result.options : [],
-  answers: Array.isArray(result.answers) ? result.answers : [],
-  subtopics: Array.isArray(result.subtopics) ? result.subtopics : [],
-  created_at: result.createdAt?.toISOString(),
-  updated_at: result.updatedAt?.toISOString(),
-});
+const transformDatabaseResult = async (result: DatabaseQuestion): Promise<Question> => {
+  // Generate base52 code for this question
+  const { generateQuestionCode } = await import('@/lib/utils/base52');
+  let base52Code: string | undefined;
+  
+  try {
+    base52Code = await generateQuestionCode(result.id, 'questions');
+  } catch (error) {
+    console.warn(`Failed to generate base52 code for question ${result.id}:`, error);
+    base52Code = undefined;
+  }
+
+  return {
+    id: result.id,
+    question: result.question,
+    tournament: result.tournament,
+    division: result.division,
+    event: result.event,
+    difficulty: result.difficulty ? parseFloat(result.difficulty) : 0.5,
+    options: Array.isArray(result.options) ? result.options : [],
+    answers: Array.isArray(result.answers) ? result.answers : [],
+    subtopics: Array.isArray(result.subtopics) ? result.subtopics : [],
+    created_at: result.createdAt?.toISOString(),
+    updated_at: result.updatedAt?.toISOString(),
+    base52: base52Code,
+  };
+};
 
 // Business logic functions
 const parseAndValidateFilters = (searchParams: URLSearchParams): ValidatedQuestionFilters => {
@@ -235,7 +249,7 @@ const fetchQuestions = async (filters: ValidatedQuestionFilters): Promise<Questi
       .limit(limit);
 
     if (first.length >= limit) {
-      return first.map(transformDatabaseResult);
+      return Promise.all(first.map(transformDatabaseResult));
     }
 
     const remaining = limit - first.length;
@@ -250,7 +264,8 @@ const fetchQuestions = async (filters: ValidatedQuestionFilters): Promise<Questi
       .orderBy(questions.randomF)
       .limit(remaining);
 
-    return [...first, ...second].map(transformDatabaseResult);
+    const allResults = [...first, ...second];
+    return Promise.all(allResults.map(transformDatabaseResult));
   } catch (err) {
     console.log('Error fetching questions', err);
     // Fallback while migrations roll out: random() sort
@@ -258,7 +273,7 @@ const fetchQuestions = async (filters: ValidatedQuestionFilters): Promise<Questi
       ? db.select().from(questions).where(whereCondition).orderBy(sql`RANDOM()`).limit(limit)
       : db.select().from(questions).orderBy(sql`RANDOM()`).limit(limit);
     const rows = await base;
-    return rows.map(transformDatabaseResult);
+    return Promise.all(rows.map(transformDatabaseResult));
   }
 };
 
@@ -283,7 +298,7 @@ const createQuestion = async (data: ValidatedCreateQuestion): Promise<Question> 
     throw new ApiError(500, 'Failed to create question', 'CREATE_FAILED');
   }
   
-  return transformDatabaseResult(question);
+  return await transformDatabaseResult(question);
 };
 
 // API Handlers

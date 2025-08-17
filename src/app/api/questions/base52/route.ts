@@ -1,48 +1,81 @@
-import { NextRequest } from 'next/server';
-import { createErrorResponse, createSuccessResponse, logApiRequest, logApiResponse } from '@/lib/api/utils';
+import { NextRequest, NextResponse } from 'next/server';
+import { generateQuestionCodes } from '@/lib/utils/base52';
 
-const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-const BASE = ALPHABET.length; // 52
-const CODE_LENGTH = 4;
-
-function encodeBase52(index: number): string {
-  if (!Number.isInteger(index) || index < 0) {
-    throw new Error('Index must be a non-negative integer');
-  }
-  let n = index;
-  let out = '';
-  for (let i = 0; i < CODE_LENGTH; i++) {
-    out = ALPHABET[n % BASE] + out;
-    n = Math.floor(n / BASE);
-  }
-  if (n > 0) throw new Error(`Index too large for ${CODE_LENGTH}-char base52`);
-  return out;
-}
-
-// GET /api/questions/base52?index=N -> { code }
-export async function GET(request: NextRequest) {
-  const start = Date.now();
-  logApiRequest('GET', '/api/questions/base52', Object.fromEntries(request.nextUrl.searchParams));
+export async function POST(request: NextRequest) {
   try {
-    const indexParam = request.nextUrl.searchParams.get('index');
-    if (indexParam === null) {
-      return createErrorResponse('Missing query parameter: index', 400, 'MISSING_INDEX');
-    }
-    const index = Number(indexParam);
-    if (!Number.isFinite(index) || !Number.isInteger(index) || index < 0) {
-      return createErrorResponse('Invalid index', 400, 'INVALID_INDEX');
+    const body = await request.json();
+    const { questionIds, table = 'questions' } = body;
+
+    if (!questionIds || !Array.isArray(questionIds) || questionIds.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid question IDs provided'
+      }, { status: 400 });
     }
 
-    const type = request.nextUrl.searchParams.get('type') === 'I' ? 'I' : 'S';
-    const code = encodeBase52(index) + type; // append type suffix
-    const res = createSuccessResponse({ index, code, type });
-    logApiResponse('GET', '/api/questions/base52', 200, Date.now() - start);
-    return res;
-  } catch {
-    const res = createErrorResponse('Failed to generate base52 code', 500, 'ENCODE_ERROR');
-    logApiResponse('GET', '/api/questions/base52', 500, Date.now() - start);
-    return res;
+    if (table !== 'questions' && table !== 'idEvents') {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid table specified. Must be "questions" or "idEvents"'
+      }, { status: 400 });
+    }
+
+    // Generate base52 codes for the questions
+    const codeMap = await generateQuestionCodes(questionIds, table);
+
+    // Convert Map to object for JSON response
+    const codes: Record<string, string> = {};
+    codeMap.forEach((code, id) => {
+      codes[id] = code;
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        codes,
+        table
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ [QUESTIONS/BASE52] Error:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to generate base52 codes'
+    }, { status: 500 });
   }
 }
 
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const code = searchParams.get('code');
 
+    if (!code) {
+      return NextResponse.json({
+        success: false,
+        error: 'Code parameter is required'
+      }, { status: 400 });
+    }
+
+    // Import the function here to avoid circular dependencies
+    const { getQuestionByCode } = await import('@/lib/utils/base52');
+    
+    const result = await getQuestionByCode(code);
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        question: result.question,
+        table: result.table
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ [QUESTIONS/BASE52] Error:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to retrieve question by code'
+    }, { status: 500 });
+  }
+}

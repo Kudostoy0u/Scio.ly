@@ -39,6 +39,19 @@ export async function POST(request: NextRequest) {
     // Combine and process all questions
     const allQuestions: Question[] = [];
     
+    // Generate base52 codes for all questions
+    const { generateQuestionCodes } = await import('@/lib/utils/base52');
+    
+    // Generate codes for regular questions
+    const regularQuestionCodes = questionRows.length > 0 
+      ? await generateQuestionCodes(questionRows.map(row => row.id), 'questions')
+      : new Map<string, string>();
+    
+    // Generate codes for ID questions
+    const idQuestionCodes = idEventRows.length > 0
+      ? await generateQuestionCodes(idEventRows.map(row => row.id), 'idEvents')
+      : new Map<string, string>();
+    
     // Process regular questions
     for (const row of questionRows) {
       allQuestions.push({
@@ -51,6 +64,7 @@ export async function POST(request: NextRequest) {
         subtopics: Array.isArray(row.subtopics) ? row.subtopics : [],
         difficulty: typeof row.difficulty === 'number' ? row.difficulty : Number(row.difficulty ?? 0.5),
         event: row.event,
+        base52: regularQuestionCodes.get(row.id),
         created_at: row.createdAt ?? row.created_at,
         updated_at: row.updatedAt ?? row.updated_at,
       });
@@ -72,6 +86,7 @@ export async function POST(request: NextRequest) {
         difficulty: typeof row.difficulty === 'number' ? row.difficulty : Number(row.difficulty ?? 0.5),
         event: row.event,
         imageData: imageData, // Add the imageData field for ID questions
+        base52: idQuestionCodes.get(row.id),
         created_at: row.createdAt ?? row.created_at,
         updated_at: row.updatedAt ?? row.updated_at,
       });
