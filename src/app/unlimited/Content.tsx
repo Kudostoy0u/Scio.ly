@@ -925,7 +925,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
 
         <div className="relative flex flex-col items-center p-6 pt-20">
           <header className="w-full max-w-3xl flex justify-between items-center py-4 ">
-            <h1 className={`text-3xl font-extrabold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+            <h1 className={`text-xl md:text-3xl font-extrabold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
               {routerData.eventName || 'Loading...'}
             </h1>
             <button

@@ -606,7 +606,7 @@ export default function PracticeDashboard() {
           "Remote Sensing": ["Satellites", "Imaging", "Data Analysis", "Applications", "Technology"],
           "Rocks and Minerals": ["Igneous", "Sedimentary", "Metamorphic", "Mineral Properties", "Crystal Systems"],
           "Solar System": ["Planets", "Moons", "Asteroids", "Comets", "Galaxies"],
-          "Water Quality - Freshwater": ["pH", "Dissolved Oxygen", "Nutrients", "Pollutants", "Testing"]
+          "Water Quality - Freshwater": ["pH", "Dissolved Oxygen", "Nutrients", "Pollutants", "Testing", "Classification"]
         };
 
         // Store the event subtopics mapping for later use

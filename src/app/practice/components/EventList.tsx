@@ -128,7 +128,7 @@ export default function EventList({
               }`}
             >
               <div className="flex justify-between items-center">
-                <h4 className={`font-medium text-base md:text-base text-sm ${
+                <h4 className={`font-medium text-sm md:text-base ${
                   darkMode ? 'text-white' : 'text-gray-900'
                 }`}>
                   {event.name}
