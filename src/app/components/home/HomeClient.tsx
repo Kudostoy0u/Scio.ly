@@ -356,7 +356,7 @@ export default function HomeClient() {
                    'How can I contribute?'}
                 </h3>
                 <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
-                  {index === 0 ? 'Our questions are sourced from publicly available Science Olympiad tests and resources, ensuring a comprehensive and diverse question bank.' :
+                  {index === 0 ? 'Our questions are sourced from real Science Olympiad tests and resources, ensuring a comprehensive and diverse question bank.' :
                    index === 1 ? 'AI is primarily used for grading free response, providing explanations, and processing reports. Excluding MatSci, all questions are from real Science Olympiad tests - AI isn\'t being used to generate them.' :
                    index === 2 ? 'No, Scio.ly is not endorsed by Science Olympiad Inc. Our platform provides practice materials based on past exams but we do not make any guarantees about content on future exams.' :
                    'We welcome contributions! Check out our GitHub repository to see how you can help improve the platform, suggest features, or report issues. You can also help by sending feedback through our contact form.'}
