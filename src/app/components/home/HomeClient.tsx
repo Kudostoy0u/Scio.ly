@@ -153,7 +153,7 @@ export default function HomeClient() {
                   className={`absolute -top-4 -left-4 p-4 rounded-2xl shadow-lg ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}
                 >
                   <div className="text-center">
-                    <div className={`text-2xl font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>83k</div>
+                    <div className={`text-2xl font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>450k</div>
                     <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Practice Questions</div>
                   </div>
                 </motion.div>
@@ -357,7 +357,7 @@ export default function HomeClient() {
                 </h3>
                 <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
                   {index === 0 ? 'Our questions are sourced from publicly available Science Olympiad tests and resources, ensuring a comprehensive and diverse question bank.' :
-                   index === 1 ? 'AI is primarily used for grading free response question, providing detailed explanations, and processing reports. All questions are from real Science Olympiad tests - AI is not used to generate questions.' :
+                   index === 1 ? 'AI is primarily used for grading free response, providing explanations, and processing reports. Excluding MatSci, all questions are from real Science Olympiad tests - AI isn\'t being used to generate them.' :
                    index === 2 ? 'No, Scio.ly is not endorsed by Science Olympiad Inc. Our platform provides practice materials based on past exams but we do not make any guarantees about content on future exams.' :
                    'We welcome contributions! Check out our GitHub repository to see how you can help improve the platform, suggest features, or report issues. You can also help by sending feedback through our contact form.'}
                 </p>

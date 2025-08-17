@@ -390,20 +390,59 @@ export default function TestConfiguration({
             selectedEvent?.name === 'Dynamic Planet - Oceanography') && (
             <div>
               <label htmlFor="idPercentage" className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                Picture Questions (% of total)
+                Picture Questions
               </label>
               <div className="flex items-center gap-3">
                 <input
                   type="range"
                   id="idPercentage"
                   min={0}
-                  max={100}
-                  step={5}
-                  value={settings.idPercentage ?? 10}
-                  onChange={(e) => onSettingsChange({ ...settings, idPercentage: parseInt(e.target.value) })}
-                  className="flex-1"
+                  max={isNaN(settings.questionCount) ? 1 : Math.max(1, settings.questionCount)}
+                  step={1}
+                  value={(() => {
+                    const questionCount = isNaN(settings.questionCount) ? 1 : Math.max(1, settings.questionCount);
+                    return Math.round((settings.idPercentage ?? 10) * questionCount / 100);
+                  })()}
+                  onChange={(e) => {
+                    const questionCount = isNaN(settings.questionCount) ? 1 : Math.max(1, settings.questionCount);
+                    const pictureQuestions = parseInt(e.target.value);
+                    const percentage = Math.round((pictureQuestions / questionCount) * 100);
+                    onSettingsChange({ ...settings, idPercentage: percentage });
+                    
+                    // Save to localStorage for persistence
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('defaultIdPercentage', percentage.toString());
+                    }
+                  }}
+                  className={`flex-1 h-2 rounded-lg appearance-none cursor-pointer ${
+                    darkMode 
+                      ? 'bg-gray-600 slider-thumb-dark' 
+                      : 'bg-gray-200 slider-thumb-light'
+                  }`}
+                  style={{
+                    background: `linear-gradient(to right, ${
+                      darkMode ? '#3b82f6' : '#2563eb'
+                    } 0%, ${
+                      darkMode ? '#3b82f6' : '#2563eb'
+                    } ${(() => {
+                      const questionCount = isNaN(settings.questionCount) ? 1 : Math.max(1, settings.questionCount);
+                      return Math.round((settings.idPercentage ?? 10) * questionCount / 100) / questionCount * 100;
+                    })()}%, ${
+                      darkMode ? '#4b5563' : '#e5e7eb'
+                    } ${(() => {
+                      const questionCount = isNaN(settings.questionCount) ? 1 : Math.max(1, settings.questionCount);
+                      return Math.round((settings.idPercentage ?? 10) * questionCount / 100) / questionCount * 100;
+                    })()}%, ${
+                      darkMode ? '#4b5563' : '#e5e7eb'
+                    } 100%)`
+                  }}
                 />
-                <span className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{settings.idPercentage ?? 10}%</span>
+                <span className={`text-sm font-medium min-w-[3rem] text-center ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {(() => {
+                    const questionCount = isNaN(settings.questionCount) ? 1 : Math.max(1, settings.questionCount);
+                    return `${Math.round((settings.idPercentage ?? 10) * questionCount / 100)}/${questionCount}`;
+                  })()}
+                </span>
               </div>
             </div>
           )}
@@ -773,6 +812,73 @@ export default function TestConfiguration({
           </div>
         </div>
       </div>
+
+      {/* Modern Slider Styles */}
+      <style jsx>{`
+        input[type="range"]::-webkit-slider-thumb {
+          appearance: none;
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: ${darkMode ? '#3b82f6' : '#2563eb'};
+          cursor: pointer;
+          border: 2px solid ${darkMode ? '#1f2937' : '#ffffff'};
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+          transition: all 0.2s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+          transform: scale(1.1);
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: ${darkMode ? '#3b82f6' : '#2563eb'};
+          cursor: pointer;
+          border: 2px solid ${darkMode ? '#1f2937' : '#ffffff'};
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+          transition: all 0.2s ease;
+        }
+
+        input[type="range"]::-moz-range-thumb:hover {
+          transform: scale(1.1);
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        input[type="range"]::-ms-thumb {
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: ${darkMode ? '#3b82f6' : '#2563eb'};
+          cursor: pointer;
+          border: 2px solid ${darkMode ? '#1f2937' : '#ffffff'};
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+          transition: all 0.2s ease;
+        }
+
+        input[type="range"]::-ms-thumb:hover {
+          transform: scale(1.1);
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        input[type="range"]::-webkit-slider-track {
+          background: transparent;
+          border: none;
+        }
+
+        input[type="range"]::-moz-range-track {
+          background: transparent;
+          border: none;
+        }
+
+        input[type="range"]::-ms-track {
+          background: transparent;
+          border: none;
+        }
+      `}</style>
     </div>
   );
 } 

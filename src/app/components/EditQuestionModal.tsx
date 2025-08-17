@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { Bot } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { geminiService, EditSuggestion, Question } from '@/app/utils/geminiService';
 // Removed in-modal success/failure icons for optimistic flow
 

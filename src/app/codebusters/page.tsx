@@ -3,7 +3,7 @@ import React, { useEffect, useCallback, useState } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
-import { RefreshCcw } from 'lucide-react';
+
 import MainHeader from '@/app/components/Header';
 
 import ShareModal from '@/app/components/ShareModal';

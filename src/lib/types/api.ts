@@ -10,6 +10,7 @@ export interface Question {
   subtopics: string[];
   difficulty: number;
   event: string;
+  imageData?: string; // Optional CDN URL for ID questions
   created_at?: string;
   updated_at?: string;
   base52?: string;
@@ -70,6 +71,7 @@ export interface PaginatedResponse<T = unknown> {
 // Share-related types
 export interface ShareCodeRequest {
   questionIds: string[];
+  idQuestionIds?: string[]; // IDs of questions that are ID questions (have imageData)
   testParamsRaw: Record<string, unknown>;
   timeRemainingSeconds?: number;
   code?: string;
@@ -88,6 +90,7 @@ export interface ShareCodeData {
   success: boolean;
   data?: {
     questionIds: string[];
+    idQuestionIds?: string[]; // IDs of questions that are ID questions (have imageData)
     testParamsRaw: Record<string, unknown>;
     timeRemainingSeconds?: number;
     createdAtMs: number;

@@ -50,7 +50,7 @@ export default function FavoriteConfigsCard() {
 
   // Global click handler to close selected card when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (_event: MouseEvent) => {
       if (selectedMobileCard !== null) {
         setSelectedMobileCard(null);
       }

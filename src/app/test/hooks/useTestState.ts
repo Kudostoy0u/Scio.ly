@@ -281,6 +281,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
             return true; // both
           });
           const idQuestions: Question[] = filtered.map((row: any) => ({
+            id: row.id, // Add the missing id field!
             question: row.question,
             options: row.options || [],
             answers: row.answers || [],
@@ -673,7 +674,12 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
       const total = parseInt(routerData.questionCount || '10');
       const idPctRaw = (routerData as any).idPercentage;
       const idPct = typeof idPctRaw !== 'undefined' ? Math.max(0, Math.min(100, parseInt(idPctRaw))) : 0;
-      const supportsId = routerData.eventName === 'Rocks and Minerals' || routerData.eventName === 'Entomology';
+      const supportsId = routerData.eventName === 'Rocks and Minerals' || 
+                        routerData.eventName === 'Entomology' ||
+                        routerData.eventName === 'Anatomy - Nervous' ||
+                        routerData.eventName === 'Anatomy - Endocrine' ||
+                        routerData.eventName === 'Anatomy - Sense Organs' ||
+                        routerData.eventName === 'Dynamic Planet - Oceanography';
       const requestedIdCount = Math.round((idPct / 100) * total);
       const idCount = supportsId ? requestedIdCount : 0;
       const baseCount = Math.max(0, total - idCount);
@@ -750,34 +756,109 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           // When offline, ID questions are not available - we'll fill with base questions later
           console.log('ID questions not available in offline mode');
         } else {
+          // Online: try to fetch ID questions
           try {
-            const idParams = buildApiParams({ ...routerData, idQuestions: true } as any, Math.max(idCount, 20));
-            const idApiUrl = `${api.questions}?${idParams}`;
-            const response = await fetch(idApiUrl);
+            const params = new URLSearchParams();
+            params.set('event', routerData.eventName || '');
+            params.set('limit', String(Math.max(idCount * 3, 50)));
             
-            if (response.ok) {
-              const idResponse = await response.json();
-              source = idResponse.data || [];
+            // Add subtopic filter if specified
+            if (routerData.subtopics && routerData.subtopics.length > 0) {
+              params.set('subtopics', routerData.subtopics.join(','));
             }
-          } catch (error) {
-            console.error('Failed to fetch ID questions:', error);
+            
+            const resp = await fetch(`${api.idQuestions}?${params.toString()}`);
+            const json = await resp.json();
+            source = Array.isArray(json?.data) ? json.data : [];
+          } catch {
+            console.log('Failed to fetch ID questions, continuing without them');
           }
         }
         
-        if (source.length > 0) {
-          const idQuestions = shuffleArray(source).slice(0, idCount);
-          selectedQuestions = [...selectedQuestions, ...idQuestions];
-        } else if (idCount > 0) {
-          // If we couldn't get ID questions, fill with more base questions
-          console.log(`Filling ${idCount} ID slots with base questions`);
-          const additionalBaseCount = Math.min(idCount, selectedQuestions.length);
-          const additionalQuestions = shuffleArray(selectedQuestions).slice(0, additionalBaseCount);
-          selectedQuestions = [...selectedQuestions, ...additionalQuestions];
+        // Filter by types (MCQ/FRQ)
+        const typesSel = (routerData.types as string) || 'multiple-choice';
+        const filtered = source.filter((row: any) => {
+          const isMcq = Array.isArray(row.options) && row.options.length > 0;
+          if (typesSel === 'multiple-choice') return isMcq;
+          if (typesSel === 'free-response') return !isMcq;
+          return true; // both
+        });
+        const idQuestions: Question[] = filtered.map((row: any) => ({
+          id: row.id, // Add the missing id field!
+          question: row.question,
+          options: row.options || [],
+          answers: row.answers || [],
+          difficulty: row.difficulty ?? 0.5,
+          event: row.event,
+          imageData: Array.isArray(row.images) && row.images.length ? row.images[Math.floor(Math.random()*row.images.length)] : undefined,
+        }));
+        // Take only up to idCount
+        const pickedId = shuffleArray(idQuestions).slice(0, idCount);
+        // If not enough ID questions, we'll fill with base later
+        selectedQuestions = selectedQuestions.concat(pickedId);
+      }
+
+      // Top-up with base questions if we still don't have enough
+      if (selectedQuestions.length < total && baseCount > 0) {
+        const need = total - selectedQuestions.length;
+        const isOffline = !navigator.onLine;
+        
+        if (isOffline) {
+          // When offline, we can't fetch more questions - just use what we have
+          console.log(`Offline mode: only ${selectedQuestions.length} questions available, need ${total}`);
+        } else {
+          // Online: try to fetch more questions
+          try {
+            const requestCount = Math.max(need, 50);
+            const params2 = buildApiParams({ ...routerData }, requestCount);
+            const apiUrl2 = `${api.questions}?${params2}`;
+            const r2 = await fetch(apiUrl2).catch(() => null);
+            const j2 = r2 && r2.ok ? await r2.json() : null;
+            const extras: Question[] = (j2?.data || []); // Removed quality filtering - assume all questions are high quality
+            selectedQuestions = selectedQuestions.concat(shuffleArray(extras).slice(0, need));
+          } catch {
+            console.log('Failed to fetch additional questions for top-up');
+          }
         }
       }
 
       // Final shuffle and set data
-      const finalQuestions = shuffleArray(selectedQuestions);
+      const finalQuestions = shuffleArray(selectedQuestions).slice(0, total);
+      
+      // ========================================
+      // TEMPORARY FIX: Replace delta symbols with en dashes
+      // WARNING: This is a temporary workaround for delta symbol display issues
+      // TODO: Remove this script once proper delta symbol handling is implemented
+      // ========================================
+      finalQuestions.forEach(question => {
+        // Replace delta symbols (Δ or ∆) between numbers with en dashes (–)
+        const deltaToEnDash = (text: string) => {
+          return text.replace(/(\d+)\s*[Δ∆]\s*(\d+)/g, '$1–$2');
+        };
+        
+        // Apply to question text
+        if (question.question) {
+          question.question = deltaToEnDash(question.question);
+        }
+        
+        // Apply to options
+        if (Array.isArray(question.options)) {
+          question.options = question.options.map(option => 
+            typeof option === 'string' ? deltaToEnDash(option) : option
+          );
+        }
+        
+        // Apply to answers
+        if (Array.isArray(question.answers)) {
+          question.answers = question.answers.map(answer => 
+            typeof answer === 'string' ? deltaToEnDash(answer) : answer
+          );
+        }
+      });
+      // ========================================
+      // END TEMPORARY FIX
+      // ========================================
+      
       setData(finalQuestions);
       localStorage.setItem('testQuestions', JSON.stringify(finalQuestions));
       

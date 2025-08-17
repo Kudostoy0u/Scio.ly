@@ -46,9 +46,11 @@ export default function PracticeDashboard() {
       const storedTimeLimit = localStorage.getItem('defaultTimeLimit');
       const storedDivision = localStorage.getItem('defaultDivision') || 'any';
       const storedQuestionTypes = localStorage.getItem('defaultQuestionTypes') || 'multiple-choice';
+      const storedIdPercentage = localStorage.getItem('defaultIdPercentage');
       
       const questionCount = storedQuestionCount ? parseInt(storedQuestionCount) : NORMAL_DEFAULTS.questionCount;
       const timeLimit = storedTimeLimit ? parseInt(storedTimeLimit) : NORMAL_DEFAULTS.timeLimit;
+      const idPercentage = storedIdPercentage ? parseInt(storedIdPercentage) : 10;
       
       setSettings(prev => ({
         ...prev,
@@ -57,7 +59,8 @@ export default function PracticeDashboard() {
         division: (storedDivision === 'B' || storedDivision === 'C' || storedDivision === 'any') ? storedDivision as any : 'any',
         types: (storedQuestionTypes === 'multiple-choice' || storedQuestionTypes === 'both' || storedQuestionTypes === 'free-response')
           ? storedQuestionTypes as any
-          : 'multiple-choice'
+          : 'multiple-choice',
+        idPercentage: isNaN(idPercentage) ? 10 : idPercentage
       }));
     }
   }, []);
@@ -423,6 +426,12 @@ export default function PracticeDashboard() {
           const stored = localStorage.getItem('defaultQuestionTypes');
           return stored === 'multiple-choice' || stored === 'both' || stored === 'free-response' ? stored : 'multiple-choice';
         })();
+        const savedIdPercentage = (() => {
+          if (typeof window === 'undefined') return 10;
+          const stored = localStorage.getItem('defaultIdPercentage');
+          const parsed = stored ? parseInt(stored) : 10;
+          return isNaN(parsed) ? 10 : parsed;
+        })();
         const availableDivisions = selectedEventObj.divisions || ['B', 'C'];
         const canShowB = availableDivisions.includes('B');
         const canShowC = availableDivisions.includes('C');
@@ -442,7 +451,8 @@ export default function PracticeDashboard() {
           difficulties: [],
           types: savedTypes as any,
           division: divisionForEvent as any,
-          subtopics: []
+          subtopics: [],
+          idPercentage: savedIdPercentage
         }));
       }
     }

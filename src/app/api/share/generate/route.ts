@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { shareCodes, questions } from '@/lib/db/schema';
+import { shareCodes, questions, idEvents } from '@/lib/db/schema';
 import { eq, inArray } from 'drizzle-orm';
 import { ShareCodeRequest, ShareCodeResponse } from '@/lib/types/api';
 
@@ -17,13 +17,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 400 });
     }
 
-    // Validate that all question IDs exist in the database
+    // Validate that all question IDs exist in the database (check both questions and idEvents tables)
     const validQuestions = await db
       .select({ id: questions.id })
       .from(questions)
       .where(inArray(questions.id, body.questionIds));
 
-    if (validQuestions.length !== body.questionIds.length) {
+    const validIdQuestions = await db
+      .select({ id: idEvents.id })
+      .from(idEvents)
+      .where(inArray(idEvents.id, body.questionIds));
+
+    const totalValidQuestions = validQuestions.length + validIdQuestions.length;
+
+    if (totalValidQuestions !== body.questionIds.length) {
       const response: ShareCodeResponse = {
         success: false,
         error: 'Some question IDs are invalid',
@@ -59,6 +66,7 @@ export async function POST(request: NextRequest) {
     // Embed questionIds into the test_params_raw object (like Node.js implementation)
     const dataToStore = {
       questionIds: body.questionIds,
+      idQuestionIds: body.idQuestionIds || [], // Store which questions are ID questions
       testParamsRaw: body.testParamsRaw,
       timeRemainingSeconds: body.timeRemainingSeconds || null,
       createdAtMs: Date.now(),

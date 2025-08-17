@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -32,7 +32,7 @@ export default function Header() {
   const isTestPage = pathname?.startsWith('/test') || pathname?.startsWith('/codebusters') || pathname?.startsWith('/unlimited');
   
   // Handle scroll events to change header appearance
-  const handleScroll = () => {
+  const handleScroll = useCallback(() => {
     const currentY = window.scrollY || 0;
     
     if (isTestPage) {
@@ -46,7 +46,7 @@ export default function Header() {
       setScrollOpacity(progress);
       setScrolled(currentY > threshold);
     }
-  };
+  }, [isTestPage]);
   
   useEffect(() => {
     // Add scroll event listener
@@ -59,7 +59,7 @@ export default function Header() {
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [isFirefox, isTestPage]);
+  }, [isFirefox, isTestPage, handleScroll]);
 
   // Detect environment for PWA instructions
   useEffect(() => {
