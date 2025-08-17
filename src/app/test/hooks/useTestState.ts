@@ -174,7 +174,8 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
                           routerParams.eventName === 'Anatomy - Nervous' ||
                           routerParams.eventName === 'Anatomy - Endocrine' ||
                           routerParams.eventName === 'Anatomy - Sense Organs' ||
-                          routerParams.eventName === 'Dynamic Planet - Oceanography';
+                          routerParams.eventName === 'Dynamic Planet - Oceanography' ||
+                          routerParams.eventName === 'Water Quality - Freshwater';
         const requestedIdCount = Math.round((idPct / 100) * total);
         const idCount = supportsId ? requestedIdCount : 0;
         const baseCount = Math.max(0, total - idCount);

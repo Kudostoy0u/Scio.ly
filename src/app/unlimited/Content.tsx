@@ -182,7 +182,8 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
                           routerParams.eventName === 'Anatomy - Nervous' ||
                           routerParams.eventName === 'Anatomy - Endocrine' ||
                           routerParams.eventName === 'Anatomy - Sense Organs' ||
-                          routerParams.eventName === 'Dynamic Planet - Oceanography';
+                          routerParams.eventName === 'Dynamic Planet - Oceanography' ||
+                          routerParams.eventName === 'Water Quality - Freshwater';
         if (supportsId && typeof idPct !== 'undefined' && parseInt(idPct) > 0) {
           const pct = Math.max(0, Math.min(100, parseInt(idPct)));
           const totalQuestionsCount = pct === 100 ? 1000 : baseQuestions.length;
@@ -354,6 +355,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           const isRocks = routerData.eventName === 'Rocks and Minerals';
           const isAnatomy = routerData.eventName?.startsWith('Anatomy');
           const isDyplan = routerData.eventName?.startsWith('Dynamic Planet');
+          const isWaterQuality = routerData.eventName === 'Water Quality - Freshwater';
           
           let frqPrompt = 'Identify the specimen shown in the image.';
           if (isEnt) {
@@ -364,6 +366,8 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             frqPrompt = 'Identify the anatomical structure shown in the image.';
           } else if (isDyplan) {
             frqPrompt = 'Identify the geological feature shown in the image.';
+          } else if (isWaterQuality) {
+            frqPrompt = 'Identify the water quality indicator shown in the image.';
           }
           
           if (types === 'free-response' || (types === 'both' && Math.random() < 0.5)) {
