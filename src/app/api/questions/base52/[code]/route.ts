@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { questions, idEvents } from '@/lib/db/schema';
-import { sql } from 'drizzle-orm';
+
 import { createErrorResponse, createSuccessResponse, logApiRequest, logApiResponse } from '@/lib/api/utils';
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
@@ -36,37 +36,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const core = code.slice(0, -1);
     const index = decodeBase52(core);
 
-    // We want the Nth row in a stable order. Use a window function to rank rows.
-    // Drizzle doesn't expose window functions directly across all dialects, so we use raw SQL.
-    // Note: CockroachDB/Postgres support window functions with ROW_NUMBER().
-
+    // Get the Nth row in stable order using Drizzle queries
     const baseTable = type === 'I' ? idEvents : questions;
-    const rows = await db.execute(sql`
-      WITH ordered AS (
-        SELECT
-          q.id,
-          q.question,
-          q.tournament,
-          q.division,
-          q.event,
-          q.difficulty,
-          q.options,
-          q.answers,
-          q.subtopics,
-          q.created_at,
-          q.updated_at,
-          ${type === 'I' ? sql`q.images,` : sql``}
-          ROW_NUMBER() OVER (
-            ORDER BY q.created_at ASC NULLS LAST, q.id ASC
-          ) AS rn
-        FROM ${baseTable} AS q
-      )
-      SELECT *
-      FROM ordered
-      WHERE rn = ${index + 1}
-    `);
-
-    const item = Array.isArray(rows) ? (rows as any[])[0] : (rows as any).rows?.[0];
+    
+    // Get all rows ordered by created_at ASC NULLS LAST, then id ASC
+    const allRows = await db
+      .select()
+      .from(baseTable)
+      .orderBy(baseTable.createdAt, baseTable.id);
+    
+    const item = allRows[index];
     if (!item) {
       const res = createErrorResponse('Question not found for index', 404, 'NOT_FOUND');
       logApiResponse('GET', `/api/questions/base52/${code}`, 404, Date.now() - start);
@@ -94,8 +73,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         answers,
         subtopics,
         ...(type === 'I' ? { images } : {}),
-        created_at: item.created_at ? new Date(item.created_at).toISOString() : undefined,
-        updated_at: item.updated_at ? new Date(item.updated_at).toISOString() : undefined,
+        created_at: item.createdAt ? new Date(item.createdAt).toISOString() : undefined,
+        updated_at: item.updatedAt ? new Date(item.updatedAt).toISOString() : undefined,
       }
     });
     logApiResponse('GET', `/api/questions/base52/${code}`, 200, Date.now() - start);
