@@ -1,10 +1,12 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { FaShareAlt } from "react-icons/fa";
+import { RefreshCcw } from 'lucide-react';
 // ToastContainer is globally provided in Providers
 import { useTheme } from '@/app/contexts/ThemeContext';
 import EditQuestionModal from '@/app/components/EditQuestionModal';
 import ShareModal from '@/app/components/ShareModal';
+import Header from '@/app/components/Header';
 import { useTestState } from './hooks/useTestState';
 import { TestLayout, TestHeader, ProgressBar, QuestionCard, TestFooter } from './components';
 import { FloatingActionButtons } from '@/app/components/FloatingActionButtons';
@@ -46,6 +48,7 @@ export default function TestContent({ initialData, initialRouterData }: { initia
     submittedEdits,
     isEditModalOpen,
     editingQuestion,
+    isResetting,
     
     // Handlers
     handleAnswerChange,
@@ -74,16 +77,18 @@ export default function TestContent({ initialData, initialRouterData }: { initia
     
   return (
     <>
+      <Header />
       <TestLayout darkMode={darkMode}>
-        <TestHeader
-          eventName={routerData.eventName || 'Loading...'}
-          timeLeft={timeLeft}
-          darkMode={darkMode}
-          isFromBookmarks={isFromBookmarks}
-        />
+        <div className="pt-20">
+          <TestHeader
+            eventName={routerData.eventName || 'Loading...'}
+            timeLeft={timeLeft}
+            darkMode={darkMode}
+            isFromBookmarks={isFromBookmarks}
+          />
 
-        {/* Inline back link to Practice */}
-        <div className="w-full max-w-3xl mt-0.5 mb-5">
+          {/* Inline back link to Practice */}
+          <div className="w-full max-w-3xl mt-0.5 mb-5">
           <button
             onClick={handleBackToMain}
             className={`group inline-flex items-center text-base font-medium ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}
@@ -104,40 +109,52 @@ export default function TestContent({ initialData, initialRouterData }: { initia
               darkMode ? 'bg-gray-800' : 'bg-white'
             }`}
           >
-          <button
-            onClick={() => setShareModalOpen(true)}
-            disabled={isOffline}
-            title={isOffline ? "Share feature not available offline" : "Share Test"}
-            className="absolute"
-          >
-            <div className={`flex justify-between transition-all duration-200 ${
-              isOffline 
-                ? 'text-gray-400 cursor-not-allowed' 
-                : 'text-blue-400 hover:text-blue-500'
-            }`}>
-              <FaShareAlt className="transition-all duration-500 mt-0.5" />
-              <p>&nbsp;&nbsp;Take together</p>
+          <div className="flex justify-between items-center mb-4">
+            <button
+              onClick={handleResetTest}
+              title="Reset Test"
+              className={`flex items-center transition-all duration-200 ${
+                darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <RefreshCcw className="w-4 h-4 mr-2" />
+              <span className="text-sm">Reset</span>
+            </button>
+            
+            <button
+              onClick={() => setShareModalOpen(true)}
+              disabled={isOffline}
+              title={isOffline ? "Share feature not available offline" : "Share Test"}
+            >
+              <div className={`flex items-center transition-all duration-200 ${
+                isOffline 
+                  ? 'text-gray-400 cursor-not-allowed' 
+                  : 'text-blue-400 hover:text-blue-500'
+              }`}>
+                <FaShareAlt className="transition-all duration-500 mr-2" />
+                <span className="text-sm">Take together</span>
+              </div>
+            </button>
           </div>
-          </button>
 
-            {isLoading ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
-              </div>
-            ) : fetchError ? (
-              <div className="text-red-600 text-center">{fetchError}</div>
-            ) : routerData.eventName === "Codebusters" && routerData.types === 'multiple-choice' ? (
-              <div className="flex flex-col items-center justify-center h-64">
-                <p className={`text-xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  No MCQs available for this event
-                </p>
-                <p className={`text-base ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                  Please select &quot;MCQ + FRQ&quot; in the dashboard to practice this event
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="container mx-auto px-4 py-8 mt-3">
+            <div className="container mx-auto px-4 mt-3">
+              {isLoading && !isResetting ? (
+                <div className="flex justify-center items-center h-64">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
+                </div>
+              ) : fetchError ? (
+                <div className="text-red-600 text-center">{fetchError}</div>
+              ) : routerData.eventName === "Codebusters" && routerData.types === 'multiple-choice' ? (
+                <div className="flex flex-col items-center justify-center h-64">
+                  <p className={`text-xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    No MCQs available for this event
+                  </p>
+                  <p className={`text-base ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    Please select &quot;MCQ + FRQ&quot; in the dashboard to practice this event
+                  </p>
+                </div>
+              ) : (
+                <>
                   {data.map((question, index) => {
                     const isBookmarked = isQuestionBookmarked(question);
 
@@ -168,8 +185,11 @@ export default function TestContent({ initialData, initialRouterData }: { initia
                     />
                     );
                   })}
-                </div>
+                </>
+              )}
+            </div>
 
+            {!isLoading && !fetchError && !(routerData.eventName === "Codebusters" && routerData.types === 'multiple-choice') && data.length > 0 && (
               <TestFooter
                 isSubmitted={isSubmitted}
                 darkMode={darkMode}
@@ -177,9 +197,9 @@ export default function TestContent({ initialData, initialRouterData }: { initia
                 onReset={handleResetTest}
                 onBackToMain={handleBackToMain}
               />
-              </>
             )}
           </main>
+        </div>
       </TestLayout>
 
       <ShareModal
@@ -205,13 +225,13 @@ export default function TestContent({ initialData, initialRouterData }: { initia
       {/* Floating Action Buttons */}
       <FloatingActionButtons
         darkMode={darkMode}
-        onReset={handleResetTest}
         showReferenceButton={routerData.eventName === 'Codebusters'}
         onShowReference={() => {
           // Handle reference button click for codebusters
           window.open('/2024_Div_C_Resource.pdf', '_blank');
         }}
         eventName={routerData.eventName}
+        hidden={isEditModalOpen}
       />
 
       {/* Global ToastContainer handles notifications */}

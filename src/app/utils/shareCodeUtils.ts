@@ -106,6 +106,7 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
               const questionsData = await questionsResponse.json();
               if (questionsData.success && questionsData.data) {
                 console.log('🔍 Successfully fetched questions:', questionsData.data.length);
+                
                 return {
                   success: true,
                   eventName: testParams.eventName,

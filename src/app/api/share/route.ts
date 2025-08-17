@@ -6,6 +6,7 @@ import { ShareCodeData } from '@/lib/types/api';
 
 interface TestParamsRaw {
   questionIds?: string[];
+  idQuestionIds?: string[]; // IDs of questions that are ID questions (have imageData)
   testParamsRaw?: Record<string, unknown>;
   timeRemainingSeconds?: number | null;
   createdAtMs?: number;
@@ -66,6 +67,7 @@ export async function GET(request: NextRequest) {
         success: true,
         data: {
           questionIds: testParamsRaw.questionIds || [],
+          idQuestionIds: testParamsRaw.idQuestionIds || [], // Return which questions are ID questions
           testParamsRaw: testParamsRaw.testParamsRaw || {},
           timeRemainingSeconds: testParamsRaw.timeRemainingSeconds ?? undefined,
           createdAtMs: testParamsRaw.createdAtMs || Date.now(),

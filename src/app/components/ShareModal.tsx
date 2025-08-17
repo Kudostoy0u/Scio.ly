@@ -174,6 +174,11 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
           throw new Error('No valid question IDs found');
         }
         
+        // Identify which questions are ID questions (have imageData)
+        const idQuestionIds = questions
+          .filter(q => q.id && (q as any).imageData)
+          .map(q => q.id);
+        
         const testParams = JSON.parse(testParamsRaw);
         // For our time model, just persist the current displayed timeLeft as remaining
         const currentTimeRemaining = (typeof currentTimeLeft === 'number') ? currentTimeLeft : null;
@@ -183,6 +188,7 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             questionIds, 
+            idQuestionIds, // Add information about which questions are ID questions
             testParamsRaw: testParams,
             timeRemainingSeconds: currentTimeRemaining || null
           })

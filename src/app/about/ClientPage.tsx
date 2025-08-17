@@ -10,16 +10,10 @@ import { Rocket, Lightbulb } from 'lucide-react';
 export default function AboutClientPage() {
   const { darkMode } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const [showMascotCaption, setShowMascotCaption] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   useEffect(() => {
@@ -27,9 +21,7 @@ export default function AboutClientPage() {
     document.documentElement.classList.toggle('light-scrollbar', !darkMode);
   }, [darkMode]);
 
-  const toggleMascotCaption = () => {
-    if (isMobile) setShowMascotCaption(!showMascotCaption);
-  };
+
 
   if (!mounted) return null;
 

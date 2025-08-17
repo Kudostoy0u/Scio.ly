@@ -468,8 +468,8 @@ export default function LeaderboardClientPage() {
 
         {/* Join Modal */}
         {showJoinModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className={`rounded-lg p-6 max-w-md w-full ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowJoinModal(false)}>
+            <div className={`rounded-lg p-6 max-w-md w-full ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
               <h3 className="text-xl font-semibold mb-4">Join Private Leaderboard</h3>
               <input
                 type="text"
@@ -508,8 +508,11 @@ export default function LeaderboardClientPage() {
         
         {/* Display Name Modal */}
         {showDisplayNameModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className={`rounded-lg p-6 max-w-md w-full ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => {
+            setShowDisplayNameModal(false);
+            setPendingLeaderboardAction(null);
+          }}>
+            <div className={`rounded-lg p-6 max-w-md w-full ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
               <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <User className="w-5 h-5" />
                 Set Your Display Name
@@ -583,8 +586,8 @@ function CreateLeaderboardModal({ onClose, onCreated }: { onClose: () => void; o
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className={`rounded-lg p-6 max-w-md w-full ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div className={`rounded-lg p-6 max-w-md w-full ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
         <h3 className="text-xl font-semibold mb-4">Create Private Leaderboard</h3>
         
         <input

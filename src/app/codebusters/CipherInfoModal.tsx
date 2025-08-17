@@ -110,24 +110,41 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
     if (!contentRef.current) return;
     const container = contentRef.current;
     const headings = Array.from(container.querySelectorAll('h2')) as HTMLElement[];
+    
     if (headings.length && !activeTabId) {
       const first = headings[0].id || sections[0]?.id || '';
       setActiveTabId(first);
     }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => (a.boundingClientRect.top < b.boundingClientRect.top ? -1 : 1));
-        if (visible[0]) {
-          const id = (visible[0].target as HTMLElement).id;
-          if (id) setActiveTabId(id);
+    
+    const handleScroll = () => {
+      const containerTop = container.scrollTop;
+      
+      // Find which heading is currently at the top of the viewport
+      let currentSection = '';
+      
+      for (let i = headings.length - 1; i >= 0; i--) {
+        const heading = headings[i];
+        const headingTop = heading.offsetTop - container.offsetTop;
+        
+        // If this heading is at or above the current scroll position
+        if (headingTop <= containerTop + 100) {
+          currentSection = heading.id;
+          break;
         }
-      },
-      { root: container, threshold: 0.2 }
-    );
-    headings.forEach((h) => observer.observe(h));
-    return () => observer.disconnect();
+      }
+      
+      // If no section found, use the first one
+      if (!currentSection && headings.length > 0) {
+        currentSection = headings[0].id;
+      }
+      
+      if (currentSection && currentSection !== activeTabId) {
+        setActiveTabId(currentSection);
+      }
+    };
+    
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
   }, [sections, activeTabId, rawMarkdown]);
 
   if (!isOpen) return null;
@@ -137,7 +154,14 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
     if (!container) return;
     const el = container.querySelector(`#${CSS.escape(id)}`) as HTMLElement | null;
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Calculate the offset to account for the header and navigation
+      const headerHeight = 80; // Approximate height of header + navigation
+      const elementTop = el.offsetTop - headerHeight;
+      
+      container.scrollTo({
+        top: elementTop,
+        behavior: 'smooth'
+      });
     }
   };
 
@@ -149,7 +173,7 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
       .replace(/\s+/g, '-');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75" onClick={onClose}>
       <div 
         className={`relative w-11/12 h-5/6 max-w-4xl rounded-lg shadow-2xl flex flex-col ${
           darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
@@ -163,8 +187,8 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
           <h2 className="text-xl font-semibold">{cipherType}</h2>
           <button
             onClick={onClose}
-            className={`p-2 rounded-full hover:bg-opacity-20 ${
-              darkMode ? 'hover:bg-white text-white' : 'hover:bg-gray-500 text-gray-700'
+            className={`p-2 rounded-full ${
+              darkMode ? 'hover:bg-white/20 text-white' : 'hover:bg-gray-500/20 text-gray-700'
             }`}
             aria-label="Close"
           >
@@ -209,7 +233,7 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
                     const text = Array.isArray(children) ? children.join(' ') : String(children ?? '');
                     const id = slugify(text);
                     return (
-                      <h2 id={id} className="scroll-mt-24 text-lg sm:text-xl mt-6 mb-2">
+                      <h2 id={id} className="scroll-mt-20 text-lg sm:text-xl mt-6 mb-2">
                         {children}
                       </h2>
                     );
