@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Combine and process all questions
-    const allQuestions = [];
+    const allQuestions: Question[] = [];
     
     // Process regular questions
     for (const row of questionRows) {

@@ -329,7 +329,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
       
       // Use the centralized id-questions endpoint for all ID events
       const params = new URLSearchParams();
-      params.set('event', routerData.eventName);
+      params.set('event', routerData.eventName || 'Unknown Event');
       params.set('limit', '1');
       
       // Add subtopic filter if specified
