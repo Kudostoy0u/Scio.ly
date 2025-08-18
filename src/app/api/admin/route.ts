@@ -6,7 +6,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
 // Admin password for authentication
-const ADMIN_PASSWORD = 'alancaithegoat';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 // Function to check admin password
 function checkAdminPassword(request: NextRequest): boolean {
