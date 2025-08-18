@@ -5,6 +5,7 @@ export { ShareButton } from './ShareButton';
 export { QuestionCard } from './QuestionCard';
 export { SubmitButton } from './SubmitButton';
 export { PDFModal } from './PDFModal';
+export { VideoCarousel } from './VideoCarousel';
 
 // Export all cipher display components
 export * from './cipher-displays';

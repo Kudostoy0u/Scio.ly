@@ -3,6 +3,7 @@ import React from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { QuoteData } from '../../types';
 import { FrequencyTable } from './FrequencyTable';
+import { ReplacementTable } from './ReplacementTable';
 
 interface AristocratDisplayProps {
     text: string;
@@ -94,6 +95,13 @@ export const AristocratDisplay = ({
                 frequencyNotes={frequencyNotes}
                 onNoteChange={(letter, note) => onFrequencyNoteChange(quoteIndex, letter, note)}
                 quoteIndex={quoteIndex}
+            />
+            <ReplacementTable
+                text={text}
+                solution={solution}
+                quoteIndex={quoteIndex}
+                isTestSubmitted={isTestSubmitted}
+                onSolutionChange={onSolutionChange}
             />
         </div>
     );

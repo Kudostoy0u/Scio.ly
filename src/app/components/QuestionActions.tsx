@@ -126,7 +126,7 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
     darkMode ? 'text-gray-500' : 'text-gray-400'
   }`;
 
-  // Detect ID questions (questions with imageData)
+  // Detect ID questions (image-based); these should not be removable
   const isIdQuestion = !!(question as any).imageData;
   const shouldDisableActions = isOffline;
 
@@ -142,16 +142,16 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
           darkMode={darkMode}
           size="sm"
         />
-        {!isIdQuestion && (
-          <>
-            <button
-              onClick={onEdit}
-              disabled={isSubmittedEdit || shouldDisableActions}
-              className={`${buttonClass} ${(isSubmittedEdit || shouldDisableActions) ? disabledClass : 'hover:text-blue-500'}`}
-              title={isSubmittedEdit ? 'Edit already submitted' : shouldDisableActions ? 'Unavailable offline' : 'Edit question'}
-            >
-              <FaEdit className="w-4 h-4" />
-            </button>
+        <>
+          <button
+            onClick={onEdit}
+            disabled={isSubmittedEdit || shouldDisableActions}
+            className={`${buttonClass} ${(isSubmittedEdit || shouldDisableActions) ? disabledClass : 'hover:text-blue-500'}`}
+            title={isSubmittedEdit ? 'Edit already submitted' : shouldDisableActions ? 'Unavailable offline' : 'Edit question'}
+          >
+            <FaEdit className="w-4 h-4" />
+          </button>
+          {!isIdQuestion && (
             <button
               onClick={handleDirectReport}
               disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions}
@@ -164,8 +164,8 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
                 <FaTrash className="w-4 h-4" />
               )}
             </button>
-          </>
-        )}
+          )}
+        </>
       </div>
     );
   }
@@ -181,21 +181,21 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
         darkMode={darkMode}
         showLabel={true}
       />
-      {!isIdQuestion && (
-        <>
-          <button
-            onClick={onEdit}
-            disabled={isSubmittedEdit || shouldDisableActions}
-            className={`${buttonClass} ${(isSubmittedEdit || shouldDisableActions) ? disabledClass : 'hover:text-blue-500'}`}
-            title={isSubmittedEdit ? 'Edit already submitted' : shouldDisableActions ? 'Unavailable offline' : 'Edit question'}
-          >
-            <div className="flex items-center space-x-1">
-              <FaEdit className="w-4 h-4" />
-              <span className="text-sm">
-                {isSubmittedEdit ? 'Edit Submitted' : 'Edit'}
-              </span>
-            </div>
-          </button>
+      <>
+        <button
+          onClick={onEdit}
+          disabled={isSubmittedEdit || shouldDisableActions}
+          className={`${buttonClass} ${(isSubmittedEdit || shouldDisableActions) ? disabledClass : 'hover:text-blue-500'}`}
+          title={isSubmittedEdit ? 'Edit already submitted' : shouldDisableActions ? 'Unavailable offline' : 'Edit question'}
+        >
+          <div className="flex items-center space-x-1">
+            <FaEdit className="w-4 h-4" />
+            <span className="text-sm">
+              {isSubmittedEdit ? 'Edit Submitted' : 'Edit'}
+            </span>
+          </div>
+        </button>
+        {!isIdQuestion && (
           <button
             onClick={handleDirectReport}
             disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions}
@@ -213,8 +213,8 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
               </span>
             </div>
           </button>
-        </>
-      )}
+        )}
+      </>
     </div>
   );
 };

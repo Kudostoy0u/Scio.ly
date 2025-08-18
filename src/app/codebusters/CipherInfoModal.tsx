@@ -6,6 +6,8 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
+import { VideoCarousel } from './components/VideoCarousel';
+import { getVideosForCipher } from './data/cipherVideos';
 
 interface CipherInfoModalProps {
   isOpen: boolean;
@@ -81,6 +83,7 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
   const [rawMarkdown, setRawMarkdown] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [activeTabId, setActiveTabId] = useState<string>('');
+  const [contentMode, setContentMode] = useState<'text' | 'video'>('video');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -90,6 +93,7 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
     setError(null);
     setRawMarkdown('');
     setActiveTabId('');
+    setContentMode('video');
     fetch(url, { signal: controller.signal })
       .then(async (res) => {
         if (!res.ok) throw new Error(`Failed to load markdown: ${res.status}`);
@@ -105,9 +109,10 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
 
   const sections = useMemo(() => parseH2Sections(rawMarkdown), [rawMarkdown]);
   const contentRef = useRef<HTMLDivElement>(null);
+  const videos = getVideosForCipher(cipherType);
 
   useEffect(() => {
-    if (!contentRef.current) return;
+    if (!contentRef.current || contentMode !== 'text') return;
     const container = contentRef.current;
     const headings = Array.from(container.querySelectorAll('h2')) as HTMLElement[];
     
@@ -145,7 +150,7 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
     
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [sections, activeTabId, rawMarkdown]);
+  }, [sections, activeTabId, rawMarkdown, contentMode]);
 
   if (!isOpen) return null;
 
@@ -198,69 +203,105 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
           </button>
         </div>
 
-        {/* Quick jumps (H2 table of contents) */}
-        <div className={`flex items-center gap-2 flex-wrap border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} px-3 py-2`}>
-          {sections.map((tab) => (
+        {/* Content Mode Toggle */}
+        <div className={`flex items-center justify-between border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} px-3 py-2`}>
+          <div className="flex items-center gap-2">
             <button
-              key={tab.id}
-              onClick={() => handleJump(tab.id)}
+              onClick={() => setContentMode('video')}
               className={`px-3 py-1 text-sm rounded transition-colors ${
-                activeTabId === tab.id
-                  ? `${darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700'} `
+                contentMode === 'video'
+                  ? `${darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700'}`
                   : `${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`
               }`}
             >
-              {tab.title}
+              Videos ({videos.length})
             </button>
-          ))}
+            <button
+              onClick={() => setContentMode('text')}
+              className={`px-3 py-1 text-sm rounded transition-colors ${
+                contentMode === 'text'
+                  ? `${darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700'}`
+                  : `${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`
+              }`}
+            >
+              Text Guide
+            </button>
+          </div>
         </div>
+
+        {/* Sections Row (scrollable) - only show for text mode */}
+        {contentMode === 'text' && sections.length > 0 && (
+          <div className={`border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} px-3 py-2 overflow-x-auto`}>
+            <div className="inline-flex items-center gap-2 whitespace-nowrap">
+              {sections.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => handleJump(tab.id)}
+                  className={`px-3 py-1 text-sm rounded transition-colors ${
+                    activeTabId === tab.id
+                      ? `${darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700'} `
+                      : `${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`
+                  }`}
+                >
+                  {tab.title}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Content */}
         <div ref={contentRef} className="flex-1 overflow-y-auto p-6">
-          {!rawMarkdown && !error && (
-            <div className={darkMode ? 'text-gray-300' : 'text-gray-700'}>Loading…</div>
-          )}
-          {error && (
-            <div className={darkMode ? 'text-red-300' : 'text-red-600'}>{error}</div>
-          )}
-          {rawMarkdown && (
-            <div className={`prose max-w-none ${darkMode ? 'prose-invert' : ''}`}>
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm, remarkMath]}
-                rehypePlugins={[rehypeKatex] as any}
-                components={{
-                  h2: ({ children }) => {
-                    const text = Array.isArray(children) ? children.join(' ') : String(children ?? '');
-                    const id = slugify(text);
-                    return (
-                      <h2 id={id} className="scroll-mt-20 text-lg sm:text-xl mt-6 mb-2">
-                        {children}
-                      </h2>
-                    );
-                  },
-                  h3: ({ children }) => (
-                    <h3 className="text-base sm:text-lg mt-4 mb-2">{children}</h3>
-                  ),
-                  pre: ({ children }) => (
-                    <pre className={`${darkMode ? 'bg-gray-900 text-gray-100 border border-gray-700' : 'bg-gray-50 text-gray-900 border border-gray-200'} overflow-x-auto rounded-md p-3`}>{children}</pre>
-                  ),
-                  code: (props) => {
-                    const { className, children, ...rest } = props as any;
-                    const isInline = (rest as any).inline === true;
-                    if (isInline) {
-                      return (
-                        <code className={`${darkMode ? 'bg-gray-900/60 text-gray-100 border border-gray-700' : 'bg-gray-50 text-gray-900 border border-gray-200'} px-1 py-0.5 rounded`} {...rest}>{children}</code>
-                      );
-                    }
-                    return (
-                      <code className={`${className ?? ''} ${darkMode ? 'text-gray-100' : 'text-gray-900'}`} {...rest}>{children}</code>
-                    );
-                  }
-                }}
-              >
-                {rawMarkdown}
-              </ReactMarkdown>
-            </div>
+          {contentMode === 'video' ? (
+            <VideoCarousel videos={videos} darkMode={darkMode} />
+          ) : (
+            <>
+              {!rawMarkdown && !error && (
+                <div className={darkMode ? 'text-gray-300' : 'text-gray-700'}>Loading…</div>
+              )}
+              {error && (
+                <div className={darkMode ? 'text-red-300' : 'text-red-600'}>{error}</div>
+              )}
+              {rawMarkdown && (
+                <div className={`prose max-w-none ${darkMode ? 'prose-invert' : ''}`}>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm, remarkMath]}
+                    rehypePlugins={[rehypeKatex] as any}
+                    components={{
+                      h2: ({ children }) => {
+                        const text = Array.isArray(children) ? children.join(' ') : String(children ?? '');
+                        const id = slugify(text);
+                        return (
+                          <h2 id={id} className="scroll-mt-20 text-lg sm:text-xl mt-6 mb-2">
+                            {children}
+                          </h2>
+                        );
+                      },
+                      h3: ({ children }) => (
+                        <h3 className="text-base sm:text-lg mt-4 mb-2">{children}</h3>
+                      ),
+                      pre: ({ children }) => (
+                        <pre className={`${darkMode ? 'bg-gray-900 text-gray-100 border border-gray-700' : 'bg-gray-50 text-gray-900 border border-gray-200'} overflow-x-auto rounded-md p-3`}>{children}</pre>
+                      ),
+                      code: (props) => {
+                        const { className, children, ...rest } = props as any;
+                        const isInline = (rest as any).inline === true;
+                        if (isInline) {
+                          return (
+                            <code className={`${darkMode ? 'bg-gray-900/60 text-gray-100 border border-gray-700' : 'bg-gray-50 text-gray-900 border border-gray-200'} px-1 py-0.5 rounded`} {...rest}>{children}</code>
+                          );
+                        }
+                        return (
+                          <code className={`${className ?? ''} ${darkMode ? 'text-gray-100' : 'text-gray-900'}`} {...rest}>{children}</code>
+                        );
+                      }
+                    }}
+                  >
+                    {rawMarkdown}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

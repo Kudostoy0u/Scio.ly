@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState, useCallback } from 'react';
-import { RefreshCcw } from 'lucide-react';
 // ToastContainer is globally provided in Providers
 import { updateMetrics } from '@/app/utils/metrics';
 import { supabase } from '@/lib/supabase';
@@ -815,90 +814,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     );
   };
 
-  const reloadQuestions = async () => {
-    setIsLoading(true);
-    setFetchError(null);
-    setCurrentAnswer([]);
-    setCurrentQuestionIndex(0);
-    setGradingResults({});
-    setIsSubmitted(false);
-    setExplanations({});
-    
-    // Clear unlimited practice-related localStorage items
-    localStorage.removeItem('unlimitedQuestions');
-    localStorage.removeItem('contestedUnlimitedQuestions');
-    
-    try {
-      // Request a large number of base questions
-      const params = buildApiParams(routerData, 1000);
-      const apiUrl = `${api.questions}?${params}`;
-      
-      let apiResponse: any = null;
-      
-      // Check if we're offline first
-      const isOffline = !navigator.onLine;
-      if (isOffline) {
-        // Use offline data immediately when offline
-        const evt = routerData.eventName as string | undefined;
-        if (evt) {
-          const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-          const cached = await getEventOfflineQuestions(slug);
-          if (Array.isArray(cached) && cached.length > 0) {
-            // Respect selected question types when offline
-            const typesSel = (routerData.types as string) || 'multiple-choice';
-            const filtered = typesSel === 'multiple-choice'
-              ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
-              : typesSel === 'free-response'
-                ? cached.filter((q: any) => !Array.isArray(q.options) || q.options.length === 0)
-                : cached;
-            apiResponse = { success: true, data: filtered };
-          }
-        }
-        if (!apiResponse) throw new Error('No offline data available for this event. Please download it first.');
-      } else {
-        // Online: try API first, fallback to offline
-        let response: Response | null = null;
-        try {
-          response = await fetch(apiUrl);
-        } catch {
-          response = null;
-        }
-        
-        if (response && response.ok) {
-          apiResponse = await response.json();
-        } else {
-          // Fallback to offline data
-          const evt = routerData.eventName as string | undefined;
-          if (evt) {
-            const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-            const cached = await getEventOfflineQuestions(slug);
-            if (Array.isArray(cached) && cached.length > 0) {
-              // Respect selected question types when offline
-              const typesSel = (routerData.types as string) || 'multiple-choice';
-              const filtered = typesSel === 'multiple-choice'
-                ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
-                : typesSel === 'free-response'
-                  ? cached.filter((q: any) => !Array.isArray(q.options) || q.options.length === 0)
-                  : cached;
-              apiResponse = { success: true, data: filtered };
-            }
-          }
-          if (!apiResponse) throw new Error('Failed to load questions.');
-        }
-      }
-      
-      const allQuestions = apiResponse.data || [];
-      const questions = shuffleArray(allQuestions) as Question[];
-      setData(questions);
-      localStorage.setItem('unlimitedQuestions', JSON.stringify(questions));
-      
-    } catch (error) {
-      console.error('Error reloading questions:', error);
-      setFetchError('Failed to reload questions. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Removed reloadQuestions as the Reset button is no longer available
 
   const handleResetTest = () => {
     setCurrentAnswer([]);
@@ -932,16 +848,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             <h1 className={`text-xl md:text-3xl font-extrabold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
               {routerData.eventName || 'Loading...'}
             </h1>
-            <button
-              onClick={reloadQuestions}
-              title="Reset Questions"
-              className={`flex items-center transition-all duration-200 ${
-                darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <RefreshCcw className="w-4 h-4 mr-2" />
-              <span className="text-sm">Reset</span>
-            </button>
+            {/* Reset button removed for Unlimited mode */}
           </header>
 
           {/* Inline back link to Practice */}

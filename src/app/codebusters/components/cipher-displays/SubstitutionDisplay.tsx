@@ -2,6 +2,7 @@
 import React from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { QuoteData } from '../../types';
+import { ReplacementTable } from './ReplacementTable';
 
 interface SubstitutionDisplayProps {
     text: string;
@@ -174,6 +175,17 @@ export const SubstitutionDisplay = ({
                     );
                 })}
             </div>
+            
+            {/* Replacement Table for substitution ciphers */}
+            {['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Xenocrypt'].includes(cipherType) && (
+                <ReplacementTable
+                    text={text}
+                    solution={solution}
+                    quoteIndex={quoteIndex}
+                    isTestSubmitted={isTestSubmitted}
+                    onSolutionChange={onSolutionChange}
+                />
+            )}
             
             {/* Show original quote after submission */}
             {isTestSubmitted && (

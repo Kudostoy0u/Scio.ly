@@ -143,28 +143,70 @@ export class GeminiService {
     const answers = question.answers || [];
     const event = question.event || '';
     const difficulty = question.difficulty || 0.5;
+    const hasImage = question.imageData && typeof question.imageData === 'string';
 
-    const prompt = `You are a Science Olympiad question editor. Your job is to improve this question by correcting errors, clarifying wording, and enhancing educational value.
+    let prompt = `You are a Science Olympiad question editor. Your job is to improve this question by correcting errors, clarifying wording, and enhancing educational value.
 
 QUESTION TO IMPROVE: ${questionText}
 OPTIONS: ${JSON.stringify(options)}
 ANSWERS: ${JSON.stringify(answers)}
 EVENT: ${event}
 DIFFICULTY: ${difficulty}
-${userReason ? `USER REASON: ${userReason}` : ''}
+${userReason ? `USER REASON: ${userReason}` : ''}`;
+
+    if (hasImage) {
+      prompt += `
+
+IMPORTANT: This question includes an image that you should reference in your suggestions. The image contains visual information that is essential for understanding and answering the question correctly.
+
+When making suggestions, consider:
+- How the image relates to the question text
+- Whether the image clearly shows what the question is asking about
+- If the image quality or content could be improved
+- Whether the question text properly references visual elements in the image`;
+    }
+
+    prompt += `
 
 IMPROVEMENT CRITERIA:
 1. Scientific accuracy - correct any factual errors
 2. Clarity and readability - improve unclear wording
 3. Educational value - ensure question tests important concepts
 4. Technical formatting - fix formatting issues
-5. Difficulty appropriateness - adjust to match event level
+5. Difficulty appropriateness - adjust to match event level${hasImage ? `
+6. Image-text alignment - ensure question text properly references the image` : ''}
 
 Provide improved versions of the question components. Make minimal changes if the question is already good.
 
 Also provide:
 - reasoning: A brief explanation of what changes were made and why
 - confidence: A number between 0 and 1 indicating how confident you are in your suggestions (1 = very confident, 0 = not confident)`;
+
+    let contents: any = prompt;
+    
+    // If question has an image, include it in the request
+    if (hasImage) {
+      try {
+        const imageBase64 = await this.fetchImageAsBase64(question.imageData as string);
+        contents = [
+          {
+            role: 'user',
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  mimeType: 'image/jpeg',
+                  data: imageBase64
+                }
+              }
+            ]
+          }
+        ];
+      } catch (error) {
+        console.warn('Failed to fetch image for suggestions, proceeding with text-only:', error);
+        // Continue with text-only prompt if image fetch fails
+      }
+    }
 
     const schema = {
       type: Type.OBJECT,
@@ -184,14 +226,13 @@ Also provide:
       propertyOrdering: ["suggestedQuestion", "suggestedOptions", "suggestedAnswers", "reasoning", "confidence"],
     };
 
-    return await this.generateStructuredContent(prompt, schema);
+    return await this.generateStructuredContent(prompt, schema, 'gemini-2.5-flash', contents);
   }
 
   // Analyze question for issues
   public async analyzeQuestion(question: Record<string, unknown>): Promise<Record<string, unknown>> {
     const questionText = question.question || '';
     const options = question.options || [];
-    const answers = question.answers || [];
     const subject = question.subject || '';
     const difficulty = question.difficulty || 0.5;
 
@@ -199,13 +240,13 @@ Also provide:
 
 Question: ${questionText}
 Options: ${JSON.stringify(options)}
-Answers: ${JSON.stringify(answers)}
 Subject: ${subject}
 Difficulty: ${difficulty}
 
 ANALYSIS CRITERIA:
 1. Unanswerabiliy (Question is not self contained, and cannot be answered without external or additional information. For example if it mentions "Substance B" which is clearly a lab substance and cannot be included in a text question.)
 2. Inappropriate content
+3. Unable to have minor edits to be a good question
 
 Based on your analysis, determine if this question should be removed from the database. Consider removal if the question has is not answerable, aka not enough context. The reason field should be a brief 2 sentence explanation`;
 
@@ -234,6 +275,7 @@ Based on your analysis, determine if this question should be removed from the da
     const editedText = (editedQuestion?.question as string) ?? '';
     const editedOptions = editedQuestion?.options ?? [];
     const editedAnswers = editedQuestion?.answers ?? [];
+    const hasImage = originalQuestion?.imageData && typeof originalQuestion.imageData === 'string';
 
     // Normalize and resolve answers to their textual form for clearer validation
     const origAnswersText = this.resolveAnswersToText(origOptions, origAnswers);
@@ -248,24 +290,53 @@ CONTEXT
 ORIGINAL (TRUSTED) QUESTION
 - text: ${origText}
 - options: ${JSON.stringify(origOptions)}
-- answers: ${JSON.stringify(origAnswersText)}
+- answers: ${JSON.stringify(origAnswersText)}${hasImage ? `
+- image: This question includes an image that should be referenced in the validation` : ''}
 
 USER OR AI--PROPOSED CHANGES
 - text: ${editedText}
 - options: ${JSON.stringify(editedOptions)}
-- answers: ${JSON.stringify(editedAnswersText)}
+- answers: ${JSON.stringify(editedAnswersText)}${hasImage ? `
+- image: The edited question maintains the same image reference` : ''}
 
 CRITICAL VALIDATION GUIDELINES
 1) Scientific accuracy dominates. Do NOT accept changes that introduce incorrect facts or weaken clarity.
 2) If the user changed the answers or question text, explicitly verify correctness step-by-step. Compare the original scientific reasoning vs. the new claim before deciding.
 3) Only accept if the edit clearly fixes inaccuracies, improves clarity/formatting, or better aligns with the event—and remains scientifically correct.
-4) Ultimately, if the new question is better than the original in accuracy, clarity, or educational value, it should generally be accepted. 
+4) Ultimately, if the new question is better than the original in accuracy, clarity, or educational value, it should generally be accepted.${hasImage ? `
+5) For image-based questions, ensure the edited text still properly references the visual elements in the image.` : ''}
 
 OUTPUT
 - Decide isValid (true/false).
 - Provide a concise reason in no more than two sentences that references your verification (if answers changed, mention your check of original vs new answers). Keep it readable and specific.
 `;
 console.log(prompt);
+
+    let contents: any = prompt;
+    
+    // If question has an image, include it in the validation request
+    if (hasImage) {
+      try {
+        const imageBase64 = await this.fetchImageAsBase64(originalQuestion.imageData as string);
+        contents = [
+          {
+            role: 'user',
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  mimeType: 'image/jpeg',
+                  data: imageBase64
+                }
+              }
+            ]
+          }
+        ];
+      } catch (error) {
+        console.warn('Failed to fetch image for validation, proceeding with text-only:', error);
+        // Continue with text-only prompt if image fetch fails
+      }
+    }
 
     const schema = {
       type: Type.OBJECT,
@@ -276,7 +347,7 @@ console.log(prompt);
       propertyOrdering: ["isValid", "reason"],
     };
 
-    return await this.generateStructuredContent(prompt, schema);
+    return await this.generateStructuredContent(prompt, schema, 'gemini-2.5-flash', contents);
   }
 
   // Helper method to fetch image and convert to base64

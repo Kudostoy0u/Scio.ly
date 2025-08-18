@@ -421,12 +421,29 @@ export const useHintSystem = (
       // Update the quotes state to reflect the revealed letter
       const newQuotes = quotes.map((q, idx) => {
         if (idx === questionIndex) {
+          let updatedSolution = {
+            ...q.solution,
+            [randomCipherLetter]: correctPlainLetter
+          };
+          
+          // For Fractionated Morse, also update the replacement table
+          if (q.cipherType === 'Fractionated Morse' && q.fractionationTable) {
+            // Find which triplet this cipher letter maps to
+            for (const [triplet, letter] of Object.entries(q.fractionationTable)) {
+              if (letter === randomCipherLetter) {
+                // Update the replacement table entry for this triplet
+                updatedSolution = {
+                  ...updatedSolution,
+                  [`replacement_${triplet}`]: randomCipherLetter
+                };
+                break;
+              }
+            }
+          }
+          
           return {
             ...q,
-            solution: {
-              ...q.solution,
-              [randomCipherLetter]: correctPlainLetter
-            }
+            solution: updatedSolution
           };
         }
         return q;

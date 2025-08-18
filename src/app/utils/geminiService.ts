@@ -47,10 +47,24 @@ class GeminiService {
 
   async suggestQuestionEdit(question: Question, userReason?: string): Promise<EditSuggestion> {
     try {
+      // Prepare request body with image information
+      const requestBody: any = { 
+        question, 
+        userReason 
+      };
+
+      // Add image information if present
+      if (question.imageData || question.imageUrl) {
+        requestBody.question = {
+          ...question,
+          imageData: question.imageData || question.imageUrl
+        };
+      }
+
       const response = await fetch(api.geminiSuggestEdit, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, userReason })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {

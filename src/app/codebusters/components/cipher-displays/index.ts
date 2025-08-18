@@ -1,4 +1,5 @@
 export { FrequencyTable } from './FrequencyTable';
+export { ReplacementTable } from './ReplacementTable';
 export { HillDisplay } from './HillDisplay';
 export { AristocratDisplay } from './AristocratDisplay';
 export { PortaDisplay } from './PortaDisplay';

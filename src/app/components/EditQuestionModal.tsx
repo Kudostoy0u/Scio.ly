@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { Bot } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { geminiService, EditSuggestion, Question } from '@/app/utils/geminiService';
+// Removed upload API usage since image edits are disabled
 // Removed in-modal success/failure icons for optimistic flow
 
 interface EditQuestionModalProps {
@@ -44,11 +45,19 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
   const [suggestions, setSuggestions] = useState<EditSuggestion | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
+  // Image-related state (read-only display)
+  const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
+
   useEffect(() => {
     if (question && isOpen) {
       resetForm();
       setEditedQuestion(question.question);
       setOriginalOptionCount(Array.isArray(question.options) ? question.options.length : 0);
+      
+      // Set image URL if question has image
+      if (question.imageData || (question as any).imageUrl) {
+        setCurrentImageUrl(question.imageData || (question as any).imageUrl);
+      }
       
       // Determine if this is a free response question
       const hasMCQOptions = question.options && question.options.length > 0;
@@ -86,6 +95,8 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
     setSuggestions(null);
     setShowSuggestions(false);
     setIsLoadingSuggestions(false);
+    // Reset image state
+    setCurrentImageUrl('');
     // No in-modal status when optimistic
     setOriginalOptionCount(0);
   };
@@ -115,12 +126,20 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
     onClose();
   };
 
+  // No image upload or removal; image is permanent
+
   const handleGetSuggestions = async () => {
     if (!question) return;
 
     setIsLoadingSuggestions(true);
     try {
-      const suggestion = await geminiService.suggestQuestionEdit(question, reason);
+      // Prepare question data with image information
+      const questionWithImage = {
+        ...question,
+        imageData: currentImageUrl || question.imageData || (question as any).imageUrl
+      };
+
+      const suggestion = await geminiService.suggestQuestionEdit(questionWithImage, reason);
       setSuggestions(suggestion);
       setShowSuggestions(true);
     } catch (error) {
@@ -170,6 +189,8 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
     setIsProcessing(true);
 
     try {
+      const finalImageUrl = currentImageUrl || question.imageData || (question as any).imageUrl;
+
       const editedQuestionData: Question = {
         question: editedQuestion,
         options: isFRQ ? undefined : editedOptions.length > 0 ? editedOptions : undefined,
@@ -180,7 +201,9 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
         subject: question.subject,
         tournament: question.tournament,
         division: question.division,
-        subtopic: question.subtopic
+        subtopic: question.subtopic,
+        // Include image data if present
+        ...(finalImageUrl && { imageData: finalImageUrl })
       };
 
       toast.info('Judging edits');
@@ -239,6 +262,8 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
     }
   };
 
+  const hasImage = currentImageUrl || question?.imageData || (question as any)?.imageUrl;
+
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
@@ -280,7 +305,9 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-blue-600 dark:text-blue-400 text-sm sm:text-base">AI-Powered Suggestions</h4>
-                      <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Get intelligent recommendations for improving this question</p>
+                      <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {hasImage ? 'Get intelligent recommendations for improving this image-based question' : 'Get intelligent recommendations for improving this question'}
+                      </p>
                     </div>
                   </div>
                   <motion.button
@@ -351,6 +378,28 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
                   </div>
                 </div>
               )
+            )}
+
+            {/* Image Section (read-only) */}
+            {hasImage && (
+              <div className="mb-6">
+                <label className="block mb-2 font-medium">Question Image</label>
+                <div className={`p-4 rounded-lg border-2 border-dashed ${
+                  darkMode ? 'border-gray-600 bg-gray-700/50' : 'border-gray-300 bg-gray-50'
+                }`}>
+                  <div className="mb-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img 
+                      src={currentImageUrl || question?.imageData || (question as any)?.imageUrl} 
+                      alt="Question" 
+                      className="max-h-64 rounded-md mx-auto"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 text-center">
+                    Image is permanent and cannot be changed
+                  </p>
+                </div>
+              </div>
             )}
 
             <div className="space-y-4">

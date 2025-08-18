@@ -157,6 +157,11 @@ export default function CodeBusters() {
         setTestScore(score);
         setIsTestSubmitted(true);
         
+        // Scroll to top when test is submitted - more robust approach
+        setTimeout(() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 200);
+        
         // Mark test as submitted using new time management system
         markTestSubmitted();
 
@@ -277,6 +282,10 @@ export default function CodeBusters() {
         setTestScore(0);
         setTimeLeft(timeLimit * 60);
         
+        // Clear hint states
+        setActiveHints({});
+        setRevealedLetters({});
+        
         // Use the original loader but with a custom callback to avoid clearing quotes immediately
         const customSetLoading = (loading: boolean) => {
             // Don't set loading to true during reset to keep old quotes visible
@@ -299,7 +308,7 @@ export default function CodeBusters() {
             setTestScore,
             loadPreferences
         );
-    }, [loadPreferences, setQuotes, setIsTestSubmitted, setTestScore, setTimeLeft, setError, setIsLoading]);
+    }, [loadPreferences, setQuotes, setIsTestSubmitted, setTestScore, setTimeLeft, setError, setIsLoading, setActiveHints, setRevealedLetters]);
 
     // Handle back navigation: preserve Codebusters progress for resume banner on Practice
     const handleBack = useCallback(() => {
@@ -326,6 +335,11 @@ export default function CodeBusters() {
 
     // Handle test reset after submission
     const handleTestReset = useCallback(() => {
+        // Scroll to top when resetting test
+        setTimeout(() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 200);
+        
         // Get test params before clearing localStorage
         const testParams = JSON.parse(localStorage.getItem('testParams') || '{}');
         const eventName = testParams.eventName || 'Codebusters';
@@ -357,6 +371,10 @@ export default function CodeBusters() {
         setTestScore(0);
         setTimeLeft(timeLimit * 60);
         
+        // Clear hint states
+        setActiveHints({});
+        setRevealedLetters({});
+        
         // Use the original loader but with a custom callback to avoid clearing quotes immediately
         const customSetLoading = (loading: boolean) => {
             // Don't set loading to true during reset to keep old quotes visible
@@ -379,7 +397,7 @@ export default function CodeBusters() {
             setTestScore,
             loadPreferences
         );
-    }, [loadPreferences, setQuotes, setIsTestSubmitted, setTestScore, setTimeLeft, setError, setIsLoading]);
+    }, [loadPreferences, setQuotes, setIsTestSubmitted, setTestScore, setTimeLeft, setError, setIsLoading, setActiveHints, setRevealedLetters]);
 
     // Load questions if needed
     useEffect(() => {

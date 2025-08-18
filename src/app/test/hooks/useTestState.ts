@@ -882,8 +882,9 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     localStorage.removeItem('contestedQuestions');
     localStorage.removeItem('testFromBookmarks');
     
-    const timeLimit = JSON.parse(localStorage.getItem("testParams") ?? "{}")?.timeLimit || "30";
-    const eventName = JSON.parse(localStorage.getItem("testParams") ?? "{}")?.eventName || "Unknown Event";
+    // Use current routerData instead of reading from localStorage to preserve idPercentage
+    const timeLimit = routerData.timeLimit || "30";
+    const eventName = routerData.eventName || "Unknown Event";
     const newSession = resetTestSession(eventName, parseInt(timeLimit));
     
     setTimeLeft(newSession.timeState.timeLeft);
