@@ -288,6 +288,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
             answers: row.answers || [],
             difficulty: row.difficulty ?? 0.5,
             event: row.event,
+            subtopics: row.subtopics || [], // Preserve subtopics field
             imageData: Array.isArray(row.images) && row.images.length ? row.images[Math.floor(Math.random()*row.images.length)] : undefined,
           }));
           // Take only up to idCount
@@ -791,6 +792,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           answers: row.answers || [],
           difficulty: row.difficulty ?? 0.5,
           event: row.event,
+          subtopics: row.subtopics || [], // Preserve subtopics field
           imageData: Array.isArray(row.images) && row.images.length ? row.images[Math.floor(Math.random()*row.images.length)] : undefined,
         }));
         // Take only up to idCount
@@ -872,6 +874,11 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   };
 
   const handleResetTest = () => {
+    // Scroll to top when resetting test
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 200);
+    
     setIsSubmitted(false);
     setUserAnswers({});
     setGradingResults({});

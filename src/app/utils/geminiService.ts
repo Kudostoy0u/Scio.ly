@@ -11,6 +11,7 @@ export interface Question {
   division?: string;
   subject?: string;
   subtopic?: string;
+  subtopics?: string[]; // Add this to match API data structure
   event?: string;
   imageUrl?: string; // optional Cloudinary URL for ID questions (legacy)
   imageData?: string; // optional CDN URL for ID questions (new)

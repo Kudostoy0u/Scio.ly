@@ -330,7 +330,7 @@ export const useHintSystem = (
       }
       const plainIndex = (aInverse * (cipherIndex - quote.affineB + 26)) % 26;
       correctPlainLetter = String.fromCharCode(plainIndex + 65);
-    } else if (quote.key && ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat'].includes(quote.cipherType)) {
+    } else if (quote.key && ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Misc. Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Misc. Patristocrat'].includes(quote.cipherType)) {
       // For aristocrat/patristocrat ciphers, find the plain letter from the key
       const keyIndex = quote.key.indexOf(randomCipherLetter);
       if (keyIndex !== -1) {

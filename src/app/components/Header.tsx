@@ -25,6 +25,8 @@ export default function Header() {
   const pathname = usePathname();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [scrollOpacity, setScrollOpacity] = useState(0);
+  // Dedicated opacity for test pages so we re-render on every scroll step
+  const [headerOpacity, setHeaderOpacity] = useState(1);
 
   // Determine if we're on the homepage
   const isHomePage = pathname === '/';
@@ -36,9 +38,12 @@ export default function Header() {
     const currentY = window.scrollY || 0;
     
     if (isTestPage) {
-      // For test pages, we don't need to track scroll opacity separately
-      // as it's handled directly in the computedOpacity calculation
-      setScrolled(currentY > 100);
+      // For test pages, update an explicit opacity state so it can reach 0 and re-render smoothly
+      const fadeThreshold = 100; // px until header starts fading
+      const fadeProgress = Math.max(0, Math.min(1, (currentY - fadeThreshold) / 100));
+      const nextOpacity = Math.max(0, 1 - fadeProgress);
+      setHeaderOpacity(nextOpacity);
+      setScrolled(currentY > fadeThreshold);
     } else {
       // For other pages, use the original logic
       const threshold = 300; // px until fully opaque
@@ -182,18 +187,10 @@ export default function Header() {
   const shouldBeTransparent = isHomePage && !scrolled;
   // Compute dynamic background/border opacity for smooth fade on homepage
   const targetOpacity = 0.95;
-  let computedOpacity;
-  
-  if (isTestPage) {
-    // For test pages, fade out the header as user scrolls down
-    const fadeThreshold = 100; // px until header starts fading
-    const fadeProgress = Math.max(0, Math.min(1, (window.scrollY - fadeThreshold) / 100));
-    computedOpacity = Math.max(0, 1 - fadeProgress); // Allow complete transparency
-  } else if (isHomePage) {
-    computedOpacity = Math.min(scrollOpacity * targetOpacity, targetOpacity);
-  } else {
-    computedOpacity = targetOpacity;
-  }
+  // For test pages, use state-driven opacity; otherwise compute based on scrollOpacity
+  const computedOpacity = isTestPage
+    ? headerOpacity
+    : (isHomePage ? Math.min(scrollOpacity * targetOpacity, targetOpacity) : targetOpacity);
   const backgroundColor = darkMode
     ? `rgba(17, 24, 39, ${computedOpacity})` // gray-900
     : `rgba(255, 255, 255, ${computedOpacity})`;
@@ -225,7 +222,9 @@ export default function Header() {
         style={{ 
           backgroundColor, 
           borderBottomColor: borderColor,
-          opacity: isTestPage ? computedOpacity : 1
+          opacity: isTestPage ? computedOpacity : 1,
+          // When fully transparent on test pages, allow interactions to pass through
+          pointerEvents: isTestPage && computedOpacity <= 0.01 ? 'none' : 'auto'
         }}
       >
         <div className="max-w-7xl mx-auto">

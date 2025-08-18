@@ -40,7 +40,8 @@ import {
   ShareButton, 
   QuestionCard, 
   SubmitButton, 
-  PDFModal 
+  PDFModal,
+  CodebustersSummary
 } from './components';
 import { FloatingActionButtons } from '@/app/components/FloatingActionButtons';
 
@@ -138,7 +139,7 @@ export default function CodeBusters() {
         let correctCount = 0;
         // Legacy correctness for UI percent
         quotes.forEach((quote, index) => {
-            const isCorrect = ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine'].includes(quote.cipherType)
+            const isCorrect = ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Misc. Aristocrat', 'Misc. Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Xenocrypt'].includes(quote.cipherType)
                 ? checkSubstitutionAnswer(index)
                 : (quote.cipherType === 'Hill 2x2' || quote.cipherType === 'Hill 3x3')
                     ? checkHillAnswer(index)
@@ -438,16 +439,22 @@ export default function CodeBusters() {
                       </button>
                     </div>
 
-                    {/* Smooth Progress Bar */}
-                    <div
-                        className={`${isTestSubmitted ? '' : 'sticky top-4'
-                        } z-10 w-full max-w-3xl bg-white border-2 border-gray-300 rounded-full h-5 mb-6 shadow-lg`}
-                    >
+                    {/* Progress Bar or Summary */}
+                    {isTestSubmitted ? (
+                        <CodebustersSummary
+                            quotes={quotes}
+                            darkMode={darkMode}
+                        />
+                    ) : (
                         <div
-                            className="bg-blue-500 h-4 rounded-full transition-[width] duration-700 ease-in-out shadow-md"
-                            style={{ width: `${totalProgress}%` }}
-                        ></div>
-                    </div>
+                            className={`sticky top-4 z-10 w-full max-w-3xl bg-white border-2 border-gray-300 rounded-full h-5 mb-6 shadow-lg`}
+                        >
+                            <div
+                                className="bg-blue-500 h-4 rounded-full transition-[width] duration-700 ease-in-out shadow-md"
+                                style={{ width: `${totalProgress}%` }}
+                            ></div>
+                        </div>
+                    )}
 
                     <main
                         className={`w-full max-w-3xl rounded-lg shadow-md p-6 mt-4 ${

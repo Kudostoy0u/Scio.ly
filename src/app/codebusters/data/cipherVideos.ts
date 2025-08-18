@@ -9,16 +9,16 @@ export interface CipherVideoData {
 }
 
 export const cipherVideos: CipherVideoData = {
-  'Random Aristocrat': [
+  'Misc. Aristocrat': [
     {
-      title: 'Random Aristocrat Basics',
-      url: 'https://www.youtube.com/watch?v=KLDnnigj1Xs',
-      description: 'Introduction to Random Aristocrat ciphers'
+      title: 'Misc. Aristocrat Basics',
+      url: 'https://www.youtube.com/watch?v=example1',
+      description: 'Introduction to Misc. Aristocrat ciphers'
     },
     {
-      title: 'Random Aristocrat Advanced',
-      url: 'https://www.youtube.com/watch?v=XFo0O12PK-w',
-      description: 'Advanced solving techniques for Random Aristocrat'
+      title: 'Misc. Aristocrat Advanced',
+      url: 'https://www.youtube.com/watch?v=example2',
+      description: 'Advanced solving techniques for Misc. Aristocrat'
     }
   ],
   'K1 Aristocrat': [
@@ -102,11 +102,11 @@ export const cipherVideos: CipherVideoData = {
       description: 'Complete guide to K3 Patristocrat cipher'
     }
   ],
-  'Random Patristocrat': [
+  'Misc. Patristocrat': [
     {
-      title: 'Random Patristocrat Cipher',
+      title: 'Misc. Patristocrat Cipher',
       url: 'https://www.youtube.com/watch?v=WRhiaHFBZLw',
-      description: 'Complete guide to Random Patristocrat cipher'
+      description: 'Complete guide to Misc. Patristocrat cipher'
     }
   ],
   'Baconian': [

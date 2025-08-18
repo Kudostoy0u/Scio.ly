@@ -6,6 +6,7 @@ export { QuestionCard } from './QuestionCard';
 export { SubmitButton } from './SubmitButton';
 export { PDFModal } from './PDFModal';
 export { VideoCarousel } from './VideoCarousel';
+export { default as CodebustersSummary } from './CodebustersSummary';
 
 // Export all cipher display components
 export * from './cipher-displays';

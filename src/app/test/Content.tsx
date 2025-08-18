@@ -8,7 +8,7 @@ import EditQuestionModal from '@/app/components/EditQuestionModal';
 import ShareModal from '@/app/components/ShareModal';
 import Header from '@/app/components/Header';
 import { useTestState } from './hooks/useTestState';
-import { TestLayout, TestHeader, ProgressBar, QuestionCard, TestFooter } from './components';
+import { TestLayout, TestHeader, ProgressBar, TestSummary, QuestionCard, TestFooter } from './components';
 import { FloatingActionButtons } from '@/app/components/FloatingActionButtons';
 
 export default function TestContent({ initialData, initialRouterData }: { initialData?: any[]; initialRouterData?: any }) {
@@ -85,6 +85,7 @@ export default function TestContent({ initialData, initialRouterData }: { initia
             timeLeft={timeLeft}
             darkMode={darkMode}
             isFromBookmarks={isFromBookmarks}
+            isSubmitted={isSubmitted}
           />
 
           {/* Inline back link to Practice */}
@@ -98,14 +99,23 @@ export default function TestContent({ initialData, initialRouterData }: { initia
           </button>
         </div>
 
-        <ProgressBar
-          answeredCount={Object.keys(userAnswers).length}
-          totalCount={data.length}
-          isSubmitted={isSubmitted}
-        />
+        {isSubmitted ? (
+          <TestSummary
+            data={data}
+            userAnswers={userAnswers}
+            gradingResults={gradingResults}
+            darkMode={darkMode}
+          />
+        ) : (
+          <ProgressBar
+            answeredCount={Object.keys(userAnswers).length}
+            totalCount={data.length}
+            isSubmitted={isSubmitted}
+          />
+        )}
 
           <main
-          className={`w-full max-w-3xl rounded-lg shadow-md p-6 mt-4 ${
+          className={`w-full max-w-3xl min-w-[50vw] rounded-lg shadow-md p-6 mt-4 ${
               darkMode ? 'bg-gray-800' : 'bg-white'
             }`}
           >

@@ -177,6 +177,7 @@ IMPROVEMENT CRITERIA:
 6. Image-text alignment - ensure question text properly references the image` : ''}
 
 Provide improved versions of the question components. Make minimal changes if the question is already good.
+Do not switch FRQ based quetsions to MCQ based questions (adding options to a question without options) or vice versa. 
 
 Also provide:
 - reasoning: A brief explanation of what changes were made and why
@@ -371,29 +372,49 @@ console.log(prompt);
   ): Promise<Record<string, unknown>> {
     const hasImage = question.imageData && typeof question.imageData === 'string';
     
-    let prompt: string;
-    let contents: any;
+    // Extract and format question components strategically
+    const questionText = question.question || '';
+    const options = Array.isArray(question.options) ? question.options : [];
+    const answers = Array.isArray(question.answers) ? question.answers : [];
+    
+    // Format options with indices
+    const formattedOptions = options.map((option, index) => `${index}: ${option}`).join('\n');
+    
+    // Map answer indices to their corresponding options
+    const formattedAnswers = answers.map(answerIndex => {
+      const index = typeof answerIndex === 'number' ? answerIndex : parseInt(String(answerIndex), 10);
+      const option = options[index];
+      return `${answerIndex} (${option})`;
+    }).join(', ');
+    
+    // const prompt = `Respond exactly like this: {correctIndices: [0], explanation: "What's up!"}`
+    const prompt = `You are an expert Science Olympiad tutor providing detailed explanations for questions${hasImage ? ' with images' : ''}. Your job is to help students understand how to solve this question step-by-step.
 
-    if (hasImage) {
-      // For picture-based questions, include the image in the prompt
-      prompt = `You are an expert Science Olympiad tutor providing detailed explanations for questions with images. Your job is to help students understand how to solve this question step-by-step.
+QUESTION: ${questionText}
+EVENT: ${event}${options.length > 0 ? `
+OPTIONS:
+${formattedOptions}
+ANSWER(S): ${formattedAnswers}` : `
+ANSWER(S): ${answers.join(', ')}`}${hasImage ? `
 
-QUESTION TO EXPLAIN: ${JSON.stringify(question)}
-EVENT: ${event}
-
-IMPORTANT: This question includes an image that you should reference in your explanation. The image contains visual information that is essential for understanding and answering the question correctly.
+IMPORTANT: This question includes an image that you should reference in your explanation. The image contains visual information that is essential for understanding and answering the question correctly.` : ''}
 
 EXPLANATION REQUIREMENTS:
-1. First, describe what you see in the image and how it relates to the question
-2. Break down the problem into logical steps, referencing specific visual elements from the image
-3. Explain the scientific concepts involved, connecting them to the visual evidence
-4. Clearly identify the correct answer(s) and explain how the image supports this answer
-5. Briefly address why other options are wrong, using evidence from the image when applicable
-6. Use language appropriate for Science Olympiad students
-7. Be specific about visual details, patterns, or features in the image that are relevant to the answer
+1. ${hasImage ? 'First, describe what you see in the image and how it relates to the question' : 'Break down the problem into logical steps'}
+2. ${hasImage ? 'Break down the problem into logical steps, referencing specific visual elements from the image' : 'Explain the scientific concepts involved'}
+3. ${hasImage ? 'Explain the scientific concepts involved, connecting them to the visual evidence' : 'Clearly identify the correct answer(s)'}
+4. ${hasImage ? 'Clearly identify the correct answer(s) and explain how the image supports this answer' : 'Explain why the correct answer is right'}
+5. ${hasImage ? 'Briefly address why other options are wrong, using evidence from the image when applicable' : 'Briefly address why other options are wrong'}
+6. Use language appropriate for Science Olympiad students${hasImage ? `
+7. Be specific about visual details, patterns, or features in the image that are relevant to the answer` : ''}
 
-Provide a comprehensive, educational explanation that helps students understand both the answer and the scientific reasoning behind it, with clear references to the visual information provided.`;
+Likely, correctIndeces will have the same answers and zero-indexed indices as the correct answers I just claimed. But in rare cases, you may need to change the correct answers. DO NOT FORGET to include correctIndeces key/value pair after your explanation.
+Provide a comprehensive, educational explanation that helps students understand both the answer and the scientific reasoning behind it${hasImage ? ', with clear references to the visual information provided' : ''}.`;
 
+    let contents: any = prompt;
+    
+    // If question has an image, include it in the request
+    if (hasImage) {
       try {
         const imageBase64 = await this.fetchImageAsBase64(question.imageData as string);
         contents = [
@@ -415,26 +436,9 @@ Provide a comprehensive, educational explanation that helps students understand 
         console.warn('Failed to fetch image, falling back to text-only explanation:', error);
         contents = prompt;
       }
-    } else {
-      // For text-only questions, use the original prompt
-      prompt = `You are an expert Science Olympiad tutor providing detailed explanations for questions. Your job is to help students understand how to solve this question step-by-step.
-
-QUESTION TO EXPLAIN: ${JSON.stringify(question)}
-EVENT: ${event}
-
-EXPLANATION REQUIREMENTS:
-1. Break down the problem into logical steps
-2. Explain the scientific concepts involved
-3. Clearly identify the correct answer(s)
-4. Explain why the correct answer is right
-5. Briefly address why other options are wrong
-6. Use language appropriate for Science Olympiad students
-
-Provide a comprehensive, educational explanation that helps students understand both the answer and the scientific reasoning behind it.`;
-
-      contents = prompt;
     }
-
+    
+    console.log(prompt);
     const schema = {
       type: Type.OBJECT,
       properties: {
@@ -444,59 +448,71 @@ Provide a comprehensive, educational explanation that helps students understand 
           items: { type: Type.NUMBER }
         },
       },
-      propertyOrdering: ["explanation", "correctIndices"],
+      propertyOrdering: ["explanation","correctIndices",],
     };
 
     return await this.generateStructuredContent(prompt, schema, 'gemini-2.5-flash', contents);
   }
 
-  // Stream explain for progressive UI
+  // Stream explain for progressive UI with structured output
   public async *streamExplain(
     question: Record<string, unknown>,
     userAnswer: unknown,
     event: string
   ): AsyncGenerator<{ type: 'text'; chunk: string } | { type: 'final'; data: Record<string, unknown> }, void, unknown> {
-    // First, stream plain markdown explanation
     const ai = this.getCurrentClient();
     const hasImage = question.imageData && typeof question.imageData === 'string';
     
-    let explanationPrompt: string;
-    let contents: any;
+    // Extract and format question components strategically (same as explain function)
+    const questionText = question.question || '';
+    const options = Array.isArray(question.options) ? question.options : [];
+    const answers = Array.isArray(question.answers) ? question.answers : [];
+    
+    // Format options with indices
+    const formattedOptions = options.map((option, index) => `${index}: ${option}`).join('\n');
+    
+    // Map answer indices to their corresponding options
+    const formattedAnswers = answers.map(answerIndex => {
+      const index = typeof answerIndex === 'number' ? answerIndex : parseInt(String(answerIndex), 10);
+      const option = options[index];
+      return `${answerIndex} (${option})`;
+    }).join(', ');
+    
+    const prompt = `You are an expert Science Olympiad tutor providing detailed explanations for questions${hasImage ? ' with images' : ''}. Your job is to help students understand how to solve this question step-by-step.
 
+QUESTION: ${questionText}
+EVENT: ${event}${options.length > 0 ? `
+OPTIONS:
+${formattedOptions}
+CORRECT ANSWER(S): ${formattedAnswers}` : `
+CORRECT ANSWER(S): ${answers.join(', ')}`}${hasImage ? `
+
+IMPORTANT: This question includes an image that you should reference in your explanation. The image contains visual information that is essential for understanding and answering the question correctly.` : ''}
+
+EXPLANATION REQUIREMENTS:
+1. ${hasImage ? 'First, describe what you see in the image and how it relates to the question' : 'Break down the problem into logical steps'}
+2. ${hasImage ? 'Break down the problem into logical steps, referencing specific visual elements from the image' : 'Explain the scientific concepts involved'}
+3. ${hasImage ? 'Explain the scientific concepts involved, connecting them to the visual evidence' : 'Clearly identify the correct answer(s)'}
+4. ${hasImage ? 'Clearly identify the correct answer(s) and explain how the image supports this answer' : 'Explain why the correct answer is right'}
+5. ${hasImage ? 'Briefly address why other options are wrong, using evidence from the image when applicable' : 'Briefly address why other options are wrong'}
+6. Use language appropriate for Science Olympiad students${hasImage ? `
+7. Be specific about visual details, patterns, or features in the image that are relevant to the answer` : ''}
+8. Refer to the options 1-indexed. For example, "Option 1, Option 2"
+
+Likely, your correctIndeces key/value pair at the start of your json object, before the explanation, will likely have the same answers and zero-indexed indices as the correct answers I just claimed. But in rare cases, you may need to change the correct answers.
+Provide a comprehensive, educational explanation that helps students understand both the answer and the scientific reasoning behind it${hasImage ? ', with clear references to the visual information provided' : ''}.`;
+
+    let contents: any = prompt;
+    console.log(prompt)
+    // If question has an image, include it in the request
     if (hasImage) {
-      // For picture-based questions, include the image in the prompt
-      explanationPrompt = `You are an expert Science Olympiad tutor. Provide concise, clear explanations for questions with images.
-
-QUESTION: ${JSON.stringify(question)}
-EVENT: ${event}
-
-IMPORTANT: This question includes an image that you should reference in your explanation. The image contains visual information that is essential for understanding and answering the question correctly.
-
-REQUIREMENTS:
-1. First, briefly describe what you see in the image and how it relates to the question
-2. Brief overview of the topic/concept, connecting it to the visual evidence
-3. Why the correct answer is right (be specific, reference the image)
-4. Why each wrong answer is wrong (be specific, use evidence from the image when applicable)
-5. Keep explanations concise and focused
-
-FORMAT:
-- Use **bold** for key terms and concepts
-- Use simple line breaks between sections
-- NO bullet points, numbered lists, or complex markdown
-- NO LaTeX, code blocks, or special formatting
-- End with "Correct answer: **[answer]**" format
-- Keep each section brief and to the point
-- Be specific about visual details, patterns, or features in the image that are relevant
-
-Focus on clarity and accuracy over length, with clear references to the visual information provided.`;
-
       try {
         const imageBase64 = await this.fetchImageAsBase64(question.imageData as string);
         contents = [
           {
             role: 'user',
             parts: [
-              { text: explanationPrompt },
+              { text: prompt },
               {
                 inlineData: {
                   mimeType: 'image/jpeg',
@@ -508,73 +524,59 @@ Focus on clarity and accuracy over length, with clear references to the visual i
         ];
       } catch (error) {
         // If image fetch fails, fall back to text-only explanation
-        console.warn('Failed to fetch image for streaming, falling back to text-only explanation:', error);
-        contents = explanationPrompt;
+        console.warn('Failed to fetch image, falling back to text-only explanation:', error);
+        contents = prompt;
       }
-    } else {
-      // For text-only questions, use the original prompt
-      explanationPrompt = `You are an expert Science Olympiad tutor. Provide concise, clear explanations.
-
-QUESTION: ${JSON.stringify(question)}
-EVENT: ${event}
-
-REQUIREMENTS:
-1. Brief overview of the topic/concept
-2. Why the correct answer is right (be specific)
-3. Why each wrong answer is wrong (be specific)
-4. Keep explanations concise and focused
-
-FORMAT:
-- Use **bold** for key terms and concepts
-- Use simple line breaks between sections
-- NO bullet points, numbered lists, or complex markdown
-- NO LaTeX, code blocks, or special formatting
-- End with "Correct answer: **[answer]**" format
-- Keep each section brief and to the point
-
-Focus on clarity and accuracy over length.`;
-
-      contents = explanationPrompt;
     }
 
+    // Use structured streaming to get both text chunks and final structured data
     const stream = await ai.models.generateContentStream({
       model: 'gemini-2.5-flash',
       contents: contents,
       config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            explanation: { type: Type.STRING },
+            correctIndices: {
+              type: Type.ARRAY,
+              items: { type: Type.NUMBER }
+            },
+          },
+          propertyOrdering: ["correctIndices", "explanation"],
+        },
         temperature: 0.1, // Low temperature for consistent explanations
         topP: 0.8,
         topK: 40,
       },
     });
 
-    let fullExplanation = '';
+    let fullText = '';
+    let finalData: Record<string, unknown> = {};
+    
     for await (const part of stream) {
       const piece = part.text || '';
       if (piece) {
-        fullExplanation += piece;
+        fullText += piece;
+        // Emit as plain text chunks so the client can progressively render
         yield { type: 'text', chunk: piece };
       }
     }
-
-    // After streaming, get structured data for correct indices
+    
+    // Try to parse final JSON
     try {
-      const structuredResult = await this.explain(question, userAnswer, event);
-      yield { 
-        type: 'final', 
-        data: {
-          explanation: fullExplanation,
-          correctIndices: structuredResult.correctIndices
-        }
-      };
+      finalData = (fullText ? JSON.parse(fullText) : {}) as Record<string, unknown>;
     } catch {
-      // If structured call fails, just return the explanation
-      yield { 
-        type: 'final', 
-        data: {
-          explanation: fullExplanation
-        }
-      };
+      // Fallback to empty object if parsing failed
+      finalData = {};
     }
+    
+    // Yield final structured data
+    yield { 
+      type: 'final', 
+      data: finalData
+    };
   }
 
   // Grade free response questions

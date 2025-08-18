@@ -34,16 +34,16 @@ export const SubstitutionDisplay = ({
 
     const getCipherInfo = () => {
         switch (cipherType) {
-            case 'Random Aristocrat':
-                return 'Random Aristocrat Cipher';
+            case 'Misc. Aristocrat':
+                return 'Misc. Aristocrat Cipher';
             case 'K1 Aristocrat':
                 return 'K1 Aristocrat Cipher';
             case 'K2 Aristocrat':
                 return 'K2 Aristocrat Cipher';
             case 'K3 Aristocrat':
                 return 'K3 Aristocrat Cipher';
-            case 'Random Patristocrat':
-                return 'Random Patristocrat Cipher';
+            case 'Misc. Patristocrat':
+                return 'Misc. Patristocrat Cipher';
             case 'K1 Patristocrat':
                 return 'K1 Patristocrat Cipher';
             case 'K2 Patristocrat':
@@ -75,7 +75,7 @@ export const SubstitutionDisplay = ({
         const quote = quotes[quoteIndex];
         
         // Handle k1/k2/k3 variants (same as substitution ciphers)
-        if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat'].includes(cipherType) && quote.key) {
+        if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Misc. Aristocrat', 'Misc. Patristocrat'].includes(cipherType) && quote.key) {
             for (let i = 0; i < 26; i++) {
                 const plainLetter = String.fromCharCode(65 + i);
                 const cipherLetter = quote.key[i];
@@ -177,7 +177,7 @@ export const SubstitutionDisplay = ({
             </div>
             
             {/* Replacement Table for substitution ciphers */}
-            {['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Xenocrypt'].includes(cipherType) && (
+            {['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Misc. Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Misc. Patristocrat', 'Xenocrypt'].includes(cipherType) && (
                 <ReplacementTable
                     text={text}
                     solution={solution}

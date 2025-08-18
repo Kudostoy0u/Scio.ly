@@ -73,8 +73,8 @@ export const loadQuestionsFromDatabase = async (
         'k1 patristocrat': 'K1 Patristocrat',
         'k2 patristocrat': 'K2 Patristocrat',
         'k3 patristocrat': 'K3 Patristocrat',
-        'random aristocrat': 'Random Aristocrat',
-        'random patristocrat': 'Random Patristocrat',
+        'misc aristocrat': 'Misc. Aristocrat',
+        'misc patristocrat': 'Misc. Patristocrat',
         'caesar': 'Caesar',
         'atbash': 'Atbash',
         'affine': 'Affine',
@@ -93,8 +93,8 @@ export const loadQuestionsFromDatabase = async (
         'K1 Patristocrat': 'K1 Patristocrat',
         'K2 Patristocrat': 'K2 Patristocrat',
         'K3 Patristocrat': 'K3 Patristocrat',
-        'Random Aristocrat': 'Random Aristocrat',
-        'Random Patristocrat': 'Random Patristocrat',
+        'Misc. Aristocrat': 'Misc. Aristocrat',
+        'Misc. Patristocrat': 'Misc. Patristocrat',
         'Caesar': 'Caesar',
         'Atbash': 'Atbash',
         'Affine': 'Affine',
@@ -106,9 +106,9 @@ export const loadQuestionsFromDatabase = async (
         'Columnar Transposition': 'Columnar Transposition',
         'Xenocrypt': 'Xenocrypt',
         'Checkerboard': 'Checkerboard',
-        // Handle standalone entries (should be mapped to Random variants)
-        'aristocrat': 'Random Aristocrat',
-        'patristocrat': 'Random Patristocrat'
+        // Handle standalone entries (should be mapped to Misc variants)
+        'aristocrat': 'Misc. Aristocrat',
+        'patristocrat': 'Misc. Patristocrat'
       };
     
       cipherTypes = cipherTypes.map(subtopic => 
@@ -121,15 +121,15 @@ export const loadQuestionsFromDatabase = async (
     
     // Define division-based cipher types
     const divisionBCipherTypes = {
-      'B': ['K1 Aristocrat', 'K2 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'Random Patristocrat', 'Baconian', 'Fractionated Morse', 'Columnar Transposition', 'Xenocrypt', 'Porta', 'Nihilist', 'Atbash', 'Caesar', 'Affine', 'Checkerboard'],
-      'C': ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Baconian', 'Xenocrypt', 'Fractionated Morse', 'Porta', 'Columnar Transposition', 'Nihilist', 'Hill 2x2', 'Hill 3x3', 'Checkerboard']
+      'B': ['K1 Aristocrat', 'K2 Aristocrat', 'Misc. Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'Misc. Patristocrat', 'Baconian', 'Fractionated Morse', 'Columnar Transposition', 'Xenocrypt', 'Porta', 'Nihilist', 'Atbash', 'Caesar', 'Affine', 'Checkerboard'],
+      'C': ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Misc. Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Misc. Patristocrat', 'Baconian', 'Xenocrypt', 'Fractionated Morse', 'Porta', 'Columnar Transposition', 'Nihilist', 'Hill 2x2', 'Hill 3x3', 'Checkerboard']
     };
     
     const availableCipherTypes = cipherTypes && cipherTypes.length > 0 
       ? cipherTypes 
       : (division === 'B' || division === 'C') 
         ? divisionBCipherTypes[division] 
-        : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Hill 2x2', 'Hill 3x3', 'Porta', 'Baconian', 'Nihilist', 'Fractionated Morse', 'Columnar Transposition', 'Xenocrypt'];
+        : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Misc. Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Misc. Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Hill 2x2', 'Hill 3x3', 'Porta', 'Baconian', 'Nihilist', 'Fractionated Morse', 'Columnar Transposition', 'Xenocrypt'];
 
     // Determine cipher types for each question in advance
     const questionCipherTypes: QuoteData['cipherType'][] = [];
@@ -322,10 +322,10 @@ export const loadQuestionsFromDatabase = async (
         case 'K3 Patristocrat':
           cipherResult = encryptK3Patristocrat(quoteData.quote);
           break;
-        case 'Random Aristocrat':
+        case 'Misc. Aristocrat':
           cipherResult = encryptRandomAristocrat(quoteData.quote);
           break;
-        case 'Random Patristocrat':
+        case 'Misc. Patristocrat':
           cipherResult = encryptRandomPatristocrat(quoteData.quote);
           break;
         case 'Caesar':

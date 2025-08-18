@@ -231,7 +231,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           quotes={quotes}
           onSolutionChange={handleCheckerboardSolutionChange}
         />
-      ) : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Xenocrypt'].includes(item.cipherType) ? (
+      ) : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Misc. Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Misc. Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Xenocrypt'].includes(item.cipherType) ? (
         <SubstitutionDisplay
           text={item.encrypted}
           quoteIndex={index}
