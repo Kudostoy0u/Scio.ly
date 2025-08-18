@@ -441,10 +441,12 @@ export default function CodeBusters() {
 
                     {/* Progress Bar or Summary */}
                     {isTestSubmitted ? (
-                        <CodebustersSummary
-                            quotes={quotes}
-                            darkMode={darkMode}
-                        />
+                        <div className="w-full">
+                            <CodebustersSummary
+                                quotes={quotes}
+                                darkMode={darkMode}
+                            />
+                        </div>
                     ) : (
                         <div
                             className={`sticky top-4 z-10 w-full max-w-3xl bg-white border-2 border-gray-300 rounded-full h-5 mb-6 shadow-lg`}
