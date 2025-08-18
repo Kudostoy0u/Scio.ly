@@ -257,7 +257,7 @@ Authorization: Bearer your-api-key-here`}
 {`{
   "success": false,
   "error": "API_KEY_REQUIRED",
-  "message": "Valid API key required. Contact us at contact@scio.ly to request an API key."
+  "message": "Valid API key required. Contact us at team.scio.ly@gmail.com to request an API key."
 }`}
                     </Example>
                   </div>
