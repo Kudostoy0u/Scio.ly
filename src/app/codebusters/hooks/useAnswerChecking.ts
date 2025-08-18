@@ -5,7 +5,7 @@ export const useAnswerChecking = (quotes: QuoteData[]) => {
   // Handle checking answer for k1/k2/k3 variants/caesar/atbash/affine/xenocrypt ciphers
   const checkSubstitutionAnswer = useCallback((quoteIndex: number): boolean => {
     const quote = quotes[quoteIndex];
-    if (!['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Misc. Aristocrat', 'Misc. Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Xenocrypt', 'Nihilist', 'Fractionated Morse', 'Columnar Transposition'].includes(quote.cipherType) || !quote.solution) return false;
+    if (!['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Xenocrypt', 'Nihilist', 'Fractionated Morse', 'Columnar Transposition'].includes(quote.cipherType) || !quote.solution) return false;
 
     // For caesar cipher
     if (quote.cipherType === 'Caesar' && quote.caesarShift !== undefined) {
@@ -51,7 +51,7 @@ export const useAnswerChecking = (quotes: QuoteData[]) => {
     }
 
     // For other substitution ciphers (k1/k2/k3 variants, xenocrypt, nihilist, columnar transposition)
-    if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Misc. Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Misc. Patristocrat', 'Xenocrypt', 'Nihilist', 'Columnar Transposition'].includes(quote.cipherType)) {
+    if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Xenocrypt', 'Nihilist', 'Columnar Transposition'].includes(quote.cipherType)) {
       // Check if all cipher letters are correctly mapped
       for (const [cipherLetter, plainLetter] of Object.entries(quote.solution)) {
         if (quote.key && quote.key[plainLetter.charCodeAt(0) - 65] !== cipherLetter) return false;

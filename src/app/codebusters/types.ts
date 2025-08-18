@@ -2,7 +2,7 @@ export interface QuoteData {
     author: string;
     quote: string;
     encrypted: string;
-    cipherType: 'Misc. Aristocrat' | 'K1 Aristocrat' | 'K2 Aristocrat' | 'K3 Aristocrat' | 'Misc. Patristocrat' | 'K1 Patristocrat' | 'K2 Patristocrat' | 'K3 Patristocrat' | 'Caesar' | 'Atbash' | 'Affine' | 'Hill 2x2' | 'Hill 3x3' | 'Baconian' | 'Porta' | 'Nihilist' | 'Fractionated Morse' | 'Columnar Transposition' | 'Xenocrypt' | 'Checkerboard';
+    cipherType: 'Random Aristocrat' | 'K1 Aristocrat' | 'K2 Aristocrat' | 'K3 Aristocrat' | 'Random Patristocrat' | 'K1 Patristocrat' | 'K2 Patristocrat' | 'K3 Patristocrat' | 'Caesar' | 'Atbash' | 'Affine' | 'Hill 2x2' | 'Hill 3x3' | 'Baconian' | 'Porta' | 'Nihilist' | 'Fractionated Morse' | 'Columnar Transposition' | 'Xenocrypt' | 'Checkerboard';
     key?: string;        // For k1/k2/k3 variants/porta/nihilist
     matrix?: number[][]; // For hill 2x2
     decryptionMatrix?: number[][]; // For hill 3x3

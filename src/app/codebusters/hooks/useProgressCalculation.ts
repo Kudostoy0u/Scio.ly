@@ -4,7 +4,7 @@ import { QuoteData } from '../types';
 export const useProgressCalculation = (quotes: QuoteData[]) => {
   // Calculate progress for each quote
   const calculateQuoteProgress = (quote: QuoteData): number => {
-    if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Misc. Aristocrat', 'Misc. Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Nihilist', 'Fractionated Morse', 'Xenocrypt'].includes(quote.cipherType)) {
+    if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Nihilist', 'Fractionated Morse', 'Xenocrypt'].includes(quote.cipherType)) {
       const totalLetters = [...new Set(quote.encrypted.match(/[A-Z]/g) || [])].length;
       const filledLetters = quote.solution ? Object.keys(quote.solution).length : 0;
       return totalLetters > 0 ? (filledLetters / totalLetters) * 100 : 0;

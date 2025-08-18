@@ -139,7 +139,7 @@ export default function CodeBusters() {
         let correctCount = 0;
         // Legacy correctness for UI percent
         quotes.forEach((quote, index) => {
-            const isCorrect = ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Misc. Aristocrat', 'Misc. Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Xenocrypt'].includes(quote.cipherType)
+            const isCorrect = ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Xenocrypt'].includes(quote.cipherType)
                 ? checkSubstitutionAnswer(index)
                 : (quote.cipherType === 'Hill 2x2' || quote.cipherType === 'Hill 3x3')
                     ? checkHillAnswer(index)

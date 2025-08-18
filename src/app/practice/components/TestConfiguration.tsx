@@ -688,11 +688,11 @@ export default function TestConfiguration({
                         // Codebusters cipher types based on division
                         (() => {
                           const divisionCipherTypes = [
-                            "Misc. Aristocrat",
+                            "Random Aristocrat",
                             "K1 Aristocrat",
                             "K2 Aristocrat",
                             "K3 Aristocrat",
-                            "Misc. Patristocrat",
+                            "Random Patristocrat",
                             "K1 Patristocrat",
                             "K2 Patristocrat",
                             "K3 Patristocrat",
