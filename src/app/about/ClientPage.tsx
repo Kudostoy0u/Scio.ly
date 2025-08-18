@@ -5,7 +5,7 @@ import { useTheme } from '@/app/contexts/ThemeContext';
 import Header from '@/app/components/Header';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Rocket, Lightbulb } from 'lucide-react';
+import { Rocket, Lightbulb, Database, Zap, Users, Shield } from 'lucide-react';
 
 export default function AboutClientPage() {
   const { darkMode } = useTheme();
@@ -110,20 +110,6 @@ export default function AboutClientPage() {
                 <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} text-sm`}>Vercel serves Next.js frontend</p>
               </div>
             </div>
-
-            <div className={`${darkMode ? 'bg-gray-700/30' : 'bg-green-50/50'} p-6 rounded-lg mb-6`}>
-              <h3 className={`text-xl font-semibold mb-4 text-center ${darkMode ? 'text-white' : 'text-gray-900'}`}>Backend Architecture</h3>
-              <div className="flex justify-center items-center space-x-4">
-                <Image src="/about/postgresql-icon.png" alt="PostgreSQL" width={50} height={50} />
-                <span className="text-2xl">→</span>
-                <Image src="/about/drizzle-icon.png" alt="Drizzle ORM" width={50} height={50} />
-                <span className="text-2xl">→</span>
-                <Image src={darkMode ? "/about/nextjs-white.png" : "/about/nextjs-black.png"} alt="Next.js" width={50} height={50} />
-              </div>
-              <p className={`text-center mt-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                Drizzle ORM provides a type-safe interface for interacting with PostgreSQL, which serves data to Next.js frontend
-              </p>
-            </div>
           </div>
         </section>
 
@@ -146,24 +132,47 @@ export default function AboutClientPage() {
         </section>
 
         <section className={`mb-16 p-6 rounded-xl max-w-4xl mx-auto ${darkMode ? 'bg-gray-800/50 backdrop-blur-sm' : 'bg-white/90 shadow-lg backdrop-blur-sm'}`}>
-          <h2 className={`text-3xl font-bold mb-6 text-center ${darkMode ? 'text-white' : 'text-gray-900'}`}>More Technologies</h2>
+          <h2 className={`text-3xl font-bold mb-6 text-center ${darkMode ? 'text-white' : 'text-gray-900'}`}>Scio.ly API</h2>
           <p className={`text-center max-w-3xl mx-auto mb-8 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-            Scio.ly is built on a modern technology stack to provide a fast, reliable, and feature-rich experience.
-            Questions are instantly sent from us to you, ensuring a seamless experience.
+            Access our comprehensive REST API to integrate Science Olympiad questions into your applications. 
           </p>
-          <div className="grid grid-cols-2 gap-8 max-w-md mx-auto">
-            <div className="flex justify-center">
-              <Image src={darkMode ? "/about/nextjs-white.png" : "/about/nextjs-black.png"} alt="Next.js" width={70} height={70} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100/50'} p-4 rounded-lg text-center`}>
+              <div className="flex justify-center mb-3">
+                <Database className="w-8 h-8 text-blue-500" />
+              </div>
+              <h3 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Question Database</h3>
+              <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} text-sm`}>~500k questions and quotes combined</p>
             </div>
-            <div className="flex justify-center">
-              <Image src="/about/typescript-icon.png" alt="TypeScript" width={70} height={20} />
+            <div className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100/50'} p-4 rounded-lg text-center`}>
+              <div className="flex justify-center mb-3">
+                <Zap className="w-8 h-8 text-yellow-500" />
+              </div>
+              <h3 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>AI Features</h3>
+              <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} text-sm`}>Get quick explanations and FRQ grading.</p>
             </div>
-            <div className="flex justify-center">
-              <Image src="/about/supabase-icon.png" alt="Supabase" width={60} height={60} />
+            <div className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100/50'} p-4 rounded-lg text-center`}>
+              <div className="flex justify-center mb-3">
+                <Users className="w-8 h-8 text-green-500" />
+              </div>
+              <h3 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Collaboration</h3>
+              <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} text-sm`}>Endpoints to share questions</p>
             </div>
-            <div className="flex justify-center">
-              <Image src={darkMode ? "/about/vercel-white.png" : "/about/vercel-icon.svg"} alt="Vercel" width={70} height={70} />
+            <div className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100/50'} p-4 rounded-lg text-center`}>
+              <div className="flex justify-center mb-3">
+                <Shield className="w-8 h-8 text-purple-500" />
+              </div>
+              <h3 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Secure & Reliable</h3>
+              <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} text-sm`}>Well documented API with zero logging.</p>
             </div>
+          </div>
+          <div className="text-center">
+            <button
+              className={`px-6 py-3 rounded-lg font-medium transition-all transform hover:scale-105 ${darkMode ? 'bg-blue-600 text-white shadow-lg hover:bg-blue-700' : 'bg-blue-500 text-white shadow-lg hover:bg-blue-600'}`}
+              onClick={() => router.push('/docs/api')}
+            >
+              View API Documentation
+            </button>
           </div>
         </section>
 

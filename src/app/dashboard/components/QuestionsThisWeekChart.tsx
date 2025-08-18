@@ -23,6 +23,22 @@ export default function QuestionsThisWeekChart({
     }
   });
 
+  // State for mobile tooltip
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+
+  // Close tooltip when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.heatmap-cell')) {
+        setActiveTooltip(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
   useEffect(() => {
     try { localStorage.setItem('scio_chart_type', chartType); } catch {}
   }, [chartType]);
@@ -303,23 +319,35 @@ export default function QuestionsThisWeekChart({
                     : cIdx === 0
                       ? 'left-0 translate-x-0'
                       : 'left-1/2 -translate-x-1/2';
+                  const tooltipId = `${rIdx}-${cIdx}`;
+                  const isTooltipActive = activeTooltip === tooltipId;
+                  
                   return (
-                    <div key={`${rIdx}-${cIdx}`} className="relative group">
+                    <div key={tooltipId} className="relative group">
                       <div
                         aria-label={isFuture ? undefined : label}
                         style={{
                           width: `${cellSizePx}px`,
                           height: `${cellSizePx}px`,
                           backgroundColor: isFuture ? 'transparent' : getCellColor(cell.value),
-                          border: isFuture ? 'none' : `1px solid ${heatmapPalette.border}`,
+                          border: isFuture ? 'none' : `1px solid ${isTooltipActive ? (darkMode ? '#60a5fa' : '#2563eb') : heatmapPalette.border}`,
                           borderRadius: 3,
+                          transform: isTooltipActive ? 'scale(1.1)' : 'scale(1)',
+                          transition: 'transform 0.1s ease-in-out, border-color 0.1s ease-in-out',
                         }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!isFuture) {
+                            setActiveTooltip(isTooltipActive ? null : tooltipId);
+                          }
+                        }}
+                        className={!isFuture ? 'cursor-pointer heatmap-cell' : ''}
                       />
                       {!isFuture && (
                         <div
                           className={`pointer-events-none absolute -top-8 ${tooltipAlignClass} whitespace-nowrap rounded px-2 py-1 text-xs border shadow transition-opacity ${
                             darkMode ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-900 border-gray-200'
-                          } opacity-0 group-hover:opacity-100`}
+                          } ${isTooltipActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
                         >
                           {label}
                         </div>
