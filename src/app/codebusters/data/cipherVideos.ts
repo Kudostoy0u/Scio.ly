@@ -156,11 +156,11 @@ export const cipherVideos: CipherVideoData = {
       description: 'Complete guide to Checkerboard cipher'
     }
   ],
-  'Columnar Transposition': [
+  'Complete Columnar': [
     {
-      title: 'Columnar Transposition Cipher',
+      title: 'Complete Columnar Cipher',
       url: 'https://www.youtube.com/watch?v=I1uDv3mBp2U',
-      description: 'Complete guide to Columnar Transposition cipher'
+      description: 'Complete guide to Complete Columnar cipher'
     }
   ],
   'Atbash': [

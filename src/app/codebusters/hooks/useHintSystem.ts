@@ -1,6 +1,7 @@
 'use client';
 import { useCallback } from 'react';
 import { QuoteData } from '../types';
+import { toast } from 'react-toastify';
 
 export const useHintSystem = (
   quotes: QuoteData[],
@@ -8,8 +9,13 @@ export const useHintSystem = (
   setActiveHints: (hints: {[questionIndex: number]: boolean}) => void,
   revealedLetters: {[questionIndex: number]: {[letter: string]: string}},
   setRevealedLetters: (letters: {[questionIndex: number]: {[letter: string]: string}}) => void,
-  setQuotes: (quotes: QuoteData[]) => void
+  setQuotes: (quotes: QuoteData[]) => void,
+  hintedLetters: {[questionIndex: number]: {[letter: string]: boolean}},
+  setHintedLetters: (letters: {[questionIndex: number]: {[letter: string]: boolean}}) => void,
+  hintCounts: {[questionIndex: number]: number},
+  setHintCounts: (counts: {[questionIndex: number]: number}) => void
 ) => {
+
   const find2LetterCrib = (cipherText: string, plainText: string) => {
     for (let i = 0; i < cipherText.length - 1; i++) {
       const crib = cipherText.substring(i, i + 2);
@@ -110,14 +116,22 @@ export const useHintSystem = (
       // Fallback to existing logic if no words found
     }
 
-    // Special handling for Columnar Transposition: crib = a word from the quote (use smallest >=3)
-    if (quote.cipherType === 'Columnar Transposition') {
+    // Special handling for Complete Columnar: crib = a word from the quote (use smallest >=3)
+    if (quote.cipherType === 'Complete Columnar') {
       const words = (quote.quote.match(/[A-Za-z]+/g) || [])
         .map(w => w.toUpperCase())
         .filter(w => w.length >= 3)
         .sort((a, b) => a.length - b.length);
       if (words.length > 0) {
-        return `Crib: ${words[0]}`;
+        // For second crib, find shortest word >=5 letters, or longest word as fallback
+        if (activeHints[`${quotes.indexOf(quote)}_second_crib`]) {
+          const shortWords = words.filter(w => w.length >= 5);
+          const cribWord = shortWords.length > 0 ? shortWords[0] : words[words.length - 1];
+          return `Second Crib: ${cribWord}`;
+        } else {
+          // For first crib, use smallest word >=3 letters
+          return `Crib: ${words[0]}`;
+        }
       }
       // Fallback to existing logic if no words found
     }
@@ -145,12 +159,23 @@ export const useHintSystem = (
     if (crib) return `Crib: ${crib}`;
 
     return 'No crib found';
-  }, []);
+  }, [activeHints, quotes]);
 
   // Reveal next hint step; for Baconian, reveal sequentially after crib
   const revealRandomLetter = useCallback((questionIndex: number) => {
     const quote = quotes[questionIndex];
     if (!quote) return;
+
+    // Update hint count for this question
+    const currentHintCount = hintCounts[questionIndex] || 0;
+    const newHintCount = currentHintCount + 1;
+    const newHintCounts = { ...hintCounts, [questionIndex]: newHintCount };
+    setHintCounts(newHintCounts);
+
+    // Warn on the 3rd hinted letter: subsequent letters (4th and beyond) will be marked as skipped
+    if (newHintCount === 3) {
+      toast.warning("You've been given three letters. Any additional letters will be marked as skipped.");
+    }
 
     // Checkerboard: reveal a random unsolved token's plaintext
     if (quote.cipherType === 'Checkerboard') {
@@ -395,8 +420,8 @@ export const useHintSystem = (
         // Get the corresponding plain letter from the original text
         correctPlainLetter = plainText[cipherIndex];
       }
-    } else if (quote.cipherType === 'Columnar Transposition' && quote.columnarKey) {
-      // For Columnar Transposition, reveal the position-based mapping
+    } else if (quote.cipherType === 'Complete Columnar' && quote.columnarKey) {
+      // For Complete Columnar, reveal the position-based mapping
       const cipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
       const plainText = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
       const cipherIndex = cipherText.indexOf(randomCipherLetter);
@@ -417,6 +442,18 @@ export const useHintSystem = (
         }
       };
       setRevealedLetters(newRevealedLetters);
+
+      // Track if this letter was revealed by a hint (after 3rd hint)
+      if (newHintCount > 3) {
+        const newHintedLetters = {
+          ...hintedLetters,
+          [questionIndex]: {
+            ...hintedLetters[questionIndex],
+            [randomCipherLetter]: true
+          }
+        };
+        setHintedLetters(newHintedLetters);
+      }
 
       // Update the quotes state to reflect the revealed letter
       const newQuotes = quotes.map((q, idx) => {
@@ -450,7 +487,7 @@ export const useHintSystem = (
       });
       setQuotes(newQuotes);
     }
-  }, [quotes, revealedLetters, setRevealedLetters, setQuotes]);
+  }, [quotes, revealedLetters, setRevealedLetters, setQuotes, hintCounts, setHintCounts, setHintedLetters]);
 
   // Handle hint functionality
   const handleHintClick = useCallback((questionIndex: number) => {
@@ -467,6 +504,12 @@ export const useHintSystem = (
         setActiveHints({
           ...activeHints,
           [questionIndex]: true
+        });
+      } else if (quote.cipherType === 'Complete Columnar' && !activeHints[`${questionIndex}_second_crib`]) {
+        // For Complete Columnar, show second crib before revealing random letters
+        setActiveHints({
+          ...activeHints,
+          [`${questionIndex}_second_crib`]: true
         });
       } else {
         // If crib is already shown, reveal a random letter

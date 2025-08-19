@@ -102,7 +102,7 @@ export default function TestSummary({ data, userAnswers, gradingResults, darkMod
   const totalQuestions = data.length;
   const answeredQuestions = Object.keys(userAnswers).length;
   const correctQuestions = Object.values(gradingResults).filter(score => score >= 1).length;
-  const accuracyPercentage = totalQuestions > 0 ? Math.round((correctQuestions / totalQuestions) * 100) : 0;
+  const accuracyPercentage = answeredQuestions > 0 ? Math.round((correctQuestions / answeredQuestions) * 100) : 0;
   const totalPoints = totalQuestions;
   const earnedPoints = Object.values(gradingResults).reduce((sum, score) => sum + Math.min(1, score), 0);
   
@@ -140,7 +140,7 @@ export default function TestSummary({ data, userAnswers, gradingResults, darkMod
       icon: CheckCircle
     },
     { 
-      label: 'Answered', 
+      label: 'Attempted', 
       value: answeredQuestions, 
       valueClassName: darkMode ? 'text-blue-400' : 'text-blue-600',
       icon: MessageCircle

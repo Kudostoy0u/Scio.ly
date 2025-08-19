@@ -687,7 +687,7 @@ export default function TestConfiguration({
                       {isCodebusters ? (
                         // Codebusters cipher types based on division
                         (() => {
-                          const divisionCipherTypes = [
+                          const divisionCCipherTypes = [
                             "Random Aristocrat",
                             "K1 Aristocrat",
                             "K2 Aristocrat",
@@ -700,7 +700,7 @@ export default function TestConfiguration({
                             "Xenocrypt",
                             "Fractionated Morse",
                             "Porta",
-                            "Columnar Transposition",
+                            "Complete Columnar",
                             "Nihilist",
                             "Hill 2x2",
                             "Hill 3x3",
@@ -716,7 +716,7 @@ export default function TestConfiguration({
                             "K2 Patristocrat",
                             "Baconian",
                             "Fractionated Morse",
-                            "Columnar Transposition",
+                            "Complete Columnar",
                             "Xenocrypt",
                             "Porta",
                             "Nihilist",
@@ -727,7 +727,12 @@ export default function TestConfiguration({
                             "Checkerboard"
                           ];
                           
-                          const cipherTypes = settings.division === 'C' ? divisionCipherTypes : divisionBCipherTypes;
+                          // For "Both" category, use the union of Division B and C ciphers
+                          const cipherTypes = settings.division === 'C' 
+                            ? divisionCCipherTypes 
+                            : settings.division === 'B' 
+                              ? divisionBCipherTypes 
+                              : [...new Set([...divisionBCipherTypes, ...divisionCCipherTypes])];
                           
                           return cipherTypes.map((cipherType) => (
                             <label

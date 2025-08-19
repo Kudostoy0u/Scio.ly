@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { QuoteData } from '../types';
 import {
   HillDisplay,
@@ -10,6 +10,20 @@ import {
   NihilistDisplay,
   CheckerboardDisplay
 } from './cipher-displays';
+
+// Function to process author field
+const processAuthor = (author: string): string => {
+  const commaIndex = author.indexOf(',');
+  if (commaIndex !== -1) {
+    const textAfterComma = author.substring(commaIndex + 1).trim();
+    if (textAfterComma.length > 28) {
+
+      // Previously logged the removed portion; removed to avoid console spam on re-renders
+      return author.substring(0, commaIndex);
+    }
+  }
+  return author;
+};
 
 interface QuestionCardProps {
   item: QuoteData;
@@ -28,6 +42,8 @@ interface QuestionCardProps {
   handleHillSolutionChange: (quoteIndex: number, type: 'matrix' | 'plaintext', value: string[][] | { [key: number]: string }) => void;
   handleNihilistSolutionChange: (quoteIndex: number, position: number, plainLetter: string) => void;
   handleCheckerboardSolutionChange: (quoteIndex: number, position: number, plainLetter: string) => void;
+  hintedLetters: {[questionIndex: number]: {[letter: string]: boolean}};
+  _hintCounts: {[questionIndex: number]: number};
 }
 
 export const QuestionCard: React.FC<QuestionCardProps> = ({
@@ -46,8 +62,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   handleFrequencyNoteChange,
   handleHillSolutionChange,
   handleNihilistSolutionChange,
-  handleCheckerboardSolutionChange
+  handleCheckerboardSolutionChange,
+  hintedLetters,
+  _hintCounts
 }) => {
+  // Process the author field once per author change to avoid extra work on re-renders
+  const processedAuthor = useMemo(() => processAuthor(item.author), [item.author]);
+
   return (
     <div 
       className={`relative border p-4 rounded-lg transition-all duration-500 ease-in-out mb-6 ${
@@ -123,7 +144,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         </div>
       </div>
       <p className={`mb-4 break-words whitespace-normal overflow-x-auto ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-        {item.author}
+        {processedAuthor}
       </p>
 
       {/* Hint Card */}
@@ -199,7 +220,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           quotes={quotes}
           onSolutionChange={handleSolutionChange}
         />
-      ) : item.cipherType === 'Columnar Transposition' ? (
+      ) : item.cipherType === 'Complete Columnar' ? (
         <ColumnarTranspositionDisplay
           text={item.encrypted}
           quoteIndex={index}
@@ -244,6 +265,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           affineB={item.affineB}
           quotes={quotes}
           onSolutionChange={handleSolutionChange}
+          hintedLetters={hintedLetters}
+          _hintCounts={_hintCounts}
         />
       ) : (
         <div className={`text-center py-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
