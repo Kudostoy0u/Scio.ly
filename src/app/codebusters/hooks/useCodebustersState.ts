@@ -60,8 +60,6 @@ export const useCodebustersState = () => {
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
   const [activeHints, setActiveHints] = useState<{[questionIndex: number]: boolean}>({});
   const [revealedLetters, setRevealedLetters] = useState<{[questionIndex: number]: {[letter: string]: string}}>({});
-  const [hintedLetters, setHintedLetters] = useState<{[questionIndex: number]: {[letter: string]: boolean}}>({});
-  const [hintCounts, setHintCounts] = useState<{[questionIndex: number]: number}>({});
   const [infoModalOpen, setInfoModalOpen] = useState(false);
   const [selectedCipherType, setSelectedCipherType] = useState<string>('');
 
@@ -106,11 +104,6 @@ export const useCodebustersState = () => {
         // Set loading to false so parent can trigger loadQuestionsFromDatabase
         setIsLoading(false);
       }
-
-      // Reset hint-related state on refresh to start fresh hint tracking
-      setRevealedLetters({});
-      setHintedLetters({});
-      setHintCounts({});
 
       // Initialize time management system
       const testParams = JSON.parse(testParamsStr);
@@ -219,10 +212,6 @@ export const useCodebustersState = () => {
     setActiveHints,
     revealedLetters,
     setRevealedLetters,
-    hintedLetters,
-    setHintedLetters,
-    hintCounts,
-    setHintCounts,
     infoModalOpen,
     setInfoModalOpen,
     selectedCipherType,

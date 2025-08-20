@@ -4,10 +4,9 @@ import { formatTime } from '../cipher-utils';
 interface HeaderProps {
   darkMode: boolean;
   timeLeft: number | null;
-  isTestSubmitted?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ darkMode, timeLeft, isTestSubmitted = false }) => {
+export const Header: React.FC<HeaderProps> = ({ darkMode, timeLeft }) => {
   return (
     <>
       <header className="w-full max-w-3xl flex justify-between items-center pt-3 pb-0">
@@ -20,9 +19,7 @@ export const Header: React.FC<HeaderProps> = ({ darkMode, timeLeft, isTestSubmit
           {timeLeft !== null && (
             <div
               className={`text-lg md:text-xl font-semibold ${
-                isTestSubmitted
-                  ? 'text-gray-500'
-                  : timeLeft <= 300
+                timeLeft <= 300
                   ? 'text-red-600'
                   : darkMode
                   ? 'text-white'

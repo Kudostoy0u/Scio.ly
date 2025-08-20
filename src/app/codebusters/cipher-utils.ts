@@ -324,7 +324,7 @@ export const encryptK3Patristocrat = (text: string): { encrypted: string; key: s
     return { encrypted, key };
 };
 
-// Random Aristocrat cipher
+// Misc. Aristocrat cipher
 export const encryptRandomAristocrat = (text: string): { encrypted: string; key: string } => {
     const generateRandomKey = (): string => {
         const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -340,7 +340,7 @@ export const encryptRandomAristocrat = (text: string): { encrypted: string; key:
     return { encrypted, key };
 };
 
-// Random Patristocrat cipher
+// Misc. Patristocrat cipher
 export const encryptRandomPatristocrat = (text: string): { encrypted: string; key: string } => {
     const generateRandomKey = (): string => {
         const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -841,7 +841,7 @@ export const encryptFractionatedMorse = (text: string): { encrypted: string; key
     return { encrypted, key, fractionationTable: tripletToLetter };
 };
 
-// Complete Columnar
+// Complete Columnar Transposition
 export const encryptColumnarTransposition = (text: string): { encrypted: string; key: string } => {
     const cleanText = text.toUpperCase().replace(/[^A-Z]/g, '');
     const keyLength = Math.floor(Math.random() * 5) + 3; // 3-7 characters

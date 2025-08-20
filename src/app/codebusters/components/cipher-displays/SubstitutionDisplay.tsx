@@ -16,8 +16,6 @@ interface SubstitutionDisplayProps {
     affineB?: number;
     quotes: QuoteData[];
     onSolutionChange: (quoteIndex: number, cipherLetter: string, plainLetter: string) => void;
-    hintedLetters: {[questionIndex: number]: {[letter: string]: boolean}};
-    _hintCounts: {[questionIndex: number]: number};
 }
 
 export const SubstitutionDisplay = ({ 
@@ -30,9 +28,7 @@ export const SubstitutionDisplay = ({
     affineA,
     affineB,
     quotes,
-    onSolutionChange,
-    hintedLetters,
-    _hintCounts
+    onSolutionChange
 }: SubstitutionDisplayProps) => {
     const { darkMode } = useTheme();
 
@@ -64,8 +60,8 @@ export const SubstitutionDisplay = ({
                 return 'Nihilist Substitution Cipher';
             case 'Fractionated Morse':
                 return 'Fractionated Morse Cipher';
-                    case 'Complete Columnar':
-            return 'Complete Columnar Cipher';
+            case 'Columnar Transposition':
+                return 'Columnar Transposition Cipher';
             case 'Xenocrypt':
                 return 'Xenocrypt Cipher';
             default:
@@ -114,7 +110,7 @@ export const SubstitutionDisplay = ({
                 const cipherLetter = quote.key[i];
                 correctMapping[cipherLetter] = plainLetter;
             }
-        } else if (['Nihilist', 'Fractionated Morse', 'Complete Columnar'].includes(cipherType) && quote.key) {
+        } else if (['Nihilist', 'Fractionated Morse', 'Columnar Transposition'].includes(cipherType) && quote.key) {
             // These are also substitution ciphers like aristocrats
             for (let i = 0; i < 26; i++) {
                 const plainLetter = String.fromCharCode(65 + i);
@@ -134,7 +130,6 @@ export const SubstitutionDisplay = ({
                     const isLetter = /[A-Z]/.test(char);
                     const value = solution?.[char] || '';
                     const isCorrect = isLetter && value === correctMapping[char];
-                    const isHinted = isLetter && hintedLetters[quoteIndex]?.[char];
                     const showCorrectAnswer = isTestSubmitted && isLetter;
                     
                     return (
@@ -160,9 +155,7 @@ export const SubstitutionDisplay = ({
                                                 : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
                                         } ${
                                             showCorrectAnswer
-                                                ? isHinted
-                                                    ? 'border-yellow-500 bg-yellow-100/10'
-                                                    : isCorrect
+                                                ? isCorrect
                                                     ? 'border-green-500 bg-green-100/10'
                                                     : 'border-red-500 bg-red-100/10'
                                                 : ''

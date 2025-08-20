@@ -89,10 +89,6 @@ export default function CodeBusters() {
         setActiveHints,
         revealedLetters,
         setRevealedLetters,
-        hintedLetters,
-        setHintedLetters,
-        hintCounts,
-        setHintCounts,
         infoModalOpen,
         setInfoModalOpen,
         selectedCipherType,
@@ -108,11 +104,7 @@ export default function CodeBusters() {
         setActiveHints, 
         revealedLetters, 
         setRevealedLetters, 
-        setQuotes,
-        hintedLetters,
-        setHintedLetters,
-        hintCounts,
-        setHintCounts
+        setQuotes
     );
     const { 
         handleSolutionChange, 
@@ -274,9 +266,6 @@ export default function CodeBusters() {
         localStorage.removeItem('codebustersIsTestSubmitted');
         localStorage.removeItem('codebustersTestScore');
         localStorage.removeItem('codebustersTimeLeft');
-        localStorage.removeItem('codebustersRevealedLetters');
-        localStorage.removeItem('codebustersHintedLetters');
-        localStorage.removeItem('codebustersHintCounts');
         localStorage.removeItem('shareCode');
         
         // Set force refresh flag to get new random quotes
@@ -297,10 +286,6 @@ export default function CodeBusters() {
         // Clear hint states
         setActiveHints({});
         setRevealedLetters({});
-        setHintedLetters({});
-        setHintCounts({});
-        setHintedLetters({});
-        setHintCounts({});
         
         // Use the original loader but with a custom callback to avoid clearing quotes immediately
         const customSetLoading = (loading: boolean) => {
@@ -324,7 +309,7 @@ export default function CodeBusters() {
             setTestScore,
             loadPreferences
         );
-    }, [loadPreferences, setQuotes, setIsTestSubmitted, setTestScore, setTimeLeft, setError, setIsLoading, setActiveHints, setRevealedLetters, setHintedLetters, setHintCounts]);
+    }, [loadPreferences, setQuotes, setIsTestSubmitted, setTestScore, setTimeLeft, setError, setIsLoading, setActiveHints, setRevealedLetters]);
 
     // Handle back navigation: preserve Codebusters progress for resume banner on Practice
     const handleBack = useCallback(() => {
@@ -370,9 +355,6 @@ export default function CodeBusters() {
         localStorage.removeItem('codebustersIsTestSubmitted');
         localStorage.removeItem('codebustersTestScore');
         localStorage.removeItem('codebustersTimeLeft');
-        localStorage.removeItem('codebustersRevealedLetters');
-        localStorage.removeItem('codebustersHintedLetters');
-        localStorage.removeItem('codebustersHintCounts');
         localStorage.removeItem('shareCode');
         
         // Set force refresh flag to get new random quotes
@@ -444,7 +426,6 @@ export default function CodeBusters() {
                     <Header 
                         darkMode={darkMode}
                         timeLeft={timeLeft}
-                        isTestSubmitted={isTestSubmitted}
                     />
 
                     {/* Inline back link to Practice */}
@@ -464,8 +445,6 @@ export default function CodeBusters() {
                             <CodebustersSummary
                                 quotes={quotes}
                                 darkMode={darkMode}
-                                hintedLetters={hintedLetters}
-                                _hintCounts={hintCounts}
                             />
                         </div>
                     ) : (
@@ -529,8 +508,6 @@ export default function CodeBusters() {
                                 handleHillSolutionChange={handleHillSolutionChange}
                                 handleNihilistSolutionChange={handleNihilistSolutionChange}
                                 handleCheckerboardSolutionChange={handleCheckerboardSolutionChange}
-                                hintedLetters={hintedLetters}
-                                _hintCounts={hintCounts}
                             />
                         ))}
                         

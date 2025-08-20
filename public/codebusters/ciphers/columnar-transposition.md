@@ -1,7 +1,7 @@
-# Complete Columnar
+# Columnar Transposition
 
 ## Explanation
-Complete Columnar is a classical transposition cipher. Instead of substituting letters, it reorders them by writing the plaintext in rows under a keyword’s columns, then reading the letters out column-by-column in the alphabetical order of the keyword’s letters.
+Columnar Transposition is a classical transposition cipher. Instead of substituting letters, it reorders them by writing the plaintext in rows under a keyword’s columns, then reading the letters out column-by-column in the alphabetical order of the keyword’s letters.
 
 Key ideas
 - No letter substitution; letters are permuted by position.

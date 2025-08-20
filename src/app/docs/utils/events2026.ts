@@ -632,7 +632,7 @@ const details: Record<string, Partial<DocsEvent>> = {
       { slug: 'baconian', title: 'Baconian' },
       { slug: 'caesar', title: 'Caesar' },
       { slug: 'checkerboard', title: 'Checkerboard' },
-      { slug: 'columnar-transposition', title: 'Complete Columnar' },
+      { slug: 'columnar-transposition', title: 'Columnar Transposition' },
       { slug: 'fractionated-morse', title: 'Fractionated Morse' },
       { slug: 'hill-2x2', title: 'Hill (2x2)' },
       { slug: 'hill-3x3', title: 'Hill (3x3)' },

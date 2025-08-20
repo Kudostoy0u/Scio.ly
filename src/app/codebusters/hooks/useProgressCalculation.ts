@@ -16,8 +16,8 @@ export const useProgressCalculation = (quotes: QuoteData[]) => {
       const plaintextProgress = Object.keys(quote.hillSolution?.plaintext || {}).length / 
         (quote.encrypted.match(/[A-Z]/g)?.length || 1);
       return ((matrixProgress / matrixSize) * 50) + (plaintextProgress * 50); // Weight matrix and plaintext equally
-    } else if (quote.cipherType === 'Complete Columnar') {
-      // For Complete Columnar, calculate progress based on decrypted text length
+    } else if (quote.cipherType === 'Columnar Transposition') {
+      // For Columnar Transposition, calculate progress based on decrypted text length
       const originalLength = quote.quote.toUpperCase().replace(/[^A-Z]/g, '').length;
       const decryptedLength = quote.solution?.decryptedText?.length || 0;
       return originalLength > 0 ? (decryptedLength / originalLength) * 100 : 0;
