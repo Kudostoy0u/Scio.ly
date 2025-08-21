@@ -5,6 +5,7 @@ import Header from '@/app/components/Header';
 import EloViewer from './components/EloViewer';
 import type { EloData } from './types/elo';
 import { useTheme } from '@/app/contexts/ThemeContext';
+import { convertOptimizedData } from './utils/eloDataProcessor';
 
 export default function TeamsContent() {
   const [eloData, setEloData] = useState<EloData | null>(null);
@@ -25,7 +26,8 @@ export default function TeamsContent() {
           throw new Error(`Failed to load ${fileName}`);
         }
         
-        const data: EloData = await response.json();
+        const rawData = await response.json();
+        const data: EloData = convertOptimizedData(rawData);
         setEloData(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load Elo data');

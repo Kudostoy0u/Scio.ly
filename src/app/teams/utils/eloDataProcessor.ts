@@ -372,3 +372,56 @@ export const compareSchools = (
   
   return { eventResults, overallResult };
 };
+
+/**
+ * Converts optimized JSON format back to the original format expected by the frontend
+ * The optimized format uses metadata maps and shortened property names to reduce file size
+ */
+export function convertOptimizedData(optimizedData: any): EloData {
+  if (!optimizedData.meta || !optimizedData.data) {
+    // If it's already in the old format, return as-is
+    return optimizedData as EloData;
+  }
+
+  const { meta, data } = optimizedData;
+  const convertedData: EloData = {};
+
+  // Convert each state
+  for (const stateCode in data) {
+    convertedData[stateCode] = {};
+    
+    // Convert each team
+    for (const teamName in data[stateCode]) {
+      const teamData = data[stateCode][teamName];
+      convertedData[stateCode][teamName] = {
+        seasons: {},
+        meta: teamData.meta
+      };
+
+      // Convert each season
+      for (const season in teamData.seasons) {
+        convertedData[stateCode][teamName].seasons[season] = {
+          events: {}
+        };
+
+        // Convert each event
+        for (const eventName in teamData.seasons[season].events) {
+          const eventData = teamData.seasons[season].events[eventName];
+          convertedData[stateCode][teamName].seasons[season].events[eventName] = {
+            rating: eventData.rating,
+            history: eventData.history.map((entry: any) => ({
+              date: entry.d,
+              tournament: meta.tournaments[entry.t],
+              place: entry.p,
+              elo: entry.e,
+              duosmiumLink: entry.l,
+              ...(entry.n && { note: entry.n })
+            }))
+          };
+        }
+      }
+    }
+  }
+
+  return convertedData;
+}
