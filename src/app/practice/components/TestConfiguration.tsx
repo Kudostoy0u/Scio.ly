@@ -388,7 +388,9 @@ export default function TestConfiguration({
             selectedEvent?.name === 'Anatomy - Endocrine' ||
             selectedEvent?.name === 'Anatomy - Sense Organs' ||
             selectedEvent?.name === 'Dynamic Planet - Oceanography' ||
-            selectedEvent?.name === 'Water Quality - Freshwater') && (
+            selectedEvent?.name === 'Water Quality - Freshwater' ||
+            selectedEvent?.name === 'Remote Sensing' ||
+            selectedEvent?.name === 'Circuit Lab') && (
             <div>
               <label htmlFor="idPercentage" className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 Picture Questions

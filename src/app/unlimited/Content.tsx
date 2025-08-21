@@ -182,7 +182,9 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
                           routerParams.eventName === 'Anatomy - Endocrine' ||
                           routerParams.eventName === 'Anatomy - Sense Organs' ||
                           routerParams.eventName === 'Dynamic Planet - Oceanography' ||
-                          routerParams.eventName === 'Water Quality - Freshwater';
+                          routerParams.eventName === 'Water Quality - Freshwater' ||
+                          routerParams.eventName === 'Remote Sensing' ||
+                          routerParams.eventName === 'Circuit Lab';
         if (supportsId && typeof idPct !== 'undefined' && parseInt(idPct) > 0) {
           const pct = Math.max(0, Math.min(100, parseInt(idPct)));
           const totalQuestionsCount = pct === 100 ? 1000 : baseQuestions.length;
@@ -355,6 +357,8 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           const isAnatomy = routerData.eventName?.startsWith('Anatomy');
           const isDyplan = routerData.eventName?.startsWith('Dynamic Planet');
           const isWaterQuality = routerData.eventName === 'Water Quality - Freshwater';
+          const isRemoteSensing = routerData.eventName === 'Remote Sensing';
+          const isCircuitLab = routerData.eventName === 'Circuit Lab';
           
           let frqPrompt = 'Identify the specimen shown in the image.';
           if (isEnt) {
@@ -367,6 +371,10 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             frqPrompt = 'Identify the geological feature shown in the image.';
           } else if (isWaterQuality) {
             frqPrompt = 'Identify the water quality indicator shown in the image.';
+          } else if (isRemoteSensing) {
+            frqPrompt = 'Analyze the remote sensing data shown in the image.';
+          } else if (isCircuitLab) {
+            frqPrompt = 'Analyze the circuit diagram or measurement shown in the image.';
           }
           
           if (types === 'free-response' || (types === 'both' && Math.random() < 0.5)) {
