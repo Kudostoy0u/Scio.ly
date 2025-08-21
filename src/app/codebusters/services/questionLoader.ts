@@ -83,7 +83,7 @@ export const loadQuestionsFromDatabase = async (
         'porta': 'Porta',
         'nihilist': 'Nihilist',
         'fractionated morse': 'Fractionated Morse',
-        'columnar transposition': 'Columnar Transposition',
+        'columnar transposition': 'Complete Columnar',
         'xenocrypt': 'Xenocrypt',
         'checkerboard': 'Checkerboard',
         // Handle correct format (from practice page)
@@ -103,7 +103,7 @@ export const loadQuestionsFromDatabase = async (
         'Porta': 'Porta',
         'Nihilist': 'Nihilist',
         'Fractionated Morse': 'Fractionated Morse',
-        'Columnar Transposition': 'Columnar Transposition',
+        'Columnar Transposition': 'Complete Columnar',
         'Xenocrypt': 'Xenocrypt',
         'Checkerboard': 'Checkerboard',
         // Handle standalone entries (should be mapped to Misc variants)
@@ -121,15 +121,15 @@ export const loadQuestionsFromDatabase = async (
     
     // Define division-based cipher types
     const divisionBCipherTypes = {
-              'B': ['K1 Aristocrat', 'K2 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'Random Patristocrat', 'Baconian', 'Fractionated Morse', 'Columnar Transposition', 'Xenocrypt', 'Porta', 'Nihilist', 'Atbash', 'Caesar', 'Affine', 'Checkerboard'],
-              'C': ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Baconian', 'Xenocrypt', 'Fractionated Morse', 'Porta', 'Columnar Transposition', 'Nihilist', 'Hill 2x2', 'Hill 3x3', 'Checkerboard']
+              'B': ['K1 Aristocrat', 'K2 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'Random Patristocrat', 'Baconian', 'Fractionated Morse', 'Complete Columnar', 'Xenocrypt', 'Porta', 'Nihilist', 'Atbash', 'Caesar', 'Affine', 'Checkerboard'],
+              'C': ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Baconian', 'Xenocrypt', 'Fractionated Morse', 'Porta', 'Complete Columnar', 'Nihilist', 'Hill 2x2', 'Hill 3x3', 'Checkerboard']
     };
     
     const availableCipherTypes = cipherTypes && cipherTypes.length > 0 
       ? cipherTypes 
       : (division === 'B' || division === 'C') 
         ? divisionBCipherTypes[division] 
-        : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Hill 2x2', 'Hill 3x3', 'Porta', 'Baconian', 'Nihilist', 'Fractionated Morse', 'Columnar Transposition', 'Xenocrypt'];
+        : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Hill 2x2', 'Hill 3x3', 'Porta', 'Baconian', 'Nihilist', 'Fractionated Morse', 'Complete Columnar', 'Xenocrypt'];
 
     // Determine cipher types for each question in advance
     const questionCipherTypes: QuoteData['cipherType'][] = [];
@@ -355,7 +355,7 @@ export const loadQuestionsFromDatabase = async (
         case 'Fractionated Morse':
           cipherResult = encryptFractionatedMorse(quoteData.quote);
           break;
-        case 'Columnar Transposition':
+        case 'Complete Columnar':
           cipherResult = encryptColumnarTransposition(quoteData.quote);
           break;
         case 'Xenocrypt':
@@ -382,6 +382,7 @@ export const loadQuestionsFromDatabase = async (
         checkerboardKeyword: (cipherResult as any).checkerboardKeyword,
         checkerboardR1: (cipherResult as any).checkerboardR1,
         checkerboardR2: (cipherResult as any).checkerboardR2,
+        columnarKey: normalizedCipherType === 'Complete Columnar' ? cipherResult.key : undefined,
         fractionationTable: cipherResult.fractionationTable || undefined,
         caesarShift: cipherResult.shift || undefined,
         affineA: cipherResult.a || undefined,
@@ -407,6 +408,7 @@ export const loadQuestionsFromDatabase = async (
             checkerboardKeyword: (quote as any).checkerboardKeyword,
             checkerboardR1: (quote as any).checkerboardR1,
             checkerboardR2: (quote as any).checkerboardR2,
+        columnarKey: quote.columnarKey,
         fractionationTable: quote.fractionationTable,
         caesarShift: quote.caesarShift,
         affineA: quote.affineA,

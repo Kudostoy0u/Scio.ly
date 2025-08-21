@@ -110,7 +110,7 @@ export default function HomeClient() {
                     }`}
                   >
                     <FaPen className="w-5 h-5" />
-                    Start Practicing
+                    Practice Now
                     <FiArrowRight className="transition-transform group-hover:translate-x-1" />
                   </motion.button>
                 </Link>

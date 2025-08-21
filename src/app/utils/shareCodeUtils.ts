@@ -10,12 +10,12 @@ export interface QuoteData {
   author: string;
   quote: string;
   encrypted: string;
-  cipherType: 'Random Aristocrat' | 'K1 Aristocrat' | 'K2 Aristocrat' | 'K3 Aristocrat' | 'Random Patristocrat' | 'K1 Patristocrat' | 'K2 Patristocrat' | 'K3 Patristocrat' | 'Caesar' | 'Atbash' | 'Affine' | 'Hill 2x2' | 'Hill 3x3' | 'Baconian' | 'Porta' | 'Nihilist' | 'Fractionated Morse' | 'Columnar Transposition' | 'Xenocrypt' | 'Checkerboard';
+      cipherType: 'Random Aristocrat' | 'K1 Aristocrat' | 'K2 Aristocrat' | 'K3 Aristocrat' | 'Random Patristocrat' | 'K1 Patristocrat' | 'K2 Patristocrat' | 'K3 Patristocrat' | 'Caesar' | 'Atbash' | 'Affine' | 'Hill 2x2' | 'Hill 3x3' | 'Baconian' | 'Porta' | 'Nihilist' | 'Fractionated Morse' | 'Complete Columnar' | 'Xenocrypt' | 'Checkerboard';
   key?: string;        // For aristocrat/patristocrat/porta/nihilist/columnar/xenocrypt
   matrix?: number[][]; // For hill
   portaKeyword?: string; // For porta
   nihilistKey?: string; // For nihilist
-  columnarKey?: string; // For columnar transposition
+      columnarKey?: string; // For complete columnar
   fractionatedKey?: string; // For fractionated morse
   fractionationTable?: { [key: string]: string }; // For fractionated morse table
   xenocryptKey?: string; // For xenocrypt
@@ -30,7 +30,7 @@ export interface QuoteData {
   };
   nihilistSolution?: { [key: number]: string }; // For nihilist
   fractionatedSolution?: { [key: number]: string }; // For fractionated morse
-  columnarSolution?: { [key: number]: string }; // For columnar transposition
+      columnarSolution?: { [key: number]: string }; // For complete columnar
   xenocryptSolution?: { [key: number]: string }; // For xenocrypt
   difficulty?: number; // New field for difficulty
 }

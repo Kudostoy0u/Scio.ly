@@ -7,6 +7,8 @@ import { CheckCircle, Hash, Target, Trophy } from 'lucide-react';
 interface CodebustersSummaryProps {
   quotes: QuoteData[];
   darkMode: boolean;
+  hintedLetters?: {[questionIndex: number]: {[letter: string]: boolean}};
+  _hintCounts?: {[questionIndex: number]: number};
 }
 
 // Function to calculate grade based on points
@@ -87,7 +89,7 @@ function MobileCompactCodebustersSummary({ items, darkMode }: {
   );
 }
 
-export default function CodebustersSummary({ quotes, darkMode }: CodebustersSummaryProps) {
+export default function CodebustersSummary({ quotes, darkMode, hintedLetters = {}, _hintCounts = {} }: CodebustersSummaryProps) {
   const [scrollY, setScrollY] = useState(0);
   
   useEffect(() => {
@@ -102,8 +104,33 @@ export default function CodebustersSummary({ quotes, darkMode }: CodebustersSumm
 
   const totalCiphers = quotes.length;
   
+  // Calculate attempted ciphers (those with at least one filled input)
+  const attemptedCiphers = quotes.filter(quote => {
+    if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Xenocrypt'].includes(quote.cipherType)) {
+      return quote.solution && Object.keys(quote.solution).length > 0;
+    } else if (quote.cipherType === 'Hill 2x2' || quote.cipherType === 'Hill 3x3') {
+      return quote.hillSolution && (
+        quote.hillSolution.matrix.some(row => row.some(cell => cell && cell.trim().length > 0)) ||
+        Object.keys(quote.hillSolution.plaintext).length > 0
+      );
+    } else if (quote.cipherType === 'Complete Columnar') {
+      return quote.solution && Object.keys(quote.solution).length > 0;
+    } else if (quote.cipherType === 'Nihilist') {
+      return quote.nihilistSolution && Object.keys(quote.nihilistSolution).length > 0;
+    } else if (quote.cipherType === 'Baconian') {
+      return quote.solution && Object.keys(quote.solution).length > 0;
+    } else if (quote.cipherType === 'Porta') {
+      return quote.solution && Object.keys(quote.solution).length > 0;
+    } else if (quote.cipherType === 'Fractionated Morse') {
+      return quote.solution && Object.keys(quote.solution).length > 0;
+    } else if (quote.cipherType === 'Checkerboard') {
+      return quote.checkerboardSolution && Object.keys(quote.checkerboardSolution).length > 0;
+    }
+    return false;
+  }).length;
+  
   // Calculate fractional scores for each cipher
-  const cipherScores = quotes.map(quote => {
+  const cipherScores = quotes.map((quote, quoteIndex) => {
     if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Xenocrypt'].includes(quote.cipherType)) {
       // For substitution ciphers, score based on how many letters are substituted
       if (!quote.solution || Object.keys(quote.solution).length === 0) {
@@ -121,7 +148,13 @@ export default function CodebustersSummary({ quotes, darkMode }: CodebustersSumm
         value && value.trim().length === 1 && /^[A-Z]$/.test(value.trim())
       ).length;
       
-      return Math.min(1, meaningfulSubstitutions / totalLetters);
+      // Count how many letters were hinted (after 3rd hint)
+      const hintedLetterCount = Object.keys(hintedLetters[quoteIndex] || {}).length;
+      
+      // Subtract hinted letters from the score (they count as skipped)
+      const adjustedSubstitutions = Math.max(0, meaningfulSubstitutions - hintedLetterCount);
+      
+      return Math.min(1, adjustedSubstitutions / totalLetters);
       
     } else if (quote.cipherType === 'Hill 2x2' || quote.cipherType === 'Hill 3x3') {
       // For Hill ciphers, score based on matrix completion and plaintext
@@ -148,8 +181,8 @@ export default function CodebustersSummary({ quotes, darkMode }: CodebustersSumm
       // Average of matrix and plaintext scores
       return (matrixScore + plaintextScore) / 2;
       
-    } else if (quote.cipherType === 'Columnar Transposition') {
-      // For columnar transposition, score based on decrypted text completion
+    } else if (quote.cipherType === 'Complete Columnar') {
+      // For complete columnar, score based on decrypted text completion
       if (!quote.solution?.decryptedText) return 0;
       
       const decryptedText = quote.solution.decryptedText.trim();
@@ -250,8 +283,8 @@ export default function CodebustersSummary({ quotes, darkMode }: CodebustersSumm
       icon: CheckCircle
     },
     { 
-      label: 'Total', 
-      value: totalCiphers, 
+      label: 'Attempted', 
+      value: attemptedCiphers, 
       valueClassName: darkMode ? 'text-blue-400' : 'text-blue-600',
       icon: Hash
     },

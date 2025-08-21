@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { QuoteData } from '../../types';
 
@@ -21,67 +21,186 @@ export const ColumnarTranspositionDisplay = ({
     onSolutionChange
 }: ColumnarTranspositionDisplayProps) => {
     const { darkMode } = useTheme();
+    const quote = quotes[quoteIndex];
 
-    // Get the original quote length for the decrypted text input
-    const originalQuote = quotes[quoteIndex]?.quote || '';
-    const cleanOriginalLength = originalQuote.toUpperCase().replace(/[^A-Z]/g, '').length;
-    
-    // Get the current decrypted text from solution
-    const decryptedText = solution?.decryptedText || '';
+    // Build correct mapping of encrypted position -> plaintext letter, preserving non-letters
+    const correctMapping = useMemo(() => {
+        const mapping: { [key: number]: string } = {};
+        if (!isTestSubmitted) return mapping;
+        const originalQuote = quote.quote.toUpperCase();
+        let plainTextIndex = 0;
+        for (let i = 0; i < text.length; i++) {
+            if (/[A-Z]/.test(text[i])) {
+                while (plainTextIndex < originalQuote.length) {
+                    if (/[A-Z]/.test(originalQuote[plainTextIndex])) {
+                        mapping[i] = originalQuote[plainTextIndex];
+                        plainTextIndex++;
+                        break;
+                    }
+                    plainTextIndex++;
+                }
+            }
+        }
+        return mapping;
+    }, [isTestSubmitted, quote.quote, text]);
+
+    // Determine padding positions by counting the last N cipher letters as padding,
+    // where N = (#cipher inputs) - (#alphabetic characters in the original quote)
+    const paddingPositions = useMemo(() => {
+        const positions = new Set<number>();
+        if (!isTestSubmitted) return positions;
+
+        // Collect original indices of all cipher letters (A-Z)
+        const cipherLetterIndices: number[] = [];
+        for (let i = 0; i < text.length; i++) {
+            if (/[A-Z]/.test(text[i])) cipherLetterIndices.push(i);
+        }
+        const cipherInputs = cipherLetterIndices.length;
+
+        // Count alphabetic characters in the original quote
+        const cleanPlainLength = quote.quote.toUpperCase().replace(/[^A-Z]/g, '').length;
+
+        const paddingCount = Math.max(0, cipherInputs - cleanPlainLength);
+        if (paddingCount === 0) return positions;
+
+        // Mark the last paddingCount cipher-letter indices as padding
+        const start = Math.max(0, cipherLetterIndices.length - paddingCount);
+        for (let idx = start; idx < cipherLetterIndices.length; idx++) {
+            positions.add(cipherLetterIndices[idx]);
+        }
+
+        return positions;
+    }, [isTestSubmitted, quote.quote, text]);
+
+    // Create a char array with spaces inserted every 5 letters for grouping
+    // Also create a mapping from display index to original text index
+    const { displayChars, displayToOriginalIndex } = useMemo(() => {
+        const chars: string[] = [];
+        const indexMapping: { [key: number]: number } = {};
+        let lettersSeen = 0;
+        let displayIndex = 0;
+        
+        for (let i = 0; i < text.length; i++) {
+            const ch = text[i];
+            chars.push(ch);
+            indexMapping[displayIndex] = i;
+            displayIndex++;
+            
+            if (/[A-Z]/.test(ch)) {
+                lettersSeen++;
+                if (lettersSeen % 5 === 0) {
+                    chars.push(' ');
+                    displayIndex++;
+                }
+            }
+        }
+        
+        return { displayChars: chars, displayToOriginalIndex: indexMapping };
+    }, [text]);
 
     return (
         <div className="font-mono">
             <div className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                Columnar Transposition Cipher
+                Complete Columnar Cipher
             </div>
 
-            {/* Cipher text display */}
-            <div className={`mb-4 p-3 rounded border ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-300'}`}>
-                <div className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Cipher Text
-                </div>
-                <div className={`text-sm break-all font-mono ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                    {text.match(new RegExp(`.{1,${quotes[quoteIndex]?.key?.length || 5}}`, 'g'))?.join(' ') || text}
-                </div>
+            {/* Per-character layout identical to Substitution/Hill */}
+            <div className="flex flex-wrap gap-y-8 text-sm sm:text-base break-words whitespace-pre-wrap">
+                {displayChars.map((char, displayIndex) => {
+                    const isLetter = /[A-Z]/.test(char);
+                    const originalIndex = displayToOriginalIndex[displayIndex];
+                    const value = isLetter && originalIndex !== undefined ? (solution?.[String(originalIndex)] || '') : '';
+                    const correctLetter = isTestSubmitted && isLetter && originalIndex !== undefined ? correctMapping[originalIndex] : '';
+                    const isCorrect = value.toUpperCase() === correctLetter;
+                    
+                    // Treat the last N cipher-letter inputs as padding after submission
+                    const isPadding = isLetter && isTestSubmitted && originalIndex !== undefined && paddingPositions.has(originalIndex);
+
+                    return (
+                        <div key={displayIndex} className="flex flex-col items-center mx-0.5">
+                            <span className={`text-base sm:text-lg ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>{char}</span>
+                            {isLetter ? (
+                                <div className="relative h-12 sm:h-14">
+                                    <input
+                                        type="text"
+                                        id={`complete-columnar-${quoteIndex}-${originalIndex}`}
+                                        name={`complete-columnar-${quoteIndex}-${originalIndex}`}
+                                        maxLength={1}
+                                        disabled={isTestSubmitted}
+                                        value={value}
+                                        onChange={(e) => onSolutionChange(
+                                            quoteIndex,
+                                            String(originalIndex),
+                                            e.target.value.toUpperCase()
+                                        )}
+                                        className={`w-5 h-5 sm:w-6 sm:h-6 text-center border rounded mt-1 text-xs sm:text-sm ${
+                                            isPadding
+                                                ? (darkMode 
+                                                    ? 'bg-gray-700 border-gray-500 text-gray-400' 
+                                                    : 'bg-gray-200 border-gray-300 text-gray-500')
+                                                : (darkMode 
+                                                    ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
+                                                    : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500')
+                                        } ${
+                                            isTestSubmitted && !isPadding
+                                                ? isCorrect
+                                                    ? 'border-green-500 bg-green-100/10'
+                                                    : 'border-red-500 bg-red-100/10'
+                                                : ''
+                                        }`}
+                                    />
+                                    {isTestSubmitted && isPadding && (
+                                        <div className={`absolute top-8 sm:top-10 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs ${
+                                            darkMode ? 'text-gray-400' : 'text-gray-500'
+                                        }`}>
+                                            X
+                                        </div>
+                                    )}
+                                    {isTestSubmitted && !isPadding && !isCorrect && correctLetter && (
+                                        <div className={`absolute top-8 sm:top-10 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs ${
+                                            darkMode ? 'text-red-400' : 'text-red-600'
+                                        }`}>
+                                            {correctLetter}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="w-5 h-12 sm:w-6 sm:h-14 mt-1" />
+                            )}
+                        </div>
+                    );
+                })}
             </div>
 
-            {/* Decrypted text input */}
-            <div className={`mb-4 p-3 rounded border ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-300'}`}>
-                <div className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Decrypted Text
-                </div>
-                <textarea
-                    value={decryptedText}
-                    onChange={(e) => {
-                        // Only allow letters and spaces, convert to uppercase
-                        const filteredValue = e.target.value.toUpperCase().replace(/[^A-Z\s]/g, '');
-                        onSolutionChange(quoteIndex, 'decryptedText', filteredValue);
-                    }}
-                    placeholder="Enter the decrypted text here..."
-                    className={`w-full h-24 p-2 text-sm font-mono resize-none ${
-                        darkMode 
-                            ? 'bg-gray-700 text-gray-300 border-gray-600' 
-                            : 'bg-white text-gray-900 border-gray-300'
-                    } border rounded focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                    disabled={isTestSubmitted}
-                />
-                <div className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    Length: {decryptedText.length}/{cleanOriginalLength} characters
-                </div>
-            </div>
-
-            {/* Show original quote when test is submitted */}
+            {/* Show encoding key and original quote after submission */}
             {isTestSubmitted && (
-                <div className={`mt-4 p-4 rounded ${
-                    darkMode ? 'bg-gray-700/50' : 'bg-gray-50'
-                }`}>
-                    <p className={`text-sm mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        Original Quote:
-                    </p>
-                    <p className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                        {originalQuote}
-                    </p>
-                </div>
+                <>
+                    {/* Encoding Key */}
+                    {quote.columnarKey && (
+                        <div className={`mt-8 p-4 rounded ${
+                            darkMode ? 'bg-gray-700/50' : 'bg-gray-50'
+                        }`}>
+                            <p className={`text-sm mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                Encoding Key:
+                            </p>
+                            <p className={`font-medium font-mono ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                                {quote.columnarKey}
+                            </p>
+                        </div>
+                    )}
+                    
+                    {/* Original Quote */}
+                    <div className={`mt-4 p-4 rounded ${
+                        darkMode ? 'bg-gray-700/50' : 'bg-gray-50'
+                    }`}>
+                        <p className={`text-sm mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                            Original Quote:
+                        </p>
+                        <p className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                            {quote.quote}
+                        </p>
+                    </div>
+                </>
             )}
         </div>
     );
