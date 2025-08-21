@@ -175,7 +175,9 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
                           routerParams.eventName === 'Anatomy - Endocrine' ||
                           routerParams.eventName === 'Anatomy - Sense Organs' ||
                           routerParams.eventName === 'Dynamic Planet - Oceanography' ||
-                          routerParams.eventName === 'Water Quality - Freshwater';
+                          routerParams.eventName === 'Water Quality - Freshwater' ||
+                          routerParams.eventName === 'Remote Sensing' ||
+                          routerParams.eventName === 'Circuit Lab';
         const requestedIdCount = Math.round((idPct / 100) * total);
         const idCount = supportsId ? requestedIdCount : 0;
         const baseCount = Math.max(0, total - idCount);
@@ -681,7 +683,9 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
                         routerData.eventName === 'Anatomy - Nervous' ||
                         routerData.eventName === 'Anatomy - Endocrine' ||
                         routerData.eventName === 'Anatomy - Sense Organs' ||
-                        routerData.eventName === 'Dynamic Planet - Oceanography';
+                        routerData.eventName === 'Dynamic Planet - Oceanography' ||
+                        routerData.eventName === 'Remote Sensing' ||
+                        routerData.eventName === 'Circuit Lab';
       const requestedIdCount = Math.round((idPct / 100) * total);
       const idCount = supportsId ? requestedIdCount : 0;
       const baseCount = Math.max(0, total - idCount);
