@@ -189,7 +189,8 @@ export const getLeaderboard = (
   eloData: EloData,
   event?: string,
   season?: string,
-  limit: number = 50
+  limit: number = 50,
+  date?: string
 ): LeaderboardEntry[] => {
   const entries: LeaderboardEntry[] = [];
   
@@ -204,10 +205,29 @@ export const getLeaderboard = (
           // Event-specific leaderboard
           const eventData = seasonData.events[event];
           if (eventData) {
+            let eloRating = eventData.rating;
+            
+            // If a specific date is provided, find the Elo rating at that date
+            if (date && eventData.history) {
+              const historyEntry = eventData.history.find(entry => entry.date === date);
+              if (historyEntry) {
+                eloRating = historyEntry.elo;
+              } else {
+                // If no exact match, find the most recent entry before the date
+                const validEntries = eventData.history
+                  .filter(entry => entry.date <= date)
+                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                
+                if (validEntries.length > 0) {
+                  eloRating = validEntries[0].elo;
+                }
+              }
+            }
+            
             entries.push({
               school: schoolName,
               state: stateCode,
-              elo: eventData.rating,
+              elo: eloRating,
               season: seasonKey,
               event: event
             });
@@ -216,10 +236,29 @@ export const getLeaderboard = (
           // Overall leaderboard
           const overallEvent = seasonData.events['__OVERALL__'];
           if (overallEvent) {
+            let eloRating = overallEvent.rating;
+            
+            // If a specific date is provided, find the Elo rating at that date
+            if (date && overallEvent.history) {
+              const historyEntry = overallEvent.history.find(entry => entry.date === date);
+              if (historyEntry) {
+                eloRating = historyEntry.elo;
+              } else {
+                // If no exact match, find the most recent entry before the date
+                const validEntries = overallEvent.history
+                  .filter(entry => entry.date <= date)
+                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                
+                if (validEntries.length > 0) {
+                  eloRating = validEntries[0].elo;
+                }
+              }
+            }
+            
             entries.push({
               school: schoolName,
               state: stateCode,
-              elo: overallEvent.rating,
+              elo: eloRating,
               season: seasonKey
             });
           }

@@ -14,7 +14,7 @@ const ELO_FLOOR = 100; // Absolute minimum Elo rating.
  * It controls the magnitude of Elo changes based on performance.
  * A higher value leads to more volatile ratings. 800 is a robust, stable starting point.
  */
-const ELO_PERFORMANCE_SCALING_FACTOR = 400;
+const ELO_PERFORMANCE_SCALING_FACTOR = 140;
 
 /**
  * Tournament competitiveness weighting factor.
@@ -26,9 +26,15 @@ const TOURNAMENT_COMPETITIVENESS_FACTOR = 0.5;
  * Tournament volatility scaling factors for new seasons.
  * Teams get more volatile Elo changes in their first few tournaments of a new season.
  */
-const FIRST_TOURNAMENT_VOLATILITY = 2.0;  // 2x more volatile for first tournament
-const SECOND_TOURNAMENT_VOLATILITY = 1.5; // 1.5x more volatile for second tournament
+const FIRST_TOURNAMENT_VOLATILITY = 1.5;  // 2x more volatile for first tournament
+const SECOND_TOURNAMENT_VOLATILITY = 1.1; // 1.5x more volatile for second tournament
 const NORMAL_VOLATILITY = 1.0;            // Normal volatility after that
+
+/**
+ * Tournament importance multipliers for state and national tournaments.
+ */
+const STATE_TOURNAMENT_MULTIPLIER = 4.0;   // 4x multiplier for state tournaments
+const NATIONAL_TOURNAMENT_MULTIPLIER = 7.0; // 7x multiplier for national tournaments
 
 /**
  * ELO change damping parameters for continuous damping function.
@@ -50,6 +56,8 @@ const metadata = {
 let nextTeamId = 0;
 let nextEventId = 0;
 let nextTournamentId = 0;
+
+
 
 // --- MAIN EXECUTION ---
 async function main() {
@@ -74,6 +82,7 @@ async function processDivision(division) {
             const fileContents = fs.readFileSync(file, 'utf8');
             const tournamentData = yaml.load(fileContents);
             if (tournamentData) {
+
                 processTournament(tournamentData, eloData, file);
             }
         } catch (e) {
@@ -119,11 +128,11 @@ function processTournament(data, eloData, filePath) {
     const { canonicalTeamMap, overallRankings, eventRankingsMap, teamStateMap } = analyzeAndRankTeams(data);
     
     // Update Elo ratings for overall rankings
-    updateEloForRanking(overallRankings, eloData, tournamentInfo, '__OVERALL__', teamStateMap);
+    updateEloForRanking(overallRankings, eloData, tournamentInfo, '__OVERALL__', teamStateMap, filePath);
     
     // Update Elo ratings for individual events
     for (const [eventName, eventRankings] of eventRankingsMap.entries()) {
-        updateEloForRanking(eventRankings, eloData, tournamentInfo, eventName, teamStateMap);
+        updateEloForRanking(eventRankings, eloData, tournamentInfo, eventName, teamStateMap, filePath);
     }
 }
 
@@ -166,18 +175,20 @@ function analyzeAndRankTeams(data) {
             continue;
         }
 
-        let totalNormalizedRank = 0;
+        let totalScore = 0;
         const teamPlacings = placingsByTeam.get(team.number) || [];
         for (const event of data.Events) {
             const placing = teamPlacings.find(p => p.event === event.name);
-            const competitorCount = eventCompetitorCounts.get(event.name) || 1;
             if (placing && placing.place) {
-                totalNormalizedRank += placing.place / competitorCount;
+                // Use raw placement score (lower is better)
+                totalScore += placing.place;
             } else {
-                totalNormalizedRank += 1.0;
+                // If no placement, use the maximum possible score for that event
+                const competitorCount = eventCompetitorCounts.get(event.name) || 1;
+                totalScore += competitorCount;
             }
         }
-        teamScores.set(team.number, { teamData: team, score: totalNormalizedRank });
+        teamScores.set(team.number, { teamData: team, score: totalScore });
     }
 
     const canonicalTeamMap = {};
@@ -254,7 +265,7 @@ function analyzeAndRankTeams(data) {
     return { canonicalTeamMap, overallRankings, eventRankingsMap, teamStateMap };
 }
 
-function updateEloForRanking(rankedTeams, eloData, tournamentInfo, category, teamStateMap) {
+function updateEloForRanking(rankedTeams, eloData, tournamentInfo, category, teamStateMap, filePath) {
     if (rankedTeams.length < 2) return;
 
     // Ensure we only process teams that actually participated
@@ -287,6 +298,11 @@ function updateEloForRanking(rankedTeams, eloData, tournamentInfo, category, tea
     const averageElo = topTeamRatings.reduce((sum, rating) => sum + rating, 0) / topTeamRatings.length;
     const competitivenessMultiplier = 1 + (TOURNAMENT_COMPETITIVENESS_FACTOR * (averageElo - 1500) / 1500);
     
+    // Calculate tournament importance multiplier for state/national tournaments
+    const importanceMultiplier = getTournamentImportanceMultiplier(tournamentInfo, filePath);
+    
+
+    
     const eloChanges = {};
     const numOpponents = participatingTeams.length - 1;
 
@@ -302,19 +318,23 @@ function updateEloForRanking(rankedTeams, eloData, tournamentInfo, category, tea
 
             expectedScoreRaw += 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
             if (teamA.place < teamB.place) actualScoreRaw += 1.0;
-            else if (teamA.place === teamB.place) actualScoreRaw += 0.5;
+            else if (teamA.place === teamB.place) actualScoreRaw += 1.0;
         }
         
         const actualPerformance = actualScoreRaw / numOpponents;
         const expectedPerformance = expectedScoreRaw / numOpponents;
         
-        // Apply volatility scaling and tournament competitiveness
+
+        
+        // Apply volatility scaling, tournament competitiveness, and importance multiplier
         const baseEloChange = ELO_PERFORMANCE_SCALING_FACTOR * (actualPerformance - expectedPerformance);
-        const scaledEloChange = baseEloChange * volatilityFactors[teamA.name] * competitivenessMultiplier;
+        const scaledEloChange = baseEloChange * volatilityFactors[teamA.name] * competitivenessMultiplier * importanceMultiplier;
         
         // Apply damping factor to make large changes more resistant
         const dampingFactor = calculateEloDampingFactor(scaledEloChange);
         eloChanges[teamA.name] = scaledEloChange * dampingFactor;
+        
+
     }
     
     // Ensure zero-sum property by normalizing ELO changes
@@ -328,7 +348,18 @@ function updateEloForRanking(rankedTeams, eloData, tournamentInfo, category, tea
     
     // Check for large ELO drops in varsity teams with 2000+ ELO
     const teamsToConvertToJV = [];
+    const MAX_ELO_LOSS = 200; // Cap maximum ELO loss to prevent excessive drops
+    
     for (const team of participatingTeams) {
+
+        
+        // Cap ELO loss to prevent excessive drops
+        if (eloChanges[team.name] < -MAX_ELO_LOSS) {
+            // console.log(`Capping ELO loss for ${team.name} from ${eloChanges[team.name]} to -${MAX_ELO_LOSS}`);
+            eloChanges[team.name] = -MAX_ELO_LOSS;
+        }
+        
+        // Only convert to JV if the loss is still significant after capping
         if (team.name.includes(' Varsity') && initialRatings[team.name] >= 2000 && eloChanges[team.name] <= -90) {
             teamsToConvertToJV.push(team.name);
         }
@@ -388,11 +419,19 @@ function updateEloForRanking(rankedTeams, eloData, tournamentInfo, category, tea
             
             const baseEloChange = ELO_PERFORMANCE_SCALING_FACTOR * (actualPerformance - expectedPerformance);
             const volatilityFactor = volatilityFactors[teamA.name.replace(' JV', ' Varsity')] || volatilityFactors[teamA.name];
-            const scaledEloChange = baseEloChange * volatilityFactor * recalculatedCompetitivenessMultiplier;
+            const scaledEloChange = baseEloChange * volatilityFactor * recalculatedCompetitivenessMultiplier * importanceMultiplier;
             
             // Apply damping factor to make large changes more resistant
             const dampingFactor = calculateEloDampingFactor(scaledEloChange);
-            recalculatedEloChanges[teamA.name] = scaledEloChange * dampingFactor;
+            let finalEloChange = scaledEloChange * dampingFactor;
+            
+            // Cap ELO loss for recalculated changes as well
+            if (finalEloChange < -MAX_ELO_LOSS) {
+                // console.log(`Capping recalculated ELO loss for ${teamA.name} from ${finalEloChange} to -${MAX_ELO_LOSS}`);
+                finalEloChange = -MAX_ELO_LOSS;
+            }
+            
+            recalculatedEloChanges[teamA.name] = finalEloChange;
         }
         
         // Ensure zero-sum property for recalculated changes
@@ -408,6 +447,8 @@ function updateEloForRanking(rankedTeams, eloData, tournamentInfo, category, tea
             const stateCode = teamStateMap[team.name.replace(' JV', ' Varsity')] || teamStateMap[team.name];
             const teamData = getOrInitializeTeam(eloData, team.name, tournamentInfo.season, category, stateCode);
             let newElo = initialRatings[team.name.replace(' JV', ' Varsity')] + recalculatedEloChanges[team.name];
+            
+
             
             // Enforce the hard floor as a final safety measure.
             newElo = Math.max(ELO_FLOOR, newElo);
@@ -435,6 +476,8 @@ function updateEloForRanking(rankedTeams, eloData, tournamentInfo, category, tea
             const stateCode = teamStateMap[team.name];
             const teamData = getOrInitializeTeam(eloData, team.name, tournamentInfo.season, category, stateCode);
             let newElo = initialRatings[team.name] + eloChanges[team.name];
+            
+
             
             // Enforce the hard floor as a final safety measure.
             newElo = Math.max(ELO_FLOOR, newElo);
@@ -473,6 +516,44 @@ function calculateEloDampingFactor(eloChange) {
     return 1 - dampingAmount;
 }
 
+/**
+ * Detect if a tournament is a state or national tournament based on name, filename, and content.
+ * Returns the appropriate multiplier (1.0 for regular tournaments).
+ */
+function getTournamentImportanceMultiplier(tournamentInfo, filePath) {
+    const searchTerms = [
+        tournamentInfo.name,
+        tournamentInfo.filename,
+        path.basename(filePath, '.yaml')
+    ];
+    
+    // Read file contents to check for state/national tournament mentions
+    try {
+        const fileContents = fs.readFileSync(filePath, 'utf8').toLowerCase();
+        searchTerms.push(fileContents);
+    } catch (e) {
+        // If we can't read the file, continue without it
+    }
+    
+    const combinedText = searchTerms.join(' ').toLowerCase();
+    
+    // Check for national tournament indicators
+    if (combinedText.includes('national tournament') || 
+        combinedText.includes('nationals') ||
+        combinedText.includes('national championship')) {
+        return NATIONAL_TOURNAMENT_MULTIPLIER;
+    }
+    
+    // Check for state tournament indicators
+    if (combinedText.includes('state tournament') || 
+        combinedText.includes('states') ||
+        combinedText.includes('state championship')) {
+        return STATE_TOURNAMENT_MULTIPLIER;
+    }
+    
+    return 1.0; // Regular tournament
+}
+
 function getOrInitializeTeam(eloData, teamName, season, category, stateCode) {
     // Initialize state if it doesn't exist
     if (!eloData[stateCode]) {
@@ -488,11 +569,24 @@ function getOrInitializeTeam(eloData, teamName, season, category, stateCode) {
 
     if (!eloData[stateCode][teamName].seasons[season].events[category]) {
         let initialRating = STARTING_ELO;
-        const previousSeason = (parseInt(season, 10) - 1).toString();
+        const currentSeasonInt = parseInt(season, 10);
 
-        // If team has previous season data, carry over their final rating
-        if (eloData[stateCode][teamName].seasons[previousSeason] && eloData[stateCode][teamName].seasons[previousSeason].events[category]) {
-            initialRating = eloData[stateCode][teamName].seasons[previousSeason].events[category].rating;
+        // Find the most recent previous season with data for this team and category
+        const availableSeasons = Object.keys(eloData[stateCode][teamName].seasons)
+            .map(s => parseInt(s, 10))
+            .filter(s => s < currentSeasonInt)
+            .sort((a, b) => b - a); // Sort in descending order to get most recent first
+
+        if (availableSeasons.length > 0) {
+            // Check each season from most recent to oldest
+            for (const prevSeason of availableSeasons) {
+                const prevSeasonStr = prevSeason.toString();
+                if (eloData[stateCode][teamName].seasons[prevSeasonStr] && 
+                    eloData[stateCode][teamName].seasons[prevSeasonStr].events[category]) {
+                    initialRating = eloData[stateCode][teamName].seasons[prevSeasonStr].events[category].rating;
+                    break;
+                }
+            }
         }
         
         eloData[stateCode][teamName].seasons[season].events[category] = {

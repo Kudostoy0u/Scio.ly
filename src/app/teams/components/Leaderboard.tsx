@@ -4,10 +4,16 @@ import React, { useState, useEffect, useMemo } from 'react';
 import type { EloData, LeaderboardEntry } from '../types/elo';
 import { getLeaderboard } from '../utils/eloDataProcessor';
 import { useTheme } from '@/app/contexts/ThemeContext';
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Calendar } from 'lucide-react';
 
 interface LeaderboardProps {
   eloData: EloData;
+}
+
+interface TournamentDate {
+  date: string;
+  tournament: string;
+  season: string;
 }
 
 const Leaderboard: React.FC<LeaderboardProps> = ({ eloData }) => {
@@ -15,6 +21,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData }) => {
   const [selectedEvent, setSelectedEvent] = useState<string>('');
   const [selectedState, setSelectedState] = useState<string>('');
   const [selectedSeason, setSelectedSeason] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -65,6 +72,37 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData }) => {
     return Array.from(events).sort();
   };
 
+  // Get all tournament dates for the selected season
+  const getTournamentDatesForSeason = (season: string): TournamentDate[] => {
+    const dates = new Set<string>();
+    const tournamentMap = new Map<string, string>();
+    
+    for (const stateCode in eloData) {
+      for (const schoolName in eloData[stateCode]) {
+        const school = eloData[stateCode][schoolName];
+        const seasonData = school.seasons[season];
+        if (seasonData) {
+          Object.values(seasonData.events).forEach(event => {
+            if (event.history) {
+              event.history.forEach(entry => {
+                dates.add(entry.date);
+                tournamentMap.set(entry.date, entry.tournament);
+              });
+            }
+          });
+        }
+      }
+    }
+    
+    return Array.from(dates)
+      .sort()
+      .map(date => ({
+        date,
+        tournament: tournamentMap.get(date) || 'Unknown Tournament',
+        season
+      }));
+  };
+
   const allSeasons = getAllSeasons();
   const allStates = getAllStates();
   const mostRecentSeason = allSeasons[allSeasons.length - 1] || '2024';
@@ -77,12 +115,21 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData }) => {
   }, [mostRecentSeason, selectedSeason]);
 
   const eventsForSelectedSeason = getEventsForSeason(selectedSeason);
+  const tournamentDates = getTournamentDatesForSeason(selectedSeason);
+  const lastTournamentDate = tournamentDates[tournamentDates.length - 1]?.date || '';
+
+  // Initialize selected date to last tournament if not set
+  useEffect(() => {
+    if (!selectedDate && lastTournamentDate) {
+      setSelectedDate(lastTournamentDate);
+    }
+  }, [lastTournamentDate, selectedDate]);
 
   useEffect(() => {
     setIsLoading(true);
     try {
-      // Get all data first
-      let data = getLeaderboard(eloData, selectedEvent || undefined, selectedSeason, 1000);
+      // Get all data first with date filtering
+      let data = getLeaderboard(eloData, selectedEvent || undefined, selectedSeason, 1000, selectedDate);
       
       // Filter by state if selected, then re-sort to maintain proper ranking
       if (selectedState) {
@@ -92,13 +139,16 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData }) => {
       }
       
       setLeaderboardData(data);
-      setCurrentPage(1); // Reset to first page when filters change
+      // Only reset to first page when state filter changes (not for search or other filters)
+      if (selectedState) {
+        setCurrentPage(1);
+      }
     } catch (error) {
       console.error('Error loading leaderboard:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [eloData, selectedEvent, selectedSeason, selectedState]);
+  }, [eloData, selectedEvent, selectedSeason, selectedState, selectedDate]);
 
   // Reset event selection when season changes (if event is not available in new season)
   useEffect(() => {
@@ -125,10 +175,12 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData }) => {
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
-  // Reset to first page when search changes
+  // Only reset to first page when search changes if we're not on the first page
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
+    if (currentPage > 1) {
+      setCurrentPage(1);
+    }
+  }, [searchTerm, currentPage]);
 
   const getRankColor = (rank: number) => {
     if (rank === 1) return darkMode ? 'bg-yellow-900/30 text-yellow-200' : 'bg-yellow-100 text-yellow-800'; // Gold
@@ -137,11 +189,29 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData }) => {
     return darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-50 text-gray-600';
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+  };
+
+  const selectedTournament = tournamentDates.find(t => t.date === selectedDate);
+
   return (
     <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm border ${darkMode ? 'border-gray-700' : 'border-gray-200'} p-6`}>
       <div className="text-center mb-6">
         <h2 className={`text-2xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>🏆 Leaderboard</h2>
-        <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>Top teams by Elo rating - {selectedSeason} Season</p>
+        <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+          Top teams by Elo rating - {selectedSeason} Season
+          {selectedTournament && (
+            <span className="block text-sm mt-1">
+              📅 {formatDate(selectedDate)} - {selectedTournament.tournament}
+            </span>
+          )}
+        </p>
       </div>
 
       <div className="mb-6 space-y-4">
@@ -205,6 +275,59 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData }) => {
             />
           </div>
         </div>
+
+        {/* Timeline Slider */}
+        {tournamentDates.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Calendar className={`h-4 w-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+              <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                Season Timeline: {selectedTournament ? formatDate(selectedDate) : 'Select date'}
+              </label>
+            </div>
+            <div className="relative">
+              <input
+                type="range"
+                min="0"
+                max={tournamentDates.length - 1}
+                value={tournamentDates.findIndex(t => t.date === selectedDate)}
+                onChange={(e) => {
+                  const index = parseInt(e.target.value);
+                  setSelectedDate(tournamentDates[index]?.date || '');
+                }}
+                className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${
+                  darkMode 
+                    ? 'bg-gray-700 slider-dark' 
+                    : 'bg-gray-200 slider-light'
+                }`}
+                style={{
+                  background: `linear-gradient(to right, ${
+                    darkMode ? '#3B82F6' : '#2563EB'
+                  } 0%, ${
+                    darkMode ? '#3B82F6' : '#2563EB'
+                  } ${(tournamentDates.findIndex(t => t.date === selectedDate) / (tournamentDates.length - 1)) * 100}%, ${
+                    darkMode ? '#374151' : '#E5E7EB'
+                  } ${(tournamentDates.findIndex(t => t.date === selectedDate) / (tournamentDates.length - 1)) * 100}%, ${
+                    darkMode ? '#374151' : '#E5E7EB'
+                  } 100%)`
+                }}
+              />
+              <div className="flex justify-between text-xs mt-1">
+                <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
+                  {tournamentDates[0] ? formatDate(tournamentDates[0].date) : ''}
+                </span>
+                <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
+                  {tournamentDates[tournamentDates.length - 1] ? formatDate(tournamentDates[tournamentDates.length - 1].date) : ''}
+                </span>
+              </div>
+            </div>
+            {selectedTournament && (
+              <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                📍 {selectedTournament.tournament}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Results Summary */}
         {!isLoading && (
@@ -370,6 +493,46 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData }) => {
           </div>
         </div>
       )}
+
+      <style jsx>{`
+        .slider-dark::-webkit-slider-thumb {
+          appearance: none;
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #3B82F6;
+          cursor: pointer;
+          border: 2px solid #1F2937;
+        }
+        
+        .slider-light::-webkit-slider-thumb {
+          appearance: none;
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #2563EB;
+          cursor: pointer;
+          border: 2px solid #FFFFFF;
+        }
+        
+        .slider-dark::-moz-range-thumb {
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #3B82F6;
+          cursor: pointer;
+          border: 2px solid #1F2937;
+        }
+        
+        .slider-light::-moz-range-thumb {
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #2563EB;
+          cursor: pointer;
+          border: 2px solid #FFFFFF;
+        }
+      `}</style>
     </div>
   );
 };

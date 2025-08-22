@@ -19,6 +19,7 @@ import { getAllSchools, getAllEvents, processChartData } from '../utils/eloDataP
 import { getChartConfig } from './ChartConfig';
 import Leaderboard from './Leaderboard';
 import CompareTool from './CompareTool';
+import ChartRangeSlider from './ChartRangeSlider';
 import { useTheme } from '@/app/contexts/ThemeContext';
 
 ChartJS.register(
@@ -52,8 +53,21 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData }) => {
   const [chartData, setChartData] = useState<ChartData>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rangeFilter, setRangeFilter] = useState<{ startIndex: number; endIndex: number } | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const chartRef = useRef<any>(null);
   const { darkMode } = useTheme();
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const schools = getAllSchools(eloData);
   const events = getAllEvents(eloData);
@@ -100,6 +114,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData }) => {
         ? prev.filter(s => s !== school)
         : [...prev, school]
     );
+    clearResultsBox(); // Clear results box when schools change
   };
 
   const handleEventToggle = (event: string) => {
@@ -108,6 +123,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData }) => {
         ? prev.filter(e => e !== event)
         : [...prev, event]
     );
+    clearResultsBox(); // Clear results box when events change
   };
 
   const removeSchool = (school: string) => {
@@ -126,14 +142,87 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData }) => {
     setSelectedEvents([]);
   };
 
+  // Function to clear results box
+  const clearResultsBox = () => {
+    const resultsBox = document.getElementById('chart-results-box');
+    if (resultsBox) {
+      resultsBox.remove();
+    }
+  };
+
+  // Function to clear tooltips
+  const clearTooltips = () => {
+    const tooltipEl = document.getElementById('chartjs-tooltip');
+    if (tooltipEl) {
+      tooltipEl.style.opacity = '0';
+      tooltipEl.style.visibility = 'hidden';
+    }
+  };
+
   const handleChartTypeChange = (newChartType: ChartType) => {
     setChartType(newChartType);
     setChartData({}); // Clear chart data when changing chart type
+    setRangeFilter(null); // Reset range filter
+    clearResultsBox(); // Clear results box
   };
 
   const handleViewModeChange = (newViewMode: 'season' | 'tournament') => {
     setViewMode(newViewMode);
     setChartData({}); // Clear chart data when changing view mode
+    setRangeFilter(null); // Reset range filter
+    clearResultsBox(); // Clear results box
+  };
+
+  const handleRangeChange = useCallback((startIndex: number, endIndex: number) => {
+    setRangeFilter({ startIndex, endIndex });
+    clearResultsBox(); // Clear results box when range changes
+  }, []);
+
+  // Get data points for the range slider (only for tournament view mode)
+  const getDataPointsForSlider = (): Array<{ x: Date; y: number; tournament?: string }> => {
+    if (viewMode !== 'tournament' || Object.keys(chartData).length === 0) {
+      return [];
+    }
+
+    // Get all unique data points from all schools/events to determine the full timeline
+    const allDataPoints = new Map<string, { x: Date; y: number; tournament: string }>();
+
+    if (chartType === 'overall') {
+      // Collect all tournament dates from all schools
+      Object.keys(chartData).forEach(schoolKey => {
+        const schoolData = chartData[schoolKey] as Array<{ date: string; tournament: string; elo: number; duosmiumLink: string }>;
+        schoolData.forEach(point => {
+          const dateKey = point.date;
+          if (!allDataPoints.has(dateKey)) {
+            allDataPoints.set(dateKey, {
+              x: new Date(point.date),
+              y: point.elo,
+              tournament: point.tournament
+            });
+          }
+        });
+      });
+    } else {
+      // Collect all tournament dates from all schools and events
+      Object.keys(chartData).forEach(schoolKey => {
+        const eventData = chartData[schoolKey] as Record<string, Array<{ date: string; tournament: string; elo: number; duosmiumLink: string }>>;
+        Object.keys(eventData).forEach(eventKey => {
+          eventData[eventKey].forEach(point => {
+            const dateKey = point.date;
+            if (!allDataPoints.has(dateKey)) {
+              allDataPoints.set(dateKey, {
+                x: new Date(point.date),
+                y: point.elo,
+                tournament: point.tournament
+              });
+            }
+          });
+        });
+      });
+    }
+
+    // Convert to array and sort by date
+    return Array.from(allDataPoints.values()).sort((a, b) => a.x.getTime() - b.x.getTime());
   };
 
   useEffect(() => {
@@ -144,7 +233,11 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData }) => {
     }
   }, [selectedSchools, selectedEvents, chartType, viewMode, generateChart]);
 
-  const chartConfig = Object.keys(chartData).length > 0 ? getChartConfig(chartData, chartType, viewMode, darkMode) : null;
+  const dataPointsForSlider = getDataPointsForSlider();
+
+  const chartConfig = Object.keys(chartData).length > 0 
+    ? getChartConfig(chartData, chartType, viewMode, darkMode, rangeFilter || undefined, dataPointsForSlider) 
+    : null;
 
   const renderChartsTab = () => (
     <>
@@ -350,8 +443,64 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData }) => {
       </div>
 
       {/* Chart Container */}
-      <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm border ${darkMode ? 'border-gray-700' : 'border-gray-200'} p-6`}>
+      <div 
+        className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm border ${darkMode ? 'border-gray-700' : 'border-gray-200'} p-6`}
+        onClick={clearResultsBox}
+      >
         <div className="relative h-96">
+          {/* Info Button */}
+          <div className="absolute top-2 right-2 z-10">
+            <div className="relative group">
+              <button
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
+                  darkMode 
+                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
+                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                }`}
+                aria-label="Elo calculation info"
+                onClick={isMobile ? (e) => {
+                  e.stopPropagation();
+                  const tooltip = e.currentTarget.nextElementSibling as HTMLElement;
+                  if (tooltip) {
+                    tooltip.style.opacity = tooltip.style.opacity === '1' ? '0' : '1';
+                    tooltip.style.pointerEvents = tooltip.style.opacity === '1' ? 'auto' : 'none';
+                  }
+                } : undefined}
+              >
+                i
+              </button>
+              
+              {/* Tooltip */}
+              <div className={`absolute right-0 top-8 w-80 p-4 rounded-lg shadow-lg border text-sm transition-opacity duration-200 ${
+                isMobile 
+                  ? 'opacity-0 pointer-events-none' 
+                  : 'opacity-0 group-hover:opacity-100 pointer-events-none'
+              } ${
+                darkMode 
+                  ? 'bg-gray-800 border-gray-600 text-gray-200' 
+                  : 'bg-white border-gray-200 text-gray-800'
+              }`}>
+                <div className="font-semibold mb-2">Elo Rating Calculation</div>
+                <p className="mb-2">
+                  Our Elo ratings are calculated using an ad-hoc simulation that factors in team placements and tournament strength. 
+                  Higher placements and stronger tournaments result in larger Elo gains.
+                </p>
+                <p className="mb-2">
+                  The system accounts for regional, state, and national tournament levels, with nationals carrying the most weight.
+                </p>
+                {isMobile ? (
+                  <p className="text-xs opacity-75">
+                    💡 Tip: Click a data point twice to see tournament results!
+                  </p>
+                ) : (
+                  <p className="text-xs opacity-75">
+                    💡 Tip: Click on data points to view detailed tournament results.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+          
           {isLoading && (
             <div className={`absolute inset-0 flex items-center justify-center rounded-lg ${darkMode ? 'bg-gray-800 bg-opacity-75' : 'bg-white bg-opacity-75'}`}>
               <div className="text-center">
@@ -368,6 +517,15 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData }) => {
             />
           )}
         </div>
+        
+        {/* Range Slider (only for tournament view mode) */}
+        {viewMode === 'tournament' && dataPointsForSlider.length > 0 && (
+          <ChartRangeSlider
+            dataPoints={dataPointsForSlider}
+            onRangeChange={handleRangeChange}
+            isMobile={isMobile}
+          />
+        )}
       </div>
     </>
   );
@@ -394,7 +552,11 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData }) => {
                 ? 'text-gray-300 hover:bg-gray-700' 
                 : 'text-gray-700 hover:bg-gray-50'
           }`}
-          onClick={() => setActiveTab('charts')}
+          onClick={() => {
+            setActiveTab('charts');
+            clearTooltips();
+            clearResultsBox();
+          }}
         >
           📊 Charts
         </button>
@@ -406,7 +568,11 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData }) => {
                 ? 'text-gray-300 hover:bg-gray-700' 
                 : 'text-gray-700 hover:bg-gray-50'
           }`}
-          onClick={() => setActiveTab('leaderboard')}
+          onClick={() => {
+            setActiveTab('leaderboard');
+            clearTooltips();
+            clearResultsBox();
+          }}
         >
           🏆 Leaderboard
         </button>
@@ -418,7 +584,11 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData }) => {
                 ? 'text-gray-300 hover:bg-gray-700' 
                 : 'text-gray-700 hover:bg-gray-50'
           }`}
-          onClick={() => setActiveTab('compare')}
+          onClick={() => {
+            setActiveTab('compare');
+            clearTooltips();
+            clearResultsBox();
+          }}
         >
           ⚔️ Compare
         </button>
