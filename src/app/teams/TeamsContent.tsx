@@ -132,7 +132,7 @@ export default function TeamsContent() {
           </div>
         </div>
         
-        <EloViewer eloData={eloData} />
+        <EloViewer eloData={eloData} division={division} />
       </div>
     </div>
   );

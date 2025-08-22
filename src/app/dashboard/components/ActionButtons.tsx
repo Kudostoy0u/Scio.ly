@@ -99,10 +99,15 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
             </div>
-            <div className="flex-1">
-              <h3 className="text-xl font-bold mb-1">Load Test with Code</h3>
-            </div>
-            <div className="grid grid-cols-3 gap-2 md:flex md:space-x-2 md:grid-cols-none">
+                          <div className="flex-1 min-w-0">
+                <h3 className="text-md lg:text-xl font-bold mb-1">Load Test with Code</h3>
+                <p className="hidden lg:block text-sm text-gray-500 dark:text-gray-400">Take a test with a friend</p>
+              </div>
+            <div className="grid grid-cols-3 gap-2 lg:flex lg:space-x-2 lg:grid-cols-none" style={{ 
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '0.5rem'
+            }}>
               {testCodeDigits.map((digit, index) => (
                 <input
                   key={index}

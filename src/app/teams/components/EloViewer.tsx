@@ -35,11 +35,12 @@ ChartJS.register(
 
 interface EloViewerProps {
   eloData: EloData;
+  division: 'b' | 'c';
 }
 
 type TabType = 'charts' | 'leaderboard' | 'compare';
 
-const EloViewer: React.FC<EloViewerProps> = ({ eloData }) => {
+const EloViewer: React.FC<EloViewerProps> = ({ eloData, division }) => {
   const [activeTab, setActiveTab] = useState<TabType>('charts');
   const [chartType, setChartType] = useState<ChartType>('overall');
   const [viewMode, setViewMode] = useState<'season' | 'tournament'>('tournament');
@@ -597,7 +598,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData }) => {
       {/* Tab Content */}
       <div className="min-h-96">
         {activeTab === 'charts' && renderChartsTab()}
-        {activeTab === 'leaderboard' && <Leaderboard eloData={eloData} />}
+        {activeTab === 'leaderboard' && <Leaderboard eloData={eloData} division={division} />}
         {activeTab === 'compare' && <CompareTool eloData={eloData} />}
       </div>
     </div>
