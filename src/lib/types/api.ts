@@ -153,7 +153,6 @@ export interface GeminiExplainRequest {
   question: Record<string, unknown>;
   userAnswer?: unknown;
   event: string;
-  streaming?: boolean; // optional flag to stream explanation text
 }
 
 export interface GeminiGradeFreeResponsesRequest {

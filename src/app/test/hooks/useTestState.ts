@@ -919,8 +919,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
       gradingResults,
       setGradingResults,
       userAnswers,
-      RATE_LIMIT_DELAY,
-      true
+      RATE_LIMIT_DELAY
     );
   };
 

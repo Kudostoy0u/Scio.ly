@@ -523,8 +523,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
       gradingResults,
       setGradingResults,
       undefined, // no userAnswers for unlimited
-      RATE_LIMIT_DELAY,
-      true
+      RATE_LIMIT_DELAY
     );
 
     await originalGetExplanation();

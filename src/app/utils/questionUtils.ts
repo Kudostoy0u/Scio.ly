@@ -210,8 +210,7 @@ export const getExplanation = async (
   gradingResults: GradingResults,
   setGradingResults: React.Dispatch<React.SetStateAction<GradingResults>>,
   userAnswers?: Record<number, (string | null)[] | null>,
-  RATE_LIMIT_DELAY: number = 2000,
-  streaming: boolean = true
+  RATE_LIMIT_DELAY: number = 2000
 ) => {
   if (explanations[index]) return;
 
@@ -227,376 +226,7 @@ export const getExplanation = async (
   try {
     const isMCQ = question.options && question.options.length > 0;
 
-    console.log('Requesting explanation from API', { streaming });
-    if (streaming) {
-      console.log('🚀 Making streaming request to:', api.geminiExplain);
-      const response = await fetch(api.geminiExplain, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: question,
-          userAnswer: userAnswer,
-          event: routerData.eventName || 'Science Olympiad',
-          streaming: true,
-        })
-      });
-
-      if (!response.ok || !response.body) {
-        const errorText = await response.text();
-        console.error('API Response error:', errorText);
-        throw new Error(`Failed to fetch explanation: ${response.status} ${response.statusText}`);
-      }
-
-      console.log('✅ Received streaming response, status:', response.status);
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let aggregatedText = '';
-      let cumulativeJsonString = '';
-      let finalCorrectIndices: number[] | undefined;
-      let finalCorrectedAnswers: any[] | undefined;
-
-             const processEvent = (rawEvent: string) => {
-        // Parse SSE frame
-        const lines = rawEvent.split('\n').filter(Boolean);
-        let eventType = 'message';
-        let dataLine = '';
-        for (const line of lines) {
-          if (line.startsWith('event:')) eventType = line.slice(6).trim();
-          if (line.startsWith('data:')) dataLine += line.slice(5).trim();
-        }
-
-        if (eventType === 'chunk') {
-          console.log('🔍 Received chunk data:', dataLine);
-          
-          // Add this chunk to our cumulative JSON string
-          cumulativeJsonString += dataLine;
-          console.log('📝 Cumulative JSON string:', cumulativeJsonString);
-          
-          // Try to complete the JSON by adding closing quote and brace
-          const completedJson = cumulativeJsonString + '"}}';
-          console.log('🔧 Attempting to parse completed JSON:', completedJson);
-          
-          try {
-            const parsed = JSON.parse(completedJson);
-            if (parsed && typeof parsed.explanation === 'string') {
-              aggregatedText = parsed.explanation;
-              console.log('✅ Successfully parsed JSON and extracted explanation:', aggregatedText);
-              // Convert \n to actual newlines for proper rendering
-              const formattedText = aggregatedText.replace(/\\n/g, '\n');
-              setExplanations(prev => ({ ...prev, [index]: formattedText }));
-            }
-          } catch {
-            console.log('❌ Failed to parse completed JSON, continuing to accumulate');
-          }
-          
-          // Try to extract correctIndices and correctedAnswers from any JSON-like content
-          try {
-            const jsonMatch = dataLine.match(/\{[^}]*"correctIndices"[^}]*\}/);
-            if (jsonMatch) {
-              const parsed = JSON.parse(jsonMatch[0]);
-              if (parsed.correctIndices) {
-                finalCorrectIndices = parsed.correctIndices;
-                console.log('✅ Extracted correctIndices:', finalCorrectIndices);
-              }
-              if (parsed.correctedAnswers) {
-                finalCorrectedAnswers = parsed.correctedAnswers;
-                console.log('✅ Extracted correctedAnswers:', finalCorrectedAnswers);
-              }
-            }
-          } catch {
-            // Ignore JSON parsing errors for metadata
-          }
-        } else if (eventType === 'final') {
-          try {
-            const payload = JSON.parse(dataLine);
-            if (payload && Array.isArray(payload.correctIndices)) {
-              finalCorrectIndices = payload.correctIndices as number[];
-            }
-            if (payload && Array.isArray(payload.correctedAnswers)) {
-              finalCorrectedAnswers = payload.correctedAnswers as any[];
-            }
-            // Use the aggregated text from streaming, not the JSON explanation
-            if (payload && typeof payload.explanation === 'string' && !aggregatedText) {
-              // Only use JSON explanation if we didn't get streaming text
-              aggregatedText = payload.explanation;
-              setExplanations(prev => ({ ...prev, [index]: aggregatedText }));
-            } else if (payload && typeof payload.explanation === 'string') {
-              // Update with the final complete explanation text
-              aggregatedText = payload.explanation;
-              setExplanations(prev => ({ ...prev, [index]: aggregatedText }));
-            }
-          } catch (e) {
-            console.warn('Failed to parse final payload:', e);
-          }
-        }
-      };
-
-      console.log('🔄 Starting to read streaming data...');
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) {
-          console.log('✅ Finished reading streaming data');
-          break;
-        }
-        const chunk = decoder.decode(value, { stream: true });
-        console.log('📦 Received raw chunk:', chunk);
-        buffer += chunk;
-        let sepIndex;
-        while ((sepIndex = buffer.indexOf('\n\n')) !== -1) {
-          const frame = buffer.slice(0, sepIndex);
-          buffer = buffer.slice(sepIndex + 2);
-          if (frame.trim()) {
-            console.log('📋 Processing frame:', frame);
-            processEvent(frame);
-          }
-        }
-      }
-      // Handle any trailing frame
-      if (buffer.trim()) {
-        console.log('📋 Processing trailing frame:', buffer);
-        processEvent(buffer);
-      }
-
-      console.log('📊 Final buffer content:', buffer);
-      console.log('📊 Final aggregated text:', aggregatedText);
-
-      // If we still don't have explanation text, try to parse the entire buffer as JSON
-      if (!aggregatedText && buffer.trim()) {
-        console.log('🔍 Trying to parse entire buffer as JSON');
-        try {
-          const fullData = JSON.parse(buffer);
-          console.log('🔍 Parsed full buffer as JSON:', fullData);
-          if (fullData && typeof fullData.explanation === 'string') {
-            aggregatedText = fullData.explanation;
-            console.log('✅ Extracted explanation from full buffer:', aggregatedText);
-            setExplanations(prev => ({ ...prev, [index]: aggregatedText }));
-          }
-        } catch (e) {
-          console.log('❌ Failed to parse full buffer as JSON:', e);
-        }
-      }
-
-      // After streaming done, optionally apply correctIndices logic below
-      const correctIndices = finalCorrectIndices;
-      const correctedAnswers = finalCorrectedAnswers;
-      
-      // Ensure we have the final explanation text
-      let explanationText = aggregatedText.trim();
-      
-      if (isMCQ && correctIndices && correctIndices.length > 0) {
-        // Same logic as non-streaming path below to update answers and grading
-        try {
-          const suggestedIndices = correctIndices.filter(n => !isNaN(n));
-          if (suggestedIndices.length > 0) {
-            const correctedAnswers = suggestedIndices;
-            const currentAnswers = question.answers || [];
-            const normalizedCurrentAnswers = currentAnswers.map(ans => 
-              typeof ans === 'string' ? parseInt(ans) : ans
-            ).filter(n => typeof n === 'number' && !isNaN(n));
-            const normalizedNewAnswers = correctedAnswers;
-            const answersChanged = !(
-              normalizedNewAnswers.length === normalizedCurrentAnswers.length &&
-              normalizedNewAnswers.every(val => normalizedCurrentAnswers.includes(val)) &&
-              normalizedCurrentAnswers.every(val => normalizedNewAnswers.includes(val))
-            );
-
-                      if (answersChanged) {
-            console.log("✅ Explanation suggested different answers, submitting edit request.");
-            const newQ = { ...question, answers: correctedAnswers } as Question;
-            
-            // Show toast notification
-            toast.info('Answer has been updated based on explanation');
-            
-            try {
-              await fetch(api.reportEdit, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  question: question.question,
-                  answer: question.answers,
-                  originalQuestion: question,
-                  editedQuestion: newQ,
-                  event: routerData.eventName || 'Unknown Event',
-                  reason: 'Explanation corrected answers',
-                  bypass: true
-                }),
-              });
-            } catch (editError) {
-              console.error('Failed to submit auto-edit request:', editError);
-            }
-          }
-
-          // Always update the answers in the main data state and regrade (regardless of whether answers changed)
-          setData(prevData => {
-            const newData = [...prevData];
-            newData[index] = { ...newData[index], answers: correctedAnswers };
-
-            if (userAnswers) {
-              const currentUserAnswers = userAnswers[index] || [];
-              const isMulti = isMultiSelectQuestion(newData[index].question, correctedAnswers);
-              const userNumericAnswers = currentUserAnswers
-                .map(ans => {
-                  const idx = newData[index].options?.indexOf(ans ?? '');
-                  return idx !== undefined && idx >= 0 ? idx : -1;
-                })
-                .filter(idx => idx >= 0);
-
-              let isNowCorrect = false;
-              if (isMulti) {
-                isNowCorrect = correctedAnswers.every(correctAns => userNumericAnswers.includes(correctAns)) &&
-                               userNumericAnswers.length === correctedAnswers.length;
-              } else {
-                isNowCorrect = correctedAnswers.includes(userNumericAnswers[0]);
-              }
-
-              console.log(`🔍 MCQ Grading Debug for question ${index + 1}:`);
-              console.log(`  User's numeric answers:`, userNumericAnswers);
-              console.log(`  Corrected answers:`, correctedAnswers);
-              console.log(`  Is multi-select:`, isMulti);
-              console.log(`  Is now correct:`, isNowCorrect);
-              console.log(`  Current grading result:`, gradingResults[index]);
-
-              if (isNowCorrect && (gradingResults[index] ?? 0) !== 1) {
-                console.log(`✅ Updating grading result for question ${index + 1} to Correct based on explanation.`);
-                setGradingResults(prev => ({ ...prev, [index]: 1 }));
-              } else if (!isNowCorrect && gradingResults[index] === 1) {
-                console.log(`❌ Updating grading result for question ${index + 1} to Incorrect based on explanation.`);
-                setGradingResults(prev => ({ ...prev, [index]: 0 }));
-              } else {
-                console.log(`ℹ️ No grading change needed for question ${index + 1}`);
-              }
-            }
-
-            return newData;
-          });
-          }
-        } catch (parseError) {
-          console.error('Failed to process correct indices:', parseError);
-          explanationText = aggregatedText;
-        }
-      }
-      
-      // Handle FRQ answer corrections in streaming
-      if (!isMCQ && correctedAnswers && correctedAnswers.length > 0) {
-        console.log('🔍 Found corrected answers for FRQ in streaming explanation');
-        try {
-          const currentAnswers = question.answers || [];
-          
-          // Compare new answers with existing ones
-          const answersChanged = !(
-            correctedAnswers.length === currentAnswers.length &&
-            correctedAnswers.every((ans: any, idx: number) => 
-              String(ans).toLowerCase().trim() === String(currentAnswers[idx]).toLowerCase().trim()
-            )
-          );
-          
-          console.log('🔍 FRQ Answer Comparison Debug (Streaming):');
-          console.log('  Original question.answers:', currentAnswers);
-          console.log('  Explanation suggested answers:', correctedAnswers);
-          console.log('  Answers changed?', answersChanged);
-          
-          if (answersChanged) {
-            console.log("✅ Explanation suggested different answers for FRQ, submitting edit request.");
-            const newQ = { ...question, answers: correctedAnswers };
-            
-            // Show toast notification
-            toast.info('Answer has been updated based on explanation');
-            
-            try {
-              await fetch(api.reportEdit, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  question: question.question,
-                  answer: question.answers,
-                  originalQuestion: question,
-                  editedQuestion: newQ,
-                  event: routerData.eventName || 'Unknown Event',
-                  reason: "Explanation corrected answers",
-                  bypass: true
-                }),
-              });
-            } catch (editError) {
-              console.error("Failed to submit auto-edit request:", editError);
-            }
-            
-            // Update the answers in the main data state and regrade
-            setData(prevData => {
-              const newData = [...prevData];
-              newData[index] = { ...newData[index], answers: correctedAnswers };
-              
-              // Always regrade the question with the current answers (original or corrected)
-              if (userAnswers) {
-                const currentUserAnswers = userAnswers[index] || [];
-                const userAnswerText = currentUserAnswers[0] || '';
-                
-                // For FRQ, we need to check if the user's answer matches any of the corrected answers
-                let isNowCorrect = false;
-                if (userAnswerText.trim()) {
-                  isNowCorrect = correctedAnswers.some(correctAnswer => 
-                    String(correctAnswer).toLowerCase().trim() === userAnswerText.toLowerCase().trim()
-                  );
-                }
-                
-                if (isNowCorrect && (gradingResults[index] ?? 0) !== 1) {
-                  console.log(`Updating grading result for question ${index + 1} to Correct based on explanation.`);
-                  setGradingResults(prev => ({ ...prev, [index]: 1 }));
-                } else if (!isNowCorrect && gradingResults[index] === 1) {
-                  console.log(`Updating grading result for question ${index + 1} to Incorrect based on explanation.`);
-                  setGradingResults(prev => ({ ...prev, [index]: 0 }));
-                }
-              }
-              
-              return newData;
-            });
-          } else {
-            console.log("✅ Explanation confirmed existing FRQ answers are correct - no edit needed.");
-          }
-          
-          // Always update the answers in the main data state and regrade (even if answers didn't change)
-          setData(prevData => {
-            const newData = [...prevData];
-            newData[index] = { ...newData[index], answers: correctedAnswers };
-            
-            // Always regrade the question with the current answers (original or corrected)
-            if (userAnswers) {
-              const currentUserAnswers = userAnswers[index] || [];
-              const userAnswerText = currentUserAnswers[0] || '';
-              
-              // For FRQ, we need to check if the user's answer matches any of the corrected answers
-              let isNowCorrect = false;
-              if (userAnswerText.trim()) {
-                isNowCorrect = correctedAnswers.some(correctAnswer => 
-                  String(correctAnswer).toLowerCase().trim() === userAnswerText.toLowerCase().trim()
-                );
-              }
-              
-              if (isNowCorrect && (gradingResults[index] ?? 0) !== 1) {
-                console.log(`Updating grading result for question ${index + 1} to Correct based on explanation.`);
-                setGradingResults(prev => ({ ...prev, [index]: 1 }));
-              } else if (!isNowCorrect && gradingResults[index] === 1) {
-                console.log(`Updating grading result for question ${index + 1} to Incorrect based on explanation.`);
-                setGradingResults(prev => ({ ...prev, [index]: 0 }));
-              }
-            }
-            
-            return newData;
-          });
-        } catch (parseError) {
-          console.error("Failed to parse corrected answers for FRQ:", parseError);
-        }
-      }
-
-      // Ensure explanation text is set at the end
-      const finalExplanationText = explanationText || aggregatedText;
-      console.log('🎯 Setting final explanation text:', finalExplanationText);
-      setExplanations(prev => ({ ...prev, [index]: finalExplanationText }));
-      return;
-    }
-
-    // Non-streaming fallback
-    console.log('🚀 Making non-streaming request to:', api.geminiExplain);
+    console.log('🚀 Making request to:', api.geminiExplain);
     const response = await fetch(api.geminiExplain, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -613,40 +243,31 @@ export const getExplanation = async (
       throw new Error(`Failed to fetch explanation: ${response.status} ${response.statusText}`);
     }
 
-    console.log('✅ Received non-streaming response, status:', response.status);
+    console.log('✅ Received response, status:', response.status);
     const data = await response.json();
-    console.log('📦 Received non-streaming data:', data);
+    console.log('📦 Received data:', data);
     if (!data.success || !data.data) {
       throw new Error('Invalid response format from API');
     }
     
     const { explanation, correctIndices, correctedAnswers } = data.data;
-    const fullResponse = explanation;
+    let explanationText = explanation;
 
-    // Modified response parsing logic
-    let explanationText = fullResponse;
-    
     // Handle MCQ answer corrections
     if (isMCQ && correctIndices && correctIndices.length > 0) {
-      // Extract and parse indices if marker is found for MCQ
-      console.log('🔍 Found "Correct Indices" marker in explanation');
+      console.log('🔍 Found correct indices in explanation');
       try {
         const suggestedIndices = correctIndices.filter(n => !isNaN(n));
         if (suggestedIndices.length > 0) {
-          // The API returns 0-based indices, so use them directly
           const correctedAnswers = suggestedIndices;
-
-          // Compare new indices with existing ones
           const currentAnswers = question.answers || [];
           
-          // Normalize both arrays to numbers for comparison
           const normalizedCurrentAnswers = currentAnswers.map(ans => 
             typeof ans === 'string' ? parseInt(ans) : ans
           ).filter(n => typeof n === 'number' && !isNaN(n));
           
           const normalizedNewAnswers = correctedAnswers;
           
-          // Debug logging
           console.log('🔍 Answer Comparison Debug:');
           console.log('  Original question.answers:', currentAnswers);
           console.log('  Normalized current answers:', normalizedCurrentAnswers);
@@ -664,7 +285,6 @@ export const getExplanation = async (
             console.log("✅ Explanation suggested different answers, submitting edit request.");
             const newQ = { ...question, answers: correctedAnswers };
             
-            // Show toast notification
             toast.info('Answer has been updated based on explanation');
             
             try {
@@ -688,12 +308,11 @@ export const getExplanation = async (
             console.log("✅ Explanation confirmed existing answers are correct - no edit needed.");
           }
 
-          // Always update the answers in the main data state and regrade (even if answers didn't change)
+          // Always update the answers in the main data state and regrade
           setData(prevData => {
             const newData = [...prevData];
             newData[index] = { ...newData[index], answers: correctedAnswers };
 
-            // Always regrade the question with the current answers (original or corrected)
             if (userAnswers) {
               const currentUserAnswers = userAnswers[index] || [];
               const correctAnswers = correctedAnswers;
@@ -714,7 +333,7 @@ export const getExplanation = async (
                 isNowCorrect = correctAnswers.includes(userNumericAnswers[0]);
               }
 
-              console.log(`🔍 MCQ Grading Debug for question ${index + 1} (Non-streaming):`);
+              console.log(`🔍 MCQ Grading Debug for question ${index + 1}:`);
               console.log(`  User's numeric answers:`, userNumericAnswers);
               console.log(`  Corrected answers:`, correctAnswers);
               console.log(`  Is multi-select:`, isMulti);
@@ -737,11 +356,8 @@ export const getExplanation = async (
         }
       } catch (parseError) {
         console.error("Failed to parse correct indices:", parseError);
-        explanationText = fullResponse;
+        explanationText = explanation;
       }
-    } else {
-      console.log('🔍 No "Correct Indices" marker found in explanation or not MCQ');
-      console.log('  Is MCQ?', isMCQ);
     }
     
     // Handle FRQ answer corrections
@@ -750,7 +366,6 @@ export const getExplanation = async (
       try {
         const currentAnswers = question.answers || [];
         
-        // Compare new answers with existing ones
         const answersChanged = !(
           correctedAnswers.length === currentAnswers.length &&
           correctedAnswers.every((ans: any, idx: number) => 
@@ -767,7 +382,6 @@ export const getExplanation = async (
           console.log("✅ Explanation suggested different answers for FRQ, submitting edit request.");
           const newQ = { ...question, answers: correctedAnswers };
           
-          // Show toast notification
           toast.info('Answer has been updated based on explanation');
           
           try {
@@ -788,17 +402,14 @@ export const getExplanation = async (
             console.error("Failed to submit auto-edit request:", editError);
           }
           
-          // Update the answers in the main data state and regrade
           setData(prevData => {
             const newData = [...prevData];
             newData[index] = { ...newData[index], answers: correctedAnswers };
             
-            // Always regrade the question with the current answers (original or corrected)
             if (userAnswers) {
               const currentUserAnswers = userAnswers[index] || [];
               const userAnswerText = currentUserAnswers[0] || '';
               
-              // For FRQ, we need to check if the user's answer matches any of the corrected answers
               let isNowCorrect = false;
               if (userAnswerText.trim()) {
                 isNowCorrect = correctedAnswers.some(correctAnswer => 
@@ -825,7 +436,7 @@ export const getExplanation = async (
       }
     }
 
-    console.log('🎯 Setting non-streaming explanation text:', explanationText);
+    console.log('🎯 Setting explanation text:', explanationText);
     setExplanations((prev) => ({ ...prev, [index]: explanationText }));
 
   } catch (error) {

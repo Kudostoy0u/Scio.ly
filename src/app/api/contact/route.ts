@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Missing required fields' }, { status: 400 })
     }
 
-    const webhookUrl = process.env.DISCORD_CONTACT_WEBHOOK_URL
+    const webhookUrl = process.env.DISCORD_CONTACT_WEBHOOK
     if (!webhookUrl) {
       return NextResponse.json({ success: false, message: 'Contact webhook not configured' }, { status: 500 })
     }

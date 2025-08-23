@@ -27,49 +27,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 503 });
     }
 
-    const streaming = Boolean(body.streaming);
-    console.log('🤖 [GEMINI/EXPLAIN] Sending request to Gemini AI', { streaming });
-
-    if (streaming) {
-      const encoder = new TextEncoder();
-      const stream = new ReadableStream<Uint8Array>({
-        async start(controller) {
-          try {
-            // Send an initial event for clients to prepare UI
-            controller.enqueue(encoder.encode('event: start\n\n'));
-            for await (const chunk of geminiService.streamExplain(
-              body.question,
-              body.userAnswer,
-              body.event
-            )) {
-              if (chunk.type === 'text') {
-                // Send as server-sent events with data lines
-                const safe = chunk.chunk.replace(/\n/g, '\\n');
-                controller.enqueue(encoder.encode(`event: chunk\ndata: ${safe}\n\n`));
-              } else if (chunk.type === 'final') {
-                controller.enqueue(
-                  encoder.encode(`event: final\ndata: ${JSON.stringify(chunk.data)}\n\n`)
-                );
-              }
-            }
-            controller.enqueue(encoder.encode('event: end\n\n'));
-            controller.close();
-          } catch (err) {
-            controller.error(err);
-          }
-        },
-      });
-
-      return new NextResponse(stream as BodyInit, {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/event-stream; charset=utf-8',
-          'Cache-Control': 'no-cache, no-transform',
-          Connection: 'keep-alive',
-          'X-Accel-Buffering': 'no',
-        },
-      });
-    }
+    console.log('🤖 [GEMINI/EXPLAIN] Sending request to Gemini AI');
 
     try {
       const result = await geminiService.explain(

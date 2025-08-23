@@ -364,7 +364,7 @@ console.log(prompt);
     }
   }
 
-  // Explain question with step-by-step reasoning
+  // Explain a question with structured output
   public async explain(
     question: Record<string, unknown>,
     userAnswer: unknown,
@@ -387,15 +387,14 @@ console.log(prompt);
       return `${answerIndex} (${option})`;
     }).join(', ');
     
-    // const prompt = `Respond exactly like this: {correctIndices: [0], explanation: "What's up!"}`
-    const prompt = `You are an expert Science Olympiad tutor providing detailed explanations for questions${hasImage ? ' with images' : ''}. Your job is to help students understand how to solve this question step-by-step.
+    const prompt = `You are an expert Science Olympiad tutor providing explanations for questions${hasImage ? ' with images' : ''}. Your job is to help students understand how to solve this question step-by-step.
 
 QUESTION: ${questionText}
 EVENT: ${event}${options.length > 0 ? `
 OPTIONS:
 ${formattedOptions}
-ANSWER(S): ${formattedAnswers}` : `
-ANSWER(S): ${answers.join(', ')}`}${hasImage ? `
+CORRECT ANSWER(S): ${formattedAnswers}` : `
+CORRECT ANSWER(S): ${answers.join(', ')}`}${hasImage ? `
 
 IMPORTANT: This question includes an image that you should reference in your explanation. The image contains visual information that is essential for understanding and answering the question correctly.` : ''}
 
@@ -408,8 +407,8 @@ EXPLANATION REQUIREMENTS:
 6. Use language appropriate for Science Olympiad students${hasImage ? `
 7. Be specific about visual details, patterns, or features in the image that are relevant to the answer` : ''}
 
-Likely, correctIndeces will have the same answers and zero-indexed indices as the correct answers I just claimed. But in rare cases, you may need to change the correct answers. DO NOT FORGET to include correctIndeces key/value pair after your explanation.
-Provide a comprehensive, educational explanation that helps students understand both the answer and the scientific reasoning behind it${hasImage ? ', with clear references to the visual information provided' : ''}.`;
+Provide an educational explanation that helps students understand both the answer and the scientific reasoning behind it${hasImage ? ', with clear references to the visual information provided' : ''}.
+Keep your answer formatted (newlines, bolding, etc, latex if necessary. no lists using asterisks, use newlines plenty) and do not make it overly long. Keep your thinking short, just figure out the right answer with it asap.`;
 
     let contents: any = prompt;
     
@@ -447,137 +446,18 @@ Provide a comprehensive, educational explanation that helps students understand 
           type: Type.ARRAY,
           items: { type: Type.NUMBER }
         },
+        correctedAnswers: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING }
+        },
       },
-      propertyOrdering: ["explanation","correctIndices",],
+      propertyOrdering: ["explanation","correctIndices","correctedAnswers"],
     };
 
     return await this.generateStructuredContent(prompt, schema, 'gemini-2.5-flash', contents);
   }
 
-  // Stream explain for progressive UI with structured output
-  public async *streamExplain(
-    question: Record<string, unknown>,
-    userAnswer: unknown,
-    event: string
-  ): AsyncGenerator<{ type: 'text'; chunk: string } | { type: 'final'; data: Record<string, unknown> }, void, unknown> {
-    const ai = this.getCurrentClient();
-    const hasImage = question.imageData && typeof question.imageData === 'string';
-    
-    // Extract and format question components strategically (same as explain function)
-    const questionText = question.question || '';
-    const options = Array.isArray(question.options) ? question.options : [];
-    const answers = Array.isArray(question.answers) ? question.answers : [];
-    
-    // Format options with indices
-    const formattedOptions = options.map((option, index) => `${index}: ${option}`).join('\n');
-    
-    // Map answer indices to their corresponding options
-    const formattedAnswers = answers.map(answerIndex => {
-      const index = typeof answerIndex === 'number' ? answerIndex : parseInt(String(answerIndex), 10);
-      const option = options[index];
-      return `${answerIndex} (${option})`;
-    }).join(', ');
-    
-    const prompt = `You are an expert Science Olympiad tutor providing detailed explanations for questions${hasImage ? ' with images' : ''}. Your job is to help students understand how to solve this question step-by-step.
 
-QUESTION: ${questionText}
-EVENT: ${event}${options.length > 0 ? `
-OPTIONS:
-${formattedOptions}
-CORRECT ANSWER(S): ${formattedAnswers}` : `
-CORRECT ANSWER(S): ${answers.join(', ')}`}${hasImage ? `
-
-IMPORTANT: This question includes an image that you should reference in your explanation. The image contains visual information that is essential for understanding and answering the question correctly.` : ''}
-
-EXPLANATION REQUIREMENTS:
-1. ${hasImage ? 'First, describe what you see in the image and how it relates to the question' : 'Break down the problem into logical steps'}
-2. ${hasImage ? 'Break down the problem into logical steps, referencing specific visual elements from the image' : 'Explain the scientific concepts involved'}
-3. ${hasImage ? 'Explain the scientific concepts involved, connecting them to the visual evidence' : 'Clearly identify the correct answer(s)'}
-4. ${hasImage ? 'Clearly identify the correct answer(s) and explain how the image supports this answer' : 'Explain why the correct answer is right'}
-5. ${hasImage ? 'Briefly address why other options are wrong, using evidence from the image when applicable' : 'Briefly address why other options are wrong'}
-6. Use language appropriate for Science Olympiad students${hasImage ? `
-7. Be specific about visual details, patterns, or features in the image that are relevant to the answer` : ''}
-8. Refer to the options 1-indexed. For example, "Option 1, Option 2"
-
-Likely, your correctIndeces key/value pair at the start of your json object, before the explanation, will likely have the same answers and zero-indexed indices as the correct answers I just claimed. But in rare cases, you may need to change the correct answers.
-Provide a comprehensive, educational explanation that helps students understand both the answer and the scientific reasoning behind it${hasImage ? ', with clear references to the visual information provided' : ''}.`;
-
-    let contents: any = prompt;
-    console.log(prompt)
-    // If question has an image, include it in the request
-    if (hasImage) {
-      try {
-        const imageBase64 = await this.fetchImageAsBase64(question.imageData as string);
-        contents = [
-          {
-            role: 'user',
-            parts: [
-              { text: prompt },
-              {
-                inlineData: {
-                  mimeType: 'image/jpeg',
-                  data: imageBase64
-                }
-              }
-            ]
-          }
-        ];
-      } catch (error) {
-        // If image fetch fails, fall back to text-only explanation
-        console.warn('Failed to fetch image, falling back to text-only explanation:', error);
-        contents = prompt;
-      }
-    }
-
-    // Use structured streaming to get both text chunks and final structured data
-    const stream = await ai.models.generateContentStream({
-      model: 'gemini-2.5-flash',
-      contents: contents,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            explanation: { type: Type.STRING },
-            correctIndices: {
-              type: Type.ARRAY,
-              items: { type: Type.NUMBER }
-            },
-          },
-          propertyOrdering: ["correctIndices", "explanation"],
-        },
-        temperature: 0.1, // Low temperature for consistent explanations
-        topP: 0.8,
-        topK: 40,
-      },
-    });
-
-    let fullText = '';
-    let finalData: Record<string, unknown> = {};
-    
-    for await (const part of stream) {
-      const piece = part.text || '';
-      if (piece) {
-        fullText += piece;
-        // Emit as plain text chunks so the client can progressively render
-        yield { type: 'text', chunk: piece };
-      }
-    }
-    
-    // Try to parse final JSON
-    try {
-      finalData = (fullText ? JSON.parse(fullText) : {}) as Record<string, unknown>;
-    } catch {
-      // Fallback to empty object if parsing failed
-      finalData = {};
-    }
-    
-    // Yield final structured data
-    yield { 
-      type: 'final', 
-      data: finalData
-    };
-  }
 
   // Grade free response questions
   public async gradeFreeResponses(responses: Array<Record<string, unknown>>): Promise<Record<string, unknown>> {
