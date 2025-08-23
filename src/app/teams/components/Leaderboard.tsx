@@ -402,6 +402,16 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
     }
   }, [selectedSeason, selectedEvent, eventsForSelectedSeason]);
 
+  // Create a rank map from the original leaderboard data
+  const originalRankMap = useMemo(() => {
+    const rankMap = new Map<string, number>();
+    leaderboardData.forEach((entry, index) => {
+      const key = `${entry.school}-${entry.state}-${entry.season}-${entry.event || 'overall'}`;
+      rankMap.set(key, index + 1);
+    });
+    return rankMap;
+  }, [leaderboardData]);
+
   // Filter and paginate data (state filtering is now handled at the data level)
   const filteredData = useMemo(() => {
     return leaderboardData.filter(entry => {
@@ -686,14 +696,9 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
                   ))
                 ) : (
                   paginatedData.map((entry) => {
-                  // Find the rank in the filtered data (not global data)
-                  const filteredIndex = filteredData.findIndex(item => 
-                    item.school === entry.school && 
-                    item.state === entry.state && 
-                    item.season === entry.season && 
-                    (item.event || 'overall') === (entry.event || 'overall')
-                  );
-                  const actualRank = filteredIndex + 1;
+                  // Get the original rank from the leaderboard data
+                  const key = `${entry.school}-${entry.state}-${entry.season}-${entry.event || 'overall'}`;
+                  const actualRank = originalRankMap.get(key) || 1;
                   
                   return (
                     <tr key={`${entry.school}-${entry.state}-${entry.season}-${entry.event || 'overall'}`} className={darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}>
