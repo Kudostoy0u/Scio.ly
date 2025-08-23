@@ -183,8 +183,8 @@ export const getOverallTournamentConfig = (data: ChartData, darkMode: boolean = 
 
   // Check if mobile for larger point sizes
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const pointRadius = isMobile ? 10 : 3;
-  const pointHoverRadius = isMobile ? 12 : 5;
+  const pointRadius = isMobile ? 5 : 3;
+  const pointHoverRadius = isMobile ? 6 : 5;
   
   return {
     type: 'line',
@@ -543,8 +543,8 @@ export const getEventTournamentConfig = (data: ChartData, darkMode: boolean = fa
 
   // Check if mobile for larger point sizes
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const pointRadius = isMobile ? 10 : 3;
-  const pointHoverRadius = isMobile ? 12 : 5;
+  const pointRadius = isMobile ? 6 : 3;
+  const pointHoverRadius = isMobile ? 8 : 5;
   
   return {
     type: 'line',

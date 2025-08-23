@@ -149,13 +149,18 @@ const CompareTool: React.FC<CompareToolProps> = ({ eloData }) => {
     return darkMode ? 'text-red-400' : 'text-red-600'; // Red for strong disadvantage
   };
 
-  const getWinPercentageText = (percentage: number) => {
-    if (percentage >= 70) return 'Strong Advantage';
-    if (percentage >= 60) return 'Moderate Advantage';
-    if (percentage >= 50) return 'Slight Advantage';
-    if (percentage >= 40) return 'Slight Disadvantage';
-    if (percentage >= 30) return 'Moderate Disadvantage';
-    return 'Strong Disadvantage';
+  const getWinPercentageText = (percentage: number, schoolName?: string) => {
+    const baseText = (() => {
+      if (percentage >= 70) return 'Strong Advantage';
+      if (percentage >= 60) return 'Moderate Advantage';
+      if (percentage >= 50) return 'Slight Advantage';
+      if (percentage >= 40) return 'Slight Disadvantage';
+      if (percentage >= 30) return 'Moderate Disadvantage';
+      return 'Strong Disadvantage';
+    })();
+    
+    // Only add school name if provided (for mobile)
+    return schoolName ? `${baseText} to ${schoolName}` : baseText;
   };
 
   return (
@@ -316,50 +321,79 @@ const CompareTool: React.FC<CompareToolProps> = ({ eloData }) => {
         ) : comparisonResults.length > 0 ? (
           <div>
             <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Event-by-Event Comparison</h3>
-            <div className={`overflow-hidden rounded-lg border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-              <div className="overflow-x-auto">
-                <table className={`min-w-full divide-y ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
-                  <thead className={darkMode ? 'bg-gray-700' : 'bg-gray-50'}>
-                    <tr>
-                      <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                        Event
-                      </th>
-                      <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                        <strong>{school1.replace(/\s*\([^)]*\)$/, '')}</strong> Elo
-                      </th>
-                      <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                        <strong>{school2.replace(/\s*\([^)]*\)$/, '')}</strong> Elo
-                      </th>
-                      <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                        <strong>{school1.replace(/\s*\([^)]*\)$/, '')}</strong> Win %
-                      </th>
-                      <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                        Assessment
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className={`divide-y ${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
-                    {comparisonResults.map((result, index) => (
-                      <tr key={index} className={darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            
+            {/* Mobile-friendly view */}
+            <div className="md:hidden">
+              <div className="space-y-3">
+                {comparisonResults.map((result, index) => (
+                  <div key={index} className={`p-4 rounded-lg border ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
+                    <div className="flex justify-between items-center">
+                      <div className="flex-1 mr-4">
+                        <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                           {result.event}
-                        </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                          {Math.round(result.school1Elo)}
-                        </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                          {Math.round(result.school2Elo)}
-                        </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${getWinPercentageColor(result.school1WinPercentage)}`}>
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0 min-w-0">
+                        <div className={`text-lg font-semibold ${getWinPercentageColor(result.school1WinPercentage)}`}>
                           {result.school1WinPercentage.toFixed(1)}%
-                        </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${getWinPercentageColor(result.school1WinPercentage)}`}>
+                        </div>
+                        <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} max-w-32`}>
+                          {getWinPercentageText(result.school1WinPercentage, school1.replace(/\s*\([^)]*\)$/, ''))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Desktop table view */}
+            <div className="hidden md:block">
+              <div className={`overflow-hidden rounded-lg border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                <div className="overflow-x-auto">
+                  <table className={`min-w-full divide-y ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                    <thead className={darkMode ? 'bg-gray-700' : 'bg-gray-50'}>
+                      <tr>
+                        <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          Event
+                        </th>
+                        <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <strong>{school1.replace(/\s*\([^)]*\)$/, '')}</strong> Elo
+                        </th>
+                        <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <strong>{school2.replace(/\s*\([^)]*\)$/, '')}</strong> Elo
+                        </th>
+                        <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <strong>{school1.replace(/\s*\([^)]*\)$/, '')}</strong> Win %
+                        </th>
+                        <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          Assessment
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className={`divide-y ${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
+                      {comparisonResults.map((result, index) => (
+                        <tr key={index} className={darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {result.event}
+                          </td>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                            {Math.round(result.school1Elo)}
+                          </td>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                            {Math.round(result.school2Elo)}
+                          </td>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${getWinPercentageColor(result.school1WinPercentage)}`}>
+                            {result.school1WinPercentage.toFixed(1)}%
+                          </td>
+                                                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${getWinPercentageColor(result.school1WinPercentage)}`}>
                           {getWinPercentageText(result.school1WinPercentage)}
                         </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
