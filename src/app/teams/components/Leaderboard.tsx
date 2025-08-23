@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { EloData, LeaderboardEntry } from '../types/elo';
 import { getLeaderboard } from '../utils/eloDataProcessor';
 import { useTheme } from '@/app/contexts/ThemeContext';
@@ -9,11 +9,13 @@ import { ChevronLeft, ChevronRight, Search, Calendar } from 'lucide-react';
 interface LeaderboardProps {
   eloData: EloData;
   division: 'b' | 'c';
+  metadata?: any;
 }
 
 interface TournamentDate {
   date: string;
   tournament: string;
+  allTournaments: string[];
   season: string;
 }
 
@@ -134,7 +136,7 @@ const EVENT_WHITELISTS: Record<string, Record<string, string[]>> = {
   }
 };
 
-const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division }) => {
+const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }) => {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<string>('');
   const [selectedState, setSelectedState] = useState<string>('');
@@ -147,33 +149,30 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division }) => {
   const { darkMode } = useTheme();
   const prevSearchTerm = useRef<string>('');
 
-  // Get all available seasons from the data
-  const getAllSeasons = (): string[] => {
-    const allSeasons: string[] = [];
+  // Memoize expensive data computations
+  const allSeasons = useMemo(() => {
+    const seasons = new Set<string>();
     
     for (const stateCode in eloData) {
       for (const schoolName in eloData[stateCode]) {
         const school = eloData[stateCode][schoolName];
         Object.keys(school.seasons).forEach(season => {
-          if (!allSeasons.includes(season)) {
-            allSeasons.push(season);
-          }
+          seasons.add(season);
         });
       }
     }
     
-    return allSeasons.sort();
-  };
+    return Array.from(seasons).sort();
+  }, [eloData]);
 
-  // Get all available states from the data
-  const getAllStates = (): string[] => {
+  const allStates = useMemo(() => {
     return Object.keys(eloData).sort();
-  };
+  }, [eloData]);
 
-  // Get events available for the selected season and division
-  const getEventsForSeason = (season: string, division: string): string[] => {
+  // Memoize events for selected season and division
+  const eventsForSelectedSeason = useMemo(() => {
     // First, get the whitelist for this season and division
-    const whitelist = EVENT_WHITELISTS[season]?.[division] || [];
+    const whitelist = EVENT_WHITELISTS[selectedSeason]?.[division.toUpperCase() as 'B' | 'C'] || [];
     
     // Then, get events that exist in the data and are in the whitelist
     const events = new Set<string>();
@@ -181,7 +180,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division }) => {
     for (const stateCode in eloData) {
       for (const schoolName in eloData[stateCode]) {
         const school = eloData[stateCode][schoolName];
-        const seasonData = school.seasons[season];
+        const seasonData = school.seasons[selectedSeason];
         if (seasonData) {
           Object.keys(seasonData.events).forEach(event => {
             if (event !== '__OVERALL__' && whitelist.includes(event)) {
@@ -193,41 +192,55 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division }) => {
     }
     
     return Array.from(events).sort();
-  };
+  }, [eloData, selectedSeason, division]);
 
-  // Get all tournament dates for the selected season
-  const getTournamentDatesForSeason = (season: string): TournamentDate[] => {
-    const dates = new Set<string>();
-    const tournamentMap = new Map<string, string>();
-    
-    for (const stateCode in eloData) {
-      for (const schoolName in eloData[stateCode]) {
-        const school = eloData[stateCode][schoolName];
-        const seasonData = school.seasons[season];
-        if (seasonData) {
-          Object.values(seasonData.events).forEach(event => {
-            if (event.history) {
-              event.history.forEach(entry => {
-                dates.add(entry.date);
-                tournamentMap.set(entry.date, entry.tournament);
-              });
-            }
-          });
+  // Get all tournament dates for the selected season (memoized for performance)
+  const getTournamentDatesForSeason = useCallback((season: string): TournamentDate[] => {
+    // Use precalculated metadata if available
+    if (metadata?.tournamentTimeline?.[season]) {
+      const tournaments = metadata.tournamentTimeline[season];
+      
+      // Group tournaments by date
+      const tournamentsByDate = new Map<string, string[]>();
+      
+      tournaments.forEach((tournament: any) => {
+        if (tournament.date && tournament.tournamentName) {
+          if (!tournamentsByDate.has(tournament.date)) {
+            tournamentsByDate.set(tournament.date, []);
+          }
+          tournamentsByDate.get(tournament.date)!.push(tournament.tournamentName);
         }
-      }
+      });
+      
+      const result = Array.from(tournamentsByDate.entries())
+        .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+        .map(([date, tournaments]) => {
+          // Show only first 2 tournaments, then "and X more" if there are more
+          let displayText = '';
+          if (tournaments.length === 1) {
+            displayText = tournaments[0];
+          } else if (tournaments.length === 2) {
+            displayText = tournaments.join(', ');
+          } else {
+            displayText = `${tournaments[0]}, ${tournaments[1]} and ${tournaments.length - 2} more`;
+          }
+          
+          return {
+            date,
+            tournament: displayText,
+            allTournaments: tournaments, // Keep all tournaments for dropdown
+            season
+          };
+        });
+      
+      return result;
     }
     
-    return Array.from(dates)
-      .sort()
-      .map(date => ({
-        date,
-        tournament: tournamentMap.get(date) || 'Unknown Tournament',
-        season
-      }));
-  };
+    // No metadata available - return empty array
+    console.warn('No metadata available for tournament timeline');
+    return [];
+  }, [metadata]);
 
-  const allSeasons = getAllSeasons();
-  const allStates = getAllStates();
   const mostRecentSeason = allSeasons[allSeasons.length - 1] || '2024';
   
   // Initialize selected season to most recent if not set
@@ -236,9 +249,17 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division }) => {
       setSelectedSeason(mostRecentSeason);
     }
   }, [mostRecentSeason, selectedSeason]);
-
-  const eventsForSelectedSeason = getEventsForSeason(selectedSeason, division.toUpperCase() as 'B' | 'C');
-  const tournamentDates = getTournamentDatesForSeason(selectedSeason);
+  
+  // Memoize tournament dates to prevent repeated processing
+  const tournamentDates = useMemo(() => {
+    return getTournamentDatesForSeason(selectedSeason);
+  }, [selectedSeason, getTournamentDatesForSeason]);
+  
+  // Cache the current tournament index to avoid repeated findIndex calls
+  const currentTournamentIndex = useMemo(() => {
+    return tournamentDates.findIndex(t => t.date === selectedDate);
+  }, [tournamentDates, selectedDate]);
+  
   const lastTournamentDate = tournamentDates[tournamentDates.length - 1]?.date || '';
 
   // Initialize selected date to last tournament if not set
@@ -253,34 +274,70 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division }) => {
     setSelectedEvent('');
   }, [selectedSeason, division]);
 
-  // Function to calculate ranking change compared to previous year
-  const calculateRankingChange = (entry: LeaderboardEntry): number => {
+  // Memoize ranking change calculations for performance
+  const rankingChanges = useMemo(() => {
+    const changes = new Map<string, number>();
+    
     try {
-      const currentYear = parseInt(entry.season);
+      const currentYear = parseInt(selectedSeason);
       const previousYear = (currentYear - 1).toString();
       
-      // Get current year ranking
-      const currentYearData = getLeaderboard(eloData, entry.event || undefined, entry.season, 1000);
-      const currentRank = currentYearData.findIndex(e => 
-        e.school === entry.school && e.state === entry.state
-      ) + 1;
+      // Get current year data with date filtering
+      let currentYearData = getLeaderboard(eloData, selectedEvent || undefined, selectedSeason, 1000, selectedDate);
       
-      if (currentRank === 0) return 0; // Not found in current year
+      // Get previous year data (use the last tournament date of previous year for comparison)
+      let previousYearData = getLeaderboard(eloData, selectedEvent || undefined, previousYear, 1000);
       
-      // Get previous year ranking
-      const previousYearData = getLeaderboard(eloData, entry.event || undefined, previousYear, 1000);
-      const previousRank = previousYearData.findIndex(e => 
-        e.school === entry.school && e.state === entry.state
-      ) + 1;
+      // If state filter is applied, filter both datasets by state and re-sort
+      if (selectedState) {
+        currentYearData = currentYearData
+          .filter(entry => entry.state === selectedState)
+          .sort((a, b) => b.elo - a.elo); // Re-sort by Elo (highest first)
+        
+        previousYearData = previousYearData
+          .filter(entry => entry.state === selectedState)
+          .sort((a, b) => b.elo - a.elo); // Re-sort by Elo (highest first)
+      }
       
-      if (previousRank === 0) return 0; // Not found in previous year (new team)
+      // Create maps for O(1) lookup
+      const currentRankMap = new Map<string, number>();
+      const previousRankMap = new Map<string, number>();
       
-      // Return the change (negative means they moved up in ranking, positive means they moved down)
-      return previousRank - currentRank;
+      currentYearData.forEach((entry, index) => {
+        const key = `${entry.school}-${entry.state}`;
+        currentRankMap.set(key, index + 1);
+      });
+      
+      previousYearData.forEach((entry, index) => {
+        const key = `${entry.school}-${entry.state}`;
+        previousRankMap.set(key, index + 1);
+      });
+      
+      // Calculate changes for all current entries
+      currentYearData.forEach(entry => {
+        const key = `${entry.school}-${entry.state}`;
+        const currentRank = currentRankMap.get(key) || 0;
+        const previousRank = previousRankMap.get(key) || 0;
+        
+        if (currentRank > 0 && previousRank > 0) {
+          // Return the change (negative means they moved up in ranking, positive means they moved down)
+          changes.set(key, previousRank - currentRank);
+        } else {
+          changes.set(key, 0); // New team or not found in previous year
+        }
+      });
+      
     } catch (error) {
-      console.error('Error calculating ranking change:', error);
-      return 0;
+      console.error('Error calculating ranking changes:', error);
     }
+    
+    return changes;
+  }, [eloData, selectedEvent, selectedSeason, selectedState, selectedDate]);
+  
+  // Function to get ranking change for a specific entry
+  const getRankingChange = (entry: LeaderboardEntry): number => {
+    const key = `${entry.school}-${entry.state}`;
+    return rankingChanges.get(key) || 0;
   };
 
   // Function to format and style the ranking change
@@ -306,8 +363,8 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division }) => {
     }
   };
 
-  useEffect(() => {
-    setIsLoading(true);
+  // Debounce and memoize leaderboard data loading
+  const leaderboardDataMemo = useMemo(() => {
     try {
       // Get all data first with date filtering
       let data = getLeaderboard(eloData, selectedEvent || undefined, selectedSeason, 1000, selectedDate);
@@ -319,13 +376,24 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division }) => {
           .sort((a, b) => b.elo - a.elo); // Re-sort by Elo (highest first)
       }
       
-      setLeaderboardData(data);
+      return data;
     } catch (error) {
       console.error('Error loading leaderboard:', error);
-    } finally {
-      setIsLoading(false);
+      return [];
     }
   }, [eloData, selectedEvent, selectedSeason, selectedState, selectedDate]);
+
+  // Update loading state when data changes
+  useEffect(() => {
+    setIsLoading(true);
+    // Use a small timeout to show loading state briefly
+    const timeout = setTimeout(() => {
+      setLeaderboardData(leaderboardDataMemo);
+      setIsLoading(false);
+    }, 50);
+    
+    return () => clearTimeout(timeout);
+  }, [leaderboardDataMemo]);
 
   // Reset event selection when season changes (if event is not available in new season)
   useEffect(() => {
@@ -389,11 +457,6 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division }) => {
         <h2 className={`text-2xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>🏆 Leaderboard</h2>
         <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
           Top teams by Elo rating - {selectedSeason} Season
-          {selectedTournament && (
-            <span className="block text-sm mt-1">
-              📅 {formatDate(selectedDate)} - {selectedTournament.tournament}
-            </span>
-          )}
         </p>
       </div>
 
@@ -473,7 +536,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division }) => {
                 type="range"
                 min="0"
                 max={tournamentDates.length - 1}
-                value={tournamentDates.findIndex(t => t.date === selectedDate)}
+                value={currentTournamentIndex >= 0 ? currentTournamentIndex : 0}
                 onChange={(e) => {
                   const index = parseInt(e.target.value);
                   setSelectedDate(tournamentDates[index]?.date || '');
@@ -488,9 +551,9 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division }) => {
                     darkMode ? '#3B82F6' : '#2563EB'
                   } 0%, ${
                     darkMode ? '#3B82F6' : '#2563EB'
-                  } ${(tournamentDates.findIndex(t => t.date === selectedDate) / (tournamentDates.length - 1)) * 100}%, ${
+                  } ${currentTournamentIndex >= 0 ? (currentTournamentIndex / (tournamentDates.length - 1)) * 100 : 0}%, ${
                     darkMode ? '#374151' : '#E5E7EB'
-                  } ${(tournamentDates.findIndex(t => t.date === selectedDate) / (tournamentDates.length - 1)) * 100}%, ${
+                  } ${currentTournamentIndex >= 0 ? (currentTournamentIndex / (tournamentDates.length - 1)) * 100 : 0}%, ${
                     darkMode ? '#374151' : '#E5E7EB'
                   } 100%)`
                 }}
@@ -506,30 +569,55 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division }) => {
             </div>
             {selectedTournament && (
               <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                📍 {selectedTournament.tournament}
+                📍 {selectedTournament.allTournaments.length > 2 ? (
+                  <span>
+                    {selectedTournament.allTournaments[0]}, {selectedTournament.allTournaments[1]}{' '}
+                    <span className="group relative inline-block">
+                      <span className="text-blue-500 hover:text-blue-600 cursor-pointer transition-colors">
+                        and {selectedTournament.allTournaments.length - 2} more
+                      </span>
+                      <div className={`absolute left-0 top-full mt-1 w-64 ${darkMode ? 'bg-gray-800' : 'bg-white'} border ${darkMode ? 'border-gray-700' : 'border-gray-200'} rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10`}>
+                        <div className="p-3">
+                          <div className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>All tournaments on this date:</div>
+                          {selectedTournament.allTournaments.map((tournament, index) => (
+                            <div key={index} className={`text-sm py-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              {tournament}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </span>
+                  </span>
+                ) : (
+                  selectedTournament.tournament
+                )}
               </div>
             )}
           </div>
         )}
 
         {/* Results Summary */}
-        {!isLoading && (
-          <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            Showing {paginatedData.length} of {filteredData.length} results
-            {searchTerm && ` for "${searchTerm}"`}
-          </div>
-        )}
+        <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          {isLoading ? (
+            <div className="flex items-center space-x-1">
+              <span className={`h-4 rounded w-12 animate-pulse ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></span>
+              <span className={`h-4 rounded w-8 animate-pulse ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></span>
+              <span className={`h-4 rounded w-16 animate-pulse ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></span>
+              <span className={`h-4 rounded w-12 animate-pulse ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></span>
+              <span className={`h-4 rounded w-16 animate-pulse ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></span>
+            </div>
+          ) : (
+            <>
+              Showing {paginatedData.length} of {filteredData.length} results
+              {searchTerm && ` for "${searchTerm}"`}
+            </>
+          )}
+        </div>
       </div>
 
       <div className={`overflow-hidden rounded-lg border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Loading leaderboard...</p>
-            </div>
-          </div>
-        ) : (
+        {/* Always show the table structure to prevent content shift */}
+        {(
           <div className="overflow-x-auto">
             <table className={`min-w-full divide-y ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
               <thead className={darkMode ? 'bg-gray-700' : 'bg-gray-50'}>
@@ -560,7 +648,44 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division }) => {
                 </tr>
               </thead>
               <tbody className={`divide-y ${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
-                {paginatedData.map((entry) => {
+                {isLoading ? (
+                  // Show placeholder rows during loading
+                  Array.from({ length: Math.min(20, paginatedData.length || 20) }).map((_, index) => (
+                    <tr key={`placeholder-${index}`} className={darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}>
+                      <td className="px-2 sm:px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRankColor(index + 1)}`}>
+                          {index + 1}
+                        </span>
+                      </td>
+                      <td className={`px-2 sm:px-6 py-4 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        <div>
+                          <div className={`h-4 rounded w-32 animate-pulse ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></div>
+                          <div className={`sm:hidden text-xs mt-1`}>
+                            <div className={`h-3 rounded w-8 animate-pulse ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className={`hidden sm:table-cell px-6 py-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                        <div className={`h-4 rounded w-8 animate-pulse ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></div>
+                      </td>
+                      <td className={`hidden md:table-cell px-6 py-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                        <div className={`h-4 rounded w-12 animate-pulse ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></div>
+                      </td>
+                      {selectedEvent && (
+                        <td className={`hidden lg:table-cell px-6 py-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <div className={`h-4 rounded w-20 animate-pulse ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></div>
+                        </td>
+                      )}
+                      <td className={`px-2 sm:px-6 py-4 text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                        <div className={`h-4 rounded w-12 animate-pulse ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></div>
+                      </td>
+                      <td className={`hidden sm:table-cell px-6 py-4 text-sm`}>
+                        <div className={`h-4 rounded w-16 animate-pulse ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  paginatedData.map((entry) => {
                   // Find the rank in the filtered data (not global data)
                   const filteredIndex = filteredData.findIndex(item => 
                     item.school === entry.school && 
@@ -601,7 +726,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division }) => {
                       </td>
                       <td className={`hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm font-semibold`}>
                         {(() => {
-                          const change = calculateRankingChange(entry);
+                          const change = getRankingChange(entry);
                           const formatted = formatRankingChange(change);
                           return (
                             <span className={formatted.colorClass}>
@@ -612,7 +737,8 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division }) => {
                       </td>
                     </tr>
                   );
-                })}
+                  })
+                )}
               </tbody>
             </table>
           </div>

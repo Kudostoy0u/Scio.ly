@@ -86,7 +86,7 @@ const showResultsBox = (point: any, chart: Chart) => {
       >
         →
       </div>
-      <span>Want to see results for <strong>${point.tournament.replace(/nationals/g, 'Science Olympiad National Tournament')}</strong>?</span>
+      <span>Want to see results for <strong>${point.tournament}</strong>?</span>
     </div>
   `;
 
@@ -308,7 +308,7 @@ export const getOverallTournamentConfig = (data: ChartData, darkMode: boolean = 
               tooltipEl.innerHTML = `
                 <div style="font-weight: bold; margin-bottom: 2px; line-height: 1.3;">
                   <a href="${point.duosmiumLink}" target="_blank" style="color: white; text-decoration: none; cursor: pointer;" onclick="event.stopPropagation();">
-                    ${point.tournament.replace(/nationals/g, 'Science Olympiad National Tournament')}
+                    ${point.tournament}
                   </a>
                 </div>
                 <div style="margin-bottom: 6px; color: #ccc; font-size: ${dateFontSize};">${new Date(point.x).toLocaleDateString()}</div>
@@ -407,7 +407,7 @@ export const getOverallTournamentConfig = (data: ChartData, darkMode: boolean = 
                 tooltipEl.innerHTML = `
                   <div style="font-weight: bold; margin-bottom: 2px; line-height: 1.3;">
                     <a href="${point.duosmiumLink}" target="_blank" style="color: white; text-decoration: none; cursor: pointer;" onclick="event.stopPropagation();">
-                      ${point.tournament.replace(/nationals/g, 'Science Olympiad National Tournament')}
+                      ${point.tournament}
                     </a>
                   </div>
                   <div style="margin-bottom: 6px; color: #ccc; font-size: ${dateFontSize};">${new Date(point.x).toLocaleDateString()}</div>
@@ -668,7 +668,7 @@ export const getEventTournamentConfig = (data: ChartData, darkMode: boolean = fa
               const dateFontSize = isMobile ? '6px' : '11px';
               
               tooltipEl.innerHTML = `
-                <div style="font-weight: bold; margin-bottom: 2px; line-height: 1.3;">${point.tournament.replace(/nationals/g, 'Science Olympiad National Tournament')}</div>
+                <div style="font-weight: bold; margin-bottom: 2px; line-height: 1.3;">${point.tournament}</div>
                 <div style="margin-bottom: 6px; color: #ccc; font-size: ${dateFontSize};">${new Date(point.x).toLocaleDateString()}</div>
                 <div style="line-height: 1.3;">${dataPoint.dataset.label}: <strong>${Math.round(point.y)}</strong>${eloChangeHtml}</div>
               `;
@@ -763,7 +763,7 @@ export const getEventTournamentConfig = (data: ChartData, darkMode: boolean = fa
                 const dateFontSize = '6px';
                 
                 tooltipEl.innerHTML = `
-                  <div style="font-weight: bold; margin-bottom: 2px; line-height: 1.3;">${point.tournament.replace(/nationals/g, 'Science Olympiad National Tournament')}</div>
+                  <div style="font-weight: bold; margin-bottom: 2px; line-height: 1.3;">${point.tournament}</div>
                   <div style="margin-bottom: 6px; color: #ccc; font-size: ${dateFontSize};">${new Date(point.x).toLocaleDateString()}</div>
                   <div style="line-height: 1.3;">${chart?.data?.datasets?.[datasetIndex]?.label}: <strong>${Math.round(point.y)}</strong>${eloChangeHtml}</div>
                 `;

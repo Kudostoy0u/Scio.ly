@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
+import { formatDate } from '../utils/eloDataProcessor';
 
 interface ChartRangeSliderProps {
-  dataPoints: Array<{ x: Date; y: number; tournament?: string }>;
+  dataPoints: Array<{ x: Date; y: number; tournament?: string; link?: string }>;
   onRangeChange: (startIndex: number, endIndex: number) => void;
   isMobile: boolean;
 }
@@ -111,13 +112,7 @@ const ChartRangeSlider: React.FC<ChartRangeSliderProps> = ({
     }
   }, [isDragging, handleMouseMove, handleTouchMove]);
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
+    // Use the imported formatDate function from eloDataProcessor
 
   if (dataPoints.length === 0) return null;
 
@@ -128,7 +123,7 @@ const ChartRangeSlider: React.FC<ChartRangeSliderProps> = ({
     <div className="mt-6 space-y-4">
       <div className="flex items-center justify-between text-sm">
         <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-          Range: {formatDate(dataPoints[startIndex]?.x)} - {formatDate(dataPoints[endIndex]?.x)}
+          Range: {dataPoints[startIndex]?.x ? formatDate(dataPoints[startIndex].x.toISOString().split('T')[0]) : ''} - {dataPoints[endIndex]?.x ? formatDate(dataPoints[endIndex].x.toISOString().split('T')[0]) : ''}
         </span>
         <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
           {endIndex - startIndex + 1} of {dataPoints.length} points
@@ -184,12 +179,14 @@ const ChartRangeSlider: React.FC<ChartRangeSliderProps> = ({
       {/* Data point indicators */}
       <div className="flex justify-between text-xs px-2">
         <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
-          {dataPoints[0] ? formatDate(dataPoints[0].x) : ''}
+          {dataPoints[0] ? formatDate(dataPoints[0].x.toISOString().split('T')[0]) : ''}
         </span>
         <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
-          {dataPoints[dataPoints.length - 1] ? formatDate(dataPoints[dataPoints.length - 1].x) : ''}
+          {dataPoints[dataPoints.length - 1] ? formatDate(dataPoints[dataPoints.length - 1].x.toISOString().split('T')[0]) : ''}
         </span>
       </div>
+      
+
     </div>
   );
 };

@@ -5,30 +5,30 @@ import Header from '@/app/components/Header';
 import EloViewer from './components/EloViewer';
 import type { EloData } from './types/elo';
 import { useTheme } from '@/app/contexts/ThemeContext';
-import { convertOptimizedData } from './utils/eloDataProcessor';
+import { loadEloData } from './utils/dataLoader';
 
 export default function TeamsContent() {
   const [eloData, setEloData] = useState<EloData | null>(null);
+  const [metadata, setMetadata] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [division, setDivision] = useState<'b' | 'c'>('c');
   const { darkMode } = useTheme();
 
   useEffect(() => {
-    const loadEloData = async () => {
+    const loadData = async () => {
       try {
         setLoading(true);
         setError(null);
         
-        const fileName = division === 'b' ? 'eloB.json' : 'eloC.json';
-        const response = await fetch(`/${fileName}`);
-        if (!response.ok) {
-          throw new Error(`Failed to load ${fileName}`);
+        const result = await loadEloData({ division });
+        
+        if (result.error) {
+          throw new Error(result.error);
         }
         
-        const rawData = await response.json();
-        const data: EloData = convertOptimizedData(rawData);
-        setEloData(data);
+        setEloData(result.data);
+        setMetadata(result.metadata);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load Elo data');
         console.error('Error loading Elo data:', err);
@@ -37,7 +37,7 @@ export default function TeamsContent() {
       }
     };
 
-    loadEloData();
+    loadData();
   }, [division]);
 
   if (loading) {
@@ -132,7 +132,7 @@ export default function TeamsContent() {
           </div>
         </div>
         
-        <EloViewer eloData={eloData} division={division} />
+        <EloViewer eloData={eloData} division={division} metadata={metadata} />
       </div>
     </div>
   );

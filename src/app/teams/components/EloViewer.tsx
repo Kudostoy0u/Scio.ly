@@ -15,7 +15,7 @@ import {
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import type { EloData, ChartType, ChartData } from '../types/elo';
-import { getAllSchools, getAllEvents, processChartData } from '../utils/eloDataProcessor';
+import { getAllSchools, getAllEvents, processChartData, getAllTournamentDates } from '../utils/eloDataProcessor';
 import { getChartConfig } from './ChartConfig';
 import Leaderboard from './Leaderboard';
 import CompareTool from './CompareTool';
@@ -36,11 +36,12 @@ ChartJS.register(
 interface EloViewerProps {
   eloData: EloData;
   division: 'b' | 'c';
+  metadata?: any;
 }
 
 type TabType = 'charts' | 'leaderboard' | 'compare';
 
-const EloViewer: React.FC<EloViewerProps> = ({ eloData, division }) => {
+const EloViewer: React.FC<EloViewerProps> = ({ eloData, division, metadata }) => {
   const [activeTab, setActiveTab] = useState<TabType>('charts');
   const [chartType, setChartType] = useState<ChartType>('overall');
   const [viewMode, setViewMode] = useState<'season' | 'tournament'>('tournament');
@@ -98,7 +99,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division }) => {
     setError(null);
 
     try {
-      const data = processChartData(eloData, chartType, selectedSchools, selectedEvents, viewMode);
+      const data = processChartData(eloData, chartType, selectedSchools, selectedEvents, viewMode, metadata);
       setChartData(data);
     } catch (err) {
       setError('Error generating chart data');
@@ -107,7 +108,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [eloData, chartType, selectedSchools, selectedEvents, viewMode]);
+  }, [eloData, chartType, selectedSchools, selectedEvents, viewMode, metadata]);
 
   const handleSchoolToggle = (school: string) => {
     setSelectedSchools(prev => 
@@ -115,7 +116,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division }) => {
         ? prev.filter(s => s !== school)
         : [...prev, school]
     );
-    clearResultsBox(); // Clear results box when schools change
+    clearAllTooltips(); // Clear tooltips when schools change
   };
 
   const handleEventToggle = (event: string) => {
@@ -124,7 +125,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division }) => {
         ? prev.filter(e => e !== event)
         : [...prev, event]
     );
-    clearResultsBox(); // Clear results box when events change
+    clearAllTooltips(); // Clear tooltips when events change
   };
 
   const removeSchool = (school: string) => {
@@ -160,70 +161,45 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division }) => {
     }
   };
 
+  // Function to clear all tooltips and results box
+  const clearAllTooltips = useCallback(() => {
+    clearResultsBox();
+    clearTooltips();
+  }, []);
+
   const handleChartTypeChange = (newChartType: ChartType) => {
     setChartType(newChartType);
     setChartData({}); // Clear chart data when changing chart type
     setRangeFilter(null); // Reset range filter
-    clearResultsBox(); // Clear results box
+    clearAllTooltips(); // Clear tooltips
   };
 
   const handleViewModeChange = (newViewMode: 'season' | 'tournament') => {
     setViewMode(newViewMode);
     setChartData({}); // Clear chart data when changing view mode
     setRangeFilter(null); // Reset range filter
-    clearResultsBox(); // Clear results box
+    clearAllTooltips(); // Clear tooltips
   };
 
   const handleRangeChange = useCallback((startIndex: number, endIndex: number) => {
     setRangeFilter({ startIndex, endIndex });
-    clearResultsBox(); // Clear results box when range changes
-  }, []);
+    clearAllTooltips(); // Clear tooltips when range changes
+  }, [clearAllTooltips]);
 
   // Get data points for the range slider (only for tournament view mode)
-  const getDataPointsForSlider = (): Array<{ x: Date; y: number; tournament?: string }> => {
-    if (viewMode !== 'tournament' || Object.keys(chartData).length === 0) {
+  const getDataPointsForSlider = (): Array<{ x: Date; y: number; tournament?: string; link?: string }> => {
+    if (viewMode !== 'tournament') {
       return [];
     }
 
-    // Get all unique data points from all schools/events to determine the full timeline
-    const allDataPoints = new Map<string, { x: Date; y: number; tournament: string }>();
-
-    if (chartType === 'overall') {
-      // Collect all tournament dates from all schools
-      Object.keys(chartData).forEach(schoolKey => {
-        const schoolData = chartData[schoolKey] as Array<{ date: string; tournament: string; elo: number; duosmiumLink: string }>;
-        schoolData.forEach(point => {
-          const dateKey = point.date;
-          if (!allDataPoints.has(dateKey)) {
-            allDataPoints.set(dateKey, {
-              x: new Date(point.date),
-              y: point.elo,
-              tournament: point.tournament
-            });
-          }
-        });
-      });
-    } else {
-      // Collect all tournament dates from all schools and events
-      Object.keys(chartData).forEach(schoolKey => {
-        const eventData = chartData[schoolKey] as Record<string, Array<{ date: string; tournament: string; elo: number; duosmiumLink: string }>>;
-        Object.keys(eventData).forEach(eventKey => {
-          eventData[eventKey].forEach(point => {
-            const dateKey = point.date;
-            if (!allDataPoints.has(dateKey)) {
-              allDataPoints.set(dateKey, {
-                x: new Date(point.date),
-                y: point.elo,
-                tournament: point.tournament
-              });
-            }
-          });
-        });
-      });
+    try {
+      // Use the precalculated metadata to get all tournament dates efficiently
+      return getAllTournamentDates(eloData, metadata);
+    } catch (error) {
+      console.error('Error getting tournament dates:', error);
+      // Return empty array if there's an error to prevent page crash
+      return [];
     }
-
-    // Convert to array and sort by date
-    return Array.from(allDataPoints.values()).sort((a, b) => a.x.getTime() - b.x.getTime());
   };
 
   useEffect(() => {
@@ -234,6 +210,11 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division }) => {
     }
   }, [selectedSchools, selectedEvents, chartType, viewMode, generateChart]);
 
+  // Update data points for slider when division changes (eloData changes)
+  useEffect(() => {
+    // This will trigger a re-render of the slider with new data points
+  }, [eloData]);
+
   const dataPointsForSlider = getDataPointsForSlider();
 
   const chartConfig = Object.keys(chartData).length > 0 
@@ -241,7 +222,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division }) => {
     : null;
 
   const renderChartsTab = () => (
-    <>
+    <div onClick={clearAllTooltips}>
       <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm border ${darkMode ? 'border-gray-700' : 'border-gray-200'} p-6 mb-6`}>
         <div className="space-y-6">
           {/* Chart Type and View Mode Controls */}
@@ -446,7 +427,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division }) => {
       {/* Chart Container */}
       <div 
         className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm border ${darkMode ? 'border-gray-700' : 'border-gray-200'} p-6`}
-        onClick={clearResultsBox}
+        onClick={clearAllTooltips}
       >
         <div className="relative h-96">
           {/* Info Button */}
@@ -528,7 +509,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division }) => {
           />
         )}
       </div>
-    </>
+    </div>
   );
 
   return (
@@ -555,8 +536,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division }) => {
           }`}
           onClick={() => {
             setActiveTab('charts');
-            clearTooltips();
-            clearResultsBox();
+            clearAllTooltips();
           }}
         >
           📊 Charts
@@ -571,8 +551,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division }) => {
           }`}
           onClick={() => {
             setActiveTab('leaderboard');
-            clearTooltips();
-            clearResultsBox();
+            clearAllTooltips();
           }}
         >
           🏆 Leaderboard
@@ -587,8 +566,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division }) => {
           }`}
           onClick={() => {
             setActiveTab('compare');
-            clearTooltips();
-            clearResultsBox();
+            clearAllTooltips();
           }}
         >
           ⚔️ Compare
@@ -598,7 +576,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division }) => {
       {/* Tab Content */}
       <div className="min-h-96">
         {activeTab === 'charts' && renderChartsTab()}
-        {activeTab === 'leaderboard' && <Leaderboard eloData={eloData} division={division} />}
+        {activeTab === 'leaderboard' && <Leaderboard eloData={eloData} division={division} metadata={metadata} />}
         {activeTab === 'compare' && <CompareTool eloData={eloData} />}
       </div>
     </div>

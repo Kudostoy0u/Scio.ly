@@ -102,18 +102,70 @@ async function processDivision(division) {
         data: eloData
     };
 
-    const outputFile = path.join(OUTPUT_DIR, `elo${division}.json`);
-    fs.writeFileSync(outputFile, JSON.stringify(optimizedData));
+    // Generate state-based files
+    generateStateFiles(eloData, division, metadata);
+}
+
+/**
+ * Process tournament name to replace state codes and "nationals" with proper tournament names
+ * @param {string} tournamentName - The original tournament name
+ * @returns {string} The processed tournament name
+ */
+function processTournamentName(tournamentName) {
+    if (!tournamentName) return tournamentName;
+    
+    let processedName = tournamentName;
+    
+    // Replace "nationals" with "Science Olympiad National Tournament"
+    processedName = processedName.replace(/\bnationals\b/gi, 'Science Olympiad National Tournament');
+    
+    // Replace state code patterns like [XX, state code] with State name Science Olympiad State Tournament
+    const stateCodePattern = /\[([^,]+),\s*([A-Z]{2})\]/g;
+    processedName = processedName.replace(stateCodePattern, (match, prefix, stateCode) => {
+        const stateName = getStateName(stateCode);
+        return `${stateName} Science Olympiad State Tournament`;
+    });
+    
+    // Replace state code + "states" pattern (e.g., "CA states", "NY states", "sCA states", "nCA states") with State name Science Olympiad State Tournament
+    const stateStatesPattern = /\b([a-z]?)([A-Z]{2})\s+states\b/gi;
+    processedName = processedName.replace(stateStatesPattern, (match, prefix, stateCode) => {
+        let stateName = getStateName(stateCode);
+        
+        // Handle California prefixes
+        if (stateCode.toUpperCase() === 'CA') {
+            if (prefix.toLowerCase() === 's') {
+                stateName = 'Southern California';
+            } else if (prefix.toLowerCase() === 'n') {
+                stateName = 'Northern California';
+            }
+        }
+        
+        return `${stateName} Science Olympiad State Tournament`;
+    });
+    
+    return processedName;
 }
 
 function processTournament(data, eloData, filePath) {
     const filename = path.basename(filePath, '.yaml');
+    const rawTournamentName = data.Tournament.name || (() => {
+        const parts = filename.split('_');
+        return parts.slice(1, -1).join(' ');
+    })();
+    
     const tournamentInfo = {
-        name: data.Tournament.name || (() => {
-            const parts = filename.split('_');
-            return parts.slice(1, -1).join(' ');
+        name: processTournamentName(rawTournamentName),
+        date: data.Tournament['start date'] ? (() => {
+            // Add one day to fix frontend date display issue
+            const originalDate = new Date(data.Tournament['start date']);
+            originalDate.setDate(originalDate.getDate() + 1);
+            return originalDate.toISOString().split('T')[0];
+        })() : (() => {
+            // Add one day to filename-based date as well
+            const originalDate = new Date(filename.split('_')[0]);
+            originalDate.setDate(originalDate.getDate() + 1);
+            return originalDate.toISOString().split('T')[0];
         })(),
-        date: data.Tournament['start date'] ? new Date(data.Tournament['start date']).toISOString().split('T')[0] : filename.split('_')[0],
         season: data.Tournament.year ? data.Tournament.year.toString() : new Date(data.Tournament['start date']).getFullYear().toString(),
         filename: filename
     };
@@ -359,8 +411,8 @@ function updateEloForRanking(rankedTeams, eloData, tournamentInfo, category, tea
             eloChanges[team.name] = -MAX_ELO_LOSS;
         }
         
-        // Only convert to JV if the loss is still significant after capping
-        if (team.name.includes(' Varsity') && initialRatings[team.name] >= 2000 && eloChanges[team.name] <= -90) {
+        // Only convert to JV if the loss is still significant after capping AND it's not a state/national tournament
+        if (team.name.includes(' Varsity') && initialRatings[team.name] >= 2000 && eloChanges[team.name] <= -90 && !isStateOrNationalTournament(tournamentInfo, filePath)) {
             teamsToConvertToJV.push(team.name);
         }
     }
@@ -554,6 +606,44 @@ function getTournamentImportanceMultiplier(tournamentInfo, filePath) {
     return 1.0; // Regular tournament
 }
 
+/**
+ * Check if a tournament is a state or national tournament.
+ * Returns true if it's a state or national tournament, false otherwise.
+ */
+function isStateOrNationalTournament(tournamentInfo, filePath) {
+    const searchTerms = [
+        tournamentInfo.name,
+        tournamentInfo.filename,
+        path.basename(filePath, '.yaml')
+    ];
+    
+    // Read file contents to check for state/national tournament mentions
+    try {
+        const fileContents = fs.readFileSync(filePath, 'utf8').toLowerCase();
+        searchTerms.push(fileContents);
+    } catch (e) {
+        // If we can't read the file, continue without it
+    }
+    
+    const combinedText = searchTerms.join(' ').toLowerCase();
+    
+    // Check for national tournament indicators
+    if (combinedText.includes('national tournament') || 
+        combinedText.includes('nationals') ||
+        combinedText.includes('national championship')) {
+        return true;
+    }
+    
+    // Check for state tournament indicators
+    if (combinedText.includes('state tournament') || 
+        combinedText.includes('states') ||
+        combinedText.includes('state championship')) {
+        return true;
+    }
+    
+    return false; // Regular tournament
+}
+
 function getOrInitializeTeam(eloData, teamName, season, category, stateCode) {
     // Initialize state if it doesn't exist
     if (!eloData[stateCode]) {
@@ -596,6 +686,142 @@ function getOrInitializeTeam(eloData, teamName, season, category, stateCode) {
     }
     
     return eloData[stateCode][teamName].seasons[season].events[category];
+}
+
+/**
+ * Generate state-based JSON files
+ * Creates individual state files and metadata for better performance
+ * 
+ * @param {Object} eloData - The complete Elo data object
+ * @param {string} division - The division ('B' or 'C')
+ * @param {Object} metadata - The metadata object with mappings
+ */
+function generateStateFiles(eloData, division, metadata) {
+    const statesDir = path.join(OUTPUT_DIR, `states${division}`);
+    
+    // Create states directory if it doesn't exist
+    if (!fs.existsSync(statesDir)) {
+        fs.mkdirSync(statesDir, { recursive: true });
+    }
+    
+    // Precalculate tournament timeline data
+    const tournamentTimeline = precalculateTournamentTimeline(eloData, metadata);
+    
+    // Create metadata file
+    const metadataFile = {
+        teams: metadata.teamIds,
+        events: metadata.eventIds,
+        tournaments: metadata.tournamentIds,
+        states: {},
+        tournamentTimeline: tournamentTimeline
+    };
+    
+    // Generate state files
+    for (const stateCode in eloData) {
+        const stateData = eloData[stateCode];
+        const stateFile = path.join(statesDir, `${stateCode}.json`);
+        
+        // Write state data
+        fs.writeFileSync(stateFile, JSON.stringify(stateData));
+        
+        // Add state info to metadata
+        metadataFile.states[stateCode] = getStateName(stateCode);
+        
+        console.log(`Generated ${stateCode}.json for Division ${division}`);
+    }
+    
+    // Write metadata file
+    const metaFile = path.join(statesDir, 'meta.json');
+    fs.writeFileSync(metaFile, JSON.stringify(metadataFile, null, 2));
+    
+    console.log(`Generated meta.json for Division ${division}`);
+    console.log(`State-based files created in: ${statesDir}`);
+}
+
+/**
+ * Precalculate tournament timeline data for all seasons
+ * This creates a comprehensive list of all tournaments with their dates and links
+ * 
+ * @param {Object} eloData - The complete Elo data object
+ * @param {Object} metadata - The metadata object with mappings
+ * @returns {Object} Tournament timeline data organized by season
+ */
+function precalculateTournamentTimeline(eloData, metadata) {
+    const timeline = {};
+    const seenTournaments = new Set();
+    
+    // Process all states and schools to collect tournament data
+    for (const stateCode in eloData) {
+        for (const schoolName in eloData[stateCode]) {
+            const school = eloData[stateCode][schoolName];
+            
+            Object.entries(school.seasons).forEach(([season, seasonData]) => {
+                // Initialize season if it doesn't exist
+                if (!timeline[season]) {
+                    timeline[season] = [];
+                }
+                
+                // Get overall tournament dates
+                const overallEvent = seasonData.events['__OVERALL__'];
+                if (overallEvent && overallEvent.history) {
+                    overallEvent.history.forEach(entry => {
+                        if (entry.d && entry.t !== undefined && entry.l) {
+                            // Create unique key for this tournament
+                            const tournamentKey = `${entry.d}-${entry.t}`;
+                            
+                            if (!seenTournaments.has(tournamentKey)) {
+                                seenTournaments.add(tournamentKey);
+                                
+                                // Use the original date without modification
+                                const timelineEntry = {
+                                    date: entry.d,
+                                    tournamentId: entry.t,
+                                    tournamentName: processTournamentName(metadata.tournamentIds[entry.t]) || `Tournament ${entry.t}`,
+                                    link: entry.l,
+                                    season: season
+                                };
+                                
+                                // Add to timeline (allow multiple tournaments per date)
+                                timeline[season].push(timelineEntry);
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    }
+    
+    // Sort tournaments by date within each season
+    for (const season in timeline) {
+        timeline[season].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    }
+    
+    return timeline;
+}
+
+/**
+ * Get state name from state code
+ * @param {string} stateCode - Two-letter state code
+ * @returns {string} Full state name
+ */
+function getStateName(stateCode) {
+    const stateNames = {
+        'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas',
+        'CA': 'California', 'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware',
+        'FL': 'Florida', 'GA': 'Georgia', 'HI': 'Hawaii', 'ID': 'Idaho',
+        'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa', 'KS': 'Kansas',
+        'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
+        'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi',
+        'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada',
+        'NH': 'New Hampshire', 'NJ': 'New Jersey', 'NM': 'New Mexico', 'NY': 'New York',
+        'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio', 'OK': 'Oklahoma',
+        'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
+        'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah',
+        'VT': 'Vermont', 'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia',
+        'WI': 'Wisconsin', 'WY': 'Wyoming', 'DC': 'District of Columbia'
+    };
+    
+    return stateNames[stateCode] || stateCode;
 }
 
 main().catch(console.error);

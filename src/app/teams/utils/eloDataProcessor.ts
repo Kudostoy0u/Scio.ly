@@ -10,6 +10,8 @@ import type {
   ComparisonResult
 } from '../types/elo';
 
+
+
 export const getAllSchools = (eloData: EloData): string[] => {
   const schools: string[] = [];
   for (const stateCode in eloData) {
@@ -77,7 +79,7 @@ export const processOverallBySeason = (eloData: EloData, selectedSchools: string
   return data;
 };
 
-export const processOverallByTournament = (eloData: EloData, selectedSchools: string[]): OverallTournamentData => {
+export const processOverallByTournament = (eloData: EloData, selectedSchools: string[], metadata?: any): OverallTournamentData => {
   const data: OverallTournamentData = {};
   
   selectedSchools.forEach(schoolNameWithState => {
@@ -88,13 +90,13 @@ export const processOverallByTournament = (eloData: EloData, selectedSchools: st
         const overallEvent = seasonData.events['__OVERALL__'];
         if (overallEvent && overallEvent.history) {
           overallEvent.history.forEach(entry => {
-            // Add 1 day to the tournament date
-            const originalDate = new Date(entry.date);
-            const adjustedDate = new Date(originalDate.getTime() + 24 * 60 * 60 * 1000);
-            
+            // Convert from optimized format to expected format
             data[schoolNameWithState].push({
-              ...entry,
-              date: adjustedDate.toISOString().split('T')[0],
+              date: entry.d, // Convert 'd' to 'date'
+              tournament: metadata?.tournaments?.[entry.t] || `Tournament ${entry.t}`, // Map tournament ID to name
+              place: entry.p, // Place
+              elo: entry.e, // Convert 'e' to 'elo'
+              duosmiumLink: entry.l, // Link
               season
             });
           });
@@ -102,7 +104,17 @@ export const processOverallByTournament = (eloData: EloData, selectedSchools: st
       });
       
       // Sort by date
-      data[schoolNameWithState].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      data[schoolNameWithState].sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        
+        // Handle invalid dates by placing them at the end
+        if (isNaN(dateA.getTime()) && isNaN(dateB.getTime())) return 0;
+        if (isNaN(dateA.getTime())) return 1;
+        if (isNaN(dateB.getTime())) return -1;
+        
+        return dateA.getTime() - dateB.getTime();
+      });
     }
   });
   
@@ -131,7 +143,7 @@ export const processEventBySeason = (eloData: EloData, selectedSchools: string[]
   return data;
 };
 
-export const processEventByTournament = (eloData: EloData, selectedSchools: string[], selectedEvents: string[]): EventTournamentData => {
+export const processEventByTournament = (eloData: EloData, selectedSchools: string[], selectedEvents: string[], metadata?: any): EventTournamentData => {
   const data: EventTournamentData = {};
   
   selectedSchools.forEach(schoolNameWithState => {
@@ -144,13 +156,13 @@ export const processEventByTournament = (eloData: EloData, selectedSchools: stri
           const eventData = seasonData.events[event];
           if (eventData && eventData.history) {
             eventData.history.forEach(entry => {
-              // Add 1 day to the tournament date
-              const originalDate = new Date(entry.date);
-              const adjustedDate = new Date(originalDate.getTime() + 24 * 60 * 60 * 1000);
-              
+              // Convert from optimized format to expected format
               data[schoolNameWithState][event].push({
-                ...entry,
-                date: adjustedDate.toISOString().split('T')[0],
+                date: entry.d, // Convert 'd' to 'date'
+                tournament: metadata?.tournaments?.[entry.t] || `Tournament ${entry.t}`, // Map tournament ID to name
+                place: entry.p, // Place
+                elo: entry.e, // Convert 'e' to 'elo'
+                duosmiumLink: entry.l, // Link
                 season
               });
             });
@@ -158,7 +170,17 @@ export const processEventByTournament = (eloData: EloData, selectedSchools: stri
         });
         
         // Sort by date
-        data[schoolNameWithState][event].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        data[schoolNameWithState][event].sort((a, b) => {
+          const dateA = new Date(a.date);
+          const dateB = new Date(b.date);
+          
+          // Handle invalid dates by placing them at the end
+          if (isNaN(dateA.getTime()) && isNaN(dateB.getTime())) return 0;
+          if (isNaN(dateA.getTime())) return 1;
+          if (isNaN(dateB.getTime())) return -1;
+          
+          return dateA.getTime() - dateB.getTime();
+        });
       });
     }
   });
@@ -171,17 +193,45 @@ export const processChartData = (
   chartType: ChartType,
   selectedSchools: string[],
   selectedEvents: string[] = [],
-  viewMode: 'season' | 'tournament' = 'season'
+  viewMode: 'season' | 'tournament' = 'season',
+  metadata?: any
 ): ChartData => {
   if (chartType === 'overall') {
     return viewMode === 'season' 
       ? processOverallBySeason(eloData, selectedSchools)
-      : processOverallByTournament(eloData, selectedSchools);
+      : processOverallByTournament(eloData, selectedSchools, metadata);
   } else {
     return viewMode === 'season'
       ? processEventBySeason(eloData, selectedSchools, selectedEvents)
-      : processEventByTournament(eloData, selectedSchools, selectedEvents);
+      : processEventByTournament(eloData, selectedSchools, selectedEvents, metadata);
   }
+};
+
+// Helper function to find Elo rating at a specific date using binary search
+const findEloAtDate = (history: any[], targetDate: string): number | null => {
+  if (!history || history.length === 0) return null;
+  
+  // Binary search for the most recent entry before or on the target date
+  let left = 0;
+  let right = history.length - 1;
+  let bestMatch: any = null;
+  
+  const targetTime = new Date(targetDate).getTime();
+  
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    const entry = history[mid];
+    const entryTime = new Date(entry.d).getTime(); // Use 'd' property for date
+    
+    if (entryTime <= targetTime) {
+      bestMatch = entry;
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+  
+  return bestMatch ? bestMatch.e : null; // Use 'e' property for elo rating
 };
 
 // New function to get leaderboard data
@@ -208,19 +258,20 @@ export const getLeaderboard = (
             let eloRating = eventData.rating;
             
             // If a specific date is provided, find the Elo rating at that date
-            if (date && eventData.history) {
-              const historyEntry = eventData.history.find(entry => entry.date === date);
-              if (historyEntry) {
-                eloRating = historyEntry.elo;
+            if (date && eventData.history && eventData.history.length > 0) {
+              // Sort history by date if not already sorted
+              const sortedHistory = [...eventData.history].sort((a, b) => {
+                const dateA = new Date(a.d).getTime(); // Use 'd' property for date
+                const dateB = new Date(b.d).getTime();
+                return dateA - dateB;
+              });
+              
+              const historicalElo = findEloAtDate(sortedHistory, date);
+              if (historicalElo !== null) {
+                eloRating = historicalElo;
               } else {
-                // If no exact match, find the most recent entry before the date
-                const validEntries = eventData.history
-                  .filter(entry => entry.date <= date)
-                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                
-                if (validEntries.length > 0) {
-                  eloRating = validEntries[0].elo;
-                }
+                // No tournaments before this date - use starting Elo (1500)
+                eloRating = 1500;
               }
             }
             
@@ -239,19 +290,20 @@ export const getLeaderboard = (
             let eloRating = overallEvent.rating;
             
             // If a specific date is provided, find the Elo rating at that date
-            if (date && overallEvent.history) {
-              const historyEntry = overallEvent.history.find(entry => entry.date === date);
-              if (historyEntry) {
-                eloRating = historyEntry.elo;
+            if (date && overallEvent.history && overallEvent.history.length > 0) {
+              // Sort history by date if not already sorted
+              const sortedHistory = [...overallEvent.history].sort((a, b) => {
+                const dateA = new Date(a.d).getTime(); // Use 'd' property for date
+                const dateB = new Date(b.d).getTime();
+                return dateA - dateB;
+              });
+              
+              const historicalElo = findEloAtDate(sortedHistory, date);
+              if (historicalElo !== null) {
+                eloRating = historicalElo;
               } else {
-                // If no exact match, find the most recent entry before the date
-                const validEntries = overallEvent.history
-                  .filter(entry => entry.date <= date)
-                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                
-                if (validEntries.length > 0) {
-                  eloRating = validEntries[0].elo;
-                }
+                // No tournaments before this date - use starting Elo (1500)
+                eloRating = 1500;
               }
             }
             
@@ -413,54 +465,76 @@ export const compareSchools = (
 };
 
 /**
- * Converts optimized JSON format back to the original format expected by the frontend
- * The optimized format uses metadata maps and shortened property names to reduce file size
+ * Format a date string (YYYY-MM-DD) to a human-readable format (e.g., "May 24th, 2025")
  */
-export function convertOptimizedData(optimizedData: any): EloData {
-  if (!optimizedData.meta || !optimizedData.data) {
-    // If it's already in the old format, return as-is
-    return optimizedData as EloData;
-  }
+export const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  const options: Intl.DateTimeFormatOptions = { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  };
+  return date.toLocaleDateString('en-US', options);
+};
 
-  const { meta, data } = optimizedData;
-  const convertedData: EloData = {};
-
-  // Convert each state
-  for (const stateCode in data) {
-    convertedData[stateCode] = {};
+/**
+ * Get all available tournament dates from the precalculated metadata
+ * This is used for the timeline slider to show all tournaments efficiently
+ * Groups tournaments by date to handle multiple tournaments on the same day
+ */
+export const getAllTournamentDates = (eloData: EloData, metadata?: any): Array<{ x: Date; y: number; tournament: string; link?: string }> => {
+  // Use the precalculated metadata to get all tournament dates efficiently
+  if (metadata?.tournamentTimeline) {
+    const allDataPoints: Array<{ x: Date; y: number; tournament: string; link?: string }> = [];
     
-    // Convert each team
-    for (const teamName in data[stateCode]) {
-      const teamData = data[stateCode][teamName];
-      convertedData[stateCode][teamName] = {
-        seasons: {},
-        meta: teamData.meta
-      };
-
-      // Convert each season
-      for (const season in teamData.seasons) {
-        convertedData[stateCode][teamName].seasons[season] = {
-          events: {}
-        };
-
-        // Convert each event
-        for (const eventName in teamData.seasons[season].events) {
-          const eventData = teamData.seasons[season].events[eventName];
-          convertedData[stateCode][teamName].seasons[season].events[eventName] = {
-            rating: eventData.rating,
-            history: eventData.history.map((entry: any) => ({
-              date: entry.d,
-              tournament: meta.tournaments[entry.t],
-              place: entry.p,
-              elo: entry.e,
-              duosmiumLink: entry.l,
-              ...(entry.n && { note: entry.n })
-            }))
-          };
-        }
+    // Process all seasons in the timeline
+    Object.entries(metadata.tournamentTimeline).forEach(([_season, tournaments]) => {
+      if (Array.isArray(tournaments)) {
+        // Group tournaments by date
+        const tournamentsByDate = new Map<string, Array<{ tournament: string; link?: string }>>();
+        
+        tournaments.forEach((tournament: any) => {
+          if (tournament.date && tournament.tournamentName) {
+            if (!tournamentsByDate.has(tournament.date)) {
+              tournamentsByDate.set(tournament.date, []);
+            }
+            tournamentsByDate.get(tournament.date)!.push({
+              tournament: tournament.tournamentName,
+              link: tournament.link
+            });
+          }
+        });
+        
+        // Create data points for each date, combining multiple tournaments
+        tournamentsByDate.forEach((tournaments, date) => {
+          if (tournaments.length === 1) {
+            // Single tournament on this date
+            allDataPoints.push({
+              x: new Date(date),
+              y: 0, // Placeholder value for timeline display
+              tournament: tournaments[0].tournament,
+              link: tournaments[0].link
+            });
+          } else {
+            // Multiple tournaments on this date - combine them
+            const tournamentNames = tournaments.map(t => t.tournament).join(', ');
+            const firstLink = tournaments[0].link; // Use first link as representative
+            
+            allDataPoints.push({
+              x: new Date(date),
+              y: 0, // Placeholder value for timeline display
+              tournament: tournamentNames,
+              link: firstLink
+            });
+          }
+        });
       }
-    }
+    });
+    
+    // Sort by date
+    return allDataPoints.sort((a, b) => a.x.getTime() - b.x.getTime());
   }
-
-  return convertedData;
-}
+  
+  // If no metadata available, return empty array
+  return [];
+};

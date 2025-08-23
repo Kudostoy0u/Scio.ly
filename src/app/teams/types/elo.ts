@@ -1,9 +1,9 @@
 export interface EloHistoryEntry {
-  date: string;
-  tournament: string;
-  place: number;
-  elo: number;
-  duosmiumLink: string;
+  d: string; // date
+  t: number; // tournament ID
+  p: number; // place
+  e: number; // elo
+  l: string; // duosmiumLink
 }
 
 export interface EloEvent {
