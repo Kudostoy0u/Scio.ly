@@ -6,6 +6,7 @@ import { useTheme } from '@/app/contexts/ThemeContext';
 import { toast } from 'react-toastify';
 import { Heart } from 'lucide-react';
 import { isConfigFavorited, toggleFavoriteConfig, getFavoriteConfigs } from '@/app/utils/favorites';
+import QuoteLengthSlider from './QuoteLengthSlider';
 
 interface TestConfigurationProps {
   selectedEvent: Event | null;
@@ -447,6 +448,33 @@ export default function TestConfiguration({
                   })()}
                 </span>
               </div>
+            </div>
+          )}
+
+          {/* Character Length Range - Only for Codebusters */}
+          {selectedEvent?.name === 'Codebusters' && (
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                Quote Character Length Range
+              </label>
+              <QuoteLengthSlider
+                min={1}
+                max={200}
+                value={[
+                  settings.charLengthMin || 1,
+                  settings.charLengthMax || 100
+                ]}
+                onValueChange={([min, max]) => {
+                  const newSettings = { ...settings, charLengthMin: min, charLengthMax: max };
+                  onSettingsChange(newSettings);
+                  
+                  // Save to localStorage for persistence
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('codebustersCharLengthMin', min.toString());
+                    localStorage.setItem('codebustersCharLengthMax', max.toString());
+                  }
+                }}
+              />
             </div>
           )}
 

@@ -15,6 +15,8 @@ export interface Settings {
   tournament: string;
   subtopics: string[];
   idPercentage?: number; // Rocks & Minerals: % of ID questions
+  charLengthMin?: number; // Codebusters: minimum character length for quotes
+  charLengthMax?: number; // Codebusters: maximum character length for quotes
 }
 
 // Extend window interface for event subtopics mapping

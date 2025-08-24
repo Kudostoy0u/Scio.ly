@@ -47,10 +47,14 @@ export default function PracticeDashboard() {
       const storedDivision = localStorage.getItem('defaultDivision') || 'any';
       const storedQuestionTypes = localStorage.getItem('defaultQuestionTypes') || 'multiple-choice';
       const storedIdPercentage = localStorage.getItem('defaultIdPercentage');
+      const storedCharLengthMin = localStorage.getItem('codebustersCharLengthMin');
+      const storedCharLengthMax = localStorage.getItem('codebustersCharLengthMax');
       
       const questionCount = storedQuestionCount ? parseInt(storedQuestionCount) : NORMAL_DEFAULTS.questionCount;
       const timeLimit = storedTimeLimit ? parseInt(storedTimeLimit) : NORMAL_DEFAULTS.timeLimit;
       const idPercentage = storedIdPercentage ? parseInt(storedIdPercentage) : 0;
+      const charLengthMin = storedCharLengthMin ? parseInt(storedCharLengthMin) : 1;
+      const charLengthMax = storedCharLengthMax ? parseInt(storedCharLengthMax) : 100;
       
       setSettings(prev => ({
         ...prev,
@@ -60,7 +64,9 @@ export default function PracticeDashboard() {
         types: (storedQuestionTypes === 'multiple-choice' || storedQuestionTypes === 'both' || storedQuestionTypes === 'free-response')
           ? storedQuestionTypes as any
           : 'multiple-choice',
-        idPercentage: isNaN(idPercentage) ? 0 : idPercentage
+        idPercentage: isNaN(idPercentage) ? 0 : idPercentage,
+        charLengthMin: isNaN(charLengthMin) ? 1 : charLengthMin,
+        charLengthMax: isNaN(charLengthMax) ? 100 : charLengthMax
       }));
     }
   }, []);

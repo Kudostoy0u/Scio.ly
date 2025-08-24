@@ -9,6 +9,9 @@ interface ReplacementTableProps {
     quoteIndex: number;
     isTestSubmitted: boolean;
     onSolutionChange: (quoteIndex: number, cipherLetter: string, plainLetter: string) => void;
+    focusedCipherLetter?: string | null;
+    onCipherLetterFocus?: (cipherLetter: string) => void;
+    onCipherLetterBlur?: () => void;
 }
 
 export const ReplacementTable = ({ 
@@ -16,7 +19,10 @@ export const ReplacementTable = ({
     solution,
     quoteIndex,
     isTestSubmitted,
-    onSolutionChange
+    onSolutionChange,
+    focusedCipherLetter,
+    onCipherLetterFocus,
+    onCipherLetterBlur
 }: ReplacementTableProps) => {
     const { darkMode } = useTheme();
     const frequencies = getLetterFrequencies(text);
@@ -81,7 +87,11 @@ export const ReplacementTable = ({
                                         maxLength={1}
                                         value={solution?.[letter] || ''}
                                         onChange={(e) => handleReplacementTableChange(letter, e.target.value.toUpperCase())}
-                                        className={`w-full text-center text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-900'} border-0 focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                                        onFocus={() => onCipherLetterFocus?.(letter)}
+                                        onBlur={onCipherLetterBlur}
+                                        className={`w-full text-center text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-900'} focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                                            focusedCipherLetter === letter ? 'border-2 border-blue-500' : 'border-0'
+                                        }`}
                                         placeholder=""
                                         disabled={isTestSubmitted}
                                     />

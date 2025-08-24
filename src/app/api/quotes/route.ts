@@ -14,17 +14,19 @@ import {
 const QuoteFiltersSchema = z.object({
   language: z.string().min(1, 'Language is required').default('en'),
   limit: z.coerce.number().int().positive().max(200).optional().default(50),
+  charLengthMin: z.coerce.number().int().positive().optional(),
+  charLengthMax: z.coerce.number().int().positive().optional(),
 });
 
 // Types - ValidatedQuoteFilters is inferred from the schema
 
 // Business logic functions
-const fetchQuotes = async (language: string, limit: number) => {
+const fetchQuotes = async (language: string, limit: number, charLengthRange?: { min: number; max: number }) => {
   const sanitizedLanguage = sanitizeInput(language);
-  const quotes = await getQuotesByLanguage(sanitizedLanguage, limit);
+  const quotes = await getQuotesByLanguage(sanitizedLanguage, limit, charLengthRange);
   
   if (!quotes || quotes.length === 0) {
-    throw new Error(`No quotes found for language: ${sanitizedLanguage}`);
+    throw new Error(`No quotes found for language: ${sanitizedLanguage}${charLengthRange ? ` with character length range ${charLengthRange.min}-${charLengthRange.max}` : ''}`);
   }
   
   return quotes.map(quote => ({
@@ -43,7 +45,16 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const filters = parseQueryParams(searchParams, QuoteFiltersSchema);
     
-    const quotes = await fetchQuotes(filters.language, filters.limit);
+    // Build character length range if both min and max are provided
+    let charLengthRange: { min: number; max: number } | undefined;
+    if (filters.charLengthMin && filters.charLengthMax) {
+      charLengthRange = {
+        min: Math.min(filters.charLengthMin, filters.charLengthMax),
+        max: Math.max(filters.charLengthMin, filters.charLengthMax)
+      };
+    }
+    
+    const quotes = await fetchQuotes(filters.language, filters.limit, charLengthRange);
     
     const response = createSuccessResponse({ quotes });
     logApiResponse('GET', '/api/quotes', 200, Date.now() - startTime);

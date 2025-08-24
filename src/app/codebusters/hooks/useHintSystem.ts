@@ -136,6 +136,25 @@ export const useHintSystem = (
       // Fallback to existing logic if no words found
     }
 
+    // Special handling for Affine: crib = word with least characters that has 4+ characters, or largest word
+    if (quote.cipherType === 'Affine') {
+      const words = (quote.quote.match(/[A-Za-z]+/g) || [])
+        .map(w => w.toUpperCase())
+        .sort((a, b) => a.length - b.length);
+      
+      if (words.length > 0) {
+        // Find the word with least characters that has 4 or more characters
+        const wordsWith4Plus = words.filter(w => w.length >= 4);
+        if (wordsWith4Plus.length > 0) {
+          return `Crib: ${wordsWith4Plus[0]}`;
+        } else {
+          // If no word has 4+ characters, return the largest word
+          return `Crib: ${words[words.length - 1]}`;
+        }
+      }
+      // Fallback to existing logic if no words found
+    }
+
     // Try different crib finding strategies
     let crib = find5LetterCrib(cipherText, plainText);
     if (crib) return `Crib: ${crib}`;

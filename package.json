@@ -34,6 +34,7 @@
     "js-yaml": "^4.1.0",
     "lucide-react": "0.539.0",
     "next": "15.4.6",
+    "pagedjs": "^0.4.3",
     "postgres": "3.4.7",
     "react": "^19",
     "react-apexcharts": "1.7.0",

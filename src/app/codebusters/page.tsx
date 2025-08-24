@@ -41,9 +41,11 @@ import {
   QuestionCard, 
   SubmitButton, 
   PDFModal,
-  CodebustersSummary
+  CodebustersSummary,
+  PrintConfigModal
 } from './components';
 import { FloatingActionButtons } from '@/app/components/FloatingActionButtons';
+import { createPrintStyles, createPrintContent, setupPrintWindow, createInPagePrint } from './utils/printUtils';
 
 export default function CodeBusters() {
     const { darkMode } = useTheme();
@@ -97,6 +99,12 @@ export default function CodeBusters() {
         setInfoModalOpen,
         selectedCipherType,
         setSelectedCipherType,
+        printModalOpen,
+        setPrintModalOpen,
+        tournamentName,
+        setTournamentName,
+        questionPoints,
+        setQuestionPoints,
         loadPreferences
     } = useCodebustersState();
 
@@ -117,7 +125,6 @@ export default function CodeBusters() {
     const { 
         handleSolutionChange, 
         handleBaconianSolutionChange, 
-        handleFrequencyNoteChange, 
         handleHillSolutionChange, 
         handleNihilistSolutionChange,
         handleCheckerboardSolutionChange
@@ -418,6 +425,127 @@ export default function CodeBusters() {
         );
     }, [loadPreferences, setQuotes, setIsTestSubmitted, setTestScore, setTimeLeft, setError, setIsLoading, setActiveHints, setRevealedLetters]);
 
+    // Handle print configuration modal
+    const handlePrintConfig = useCallback(() => {
+        setPrintModalOpen(true);
+    }, [setPrintModalOpen]);
+
+    // Handle actual printing
+    const handleActualPrint = useCallback(async () => {
+        if (!tournamentName.trim()) {
+            toast.error('Tournament name is required');
+            return;
+        }
+
+        // Find the questions container
+        const questionsContainer = document.querySelector('[data-questions-container]');
+        if (!questionsContainer) {
+            toast.error('Could not find questions to print');
+            return;
+        }
+
+        // Clone the questions container
+        const clonedContainer = questionsContainer.cloneNode(true) as HTMLElement;
+        
+        // Remove any interactive elements that shouldn't be printed
+        const interactiveElements = clonedContainer.querySelectorAll('button, .hint-button, .info-button, .floating-buttons');
+        interactiveElements.forEach(el => el.remove());
+
+        // Add point values to question headers
+        const questionHeaders = clonedContainer.querySelectorAll('[data-question-header]');
+        questionHeaders.forEach((header, index) => {
+            const points = questionPoints[index] || Math.round((quotes[index]?.difficulty || 0.5) * 500);
+            const headerText = header.textContent || '';
+            header.textContent = `${headerText} [${points} pts]`;
+        });
+
+        // Ensure questions avoid breaking inside a page; do NOT force a page break between every question
+        // The `.question` class has `page-break-inside: avoid` in print styles so multiple questions will flow
+        // onto the same page when space allows.
+
+        // Get all stylesheets from the current page
+        const getStylesheets = () => {
+            const stylesheets = Array.from(document.styleSheets);
+            let cssText = '';
+            
+            stylesheets.forEach(sheet => {
+                try {
+                    const rules = Array.from(sheet.cssRules || sheet.rules || []);
+                    rules.forEach(rule => {
+                        cssText += rule.cssText + '\n';
+                    });
+                } catch {
+                    // Skip external stylesheets that might cause CORS issues
+                    console.log('Skipping external stylesheet:', sheet.href);
+                }
+            });
+            
+            return cssText;
+        };
+
+        // Create print styles using utility function
+        const printStyles = createPrintStyles(getStylesheets);
+
+        // Create answer key for Codebusters
+        const createCodebustersAnswerKey = () => {
+            let answerKeyHtml = '<div class="answer-key-section">';
+            answerKeyHtml += '<div class="answer-key-header">ANSWER KEY</div>';
+            answerKeyHtml += '<div class="answer-key-content">';
+            
+            // Calculate how many columns we can fit (aim for 2 columns for longer quotes)
+            const totalQuestions = quotes.length;
+            const columns = Math.min(2, Math.ceil(totalQuestions / 10)); // 10 questions per column max
+            const questionsPerColumn = Math.ceil(totalQuestions / columns);
+            
+            for (let col = 0; col < columns; col++) {
+                answerKeyHtml += '<div class="answer-column">';
+                
+                for (let i = col * questionsPerColumn; i < Math.min((col + 1) * questionsPerColumn, totalQuestions); i++) {
+                    const quote = quotes[i];
+                    const questionNumber = i + 1;
+                    
+                    // Show the decrypted quote (plaintext)
+                    const decryptedQuote = quote.quote || '[No solution available]';
+                    answerKeyHtml += `<div class="answer-item"><strong>${questionNumber}.</strong> ${decryptedQuote}</div>`;
+                }
+                
+                answerKeyHtml += '</div>'; // Close column
+            }
+            
+            answerKeyHtml += '</div>'; // Close answer-key-content
+            answerKeyHtml += '</div>'; // Close answer-key-section
+            
+            return answerKeyHtml;
+        };
+
+        // Create print content using utility function
+        const printContent = createPrintContent({
+            tournamentName,
+            questionsHtml: clonedContainer.innerHTML + createCodebustersAnswerKey(),
+            questionPoints
+        }, printStyles);
+
+        // Setup print window using utility function
+        try {
+            // Prefer in-page print to avoid popup blockers
+            await createInPagePrint({
+                tournamentName,
+                questionsHtml: clonedContainer.innerHTML + createCodebustersAnswerKey(),
+                questionPoints
+            }, printStyles);
+        } catch {
+            // Fallback to popup-based print window
+            try {
+                await setupPrintWindow(printContent);
+            } catch (err) {
+                toast.error(err instanceof Error ? err.message : 'Failed to print questions');
+            }
+        }
+
+        // Close the modal
+        setPrintModalOpen(false);
+    }, [quotes, tournamentName, questionPoints, setPrintModalOpen]);
+
     // Load questions if needed
     useEffect(() => {
         if (hasAttemptedLoad && quotes.length === 0 && !isLoading && !error) {
@@ -505,34 +633,36 @@ export default function CodeBusters() {
                             <ShareButton 
                                 onShare={() => setShareModalOpen(true)} 
                                 onReset={handleReset}
+                                onPrint={handlePrintConfig}
                                 isOffline={isOffline} 
                                 darkMode={darkMode}
                             />
                         )}
                         
-                        {!isLoading && !error && hasAttemptedLoad && quotes.length > 0 && quotes.map((item, index) => (
-                            <QuestionCard
-                                key={index}
-                                item={item}
-                                index={index}
-                                darkMode={darkMode}
-                                isTestSubmitted={isTestSubmitted}
-                                quotes={quotes}
-                                activeHints={activeHints}
-                                getHintContent={getHintContent}
-                                handleHintClick={handleHintClick}
-                                setSelectedCipherType={setSelectedCipherType}
-                                setInfoModalOpen={setInfoModalOpen}
-                                handleSolutionChange={handleSolutionChange}
-                                handleBaconianSolutionChange={handleBaconianSolutionChange}
-                                handleFrequencyNoteChange={handleFrequencyNoteChange}
-                                handleHillSolutionChange={handleHillSolutionChange}
-                                handleNihilistSolutionChange={handleNihilistSolutionChange}
-                                handleCheckerboardSolutionChange={handleCheckerboardSolutionChange}
-                                hintedLetters={hintedLetters}
-                                _hintCounts={hintCounts}
-                            />
-                        ))}
+                        <div data-questions-container>
+                            {!isLoading && !error && hasAttemptedLoad && quotes.length > 0 && quotes.map((item, index) => (
+                                <QuestionCard
+                                    key={index}
+                                    item={item}
+                                    index={index}
+                                    darkMode={darkMode}
+                                    isTestSubmitted={isTestSubmitted}
+                                    quotes={quotes}
+                                    activeHints={activeHints}
+                                    getHintContent={getHintContent}
+                                    handleHintClick={handleHintClick}
+                                    setSelectedCipherType={setSelectedCipherType}
+                                    setInfoModalOpen={setInfoModalOpen}
+                                    handleSolutionChange={handleSolutionChange}
+                                    handleBaconianSolutionChange={handleBaconianSolutionChange}
+                                    handleHillSolutionChange={handleHillSolutionChange}
+                                    handleNihilistSolutionChange={handleNihilistSolutionChange}
+                                    handleCheckerboardSolutionChange={handleCheckerboardSolutionChange}
+                                    hintedLetters={hintedLetters}
+                                    _hintCounts={hintCounts}
+                                />
+                            ))}
+                        </div>
                         
                         {/* Submit Button */}
                         {!isLoading && !error && quotes.length > 0 && hasAttemptedLoad && !isResetting && (
@@ -577,6 +707,19 @@ export default function CodeBusters() {
                         isOpen={infoModalOpen}
                         onClose={() => setInfoModalOpen(false)}
                         cipherType={selectedCipherType}
+                        darkMode={darkMode}
+                    />
+
+                    {/* Print Configuration Modal */}
+                    <PrintConfigModal
+                        isOpen={printModalOpen}
+                        onClose={() => setPrintModalOpen(false)}
+                        onPrint={handleActualPrint}
+                        quotes={quotes}
+                        tournamentName={tournamentName}
+                        setTournamentName={setTournamentName}
+                        questionPoints={questionPoints}
+                        setQuestionPoints={setQuestionPoints}
                         darkMode={darkMode}
                     />
                     

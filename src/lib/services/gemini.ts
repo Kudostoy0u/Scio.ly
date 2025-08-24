@@ -408,7 +408,7 @@ EXPLANATION REQUIREMENTS:
 7. Be specific about visual details, patterns, or features in the image that are relevant to the answer` : ''}
 
 Provide an educational explanation that helps students understand both the answer and the scientific reasoning behind it${hasImage ? ', with clear references to the visual information provided' : ''}.
-Keep your answer formatted (newlines, bolding, etc, latex if necessary. no lists using asterisks, use newlines plenty) and do not make it overly long. Keep your thinking short, just figure out the right answer with it asap.`;
+Keep your text-based answer in the explanation field using markdown-based formatting (newlines (\\n) for paragraph structuring, bolding with double asterisks, etc, latex if necessary. no lists using asterisks, use newlines plenty) and do not make it overly long. Keep your thinking short, just figure out the right answer with it asap. Make sure to conclude your explanation appropriately, do not cut it short.`;
 
     let contents: any = prompt;
     

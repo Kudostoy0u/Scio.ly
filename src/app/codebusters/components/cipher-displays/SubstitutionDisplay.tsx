@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { QuoteData } from '../../types';
 import { ReplacementTable } from './ReplacementTable';
@@ -35,6 +35,7 @@ export const SubstitutionDisplay = ({
     _hintCounts
 }: SubstitutionDisplayProps) => {
     const { darkMode } = useTheme();
+    const [focusedCipherLetter, setFocusedCipherLetter] = useState<string | null>(null);
 
     const getCipherInfo = () => {
         switch (cipherType) {
@@ -136,6 +137,7 @@ export const SubstitutionDisplay = ({
                     const isCorrect = isLetter && value === correctMapping[char];
                     const isHinted = isLetter && hintedLetters[quoteIndex]?.[char];
                     const showCorrectAnswer = isTestSubmitted && isLetter;
+                    const isSameCipherLetter = isLetter && focusedCipherLetter === char;
                     
                     return (
                         <div key={i} className="flex flex-col items-center mx-0.5">
@@ -154,10 +156,14 @@ export const SubstitutionDisplay = ({
                                             char,
                                             e.target.value.toUpperCase()
                                         )}
+                                        onFocus={() => setFocusedCipherLetter(char)}
+                                        onBlur={() => setFocusedCipherLetter(null)}
                                         className={`w-5 h-5 sm:w-6 sm:h-6 text-center border rounded mt-1 text-xs sm:text-sm ${
-                                            darkMode 
-                                                ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
-                                                : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
+                                            isSameCipherLetter
+                                                ? 'border-2 border-blue-500'
+                                                : darkMode 
+                                                    ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
+                                                    : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
                                         } ${
                                             showCorrectAnswer
                                                 ? isHinted
@@ -191,6 +197,9 @@ export const SubstitutionDisplay = ({
                     quoteIndex={quoteIndex}
                     isTestSubmitted={isTestSubmitted}
                     onSolutionChange={onSolutionChange}
+                    focusedCipherLetter={focusedCipherLetter}
+                    onCipherLetterFocus={setFocusedCipherLetter}
+                    onCipherLetterBlur={() => setFocusedCipherLetter(null)}
                 />
             )}
             

@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, jsonb, numeric, doublePrecision } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, jsonb, numeric, doublePrecision, integer } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 // Questions table
@@ -17,12 +17,24 @@ export const questions = pgTable('questions', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-// Quotes table
+// Quotes table (for quotes <= 120 characters)
 export const quotes = pgTable('quotes', {
   id: uuid('id').primaryKey().defaultRandom(),
   author: text('author').notNull(),
   quote: text('quote').notNull(),
   language: text('language').notNull(),
+  charLength: integer('char_length').notNull(),
+  randomF: doublePrecision('random_f').notNull().default(sql`random()`),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// Long quotes table (for quotes > 120 characters, unused for codebusters)
+export const longquotes = pgTable('longquotes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  author: text('author').notNull(),
+  quote: text('quote').notNull(),
+  language: text('language').notNull(),
+  charLength: integer('char_length').notNull(),
   randomF: doublePrecision('random_f').notNull().default(sql`random()`),
   createdAt: timestamp('created_at').defaultNow(),
 });

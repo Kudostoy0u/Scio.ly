@@ -38,7 +38,6 @@ interface QuestionCardProps {
   setInfoModalOpen: (open: boolean) => void;
   handleSolutionChange: (quoteIndex: number, cipherLetter: string, plainLetter: string) => void;
   handleBaconianSolutionChange: (quoteIndex: number, position: number, plainLetter: string) => void;
-  handleFrequencyNoteChange: (quoteIndex: number, letter: string, note: string) => void;
   handleHillSolutionChange: (quoteIndex: number, type: 'matrix' | 'plaintext', value: string[][] | { [key: number]: string }) => void;
   handleNihilistSolutionChange: (quoteIndex: number, position: number, plainLetter: string) => void;
   handleCheckerboardSolutionChange: (quoteIndex: number, position: number, plainLetter: string) => void;
@@ -59,7 +58,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   setInfoModalOpen,
   handleSolutionChange,
   handleBaconianSolutionChange,
-  handleFrequencyNoteChange,
   handleHillSolutionChange,
   handleNihilistSolutionChange,
   handleCheckerboardSolutionChange,
@@ -71,12 +69,17 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
   return (
     <div 
-      className={`relative border p-4 rounded-lg transition-all duration-500 ease-in-out mb-6 ${
+      className={`relative border p-4 rounded-lg transition-all duration-500 ease-in-out mb-6 question ${
         darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-black'
       }`}
+      data-question-card
+      data-question-index={index}
     >
       <div className="flex justify-between items-start">
-        <h3 className={`font-semibold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+        <h3 
+          data-question-header
+          className={`font-semibold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}
+        >
           Question {index + 1}
         </h3>
         <div className="flex items-center gap-2">
@@ -195,11 +198,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           keyword={item.portaKeyword!}
           quoteIndex={index}
           solution={item.solution}
-          frequencyNotes={item.frequencyNotes}
           isTestSubmitted={isTestSubmitted}
           quotes={quotes}
           onSolutionChange={handleSolutionChange}
-          onFrequencyNoteChange={handleFrequencyNoteChange}
         />
       ) : item.cipherType === 'Baconian' ? (
         <BaconianDisplay

@@ -483,52 +483,112 @@ export const encryptHill3x3 = (text: string): { encrypted: string; matrix: numbe
 
 // Porta cipher encryption
 export const encryptPorta = (text: string): { encrypted: string; keyword: string } => {
-    // Porta table - each row represents the substitution for a keyword letter
+    // Word bank for Porta keywords
+    const portaKeywords = [
+        'SCIENCE', 'OLYMPIAD', 'COMPETITION', 'STUDENT', 'RESEARCH', 'EXPERIMENT',
+        'DISCOVERY', 'INNOVATION', 'TECHNOLOGY', 'MATHEMATICS', 'PHYSICS', 'CHEMISTRY',
+        'BIOLOGY', 'ENGINEERING', 'COMPUTER', 'PROGRAMMING', 'ALGORITHM', 'DATABASE',
+        'NETWORK', 'SECURITY', 'ENCRYPTION', 'DECRYPTION', 'CIPHER', 'CODE',
+        'ANALYSIS', 'SOLUTION', 'PROBLEM', 'CHALLENGE', 'KNOWLEDGE', 'LEARNING',
+        'EDUCATION', 'ACADEMIC', 'SCHOLAR', 'SCIENTIST', 'RESEARCHER', 'INVENTOR',
+        'PIONEER', 'EXPLORER', 'INVESTIGATOR', 'OBSERVER', 'ANALYST', 'SPECIALIST',
+        'EXPERT', 'PROFESSIONAL', 'ACADEMICIAN', 'THEORIST', 'PRACTITIONER', 'SCHOLAR',
+        'INTELLECTUAL', 'PHILOSOPHER', 'THINKER', 'INNOVATOR', 'CREATOR', 'DESIGNER',
+        'ARCHITECT', 'BUILDER', 'DEVELOPER', 'PROGRAMMER', 'ENGINEER', 'TECHNICIAN',
+        'OPERATOR', 'ADMINISTRATOR', 'MANAGER', 'COORDINATOR', 'ORGANIZER', 'PLANNER',
+        'STRATEGIST', 'TACTICIAN', 'CONSULTANT', 'ADVISOR', 'COUNSELOR', 'MENTOR',
+        'TUTOR', 'INSTRUCTOR', 'TEACHER', 'PROFESSOR', 'LECTURER', 'EDUCATOR',
+        'TRAINER', 'COACH', 'GUIDE', 'LEADER', 'DIRECTOR', 'SUPERVISOR', 'CONTROLLER',
+        'REGULATOR', 'MONITOR', 'OBSERVER', 'WATCHER', 'GUARDIAN', 'PROTECTOR',
+        'DEFENDER', 'GUARDIAN', 'CUSTODIAN', 'KEEPER', 'CARETAKER', 'MANAGER',
+        'HANDLER', 'OPERATOR', 'CONTROLLER', 'REGULATOR', 'MODERATOR', 'MEDIATOR',
+        'ARBITRATOR', 'JUDGE', 'REFEREE', 'UMPIRE', 'ADJUDICATOR', 'ASSESSOR',
+        'EVALUATOR', 'EXAMINER', 'INSPECTOR', 'AUDITOR', 'REVIEWER', 'CRITIC',
+        'ANALYST', 'SPECIALIST', 'EXPERT', 'AUTHORITY', 'MASTER', 'GURU', 'SAGE',
+        'WIZARD', 'MAGICIAN', 'SORCERER', 'ENCHANTER', 'CONJURER', 'ILLUSIONIST',
+        'PERFORMER', 'ENTERTAINER', 'ARTIST', 'CREATOR', 'DESIGNER', 'ARCHITECT',
+        'BUILDER', 'CONSTRUCTOR', 'MANUFACTURER', 'PRODUCER', 'GENERATOR', 'CREATOR',
+        'ORIGINATOR', 'FOUNDER', 'ESTABLISHER', 'INITIATOR', 'PIONEER', 'TRAILBLAZER',
+        'PATHFINDER', 'EXPLORER', 'DISCOVERER', 'INVENTOR', 'INNOVATOR', 'CREATOR',
+        'DESIGNER', 'PLANNER', 'STRATEGIST', 'TACTICIAN', 'CONSULTANT', 'ADVISOR',
+        'COUNSELOR', 'MENTOR', 'TUTOR', 'INSTRUCTOR', 'TEACHER', 'PROFESSOR',
+        'LECTURER', 'EDUCATOR', 'TRAINER', 'COACH', 'GUIDE', 'LEADER', 'DIRECTOR',
+        'SUPERVISOR', 'CONTROLLER', 'REGULATOR', 'MONITOR', 'OBSERVER', 'WATCHER',
+        'GUARDIAN', 'PROTECTOR', 'DEFENDER', 'CUSTODIAN', 'KEEPER', 'CARETAKER',
+        'MANAGER', 'HANDLER', 'OPERATOR', 'CONTROLLER', 'REGULATOR', 'MODERATOR',
+        'MEDIATOR', 'ARBITRATOR', 'JUDGE', 'REFEREE', 'UMPIRE', 'ADJUDICATOR',
+        'ASSESSOR', 'EVALUATOR', 'EXAMINER', 'INSPECTOR', 'AUDITOR', 'REVIEWER',
+        'CRITIC', 'ANALYST', 'SPECIALIST', 'EXPERT', 'AUTHORITY', 'MASTER', 'GURU',
+        'SAGE', 'WIZARD', 'MAGICIAN', 'SORCERER', 'ENCHANTER', 'CONJURER', 'ILLUSIONIST'
+    ];
+
+    // Porta table - each row represents the substitution alphabet for a keyword letter pair
+    // Based on the correct Porta cipher algorithm from your example
     const portaTable = {
-        'A': 'NOPQRSTUVWXYZABCDEFGHIJKLM',
-        'B': 'OPQRSTUVWXYZABCDEFGHIJKLMN',
-        'C': 'PQRSTUVWXYZABCDEFGHIJKLMNO',
-        'D': 'QRSTUVWXYZABCDEFGHIJKLMNOP',
-        'E': 'RSTUVWXYZABCDEFGHIJKLMNOPQ',
-        'F': 'STUVWXYZABCDEFGHIJKLMNOPQR',
-        'G': 'TUVWXYZABCDEFGHIJKLMNOPQRS',
-        'H': 'UVWXYZABCDEFGHIJKLMNOPQRST',
-        'I': 'VWXYZABCDEFGHIJKLMNOPQRSTU',
-        'J': 'WXYZABCDEFGHIJKLMNOPQRSTUV',
-        'K': 'XYZABCDEFGHIJKLMNOPQRSTUVW',
-        'L': 'YZABCDEFGHIJKLMNOPQRSTUVWX',
-        'M': 'ZABCDEFGHIJKLMNOPQRSTUVWXY',
-        'N': 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-        'O': 'BCDEFGHIJKLMNOPQRSTUVWXYZA',
-        'P': 'CDEFGHIJKLMNOPQRSTUVWXYZAB',
-        'Q': 'DEFGHIJKLMNOPQRSTUVWXYZABC',
-        'R': 'EFGHIJKLMNOPQRSTUVWXYZABCD',
-        'S': 'FGHIJKLMNOPQRSTUVWXYZABCDE',
-        'T': 'GHIJKLMNOPQRSTUVWXYZABCDEF',
-        'U': 'HIJKLMNOPQRSTUVWXYZABCDEFG',
-        'V': 'IJKLMNOPQRSTUVWXYZABCDEFGH',
-        'W': 'JKLMNOPQRSTUVWXYZABCDEFGHI',
-        'X': 'KLMNOPQRSTUVWXYZABCDEFGHIJ',
-        'Y': 'LMNOPQRSTUVWXYZABCDEFGHIJK',
-        'Z': 'MNOPQRSTUVWXYZABCDEFGHIJKL'
+        'AB': 'NOPQRSTUVWXYZABCDEFGHIJKLM',
+        'CD': 'OPQRSTUVWXYZNABCDEFGHIJKLM', 
+        'EF': 'PQRSTUVWXYZNOABCDEFGHIJKLM',
+        'GH': 'QRSTUVWXYZNOPABCDEFGHIJKLM',
+        'IJ': 'RSTUVWXYZNOPQABCDEFGHIJKLM',
+        'KL': 'STUVWXYZNOPQRABCDEFGHIJKLM',
+        'MN': 'TUVWXYZNOPQRSABCDEFGHIJKLM',
+        'OP': 'UVWXYZNOPQRSTABCDEFGHIJKLM',
+        'QR': 'VWXYZNOPQRSTUABCDEFGHIJKLM',
+        'ST': 'WXYZNOPQRSTUVABCDEFGHIJKLM',
+        'UV': 'XYZNOPQRSTUVWABCDEFGHIJKLM',
+        'WX': 'YZNOPQRSTUVWXABCDEFGHIJKLM',
+        'YZ': 'ZNOPQRSTUVWXYABCDEFGHIJKLM'
     };
 
-    // Generate a random 4-letter keyword
-    const keyword = Array.from({ length: 4 }, () => 
-        String.fromCharCode(65 + Math.floor(Math.random() * 26))
-    ).join('');
+    // Select a random keyword from the word bank
+    const keyword = portaKeywords[Math.floor(Math.random() * portaKeywords.length)];
 
-    // Clean the text
+    // Clean the text - remove all non-letters and convert to uppercase
     const cleanText = text.toUpperCase().replace(/[^A-Z]/g, '');
 
-    // Encrypt the text
+    // Encrypt the text using Porta cipher
     let encrypted = '';
     for (let i = 0; i < cleanText.length; i++) {
         const keywordChar = keyword[i % keyword.length];
         const textChar = cleanText[i];
-        const row = portaTable[keywordChar];
-        const col = textChar.charCodeAt(0) - 65;
-        encrypted += row[col];
+        
+        // Find which row in the Porta table to use based on the keyword character
+        // Each letter maps to a specific pair in the Porta table
+        const charToPair: { [key: string]: string } = {
+            'A': 'AB', 'B': 'AB',
+            'C': 'CD', 'D': 'CD',
+            'E': 'EF', 'F': 'EF',
+            'G': 'GH', 'H': 'GH',
+            'I': 'IJ', 'J': 'IJ',
+            'K': 'KL', 'L': 'KL',
+            'M': 'MN', 'N': 'MN',
+            'O': 'OP', 'P': 'OP',
+            'Q': 'QR', 'R': 'QR',
+            'S': 'ST', 'T': 'ST',
+            'U': 'UV', 'V': 'UV',
+            'W': 'WX', 'X': 'WX',
+            'Y': 'YZ', 'Z': 'YZ'
+        };
+        
+        const pair = charToPair[keywordChar];
+        const portaRow = portaTable[pair];
+        
+        // Porta's rule: A-M vs N-Z handling
+        const charCode = textChar.charCodeAt(0);
+        
+        let cipherChar;
+        if (charCode >= 65 && charCode <= 77) { // A-M (1-13)
+            // Find the plaintext letter in the header row (A-M), get cipher from key row
+            const headerRow = 'ABCDEFGHIJKLM';
+            const headerIndex = headerRow.indexOf(textChar);
+            cipherChar = portaRow[headerIndex];
+        } else { // N-Z (14-26)
+            // Find the plaintext letter in the key row, get cipher from header
+            const keyRowIndex = portaRow.indexOf(textChar);
+            const headerRow = 'ABCDEFGHIJKLM';
+            cipherChar = headerRow[keyRowIndex];
+        }
+        encrypted += cipherChar;
     }
 
     // Add spaces every 5 characters for readability

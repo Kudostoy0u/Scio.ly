@@ -1,0 +1,177 @@
+import React from 'react';
+import { QuoteData } from '../types';
+
+interface PrintConfigModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onPrint: () => void;
+  quotes: QuoteData[];
+  tournamentName: string;
+  setTournamentName: (name: string) => void;
+  questionPoints: {[key: number]: number};
+  setQuestionPoints: (points: {[key: number]: number}) => void;
+  darkMode: boolean;
+}
+
+export const PrintConfigModal: React.FC<PrintConfigModalProps> = ({
+  isOpen,
+  onClose,
+  onPrint,
+  quotes,
+  tournamentName,
+  setTournamentName,
+  questionPoints,
+  setQuestionPoints,
+  darkMode
+}) => {
+  if (!isOpen) return null;
+
+  const handlePointChange = (index: number, value: string) => {
+    const numValue = parseInt(value) || 0;
+    setQuestionPoints({
+      ...questionPoints,
+      [index]: numValue
+    });
+  };
+
+  const getSuggestedPoints = (quote: QuoteData) => {
+    return Math.round((quote.difficulty || 0.5) * 500);
+  };
+
+  const getCharCount = (quote: QuoteData) => {
+    return quote.encrypted.replace(/[^A-Z]/g, '').length;
+  };
+
+  return (
+    <div className={`fixed inset-0 z-50 flex items-center justify-center ${darkMode ? 'bg-black' : 'bg-black'}`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+      <div className={`max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'} rounded-lg shadow-xl`}>
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              Print Configuration
+            </h2>
+            <button
+              onClick={onClose}
+              className={`p-2 rounded-full hover:bg-opacity-20 ${darkMode ? 'hover:bg-white text-white' : 'hover:bg-gray-200 text-gray-600'}`}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Tournament Name */}
+          <div className="mb-6">
+            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              Tournament Name *
+            </label>
+            <input
+              type="text"
+              value={tournamentName}
+              onChange={(e) => setTournamentName(e.target.value)}
+              className={`w-full px-3 py-2 border rounded-md ${
+                darkMode 
+                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+              } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              placeholder="Enter tournament name"
+            />
+          </div>
+
+          {/* Print Warning */}
+          <div className={`mb-6 p-4 border-l-4 rounded-r-lg ${darkMode ? 'bg-yellow-900/30 border-yellow-400 text-yellow-200' : 'bg-yellow-50 border-yellow-500 text-yellow-800'}`}>
+            <div className="flex items-start">
+              <svg className="w-5 h-5 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <h4 className="font-semibold mb-1">Print Optimization Tip</h4>
+                <p className="text-sm">
+                  For optimal printing results, go to your browser&apos;s print options and disable headers and footers. 
+                  This will ensure clean page margins and proper formatting.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Question Points */}
+          <div className="mb-6">
+            <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              Question Point Values
+            </h3>
+            <div className="space-y-3">
+              {quotes.map((quote, index) => {
+                const charCount = getCharCount(quote);
+                const suggestedPoints = getSuggestedPoints(quote);
+                const currentPoints = questionPoints[index] || suggestedPoints;
+
+                return (
+                  <div key={index} className={`p-4 border rounded-lg ${darkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-200 bg-gray-50'}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Question {index + 1}
+                      </span>
+                      <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {quote.cipherType}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Characters: </span>
+                        <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{charCount}</span>
+                      </div>
+                      <div>
+                        <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Suggested: </span>
+                        <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{suggestedPoints}</span>
+                      </div>
+                      <div>
+                        <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Points: </span>
+                        <input
+                          type="number"
+                          value={currentPoints}
+                          onChange={(e) => handlePointChange(index, e.target.value)}
+                          min="1"
+                          max="1000"
+                          className={`w-16 px-2 py-1 border rounded text-center ${
+                            darkMode 
+                              ? 'bg-gray-600 border-gray-500 text-white' 
+                              : 'bg-white border-gray-300 text-gray-900'
+                          } focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={onClose}
+              className={`px-4 py-2 border rounded-md ${
+                darkMode 
+                  ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onPrint}
+              disabled={!tournamentName.trim()}
+              className={`px-4 py-2 rounded-md ${
+                !tournamentName.trim()
+                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              Print Test
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

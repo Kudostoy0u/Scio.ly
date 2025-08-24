@@ -1,29 +1,45 @@
 import React from 'react';
 import { FaShareAlt } from 'react-icons/fa';
-import { RefreshCcw } from 'lucide-react';
+import { RefreshCcw, Printer } from 'lucide-react';
 
 interface ShareButtonProps {
   onShare: () => void;
   onReset?: () => void;
+  onPrint?: () => void;
   isOffline?: boolean;
   darkMode?: boolean;
 }
 
-export const ShareButton: React.FC<ShareButtonProps> = ({ onShare, onReset, isOffline = false, darkMode = false }) => {
+export const ShareButton: React.FC<ShareButtonProps> = ({ onShare, onReset, onPrint, isOffline = false, darkMode = false }) => {
   return (
     <div className="flex justify-between items-center mb-4">
-      {onReset && (
-        <button
-          onClick={onReset}
-          title="Reset Test"
-          className={`flex items-center transition-all duration-200 ${
-            darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          <RefreshCcw className="w-4 h-4 mr-2" />
-          <span className="text-sm">Reset</span>
-        </button>
-      )}
+      <div className="flex items-center gap-4">
+        {onReset && (
+          <button
+            onClick={onReset}
+            title="Reset Test"
+            className={`flex items-center transition-all duration-200 ${
+              darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <RefreshCcw className="w-4 h-4 mr-2" />
+            <span className="text-sm">Reset</span>
+          </button>
+        )}
+        
+        {onPrint && (
+          <button
+            onClick={onPrint}
+            title="Print Questions"
+            className={`flex items-center transition-all duration-200 ${
+              darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Printer className="w-4 h-4 mr-2" />
+            <span className="text-sm">Print</span>
+          </button>
+        )}
+      </div>
       
       <button
         onClick={onShare}

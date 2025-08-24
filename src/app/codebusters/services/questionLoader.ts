@@ -174,27 +174,38 @@ export const loadQuestionsFromDatabase = async (
       
       if (nonXenocryptCount > 0) {
         if (storedEn.length < nonXenocryptCount) {
-          throw new Error(`Not enough offline English quotes. Need ${nonXenocryptCount}, got ${storedEn.length}`);
+          console.warn(`⚠️ Not enough offline English quotes. Need ${nonXenocryptCount}, got ${storedEn.length}. Using all available quotes.`);
+          // Use all available quotes instead of throwing an error
+          englishQuotes = storedEn;
+        } else {
+          englishQuotes = storedEn.slice(0, nonXenocryptCount);
         }
-        englishQuotes = storedEn.slice(0, nonXenocryptCount);
       }
       if (xenocryptCount > 0) {
         if (storedEs.length < xenocryptCount) {
-          throw new Error(`Not enough offline Spanish quotes. Need ${xenocryptCount}, got ${storedEs.length}`);
+          console.warn(`⚠️ Not enough offline Spanish quotes. Need ${xenocryptCount}, got ${storedEs.length}. Using all available quotes.`);
+          // Use all available quotes instead of throwing an error
+          spanishQuotes = storedEs;
+        } else {
+          spanishQuotes = storedEs.slice(0, xenocryptCount);
         }
-        spanishQuotes = storedEs.slice(0, xenocryptCount);
       }
     } else {
       // Online: try API first, fallback to offline
       try {
+        // Build character length range parameters if specified
+        const charLengthParams = testParams.charLengthMin && testParams.charLengthMax 
+          ? `&charLengthMin=${testParams.charLengthMin}&charLengthMax=${testParams.charLengthMax}`
+          : '';
+        
         if (nonXenocryptCount > 0) {
-          const englishResponse = await fetch(`/api/quotes?language=en&limit=${Math.min(nonXenocryptCount, 200)}`);
+          const englishResponse = await fetch(`/api/quotes?language=en&limit=${Math.min(nonXenocryptCount, 200)}${charLengthParams}`);
           if (!englishResponse.ok) throw new Error('en failed');
           const englishData = await englishResponse.json();
           englishQuotes = englishData.data?.quotes || englishData.quotes || [];
         }
         if (xenocryptCount > 0) {
-          const spanishResponse = await fetch(`/api/quotes?language=es&limit=${Math.min(xenocryptCount, 200)}`);
+          const spanishResponse = await fetch(`/api/quotes?language=es&limit=${Math.min(xenocryptCount, 200)}${charLengthParams}`);
           if (!spanishResponse.ok) throw new Error('es failed');
           const spanishData = await spanishResponse.json();
           spanishQuotes = spanishData.data?.quotes || spanishData.quotes || [];
@@ -222,25 +233,76 @@ export const loadQuestionsFromDatabase = async (
         
         if (nonXenocryptCount > 0) {
           if (storedEn.length < nonXenocryptCount) {
-            throw new Error(`Not enough offline English quotes. Need ${nonXenocryptCount}, got ${storedEn.length}`);
+            console.warn(`⚠️ Not enough offline English quotes in fallback. Need ${nonXenocryptCount}, got ${storedEn.length}. Using all available quotes.`);
+            // Use all available quotes instead of throwing an error
+            englishQuotes = storedEn;
+          } else {
+            englishQuotes = storedEn.slice(0, nonXenocryptCount);
           }
-          englishQuotes = storedEn.slice(0, nonXenocryptCount);
         }
         if (xenocryptCount > 0) {
           if (storedEs.length < xenocryptCount) {
-            throw new Error(`Not enough offline Spanish quotes. Need ${xenocryptCount}, got ${storedEs.length}`);
+            console.warn(`⚠️ Not enough offline Spanish quotes in fallback. Need ${xenocryptCount}, got ${storedEs.length}. Using all available quotes.`);
+            // Use all available quotes instead of throwing an error
+            spanishQuotes = storedEs;
+          } else {
+            spanishQuotes = storedEs.slice(0, xenocryptCount);
           }
-          spanishQuotes = storedEs.slice(0, xenocryptCount);
         }
       }
     }
 
-    // Verify we have enough quotes before processing
+    // Handle insufficient quotes gracefully
     if (nonXenocryptCount > 0 && englishQuotes.length < nonXenocryptCount) {
-      throw new Error(`Not enough English quotes. Need ${nonXenocryptCount}, got ${englishQuotes.length}`);
+      console.warn(`⚠️ Not enough English quotes in selected range. Need ${nonXenocryptCount}, got ${englishQuotes.length}. Trying fallback...`);
+      
+      // Try to fetch more quotes without character length restrictions
+      try {
+        const fallbackResponse = await fetch(`/api/quotes?language=en&limit=${Math.min(nonXenocryptCount, 200)}`);
+        if (fallbackResponse.ok) {
+          const fallbackData = await fallbackResponse.json();
+          const fallbackQuotes = fallbackData.data?.quotes || fallbackData.quotes || [];
+          if (fallbackQuotes.length >= nonXenocryptCount) {
+            englishQuotes = fallbackQuotes;
+            console.log(`✅ Fallback successful: Found ${fallbackQuotes.length} English quotes without length restrictions`);
+          } else {
+            throw new Error(`Not enough English quotes available. Your character length range (${testParams.charLengthMin || 1}-${testParams.charLengthMax || 100}) is too restrictive. Try expanding the range or reducing the number of questions. Available: ${englishQuotes.length}, needed: ${nonXenocryptCount}.`);
+          }
+        } else {
+          throw new Error(`Not enough English quotes available. Your character length range (${testParams.charLengthMin || 1}-${testParams.charLengthMax || 100}) is too restrictive. Try expanding the range or reducing the number of questions. Available: ${englishQuotes.length}, needed: ${nonXenocryptCount}.`);
+        }
+      } catch (fallbackError) {
+        if (fallbackError instanceof Error && fallbackError.message.includes('character length range')) {
+          throw fallbackError; // Re-throw our custom error message
+        }
+        throw new Error(`Not enough English quotes available. Your character length range (${testParams.charLengthMin || 1}-${testParams.charLengthMax || 100}) is too restrictive. Try expanding the range or reducing the number of questions. Available: ${englishQuotes.length}, needed: ${nonXenocryptCount}.`);
+      }
     }
+    
     if (xenocryptCount > 0 && spanishQuotes.length < xenocryptCount) {
-      throw new Error(`Not enough Spanish quotes. Need ${xenocryptCount}, got ${spanishQuotes.length}`);
+      console.warn(`⚠️ Not enough Spanish quotes in selected range. Need ${xenocryptCount}, got ${spanishQuotes.length}. Trying fallback...`);
+      
+      // Try to fetch more quotes without character length restrictions
+      try {
+        const fallbackResponse = await fetch(`/api/quotes?language=es&limit=${Math.min(xenocryptCount, 200)}`);
+        if (fallbackResponse.ok) {
+          const fallbackData = await fallbackResponse.json();
+          const fallbackQuotes = fallbackData.data?.quotes || fallbackData.quotes || [];
+          if (fallbackQuotes.length >= xenocryptCount) {
+            spanishQuotes = fallbackQuotes;
+            console.log(`✅ Fallback successful: Found ${fallbackQuotes.length} Spanish quotes without length restrictions`);
+          } else {
+            throw new Error(`Not enough Spanish quotes available. Your character length range (${testParams.charLengthMin || 1}-${testParams.charLengthMax || 100}) is too restrictive. Try expanding the range or reducing the number of questions. Available: ${spanishQuotes.length}, needed: ${xenocryptCount}.`);
+          }
+        } else {
+          throw new Error(`Not enough Spanish quotes available. Your character length range (${testParams.charLengthMin || 1}-${testParams.charLengthMax || 100}) is too restrictive. Try expanding the range or reducing the number of questions. Available: ${spanishQuotes.length}, needed: ${xenocryptCount}.`);
+        }
+      } catch (fallbackError) {
+        if (fallbackError instanceof Error && fallbackError.message.includes('character length range')) {
+          throw fallbackError; // Re-throw our custom error message
+        }
+        throw new Error(`Not enough Spanish quotes available. Your character length range (${testParams.charLengthMin || 1}-${testParams.charLengthMax || 100}) is too restrictive. Try expanding the range or reducing the number of questions. Available: ${spanishQuotes.length}, needed: ${xenocryptCount}.`);
+      }
     }
     
     console.log(`🔍 Quote validation passed: ${englishQuotes.length} English, ${spanishQuotes.length} Spanish quotes available`);
@@ -251,7 +313,16 @@ export const loadQuestionsFromDatabase = async (
     let englishQuoteIndex = 0;
     let spanishQuoteIndex = 0;
 
-    for (let i = 0; i < questionCount; i++) {
+    // Calculate how many questions we can actually create with available quotes
+    const availableEnglishQuotes = englishQuotes.length;
+    const availableSpanishQuotes = spanishQuotes.length;
+    const actualQuestionCount = Math.min(questionCount, availableEnglishQuotes + availableSpanishQuotes);
+    
+    if (actualQuestionCount < questionCount) {
+      console.warn(`⚠️ Not enough quotes available. Requested ${questionCount} questions, but only ${actualQuestionCount} can be created.`);
+    }
+    
+    for (let i = 0; i < actualQuestionCount; i++) {
       const cipherType = questionCipherTypes[i];
       // Normalize cipher type to handle case sensitivity
       const normalizedCipherType = cipherType.split(' ').map(word => 
@@ -262,22 +333,39 @@ export const loadQuestionsFromDatabase = async (
       if (cipherType === 'Xenocrypt') {
         // Use Spanish quote for xenocrypt
         if (spanishQuoteIndex >= spanishQuotes.length) {
-          throw new Error(`Not enough Spanish quotes available for xenocrypt questions. Need ${xenocryptCount}, got ${spanishQuotes.length}`);
+          console.warn(`⚠️ Not enough Spanish quotes for xenocrypt. Using English quote instead.`);
+          // Fallback to English quote if no Spanish quotes available
+          if (englishQuoteIndex >= englishQuotes.length) {
+            console.warn(`⚠️ No more quotes available. Stopping at ${i} questions.`);
+            break;
+          }
+          const englishQuote = englishQuotes[englishQuoteIndex];
+          quoteData = { 
+            quote: englishQuote.quote, 
+            author: englishQuote.author, 
+            originalIndex: englishQuoteIndex,
+            isSpanish: false,
+            id: englishQuote.id
+          };
+          quoteUUIDs.push({ id: englishQuote.id, language: 'en', cipherType });
+          englishQuoteIndex++;
+        } else {
+          const spanishQuote = spanishQuotes[spanishQuoteIndex];
+          quoteData = { 
+            quote: spanishQuote.quote, 
+            author: spanishQuote.author, 
+            originalIndex: spanishQuoteIndex,
+            isSpanish: true,
+            id: spanishQuote.id
+          };
+          quoteUUIDs.push({ id: spanishQuote.id, language: 'es', cipherType });
+          spanishQuoteIndex++;
         }
-        const spanishQuote = spanishQuotes[spanishQuoteIndex];
-        quoteData = { 
-          quote: spanishQuote.quote, 
-          author: spanishQuote.author, 
-          originalIndex: spanishQuoteIndex,
-          isSpanish: true,
-          id: spanishQuote.id
-        };
-        quoteUUIDs.push({ id: spanishQuote.id, language: 'es', cipherType });
-        spanishQuoteIndex++;
       } else {
         // Use English quote for non-xenocrypt
         if (englishQuoteIndex >= englishQuotes.length) {
-          throw new Error(`Not enough English quotes available for non-xenocrypt questions. Need ${nonXenocryptCount}, got ${englishQuotes.length}`);
+          console.warn(`⚠️ Not enough English quotes. Stopping at ${i} questions.`);
+          break;
         }
         const englishQuote = englishQuotes[englishQuoteIndex];
         quoteData = { 

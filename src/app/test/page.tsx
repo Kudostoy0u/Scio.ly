@@ -87,5 +87,8 @@ const baseRouterData = {
   idPercentage,
 };
 
-return <Content initialData={initialData} initialRouterData={{ ...(initialRouterData || {}), ...baseRouterData }} />;
+// Use stable object to prevent unnecessary re-renders
+const finalRouterData = initialRouterData || baseRouterData;
+
+return <Content initialData={initialData} initialRouterData={finalRouterData} />;
 }

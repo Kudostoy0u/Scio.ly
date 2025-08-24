@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { supabase } from '@/lib/supabase';
@@ -36,6 +36,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const fetchStartedRef = useRef(false);
+  const fetchCompletedRef = useRef(false);
   const [data, setData] = useState<Question[]>(Array.isArray(initialData) ? initialData as Question[] : []);
   const [routerData, setRouterData] = useState<RouterParams>(initialRouterData || {});
   const [userAnswers, setUserAnswers] = useState<Record<number, (string | null)[] | null>>({});
@@ -58,6 +59,12 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   const [gradingFRQs, setGradingFRQs] = useState<Record<number, boolean>>({});
   const [isResetting, setIsResetting] = useState(false);
 
+  // Create stable router data to prevent unnecessary re-renders
+  const routerDataKey = JSON.stringify(initialRouterData);
+  const stableRouterData = useMemo(() => {
+    return initialRouterData || {};
+  }, [routerDataKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Initialize component
   useEffect(() => {
     setIsMounted(true);
@@ -79,20 +86,16 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     // Clear any existing bookmarked state that might interfere
     localStorage.removeItem('testFromBookmarks');
     
-    // Reset fetchStartedRef if we have router data but no data yet
-    if (initialRouterData && Object.keys(initialRouterData).length > 0 && data.length === 0) {
-      fetchStartedRef.current = false;
-    }
-    
-    if (fetchStartedRef.current || data.length > 0) {
+    // Prevent duplicate fetching with multiple guards
+    if (fetchStartedRef.current || fetchCompletedRef.current || data.length > 0 || isLoading === false) {
       return;
     }
     
     fetchStartedRef.current = true;
 
-    // Prefer initialRouterData from server. Fallback to localStorage.
+    // Prefer stableRouterData from server. Fallback to localStorage.
     const storedParams = localStorage.getItem('testParams');
-    const routerParams = initialRouterData || (storedParams ? JSON.parse(storedParams) : {});
+    const routerParams = stableRouterData || (storedParams ? JSON.parse(storedParams) : {});
     if (!routerParams || Object.keys(routerParams).length === 0) {
       router.push('/');
       return;
@@ -125,6 +128,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     if (Array.isArray(initialData) && initialData.length > 0) {
       setData(initialData as Question[]);
       setIsLoading(false);
+      fetchCompletedRef.current = true;
       return;
     }
 
@@ -132,6 +136,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
       const parsedQuestions = JSON.parse(storedQuestions);
       setData(parsedQuestions);
       setIsLoading(false);
+      fetchCompletedRef.current = true;
       return;
     }
 
@@ -155,6 +160,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           setFetchError('Failed to load bookmarked questions.');
         } finally {
           setIsLoading(false);
+          fetchCompletedRef.current = true;
         }
       }
     };
@@ -370,12 +376,13 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         setFetchError('Failed to load questions. Please try again later.');
       } finally {
         setIsLoading(false);
+        fetchCompletedRef.current = true;
       }
     };
   
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router, initialData, initialRouterData]);
+  }, [router, initialData, stableRouterData]);
 
   // Timer logic (for non-shared tests, decrement from stored timeLeft only while mounted)
   useEffect(() => {
@@ -939,9 +946,13 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   };
 
   const handleQuestionRemoved = (questionIndex: number) => {
+    // Use a more robust approach to prevent DOM manipulation errors
     setData(prevData => {
       const newData = prevData.filter((_, index) => index !== questionIndex);
-      localStorage.setItem('testQuestions', JSON.stringify(newData));
+      // Update localStorage after state update to ensure consistency
+      setTimeout(() => {
+        localStorage.setItem('testQuestions', JSON.stringify(newData));
+      }, 0);
       return newData;
     });
 
@@ -957,7 +968,10 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         }
       });
       
-      localStorage.setItem('testUserAnswers', JSON.stringify(newAnswers));
+      // Update localStorage after state update
+      setTimeout(() => {
+        localStorage.setItem('testUserAnswers', JSON.stringify(newAnswers));
+      }, 0);
       return newAnswers;
     });
 

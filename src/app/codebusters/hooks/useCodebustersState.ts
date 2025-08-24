@@ -64,6 +64,9 @@ export const useCodebustersState = () => {
   const [hintCounts, setHintCounts] = useState<{[questionIndex: number]: number}>({});
   const [infoModalOpen, setInfoModalOpen] = useState(false);
   const [selectedCipherType, setSelectedCipherType] = useState<string>('');
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [tournamentName, setTournamentName] = useState('');
+  const [questionPoints, setQuestionPoints] = useState<{[key: number]: number}>({});
 
   // Load data from localStorage on component mount
   useEffect(() => {
@@ -227,6 +230,12 @@ export const useCodebustersState = () => {
     setInfoModalOpen,
     selectedCipherType,
     setSelectedCipherType,
+    printModalOpen,
+    setPrintModalOpen,
+    tournamentName,
+    setTournamentName,
+    questionPoints,
+    setQuestionPoints,
     // Utilities
     loadPreferences
   };

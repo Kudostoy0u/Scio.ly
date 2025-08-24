@@ -8,14 +8,19 @@ export const useProgressCalculation = (quotes: QuoteData[]) => {
       const totalLetters = [...new Set(quote.encrypted.match(/[A-Z]/g) || [])].length;
       const filledLetters = quote.solution ? Object.keys(quote.solution).length : 0;
       return totalLetters > 0 ? (filledLetters / totalLetters) * 100 : 0;
-    } else if (quote.cipherType === 'Hill 2x2' || quote.cipherType === 'Hill 3x3') {
-      // For Hill cipher
-      const matrixSize = quote.cipherType === 'Hill 3x3' ? 9 : 4; // 3x3 = 9 cells, 2x2 = 4 cells
+    } else if (quote.cipherType === 'Hill 2x2') {
+      // For Hill 2x2 cipher
+      const matrixSize = 4; // 2x2 = 4 cells
       const matrixProgress = quote.hillSolution?.matrix.reduce((acc, row) => 
         acc + row.filter(cell => cell !== '').length, 0) || 0;
       const plaintextProgress = Object.keys(quote.hillSolution?.plaintext || {}).length / 
         (quote.encrypted.match(/[A-Z]/g)?.length || 1);
       return ((matrixProgress / matrixSize) * 50) + (plaintextProgress * 50); // Weight matrix and plaintext equally
+    } else if (quote.cipherType === 'Hill 3x3') {
+      // For Hill 3x3 cipher, only count plaintext letters as progress
+      const plaintextProgress = Object.keys(quote.hillSolution?.plaintext || {}).length / 
+        (quote.encrypted.match(/[A-Z]/g)?.length || 1);
+      return plaintextProgress * 100;
     } else if (quote.cipherType === 'Complete Columnar') {
       // For Complete Columnar, calculate progress based on decrypted text length
       const originalLength = quote.quote.toUpperCase().replace(/[^A-Z]/g, '').length;

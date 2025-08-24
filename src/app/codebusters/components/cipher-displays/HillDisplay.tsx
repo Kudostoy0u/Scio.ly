@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { QuoteData } from '../../types';
 import { numberToLetter } from '../../cipher-utils';
@@ -44,8 +44,10 @@ export const HillDisplay = ({
     }, [is3x3, quote.decryptionMatrix, solution?.matrix, onSolutionChange]);
     
     // Create a mapping of positions to correct letters, preserving spaces and punctuation
-    const correctMapping: { [key: number]: string } = {};
-    if (isTestSubmitted) {
+    const correctMapping = useMemo(() => {
+        const mapping: { [key: number]: string } = {};
+        if (!isTestSubmitted) return mapping;
+        
         const originalQuote = quote.quote.toUpperCase();
         let plainTextIndex = 0;
         
@@ -54,7 +56,7 @@ export const HillDisplay = ({
             if (/[A-Z]/.test(text[i])) {
                 while (plainTextIndex < originalQuote.length) {
                     if (/[A-Z]/.test(originalQuote[plainTextIndex])) {
-                        correctMapping[i] = originalQuote[plainTextIndex];
+                        mapping[i] = originalQuote[plainTextIndex];
                         plainTextIndex++;
                         break;
                     }
@@ -62,7 +64,38 @@ export const HillDisplay = ({
                 }
             }
         }
-    }
+        return mapping;
+    }, [isTestSubmitted, quote.quote, text]);
+
+    // Determine padding positions for Hill ciphers
+    const paddingPositions = useMemo(() => {
+        const positions = new Set<number>();
+        if (!isTestSubmitted) return positions;
+
+        // Collect original indices of all cipher letters (A-Z)
+        const cipherLetterIndices: number[] = [];
+        for (let i = 0; i < text.length; i++) {
+            if (/[A-Z]/.test(text[i])) cipherLetterIndices.push(i);
+        }
+
+        // Count alphabetic characters in the original quote
+        const cleanPlainLength = quote.quote.toUpperCase().replace(/[^A-Z]/g, '').length;
+
+        // For Hill ciphers, we need to determine how many padding letters were added
+        // The ciphertext length should be divisible by the matrix size
+        const requiredLength = Math.ceil(cleanPlainLength / matrixSize) * matrixSize;
+        const paddingCount = requiredLength - cleanPlainLength;
+
+        if (paddingCount === 0) return positions;
+
+        // Mark the last paddingCount cipher-letter indices as padding
+        const start = Math.max(0, cipherLetterIndices.length - paddingCount);
+        for (let idx = start; idx < cipherLetterIndices.length; idx++) {
+            positions.add(cipherLetterIndices[idx]);
+        }
+
+        return positions;
+    }, [isTestSubmitted, quote.quote, text, matrixSize]);
 
     return (
         <div className="font-mono">
@@ -135,6 +168,9 @@ export const HillDisplay = ({
                     const value = solution?.plaintext?.[i] || '';
                     const correctLetter = isTestSubmitted && isLetter ? correctMapping[i] : '';
                     const isCorrect = value.toUpperCase() === correctLetter;
+                    
+                    // Treat the last N cipher-letter inputs as padding after submission
+                    const isPadding = isLetter && isTestSubmitted && paddingPositions.has(i);
 
                     return (
                         <div key={i} className="flex flex-col items-center mx-0.5">
@@ -155,18 +191,29 @@ export const HillDisplay = ({
                                             onSolutionChange('plaintext', newPlaintext);
                                         }}
                                         className={`w-5 h-5 sm:w-6 sm:h-6 text-center border rounded mt-1 text-xs sm:text-sm ${
-                                            darkMode 
-                                                ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
-                                                : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
+                                            isPadding
+                                                ? (darkMode 
+                                                    ? 'bg-gray-700 border-gray-500 text-gray-400' 
+                                                    : 'bg-gray-200 border-gray-300 text-gray-500')
+                                                : (darkMode 
+                                                    ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
+                                                    : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500')
                                         } ${
-                                            isTestSubmitted
+                                            isTestSubmitted && !isPadding
                                                 ? isCorrect
                                                     ? 'border-green-500 bg-green-100/10'
                                                     : 'border-red-500 bg-red-100/10'
                                                 : ''
                                         }`}
                                     />
-                                    {isTestSubmitted && !isCorrect && correctLetter && (
+                                    {isTestSubmitted && isPadding && (
+                                        <div className={`absolute top-8 sm:top-10 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs ${
+                                            darkMode ? 'text-gray-400' : 'text-gray-500'
+                                        }`}>
+                                            X
+                                        </div>
+                                    )}
+                                    {isTestSubmitted && !isPadding && !isCorrect && correctLetter && (
                                         <div className={`absolute top-8 sm:top-10 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs ${
                                             darkMode ? 'text-red-400' : 'text-red-600'
                                         }`}>

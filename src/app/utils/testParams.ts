@@ -12,6 +12,8 @@ export type TestParams = {
   tournament: string;
   subtopics: string[];
   idPercentage?: number;
+  charLengthMin?: number;
+  charLengthMax?: number;
 };
 
 function normalizeArray(values: string[] | undefined): string[] {
@@ -31,6 +33,12 @@ export function buildTestParams(eventName: string, settings: Settings): TestPara
   const normalizedIdPct = typeof settings.idPercentage === 'number'
     ? Math.max(0, Math.min(100, settings.idPercentage))
     : undefined;
+  const normalizedCharLengthMin = typeof settings.charLengthMin === 'number'
+    ? Math.max(10, Math.min(200, settings.charLengthMin))
+    : undefined;
+  const normalizedCharLengthMax = typeof settings.charLengthMax === 'number'
+    ? Math.max(10, Math.min(200, settings.charLengthMax))
+    : undefined;
 
   return {
     eventName,
@@ -42,6 +50,8 @@ export function buildTestParams(eventName: string, settings: Settings): TestPara
     tournament: settings.tournament || 'any',
     subtopics: normalizeArray(settings.subtopics),
     idPercentage: normalizedIdPct,
+    charLengthMin: normalizedCharLengthMin,
+    charLengthMax: normalizedCharLengthMax,
   };
 }
 

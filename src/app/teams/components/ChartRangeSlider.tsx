@@ -143,7 +143,7 @@ const ChartRangeSlider: React.FC<ChartRangeSliderProps> = ({
           
           {/* Active range track */}
           <div
-            className={`absolute h-1 rounded-full bg-blue-500 transition-all duration-200`}
+            className={`absolute h-1 rounded-full bg-blue-500 ${isDragging ? '' : 'transition-all duration-200'}`}
             style={{
               left: `${startPercentage}%`,
               width: `${endPercentage - startPercentage}%`
@@ -152,7 +152,9 @@ const ChartRangeSlider: React.FC<ChartRangeSliderProps> = ({
           
           {/* Start thumb */}
           <div
-            className={`absolute w-4 h-4 rounded-full border-2 cursor-grab active:cursor-grabbing transform -translate-x-1/2 transition-all duration-200 shadow-lg touch-none ${
+            className={`absolute w-4 h-4 rounded-full border-2 cursor-grab active:cursor-grabbing transform -translate-x-1/2 shadow-lg touch-none ${
+              isDragging ? '' : 'transition-all duration-200'
+            } ${
               darkMode 
                 ? 'bg-white border-blue-400 hover:border-blue-300 hover:shadow-xl' 
                 : 'bg-white border-blue-500 hover:border-blue-600 hover:shadow-xl'
@@ -164,7 +166,9 @@ const ChartRangeSlider: React.FC<ChartRangeSliderProps> = ({
           
           {/* End thumb */}
           <div
-            className={`absolute w-4 h-4 rounded-full border-2 cursor-grab active:cursor-grabbing transform -translate-x-1/2 transition-all duration-200 shadow-lg touch-none ${
+            className={`absolute w-4 h-4 rounded-full border-2 cursor-grab active:cursor-grabbing transform -translate-x-1/2 shadow-lg touch-none ${
+              isDragging ? '' : 'transition-all duration-200'
+            } ${
               darkMode 
                 ? 'bg-white border-blue-400 hover:border-blue-300 hover:shadow-xl' 
                 : 'bg-white border-blue-500 hover:border-blue-600 hover:shadow-xl'

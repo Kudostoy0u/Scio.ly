@@ -1,5 +1,5 @@
 'use client';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { QuoteData } from '../../types';
 
@@ -23,6 +23,7 @@ export const FractionatedMorseDisplay = ({
     onSolutionChange
 }: FractionatedMorseDisplayProps) => {
     const { darkMode } = useTheme();
+    const [focusedCipherLetter, setFocusedCipherLetter] = useState<string | null>(null);
 
     // Create mapping for correct answers
     const correctMapping: { [key: string]: string } = {};
@@ -136,6 +137,7 @@ export const FractionatedMorseDisplay = ({
                     const value = solution?.[char] || '';
                     const isCorrect = isTestSubmitted && correctMapping[char] && value.toLowerCase() === correctMapping[char].toLowerCase();
                     const showCorrectAnswer = isTestSubmitted && isLetter;
+                    const isSameCipherLetter = isLetter && focusedCipherLetter === char;
                     
                     return (
                         <div key={i} className="flex flex-col items-center mx-0.5">
@@ -149,6 +151,8 @@ export const FractionatedMorseDisplay = ({
                                         maxLength={3}
                                         value={value}
                                         disabled={isTestSubmitted}
+                                        onFocus={() => setFocusedCipherLetter(char)}
+                                        onBlur={() => setFocusedCipherLetter(null)}
                                         onChange={(e) => {
                                             const inputValue = e.target.value;
                                             // Filter to only allow dots, dashes, and x (case insensitive)
@@ -180,9 +184,11 @@ export const FractionatedMorseDisplay = ({
                                             }
                                         }}
                                         className={`w-8 h-5 sm:w-10 sm:h-6 text-center border rounded mt-1 text-xs sm:text-sm ${
-                                            darkMode 
-                                                ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
-                                                : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
+                                            isSameCipherLetter
+                                                ? 'border-2 border-blue-500'
+                                                : darkMode 
+                                                    ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
+                                                    : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
                                         } ${
                                             showCorrectAnswer
                                                 ? isCorrect
@@ -288,6 +294,8 @@ export const FractionatedMorseDisplay = ({
                                                 type="text"
                                                 maxLength={1}
                                                 value={replacementValue}
+                                                onFocus={() => setFocusedCipherLetter(replacementValue)}
+                                                onBlur={() => setFocusedCipherLetter(null)}
                                                 onChange={(e) => {
                                                     const newLetter = e.target.value.toUpperCase();
                                                     
@@ -309,7 +317,9 @@ export const FractionatedMorseDisplay = ({
                                                     // Then trigger the morse code filling
                                                     handleReplacementTableChange(triplet, e.target.value);
                                                 }}
-                                                className={`w-full text-center text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-900'} border-0 focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                                                className={`w-full text-center text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-900'} focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                                                    focusedCipherLetter === replacementValue ? 'border-2 border-blue-500' : 'border-0'
+                                                }`}
                                                 placeholder=""
                                                 disabled={isTestSubmitted}
                                             />
