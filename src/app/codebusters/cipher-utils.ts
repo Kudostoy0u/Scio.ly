@@ -844,17 +844,22 @@ export const encryptFractionatedMorse = (text: string): { encrypted: string; key
         'Y': '-.--', 'Z': '--..'
     };
     
-    // Strip text of all non-alphabet letters and convert to uppercase
-    const cleanText = text.toUpperCase().replace(/[^A-Z]/g, '');
-    
-    
-    
-    // Convert to morse code with x to separate letters
+    // Split text into words and convert to uppercase, keeping only letters
+    const words = text.toUpperCase().split(/\s+/).map(word => word.replace(/[^A-Z]/g, '')).filter(word => word.length > 0);
+
+    // Convert to morse code with 'x' to separate letters and add one extra 'x' between words
     let morseString = '';
-    for (let i = 0; i < cleanText.length; i++) {
-        const char = cleanText[i];
-        if (morseMap[char]) {
-            morseString += morseMap[char] + 'x';
+    for (let wi = 0; wi < words.length; wi++) {
+        const word = words[wi];
+        for (let i = 0; i < word.length; i++) {
+            const char = word[i];
+            if (morseMap[char]) {
+                morseString += morseMap[char] + 'x';
+            }
+        }
+        // Add one extra 'x' between words (but not after the last word)
+        if (wi < words.length - 1) {
+            morseString += 'x';
         }
     }
     

@@ -576,7 +576,7 @@ export default function CodeBusters() {
                     />
 
                     {/* Inline back link to Practice */}
-                    <div className="w-full max-w-3xl mt-0 mb-3">
+                    <div className="w-full max-w-[80vw] mt-0 mb-3">
                       <button
                         onClick={handleBack}
                         className={`group inline-flex items-center text-base font-medium ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}
@@ -598,7 +598,7 @@ export default function CodeBusters() {
                         </div>
                     ) : (
                         <div
-                            className={`sticky top-4 z-10 w-full max-w-3xl bg-white border-2 border-gray-300 rounded-full h-5 mb-6 shadow-lg`}
+                            className={`sticky top-4 z-10 w-full max-w-[80vw] bg-white border-2 border-gray-300 rounded-full h-5 mb-6 shadow-lg`}
                         >
                             <div
                                 className="bg-blue-500 h-4 rounded-full transition-[width] duration-700 ease-in-out shadow-md"
@@ -608,7 +608,7 @@ export default function CodeBusters() {
                     )}
 
                     <main
-                        className={`w-full max-w-3xl rounded-lg shadow-md p-6 mt-4 ${
+                        className={`w-full max-w-[80vw] rounded-lg shadow-md p-6 mt-4 ${
                             darkMode ? 'bg-gray-800' : 'bg-white'
                         }`}
                     >

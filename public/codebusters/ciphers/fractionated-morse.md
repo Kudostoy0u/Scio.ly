@@ -2,13 +2,14 @@
 
 ## Explanation
 Fractionated Morse combines International Morse code with a simple substitution on fixed-size chunks of Morse symbols. The process:
-1) Convert normalized plaintext to Morse code, separating Morse letters with a special separator symbol (commonly `x`).
+1) Convert normalized plaintext to Morse code, separating Morse letters with a special separator symbol (commonly `x`) and adding an additional `x` between words to create word boundaries (resulting in two consecutive `x` characters).
 2) Read the entire Morse stream left-to-right and cut it into triplets of characters (., -, x). Pad with trailing `x` if needed so the length is divisible by 3.
 3) Substitute each triplet with a letter using a 26-letter fractionation table, producing the final ciphertext.
 
 Key facts
 - Alphabet: A–Z only; punctuation removed before Morse conversion in many implementations.
-- Letter separator: `x` is used between Morse letters in this app’s generator.
+- Letter separator: `x` is used between Morse letters within words in this app's generator.
+- Word separator: An additional `x` is added between words, creating word boundaries with two consecutive `x` characters.
 - Triplets: Every 3 symbols of the Morse stream form a unit; repeated triplets map to the same letter.
 - Table: The mapping from triplet → letter is a permutation of A–Z established per-quote (shown in the UI as the Replacement Table columns).
 - Decoding is unique once you know the triplet table or can reconstruct the Morse stream correctly.
@@ -28,9 +29,9 @@ Morse code:       .    -    x
 ## How Decryption Works (Given the Table)
 1) For each ciphertext letter, look up its triplet from the table.
 2) Concatenate all triplets to reconstruct the full Morse string.
-3) Split Morse at the separator `x` to get per-letter Morse codes.
+3) Split Morse at the separator `x` to get per-letter Morse codes, and identify word boundaries where two consecutive `x` characters occur.
 4) Translate each Morse code to A–Z using the Morse table.
-5) Join letters to recover plaintext.
+5) Join letters to recover plaintext, preserving word boundaries where double `x` was found.
 
 Because the fractionation table is a bijection over the set of triplets that actually occur, this process is reversible and deterministic for a given quote.
 
@@ -74,19 +75,21 @@ Example 3: Confirming a decoded word
 - Triplet alphabet size: There are up to 3^3 = 27 possible triplets from {., -, x}; only 26 letters exist, so at most 26 triplets are assigned. In practice, the generator only assigns letters to triplets that occur in the text.
 - Table consistency: The mapping triplet→letter is one-to-one among used triplets; the inverse letter→triplet is used during checking and the Replacement Table UI.
 - Separator variants: Some sources use `/` or a space between Morse letters; this implementation uses `x` consistently.
-- Word separation: In plain Morse, `/` or `x x` could serve as inter-word spacing; here, word spaces are removed before Morse, so recovered plaintext has no original word spacing unless the puzzle re-inserts it.
+- Word separation: In this implementation, an additional `x` is added between words, creating word boundaries with two consecutive `x` characters, allowing the recovered plaintext to maintain the original word spacing.
 
 ## Common Mistakes
 - Forgetting to include separators: Without `x`, adjacent Morse letters run together and become ambiguous.
+- Confusing letter separators (`x`) with word separators (double `x`): `x` separates letters within words, double `x` separates words.
 - Using invalid characters in triplets: Only `.`, `-`, and `x` are valid.
 - Assuming the fractionation table is standard: It is generated per-quote; do not reuse between puzzles.
 - Ignoring padding: You must pad with `x` until length % 3 == 0 during encryption, and you may see extraneous `x` at the end during decryption.
 
 ## Quick Reference
-- Separator: `x` between Morse letters.
+- Letter separator: `x` between Morse letters within words.
+- Word separator: Additional `x` between words (creates double `x` boundaries).
 - Chunking: 3-symbol triplets over {., -, x}.
 - Table: triplet → letter, permutation of A–Z for used triplets.
-- Decoding: ciphertext → triplets → Morse (split by `x`) → plaintext.
+- Decoding: ciphertext → triplets → Morse (split by `x`, word boundaries at double `x`) → plaintext.
 
 ## Practice Exercises
 1) Decrypt given fractionated Morse with known table:
