@@ -1,7 +1,6 @@
 'use client';
 import { useCallback } from 'react';
 import { QuoteData } from '../types';
-import { toast } from 'react-toastify';
 
 export const useHintSystem = (
   quotes: QuoteData[],
@@ -104,14 +103,19 @@ export const useHintSystem = (
     const cipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
     const plainText = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
 
-    // Special handling for Baconian: crib = smallest word (>=3 letters) from the quote
+    // Special handling for Baconian: first hint = binary type, second hint = crib
     if (quote.cipherType === 'Baconian') {
-      const words = (quote.quote.match(/[A-Za-z]+/g) || [])
-        .map(w => w.toUpperCase())
-        .filter(w => w.length >= 3)
-        .sort((a, b) => a.length - b.length);
-      if (words.length > 0) {
-        return `Crib: ${words[0]}`;
+      const currentHintCount = hintCounts[quotes.indexOf(quote)] || 0;
+      if (currentHintCount === 0 && (quote as any).baconianBinaryType) {
+        return `Binary Type: ${(quote as any).baconianBinaryType}`;
+      } else if (currentHintCount >= 1) {
+        const words = (quote.quote.match(/[A-Za-z]+/g) || [])
+          .map(w => w.toUpperCase())
+          .filter(w => w.length >= 3)
+          .sort((a, b) => a.length - b.length);
+        if (words.length > 0) {
+          return `Crib: ${words[0]}`;
+        }
       }
       // Fallback to existing logic if no words found
     }
@@ -168,8 +172,8 @@ export const useHintSystem = (
     crib = findWordCrib(cipherText, plainText);
     if (crib) return `Crib: ${crib}`;
 
-    // For Spanish text (Xenocrypt)
-    if (quote.cipherType === 'Xenocrypt') {
+    // For Spanish text (Xenocrypt variants)
+    if (quote.cipherType === 'Random Xenocrypt' || quote.cipherType === 'K1 Xenocrypt' || quote.cipherType === 'K2 Xenocrypt') {
       crib = findSpanishWordCrib(cipherText, plainText);
       if (crib) return `Crib: ${crib}`;
     }
@@ -178,7 +182,7 @@ export const useHintSystem = (
     if (crib) return `Crib: ${crib}`;
 
     return 'No crib found';
-  }, [activeHints, quotes]);
+  }, [activeHints, quotes, hintCounts]);
 
   // Reveal next hint step; for Baconian, reveal sequentially after crib
   const revealRandomLetter = useCallback((questionIndex: number) => {
@@ -190,11 +194,6 @@ export const useHintSystem = (
     const newHintCount = currentHintCount + 1;
     const newHintCounts = { ...hintCounts, [questionIndex]: newHintCount };
     setHintCounts(newHintCounts);
-
-    // Warn on the 3rd hinted letter: subsequent letters (4th and beyond) will be marked as skipped
-    if (newHintCount === 3) {
-      toast.warning("You've been given three letters. Any additional letters will be marked as skipped.");
-    }
 
     // Checkerboard: reveal a random unsolved token's plaintext
     if (quote.cipherType === 'Checkerboard') {
@@ -374,8 +373,8 @@ export const useHintSystem = (
       }
       const plainIndex = (aInverse * (cipherIndex - quote.affineB + 26)) % 26;
       correctPlainLetter = String.fromCharCode(plainIndex + 65);
-    } else if (quote.key && ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat'].includes(quote.cipherType)) {
-      // For aristocrat/patristocrat ciphers, find the plain letter from the key
+    } else if (quote.key && ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Random Xenocrypt'].includes(quote.cipherType)) {
+      // For aristocrat/patristocrat/xenocrypt ciphers, find the plain letter from the key
       const keyIndex = quote.key.indexOf(randomCipherLetter);
       if (keyIndex !== -1) {
         correctPlainLetter = String.fromCharCode(keyIndex + 65);
@@ -411,8 +410,8 @@ export const useHintSystem = (
           break;
         }
       }
-    } else if (quote.cipherType === 'Xenocrypt') {
-      // For Xenocrypt, handle Spanish text normalization
+    } else if (quote.cipherType === 'Random Xenocrypt' || quote.cipherType === 'K1 Xenocrypt' || quote.cipherType === 'K2 Xenocrypt') {
+      // For Xenocrypt variants, handle Spanish text normalization
       const normalizedOriginal = quote.quote.toUpperCase()
         .replace(/Á/g, 'A')
         .replace(/É/g, 'E')
@@ -462,17 +461,15 @@ export const useHintSystem = (
       };
       setRevealedLetters(newRevealedLetters);
 
-      // Track if this letter was revealed by a hint (after 3rd hint)
-      if (newHintCount > 3) {
-        const newHintedLetters = {
-          ...hintedLetters,
-          [questionIndex]: {
-            ...hintedLetters[questionIndex],
-            [randomCipherLetter]: true
-          }
-        };
-        setHintedLetters(newHintedLetters);
-      }
+      // Track if this letter was revealed by a hint (all substitutions count as skipped)
+      const newHintedLetters = {
+        ...hintedLetters,
+        [questionIndex]: {
+          ...hintedLetters[questionIndex],
+          [randomCipherLetter]: true
+        }
+      };
+      setHintedLetters(newHintedLetters);
 
       // Update the quotes state to reflect the revealed letter
       const newQuotes = quotes.map((q, idx) => {
@@ -513,6 +510,41 @@ export const useHintSystem = (
     const quote = quotes[questionIndex];
     if (!quote) return;
 
+    // Special handling for Baconian: first click shows binary type, second shows crib
+    if (quote.cipherType === 'Baconian') {
+      const currentHintCount = hintCounts[questionIndex] || 0;
+      if (currentHintCount === 0) {
+        // First click: show binary type
+        setActiveHints({
+          ...activeHints,
+          [questionIndex]: true
+        });
+        // Increment hint count
+        const newHintCounts = { ...hintCounts, [questionIndex]: 1 };
+        setHintCounts(newHintCounts);
+      } else if (currentHintCount === 1) {
+        // Second click: show crib
+        const words = (quote.quote.match(/[A-Za-z]+/g) || [])
+          .map(w => w.toUpperCase())
+          .filter(w => w.length >= 3)
+          .sort((a, b) => a.length - b.length);
+        if (words.length > 0) {
+          // Show the crib
+          setActiveHints({
+            ...activeHints,
+            [questionIndex]: true
+          });
+        } else {
+          // If no crib available, reveal a random letter
+          revealRandomLetter(questionIndex);
+        }
+      } else {
+        // Third click and beyond: reveal random letters
+        revealRandomLetter(questionIndex);
+      }
+      return;
+    }
+
     // Check if this cipher type has a crib available
     const hintContent = getHintContent(quote);
     const hasCrib = hintContent.includes('Crib:') && !hintContent.includes('No crib found');
@@ -538,7 +570,7 @@ export const useHintSystem = (
       // For ciphers without cribs, always reveal a random correct letter
       revealRandomLetter(questionIndex);
     }
-  }, [quotes, activeHints, setActiveHints, getHintContent, revealRandomLetter]);
+  }, [quotes, activeHints, setActiveHints, getHintContent, revealRandomLetter, hintCounts, setHintCounts]);
 
   return {
     getHintContent,

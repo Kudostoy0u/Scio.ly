@@ -78,6 +78,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <meta charSet="utf-8" />
         <link rel="icon" href="/site-logo.png" sizes="any" />
         <link rel="manifest" href="/manifest.webmanifest" />
         <meta name="theme-color" content="${initialDarkMode ? '#020617' : '#f9fafb'}" />
@@ -85,8 +86,8 @@ export default async function RootLayout({
           <meta name="scio-display-name" content={initialDisplayFirstName} />
         ) : null}
       </head>
-      <body  
-        className={`font-Poppins antialiased overflow-x-hidden`}
+      <body
+        className={`font-sans antialiased overflow-x-hidden`}
         data-scio-display-name={initialDisplayFirstName || undefined}
         suppressHydrationWarning
       >

@@ -113,7 +113,7 @@ export const CheckerboardDisplay = ({
       {isTestSubmitted && (
         <div className={`mt-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-800'}`}>
           <div className="font-semibold">Original quote:</div>
-          <div className="whitespace-pre-wrap mt-1">{quote.quote}</div>
+                          <div className="whitespace-pre-wrap mt-1">{quote.quote.replace(/\[.*?\]/g, '')}</div>
         </div>
       )}
     </div>

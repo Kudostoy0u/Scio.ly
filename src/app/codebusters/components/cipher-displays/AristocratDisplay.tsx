@@ -11,9 +11,11 @@ interface AristocratDisplayProps {
     solution?: { [key: string]: string };
     frequencyNotes?: { [key: string]: string };
     isTestSubmitted: boolean;
+    cipherType: string;
     quotes: QuoteData[];
     onSolutionChange: (quoteIndex: number, cipherLetter: string, plainLetter: string) => void;
     onFrequencyNoteChange: (quoteIndex: number, letter: string, note: string) => void;
+    onKeywordSolutionChange?: (quoteIndex: number, keyword: string) => void;
 }
 
 export const AristocratDisplay = ({ 
@@ -22,9 +24,11 @@ export const AristocratDisplay = ({
     solution, 
     frequencyNotes,
     isTestSubmitted,
+    cipherType,
     quotes,
     onSolutionChange,
-    onFrequencyNoteChange
+    onFrequencyNoteChange,
+    onKeywordSolutionChange
 }: AristocratDisplayProps) => {
     const { darkMode } = useTheme();
     
@@ -40,6 +44,70 @@ export const AristocratDisplay = ({
 
     return (
         <div className="font-mono">
+            {quotes[quoteIndex].askForKeyword && (
+                <div className={`mb-4 p-3 rounded-lg border-2 ${
+                    darkMode 
+                        ? 'bg-blue-900/20 border-blue-500/50 text-blue-300' 
+                        : 'bg-blue-50 border-blue-300 text-blue-800'
+                }`}>
+                    <div className="font-semibold mb-1">⚠️ Special Instructions:</div>
+                    <div>The decrypted text will not be graded for this quote. Instead, figure out the <strong>key used to encode the cipher</strong>.</div>
+                    <div className="text-sm mt-1 opacity-80">Enter the key in the input boxes below.</div>
+                </div>
+            )}
+            
+            {/* Keyword Input Section */}
+            {quotes[quoteIndex].askForKeyword && (
+                <div className="mb-6">
+                    <div className={`text-sm font-medium mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Key:
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {Array.from({ length: quotes[quoteIndex].key?.length || 0 }, (_, i) => {
+                            const currentValue = quotes[quoteIndex].keywordSolution?.[i] || '';
+                            const expectedValue = quotes[quoteIndex].key?.[i] || '';
+                            const isCorrect = isTestSubmitted && currentValue.toUpperCase() === expectedValue.toUpperCase();
+                            const showCorrectAnswer = isTestSubmitted;
+                            
+                            return (
+                                <div key={i} className="flex flex-col items-center">
+                                    <input
+                                        type="text"
+                                        maxLength={1}
+                                        value={currentValue}
+                                        disabled={isTestSubmitted}
+                                        onChange={(e) => {
+                                            if (onKeywordSolutionChange) {
+                                                const currentKeyword = quotes[quoteIndex].keywordSolution || '';
+                                                const newKeyword = currentKeyword.slice(0, i) + e.target.value.toUpperCase() + currentKeyword.slice(i + 1);
+                                                onKeywordSolutionChange(quoteIndex, newKeyword);
+                                            }
+                                        }}
+                                        className={`w-8 h-8 text-center border rounded text-sm ${
+                                            darkMode 
+                                                ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
+                                                : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
+                                        } ${
+                                            showCorrectAnswer
+                                                ? isCorrect
+                                                    ? 'border-green-500 bg-green-100/10'
+                                                    : 'border-red-500 bg-red-100/10'
+                                                : ''
+                                        }`}
+                                    />
+                                    {showCorrectAnswer && !isCorrect && (
+                                        <div className={`text-xs mt-1 ${
+                                            darkMode ? 'text-red-400' : 'text-red-600'
+                                        }`}>
+                                            {expectedValue}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
             <div className="flex flex-wrap gap-y-8 text-sm sm:text-base break-words whitespace-pre-wrap">
                 {text.split('').map((char, i) => {
                     const isLetter = /[A-Z]/.test(char);
@@ -101,6 +169,8 @@ export const AristocratDisplay = ({
                 solution={solution}
                 quoteIndex={quoteIndex}
                 isTestSubmitted={isTestSubmitted}
+                cipherType={cipherType}
+                correctMapping={correctMapping}
                 onSolutionChange={onSolutionChange}
             />
         </div>

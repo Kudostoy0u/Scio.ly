@@ -1,5 +1,6 @@
 import { QuoteData } from '../types';
 import { getEventOfflineQuestions } from '@/app/utils/storage';
+import { cleanQuote } from '../utils/quoteCleaner';
 import {
   encryptK1Aristocrat,
   encryptK2Aristocrat,
@@ -19,8 +20,11 @@ import {
   encryptNihilist,
   encryptFractionatedMorse,
   encryptColumnarTransposition,
-  encryptXenocrypt,
-  encryptCheckerboard
+  encryptRandomXenocrypt,
+  encryptK1Xenocrypt,
+  encryptK2Xenocrypt,
+  encryptCheckerboard,
+  encryptCryptarithm
 } from '../cipher-utils';
 
 export const loadQuestionsFromDatabase = async (
@@ -33,20 +37,60 @@ export const loadQuestionsFromDatabase = async (
   loadPreferences: (eventName: string) => { questionCount: number; timeLimit: number }
 ) => {
   console.log('loadQuestionsFromDatabase called');
+  
+  // Check if test was already submitted and there are existing quotes
+  const testAlreadySubmitted = localStorage.getItem('codebustersIsTestSubmitted') === 'true';
+  const existingQuotes = localStorage.getItem('codebustersQuotes');
+  
+  if (testAlreadySubmitted && existingQuotes) {
+    console.log('Test was already submitted, restoring existing quotes');
+    try {
+      const quotes = JSON.parse(existingQuotes);
+      setQuotes(quotes);
+      
+      // Also restore the test submission state
+      setIsTestSubmitted(true);
+      const savedTestScore = localStorage.getItem('codebustersTestScore');
+      const savedTimeLeft = localStorage.getItem('codebustersTimeLeft');
+      setTestScore(savedTestScore ? parseFloat(savedTestScore) : 0);
+      setTimeLeft(savedTimeLeft ? parseInt(savedTimeLeft) : 0);
+      
+      setIsLoading(false);
+      return; // Don't load new questions
+    } catch (error) {
+      console.error('Error parsing existing quotes:', error);
+      // Continue with loading new questions if parsing fails
+    }
+  }
+  
   setIsLoading(true);
   setError(null);
   
-  // Always reset the timer and submission state for a new test
+  // Check if test was already submitted and preserve state
   const testParamsStr = localStorage.getItem('testParams');
   const testParams = testParamsStr ? JSON.parse(testParamsStr) : {};
   const eventName = testParams.eventName || 'Codebusters';
   const preferences = loadPreferences(eventName);
-  setTimeLeft(preferences.timeLimit * 60); // Use preferences for time limit
-  setIsTestSubmitted(false);
-  setTestScore(null);
-  localStorage.removeItem('codebustersTimeLeft');
-  localStorage.removeItem('codebustersIsTestSubmitted');
-  localStorage.removeItem('codebustersTestScore');
+  
+  // Check if test was already submitted
+  const wasTestSubmitted = localStorage.getItem('codebustersIsTestSubmitted') === 'true';
+  const savedTestScore = localStorage.getItem('codebustersTestScore');
+  const savedTimeLeft = localStorage.getItem('codebustersTimeLeft');
+  
+  if (wasTestSubmitted) {
+    // Preserve submitted test state
+    setIsTestSubmitted(true);
+    setTestScore(savedTestScore ? parseFloat(savedTestScore) : 0);
+    setTimeLeft(savedTimeLeft ? parseInt(savedTimeLeft) : 0);
+  } else {
+    // Reset for new test
+    setTimeLeft(preferences.timeLimit * 60);
+    setIsTestSubmitted(false);
+    setTestScore(null);
+    localStorage.removeItem('codebustersTimeLeft');
+    localStorage.removeItem('codebustersIsTestSubmitted');
+    localStorage.removeItem('codebustersTestScore');
+  }
 
   try {
     // Get test parameters from localStorage
@@ -84,7 +128,9 @@ export const loadQuestionsFromDatabase = async (
         'nihilist': 'Nihilist',
         'fractionated morse': 'Fractionated Morse',
         'columnar transposition': 'Complete Columnar',
-        'xenocrypt': 'Xenocrypt',
+        'random xenocrypt': 'Random Xenocrypt',
+        'k1 xenocrypt': 'K1 Xenocrypt',
+        'k2 xenocrypt': 'K2 Xenocrypt',
         'checkerboard': 'Checkerboard',
         // Handle correct format (from practice page)
         'K1 Aristocrat': 'K1 Aristocrat',
@@ -104,8 +150,11 @@ export const loadQuestionsFromDatabase = async (
         'Nihilist': 'Nihilist',
         'Fractionated Morse': 'Fractionated Morse',
         'Columnar Transposition': 'Complete Columnar',
-        'Xenocrypt': 'Xenocrypt',
+        'Random Xenocrypt': 'Random Xenocrypt',
+        'K1 Xenocrypt': 'K1 Xenocrypt',
+        'K2 Xenocrypt': 'K2 Xenocrypt',
         'Checkerboard': 'Checkerboard',
+        'Cryptarithm': 'Cryptarithm',
         // Handle standalone entries (should be mapped to Misc variants)
         'aristocrat': 'Random Aristocrat',
         'patristocrat': 'Random Patristocrat'
@@ -121,15 +170,15 @@ export const loadQuestionsFromDatabase = async (
     
     // Define division-based cipher types
     const divisionBCipherTypes = {
-              'B': ['K1 Aristocrat', 'K2 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'Random Patristocrat', 'Baconian', 'Fractionated Morse', 'Complete Columnar', 'Xenocrypt', 'Porta', 'Nihilist', 'Atbash', 'Caesar', 'Affine', 'Checkerboard'],
-              'C': ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Baconian', 'Xenocrypt', 'Fractionated Morse', 'Porta', 'Complete Columnar', 'Nihilist', 'Hill 2x2', 'Hill 3x3', 'Checkerboard']
+              'B': ['K1 Aristocrat', 'K2 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'Random Patristocrat', 'Baconian', 'Fractionated Morse', 'Complete Columnar', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt', 'Porta', 'Nihilist', 'Atbash', 'Caesar', 'Affine', 'Checkerboard', 'Cryptarithm'],
+              'C': ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Baconian', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt', 'Fractionated Morse', 'Porta', 'Complete Columnar', 'Nihilist', 'Hill 2x2', 'Hill 3x3', 'Checkerboard', 'Cryptarithm']
     };
     
     const availableCipherTypes = cipherTypes && cipherTypes.length > 0 
       ? cipherTypes 
       : (division === 'B' || division === 'C') 
         ? divisionBCipherTypes[division] 
-        : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Hill 2x2', 'Hill 3x3', 'Porta', 'Baconian', 'Nihilist', 'Fractionated Morse', 'Complete Columnar', 'Xenocrypt'];
+        : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Hill 2x2', 'Hill 3x3', 'Porta', 'Baconian', 'Nihilist', 'Fractionated Morse', 'Complete Columnar', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt', 'Cryptarithm'];
 
     // Determine cipher types for each question in advance
     const questionCipherTypes: QuoteData['cipherType'][] = [];
@@ -139,7 +188,7 @@ export const loadQuestionsFromDatabase = async (
     }
 
     // Count xenocrypt vs non-xenocrypt questions
-    const xenocryptCount = questionCipherTypes.filter(type => type === 'Xenocrypt').length;
+    const xenocryptCount = questionCipherTypes.filter(type => type === 'Random Xenocrypt' || type === 'K1 Xenocrypt' || type === 'K2 Xenocrypt').length;
     const nonXenocryptCount = questionCount - xenocryptCount;
     
     console.log(`🔍 Quote requirements: ${nonXenocryptCount} English, ${xenocryptCount} Spanish, total: ${questionCount}`);
@@ -330,8 +379,8 @@ export const loadQuestionsFromDatabase = async (
       ).join(' ');
       let quoteData: { quote: string; author: string; originalIndex: number; isSpanish?: boolean; id?: string };
 
-      if (cipherType === 'Xenocrypt') {
-        // Use Spanish quote for xenocrypt
+      if (cipherType === 'Random Xenocrypt' || cipherType === 'K1 Xenocrypt' || cipherType === 'K2 Xenocrypt') {
+        // Use Spanish quote for xenocrypt variants
         if (spanishQuoteIndex >= spanishQuotes.length) {
           console.warn(`⚠️ Not enough Spanish quotes for xenocrypt. Using English quote instead.`);
           // Fallback to English quote if no Spanish quotes available
@@ -379,6 +428,9 @@ export const loadQuestionsFromDatabase = async (
         englishQuoteIndex++;
       }
 
+      // Clean the quote before encryption to remove bracketed content
+      const cleanedQuote = cleanQuote(quoteData.quote);
+      
       // Encrypt the quote based on cipher type
       let cipherResult: { 
         encrypted: string; 
@@ -393,72 +445,85 @@ export const loadQuestionsFromDatabase = async (
 
       switch (normalizedCipherType) {
         case 'K1 Aristocrat':
-          cipherResult = encryptK1Aristocrat(quoteData.quote);
+          cipherResult = encryptK1Aristocrat(cleanedQuote);
           break;
         case 'K2 Aristocrat':
-          cipherResult = encryptK2Aristocrat(quoteData.quote);
+          cipherResult = encryptK2Aristocrat(cleanedQuote);
           break;
         case 'K3 Aristocrat':
-          cipherResult = encryptK3Aristocrat(quoteData.quote);
+          cipherResult = encryptK3Aristocrat(cleanedQuote);
           break;
         case 'K1 Patristocrat':
-          cipherResult = encryptK1Patristocrat(quoteData.quote);
+          cipherResult = encryptK1Patristocrat(cleanedQuote);
           break;
         case 'K2 Patristocrat':
-          cipherResult = encryptK2Patristocrat(quoteData.quote);
+          cipherResult = encryptK2Patristocrat(cleanedQuote);
           break;
         case 'K3 Patristocrat':
-          cipherResult = encryptK3Patristocrat(quoteData.quote);
+          cipherResult = encryptK3Patristocrat(cleanedQuote);
           break;
         case 'Random Aristocrat':
-          cipherResult = encryptRandomAristocrat(quoteData.quote);
+          cipherResult = encryptRandomAristocrat(cleanedQuote);
           break;
         case 'Random Patristocrat':
-          cipherResult = encryptRandomPatristocrat(quoteData.quote);
+          cipherResult = encryptRandomPatristocrat(cleanedQuote);
           break;
         case 'Caesar':
-          cipherResult = encryptCaesar(quoteData.quote);
+          cipherResult = encryptCaesar(cleanedQuote);
           break;
         case 'Atbash':
-          cipherResult = encryptAtbash(quoteData.quote);
+          cipherResult = encryptAtbash(cleanedQuote);
           break;
         case 'Affine':
-          cipherResult = encryptAffine(quoteData.quote);
+          cipherResult = encryptAffine(cleanedQuote);
           break;
         case 'Hill 2x2':
-          cipherResult = encryptHill2x2(quoteData.quote);
+          cipherResult = encryptHill2x2(cleanedQuote);
           break;
         case 'Hill 3x3':
-          cipherResult = encryptHill3x3(quoteData.quote);
+          cipherResult = encryptHill3x3(cleanedQuote);
           break;
         case 'Porta':
-          cipherResult = encryptPorta(quoteData.quote);
+          cipherResult = encryptPorta(cleanedQuote);
           break;
         case 'Baconian':
-          cipherResult = encryptBaconian(quoteData.quote);
+          cipherResult = encryptBaconian(cleanedQuote);
           break;
         case 'Nihilist':
-          cipherResult = encryptNihilist(quoteData.quote);
+          cipherResult = encryptNihilist(cleanedQuote);
           break;
         case 'Fractionated Morse':
-          cipherResult = encryptFractionatedMorse(quoteData.quote);
+          cipherResult = encryptFractionatedMorse(cleanedQuote);
           break;
         case 'Complete Columnar':
-          cipherResult = encryptColumnarTransposition(quoteData.quote);
+          cipherResult = encryptColumnarTransposition(cleanedQuote);
           break;
-        case 'Xenocrypt':
-          cipherResult = encryptXenocrypt(quoteData.quote);
+        case 'Random Xenocrypt':
+          cipherResult = encryptRandomXenocrypt(cleanedQuote);
+          break;
+        case 'K1 Xenocrypt':
+          cipherResult = encryptK1Xenocrypt(cleanedQuote);
+          break;
+        case 'K2 Xenocrypt':
+          cipherResult = encryptK2Xenocrypt(cleanedQuote);
           break;
         case 'Checkerboard':
-          cipherResult = encryptCheckerboard(quoteData.quote);
+          cipherResult = encryptCheckerboard(cleanedQuote);
+          break;
+        case 'Cryptarithm':
+          cipherResult = encryptCryptarithm(cleanedQuote);
           break;
         default:
           throw new Error(`Unknown cipher type: ${cipherType} (normalized: ${normalizedCipherType})`);
       }
 
+      // Determine if this question should ask for keyword/key phrase (15% chance for K1, K2, K3 ciphers)
+      const isK1K2K3Cipher = ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'K1 Xenocrypt', 'K2 Xenocrypt'].includes(normalizedCipherType);
+      const askForKeyword = isK1K2K3Cipher && Math.random() < 0.15;
+
       processedQuotes.push({
         author: quoteData.author,
-        quote: quoteData.quote,
+        quote: cleanedQuote,
         encrypted: cipherResult.encrypted,
         cipherType: normalizedCipherType,
         key: cipherResult.key || undefined,
@@ -475,7 +540,10 @@ export const loadQuestionsFromDatabase = async (
         caesarShift: cipherResult.shift || undefined,
         affineA: cipherResult.a || undefined,
         affineB: cipherResult.b || undefined,
+        baconianBinaryType: 'binaryType' in cipherResult ? (cipherResult as { binaryType: string }).binaryType : undefined,
+        cryptarithmData: 'cryptarithmData' in cipherResult ? (cipherResult as { cryptarithmData: any }).cryptarithmData : undefined,
         difficulty: Math.random() * 0.8 + 0.2,
+        askForKeyword: askForKeyword,
       });
     }
 
@@ -484,7 +552,7 @@ export const loadQuestionsFromDatabase = async (
       quoteUUIDs,
       processedQuotes: processedQuotes.map(quote => ({
         author: quote.author,
-        quote: quote.quote,
+        quote: quote.quote, // This is already the cleaned quote from processedQuotes
         encrypted: quote.encrypted,
         cipherType: quote.cipherType,
         key: quote.key,
@@ -501,10 +569,13 @@ export const loadQuestionsFromDatabase = async (
         caesarShift: quote.caesarShift,
         affineA: quote.affineA,
         affineB: quote.affineB,
+        baconianBinaryType: quote.baconianBinaryType,
+        cryptarithmData: quote.cryptarithmData,
         difficulty: quote.difficulty
       }))
     };
     localStorage.setItem('codebustersShareData', JSON.stringify(shareData));
+    localStorage.setItem('codebustersQuotes', JSON.stringify(processedQuotes));
 
     setQuotes(processedQuotes);
     setIsLoading(false);

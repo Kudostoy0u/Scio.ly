@@ -183,6 +183,13 @@ export const cipherVideos: CipherVideoData = {
       url: 'https://www.youtube.com/watch?v=UMvP7URrXiU',
       description: 'Complete guide to Caesar cipher'
     }
+  ],
+  'Cryptarithm': [
+    {
+      title: 'Cryptarithm Tutorial',
+      url: 'https://www.youtube.com/watch?v=qwikGHbIbwM',
+      description: 'Complete guide to solving cryptarithm puzzles'
+    }
   ]
 };
 

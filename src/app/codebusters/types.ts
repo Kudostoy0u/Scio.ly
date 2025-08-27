@@ -2,7 +2,7 @@ export interface QuoteData {
     author: string;
     quote: string;
     encrypted: string;
-    cipherType: 'Random Aristocrat' | 'K1 Aristocrat' | 'K2 Aristocrat' | 'K3 Aristocrat' | 'Random Patristocrat' | 'K1 Patristocrat' | 'K2 Patristocrat' | 'K3 Patristocrat' | 'Caesar' | 'Atbash' | 'Affine' | 'Hill 2x2' | 'Hill 3x3' | 'Baconian' | 'Porta' | 'Nihilist' | 'Fractionated Morse' | 'Complete Columnar' | 'Xenocrypt' | 'Checkerboard';
+    cipherType: 'Random Aristocrat' | 'K1 Aristocrat' | 'K2 Aristocrat' | 'K3 Aristocrat' | 'Random Patristocrat' | 'K1 Patristocrat' | 'K2 Patristocrat' | 'K3 Patristocrat' | 'Caesar' | 'Atbash' | 'Affine' | 'Hill 2x2' | 'Hill 3x3' | 'Baconian' | 'Porta' | 'Nihilist' | 'Fractionated Morse' | 'Complete Columnar' | 'Random Xenocrypt' | 'K1 Xenocrypt' | 'K2 Xenocrypt' | 'Checkerboard' | 'Cryptarithm';
     key?: string;        // For k1/k2/k3 variants/porta/nihilist
     matrix?: number[][]; // For hill 2x2
     decryptionMatrix?: number[][]; // For hill 3x3
@@ -20,6 +20,17 @@ export interface QuoteData {
     caesarShift?: number; // For caesar cipher
     affineA?: number; // For affine cipher (a value)
     affineB?: number; // For affine cipher (b value)
+    baconianBinaryType?: string; // For baconian cipher binary representation type
+    // Cryptarithm
+    cryptarithmData?: {
+      equation: string;
+      numericExample: string;
+      digitGroups: Array<{
+        digits: string;
+        word: string;
+      }>;
+      hint?: string;
+    };
     solution?: { [key: string]: string };
     frequencyNotes?: { [key: string]: string };
     hillSolution?: {
@@ -32,6 +43,8 @@ export interface QuoteData {
     columnarSolution?: { [key: number]: string }; // For complete columnar
     xenocryptSolution?: { [key: number]: string }; // For xenocrypt
     difficulty?: number; // New field for difficulty
+    askForKeyword?: boolean; // Whether to ask for keyword/key phrase instead of deciphered text
+    keywordSolution?: string; // User's input for the keyword when askForKeyword is true
 }
 
 export interface CipherResult {

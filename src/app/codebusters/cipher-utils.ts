@@ -1,7 +1,153 @@
 // Helper functions for both ciphers
 export const mod26 = (n: number): number => ((n % 26) + 26) % 26;
-export const letterToNumber = (letter: string): number => letter.toUpperCase().charCodeAt(0) - 65;
-export const numberToLetter = (num: number): string => String.fromCharCode(mod26(num) + 65);
+export const letterToNumber = (letter: string): number => {
+    const upperLetter = letter.toUpperCase();
+    if (upperLetter === 'Ñ') return 26; // Ñ is position 26 (after Z)
+    return upperLetter.charCodeAt(0) - 65;
+};
+export const numberToLetter = (num: number): string => {
+    if (num === 26) return 'Ñ'; // Ñ is position 26
+    return String.fromCharCode(mod26(num) + 65);
+};
+
+// Helper functions for keyword-based alphabet generation
+const generateKeywordAlphabet = (keyword: string): string => {
+    const cleanKeyword = keyword.toUpperCase().replace(/[^A-Z]/g, '');
+    const used = new Set<string>();
+    const result: string[] = [];
+    
+    // Add keyword letters first (removing duplicates)
+    for (const char of cleanKeyword) {
+        if (!used.has(char)) {
+            used.add(char);
+            result.push(char);
+        }
+    }
+    
+    // Add remaining alphabet letters
+    for (const char of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+        if (!used.has(char)) {
+            result.push(char);
+        }
+    }
+    
+    return result.join('');
+};
+
+// Centralized word bank for all cipher keywords
+const CIPHER_WORD_BANK = [
+    // General cipher/security terms
+    'CRYPTO', 'SCIENCE', 'ALGORITHM', 'CIPHER', 'KEYWORD', 'SECURITY', 
+    'PUZZLE', 'ENIGMA', 'MATRIX', 'VECTOR', 'SECRET', 'MESSAGE', 
+    'CODE', 'BREAK', 'SOLVE', 'FIND', 'HIDDEN', 'CLUE', 'ANSWER',
+    
+    // Technology and computing
+    'PASSWORD', 'KEYBOARD', 'COMPUTER', 'NETWORK', 'SYSTEM', 'ACCESS', 'CONTROL',
+    'PROTOCOL', 'ENCRYPT', 'DECRYPT', 'DATABASE', 'SERVER', 'CLIENT', 'BROWSER', 
+    'FIREWALL', 'ANTIVIRUS', 'BACKUP', 'RESTORE', 'UPDATE', 'DOWNLOAD', 'UPLOAD', 
+    'CONNECT', 'DISCONNECT', 'AUTHENTICATE', 'VERIFY', 'VALIDATE', 'REGISTER', 'LOGIN',
+    'LOGOUT', 'SESSION', 'COOKIE', 'TOKEN', 'HASH', 'SIGNATURE', 'CERTIFICATE', 'PRIVATE',
+    'PUBLIC', 'SYMMETRIC', 'ASYMMETRIC', 'BLOCKCHAIN', 'CRYPTOCURRENCY', 'WALLET', 'MINING',
+    'TRANSACTION', 'LEDGER', 'CONSENSUS', 'SMART', 'CONTRACT', 'DEFI', 'NFT', 'METAVERSE',
+    'ARTIFICIAL', 'INTELLIGENCE', 'MACHINE', 'LEARNING', 'DEEP', 'NEURAL', 'TENSOR',
+    'PYTHON', 'JAVASCRIPT', 'TYPESCRIPT', 'REACT', 'ANGULAR', 'VUE', 'NODE', 'EXPRESS',
+    'MONGODB', 'POSTGRESQL', 'MYSQL', 'REDIS', 'DOCKER', 'KUBERNETES', 'AWS', 'AZURE',
+    'GOOGLE', 'MICROSOFT', 'APPLE', 'LINUX', 'WINDOWS', 'MACOS', 'ANDROID', 'IOS',
+    'BLUETOOTH', 'WIFI', 'ETHERNET', 'FIBER', 'SATELLITE', 'ROUTER', 'SWITCH', 'GATEWAY',
+    'PROXY', 'VPN', 'TOR', 'DNS', 'HTTP', 'HTTPS', 'FTP', 'SSH', 'TELNET', 'SMTP',
+    'POP3', 'IMAP', 'REST', 'API', 'GRAPHQL', 'SOAP', 'XML', 'JSON', 'YAML', 'CSV',
+    'HTML', 'CSS', 'SCSS', 'SASS', 'LESS', 'WEBPACK', 'BABEL', 'ESLINT', 'PRETTIER',
+    'GIT', 'GITHUB', 'GITLAB', 'BITBUCKET', 'JENKINS', 'TRAVIS', 'CIRCLECI',
+    'HELM', 'TERRAFORM', 'ANSIBLE', 'CHEF', 'PUPPET', 'SALT', 'CONSUL', 'ETCD', 
+    'ZOOKEEPER', 'KAFKA', 'RABBITMQ', 'ACTIVEMQ', 'MEMCACHED', 'ELASTIC', 'LOGSTASH', 
+    'KIBANA', 'GRAFANA', 'PROMETHEUS', 'NAGIOS', 'ZABBIX', 'SPLUNK', 'DATADOG',
+    'NEWRELIC', 'APPDYNAMICS', 'DYNATRACE', 'JAEGER', 'ZIPKIN', 'OTEL', 'ISTIO', 'LINKERD',
+    'ENVOY', 'NGINX', 'APACHE', 'TOMCAT', 'JETTY', 'UNDERTOW', 'WILDFLY', 'SPRING', 
+    'HIBERNATE', 'JPA', 'JAX', 'RS', 'WSDL', 'UDDI', 'ESB', 'BPM', 'WORKFLOW', 
+    'ORCHESTRATION', 'MICROSERVICE', 'MONOLITH', 'SOA', 'DDD', 'CQRS', 'ES', 'EVENT', 
+    'SOURCING', 'SAGA', 'CHOREOGRAPHY', 'COMPENSATION', 'RETRY', 'CIRCUIT', 'BREAKER', 
+    'BULKHEAD', 'TIMEOUT', 'RATE', 'LIMITING', 'THROTTLING', 'CACHING', 'CDN', 'EDGE', 
+    'COMPUTING', 'FOG', 'IOT', 'MESH', 'GRID', 'CLUSTER', 'LOAD', 'BALANCER',
+    'AUTOSCALING', 'HORIZONTAL', 'VERTICAL', 'SCALING', 'SHARDING', 'PARTITIONING', 
+    'REPLICATION', 'MASTER', 'SLAVE', 'PRIMARY', 'SECONDARY', 'READ', 'WRITE', 
+    'CONSISTENCY', 'AVAILABILITY', 'PARTITION', 'TOLERANCE', 'CAP', 'THEOREM', 'ACID', 
+    'BASE', 'TRANSACTION', 'ISOLATION', 'DURABILITY', 'ATOMICITY', 'NORMALIZATION', 
+    'DENORMALIZATION', 'INDEX', 'QUERY', 'OPTIMIZATION', 'EXECUTION', 'PLAN', 'STATISTICS', 
+    'ANALYZE', 'EXPLAIN', 'PROFILING', 'BENCHMARKING', 'STRESS', 'TESTING', 'PERFORMANCE', 
+    'MONITORING', 'ALERTING', 'LOGGING', 'TRACING', 'METRICS', 'DASHBOARD', 'REPORTING', 
+    'ANALYTICS', 'BUSINESS', 'INTELLIGENCE', 'DATA', 'WAREHOUSE', 'LAKE', 'STREAMING', 
+    'BATCH', 'REAL', 'TIME', 'NEAR', 'LATENCY', 'THROUGHPUT', 'BANDWIDTH', 'CAPACITY', 
+    'UTILIZATION', 'EFFICIENCY',
+    
+    // Science and education
+    'OLYMPIAD', 'COMPETITION', 'STUDENT', 'RESEARCH', 'EXPERIMENT', 'DISCOVERY', 
+    'INNOVATION', 'TECHNOLOGY', 'MATHEMATICS', 'PHYSICS', 'CHEMISTRY', 'BIOLOGY', 
+    'ENGINEERING', 'PROGRAMMING', 'ANALYSIS', 'SOLUTION', 'PROBLEM', 'CHALLENGE', 
+    'KNOWLEDGE', 'LEARNING', 'EDUCATION', 'ACADEMIC', 'SCHOLAR', 'SCIENTIST', 
+    'RESEARCHER', 'INVENTOR', 'PIONEER', 'EXPLORER', 'INVESTIGATOR', 'OBSERVER', 
+    'ANALYST', 'SPECIALIST', 'EXPERT', 'PROFESSIONAL', 'ACADEMICIAN', 'THEORIST', 
+    'PRACTITIONER', 'INTELLECTUAL', 'PHILOSOPHER', 'THINKER', 'INNOVATOR', 'CREATOR', 
+    'DESIGNER', 'ARCHITECT', 'BUILDER', 'DEVELOPER', 'PROGRAMMER', 'ENGINEER', 
+    'TECHNICIAN', 'OPERATOR', 'ADMINISTRATOR', 'MANAGER', 'COORDINATOR', 'ORGANIZER', 
+    'PLANNER', 'STRATEGIST', 'TACTICIAN', 'CONSULTANT', 'ADVISOR', 'COUNSELOR', 
+    'MENTOR', 'TUTOR', 'INSTRUCTOR', 'TEACHER', 'PROFESSOR', 'LECTURER', 'EDUCATOR',
+    'TRAINER', 'COACH', 'GUIDE', 'LEADER', 'DIRECTOR', 'SUPERVISOR', 'CONTROLLER',
+    'REGULATOR', 'MONITOR', 'WATCHER', 'GUARDIAN', 'PROTECTOR', 'DEFENDER', 
+    'CUSTODIAN', 'KEEPER', 'CARETAKER', 'HANDLER', 'MODERATOR', 'MEDIATOR',
+    'ARBITRATOR', 'JUDGE', 'REFEREE', 'UMPIRE', 'ADJUDICATOR', 'ASSESSOR',
+    'EVALUATOR', 'EXAMINER', 'INSPECTOR', 'AUDITOR', 'REVIEWER', 'CRITIC',
+    'AUTHORITY', 'MASTER', 'GURU', 'SAGE', 'WIZARD', 'MAGICIAN', 'SORCERER', 
+    'ENCHANTER', 'CONJURER', 'ILLUSIONIST', 'PERFORMER', 'ENTERTAINER', 'ARTIST',
+    'CONSTRUCTOR', 'MANUFACTURER', 'PRODUCER', 'GENERATOR', 'ORIGINATOR', 'FOUNDER', 
+    'ESTABLISHER', 'INITIATOR', 'TRAILBLAZER', 'PATHFINDER', 'DISCOVERER',
+    
+    // Finance and economics
+    'CASH', 'MONEY', 'GOLD', 'SILVER', 'COIN', 'BANK', 'FUND', 'DEBT', 'CREDIT', 
+    'DEBIT', 'LOAN', 'MORTGAGE', 'INTEREST', 'RATE', 'PRINCIPAL', 'PAYMENT',
+    'DEPOSIT', 'WITHDRAWAL', 'TRANSFER', 'WIRE', 'CHECK', 'CARD', 'VISA', 'MASTERCARD',
+    'AMEX', 'DISCOVER', 'PAYPAL', 'VENMO', 'CASHAPP', 'BITCOIN', 'ETHEREUM', 'DOGE',
+    'ADA', 'DOT', 'LINK', 'UNI', 'AAVE', 'COMP', 'YFI', 'SUSHI', 'CRV', 'BAL',
+    'SNX', 'MKR', 'REN', 'ZRX', 'BAT', 'REP', 'KNC', 'BNT', 'LRC', 'OMG',
+    'STORJ', 'MANA', 'SAND', 'AXS', 'SLP', 'CHZ', 'HOT', 'VET', 'TRX', 'XRP',
+    'LTC', 'BCH', 'BSV', 'XLM', 'XMR', 'ZEC', 'DASH', 'NEO', 'ONT', 'QTUM', 
+    'ICX', 'WAVES', 'STRAT', 'ARK', 'LSK', 'STEEM', 'BTS', 'EOS', 'TELOS', 'WAX', 
+    'CHAIN', 'POLKADOT', 'COSMOS', 'AVALANCHE', 'POLYGON', 'ARBITRUM', 'OPTIMISM',
+    'FANTOM', 'HARMONY', 'CELO', 'NEAR', 'SOLANA', 'ALGORAND', 'CARDANO', 'TEZOS',
+    'TENDermint', 'VALIDATOR', 'DELEGATOR', 'STAKING', 'REWARDS', 'SLASHING',
+    'GOVERNANCE', 'PROPOSAL', 'VOTING', 'QUORUM', 'THRESHOLD', 'FINALITY',
+    'BLOCK', 'HASH', 'ADDRESS', 'BALANCE', 'NONCE', 'GAS', 'FEE', 'STAKING', 'YIELD',
+    'FARMING', 'LIQUIDITY', 'POOL', 'SWAP', 'TRADE', 'ORDER', 'BOOK', 'SPREAD',
+    'SLIPPAGE', 'IMPERMANENT', 'LOSS', 'APY', 'APR', 'TVL', 'MCAP', 'VOLUME',
+    'MARKET', 'CAP', 'CIRCULATING', 'SUPPLY', 'MAX', 'TOTAL', 'BURNED', 'MINTED',
+    'LOCKED', 'VESTED', 'CLAIM', 'AIRDROP', 'IDO', 'ICO', 'STO', 'IEO', 'LAUNCHPAD',
+    'INCUBATOR', 'ACCELERATOR', 'VENTURE', 'CAPITAL', 'ANGEL', 'INVESTOR', 'PORTFOLIO',
+    'DIVERSIFICATION', 'RISK', 'MANAGEMENT', 'HEDGE', 'DERIVATIVE', 'FUTURES', 'OPTIONS',
+    'FORWARDS', 'SWAPS', 'ARBITRAGE', 'SCALPING', 'DAY', 'TRADING', 'SWING', 'POSITION',
+    'LONG', 'SHORT', 'LEVERAGE', 'MARGIN', 'CALL', 'PUT', 'STRIKE', 'EXPIRY', 'PREMIUM',
+    'DELTA', 'GAMMA', 'THETA', 'VEGA', 'RHO', 'IMPLIED', 'VOLATILITY', 'HISTORICAL',
+    'BETA', 'ALPHA', 'SHARPE', 'RATIO', 'SORTINO', 'TREYNOR', 'INFORMATION', 'JENSEN',
+    'MODERN', 'PORTFOLIO', 'THEORY', 'EFFICIENT', 'FRONTIER', 'CAPITAL', 'ASSET', 'PRICING',
+    'MODEL', 'BLACK', 'SCHOLES', 'BINOMIAL', 'MONTE', 'CARLO', 'SIMULATION', 'BACKTESTING',
+    'FORWARD', 'TESTING', 'WALK', 'ANALYSIS', 'COINTEGRATION', 'GRANGER', 'CAUSALITY',
+    'VECTOR', 'AUTOREGRESSION', 'GARCH', 'ARCH', 'EGARCH', 'TGARCH', 'PARCH', 'APARCH',
+    'STOCHASTIC', 'VOLATILITY', 'JUMP', 'DIFFUSION', 'MEAN', 'REVERSION', 'MOMENTUM',
+    'CONTRARIAN', 'TREND', 'FOLLOWING', 'BREAKOUT', 'BREAKDOWN', 'SUPPORT', 'RESISTANCE', 
+    'PIVOT', 'POINT', 'FIBONACCI', 'RETRACEMENT', 'EXTENSION', 'ELLIOTT', 'WAVE', 'THEORY', 
+    'DOW', 'THEORY', 'WYCKOFF', 'METHOD', 'MARKET', 'PROFILE', 'VOLUME', 'PROFILE', 
+    'ORDER', 'FLOW', 'TAPE', 'READING', 'LEVEL', 'II', 'DATA', 'SALES', 'TICK', 'CHART', 
+    'RANGE', 'BAR', 'CANDLESTICK', 'HEIKIN', 'ASHI', 'RENKO', 'KAGI', 'FIGURE', 'LINE', 
+    'AREA', 'COLUMN', 'HISTOGRAM', 'SCATTER', 'PLOT', 'BUBBLE', 'RADAR', 'POLAR', 'STOCK', 
+    'WATERFALL', 'FUNNEL', 'GAUGE', 'THERMOMETER', 'PROGRESS', 'SLIDER', 'KNOB', 'DIAL', 
+    'METER', 'COMPASS', 'CLOCK', 'TIMER', 'STOPWATCH', 'CHRONOMETER', 'PENDULUM', 'SPRING',
+    'GEAR', 'PULLEY', 'LEVER', 'WEDGE', 'SCREW', 'INCLINED', 'PLANE', 'WHEEL', 'AXLE', 
+    'BEARING', 'BUSHING', 'COUPLING', 'CLUTCH', 'BRAKE', 'TRANSMISSION', 'DIFFERENTIAL', 
+    'DRIVESHAFT', 'CARDAN', 'UNIVERSAL', 'JOINT', 'CV', 'CONSTANT', 'VELOCITY', 'TRIPOD', 
+    'DOUBLE', 'RZEPPA', 'BIRFIELD', 'WEISFELD', 'THOMPSON', 'BALL', 'JOINT', 'TIE', 'ROD', 'END'
+];
+
+const generateRandomKeyword = (): string => {
+    return CIPHER_WORD_BANK[Math.floor(Math.random() * CIPHER_WORD_BANK.length)];
+};
 
 // Helper functions for Hill cipher
 const generateRandomMatrix = (size: number): number[][] => {
@@ -102,118 +248,82 @@ export const formatTime = (seconds: number): string => {
     return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
 };
 
-// K1 Aristocrat cipher
+// K1 Aristocrat cipher - Plain alphabet is keyed
 export const encryptK1Aristocrat = (text: string): { encrypted: string; key: string } => {
-    const generateK1Key = (): string => {
-        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-        const result = new Array(26);
-        let available = [...alphabet];
-        
-        // K1 Aristocrat specific constraints
-        for (let i = 0; i < 26; i++) {
-            available = available.filter(char => char !== alphabet[i]);
-            const randomIndex = Math.floor(Math.random() * available.length);
-            result[i] = available[randomIndex];
-            available = [...alphabet].filter(char => 
-                !result.includes(char) && char !== alphabet[i]
-            );
-        }
-        
-        return result.join('');
-    };
-
-    const key = generateK1Key();
+    const keyword = generateRandomKeyword();
+    const plainAlphabet = generateKeywordAlphabet(keyword);
+    const cipherAlphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    
+    // Create substitution mapping
+    const substitutionMap: { [key: string]: string } = {};
+    for (let i = 0; i < 26; i++) {
+        substitutionMap[plainAlphabet[i]] = cipherAlphabet[i];
+    }
+    
     const encrypted = text.toUpperCase().replace(/[A-Z]/g, char => 
-        key[letterToNumber(char)] || char
+        substitutionMap[char] || char
     );
 
-    return { encrypted, key };
+    return { encrypted, key: keyword };
 };
 
-// K2 Aristocrat cipher
+// K2 Aristocrat cipher - Cipher alphabet is keyed
 export const encryptK2Aristocrat = (text: string): { encrypted: string; key: string } => {
-    const generateK2Key = (): string => {
-        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-        const result = new Array(26);
-        let available = [...alphabet];
-        
-        // K2 Aristocrat specific constraints
-        for (let i = 0; i < 26; i++) {
-            available = available.filter(char => char !== alphabet[i]);
-            const randomIndex = Math.floor(Math.random() * available.length);
-            result[i] = available[randomIndex];
-            available = [...alphabet].filter(char => 
-                !result.includes(char) && char !== alphabet[i]
-            );
-        }
-        
-        return result.join('');
-    };
-
-    const key = generateK2Key();
+    const keyword = generateRandomKeyword();
+    const plainAlphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const cipherAlphabet = generateKeywordAlphabet(keyword);
+    
+    // Create substitution mapping
+    const substitutionMap: { [key: string]: string } = {};
+    for (let i = 0; i < 26; i++) {
+        substitutionMap[plainAlphabet[i]] = cipherAlphabet[i];
+    }
+    
     const encrypted = text.toUpperCase().replace(/[A-Z]/g, char => 
-        key[letterToNumber(char)] || char
+        substitutionMap[char] || char
     );
 
-    return { encrypted, key };
+    return { encrypted, key: keyword };
 };
 
-// K3 Aristocrat cipher
+// K3 Aristocrat cipher - Both alphabets use the same keyword
 export const encryptK3Aristocrat = (text: string): { encrypted: string; key: string } => {
-    const generateK3Key = (): string => {
-        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-        const result = new Array(26);
-        let available = [...alphabet];
-        
-        // K3 Aristocrat specific constraints
-        for (let i = 0; i < 26; i++) {
-            available = available.filter(char => char !== alphabet[i]);
-            const randomIndex = Math.floor(Math.random() * available.length);
-            result[i] = available[randomIndex];
-            available = [...alphabet].filter(char => 
-                !result.includes(char) && char !== alphabet[i]
-            );
-        }
-        
-        return result.join('');
-    };
-
-    const key = generateK3Key();
+    const keyword = generateRandomKeyword();
+    const plainAlphabet = generateKeywordAlphabet(keyword);
+    const cipherAlphabet = generateKeywordAlphabet(keyword);
+    
+    // Create substitution mapping with shift to avoid self-mapping
+    const substitutionMap: { [key: string]: string } = {};
+    for (let i = 0; i < 26; i++) {
+        const shiftedIndex = (i + 1) % 26; // Shift by 1 to avoid self-mapping
+        substitutionMap[plainAlphabet[i]] = cipherAlphabet[shiftedIndex];
+    }
+    
     const encrypted = text.toUpperCase().replace(/[A-Z]/g, char => 
-        key[letterToNumber(char)] || char
+        substitutionMap[char] || char
     );
 
-    return { encrypted, key };
+    return { encrypted, key: keyword };
 };
 
-// K1 Patristocrat cipher
+// K1 Patristocrat cipher - Plain alphabet is keyed
 export const encryptK1Patristocrat = (text: string): { encrypted: string; key: string } => {
-    const generateK1Key = (): string => {
-        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-        const result = new Array(26);
-        let available = [...alphabet];
-        
-        // K1 Patristocrat specific constraints
-        for (let i = 0; i < 26; i++) {
-            available = available.filter(char => char !== alphabet[i]);
-            const randomIndex = Math.floor(Math.random() * available.length);
-            result[i] = available[randomIndex];
-            available = [...alphabet].filter(char => 
-                !result.includes(char) && char !== alphabet[i]
-            );
-        }
-        
-        return result.join('');
-    };
-
-    const key = generateK1Key();
+    const keyword = generateRandomKeyword();
+    const plainAlphabet = generateKeywordAlphabet(keyword);
+    const cipherAlphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    
+    // Create substitution mapping
+    const substitutionMap: { [key: string]: string } = {};
+    for (let i = 0; i < 26; i++) {
+        substitutionMap[plainAlphabet[i]] = cipherAlphabet[i];
+    }
     
     // Remove all non-letters and convert to uppercase
     const cleanText = text.toUpperCase().replace(/[^A-Z]/g, '');
     
     // Encrypt the cleaned text
     const encryptedLetters = cleanText.split('').map(char => 
-        key[letterToNumber(char)] || char
+        substitutionMap[char] || char
     );
     
     // Group into sets of 5 letters
@@ -229,37 +339,27 @@ export const encryptK1Patristocrat = (text: string): { encrypted: string; key: s
     // Join groups with spaces
     const encrypted = groupedText.join(' ');
 
-    return { encrypted, key };
+    return { encrypted, key: keyword };
 };
 
-// K2 Patristocrat cipher
+// K2 Patristocrat cipher - Cipher alphabet is keyed
 export const encryptK2Patristocrat = (text: string): { encrypted: string; key: string } => {
-    const generateK2Key = (): string => {
-        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-        const result = new Array(26);
-        let available = [...alphabet];
-        
-        // K2 Patristocrat specific constraints
-        for (let i = 0; i < 26; i++) {
-            available = available.filter(char => char !== alphabet[i]);
-            const randomIndex = Math.floor(Math.random() * available.length);
-            result[i] = available[randomIndex];
-            available = [...alphabet].filter(char => 
-                !result.includes(char) && char !== alphabet[i]
-            );
-        }
-        
-        return result.join('');
-    };
-
-    const key = generateK2Key();
+    const keyword = generateRandomKeyword();
+    const plainAlphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const cipherAlphabet = generateKeywordAlphabet(keyword);
+    
+    // Create substitution mapping
+    const substitutionMap: { [key: string]: string } = {};
+    for (let i = 0; i < 26; i++) {
+        substitutionMap[plainAlphabet[i]] = cipherAlphabet[i];
+    }
     
     // Remove all non-letters and convert to uppercase
     const cleanText = text.toUpperCase().replace(/[^A-Z]/g, '');
     
     // Encrypt the cleaned text
     const encryptedLetters = cleanText.split('').map(char => 
-        key[letterToNumber(char)] || char
+        substitutionMap[char] || char
     );
     
     // Group into sets of 5 letters
@@ -275,37 +375,28 @@ export const encryptK2Patristocrat = (text: string): { encrypted: string; key: s
     // Join groups with spaces
     const encrypted = groupedText.join(' ');
 
-    return { encrypted, key };
+    return { encrypted, key: keyword };
 };
 
-// K3 Patristocrat cipher
+// K3 Patristocrat cipher - Both alphabets use the same keyword
 export const encryptK3Patristocrat = (text: string): { encrypted: string; key: string } => {
-    const generateK3Key = (): string => {
-        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-        const result = new Array(26);
-        let available = [...alphabet];
-        
-        // K3 Patristocrat specific constraints
-        for (let i = 0; i < 26; i++) {
-            available = available.filter(char => char !== alphabet[i]);
-            const randomIndex = Math.floor(Math.random() * available.length);
-            result[i] = available[randomIndex];
-            available = [...alphabet].filter(char => 
-                !result.includes(char) && char !== alphabet[i]
-            );
-        }
-        
-        return result.join('');
-    };
-
-    const key = generateK3Key();
+    const keyword = generateRandomKeyword();
+    const plainAlphabet = generateKeywordAlphabet(keyword);
+    const cipherAlphabet = generateKeywordAlphabet(keyword);
+    
+    // Create substitution mapping with shift to avoid self-mapping
+    const substitutionMap: { [key: string]: string } = {};
+    for (let i = 0; i < 26; i++) {
+        const shiftedIndex = (i + 1) % 26; // Shift by 1 to avoid self-mapping
+        substitutionMap[plainAlphabet[i]] = cipherAlphabet[shiftedIndex];
+    }
     
     // Remove all non-letters and convert to uppercase
     const cleanText = text.toUpperCase().replace(/[^A-Z]/g, '');
     
     // Encrypt the cleaned text
     const encryptedLetters = cleanText.split('').map(char => 
-        key[letterToNumber(char)] || char
+        substitutionMap[char] || char
     );
     
     // Group into sets of 5 letters
@@ -321,7 +412,7 @@ export const encryptK3Patristocrat = (text: string): { encrypted: string; key: s
     // Join groups with spaces
     const encrypted = groupedText.join(' ');
 
-    return { encrypted, key };
+    return { encrypted, key: keyword };
 };
 
 // Random Aristocrat cipher
@@ -435,9 +526,7 @@ export const encryptHill2x2 = (text: string): { encrypted: string; matrix: numbe
         encrypted += numberToLetter(encryptedPair[0]) + numberToLetter(encryptedPair[1]);
     }
     
-    // Add spaces every 5 characters for readability
-    encrypted = encrypted.match(/.{1,5}/g)?.join(' ') || encrypted;
-    
+    // Hill 2x2: no blocks, continuous text
     return { encrypted, matrix };
 };
 
@@ -483,44 +572,8 @@ export const encryptHill3x3 = (text: string): { encrypted: string; matrix: numbe
 
 // Porta cipher encryption
 export const encryptPorta = (text: string): { encrypted: string; keyword: string } => {
-    // Word bank for Porta keywords
-    const portaKeywords = [
-        'SCIENCE', 'OLYMPIAD', 'COMPETITION', 'STUDENT', 'RESEARCH', 'EXPERIMENT',
-        'DISCOVERY', 'INNOVATION', 'TECHNOLOGY', 'MATHEMATICS', 'PHYSICS', 'CHEMISTRY',
-        'BIOLOGY', 'ENGINEERING', 'COMPUTER', 'PROGRAMMING', 'ALGORITHM', 'DATABASE',
-        'NETWORK', 'SECURITY', 'ENCRYPTION', 'DECRYPTION', 'CIPHER', 'CODE',
-        'ANALYSIS', 'SOLUTION', 'PROBLEM', 'CHALLENGE', 'KNOWLEDGE', 'LEARNING',
-        'EDUCATION', 'ACADEMIC', 'SCHOLAR', 'SCIENTIST', 'RESEARCHER', 'INVENTOR',
-        'PIONEER', 'EXPLORER', 'INVESTIGATOR', 'OBSERVER', 'ANALYST', 'SPECIALIST',
-        'EXPERT', 'PROFESSIONAL', 'ACADEMICIAN', 'THEORIST', 'PRACTITIONER', 'SCHOLAR',
-        'INTELLECTUAL', 'PHILOSOPHER', 'THINKER', 'INNOVATOR', 'CREATOR', 'DESIGNER',
-        'ARCHITECT', 'BUILDER', 'DEVELOPER', 'PROGRAMMER', 'ENGINEER', 'TECHNICIAN',
-        'OPERATOR', 'ADMINISTRATOR', 'MANAGER', 'COORDINATOR', 'ORGANIZER', 'PLANNER',
-        'STRATEGIST', 'TACTICIAN', 'CONSULTANT', 'ADVISOR', 'COUNSELOR', 'MENTOR',
-        'TUTOR', 'INSTRUCTOR', 'TEACHER', 'PROFESSOR', 'LECTURER', 'EDUCATOR',
-        'TRAINER', 'COACH', 'GUIDE', 'LEADER', 'DIRECTOR', 'SUPERVISOR', 'CONTROLLER',
-        'REGULATOR', 'MONITOR', 'OBSERVER', 'WATCHER', 'GUARDIAN', 'PROTECTOR',
-        'DEFENDER', 'GUARDIAN', 'CUSTODIAN', 'KEEPER', 'CARETAKER', 'MANAGER',
-        'HANDLER', 'OPERATOR', 'CONTROLLER', 'REGULATOR', 'MODERATOR', 'MEDIATOR',
-        'ARBITRATOR', 'JUDGE', 'REFEREE', 'UMPIRE', 'ADJUDICATOR', 'ASSESSOR',
-        'EVALUATOR', 'EXAMINER', 'INSPECTOR', 'AUDITOR', 'REVIEWER', 'CRITIC',
-        'ANALYST', 'SPECIALIST', 'EXPERT', 'AUTHORITY', 'MASTER', 'GURU', 'SAGE',
-        'WIZARD', 'MAGICIAN', 'SORCERER', 'ENCHANTER', 'CONJURER', 'ILLUSIONIST',
-        'PERFORMER', 'ENTERTAINER', 'ARTIST', 'CREATOR', 'DESIGNER', 'ARCHITECT',
-        'BUILDER', 'CONSTRUCTOR', 'MANUFACTURER', 'PRODUCER', 'GENERATOR', 'CREATOR',
-        'ORIGINATOR', 'FOUNDER', 'ESTABLISHER', 'INITIATOR', 'PIONEER', 'TRAILBLAZER',
-        'PATHFINDER', 'EXPLORER', 'DISCOVERER', 'INVENTOR', 'INNOVATOR', 'CREATOR',
-        'DESIGNER', 'PLANNER', 'STRATEGIST', 'TACTICIAN', 'CONSULTANT', 'ADVISOR',
-        'COUNSELOR', 'MENTOR', 'TUTOR', 'INSTRUCTOR', 'TEACHER', 'PROFESSOR',
-        'LECTURER', 'EDUCATOR', 'TRAINER', 'COACH', 'GUIDE', 'LEADER', 'DIRECTOR',
-        'SUPERVISOR', 'CONTROLLER', 'REGULATOR', 'MONITOR', 'OBSERVER', 'WATCHER',
-        'GUARDIAN', 'PROTECTOR', 'DEFENDER', 'CUSTODIAN', 'KEEPER', 'CARETAKER',
-        'MANAGER', 'HANDLER', 'OPERATOR', 'CONTROLLER', 'REGULATOR', 'MODERATOR',
-        'MEDIATOR', 'ARBITRATOR', 'JUDGE', 'REFEREE', 'UMPIRE', 'ADJUDICATOR',
-        'ASSESSOR', 'EVALUATOR', 'EXAMINER', 'INSPECTOR', 'AUDITOR', 'REVIEWER',
-        'CRITIC', 'ANALYST', 'SPECIALIST', 'EXPERT', 'AUTHORITY', 'MASTER', 'GURU',
-        'SAGE', 'WIZARD', 'MAGICIAN', 'SORCERER', 'ENCHANTER', 'CONJURER', 'ILLUSIONIST'
-    ];
+    // Use centralized word bank for Porta keywords
+    const portaKeywords = CIPHER_WORD_BANK;
 
     // Porta table - each row represents the substitution alphabet for a keyword letter pair
     // Based on the correct Porta cipher algorithm from your example
@@ -591,14 +644,16 @@ export const encryptPorta = (text: string): { encrypted: string; keyword: string
         encrypted += cipherChar;
     }
 
-    // Add spaces every 5 characters for readability
-    encrypted = encrypted.match(/.{1,5}/g)?.join(' ') || encrypted;
+    // Porta: randomize block sizes (3-6, weighted distribution)
+    const blockSizes = [3, 3, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6]; // weighted distribution
+    const blockSize = blockSizes[Math.floor(Math.random() * blockSizes.length)];
+    encrypted = encrypted.match(new RegExp(`.{1,${blockSize}}`, 'g'))?.join(' ') || encrypted;
 
     return { encrypted, keyword };
 };
 
-// Baconian cipher with 24-letter alphabet (I/J same, U/V same)
-export const encryptBaconian = (text: string): { encrypted: string; } => {
+// Baconian cipher with 24-letter alphabet (I/J same, U/V same) and variety of binary representations
+export const encryptBaconian = (text: string): { encrypted: string; binaryType: string } => {
     // Baconian cipher mapping (24-letter alphabet)
     const baconianMap: { [key: string]: string } = {
         'A': 'AAAAA', 'B': 'AAAAB', 'C': 'AAABA', 'D': 'AAABB', 'E': 'AABAA',
@@ -607,6 +662,101 @@ export const encryptBaconian = (text: string): { encrypted: string; } => {
         'P': 'ABBBA', 'Q': 'ABBBB', 'R': 'BAAAA', 'S': 'BAAAB', 'T': 'BAABA',
         'U': 'BAABB', 'V': 'BAABB', 'W': 'BABAA', 'X': 'BABAB', 'Y': 'BABBA',
         'Z': 'BABBB'
+    };
+
+    // Define different binary representation schemes
+    const binarySchemes = [
+        // 40% chance: Traditional A/B representation
+        { type: 'A/B', zero: 'A', one: 'B', weight: 40 },
+        // 20% chance: Vowels vs Consonants
+        { type: 'Vowels/Consonants', zero: 'AEIOU', one: 'BCDFGHJKLMNPQRSTVWXYZ', weight: 20 },
+        // 20% chance: Odd vs Even alphabet positions
+        { type: 'Odd/Even', zero: 'ACEGIKMOQSUWY', one: 'BDFHJLNPRTVXZ', weight: 20 }
+    ];
+
+    // Select binary scheme based on weights
+    const random = Math.random() * 100;
+    let cumulativeWeight = 0;
+    let selectedScheme = binarySchemes[0]; // Default to A/B
+
+    for (const scheme of binarySchemes) {
+        cumulativeWeight += scheme.weight;
+        if (random <= cumulativeWeight) {
+            selectedScheme = scheme;
+            break;
+        }
+    }
+
+    // Additional 40% chance for advanced schemes (5% each)
+    const advancedRandom = Math.random();
+    if (advancedRandom < 0.05) {
+        // Emoji pairs: Happy vs Sad
+        const happyEmojis = ['😊', '😄', '😃', '😁', '😆', '😅', '😂', '🤣', '😉', '😋'];
+        const sadEmojis = ['😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩'];
+        const happyEmoji = happyEmojis[Math.floor(Math.random() * happyEmojis.length)];
+        const sadEmoji = sadEmojis[Math.floor(Math.random() * sadEmojis.length)];
+        selectedScheme = { type: 'Emoji Pairs', zero: happyEmoji, one: sadEmoji, weight: 0 };
+    } else if (advancedRandom < 0.1) {
+        // Emoji sets: Desert vs Animal
+        const desertEmojis = ['🌵', '🏜️', '🐪', '☀️', '🔥', '💨'];
+        const animalEmojis = ['🐯', '🦁', '🐻', '🐨', '🐼', '🦊'];
+        const desertEmoji = desertEmojis[Math.floor(Math.random() * desertEmojis.length)];
+        const animalEmoji = animalEmojis[Math.floor(Math.random() * animalEmojis.length)];
+        selectedScheme = { type: 'Emoji Sets', zero: desertEmoji, one: animalEmoji, weight: 0 };
+    } else if (advancedRandom < 0.15) {
+        // Monetary symbols with single slashes
+        selectedScheme = { type: 'Monetary Single', zero: '฿', one: '¥', weight: 0 };
+    } else if (advancedRandom < 0.2) {
+        // Monetary symbols with double slashes
+        selectedScheme = { type: 'Monetary Double', zero: '¥', one: '฿', weight: 0 };
+    } else if (advancedRandom < 0.25) {
+        // Accented vs Non-accented characters
+        selectedScheme = { type: 'Accented/Non-accented', zero: 'áéíóúñ', one: 'aeioun', weight: 0 };
+    } else if (advancedRandom < 0.3) {
+        // Full height vs Upper height characters
+        selectedScheme = { type: 'Height Characters', zero: '#@', one: '^*', weight: 0 };
+    } else if (advancedRandom < 0.35) {
+        // Emoji sets: Weather vs Nature
+        const weatherEmojis = ['☀', '⛅', '☁', '🌧', '⚡', '❄'];
+        const natureEmojis = ['🌿', '🌱', '🌲', '🌳', '🌴', '🌵', '🌸', '🌺', '🌻', '🌼'];
+        const weatherEmoji = weatherEmojis[Math.floor(Math.random() * weatherEmojis.length)];
+        const natureEmoji = natureEmojis[Math.floor(Math.random() * natureEmojis.length)];
+        selectedScheme = { type: 'Weather/Nature', zero: weatherEmoji, one: natureEmoji, weight: 0 };
+    } else if (advancedRandom < 0.4) {
+        // Emoji sets: Food vs Drink
+        const foodEmojis = ['🍕', '🍔', '🍟', '🌭', '🌮', '🌯', '🥪', '🥙', '🍖', '🍗'];
+        const drinkEmojis = ['☕', '🍺', '🍷', '🍸', '🍹', '🥤', '🧃', '🥛', '🍼', '🧋'];
+        const foodEmoji = foodEmojis[Math.floor(Math.random() * foodEmojis.length)];
+        const drinkEmoji = drinkEmojis[Math.floor(Math.random() * drinkEmojis.length)];
+        selectedScheme = { type: 'Food/Drink', zero: foodEmoji, one: drinkEmoji, weight: 0 };
+    }
+
+    // Convert binary A/B pattern to selected representation
+    const convertBinaryPattern = (pattern: string): string => {
+        if (selectedScheme.type === 'A/B') {
+            return pattern;
+        } else if (selectedScheme.type === 'Vowels/Consonants') {
+            return pattern.replace(/A/g, 'AEIOU').replace(/B/g, 'BCDFGHJKLMNPQRSTVWXYZ');
+        } else if (selectedScheme.type === 'Odd/Even') {
+            return pattern.replace(/A/g, 'ACEGIKMOQSUWY').replace(/B/g, 'BDFHJLNPRTVXZ');
+        } else if (selectedScheme.type === 'Emoji Pairs') {
+            return pattern.replace(/A/g, selectedScheme.zero).replace(/B/g, selectedScheme.one);
+        } else if (selectedScheme.type === 'Emoji Sets') {
+            return pattern.replace(/A/g, selectedScheme.zero).replace(/B/g, selectedScheme.one);
+        } else if (selectedScheme.type === 'Monetary Single') {
+            return pattern.replace(/A/g, '฿').replace(/B/g, '¥');
+        } else if (selectedScheme.type === 'Monetary Double') {
+            return pattern.replace(/A/g, '¥').replace(/B/g, '฿');
+        } else if (selectedScheme.type === 'Accented/Non-accented') {
+            return pattern.replace(/A/g, 'áéíóúñ').replace(/B/g, 'aeioun');
+        } else if (selectedScheme.type === 'Height Characters') {
+            return pattern.replace(/A/g, '#@').replace(/B/g, '^*');
+        } else if (selectedScheme.type === 'Weather/Nature') {
+            return pattern.replace(/A/g, selectedScheme.zero).replace(/B/g, selectedScheme.one);
+        } else if (selectedScheme.type === 'Food/Drink') {
+            return pattern.replace(/A/g, selectedScheme.zero).replace(/B/g, selectedScheme.one);
+        }
+        return pattern;
     };
 
     // Clean and convert the text
@@ -618,7 +768,9 @@ export const encryptBaconian = (text: string): { encrypted: string; } => {
     for (let i = 0; i < cleanText.length; i++) {
         const char = cleanText[i];
         if (/[A-Z]/.test(char)) {
-            encrypted += baconianMap[char];
+            const binaryPattern = baconianMap[char];
+            const convertedPattern = convertBinaryPattern(binaryPattern);
+            encrypted += convertedPattern;
             letterCount++;
             // Add space after every 5 groups (25 letters) for readability
             if (letterCount % 5 === 0) {
@@ -632,102 +784,18 @@ export const encryptBaconian = (text: string): { encrypted: string; } => {
         }
     }
 
-    return { encrypted: encrypted.trim() };
+    return { encrypted: encrypted.trim(), binaryType: selectedScheme.type };
 };
 
 // Nihilist Substitution cipher
 export const encryptNihilist = (text: string): { encrypted: string; polybiusKey: string; cipherKey: string } => {
     // Generate two random keys for Nihilist cipher
     const generatePolybiusKey = (): string => {
-        const words = [
-            'SECURITY', 'PASSWORD', 'KEYBOARD', 'COMPUTER', 'NETWORK', 'SYSTEM', 'ACCESS', 'CONTROL',
-            'PROTOCOL', 'ENCRYPT', 'DECRYPT', 'ALGORITHM', 'CIPHER', 'KEYWORD', 'DATABASE', 'SERVER',
-            'CLIENT', 'BROWSER', 'FIREWALL', 'ANTIVIRUS', 'BACKUP', 'RESTORE', 'UPDATE', 'DOWNLOAD',
-            'UPLOAD', 'CONNECT', 'DISCONNECT', 'AUTHENTICATE', 'VERIFY', 'VALIDATE', 'REGISTER', 'LOGIN',
-            'LOGOUT', 'SESSION', 'COOKIE', 'TOKEN', 'HASH', 'SIGNATURE', 'CERTIFICATE', 'PRIVATE',
-            'PUBLIC', 'SYMMETRIC', 'ASYMMETRIC', 'BLOCKCHAIN', 'CRYPTOCURRENCY', 'WALLET', 'MINING',
-            'TRANSACTION', 'LEDGER', 'CONSENSUS', 'SMART', 'CONTRACT', 'DEFI', 'NFT', 'METAVERSE',
-            'ARTIFICIAL', 'INTELLIGENCE', 'MACHINE', 'LEARNING', 'DEEP', 'NEURAL', 'NETWORK', 'TENSOR',
-            'PYTHON', 'JAVASCRIPT', 'TYPESCRIPT', 'REACT', 'ANGULAR', 'VUE', 'NODE', 'EXPRESS',
-            'MONGODB', 'POSTGRESQL', 'MYSQL', 'REDIS', 'DOCKER', 'KUBERNETES', 'AWS', 'AZURE',
-            'GOOGLE', 'MICROSOFT', 'APPLE', 'LINUX', 'WINDOWS', 'MACOS', 'ANDROID', 'IOS',
-            'BLUETOOTH', 'WIFI', 'ETHERNET', 'FIBER', 'SATELLITE', 'ROUTER', 'SWITCH', 'GATEWAY',
-            'PROXY', 'VPN', 'TOR', 'DNS', 'HTTP', 'HTTPS', 'FTP', 'SSH', 'TELNET', 'SMTP',
-            'POP3', 'IMAP', 'REST', 'API', 'GRAPHQL', 'SOAP', 'XML', 'JSON', 'YAML', 'CSV',
-            'HTML', 'CSS', 'SCSS', 'SASS', 'LESS', 'WEBPACK', 'BABEL', 'ESLINT', 'PRETTIER',
-            'GIT', 'GITHUB', 'GITLAB', 'BITBUCKET', 'JENKINS', 'TRAVIS', 'CIRCLECI', 'DOCKER',
-            'KUBERNETES', 'HELM', 'TERRAFORM', 'ANSIBLE', 'CHEF', 'PUPPET', 'SALT', 'CONSUL',
-            'ETCD', 'ZOOKEEPER', 'KAFKA', 'RABBITMQ', 'ACTIVEMQ', 'REDIS', 'MEMCACHED', 'ELASTIC',
-            'LOGSTASH', 'KIBANA', 'GRAFANA', 'PROMETHEUS', 'NAGIOS', 'ZABBIX', 'SPLUNK', 'DATADOG',
-            'NEWRELIC', 'APPDYNAMICS', 'DYNATRACE', 'JAEGER', 'ZIPKIN', 'OTEL', 'ISTIO', 'LINKERD',
-            'CONSUL', 'ENVOY', 'NGINX', 'APACHE', 'TOMCAT', 'JETTY', 'UNDERTOW', 'WILDFLY',
-            'SPRING', 'HIBERNATE', 'JPA', 'JAX', 'RS', 'SOAP', 'WSDL', 'UDDI', 'ESB', 'BPM',
-            'WORKFLOW', 'ORCHESTRATION', 'MICROSERVICE', 'MONOLITH', 'SOA', 'DDD', 'CQRS', 'ES',
-            'EVENT', 'SOURCING', 'SAGA', 'CHOREOGRAPHY', 'ORCHESTRATION', 'COMPENSATION', 'RETRY',
-            'CIRCUIT', 'BREAKER', 'BULKHEAD', 'TIMEOUT', 'RATE', 'LIMITING', 'THROTTLING', 'CACHING',
-            'CDN', 'EDGE', 'COMPUTING', 'FOG', 'IOT', 'MESH', 'GRID', 'CLUSTER', 'LOAD', 'BALANCER',
-            'AUTOSCALING', 'HORIZONTAL', 'VERTICAL', 'SCALING', 'SHARDING', 'PARTITIONING', 'REPLICATION',
-            'MASTER', 'SLAVE', 'PRIMARY', 'SECONDARY', 'READ', 'WRITE', 'CONSISTENCY', 'AVAILABILITY',
-            'PARTITION', 'TOLERANCE', 'CAP', 'THEOREM', 'ACID', 'BASE', 'TRANSACTION', 'ISOLATION',
-            'DURABILITY', 'ATOMICITY', 'CONSISTENCY', 'NORMALIZATION', 'DENORMALIZATION', 'INDEX',
-            'QUERY', 'OPTIMIZATION', 'EXECUTION', 'PLAN', 'STATISTICS', 'ANALYZE', 'EXPLAIN',
-            'PROFILING', 'BENCHMARKING', 'STRESS', 'TESTING', 'LOAD', 'PERFORMANCE', 'MONITORING',
-            'ALERTING', 'LOGGING', 'TRACING', 'METRICS', 'DASHBOARD', 'REPORTING', 'ANALYTICS',
-            'BUSINESS', 'INTELLIGENCE', 'DATA', 'WAREHOUSE', 'LAKE', 'STREAMING', 'BATCH', 'REAL',
-            'TIME', 'NEAR', 'LATENCY', 'THROUGHPUT', 'BANDWIDTH', 'CAPACITY', 'UTILIZATION', 'EFFICIENCY'
-        ];
-        return words[Math.floor(Math.random() * words.length)];
+        return CIPHER_WORD_BANK[Math.floor(Math.random() * CIPHER_WORD_BANK.length)];
     };
 
     const generateCipherKey = (): string => {
-        const words = [
-            'CASH', 'MONEY', 'GOLD', 'SILVER', 'COIN', 'BANK', 'FUND', 'DEBT',
-            'CREDIT', 'DEBIT', 'LOAN', 'MORTGAGE', 'INTEREST', 'RATE', 'PRINCIPAL', 'PAYMENT',
-            'DEPOSIT', 'WITHDRAWAL', 'TRANSFER', 'WIRE', 'CHECK', 'CARD', 'VISA', 'MASTERCARD',
-            'AMEX', 'DISCOVER', 'PAYPAL', 'VENMO', 'CASHAPP', 'BITCOIN', 'ETHEREUM', 'DOGE',
-            'ADA', 'DOT', 'LINK', 'UNI', 'AAVE', 'COMP', 'YFI', 'SUSHI', 'CRV', 'BAL',
-            'SNX', 'MKR', 'REN', 'ZRX', 'BAT', 'REP', 'KNC', 'BNT', 'LRC', 'OMG',
-            'STORJ', 'MANA', 'SAND', 'AXS', 'SLP', 'CHZ', 'HOT', 'VET', 'TRX', 'XRP',
-            'LTC', 'BCH', 'BSV', 'XLM', 'XMR', 'ZEC', 'DASH', 'NEO', 'ONT', 'VET',
-            'QTUM', 'ICX', 'WAVES', 'STRAT', 'ARK', 'LSK', 'STEEM', 'BTS', 'EOS', 'TELOS',
-            'WAX', 'CHAIN', 'POLKADOT', 'COSMOS', 'AVALANCHE', 'POLYGON', 'ARBITRUM', 'OPTIMISM',
-            'FANTOM', 'HARMONY', 'CELO', 'NEAR', 'SOLANA', 'ALGORAND', 'CARDANO', 'TEZOS',
-            'COSMOS', 'TENDermint', 'VALIDATOR', 'DELEGATOR', 'STAKING', 'REWARDS', 'SLASHING',
-            'GOVERNANCE', 'PROPOSAL', 'VOTING', 'QUORUM', 'THRESHOLD', 'CONSENSUS', 'FINALITY',
-            'BLOCK', 'TRANSACTION', 'HASH', 'SIGNATURE', 'PUBLIC', 'PRIVATE', 'KEY', 'WALLET',
-            'ADDRESS', 'BALANCE', 'NONCE', 'GAS', 'FEE', 'MINING', 'STAKING', 'YIELD',
-            'FARMING', 'LIQUIDITY', 'POOL', 'SWAP', 'TRADE', 'ORDER', 'BOOK', 'SPREAD',
-            'SLIPPAGE', 'IMPERMANENT', 'LOSS', 'APY', 'APR', 'TVL', 'MCAP', 'VOLUME',
-            'MARKET', 'CAP', 'CIRCULATING', 'SUPPLY', 'MAX', 'TOTAL', 'BURNED', 'MINTED',
-            'LOCKED', 'VESTED', 'CLAIM', 'AIRDROP', 'IDO', 'ICO', 'STO', 'IEO', 'LAUNCHPAD',
-            'INCUBATOR', 'ACCELERATOR', 'VENTURE', 'CAPITAL', 'ANGEL', 'INVESTOR', 'FUND', 'PORTFOLIO',
-            'DIVERSIFICATION', 'RISK', 'MANAGEMENT', 'HEDGE', 'DERIVATIVE', 'FUTURES', 'OPTIONS',
-            'FORWARDS', 'SWAPS', 'ARBITRAGE', 'SCALPING', 'DAY', 'TRADING', 'SWING', 'POSITION',
-            'LONG', 'SHORT', 'LEVERAGE', 'MARGIN', 'CALL', 'PUT', 'STRIKE', 'EXPIRY', 'PREMIUM',
-            'DELTA', 'GAMMA', 'THETA', 'VEGA', 'RHO', 'IMPLIED', 'VOLATILITY', 'HISTORICAL',
-            'BETA', 'ALPHA', 'SHARPE', 'RATIO', 'SORTINO', 'TREYNOR', 'INFORMATION', 'JENSEN',
-            'MODERN', 'PORTFOLIO', 'THEORY', 'EFFICIENT', 'FRONTIER', 'CAPITAL', 'ASSET', 'PRICING',
-            'MODEL', 'BLACK', 'SCHOLES', 'BINOMIAL', 'MONTE', 'CARLO', 'SIMULATION', 'BACKTESTING',
-            'FORWARD', 'TESTING', 'WALK', 'ANALYSIS', 'COINTEGRATION', 'GRANGER', 'CAUSALITY',
-            'VECTOR', 'AUTOREGRESSION', 'GARCH', 'ARCH', 'EGARCH', 'TGARCH', 'PARCH', 'APARCH',
-            'STOCHASTIC', 'VOLATILITY', 'JUMP', 'DIFFUSION', 'MEAN', 'REVERSION', 'MOMENTUM',
-            'CONTRARIAN', 'TREND', 'FOLLOWING', 'MEAN', 'REVERSION', 'BREAKOUT', 'BREAKDOWN',
-            'SUPPORT', 'RESISTANCE', 'PIVOT', 'POINT', 'FIBONACCI', 'RETRACEMENT', 'EXTENSION',
-            'ELLIOTT', 'WAVE', 'THEORY', 'DOW', 'THEORY', 'WYCKOFF', 'METHOD', 'MARKET', 'PROFILE',
-            'VOLUME', 'PROFILE', 'ORDER', 'FLOW', 'TAPE', 'READING', 'LEVEL', 'II', 'DATA',
-            'TIME', 'SALES', 'TICK', 'CHART', 'RANGE', 'BAR', 'CANDLESTICK', 'HEIKIN', 'ASHI',
-            'RENKO', 'KAGI', 'POINT', 'FIGURE', 'LINE', 'AREA', 'COLUMN', 'BAR', 'HISTOGRAM',
-            'SCATTER', 'PLOT', 'BUBBLE', 'RADAR', 'POLAR', 'STOCK', 'WATERFALL', 'FUNNEL',
-            'GAUGE', 'THERMOMETER', 'PROGRESS', 'BAR', 'SLIDER', 'KNOB', 'DIAL', 'METER',
-            'COMPASS', 'CLOCK', 'TIMER', 'STOPWATCH', 'CHRONOMETER', 'PENDULUM', 'SPRING',
-            'GEAR', 'PULLEY', 'LEVER', 'WEDGE', 'SCREW', 'INCLINED', 'PLANE', 'WHEEL',
-            'AXLE', 'BEARING', 'BUSHING', 'COUPLING', 'CLUTCH', 'BRAKE', 'TRANSMISSION',
-            'DIFFERENTIAL', 'DRIVESHAFT', 'CARDAN', 'UNIVERSAL', 'JOINT', 'CV', 'CONSTANT',
-            'VELOCITY', 'TRIPOD', 'DOUBLE', 'CARDAN', 'RZEPPA', 'BIRFIELD', 'WEISFELD',
-            'THOMPSON', 'BALL', 'JOINT', 'TIE', 'ROD', 'END', 'BALL', 'JOINT', 'TIE',
-            'ROD', 'END', 'BALL', 'JOINT', 'TIE', 'ROD', 'END', 'BALL', 'JOINT', 'TIE'
-        ];
-        return words[Math.floor(Math.random() * words.length)];
+        return CIPHER_WORD_BANK[Math.floor(Math.random() * CIPHER_WORD_BANK.length)];
     };
 
     const polybiusKey = generatePolybiusKey();
@@ -827,8 +895,25 @@ export const encryptNihilist = (text: string): { encrypted: string; polybiusKey:
         ciphertextNumbers.push(plaintextNumbers[i] + runningKey[i]);
     }
 
+    // Nihilist: randomize block sizes (3-6 pairs, weighted distribution) with gaps between blocks
+    const blockSizes = [3, 3, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6]; // weighted distribution
+    const blockSize = blockSizes[Math.floor(Math.random() * blockSizes.length)];
+    
     // Convert numbers back to string representation
-    const encrypted = ciphertextNumbers.join(' ');
+    const numberString = ciphertextNumbers.join(' ');
+    
+    // Group into blocks of the chosen size with gaps between blocks
+    const blocks: string[] = [];
+    const pairs = numberString.split(' ');
+    
+    for (let i = 0; i < pairs.length; i += blockSize) {
+        const block = pairs.slice(i, i + blockSize).join(' ');
+        if (block.trim()) {
+            blocks.push(block);
+        }
+    }
+    
+    const encrypted = blocks.join('  '); // double space between blocks for clear separation
 
     return { encrypted, polybiusKey, cipherKey };
 };
@@ -862,6 +947,9 @@ export const encryptFractionatedMorse = (text: string): { encrypted: string; key
             morseString += 'x';
         }
     }
+    
+    // Remove any triple x patterns that might have been created
+    morseString = morseString.replace(/xxx/g, 'xx');
     
     // Pad with trailing x's if length is not divisible by 3
     while (morseString.length % 3 !== 0) {
@@ -903,7 +991,15 @@ export const encryptFractionatedMorse = (text: string): { encrypted: string; key
     // Create the key string (the order of unique triplets)
     const key = Object.keys(tripletToLetter).join('|');
     
-    return { encrypted, key, fractionationTable: tripletToLetter };
+    // Filter out any 'xxx' triplets from the fractionation table
+    const filteredFractionationTable: { [key: string]: string } = {};
+    Object.entries(tripletToLetter).forEach(([triplet, letter]) => {
+        if (triplet !== 'xxx' && !triplet.includes('xxx')) {
+            filteredFractionationTable[triplet] = letter;
+        }
+    });
+    
+    return { encrypted, key, fractionationTable: filteredFractionationTable };
 };
 
 // Complete Columnar
@@ -944,14 +1040,14 @@ export const encryptColumnarTransposition = (text: string): { encrypted: string;
     return { encrypted, key };
 };
 
-// Xenocrypt cipher (simplified version)
-export const encryptXenocrypt = (text: string): { encrypted: string; key: string } => {
-    const generateXenocryptKey = (): string => {
-        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-        const result = new Array(26);
+// Random Xenocrypt cipher
+export const encryptRandomXenocrypt = (text: string): { encrypted: string; key: string } => {
+    const generateRandomXenocryptKey = (): string => {
+        const alphabet = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'.split(''); // 27 letters including Ñ
+        const result = new Array(27);
         let available = [...alphabet];
         
-        for (let i = 0; i < 26; i++) {
+        for (let i = 0; i < 27; i++) {
             available = available.filter(char => char !== alphabet[i]);
             const randomIndex = Math.floor(Math.random() * available.length);
             result[i] = available[randomIndex];
@@ -963,37 +1059,113 @@ export const encryptXenocrypt = (text: string): { encrypted: string; key: string
         return result.join('');
     };
 
-    const key = generateXenocryptKey();
-    // Handle Spanish text by normalizing accented characters
+    const key = generateRandomXenocryptKey();
+    // Handle Spanish text by normalizing accented characters, but preserve Ñ
     const normalizedText = text.toUpperCase()
         .replace(/Á/g, 'A')
         .replace(/É/g, 'E')
         .replace(/Í/g, 'I')
         .replace(/Ó/g, 'O')
         .replace(/Ú/g, 'U')
-        .replace(/Ü/g, 'U')
-        .replace(/Ñ/g, 'N');
+        .replace(/Ü/g, 'U');
+    // Note: Ñ is preserved and not converted to N
     
-    const encrypted = normalizedText.replace(/[A-Z]/g, char => 
+    const encrypted = normalizedText.replace(/[A-ZÑ]/g, char => 
         key[letterToNumber(char)] || char
     );
 
     return { encrypted, key };
 };
 
+// K1 Xenocrypt cipher - Plain alphabet is keyed
+export const encryptK1Xenocrypt = (text: string): { encrypted: string; key: string } => {
+    const keyword = generateRandomKeyword();
+    const plainAlphabet = generateKeywordAlphabet(keyword) + 'Ñ'; // Add Ñ for Spanish
+    const cipherAlphabet = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ';
+    
+    // Create substitution mapping
+    const substitutionMap: { [key: string]: string } = {};
+    for (let i = 0; i < 27; i++) {
+        substitutionMap[plainAlphabet[i]] = cipherAlphabet[i];
+    }
+    
+    // Handle Spanish text by normalizing accented characters, but preserve Ñ
+    const normalizedText = text.toUpperCase()
+        .replace(/Á/g, 'A')
+        .replace(/É/g, 'E')
+        .replace(/Í/g, 'I')
+        .replace(/Ó/g, 'O')
+        .replace(/Ú/g, 'U')
+        .replace(/Ü/g, 'U');
+    // Note: Ñ is preserved and not converted to N
+    
+    const encrypted = normalizedText.replace(/[A-ZÑ]/g, char => 
+        substitutionMap[char] || char
+    );
+
+    return { encrypted, key: keyword };
+};
+
+// K2 Xenocrypt cipher - Cipher alphabet is keyed
+export const encryptK2Xenocrypt = (text: string): { encrypted: string; key: string } => {
+    const keyword = generateRandomKeyword();
+    const plainAlphabet = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ';
+    const cipherAlphabet = generateKeywordAlphabet(keyword) + 'Ñ'; // Add Ñ for Spanish
+    
+    // Create substitution mapping
+    const substitutionMap: { [key: string]: string } = {};
+    for (let i = 0; i < 27; i++) {
+        substitutionMap[plainAlphabet[i]] = cipherAlphabet[i];
+    }
+    
+    // Handle Spanish text by normalizing accented characters, but preserve Ñ
+    const normalizedText = text.toUpperCase()
+        .replace(/Á/g, 'A')
+        .replace(/É/g, 'E')
+        .replace(/Í/g, 'I')
+        .replace(/Ó/g, 'O')
+        .replace(/Ú/g, 'U')
+        .replace(/Ü/g, 'U');
+    // Note: Ñ is preserved and not converted to N
+    
+    const encrypted = normalizedText.replace(/[A-ZÑ]/g, char => 
+        substitutionMap[char] || char
+    );
+
+    return { encrypted, key: keyword };
+};
+
 // New helper function to calculate letter frequencies
 export const getLetterFrequencies = (text: string): { [key: string]: number } => {
     const frequencies: { [key: string]: number } = {};
+    
+    // Check if text contains Ñ to determine if it's xenocrypt
+    const isXenocrypt = text.includes('Ñ');
+    const alphabet = isXenocrypt ? 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ' : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    
     // Initialize all letters to 0
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(letter => {
+    alphabet.split('').forEach(letter => {
         frequencies[letter] = 0;
     });
+    
     // Count occurrences
     text.split('').forEach(char => {
-        if (/[A-Z]/.test(char)) {
-            frequencies[char]++;
+        if (isXenocrypt) {
+            if (/[A-ZÑ]/.test(char)) {
+                frequencies[char]++;
+            }
+        } else {
+            if (/[A-Z]/.test(char)) {
+                frequencies[char]++;
+            }
         }
     });
+    
+    // Ensure Ñ is always initialized for xenocrypt ciphers, even if not in text
+    if (isXenocrypt && !frequencies.hasOwnProperty('Ñ')) {
+        frequencies['Ñ'] = 0;
+    }
+    
     return frequencies;
 }; 
 
@@ -1007,9 +1179,7 @@ export const encryptCheckerboard = (text: string): {
 } => {
     // 1) Build mixed alphabet from a keyword (I/J combined for 25 letters or keep 26; we keep 26 and allow J)
     const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const keywords = [
-        'CRYPTO', 'SCIENCE', 'ALGORITHM', 'CIPHER', 'KEYWORD', 'SECURITY', 'PUZZLE', 'ENIGMA', 'MATRIX', 'VECTOR'
-    ];
+    const keywords = CIPHER_WORD_BANK;
     const checkerboardKeyword = keywords[Math.floor(Math.random() * keywords.length)];
     const used = new Set<string>();
     const mixed: string[] = [];
@@ -1081,4 +1251,64 @@ export const encryptCheckerboard = (text: string): {
         if (code) encryptedDigits += code;
     }
     return { encrypted: encryptedDigits, checkerboardKeyword, checkerboardR1, checkerboardR2 };
+};
+
+// Cryptarithm cipher
+// Returns: encrypted text (the cryptarithm puzzle), plus cryptarithm data
+export const encryptCryptarithm = (_text: string): {
+    encrypted: string;
+    cryptarithmData: {
+        equation: string;
+        numericExample: string;
+        digitGroups: Array<{
+            digits: string;
+            word: string;
+        }>;
+        hint?: string;
+    };
+} => {
+    // Predefined cryptarithm puzzles
+    const cryptarithmPuzzles = [
+        {
+            equation: "  E A T\n+ T H A T\n---------\nA P P L E",
+            numericExample: "  8 1 9\n+ 9 2 1 9\n---------\n1 0 0 3 8",
+            digitGroups: [
+                { digits: "2 8 1 9", word: "H E A T" },
+                { digits: "9 2 8", word: "T H E" },
+                { digits: "0 3 1 9 8", word: "P L A T E" }
+            ],
+            hint: "The solution is microwave-related."
+        },
+        {
+            equation: "  S E N D\n+ M O R E\n---------\nM O N E Y",
+            numericExample: "  9 5 6 7\n+ 1 0 8 5\n---------\n1 0 6 5 2",
+            digitGroups: [
+                { digits: "1 0 6 5 2", word: "M O N E Y" },
+                { digits: "9 5 6 7", word: "S E N D" },
+                { digits: "1 0 8 5", word: "M O R E" }
+            ],
+            hint: "Think about sending money."
+        },
+        {
+            equation: "  C R O S S\n+ R O A D S\n---------\nD A N G E R",
+            numericExample: "  9 6 2 3 3\n+ 6 2 1 7 3\n---------\n1 5 8 4 0 6",
+            digitGroups: [
+                { digits: "1 5 8 4 0 6", word: "D A N G E R" },
+                { digits: "9 6 2 3 3", word: "C R O S S" },
+                { digits: "6 2 1 7 3", word: "R O A D S" }
+            ],
+            hint: "Be careful when crossing roads."
+        }
+    ];
+
+    // Select a random puzzle
+    const puzzle = cryptarithmPuzzles[Math.floor(Math.random() * cryptarithmPuzzles.length)];
+    
+    // Create the encrypted text (the puzzle description)
+    const encrypted = `Solve the cryptarithm and then use the digit→letter key to decode the number string shown.\n\nContext\n\nThe alphametic shown is\n\n${puzzle.equation}\n\nwith the numeric example printed on the puzzle:\n\n${puzzle.numericExample}\n\nThe puzzle hint says the solution is ${puzzle.hint?.toLowerCase().replace('the solution is ', '').replace('.', '')}-related.`;
+
+    return {
+        encrypted,
+        cryptarithmData: puzzle
+    };
 };

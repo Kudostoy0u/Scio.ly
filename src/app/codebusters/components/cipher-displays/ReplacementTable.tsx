@@ -8,6 +8,8 @@ interface ReplacementTableProps {
     solution?: { [key: string]: string };
     quoteIndex: number;
     isTestSubmitted: boolean;
+    cipherType: string;
+    correctMapping?: { [key: string]: string };
     onSolutionChange: (quoteIndex: number, cipherLetter: string, plainLetter: string) => void;
     focusedCipherLetter?: string | null;
     onCipherLetterFocus?: (cipherLetter: string) => void;
@@ -19,6 +21,8 @@ export const ReplacementTable = ({
     solution,
     quoteIndex,
     isTestSubmitted,
+    cipherType,
+    correctMapping,
     onSolutionChange,
     focusedCipherLetter,
     onCipherLetterFocus,
@@ -26,6 +30,10 @@ export const ReplacementTable = ({
 }: ReplacementTableProps) => {
     const { darkMode } = useTheme();
     const frequencies = getLetterFrequencies(text);
+    
+    // Determine the alphabet based on cipher type
+    const isXenocrypt = cipherType.includes('Xenocrypt');
+    const alphabet = isXenocrypt ? 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ' : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     
     // Handle replacement table input changes
     const handleReplacementTableChange = (cipherLetter: string, newPlainLetter: string) => {
@@ -51,14 +59,14 @@ export const ReplacementTable = ({
                 Replacement Table
             </div>
             <div className="overflow-x-auto">
-                <table className="text-xs border-collapse">
+                <table className="text-xs border-collapse min-w-full">
                     <tbody>
                         {/* Cipher letters row */}
                         <tr>
                             <td className={`p-1 border text-center font-bold ${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`}>
                                 Cipher
                             </td>
-                            {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => (
+                            {alphabet.split('').map(letter => (
                                 <td key={letter} className={`p-1 border text-center font-bold ${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`}>
                                     {letter}
                                 </td>
@@ -69,9 +77,9 @@ export const ReplacementTable = ({
                             <td className={`p-1 border text-center font-bold ${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`}>
                                 Frequency
                             </td>
-                            {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => (
+                            {alphabet.split('').map(letter => (
                                 <td key={letter} className={`p-1 border text-center ${darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-600'}`}>
-                                    {frequencies[letter]}
+                                    {frequencies[letter] || 0}
                                 </td>
                             ))}
                         </tr>
@@ -80,23 +88,60 @@ export const ReplacementTable = ({
                             <td className={`p-1 border text-center font-bold ${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`}>
                                 Replacement
                             </td>
-                            {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => (
-                                <td key={letter} className={`p-1 border ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
-                                    <input
-                                        type="text"
-                                        maxLength={1}
-                                        value={solution?.[letter] || ''}
-                                        onChange={(e) => handleReplacementTableChange(letter, e.target.value.toUpperCase())}
-                                        onFocus={() => onCipherLetterFocus?.(letter)}
-                                        onBlur={onCipherLetterBlur}
-                                        className={`w-full text-center text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-900'} focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                                            focusedCipherLetter === letter ? 'border-2 border-blue-500' : 'border-0'
-                                        }`}
-                                        placeholder=""
-                                        disabled={isTestSubmitted}
-                                    />
-                                </td>
-                            ))}
+                            {alphabet.split('').map(letter => {
+                                const userValue = solution?.[letter] || '';
+                                const correctValue = correctMapping?.[letter] || '';
+                                const isCorrect = userValue === correctValue;
+                                const hasUserInput = userValue !== '';
+                                
+                                return (
+                                    <td key={letter} className={`p-1 border min-w-[2rem] ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
+                                        {isTestSubmitted ? (
+                                            // Show correct mappings after submission
+                                            <div className="relative w-full h-full flex items-center justify-center">
+                                                {hasUserInput && !isCorrect ? (
+                                                    // Show both wrong and correct answers side by side
+                                                    <div className="flex items-center justify-center space-x-1">
+                                                        <div className={`text-xs line-through ${
+                                                            darkMode ? 'text-red-400' : 'text-red-600'
+                                                        }`}>
+                                                            {userValue}
+                                                        </div>
+                                                        <div className={`text-xs font-medium ${
+                                                            darkMode ? 'text-green-400' : 'text-green-600'
+                                                        }`}>
+                                                            {correctValue}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    // Show only correct answer
+                                                    <div className={`text-center text-xs font-medium ${
+                                                        isCorrect 
+                                                            ? (darkMode ? 'text-green-400' : 'text-green-600')
+                                                            : (darkMode ? 'text-red-400' : 'text-red-600')
+                                                    }`}>
+                                                        {correctValue}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            // Normal input during test
+                                            <input
+                                                type="text"
+                                                maxLength={1}
+                                                value={userValue}
+                                                onChange={(e) => handleReplacementTableChange(letter, e.target.value.toUpperCase())}
+                                                onFocus={() => onCipherLetterFocus?.(letter)}
+                                                onBlur={onCipherLetterBlur}
+                                                className={`w-full text-center text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-900'} focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                                                    focusedCipherLetter === letter ? 'border-2 border-blue-500' : 'border-0'
+                                                }`}
+                                                placeholder=""
+                                            />
+                                        )}
+                                    </td>
+                                );
+                            })}
                         </tr>
                     </tbody>
                 </table>

@@ -35,7 +35,7 @@ export const PrintConfigModal: React.FC<PrintConfigModalProps> = ({
   };
 
   const getSuggestedPoints = (quote: QuoteData) => {
-    return Math.round((quote.difficulty || 0.5) * 500);
+    return Math.round((quote.difficulty || 0.5) * 50);
   };
 
   const getCharCount = (quote: QuoteData) => {

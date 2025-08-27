@@ -3,12 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { QuoteData } from '../types';
 import SummaryGrid, { SummaryItem } from '@/app/components/SummaryGrid';
 import { CheckCircle, Hash, Target, Trophy } from 'lucide-react';
+import { calculateCipherGrade } from '../utils/gradingUtils';
 
 interface CodebustersSummaryProps {
   quotes: QuoteData[];
   darkMode: boolean;
   hintedLetters?: {[questionIndex: number]: {[letter: string]: boolean}};
   _hintCounts?: {[questionIndex: number]: number};
+  questionPoints?: {[key: number]: number};
 }
 
 // Function to calculate grade based on points
@@ -31,7 +33,7 @@ function NonCompactCodebustersSummary({ items, cipherTypes, darkMode }: {
   darkMode: boolean; 
 }) {
   return (
-    <div className="sticky top-4 z-10 w-full max-w-3xl mx-auto mb-6">
+    <div className="sticky top-4 z-10 w-full max-w-[80vw] mx-auto mb-6">
       <div className={`rounded-lg shadow-lg p-4 md:p-5 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
         <h2 className={`text-lg md:text-xl font-bold mb-3 md:mb-4 text-center ${darkMode ? 'text-white' : 'text-gray-900'}`}>
           Test Summary
@@ -89,7 +91,7 @@ function MobileCompactCodebustersSummary({ items, darkMode }: {
   );
 }
 
-export default function CodebustersSummary({ quotes, darkMode, hintedLetters = {}, _hintCounts = {} }: CodebustersSummaryProps) {
+export default function CodebustersSummary({ quotes, darkMode, hintedLetters = {}, _hintCounts = {}, questionPoints = {} }: CodebustersSummaryProps) {
   const [scrollY, setScrollY] = useState(0);
   
   useEffect(() => {
@@ -102,195 +104,44 @@ export default function CodebustersSummary({ quotes, darkMode, hintedLetters = {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const totalCiphers = quotes.length;
+  // Calculate points-based scoring using the new grading system
+  let totalPointsEarned = 0;
+  let totalPointsAttempted = 0;
+  let totalInputs = 0;
   
-  // Calculate attempted ciphers (those with at least one filled input)
-  const attemptedCiphers = quotes.filter(quote => {
-    if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Xenocrypt'].includes(quote.cipherType)) {
-      return quote.solution && Object.keys(quote.solution).length > 0;
-    } else if (quote.cipherType === 'Hill 2x2' || quote.cipherType === 'Hill 3x3') {
-      return quote.hillSolution && (
-        quote.hillSolution.matrix.some(row => row.some(cell => cell && cell.trim().length > 0)) ||
-        Object.keys(quote.hillSolution.plaintext).length > 0
-      );
-    } else if (quote.cipherType === 'Complete Columnar') {
-      return quote.solution && Object.keys(quote.solution).length > 0;
-    } else if (quote.cipherType === 'Nihilist') {
-      return quote.nihilistSolution && Object.keys(quote.nihilistSolution).length > 0;
-    } else if (quote.cipherType === 'Baconian') {
-      return quote.solution && Object.keys(quote.solution).length > 0;
-    } else if (quote.cipherType === 'Porta') {
-      return quote.solution && Object.keys(quote.solution).length > 0;
-    } else if (quote.cipherType === 'Fractionated Morse') {
-      return quote.solution && Object.keys(quote.solution).length > 0;
-    } else if (quote.cipherType === 'Checkerboard') {
-      return quote.checkerboardSolution && Object.keys(quote.checkerboardSolution).length > 0;
-    }
-    return false;
-  }).length;
-  
-  // Calculate fractional scores for each cipher
-  const cipherScores = quotes.map((quote, quoteIndex) => {
-    if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Xenocrypt'].includes(quote.cipherType)) {
-      // For substitution ciphers, score based on how many letters are substituted
-      if (!quote.solution || Object.keys(quote.solution).length === 0) {
-        return 0;
-      }
-      
-      // Count how many unique letters are in the encrypted text
-      const uniqueLetters = new Set(quote.encrypted.replace(/[^A-Z]/g, ''));
-      const totalLetters = uniqueLetters.size;
-      
-      if (totalLetters === 0) return 0;
-      
-      // Count how many letters have meaningful substitutions
-      const meaningfulSubstitutions = Object.values(quote.solution).filter(value => 
-        value && value.trim().length === 1 && /^[A-Z]$/.test(value.trim())
-      ).length;
-      
-      // Count how many letters were hinted (after 3rd hint)
-      const hintedLetterCount = Object.keys(hintedLetters[quoteIndex] || {}).length;
-      
-      // Subtract hinted letters from the score (they count as skipped)
-      const adjustedSubstitutions = Math.max(0, meaningfulSubstitutions - hintedLetterCount);
-      
-      return Math.min(1, adjustedSubstitutions / totalLetters);
-      
-    } else if (quote.cipherType === 'Hill 2x2' || quote.cipherType === 'Hill 3x3') {
-      // For Hill ciphers, score based on matrix completion and plaintext
-      if (!quote.hillSolution) return 0;
-      
-      let matrixScore = 0;
-      let plaintextScore = 0;
-      
-      // Score matrix completion (each cell is worth equal weight)
-      const totalMatrixCells = quote.hillSolution.matrix.flat().length;
-      const filledMatrixCells = quote.hillSolution.matrix.flat().filter(cell => 
-        cell && cell.trim().length > 0 && /^[A-Z]$/.test(cell.trim())
-      ).length;
-      matrixScore = totalMatrixCells > 0 ? filledMatrixCells / totalMatrixCells : 0;
-      
-      // Score plaintext completion
-      const plaintextValues = Object.values(quote.hillSolution.plaintext);
-      const totalPlaintextSlots = plaintextValues.length;
-      const filledPlaintextSlots = plaintextValues.filter(value => 
-        value && value.trim().length > 0
-      ).length;
-      plaintextScore = totalPlaintextSlots > 0 ? filledPlaintextSlots / totalPlaintextSlots : 0;
-      
-      // Average of matrix and plaintext scores
-      return (matrixScore + plaintextScore) / 2;
-      
-    } else if (quote.cipherType === 'Complete Columnar') {
-      // For complete columnar, score based on decrypted text completion
-      if (!quote.solution?.decryptedText) return 0;
-      
-      const decryptedText = quote.solution.decryptedText.trim();
-      if (decryptedText.length === 0) return 0;
-      
-      // Score based on how much of the expected length is filled
-      const expectedLength = quote.encrypted.replace(/[^A-Z]/g, '').length;
-      return Math.min(1, decryptedText.length / expectedLength);
-      
-    } else if (quote.cipherType === 'Nihilist') {
-      // For nihilist, score based on solution completion
-      if (!quote.nihilistSolution || Object.keys(quote.nihilistSolution).length === 0) {
-        return 0;
-      }
-      
-      const solutionValues = Object.values(quote.nihilistSolution);
-      const totalSlots = solutionValues.length;
-      const filledSlots = solutionValues.filter(value => 
-        value && value.trim().length > 0
-      ).length;
-      
-      return totalSlots > 0 ? filledSlots / totalSlots : 0;
-      
-    } else if (quote.cipherType === 'Baconian') {
-      // For baconian, score based on solution completion
-      if (!quote.solution || Object.keys(quote.solution).length === 0) {
-        return 0;
-      }
-      
-      const solutionValues = Object.values(quote.solution);
-      const totalSlots = solutionValues.length;
-      const filledSlots = solutionValues.filter(value => 
-        value && value.trim().length > 0
-      ).length;
-      
-      return totalSlots > 0 ? filledSlots / totalSlots : 0;
-      
-    } else if (quote.cipherType === 'Porta') {
-      // For porta, score based on solution completion
-      if (!quote.solution || Object.keys(quote.solution).length === 0) {
-        return 0;
-      }
-      
-      const solutionValues = Object.values(quote.solution);
-      const totalSlots = solutionValues.length;
-      const filledSlots = solutionValues.filter(value => 
-        value && value.trim().length > 0
-      ).length;
-      
-      return totalSlots > 0 ? filledSlots / totalSlots : 0;
-      
-    } else if (quote.cipherType === 'Fractionated Morse') {
-      // For fractionated morse, score based on solution completion
-      if (!quote.solution || Object.keys(quote.solution).length === 0) {
-        return 0;
-      }
-      
-      const solutionValues = Object.values(quote.solution);
-      const totalSlots = solutionValues.length;
-      const filledSlots = solutionValues.filter(value => 
-        value && value.trim().length > 0
-      ).length;
-      
-      return totalSlots > 0 ? filledSlots / totalSlots : 0;
-      
-    } else if (quote.cipherType === 'Checkerboard') {
-      // For checkerboard, score based on solution completion
-      if (!quote.checkerboardSolution || Object.keys(quote.checkerboardSolution).length === 0) {
-        return 0;
-      }
-      
-      const solutionValues = Object.values(quote.checkerboardSolution);
-      const totalSlots = solutionValues.length;
-      const filledSlots = solutionValues.filter(value => 
-        value && value.trim().length > 0
-      ).length;
-      
-      return totalSlots > 0 ? filledSlots / totalSlots : 0;
-    }
+  quotes.forEach((quote, quoteIndex) => {
+    // Calculate grade for this cipher using the new grading system
+    const gradeResult = calculateCipherGrade(quote, quoteIndex, hintedLetters, questionPoints);
     
-    return 0;
+    // Add to totals
+    totalPointsEarned += gradeResult.score;
+    totalPointsAttempted += gradeResult.attemptedScore;
+    totalInputs += gradeResult.totalInputs;
   });
   
-  const totalPoints = totalCiphers;
-  const earnedPoints = cipherScores.reduce((sum, score) => sum + score, 0);
-  const solvedCiphers = Math.round(earnedPoints); // Round to nearest whole number for display
-  const accuracyPercentage = totalCiphers > 0 ? Math.round((earnedPoints / totalCiphers) * 100) : 0;
+  // Calculate accuracy percentage based on points earned vs points attempted
+  const accuracyPercentage = totalPointsAttempted > 0 ? Math.round((totalPointsEarned / totalPointsAttempted) * 100) : 'N/A';
   const cipherTypes = [...new Set(quotes.map(quote => quote.cipherType))];
 
-  // Calculate grade
-  const grade = calculateGrade(earnedPoints, totalPoints);
+  // Calculate grade - show N/A if no questions were attempted
+  const grade = totalInputs > 0 ? calculateGrade(totalPointsEarned, totalPointsAttempted) : 'N/A';
 
   const items: SummaryItem[] = [
     { 
-      label: 'Solved', 
-      value: solvedCiphers, 
+      label: 'Points Earned', 
+      value: Math.round(totalPointsEarned), 
       valueClassName: darkMode ? 'text-green-400' : 'text-green-600',
       icon: CheckCircle
     },
     { 
-      label: 'Attempted', 
-      value: attemptedCiphers, 
+      label: 'Points Attempted', 
+      value: Math.round(totalPointsAttempted), 
       valueClassName: darkMode ? 'text-blue-400' : 'text-blue-600',
       icon: Hash
     },
     { 
       label: 'Correct', 
-      value: `${accuracyPercentage}%`, 
+      value: typeof accuracyPercentage === 'number' ? `${accuracyPercentage}%` : accuracyPercentage, 
       valueClassName: darkMode ? 'text-yellow-400' : 'text-yellow-600',
       icon: Target
     },

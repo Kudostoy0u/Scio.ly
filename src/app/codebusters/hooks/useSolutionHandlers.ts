@@ -82,12 +82,22 @@ export const useSolutionHandlers = (
     }));
   }, [setQuotes]);
 
+  // Handle keyword solution changes for K1, K2, K3 ciphers when askForKeyword is true
+  const handleKeywordSolutionChange = useCallback((quoteIndex: number, keyword: string) => {
+    setQuotes((prevQuotes) => prevQuotes.map((quote, index) => 
+      index === quoteIndex 
+        ? { ...quote, keywordSolution: keyword }
+        : quote
+    ));
+  }, [setQuotes]);
+
   return {
     handleSolutionChange,
     handleBaconianSolutionChange,
     handleFrequencyNoteChange,
     handleHillSolutionChange,
     handleNihilistSolutionChange,
-    handleCheckerboardSolutionChange
+    handleCheckerboardSolutionChange,
+    handleKeywordSolutionChange
   };
 };

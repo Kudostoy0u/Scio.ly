@@ -197,7 +197,7 @@ export const ColumnarTranspositionDisplay = ({
                             Original Quote:
                         </p>
                         <p className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                            {quote.quote}
+                            {quote.quote.replace(/\[.*?\]/g, '')}
                         </p>
                     </div>
                 </>

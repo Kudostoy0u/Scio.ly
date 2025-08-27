@@ -11,6 +11,7 @@ interface FractionatedMorseDisplayProps {
     isTestSubmitted: boolean;
     quotes: QuoteData[];
     onSolutionChange: (quoteIndex: number, cipherLetter: string, plainLetter: string) => void;
+    hintedLetters?: {[questionIndex: number]: {[letter: string]: boolean}};
 }
 
 export const FractionatedMorseDisplay = ({ 
@@ -20,7 +21,8 @@ export const FractionatedMorseDisplay = ({
     fractionationTable,
     isTestSubmitted,
     quotes,
-    onSolutionChange
+    onSolutionChange,
+    hintedLetters = {}
 }: FractionatedMorseDisplayProps) => {
     const { darkMode } = useTheme();
     const [focusedCipherLetter, setFocusedCipherLetter] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export const FractionatedMorseDisplay = ({
 
     // Get the actual triplets used in this cipher from the fractionation table
     const usedTriplets = useMemo(() => 
-        fractionationTable ? Object.keys(fractionationTable).sort() : [], 
+        fractionationTable ? Object.keys(fractionationTable).filter(triplet => triplet !== 'xxx' && !triplet.includes('xxx')).sort() : [], 
         [fractionationTable]
     );
     
@@ -124,7 +126,7 @@ export const FractionatedMorseDisplay = ({
         }
     };
 
-    // Function to calculate plaintext letters from morse code triplets
+    // Function to calculate plaintext letters from morse code triplets using linear sweep
     const calculatePlaintextLetters = (triplets: string[]): string[] => {
         const morseMap: { [key: string]: string } = {
             'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.',
@@ -140,249 +142,79 @@ export const FractionatedMorseDisplay = ({
             reverseMorseMap[morse] = letter;
         });
 
+        // Initialize all positions with empty strings
         const plaintextLetters: string[] = [];
-        
         for (let i = 0; i < triplets.length; i++) {
-            const triplet = triplets[i];
-            let letters = '';
-            
-            // Check if this is the first triplet or if previous triplet ended with x
-            const isFirstTriplet = i === 0;
-            const prevTriplet = i > 0 ? triplets[i - 1] : '';
-            const prevEndedWithX = prevTriplet && prevTriplet[2] === 'x';
-
-            // Special case: previous ended with x AND current triplet has x in middle
-            // Then we should produce two letters: one from the start of current triplet up to the x,
-            // and one from after the x continuing until the next x.
-            if (prevEndedWithX && triplet[1] === 'x') {
-                let firstLetter = '';
-                const firstMorse = (triplet[0] || '');
-                const mappedFirst = reverseMorseMap[firstMorse];
-                if (mappedFirst) firstLetter = mappedFirst;
-
-                // build second morse starting from position 2 of current triplet
-                let secondMorse = triplet[2] || '';
-                for (let j = i + 1; j < triplets.length; j++) {
-                    const nextTriplet = triplets[j] || '';
-                    const xPos = nextTriplet.indexOf('x');
-                    if (xPos !== -1) {
-                        secondMorse += nextTriplet.slice(0, xPos);
-                        break;
-                    } else {
-                        secondMorse += nextTriplet;
-                    }
-                }
-                const mappedSecond = reverseMorseMap[secondMorse];
-
-                const combined = `${firstLetter}${mappedSecond || ''}`;
-                if (combined) {
-                    plaintextLetters.push(combined);
-                    continue;
-                }
-            }
-            
-            if (isFirstTriplet || prevEndedWithX) {
-                // Start collecting morse code from this position
-                let morseCode = '';
-                let startPos = 0;
-                
-                // If previous triplet ended with x, start from the beginning of current triplet
-                // Otherwise, start from the beginning of current triplet
-                if (prevEndedWithX) {
-                    morseCode = triplet;
-                    startPos = i;
-                } else {
-                    morseCode = triplet;
-                    startPos = i;
-                }
-                
-                // Continue collecting morse code until we hit any 'x' in future triplets
-                for (let j = startPos + 1; j < triplets.length; j++) {
-                    const nextTriplet = triplets[j] || '';
-                    const xPos = nextTriplet.indexOf('x');
-                    if (xPos !== -1) {
-                        // Add everything before the x and stop
-                        morseCode += nextTriplet.slice(0, xPos);
-                        break;
-                    } else {
-                        // No x in this triplet, include whole triplet
-                        morseCode += nextTriplet;
-                    }
-                }
-                
-                // Convert morse code to letter
-                const letter = reverseMorseMap[morseCode];
-                if (letter) {
-                    letters += letter;
-                }
-            }
-
-            // If we've already produced a plaintext letter from the "start"/previous-x logic,
-            // skip the other cases to avoid producing duplicates (e.g., LL or HH).
-            if (letters) {
-                plaintextLetters.push(letters);
-                continue;
-            }
-            
-            // Check if current triplet has an x in the middle (position 1) and doesn't start with x
-            if (triplet[1] === 'x' && triplet[0] !== 'x') {
-                // Take the part after the x (position 2) and continue until next x
-                let morseCode = triplet[2];
-                
-                for (let j = i + 1; j < triplets.length; j++) {
-                    const nextTriplet = triplets[j];
-                    
-                    // Check if this triplet has an x
-                    const xPos = nextTriplet.indexOf('x');
-                    if (xPos !== -1) {
-                        // Add the part before the x
-                        morseCode += nextTriplet.slice(0, xPos);
-                        break;
-                    } else {
-                        // Add the entire triplet
-                        morseCode += nextTriplet;
-                    }
-                }
-                
-                // Convert morse code to letter
-                const letter = reverseMorseMap[morseCode];
-                if (letter) {
-                    letters += letter;
-                }
-            }
-            
-            // Check if current triplet has x in first and last positions (x.x pattern)
-            if (triplet[0] === 'x' && triplet[2] === 'x') {
-                // This represents just the middle character (position 1)
-                const morseCode = triplet[1];
-                const letter = reverseMorseMap[morseCode];
-                if (letter) {
-                    letters += letter;
-                }
-                
-                // Check if next triplet starts with x (word boundary)
-                const nextTriplet = i < triplets.length - 1 ? triplets[i + 1] : '';
-                if (nextTriplet && nextTriplet[0] === 'x') {
-                    letters += '/';
-                }
-            }
-            // Check if current triplet has x in first position (x.. pattern) - but not x.x
-            else if (triplet[0] === 'x') {
-                // Take the part after the x (positions 1 and 2) and continue until next x
-                let morseCode = triplet.slice(1);
-                
-                for (let j = i + 1; j < triplets.length; j++) {
-                    const nextTriplet = triplets[j];
-                    
-                    // Check if this triplet has an x
-                    const xPos = nextTriplet.indexOf('x');
-                    if (xPos !== -1) {
-                        // Add the part before the x
-                        morseCode += nextTriplet.slice(0, xPos);
-                        break;
-                    } else {
-                        // Add the entire triplet
-                        morseCode += nextTriplet;
-                    }
-                }
-                
-                // Convert morse code to letter
-                const letter = reverseMorseMap[morseCode];
-                if (letter) {
-                    letters += letter;
-                }
-            }
-            // Check if previous triplet ended with x and current triplet has x in last position
-            else if (prevEndedWithX && triplet[2] === 'x') {
-                // Start with the first two characters of current triplet (stop at the x in current triplet)
-                const morseCode = triplet.slice(0, 2);
-                
-                // Convert morse code to letter
-                const letter = reverseMorseMap[morseCode];
-                if (letter) {
-                    letters += letter;
-                }
-                
-                // Check if next triplet starts with x (word boundary)
-                const nextTriplet = i < triplets.length - 1 ? triplets[i + 1] : '';
-                if (nextTriplet && nextTriplet[0] === 'x') {
-                    letters += '/';
-                }
-            }
-            // Check if previous triplet ended with x and current triplet has no x in last position
-            else if (prevEndedWithX && triplet[2] !== 'x') {
-                // Start with the entire current triplet and continue until next x
-                let morseCode = triplet;
-                
-                for (let j = i + 1; j < triplets.length; j++) {
-                    const nextTriplet = triplets[j];
-                    
-                    // Check if this triplet has an x
-                    const xPos = nextTriplet.indexOf('x');
-                    if (xPos !== -1) {
-                        // Add the part before the x
-                        morseCode += nextTriplet.slice(0, xPos);
-                        break;
-                    } else {
-                        // Add the entire triplet
-                        morseCode += nextTriplet;
-                    }
-                }
-                
-                // Convert morse code to letter
-                const letter = reverseMorseMap[morseCode];
-                if (letter) {
-                    letters += letter;
-                }
-            }
-            
-            // Check for double x in current triplet (word boundary)
-            if (triplet.includes('xx')) {
-                // Case: triplet starts with 'xx' (e.g., "xx.") -> show '/' then map morse after the second x
-                if (triplet[0] === 'x' && triplet[1] === 'x') {
-                    if (!letters.includes('/')) letters += '/';
-                    // Collect morse after the second x
-                    let morseCodeAfter = triplet.slice(2) || '';
-                    for (let j = i + 1; j < triplets.length; j++) {
-                        const nextTriplet = triplets[j] || '';
-                        const xPos = nextTriplet.indexOf('x');
-                        if (xPos !== -1) {
-                            morseCodeAfter += nextTriplet.slice(0, xPos);
-                            break;
-                        } else {
-                            morseCodeAfter += nextTriplet;
-                        }
-                    }
-                    const mappedAfter = reverseMorseMap[morseCodeAfter];
-                    if (mappedAfter) letters += mappedAfter;
-                }
-                // If pattern is like ".xx" or "-xx" handle specially:
-                // - if previous triplet ended with x, show the mapped first symbol plus '/'
-                // - otherwise show just '/'
-                else if ((triplet[1] === 'x' && triplet[2] === 'x') && (triplet[0] === '.' || triplet[0] === '-')) {
-                    if (prevEndedWithX) {
-                        const mapped = reverseMorseMap[triplet[0]];
-                        if (mapped) letters += mapped;
-                        if (!letters.includes('/')) letters += '/';
-                    } else {
-                        if (!letters.includes('/')) letters += '/';
-                    }
-                } else {
-                    if (!letters.includes('/')) letters += '/';
-                }
-            }
-
-            // If current triplet ends with x and next triplet starts with x, mark a word boundary
-            const nextTripletForBoundary = i < triplets.length - 1 ? triplets[i + 1] : '';
-            if (triplet[2] === 'x' && nextTripletForBoundary && nextTripletForBoundary[0] === 'x') {
-                // Avoid duplicating a slash if already present
-                if (!letters.includes('/')) letters += '/';
-            }
-            
-            plaintextLetters.push(letters);
+            plaintextLetters.push('');
         }
         
-        return plaintextLetters;
+        // Concatenate all triplets into a single morse code string
+        let morseString = '';
+        for (const triplet of triplets) {
+            morseString += triplet;
+        }
+        
+        let currentIndex = 0;
+        let currentMorse = '';
+        let morseStartIndex = 0; // Track the start index of current morse code
+        
+        // Process the morse string linearly
+        for (let i = 0; i < morseString.length; i++) {
+            const char = morseString[i];
+            
+            if (char === 'x') {
+                // Check if we have accumulated morse code to decode
+                if (currentMorse.length > 0) {
+                    const letter = reverseMorseMap[currentMorse];
+                    if (letter) {
+                        // Calculate which input position this corresponds to based on the start index
+                        const inputIndex = Math.floor(morseStartIndex / 3);
+                        if (inputIndex < plaintextLetters.length) {
+                            plaintextLetters[inputIndex] += letter;
+                        }
+                    }
+                    currentMorse = '';
+                }
+                
+                // Check for double x (word boundary) - but not at the end of the string
+                if (i + 1 < morseString.length && morseString[i + 1] === 'x' && i + 2 < morseString.length) {
+                    // Calculate which input position this corresponds to
+                    const inputIndex = Math.floor(currentIndex / 3);
+                    if (inputIndex < plaintextLetters.length && !plaintextLetters[inputIndex].includes('/')) {
+                        plaintextLetters[inputIndex] += '/';
+                    }
+                    i++; // Skip the next x
+                    currentIndex++;
+                }
+                
+                currentIndex++;
+            } else {
+                // Start accumulating morse code (if this is the first character)
+                if (currentMorse.length === 0) {
+                    morseStartIndex = currentIndex;
+                }
+                currentMorse += char;
+                currentIndex++;
+            }
+        }
+        
+        // Handle any remaining morse code at the end
+        if (currentMorse.length > 0) {
+            const letter = reverseMorseMap[currentMorse];
+            if (letter) {
+                const inputIndex = Math.floor(morseStartIndex / 3);
+                if (inputIndex < plaintextLetters.length) {
+                    plaintextLetters[inputIndex] += letter;
+                }
+            }
+        }
+        
+        // Remove any inputs that map to just "xxx" (triple x) or contain triple x patterns
+        const filteredPlaintextLetters = plaintextLetters.map(letters => 
+            letters === 'xxx' || letters.includes('xxx') ? '' : letters
+        );
+        
+        return filteredPlaintextLetters;
     };
 
     return (
@@ -396,14 +228,18 @@ export const FractionatedMorseDisplay = ({
                 {(() => {
                     // Get all triplets from the solution or correct mapping
                     const triplets: string[] = [];
-                    text.split('').forEach(char => {
+                    const incompleteTriplets: Set<number> = new Set();
+                    text.split('').forEach((char, index) => {
                         if (/[A-Z]/.test(char)) {
                             // Use correct mapping if available (for red text), otherwise use user solution
                             const triplet = (isTestSubmitted && correctMapping[char]) ? correctMapping[char] : (solution?.[char] || '');
                             if (triplet.length === 3) {
                                 triplets.push(triplet);
                             } else {
-                                triplets.push(''); // Placeholder for incomplete triplets
+                                // Use placeholder values for incomplete triplets to make decoding more sensible
+                                const placeholder = triplet.length === 0 ? 'xxx' : triplet + 'x'.repeat(3 - triplet.length);
+                                triplets.push(placeholder);
+                                incompleteTriplets.add(index);
                             }
                         }
                     });
@@ -415,11 +251,13 @@ export const FractionatedMorseDisplay = ({
                         const isLetter = /[A-Z]/.test(char);
                         const value = solution?.[char] || '';
                         const isCorrect = isTestSubmitted && correctMapping[char] && value.toLowerCase() === correctMapping[char].toLowerCase();
+                        const isHinted = isLetter && hintedLetters[quoteIndex]?.[char];
                         const showCorrectAnswer = isTestSubmitted && isLetter;
                         const isSameCipherLetter = isLetter && focusedCipherLetter === char;
                         
                         // Get the plaintext letter for this position
-                        const plaintextLetter = isLetter ? plaintextLetters[i] || '' : '';
+                        // Don't show decoded text for incomplete triplets
+                        const plaintextLetter = isLetter && !incompleteTriplets.has(i) ? plaintextLetters[i] || '' : '';
                         
                         // Debug logging
                         if (isLetter && plaintextLetter) {
@@ -448,7 +286,10 @@ export const FractionatedMorseDisplay = ({
                                                 ).join('').toUpperCase();
                                                 
                                                 // Convert x to lowercase for fractionated morse
-                                                const finalValue = filteredValue.replace(/X/g, 'x');
+                                                let finalValue = filteredValue.replace(/X/g, 'x');
+                                                
+                                                // Remove any triple x patterns
+                                                finalValue = finalValue.replace(/xxx/g, 'xx');
                                                 
                                                 // Only update if the final value is different from what was typed
                                                 if (finalValue !== inputValue) {
@@ -478,7 +319,9 @@ export const FractionatedMorseDisplay = ({
                                                         : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
                                             } ${
                                                 showCorrectAnswer
-                                                    ? isCorrect
+                                                    ? isHinted
+                                                        ? 'border-yellow-500 bg-yellow-100/10'
+                                                        : isCorrect
                                                         ? 'border-green-500 bg-green-100/10'
                                                         : 'border-red-500 bg-red-100/10'
                                                     : ''
@@ -509,63 +352,7 @@ export const FractionatedMorseDisplay = ({
                 })()}
             </div>
 
-            {/* Longest Continuous Morse Code Section */}
-            {(() => {
-                // Find longest continuous solved morse code from the very beginning
-                let longestMorse = '';
-                let currentMorse = '';
-                
-                for (let i = 0; i < text.length; i++) {
-                    const char = text[i];
-                    if (/[A-Z]/.test(char) && solution?.[char]) {
-                        currentMorse += solution[char];
-                    } else {
-                        // If we hit a non-letter or unsolved letter, stop
-                        break;
-                    }
-                }
-                
-                longestMorse = currentMorse;
-                
-                // Convert morse to text
-                const morseMap: { [key: string]: string } = {
-                    'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.',
-                    'G': '--.', 'H': '....', 'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..',
-                    'M': '--', 'N': '-.', 'O': '---', 'P': '.--.', 'Q': '--.-', 'R': '.-.',
-                    'S': '...', 'T': '-', 'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-',
-                    'Y': '-.--', 'Z': '--..'
-                };
-                
-                // Create reverse morse map
-                const reverseMorseMap: { [key: string]: string } = {};
-                Object.entries(morseMap).forEach(([letter, morse]) => {
-                    reverseMorseMap[morse] = letter;
-                });
-                
-                // Convert morse string to text
-                let translatedText = '';
-                if (longestMorse) {
-                    // Split morse into individual letters (separated by 'x' or 'X')
-                    const morseLetters = longestMorse.split(/[xX]/).filter(m => m.length > 0);
-                    translatedText = morseLetters.map(morse => reverseMorseMap[morse] || '?').join('');
-                }
-                
-                return longestMorse ? (
-                    <div className={`mt-4 p-3 rounded border ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-300'}`}>
-                        <div className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                            Longest Continuous Morse Code
-                        </div>
-                        <div className="flex flex-wrap gap-2 items-center">
-                            <div className={`font-mono text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                                Morse: <span className="font-bold">{longestMorse}</span>
-                            </div>
-                            <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-900'} break-all`}>
-                                Translation: <span className="font-bold">{translatedText}</span>
-                            </div>
-                        </div>
-                    </div>
-                ) : null;
-            })()}
+
 
             {/* Replacement Table */}
             <div className={`mt-4 mb-4 p-3 rounded border ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-300'}`}>
@@ -573,7 +360,7 @@ export const FractionatedMorseDisplay = ({
                     Replacement Table
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="text-xs border-collapse">
+                    <table className="text-xs border-collapse min-w-full">
                         <tbody>
                             {/* Replacement row - editable cells */}
                             <tr>
@@ -584,41 +371,75 @@ export const FractionatedMorseDisplay = ({
                                     // For replacement table, we want to show what letter the user typed, not the morse code
                                     // We need to track this separately from the solution
                                     const replacementValue = solution?.[`replacement_${triplet}`] || '';
+                                    const correctValue = fractionationTable?.[triplet] || '';
+                                    const isCorrect = replacementValue === correctValue;
+                                    const hasUserInput = replacementValue !== '';
+                                    
                                     return (
-                                        <td key={triplet} className={`p-1 border ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
-                                            <input
-                                                type="text"
-                                                maxLength={1}
-                                                value={replacementValue}
-                                                onFocus={() => {}}
-                                                onBlur={() => {}}
-                                                onChange={(e) => {
-                                                    const newLetter = e.target.value.toUpperCase();
-                                                    
-                                                    // Check if this letter is already used in another replacement table input
-                                                    const existingLetters = usedTriplets.map(t => 
-                                                        solution?.[`replacement_${t}`] || ''
-                                                    ).filter(letter => letter !== '');
-                                                    
-                                                    // If letter is already used and it's not the current input, don't allow it
-                                                    if (existingLetters.includes(newLetter) && newLetter !== replacementValue) {
-                                                        console.log('Letter already used:', newLetter);
-                                                        return; // Don't update
-                                                    }
-                                                    
-                                                    console.log('Updating replacement table:', { triplet, newLetter, existingLetters });
-                                                    
-                                                    // Store the replacement letter separately
-                                                    onSolutionChange(quoteIndex, `replacement_${triplet}`, newLetter);
-                                                    // Then trigger the morse code filling
-                                                    handleReplacementTableChange(triplet, e.target.value);
-                                                }}
-                                                className={`w-full text-center text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-900'} focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                                                    'border-0'
-                                                }`}
-                                                placeholder=""
-                                                disabled={isTestSubmitted}
-                                            />
+                                        <td key={triplet} className={`p-1 border min-w-[2rem] ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
+                                            {isTestSubmitted ? (
+                                                // Show correct mappings after submission
+                                                <div className="relative w-full h-full flex items-center justify-center">
+                                                    {hasUserInput && !isCorrect ? (
+                                                        // Show both wrong and correct answers side by side
+                                                        <div className="flex items-center justify-center space-x-1">
+                                                            <div className={`text-xs line-through ${
+                                                                darkMode ? 'text-red-400' : 'text-red-600'
+                                                            }`}>
+                                                                {replacementValue}
+                                                            </div>
+                                                            <div className={`text-xs font-medium ${
+                                                                darkMode ? 'text-green-400' : 'text-green-600'
+                                                            }`}>
+                                                                {correctValue}
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        // Show only correct answer
+                                                        <div className={`text-center text-xs font-medium ${
+                                                            isCorrect 
+                                                                ? (darkMode ? 'text-green-400' : 'text-green-600')
+                                                                : (darkMode ? 'text-red-400' : 'text-red-600')
+                                                        }`}>
+                                                            {correctValue}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                // Normal input during test
+                                                <input
+                                                    type="text"
+                                                    maxLength={1}
+                                                    value={replacementValue}
+                                                    onFocus={() => {}}
+                                                    onBlur={() => {}}
+                                                    onChange={(e) => {
+                                                        const newLetter = e.target.value.toUpperCase();
+                                                        
+                                                        // Check if this letter is already used in another replacement table input
+                                                        const existingLetters = usedTriplets.map(t => 
+                                                            solution?.[`replacement_${t}`] || ''
+                                                        ).filter(letter => letter !== '');
+                                                        
+                                                        // If letter is already used and it's not the current input, don't allow it
+                                                        if (existingLetters.includes(newLetter) && newLetter !== replacementValue) {
+                                                            console.log('Letter already used:', newLetter);
+                                                            return; // Don't update
+                                                        }
+                                                        
+                                                        console.log('Updating replacement table:', { triplet, newLetter, existingLetters });
+                                                        
+                                                        // Store the replacement letter separately
+                                                        onSolutionChange(quoteIndex, `replacement_${triplet}`, newLetter);
+                                                        // Then trigger the morse code filling
+                                                        handleReplacementTableChange(triplet, e.target.value);
+                                                    }}
+                                                    className={`w-full text-center text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-900'} focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                                                        'border-0'
+                                                    }`}
+                                                    placeholder=""
+                                                />
+                                            )}
                                         </td>
                                     );
                                 })}

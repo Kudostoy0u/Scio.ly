@@ -715,46 +715,55 @@ export default function TestConfiguration({
                   } ring-1 ring-black ring-opacity-5 max-h-60 overflow-y-auto`}>
                     <div className="py-1">
                       {isCodebusters ? (
-                        // Codebusters cipher types based on division
+                        // Codebusters cipher types based on division (alphabetically ordered)
                         (() => {
                           const divisionCCipherTypes = [
-                            "Random Aristocrat",
+                            "Affine",
+                            "Atbash",
+                            "Baconian",
+                            "Caesar",
+                            "Checkerboard",
+                            "Complete Columnar",
+                            "Cryptarithm",
+                            "Fractionated Morse",
+                            "Hill 2x2",
+                            "Hill 3x3",
                             "K1 Aristocrat",
                             "K2 Aristocrat",
                             "K3 Aristocrat",
-                            "Random Patristocrat",
-                            "K1 Patristocrat",
-                            "K2 Patristocrat",
-                            "K3 Patristocrat",
-                            "Baconian",
-                            "Xenocrypt",
-                            "Fractionated Morse",
-                            "Porta",
-                            "Complete Columnar",
                             "Nihilist",
-                            "Hill 2x2",
-                            "Hill 3x3",
-                            "Checkerboard"
+                            "Porta",
+                            "Random Aristocrat",
+                            // "Random Patristocrat", // TEMPORARILY DISABLED
+                            // "K1 Patristocrat", // TEMPORARILY DISABLED
+                            // "K2 Patristocrat", // TEMPORARILY DISABLED
+                            // "K3 Patristocrat", // TEMPORARILY DISABLED
+                            "Random Xenocrypt",
+                            "K1 Xenocrypt",
+                            "K2 Xenocrypt"
                           ];
                           
                           const divisionBCipherTypes = [
-                            "Random Aristocrat",
+                            "Affine",
+                            "Atbash",
+                            "Baconian",
+                            "Caesar",
+                            "Checkerboard",
+                            "Complete Columnar",
+                            "Cryptarithm",
+                            "Fractionated Morse",
+                            "Hill 2x2",
                             "K1 Aristocrat",
                             "K2 Aristocrat",
-                            "Random Patristocrat",
-                            "K1 Patristocrat",
-                            "K2 Patristocrat",
-                            "Baconian",
-                            "Fractionated Morse",
-                            "Complete Columnar",
-                            "Xenocrypt",
-                            "Porta",
                             "Nihilist",
-                            "Atbash",
-                            "Caesar",
-                            "Affine",
-                            "Hill 2x2",
-                            "Checkerboard"
+                            "Porta",
+                            "Random Aristocrat",
+                            // "Random Patristocrat", // TEMPORARILY DISABLED
+                            // "K1 Patristocrat", // TEMPORARILY DISABLED
+                            // "K2 Patristocrat", // TEMPORARILY DISABLED
+                            "Random Xenocrypt",
+                            "K1 Xenocrypt",
+                            "K2 Xenocrypt"
                           ];
                           
                           // For "Both" category, use the union of Division B and C ciphers

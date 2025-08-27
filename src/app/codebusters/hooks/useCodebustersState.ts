@@ -58,6 +58,7 @@ export const useCodebustersState = () => {
   const [, setIsTimeSynchronized] = useState(false);
   const [, setSyncTimestamp] = useState<number | null>(null);
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
+  const [quotesLoadedFromStorage, setQuotesLoadedFromStorage] = useState(false);
   const [activeHints, setActiveHints] = useState<{[questionIndex: number]: boolean}>({});
   const [revealedLetters, setRevealedLetters] = useState<{[questionIndex: number]: {[letter: string]: string}}>({});
   const [hintedLetters, setHintedLetters] = useState<{[questionIndex: number]: {[letter: string]: boolean}}>({});
@@ -82,6 +83,10 @@ export const useCodebustersState = () => {
     const savedIsTestSubmitted = localStorage.getItem('codebustersIsTestSubmitted');
     const savedTestScore = localStorage.getItem('codebustersTestScore');
     const forceRefresh = localStorage.getItem('codebustersForceRefresh');
+    const savedQuotesLoadedFromStorage = localStorage.getItem('codebustersQuotesLoadedFromStorage');
+    
+    // Keep loading true until we've fully processed everything
+    setIsLoading(true);
     
     if (testParamsStr) {
       console.log('Found testParams, checking for saved quotes...');
@@ -94,14 +99,39 @@ export const useCodebustersState = () => {
         setIsLoading(false);
       } else if (savedQuotes) {
         console.log('Found saved quotes, loading them');
+        console.log('savedIsTestSubmitted:', savedIsTestSubmitted);
+        console.log('savedTestScore:', savedTestScore);
+        
         try {
           const parsedQuotes = JSON.parse(savedQuotes);
           setQuotes(parsedQuotes);
-          setIsLoading(false);
+          
+          // Also restore test submission state if it exists
+          if (savedIsTestSubmitted) {
+            try {
+              const isSubmitted = JSON.parse(savedIsTestSubmitted);
+              console.log('Setting isTestSubmitted to:', isSubmitted);
+              setIsTestSubmitted(isSubmitted);
+            } catch (error) {
+              console.error('Error parsing saved test submitted:', error);
+            }
+          }
+          
+          if (savedTestScore) {
+            try {
+              const score = JSON.parse(savedTestScore);
+              console.log('Setting testScore to:', score);
+              setTestScore(score);
+            } catch (error) {
+              console.error('Error parsing saved test score:', error);
+            }
+          }
+          
+          setQuotesLoadedFromStorage(true);
+          localStorage.setItem('codebustersQuotesLoadedFromStorage', 'true');
         } catch (error) {
           console.error('Error parsing saved quotes:', error);
           setError('Could not load test data. It might be corrupted.');
-          setIsLoading(false);
         }
       } else {
         console.log('No saved quotes found, will trigger fresh load');
@@ -160,28 +190,27 @@ export const useCodebustersState = () => {
         setTimeLeft(session.timeState.timeLeft);
         setIsTimeSynchronized(session.timeState.isTimeSynchronized);
         setSyncTimestamp(session.timeState.syncTimestamp);
-        setIsTestSubmitted(session.isSubmitted);
+        // Only set test submitted from session if we don't have a saved value in localStorage
+        if (!savedIsTestSubmitted) {
+          setIsTestSubmitted(session.isSubmitted);
+        }
       }
     } else {
       // No test parameters found - show error
       setError('No test parameters found. Please configure a test from the practice page.');
     }
 
-    if (savedIsTestSubmitted) {
-      try {
-        setIsTestSubmitted(JSON.parse(savedIsTestSubmitted));
-      } catch (error) {
-        console.error('Error parsing saved test submitted:', error);
-      }
+    // Restore quotesLoadedFromStorage flag from localStorage
+    if (savedQuotesLoadedFromStorage === 'true') {
+      console.log('Restoring quotesLoadedFromStorage flag');
+      setQuotesLoadedFromStorage(true);
     }
-
-    if (savedTestScore) {
-      try {
-        setTestScore(JSON.parse(savedTestScore));
-      } catch (error) {
-        console.error('Error parsing saved test score:', error);
-      }
-    }
+    
+    // Note: Test submission state and score are now restored when quotes are loaded above
+    
+    // Set loading to false after everything is processed
+    console.log('Setting isLoading to false');
+    setIsLoading(false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Save state to localStorage
@@ -218,6 +247,7 @@ export const useCodebustersState = () => {
     setIsTimeSynchronized,
     setSyncTimestamp,
     hasAttemptedLoad,
+    quotesLoadedFromStorage,
     activeHints,
     setActiveHints,
     revealedLetters,

@@ -8,7 +8,8 @@ import {
   BaconianDisplay,
   ColumnarTranspositionDisplay,
   NihilistDisplay,
-  CheckerboardDisplay
+  CheckerboardDisplay,
+  CryptarithmDisplay
 } from './cipher-displays';
 
 // Function to process author field
@@ -41,8 +42,10 @@ interface QuestionCardProps {
   handleHillSolutionChange: (quoteIndex: number, type: 'matrix' | 'plaintext', value: string[][] | { [key: number]: string }) => void;
   handleNihilistSolutionChange: (quoteIndex: number, position: number, plainLetter: string) => void;
   handleCheckerboardSolutionChange: (quoteIndex: number, position: number, plainLetter: string) => void;
+  handleKeywordSolutionChange: (quoteIndex: number, keyword: string) => void;
   hintedLetters: {[questionIndex: number]: {[letter: string]: boolean}};
   _hintCounts: {[questionIndex: number]: number};
+  questionPoints?: {[key: number]: number};
 }
 
 export const QuestionCard: React.FC<QuestionCardProps> = ({
@@ -61,9 +64,16 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   handleHillSolutionChange,
   handleNihilistSolutionChange,
   handleCheckerboardSolutionChange,
+  handleKeywordSolutionChange,
   hintedLetters,
-  _hintCounts
+  _hintCounts,
+  questionPoints = {}
 }) => {
+  // Function to get suggested points for a question (same as print functionality)
+  const getSuggestedPoints = (quote: QuoteData) => {
+    return Math.round((quote.difficulty || 0.5) * 50);
+  };
+
   // Process the author field once per author change to avoid extra work on re-renders
   const processedAuthor = useMemo(() => processAuthor(item.author), [item.author]);
 
@@ -80,7 +90,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           data-question-header
           className={`font-semibold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}
         >
-          Question {index + 1}
+          Question {index + 1} [{questionPoints[index] || getSuggestedPoints(item)} pts]
         </h3>
         <div className="flex items-center gap-2">
           <span className={`px-2 py-1 rounded text-sm ${
@@ -210,6 +220,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           isTestSubmitted={isTestSubmitted}
           quotes={quotes}
           onBaconianSolutionChange={handleBaconianSolutionChange}
+          activeHints={activeHints}
         />
       ) : item.cipherType === 'Fractionated Morse' ? (
         <FractionatedMorseDisplay
@@ -220,6 +231,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           isTestSubmitted={isTestSubmitted}
           quotes={quotes}
           onSolutionChange={handleSolutionChange}
+          hintedLetters={hintedLetters}
         />
       ) : item.cipherType === 'Complete Columnar' ? (
         <ColumnarTranspositionDisplay
@@ -253,7 +265,17 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           quotes={quotes}
           onSolutionChange={handleCheckerboardSolutionChange}
         />
-      ) : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Xenocrypt'].includes(item.cipherType) ? (
+      ) : item.cipherType === 'Cryptarithm' ? (
+        <CryptarithmDisplay
+          text={item.encrypted}
+          quoteIndex={index}
+          solution={item.solution}
+          isTestSubmitted={isTestSubmitted}
+          quotes={quotes}
+          onSolutionChange={handleSolutionChange}
+          cryptarithmData={item.cryptarithmData}
+        />
+      ) : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt'].includes(item.cipherType) ? (
         <SubstitutionDisplay
           text={item.encrypted}
           quoteIndex={index}
@@ -266,6 +288,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           affineB={item.affineB}
           quotes={quotes}
           onSolutionChange={handleSolutionChange}
+          onKeywordSolutionChange={handleKeywordSolutionChange}
           hintedLetters={hintedLetters}
           _hintCounts={_hintCounts}
         />
@@ -276,7 +299,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       )}
       
       {/* Difficulty Bar */}
-      <div className="absolute bottom-2 right-2 w-20 h-2 rounded-full bg-gray-300">
+      <div className="absolute right-2 w-20 h-2 rounded-full bg-gray-300">
         <div
           className={`h-full rounded-full ${
             (item.difficulty || 0.5) >= 0.66

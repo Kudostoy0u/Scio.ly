@@ -279,12 +279,12 @@ export const getOverallTournamentConfig = (data: ChartData, darkMode: boolean = 
             const tooltipModel = context.tooltip;
             const isMobile = window.innerWidth < 768;
             
-            // Hide if no tooltip (but not when clicking)
-            if (tooltipModel.opacity === 0 && !tooltipModel.dataPoints?.length) {
+            // Hide if no tooltip or opacity is 0 (mouse left the point)
+            if (tooltipModel.opacity === 0) {
               tooltipEl.style.opacity = '0';
               tooltipEl.style.visibility = 'hidden';
               if (!isMobile) {
-              tooltipEl.style.transform = 'translate(-100%, -50%) scale(0.9)';
+                tooltipEl.style.transform = 'translate(-100%, -50%) scale(0.9)';
               }
               return;
             }
@@ -641,12 +641,12 @@ export const getEventTournamentConfig = (data: ChartData, darkMode: boolean = fa
             const tooltipModel = context.tooltip;
             const isMobile = window.innerWidth < 768;
             
-            // Hide if no tooltip (but not when clicking)
-            if (tooltipModel.opacity === 0 && !tooltipModel.dataPoints?.length) {
+            // Hide if no tooltip or opacity is 0 (mouse left the point)
+            if (tooltipModel.opacity === 0) {
               tooltipEl.style.opacity = '0';
               tooltipEl.style.visibility = 'hidden';
               if (!isMobile) {
-              tooltipEl.style.transform = 'translate(-100%, -50%) scale(0.9)';
+                tooltipEl.style.transform = 'translate(-100%, -50%) scale(0.9)';
               }
               return;
             }

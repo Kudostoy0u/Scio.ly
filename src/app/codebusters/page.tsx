@@ -87,6 +87,7 @@ export default function CodeBusters() {
         setInputCode,
 
         hasAttemptedLoad,
+        quotesLoadedFromStorage,
         activeHints,
         setActiveHints,
         revealedLetters,
@@ -109,7 +110,7 @@ export default function CodeBusters() {
     } = useCodebustersState();
 
     // Use custom hooks for functionality
-    const { checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer, checkCheckerboardAnswer } = useAnswerChecking(quotes);
+    const { checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer, checkCheckerboardAnswer, checkCryptarithmAnswer } = useAnswerChecking(quotes);
     const { getHintContent, handleHintClick } = useHintSystem(
         quotes, 
         activeHints, 
@@ -127,7 +128,8 @@ export default function CodeBusters() {
         handleBaconianSolutionChange, 
         handleHillSolutionChange, 
         handleNihilistSolutionChange,
-        handleCheckerboardSolutionChange
+        handleCheckerboardSolutionChange,
+        handleKeywordSolutionChange
     } = useSolutionHandlers(quotes, setQuotes);
     const { totalProgress, calculateQuoteProgress } = useProgressCalculation(quotes);
 
@@ -162,9 +164,11 @@ export default function CodeBusters() {
                         ? checkPortaAnswer(index)
                         : quote.cipherType === 'Baconian'
                             ? checkBaconianAnswer(index)
-                            : quote.cipherType === 'Checkerboard'
-                                ? checkCheckerboardAnswer(index)
-                                : false;
+                                    : quote.cipherType === 'Checkerboard'
+            ? checkCheckerboardAnswer(index)
+            : quote.cipherType === 'Cryptarithm'
+                ? checkCryptarithmAnswer(index)
+                : false;
             if (isCorrect) correctCount++;
         });
 
@@ -172,6 +176,11 @@ export default function CodeBusters() {
         const score = (correctCount / Math.max(1, quotes.length)) * 100;
         setTestScore(score);
         setIsTestSubmitted(true);
+        
+        // Save test submission state to localStorage
+        localStorage.setItem('codebustersIsTestSubmitted', 'true');
+        localStorage.setItem('codebustersTestScore', score.toString());
+        localStorage.setItem('codebustersTimeLeft', timeLeft?.toString() || '0');
         
         // Scroll to top when test is submitted - more robust approach
         setTimeout(() => {
@@ -206,7 +215,7 @@ export default function CodeBusters() {
         } catch (e) {
             console.error('Failed to update metrics for Codebusters:', e);
         }
-    }, [quotes, checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer, checkCheckerboardAnswer, setTestScore, setIsTestSubmitted, calculateQuoteProgress]);
+    }, [quotes, checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer, checkCheckerboardAnswer, checkCryptarithmAnswer, setTestScore, setIsTestSubmitted, calculateQuoteProgress, timeLeft]);
 
     // Handle time management
     useEffect(() => {
@@ -380,6 +389,7 @@ export default function CodeBusters() {
         localStorage.removeItem('codebustersRevealedLetters');
         localStorage.removeItem('codebustersHintedLetters');
         localStorage.removeItem('codebustersHintCounts');
+        localStorage.removeItem('codebustersQuotesLoadedFromStorage');
         localStorage.removeItem('shareCode');
         
         // Set force refresh flag to get new random quotes
@@ -454,7 +464,7 @@ export default function CodeBusters() {
         // Add point values to question headers
         const questionHeaders = clonedContainer.querySelectorAll('[data-question-header]');
         questionHeaders.forEach((header, index) => {
-            const points = questionPoints[index] || Math.round((quotes[index]?.difficulty || 0.5) * 500);
+            const points = questionPoints[index] || Math.round((quotes[index]?.difficulty || 0.5) * 50);
             const headerText = header.textContent || '';
             header.textContent = `${headerText} [${points} pts]`;
         });
@@ -548,11 +558,11 @@ export default function CodeBusters() {
 
     // Load questions if needed
     useEffect(() => {
-        if (hasAttemptedLoad && quotes.length === 0 && !isLoading && !error) {
+        if (hasAttemptedLoad && quotes.length === 0 && !isLoading && !error && !quotesLoadedFromStorage) {
             console.log('Triggering loadQuestionsFromDatabase');
             handleLoadQuestions();
         }
-    }, [hasAttemptedLoad, quotes.length, isLoading, error, handleLoadQuestions]);
+    }, [hasAttemptedLoad, quotes.length, isLoading, error, quotesLoadedFromStorage, handleLoadQuestions]);
 
     return (
         <>
@@ -594,6 +604,7 @@ export default function CodeBusters() {
                                 darkMode={darkMode}
                                 hintedLetters={hintedLetters}
                                 _hintCounts={hintCounts}
+                                questionPoints={questionPoints}
                             />
                         </div>
                     ) : (
@@ -658,8 +669,10 @@ export default function CodeBusters() {
                                     handleHillSolutionChange={handleHillSolutionChange}
                                     handleNihilistSolutionChange={handleNihilistSolutionChange}
                                     handleCheckerboardSolutionChange={handleCheckerboardSolutionChange}
+                                    handleKeywordSolutionChange={handleKeywordSolutionChange}
                                     hintedLetters={hintedLetters}
                                     _hintCounts={hintCounts}
+                                    questionPoints={questionPoints}
                                 />
                             ))}
                         </div>

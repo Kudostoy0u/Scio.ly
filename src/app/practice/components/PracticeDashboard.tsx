@@ -270,6 +270,7 @@ export default function PracticeDashboard() {
         localStorage.removeItem('codebustersIsTestSubmitted');
         localStorage.removeItem('codebustersTestScore');
         localStorage.removeItem('codebustersTimeLeft');
+        localStorage.removeItem('codebustersQuotesLoadedFromStorage');
         localStorage.removeItem('shareCode');
       } catch {}
       router.push('/codebusters');
@@ -324,6 +325,7 @@ export default function PracticeDashboard() {
         localStorage.removeItem('codebustersIsTestSubmitted');
         localStorage.removeItem('codebustersTestScore');
         localStorage.removeItem('codebustersTimeLeft');
+        localStorage.removeItem('codebustersQuotesLoadedFromStorage');
         localStorage.removeItem('shareCode');
       } catch {}
       router.push('/codebusters');
