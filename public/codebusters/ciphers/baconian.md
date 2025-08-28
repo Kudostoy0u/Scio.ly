@@ -46,18 +46,72 @@ Example (decoding)
 A/B: AABBB AABAA ABABA ABABA ABBAB  
 → H E L L O → HELLO
 
-## Recognizing and Extracting A/B from Carrier Text
-In steganographic variants, any consistent binary feature can represent A vs B. Examples:
-- Lowercase vs uppercase  
-- Roman vs italic  
-- Thin vs bold  
-- Serif vs sans-serif  
-- Slight spacing/kerning toggles (competitions prefer obvious visual toggles)
+## Binary Representation Types
+The Baconian cipher can use various binary representations beyond simple A/B. In this app, you may encounter:
 
-Strategy
-- Identify a property that flips about every character.  
-- Read off A/B by mapping the two distinct features to A and B.  
-- If uncertain, test both assignments (swap A/B) and see which yields legible plaintext.
+### Traditional Representations
+- **A/B**: Standard A and B symbols
+- **Vowels/Consonants**: Vowels (AEIOU) vs Consonants (BCDFGHJKLMNPQRSTVWXYZ)
+- **Odd/Even**: Odd-positioned letters (ACEGIKMOQSUWY) vs Even-positioned letters (BDFHJLNPRTVXZ)
+
+### Thematic Emoji Representations (Set-Based)
+These themes use multiple symbols from each category, randomly selected for variety:
+
+- **Fire vs Ice**: 🔥🌋☀️⚡💥🌡️ vs ❄️🧊🌨️💎🔮🌊
+- **Day vs Night**: ☀️🌅🌞🌤️🌻🐦 vs 🌙⭐🌃🌌🦉🦇
+- **Land vs Sea**: 🏔️🌲🦁🐻🌵🏜️ vs 🌊🐋🐙🦈🏝️⚓
+- **Tech vs Nature**: 💻📱🤖🚀⚡🔋 vs 🌿🌸🦋🌳🍃🌺
+- **Sweet vs Spicy**: 🍰🍭🍫🍪🍦🍯 vs 🌶️🔥💥⚡🌋💣
+- **Fast vs Slow**: 🏃🚀⚡💨🏎️🦅 vs 🐌🐢🦥🌱⏰🕰️
+- **Loud vs Quiet**: 🔊📢🎵💥⚡🌋 vs 🔇🤫🦋🍃🌙💤
+- **Hot vs Cold**: 🔥🌡️☀️🌋💥⚡ vs ❄️🧊🌨️💎🔮🌊
+- **Light vs Dark**: 💡☀️⭐🌟✨🔆 vs 🌑🌙🕯️🌃🌌⚫
+- **Old vs New**: 📜🏛️🕰️📚🕯️⚔️ vs 💻📱🚀⚡🔋🤖
+- **Big vs Small**: 🐘🐋🦕🏔️🌋🌊 vs 🐜🦋🌸💎⭐🌱
+- **Strong vs Weak**: 💪🏋️🦁🐻⚡💥 vs 🦋🌸🍃🌱💤🕊️
+- **Happy vs Sad**: 😊😄😃😁😆😅😂🤣😉😋 vs 😞😔😟😕🙁☹️😣😖😫😩
+- **Food vs Drink**: 🍕🍔🍟🌭🌮🌯🥪🥙🍖🍗 vs ☕🍺🍷🍸🍹🥤🧃🥛🍼🧋
+- **Weather vs Nature**: ☀⛅☁🌧⚡❄ vs 🌿🌱🌲🌳🌴🌵🌸🌺🌻🌼
+- **Animals vs Plants**: 🐯🦁🐻🐨🐼🦊🐸🐙🦋🦅 vs 🌱🌿🌲🌳🌴🌵🌸🌺🌻🌼
+- **Sports vs Games**: ⚽🏀🏈⚾🎾🏐🏓🏸🏊🏃 vs 🎮🎲♟️🎯🎪🎨🎭🎪🎤🎧
+- **Music vs Art**: 🎵🎶🎸🎹🎺🎻🥁🎤🎧🎼 vs 🎨🖼️🎭🎪🎬📷🎥🎞️🎟️🎫
+- **Space vs Earth**: 🚀🛸⭐🌙🌌🌠☄️🪐🌍🌎 vs 🌍🌎🌏🏔️🌊🌋🏜️🏝️🌲🌳
+- **Fantasy vs Reality**: 🐉🦄🧙‍♀️🧝‍♀️🧚‍♀️👻💫✨🔮⚡ vs 🏠🚗📱💻📚🏢🚌🛒💼👔
+- **Summer vs Winter**: ☀️🌞🏖️🍦🌊🏄🌴🍉🌻🦋 vs ❄️⛄🏂🎿🧤🧥🌨️🏔️🦌🦊
+- **Ocean vs Sky**: 🌊🐋🐙🦈🐠🐡🦀🦞🦐🐚 vs ☁️🌈🦅🕊️🦢🦆🦉🦇🦋🦗
+- **City vs Country**: 🏢🏪🚗🚌🚇🏭💡🌃🎭🍕 vs 🌾🚜🐄🐓🌲🏡🌻🦋🐝🌿
+- **Morning vs Evening**: 🌅☀️🐓☕🍳🚶📰💼🚌🏢 vs 🌆🌙🦉🍷🍽️🛋️📺🛏️🌃💤
+- **Adventure vs Relaxation**: 🗺️🏔️🧗‍♀️🏕️🔥🔦🎒🧭⚔️🛡️ vs 🛋️🛁☕📖🎵🕯️🧘‍♀️💆‍♀️🛏️🌙
+
+### Text Formatting Representations
+- **Bold vs Italic**: ** vs *
+- **Underline vs Plain**: _ vs (space)
+- **UPPER vs lower**: U vs L
+- **Double vs Single**: || vs |
+- **Brackets vs Parentheses**: [ vs (
+- **Curly vs Square**: { vs [
+- **Hash vs At**: # vs @
+- **Dollar vs Cent**: $ vs ¢
+- **Plus vs Minus**: + vs -
+- **Equal vs Not Equal**: = vs ≠
+- **Greater vs Less**: > vs <
+- **Arrow Up vs Down**: ↑ vs ↓
+- **Arrow Left vs Right**: ← vs →
+- **Circle vs Square**: ○ vs □
+- **Triangle vs Diamond**: △ vs ◇
+- **Star vs Heart**: ★ vs ♥
+- **Sun vs Moon**: ☀ vs ☾
+- **Check vs X**: ✓ vs ✗
+- **Infinity vs Zero**: ∞ vs 0
+- **Pi vs E**: π vs e
+- **Greek Letters**: α vs β, γ vs δ, ω vs θ, σ vs φ, λ vs μ, ρ vs τ, χ vs ψ
+
+### Strategy for All Types
+- Identify the two distinct symbols or styles being used
+- Map one to A and the other to B
+- Extract the A/B pattern from the representation
+- Group into 5s and decode using the Baconian table
+- If the result doesn't make sense, try swapping A/B assignments
 
 ## Solving in Codebusters (Practical Guide)
 1) Identify encoding mode

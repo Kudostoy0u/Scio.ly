@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { QuoteData } from '../types';
 import {
   HillDisplay,
@@ -39,6 +39,7 @@ interface QuestionCardProps {
   setInfoModalOpen: (open: boolean) => void;
   handleSolutionChange: (quoteIndex: number, cipherLetter: string, plainLetter: string) => void;
   handleBaconianSolutionChange: (quoteIndex: number, position: number, plainLetter: string) => void;
+
   handleHillSolutionChange: (quoteIndex: number, type: 'matrix' | 'plaintext', value: string[][] | { [key: number]: string }) => void;
   handleNihilistSolutionChange: (quoteIndex: number, position: number, plainLetter: string) => void;
   handleCheckerboardSolutionChange: (quoteIndex: number, position: number, plainLetter: string) => void;
@@ -46,6 +47,7 @@ interface QuestionCardProps {
   hintedLetters: {[questionIndex: number]: {[letter: string]: boolean}};
   _hintCounts: {[questionIndex: number]: number};
   questionPoints?: {[key: number]: number};
+  resetTrigger?: number;
 }
 
 export const QuestionCard: React.FC<QuestionCardProps> = ({
@@ -61,21 +63,135 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   setInfoModalOpen,
   handleSolutionChange,
   handleBaconianSolutionChange,
+
   handleHillSolutionChange,
   handleNihilistSolutionChange,
   handleCheckerboardSolutionChange,
   handleKeywordSolutionChange,
   hintedLetters,
   _hintCounts,
-  questionPoints = {}
+  questionPoints = {},
+  resetTrigger = 0
 }) => {
-  // Function to get suggested points for a question (same as print functionality)
+  const [baconianSyncEnabled, setBaconianSyncEnabled] = useState<boolean>(true);
+
+  // Set default sync state for Baconian ciphers
+  useEffect(() => {
+    if (item.cipherType === 'Baconian' && item.baconianBinaryType) {
+      const binaryType = item.baconianBinaryType;
+      
+
+      
+      // Add emoji and symbol schemes that have multiple values
+      const emojiSchemes = [
+        'Happy vs Sad', 'Fire vs Ice', 'Day vs Night', 'Land vs Sea', 'Tech vs Nature',
+        'Sweet vs Spicy', 'Star vs Heart', 'Sun vs Moon', 'Music vs Art', 'Food vs Drink',
+        'Sport vs Game', 'Animal vs Plant', 'City vs Country', 'Past vs Future',
+        'Light vs Dark', 'Hot vs Cold', 'Big vs Small', 'Fast vs Slow', 'Old vs New'
+      ];
+      
+      const symbolSchemes = [
+        'Stars vs Hearts', 'Squares vs Circles', 'Arrows vs Lines', 'Shapes vs Numbers'
+      ];
+      
+      const hasMultipleValues = emojiSchemes.includes(binaryType) || symbolSchemes.includes(binaryType);
+      
+      if (binaryType === 'Vowels/Consonants' || 
+          binaryType === 'Odd/Even' || 
+          hasMultipleValues) {
+        setBaconianSyncEnabled(false);
+      } else {
+        setBaconianSyncEnabled(true);
+      }
+    }
+  }, [item.cipherType, item.baconianBinaryType, resetTrigger]);
+
+  // Function to get suggested points for a question with logical difficulty calculation
   const getSuggestedPoints = (quote: QuoteData) => {
-    return Math.round((quote.difficulty || 0.5) * 50);
+    // Base cipher difficulty multipliers
+    const cipherMultipliers: { [key: string]: number } = {
+      // Very Easy (1.0-1.5x)
+      'Atbash': 1.0,
+      'Caesar': 1.0,
+      'Baconian': 1.2, // Base Baconian
+      
+      // Easy (1.5-2.0x)
+      'Affine': 1.8,
+      'Porta': 1.6,
+      'Checkerboard': 1.7,
+      
+      // Medium (2.0-3.0x)
+      'K1 Aristocrat': 2.2,
+      'K1 Patristocrat': 2.8, // Slightly harder than Aristocrat
+      'K1 Xenocrypt': 2.5,
+      'Hill 2x2': 2.8,
+      'Nihilist': 2.3,
+      
+      // Hard (3.0-4.0x)
+      'K2 Aristocrat': 3.2,
+      'K2 Patristocrat': 3.8, // Slightly harder than Aristocrat
+      'K2 Xenocrypt': 3.5,
+      'Hill 3x3': 3.8,
+      'Fractionated Morse': 3.6,
+      'Complete Columnar': 3.4,
+      
+      // Very Hard (4.0-5.0x)
+      'K3 Aristocrat': 4.2,
+      'K3 Patristocrat': 4.8, // Slightly harder than Aristocrat
+      'K3 Xenocrypt': 4.5,
+      'Random Aristocrat': 4.0,
+      'Random Patristocrat': 4.2, // Slightly harder than Aristocrat
+      'Random Xenocrypt': 4.8,
+      'Cryptarithm': 4.5
+    };
+
+    // Get base multiplier for cipher type
+    const baseMultiplier = cipherMultipliers[quote.cipherType] || 2.0;
+    
+    // Baconian binary type adjustments
+    let baconianMultiplier = baseMultiplier;
+    if (quote.cipherType === 'Baconian' && quote.baconianBinaryType) {
+      const binaryType = quote.baconianBinaryType;
+      
+      // Easy binary types
+      if (binaryType === 'A/B') {
+        baconianMultiplier = 1.0;
+      } else if (binaryType === 'Vowels/Consonants' || binaryType === 'Odd/Even') {
+        baconianMultiplier = 1.3;
+      } else if (binaryType.includes(' vs ')) {
+        // Formatting types (Highlight vs Plain, Bold vs Italic, etc.)
+        baconianMultiplier = 1.4;
+      } else {
+        // Emoji and symbol sets (multiple symbols per side)
+        baconianMultiplier = 1.8;
+      }
+    }
+    
+    // Quote length multiplier (more letters = more points)
+    const quoteLength = quote.quote.replace(/[^A-Za-z]/g, '').length;
+    let lengthMultiplier = 1.0;
+    
+    if (quoteLength < 50) {
+      lengthMultiplier = 0.8; // Short quotes
+    } else if (quoteLength < 100) {
+      lengthMultiplier = 1.0; // Medium quotes
+    } else if (quoteLength < 200) {
+      lengthMultiplier = 1.2; // Long quotes
+    } else {
+      lengthMultiplier = 1.4; // Very long quotes
+    }
+    
+    // Calculate final points (base 50 points * multipliers)
+    const finalPoints = Math.round(50 * baconianMultiplier * lengthMultiplier);
+    
+    // Ensure minimum and maximum reasonable bounds
+    return Math.max(2.5, Math.min(20, Number((finalPoints / 7).toFixed(1))));
   };
 
   // Process the author field once per author change to avoid extra work on re-renders
   const processedAuthor = useMemo(() => processAuthor(item.author), [item.author]);
+
+
 
   return (
     <div 
@@ -98,6 +214,30 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           }`}>
             {item.cipherType.charAt(0).toUpperCase() + item.cipherType.slice(1)}
           </span>
+
+          {item.cipherType === 'Baconian' && (
+            <button
+              onClick={() => setBaconianSyncEnabled(!baconianSyncEnabled)}
+              disabled={isTestSubmitted}
+              className={`px-2 py-1 rounded text-xs border transition-all duration-200 ${
+                baconianSyncEnabled
+                  ? darkMode 
+                    ? 'bg-blue-600 border-blue-500 text-white' 
+                    : 'bg-blue-500 border-blue-600 text-white'
+                  : darkMode 
+                    ? 'bg-gray-600 border-gray-500 text-gray-300' 
+                    : 'bg-gray-200 border-gray-300 text-gray-600'
+              } ${
+                isTestSubmitted
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:scale-105'
+              }`}
+              title={isTestSubmitted ? 'Sync disabled after submission' : baconianSyncEnabled ? 'Disable input syncing' : 'Enable input syncing'}
+            >
+              {baconianSyncEnabled ? 'Sync ON' : 'Sync OFF'}
+            </button>
+          )}
+
           <button
             onClick={() => { if (isTestSubmitted) return; handleHintClick(index); }}
             disabled={isTestSubmitted}
@@ -214,13 +354,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         />
       ) : item.cipherType === 'Baconian' ? (
         <BaconianDisplay
-          text={item.encrypted}
           quoteIndex={index}
           solution={item.solution}
-          isTestSubmitted={isTestSubmitted}
           quotes={quotes}
-          onBaconianSolutionChange={handleBaconianSolutionChange}
           activeHints={activeHints}
+          isTestSubmitted={isTestSubmitted}
+          onSolutionChange={handleBaconianSolutionChange}
+          syncEnabled={baconianSyncEnabled}
         />
       ) : item.cipherType === 'Fractionated Morse' ? (
         <FractionatedMorseDisplay

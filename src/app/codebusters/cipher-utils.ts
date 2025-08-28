@@ -652,6 +652,9 @@ export const encryptPorta = (text: string): { encrypted: string; keyword: string
     return { encrypted, keyword };
 };
 
+import { selectRandomScheme } from './schemes/baconian-schemes';
+import { convertBinaryPattern } from './schemes/pattern-converter';
+
 // Baconian cipher with 24-letter alphabet (I/J same, U/V same) and variety of binary representations
 export const encryptBaconian = (text: string): { encrypted: string; binaryType: string } => {
     // Baconian cipher mapping (24-letter alphabet)
@@ -664,124 +667,29 @@ export const encryptBaconian = (text: string): { encrypted: string; binaryType: 
         'Z': 'BABBB'
     };
 
-    // Define different binary representation schemes
-    const binarySchemes = [
-        // 40% chance: Traditional A/B representation
-        { type: 'A/B', zero: 'A', one: 'B', weight: 40 },
-        // 20% chance: Vowels vs Consonants
-        { type: 'Vowels/Consonants', zero: 'AEIOU', one: 'BCDFGHJKLMNPQRSTVWXYZ', weight: 20 },
-        // 20% chance: Odd vs Even alphabet positions
-        { type: 'Odd/Even', zero: 'ACEGIKMOQSUWY', one: 'BDFHJLNPRTVXZ', weight: 20 }
-    ];
-
-    // Select binary scheme based on weights
-    const random = Math.random() * 100;
-    let cumulativeWeight = 0;
-    let selectedScheme = binarySchemes[0]; // Default to A/B
-
-    for (const scheme of binarySchemes) {
-        cumulativeWeight += scheme.weight;
-        if (random <= cumulativeWeight) {
-            selectedScheme = scheme;
-            break;
+    // Clean the text and convert to uppercase
+    const cleanedText = text.toUpperCase().replace(/[^A-Z]/g, '');
+    
+    // Convert each letter to its 5-bit binary representation
+    let binaryPattern = '';
+    for (let i = 0; i < cleanedText.length; i++) {
+        const letter = cleanedText[i];
+        if (baconianMap[letter]) {
+            binaryPattern += baconianMap[letter];
         }
     }
 
-    // Additional 40% chance for advanced schemes (5% each)
-    const advancedRandom = Math.random();
-    if (advancedRandom < 0.05) {
-        // Emoji pairs: Happy vs Sad
-        const happyEmojis = ['😊', '😄', '😃', '😁', '😆', '😅', '😂', '🤣', '😉', '😋'];
-        const sadEmojis = ['😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩'];
-        const happyEmoji = happyEmojis[Math.floor(Math.random() * happyEmojis.length)];
-        const sadEmoji = sadEmojis[Math.floor(Math.random() * sadEmojis.length)];
-        selectedScheme = { type: 'Emoji Pairs', zero: happyEmoji, one: sadEmoji, weight: 0 };
-    } else if (advancedRandom < 0.1) {
-        // Emoji sets: Desert vs Animal
-        const desertEmojis = ['🌵', '🏜️', '🐪', '☀️', '🔥', '💨'];
-        const animalEmojis = ['🐯', '🦁', '🐻', '🐨', '🐼', '🦊'];
-        const desertEmoji = desertEmojis[Math.floor(Math.random() * desertEmojis.length)];
-        const animalEmoji = animalEmojis[Math.floor(Math.random() * animalEmojis.length)];
-        selectedScheme = { type: 'Emoji Sets', zero: desertEmoji, one: animalEmoji, weight: 0 };
-    } else if (advancedRandom < 0.15) {
-        // Monetary symbols with single slashes
-        selectedScheme = { type: 'Monetary Single', zero: '฿', one: '¥', weight: 0 };
-    } else if (advancedRandom < 0.2) {
-        // Monetary symbols with double slashes
-        selectedScheme = { type: 'Monetary Double', zero: '¥', one: '฿', weight: 0 };
-    } else if (advancedRandom < 0.25) {
-        // Accented vs Non-accented characters
-        selectedScheme = { type: 'Accented/Non-accented', zero: 'áéíóúñ', one: 'aeioun', weight: 0 };
-    } else if (advancedRandom < 0.3) {
-        // Full height vs Upper height characters
-        selectedScheme = { type: 'Height Characters', zero: '#@', one: '^*', weight: 0 };
-    } else if (advancedRandom < 0.35) {
-        // Emoji sets: Weather vs Nature
-        const weatherEmojis = ['☀', '⛅', '☁', '🌧', '⚡', '❄'];
-        const natureEmojis = ['🌿', '🌱', '🌲', '🌳', '🌴', '🌵', '🌸', '🌺', '🌻', '🌼'];
-        const weatherEmoji = weatherEmojis[Math.floor(Math.random() * weatherEmojis.length)];
-        const natureEmoji = natureEmojis[Math.floor(Math.random() * natureEmojis.length)];
-        selectedScheme = { type: 'Weather/Nature', zero: weatherEmoji, one: natureEmoji, weight: 0 };
-    } else if (advancedRandom < 0.4) {
-        // Emoji sets: Food vs Drink
-        const foodEmojis = ['🍕', '🍔', '🍟', '🌭', '🌮', '🌯', '🥪', '🥙', '🍖', '🍗'];
-        const drinkEmojis = ['☕', '🍺', '🍷', '🍸', '🍹', '🥤', '🧃', '🥛', '🍼', '🧋'];
-        const foodEmoji = foodEmojis[Math.floor(Math.random() * foodEmojis.length)];
-        const drinkEmoji = drinkEmojis[Math.floor(Math.random() * drinkEmojis.length)];
-        selectedScheme = { type: 'Food/Drink', zero: foodEmoji, one: drinkEmoji, weight: 0 };
-    }
+    // Select a random scheme
+    const selectedScheme = selectRandomScheme();
 
-    // Convert binary A/B pattern to selected representation
-    const convertBinaryPattern = (pattern: string): string => {
-        if (selectedScheme.type === 'A/B') {
-            return pattern;
-        } else if (selectedScheme.type === 'Vowels/Consonants') {
-            return pattern.replace(/A/g, 'AEIOU').replace(/B/g, 'BCDFGHJKLMNPQRSTVWXYZ');
-        } else if (selectedScheme.type === 'Odd/Even') {
-            return pattern.replace(/A/g, 'ACEGIKMOQSUWY').replace(/B/g, 'BDFHJLNPRTVXZ');
-        } else if (selectedScheme.type === 'Emoji Pairs') {
-            return pattern.replace(/A/g, selectedScheme.zero).replace(/B/g, selectedScheme.one);
-        } else if (selectedScheme.type === 'Emoji Sets') {
-            return pattern.replace(/A/g, selectedScheme.zero).replace(/B/g, selectedScheme.one);
-        } else if (selectedScheme.type === 'Monetary Single') {
-            return pattern.replace(/A/g, '฿').replace(/B/g, '¥');
-        } else if (selectedScheme.type === 'Monetary Double') {
-            return pattern.replace(/A/g, '¥').replace(/B/g, '฿');
-        } else if (selectedScheme.type === 'Accented/Non-accented') {
-            return pattern.replace(/A/g, 'áéíóúñ').replace(/B/g, 'aeioun');
-        } else if (selectedScheme.type === 'Height Characters') {
-            return pattern.replace(/A/g, '#@').replace(/B/g, '^*');
-        } else if (selectedScheme.type === 'Weather/Nature') {
-            return pattern.replace(/A/g, selectedScheme.zero).replace(/B/g, selectedScheme.one);
-        } else if (selectedScheme.type === 'Food/Drink') {
-            return pattern.replace(/A/g, selectedScheme.zero).replace(/B/g, selectedScheme.one);
-        }
-        return pattern;
-    };
-
-    // Clean and convert the text
-    const cleanText = text.toUpperCase().replace(/[^A-Z\s.,!?]/g, '');
+    // Convert the binary pattern to the selected representation
+    const convertedPattern = convertBinaryPattern(binaryPattern, selectedScheme);
+    
+    // Format the encrypted text with spaces every 5 groups
     let encrypted = '';
-    let letterCount = 0;
-
-    // Process each character
-    for (let i = 0; i < cleanText.length; i++) {
-        const char = cleanText[i];
-        if (/[A-Z]/.test(char)) {
-            const binaryPattern = baconianMap[char];
-            const convertedPattern = convertBinaryPattern(binaryPattern);
-            encrypted += convertedPattern;
-            letterCount++;
-            // Add space after every 5 groups (25 letters) for readability
-            if (letterCount % 5 === 0) {
-                encrypted += ' ';
-            } else {
-                encrypted += ' ';
-            }
-        } else {
-            // Preserve spaces and punctuation
-            encrypted += char;
-        }
+    for (let i = 0; i < convertedPattern.length; i += 5) {
+        if (i > 0) encrypted += ' ';
+        encrypted += convertedPattern.slice(i, i + 5);
     }
 
     return { encrypted: encrypted.trim(), binaryType: selectedScheme.type };

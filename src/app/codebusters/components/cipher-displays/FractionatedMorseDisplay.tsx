@@ -473,22 +473,7 @@ export const FractionatedMorseDisplay = ({
                     <p className={`font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
                         {quotes[quoteIndex].quote}
                     </p>
-                    {fractionationTable && (
-                        <div className="mt-3">
-                            <p className={`text-xs mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                Morse Code Mapping:
-                            </p>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-                                {Object.entries(fractionationTable).map(([triplet, letter]) => (
-                                    <div key={triplet} className={`p-2 rounded ${darkMode ? 'bg-gray-600' : 'bg-gray-100'}`}>
-                                        <span className={`font-mono ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                            {letter}: {triplet}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+
                 </div>
             )}
         </div>

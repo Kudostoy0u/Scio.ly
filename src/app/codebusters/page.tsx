@@ -106,6 +106,8 @@ export default function CodeBusters() {
         setTournamentName,
         questionPoints,
         setQuestionPoints,
+        resetTrigger,
+        setResetTrigger,
         loadPreferences
     } = useCodebustersState();
 
@@ -125,13 +127,15 @@ export default function CodeBusters() {
     );
     const { 
         handleSolutionChange, 
-        handleBaconianSolutionChange, 
+        handleBaconianSolutionChange,
         handleHillSolutionChange, 
         handleNihilistSolutionChange,
         handleCheckerboardSolutionChange,
         handleKeywordSolutionChange
     } = useSolutionHandlers(quotes, setQuotes);
     const { totalProgress, calculateQuoteProgress } = useProgressCalculation(quotes);
+
+
 
     // Setup visibility handling for time management
     useEffect(() => {
@@ -315,8 +319,7 @@ export default function CodeBusters() {
         setRevealedLetters({});
         setHintedLetters({});
         setHintCounts({});
-        setHintedLetters({});
-        setHintCounts({});
+        setResetTrigger(prev => prev + 1);
         
         // Use the original loader but with a custom callback to avoid clearing quotes immediately
         const customSetLoading = (loading: boolean) => {
@@ -340,7 +343,7 @@ export default function CodeBusters() {
             setTestScore,
             loadPreferences
         );
-    }, [loadPreferences, setQuotes, setIsTestSubmitted, setTestScore, setTimeLeft, setError, setIsLoading, setActiveHints, setRevealedLetters, setHintedLetters, setHintCounts]);
+    }, [loadPreferences, setQuotes, setIsTestSubmitted, setTestScore, setTimeLeft, setError, setIsLoading, setActiveHints, setRevealedLetters, setHintedLetters, setHintCounts, setResetTrigger]);
 
     // Handle back navigation: preserve Codebusters progress for resume banner on Practice
     const handleBack = useCallback(() => {
@@ -666,6 +669,7 @@ export default function CodeBusters() {
                                     setInfoModalOpen={setInfoModalOpen}
                                     handleSolutionChange={handleSolutionChange}
                                     handleBaconianSolutionChange={handleBaconianSolutionChange}
+
                                     handleHillSolutionChange={handleHillSolutionChange}
                                     handleNihilistSolutionChange={handleNihilistSolutionChange}
                                     handleCheckerboardSolutionChange={handleCheckerboardSolutionChange}
@@ -673,6 +677,8 @@ export default function CodeBusters() {
                                     hintedLetters={hintedLetters}
                                     _hintCounts={hintCounts}
                                     questionPoints={questionPoints}
+                                    resetTrigger={resetTrigger}
+
                                 />
                             ))}
                         </div>

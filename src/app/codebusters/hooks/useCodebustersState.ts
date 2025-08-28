@@ -68,6 +68,7 @@ export const useCodebustersState = () => {
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [tournamentName, setTournamentName] = useState('');
   const [questionPoints, setQuestionPoints] = useState<{[key: number]: number}>({});
+  const [resetTrigger, setResetTrigger] = useState(0);
 
   // Load data from localStorage on component mount
   useEffect(() => {
@@ -266,6 +267,8 @@ export const useCodebustersState = () => {
     setTournamentName,
     questionPoints,
     setQuestionPoints,
+    resetTrigger,
+    setResetTrigger,
     // Utilities
     loadPreferences
   };

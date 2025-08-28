@@ -717,63 +717,61 @@ export default function TestConfiguration({
                       {isCodebusters ? (
                         // Codebusters cipher types based on division (alphabetically ordered)
                         (() => {
-                          const divisionCCipherTypes = [
+                          // Division B only ciphers
+                          const divisionBOnlyCiphers = [
                             "Affine",
-                            "Atbash",
-                            "Baconian",
-                            "Caesar",
-                            "Checkerboard",
-                            "Complete Columnar",
-                            "Cryptarithm",
-                            "Fractionated Morse",
+                            "Atbash", 
+                            "Caesar"
+                          ];
+                          
+                          // Disabled ciphers (temporarily unavailable)
+                          const disabledCiphers = [
+                            "K2 Patristocrat",
+                            "K3 Patristocrat",
+                            "Random Patristocrat"
+                          ];
+                          
+                          // Division C only ciphers
+                          const divisionCOnlyCiphers = [
                             "Hill 2x2",
                             "Hill 3x3",
-                            "K1 Aristocrat",
-                            "K2 Aristocrat",
                             "K3 Aristocrat",
-                            "Nihilist",
-                            "Porta",
-                            "Random Aristocrat",
-                            // "Random Patristocrat", // TEMPORARILY DISABLED
-                            // "K1 Patristocrat", // TEMPORARILY DISABLED
-                            // "K2 Patristocrat", // TEMPORARILY DISABLED
-                            // "K3 Patristocrat", // TEMPORARILY DISABLED
-                            "Random Xenocrypt",
-                            "K1 Xenocrypt",
-                            "K2 Xenocrypt"
-                          ];
+                            "K3 Xenocrypt"
+                          ].filter(cipher => !disabledCiphers.includes(cipher));
                           
-                          const divisionBCipherTypes = [
-                            "Affine",
-                            "Atbash",
+                          // Ciphers available in both divisions
+                          const bothDivisionsCiphers = [
                             "Baconian",
-                            "Caesar",
                             "Checkerboard",
                             "Complete Columnar",
                             "Cryptarithm",
                             "Fractionated Morse",
-                            "Hill 2x2",
                             "K1 Aristocrat",
                             "K2 Aristocrat",
                             "Nihilist",
                             "Porta",
                             "Random Aristocrat",
-                            // "Random Patristocrat", // TEMPORARILY DISABLED
-                            // "K1 Patristocrat", // TEMPORARILY DISABLED
-                            // "K2 Patristocrat", // TEMPORARILY DISABLED
+                            "K1 Patristocrat",
                             "Random Xenocrypt",
                             "K1 Xenocrypt",
                             "K2 Xenocrypt"
-                          ];
+                          ].filter(cipher => !disabledCiphers.includes(cipher));
                           
-                          // For "Both" category, use the union of Division B and C ciphers
-                          const cipherTypes = settings.division === 'C' 
-                            ? divisionCCipherTypes 
-                            : settings.division === 'B' 
-                              ? divisionBCipherTypes 
-                              : [...new Set([...divisionBCipherTypes, ...divisionCCipherTypes])];
+                          // Build cipher types based on selected division
+                          let cipherTypes: string[] = [];
                           
-                          return cipherTypes.map((cipherType) => (
+                          if (settings.division === 'B') {
+                            // Division B: B-only + both divisions
+                            cipherTypes = [...divisionBOnlyCiphers, ...bothDivisionsCiphers];
+                          } else if (settings.division === 'C') {
+                            // Division C: C-only + both divisions
+                            cipherTypes = [...divisionCOnlyCiphers, ...bothDivisionsCiphers];
+                          } else {
+                            // Both divisions: union of all ciphers
+                            cipherTypes = [...new Set([...divisionBOnlyCiphers, ...divisionCOnlyCiphers, ...bothDivisionsCiphers])];
+                          }
+                          
+                          return cipherTypes.sort().map((cipherType) => (
                             <label
                               key={cipherType}
                               className={`flex items-center px-4 py-2 text-xs cursor-pointer ${
