@@ -22,10 +22,10 @@ export default function Header() {
   const installPromptRef = useRef<any>(null);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [aboutDropdownOpen, setAboutDropdownOpen] = useState(false);
+  const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
   const pathname = usePathname();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const aboutDropdownRef = useRef<HTMLDivElement>(null);
+  const moreDropdownRef = useRef<HTMLDivElement>(null);
   const [scrollOpacity, setScrollOpacity] = useState(0);
   // Dedicated opacity for test pages so we re-render on every scroll step
   const [headerOpacity, setHeaderOpacity] = useState(1);
@@ -147,12 +147,12 @@ export default function Header() {
         }
       }
       
-      if (aboutDropdownRef.current && !aboutDropdownRef.current.contains(event.target as Node)) {
-        // Only close if the click is not on the about dropdown button itself
+      if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target as Node)) {
+        // Only close if the click is not on the more dropdown button itself
         const target = event.target as HTMLElement;
-        const aboutButton = target.closest('button[aria-label="Toggle about menu"]');
-        if (!aboutButton) {
-          setAboutDropdownOpen(false);
+        const moreButton = target.closest('button[aria-label="Toggle more menu"]');
+        if (!moreButton) {
+          setMoreDropdownOpen(false);
         }
       }
     }
@@ -195,8 +195,8 @@ export default function Header() {
     setMobileMenuOpen(false);
   };
 
-  const closeAboutDropdown = () => {
-    setAboutDropdownOpen(false);
+  const closeMoreDropdown = () => {
+    setMoreDropdownOpen(false);
   };
 
   const shouldBeTransparent = isHomePage && !scrolled;
@@ -273,10 +273,10 @@ export default function Header() {
                 Teams
               </Link>
               
-              {/* About Dropdown */}
-              <div className="relative" ref={aboutDropdownRef}>
+              {/* More Dropdown */}
+              <div className="relative" ref={moreDropdownRef}>
                 <button
-                  onClick={() => setAboutDropdownOpen(!aboutDropdownOpen)}
+                  onClick={() => setMoreDropdownOpen(!moreDropdownOpen)}
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-1 ${
                     (pathname === '/about' || pathname === '/contact' || pathname === '/join')
                       ? darkMode
@@ -286,14 +286,14 @@ export default function Header() {
                         ? 'text-gray-300 hover:text-white'
                         : 'text-gray-700 hover:text-gray-900'
                   }`}
-                  aria-label="Toggle about menu"
+                  aria-label="Toggle more menu"
                 >
-                  About
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${aboutDropdownOpen ? 'rotate-180' : ''}`} />
+                  More
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${moreDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
                 
                 <AnimatePresence>
-                  {aboutDropdownOpen && (
+                  {moreDropdownOpen && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -313,7 +313,7 @@ export default function Header() {
                               ? 'text-gray-300 hover:text-white hover:bg-gray-700'
                               : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
                         }`}
-                        onClick={closeAboutDropdown}
+                        onClick={closeMoreDropdown}
                       >
                         Join Us
                       </Link>
@@ -328,7 +328,7 @@ export default function Header() {
                               ? 'text-gray-300 hover:text-white hover:bg-gray-700'
                               : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
                         }`}
-                        onClick={closeAboutDropdown}
+                        onClick={closeMoreDropdown}
                       >
                         Contact Us
                       </Link>
@@ -343,7 +343,7 @@ export default function Header() {
                               ? 'text-gray-300 hover:text-white hover:bg-gray-700'
                               : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
                         }`}
-                        onClick={closeAboutDropdown}
+                        onClick={closeMoreDropdown}
                       >
                         About Us
                       </Link>
@@ -456,10 +456,10 @@ export default function Header() {
                     Teams
                   </Link>
                   
-                  {/* About Section */}
+                  {/* More Section */}
                   <div className="pt-2 pb-1">
                     <div className={`px-4 py-1 text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      ABOUT
+                      MORE
                     </div>
                     <Link href="/join" className={mobileLinkStyles('/join')} onClick={closeMobileMenu}>
                       Join Us
