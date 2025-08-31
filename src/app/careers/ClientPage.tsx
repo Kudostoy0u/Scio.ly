@@ -57,7 +57,7 @@ export default function CareersClientPage() {
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <Header />
       {/* Global ToastContainer handles notifications */}
-      <div className="pt-20 px-4 sm:px-6 lg:px-8">
+      <div className="pt-4 px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">
           <div className="mb-8">
             <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Join Our Team</h1>

@@ -23,8 +23,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Too many requests' }, { status: 429 })
     }
 
-    const { name, email, position, experience, message } = await req.json()
-    if (!name || !email || !position || !message) {
+    const { name, email, discordId, position, hoursPerWeek, experience, message } = await req.json()
+    if (!name || !email || !discordId || !position || !hoursPerWeek || !message) {
       return NextResponse.json({ success: false, message: 'Missing required fields' }, { status: 400 })
     }
 
@@ -39,7 +39,9 @@ export async function POST(req: NextRequest) {
       fields: [
         { name: '👤 Name', value: String(name), inline: true },
         { name: '📧 Email', value: String(email), inline: true },
+        { name: '💬 Discord ID', value: String(discordId), inline: true },
         { name: '💼 Position', value: String(position), inline: true },
+        { name: '⏰ Hours per Week', value: String(hoursPerWeek), inline: true },
         { name: '📝 Experience', value: String(experience || 'Not provided'), inline: false },
         { name: '📄 Cover Letter', value: String(message), inline: false },
       ],

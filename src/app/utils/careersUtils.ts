@@ -1,7 +1,9 @@
 interface CareersFormData {
   name: string;
   email: string;
+  discordId: string;
   position: string;
+  hoursPerWeek: string;
   experience: string;
   message: string;
 }
