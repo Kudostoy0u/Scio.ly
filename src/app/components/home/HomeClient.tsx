@@ -14,6 +14,7 @@ import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
 import testimonialsData from '../../../../public/testimonials.json';
 
+
 export default function HomeClient() {
   const { darkMode } = useTheme();
   const router = useRouter();
@@ -130,6 +131,8 @@ export default function HomeClient() {
                   </motion.button>
                 </Link>
               </motion.div>
+              
+
             </motion.div>
             <motion.div
               initial={{ opacity: 0, x: 50, scale:0.8 }}

@@ -8,7 +8,7 @@ import { useTheme } from '@/app/contexts/ThemeContext';
 import AuthButton from '@/app/components/AuthButton';
 // ToastContainer is globally provided in Providers
 import { usePathname } from 'next/navigation';
-import { Upload, SquarePlus, Chrome as ChromeIcon, Smartphone, MonitorSmartphone, CheckCircle2, AlertTriangle, X as CloseIcon, Compass, Download } from 'lucide-react';
+import { Upload, SquarePlus, Chrome as ChromeIcon, Smartphone, MonitorSmartphone, CheckCircle2, AlertTriangle, X as CloseIcon, Compass, Download, ChevronDown } from 'lucide-react';
 import { FaFirefoxBrowser } from 'react-icons/fa';
 
 export default function Header() {
@@ -22,8 +22,10 @@ export default function Header() {
   const installPromptRef = useRef<any>(null);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [aboutDropdownOpen, setAboutDropdownOpen] = useState(false);
   const pathname = usePathname();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const aboutDropdownRef = useRef<HTMLDivElement>(null);
   const [scrollOpacity, setScrollOpacity] = useState(0);
   // Dedicated opacity for test pages so we re-render on every scroll step
   const [headerOpacity, setHeaderOpacity] = useState(1);
@@ -144,6 +146,15 @@ export default function Header() {
           setMobileMenuOpen(false);
         }
       }
+      
+      if (aboutDropdownRef.current && !aboutDropdownRef.current.contains(event.target as Node)) {
+        // Only close if the click is not on the about dropdown button itself
+        const target = event.target as HTMLElement;
+        const aboutButton = target.closest('button[aria-label="Toggle about menu"]');
+        if (!aboutButton) {
+          setAboutDropdownOpen(false);
+        }
+      }
     }
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -182,6 +193,10 @@ export default function Header() {
 
   const closeMobileMenu = () => {
     setMobileMenuOpen(false);
+  };
+
+  const closeAboutDropdown = () => {
+    setAboutDropdownOpen(false);
   };
 
   const shouldBeTransparent = isHomePage && !scrolled;
@@ -257,9 +272,86 @@ export default function Header() {
               <Link href="/teams" className={getLinkStyles('/teams')}>
                 Teams
               </Link>
-              <Link href="/contact" className={getLinkStyles('/contact')}>
-                Contact
-              </Link>
+              
+              {/* About Dropdown */}
+              <div className="relative" ref={aboutDropdownRef}>
+                <button
+                  onClick={() => setAboutDropdownOpen(!aboutDropdownOpen)}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-1 ${
+                    (pathname === '/about' || pathname === '/contact' || pathname === '/join')
+                      ? darkMode
+                        ? 'text-white font-semibold'
+                        : 'text-gray-900 font-semibold'
+                      : darkMode
+                        ? 'text-gray-300 hover:text-white'
+                        : 'text-gray-700 hover:text-gray-900'
+                  }`}
+                  aria-label="Toggle about menu"
+                >
+                  About
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${aboutDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                <AnimatePresence>
+                  {aboutDropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className={`absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 z-50 ${
+                        darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+                      }`}
+                    >
+                      <Link
+                        href="/join"
+                        className={`block px-4 py-2 text-sm transition-colors duration-200 ${
+                          pathname === '/join'
+                            ? darkMode
+                              ? 'text-white bg-gray-700'
+                              : 'text-gray-900 bg-gray-100'
+                            : darkMode
+                              ? 'text-gray-300 hover:text-white hover:bg-gray-700'
+                              : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
+                        }`}
+                        onClick={closeAboutDropdown}
+                      >
+                        Join Us
+                      </Link>
+                      <Link
+                        href="/contact"
+                        className={`block px-4 py-2 text-sm transition-colors duration-200 ${
+                          pathname === '/contact'
+                            ? darkMode
+                              ? 'text-white bg-gray-700'
+                              : 'text-gray-900 bg-gray-100'
+                            : darkMode
+                              ? 'text-gray-300 hover:text-white hover:bg-gray-700'
+                              : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
+                        }`}
+                        onClick={closeAboutDropdown}
+                      >
+                        Contact Us
+                      </Link>
+                      <Link
+                        href="/about"
+                        className={`block px-4 py-2 text-sm transition-colors duration-200 ${
+                          pathname === '/about'
+                            ? darkMode
+                              ? 'text-white bg-gray-700'
+                              : 'text-gray-900 bg-gray-100'
+                            : darkMode
+                              ? 'text-gray-300 hover:text-white hover:bg-gray-700'
+                              : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
+                        }`}
+                        onClick={closeAboutDropdown}
+                      >
+                        About Us
+                      </Link>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+              
               <AuthButton />
             </div>
 
@@ -363,9 +455,23 @@ export default function Header() {
                   <Link href="/teams" className={mobileLinkStyles('/teams')} onClick={closeMobileMenu}>
                     Teams
                   </Link>
-                  <Link href="/contact" className={mobileLinkStyles('/contact')} onClick={closeMobileMenu}>
-                    Contact
-                  </Link>
+                  
+                  {/* About Section */}
+                  <div className="pt-2 pb-1">
+                    <div className={`px-4 py-1 text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      ABOUT
+                    </div>
+                    <Link href="/join" className={mobileLinkStyles('/join')} onClick={closeMobileMenu}>
+                      Join Us
+                    </Link>
+                    <Link href="/contact" className={mobileLinkStyles('/contact')} onClick={closeMobileMenu}>
+                      Contact Us
+                    </Link>
+                    <Link href="/about" className={mobileLinkStyles('/about')} onClick={closeMobileMenu}>
+                      About Us
+                    </Link>
+                  </div>
+                  
                   <div className="pt-4 pb-3 border-t border-gray-200 dark:border-gray-700 px-2">
                     <AuthButton />
                   </div>
