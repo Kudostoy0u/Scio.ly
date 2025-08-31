@@ -1,11 +1,11 @@
+import JoinClientPage from './ClientPage';
 import { Metadata } from 'next';
-import CareersClientPage from './ClientPage';
 
 export const metadata: Metadata = {
-  title: "Scio.ly | Careers",
-  description: "Join the Scio.ly team and help us make Science Olympiad practice accessible to everyone.",
+  title: "Scio.ly | Join Our Team",
+  description: "Join our team and help make Science Olympiad practice accessible to everyone.",
 };
 
-export default function CareersPage() {
-  return <CareersClientPage />;
+export default function JoinPage() {
+  return <JoinClientPage />;
 }

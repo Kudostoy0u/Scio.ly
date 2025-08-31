@@ -7,7 +7,7 @@ import { toast } from 'react-toastify';
 import Header from '@/app/components/Header';
 import { handleCareersSubmission } from '@/app/utils/careersUtils';
 
-interface CareersFormData {
+interface JoinFormData {
   name: string;
   email: string;
   discordId: string;
@@ -17,9 +17,9 @@ interface CareersFormData {
   message: string;
 }
 
-export default function CareersClientPage() {
+export default function JoinClientPage() {
   const { darkMode } = useTheme();
-  const [formData, setFormData] = useState<CareersFormData>({
+  const [formData, setFormData] = useState<JoinFormData>({
     name: '',
     email: '',
     discordId: '',
@@ -53,7 +53,7 @@ export default function CareersClientPage() {
     }
   };
 
-  const handleInputChange = (field: keyof CareersFormData, value: string) => {
+  const handleInputChange = (field: keyof JoinFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
