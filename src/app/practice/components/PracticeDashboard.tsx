@@ -27,6 +27,7 @@ export default function PracticeDashboard() {
   const [isLarge, setIsLarge] = useState<boolean>(false);
   const [isOffline, setIsOffline] = useState<boolean>(false);
   const [downloadedSet, setDownloadedSet] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<'current' | 'all'>('current');
 
   const [settings, setSettings] = useState<Settings>({
     questionCount: NORMAL_DEFAULTS.questionCount,
@@ -467,7 +468,7 @@ export default function PracticeDashboard() {
   };
 
   useEffect(() => {
-    const fetchData = async () => {
+    const loadCurrentEvents = async () => {
       try {
         setLoading(true);
         setError(null);
@@ -594,8 +595,6 @@ export default function PracticeDashboard() {
 
         setEvents(eventsWithIds);
 
-        // Use local subtopics mapping
-
         // Define event-specific subtopics based on the provided mapping
         const eventSubtopics: Record<string, string[]> = {
           "Anatomy - Nervous": ["Brain Anatomy", "Spinal Cord", "Cranial Nerves", "Peripheral Nervous System", "Autonomic Nervous System", "Neurons", "Synapses", "Neurotransmitters", "Reflexes", "Sensory Pathways", "Motor Pathways", "Brain Functions"],
@@ -633,9 +632,53 @@ export default function PracticeDashboard() {
         setLoading(false);
       }
     };
+    const loadAllEvents = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-    fetchData();
-  }, []);
+        const [statsRes, subtopicsRes] = await Promise.all([
+          fetch('/api/meta/stats'),
+          fetch('/subtopics.json')
+        ]);
+
+        if (!statsRes.ok) throw new Error('Failed to fetch stats');
+        const statsJson = await statsRes.json();
+        const byEvent: Array<{ event: string; count: string }> = statsJson?.data?.byEvent || [];
+
+        // Exclude events with 100 or fewer questions
+        const filtered = byEvent.filter(e => parseInt(e.count || '0', 10) > 100);
+
+        const mapped: Event[] = filtered.map((row, index) => ({
+          id: index + 1,
+          name: row.event,
+          subject: 'General',
+          divisions: ['B', 'C']
+        }));
+
+        setEvents(mapped);
+        setSelectedEvent(null);
+
+        if (subtopicsRes.ok) {
+          try {
+            const subtopicsJson = await subtopicsRes.json();
+            window.eventSubtopicsMapping = subtopicsJson as Record<string, string[]>;
+          } catch {}
+        }
+      } catch (err) {
+        console.error('Error loading all events:', err);
+        setError('Failed to load events. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (viewMode === 'current') {
+      loadCurrentEvents();
+    } else {
+      loadAllEvents();
+    }
+  }, [viewMode]);
 
   const selectedEventObj = selectedEvent ? events.find(event => event.id === selectedEvent) : null;
 
@@ -730,6 +773,13 @@ export default function PracticeDashboard() {
               error={error}
               isOffline={isOffline}
               downloadedSlugs={downloadedSet}
+              viewMode={viewMode}
+              onViewModeChange={(mode) => {
+                if (mode !== viewMode) {
+                  setSelectedEvent(null);
+                  setViewMode(mode);
+                }
+              }}
             />
           </div>
 

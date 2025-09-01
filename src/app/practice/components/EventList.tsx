@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import * as Icons from 'lucide-react';
 import { Event } from '../types';
 import { useTheme } from '@/app/contexts/ThemeContext';
 
@@ -15,6 +16,8 @@ interface EventListProps {
   // When offline, non-downloaded events should be disabled
   isOffline?: boolean;
   downloadedSlugs?: Set<string>;
+  viewMode: 'current' | 'all';
+  onViewModeChange: (mode: 'current' | 'all') => void;
 }
 
 export default function EventList({
@@ -26,7 +29,9 @@ export default function EventList({
   loading,
   error,
   isOffline = false,
-  downloadedSlugs
+  downloadedSlugs,
+  viewMode,
+  onViewModeChange
 }: EventListProps) {
   const { darkMode } = useTheme();
 
@@ -40,38 +45,6 @@ export default function EventList({
     return 0;
   });
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className={`animate-pulse text-lg font-medium ${
-          darkMode ? 'text-gray-300' : 'text-gray-700'
-        }`}>
-          Loading events...
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-red-500 text-lg">{error}</div>
-      </div>
-    );
-  }
-
-  if (events.length === 0) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className={`text-lg ${
-          darkMode ? 'text-gray-400' : 'text-gray-500'
-        }`}>
-          No events match the whitelist criteria.
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className={`h-full rounded-xl flex flex-col ${
       darkMode ? 'bg-gray-800' : 'bg-white shadow-md'
@@ -82,8 +55,8 @@ export default function EventList({
         }`}>
           Available Events
         </h3>
-        <div className="flex items-center">
-          <label htmlFor="sort" className={`text-sm mr-2 ${
+        <div className="flex items-center space-x-3">
+          <label htmlFor="sort" className={`text-sm ${
             darkMode ? 'text-gray-300' : 'text-gray-600'
           }`}>
             Sort:
@@ -101,63 +74,117 @@ export default function EventList({
             <option value="alphabetical">Alphabetical</option>
             <option value="subject">Subject</option>
           </select>
+          <div className={`flex rounded-md border ${
+            darkMode ? 'border-gray-600' : 'border-gray-300'
+          }`}>
+            {(() => {
+              const CurrentIcon = (Icons as any)['ClockArrowDown'] || (Icons as any)['History'] || (Icons as any)['Clock'];
+              const AllIcon = (Icons as any)['ClockFading'] || (Icons as any)['ClockDashed'] || (Icons as any)['Clock'];
+              return (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onViewModeChange('current')}
+                    className={`py-1.5 px-2.5 text-xs font-medium rounded-l-md border ${
+                      viewMode === 'current'
+                        ? (darkMode ? 'border-blue-500 text-blue-400' : 'border-blue-500 text-blue-600')
+                        : (darkMode ? 'border-gray-600 text-gray-300 hover:border-blue-500 hover:text-blue-400' : 'border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600')
+                    } bg-transparent`}
+                    title="Current"
+                  >
+                    <CurrentIcon className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onViewModeChange('all')}
+                    className={`py-1.5 px-2.5 text-xs font-medium rounded-r-md border ${
+                      viewMode === 'all'
+                        ? (darkMode ? 'border-blue-500 text-blue-400' : 'border-blue-500 text-blue-600')
+                        : (darkMode ? 'border-gray-600 text-gray-300 hover:border-blue-500 hover:text-blue-400' : 'border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600')
+                    } bg-transparent`}
+                    title="All"
+                  >
+                    <AllIcon className="w-4 h-4" />
+                  </button>
+                </>
+              );
+            })()}
+          </div>
         </div>
       </div>
       <div className="flex-1 overflow-hidden p-3 min-h-0 practice-events-scroll relative">
-        <ScrollBarAlwaysVisible>
-          <ul className="space-y-2">
-          {sortedEvents.map((event) => {
-            const slug = event.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-            const isDownloaded = downloadedSlugs ? downloadedSlugs.has(slug) : true;
-            const isDisabled = isOffline && !isDownloaded;
-            return (
-            <li
-              key={event.id}
-              id={`event-${event.id}`}
-              onClick={() => { if (!isDisabled) onEventSelect(event.id); }}
-              className={`p-4 rounded-lg transition-all duration-200 ${
-                isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-              } ${
-                selectedEvent === event.id
-                  ? darkMode
-                    ? 'bg-blue-600/20 border-l-4 border-blue-500'
-                    : 'bg-blue-50 border-l-4 border-blue-500'
-                  : darkMode
-                    ? 'hover:bg-gray-700'
-                    : 'hover:bg-gray-50'
-              }`}
-            >
-              <div className="flex justify-between items-center">
-                <h4 className={`font-medium text-sm md:text-base ${
-                  darkMode ? 'text-white' : 'text-gray-900'
-                }`}>
-                  {event.name}
-                </h4>
-                <div className="flex items-center space-x-2">
-                  <span className={`text-xs md:text-xs text-[10px] px-3 py-1 rounded-full ${
-                    darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
+        {loading ? (
+          <div className="flex justify-center items-center h-full">
+            <div className={`animate-pulse text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              Loading events...
+            </div>
+          </div>
+        ) : error ? (
+          <div className="flex justify-center items-center h-full">
+            <div className="text-red-500 text-sm">{error}</div>
+          </div>
+        ) : events.length === 0 ? (
+          <div className="flex justify-center items-center h-full">
+            <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              No events match the criteria.
+            </div>
+          </div>
+        ) : (
+          <ScrollBarAlwaysVisible>
+            <ul className="space-y-2">
+            {sortedEvents.map((event) => {
+              const slug = event.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+              const isDownloaded = downloadedSlugs ? downloadedSlugs.has(slug) : true;
+              const isDisabled = isOffline && !isDownloaded;
+              return (
+              <li
+                key={event.id}
+                id={`event-${event.id}`}
+                onClick={() => { if (!isDisabled) onEventSelect(event.id); }}
+                className={`p-4 rounded-lg transition-all duration-200 ${
+                  isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                } ${
+                  selectedEvent === event.id
+                    ? darkMode
+                      ? 'bg-blue-600/20 border-l-4 border-blue-500'
+                      : 'bg-blue-50 border-l-4 border-blue-500'
+                    : darkMode
+                      ? 'hover:bg-gray-700'
+                      : 'hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex justify-between items-center">
+                  <h4 className={`font-medium text-sm md:text-base ${
+                    darkMode ? 'text-white' : 'text-gray-900'
                   }`}>
-                    {event.subject}
-                  </span>
-                  {isOffline && !isDownloaded && (
-                    <span className={`text-xs px-2 py-0.5 rounded ${darkMode ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-600'}`}>
-                      Not downloaded
-                    </span>
-                  )}
-                  {event.divisions && (
-                    <span className={`hidden lg:inline-block text-xs px-3 py-1 rounded-full ${
-                      darkMode ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-600'
+                    {event.name}
+                  </h4>
+                  <div className="flex items-center space-x-2">
+                    <span className={`text-xs md:text-xs text-[10px] px-3 py-1 rounded-full ${
+                      darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
                     }`}>
-                      Div {event.divisions.join(', ')}
+                      {event.subject}
                     </span>
-                  )}
+                    {isOffline && !isDownloaded && (
+                      <span className={`text-xs px-2 py-0.5 rounded ${darkMode ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-600'}`}>
+                        Not downloaded
+                      </span>
+                    )}
+                    {event.divisions && (
+                      <span className={`hidden lg:inline-block text-xs px-3 py-1 rounded-full ${
+                        darkMode ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-600'
+                      }`}>
+                        Div {event.divisions.join(', ')}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </li>
-            );
-          })}
-          </ul>
-        </ScrollBarAlwaysVisible>
+              </li>
+              );
+            })}
+            </ul>
+          </ScrollBarAlwaysVisible>
+        )}
       </div>
     </div>
   );
