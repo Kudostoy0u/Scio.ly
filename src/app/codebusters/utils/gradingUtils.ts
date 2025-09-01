@@ -536,6 +536,29 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
       }
     }
   }
+  
+  // Handle Cryptarithm
+  else if (quote.cipherType === 'Cryptarithm') {
+    if (quote.cryptarithmSolution && Object.keys(quote.cryptarithmSolution).length > 0) {
+      // Get the expected words from cryptarithm data
+      const expectedWords = quote.cryptarithmData?.digitGroups.map(group => group.word.replace(/\s/g, '')) || [];
+      const allExpectedLetters = expectedWords.join('');
+      totalInputs = allExpectedLetters.length;
+      
+      // Check each position for correctness
+      for (let i = 0; i < totalInputs; i++) {
+        const userAnswer = quote.cryptarithmSolution[i];
+        const isHinted = Boolean((quote as any).cryptarithmHinted?.[i]);
+        if (!isHinted && userAnswer && userAnswer.trim().length > 0) {
+          filledInputs++;
+          // Check if the answer matches the expected letter at this position
+          if (userAnswer.trim() === allExpectedLetters[i]) {
+            correctInputs++;
+          }
+        }
+      }
+    }
+  }
 
   // Calculate score
   const attemptedScore = totalInputs > 0 ? (filledInputs / totalInputs) * questionPointValue : 0;

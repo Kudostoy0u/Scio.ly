@@ -34,119 +34,25 @@ const generateKeywordAlphabet = (keyword: string): string => {
     return result.join('');
 };
 
-// Centralized word bank for all cipher keywords
-const CIPHER_WORD_BANK = [
-    // General cipher/security terms
-    'CRYPTO', 'SCIENCE', 'ALGORITHM', 'CIPHER', 'KEYWORD', 'SECURITY', 
-    'PUZZLE', 'ENIGMA', 'MATRIX', 'VECTOR', 'SECRET', 'MESSAGE', 
-    'CODE', 'BREAK', 'SOLVE', 'FIND', 'HIDDEN', 'CLUE', 'ANSWER',
-    
-    // Technology and computing
-    'PASSWORD', 'KEYBOARD', 'COMPUTER', 'NETWORK', 'SYSTEM', 'ACCESS', 'CONTROL',
-    'PROTOCOL', 'ENCRYPT', 'DECRYPT', 'DATABASE', 'SERVER', 'CLIENT', 'BROWSER', 
-    'FIREWALL', 'ANTIVIRUS', 'BACKUP', 'RESTORE', 'UPDATE', 'DOWNLOAD', 'UPLOAD', 
-    'CONNECT', 'DISCONNECT', 'AUTHENTICATE', 'VERIFY', 'VALIDATE', 'REGISTER', 'LOGIN',
-    'LOGOUT', 'SESSION', 'COOKIE', 'TOKEN', 'HASH', 'SIGNATURE', 'CERTIFICATE', 'PRIVATE',
-    'PUBLIC', 'SYMMETRIC', 'ASYMMETRIC', 'BLOCKCHAIN', 'CRYPTOCURRENCY', 'WALLET', 'MINING',
-    'TRANSACTION', 'LEDGER', 'CONSENSUS', 'SMART', 'CONTRACT', 'DEFI', 'NFT', 'METAVERSE',
-    'ARTIFICIAL', 'INTELLIGENCE', 'MACHINE', 'LEARNING', 'DEEP', 'NEURAL', 'TENSOR',
-    'PYTHON', 'JAVASCRIPT', 'TYPESCRIPT', 'REACT', 'ANGULAR', 'VUE', 'NODE', 'EXPRESS',
-    'MONGODB', 'POSTGRESQL', 'MYSQL', 'REDIS', 'DOCKER', 'KUBERNETES', 'AWS', 'AZURE',
-    'GOOGLE', 'MICROSOFT', 'APPLE', 'LINUX', 'WINDOWS', 'MACOS', 'ANDROID', 'IOS',
-    'BLUETOOTH', 'WIFI', 'ETHERNET', 'FIBER', 'SATELLITE', 'ROUTER', 'SWITCH', 'GATEWAY',
-    'PROXY', 'VPN', 'TOR', 'DNS', 'HTTP', 'HTTPS', 'FTP', 'SSH', 'TELNET', 'SMTP',
-    'POP3', 'IMAP', 'REST', 'API', 'GRAPHQL', 'SOAP', 'XML', 'JSON', 'YAML', 'CSV',
-    'HTML', 'CSS', 'SCSS', 'SASS', 'LESS', 'WEBPACK', 'BABEL', 'ESLINT', 'PRETTIER',
-    'GIT', 'GITHUB', 'GITLAB', 'BITBUCKET', 'JENKINS', 'TRAVIS', 'CIRCLECI',
-    'HELM', 'TERRAFORM', 'ANSIBLE', 'CHEF', 'PUPPET', 'SALT', 'CONSUL', 'ETCD', 
-    'ZOOKEEPER', 'KAFKA', 'RABBITMQ', 'ACTIVEMQ', 'MEMCACHED', 'ELASTIC', 'LOGSTASH', 
-    'KIBANA', 'GRAFANA', 'PROMETHEUS', 'NAGIOS', 'ZABBIX', 'SPLUNK', 'DATADOG',
-    'NEWRELIC', 'APPDYNAMICS', 'DYNATRACE', 'JAEGER', 'ZIPKIN', 'OTEL', 'ISTIO', 'LINKERD',
-    'ENVOY', 'NGINX', 'APACHE', 'TOMCAT', 'JETTY', 'UNDERTOW', 'WILDFLY', 'SPRING', 
-    'HIBERNATE', 'JPA', 'JAX', 'RS', 'WSDL', 'UDDI', 'ESB', 'BPM', 'WORKFLOW', 
-    'ORCHESTRATION', 'MICROSERVICE', 'MONOLITH', 'SOA', 'DDD', 'CQRS', 'ES', 'EVENT', 
-    'SOURCING', 'SAGA', 'CHOREOGRAPHY', 'COMPENSATION', 'RETRY', 'CIRCUIT', 'BREAKER', 
-    'BULKHEAD', 'TIMEOUT', 'RATE', 'LIMITING', 'THROTTLING', 'CACHING', 'CDN', 'EDGE', 
-    'COMPUTING', 'FOG', 'IOT', 'MESH', 'GRID', 'CLUSTER', 'LOAD', 'BALANCER',
-    'AUTOSCALING', 'HORIZONTAL', 'VERTICAL', 'SCALING', 'SHARDING', 'PARTITIONING', 
-    'REPLICATION', 'MASTER', 'SLAVE', 'PRIMARY', 'SECONDARY', 'READ', 'WRITE', 
-    'CONSISTENCY', 'AVAILABILITY', 'PARTITION', 'TOLERANCE', 'CAP', 'THEOREM', 'ACID', 
-    'BASE', 'TRANSACTION', 'ISOLATION', 'DURABILITY', 'ATOMICITY', 'NORMALIZATION', 
-    'DENORMALIZATION', 'INDEX', 'QUERY', 'OPTIMIZATION', 'EXECUTION', 'PLAN', 'STATISTICS', 
-    'ANALYZE', 'EXPLAIN', 'PROFILING', 'BENCHMARKING', 'STRESS', 'TESTING', 'PERFORMANCE', 
-    'MONITORING', 'ALERTING', 'LOGGING', 'TRACING', 'METRICS', 'DASHBOARD', 'REPORTING', 
-    'ANALYTICS', 'BUSINESS', 'INTELLIGENCE', 'DATA', 'WAREHOUSE', 'LAKE', 'STREAMING', 
-    'BATCH', 'REAL', 'TIME', 'NEAR', 'LATENCY', 'THROUGHPUT', 'BANDWIDTH', 'CAPACITY', 
-    'UTILIZATION', 'EFFICIENCY',
-    
-    // Science and education
-    'OLYMPIAD', 'COMPETITION', 'STUDENT', 'RESEARCH', 'EXPERIMENT', 'DISCOVERY', 
-    'INNOVATION', 'TECHNOLOGY', 'MATHEMATICS', 'PHYSICS', 'CHEMISTRY', 'BIOLOGY', 
-    'ENGINEERING', 'PROGRAMMING', 'ANALYSIS', 'SOLUTION', 'PROBLEM', 'CHALLENGE', 
-    'KNOWLEDGE', 'LEARNING', 'EDUCATION', 'ACADEMIC', 'SCHOLAR', 'SCIENTIST', 
-    'RESEARCHER', 'INVENTOR', 'PIONEER', 'EXPLORER', 'INVESTIGATOR', 'OBSERVER', 
-    'ANALYST', 'SPECIALIST', 'EXPERT', 'PROFESSIONAL', 'ACADEMICIAN', 'THEORIST', 
-    'PRACTITIONER', 'INTELLECTUAL', 'PHILOSOPHER', 'THINKER', 'INNOVATOR', 'CREATOR', 
-    'DESIGNER', 'ARCHITECT', 'BUILDER', 'DEVELOPER', 'PROGRAMMER', 'ENGINEER', 
-    'TECHNICIAN', 'OPERATOR', 'ADMINISTRATOR', 'MANAGER', 'COORDINATOR', 'ORGANIZER', 
-    'PLANNER', 'STRATEGIST', 'TACTICIAN', 'CONSULTANT', 'ADVISOR', 'COUNSELOR', 
-    'MENTOR', 'TUTOR', 'INSTRUCTOR', 'TEACHER', 'PROFESSOR', 'LECTURER', 'EDUCATOR',
-    'TRAINER', 'COACH', 'GUIDE', 'LEADER', 'DIRECTOR', 'SUPERVISOR', 'CONTROLLER',
-    'REGULATOR', 'MONITOR', 'WATCHER', 'GUARDIAN', 'PROTECTOR', 'DEFENDER', 
-    'CUSTODIAN', 'KEEPER', 'CARETAKER', 'HANDLER', 'MODERATOR', 'MEDIATOR',
-    'ARBITRATOR', 'JUDGE', 'REFEREE', 'UMPIRE', 'ADJUDICATOR', 'ASSESSOR',
-    'EVALUATOR', 'EXAMINER', 'INSPECTOR', 'AUDITOR', 'REVIEWER', 'CRITIC',
-    'AUTHORITY', 'MASTER', 'GURU', 'SAGE', 'WIZARD', 'MAGICIAN', 'SORCERER', 
-    'ENCHANTER', 'CONJURER', 'ILLUSIONIST', 'PERFORMER', 'ENTERTAINER', 'ARTIST',
-    'CONSTRUCTOR', 'MANUFACTURER', 'PRODUCER', 'GENERATOR', 'ORIGINATOR', 'FOUNDER', 
-    'ESTABLISHER', 'INITIATOR', 'TRAILBLAZER', 'PATHFINDER', 'DISCOVERER',
-    
-    // Finance and economics
-    'CASH', 'MONEY', 'GOLD', 'SILVER', 'COIN', 'BANK', 'FUND', 'DEBT', 'CREDIT', 
-    'DEBIT', 'LOAN', 'MORTGAGE', 'INTEREST', 'RATE', 'PRINCIPAL', 'PAYMENT',
-    'DEPOSIT', 'WITHDRAWAL', 'TRANSFER', 'WIRE', 'CHECK', 'CARD', 'VISA', 'MASTERCARD',
-    'AMEX', 'DISCOVER', 'PAYPAL', 'VENMO', 'CASHAPP', 'BITCOIN', 'ETHEREUM', 'DOGE',
-    'ADA', 'DOT', 'LINK', 'UNI', 'AAVE', 'COMP', 'YFI', 'SUSHI', 'CRV', 'BAL',
-    'SNX', 'MKR', 'REN', 'ZRX', 'BAT', 'REP', 'KNC', 'BNT', 'LRC', 'OMG',
-    'STORJ', 'MANA', 'SAND', 'AXS', 'SLP', 'CHZ', 'HOT', 'VET', 'TRX', 'XRP',
-    'LTC', 'BCH', 'BSV', 'XLM', 'XMR', 'ZEC', 'DASH', 'NEO', 'ONT', 'QTUM', 
-    'ICX', 'WAVES', 'STRAT', 'ARK', 'LSK', 'STEEM', 'BTS', 'EOS', 'TELOS', 'WAX', 
-    'CHAIN', 'POLKADOT', 'COSMOS', 'AVALANCHE', 'POLYGON', 'ARBITRUM', 'OPTIMISM',
-    'FANTOM', 'HARMONY', 'CELO', 'NEAR', 'SOLANA', 'ALGORAND', 'CARDANO', 'TEZOS',
-    'TENDermint', 'VALIDATOR', 'DELEGATOR', 'STAKING', 'REWARDS', 'SLASHING',
-    'GOVERNANCE', 'PROPOSAL', 'VOTING', 'QUORUM', 'THRESHOLD', 'FINALITY',
-    'BLOCK', 'HASH', 'ADDRESS', 'BALANCE', 'NONCE', 'GAS', 'FEE', 'STAKING', 'YIELD',
-    'FARMING', 'LIQUIDITY', 'POOL', 'SWAP', 'TRADE', 'ORDER', 'BOOK', 'SPREAD',
-    'SLIPPAGE', 'IMPERMANENT', 'LOSS', 'APY', 'APR', 'TVL', 'MCAP', 'VOLUME',
-    'MARKET', 'CAP', 'CIRCULATING', 'SUPPLY', 'MAX', 'TOTAL', 'BURNED', 'MINTED',
-    'LOCKED', 'VESTED', 'CLAIM', 'AIRDROP', 'IDO', 'ICO', 'STO', 'IEO', 'LAUNCHPAD',
-    'INCUBATOR', 'ACCELERATOR', 'VENTURE', 'CAPITAL', 'ANGEL', 'INVESTOR', 'PORTFOLIO',
-    'DIVERSIFICATION', 'RISK', 'MANAGEMENT', 'HEDGE', 'DERIVATIVE', 'FUTURES', 'OPTIONS',
-    'FORWARDS', 'SWAPS', 'ARBITRAGE', 'SCALPING', 'DAY', 'TRADING', 'SWING', 'POSITION',
-    'LONG', 'SHORT', 'LEVERAGE', 'MARGIN', 'CALL', 'PUT', 'STRIKE', 'EXPIRY', 'PREMIUM',
-    'DELTA', 'GAMMA', 'THETA', 'VEGA', 'RHO', 'IMPLIED', 'VOLATILITY', 'HISTORICAL',
-    'BETA', 'ALPHA', 'SHARPE', 'RATIO', 'SORTINO', 'TREYNOR', 'INFORMATION', 'JENSEN',
-    'MODERN', 'PORTFOLIO', 'THEORY', 'EFFICIENT', 'FRONTIER', 'CAPITAL', 'ASSET', 'PRICING',
-    'MODEL', 'BLACK', 'SCHOLES', 'BINOMIAL', 'MONTE', 'CARLO', 'SIMULATION', 'BACKTESTING',
-    'FORWARD', 'TESTING', 'WALK', 'ANALYSIS', 'COINTEGRATION', 'GRANGER', 'CAUSALITY',
-    'VECTOR', 'AUTOREGRESSION', 'GARCH', 'ARCH', 'EGARCH', 'TGARCH', 'PARCH', 'APARCH',
-    'STOCHASTIC', 'VOLATILITY', 'JUMP', 'DIFFUSION', 'MEAN', 'REVERSION', 'MOMENTUM',
-    'CONTRARIAN', 'TREND', 'FOLLOWING', 'BREAKOUT', 'BREAKDOWN', 'SUPPORT', 'RESISTANCE', 
-    'PIVOT', 'POINT', 'FIBONACCI', 'RETRACEMENT', 'EXTENSION', 'ELLIOTT', 'WAVE', 'THEORY', 
-    'DOW', 'THEORY', 'WYCKOFF', 'METHOD', 'MARKET', 'PROFILE', 'VOLUME', 'PROFILE', 
-    'ORDER', 'FLOW', 'TAPE', 'READING', 'LEVEL', 'II', 'DATA', 'SALES', 'TICK', 'CHART', 
-    'RANGE', 'BAR', 'CANDLESTICK', 'HEIKIN', 'ASHI', 'RENKO', 'KAGI', 'FIGURE', 'LINE', 
-    'AREA', 'COLUMN', 'HISTOGRAM', 'SCATTER', 'PLOT', 'BUBBLE', 'RADAR', 'POLAR', 'STOCK', 
-    'WATERFALL', 'FUNNEL', 'GAUGE', 'THERMOMETER', 'PROGRESS', 'SLIDER', 'KNOB', 'DIAL', 
-    'METER', 'COMPASS', 'CLOCK', 'TIMER', 'STOPWATCH', 'CHRONOMETER', 'PENDULUM', 'SPRING',
-    'GEAR', 'PULLEY', 'LEVER', 'WEDGE', 'SCREW', 'INCLINED', 'PLANE', 'WHEEL', 'AXLE', 
-    'BEARING', 'BUSHING', 'COUPLING', 'CLUTCH', 'BRAKE', 'TRANSMISSION', 'DIFFERENTIAL', 
-    'DRIVESHAFT', 'CARDAN', 'UNIVERSAL', 'JOINT', 'CV', 'CONSTANT', 'VELOCITY', 'TRIPOD', 
-    'DOUBLE', 'RZEPPA', 'BIRFIELD', 'WEISFELD', 'THOMPSON', 'BALL', 'JOINT', 'TIE', 'ROD', 'END'
-];
+// Centralized word bank is now loaded from /words.json via questionLoader.
+// Keep a tiny fallback to avoid runtime errors if words.json isn't loaded yet.
+const FALLBACK_WORDS = ['KEYWORD', 'CIPHER', 'SECRET', 'PUZZLE', 'MESSAGE'];
+
+// Optional external/custom word bank (loaded from /words.json)
+let CUSTOM_WORD_BANK: string[] | null = null;
+export const setCustomWordBank = (words: string[]): void => {
+    try {
+        CUSTOM_WORD_BANK = Array.isArray(words) ? words.map(w => (w || '').toString().toUpperCase()) : null;
+    } catch {
+        CUSTOM_WORD_BANK = null;
+    }
+};
+export const getCustomWordBank = (): string[] | null => CUSTOM_WORD_BANK;
 
 const generateRandomKeyword = (): string => {
-    return CIPHER_WORD_BANK[Math.floor(Math.random() * CIPHER_WORD_BANK.length)];
+    const bank = getCustomWordBank();
+    const list = bank && bank.length > 0 ? bank : FALLBACK_WORDS;
+    return list[Math.floor(Math.random() * list.length)].toUpperCase();
 };
 
 // Helper functions for Hill cipher
@@ -573,7 +479,7 @@ export const encryptHill3x3 = (text: string): { encrypted: string; matrix: numbe
 // Porta cipher encryption
 export const encryptPorta = (text: string): { encrypted: string; keyword: string } => {
     // Use centralized word bank for Porta keywords
-    const portaKeywords = CIPHER_WORD_BANK;
+    const portaKeywords = (getCustomWordBank() && getCustomWordBank()!.length > 0 ? getCustomWordBank()! : FALLBACK_WORDS).map(w => w.toUpperCase());
 
     // Porta table - each row represents the substitution alphabet for a keyword letter pair
     // Based on the correct Porta cipher algorithm from your example
@@ -699,11 +605,13 @@ export const encryptBaconian = (text: string): { encrypted: string; binaryType: 
 export const encryptNihilist = (text: string): { encrypted: string; polybiusKey: string; cipherKey: string } => {
     // Generate two random keys for Nihilist cipher
     const generatePolybiusKey = (): string => {
-        return CIPHER_WORD_BANK[Math.floor(Math.random() * CIPHER_WORD_BANK.length)];
+        const list = getCustomWordBank() && getCustomWordBank()!.length > 0 ? getCustomWordBank()! : FALLBACK_WORDS;
+        return list[Math.floor(Math.random() * list.length)];
     };
 
     const generateCipherKey = (): string => {
-        return CIPHER_WORD_BANK[Math.floor(Math.random() * CIPHER_WORD_BANK.length)];
+        const list = getCustomWordBank() && getCustomWordBank()!.length > 0 ? getCustomWordBank()! : FALLBACK_WORDS;
+        return list[Math.floor(Math.random() * list.length)];
     };
 
     const polybiusKey = generatePolybiusKey();
@@ -1087,7 +995,7 @@ export const encryptCheckerboard = (text: string): {
 } => {
     // 1) Build mixed alphabet from a keyword (I/J combined for 25 letters or keep 26; we keep 26 and allow J)
     const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const keywords = CIPHER_WORD_BANK;
+    const keywords = (getCustomWordBank() && getCustomWordBank()!.length > 0 ? getCustomWordBank()! : FALLBACK_WORDS).map(w => w.toUpperCase());
     const checkerboardKeyword = keywords[Math.floor(Math.random() * keywords.length)];
     const used = new Set<string>();
     const mixed: string[] = [];
@@ -1162,61 +1070,252 @@ export const encryptCheckerboard = (text: string): {
 };
 
 // Cryptarithm cipher
-// Returns: encrypted text (the cryptarithm puzzle), plus cryptarithm data
+// Returns: encrypted text (unused by display), plus cryptarithm data generated dynamically
 export const encryptCryptarithm = (_text: string): {
     encrypted: string;
     cryptarithmData: {
         equation: string;
-        numericExample: string;
+        numericExample: string | null;
         digitGroups: Array<{
             digits: string;
             word: string;
         }>;
-        hint?: string;
     };
 } => {
-    // Predefined cryptarithm puzzles
-    const cryptarithmPuzzles = [
-        {
-            equation: "  E A T\n+ T H A T\n---------\nA P P L E",
-            numericExample: "  8 1 9\n+ 9 2 1 9\n---------\n1 0 0 3 8",
-            digitGroups: [
-                { digits: "2 8 1 9", word: "H E A T" },
-                { digits: "9 2 8", word: "T H E" },
-                { digits: "0 3 1 9 8", word: "P L A T E" }
-            ],
-            hint: "The solution is microwave-related."
-        },
-        {
-            equation: "  S E N D\n+ M O R E\n---------\nM O N E Y",
-            numericExample: "  9 5 6 7\n+ 1 0 8 5\n---------\n1 0 6 5 2",
-            digitGroups: [
-                { digits: "1 0 6 5 2", word: "M O N E Y" },
-                { digits: "9 5 6 7", word: "S E N D" },
-                { digits: "1 0 8 5", word: "M O R E" }
-            ],
-            hint: "Think about sending money."
-        },
-        {
-            equation: "  C R O S S\n+ R O A D S\n---------\nD A N G E R",
-            numericExample: "  9 6 2 3 3\n+ 6 2 1 7 3\n---------\n1 5 8 4 0 6",
-            digitGroups: [
-                { digits: "1 5 8 4 0 6", word: "D A N G E R" },
-                { digits: "9 6 2 3 3", word: "C R O S S" },
-                { digits: "6 2 1 7 3", word: "R O A D S" }
-            ],
-            hint: "Be careful when crossing roads."
+    const shuffleArray = <T,>(arr: T[]): T[] => {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
         }
-    ];
-
-    // Select a random puzzle
-    const puzzle = cryptarithmPuzzles[Math.floor(Math.random() * cryptarithmPuzzles.length)];
-    
-    // Create the encrypted text (the puzzle description)
-    const encrypted = `Solve the cryptarithm and then use the digit→letter key to decode the number string shown.\n\nContext\n\nThe alphametic shown is\n\n${puzzle.equation}\n\nwith the numeric example printed on the puzzle:\n\n${puzzle.numericExample}\n\nThe puzzle hint says the solution is ${puzzle.hint?.toLowerCase().replace('the solution is ', '').replace('.', '')}-related.`;
-
-    return {
-        encrypted,
-        cryptarithmData: puzzle
+        return a;
     };
+
+    const custom = getCustomWordBank();
+    const wordBank = (custom && custom.length > 0 ? custom : FALLBACK_WORDS).map(w => w.toUpperCase());
+
+    const pickWord = (): string => wordBank[Math.floor(Math.random() * wordBank.length)];
+
+    const toUniqueLetters = (w: string): string[] => {
+        const seen = new Set<string>();
+        const out: string[] = [];
+        for (const ch of w) {
+            if (/^[A-Z]$/.test(ch) && !seen.has(ch)) {
+                seen.add(ch);
+                out.push(ch);
+            }
+        }
+        return out;
+    };
+
+    const assignLetterDigits = (
+        letters: string[],
+        leadingLetters: Set<string>
+    ): Record<string, number> | null => {
+        const digits = [0,1,2,3,4,5,6,7,8,9];
+        // Shuffle digits for randomness
+        const shuffled = [...digits].sort(() => Math.random() - 0.5);
+        const mapping: Record<string, number> = {};
+        let usedIndex = 0;
+        // Ensure leading letters are not zero
+        for (const lead of Array.from(leadingLetters)) {
+            // Find first non-zero digit in shuffled list
+            let idx = usedIndex;
+            while (idx < shuffled.length && shuffled[idx] === 0) idx++;
+            if (idx >= shuffled.length) return null;
+            mapping[lead] = shuffled[idx];
+            // swap to front to mark used
+            [shuffled[usedIndex], shuffled[idx]] = [shuffled[idx], shuffled[usedIndex]];
+            usedIndex++;
+        }
+        // Assign remaining letters
+        for (const letter of letters) {
+            if (mapping[letter] !== undefined) continue;
+            if (usedIndex >= shuffled.length) return null;
+            mapping[letter] = shuffled[usedIndex];
+            usedIndex++;
+        }
+        // If any leading letter accidentally got 0 due to duplicates handling, reject
+        for (const lead of Array.from(leadingLetters)) {
+            if (mapping[lead] === 0) return null;
+        }
+        return mapping;
+    };
+
+    const wordToNumber = (w: string, map: Record<string, number>): number => {
+        let s = '';
+        for (const ch of w) {
+            const digit = map[ch];
+            if (digit === undefined || digit === null) return NaN;
+            s += digit.toString();
+        }
+        return parseInt(s, 10);
+    };
+
+    const findCompatibleResultWord = (
+        resultDigits: string,
+        letterToDigit: Record<string, number>,
+        candidateWords: string[]
+    ): string | null => {
+        // Build known digit->letter map from addend mapping
+        const digitToLetterKnown: Record<string, string> = {};
+        Object.entries(letterToDigit).forEach(([letter, digit]) => {
+            digitToLetterKnown[digit.toString()] = letter;
+        });
+
+        const usedLetters = new Set(Object.keys(letterToDigit));
+
+        // For result digits not in known mapping, maintain variables ensuring consistency and uniqueness
+        const shuffledCandidates = shuffleArray(candidateWords);
+        for (const candidate of shuffledCandidates) {
+            if (candidate.length !== resultDigits.length) continue;
+            const varDigitToLetter: Record<string, string> = {};
+            const seenResultLetters = new Set<string>(usedLetters);
+            let ok = true;
+            for (let i = 0; i < resultDigits.length && ok; i++) {
+                const d = resultDigits[i];
+                const expectedKnown = digitToLetterKnown[d];
+                const letter = candidate[i];
+                if (expectedKnown) {
+                    if (letter !== expectedKnown) { ok = false; break; }
+                    continue;
+                }
+                // unknown digit: enforce same digit -> same letter, different digits -> different letters, and not clashing with used letters
+                if (!(d in varDigitToLetter)) {
+                    if (seenResultLetters.has(letter)) { ok = false; break; }
+                    varDigitToLetter[d] = letter;
+                    seenResultLetters.add(letter);
+                } else {
+                    if (varDigitToLetter[d] !== letter) { ok = false; break; }
+                }
+            }
+            if (ok) return candidate;
+        }
+        return null;
+    };
+
+    // Limit attempts to avoid infinite loops (high to ensure success without fallback)
+    for (let attempt = 0; attempt < 5000; attempt++) {
+        // Pick two words that keep total unique letters <= 10 and reasonable length
+        const a = pickWord();
+        const b = pickWord();
+        if (a === b) continue;
+        // Allow 3+ letter words now that external word list is filtered
+        if (a.length < 3 || b.length < 3) continue;
+        if (a.length > 8 || b.length > 8) continue;
+        const lettersA = toUniqueLetters(a);
+        const lettersB = toUniqueLetters(b);
+        const allLetters = Array.from(new Set([...lettersA, ...lettersB]));
+        if (allLetters.length > 10) continue;
+
+        const leadingLetters = new Set<string>([a[0], b[0]]);
+        const letterToDigit = assignLetterDigits(allLetters, leadingLetters);
+        if (!letterToDigit) continue;
+
+        const numA = wordToNumber(a, letterToDigit);
+        const numB = wordToNumber(b, letterToDigit);
+        if (!Number.isFinite(numA) || !Number.isFinite(numB)) continue;
+
+        // Choose operation; prefer addition, allow subtraction
+        const useAddition = Math.random() < 0.7;
+        let resultNum: number;
+        let op = '+';
+        let displayA = a;
+        let displayB = b;
+        if (useAddition) {
+            resultNum = numA + numB;
+        } else {
+            // Ensure positive non-negative result and present larger minus smaller
+            if (numA === numB) continue;
+            if (numA < numB) {
+                resultNum = numB - numA;
+                op = '-';
+                displayA = b;
+                displayB = a;
+            } else {
+                resultNum = numA - numB;
+                op = '-';
+                displayA = a;
+                displayB = b;
+            }
+        }
+
+        const resultDigits = resultNum.toString();
+
+        // Find a compatible result word in the bank
+        const resultWord = findCompatibleResultWord(resultDigits, letterToDigit, wordBank);
+        if (!resultWord) continue;
+
+        // Expand mapping to include letters from the result word based on the computed result digits
+        const digitTakenBy: Record<number, string> = {};
+        Object.entries(letterToDigit).forEach(([letter, d]) => { digitTakenBy[d] = letter; });
+        let mappingConsistent = true;
+        for (let i = 0; i < resultDigits.length; i++) {
+            const d = parseInt(resultDigits[i], 10);
+            const L = resultWord[i];
+            const existing = letterToDigit[L];
+            if (existing !== undefined) {
+                if (existing !== d) { mappingConsistent = false; break; }
+                continue;
+            }
+            if (digitTakenBy[d] && digitTakenBy[d] !== L) { mappingConsistent = false; break; }
+            // Prevent leading zero for the result word
+            if (i === 0 && d === 0) { mappingConsistent = false; break; }
+            letterToDigit[L] = d;
+            digitTakenBy[d] = L;
+        }
+        if (!mappingConsistent) continue;
+
+        // Build equation ASCII art
+        const spaced = (w: string) => w.split('').join(' ');
+        const sA = spaced(displayA);
+        const sB = spaced(displayB);
+        const sR = spaced(resultWord);
+        const totalWidth = Math.max(sA.length, sB.length, sR.length);
+        const padLeft = (s: string, width: number) => ' '.repeat(Math.max(0, width - s.length)) + s;
+        const line1 = '  ' + padLeft(sA, totalWidth);
+        const line2 = `${op} ` + padLeft(sB, totalWidth);
+        const line3 = ''.padStart(2 + totalWidth, '-');
+        const line4 = '  ' + padLeft(sR, totalWidth);
+        const eq = `${line1}\n${line2}\n${line3}\n${line4}`;
+
+        // Build digit group for the result word decoding task
+        const digitsGroup = resultDigits.split('').join(' ');
+        const wordGroup = sR;
+
+        // Build three value groups to decode for solution using letters from the cryptarithm only
+        const cryptLettersSet = new Set<string>([...displayA, ...displayB, ...resultWord].filter(ch => /[A-Z]/.test(ch)));
+        const isSubsetWord = (w: string) => w.length >= 4 && w.split('').every(ch => cryptLettersSet.has(ch));
+        const candidateValues = wordBank.filter(w => isSubsetWord(w) && w !== displayA && w !== displayB && w !== resultWord);
+        if (candidateValues.length === 0) continue;
+        // Shuffle and pick the first three unique words with a valid mapping
+        const shuffledVals = shuffleArray(candidateValues);
+        const values: string[] = [];
+        const seenVals = new Set<string>();
+        for (const w of shuffledVals) {
+            if (seenVals.has(w)) continue;
+            const n = wordToNumber(w, letterToDigit);
+            if (!Number.isFinite(n)) continue;
+            values.push(w);
+            seenVals.add(w);
+            if (values.length >= 3) break;
+        }
+        if (values.length < 3) continue;
+        const extraGroups = values.map(w => ({ digits: w.split('').map(ch => String(letterToDigit[ch])).join(' '), word: spaced(w) }));
+
+        return {
+            encrypted: 'Solve the cryptarithm.',
+            cryptarithmData: {
+                equation: eq,
+                numericExample: null,
+                digitGroups: [
+                    { digits: digitsGroup, word: wordGroup },
+                    ...extraGroups
+                ]
+            }
+        };
+    }
+
+    // If generation somehow fails after many attempts, try again recursively rather than emitting an empty puzzle
+    return encryptCryptarithm(_text);
 };

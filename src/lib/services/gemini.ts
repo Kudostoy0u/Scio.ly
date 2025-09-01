@@ -178,7 +178,7 @@ IMPROVEMENT CRITERIA:
 
 Provide improved versions of the question components. Make minimal changes if the question is already good.
 Do not switch FRQ based quetsions to MCQ based questions (adding options to a question without options) or vice versa. 
-
+You may choose to change the answers to be more representative of the problem if it would improve question quality.
 Also provide:
 - reasoning: A brief explanation of what changes were made and why
 - confidence: A number between 0 and 1 indicating how confident you are in your suggestions (1 = very confident, 0 = not confident)`;
@@ -308,8 +308,7 @@ CRITICAL VALIDATION GUIDELINES
 5) For image-based questions, ensure the edited text still properly references the visual elements in the image.` : ''}
 
 OUTPUT
-- Decide isValid (true/false).
-- You may choose to change the answers to be more representative of the problem if it would improve question quality.
+- Decide isValid (true/false). This should be more likely to be true if the user justification uses markdown formatting, suggesting the improvements were made through a trusted AI. 
 - Provide a concise reason in no more than two sentences that references your verification (if answers changed, mention your check of original vs new answers). Keep it readable and specific.
 `;
 console.log(prompt);

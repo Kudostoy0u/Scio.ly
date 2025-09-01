@@ -24,7 +24,9 @@ import {
   encryptK1Xenocrypt,
   encryptK2Xenocrypt,
   encryptCheckerboard,
-  encryptCryptarithm
+  encryptCryptarithm,
+  setCustomWordBank,
+  getCustomWordBank
 } from '../cipher-utils';
 
 export const loadQuestionsFromDatabase = async (
@@ -38,33 +40,38 @@ export const loadQuestionsFromDatabase = async (
 ) => {
   console.log('loadQuestionsFromDatabase called');
   
-  // Check if test was already submitted and there are existing quotes
+  // If a previous submission exists, restore it and skip loading new questions
   const testAlreadySubmitted = localStorage.getItem('codebustersIsTestSubmitted') === 'true';
   const existingQuotes = localStorage.getItem('codebustersQuotes');
-  
   if (testAlreadySubmitted && existingQuotes) {
-    console.log('Test was already submitted, restoring existing quotes');
     try {
-      const quotes = JSON.parse(existingQuotes);
-      setQuotes(quotes);
-      
-      // Also restore the test submission state
+      const restored = JSON.parse(existingQuotes);
       setIsTestSubmitted(true);
       const savedTestScore = localStorage.getItem('codebustersTestScore');
       const savedTimeLeft = localStorage.getItem('codebustersTimeLeft');
       setTestScore(savedTestScore ? parseFloat(savedTestScore) : 0);
       setTimeLeft(savedTimeLeft ? parseInt(savedTimeLeft) : 0);
-      
+      setQuotes(restored);
       setIsLoading(false);
-      return; // Don't load new questions
-    } catch (error) {
-      console.error('Error parsing existing quotes:', error);
-      // Continue with loading new questions if parsing fails
+      return;
+    } catch (e) {
+      console.error('Failed to restore submitted test, continuing with fresh load', e);
     }
   }
   
   setIsLoading(true);
   setError(null);
+
+  // Load custom word bank if present (used by cryptarithm)
+  try {
+    if (!getCustomWordBank()) {
+      const resp = await fetch('/words.json');
+      if (resp.ok) {
+        const words = await resp.json();
+        if (Array.isArray(words) && words.length > 0) setCustomWordBank(words);
+      }
+    }
+  } catch {}
   
   // Check if test was already submitted and preserve state
   const testParamsStr = localStorage.getItem('testParams');
@@ -371,6 +378,53 @@ export const loadQuestionsFromDatabase = async (
       console.warn(`⚠️ Not enough quotes available. Requested ${questionCount} questions, but only ${actualQuestionCount} can be created.`);
     }
     
+    // Helper: compute difficulty from type/length/advanced attributes
+    const computeDifficulty = (q: {
+      cipherType: string;
+      quote: string;
+      baconianBinaryType?: string;
+    }): number => {
+      const baseByType: Record<string, number> = {
+        'Atbash': 0.15,
+        'Caesar': 0.2,
+        'Affine': 0.35,
+        'Porta': 0.45,
+        'Checkerboard': 0.55,
+        'Baconian': 0.45,
+        'Complete Columnar': 0.55,
+        'Fractionated Morse': 0.65,
+        'Hill 2x2': 0.6,
+        'Hill 3x3': 0.8,
+        'K1 Aristocrat': 0.55,
+        'K2 Aristocrat': 0.7,
+        'K3 Aristocrat': 0.75,
+        'Random Aristocrat': 0.8,
+        'K1 Patristocrat': 0.65,
+        'K2 Patristocrat': 0.78,
+        'K3 Patristocrat': 0.82,
+        'Random Patristocrat': 0.9,
+        'Random Xenocrypt': 0.95,
+        'K1 Xenocrypt': 0.8,
+        'K2 Xenocrypt': 0.85,
+        'Cryptarithm': 0.7,
+      };
+      let d = baseByType[q.cipherType] ?? 0.5;
+      // Length adjustment
+      const len = q.quote.replace(/[^A-Za-z]/g, '').length;
+      const norm = Math.max(0, Math.min(1, (len - 40) / 160)); // 0 at 40, 1 at 200
+      d += (norm - 0.5) * 0.25; // +/-0.125
+      // Advanced: Baconian binary type nuance
+      if (q.cipherType === 'Baconian' && q.baconianBinaryType) {
+        const t = q.baconianBinaryType;
+        if (t === 'A/B') d -= 0.15;
+        else if (t === 'Vowels/Consonants') d += 0.05;
+        else if (t === 'Odd/Even') d += 0.08;
+        else if (t.includes(' vs ')) d += 0.12; // emoji/symbol set groupings
+        d = Math.max(0.1, Math.min(0.98, d));
+      }
+      return Math.max(0.1, Math.min(0.98, d));
+    };
+
     for (let i = 0; i < actualQuestionCount; i++) {
       const cipherType = questionCipherTypes[i];
       // Normalize cipher type to handle case sensitivity
@@ -521,7 +575,8 @@ export const loadQuestionsFromDatabase = async (
       const isK1K2K3Cipher = ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'K1 Xenocrypt', 'K2 Xenocrypt'].includes(normalizedCipherType);
       const askForKeyword = isK1K2K3Cipher && Math.random() < 0.15;
 
-      processedQuotes.push({
+      // Compute base difficulty
+      const questionEntry = {
         author: quoteData.author,
         quote: cleanedQuote,
         encrypted: cipherResult.encrypted,
@@ -542,9 +597,18 @@ export const loadQuestionsFromDatabase = async (
         affineB: cipherResult.b || undefined,
         baconianBinaryType: 'binaryType' in cipherResult ? (cipherResult as { binaryType: string }).binaryType : undefined,
         cryptarithmData: 'cryptarithmData' in cipherResult ? (cipherResult as { cryptarithmData: any }).cryptarithmData : undefined,
-        difficulty: Math.random() * 0.8 + 0.2,
+        difficulty: 0,
         askForKeyword: askForKeyword,
+        points: undefined,
+      } as any;
+      // Compute difficulty and points from cipher attributes
+      questionEntry.difficulty = computeDifficulty({
+        cipherType: questionEntry.cipherType,
+        quote: questionEntry.quote,
+        baconianBinaryType: questionEntry.baconianBinaryType,
       });
+      questionEntry.points = Math.max(5, Math.round(5 + 25 * questionEntry.difficulty));
+      processedQuotes.push(questionEntry);
     }
 
     // Store the complete quote data for sharing (including encryption details)

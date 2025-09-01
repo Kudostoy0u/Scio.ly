@@ -24,14 +24,15 @@ export interface QuoteData {
     // Cryptarithm
     cryptarithmData?: {
       equation: string;
-      numericExample: string;
+      numericExample: string | null;
       digitGroups: Array<{
         digits: string;
         word: string;
       }>;
-      hint?: string;
     };
     solution?: { [key: string]: string };
+    cryptarithmHinted?: { [key: number]: boolean }; // positions revealed by hint
+    points?: number; // centralized per-question points
     frequencyNotes?: { [key: string]: string };
     hillSolution?: {
         matrix: string[][];
@@ -42,6 +43,7 @@ export interface QuoteData {
     fractionatedSolution?: { [key: number]: string }; // For fractionated morse
     columnarSolution?: { [key: number]: string }; // For complete columnar
     xenocryptSolution?: { [key: number]: string }; // For xenocrypt
+    cryptarithmSolution?: { [key: number]: string }; // For cryptarithm
     difficulty?: number; // New field for difficulty
     askForKeyword?: boolean; // Whether to ask for keyword/key phrase instead of deciphered text
     keywordSolution?: string; // User's input for the keyword when askForKeyword is true

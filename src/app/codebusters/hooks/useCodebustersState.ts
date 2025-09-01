@@ -89,6 +89,35 @@ export const useCodebustersState = () => {
     // Keep loading true until we've fully processed everything
     setIsLoading(true);
     
+    // If we have saved quotes, prefer restoring them immediately – even without test params
+    if (savedQuotes) {
+      try {
+        const parsedQuotes: QuoteData[] = JSON.parse(savedQuotes);
+        // Backfill centralized points if missing
+        const updatedQuotes = parsedQuotes.map((q) => {
+          if (typeof q.points === 'number' && q.points > 0) return q;
+          const base = Math.max(5, Math.round(5 + 25 * (q.difficulty ?? 0.5)));
+          return { ...q, points: base } as QuoteData;
+        });
+        // Restore submission state and score BEFORE setting quotes to avoid overwriting stored flags with defaults
+        if (savedIsTestSubmitted) {
+          try { setIsTestSubmitted(JSON.parse(savedIsTestSubmitted)); } catch {}
+        }
+        if (savedTestScore) {
+          try { setTestScore(JSON.parse(savedTestScore)); } catch {}
+        }
+        setQuotes(updatedQuotes);
+        localStorage.setItem('codebustersQuotes', JSON.stringify(updatedQuotes));
+        setQuotesLoadedFromStorage(true);
+        localStorage.setItem('codebustersQuotesLoadedFromStorage', 'true');
+        setIsLoading(false);
+        return; // Done restoring – skip fresh load
+      } catch (e) {
+        console.error('Error parsing saved quotes:', e);
+        // fall through to normal path
+      }
+    }
+
     if (testParamsStr) {
       console.log('Found testParams, checking for saved quotes...');
       // Check if we should force refresh (clear saved quotes and load fresh ones)
@@ -104,10 +133,15 @@ export const useCodebustersState = () => {
         console.log('savedTestScore:', savedTestScore);
         
         try {
-          const parsedQuotes = JSON.parse(savedQuotes);
-          setQuotes(parsedQuotes);
-          
-          // Also restore test submission state if it exists
+          const parsedQuotes: QuoteData[] = JSON.parse(savedQuotes);
+          // Backfill centralized points for older saved data
+          const updatedQuotes = parsedQuotes.map((q) => {
+            if (typeof q.points === 'number' && q.points > 0) return q;
+            // fallback based solely on difficulty if present, else minimal default
+            const base = Math.max(5, Math.round(5 + 25 * (q.difficulty ?? 0.5)));
+            return { ...q, points: base } as QuoteData;
+          });
+          // Restore flags before setting quotes, to avoid save-effect writing defaults
           if (savedIsTestSubmitted) {
             try {
               const isSubmitted = JSON.parse(savedIsTestSubmitted);
@@ -117,7 +151,6 @@ export const useCodebustersState = () => {
               console.error('Error parsing saved test submitted:', error);
             }
           }
-          
           if (savedTestScore) {
             try {
               const score = JSON.parse(savedTestScore);
@@ -127,6 +160,8 @@ export const useCodebustersState = () => {
               console.error('Error parsing saved test score:', error);
             }
           }
+          setQuotes(updatedQuotes);
+          try { localStorage.setItem('codebustersQuotes', JSON.stringify(updatedQuotes)); } catch {}
           
           setQuotesLoadedFromStorage(true);
           localStorage.setItem('codebustersQuotesLoadedFromStorage', 'true');
@@ -197,7 +232,7 @@ export const useCodebustersState = () => {
         }
       }
     } else {
-      // No test parameters found - show error
+      // No testParams and no saved quotes – require configuration
       setError('No test parameters found. Please configure a test from the practice page.');
     }
 
@@ -219,11 +254,10 @@ export const useCodebustersState = () => {
     if (quotes.length > 0) {
       localStorage.setItem('codebustersQuotes', JSON.stringify(quotes));
     }
-    localStorage.setItem('codebustersIsTestSubmitted', JSON.stringify(isTestSubmitted));
     if (testScore !== null) {
       localStorage.setItem('codebustersTestScore', JSON.stringify(testScore));
     }
-  }, [quotes, isTestSubmitted, testScore]);
+  }, [quotes, testScore]);
 
   return {
     // State

@@ -70,6 +70,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     setIsMounted(true);
     if (localStorage.getItem("loaded")) {
       localStorage.removeItem('testUserAnswers')
+      localStorage.removeItem('testGradingResults')
       // Do not toast on resume/share-load; keep UX quiet
       localStorage.removeItem("loaded");
     }
@@ -77,6 +78,11 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     const storedUserAnswers = localStorage.getItem('testUserAnswers');
     if (storedUserAnswers) {
       setUserAnswers(JSON.parse(storedUserAnswers));
+    }
+
+    const storedGrading = localStorage.getItem('testGradingResults');
+    if (storedGrading) {
+      try { setGradingResults(JSON.parse(storedGrading)); } catch {}
     }
   }, []);
 
@@ -105,6 +111,22 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     const eventName = routerParams.eventName || 'Unknown Event';
     const timeLimit = parseInt(routerParams.timeLimit || '30');
     
+    // If there's an existing session but router params indicate a different/new test, reset session and persisted results
+    try {
+      const existingSession = getCurrentTestSession();
+      if (
+        existingSession && (
+          (existingSession.eventName && existingSession.eventName !== eventName) ||
+          (existingSession.timeLimit && existingSession.timeLimit !== timeLimit)
+        )
+      ) {
+        resetTestSession(eventName, timeLimit);
+        localStorage.removeItem('testQuestions');
+        localStorage.removeItem('testUserAnswers');
+        localStorage.removeItem('testGradingResults');
+      }
+    } catch {}
+    
     let session = migrateFromLegacyStorage(eventName, timeLimit);
     
     if (!session) {
@@ -120,6 +142,13 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     if (session) {
       setTimeLeft(session.timeState.timeLeft);
       setIsSubmitted(session.isSubmitted);
+      // If already submitted, ensure we restore gradingResults to drive summary
+      if (session.isSubmitted) {
+        const storedGrading = localStorage.getItem('testGradingResults');
+        if (storedGrading) {
+          try { setGradingResults(JSON.parse(storedGrading)); } catch {}
+        }
+      }
     }
 
     const storedQuestions = localStorage.getItem('testQuestions');
@@ -427,6 +456,90 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     return cleanup;
   }, []);
 
+  // Backfill gradingResults on reload when submitted and results are missing
+  useEffect(() => {
+    if (!isSubmitted || data.length === 0) return;
+    // Identify indices lacking results
+    const missing: number[] = [];
+    for (let i = 0; i < data.length; i++) {
+      if (typeof gradingResults[i] === 'undefined') missing.push(i);
+    }
+    if (missing.length === 0) return;
+
+    const newResults: GradingResults = {};
+
+    // Simple fuzzy grading for FRQs like in submit fallback
+    const normalize = (s: string) => s
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const levenshtein = (a: string, b: string): number => {
+      const m = a.length, n = b.length;
+      if (m === 0) return n;
+      if (n === 0) return m;
+      const prev: number[] = Array.from({ length: n + 1 }, (_, j) => j);
+      for (let i = 1; i <= m; i++) {
+        let lastDiag = i - 1;
+        prev[0] = i;
+        for (let j = 1; j <= n; j++) {
+          const temp = prev[j];
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          prev[j] = Math.min(
+            prev[j] + 1,
+            prev[j - 1] + 1,
+            lastDiag + cost
+          );
+          lastDiag = temp;
+        }
+      }
+      return prev[n];
+    };
+    const fuzzyGrade = (student: string, corrects: (string | number)[]): number => {
+      const s = normalize(student);
+      if (!s) return 0;
+      let best = 0;
+      for (const ans of corrects) {
+        const a = normalize(String(ans));
+        if (!a) continue;
+        if (s === a) return 1;
+        if (a.includes(s) || s.includes(a)) best = Math.max(best, 0.85);
+        const dist = levenshtein(s, a);
+        const maxLen = Math.max(s.length, a.length);
+        if (maxLen > 0) {
+          const sim = 1 - dist / maxLen;
+          best = Math.max(best, sim);
+        }
+      }
+      if (best >= 0.9) return 1;
+      if (best >= 0.75) return 0.75;
+      if (best >= 0.6) return 0.5;
+      if (best >= 0.45) return 0.25;
+      return 0;
+    };
+
+    missing.forEach((i) => {
+      const q = data[i];
+      const ans = userAnswers[i] || [];
+      if (q?.options && q.options.length > 0) {
+        const frac = calculateMCQScore(q, ans);
+        newResults[i] = frac;
+      } else {
+        const val = ans[0];
+        if (val && Array.isArray(q?.answers) && q.answers.length > 0) {
+          newResults[i] = fuzzyGrade(String(val), q.answers);
+        } else {
+          newResults[i] = 0;
+        }
+      }
+    });
+
+    if (Object.keys(newResults).length > 0) {
+      setGradingResults(prev => ({ ...prev, ...newResults }));
+    }
+  }, [isSubmitted, data, userAnswers, gradingResults, setGradingResults]);
+
   // Pause timer when leaving the page/component
   useEffect(() => {
     return () => {
@@ -483,6 +596,11 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
       return updatedAnswers;
     });
   };
+
+  // Persist grading results whenever they change (for reload summary)
+  useEffect(() => {
+    try { localStorage.setItem('testGradingResults', JSON.stringify(gradingResults)); } catch {}
+  }, [gradingResults]);
 
   const handleSubmit = useCallback(async () => {
     setIsSubmitted(true);
@@ -663,9 +781,14 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
       }
     }
     
-    markTestSubmitted();
-    localStorage.removeItem('testUserAnswers');
-    localStorage.removeItem('testFromBookmarks');
+    // Persist submission state and results so reload shows summary
+    try {
+      markTestSubmitted();
+      localStorage.setItem('testGradingResults', JSON.stringify(gradingResults));
+      // Keep user answers so TestSummary can show attempted/accuracy after reload
+      // localStorage.setItem('testUserAnswers', JSON.stringify(userAnswers)); // answers are already persisted on change
+      localStorage.removeItem('testFromBookmarks');
+    } catch {}
     
     const { data: { user } } = await supabase.auth.getUser();
     if (routerData.eventName) {
@@ -897,6 +1020,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     
     localStorage.removeItem('testQuestions');
     localStorage.removeItem('testUserAnswers');
+    localStorage.removeItem('testGradingResults');
     localStorage.removeItem('contestedQuestions');
     localStorage.removeItem('testFromBookmarks');
     

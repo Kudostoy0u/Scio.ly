@@ -43,6 +43,7 @@ interface QuestionCardProps {
   handleHillSolutionChange: (quoteIndex: number, type: 'matrix' | 'plaintext', value: string[][] | { [key: number]: string }) => void;
   handleNihilistSolutionChange: (quoteIndex: number, position: number, plainLetter: string) => void;
   handleCheckerboardSolutionChange: (quoteIndex: number, position: number, plainLetter: string) => void;
+  handleCryptarithmSolutionChange: (quoteIndex: number, position: number, plainLetter: string) => void;
   handleKeywordSolutionChange: (quoteIndex: number, keyword: string) => void;
   hintedLetters: {[questionIndex: number]: {[letter: string]: boolean}};
   _hintCounts: {[questionIndex: number]: number};
@@ -67,6 +68,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   handleHillSolutionChange,
   handleNihilistSolutionChange,
   handleCheckerboardSolutionChange,
+  handleCryptarithmSolutionChange,
   handleKeywordSolutionChange,
   hintedLetters,
   _hintCounts,
@@ -106,87 +108,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     }
   }, [item.cipherType, item.baconianBinaryType, resetTrigger]);
 
-  // Function to get suggested points for a question with logical difficulty calculation
-  const getSuggestedPoints = (quote: QuoteData) => {
-    // Base cipher difficulty multipliers
-    const cipherMultipliers: { [key: string]: number } = {
-      // Very Easy (1.0-1.5x)
-      'Atbash': 1.0,
-      'Caesar': 1.0,
-      'Baconian': 1.2, // Base Baconian
-      
-      // Easy (1.5-2.0x)
-      'Affine': 1.8,
-      'Porta': 1.6,
-      'Checkerboard': 1.7,
-      
-      // Medium (2.0-3.0x)
-      'K1 Aristocrat': 2.2,
-      'K1 Patristocrat': 2.8, // Slightly harder than Aristocrat
-      'K1 Xenocrypt': 2.5,
-      'Hill 2x2': 2.8,
-      'Nihilist': 2.3,
-      
-      // Hard (3.0-4.0x)
-      'K2 Aristocrat': 3.2,
-      'K2 Patristocrat': 3.8, // Slightly harder than Aristocrat
-      'K2 Xenocrypt': 3.5,
-      'Hill 3x3': 3.8,
-      'Fractionated Morse': 3.6,
-      'Complete Columnar': 3.4,
-      
-      // Very Hard (4.0-5.0x)
-      'K3 Aristocrat': 4.2,
-      'K3 Patristocrat': 4.8, // Slightly harder than Aristocrat
-      'K3 Xenocrypt': 4.5,
-      'Random Aristocrat': 4.0,
-      'Random Patristocrat': 4.2, // Slightly harder than Aristocrat
-      'Random Xenocrypt': 4.8,
-      'Cryptarithm': 4.5
-    };
-
-    // Get base multiplier for cipher type
-    const baseMultiplier = cipherMultipliers[quote.cipherType] || 2.0;
-    
-    // Baconian binary type adjustments
-    let baconianMultiplier = baseMultiplier;
-    if (quote.cipherType === 'Baconian' && quote.baconianBinaryType) {
-      const binaryType = quote.baconianBinaryType;
-      
-      // Easy binary types
-      if (binaryType === 'A/B') {
-        baconianMultiplier = 1.0;
-      } else if (binaryType === 'Vowels/Consonants' || binaryType === 'Odd/Even') {
-        baconianMultiplier = 1.3;
-      } else if (binaryType.includes(' vs ')) {
-        // Formatting types (Highlight vs Plain, Bold vs Italic, etc.)
-        baconianMultiplier = 1.4;
-      } else {
-        // Emoji and symbol sets (multiple symbols per side)
-        baconianMultiplier = 1.8;
-      }
-    }
-    
-    // Quote length multiplier (more letters = more points)
-    const quoteLength = quote.quote.replace(/[^A-Za-z]/g, '').length;
-    let lengthMultiplier = 1.0;
-    
-    if (quoteLength < 50) {
-      lengthMultiplier = 0.8; // Short quotes
-    } else if (quoteLength < 100) {
-      lengthMultiplier = 1.0; // Medium quotes
-    } else if (quoteLength < 200) {
-      lengthMultiplier = 1.2; // Long quotes
-    } else {
-      lengthMultiplier = 1.4; // Very long quotes
-    }
-    
-    // Calculate final points (base 50 points * multipliers)
-    const finalPoints = Math.round(50 * baconianMultiplier * lengthMultiplier);
-    
-    // Ensure minimum and maximum reasonable bounds
-    return Math.max(2.5, Math.min(20, Number((finalPoints / 7).toFixed(1))));
-  };
+  // Suggested points logic removed in favor of centralized per-question points
 
   // Process the author field once per author change to avoid extra work on re-renders
   const processedAuthor = useMemo(() => processAuthor(item.author), [item.author]);
@@ -195,7 +117,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
   return (
     <div 
-      className={`relative border p-4 rounded-lg transition-all duration-500 ease-in-out mb-6 question ${
+      className={`relative border p-4 pb-4 rounded-lg transition-all duration-500 ease-in-out mb-6 question ${
         darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-black'
       }`}
       data-question-card
@@ -206,7 +128,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           data-question-header
           className={`font-semibold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}
         >
-          Question {index + 1} [{questionPoints[index] || getSuggestedPoints(item)} pts]
+          Question {index + 1} [{(questionPoints[index] ?? item.points ?? ((item.difficulty || 0.5) * 20 + 5 | 0))} pts]
         </h3>
         <div className="flex items-center gap-2">
           <span className={`px-2 py-1 rounded text-sm ${
@@ -238,35 +160,73 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             </button>
           )}
 
-          <button
-            onClick={() => { if (isTestSubmitted) return; handleHintClick(index); }}
-            disabled={isTestSubmitted}
-            className={`w-5 h-5 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center transition-all duration-200 ${
-              isTestSubmitted
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:scale-110'
-            } ${
-              darkMode 
-                ? 'bg-gray-600 border-gray-500 text-white' 
-                : 'text-gray-600'
-            }`}
-            title={isTestSubmitted ? 'Hints are disabled after submission' : 'Get a hint'}
-          >
-            <svg 
-              width="10" 
-              height="10" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round"
+          {
+            <button
+              onClick={() => {
+                if (isTestSubmitted) return;
+                // For Cryptarithm, auto-fill one correct letter as a hint
+                if (item.cipherType === 'Cryptarithm' && item.cryptarithmData) {
+                  const allLetters = item.cryptarithmData.digitGroups
+                    .map(g => g.word.replace(/\s/g, ''))
+                    .join('');
+                  const allDigitsArr: string[] = [];
+                  item.cryptarithmData.digitGroups.forEach(g => {
+                    g.digits.split(' ').filter(Boolean).forEach(d => allDigitsArr.push(d));
+                  });
+                  const current = item.cryptarithmSolution || {};
+                  // collect unfilled indices
+                  const unfilled: number[] = [];
+                  for (let i = 0; i < allLetters.length; i++) {
+                    if (!current[i]) unfilled.push(i);
+                  }
+                  if (unfilled.length > 0) {
+                    const target = unfilled[Math.floor(Math.random() * unfilled.length)];
+                    const targetDigit = allDigitsArr[target];
+                    const correct = allLetters[target].toUpperCase();
+                    // fill all positions with same digit
+                    const positionsToFill: number[] = [];
+                    allDigitsArr.forEach((d, pos) => { if (d === targetDigit) positionsToFill.push(pos); });
+                    positionsToFill.forEach(pos => handleCryptarithmSolutionChange(index, pos, correct));
+                    // Mark hinted positions so grading can skip them
+                    quotes[index] = {
+                      ...quotes[index],
+                      cryptarithmHinted: {
+                        ...(quotes[index].cryptarithmHinted || {}),
+                        ...Object.fromEntries(positionsToFill.map(p => [p, true]))
+                      }
+                    };
+                  }
+                }
+                handleHintClick(index);
+              }}
+              disabled={isTestSubmitted}
+              className={`w-5 h-5 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center transition-all duration-200 ${
+                isTestSubmitted
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:scale-110'
+              } ${
+                darkMode 
+                  ? 'bg-gray-600 border-gray-500 text-white' 
+                  : 'text-gray-600'
+              }`}
+              title={isTestSubmitted ? 'Hints are disabled after submission' : 'Get a hint'}
             >
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-              <circle cx="12" cy="17" r="1"/>
-            </svg>
-          </button>
+              <svg 
+                width="10" 
+                height="10" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                <circle cx="12" cy="17" r="1"/>
+              </svg>
+            </button>
+          }
           <button
             onClick={() => {
               setSelectedCipherType(item.cipherType);
@@ -296,12 +256,14 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           </button>
         </div>
       </div>
-      <p className={`mb-4 break-words whitespace-normal overflow-x-auto ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-        {processedAuthor}
-      </p>
+      {item.cipherType !== 'Cryptarithm' && (
+        <p className={`mb-4 break-words whitespace-normal overflow-x-auto ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+          {processedAuthor}
+        </p>
+      )}
 
       {/* Hint Card */}
-      {activeHints[index] && !isTestSubmitted && (
+      {activeHints[index] && !isTestSubmitted && item.cipherType !== 'Cryptarithm' && (
         <div className={`mb-4 p-3 rounded-lg border-l-4 ${
           darkMode 
             ? 'bg-blue-900/30 border-blue-400 text-blue-200' 
@@ -409,10 +371,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         <CryptarithmDisplay
           text={item.encrypted}
           quoteIndex={index}
-          solution={item.solution}
+          solution={item.cryptarithmSolution}
           isTestSubmitted={isTestSubmitted}
           quotes={quotes}
-          onSolutionChange={handleSolutionChange}
+          onSolutionChange={handleCryptarithmSolutionChange}
           cryptarithmData={item.cryptarithmData}
         />
       ) : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt'].includes(item.cipherType) ? (

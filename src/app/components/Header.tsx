@@ -35,6 +35,30 @@ export default function Header() {
   const isDashboard = pathname?.startsWith('/dashboard');
   const isTestPage = pathname?.startsWith('/test') || pathname?.startsWith('/codebusters') || pathname?.startsWith('/unlimited');
   
+  // Only check banner context on dashboard pages
+  const [bannerVisible, setBannerVisible] = useState<boolean | null>(null);
+  
+  useEffect(() => {
+    if (isDashboard) {
+      const checkBannerVisibility = () => {
+        const bannerClosed = localStorage.getItem('hylas-banner-closed') === 'true';
+        setBannerVisible(!bannerClosed);
+      };
+      
+      checkBannerVisibility();
+      
+      // Listen for storage changes and custom banner events
+      window.addEventListener('storage', checkBannerVisibility);
+      window.addEventListener('banner-closed', checkBannerVisibility);
+      return () => {
+        window.removeEventListener('storage', checkBannerVisibility);
+        window.removeEventListener('banner-closed', checkBannerVisibility);
+      };
+    }
+  }, [isDashboard]);
+  
+
+  
   // Handle scroll events to change header appearance
   const handleScroll = useCallback(() => {
     const currentY = window.scrollY || 0;
@@ -233,8 +257,10 @@ export default function Header() {
       {/* Global ToastContainer handles notifications */}
 
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 ${showBlur ? 'backdrop-blur-sm' : ''} border-b transition-opacity duration-300`}
+        className={`fixed left-0 right-0 z-50 ${showBlur ? 'backdrop-blur-sm' : ''} border-b transition-[top] duration-300 ease-out`}
         style={{ 
+          top: isDashboard && bannerVisible ? '32px' : '0px',
+          transition: isDashboard && bannerVisible ? 'none' : 'top 0.3s ease-out',
           backgroundColor, 
           borderBottomColor: borderColor,
           opacity: isTestPage ? computedOpacity : 1,

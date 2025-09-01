@@ -17,18 +17,17 @@ import FavoriteConfigsCard from './FavoriteConfigsCard';
 import QuestionsThisWeekChart from './QuestionsThisWeekChart';
 import ActionButtons from './ActionButtons';
 import AnimatedAccuracy from './AnimatedAccuracy';
+import HylasBanner from './HylasBanner';
 
 import { useDashboardData } from '../hooks/useDashboardData';
+import { BannerProvider, useBannerContext } from '../contexts/BannerContext';
 
-export default function DashboardMain({
-  initialUser,
-}: {
-  initialUser?: User | null;
-}) {
+function DashboardContent({ initialUser }: { initialUser?: User | null }) {
   const router = useRouter();
   const { darkMode, setDarkMode } = useTheme();
   const [currentUser, setCurrentUser] = useState<User | null>(initialUser ?? null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
+  const { bannerVisible, closeBanner } = useBannerContext();
 
   // Use the new simplified data management hook
   const {
@@ -177,7 +176,7 @@ export default function DashboardMain({
     return totals;
   };
 
-  return (
+    return (
     <div className="relative min-h-screen">
       {/* Background */}
       <div
@@ -188,9 +187,12 @@ export default function DashboardMain({
 
       {/* Main Content */}
       <div className="relative z-10">
-        <Header />
+        {bannerVisible && <HylasBanner onClose={closeBanner} />}
+        <div className={bannerVisible ? 'relative' : ''} style={bannerVisible ? { marginTop: '32px' } : {}}>
+          <Header />
+        </div>
 
-        <div className="container mx-auto px-4 pt-24 pb-8">
+        <div className={`container mx-auto px-4 pb-8 ${bannerVisible ? 'pt-28' : 'pt-24'}`}>
           {/* Welcome Banner and Practice Button Row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 md:mb-8">
             {/* Welcome Message - Takes 2/3 on desktop */}
@@ -427,5 +429,13 @@ export default function DashboardMain({
         darkMode={darkMode}
       />
     </div>
+  );
+}
+
+export default function DashboardMain({ initialUser }: { initialUser?: User | null }) {
+  return (
+    <BannerProvider>
+      <DashboardContent initialUser={initialUser} />
+    </BannerProvider>
   );
 } 

@@ -84,9 +84,9 @@ export const NihilistDisplay = ({
                                     disabled={isTestSubmitted}
                                     className={`w-8 h-8 text-center border rounded text-sm ${
                                         isTestSubmitted
-                                            ? correctMapping[index] === solution?.[index]
-                                                ? 'bg-green-100 border-green-500 text-green-800'
-                                                : 'bg-red-100 border-red-500 text-red-800'
+                                            ? ( (solution?.[index] || '').toUpperCase() === (correctMapping[index] || '')
+                                                ? 'border-green-500 text-green-800 bg-transparent'
+                                                : 'border-red-500 text-red-800 bg-transparent')
                                             : darkMode
                                             ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500'
                                             : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'

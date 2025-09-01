@@ -191,33 +191,17 @@ export const useAnswerChecking = (quotes: QuoteData[]) => {
 
   const checkCryptarithmAnswer = useCallback((quoteIndex: number): boolean => {
     const quote = quotes[quoteIndex];
-    if (quote.cipherType !== 'Cryptarithm' || !quote.solution || !quote.cryptarithmData) return false;
+    if (quote.cipherType !== 'Cryptarithm' || !quote.cryptarithmSolution || !quote.cryptarithmData) return false;
     
-    // Check if the letter-to-digit mapping is correct based on the puzzle
-    const equation = quote.cryptarithmData.equation;
-    let expectedMapping: { [key: string]: string } = {};
+    // Check if the digit-based solution matches the expected words
+    const expectedWords = quote.cryptarithmData.digitGroups.map(group => group.word.replace(/\s/g, ''));
+    const allExpectedLetters = expectedWords.join('');
     
-    // Determine expected mapping based on the equation
-    if (equation.includes('E A T') && equation.includes('T H A T') && equation.includes('A P P L E')) {
-      // EAT + THAT = APPLE puzzle
-      expectedMapping = {
-        'A': '1', 'E': '8', 'H': '2', 'L': '3', 'P': '0', 'T': '9'
-      };
-    } else if (equation.includes('S E N D') && equation.includes('M O R E') && equation.includes('M O N E Y')) {
-      // SEND + MORE = MONEY puzzle
-      expectedMapping = {
-        'S': '9', 'E': '5', 'N': '6', 'D': '7', 'M': '1', 'O': '0', 'R': '8', 'Y': '2'
-      };
-    } else if (equation.includes('C R O S S') && equation.includes('R O A D S') && equation.includes('D A N G E R')) {
-      // CROSS + ROADS = DANGER puzzle
-      expectedMapping = {
-        'C': '9', 'R': '6', 'O': '2', 'S': '3', 'A': '1', 'D': '5', 'N': '8', 'G': '4', 'E': '0'
-      };
-    }
-    
-    // Check each letter mapping
-    for (const [letter, digit] of Object.entries(expectedMapping)) {
-      if (quote.solution[letter] !== digit) return false;
+    // Check each position for correctness
+    for (let i = 0; i < allExpectedLetters.length; i++) {
+      const expected = allExpectedLetters[i];
+      const actual = quote.cryptarithmSolution[i] || '';
+      if (actual !== expected) return false;
     }
     
     return true;

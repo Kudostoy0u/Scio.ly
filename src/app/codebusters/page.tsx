@@ -131,6 +131,7 @@ export default function CodeBusters() {
         handleHillSolutionChange, 
         handleNihilistSolutionChange,
         handleCheckerboardSolutionChange,
+        handleCryptarithmSolutionChange,
         handleKeywordSolutionChange
     } = useSolutionHandlers(quotes, setQuotes);
     const { totalProgress, calculateQuoteProgress } = useProgressCalculation(quotes);
@@ -181,10 +182,14 @@ export default function CodeBusters() {
         setTestScore(score);
         setIsTestSubmitted(true);
         
-        // Save test submission state to localStorage
-        localStorage.setItem('codebustersIsTestSubmitted', 'true');
-        localStorage.setItem('codebustersTestScore', score.toString());
-        localStorage.setItem('codebustersTimeLeft', timeLeft?.toString() || '0');
+        // Persist submission state so a reload preserves the summary
+        try {
+            localStorage.setItem('codebustersIsTestSubmitted', 'true');
+            localStorage.setItem('codebustersTestScore', score.toString());
+            localStorage.setItem('codebustersTimeLeft', timeLeft?.toString() || '0');
+            localStorage.setItem('codebustersQuotes', JSON.stringify(quotes));
+            localStorage.setItem('codebustersQuotesLoadedFromStorage', 'true');
+        } catch {}
         
         // Scroll to top when test is submitted - more robust approach
         setTimeout(() => {
@@ -464,12 +469,12 @@ export default function CodeBusters() {
         const interactiveElements = clonedContainer.querySelectorAll('button, .hint-button, .info-button, .floating-buttons');
         interactiveElements.forEach(el => el.remove());
 
-        // Add point values to question headers
+        // Normalize headers to exactly "Question N [X pts]"
         const questionHeaders = clonedContainer.querySelectorAll('[data-question-header]');
         questionHeaders.forEach((header, index) => {
-            const points = questionPoints[index] || Math.round((quotes[index]?.difficulty || 0.5) * 50);
-            const headerText = header.textContent || '';
-            header.textContent = `${headerText} [${points} pts]`;
+            const fallback = (((quotes[index]?.difficulty || 0.5) * 20 + 5) | 0);
+            const points = (questionPoints[index] ?? quotes[index]?.points ?? fallback);
+            header.textContent = `Question ${index + 1} [${points} pts]`;
         });
 
         // Ensure questions avoid breaking inside a page; do NOT force a page break between every question
@@ -673,6 +678,7 @@ export default function CodeBusters() {
                                     handleHillSolutionChange={handleHillSolutionChange}
                                     handleNihilistSolutionChange={handleNihilistSolutionChange}
                                     handleCheckerboardSolutionChange={handleCheckerboardSolutionChange}
+                                    handleCryptarithmSolutionChange={handleCryptarithmSolutionChange}
                                     handleKeywordSolutionChange={handleKeywordSolutionChange}
                                     hintedLetters={hintedLetters}
                                     _hintCounts={hintCounts}

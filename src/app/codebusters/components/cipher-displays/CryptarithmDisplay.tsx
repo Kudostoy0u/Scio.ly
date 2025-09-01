@@ -1,22 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { QuoteData } from '../../types';
 import { useTheme } from '@/app/contexts/ThemeContext';
 
 interface CryptarithmDisplayProps {
   text: string;
   quoteIndex: number;
-  solution: { [key: string]: string } | undefined;
+  solution: { [key: number]: string } | undefined;
   isTestSubmitted: boolean;
   quotes: QuoteData[];
-  onSolutionChange: (quoteIndex: number, letter: string, digit: string) => void;
+  onSolutionChange: (quoteIndex: number, position: number, letter: string) => void;
   cryptarithmData?: {
     equation: string;
-    numericExample: string;
+    numericExample: string | null;
     digitGroups: Array<{
       digits: string;
       word: string;
     }>;
-    hint?: string;
   };
 }
 
@@ -30,61 +29,46 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
   cryptarithmData
 }) => {
   const { darkMode } = useTheme();
-  const [mapping, setMapping] = useState<{ [key: string]: string }>(solution || {});
-  const [decodedMessage, setDecodedMessage] = useState<string>('');
+  const [focusedDigit, setFocusedDigit] = React.useState<string | null>(null);
+  const [focusedPos, setFocusedPos] = React.useState<number | null>(null);
 
-  // Extract unique letters from the cryptarithm
-  const uniqueLetters = React.useMemo(() => {
-    const letters = new Set<string>();
-    if (cryptarithmData?.equation) {
-      cryptarithmData.equation.split('').forEach(char => {
-        if (/[A-Z]/.test(char)) {
-          letters.add(char);
-        }
-      });
-    }
-    return Array.from(letters).sort();
+  // Flatten all digit groups into a single inline sequence with word-boundary markers
+  const inlineDigits = React.useMemo(() => {
+    if (!cryptarithmData?.digitGroups) return { digits: [] as string[], boundaries: new Set<number>() };
+    const digits: string[] = [];
+    const boundaries = new Set<number>();
+    let idx = 0;
+    cryptarithmData.digitGroups.forEach((group, gi) => {
+      const parts = group.digits.split(' ').filter(Boolean);
+      for (const d of parts) {
+        digits.push(d);
+        idx++;
+      }
+      if (gi < cryptarithmData.digitGroups.length - 1 && idx > 0) {
+        boundaries.add(idx - 1); // add extra gap after this word
+      }
+    });
+    return { digits, boundaries };
   }, [cryptarithmData]);
 
-  // Update mapping when solution changes
-  useEffect(() => {
-    if (solution) {
-      setMapping(solution);
-    }
-  }, [solution]);
-
-  // Decode the message when mapping changes
-  useEffect(() => {
-    if (cryptarithmData?.digitGroups && Object.keys(mapping).length > 0) {
-      const decoded = cryptarithmData.digitGroups.map(group => {
-        const decodedWord = group.digits.split(' ').map(digit => {
-          // Find the letter that maps to this digit
-          const letter = Object.keys(mapping).find(key => mapping[key] === digit);
-          return letter || '?';
-        }).join('');
-        return decodedWord;
-      }).join(' ');
-      setDecodedMessage(decoded);
-    }
-  }, [mapping, cryptarithmData]);
-
-  const handleMappingChange = (letter: string, digit: string) => {
-    const newMapping = { ...mapping };
-    if (digit === '') {
-      delete newMapping[letter];
-    } else {
-      newMapping[letter] = digit;
-    }
-    setMapping(newMapping);
-    onSolutionChange(quoteIndex, letter, digit);
-  };
-
-  const clearMapping = () => {
-    setMapping({});
-    uniqueLetters.forEach(letter => {
-      onSolutionChange(quoteIndex, letter, '');
+  // Build digit -> positions map for syncing
+  const digitToPositions = React.useMemo(() => {
+    const map: { [digit: string]: number[] } = {};
+    inlineDigits.digits.forEach((d, i) => {
+      if (!map[d]) map[d] = [];
+      map[d].push(i);
     });
-  };
+    return map;
+  }, [inlineDigits]);
+
+  // Create a mapping of positions to correct letters
+  const correctMapping: { [key: number]: string } = {};
+  if (isTestSubmitted && cryptarithmData?.digitGroups) {
+    const allLetters = cryptarithmData.digitGroups.map(group => group.word.replace(/\s/g, '')).join('');
+    for (let i = 0; i < allLetters.length; i++) {
+      correctMapping[i] = allLetters[i];
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -92,147 +76,77 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
       {cryptarithmData && (
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-gray-50'} p-4 rounded-lg`}>
           <h4 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Cryptarithm Formula</h4>
-          <div className={`font-mono text-center mb-2 whitespace-pre-line ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+          <div className={`font-mono text-center mb-2 whitespace-pre ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             {cryptarithmData.equation}
           </div>
-          {cryptarithmData.numericExample && (
-            <div className={`font-mono text-center text-sm whitespace-pre-line ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              {cryptarithmData.numericExample}
-            </div>
-          )}
-          {cryptarithmData.hint && (
-            <div className={`mt-2 text-sm italic ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-              Hint: {cryptarithmData.hint}
-            </div>
-          )}
+
+          {/* Hints removed for Cryptarithm */}
         </div>
       )}
 
-      {/* Values to Decode */}
-      {cryptarithmData?.digitGroups && (
-        <div className={`${darkMode ? 'bg-yellow-900/20' : 'bg-yellow-50'} p-4 rounded-lg`}>
-          <h4 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Values to decode for solution</h4>
-          <div className="space-y-3">
-            {cryptarithmData.digitGroups.map((group, index) => (
-              <div key={index} className="flex items-center gap-3">
-                <div className={`font-mono ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {group.digits}
-                </div>
-                <div className="flex gap-1">
-                  {group.word.split('').map((letter, letterIndex) => (
-                    <div
-                      key={letterIndex}
-                      className={`w-8 h-8 ${darkMode ? 'bg-yellow-800 border-yellow-700' : 'bg-yellow-200 border-yellow-300'} border rounded flex items-center justify-center text-sm font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}
-                    >
-                      {letter}
+      {/* Digit values inline (with larger gaps at word boundaries) */}
+      {inlineDigits.digits.length > 0 && (
+        <div className={`p-4 rounded-lg border ${darkMode ? 'border-gray-600' : 'border-gray-300'} mt-4 mb-6`}> 
+          <h4 className={`font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Values to decode for solution</h4>
+          <div className="flex flex-wrap gap-2">
+            {inlineDigits.digits.map((digit, i) => {
+              const position = i;
+              const isCorrect = correctMapping[position] === (solution?.[position] || '');
+              const isHinted = ( (_quotes[quoteIndex] as any)?.cryptarithmHinted || {} )[position] === true;
+              const isSameDigitFocused = focusedDigit !== null && focusedDigit === digit;
+              return (
+                <React.Fragment key={i}>
+                  <div className="flex flex-col items-center">
+                    <div className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {digit}
                     </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+                    <input
+                      type="text"
+                      maxLength={1}
+                      value={solution?.[position] || ''}
+                      onChange={(e) => {
+                        const val = e.target.value.toUpperCase();
+                        const digit = inlineDigits.digits[position];
+                        const positions = digitToPositions[digit] || [position];
+                        positions.forEach(p => onSolutionChange(quoteIndex, p, val));
+                      }}
+                      onFocus={() => { setFocusedDigit(digit); setFocusedPos(position); }}
+                      onBlur={() => { setFocusedDigit(null); setFocusedPos(null); }}
+                      disabled={isTestSubmitted}
+                      className={`w-8 h-8 text-center border rounded text-sm focus:outline-none focus:ring-0 ${
+                        isTestSubmitted
+                          ? (isHinted
+                              ? 'border-yellow-500 text-yellow-800 bg-transparent'
+                              : (isCorrect
+                                  ? 'border-green-500 text-green-800 bg-transparent'
+                                  : 'border-red-500 text-red-800 bg-transparent'))
+                          : darkMode
+                          ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500'
+                          : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
+                      } ${isSameDigitFocused 
+                        ? 'border-2' 
+                        : ''}`}
+                      style={isSameDigitFocused
+                        ? (position === focusedPos
+                            ? { borderColor: '#3b82f6', borderWidth: 2 }
+                            : { borderColor: '#60a5fa', borderWidth: 2 })
+                        : undefined}
+                    />
+                    {isTestSubmitted && (
+                      <div className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {correctMapping[position]}
+                      </div>
+                    )}
+                  </div>
+                  {inlineDigits.boundaries.has(i) && (
+                    <div className="w-4 sm:w-6" />
+                  )}
+                </React.Fragment>
+              );
+            })}
           </div>
         </div>
       )}
-
-      {/* Letter to Digit Mapping Grid */}
-      <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} p-4 rounded-lg border`}>
-        <div className="flex justify-between items-center mb-3">
-          <h4 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Letter → Digit Mapping</h4>
-          {!isTestSubmitted && (
-            <button
-              onClick={clearMapping}
-              className={`px-3 py-1 text-sm rounded transition-colors ${darkMode ? 'bg-red-900/30 hover:bg-red-900/50 text-red-300' : 'bg-red-100 hover:bg-red-200 text-red-700'}`}
-            >
-              Clear All
-            </button>
-          )}
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                <th className={`border p-2 text-center text-sm font-medium ${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`}>
-                  Letter
-                </th>
-                {Array.from({ length: 10 }, (_, i) => (
-                  <th key={i} className={`border p-2 text-center text-sm font-medium ${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`}>
-                    {i}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {uniqueLetters.map(letter => (
-                <tr key={letter}>
-                  <td className={`border p-2 text-center font-semibold ${darkMode ? 'border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}>
-                    {letter}
-                  </td>
-                  {Array.from({ length: 10 }, (_, digit) => (
-                    <td key={digit} className={`border p-1 ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
-                      <input
-                        type="radio"
-                        name={`letter-${letter}`}
-                        value={digit.toString()}
-                        checked={mapping[letter] === digit.toString()}
-                        onChange={(e) => handleMappingChange(letter, e.target.value)}
-                        disabled={isTestSubmitted}
-                        className="sr-only"
-                        id={`${letter}-${digit}`}
-                      />
-                      <label
-                        htmlFor={`${letter}-${digit}`}
-                        className={`block w-full h-8 flex items-center justify-center text-sm cursor-pointer transition-colors ${
-                          mapping[letter] === digit.toString()
-                            ? 'bg-blue-500 text-white'
-                            : `${darkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-700'}`
-                        } ${isTestSubmitted ? 'cursor-not-allowed' : ''}`}
-                      >
-                        {mapping[letter] === digit.toString() ? '✓' : ''}
-                      </label>
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Decoded Message */}
-      {decodedMessage && decodedMessage !== '??? ??? ???' && (
-        <div className={`${darkMode ? 'bg-green-900/20' : 'bg-green-50'} p-4 rounded-lg`}>
-          <h4 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Decoded Message</h4>
-          <div className={`font-mono text-lg ${darkMode ? 'text-green-300' : 'text-green-700'}`}>
-            {decodedMessage}
-          </div>
-        </div>
-      )}
-
-      {/* Answer Input */}
-      <div className="space-y-2">
-        <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-          Your Answer:
-        </label>
-        <input
-          type="text"
-          value={decodedMessage}
-          onChange={(e) => {
-            setDecodedMessage(e.target.value);
-            // Update the solution with the decoded message
-            if (e.target.value.trim()) {
-              onSolutionChange(quoteIndex, 'ANSWER', e.target.value.trim());
-            }
-          }}
-          disabled={isTestSubmitted}
-          className={`w-full p-3 border rounded-lg text-lg font-mono ${
-            isTestSubmitted
-              ? `${darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'} cursor-not-allowed`
-              : `${darkMode ? 'bg-gray-800 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-blue-500 focus:border-transparent`
-          }`}
-          placeholder="Enter your decoded message..."
-        />
-      </div>
     </div>
   );
 };

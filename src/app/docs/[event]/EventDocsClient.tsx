@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { DocsMarkdown } from '@/app/docs/components/DocsMarkdown';
+import { toast } from 'react-toastify';
 
 interface EventDocsClientProps {
   evt: any;
@@ -108,6 +109,51 @@ export function EventDocsClient({ evt, md, meta, toc }: EventDocsClientProps) {
               <Link className={`px-4 py-2 rounded border hover:bg-gray-50 ${darkMode ? 'border-gray-700 text-gray-100 hover:bg-gray-800' : 'border-gray-300 text-gray-900'}`} href={`/docs/${evt.slug}/notesheet`} prefetch={false}>
                 Preview in browser
               </Link>
+            </div>
+          </section>
+        )}
+
+        {!evt.notesheetAllowed && (
+          <section id="notesheet" className="space-y-2">
+            <h2 className={`text-xl font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Sample notesheet</h2>
+            <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>Download a printable, rule-compliant sample notesheet. Customize with your notes.</p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => {
+                  toast.info(
+                    <div>
+                      A notesheet is not available for this event (yet). If you have notesheets for this season, please help us out and send it through{' '}
+                      <a href="https://discord.gg/wF4k27vt" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Discord</a> or{' '}
+                      <a href="mailto:team.scio.ly@gmail.com" className="text-blue-500 hover:underline">Email</a>!
+                    </div>,
+                    {
+                      autoClose: 6000,
+                      position: "top-right"
+                    }
+                  );
+                }}
+                className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+              >
+                Download PDF
+              </button>
+              <button 
+                onClick={() => {
+                  toast.info(
+                    <div>
+                      A notesheet is not available for this event (yet). If you have notesheets for this season, please help us out and send it through{' '}
+                      <a href="https://discord.gg/wF4k27vt" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Discord</a> or{' '}
+                      <a href="mailto:team.scio.ly@gmail.com" className="text-blue-500 hover:underline">Email</a>!
+                    </div>,
+                    {
+                      autoClose: 6000,
+                      position: "top-right"
+                    }
+                  );
+                }}
+                className={`px-4 py-2 rounded border hover:bg-gray-50 ${darkMode ? 'border-gray-700 text-gray-100 hover:bg-gray-800' : 'border-gray-300 text-gray-900'}`}
+              >
+                Preview in browser
+              </button>
             </div>
           </section>
         )}

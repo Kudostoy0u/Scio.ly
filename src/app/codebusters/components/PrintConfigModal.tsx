@@ -34,9 +34,6 @@ export const PrintConfigModal: React.FC<PrintConfigModalProps> = ({
     });
   };
 
-  const getSuggestedPoints = (quote: QuoteData) => {
-    return Math.round((quote.difficulty || 0.5) * 50);
-  };
 
   const getCharCount = (quote: QuoteData) => {
     return quote.encrypted.replace(/[^A-Z]/g, '').length;
@@ -102,8 +99,7 @@ export const PrintConfigModal: React.FC<PrintConfigModalProps> = ({
             <div className="space-y-3">
               {quotes.map((quote, index) => {
                 const charCount = getCharCount(quote);
-                const suggestedPoints = getSuggestedPoints(quote);
-                const currentPoints = questionPoints[index] || suggestedPoints;
+                const effectivePoints = (questionPoints[index] ?? quote.points ?? ((quote.difficulty || 0.5) * 20 + 5 | 0));
 
                 return (
                   <div key={index} className={`p-4 border rounded-lg ${darkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-200 bg-gray-50'}`}>
@@ -120,15 +116,12 @@ export const PrintConfigModal: React.FC<PrintConfigModalProps> = ({
                         <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Characters: </span>
                         <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{charCount}</span>
                       </div>
-                      <div>
-                        <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Suggested: </span>
-                        <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{suggestedPoints}</span>
-                      </div>
+                      <div></div>
                       <div>
                         <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Points: </span>
                         <input
                           type="number"
-                          value={currentPoints}
+                          value={effectivePoints}
                           onChange={(e) => handlePointChange(index, e.target.value)}
                           min="1"
                           max="1000"

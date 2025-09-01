@@ -40,12 +40,60 @@ export const BINDER_EVENT_NAMES = new Set<string>([
 
 const BADGE_PRIORITY: Array<EventBadgeKind> = ['build', 'misc', 'binder', 'notesheet'];
 
+// Centralized list of events with notesheet support
+// Currently empty array as requested - events will be added as notesheets become available
+export const EVENTS_WITH_NOTESHEETS: string[] = [];
+
+// Division C and Division B events that traditionally support notesheets
+// This is for reference and future implementation
+export const TRADITIONAL_NOTESHEET_EVENTS = {
+  'B': [
+    'Anatomy and Physiology',
+    'Disease Detectives',
+    'Entomology',
+    'Heredity',
+    'Water Quality',
+    'Astronomy',
+    'Dynamic Planet',
+    'Remote Sensing',
+    'Rocks and Minerals',
+    'Solar System',
+    'Chemistry Lab',
+    'Circuit Lab',
+    'Forensics',
+    'Materials Science',
+    'Crime Busters',
+    'Potions and Poisons',
+    'Metric Mastery',
+    'Experimental Design',
+  ],
+  'C': [
+    'Anatomy and Physiology',
+    'Designer Genes',
+    'Disease Detectives',
+    'Entomology',
+    'Water Quality',
+    'Astronomy',
+    'Dynamic Planet',
+    'Remote Sensing',
+    'Rocks and Minerals',
+    'Chemistry Lab',
+    'Circuit Lab',
+    'Forensics',
+    'Materials Science',
+    'Bungee Drop',
+    'Codebusters',
+    'Engineering CAD',
+    'Experimental Design',
+  ]
+};
+
 export function getPrimaryBadgeForEvent(evt: DocsEvent): EventBadge | null {
   const checks: Partial<Record<EventBadgeKind, boolean>> = {
     build: evt.eventType === 'build',
     misc: MISC_EVENT_NAMES.has(evt.name),
     binder: BINDER_EVENT_NAMES.has(evt.name),
-    notesheet: evt.notesheetAllowed,
+    notesheet: evt.notesheetAllowed || TRADITIONAL_NOTESHEET_EVENTS.B.includes(evt.name) || TRADITIONAL_NOTESHEET_EVENTS.C.includes(evt.name),
   };
 
   for (const kind of BADGE_PRIORITY) {
@@ -85,26 +133,8 @@ const cTech = ['Boomilever', 'Electric Vehicle', 'Helicopter', 'Robot Tour'] as 
 const cInquiry = ['Bungee Drop', 'Codebusters', 'Engineering CAD', 'Experimental Design'] as const;
 
 const notesheetByName: Record<string, boolean> = {
-  // Commonly notesheet/test events (will be refined as rules release)
-  'Anatomy and Physiology': true,
-  'Disease Detectives': true,
-  'Entomology': true,
-  'Heredity': true,
-  'Water Quality': true,
-  'Astronomy': true,
-  'Dynamic Planet': true,
-  'Remote Sensing': true,
-  'Rocks and Minerals': true,
-  'Solar System': true,
-  'Chemistry Lab': true,
-  'Circuit Lab': true,
-  'Forensics': true,
-  'Materials Science': true,
-  'Crime Busters': true,
-  'Potions and Poisons': true,
-  'Metric Mastery': true,
-  'Experimental Design': true,
-  'Designer Genes': true,
+  // Currently no events have notesheets available
+  // Events will be added to EVENTS_WITH_NOTESHEETS as they become available
 };
 
 function makeSlug(name: string) {

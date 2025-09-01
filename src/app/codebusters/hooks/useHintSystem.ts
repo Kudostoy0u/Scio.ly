@@ -510,6 +510,38 @@ export const useHintSystem = (
     const quote = quotes[questionIndex];
     if (!quote) return;
 
+    // Cryptarithm: reveal a random unfilled position and sync all same-digit positions; mark as hinted
+    if (quote.cipherType === 'Cryptarithm' && quote.cryptarithmData) {
+      const allLetters = quote.cryptarithmData.digitGroups.map(g => g.word.replace(/\s/g, '')).join('');
+      const allDigitsArr: string[] = [];
+      quote.cryptarithmData.digitGroups.forEach(g => {
+        g.digits.split(' ').filter(Boolean).forEach(d => allDigitsArr.push(d));
+      });
+      const current = quote.cryptarithmSolution || {};
+      const unfilled: number[] = [];
+      for (let i = 0; i < allLetters.length; i++) {
+        if (!current[i]) unfilled.push(i);
+      }
+      if (unfilled.length > 0) {
+        const target = unfilled[Math.floor(Math.random() * unfilled.length)];
+        const targetDigit = allDigitsArr[target];
+        const correct = allLetters[target].toUpperCase();
+        const positionsToFill: number[] = [];
+        allDigitsArr.forEach((d, pos) => { if (d === targetDigit) positionsToFill.push(pos); });
+        const newQuotes = quotes.map((q, idx) => {
+          if (idx !== questionIndex) return q;
+          const prevSol = q.cryptarithmSolution || {};
+          const prevHinted = (q as any).cryptarithmHinted || {};
+          const updatedSol: { [key: number]: string } = { ...prevSol } as any;
+          const updatedHinted: { [key: number]: boolean } = { ...prevHinted } as any;
+          positionsToFill.forEach(p => { updatedSol[p] = correct; updatedHinted[p] = true; });
+          return { ...q, cryptarithmSolution: updatedSol, cryptarithmHinted: updatedHinted } as QuoteData;
+        });
+        setQuotes(newQuotes);
+      }
+      return;
+    }
+
     // Special handling for Baconian: first click shows binary type, second shows crib
     if (quote.cipherType === 'Baconian') {
       const currentHintCount = hintCounts[questionIndex] || 0;

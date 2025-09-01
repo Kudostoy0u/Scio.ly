@@ -91,6 +91,22 @@ export const useSolutionHandlers = (
     ));
   }, [setQuotes]);
 
+  // Handle Cryptarithm cipher solution changes (position-based like Nihilist)
+  const handleCryptarithmSolutionChange = useCallback((quoteIndex: number, position: number, plainLetter: string) => {
+    setQuotes((prevQuotes) => prevQuotes.map((quote, index) => {
+      if (index === quoteIndex) {
+        return {
+          ...quote,
+          cryptarithmSolution: {
+            ...(quote.cryptarithmSolution || {}),
+            [position]: plainLetter.toUpperCase()
+          }
+        };
+      }
+      return quote;
+    }));
+  }, [setQuotes]);
+
   return {
     handleSolutionChange,
     handleBaconianSolutionChange,
@@ -98,6 +114,7 @@ export const useSolutionHandlers = (
     handleHillSolutionChange,
     handleNihilistSolutionChange,
     handleCheckerboardSolutionChange,
-    handleKeywordSolutionChange
+    handleKeywordSolutionChange,
+    handleCryptarithmSolutionChange
   };
 };
