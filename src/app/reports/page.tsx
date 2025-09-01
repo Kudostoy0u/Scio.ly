@@ -73,6 +73,11 @@ const approvedEvents = [
     divisions: ["B"]
   },
   { 
+    name: "Machines", 
+    subject: "Inquiry & Nature of Science",
+    divisions: ["B", "C"]
+  },
+  { 
     name: "Materials Science", 
     subject: "Physical Science & Chemistry",
     divisions: ["C"]

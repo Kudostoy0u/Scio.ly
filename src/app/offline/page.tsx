@@ -51,7 +51,7 @@ export default function OfflinePage() {
       // 'Helicopter',
       'Heredity',
         // 'Hovercraft',
-        // 'Machines',
+        'Machines',
       'Materials Science',
       'Meteorology',
       'Metric Mastery',

@@ -540,6 +540,11 @@ export default function PracticeDashboard() {
             divisions: ["B"]
           },
           { 
+            name: "Machines", 
+            subject: "Inquiry & Nature of Science",
+            divisions: ["B", "C"]
+          },
+          { 
             name: "Materials Science - Nanomaterials", 
             subject: "Physical Science & Chemistry",
             divisions: ["C"]
@@ -607,6 +612,7 @@ export default function PracticeDashboard() {
           "Entomology": ["Insect Anatomy", "Life Cycles", "Behavior", "Classification", "Ecology"],
           "Forensics": ["Evidence Analysis", "Fingerprints", "DNA", "Toxicology", "Crime Scene"],
           "Heredity": ["Genetics", "DNA", "Proteins", "Evolution", "Population Genetics"],
+          "Machines": ["Simple Machines", "Mechanical Advantage", "Efficiency", "Compound Machines", "Design", "unknown"],
           "Materials Science - Nanomaterials": ["Basics","Quantum Effects","Properties","Classification","Carbon Nanomaterials","Specific Types","Synthesis Methods","Top-Down","Bottom-Up","Microscopy","Spectroscopy","Analysis Techniques","Physical Properties","Mechanical Properties","Thermal Properties","Electronics","Biomedical","Energy","Materials"],
           "Meteorology": ["Weather Systems", "Clouds", "Precipitation", "Temperature", "Pressure"],
           "Metric Mastery": ["Estimation", "Orders of Magnitude", "Problem Solving", "Scientific Reasoning", "Calculations"],
