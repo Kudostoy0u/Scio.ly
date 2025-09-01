@@ -30,19 +30,36 @@ export default function HylasBanner({ onClose }: HylasBannerProps) {
           <div className={`text-sm text-center ${
             darkMode ? 'text-gray-300' : 'text-gray-700'
           }`}>
-            Check out{' '}
-            <a 
-              href="https://www.hylas-so.org/" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className={`font-medium underline hover:no-underline transition-all duration-200 ${
-                darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
-              }`}
-            >
-              Hylas SO
-              <ExternalLink className="inline w-3 h-3 ml-1" />
-            </a>
-            , a tournament hosted by part of our team @ Los Altos High School, CA!
+            <span className="block sm:hidden">
+              Check out{' '}
+              <a 
+                href="https://www.hylas-so.org/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className={`font-medium underline hover:no-underline transition-all duration-200 ${
+                  darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
+                }`}
+              >
+                Hylas SO
+                <ExternalLink className="inline w-3 h-3 ml-1" />
+              </a>
+              , hosted by LAHS!
+            </span>
+            <span className="hidden sm:block">
+              Check out{' '}
+              <a 
+                href="https://www.hylas-so.org/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className={`font-medium underline hover:no-underline transition-all duration-200 ${
+                  darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
+                }`}
+              >
+                Hylas SO
+                <ExternalLink className="inline w-3 h-3 ml-1" />
+              </a>
+              , a tournament hosted by part of our team @ Los Altos High School, CA!
+            </span>
           </div>
         </div>
       </div>
