@@ -309,6 +309,7 @@ CRITICAL VALIDATION GUIDELINES
 
 OUTPUT
 - Decide isValid (true/false).
+- You may choose to change the answers to be more representative of the problem if it would improve question quality.
 - Provide a concise reason in no more than two sentences that references your verification (if answers changed, mention your check of original vs new answers). Keep it readable and specific.
 `;
 console.log(prompt);
