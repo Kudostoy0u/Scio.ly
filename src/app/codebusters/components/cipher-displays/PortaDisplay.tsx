@@ -25,13 +25,13 @@ export const PortaDisplay = ({
     const { darkMode } = useTheme();
     const [hoveredChar, setHoveredChar] = useState<{ rowIndex: number; charIndex: number } | null>(null);
     
-    // Create mapping for correct answers using proper Porta cipher logic
+
     const originalQuote = quotes[quoteIndex].quote.toUpperCase();
     const cleanOriginalQuote = originalQuote.replace(/[^A-Z]/g, '');
     const cleanCipherText = text.replace(/[^A-Z]/g, '');
     const correctMapping: { [key: number]: string } = {};
     
-    // Porta table for lookup
+
     const portaTable = {
         'AB': 'NOPQRSTUVWXYZABCDEFGHIJKLM',
         'CD': 'OPQRSTUVWXYZNABCDEFGHIJKLM', 
@@ -48,7 +48,7 @@ export const PortaDisplay = ({
         'YZ': 'ZNOPQRSTUVWXYABCDEFGHIJKLM'
     };
     
-    // Character to pair mapping
+
     const charToPair: { [key: string]: string } = {
         'A': 'AB', 'B': 'AB',
         'C': 'CD', 'D': 'CD',
@@ -65,29 +65,29 @@ export const PortaDisplay = ({
         'Y': 'YZ', 'Z': 'YZ'
     };
     
-    // Map each cipher letter position to its correct plain letter
+
     let cipherLetterIndex = 0;
     for (let i = 0; i < text.length; i++) {
         if (/[A-Z]/.test(text[i])) {
             if (cipherLetterIndex < cleanCipherText.length && cipherLetterIndex < cleanOriginalQuote.length) {
                 const cipherChar = cleanCipherText[cipherLetterIndex];
                 
-                // Get the keyword letter for this position
+
                 const keywordChar = keyword[cipherLetterIndex % keyword.length];
                 const pair = charToPair[keywordChar];
                 const portaRow = portaTable[pair];
                 
-                // Porta's rule: A-M vs N-Z handling for decryption
+
                 const headerRow = 'ABCDEFGHIJKLM';
                 let plainChar;
                 
-                // Check if cipher character is in header row (A-M)
+
                 const headerIndex = headerRow.indexOf(cipherChar);
                 if (headerIndex !== -1) {
-                    // Cipher is A-M, so plaintext is in key row at same position
+
                     plainChar = portaRow[headerIndex];
                 } else {
-                    // Cipher is N-Z, so plaintext is in header row at same position as cipher in key row
+
                     const keyRowIndex = portaRow.indexOf(cipherChar);
                     if (keyRowIndex !== -1) {
                         plainChar = headerRow[keyRowIndex];
@@ -102,7 +102,7 @@ export const PortaDisplay = ({
         }
     }
 
-    // Porta table for display - matches the correct Porta cipher algorithm
+
     const portaTableDisplay = [
         { pair: 'AB', row: 'NOPQRSTUVWXYZABCDEFGHIJKLM' },
         { pair: 'CD', row: 'OPQRSTUVWXYZNABCDEFGHIJKLM' },
@@ -138,7 +138,7 @@ export const PortaDisplay = ({
                     const correctLetter = correctMapping[i];
                     const isCorrect = isLetter && value.toUpperCase() === correctLetter;
                     
-                    // Calculate which keyword letter corresponds to this position
+
                     const letterCount = text.substring(0, i).replace(/[^A-Z]/g, '').length;
                     const keywordChar = isLetter ? keyword[letterCount % keyword.length] : '';
                     

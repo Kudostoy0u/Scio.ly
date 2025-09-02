@@ -12,14 +12,14 @@ import {
   CryptarithmDisplay
 } from './cipher-displays';
 
-// Function to process author field
+
 const processAuthor = (author: string): string => {
   const commaIndex = author.indexOf(',');
   if (commaIndex !== -1) {
     const textAfterComma = author.substring(commaIndex + 1).trim();
     if (textAfterComma.length > 28) {
 
-      // Previously logged the removed portion; removed to avoid console spam on re-renders
+
       return author.substring(0, commaIndex);
     }
   }
@@ -77,14 +77,14 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 }) => {
   const [baconianSyncEnabled, setBaconianSyncEnabled] = useState<boolean>(true);
 
-  // Set default sync state for Baconian ciphers
+
   useEffect(() => {
     if (item.cipherType === 'Baconian' && item.baconianBinaryType) {
       const binaryType = item.baconianBinaryType;
       
 
       
-      // Add emoji and symbol schemes that have multiple values
+
       const emojiSchemes = [
         'Happy vs Sad', 'Fire vs Ice', 'Day vs Night', 'Land vs Sea', 'Tech vs Nature',
         'Sweet vs Spicy', 'Star vs Heart', 'Sun vs Moon', 'Music vs Art', 'Food vs Drink',
@@ -108,9 +108,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     }
   }, [item.cipherType, item.baconianBinaryType, resetTrigger]);
 
-  // Suggested points logic removed in favor of centralized per-question points
 
-  // Process the author field once per author change to avoid extra work on re-renders
+
+
   const processedAuthor = useMemo(() => processAuthor(item.author), [item.author]);
 
 
@@ -164,7 +164,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             <button
               onClick={() => {
                 if (isTestSubmitted) return;
-                // For Cryptarithm, auto-fill one correct letter as a hint
+
                 if (item.cipherType === 'Cryptarithm' && item.cryptarithmData) {
                   const allLetters = item.cryptarithmData.digitGroups
                     .map(g => g.word.replace(/\s/g, ''))
@@ -187,7 +187,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                     const positionsToFill: number[] = [];
                     allDigitsArr.forEach((d, pos) => { if (d === targetDigit) positionsToFill.push(pos); });
                     positionsToFill.forEach(pos => handleCryptarithmSolutionChange(index, pos, correct));
-                    // Mark hinted positions so grading can skip them
+
                     quotes[index] = {
                       ...quotes[index],
                       cryptarithmHinted: {

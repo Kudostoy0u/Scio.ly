@@ -19,7 +19,7 @@ interface TournamentDate {
   season: string;
 }
 
-// Event whitelists by season and division
+
 const EVENT_WHITELISTS: Record<string, Record<string, string[]>> = {
   '2018': {
     'C': [
@@ -149,7 +149,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
   const { darkMode } = useTheme();
   const prevSearchTerm = useRef<string>('');
 
-  // Memoize expensive data computations
+
   const allSeasons = useMemo(() => {
     const seasons = new Set<string>();
     
@@ -169,12 +169,12 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
     return Object.keys(eloData).sort();
   }, [eloData]);
 
-  // Memoize events for selected season and division
+
   const eventsForSelectedSeason = useMemo(() => {
-    // First, get the whitelist for this season and division
+
     const whitelist = EVENT_WHITELISTS[selectedSeason]?.[division.toUpperCase() as 'B' | 'C'] || [];
     
-    // Then, get events that exist in the data and are in the whitelist
+
     const events = new Set<string>();
     
     for (const stateCode in eloData) {
@@ -194,13 +194,13 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
     return Array.from(events).sort();
   }, [eloData, selectedSeason, division]);
 
-  // Get all tournament dates for the selected season (memoized for performance)
+
   const getTournamentDatesForSeason = useCallback((season: string): TournamentDate[] => {
-    // Use precalculated metadata if available
+
     if (metadata?.tournamentTimeline?.[season]) {
       const tournaments = metadata.tournamentTimeline[season];
       
-      // Group tournaments by date
+
       const tournamentsByDate = new Map<string, string[]>();
       
       tournaments.forEach((tournament: any) => {
@@ -215,7 +215,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
       const result = Array.from(tournamentsByDate.entries())
         .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
         .map(([date, tournaments]) => {
-          // Show only first 2 tournaments, then "and X more" if there are more
+
           let displayText = '';
           if (tournaments.length === 1) {
             displayText = tournaments[0];
@@ -228,7 +228,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
           return {
             date,
             tournament: displayText,
-            allTournaments: tournaments, // Keep all tournaments for dropdown
+            allTournaments: tournaments,
             season
           };
         });
@@ -236,45 +236,45 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
       return result;
     }
     
-    // No metadata available - return empty array
+
     console.warn('No metadata available for tournament timeline');
     return [];
   }, [metadata]);
 
   const mostRecentSeason = allSeasons[allSeasons.length - 1] || '2024';
   
-  // Initialize selected season to most recent if not set
+
   useEffect(() => {
     if (!selectedSeason) {
       setSelectedSeason(mostRecentSeason);
     }
   }, [mostRecentSeason, selectedSeason]);
   
-  // Memoize tournament dates to prevent repeated processing
+
   const tournamentDates = useMemo(() => {
     return getTournamentDatesForSeason(selectedSeason);
   }, [selectedSeason, getTournamentDatesForSeason]);
   
-  // Cache the current tournament index to avoid repeated findIndex calls
+
   const currentTournamentIndex = useMemo(() => {
     return tournamentDates.findIndex(t => t.date === selectedDate);
   }, [tournamentDates, selectedDate]);
   
   const lastTournamentDate = tournamentDates[tournamentDates.length - 1]?.date || '';
 
-  // Initialize selected date to last tournament if not set
+
   useEffect(() => {
     if (!selectedDate && lastTournamentDate) {
       setSelectedDate(lastTournamentDate);
     }
   }, [lastTournamentDate, selectedDate]);
 
-  // Reset selected event when season or division changes
+
   useEffect(() => {
     setSelectedEvent('');
   }, [selectedSeason, division]);
 
-  // Memoize ranking change calculations for performance
+
   const rankingChanges = useMemo(() => {
     const changes = new Map<string, number>();
     
@@ -282,24 +282,24 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
       const currentYear = parseInt(selectedSeason);
       const previousYear = (currentYear - 1).toString();
       
-      // Get current year data with date filtering
+
       let currentYearData = getLeaderboard(eloData, selectedEvent || undefined, selectedSeason, 1000, selectedDate);
       
-      // Get previous year data (use the last tournament date of previous year for comparison)
+
       let previousYearData = getLeaderboard(eloData, selectedEvent || undefined, previousYear, 1000);
       
-      // If state filter is applied, filter both datasets by state and re-sort
+
       if (selectedState) {
         currentYearData = currentYearData
           .filter(entry => entry.state === selectedState)
-          .sort((a, b) => b.elo - a.elo); // Re-sort by Elo (highest first)
+          .sort((a, b) => b.elo - a.elo);
         
         previousYearData = previousYearData
           .filter(entry => entry.state === selectedState)
-          .sort((a, b) => b.elo - a.elo); // Re-sort by Elo (highest first)
+          .sort((a, b) => b.elo - a.elo);
       }
       
-      // Create maps for O(1) lookup
+
       const currentRankMap = new Map<string, number>();
       const previousRankMap = new Map<string, number>();
       
@@ -313,17 +313,17 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
         previousRankMap.set(key, index + 1);
       });
       
-      // Calculate changes for all current entries
+
       currentYearData.forEach(entry => {
         const key = `${entry.school}-${entry.state}`;
         const currentRank = currentRankMap.get(key) || 0;
         const previousRank = previousRankMap.get(key) || 0;
         
         if (currentRank > 0 && previousRank > 0) {
-          // Return the change (negative means they moved up in ranking, positive means they moved down)
+
           changes.set(key, previousRank - currentRank);
         } else {
-          changes.set(key, 0); // New team or not found in previous year
+          changes.set(key, 0);
         }
       });
       
@@ -334,28 +334,28 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
     return changes;
   }, [eloData, selectedEvent, selectedSeason, selectedState, selectedDate]);
   
-  // Function to get ranking change for a specific entry
+
   const getRankingChange = (entry: LeaderboardEntry): number => {
     const key = `${entry.school}-${entry.state}`;
     return rankingChanges.get(key) || 0;
   };
 
-  // Function to format and style the ranking change
+
   const formatRankingChange = (change: number): { text: string; colorClass: string } => {
     if (change > 0) {
-      // Moved up in ranking (lower rank number = better)
+
       return {
         text: `+${change}`,
         colorClass: darkMode ? 'text-green-400' : 'text-green-600'
       };
     } else if (change < 0) {
-      // Moved down in ranking (higher rank number = worse)
+
       return {
-        text: `${change}`, // Already negative
+        text: `${change}`,
         colorClass: darkMode ? 'text-red-400' : 'text-red-600'
       };
     } else {
-      // No change or no previous data
+
       return {
         text: '-',
         colorClass: darkMode ? 'text-gray-400' : 'text-gray-500'
@@ -363,17 +363,17 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
     }
   };
 
-  // Debounce and memoize leaderboard data loading
+
   const leaderboardDataMemo = useMemo(() => {
     try {
-      // Get all data first with date filtering
+
       let data = getLeaderboard(eloData, selectedEvent || undefined, selectedSeason, 1000, selectedDate);
       
-      // Filter by state if selected, then re-sort to maintain proper ranking
+
       if (selectedState) {
         data = data
           .filter(entry => entry.state === selectedState)
-          .sort((a, b) => b.elo - a.elo); // Re-sort by Elo (highest first)
+          .sort((a, b) => b.elo - a.elo);
       }
       
       return data;
@@ -383,10 +383,10 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
     }
   }, [eloData, selectedEvent, selectedSeason, selectedState, selectedDate]);
 
-  // Update loading state when data changes
+
   useEffect(() => {
     setIsLoading(true);
-    // Use a small timeout to show loading state briefly
+
     const timeout = setTimeout(() => {
       setLeaderboardData(leaderboardDataMemo);
       setIsLoading(false);
@@ -395,14 +395,14 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
     return () => clearTimeout(timeout);
   }, [leaderboardDataMemo]);
 
-  // Reset event selection when season changes (if event is not available in new season)
+
   useEffect(() => {
     if (selectedEvent && !eventsForSelectedSeason.includes(selectedEvent)) {
       setSelectedEvent('');
     }
   }, [selectedSeason, selectedEvent, eventsForSelectedSeason]);
 
-  // Create a rank map from the original leaderboard data
+
   const originalRankMap = useMemo(() => {
     const rankMap = new Map<string, number>();
     leaderboardData.forEach((entry, index) => {
@@ -412,7 +412,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
     return rankMap;
   }, [leaderboardData]);
 
-  // Filter and paginate data (state filtering is now handled at the data level)
+
   const filteredData = useMemo(() => {
     return leaderboardData.filter(entry => {
       const matchesSearch = 
@@ -430,7 +430,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
-  // Reset to first page when search term changes
+
   useEffect(() => {
     if (prevSearchTerm.current !== searchTerm) {
       prevSearchTerm.current = searchTerm;
@@ -438,15 +438,15 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
     }
   }, [searchTerm]);
 
-  // Reset to first page when major filters change
+
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedSeason, selectedEvent, selectedState, selectedDate]);
 
   const getRankColor = (rank: number) => {
-    if (rank === 1) return darkMode ? 'bg-yellow-900/30 text-yellow-200' : 'bg-yellow-100 text-yellow-800'; // Gold
-    if (rank === 2) return darkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-800'; // Silver
-    if (rank === 3) return darkMode ? 'bg-orange-900/30 text-orange-200' : 'bg-orange-100 text-orange-800'; // Bronze
+    if (rank === 1) return darkMode ? 'bg-yellow-900/30 text-yellow-200' : 'bg-yellow-100 text-yellow-800';
+    if (rank === 2) return darkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-800';
+    if (rank === 3) return darkMode ? 'bg-orange-900/30 text-orange-200' : 'bg-orange-100 text-orange-800';
     return darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-50 text-gray-600';
   };
 
@@ -659,7 +659,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
               </thead>
               <tbody className={`divide-y ${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
                 {isLoading ? (
-                  // Show placeholder rows during loading
+
                   Array.from({ length: Math.min(20, paginatedData.length || 20) }).map((_, index) => (
                     <tr key={`placeholder-${index}`} className={darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}>
                       <td className="px-2 sm:px-6 py-4 whitespace-nowrap">
@@ -696,7 +696,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
                   ))
                 ) : (
                   paginatedData.map((entry) => {
-                  // Get the original rank from the leaderboard data
+
                   const key = `${entry.school}-${entry.state}-${entry.season}-${entry.event || 'overall'}`;
                   const actualRank = originalRankMap.get(key) || 1;
                   

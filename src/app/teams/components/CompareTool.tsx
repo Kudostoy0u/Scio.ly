@@ -29,7 +29,7 @@ const CompareTool: React.FC<CompareToolProps> = ({ eloData }) => {
 
   const schools = useMemo(() => getAllSchools(eloData), [eloData]);
   
-  // Get the most recent season from the data
+
   const mostRecentSeason = useMemo(() => {
     const allSeasons: string[] = [];
     
@@ -44,11 +44,11 @@ const CompareTool: React.FC<CompareToolProps> = ({ eloData }) => {
       }
     }
     
-    // Sort seasons and return the most recent (highest year)
+
     return allSeasons.sort().pop() || '2024';
   }, [eloData]);
 
-  // Handle click outside to close suggestions
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (school1Ref.current && !school1Ref.current.contains(event.target as Node)) {
@@ -65,12 +65,12 @@ const CompareTool: React.FC<CompareToolProps> = ({ eloData }) => {
     };
   }, []);
 
-  // Filter schools based on search input
+
   useEffect(() => {
     if (school1Search.trim() && !school1) {
       const filtered = schools.filter(school =>
         school.toLowerCase().includes(school1Search.toLowerCase())
-      ).slice(0, 10); // Limit to 10 suggestions
+      ).slice(0, 10);
       setSchool1Suggestions(filtered);
       setShowSchool1Suggestions(true);
     } else {
@@ -83,7 +83,7 @@ const CompareTool: React.FC<CompareToolProps> = ({ eloData }) => {
     if (school2Search.trim() && !school2) {
       const filtered = schools.filter(school =>
         school.toLowerCase().includes(school2Search.toLowerCase())
-      ).slice(0, 10); // Limit to 10 suggestions
+      ).slice(0, 10);
       setSchool2Suggestions(filtered);
       setShowSchool2Suggestions(true);
     } else {
@@ -141,12 +141,12 @@ const CompareTool: React.FC<CompareToolProps> = ({ eloData }) => {
   };
 
   const getWinPercentageColor = (percentage: number) => {
-    if (percentage >= 70) return darkMode ? 'text-green-600' : 'text-green-800'; // Dark green for strong advantage
-    if (percentage >= 60) return darkMode ? 'text-green-400' : 'text-green-600'; // Medium green for moderate advantage
-    if (percentage >= 50) return darkMode ? 'text-green-500' : 'text-green-500'; // Light green for slight advantage
-    if (percentage >= 40) return darkMode ? 'text-yellow-400' : 'text-yellow-500'; // Light yellow for slight disadvantage
-    if (percentage >= 30) return darkMode ? 'text-orange-400' : 'text-orange-600'; // Orange for moderate disadvantage
-    return darkMode ? 'text-red-400' : 'text-red-600'; // Red for strong disadvantage
+    if (percentage >= 70) return darkMode ? 'text-green-600' : 'text-green-800';
+    if (percentage >= 60) return darkMode ? 'text-green-400' : 'text-green-600';
+    if (percentage >= 50) return darkMode ? 'text-green-500' : 'text-green-500';
+    if (percentage >= 40) return darkMode ? 'text-yellow-400' : 'text-yellow-500';
+    if (percentage >= 30) return darkMode ? 'text-orange-400' : 'text-orange-600';
+    return darkMode ? 'text-red-400' : 'text-red-600';
   };
 
   const getWinPercentageText = (percentage: number, schoolName?: string) => {
@@ -159,7 +159,7 @@ const CompareTool: React.FC<CompareToolProps> = ({ eloData }) => {
       return 'Strong Disadvantage';
     })();
     
-    // Only add school name if provided (for mobile)
+
     return schoolName ? `${baseText} to ${schoolName}` : baseText;
   };
 

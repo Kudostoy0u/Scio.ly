@@ -74,7 +74,7 @@ export const getWeeklyMetrics = async (userId: string | null): Promise<DailyMetr
 
   try {
     const data = await fetchUserStatsSince(userId, weekAgoString);
-    // Aggregate the weekly data
+
     const aggregated = data.reduce((acc: DailyMetrics, day) => ({
       questionsAttempted: acc.questionsAttempted + day.questions_attempted,
       correctAnswers: acc.correctAnswers + day.correct_answers,
@@ -108,7 +108,7 @@ export const getMonthlyMetrics = async (userId: string | null): Promise<DailyMet
 
   try {
     const data = await fetchUserStatsSince(userId, monthAgoString);
-    // Aggregate the monthly data
+
     const aggregated = data.reduce((acc: DailyMetrics, day) => ({
       questionsAttempted: acc.questionsAttempted + day.questions_attempted,
       correctAnswers: acc.correctAnswers + day.correct_answers,
@@ -141,7 +141,7 @@ export const updateMetrics = async (
     eventName?: string;
   }
 ): Promise<DailyMetrics | null> => {
-  // Normalize incoming values to integers for storage/leaderboards
+
   const attemptedDelta = Math.round(updates.questionsAttempted || 0);
   const correctDelta = Math.round(updates.correctAnswers || 0);
   if (!userId) {
@@ -149,7 +149,7 @@ export const updateMetrics = async (
     const updatedStats: DailyMetrics = {
       ...currentStats,
       questionsAttempted: currentStats.questionsAttempted + attemptedDelta,
-      // Preserve fractional credit locally for anonymous users
+
       correctAnswers: currentStats.correctAnswers + (updates.correctAnswers || 0),
       eventsPracticed: updates.eventName && !currentStats.eventsPracticed.includes(updates.eventName)
         ? [...currentStats.eventsPracticed, updates.eventName]
@@ -168,7 +168,7 @@ export const updateMetrics = async (
   const today = new Date().toISOString().split('T')[0];
   
   try {
-    // Get current stats for today
+
     const currentData = await fetchDailyUserStatsRow(userId, today);
 
     let currentStats: {
@@ -236,23 +236,23 @@ export const updateMetrics = async (
         data = upserted;
       }
     }
-    // Mirror to localStorage for identical anonymous experience
+
     saveLocalMetrics({
       questionsAttempted: updatedStats.questions_attempted,
-      // Persist the rounded integer daily for parity with DB
+
       correctAnswers: updatedStats.correct_answers,
       eventsPracticed: updatedStats.events_practiced,
       eventQuestions: updatedStats.event_questions,
       gamePoints: updatedStats.game_points,
     });
 
-    // Also update leaderboard stats (centralized here)
+
     if (attemptedDelta || correctDelta) {
       try {
         await updateLeaderboardStats(attemptedDelta, correctDelta);
       } catch (leaderboardError) {
         console.error('Error updating leaderboard stats:', leaderboardError);
-        // Don't fail the whole operation if leaderboard update fails
+
       }
     }
 
@@ -269,7 +269,7 @@ export const updateMetrics = async (
   }
 };
 
-// ---------- Internal helpers with auth refresh & retry ----------
+// ---------- internal helpers with auth refresh & retry ----------
 
 type UserStatsRow = {
   user_id: string;

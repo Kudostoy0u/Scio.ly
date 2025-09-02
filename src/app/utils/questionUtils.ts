@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import api from '../api';
 import { Question } from './geminiService';
 
-// Types for shared functionality
+
 export interface RouterParams {
   eventName?: string;
   questionCount?: string;
@@ -30,7 +30,7 @@ export interface LoadingExplanation {
   [key: number]: boolean;
 }
 
-// Difficulty ranges for API queries
+
 export const difficultyRanges: Record<string, { min: number; max: number }> = {
   'very-easy': { min: 0, max: 0.19 },
   'easy': { min: 0.20, max: 0.39 },
@@ -39,7 +39,7 @@ export const difficultyRanges: Record<string, { min: number; max: number }> = {
   'very-hard': { min: 0.80, max: 1.0 }
 };
 
-// Helper function to determine if question is multi-select
+
 export const isMultiSelectQuestion = (question: string, answers?: (number | string)[]): boolean => {
   const multiSelectKeywords = [
     'choose all',
@@ -63,7 +63,7 @@ export const isMultiSelectQuestion = (question: string, answers?: (number | stri
   return false;
 };
 
-// Batch grading function for free-response questions using Express API
+
 export const gradeFreeResponses = async (
   freeResponses: { question: string; correctAnswers: (string | number)[]; studentAnswer: string }[]
 ): Promise<number[]> => {
@@ -93,7 +93,7 @@ export const gradeFreeResponses = async (
   }
 };
 
-// Single question grading function
+
 export const gradeWithGemini = async (
   userAnswer: string,
   correctAnswers: (string | number)[],
@@ -102,7 +102,7 @@ export const gradeWithGemini = async (
   if (!userAnswer) return 0;
 
   try {
-    // Use the batch grading API with a single question
+
     const response = await fetch(api.geminiGradeFreeResponses, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -131,13 +131,13 @@ export const gradeWithGemini = async (
   }
 };
 
-// Build API query parameters for fetching questions
+
 export const buildApiParams = (routerParams: RouterParams, requestCount: number): string => {
   const { eventName, difficulties, division, tournament, subtopics, types } = routerParams;
   
   const params: string[] = [];
   
-  // Map event name to API format
+
   let apiEventName = eventName;
   if (eventName === "Dynamic Planet") {
     apiEventName = "Dynamic Planet - Oceanography";
@@ -150,7 +150,7 @@ export const buildApiParams = (routerParams: RouterParams, requestCount: number)
     params.push(`subtopics=${encodeURIComponent(subtopics.join(','))}`);
   }
   
-  // Map question types to API format
+
   if (types) {
     if (types === 'multiple-choice') {
       params.push(`question_type=mcq`);
@@ -159,7 +159,7 @@ export const buildApiParams = (routerParams: RouterParams, requestCount: number)
     }
   }
   
-  // Set difficulty range for multiple difficulties
+
   if (difficulties && difficulties.length > 0) {
     const allRanges = difficulties.map(d => difficultyRanges[d]).filter(Boolean);
     if (allRanges.length > 0) {
@@ -175,7 +175,7 @@ export const buildApiParams = (routerParams: RouterParams, requestCount: number)
   return params.join('&');
 };
 
-// Filter questions based on type
+
 export const filterQuestionsByType = (questions: Question[], types: string): Question[] => {
   if (types === 'multiple-choice') {
     return questions.filter((q) => q.options && q.options.length > 0);
@@ -185,7 +185,7 @@ export const filterQuestionsByType = (questions: Question[], types: string): Que
   return questions;
 };
 
-// Shuffle array utility
+
 export const shuffleArray = <T>(array: T[]): T[] => {
   const newArray = [...array];
   for (let i = newArray.length - 1; i > 0; i--) {
@@ -195,7 +195,7 @@ export const shuffleArray = <T>(array: T[]): T[] => {
   return newArray;
 };
 
-// Shared explanation request logic
+
 export const getExplanation = async (
   index: number,
   question: Question,
@@ -253,7 +253,7 @@ export const getExplanation = async (
     const { explanation, correctIndices, correctedAnswers } = data.data;
     let explanationText = explanation;
 
-    // Handle MCQ answer corrections
+
     if (isMCQ && correctIndices && correctIndices.length > 0) {
       console.log('🔍 Found correct indices in explanation');
       try {
@@ -308,7 +308,7 @@ export const getExplanation = async (
             console.log("✅ Explanation confirmed existing answers are correct - no edit needed.");
           }
 
-          // Always update the answers in the main data state and regrade
+
           setData(prevData => {
             const newData = [...prevData];
             newData[index] = { ...newData[index], answers: correctedAnswers };
@@ -360,7 +360,7 @@ export const getExplanation = async (
       }
     }
     
-    // Handle FRQ answer corrections
+
     if (!isMCQ && correctedAnswers && correctedAnswers.length > 0) {
       console.log('🔍 Found corrected answers for FRQ in explanation');
       try {
@@ -452,7 +452,7 @@ export const getExplanation = async (
   }
 };
 
-// Calculate score for multiple choice questions
+
 export const calculateMCQScore = (
   question: Question,
   userAnswers: (string | null)[]
@@ -460,10 +460,10 @@ export const calculateMCQScore = (
   if (!question.answers || question.answers.length === 0) return 0;
   
   const filteredUserAnswers = userAnswers.filter((a) => a !== null) as string[];
-  // Answers are already 0-based, so use them directly
+
   const correctOptions = question.answers.map(ans => question.options![Number(ans)]);
 
-  // Check if multi-select
+
   if (isMultiSelectQuestion(question.question, question.answers)) {
     if (filteredUserAnswers.length === 0) return 0;
 
@@ -477,12 +477,12 @@ export const calculateMCQScore = (
     }
     return 0;
   } else {
-    // Single selection
+
     return filteredUserAnswers.length === 1 && filteredUserAnswers[0] === correctOptions[0] ? 1 : 0;
   }
 };
 
-// Format time utility
+
 export const formatTime = (seconds: number): string => {
   const minutes = Math.floor(seconds / 60);
   const secs = seconds % 60;

@@ -60,7 +60,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division, metadata }) =>
   const chartRef = useRef<any>(null);
   const { darkMode } = useTheme();
 
-  // Mobile detection
+
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -116,7 +116,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division, metadata }) =>
         ? prev.filter(s => s !== school)
         : [...prev, school]
     );
-    clearAllTooltips(); // Clear tooltips when schools change
+    clearAllTooltips();
   };
 
   const handleEventToggle = (event: string) => {
@@ -125,7 +125,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division, metadata }) =>
         ? prev.filter(e => e !== event)
         : [...prev, event]
     );
-    clearAllTooltips(); // Clear tooltips when events change
+    clearAllTooltips();
   };
 
   const removeSchool = (school: string) => {
@@ -144,7 +144,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division, metadata }) =>
     setSelectedEvents([]);
   };
 
-  // Function to clear results box
+
   const clearResultsBox = () => {
     const resultsBox = document.getElementById('chart-results-box');
     if (resultsBox) {
@@ -152,7 +152,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division, metadata }) =>
     }
   };
 
-  // Function to clear tooltips
+
   const clearTooltips = () => {
     const tooltipEl = document.getElementById('chartjs-tooltip');
     if (tooltipEl) {
@@ -161,7 +161,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division, metadata }) =>
     }
   };
 
-  // Function to clear all tooltips and results box
+
   const clearAllTooltips = useCallback(() => {
     clearResultsBox();
     clearTooltips();
@@ -169,35 +169,35 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division, metadata }) =>
 
   const handleChartTypeChange = (newChartType: ChartType) => {
     setChartType(newChartType);
-    setChartData({}); // Clear chart data when changing chart type
-    setRangeFilter(null); // Reset range filter
-    clearAllTooltips(); // Clear tooltips
+    setChartData({});
+    setRangeFilter(null);
+    clearAllTooltips();
   };
 
   const handleViewModeChange = (newViewMode: 'season' | 'tournament') => {
     setViewMode(newViewMode);
-    setChartData({}); // Clear chart data when changing view mode
-    setRangeFilter(null); // Reset range filter
-    clearAllTooltips(); // Clear tooltips
+    setChartData({});
+    setRangeFilter(null);
+    clearAllTooltips();
   };
 
   const handleRangeChange = useCallback((startIndex: number, endIndex: number) => {
     setRangeFilter({ startIndex, endIndex });
-    clearAllTooltips(); // Clear tooltips when range changes
+    clearAllTooltips();
   }, [clearAllTooltips]);
 
-  // Get data points for the range slider (only for tournament view mode)
+
   const getDataPointsForSlider = (): Array<{ x: Date; y: number; tournament?: string; link?: string }> => {
     if (viewMode !== 'tournament') {
       return [];
     }
 
     try {
-      // Use the precalculated metadata to get all tournament dates efficiently
+
       return getAllTournamentDates(eloData, metadata);
     } catch (error) {
       console.error('Error getting tournament dates:', error);
-      // Return empty array if there's an error to prevent page crash
+
       return [];
     }
   };
@@ -210,9 +210,9 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division, metadata }) =>
     }
   }, [selectedSchools, selectedEvents, chartType, viewMode, generateChart]);
 
-  // Update data points for slider when division changes (eloData changes)
+
   useEffect(() => {
-    // This will trigger a re-render of the slider with new data points
+
   }, [eloData]);
 
   const dataPointsForSlider = getDataPointsForSlider();

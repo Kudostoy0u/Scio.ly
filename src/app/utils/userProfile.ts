@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 
-// Define the structure of the user's profile data
+
 export interface UserProfile {
   firstName?: string | null;
   lastName?: string | null;
@@ -10,7 +10,7 @@ export interface UserProfile {
 
 const defaultProfile: UserProfile = {};
 
-// --- Local Storage Functions for Anonymous Users ---
+// --- local storage functions for anonymous users ---
 
 const getLocalProfile = (): UserProfile => {
   const localProfile = localStorage.getItem('userProfile');
@@ -29,7 +29,7 @@ const saveLocalProfile = (profile: UserProfile) => {
   localStorage.setItem('userProfile', JSON.stringify(profile));
 };
 
-// --- Supabase Functions for Logged-in Users ---
+// --- supabase functions for logged-in users ---
 
 /**
  * Fetches the user's profile data.
@@ -49,7 +49,7 @@ export const getUserProfile = async (userId: string | null): Promise<UserProfile
       .eq('id', userId)
       .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+    if (error && error.code !== 'PGRST116') {
       console.error('Error getting user profile:', error);
       return { ...defaultProfile };
     }
@@ -77,14 +77,14 @@ export const getUserProfile = async (userId: string | null): Promise<UserProfile
  */
 export const updateUserProfile = async (userId: string | null, updates: Partial<UserProfile>): Promise<void> => {
   if (!userId) {
-    // Anonymous user: Update localStorage
+
     const currentProfile = getLocalProfile();
     const updatedProfile = { ...currentProfile, ...updates };
     saveLocalProfile(updatedProfile);
     return;
   }
 
-  // Logged-in user: Update Supabase
+
   try {
     const updateData: Record<string, unknown> = {};
 

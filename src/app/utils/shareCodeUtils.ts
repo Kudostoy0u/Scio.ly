@@ -5,34 +5,34 @@ import {
   clearTestSession
 } from './timeManagement';
 
-// Import the QuoteData type from the codebusters page
+
 export interface QuoteData {
   author: string;
   quote: string;
   encrypted: string;
       cipherType: 'Random Aristocrat' | 'K1 Aristocrat' | 'K2 Aristocrat' | 'K3 Aristocrat' | 'Random Patristocrat' | 'K1 Patristocrat' | 'K2 Patristocrat' | 'K3 Patristocrat' | 'Caesar' | 'Atbash' | 'Affine' | 'Hill 2x2' | 'Hill 3x3' | 'Baconian' | 'Porta' | 'Nihilist' | 'Fractionated Morse' | 'Complete Columnar' | 'Xenocrypt' | 'Checkerboard';
-  key?: string;        // For aristocrat/patristocrat/porta/nihilist/columnar/xenocrypt
-  matrix?: number[][]; // For hill
-  portaKeyword?: string; // For porta
-  nihilistKey?: string; // For nihilist
-      columnarKey?: string; // For complete columnar
-  fractionatedKey?: string; // For fractionated morse
-  fractionationTable?: { [key: string]: string }; // For fractionated morse table
-  xenocryptKey?: string; // For xenocrypt
-  caesarShift?: number; // For caesar cipher
-  affineA?: number; // For affine cipher (a value)
-  affineB?: number; // For affine cipher (b value)
+  key?: string;
+  matrix?: number[][];
+  portaKeyword?: string;
+  nihilistKey?: string;
+      columnarKey?: string;
+  fractionatedKey?: string;
+  fractionationTable?: { [key: string]: string };
+  xenocryptKey?: string;
+  caesarShift?: number;
+  affineA?: number;
+  affineB?: number;
   solution?: { [key: string]: string };
   frequencyNotes?: { [key: string]: string };
   hillSolution?: {
     matrix: string[][];
     plaintext: { [key: number]: string };
   };
-  nihilistSolution?: { [key: number]: string }; // For nihilist
-  fractionatedSolution?: { [key: number]: string }; // For fractionated morse
-      columnarSolution?: { [key: number]: string }; // For complete columnar
-  xenocryptSolution?: { [key: number]: string }; // For xenocrypt
-  difficulty?: number; // New field for difficulty
+  nihilistSolution?: { [key: number]: string };
+  fractionatedSolution?: { [key: number]: string };
+      columnarSolution?: { [key: number]: string };
+  xenocryptSolution?: { [key: number]: string };
+  difficulty?: number;
 }
 
 export interface ShareCodeResult {
@@ -48,7 +48,7 @@ export interface ShareCodeResult {
 
 export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult> => {
   try {
-    // First, try the codebusters share endpoint
+
     let response = await fetch(`${api.codebustersShare}?code=${code}`);
     
     if (response.ok) {
@@ -57,10 +57,10 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
       
       if (data.success && data.data && data.data.quotes && data.data.testParams) {
         console.log('🔍 Successfully got encrypted quotes from codebusters endpoint:', data.data.quotes.length, 'quotes');
-        // Store test parameters
+
         localStorage.setItem('testParams', JSON.stringify(data.data.testParams));
         
-        // Time synchronization will be handled using createdAtMs
+
         
         return {
           success: true,
@@ -73,7 +73,7 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
       }
     }
     
-    // If codebusters endpoint fails, try the general share endpoint
+
     response = await fetch(`${api.share}?code=${code}`);
     
     if (response.ok) {
@@ -85,12 +85,12 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
         
         console.log('🔍 Processing regular test with eventName:', testParams.eventName);
         
-        // Store test parameters
+
         localStorage.setItem('testParams', JSON.stringify(testParams));
         
-        // Time synchronization will be handled using createdAtMs
+
         
-        // Fetch the actual questions using the questionIds
+
         const questionIds = data.data.questionIds || [];
         if (questionIds.length > 0) {
           try {
@@ -147,7 +147,7 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
 };
 
 export const handleShareCodeRedirect = async (code: string): Promise<boolean> => {
-  // 1. Clear all relevant local storage to ensure a clean slate
+  // 1. clear all relevant local storage to ensure a clean slate
   clearTestSession();
   localStorage.removeItem('testQuestions');
   localStorage.removeItem('testUserAnswers');
@@ -158,7 +158,7 @@ export const handleShareCodeRedirect = async (code: string): Promise<boolean> =>
   localStorage.removeItem('testSubmitted');
   localStorage.removeItem('loaded');
 
-  // 2. Fetch the shared test data
+  // 2. fetch the shared test data
   const result = await loadSharedTestCode(code);
   
   if (!result.success || !result.testParams) {
@@ -166,19 +166,19 @@ export const handleShareCodeRedirect = async (code: string): Promise<boolean> =>
     return false;
   }
 
-  // 3. Copy the share code to clipboard and show success notification
+  // 3. copy the share code to clipboard and show success notification
   try {
     await navigator.clipboard.writeText(code);
     toast.success('Share code copied to clipboard!');
   } catch (error) {
     console.error('Failed to copy share code to clipboard:', error);
-    // Don't show error toast as the main functionality still works
+
   }
 
-  // 4. Set up local storage based on the test type
+  // 4. set up local storage based on the test type
   localStorage.setItem('testParams', JSON.stringify(result.testParams));
 
-  // 5. Initialize time management session
+  // 5. initialize time management session
   const eventName = result.eventName || 'Unknown Event';
   const timeLimit = parseInt(result.testParams.timeLimit as string || '30');
   const isSharedTest = true;
@@ -193,7 +193,7 @@ export const handleShareCodeRedirect = async (code: string): Promise<boolean> =>
   } else if (baseRemaining !== null) {
     sharedTimeRemaining = baseRemaining;
   } else if (createdAt !== null) {
-    // Fallback: if share didn't include remaining time, approximate from full time limit minus elapsed
+
     const now = Date.now();
     const elapsedSeconds = Math.floor((now - createdAt) / 1000);
     sharedTimeRemaining = Math.max(0, (timeLimit * 60) - elapsedSeconds);
@@ -201,20 +201,20 @@ export const handleShareCodeRedirect = async (code: string): Promise<boolean> =>
 
   initializeTestSession(eventName, timeLimit, isSharedTest, sharedTimeRemaining ?? undefined);
   
-  // 6. Redirect to the correct page
+  // 6. redirect to the correct page
   if (result.eventName === 'Codebusters') {
     if (result.encryptedQuotes) {
       localStorage.setItem('codebustersQuotes', JSON.stringify(result.encryptedQuotes));
     }
-    // No longer need to set shareCode, the destination page will load from the pre-loaded data
+
     window.location.href = '/codebusters';
   } else {
-    // For regular tests, store the questions and reload the test page
+
     if (result.questions && Array.isArray(result.questions)) {
       const questionsWithIndex = result.questions.map((q: Record<string, unknown>, idx: number) => ({ ...q, originalIndex: idx }));
       localStorage.setItem('testQuestions', JSON.stringify(questionsWithIndex));
     }
-    localStorage.setItem('loaded', '1'); // Flag for the test page to show a success message
+    localStorage.setItem('loaded', '1');
     window.location.href = '/test';
   }
   

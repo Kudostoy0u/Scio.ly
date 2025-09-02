@@ -10,7 +10,7 @@ export interface SummaryItem {
 }
 
 interface SummaryGridProps {
-  items: SummaryItem[]; // Expecting 4 items in order: TL, TR, BL, BR
+  items: SummaryItem[];
   darkMode: boolean;
   showCompactLayout: boolean; // controls 4-col -> 2x2 transform
   className?: string; // optional wrapper classes

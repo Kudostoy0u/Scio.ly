@@ -5,7 +5,7 @@ import { geminiService } from '@/lib/services/gemini';
 import { edits as editsTable, questions as questionsTable } from '@/lib/db/schema';
 import { and, eq } from 'drizzle-orm';
 
-// POST /api/report/edit - Report and validate an edit
+
 export async function POST(request: NextRequest) {
   try {
     const body: ReportEditRequest = await request.json();
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       aiReason = 'Edit bypassed AI validation and was accepted by administrator';
       console.log('🔧 [REPORT/EDIT] Bypass mode: Edit accepted without AI validation');
     } else {
-      // AI validation using Gemini
+
       if (geminiService.isAvailable()) {
         console.log('🤖 [REPORT/EDIT] Sending request to Gemini AI for edit validation');
         console.log(`📝 [REPORT/EDIT] Event: ${body.event}, Reason: ${body.reason}`);
@@ -58,12 +58,12 @@ export async function POST(request: NextRequest) {
     }
 
     if (isValid) {
-      // Save edit to database
+
       const originalJSON = JSON.stringify(body.originalQuestion);
       const editedJSON = JSON.stringify(body.editedQuestion);
 
       try {
-        // Check if edit already exists
+
         const existing = await db
           .select({ id: editsTable.id })
           .from(editsTable)
@@ -85,15 +85,15 @@ export async function POST(request: NextRequest) {
 
         console.log('✅ [REPORT/EDIT] Edit successfully saved to database');
 
-        // Auto-apply to questions table
+
         const original = body.originalQuestion as Record<string, unknown>;
         const edited = body.editedQuestion as Record<string, unknown>;
 
-        // Prefer ID if present, otherwise try to locate question by content and event
+
         const event = body.event;
         let targetId: string | undefined = (original.id as string | undefined) || (edited.id as string | undefined);
         if (!targetId) {
-          // Locate by original content first
+
           const conditions: any[] = [
             eq(questionsTable.question, String(original.question || '')),
             eq(questionsTable.event, String(event)),
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
           const found = await db.select({ id: questionsTable.id }).from(questionsTable).where(and(...conditions)).limit(1);
           targetId = found[0]?.id as string | undefined;
           if (!targetId) {
-            // Fallback: try via edited content
+
             const cond2: any[] = [
               eq(questionsTable.question, String(edited.question || '')),
               eq(questionsTable.event, String(event)),

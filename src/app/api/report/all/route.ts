@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 import { edits as editsTable, blacklists as blacklistsTable } from '@/lib/db/schema';
 import { desc } from 'drizzle-orm';
 
-// Helper to handle jsonb (object) or string-encoded JSON seamlessly
+
 function parseMaybeJson(value: unknown): Record<string, unknown> {
   if (value === null || value === undefined) return {};
   if (typeof value === 'string') {
@@ -21,12 +21,12 @@ function parseMaybeJson(value: unknown): Record<string, unknown> {
   return { value } as Record<string, unknown>;
 }
 
-// GET /api/report/all - Get all reports (edits and blacklists)
+
 export async function GET() {
   try {
     console.log('🔍 [REPORT/ALL] Fetching all reports');
 
-    // Get all edits via Drizzle
+
     const editsResult = await db
       .select()
       .from(editsTable)
@@ -52,7 +52,7 @@ export async function GET() {
       });
     }
 
-    // Get all blacklists via Drizzle
+
     const blacklistsResult = await db
       .select()
       .from(blacklistsTable)

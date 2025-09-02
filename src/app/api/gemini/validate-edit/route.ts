@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse, GeminiValidateEditRequest } from '@/lib/types/api';
 import { geminiService } from '@/lib/services/gemini';
 
-// POST /api/gemini/validate-edit - Validate an edit using AI
+
 export async function POST(request: NextRequest) {
   try {
     const body: GeminiValidateEditRequest = await request.json();
@@ -15,11 +15,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 400 });
     }
 
-    console.log('🤖 [GEMINI/VALIDATE-EDIT] Request received');
-    console.log(`📝 [GEMINI/VALIDATE-EDIT] Event: ${body.event}, Reason: ${body.reason}`);
+    console.log('Request received');
+    console.log(`Event: ${body.event}, Reason: ${body.reason}`);
 
     if (!geminiService.isAvailable()) {
-      console.log('❌ [GEMINI/VALIDATE-EDIT] Gemini AI not available');
+      console.log('Gemini AI not available');
       const response: ApiResponse = {
         success: false,
         error: 'Gemini AI not available',
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 503 });
     }
 
-    console.log('🤖 [GEMINI/VALIDATE-EDIT] Sending request to Gemini AI');
+    console.log('Sending request to Gemini AI');
 
     try {
       const result = await geminiService.validateEdit(
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         body.reason
       );
 
-      console.log('✅ [GEMINI/VALIDATE-EDIT] Gemini AI response received:', result);
+      console.log('Gemini AI response received:', result);
 
       const response: ApiResponse = {
         success: true,
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(response);
     } catch (error) {
-      console.log('❌ [GEMINI/VALIDATE-EDIT] Gemini AI error:', error);
+      console.log('Gemini AI error:', error);
       const response: ApiResponse = {
         success: false,
         error: 'Failed to validate edit',

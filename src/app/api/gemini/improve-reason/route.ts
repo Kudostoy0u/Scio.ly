@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse, GeminiImproveReasonRequest } from '@/lib/types/api';
 import { geminiService } from '@/lib/services/gemini';
 
-// POST /api/gemini/improve-reason - Improve user's reasoning for an edit
+
 export async function POST(request: NextRequest) {
   try {
     const body: GeminiImproveReasonRequest = await request.json();
@@ -15,11 +15,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 400 });
     }
 
-    console.log('🤖 [GEMINI/IMPROVE-REASON] Request received');
-    console.log(`📝 [GEMINI/IMPROVE-REASON] Original reason: ${body.reason}`);
+    console.log('Request received');
+    console.log(`Original reason: ${body.reason}`);
 
     if (!geminiService.isAvailable()) {
-      console.log('❌ [GEMINI/IMPROVE-REASON] Gemini AI not available');
+      console.log('Gemini AI not available');
       const response: ApiResponse = {
         success: false,
         error: 'Gemini AI not available',
@@ -27,12 +27,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 503 });
     }
 
-    console.log('🤖 [GEMINI/IMPROVE-REASON] Sending request to Gemini AI');
+    console.log('Sending request to Gemini AI');
 
     try {
       const result = await geminiService.improveReason(body.reason, body.question);
 
-      console.log('✅ [GEMINI/IMPROVE-REASON] Gemini AI response received:', result);
+      console.log('Gemini AI response received:', result);
 
       const response: ApiResponse = {
         success: true,
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(response);
     } catch (error) {
-      console.log('❌ [GEMINI/IMPROVE-REASON] Gemini AI error:', error);
+      console.log('Gemini AI error:', error);
       const response: ApiResponse = {
         success: false,
         error: 'Failed to improve reasoning',

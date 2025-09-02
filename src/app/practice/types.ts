@@ -14,12 +14,12 @@ export interface Settings {
   division: string;
   tournament: string;
   subtopics: string[];
-  idPercentage?: number; // Rocks & Minerals: % of ID questions
-  charLengthMin?: number; // Codebusters: minimum character length for quotes
-  charLengthMax?: number; // Codebusters: maximum character length for quotes
+  idPercentage?: number;
+  charLengthMin?: number;
+  charLengthMax?: number;
 }
 
-// Extend window interface for event subtopics mapping
+
 declare global {
   interface Window {
     eventSubtopicsMapping?: Record<string, string[]>;

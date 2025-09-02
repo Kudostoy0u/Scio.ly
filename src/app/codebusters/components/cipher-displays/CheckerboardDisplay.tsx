@@ -28,7 +28,7 @@ export const CheckerboardDisplay = ({
   const { darkMode } = useTheme();
   const quote = quotes[quoteIndex];
 
-  // Ciphertext is a run of digits; decode unambiguously by reading one digit; if it's r1 or r2, read next as a pair token.
+
   const digits = text.replace(/\s+/g, '').split('');
   const tokens: string[] = [];
   for (let i = 0; i < digits.length; i++) {
@@ -45,7 +45,7 @@ export const CheckerboardDisplay = ({
     }
   }
 
-  // Build correct mapping when submitted (compare to original plaintext letters only up to tokens length)
+
   const correctMapping: { [key: number]: string } = {};
   if (isTestSubmitted) {
     const original = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');

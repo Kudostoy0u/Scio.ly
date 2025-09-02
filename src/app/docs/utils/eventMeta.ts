@@ -50,16 +50,16 @@ const DEFAULTS: EventMeta = {
 export function getEventMeta(evt: DocsEvent): EventMeta {
   const overrides = PER_EVENT_OVERRIDES[evt.slug] ?? {};
 
-  // Compute sensible defaults based on event attributes
+
   const computedType = evt.eventType ? TYPE_LABEL_BY_EVENTTYPE[evt.eventType] ?? DEFAULTS.typeLabel : DEFAULTS.typeLabel;
 
-  // Participants default: most events allow 2; Codebusters already overridden to 3 via overrides
+
   const computedParticipants = 'Up to 2';
 
-  // Time default: 50 minutes across most written/build windows
+
   const computedApproxTime = '50 minutes';
 
-  // Allowed resources logic
+
   let computedAllowed = DEFAULTS.allowedResources;
   if (evt.eventType === 'build') {
     computedAllowed = 'Device and tools as permitted; eye protection per rules; impound likely. No external notes unless specified. Verify current‑year rules.';

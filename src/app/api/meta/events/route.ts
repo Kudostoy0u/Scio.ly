@@ -4,7 +4,7 @@ import { questions } from '@/lib/db/schema';
 import { asc } from 'drizzle-orm';
 import { ApiResponse } from '@/lib/types/api';
 
-// GET /api/meta/events - Get all distinct events
+
 export async function GET() {
   try {
     const rows = await db.select({ event: questions.event }).from(questions).groupBy(questions.event).orderBy(asc(questions.event));

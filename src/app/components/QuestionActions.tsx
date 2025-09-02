@@ -47,7 +47,7 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
   const [hasRemovalFailed, setHasRemovalFailed] = useState(false);
   const [isOffline, setIsOffline] = useState<boolean>(false);
 
-  // Reset hasRemovalFailed when questionIndex changes (new question)
+
   useEffect(() => {
     setHasRemovalFailed(false);
   }, [questionIndex]);
@@ -69,7 +69,7 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
     setIsProcessingDirectReport(true);
 
     try {
-      // Prepare the complete question data with all fields
+
       const completeQuestionData = {
         id: question.id,
         question: question.question,
@@ -99,9 +99,9 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
       const result = await response.json();
       if (result.success) {
         toast.success(result.data.reason || 'Question removed successfully!');
-        // First mark this index as submitted (applies to the removed item only)
+
         onReportSubmitted?.(questionIndex);
-        // Then remove the question so the next one is not affected
+
         onQuestionRemoved?.(questionIndex);
       } else {
         toast.error(result.data.reason || 'Failed to remove question');
@@ -126,7 +126,7 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
     darkMode ? 'text-gray-500' : 'text-gray-400'
   }`;
 
-  // Detect ID questions (image-based); these should not be removable
+
   const isIdQuestion = !!(question as any).imageData;
   const shouldDisableActions = isOffline;
 

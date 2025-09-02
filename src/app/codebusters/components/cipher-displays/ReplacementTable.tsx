@@ -31,23 +31,23 @@ export const ReplacementTable = ({
     const { darkMode } = useTheme();
     const frequencies = getLetterFrequencies(text);
     
-    // Determine the alphabet based on cipher type
+
     const isXenocrypt = cipherType.includes('Xenocrypt');
     const alphabet = isXenocrypt ? 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ' : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     
-    // Handle replacement table input changes
+
     const handleReplacementTableChange = (cipherLetter: string, newPlainLetter: string) => {
         if (isTestSubmitted) return;
         
-        // Check if this plain letter is already used in another replacement table input
+
         const existingPlainLetters = Object.values(solution || {}).filter(letter => letter !== '');
         
-        // If letter is already used and it's not the current input, don't allow it
+
         if (existingPlainLetters.includes(newPlainLetter) && newPlainLetter !== solution?.[cipherLetter]) {
-            return; // Don't update
+            return;
         }
         
-        // Update the solution for this cipher letter
+
         onSolutionChange(quoteIndex, cipherLetter, newPlainLetter);
     };
 
@@ -97,10 +97,10 @@ export const ReplacementTable = ({
                                 return (
                                     <td key={letter} className={`p-1 border min-w-[2rem] ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
                                         {isTestSubmitted ? (
-                                            // Show correct mappings after submission
+
                                             <div className="relative w-full h-full flex items-center justify-center">
                                                 {hasUserInput && !isCorrect ? (
-                                                    // Show both wrong and correct answers side by side
+
                                                     <div className="flex items-center justify-center space-x-1">
                                                         <div className={`text-xs line-through ${
                                                             darkMode ? 'text-red-400' : 'text-red-600'
@@ -114,7 +114,7 @@ export const ReplacementTable = ({
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    // Show only correct answer
+
                                                     <div className={`text-center text-xs font-medium ${
                                                         isCorrect 
                                                             ? (darkMode ? 'text-green-400' : 'text-green-600')
@@ -125,7 +125,7 @@ export const ReplacementTable = ({
                                                 )}
                                             </div>
                                         ) : (
-                                            // Normal input during test
+
                                             <input
                                                 type="text"
                                                 maxLength={1}

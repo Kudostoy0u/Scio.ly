@@ -42,12 +42,12 @@ export default function TestConfiguration({
           isConfigFavorited({ eventName: selectedEventName, settings })
         );
       } catch {}
-      // Re-evaluate when settings change
+
     }, [selectedEventName, settings]);
 
     const toggle = () => {
       if (!selectedEventName) return;
-      // Enforce max of 4: if trying to add a new favorite when already at 4, show error and do nothing
+
       const already = isConfigFavorited({ eventName: selectedEventName, settings });
       if (!already) {
         try {
@@ -92,7 +92,7 @@ export default function TestConfiguration({
       }
       if (questionCount < 1) {
         onSettingsChange({ ...settings, questionCount: 1 });
-        // Save to localStorage even for minimum value
+
         if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
           localStorage.setItem('defaultQuestionCount', '1');
         } else if (selectedEvent && selectedEvent.name === 'Codebusters') {
@@ -102,7 +102,7 @@ export default function TestConfiguration({
       }
       onSettingsChange({ ...settings, questionCount });
       
-      // Save to localStorage - if no event selected, assume general event
+
       if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
         localStorage.setItem('defaultQuestionCount', questionCount.toString());
       } else if (selectedEvent && selectedEvent.name === 'Codebusters') {
@@ -112,7 +112,7 @@ export default function TestConfiguration({
       const timeLimit = parseInt(value);
       if (timeLimit < 1) {
         onSettingsChange({ ...settings, timeLimit: 1 });
-        // Save to localStorage even for minimum value
+
         if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
           localStorage.setItem('defaultTimeLimit', '1');
         } else if (selectedEvent && selectedEvent.name === 'Codebusters') {
@@ -120,7 +120,7 @@ export default function TestConfiguration({
         }
       } else if (timeLimit > 120) {
         onSettingsChange({ ...settings, timeLimit: 120 });
-        // Save to localStorage even for maximum value
+
         if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
           localStorage.setItem('defaultTimeLimit', '120');
         } else if (selectedEvent && selectedEvent.name === 'Codebusters') {
@@ -128,7 +128,7 @@ export default function TestConfiguration({
         }
       } else {
         onSettingsChange({ ...settings, timeLimit });
-        // Save to localStorage - if no event selected, assume general event
+
         if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
           localStorage.setItem('defaultTimeLimit', timeLimit.toString());
         } else if (selectedEvent && selectedEvent.name === 'Codebusters') {
@@ -173,10 +173,10 @@ export default function TestConfiguration({
     onSettingsChange({ ...settings, difficulties: newDifficulties });
   };
 
-  // Persist division and question types in localStorage
+
   useEffect(() => {
     if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
-      // Division
+
       const availableDivisions = selectedEvent?.divisions || ['B', 'C'];
       const canShowB = availableDivisions.includes('B');
       const canShowC = availableDivisions.includes('C');
@@ -190,7 +190,7 @@ export default function TestConfiguration({
 
       localStorage.setItem('defaultDivision', normalizedDivision);
 
-      // Question types
+
       const normalizedTypes = ['multiple-choice', 'both', 'free-response'].includes(settings.types)
         ? settings.types
         : 'multiple-choice';
@@ -204,7 +204,7 @@ export default function TestConfiguration({
     return `${settings.difficulties.length} selected`;
   };
 
-  // Click outside detection for dropdowns
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (subtopicDropdownRef.current && !subtopicDropdownRef.current.contains(event.target as Node)) {
@@ -307,7 +307,7 @@ export default function TestConfiguration({
                 type="button"
                   onClick={() => {
                     onSettingsChange({ ...settings, types: 'multiple-choice' });
-                    // Save to localStorage - if no event selected, assume general event
+
                     if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
                       localStorage.setItem('defaultQuestionTypes', 'multiple-choice');
                     }
@@ -331,7 +331,7 @@ export default function TestConfiguration({
                 type="button"
                   onClick={() => {
                     onSettingsChange({ ...settings, types: 'both' });
-                    // Save to localStorage - if no event selected, assume general event
+
                     if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
                       localStorage.setItem('defaultQuestionTypes', 'both');
                     }
@@ -355,7 +355,7 @@ export default function TestConfiguration({
                 type="button"
                   onClick={() => {
                     onSettingsChange({ ...settings, types: 'free-response' });
-                    // Save to localStorage - if no event selected, assume general event
+
                     if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
                       localStorage.setItem('defaultQuestionTypes', 'free-response');
                     }
@@ -413,7 +413,7 @@ export default function TestConfiguration({
                     const percentage = Math.round((pictureQuestions / questionCount) * 100);
                     onSettingsChange({ ...settings, idPercentage: percentage });
                     
-                    // Save to localStorage for persistence
+
                     if (typeof window !== 'undefined') {
                       localStorage.setItem('defaultIdPercentage', percentage.toString());
                     }
@@ -468,7 +468,7 @@ export default function TestConfiguration({
                   const newSettings = { ...settings, charLengthMin: min, charLengthMax: max };
                   onSettingsChange(newSettings);
                   
-                  // Save to localStorage for persistence
+
                   if (typeof window !== 'undefined') {
                     localStorage.setItem('codebustersCharLengthMin', min.toString());
                     localStorage.setItem('codebustersCharLengthMax', max.toString());
@@ -500,7 +500,7 @@ export default function TestConfiguration({
                       onClick={() => {
                         if (!canShowB) return;
                         onSettingsChange({ ...settings, division: 'B' });
-                        // Save to localStorage - if no event selected, assume general event
+
                         if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
                           localStorage.setItem('defaultDivision', 'B');
                         }
@@ -525,7 +525,7 @@ export default function TestConfiguration({
                       onClick={() => {
                         if (!(canShowB && canShowC)) return;
                         onSettingsChange({ ...settings, division: 'any' });
-                        // Save to localStorage - if no event selected, assume general event
+
                         if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
                           localStorage.setItem('defaultDivision', 'any');
                         }
@@ -550,7 +550,7 @@ export default function TestConfiguration({
                       onClick={() => {
                         if (!canShowC) return;
                         onSettingsChange({ ...settings, division: 'C' });
-                        // Save to localStorage - if no event selected, assume general event
+
                         if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
                           localStorage.setItem('defaultDivision', 'C');
                         }
@@ -620,7 +620,7 @@ export default function TestConfiguration({
                   } ring-1 ring-black ring-opacity-5`}>
                     <div className="py-1">
                       {isCodebusters ? (
-                        // Codebusters uses simple difficulty levels
+
                         ['Easy', 'Medium', 'Hard'].map((difficulty) => (
                           <label
                             key={difficulty}
@@ -642,7 +642,7 @@ export default function TestConfiguration({
                           </label>
                         ))
                       ) : (
-                        // Other events use detailed difficulty levels
+
                         [
                           { id: 'very-easy', label: 'Very Easy (0-19%)' },
                           { id: 'easy', label: 'Easy (20-39%)' },
@@ -715,23 +715,23 @@ export default function TestConfiguration({
                   } ring-1 ring-black ring-opacity-5 max-h-60 overflow-y-auto`}>
                     <div className="py-1">
                       {isCodebusters ? (
-                        // Codebusters cipher types based on division (alphabetically ordered)
+
                         (() => {
-                          // Division B only ciphers
+
                           const divisionBOnlyCiphers = [
                             "Affine",
                             "Atbash", 
                             "Caesar"
                           ];
                           
-                          // Disabled ciphers (temporarily unavailable)
+
                           const disabledCiphers = [
                             "K2 Patristocrat",
                             "K3 Patristocrat",
                             "Random Patristocrat"
                           ];
                           
-                          // Division C only ciphers
+
                           const divisionCOnlyCiphers = [
                             "Hill 2x2",
                             "Hill 3x3",
@@ -739,7 +739,7 @@ export default function TestConfiguration({
                             "K3 Xenocrypt"
                           ].filter(cipher => !disabledCiphers.includes(cipher));
                           
-                          // Ciphers available in both divisions
+
                           const bothDivisionsCiphers = [
                             "Baconian",
                             "Checkerboard",
@@ -757,17 +757,17 @@ export default function TestConfiguration({
                             "K2 Xenocrypt"
                           ].filter(cipher => !disabledCiphers.includes(cipher));
                           
-                          // Build cipher types based on selected division
+
                           let cipherTypes: string[] = [];
                           
                           if (settings.division === 'B') {
-                            // Division B: B-only + both divisions
+
                             cipherTypes = [...divisionBOnlyCiphers, ...bothDivisionsCiphers];
                           } else if (settings.division === 'C') {
-                            // Division C: C-only + both divisions
+
                             cipherTypes = [...divisionCOnlyCiphers, ...bothDivisionsCiphers];
                           } else {
-                            // Both divisions: union of all ciphers
+
                             cipherTypes = [...new Set([...divisionBOnlyCiphers, ...divisionCOnlyCiphers, ...bothDivisionsCiphers])];
                           }
                           
@@ -793,7 +793,7 @@ export default function TestConfiguration({
                           ));
                         })()
                       ) : (
-                        // Regular subtopics for other events
+
                         selectedEvent && window.eventSubtopicsMapping?.[selectedEvent.name]?.map((subtopic) => (
                           <label
                             key={subtopic}

@@ -19,7 +19,7 @@ export const updateGamePoints = async (
 
   const currentMetrics = await getDailyMetrics(userId);
 
-  // If metrics couldn't be fetched, we can't update.
+
   if (!currentMetrics) {
     console.error('Could not fetch current metrics to update game points.');
     return null;
@@ -30,16 +30,16 @@ export const updateGamePoints = async (
     gamePoints: (currentMetrics.gamePoints || 0) + pointsChange,
   };
 
-  // Save back to the appropriate storage
+
   if (!userId) {
-    // Anonymous user: save to localStorage
+
     saveLocalMetrics(updatedMetrics);
     return updatedMetrics;
   } else {
-    // Logged-in user: save to Supabase
+
     const today = new Date().toISOString().split('T')[0];
     try {
-      // Update the user_stats table with the new game points
+
     const { error } = await (supabase as any)
         .from('user_stats')
         .upsert({
@@ -82,7 +82,7 @@ export const updateGamePoints = async (
         }
       }
 
-      // Also record the game point transaction
+
       await (supabase as any)
         .from('game_points')
         .insert({
@@ -123,7 +123,7 @@ export const setGamePoints = async (
   const today = new Date().toISOString().split('T')[0];
 
   try {
-    // Get current stats for the day
+
     const currentMetrics = await getDailyMetrics(userId);
     
     if (!currentMetrics) {
@@ -131,10 +131,10 @@ export const setGamePoints = async (
       return false;
     }
 
-    // Calculate the difference for transaction record
+
     const pointsDifference = newScore - currentMetrics.gamePoints;
 
-    // Update the user_stats table with the new game points
+
     const { error: updateError } = await (supabase as any)
       .from('user_stats')
       .upsert({
@@ -154,7 +154,7 @@ export const setGamePoints = async (
       return false;
     }
 
-    // Record the game point transaction if there's a change
+
     if (pointsDifference !== 0) {
       await (supabase as any)
         .from('game_points')

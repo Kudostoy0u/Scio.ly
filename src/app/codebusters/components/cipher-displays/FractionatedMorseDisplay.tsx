@@ -27,18 +27,18 @@ export const FractionatedMorseDisplay = ({
     const { darkMode } = useTheme();
     const [focusedCipherLetter, setFocusedCipherLetter] = useState<string | null>(null);
 
-    // Create mapping for correct answers
+
     const correctMapping: { [key: string]: string } = {};
     if (isTestSubmitted && quotes[quoteIndex] && fractionationTable) {
         const quote = quotes[quoteIndex];
         
-        // For fractionated morse, map each cipher letter to its expected triplet
+
         if (quote.cipherType === 'Fractionated Morse') {
             Object.entries(fractionationTable).forEach(([triplet, letter]) => {
                 correctMapping[letter] = triplet;
             });
         } else if (quote.key) {
-            // For other ciphers, use the original logic
+
             for (let i = 0; i < 26; i++) {
                 const plainLetter = String.fromCharCode(65 + i);
                 const cipherLetter = quote.key![i];
@@ -47,13 +47,13 @@ export const FractionatedMorseDisplay = ({
         }
     }
 
-    // Get the actual triplets used in this cipher from the fractionation table
+
     const usedTriplets = useMemo(() => 
         fractionationTable ? Object.keys(fractionationTable).filter(triplet => triplet !== 'xxx' && !triplet.includes('xxx')).sort() : [], 
         [fractionationTable]
     );
     
-    // Create reverse mapping from cipher letter to triplet
+
     const cipherToTriplet: { [key: string]: string } = {};
     if (fractionationTable) {
         Object.entries(fractionationTable).forEach(([triplet, letter]) => {
@@ -61,7 +61,7 @@ export const FractionatedMorseDisplay = ({
         });
     }
     
-    // Create mapping from triplet to cipher letter (for debugging)
+
     const tripletToCipher: { [key: string]: string } = {};
     if (fractionationTable) {
         Object.entries(fractionationTable).forEach(([triplet, letter]) => {
@@ -69,37 +69,37 @@ export const FractionatedMorseDisplay = ({
         });
     }
 
-    // Handle replacement table input changes
+
     const handleReplacementTableChange = (triplet: string, newLetter: string) => {
         if (!fractionationTable) return;
         
-        // The letter typed in the replacement table should match the cipher letter
-        // So we fill all instances of that letter with the morse code triplet
+
+
         if (newLetter) {
-            // Fill all cipher inputs that show this letter with the morse code triplet
+
             onSolutionChange(quoteIndex, newLetter.toUpperCase(), triplet);
         } else {
-            // If letter is deleted, clear all cipher inputs that were filled by this triplet
-            // We need to find which letter was previously associated with this triplet
+
+
             const previousLetter = solution?.[`replacement_${triplet}`];
             if (previousLetter) {
-                // Clear all inputs for the previously associated letter
+
                 onSolutionChange(quoteIndex, previousLetter.toUpperCase(), '');
             }
         }
     };
 
-    // Update replacement table when a complete triplet is entered in cipher input
+
     const updateReplacementTableFromTriplet = (cipherLetter: string, triplet: string) => {
         if (!fractionationTable) return;
         
         console.log('Updating replacement table from triplet:', { cipherLetter, triplet, fractionationTable });
         
-        // Find which triplet column this matches
+
         const matchingTriplet = usedTriplets.find(t => t === triplet);
         if (matchingTriplet) {
             console.log('Found matching triplet:', matchingTriplet);
-            // Update the replacement table for this triplet with the cipher letter
+
             onSolutionChange(quoteIndex, `replacement_${matchingTriplet}`, cipherLetter);
         } else {
             console.log('No matching triplet found for:', triplet);
@@ -107,13 +107,13 @@ export const FractionatedMorseDisplay = ({
         }
     };
 
-    // Clear replacement table when a triplet becomes incomplete
+
     const clearReplacementTableFromTriplet = (cipherLetter: string, incompleteTriplet: string) => {
         if (!fractionationTable) return;
         
         console.log('Clearing replacement table from incomplete triplet:', { cipherLetter, incompleteTriplet });
         
-        // Find which triplet column this cipher letter was associated with
+
         const matchingTriplet = usedTriplets.find(t => {
             const currentReplacement = solution?.[`replacement_${t}`];
             return currentReplacement === cipherLetter;
@@ -121,12 +121,12 @@ export const FractionatedMorseDisplay = ({
         
         if (matchingTriplet) {
             console.log('Found triplet to clear:', matchingTriplet);
-            // Clear the replacement table for this triplet
+
             onSolutionChange(quoteIndex, `replacement_${matchingTriplet}`, '');
         }
     };
 
-    // Function to calculate plaintext letters from morse code triplets using linear sweep
+
     const calculatePlaintextLetters = (triplets: string[]): string[] => {
         const morseMap: { [key: string]: string } = {
             'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.',
@@ -136,19 +136,19 @@ export const FractionatedMorseDisplay = ({
             'Y': '-.--', 'Z': '--..'
         };
         
-        // Create reverse morse map
+
         const reverseMorseMap: { [key: string]: string } = {};
         Object.entries(morseMap).forEach(([letter, morse]) => {
             reverseMorseMap[morse] = letter;
         });
 
-        // Initialize all positions with empty strings
+
         const plaintextLetters: string[] = [];
         for (let i = 0; i < triplets.length; i++) {
             plaintextLetters.push('');
         }
         
-        // Concatenate all triplets into a single morse code string
+
         let morseString = '';
         for (const triplet of triplets) {
             morseString += triplet;
@@ -156,18 +156,18 @@ export const FractionatedMorseDisplay = ({
         
         let currentIndex = 0;
         let currentMorse = '';
-        let morseStartIndex = 0; // Track the start index of current morse code
+        let morseStartIndex = 0;
         
-        // Process the morse string linearly
+
         for (let i = 0; i < morseString.length; i++) {
             const char = morseString[i];
             
             if (char === 'x') {
-                // Check if we have accumulated morse code to decode
+
                 if (currentMorse.length > 0) {
                     const letter = reverseMorseMap[currentMorse];
                     if (letter) {
-                        // Calculate which input position this corresponds to based on the start index
+
                         const inputIndex = Math.floor(morseStartIndex / 3);
                         if (inputIndex < plaintextLetters.length) {
                             plaintextLetters[inputIndex] += letter;
@@ -176,20 +176,20 @@ export const FractionatedMorseDisplay = ({
                     currentMorse = '';
                 }
                 
-                // Check for double x (word boundary) - but not at the end of the string
+
                 if (i + 1 < morseString.length && morseString[i + 1] === 'x' && i + 2 < morseString.length) {
-                    // Calculate which input position this corresponds to
+
                     const inputIndex = Math.floor(currentIndex / 3);
                     if (inputIndex < plaintextLetters.length && !plaintextLetters[inputIndex].includes('/')) {
                         plaintextLetters[inputIndex] += '/';
                     }
-                    i++; // Skip the next x
+                    i++;
                     currentIndex++;
                 }
                 
                 currentIndex++;
             } else {
-                // Start accumulating morse code (if this is the first character)
+
                 if (currentMorse.length === 0) {
                     morseStartIndex = currentIndex;
                 }
@@ -198,7 +198,7 @@ export const FractionatedMorseDisplay = ({
             }
         }
         
-        // Handle any remaining morse code at the end
+
         if (currentMorse.length > 0) {
             const letter = reverseMorseMap[currentMorse];
             if (letter) {
@@ -209,7 +209,7 @@ export const FractionatedMorseDisplay = ({
             }
         }
         
-        // Remove any inputs that map to just "xxx" (triple x) or contain triple x patterns
+
         const filteredPlaintextLetters = plaintextLetters.map(letters => 
             letters === 'xxx' || letters.includes('xxx') ? '' : letters
         );
@@ -226,17 +226,17 @@ export const FractionatedMorseDisplay = ({
             {/* Cipher text */}
             <div className="flex flex-wrap gap-y-8 text-sm sm:text-base break-words whitespace-pre-wrap">
                 {(() => {
-                    // Get all triplets from the solution or correct mapping
+
                     const triplets: string[] = [];
                     const incompleteTriplets: Set<number> = new Set();
                     text.split('').forEach((char, index) => {
                         if (/[A-Z]/.test(char)) {
-                            // Use correct mapping if available (for red text), otherwise use user solution
+
                             const triplet = (isTestSubmitted && correctMapping[char]) ? correctMapping[char] : (solution?.[char] || '');
                             if (triplet.length === 3) {
                                 triplets.push(triplet);
                             } else {
-                                // Use placeholder values for incomplete triplets to make decoding more sensible
+
                                 const placeholder = triplet.length === 0 ? 'xxx' : triplet + 'x'.repeat(3 - triplet.length);
                                 triplets.push(placeholder);
                                 incompleteTriplets.add(index);
@@ -244,7 +244,7 @@ export const FractionatedMorseDisplay = ({
                         }
                     });
                     
-                    // Calculate plaintext letters
+
                     const plaintextLetters = calculatePlaintextLetters(triplets);
                     
                     return text.split('').map((char, i) => {
@@ -255,11 +255,11 @@ export const FractionatedMorseDisplay = ({
                         const showCorrectAnswer = isTestSubmitted && isLetter;
                         const isSameCipherLetter = isLetter && focusedCipherLetter === char;
                         
-                        // Get the plaintext letter for this position
-                        // Don't show decoded text for incomplete triplets
+
+
                         const plaintextLetter = isLetter && !incompleteTriplets.has(i) ? plaintextLetters[i] || '' : '';
                         
-                        // Debug logging
+
                         if (isLetter && plaintextLetter) {
                             console.log(`Plaintext for ${char}: ${plaintextLetter}, triplet: ${triplets[i]}`);
                         }
@@ -280,33 +280,33 @@ export const FractionatedMorseDisplay = ({
                                             onBlur={() => setFocusedCipherLetter(null)}
                                             onChange={(e) => {
                                                 const inputValue = e.target.value;
-                                                // Filter to only allow dots, dashes, and x (case insensitive)
+
                                                 const filteredValue = inputValue.split('').filter(char => 
                                                     /[.\-x]/i.test(char)
                                                 ).join('').toUpperCase();
                                                 
-                                                // Convert x to lowercase for fractionated morse
+
                                                 let finalValue = filteredValue.replace(/X/g, 'x');
                                                 
-                                                // Remove any triple x patterns
+
                                                 finalValue = finalValue.replace(/xxx/g, 'xx');
                                                 
-                                                // Only update if the final value is different from what was typed
+
                                                 if (finalValue !== inputValue) {
                                                     e.target.value = finalValue;
                                                 }
                                                 
                                                 console.log('Cipher input change:', { char, finalValue, length: finalValue.length });
                                                 
-                                                // Update all instances of this cipher letter with the new value
+
                                                 onSolutionChange(quoteIndex, char, finalValue);
                                                 
-                                                // If we have a complete triplet, update the replacement table
+
                                                 if (finalValue.length === 3) {
                                                     console.log('Complete triplet detected, updating replacement table');
                                                     updateReplacementTableFromTriplet(char, finalValue);
                                                 } else if (finalValue.length < 3) {
-                                                    // If triplet becomes incomplete, clear the replacement table entry
+
                                                     console.log('Triplet became incomplete, clearing replacement table');
                                                     clearReplacementTableFromTriplet(char, finalValue);
                                                 }
@@ -368,8 +368,8 @@ export const FractionatedMorseDisplay = ({
                                     Replacement
                                 </td>
                                 {usedTriplets.map(triplet => {
-                                    // For replacement table, we want to show what letter the user typed, not the morse code
-                                    // We need to track this separately from the solution
+
+
                                     const replacementValue = solution?.[`replacement_${triplet}`] || '';
                                     const correctValue = fractionationTable?.[triplet] || '';
                                     const isCorrect = replacementValue === correctValue;
@@ -378,10 +378,10 @@ export const FractionatedMorseDisplay = ({
                                     return (
                                         <td key={triplet} className={`p-1 border min-w-[2rem] ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
                                             {isTestSubmitted ? (
-                                                // Show correct mappings after submission
+
                                                 <div className="relative w-full h-full flex items-center justify-center">
                                                     {hasUserInput && !isCorrect ? (
-                                                        // Show both wrong and correct answers side by side
+
                                                         <div className="flex items-center justify-center space-x-1">
                                                             <div className={`text-xs line-through ${
                                                                 darkMode ? 'text-red-400' : 'text-red-600'
@@ -395,7 +395,7 @@ export const FractionatedMorseDisplay = ({
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        // Show only correct answer
+
                                                         <div className={`text-center text-xs font-medium ${
                                                             isCorrect 
                                                                 ? (darkMode ? 'text-green-400' : 'text-green-600')
@@ -406,7 +406,7 @@ export const FractionatedMorseDisplay = ({
                                                     )}
                                                 </div>
                                             ) : (
-                                                // Normal input during test
+
                                                 <input
                                                     type="text"
                                                     maxLength={1}
@@ -416,22 +416,22 @@ export const FractionatedMorseDisplay = ({
                                                     onChange={(e) => {
                                                         const newLetter = e.target.value.toUpperCase();
                                                         
-                                                        // Check if this letter is already used in another replacement table input
+
                                                         const existingLetters = usedTriplets.map(t => 
                                                             solution?.[`replacement_${t}`] || ''
                                                         ).filter(letter => letter !== '');
                                                         
-                                                        // If letter is already used and it's not the current input, don't allow it
+
                                                         if (existingLetters.includes(newLetter) && newLetter !== replacementValue) {
                                                             console.log('Letter already used:', newLetter);
-                                                            return; // Don't update
+                                                            return;
                                                         }
                                                         
                                                         console.log('Updating replacement table:', { triplet, newLetter, existingLetters });
                                                         
-                                                        // Store the replacement letter separately
+
                                                         onSolutionChange(quoteIndex, `replacement_${triplet}`, newLetter);
-                                                        // Then trigger the morse code filling
+
                                                         handleReplacementTableChange(triplet, e.target.value);
                                                     }}
                                                     className={`w-full text-center text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-900'} focus:outline-none focus:ring-1 focus:ring-blue-500 ${

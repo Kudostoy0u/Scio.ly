@@ -4,14 +4,14 @@ import { db } from '@/lib/db';
 import { questions } from '@/lib/db/schema';
 import { count, desc, sql } from 'drizzle-orm';
 
-// GET /api/meta/stats - Get question statistics
+
 export async function GET() {
   try {
-    // Get total count
+
     const totalRes = await db.select({ total: count() }).from(questions);
     const total = Number(totalRes[0]?.total || 0);
 
-    // Get event stats
+
     const eventResult = await db
       .select({ event: questions.event, count: sql<number>`count(*)` })
       .from(questions)
@@ -19,7 +19,7 @@ export async function GET() {
       .orderBy(desc(sql`count(*)`));
     const byEvent: EventStat[] = eventResult.map(row => ({ event: row.event, count: String(row.count) }));
 
-    // Get division stats
+
     const divisionResult = await db
       .select({ division: questions.division, count: sql<number>`count(*)` })
       .from(questions)

@@ -224,10 +224,10 @@ export const baconianSchemes: SchemesData = {
     ]
   },
   probabilities: {
-    traditional: 0.6,  // 40% A/B + 20% Vowels/Consonants + Odd/Even
-    emoji: 0.15,       // Part of 40% special
-    symbols: 0.15,     // Part of 40% special
-    formatting: 0.1    // Part of 40% special
+    traditional: 0.6,  // 40% a/b + 20% vowels/consonants + odd/even
+    emoji: 0.15,
+    symbols: 0.15,
+    formatting: 0.1
   }
 };
 

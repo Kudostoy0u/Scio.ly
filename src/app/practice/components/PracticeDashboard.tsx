@@ -40,7 +40,7 @@ export default function PracticeDashboard() {
     idPercentage: 0,
   });
 
-  // Load localStorage values after component mounts (client-side only)
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedQuestionCount = localStorage.getItem('defaultQuestionCount');
@@ -72,7 +72,7 @@ export default function PracticeDashboard() {
     }
   }, []);
 
-  // Detect offline and load downloaded event slugs
+
   useEffect(() => {
     const updateOnline = () => setIsOffline(!navigator.onLine);
     updateOnline();
@@ -88,7 +88,7 @@ export default function PracticeDashboard() {
     
     loadDownloadedSlugs();
     
-    // Subscribe to cross-tab download updates for immediate UI sync
+
     const unsubscribe = subscribeToDownloads(loadDownloadedSlugs);
     
     return () => {
@@ -98,16 +98,16 @@ export default function PracticeDashboard() {
     };
   }, []);
 
-  // Detect if there is a test in progress with at least one answer
+
   useEffect(() => {
-    // Track viewport size to switch behavior on mobile vs desktop
+
     if (typeof window === 'undefined') return;
     const mq = window.matchMedia('(min-width: 1024px)');
     const apply = () => setIsLarge(mq.matches);
     try {
       mq.addEventListener('change', apply);
     } catch {
-      // Safari fallback
+
       mq.addListener(apply);
     }
     apply();
@@ -121,7 +121,7 @@ export default function PracticeDashboard() {
   }, []);
 
   useEffect(() => {
-    // Sync Available Events panel height to EXACT Test Configuration height
+
     if (typeof window === 'undefined') return;
     const target = document.querySelector('[data-test-config]') as HTMLElement | null;
     if (!target) return;
@@ -137,7 +137,7 @@ export default function PracticeDashboard() {
       ro = new ResizeObserver(() => update());
       ro.observe(target);
     } catch {
-      // Fallback: listen to window resize
+
       window.addEventListener('resize', update);
     }
     return () => {
@@ -150,7 +150,7 @@ export default function PracticeDashboard() {
   }, []);
 
   useEffect(() => {
-    // Recompute on theme/layout shifts that might affect sizes
+
     const t = setTimeout(() => {
       const target = document.querySelector('[data-test-config]') as HTMLElement | null;
       if (target) {
@@ -164,7 +164,7 @@ export default function PracticeDashboard() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      // Prefer session info for event name and submission state
+
       const sessionStr = localStorage.getItem('currentTestSession');
       const session = sessionStr ? JSON.parse(sessionStr) as { eventName?: string; isSubmitted?: boolean } : null;
       if (session && session.isSubmitted) {
@@ -172,12 +172,12 @@ export default function PracticeDashboard() {
         return;
       }
 
-      // General tests: check answered state
+
       const testAnswersStr = localStorage.getItem('testUserAnswers');
       const testAnswers = testAnswersStr ? JSON.parse(testAnswersStr) as Record<string, (string | null)[]> : null;
       const hasGeneralProgress = !!testAnswers && Object.values(testAnswers).some(arr => Array.isArray(arr) ? arr.some(v => v && String(v).length > 0) : !!testAnswersStr);
 
-      // Codebusters: check any solution/notes fields populated
+
       const cbQuotesStr = localStorage.getItem('codebustersQuotes');
       let hasCodebustersProgress = false;
       if (cbQuotesStr) {
@@ -196,7 +196,7 @@ export default function PracticeDashboard() {
         } catch {}
       }
 
-      // Also consider current session state for Codebusters
+
       if (hasCodebustersProgress || (session && session.eventName === 'Codebusters')) {
         const params = localStorage.getItem('testParams');
         const eventName = (() => { try { return (params ? JSON.parse(params).eventName : undefined) || 'Codebusters'; } catch { return 'Codebusters'; }})();
@@ -217,12 +217,12 @@ export default function PracticeDashboard() {
     }
   }, []);
 
-  // This function is no longer needed as it's handled in TestConfiguration component
-  // const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+
+  // const handlechange = (e: react.changeevent<htmlinputelement | htmlselectelement>) => {
   //   const { id, value } = e.target;
-  //   setSettings(prev => ({
+  //   setsettings(prev => ({
   //     ...prev,
-  //     [id]: id === 'questionCount' || id === 'timeLimit' ? parseInt(value) : value
+  //     [id]: id === 'questioncount' || id === 'timelimit' ? parseint(value) : value
   //   }));
   // };
 
@@ -240,14 +240,14 @@ export default function PracticeDashboard() {
 
     if (isOffline) {
       const slug = selectedEventObj.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      // Use real-time check instead of stale state
+
       (async () => {
         const hasDownloaded = await hasOfflineEvent(slug);
         if (!hasDownloaded) {
           toast.error('This event is not downloaded for offline use. Go to Offline page to download it.');
           return;
         }
-        // Continue with test generation
+
         proceedWithTest(selectedEventObj);
       })();
       return;
@@ -257,7 +257,7 @@ export default function PracticeDashboard() {
   };
 
   const proceedWithTest = (selectedEventObj: Event) => {
-    // Clear any existing time management session
+
     clearTestSession();
 
     // ensure no stale sessions affect timer
@@ -294,14 +294,14 @@ export default function PracticeDashboard() {
 
     if (isOffline) {
       const slug = selectedEventObj.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      // Use real-time check instead of stale state
+
       (async () => {
         const hasDownloaded = await hasOfflineEvent(slug);
         if (!hasDownloaded) {
           toast.error('This event is not downloaded for offline use. Go to Offline page to download it.');
           return;
         }
-        // Continue with unlimited practice
+
         proceedWithUnlimited(selectedEventObj);
       })();
       return;
@@ -311,13 +311,13 @@ export default function PracticeDashboard() {
   };
 
   const proceedWithUnlimited = (selectedEventObj: Event) => {
-    // Save preferences
+
     savePreferences(selectedEventObj.name, settings.questionCount, settings.timeLimit);
 
-    // Clear any existing test session
+
     clearTestSession();
 
-    // Special behavior for Codebusters: treat as creating a test with 1 question
+
     if (selectedEventObj.name === 'Codebusters') {
       const cbParams = buildTestParams(selectedEventObj.name, { ...settings, questionCount: 1 });
       saveTestParams(cbParams);
@@ -333,7 +333,7 @@ export default function PracticeDashboard() {
       return;
     }
 
-    // Default Unlimited behavior for non-Codebusters events
+
     try {
       const cookiePayload = encodeURIComponent(JSON.stringify({
         eventName: selectedEventObj.name,
@@ -354,7 +354,7 @@ export default function PracticeDashboard() {
     
     if (selectedEventObj) {
       if (selectedEventObj.name === 'Codebusters') {
-        // Codebusters uses its own localStorage system with defaults of 3 and 15
+
         if (typeof window !== 'undefined') {
           const codebustersQuestionCount = localStorage.getItem('codebustersQuestionCount');
           const codebustersTimeLimit = localStorage.getItem('codebustersTimeLimit');
@@ -362,14 +362,14 @@ export default function PracticeDashboard() {
           const questionCount = codebustersQuestionCount ? parseInt(codebustersQuestionCount) : 3;
           const timeLimit = codebustersTimeLimit ? parseInt(codebustersTimeLimit) : 15;
           
-          // Set defaults if not already set
+
           if (!codebustersQuestionCount) {
             localStorage.setItem('codebustersQuestionCount', '3');
           }
           if (!codebustersTimeLimit) {
             localStorage.setItem('codebustersTimeLimit', '15');
           }
-          // Sync division with normal events' selection
+
           const savedDivision = (() => {
             const stored = localStorage.getItem('defaultDivision');
             return stored === 'B' || stored === 'C' || stored === 'any' ? stored : 'any';
@@ -396,7 +396,7 @@ export default function PracticeDashboard() {
             subtopics: []
           }));
         } else {
-          // Fallback for server-side rendering
+
           const availableDivisions = selectedEventObj.divisions || ['B', 'C'];
           const canShowB = availableDivisions.includes('B');
           const canShowC = availableDivisions.includes('C');
@@ -412,7 +412,7 @@ export default function PracticeDashboard() {
           }));
         }
       } else {
-        // Other events use global defaults from localStorage
+
         const defaultQuestionCount = (() => {
           if (typeof window === 'undefined') return NORMAL_DEFAULTS.questionCount;
           const stored = localStorage.getItem('defaultQuestionCount');
@@ -473,7 +473,7 @@ export default function PracticeDashboard() {
         setLoading(true);
         setError(null);
 
-        // Define new approved events with division restrictions
+
         const approvedEvents = [
           { 
             name: "Anatomy - Nervous", 
@@ -587,7 +587,7 @@ export default function PracticeDashboard() {
           }
         ];
 
-        // Map events to the Event interface
+
         const eventsWithIds: Event[] = approvedEvents.map((event, index) => ({
           id: index + 1,
           ...event
@@ -595,7 +595,7 @@ export default function PracticeDashboard() {
 
         setEvents(eventsWithIds);
 
-        // Define event-specific subtopics based on the provided mapping
+
         const eventSubtopics: Record<string, string[]> = {
           "Anatomy - Nervous": ["Brain Anatomy", "Spinal Cord", "Cranial Nerves", "Peripheral Nervous System", "Autonomic Nervous System", "Neurons", "Synapses", "Neurotransmitters", "Reflexes", "Sensory Pathways", "Motor Pathways", "Brain Functions"],
           "Anatomy - Endocrine": ["Pituitary Gland", "Thyroid Gland", "Adrenal Glands", "Pancreas", "Gonads", "Hormones", "Hormone Regulation", "Endocrine Disorders", "Metabolism", "Growth and Development", "Stress Response", "Reproductive Endocrinology"],
@@ -622,7 +622,7 @@ export default function PracticeDashboard() {
           "Water Quality - Freshwater": ["pH", "Dissolved Oxygen", "Nutrients", "Pollutants", "Testing", "Classification"]
         };
 
-        // Store the event subtopics mapping for later use
+
         window.eventSubtopicsMapping = eventSubtopics;
 
       } catch (err) {
@@ -646,7 +646,7 @@ export default function PracticeDashboard() {
         const statsJson = await statsRes.json();
         const byEvent: Array<{ event: string; count: string }> = statsJson?.data?.byEvent || [];
 
-        // Exclude events with 100 or fewer questions
+
         const filtered = byEvent.filter(e => parseInt(e.count || '0', 10) > 100);
 
         const mapped: Event[] = filtered.map((row, index) => ({

@@ -5,7 +5,7 @@ import { useTheme } from '@/app/contexts/ThemeContext';
 import Link from 'next/link';
 import api from '@/app/api';
 
-// Approved events list
+
 const approvedEvents = [
   { 
     name: "Anatomy - Nervous", 
@@ -119,7 +119,7 @@ const approvedEvents = [
   }
 ];
 
-// Add Question interface
+
 interface Question {
   question: string;
   options?: string[];
@@ -127,14 +127,14 @@ interface Question {
   difficulty: number;
 }
 
-// Helper function to parse question data
+
 const parseQuestion = (questionData: string | unknown): Question | null => {
   if (typeof questionData === 'string') {
     try {
-      // Try to parse as JSON
+
       const parsed = JSON.parse(questionData);
       
-      // If parsed is an object with a 'question' property, it's likely a question object
+
       if (typeof parsed === 'object' && parsed !== null && 'question' in parsed) {
         return {
           question: parsed.question,
@@ -144,14 +144,14 @@ const parseQuestion = (questionData: string | unknown): Question | null => {
         };
       }
       
-      // Otherwise, treat the parsed value as the question text
+
       return {
         question: parsed,
         answers: [],
         difficulty: 0.5
       };
     } catch {
-      // If not valid JSON, return a simple question object
+
       return {
         question: questionData,
         answers: [],
@@ -170,7 +170,7 @@ const parseQuestion = (questionData: string | unknown): Question | null => {
   return null;
 };
 
-// Component for blacklisted questions to avoid double box effect
+
 const BlacklistedQuestionCard = ({ questionData, darkMode }: { 
   questionData: string | unknown, 
   darkMode: boolean
@@ -265,7 +265,7 @@ const BlacklistedQuestionCard = ({ questionData, darkMode }: {
   );
 };
 
-// Component to render a question card
+
 const QuestionCard = ({ questionData, darkMode, type = 'normal', className }: { 
   questionData: string | unknown, 
   darkMode: boolean, 
@@ -282,7 +282,7 @@ const QuestionCard = ({ questionData, darkMode, type = 'normal', className }: {
     );
   }
 
-  // Use a simpler style for the card
+
   return (
     <div className={`${
       darkMode
@@ -367,7 +367,7 @@ const QuestionCard = ({ questionData, darkMode, type = 'normal', className }: {
   );
 };
 
-// ScrollBarAlwaysVisible component (full implementation)
+
 const ScrollBarAlwaysVisible = ({ children, darkMode }: { children: React.ReactNode; darkMode: boolean }) => {
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const thumbRef = React.useRef<HTMLDivElement>(null);
@@ -463,7 +463,7 @@ const ScrollBarAlwaysVisible = ({ children, darkMode }: { children: React.ReactN
   );
 };
 
-// Pagination component
+
 const Pagination = ({ 
   currentPage, 
   totalPages, 
@@ -553,7 +553,7 @@ export default function ReportsPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch blacklisted questions
+
         const blacklistResponse = await fetch(api.blacklists);
         if (!blacklistResponse.ok) {
           throw new Error('Failed to fetch blacklisted questions');
@@ -561,7 +561,7 @@ export default function ReportsPage() {
         const blacklistData = await blacklistResponse.json();
         setBlacklistedQuestions(blacklistData.blacklists || {});
 
-        // Fetch edited questions
+
         const editedResponse = await fetch(api.edits);
         if (!editedResponse.ok) {
           throw new Error('Failed to fetch edited questions');
@@ -578,7 +578,7 @@ export default function ReportsPage() {
     fetchData();
   }, []);
 
-  // Reset page when event changes
+
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedEvent]);
@@ -587,7 +587,7 @@ export default function ReportsPage() {
     return new Date(timestamp).toLocaleString();
   };
 
-  // Get current event data
+
   const getCurrentEventData = () => {
     if (!selectedEvent) return [];
     
@@ -598,18 +598,18 @@ export default function ReportsPage() {
     }
   };
 
-  // Get events that have reports
+
   const getEventsWithReports = () => {
     const eventsWithReports = new Set<string>();
     
-    // Add events with blacklisted questions
+
     Object.keys(blacklistedQuestions).forEach(event => {
       if (blacklistedQuestions[event] && blacklistedQuestions[event].length > 0) {
         eventsWithReports.add(event);
       }
     });
     
-    // Add events with edited questions
+
     Object.keys(editedQuestions).forEach(event => {
       if (editedQuestions[event] && editedQuestions[event].length > 0) {
         eventsWithReports.add(event);
@@ -619,14 +619,14 @@ export default function ReportsPage() {
     return approvedEvents.filter(event => eventsWithReports.has(event.name));
   };
 
-  // Get report count for an event
+
   const getEventReportCount = (eventName: string) => {
     const blacklistedCount = blacklistedQuestions[eventName]?.length || 0;
     const editedCount = editedQuestions[eventName]?.length || 0;
     return blacklistedCount + editedCount;
   };
 
-  // Get total report count
+
   const getTotalReportCount = () => {
     let total = 0;
     Object.values(blacklistedQuestions).forEach(questions => {
@@ -638,7 +638,7 @@ export default function ReportsPage() {
     return total;
   };
 
-  // Get paginated data
+
   const getPaginatedData = () => {
     const data = getCurrentEventData();
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -646,7 +646,7 @@ export default function ReportsPage() {
     return data.slice(startIndex, endIndex);
   };
 
-  // Get total pages
+
   const getTotalPages = () => {
     const data = getCurrentEventData();
     return Math.ceil(data.length / ITEMS_PER_PAGE);

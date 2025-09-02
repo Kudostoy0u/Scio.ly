@@ -14,7 +14,7 @@ export class ScioDatabase extends Dexie {
   constructor() {
     super('scio-offline');
     
-    // Clean v1 schema with questions table
+
     this.version(1).stores({
       questions: '&eventSlug, updatedAt'
     });

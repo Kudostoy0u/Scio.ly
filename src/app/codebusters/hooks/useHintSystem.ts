@@ -66,7 +66,7 @@ export const useHintSystem = (
   };
 
   const findSpanishWordCrib = (cipherText: string, plainText: string) => {
-    // Normalize Spanish text for comparison
+
     const normalizedPlain = plainText
       .toUpperCase()
       .replace(/Á/g, 'A')
@@ -86,11 +86,11 @@ export const useHintSystem = (
     return null;
   };
 
-  // Get hint content for a specific quote
+
   const getHintContent = useCallback((quote: QuoteData): string => {
     if (!quote) return 'No hint available';
 
-    // Special handling: Checkerboard numeric stream
+
     if (quote.cipherType === 'Checkerboard') {
       const r1 = (quote as any).checkerboardR1 as number;
       const r2 = (quote as any).checkerboardR2 as number;
@@ -103,7 +103,7 @@ export const useHintSystem = (
     const cipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
     const plainText = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
 
-    // Special handling for Baconian: first hint = binary type, second hint = crib
+
     if (quote.cipherType === 'Baconian') {
       const currentHintCount = hintCounts[quotes.indexOf(quote)] || 0;
       if (currentHintCount === 0 && (quote as any).baconianBinaryType) {
@@ -117,49 +117,49 @@ export const useHintSystem = (
           return `Crib: ${words[0]}`;
         }
       }
-      // Fallback to existing logic if no words found
+
     }
 
-    // Special handling for Complete Columnar: crib = a word from the quote (use smallest >=3)
+
     if (quote.cipherType === 'Complete Columnar') {
       const words = (quote.quote.match(/[A-Za-z]+/g) || [])
         .map(w => w.toUpperCase())
         .filter(w => w.length >= 3)
         .sort((a, b) => a.length - b.length);
       if (words.length > 0) {
-        // For second crib, find shortest word >=5 letters, or longest word as fallback
+
         if (activeHints[`${quotes.indexOf(quote)}_second_crib`]) {
           const shortWords = words.filter(w => w.length >= 5);
           const cribWord = shortWords.length > 0 ? shortWords[0] : words[words.length - 1];
           return `Second Crib: ${cribWord}`;
         } else {
-          // For first crib, use smallest word >=3 letters
+
           return `Crib: ${words[0]}`;
         }
       }
-      // Fallback to existing logic if no words found
+
     }
 
-    // Special handling for Affine: crib = word with least characters that has 4+ characters, or largest word
+
     if (quote.cipherType === 'Affine') {
       const words = (quote.quote.match(/[A-Za-z]+/g) || [])
         .map(w => w.toUpperCase())
         .sort((a, b) => a.length - b.length);
       
       if (words.length > 0) {
-        // Find the word with least characters that has 4 or more characters
+
         const wordsWith4Plus = words.filter(w => w.length >= 4);
         if (wordsWith4Plus.length > 0) {
           return `Crib: ${wordsWith4Plus[0]}`;
         } else {
-          // If no word has 4+ characters, return the largest word
+
           return `Crib: ${words[words.length - 1]}`;
         }
       }
-      // Fallback to existing logic if no words found
+
     }
 
-    // Try different crib finding strategies
+
     let crib = find5LetterCrib(cipherText, plainText);
     if (crib) return `Crib: ${crib}`;
 
@@ -172,7 +172,7 @@ export const useHintSystem = (
     crib = findWordCrib(cipherText, plainText);
     if (crib) return `Crib: ${crib}`;
 
-    // For Spanish text (Xenocrypt variants)
+
     if (quote.cipherType === 'Random Xenocrypt' || quote.cipherType === 'K1 Xenocrypt' || quote.cipherType === 'K2 Xenocrypt') {
       crib = findSpanishWordCrib(cipherText, plainText);
       if (crib) return `Crib: ${crib}`;
@@ -184,18 +184,18 @@ export const useHintSystem = (
     return 'No crib found';
   }, [activeHints, quotes, hintCounts]);
 
-  // Reveal next hint step; for Baconian, reveal sequentially after crib
+
   const revealRandomLetter = useCallback((questionIndex: number) => {
     const quote = quotes[questionIndex];
     if (!quote) return;
 
-    // Update hint count for this question
+
     const currentHintCount = hintCounts[questionIndex] || 0;
     const newHintCount = currentHintCount + 1;
     const newHintCounts = { ...hintCounts, [questionIndex]: newHintCount };
     setHintCounts(newHintCounts);
 
-    // Checkerboard: reveal a random unsolved token's plaintext
+
     if (quote.cipherType === 'Checkerboard') {
       const r1 = (quote as any).checkerboardR1 as number;
       const r2 = (quote as any).checkerboardR2 as number;
@@ -230,7 +230,7 @@ export const useHintSystem = (
       return;
     }
 
-    // Nihilist: reveal a random unsolved group position's plaintext
+
     if (quote.cipherType === 'Nihilist') {
       const groups = quote.encrypted.trim().split(/\s+/).filter(g => g.length > 0);
       const plain = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
@@ -253,10 +253,10 @@ export const useHintSystem = (
       return;
     }
 
-    // Baconian: sequentially reveal letters starting right after the crib, and sync identical 5-bit groups
+
     if (quote.cipherType === 'Baconian') {
       const encrypted = quote.encrypted;
-      // Parse encrypted text into tokens and capture 5-bit groups with their parsed indices
+
       const parsedTokens: { token: string; isGroup: boolean }[] = [];
       let currentGroup = '';
       for (let i = 0; i < encrypted.length; i++) {
@@ -271,7 +271,7 @@ export const useHintSystem = (
           continue;
         } else {
           if (currentGroup.length > 0) {
-            // Flush any partial group (shouldn't happen for valid ciphertext)
+
             if (currentGroup.length === 5) {
               parsedTokens.push({ token: currentGroup, isGroup: true });
             }
@@ -284,7 +284,7 @@ export const useHintSystem = (
         parsedTokens.push({ token: currentGroup, isGroup: true });
       }
 
-      // Build mapping between sequential group order and parsed token indices
+
       const groupParsedIdxs: number[] = [];
       const groupTokens: string[] = [];
       parsedTokens.forEach((t, idx) => {
@@ -295,7 +295,7 @@ export const useHintSystem = (
       });
 
       const letterOnlyPlain = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
-      // Determine crib: smallest word >=3
+
       const words = (quote.quote.match(/[A-Za-z]+/g) || [])
         .map(w => w.toUpperCase())
         .filter(w => w.length >= 3)
@@ -304,7 +304,7 @@ export const useHintSystem = (
       const cribStart = cribWord ? letterOnlyPlain.indexOf(cribWord) : 0;
       const startLetterIdx = cribStart >= 0 ? cribStart + (cribWord ? cribWord.length : 0) : 0;
 
-      // Find first unfilled group after startLetterIdx
+
       const currentSolution = (quote.solution || {}) as { [key: number]: string };
       let targetGroupOrderIdx = -1;
       for (let k = startLetterIdx; k < groupTokens.length; k++) {
@@ -319,7 +319,7 @@ export const useHintSystem = (
         const correctPlainLetter = letterOnlyPlain[targetGroupOrderIdx];
         const targetToken = groupTokens[targetGroupOrderIdx];
 
-        // Prepare updated solution by syncing all identical groups
+
         const newQuotes = quotes.map((q, idx) => {
           if (idx !== questionIndex) return q;
           const prevSol = (q.solution || {}) as { [key: number]: string };
@@ -337,7 +337,7 @@ export const useHintSystem = (
       return;
     }
 
-    // Get all cipher letters that haven't been revealed yet
+
     const availableLetters = quote.encrypted
       .toUpperCase()
       .split('')
@@ -346,10 +346,10 @@ export const useHintSystem = (
 
     if (availableLetters.length === 0) return;
 
-    // Pick a random cipher letter
+
     const randomCipherLetter = availableLetters[Math.floor(Math.random() * availableLetters.length)];
     
-    // Get the correct plain letter for this cipher letter
+
     let correctPlainLetter = '';
     
     if (quote.cipherType === 'Caesar' && quote.caesarShift !== undefined) {
@@ -361,9 +361,9 @@ export const useHintSystem = (
       const plainIndex = 25 - cipherIndex;
       correctPlainLetter = String.fromCharCode(plainIndex + 65);
     } else if (quote.cipherType === 'Affine' && quote.affineA !== undefined && quote.affineB !== undefined) {
-      // For Affine cipher, we need to find the modular inverse
+
       const cipherIndex = randomCipherLetter.charCodeAt(0) - 65;
-      // Find modular inverse of affineA mod 26
+
       let aInverse = 1;
       for (let i = 1; i < 26; i++) {
         if ((quote.affineA * i) % 26 === 1) {
@@ -374,44 +374,44 @@ export const useHintSystem = (
       const plainIndex = (aInverse * (cipherIndex - quote.affineB + 26)) % 26;
       correctPlainLetter = String.fromCharCode(plainIndex + 65);
     } else if (quote.key && ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Random Xenocrypt'].includes(quote.cipherType)) {
-      // For aristocrat/patristocrat/xenocrypt ciphers, find the plain letter from the key
+
       const keyIndex = quote.key.indexOf(randomCipherLetter);
       if (keyIndex !== -1) {
         correctPlainLetter = String.fromCharCode(keyIndex + 65);
       }
     } else if (quote.cipherType === 'Porta' && quote.portaKeyword) {
-      // For Porta cipher, find the position and get the corresponding plain letter
+
       const cipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
       const plainText = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
       const cipherIndex = cipherText.indexOf(randomCipherLetter);
       
       if (cipherIndex !== -1 && cipherIndex < plainText.length) {
-        // Get the corresponding plain letter from the original text
+
         correctPlainLetter = plainText[cipherIndex];
       }
     } else if ((quote.cipherType === 'Hill 2x2' || quote.cipherType === 'Hill 3x3') && quote.matrix) {
-      // For Hill cipher, we need to decrypt using the matrix inverse
-      // This is complex, so we'll just reveal a letter from the original quote
+
+
       const originalQuote = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
       const cipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
       
-      // Find the position of the random cipher letter in the encrypted text
+
       const cipherIndex = cipherText.indexOf(randomCipherLetter);
       if (cipherIndex !== -1 && cipherIndex < originalQuote.length) {
         correctPlainLetter = originalQuote[cipherIndex];
       }
     } else if (quote.cipherType === 'Fractionated Morse' && quote.fractionationTable) {
-      // For Fractionated Morse, reveal the triplet that maps to this cipher letter
+
       for (const [triplet, letter] of Object.entries(quote.fractionationTable)) {
         if (letter === randomCipherLetter) {
-          // Instead of revealing a plain letter, reveal the triplet
-          // This will be used to update the replacement table
-          correctPlainLetter = triplet; // Store the triplet as the "plain letter"
+
+
+          correctPlainLetter = triplet;
           break;
         }
       }
     } else if (quote.cipherType === 'Random Xenocrypt' || quote.cipherType === 'K1 Xenocrypt' || quote.cipherType === 'K2 Xenocrypt') {
-      // For Xenocrypt variants, handle Spanish text normalization
+
       const normalizedOriginal = quote.quote.toUpperCase()
         .replace(/Á/g, 'A')
         .replace(/É/g, 'E')
@@ -423,34 +423,34 @@ export const useHintSystem = (
         .replace(/[^A-Z]/g, '');
       const cipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
       
-      // Find the position of the random cipher letter in the encrypted text
+
       const cipherIndex = cipherText.indexOf(randomCipherLetter);
       if (cipherIndex !== -1 && cipherIndex < normalizedOriginal.length) {
         correctPlainLetter = normalizedOriginal[cipherIndex];
       }
     } else if ((quote as any).nihilistPolybiusKey || (quote as any).nihilistCipherKey) {
-      // For Nihilist cipher, reveal the position-based mapping
+
       const cipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
       const plainText = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
       const cipherIndex = cipherText.indexOf(randomCipherLetter);
       
       if (cipherIndex !== -1 && cipherIndex < plainText.length) {
-        // Get the corresponding plain letter from the original text
+
         correctPlainLetter = plainText[cipherIndex];
       }
     } else if (quote.cipherType === 'Complete Columnar' && quote.columnarKey) {
-      // For Complete Columnar, reveal the position-based mapping
+
       const cipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
       const plainText = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
       const cipherIndex = cipherText.indexOf(randomCipherLetter);
       
       if (cipherIndex !== -1 && cipherIndex < plainText.length) {
-        // Get the corresponding plain letter from the original text
+
         correctPlainLetter = plainText[cipherIndex];
       }
     }
 
-    // Update the revealed letters state
+
     if (correctPlainLetter) {
       const newRevealedLetters = {
         ...revealedLetters,
@@ -461,7 +461,7 @@ export const useHintSystem = (
       };
       setRevealedLetters(newRevealedLetters);
 
-      // Track if this letter was revealed by a hint (all substitutions count as skipped)
+
       const newHintedLetters = {
         ...hintedLetters,
         [questionIndex]: {
@@ -471,7 +471,7 @@ export const useHintSystem = (
       };
       setHintedLetters(newHintedLetters);
 
-      // Update the quotes state to reflect the revealed letter
+
       const newQuotes = quotes.map((q, idx) => {
         if (idx === questionIndex) {
           let updatedSolution = {
@@ -479,12 +479,12 @@ export const useHintSystem = (
             [randomCipherLetter]: correctPlainLetter
           };
           
-          // For Fractionated Morse, also update the replacement table
+
           if (q.cipherType === 'Fractionated Morse' && q.fractionationTable) {
-            // Find which triplet this cipher letter maps to
+
             for (const [triplet, letter] of Object.entries(q.fractionationTable)) {
               if (letter === randomCipherLetter) {
-                // Update the replacement table entry for this triplet
+
                 updatedSolution = {
                   ...updatedSolution,
                   [`replacement_${triplet}`]: randomCipherLetter
@@ -505,12 +505,12 @@ export const useHintSystem = (
     }
   }, [quotes, revealedLetters, setRevealedLetters, setQuotes, hintCounts, setHintCounts, setHintedLetters, hintedLetters]);
 
-  // Handle hint functionality
+
   const handleHintClick = useCallback((questionIndex: number) => {
     const quote = quotes[questionIndex];
     if (!quote) return;
 
-    // Cryptarithm: reveal a random unfilled position and sync all same-digit positions; mark as hinted
+
     if (quote.cipherType === 'Cryptarithm' && quote.cryptarithmData) {
       const allLetters = quote.cryptarithmData.digitGroups.map(g => g.word.replace(/\s/g, '')).join('');
       const allDigitsArr: string[] = [];
@@ -542,64 +542,64 @@ export const useHintSystem = (
       return;
     }
 
-    // Special handling for Baconian: first click shows binary type, second shows crib
+
     if (quote.cipherType === 'Baconian') {
       const currentHintCount = hintCounts[questionIndex] || 0;
       if (currentHintCount === 0) {
-        // First click: show binary type
+
         setActiveHints({
           ...activeHints,
           [questionIndex]: true
         });
-        // Increment hint count
+
         const newHintCounts = { ...hintCounts, [questionIndex]: 1 };
         setHintCounts(newHintCounts);
       } else if (currentHintCount === 1) {
-        // Second click: show crib
+
         const words = (quote.quote.match(/[A-Za-z]+/g) || [])
           .map(w => w.toUpperCase())
           .filter(w => w.length >= 3)
           .sort((a, b) => a.length - b.length);
         if (words.length > 0) {
-          // Show the crib
+
           setActiveHints({
             ...activeHints,
             [questionIndex]: true
           });
         } else {
-          // If no crib available, reveal a random letter
+
           revealRandomLetter(questionIndex);
         }
       } else {
-        // Third click and beyond: reveal random letters
+
         revealRandomLetter(questionIndex);
       }
       return;
     }
 
-    // Check if this cipher type has a crib available
+
     const hintContent = getHintContent(quote);
     const hasCrib = hintContent.includes('Crib:') && !hintContent.includes('No crib found');
     
     if (hasCrib) {
-      // If crib is not shown yet, show it
+
       if (!activeHints[questionIndex]) {
         setActiveHints({
           ...activeHints,
           [questionIndex]: true
         });
       } else if (quote.cipherType === 'Complete Columnar' && !activeHints[`${questionIndex}_second_crib`]) {
-        // For Complete Columnar, show second crib before revealing random letters
+
         setActiveHints({
           ...activeHints,
           [`${questionIndex}_second_crib`]: true
         });
       } else {
-        // If crib is already shown, reveal a random letter
+
         revealRandomLetter(questionIndex);
       }
     } else {
-      // For ciphers without cribs, always reveal a random correct letter
+
       revealRandomLetter(questionIndex);
     }
   }, [quotes, activeHints, setActiveHints, getHintContent, revealRandomLetter, hintCounts, setHintCounts]);

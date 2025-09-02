@@ -5,7 +5,7 @@ export const useSolutionHandlers = (
   quotes: QuoteData[],
   setQuotes: Dispatch<SetStateAction<QuoteData[]>>
 ) => {
-  // Handle input change for aristocrat/patristocrat solution
+
   const handleSolutionChange = useCallback((quoteIndex: number, cipherLetter: string, plainLetter: string) => {
     setQuotes((prevQuotes) => prevQuotes.map((quote, index) => 
       index === quoteIndex 
@@ -14,7 +14,7 @@ export const useSolutionHandlers = (
     ));
   }, [setQuotes]);
 
-  // Handle input change for baconian solution (uses position-based indexing)
+
   const handleBaconianSolutionChange = useCallback((quoteIndex: number, position: number, plainLetter: string) => {
     setQuotes((prevQuotes) => prevQuotes.map((quote, index) => 
       index === quoteIndex 
@@ -23,7 +23,7 @@ export const useSolutionHandlers = (
     ));
   }, [setQuotes]);
 
-  // Handle frequency note change
+
   const handleFrequencyNoteChange = useCallback((quoteIndex: number, letter: string, note: string) => {
     setQuotes((prevQuotes) => prevQuotes.map((quote, index) => 
       index === quoteIndex 
@@ -32,7 +32,7 @@ export const useSolutionHandlers = (
     ));
   }, [setQuotes]);
 
-  // Handle Hill cipher solution changes
+
   const handleHillSolutionChange = useCallback((quoteIndex: number, type: 'matrix' | 'plaintext', value: string[][] | { [key: number]: string }) => {
     setQuotes((prevQuotes) => prevQuotes.map((quote, index) => 
       index === quoteIndex 
@@ -50,7 +50,7 @@ export const useSolutionHandlers = (
     ));
   }, [setQuotes]);
 
-  // Handle Nihilist cipher solution changes
+
   const handleNihilistSolutionChange = useCallback((quoteIndex: number, position: number, plainLetter: string) => {
     setQuotes((prevQuotes) => prevQuotes.map((quote, index) => {
       if (index === quoteIndex) {
@@ -66,7 +66,7 @@ export const useSolutionHandlers = (
     }));
   }, [setQuotes]);
 
-  // Handle Checkerboard cipher solution changes (position-based like Nihilist)
+
   const handleCheckerboardSolutionChange = useCallback((quoteIndex: number, position: number, plainLetter: string) => {
     setQuotes((prevQuotes) => prevQuotes.map((quote, index) => {
       if (index === quoteIndex) {
@@ -82,7 +82,7 @@ export const useSolutionHandlers = (
     }));
   }, [setQuotes]);
 
-  // Handle keyword solution changes for K1, K2, K3 ciphers when askForKeyword is true
+
   const handleKeywordSolutionChange = useCallback((quoteIndex: number, keyword: string) => {
     setQuotes((prevQuotes) => prevQuotes.map((quote, index) => 
       index === quoteIndex 
@@ -91,7 +91,7 @@ export const useSolutionHandlers = (
     ));
   }, [setQuotes]);
 
-  // Handle Cryptarithm cipher solution changes (position-based like Nihilist)
+
   const handleCryptarithmSolutionChange = useCallback((quoteIndex: number, position: number, plainLetter: string) => {
     setQuotes((prevQuotes) => prevQuotes.map((quote, index) => {
       if (index === quoteIndex) {

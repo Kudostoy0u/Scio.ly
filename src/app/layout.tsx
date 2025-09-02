@@ -9,7 +9,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { getServerUser } from '@/lib/supabaseServer';
 import { cookies } from 'next/headers';
 import ThemeColorMeta from '@/app/components/ThemeColorMeta';
-// import { createSupabaseServerClient } from '@/lib/supabaseServer';
+// import { createsupabaseserverclient } from '@/lib/supabaseserver';
 
 export const metadata: Metadata = {
   title: 'Scio.ly',
@@ -57,8 +57,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  // The following viewport-fit=cover ensures the page uses the full device screen
-  // This is particularly important for devices with notches (iPhone X and later)
+
+
   viewportFit: 'cover',
 };
 
@@ -68,12 +68,12 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const user = await getServerUser();
-  // Determine initial theme preference from cookie (SSR-safe)
+
   const cookieStore = await cookies();
   const themeCookie = cookieStore.get('theme')?.value;
   const initialDarkMode = themeCookie === 'dark' ? true : themeCookie === 'light' ? false : false;
 
-  // Keep layout lean; AuthProvider will resolve user on client
+
   const initialDisplayFirstName: string | null = null;
   return (
     <html lang="en" suppressHydrationWarning>

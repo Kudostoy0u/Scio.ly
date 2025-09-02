@@ -20,7 +20,7 @@ export function BannerProvider({ children }: { children: ReactNode }) {
     
     checkBannerVisibility();
     
-    // Listen for storage changes
+
     window.addEventListener('storage', checkBannerVisibility);
     return () => window.removeEventListener('storage', checkBannerVisibility);
   }, []);

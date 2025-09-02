@@ -5,7 +5,7 @@ import { geminiService } from '@/lib/services/gemini';
 import { blacklists as blacklistsTable, questions as questionsTable } from '@/lib/db/schema';
 import { and, eq } from 'drizzle-orm';
 
-// POST /api/report/remove - Report a question for removal
+
 export async function POST(request: NextRequest) {
   try {
     const body: ReportRemoveRequest = await request.json();
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     console.log('📝 [REPORT/REMOVE] Remove request received');
     console.log(`📋 [REPORT/REMOVE] Event: ${body.event}`);
 
-    // AI analysis of the question for removal justification
+
     let shouldRemove = false;
     let aiReason = 'Question analysis not available';
 
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
         console.log('✅ [REPORT/REMOVE] Gemini AI response received:', result);
 
-        // Determine if question should be removed based on AI analysis
+
         shouldRemove = Boolean(result.remove);
         aiReason = String(result.reason || 'AI analysis completed');
 
@@ -48,16 +48,16 @@ export async function POST(request: NextRequest) {
     }
 
     if (shouldRemove) {
-      // Move question to blacklist
+
       const questionDataJSON = JSON.stringify(body.question);
 
       try {
-        // Add to blacklist via Drizzle
+
         await db
           .insert(blacklistsTable)
           .values({ event: body.event, questionData: JSON.parse(questionDataJSON) });
 
-        // Remove from main questions table by id or content
+
         const questionId = body.question.id as string | undefined;
         if (questionId) {
           try {
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
             console.log('Question might not exist in main table (id path):', error);
           }
         } else {
-          // Fallback: try content-based match using event + question text and optional tournament/division
+
           const event = String(body.event);
           const q = body.question as Record<string, unknown>;
           const conditions: any[] = [

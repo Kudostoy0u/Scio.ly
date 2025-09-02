@@ -1,7 +1,7 @@
 import { pgTable, uuid, text, timestamp, jsonb, numeric, doublePrecision, integer } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
-// Questions table
+
 export const questions = pgTable('questions', {
   id: uuid('id').primaryKey(),
   question: text('question').notNull(),
@@ -17,7 +17,7 @@ export const questions = pgTable('questions', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-// Quotes table (for quotes <= 120 characters)
+
 export const quotes = pgTable('quotes', {
   id: uuid('id').primaryKey().defaultRandom(),
   author: text('author').notNull(),
@@ -28,7 +28,7 @@ export const quotes = pgTable('quotes', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
-// Long quotes table (for quotes > 120 characters, unused for codebusters)
+
 export const longquotes = pgTable('longquotes', {
   id: uuid('id').primaryKey().defaultRandom(),
   author: text('author').notNull(),
@@ -39,7 +39,7 @@ export const longquotes = pgTable('longquotes', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
-// Share codes table
+
 export const shareCodes = pgTable('share_codes', {
   id: uuid('id').primaryKey().defaultRandom(),
   code: text('code').notNull().unique(),
@@ -49,7 +49,7 @@ export const shareCodes = pgTable('share_codes', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
-// Edits table
+
 export const edits = pgTable('edits', {
   id: uuid('id').primaryKey().defaultRandom(),
   event: text('event').notNull(),
@@ -58,7 +58,7 @@ export const edits = pgTable('edits', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// Blacklists table
+
 export const blacklists = pgTable('blacklists', {
   id: uuid('id').primaryKey().defaultRandom(),
   event: text('event').notNull(),
@@ -66,7 +66,7 @@ export const blacklists = pgTable('blacklists', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
-// ID Events table (image-based identification questions)
+
 export const idEvents = pgTable('id_events', {
   id: uuid('id').primaryKey(),
   question: text('question').notNull(),
@@ -83,7 +83,7 @@ export const idEvents = pgTable('id_events', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-// Base52 codes table for efficient question lookups
+
 export const base52Codes = pgTable('base52_codes', {
   id: uuid('id').primaryKey().defaultRandom(),
   code: text('code').notNull().unique(),

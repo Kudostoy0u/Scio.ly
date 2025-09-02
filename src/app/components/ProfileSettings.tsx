@@ -57,7 +57,7 @@ export default function ProfileSettings({ onClose }: { onClose: () => void }) {
       .match({ email: user.email || '' });
 
     if (!error) {
-      // Update local cache and broadcast so greeting updates immediately
+
       try {
         const first = (firstName || '').trim();
         const display = (displayName || '').trim();

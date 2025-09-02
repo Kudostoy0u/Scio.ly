@@ -14,9 +14,9 @@ export default function NotFound() {
     setMounted(true);
   }, []);
 
-  // Add effect for scrollbar theme
+
   useEffect(() => {
-    // Apply scrollbar styles based on theme
+
     document.documentElement.classList.toggle('dark-scrollbar', darkMode);
     document.documentElement.classList.toggle('light-scrollbar', !darkMode);
   }, [darkMode]);

@@ -328,12 +328,12 @@ export const setupTestPrintWindow = (printContent: string): Promise<Window> => {
         return;
       }
 
-      // Add error handling for the print window
+
       printWindow.onerror = () => {
         reject(new Error('Failed to load print window'));
       };
 
-      // Add timeout to prevent hanging
+
       const timeout = setTimeout(() => {
         reject(new Error('Print window failed to load within 10 seconds'));
       }, 10000);
@@ -342,7 +342,7 @@ export const setupTestPrintWindow = (printContent: string): Promise<Window> => {
       printWindow.document.close();
       
       printWindow.onload = () => {
-        // Immediately try to print as soon as the window loads
+
         setTimeout(() => {
           try { 
             printWindow.focus(); 
@@ -352,11 +352,11 @@ export const setupTestPrintWindow = (printContent: string): Promise<Window> => {
           }
         }, 200);
 
-        // Start paged.js rendering
+
         if (printWindow.PagedPolyfill) {
           printWindow.PagedPolyfill.preview();
         } else {
-          // Fallback if paged.js fails to load - show instructions
+
           setTimeout(() => {
             const fallbackInstructions = printWindow.document.createElement('div');
             fallbackInstructions.innerHTML = `
@@ -379,7 +379,7 @@ export const setupTestPrintWindow = (printContent: string): Promise<Window> => {
           }, 500);
         }
 
-        // Inject a top banner with Print button (always present to avoid relying on inline scripts)
+
         try {
           const banner = printWindow.document.createElement('div');
           banner.setAttribute('id', '__paged_banner__');
@@ -401,11 +401,11 @@ export const setupTestPrintWindow = (printContent: string): Promise<Window> => {
           });
           if (cbtn) cbtn.addEventListener('click', () => printWindow.close());
         } catch (e) {
-          // ignore DOM injection errors
+          // ignore dom injection errors
           console.error('Failed to inject banner into print window', e);
         }
 
-        // Bring popup to front and focus
+
         try { printWindow.focus(); } catch {}
         clearTimeout(timeout);
         resolve(printWindow);
@@ -418,14 +418,14 @@ export const setupTestPrintWindow = (printContent: string): Promise<Window> => {
 };
 
 export const createTestInPagePrint = async (config: TestPrintConfig, printStyles: string): Promise<void> => {
-  // Create a new print window instead of modifying the current page
-  // This prevents React DOM manipulation errors
+
+
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
     throw new Error('Please allow popups to print the test');
   }
 
-  // Build print HTML for the new window
+
   const printHtml = `
     <!DOCTYPE html>
     <html>
@@ -500,13 +500,13 @@ export const createTestInPagePrint = async (config: TestPrintConfig, printStyles
     </html>
   `;
 
-  // Write content to the new window
+
   printWindow.document.write(printHtml);
   printWindow.document.close();
   
-  // Wait for the window to load
+
   printWindow.onload = () => {
-    // Immediately try to print as soon as the window loads
+
     setTimeout(() => {
       try { 
         printWindow.focus(); 
@@ -516,11 +516,11 @@ export const createTestInPagePrint = async (config: TestPrintConfig, printStyles
       }
     }, 200);
 
-    // Start paged.js rendering
+
     if (printWindow.PagedPolyfill) {
       printWindow.PagedPolyfill.preview();
     } else {
-      // Fallback if paged.js fails to load
+
       setTimeout(() => {
         const fallbackInstructions = printWindow.document.createElement('div');
         fallbackInstructions.innerHTML = `
@@ -543,7 +543,7 @@ export const createTestInPagePrint = async (config: TestPrintConfig, printStyles
       }, 500);
     }
 
-    // Inject a top banner with Print button
+
     try {
       const banner = printWindow.document.createElement('div');
       banner.setAttribute('id', '__paged_banner__');
@@ -567,7 +567,7 @@ export const createTestInPagePrint = async (config: TestPrintConfig, printStyles
       console.error('Failed to inject banner into print window', e);
     }
 
-    // Bring popup to front and focus
+
     try { printWindow.focus(); } catch {}
   };
 
@@ -575,6 +575,6 @@ export const createTestInPagePrint = async (config: TestPrintConfig, printStyles
     throw new Error('Failed to load print window');
   };
 
-  // Small delay to let DOM settle
+
   await new Promise((res) => setTimeout(res, 100));
 };

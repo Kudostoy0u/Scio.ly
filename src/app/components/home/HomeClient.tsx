@@ -6,13 +6,14 @@ import { FaBook, FaPen, FaDiscord, FaInstagram, FaGithub, FaFlask, FaBrain, FaUs
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from 'next/navigation';
 import { FiArrowRight } from "react-icons/fi";
-// Toast styles are injected globally by Providers
+
 import Header from '../../components/Header';
 import Image from 'next/image';
 import { useTheme } from '../../contexts/ThemeContext';
 import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
 import testimonialsData from '../../../../public/testimonials.json';
+import HylasBanner from '../../dashboard/components/HylasBanner';
 
 
 export default function HomeClient() {
@@ -20,7 +21,8 @@ export default function HomeClient() {
   const router = useRouter();
   const [pwaChecked, setPwaChecked] = useState(false);
   const [isPwa, setIsPwa] = useState(false);
-  // Detect PWA very early and redirect before painting content
+  const [bannerVisible, setBannerVisible] = useState<boolean | null>(null);
+
   useEffect(() => {
     const standalone = (typeof window !== 'undefined') && (
       (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
@@ -51,6 +53,21 @@ export default function HomeClient() {
     document.documentElement.classList.toggle('light-scrollbar', !darkMode);
   }, [darkMode]);
 
+  // Sync banner visibility with localStorage and events (same as dashboard/header)
+  useEffect(() => {
+    const checkBannerVisibility = () => {
+      const bannerClosed = localStorage.getItem('hylas-banner-closed') === 'true';
+      setBannerVisible(!bannerClosed);
+    };
+    checkBannerVisibility();
+    window.addEventListener('storage', checkBannerVisibility);
+    window.addEventListener('banner-closed', checkBannerVisibility);
+    return () => {
+      window.removeEventListener('storage', checkBannerVisibility);
+      window.removeEventListener('banner-closed', checkBannerVisibility);
+    };
+  }, []);
+
   useEffect(() => {
     if (timeLeft <= 0) return;
     const intervalId = setInterval(() => {
@@ -61,15 +78,26 @@ export default function HomeClient() {
 
   const titleColor = darkMode ? 'text-blue-400' : 'text-blue-600';
 
-  // While checking or redirecting in PWA mode, render nothing to avoid flicker
+
   if (!pwaChecked || isPwa) {
     return null;
   }
 
   return (
     <div className={`relative font-Poppins w-full max-w-full overflow-x-hidden ${darkMode ? 'bg-[#020617]' : 'bg-white'}  cursor-default`}>
-      <Header />
-      <section className="relative pt-24 md:pt-16 md:min-h-screen">
+      {bannerVisible && (
+        <HylasBanner onClose={() => {
+          try {
+            localStorage.setItem('hylas-banner-closed', 'true');
+            window.dispatchEvent(new CustomEvent('banner-closed'));
+          } catch {}
+          setBannerVisible(false);
+        }} />
+      )}
+      <div className={bannerVisible ? 'relative' : ''} style={bannerVisible ? { marginTop: '32px' } : {}}>
+        <Header />
+      </div>
+      <section className={`relative ${bannerVisible ? 'pt-28' : 'pt-24'} md:min-h-screen`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-4rem)] flex items-start lg:items-center">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center w-full lg:-mt-10">
             <motion.div

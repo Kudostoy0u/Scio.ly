@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 import { questions } from '@/lib/db/schema';
 import { asc } from 'drizzle-orm';
 
-// GET /api/meta/tournaments - Get all distinct tournaments
+
 export async function GET() {
   try {
     const rows = await db.select({ tournament: questions.tournament }).from(questions).groupBy(questions.tournament).orderBy(asc(questions.tournament));

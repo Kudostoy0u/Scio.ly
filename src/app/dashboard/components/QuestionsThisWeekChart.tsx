@@ -23,10 +23,10 @@ export default function QuestionsThisWeekChart({
     }
   });
 
-  // State for mobile tooltip
+
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
-  // Close tooltip when clicking outside
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
@@ -43,7 +43,7 @@ export default function QuestionsThisWeekChart({
     try { localStorage.setItem('scio_chart_type', chartType); } catch {}
   }, [chartType]);
 
-  // Responsive sizing
+
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const chartAreaRef = useRef<HTMLDivElement | null>(null);
   const [containerWidth, setContainerWidth] = useState<number>(0);
@@ -66,7 +66,7 @@ export default function QuestionsThisWeekChart({
     return Math.max(6, Math.min(widthConstrained, heightConstrained));
   }, [containerWidth, weeksCount, chartAreaHeight]);
 
-  // Line chart data - last 7 days
+
   const last7Days = useMemo(() => {
     const days: { label: string; key: string; value: number }[] = [];
     for (let i = 6; i >= 0; i--) {
@@ -80,7 +80,7 @@ export default function QuestionsThisWeekChart({
     return days;
   }, [historyData]);
 
-  // Weekly totals (current week vs previous week)
+
   const weeklyTotals = useMemo(() => {
     const now = new Date();
     let current = 0;
@@ -98,7 +98,7 @@ export default function QuestionsThisWeekChart({
     return { current, previous };
   }, [historyData]);
 
-  // Today's totals (today vs yesterday)
+
   const todayTotals = useMemo(() => {
     const now = new Date();
     const todayKey = now.toISOString().split('T')[0];
@@ -110,7 +110,7 @@ export default function QuestionsThisWeekChart({
     return { today, yesterday: y };
   }, [historyData]);
 
-  // Monthly totals (current month vs previous month)
+
   const monthTotals = useMemo(() => {
     const now = new Date();
     const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
@@ -120,7 +120,7 @@ export default function QuestionsThisWeekChart({
     let currentMonth = 0;
     let previousMonth = 0;
 
-    // Sum current month
+
     for (
       let d = new Date(startOfMonth);
       d <= now;
@@ -130,7 +130,7 @@ export default function QuestionsThisWeekChart({
       currentMonth += historyData[key]?.questionsAttempted ?? 0;
     }
 
-    // Sum previous month
+
     for (
       let d = new Date(startOfPrevMonth);
       d <= endOfPrevMonth;
@@ -142,7 +142,7 @@ export default function QuestionsThisWeekChart({
     return { currentMonth, previousMonth };
   }, [historyData]);
 
-  // Calculate percentage changes
+
   const getDelta = (current: number, previous: number) => {
     if (current === 0 && previous === 0) return 0;
     if (previous === 0) return 100; // treat as full increase from zero
@@ -153,7 +153,7 @@ export default function QuestionsThisWeekChart({
   const todayDelta = getDelta(todayTotals.today, todayTotals.yesterday);
   const monthDelta = getDelta(monthTotals.currentMonth, monthTotals.previousMonth);
 
-  // Chart configuration
+
   const sharedTheme = {
     foreColor: darkMode ? '#e5e7eb' : '#111827',
   } as const;
@@ -174,7 +174,7 @@ export default function QuestionsThisWeekChart({
     { name: 'Answered', data: last7Days.map(d => d.value) },
   ]), [last7Days]);
 
-  // Heatmap grid data
+
   const gridData = useMemo(() => {
     const today = new Date();
     const endWeekday = today.getDay();
@@ -206,7 +206,7 @@ export default function QuestionsThisWeekChart({
     return max;
   }, [gridData]);
 
-  // Heatmap color palette
+
   const heatmapPalette = useMemo(() => ({
     empty: darkMode ? '#374151' : '#e5e7eb', // gray-700 vs gray-200
     border: darkMode ? '#4b5563' : '#d1d5db', // gray-600 vs gray-300
@@ -224,7 +224,7 @@ export default function QuestionsThisWeekChart({
     return heatmapPalette.levels[level - 1] ?? '#22c55e';
   };
 
-  // Responsive resize handling
+
   useEffect(() => {
     const RO = (typeof ResizeObserver !== 'undefined') ? ResizeObserver : (window as any).ResizeObserver;
     if (wrapperRef.current) {

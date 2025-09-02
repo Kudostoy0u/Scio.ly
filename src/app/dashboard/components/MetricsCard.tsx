@@ -13,7 +13,7 @@ interface MetricsCardProps {
   onViewChange: (view: 'daily' | 'weekly' | 'allTime') => void;
   color: string;
   darkMode: boolean;
-  // Optional denominators to render as fraction (numerator/denominator)
+
   dailyDenominator?: number;
   weeklyDenominator?: number;
   allTimeDenominator?: number;
@@ -53,7 +53,7 @@ export default function MetricsCard({
 
 
   const getDisplay = (currentView: 'daily' | 'weekly' | 'allTime') => {
-    // Only show loading if we don't have any data yet
+
     const hasData = dailyValue > 0 || weeklyValue > 0 || allTimeValue > 0;
     if (isLoading && !hasData) {
       return <div className={`text-4xl font-bold ${color}`}>...</div>;

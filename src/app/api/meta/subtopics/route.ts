@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse } from '@/lib/types/api';
 import { client } from '@/lib/db';
 
-// GET /api/meta/subtopics - Get all distinct subtopics (optionally filtered by event)
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;

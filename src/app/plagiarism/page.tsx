@@ -6,11 +6,11 @@ import { QuestionItem } from './components/QuestionItem';
 import { PlagiarismModal } from './components/PlagiarismModal';
 import { ExtractedQuestion, ProcessedQuestions, OfficialQuestion, PlagiarismMatch, QuestionPlagiarismSummary } from './types';
 
-// PDF processing will be handled by the backend API instead of client-side
+
 
 // types moved to ./types
 
-// Helper functions moved outside component to prevent re-creation on every render
+
 const getSimilarityColor = (similarity: number) => {
   if (similarity >= 0.8) return 'text-red-600 bg-red-50';
   if (similarity >= 0.6) return 'text-orange-600 bg-orange-50';
@@ -39,11 +39,11 @@ const getRiskText = (riskLevel: string | null) => {
   return 'No Risk';
 };
 
-// Memoized Modal component (moved to components) retained here for backward compatibility export if needed
+
 const PlagiarismModalLegacy = memo(({ isOpen, onClose, summary }: { isOpen: boolean; onClose: () => void; summary: QuestionPlagiarismSummary | null }) => {
   if (!isOpen || !summary) return null;
 
-  // All data is pre-calculated - zero processing needed
+
   const { highRiskMatches, mediumRiskMatches, lowRiskMatches, matches, totalMatches } = summary;
   const highRiskCount = highRiskMatches.length;
   const mediumRiskCount = mediumRiskMatches.length;
@@ -204,7 +204,7 @@ const PlagiarismModalLegacy = memo(({ isOpen, onClose, summary }: { isOpen: bool
 
 PlagiarismModalLegacy.displayName = 'PlagiarismModalLegacy';
 
-// Memoized Question Item component to prevent re-renders
+
 const QuestionItemLegacy = memo(({ 
   question, 
   index, 
@@ -246,7 +246,7 @@ const QuestionItemLegacy = memo(({
               </p>
             </div>
             {(() => {
-              // Show analysis status if this question hasn't been processed yet
+
               if (!summary) {
                 return (
                   <span className="ml-4 flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
@@ -258,7 +258,7 @@ const QuestionItemLegacy = memo(({
                 );
               }
               
-              // Show risk bubble if we have matches
+
               if (riskLevel && hasMatches) {
                 return (
                   <button
@@ -331,7 +331,7 @@ const QuestionItemLegacy = memo(({
 
 QuestionItemLegacy.displayName = 'QuestionItemLegacy';
 
-// Web Worker for fuzzy matching
+
 const createFuzzyMatchingWorker = () => {
   const workerCode = `
     // Optimized string similarity function
@@ -561,7 +561,7 @@ export default function PlagiarismPage() {
   const scrollPositionRef = useRef<number>(0);
   const questionSummariesRef = useRef<QuestionPlagiarismSummary[]>([]);
 
-  // Cleanup worker on unmount
+
   useEffect(() => {
     return () => {
       if (workerRef.current) {
@@ -571,23 +571,23 @@ export default function PlagiarismPage() {
     };
   }, []);
 
-  // Preserve scroll position during updates - only update when summaries actually change
+
   useEffect(() => {
     if (analysisScrollRef.current && scrollPositionRef.current > 0) {
       analysisScrollRef.current.scrollTop = scrollPositionRef.current;
     }
   }, [questionSummaries]);
 
-  // Save scroll position when user scrolls
+
   const handleScroll = useCallback(() => {
     if (analysisScrollRef.current) {
       scrollPositionRef.current = analysisScrollRef.current.scrollTop;
     }
   }, []);
 
-  // Check if input has changed to reset button state
+
   const checkInputChange = useCallback((newInput: string) => {
-    // Use a more robust hashing function that handles any characters
+
     const newHash = newInput.length.toString() + newInput.slice(0, 50).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     if (newHash !== lastInputHash) {
       setLastInputHash(newHash);
@@ -598,12 +598,12 @@ export default function PlagiarismPage() {
     }
   }, [lastInputHash]);
 
-  // Stable callback for opening modal
+
   const handleOpenModal = useCallback((summary: QuestionPlagiarismSummary) => {
     setModalData({ isOpen: true, summary });
   }, []);
 
-  // Stable callback for closing modal
+
   const handleCloseModal = useCallback(() => {
     setModalData({ isOpen: false, summary: null });
   }, []);
@@ -621,7 +621,7 @@ export default function PlagiarismPage() {
     setIsDataLoaded(false);
     
     try {
-      // Fetch questions for the selected event with high limit to get all questions
+
       const response = await fetch(`${api.questions}?event=${encodeURIComponent(eventToLoad)}&limit=50000`);
       const data = await response.json();
       
@@ -650,7 +650,7 @@ export default function PlagiarismPage() {
     setLoadingState('loading');
 
     try {
-      // Convert file to base64 for backend processing
+
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -665,7 +665,7 @@ export default function PlagiarismPage() {
         reader.onerror = (error) => reject(error);
       });
       
-      // Send to backend for document processing
+
       const response = await fetch(api.processPdf, {
         method: 'POST',
         headers: {
@@ -705,7 +705,7 @@ export default function PlagiarismPage() {
     setLoadingState('loading');
 
     try {
-      // Step 1: Extract questions using AI
+
       const extractResponse = await fetch(api.geminiExtractQuestions, {
         method: 'POST',
         headers: {
@@ -728,14 +728,14 @@ export default function PlagiarismPage() {
       setExtractedQuestions(extractedQuestions);
       setStatus(`Step 2: Starting background analysis...`);
 
-      // Step 2: Use Web Worker for fuzzy matching
+
       const allMatches: PlagiarismMatch[] = [];
       let completedQuestions = 0;
       
-      // Initialize the ref with empty array
+
       questionSummariesRef.current = new Array(extractedQuestions.questions.length);
       
-      // Create worker if not exists
+
       if (!workerRef.current) {
         workerRef.current = createFuzzyMatchingWorker();
       }
@@ -743,17 +743,17 @@ export default function PlagiarismPage() {
       setIsWorkerActive(true);
       setIsAnalyzing(true);
       
-      // Set up worker message handler
+
       const handleWorkerMessage = (event: MessageEvent) => {
         const { summary, questionIndex } = event.data;
         
-        // Validate the summary before using it
+
         if (!summary || typeof summary.questionIndex !== 'number') {
           console.warn('Invalid summary received from worker:', summary);
           return;
         }
         
-        // Ensure all required properties exist
+
         const validSummary = {
           ...summary,
           matches: summary.matches || [],
@@ -764,26 +764,26 @@ export default function PlagiarismPage() {
           highestSimilarity: summary.highestSimilarity || 0
         };
         
-        // Update the summary for this question using ref to avoid re-renders
+
         questionSummariesRef.current[questionIndex] = validSummary;
         
-        // Only update state periodically to avoid constant re-renders
+
         const shouldUpdate = questionIndex === questionSummariesRef.current.length - 1 || 
-                           (questionIndex + 1) % 10 === 0; // Update every 10 questions
+                           (questionIndex + 1) % 10 === 0;
         
         if (shouldUpdate) {
           setQuestionSummaries([...questionSummariesRef.current]);
         }
         
-        // Add matches to all matches (but don't update state until end)
+
         allMatches.push(...validSummary.matches);
         
         completedQuestions++;
         setStatus(`Step 2: Analyzing ${completedQuestions}/${extractedQuestions.questions.length} questions...`);
         
-        // Check if all questions are processed
+
         if (completedQuestions === extractedQuestions.questions.length) {
-          // Sort all matches by similarity score (highest first)
+
           allMatches.sort((a, b) => b.similarity - a.similarity);
           
           setQuestionSummaries([...questionSummariesRef.current]);
@@ -793,7 +793,7 @@ export default function PlagiarismPage() {
         setIsAnalyzing(false);
         setHasAnalyzed(true);
           
-           // Clean up worker
+
           if (workerRef.current) {
             workerRef.current.terminate();
             workerRef.current = null;
@@ -801,21 +801,21 @@ export default function PlagiarismPage() {
         }
       };
       
-      // Add event listener
+
       workerRef.current.onmessage = handleWorkerMessage;
       
-      // Process each question in the worker
+
       for (let questionIndex = 0; questionIndex < extractedQuestions.questions.length; questionIndex++) {
         const inputQuestion = extractedQuestions.questions[questionIndex];
         
-        // Send question to worker for processing
+
         workerRef.current.postMessage({
           inputQuestion,
           officialQuestions,
           questionIndex
         });
         
-        // Small delay to prevent overwhelming the worker
+
         await new Promise(resolve => setTimeout(resolve, 5));
       }
       
@@ -825,7 +825,7 @@ export default function PlagiarismPage() {
       setIsWorkerActive(false);
       setIsAnalyzing(false);
       
-      // Clean up worker on error
+
       if (workerRef.current) {
         workerRef.current.terminate();
         workerRef.current = null;

@@ -33,16 +33,21 @@ export default function HylasBanner({ onClose }: HylasBannerProps) {
     };
   }, []);
 
-  // Compute dynamic background opacity for smooth fade on homepage
+
   const targetOpacity = 0.95;
   const computedOpacity = isHomePage ? Math.min(scrollOpacity * targetOpacity, targetOpacity) : targetOpacity;
   const backgroundColor = darkMode
     ? `rgba(17, 24, 39, ${computedOpacity})` // gray-900
     : `rgba(255, 255, 255, ${computedOpacity})`;
+  const borderColor = computedOpacity === 0
+    ? 'transparent'
+    : darkMode
+      ? `rgba(31, 41, 55, ${computedOpacity})` // gray-800
+      : `rgba(229, 231, 235, ${computedOpacity})`; // gray-200
 
   const handleClose = () => {
     localStorage.setItem('hylas-banner-closed', 'true');
-    // Dispatch a custom event to notify Header immediately
+
     window.dispatchEvent(new CustomEvent('banner-closed'));
     onClose();
   };
@@ -54,7 +59,7 @@ export default function HylasBanner({ onClose }: HylasBannerProps) {
     >
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-center h-8 px-4 sm:px-6">
-          <div className={`text-sm text-center ${
+          <div className={`text-xs sm:text-sm text-center ${
             darkMode ? 'text-gray-300' : 'text-gray-700'
           }`}>
             <span className="block sm:hidden">
@@ -70,7 +75,7 @@ export default function HylasBanner({ onClose }: HylasBannerProps) {
                 Hylas SO
                 <ExternalLink className="inline w-3 h-3 ml-1" />
               </a>
-              , a satellite tournament hosted by LAHS!
+              , a satellite tourney by LAHS!
             </span>
             <span className="hidden sm:block">
               Check out{' '}
@@ -104,8 +109,8 @@ export default function HylasBanner({ onClose }: HylasBannerProps) {
         <X className="w-4 h-4" />
       </button>
       
-      {/* Bottom separator line - full width */}
-      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-300"></div>
+      {/* Bottom separator line - full width, matches Header border color */}
+      <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: borderColor }}></div>
     </div>
   );
 }

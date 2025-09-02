@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse } from '@/lib/types/api';
 
-// POST /api/upload-image - Upload image to CDN
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 400 });
     }
 
-    // Validate file type
+
     if (!imageFile.type.startsWith('image/')) {
       const response: ApiResponse = {
         success: false,
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 400 });
     }
 
-    // Validate file size (max 5MB)
+
     if (imageFile.size > 5 * 1024 * 1024) {
       const response: ApiResponse = {
         success: false,
@@ -35,11 +35,11 @@ export async function POST(request: NextRequest) {
 
     console.log('📤 [UPLOAD-IMAGE] Uploading image:', imageFile.name, 'Size:', imageFile.size);
 
-    // For now, we'll use a placeholder CDN URL
-    // In a real implementation, you would upload to a service like Cloudinary, AWS S3, etc.
+
+
     const cdnUrl = `https://example-cdn.com/images/${Date.now()}-${imageFile.name}`;
 
-    // Simulate upload delay
+
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     console.log('✅ [UPLOAD-IMAGE] Image uploaded successfully:', cdnUrl);

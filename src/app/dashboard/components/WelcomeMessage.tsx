@@ -7,7 +7,7 @@ import { WelcomeMessageProps } from '../types';
 export default function WelcomeMessage({ darkMode, currentUser: _currentUser, setDarkMode, greetingName: greetingNameProp, isLoading: _isLoading }: WelcomeMessageProps) {
   const [greetingName, setGreetingName] = useState<string>('');
 
-  // Initialize greeting name from localStorage on mount (client-side only)
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -19,7 +19,7 @@ export default function WelcomeMessage({ darkMode, currentUser: _currentUser, se
     }
   }, []);
 
-  // If a prop is provided from DashboardMain, prefer it and sync to localStorage
+
   useEffect(() => {
     if (greetingNameProp && greetingNameProp.trim()) {
       setGreetingName(prev => prev || greetingNameProp.trim());
@@ -27,7 +27,7 @@ export default function WelcomeMessage({ darkMode, currentUser: _currentUser, se
     }
   }, [greetingNameProp]);
 
-  // Listen for explicit updates from login/profile flows
+
   useEffect(() => {
     const onNameUpdated = (e: Event) => {
       const ce = e as CustomEvent<string>;
@@ -43,20 +43,20 @@ export default function WelcomeMessage({ darkMode, currentUser: _currentUser, se
     };
   }, []);
 
-  // Keep cache fresh when name is set
+
   useEffect(() => {
     if (greetingName) {
       try { localStorage.setItem('scio_display_name', greetingName); } catch {}
     }
   }, [greetingName]);
 
-  // Determine the final greeting name - prioritize localStorage over props to prevent flickering
+
   const resolvedName = (() => {
-    // If we have a name in localStorage, use it immediately (prevents flickering)
+
     if (greetingName && greetingName.trim()) {
       return greetingName.trim();
     }
-    // Fall back to prop if no localStorage name
+
     if (greetingNameProp && greetingNameProp.trim()) {
       return greetingNameProp.trim();
     }

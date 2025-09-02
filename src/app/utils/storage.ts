@@ -33,7 +33,7 @@ export function subscribeToDownloads(onUpdate: () => void): () => void {
         (ch as any).onmessage = handler as any;
       }
 
-      // Also listen to same-window CustomEvent fallback
+
       const winHandler = (ev: Event) => {
         try {
           const detail = (ev as CustomEvent).detail as any;
@@ -52,7 +52,7 @@ export function subscribeToDownloads(onUpdate: () => void): () => void {
       };
     }
 
-    // If BroadcastChannel not available, use window events only
+
     const winHandlerOnly = () => onUpdate();
     window.addEventListener('scio-downloads-updated', winHandlerOnly as EventListener);
     return () => window.removeEventListener('scio-downloads-updated', winHandlerOnly as EventListener);
@@ -61,7 +61,7 @@ export function subscribeToDownloads(onUpdate: () => void): () => void {
   }
 }
 
-// --- Database helpers ---
+// --- database helpers ---
 async function ensureDbOpen() {
   try { await db.open(); } catch {}
 }
@@ -80,7 +80,7 @@ function broadcastDownloadUpdate(eventSlug: string) {
   } catch {}
 }
 
-// Returns all event slugs that have been downloaded
+
 export async function listDownloadedEventSlugs(): Promise<string[]> {
   try {
     await ensureDbOpen();
@@ -91,7 +91,7 @@ export async function listDownloadedEventSlugs(): Promise<string[]> {
   }
 }
 
-// Check if an event has been downloaded
+
 export async function hasOfflineEvent(eventSlug: string): Promise<boolean> {
   try {
     await ensureDbOpen();
@@ -102,7 +102,7 @@ export async function hasOfflineEvent(eventSlug: string): Promise<boolean> {
   }
 }
 
-// Get questions for a specific event
+
 export async function getEventOfflineQuestions(eventSlug: string): Promise<any> {
   try {
     await ensureDbOpen();
@@ -113,7 +113,7 @@ export async function getEventOfflineQuestions(eventSlug: string): Promise<any> 
   }
 }
 
-// Save questions for an event
+
 export async function saveOfflineEvent(eventSlug: string, questions: any): Promise<boolean> {
   try {
     await ensureDbOpen();
@@ -130,7 +130,7 @@ export async function saveOfflineEvent(eventSlug: string, questions: any): Promi
   }
 }
 
-// Remove questions for an event
+
 export async function removeOfflineEvent(eventSlug: string): Promise<void> {
   try {
     await ensureDbOpen();
@@ -141,9 +141,9 @@ export async function removeOfflineEvent(eventSlug: string): Promise<void> {
   }
 }
 
-// Sync function for compatibility
+
 export async function syncOfflineDownloads(): Promise<void> {
-  // No-op for the new clean implementation
+
 }
 
 

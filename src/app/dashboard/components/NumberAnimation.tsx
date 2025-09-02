@@ -19,13 +19,13 @@ export default function NumberAnimation({ value, className }: NumberAnimationPro
     const prev = prevValueRef.current;
     prevValueRef.current = value;
 
-    // On first mount, set directly to avoid any flicker
+
     if (prev === null) {
       setDisplayValue(value);
       return;
     }
 
-    // Cancel any running animation
+
     if (rafRef.current !== null) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
@@ -61,7 +61,7 @@ export default function NumberAnimation({ value, className }: NumberAnimationPro
   }, [value, isMounted]);
 
   if (!isMounted) {
-    // Match server-rendered value to avoid hydration mismatch
+
     return <span className={className}>{value}</span>;
   }
 

@@ -23,7 +23,7 @@ import { supabase } from '@/lib/supabase';
 import { updateMetrics } from '@/app/utils/metrics';
 import { QuoteData } from './types';
 
-// Import hooks
+
 import { 
   useCodebustersState, 
   useAnswerChecking, 
@@ -32,7 +32,7 @@ import {
   useProgressCalculation 
 } from './hooks';
 
-// Import components
+
 import { 
   Header, 
   LoadingState, 
@@ -53,7 +53,7 @@ export default function CodeBusters() {
     const [isOffline, setIsOffline] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
     
-    // Detect offline status
+
     useEffect(() => {
         const updateOnline = () => setIsOffline(!navigator.onLine);
         updateOnline();
@@ -66,7 +66,7 @@ export default function CodeBusters() {
         };
     }, []);
 
-    // Use custom hooks for state management
+
     const {
         quotes,
         setQuotes,
@@ -111,7 +111,7 @@ export default function CodeBusters() {
         loadPreferences
     } = useCodebustersState();
 
-    // Use custom hooks for functionality
+
     const { checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer, checkCheckerboardAnswer, checkCryptarithmAnswer } = useAnswerChecking(quotes);
     const { getHintContent, handleHintClick } = useHintSystem(
         quotes, 
@@ -138,28 +138,28 @@ export default function CodeBusters() {
 
 
 
-    // Setup visibility handling for time management
+
     useEffect(() => {
         const cleanup = setupVisibilityHandling();
         return cleanup;
     }, []);
 
-    // Pause timer when navigating away/unmounting
+
     useEffect(() => {
         return () => {
             try { pauseTestSession(); } catch {}
         };
     }, []);
 
-    // Ensure we resume from pause on mount so the ticker runs while on page
+
     useEffect(() => {
         try { resumeFromPause(); } catch {}
     }, []);
 
-    // Handle test submission
+
     const handleSubmitTest = useCallback(async () => {
         let correctCount = 0;
-        // Legacy correctness for UI percent
+
         quotes.forEach((quote, index) => {
             const isCorrect = ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Xenocrypt'].includes(quote.cipherType)
                 ? checkSubstitutionAnswer(index)
@@ -177,12 +177,12 @@ export default function CodeBusters() {
             if (isCorrect) correctCount++;
         });
 
-        // Calculate UI score as percentage
+
         const score = (correctCount / Math.max(1, quotes.length)) * 100;
         setTestScore(score);
         setIsTestSubmitted(true);
         
-        // Persist submission state so a reload preserves the summary
+
         try {
             localStorage.setItem('codebustersIsTestSubmitted', 'true');
             localStorage.setItem('codebustersTestScore', score.toString());
@@ -191,15 +191,15 @@ export default function CodeBusters() {
             localStorage.setItem('codebustersQuotesLoadedFromStorage', 'true');
         } catch {}
         
-        // Scroll to top when test is submitted - more robust approach
+
         setTimeout(() => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }, 200);
         
-        // Mark test as submitted using new time management system
+
         markTestSubmitted();
 
-        // Metrics: Codebusters weighting: 20 * difficulty, skipped don’t count, correct only when fully correct
+
         let attemptedPoints = 0;
         let correctPoints = 0;
         quotes.forEach((q) => {
@@ -226,7 +226,7 @@ export default function CodeBusters() {
         }
     }, [quotes, checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer, checkCheckerboardAnswer, checkCryptarithmAnswer, setTestScore, setIsTestSubmitted, calculateQuoteProgress, timeLeft]);
 
-    // Handle time management
+
     useEffect(() => {
         if (timeLeft === null || isTestSubmitted) return;
 
@@ -249,9 +249,9 @@ export default function CodeBusters() {
             const session = getCurrentTestSession();
             if (!session) return;
             
-            // Update time based on session state
+
             if (session.timeState.isTimeSynchronized && session.timeState.syncTimestamp && session.timeState.originalTimeAtSync) {
-                // Synchronized test - calculate based on original sync point
+
                 const now = Date.now();
                 const elapsedMs = now - session.timeState.syncTimestamp;
                 const elapsedSeconds = Math.floor(elapsedMs / 1000);
@@ -260,7 +260,7 @@ export default function CodeBusters() {
                 updateTimeLeft(newTimeLeft);
 
             } else if (!session.timeState.isPaused) {
-                // Non-synchronized test - decrement from stored timeLeft only while mounted/not paused
+
                 const newTimeLeft = Math.max(0, (session.timeState.timeLeft || 0) - 1);
                 setTimeLeft(newTimeLeft);
                 updateTimeLeft(newTimeLeft);
@@ -270,7 +270,7 @@ export default function CodeBusters() {
         return () => clearInterval(timer);
     }, [timeLeft, isTestSubmitted, handleSubmitTest, setTimeLeft]);
 
-    // Handle loading questions from database
+
     const handleLoadQuestions = useCallback(async () => {
         await loadQuestionsFromDatabase(
             setIsLoading,
@@ -283,18 +283,18 @@ export default function CodeBusters() {
         );
     }, [setIsLoading, setError, setQuotes, setTimeLeft, setIsTestSubmitted, setTestScore, loadPreferences]);
 
-    // Handle reset functionality
+
     const handleReset = useCallback(() => {
-        // Get test params before clearing localStorage
+
         const testParams = JSON.parse(localStorage.getItem('testParams') || '{}');
         const eventName = testParams.eventName || 'Codebusters';
         const preferences = loadPreferences(eventName);
         const timeLimit = parseInt(testParams.timeLimit) || preferences.timeLimit;
         
-        // Clear all codebusters-related localStorage items
+
         localStorage.removeItem('codebustersQuotes');
-        localStorage.removeItem('codebustersQuoteIndices'); // Legacy
-        localStorage.removeItem('codebustersQuoteUUIDs'); // Legacy
+        localStorage.removeItem('codebustersQuoteIndices');
+        localStorage.removeItem('codebustersQuoteUUIDs');
         localStorage.removeItem('codebustersShareData');
         localStorage.removeItem('codebustersIsTestSubmitted');
         localStorage.removeItem('codebustersTestScore');
@@ -304,31 +304,31 @@ export default function CodeBusters() {
         localStorage.removeItem('codebustersHintCounts');
         localStorage.removeItem('shareCode');
         
-        // Set force refresh flag to get new random quotes
+
         localStorage.setItem('codebustersForceRefresh', 'true');
         
-        // Clear time management session completely
+
         clearTestSession();
         
-        // Initialize a fresh session with the correct time limit
+
         initializeTestSession(eventName, timeLimit, false);
         
-        // Set resetting state and update other state
+
         setIsResetting(true);
         setIsTestSubmitted(false);
         setTestScore(0);
         setTimeLeft(timeLimit * 60);
         
-        // Clear hint states
+
         setActiveHints({});
         setRevealedLetters({});
         setHintedLetters({});
         setHintCounts({});
         setResetTrigger(prev => prev + 1);
         
-        // Use the original loader but with a custom callback to avoid clearing quotes immediately
+
         const customSetLoading = (loading: boolean) => {
-            // Don't set loading to true during reset to keep old quotes visible
+
             if (!loading) {
                 setIsLoading(false);
             }
@@ -350,46 +350,46 @@ export default function CodeBusters() {
         );
     }, [loadPreferences, setQuotes, setIsTestSubmitted, setTestScore, setTimeLeft, setError, setIsLoading, setActiveHints, setRevealedLetters, setHintedLetters, setHintCounts, setResetTrigger]);
 
-    // Handle back navigation: preserve Codebusters progress for resume banner on Practice
+
     const handleBack = useCallback(() => {
         try {
-            // Ensure timer is paused when exiting
+
             pauseTestSession();
-            // Only clear unrelated unlimited cache; keep Codebusters keys and testParams so Practice can detect progress
+
             localStorage.removeItem('unlimitedQuestions');
         } catch {}
         router.push('/practice');
     }, [router]);
 
-    // Handle retry loading
+
     const handleRetry = useCallback(() => {
         setError(null);
         setIsLoading(true);
         handleLoadQuestions();
     }, [setError, setIsLoading, handleLoadQuestions]);
 
-    // Handle navigation to practice page
+
     const handleGoToPractice = useCallback(() => {
         router.push('/practice');
     }, [router]);
 
-    // Handle test reset after submission
+
     const handleTestReset = useCallback(() => {
-        // Scroll to top when resetting test
+
         setTimeout(() => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }, 200);
         
-        // Get test params before clearing localStorage
+
         const testParams = JSON.parse(localStorage.getItem('testParams') || '{}');
         const eventName = testParams.eventName || 'Codebusters';
         const preferences = loadPreferences(eventName);
         const timeLimit = parseInt(testParams.timeLimit) || preferences.timeLimit;
         
-        // Clear all codebusters-related localStorage items
+
         localStorage.removeItem('codebustersQuotes');
-        localStorage.removeItem('codebustersQuoteIndices'); // Legacy
-        localStorage.removeItem('codebustersQuoteUUIDs'); // Legacy
+        localStorage.removeItem('codebustersQuoteIndices');
+        localStorage.removeItem('codebustersQuoteUUIDs');
         localStorage.removeItem('codebustersShareData');
         localStorage.removeItem('codebustersIsTestSubmitted');
         localStorage.removeItem('codebustersTestScore');
@@ -400,28 +400,28 @@ export default function CodeBusters() {
         localStorage.removeItem('codebustersQuotesLoadedFromStorage');
         localStorage.removeItem('shareCode');
         
-        // Set force refresh flag to get new random quotes
+
         localStorage.setItem('codebustersForceRefresh', 'true');
         
-        // Clear time management session completely
+
         clearTestSession();
         
-        // Initialize a fresh session with the correct time limit
+
         initializeTestSession(eventName, timeLimit, false);
         
-        // Set resetting state and update other state
+
         setIsResetting(true);
         setIsTestSubmitted(false);
         setTestScore(0);
         setTimeLeft(timeLimit * 60);
         
-        // Clear hint states
+
         setActiveHints({});
         setRevealedLetters({});
         
-        // Use the original loader but with a custom callback to avoid clearing quotes immediately
+
         const customSetLoading = (loading: boolean) => {
-            // Don't set loading to true during reset to keep old quotes visible
+
             if (!loading) {
                 setIsLoading(false);
             }
@@ -443,33 +443,33 @@ export default function CodeBusters() {
         );
     }, [loadPreferences, setQuotes, setIsTestSubmitted, setTestScore, setTimeLeft, setError, setIsLoading, setActiveHints, setRevealedLetters]);
 
-    // Handle print configuration modal
+
     const handlePrintConfig = useCallback(() => {
         setPrintModalOpen(true);
     }, [setPrintModalOpen]);
 
-    // Handle actual printing
+
     const handleActualPrint = useCallback(async () => {
         if (!tournamentName.trim()) {
             toast.error('Tournament name is required');
             return;
         }
 
-        // Find the questions container
+
         const questionsContainer = document.querySelector('[data-questions-container]');
         if (!questionsContainer) {
             toast.error('Could not find questions to print');
             return;
         }
 
-        // Clone the questions container
+
         const clonedContainer = questionsContainer.cloneNode(true) as HTMLElement;
         
-        // Remove any interactive elements that shouldn't be printed
+
         const interactiveElements = clonedContainer.querySelectorAll('button, .hint-button, .info-button, .floating-buttons');
         interactiveElements.forEach(el => el.remove());
 
-        // Normalize headers to exactly "Question N [X pts]"
+
         const questionHeaders = clonedContainer.querySelectorAll('[data-question-header]');
         questionHeaders.forEach((header, index) => {
             const fallback = (((quotes[index]?.difficulty || 0.5) * 20 + 5) | 0);
@@ -477,11 +477,11 @@ export default function CodeBusters() {
             header.textContent = `Question ${index + 1} [${points} pts]`;
         });
 
-        // Ensure questions avoid breaking inside a page; do NOT force a page break between every question
-        // The `.question` class has `page-break-inside: avoid` in print styles so multiple questions will flow
+
+
         // onto the same page when space allows.
 
-        // Get all stylesheets from the current page
+
         const getStylesheets = () => {
             const stylesheets = Array.from(document.styleSheets);
             let cssText = '';
@@ -493,7 +493,7 @@ export default function CodeBusters() {
                         cssText += rule.cssText + '\n';
                     });
                 } catch {
-                    // Skip external stylesheets that might cause CORS issues
+
                     console.log('Skipping external stylesheet:', sheet.href);
                 }
             });
@@ -501,16 +501,16 @@ export default function CodeBusters() {
             return cssText;
         };
 
-        // Create print styles using utility function
+
         const printStyles = createPrintStyles(getStylesheets);
 
-        // Create answer key for Codebusters
+
         const createCodebustersAnswerKey = () => {
             let answerKeyHtml = '<div class="answer-key-section">';
             answerKeyHtml += '<div class="answer-key-header">ANSWER KEY</div>';
             answerKeyHtml += '<div class="answer-key-content">';
             
-            // Calculate how many columns we can fit (aim for 2 columns for longer quotes)
+
             const totalQuestions = quotes.length;
             const columns = Math.min(2, Math.ceil(totalQuestions / 10)); // 10 questions per column max
             const questionsPerColumn = Math.ceil(totalQuestions / columns);
@@ -522,37 +522,37 @@ export default function CodeBusters() {
                     const quote = quotes[i];
                     const questionNumber = i + 1;
                     
-                    // Show the decrypted quote (plaintext)
+
                     const decryptedQuote = quote.quote || '[No solution available]';
                     answerKeyHtml += `<div class="answer-item"><strong>${questionNumber}.</strong> ${decryptedQuote}</div>`;
                 }
                 
-                answerKeyHtml += '</div>'; // Close column
+                answerKeyHtml += '</div>';
             }
             
-            answerKeyHtml += '</div>'; // Close answer-key-content
-            answerKeyHtml += '</div>'; // Close answer-key-section
+            answerKeyHtml += '</div>';
+            answerKeyHtml += '</div>';
             
             return answerKeyHtml;
         };
 
-        // Create print content using utility function
+
         const printContent = createPrintContent({
             tournamentName,
             questionsHtml: clonedContainer.innerHTML + createCodebustersAnswerKey(),
             questionPoints
         }, printStyles);
 
-        // Setup print window using utility function
+
         try {
-            // Prefer in-page print to avoid popup blockers
+
             await createInPagePrint({
                 tournamentName,
                 questionsHtml: clonedContainer.innerHTML + createCodebustersAnswerKey(),
                 questionPoints
             }, printStyles);
         } catch {
-            // Fallback to popup-based print window
+
             try {
                 await setupPrintWindow(printContent);
             } catch (err) {
@@ -560,11 +560,11 @@ export default function CodeBusters() {
             }
         }
 
-        // Close the modal
+
         setPrintModalOpen(false);
     }, [quotes, tournamentName, questionPoints, setPrintModalOpen]);
 
-    // Load questions if needed
+
     useEffect(() => {
         if (hasAttemptedLoad && quotes.length === 0 && !isLoading && !error && !quotesLoadedFromStorage) {
             console.log('Triggering loadQuestionsFromDatabase');

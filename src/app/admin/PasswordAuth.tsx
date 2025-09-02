@@ -24,7 +24,7 @@ export default function PasswordAuth({ onAuthenticated }: PasswordAuthProps) {
     setIsLoading(true);
 
     try {
-      // Test the password by making a request to the admin API
+
       const response = await fetch('/api/admin', {
         method: 'GET',
         headers: {
@@ -43,7 +43,7 @@ export default function PasswordAuth({ onAuthenticated }: PasswordAuthProps) {
         return;
       }
 
-      // Password is correct, proceed
+
       onAuthenticated(password);
     } catch {
       setError('Network error. Please try again.');

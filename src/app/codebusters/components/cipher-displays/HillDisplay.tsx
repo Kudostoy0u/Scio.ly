@@ -28,7 +28,7 @@ export const HillDisplay = ({
     const is3x3 = quote.cipherType === 'Hill 3x3';
     const matrixSize = is3x3 ? 3 : 2;
     
-    // Auto-fill decryption matrix for 3x3 Hill ciphers
+
     useEffect(() => {
         if (is3x3 && quote.decryptionMatrix) {
             const hasEmptyMatrix = !solution?.matrix || 
@@ -43,7 +43,7 @@ export const HillDisplay = ({
         }
     }, [is3x3, quote.decryptionMatrix, solution?.matrix, onSolutionChange]);
     
-    // Create a mapping of positions to correct letters, preserving spaces and punctuation
+
     const correctMapping = useMemo(() => {
         const mapping: { [key: number]: string } = {};
         if (!isTestSubmitted) return mapping;
@@ -51,7 +51,7 @@ export const HillDisplay = ({
         const originalQuote = quote.quote.toUpperCase();
         let plainTextIndex = 0;
         
-        // Map each encrypted letter position to its corresponding plaintext letter
+
         for (let i = 0; i < text.length; i++) {
             if (/[A-Z]/.test(text[i])) {
                 while (plainTextIndex < originalQuote.length) {
@@ -67,28 +67,28 @@ export const HillDisplay = ({
         return mapping;
     }, [isTestSubmitted, quote.quote, text]);
 
-    // Determine padding positions for Hill ciphers
+
     const paddingPositions = useMemo(() => {
         const positions = new Set<number>();
         if (!isTestSubmitted) return positions;
 
-        // Collect original indices of all cipher letters (A-Z)
+
         const cipherLetterIndices: number[] = [];
         for (let i = 0; i < text.length; i++) {
             if (/[A-Z]/.test(text[i])) cipherLetterIndices.push(i);
         }
 
-        // Count alphabetic characters in the original quote
+
         const cleanPlainLength = quote.quote.toUpperCase().replace(/[^A-Z]/g, '').length;
 
-        // For Hill ciphers, we need to determine how many padding letters were added
-        // The ciphertext length should be divisible by the matrix size
+
+
         const requiredLength = Math.ceil(cleanPlainLength / matrixSize) * matrixSize;
         const paddingCount = requiredLength - cleanPlainLength;
 
         if (paddingCount === 0) return positions;
 
-        // Mark the last paddingCount cipher-letter indices as padding
+
         const start = Math.max(0, cipherLetterIndices.length - paddingCount);
         for (let idx = start; idx < cipherLetterIndices.length; idx++) {
             positions.add(cipherLetterIndices[idx]);
@@ -125,7 +125,7 @@ export const HillDisplay = ({
                                 const numValue = parseInt(value) || 0;
                                 
                                 return is3x3 ? (
-                                    // For 3x3: display as read-only like encryption matrix
+
                                     <div key={`solution-${i}-${j}`} className={`w-10 h-10 sm:w-12 sm:h-12 flex flex-col items-center justify-center border rounded ${
                                         darkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'
                                     }`}>
@@ -133,7 +133,7 @@ export const HillDisplay = ({
                                         <span className={`text-[10px] sm:text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{numberToLetter(numValue)}</span>
                                     </div>
                                 ) : (
-                                    // For 2x2: editable input
+
                                     <input
                                         key={`solution-${i}-${j}`}
                                         type="text"
@@ -169,7 +169,7 @@ export const HillDisplay = ({
                     const correctLetter = isTestSubmitted && isLetter ? correctMapping[i] : '';
                     const isCorrect = value.toUpperCase() === correctLetter;
                     
-                    // Treat the last N cipher-letter inputs as padding after submission
+
                     const isPadding = isLetter && isTestSubmitted && paddingPositions.has(i);
 
                     return (

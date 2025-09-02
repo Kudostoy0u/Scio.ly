@@ -1,4 +1,4 @@
-// Shared Gemini 2.5 Flash Lite service for AI-powered features
+
 import api from '../api';
 
 export interface Question {
@@ -11,10 +11,10 @@ export interface Question {
   division?: string;
   subject?: string;
   subtopic?: string;
-  subtopics?: string[]; // Add this to match API data structure
+  subtopics?: string[];
   event?: string;
-  imageUrl?: string; // optional Cloudinary URL for ID questions (legacy)
-  imageData?: string; // optional CDN URL for ID questions (new)
+  imageUrl?: string; // optional cloudinary url for id questions (legacy)
+  imageData?: string; // optional cdn url for id questions (new)
 }
 
 export interface EditSuggestion {
@@ -40,21 +40,21 @@ class GeminiService {
   }
 
   private async callGemini(_prompt: string): Promise<string> {
-    // This method is deprecated - geminiService now uses Express API endpoints
-    // Keeping for backward compatibility but should not be used
+
+
     console.warn('Direct Gemini calls are deprecated. Use Express API endpoints instead.');
     throw new Error('Direct Gemini calls have been migrated to Express API endpoints');
   }
 
   async suggestQuestionEdit(question: Question, userReason?: string): Promise<EditSuggestion> {
     try {
-      // Prepare request body with image information
+
       const requestBody: any = { 
         question, 
         userReason 
       };
 
-      // Add image information if present
+
       if (question.imageData || question.imageUrl) {
         requestBody.question = {
           ...question,

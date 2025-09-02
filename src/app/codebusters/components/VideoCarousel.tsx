@@ -21,7 +21,7 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({ videos, darkMode }
 
   const currentVideo = videos[currentVideoIndex];
   
-  // Extract YouTube video ID from URL
+
   const getYouTubeEmbedUrl = (url: string): string => {
     const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/)?.[1];
     return videoId ? `https://www.youtube.com/embed/${videoId}` : url;

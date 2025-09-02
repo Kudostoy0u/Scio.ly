@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse, GeminiGradeFreeResponsesRequest } from '@/lib/types/api';
 import { geminiService } from '@/lib/services/gemini';
 
-// POST /api/gemini/grade-free-responses - Grade free response answers using AI
+
 export async function POST(request: NextRequest) {
   try {
     const body: GeminiGradeFreeResponsesRequest = await request.json();
@@ -15,11 +15,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 400 });
     }
 
-    console.log('🤖 [GEMINI/GRADE-FREE-RESPONSES] Request received');
-    console.log(`📋 [GEMINI/GRADE-FREE-RESPONSES] Grading ${body.responses.length} responses`);
+    console.log('Request received');
+    console.log(`Grading ${body.responses.length} responses`);
 
     if (!geminiService.isAvailable()) {
-      console.log('❌ [GEMINI/GRADE-FREE-RESPONSES] Gemini AI not available');
+      console.log('Gemini AI not available');
       const response: ApiResponse = {
         success: false,
         error: 'Gemini AI not available',
@@ -27,12 +27,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 503 });
     }
 
-    console.log('🤖 [GEMINI/GRADE-FREE-RESPONSES] Sending request to Gemini AI');
+    console.log('Sending request to Gemini AI');
 
     try {
       const result = await geminiService.gradeFreeResponses(body.responses);
 
-      console.log('✅ [GEMINI/GRADE-FREE-RESPONSES] Gemini AI response received:', result);
+      console.log('Gemini AI response received:', result);
 
       const response: ApiResponse = {
         success: true,
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(response);
     } catch (error) {
-      console.log('❌ [GEMINI/GRADE-FREE-RESPONSES] Gemini AI error:', error);
+      console.log('Gemini AI error:', error);
       const response: ApiResponse = {
         success: false,
         error: 'Failed to grade free responses',

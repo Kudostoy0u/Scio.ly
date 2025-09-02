@@ -26,7 +26,7 @@ export default function ProfilePage() {
   const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
-    // Sync from context
+
     const supabase = client as any;
     const currentUser = ctxUser || null;
     setUser(currentUser);
@@ -100,7 +100,7 @@ export default function ProfilePage() {
       toast.error('Please select an image file');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+    if (file.size > 5 * 1024 * 1024) { // 5mb limit
       toast.error('Image must be 5MB or less');
       return;
     }
@@ -109,7 +109,7 @@ export default function ProfilePage() {
     try {
       const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
       const path = `users/${user.id}.${fileExt}`;
-      // Upload with upsert
+
       const { error: uploadError } = await client.storage.from('avatars').upload(path, file, {
         cacheControl: '3600',
         upsert: true,
@@ -122,7 +122,7 @@ export default function ProfilePage() {
       const { data: publicUrlData } = client.storage.from('avatars').getPublicUrl(path);
       const publicUrl = publicUrlData.publicUrl;
       setPhotoUrl(publicUrl);
-      // Persist photo_url
+
       await (client as any)
         .from('users')
         .update({ photo_url: publicUrl } as any)
@@ -148,7 +148,7 @@ export default function ProfilePage() {
   }
 
   if (!user) {
-    return null; // Will redirect to home
+    return null;
   }
 
   return (

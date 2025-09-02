@@ -12,23 +12,23 @@ export type DocsEvent = {
   subsections?: { slug: string; title: string }[];
 };
 
-// Centralized, explicit classification helpers for catalogue/badging logic
+
 export type EventBadgeKind = 'build' | 'misc' | 'binder' | 'notesheet';
 export type EventBadge = { kind: EventBadgeKind; label: 'Build Event' | 'Miscellaneous' | 'Binder' | 'Notesheet' };
 
-// Source of truth: events considered "miscellaneous" for catalogue labeling
+
 export const MISC_EVENT_NAMES = new Set<string>([
   'Codebusters',
   'Engineering CAD',
   'Write It Do It',
 ]);
 
-// Binder-heavy events (notes/binder traditionally emphasized)
+
 export const BINDER_EVENT_NAMES = new Set<string>([
   'Astronomy',
   'Dynamic Planet',
   'Rocks and Minerals',
-  // Historical/related labels retained for future inclusion or local content
+
   'Geologic Mapping',
   'Meteorology',
   'Optics',
@@ -40,12 +40,12 @@ export const BINDER_EVENT_NAMES = new Set<string>([
 
 const BADGE_PRIORITY: Array<EventBadgeKind> = ['build', 'misc', 'binder', 'notesheet'];
 
-// Centralized list of events with notesheet support
-// Currently empty array as requested - events will be added as notesheets become available
+
+
 export const EVENTS_WITH_NOTESHEETS: string[] = [];
 
-// Division C and Division B events that traditionally support notesheets
-// This is for reference and future implementation
+
+
 export const TRADITIONAL_NOTESHEET_EVENTS = {
   'B': [
     'Anatomy and Physiology',
@@ -133,8 +133,8 @@ const cTech = ['Boomilever', 'Electric Vehicle', 'Helicopter', 'Robot Tour'] as 
 const cInquiry = ['Bungee Drop', 'Codebusters', 'Engineering CAD', 'Experimental Design'] as const;
 
 const notesheetByName: Record<string, boolean> = {
-  // Currently no events have notesheets available
-  // Events will be added to EVENTS_WITH_NOTESHEETS as they become available
+
+
 };
 
 function makeSlug(name: string) {
@@ -802,7 +802,7 @@ const eventsC = [
   ...cInquiry.map(n => baseEvent(n, ['C'])),
 ];
 
-// Merge B + C, dedup and annotate divisions where an event appears in both
+
 const slugToEvent: Record<string, DocsEvent> = {};
 for (const evt of [...eventsB, ...eventsC]) {
   const slug = evt.slug;

@@ -55,7 +55,7 @@ export default function LeaderboardClientPage() {
   const [publicLeaderboard, setPublicLeaderboard] = useState<Leaderboard | null>(null);
   const [hasJoinedPublic, setHasJoinedPublic] = useState<boolean>(false);
 
-  // Memoized loader for members to satisfy hook dependencies and build order
+
   const loadLeaderboardMembers = useCallback(async (leaderboardId: string) => {
     const supabase = client as any;
     const { data, error } = await supabase
@@ -113,7 +113,7 @@ export default function LeaderboardClientPage() {
     }
   }, [selectedLeaderboard, loadLeaderboardMembers]);
 
-  // Ensure a selection exists when data loads/changes
+
   useEffect(() => {
     if (!selectedLeaderboard && leaderboards.length > 0) {
       setSelectedLeaderboard(leaderboards[0].id);
@@ -128,7 +128,7 @@ export default function LeaderboardClientPage() {
       return;
     }
     
-    // Load user profile with display name
+
     const { data: userProfile } = await supabase
       .from('users')
       .select('display_name')
@@ -173,7 +173,7 @@ export default function LeaderboardClientPage() {
       }
     }
 
-    // Fetch global/public leaderboard definition for the card if not joined
+
     try {
       const { data: pubLb } = await supabase
         .from('leaderboards')
@@ -191,7 +191,7 @@ export default function LeaderboardClientPage() {
   
 
   const joinPublicLeaderboard = async () => {
-    // Check if user has display name
+
     if (!user?.display_name) {
       setPendingLeaderboardAction('public');
       setShowDisplayNameModal(true);
@@ -206,7 +206,7 @@ export default function LeaderboardClientPage() {
   };
 
   const joinPrivateLeaderboard = async () => {
-    // Check if user has display name
+
     if (!user?.display_name) {
       setPendingLeaderboardAction('private');
       setShowDisplayNameModal(true);
@@ -235,7 +235,7 @@ export default function LeaderboardClientPage() {
       setUser(prev => prev ? { ...prev, display_name: displayName.trim() } : null);
       setShowDisplayNameModal(false);
       
-      // Continue with pending action - directly call RPC since we now have display name
+
       if (pendingLeaderboardAction === 'public') {
         const { error: joinError } = await client.rpc('join_public_leaderboard');
         if (!joinError) {

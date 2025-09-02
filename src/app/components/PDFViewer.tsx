@@ -18,7 +18,7 @@ const PDFViewer = React.forwardRef<HTMLButtonElement, PDFViewerProps>(({
   pdfPath, 
   buttonText = "Reference Material", 
   darkMode,
-  ...rest // Spread rest of props
+  ...rest
 }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -32,13 +32,13 @@ const PDFViewer = React.forwardRef<HTMLButtonElement, PDFViewerProps>(({
   const openPDF = () => {
     setIsOpen(true);
     setPdfError(false);
-    // Prevent body scrolling when modal is open
+
     document.body.style.overflow = 'hidden';
   };
 
   const closePDF = () => {
     setIsOpen(false);
-    // Restore body scrolling when modal is closed
+
     document.body.style.overflow = 'auto';
   };
 
@@ -108,7 +108,7 @@ const PDFViewer = React.forwardRef<HTMLButtonElement, PDFViewerProps>(({
             ? 'bg-blue-600 hover:bg-blue-700 text-white'
             : 'bg-blue-500 hover:bg-blue-600 text-white'
         }`}
-        {...rest} // Spread rest of props to button
+        {...rest}
       >
         {buttonText}
       </button>

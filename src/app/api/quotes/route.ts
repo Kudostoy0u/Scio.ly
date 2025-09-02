@@ -10,7 +10,7 @@ import {
   sanitizeInput
 } from '@/lib/api/utils';
 
-// Validation schemas
+
 const QuoteFiltersSchema = z.object({
   language: z.string().min(1, 'Language is required').default('en'),
   limit: z.coerce.number().int().positive().max(200).optional().default(50),
@@ -18,9 +18,9 @@ const QuoteFiltersSchema = z.object({
   charLengthMax: z.coerce.number().int().positive().optional(),
 });
 
-// Types - ValidatedQuoteFilters is inferred from the schema
 
-// Business logic functions
+
+
 const fetchQuotes = async (language: string, limit: number, charLengthRange?: { min: number; max: number }) => {
   const sanitizedLanguage = sanitizeInput(language);
   const quotes = await getQuotesByLanguage(sanitizedLanguage, limit, charLengthRange);
@@ -36,7 +36,7 @@ const fetchQuotes = async (language: string, limit: number, charLengthRange?: { 
   }));
 };
 
-// API Handlers
+
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
   logApiRequest('GET', '/api/quotes', Object.fromEntries(request.nextUrl.searchParams));
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const filters = parseQueryParams(searchParams, QuoteFiltersSchema);
     
-    // Build character length range if both min and max are provided
+
     let charLengthRange: { min: number; max: number } | undefined;
     if (filters.charLengthMin && filters.charLengthMax) {
       charLengthRange = {

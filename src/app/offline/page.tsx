@@ -16,59 +16,59 @@ export default function OfflinePage() {
   const [status, setStatus] = useState<string>('');
 
   useEffect(() => {
-    // Build event list from approved events
+
     const approvedEvents = [
       'Anatomy - Nervous',
       'Anatomy - Endocrine',
       'Anatomy - Sense Organs',
-      // 'Anatomy - Cardiovascular',
-      // 'Anatomy - Digestive',
-      // 'Anatomy - Excretory',
-      // 'Anatomy - Immune',
-      // 'Anatomy - Integumentary',
-      // 'Anatomy - Lymphatic',
-      // 'Anatomy - Muscular',
-      // 'Anatomy - Respiratory',
-      // 'Anatomy - Skeletal',
+      // 'anatomy - cardiovascular',
+      // 'anatomy - digestive',
+      // 'anatomy - excretory',
+      // 'anatomy - immune',
+      // 'anatomy - integumentary',
+      // 'anatomy - lymphatic',
+      // 'anatomy - muscular',
+      // 'anatomy - respiratory',
+      // 'anatomy - skeletal',
       'Astronomy',
-      // 'Boomilever',
-      // 'Bungee Drop',
+      // 'boomilever',
+      // 'bungee drop',
       'Chemistry Lab',
       'Circuit Lab',
       'Codebusters',
-      // 'Crime Busters',
+      // 'crime busters',
       'Designer Genes',
       'Disease Detectives',
-      // 'Dynamic Planet - Earth Fresh Waters',
-      // 'Dynamic Planet - Glaciers',
+      // 'dynamic planet - earth fresh waters',
+      // 'dynamic planet - glaciers',
       'Dynamic Planet - Oceanography',
-      // 'Dynamic Planet - Tectonics',
-      // 'Electric Vehicle',
-      // 'Engineering CAD',
+      // 'dynamic planet - tectonics',
+      // 'electric vehicle',
+      // 'engineering cad',
       'Entomology',
-      // 'Experimental Design',
+      // 'experimental design',
       'Forensics',
-      // 'Helicopter',
+      // 'helicopter',
       'Heredity',
-        // 'Hovercraft',
+        // 'hovercraft',
         'Machines',
       'Materials Science',
       'Meteorology',
       'Metric Mastery',
-      // 'Mission Possible',
+      // 'mission possible',
       'Potions and Poisons',
       'Remote Sensing',
-      // 'Robot Tour',
+      // 'robot tour',
       'Rocks and Minerals',
-      // 'Scrambler',
+      // 'scrambler',
       'Solar System',
       'Water Quality - Freshwater',
-      // 'Write It Do It',
+      // 'write it do it',
     ];
     const list: EventOption[] = approvedEvents.map((name) => ({ name, slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-') }));
     setEvents(list);
     
-    // Seed downloaded map from IndexedDB
+
     let cancelled = false;
     (async () => {
       try {
@@ -80,7 +80,7 @@ export default function OfflinePage() {
       } catch {}
     })();
     
-    // Subscribe to cross-tab download updates for immediate UI sync
+
     const unsubscribe = subscribeToDownloads(async () => {
       try {
         const keys = await listDownloadedEventSlugs();
@@ -95,7 +95,7 @@ export default function OfflinePage() {
     };
   }, []);
 
-  // Also re-read downloaded flags when page regains focus
+
   useEffect(() => {
     const onFocus = async () => {
       try {
@@ -114,7 +114,7 @@ export default function OfflinePage() {
     setStatus(`Downloading ${evt.name}...`);
     try {
       if (evt.name === 'Codebusters') {
-        // Download a pool of quotes for offline Codebusters use
+
         const enResp = await fetch(`/api/quotes?language=en&limit=200`);
         const esResp = await fetch(`/api/quotes?language=es&limit=200`);
         if (!enResp.ok || !esResp.ok) throw new Error('Failed to fetch quotes');

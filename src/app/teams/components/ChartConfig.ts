@@ -22,7 +22,7 @@ interface ChartConfig {
       pointHoverRadius?: number;
     }>;
   };
-  options: any; // Use any to avoid complex Chart.js type issues
+  options: any;
 }
 
 interface RangeFilter {
@@ -30,22 +30,22 @@ interface RangeFilter {
   endIndex: number;
 }
 
-// Global state for the results box
+
 let currentResultsBox: HTMLElement | null = null;
 
-// Function to show results box (mobile only)
+
 const showResultsBox = (point: any, chart: Chart) => {
-  // Only show on mobile
+
   const isMobile = window.innerWidth < 768;
   if (!isMobile) return;
 
-  // Remove existing results box
+
   if (currentResultsBox) {
     currentResultsBox.remove();
     currentResultsBox = null;
   }
 
-  // Create new results box
+
   const resultsBox = document.createElement('div');
   resultsBox.id = 'chart-results-box';
   resultsBox.innerHTML = `
@@ -90,7 +90,7 @@ const showResultsBox = (point: any, chart: Chart) => {
     </div>
   `;
 
-  // Insert the box above the chart title
+
   const chartContainer = chart.canvas.parentElement;
   if (chartContainer) {
     chartContainer.insertBefore(resultsBox, chartContainer.firstChild);
@@ -105,7 +105,7 @@ export const getOverallSeasonConfig = (data: ChartData, darkMode: boolean = fals
   const schools = Object.keys(data);
   const allSeasons = [...new Set(Object.values(data).flatMap(school => Object.keys(school as Record<string, number>)))].sort();
   
-  // Apply range filter if provided
+
   const seasons = rangeFilter 
     ? allSeasons.slice(rangeFilter.startIndex, rangeFilter.endIndex + 1)
     : allSeasons;
@@ -171,7 +171,7 @@ export const getOverallSeasonConfig = (data: ChartData, darkMode: boolean = fals
 export const getOverallTournamentConfig = (data: ChartData, darkMode: boolean = false, rangeFilter?: RangeFilter, allDataPoints?: Array<{ x: Date; y: number; tournament?: string }>): ChartConfig => {
   const schools = Object.keys(data);
   
-  // Determine date range from the range filter and all data points
+
   let startDate: Date | null = null;
   let endDate: Date | null = null;
   
@@ -181,7 +181,7 @@ export const getOverallTournamentConfig = (data: ChartData, darkMode: boolean = 
     endDate = sortedPoints[rangeFilter.endIndex]?.x || sortedPoints[sortedPoints.length - 1].x;
   }
 
-  // Check if mobile for larger point sizes
+
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const pointRadius = isMobile ? 5 : 3;
   const pointHoverRadius = isMobile ? 6 : 5;
@@ -192,7 +192,7 @@ export const getOverallTournamentConfig = (data: ChartData, darkMode: boolean = 
       datasets: schools.map((school, index) => {
         const schoolData = data[school] as Array<{ date: string; tournament: string; elo: number; duosmiumLink: string }>;
         
-        // Apply date-based filtering if range filter is provided
+
         const filteredData = (startDate && endDate) 
           ? schoolData.filter(point => {
               const pointDate = new Date(point.date);
@@ -203,7 +203,7 @@ export const getOverallTournamentConfig = (data: ChartData, darkMode: boolean = 
         return {
           label: school,
           data: filteredData.map((point, index) => {
-            // Calculate Elo change from previous tournament within filtered data
+
             const previousElo = index > 0 ? filteredData[index - 1].elo : point.elo;
             const eloChange = point.elo - previousElo;
             
@@ -244,13 +244,13 @@ export const getOverallTournamentConfig = (data: ChartData, darkMode: boolean = 
         tooltip: {
           enabled: false,
           external: function(context: any) {
-            // Get or create tooltip element
+
             let tooltipEl = document.getElementById('chartjs-tooltip');
             if (!tooltipEl) {
               tooltipEl = document.createElement('div');
               tooltipEl.id = 'chartjs-tooltip';
               
-              // Check if mobile
+
               const isMobile = window.innerWidth < 768;
               const baseFontSize = isMobile ? '8px' : '13px';
               const basePadding = isMobile ? '4px 6px' : '12px 14px';
@@ -279,7 +279,7 @@ export const getOverallTournamentConfig = (data: ChartData, darkMode: boolean = 
             const tooltipModel = context.tooltip;
             const isMobile = window.innerWidth < 768;
             
-            // Hide if no tooltip or opacity is 0 (mouse left the point)
+
             if (tooltipModel.opacity === 0) {
               tooltipEl.style.opacity = '0';
               tooltipEl.style.visibility = 'hidden';
@@ -289,13 +289,13 @@ export const getOverallTournamentConfig = (data: ChartData, darkMode: boolean = 
               return;
             }
 
-            // Get the data point
+
             if (tooltipModel.dataPoints && tooltipModel.dataPoints.length > 0) {
               const dataPoint = tooltipModel.dataPoints[0];
               const point = dataPoint.raw;
               const eloChange = point.eloChange || 0;
               
-              // Build tooltip content with bold Elo rating and colored Elo change
+
               let eloChangeHtml = '';
               if (eloChange !== 0) {
                 const changeText = `${eloChange > 0 ? '+' : ''}${Math.round(eloChange)}`;
@@ -318,11 +318,11 @@ export const getOverallTournamentConfig = (data: ChartData, darkMode: boolean = 
               const position = context.chart.canvas.getBoundingClientRect();
               const chartCenterX = position.width / 2;
               
-              // Position tooltip based on data point position relative to chart center
+
               const isLeftHalf = tooltipModel.caretX < chartCenterX;
               
               if (isLeftHalf) {
-                // Position to the right for points in left half
+
                 tooltipEl.style.opacity = '1';
                 tooltipEl.style.visibility = 'visible';
                 if (isMobile) {
@@ -333,7 +333,7 @@ export const getOverallTournamentConfig = (data: ChartData, darkMode: boolean = 
                 tooltipEl.style.left = position.left + window.pageXOffset + tooltipModel.caretX + 10 + 'px';
                 tooltipEl.style.top = position.top + window.pageYOffset + tooltipModel.caretY + 'px';
               } else {
-                // Position to the left for points in right half
+
                 tooltipEl.style.opacity = '1';
                 tooltipEl.style.visibility = 'visible';
                 if (isMobile) {
@@ -386,15 +386,15 @@ export const getOverallTournamentConfig = (data: ChartData, darkMode: boolean = 
             const isMobile = window.innerWidth < 768;
             
             if (isMobile) {
-              // Show results box for mobile only
+
               showResultsBox(point, chart);
               
-              // On mobile, manually trigger tooltip display alongside results box
+
               const tooltipEl = document.getElementById('chartjs-tooltip');
               if (tooltipEl) {
                 const eloChange = point.eloChange || 0;
                 
-                // Build tooltip content with bold Elo rating and colored Elo change
+
                 let eloChangeHtml = '';
                 if (eloChange !== 0) {
                   const changeText = `${eloChange > 0 ? '+' : ''}${Math.round(eloChange)}`;
@@ -414,27 +414,27 @@ export const getOverallTournamentConfig = (data: ChartData, darkMode: boolean = 
                   <div style="line-height: 1.3;">${chart?.data?.datasets?.[datasetIndex]?.label}: <strong>${Math.round(point.y)}</strong>${eloChangeHtml}</div>
                 `;
 
-                // Position tooltip near the clicked point
+
                 const canvas = chart.canvas;
                 const rect = canvas.getBoundingClientRect();
                 
-                // Get the actual click position relative to the canvas
+
                 const clickX = (event.native as MouseEvent)?.offsetX || (event.x || 0);
                 const clickY = (event.native as MouseEvent)?.offsetY || (event.y || 0);
                 
-                // Position tooltip based on data point position relative to chart center
+
                 const chartCenterX = rect.width / 2;
                 const isLeftHalf = clickX < chartCenterX;
                 
                 if (isLeftHalf) {
-                  // Position to the right for points in left half
+
                   tooltipEl.style.opacity = '1';
                   tooltipEl.style.visibility = 'visible';
                   tooltipEl.style.transform = 'translate(0%, -50%) scale(1)';
                   tooltipEl.style.left = rect.left + window.pageXOffset + clickX + 10 + 'px';
                   tooltipEl.style.top = rect.top + window.pageYOffset + clickY + 'px';
                 } else {
-                  // Position to the left for points in right half
+
                   tooltipEl.style.opacity = '1';
                   tooltipEl.style.visibility = 'visible';
                   tooltipEl.style.transform = 'translate(-100%, -50%) scale(1)';
@@ -443,7 +443,7 @@ export const getOverallTournamentConfig = (data: ChartData, darkMode: boolean = 
                 }
               }
             } else {
-              // On desktop, open the link directly
+
               window.open(point.duosmiumLink, '_blank');
             }
           }
@@ -462,7 +462,7 @@ export const getEventSeasonConfig = (data: ChartData, darkMode: boolean = false,
     )
   )].sort();
   
-  // Apply range filter if provided
+
   const seasons = rangeFilter 
     ? allSeasons.slice(rangeFilter.startIndex, rangeFilter.endIndex + 1)
     : allSeasons;
@@ -531,7 +531,7 @@ export const getEventTournamentConfig = (data: ChartData, darkMode: boolean = fa
   const schools = Object.keys(data);
   const events = Object.keys(data[schools[0]] || {});
   
-  // Determine date range from the range filter and all data points
+
   let startDate: Date | null = null;
   let endDate: Date | null = null;
   
@@ -541,7 +541,7 @@ export const getEventTournamentConfig = (data: ChartData, darkMode: boolean = fa
     endDate = sortedPoints[rangeFilter.endIndex]?.x || sortedPoints[sortedPoints.length - 1].x;
   }
 
-  // Check if mobile for larger point sizes
+
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const pointRadius = isMobile ? 6 : 3;
   const pointHoverRadius = isMobile ? 8 : 5;
@@ -553,7 +553,7 @@ export const getEventTournamentConfig = (data: ChartData, darkMode: boolean = fa
         events.map((event, eventIndex) => {
           const eventData = (data[school] as Record<string, Array<{ date: string; tournament: string; elo: number; duosmiumLink: string }>>)[event];
           
-          // Apply date-based filtering if range filter is provided
+
           const filteredData = (startDate && endDate) 
             ? eventData.filter(point => {
                 const pointDate = new Date(point.date);
@@ -564,7 +564,7 @@ export const getEventTournamentConfig = (data: ChartData, darkMode: boolean = fa
           return {
             label: `${school} - ${event}`,
             data: filteredData.map((point, index) => {
-              // Calculate Elo change from previous tournament within filtered data
+
               const previousElo = index > 0 ? filteredData[index - 1].elo : point.elo;
               const eloChange = point.elo - previousElo;
               
@@ -606,13 +606,13 @@ export const getEventTournamentConfig = (data: ChartData, darkMode: boolean = fa
         tooltip: {
           enabled: false,
           external: function(context: any) {
-            // Get or create tooltip element
+
             let tooltipEl = document.getElementById('chartjs-tooltip');
             if (!tooltipEl) {
               tooltipEl = document.createElement('div');
               tooltipEl.id = 'chartjs-tooltip';
               
-              // Check if mobile
+
               const isMobile = window.innerWidth < 768;
               const baseFontSize = isMobile ? '8px' : '13px';
               const basePadding = isMobile ? '4px 6px' : '12px 14px';
@@ -641,7 +641,7 @@ export const getEventTournamentConfig = (data: ChartData, darkMode: boolean = fa
             const tooltipModel = context.tooltip;
             const isMobile = window.innerWidth < 768;
             
-            // Hide if no tooltip or opacity is 0 (mouse left the point)
+
             if (tooltipModel.opacity === 0) {
               tooltipEl.style.opacity = '0';
               tooltipEl.style.visibility = 'hidden';
@@ -651,13 +651,13 @@ export const getEventTournamentConfig = (data: ChartData, darkMode: boolean = fa
               return;
             }
 
-            // Get the data point
+
             if (tooltipModel.dataPoints && tooltipModel.dataPoints.length > 0) {
               const dataPoint = tooltipModel.dataPoints[0];
               const point = dataPoint.raw;
               const eloChange = point.eloChange || 0;
               
-              // Build tooltip content with bold Elo rating and colored Elo change
+
               let eloChangeHtml = '';
               if (eloChange !== 0) {
                 const changeText = `${eloChange > 0 ? '+' : ''}${Math.round(eloChange)}`;
@@ -676,11 +676,11 @@ export const getEventTournamentConfig = (data: ChartData, darkMode: boolean = fa
               const position = context.chart.canvas.getBoundingClientRect();
               const chartCenterX = position.width / 2;
               
-              // Position tooltip based on data point position relative to chart center
+
               const isLeftHalf = tooltipModel.caretX < chartCenterX;
               
               if (isLeftHalf) {
-                // Position to the right for points in left half
+
                 tooltipEl.style.opacity = '1';
                 tooltipEl.style.visibility = 'visible';
                 if (isMobile) {
@@ -691,7 +691,7 @@ export const getEventTournamentConfig = (data: ChartData, darkMode: boolean = fa
                 tooltipEl.style.left = position.left + window.pageXOffset + tooltipModel.caretX + 10 + 'px';
                 tooltipEl.style.top = position.top + window.pageYOffset + tooltipModel.caretY + 'px';
               } else {
-                // Position to the left for points in right half
+
                 tooltipEl.style.opacity = '1';
                 tooltipEl.style.visibility = 'visible';
                 if (isMobile) {
@@ -744,15 +744,15 @@ export const getEventTournamentConfig = (data: ChartData, darkMode: boolean = fa
             const isMobile = window.innerWidth < 768;
             
             if (isMobile) {
-              // Show results box for mobile only
+
               showResultsBox(point, chart);
               
-              // On mobile, manually trigger tooltip display alongside results box
+
               const tooltipEl = document.getElementById('chartjs-tooltip');
               if (tooltipEl) {
                 const eloChange = point.eloChange || 0;
                 
-                // Build tooltip content with bold Elo rating and colored Elo change
+
                 let eloChangeHtml = '';
                 if (eloChange !== 0) {
                   const changeText = `${eloChange > 0 ? '+' : ''}${Math.round(eloChange)}`;
@@ -768,27 +768,27 @@ export const getEventTournamentConfig = (data: ChartData, darkMode: boolean = fa
                   <div style="line-height: 1.3;">${chart?.data?.datasets?.[datasetIndex]?.label}: <strong>${Math.round(point.y)}</strong>${eloChangeHtml}</div>
                 `;
 
-                // Position tooltip near the clicked point
+
                 const canvas = chart.canvas;
                 const rect = canvas.getBoundingClientRect();
                 
-                // Get the actual click position relative to the canvas
+
                 const clickX = (event.native as MouseEvent)?.offsetX || (event.x || 0);
                 const clickY = (event.native as MouseEvent)?.offsetY || (event.y || 0);
                 
-                // Position tooltip based on data point position relative to chart center
+
                 const chartCenterX = rect.width / 2;
                 const isLeftHalf = clickX < chartCenterX;
                 
                 if (isLeftHalf) {
-                  // Position to the right for points in left half
+
                   tooltipEl.style.opacity = '1';
                   tooltipEl.style.visibility = 'visible';
                   tooltipEl.style.transform = 'translate(0%, -50%) scale(1)';
                   tooltipEl.style.left = rect.left + window.pageXOffset + clickX + 10 + 'px';
                   tooltipEl.style.top = rect.top + window.pageYOffset + clickY + 'px';
                 } else {
-                  // Position to the left for points in right half
+
                   tooltipEl.style.opacity = '1';
                   tooltipEl.style.visibility = 'visible';
                   tooltipEl.style.transform = 'translate(-100%, -50%) scale(1)';
@@ -797,7 +797,7 @@ export const getEventTournamentConfig = (data: ChartData, darkMode: boolean = fa
                 }
               }
             } else {
-              // On desktop, open the link directly
+
               window.open(point.duosmiumLink, '_blank');
             }
           }

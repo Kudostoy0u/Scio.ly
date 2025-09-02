@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaShareAlt } from "react-icons/fa";
 import { RefreshCcw } from 'lucide-react';
-// ToastContainer is globally provided in Providers
+
 import { useTheme } from '@/app/contexts/ThemeContext';
 import EditQuestionModal from '@/app/components/EditQuestionModal';
 import ShareModal from '@/app/components/ShareModal';
@@ -20,7 +20,7 @@ export default function TestContent({ initialData, initialRouterData }: { initia
   const [tournamentName, setTournamentName] = useState('');
   const [questionPoints, setQuestionPoints] = useState<{[key: number]: number}>({});
   
-  // Detect offline status
+
   useEffect(() => {
     const updateOnline = () => setIsOffline(!navigator.onLine);
     updateOnline();
@@ -34,7 +34,7 @@ export default function TestContent({ initialData, initialRouterData }: { initia
   }, []);
 
   const {
-    // State
+
     isLoading,
     data,
       routerData,
@@ -55,7 +55,7 @@ export default function TestContent({ initialData, initialRouterData }: { initia
     editingQuestion,
     isResetting,
     
-    // Handlers
+
     handleAnswerChange,
     handleSubmit,
     handleResetTest,
@@ -74,39 +74,39 @@ export default function TestContent({ initialData, initialRouterData }: { initia
     setIsEditModalOpen
   } = useTestState({ initialData, initialRouterData });
 
-  // Handle print configuration modal
+
   const handlePrintConfig = () => {
     setPrintModalOpen(true);
   };
 
-  // Handle actual printing
+
   const handleActualPrint = async () => {
     if (!tournamentName.trim()) {
       toast.error('Tournament name is required');
       return;
     }
 
-    // Create custom compact text-based format for questions
+
     const formatQuestionsForPrint = () => {
       let questionsHtml = '';
       
       data.forEach((question, index) => {
         const points = questionPoints[index] || (question.options && question.options.length > 0 ? 2 : 5);
         
-        // Start question div
+
         questionsHtml += `<div class="question">`;
         
-        // Question number and text
+
         questionsHtml += `<div class="question-header">${index + 1}. ${question.question} [${points} pts]</div>`;
         
-        // Add image if present
+
         if (question.imageUrl || (question as any).imageData) {
           questionsHtml += `<div class="question-image">
             <img src="${(question as any).imageData || question.imageUrl}" alt="Question Image" />
           </div>`;
         }
         
-        // Handle multiple choice questions
+
         if (question.options && question.options.length > 0) {
           questionsHtml += `<div class="question-options">`;
           question.options.forEach((option, optionIndex) => {
@@ -115,7 +115,7 @@ export default function TestContent({ initialData, initialRouterData }: { initia
           });
           questionsHtml += `</div>`;
         } else {
-          // Free response question - add answer lines
+
           questionsHtml += `<div class="answer-space">
             <div class="answer-line">Answer: _________________________________________________</div>
             <div class="answer-line">_______________________________________________________</div>
@@ -123,28 +123,28 @@ export default function TestContent({ initialData, initialRouterData }: { initia
           </div>`;
         }
         
-        questionsHtml += `</div>`; // Close question div
+        questionsHtml += `</div>`;
       });
       
       return questionsHtml;
     };
 
-    // Get minimal stylesheets for print
+
     const getStylesheets = () => {
-      // Return minimal CSS for clean text-based layout
+
       return '';
     };
 
-    // Create print styles using utility function
+
     const printStyles = createTestPrintStyles(getStylesheets);
 
-    // Create answer key
+
     const createAnswerKey = () => {
       let answerKeyHtml = '<div class="answer-key-section">';
       answerKeyHtml += '<div class="answer-key-header">ANSWER KEY</div>';
       answerKeyHtml += '<div class="answer-key-content">';
       
-      // Calculate how many columns we can fit (aim for 4-5 columns)
+
       const totalQuestions = data.length;
       const columns = Math.min(5, Math.ceil(totalQuestions / 20)); // 20 questions per column max
       const questionsPerColumn = Math.ceil(totalQuestions / columns);
@@ -157,18 +157,18 @@ export default function TestContent({ initialData, initialRouterData }: { initia
           const questionNumber = i + 1;
           
           if (question.options && question.options.length > 0) {
-            // Multiple choice question - find the correct answer letter
+
             const correctAnswers = question.answers;
             let answerLetters = '';
             
                          if (Array.isArray(correctAnswers)) {
                answerLetters = correctAnswers.map(ans => {
                  if (typeof ans === 'string') {
-                   // Find the index of this answer in the options
+
                    const optionIndex = question.options?.findIndex(opt => opt === ans) ?? -1;
                    return optionIndex >= 0 ? String.fromCharCode(97 + optionIndex) : ans;
                  } else if (typeof ans === 'number') {
-                   // Direct index
+
                    return String.fromCharCode(97 + ans);
                  }
                  return ans;
@@ -182,36 +182,36 @@ export default function TestContent({ initialData, initialRouterData }: { initia
             
             answerKeyHtml += `<div class="answer-item">${questionNumber}. ${answerLetters}</div>`;
           } else {
-            // Free response question
+
             answerKeyHtml += `<div class="answer-item">${questionNumber}. [judge on accuracy and completeness]</div>`;
           }
         }
         
-        answerKeyHtml += '</div>'; // Close column
+        answerKeyHtml += '</div>';
       }
       
-      answerKeyHtml += '</div>'; // Close answer-key-content
-      answerKeyHtml += '</div>'; // Close answer-key-section
+      answerKeyHtml += '</div>';
+      answerKeyHtml += '</div>';
       
       return answerKeyHtml;
     };
 
-    // Create print content using utility function
+
     const printContent = createTestPrintContent({
       tournamentName,
       questionsHtml: formatQuestionsForPrint() + createAnswerKey(),
       questionPoints
     }, printStyles);
 
-    // Setup print window using utility function
+
     try {
-      // Use the robust popup-based print approach
+
       await setupTestPrintWindow(printContent);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to print test');
     }
 
-    // Close the modal
+
     setPrintModalOpen(false);
   };
 
@@ -334,7 +334,7 @@ export default function TestContent({ initialData, initialRouterData }: { initia
                 <>
                   {data.map((question, index) => {
                     const isBookmarked = isQuestionBookmarked(question);
-                    // Use a more stable key that includes question content to prevent DOM manipulation errors
+
                     const questionKey = question.id || `question-${index}-${question.question.substring(0, 50)}`;
 
                     return (
@@ -419,7 +419,7 @@ export default function TestContent({ initialData, initialRouterData }: { initia
         darkMode={darkMode}
         showReferenceButton={routerData.eventName === 'Codebusters'}
         onShowReference={() => {
-          // Handle reference button click for codebusters
+
           window.open('/2024_Div_C_Resource.pdf', '_blank');
         }}
         eventName={routerData.eventName}

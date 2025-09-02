@@ -3,7 +3,7 @@
 import { supabase } from '@/lib/supabase';
 import type { DailyMetrics } from './metrics';
 
-// Types
+
 export interface HistoryRecord {
   questionsAttempted: number;
   correctAnswers: number;
@@ -16,14 +16,14 @@ export interface DashboardData {
   greetingName: string;
 }
 
-// Local storage keys
+
 const METRICS_PREFIX = 'metrics_';
 const GREETING_NAME_KEY = 'scio_display_name';
 
-// Date helper
+
 const getTodayKey = (): string => new Date().toISOString().split('T')[0];
 
-// Local storage helpers
+
 const getLocalGreetingName = (): string => {
   try {
     return localStorage.getItem(GREETING_NAME_KEY) || '';
@@ -87,7 +87,7 @@ const getLocalHistory = (): Record<string, HistoryRecord> => {
   return historyData;
 };
 
-// Supabase helpers
+
 const fetchUserStatsSince = async (userId: string, fromDate: string): Promise<any[]> => {
   const exec = async () => (supabase as any)
     .from('user_stats')
@@ -100,7 +100,7 @@ const fetchUserStatsSince = async (userId: string, fromDate: string): Promise<an
     try { 
       await supabase.auth.refreshSession(); 
     } catch {
-      // If refresh fails, clear cookies and try again
+
       if (typeof window !== 'undefined') {
         const supabaseCookieNames = [
           'sb-access-token', 'sb-refresh-token', 'supabase-auth-token',
@@ -140,7 +140,7 @@ const fetchDailyUserStatsRow = async (userId: string, date: string): Promise<any
     try { 
       await supabase.auth.refreshSession(); 
     } catch {
-      // If refresh fails, clear cookies and try again
+
       if (typeof window !== 'undefined') {
         const supabaseCookieNames = [
           'sb-access-token', 'sb-refresh-token', 'supabase-auth-token',
@@ -167,10 +167,10 @@ const fetchDailyUserStatsRow = async (userId: string, date: string): Promise<any
   return data || null;
 };
 
-// Main data sync function
+
 export const syncDashboardData = async (userId: string | null): Promise<DashboardData> => {
   if (!userId) {
-    // Anonymous user: return local data only
+
     const metrics = getLocalDailyMetrics();
     const historyData = getLocalHistory();
     const greetingName = getLocalGreetingName();
@@ -183,7 +183,7 @@ export const syncDashboardData = async (userId: string | null): Promise<Dashboar
   }
 
   try {
-    // 1. Sync all historical data from Supabase to localStorage
+    // 1. sync all historical data from supabase to localstorage
     const allRows = await fetchUserStatsSince(userId, '1970-01-01');
     if (Array.isArray(allRows)) {
       allRows.forEach((row: any) => {
@@ -201,7 +201,7 @@ export const syncDashboardData = async (userId: string | null): Promise<Dashboar
       });
     }
 
-    // 2. Ensure today's data is up to date
+    // 2. ensure today's data is up to date
     const today = getTodayKey();
     const todayRow = await fetchDailyUserStatsRow(userId, today);
     if (todayRow) {
@@ -215,7 +215,7 @@ export const syncDashboardData = async (userId: string | null): Promise<Dashboar
       setLocalDailyMetrics(payload);
     }
 
-    // 3. Sync greeting name
+    // 3. sync greeting name
     try {
       if (!userId) {
         console.warn('No userId provided for greeting name sync');
@@ -243,7 +243,7 @@ export const syncDashboardData = async (userId: string | null): Promise<Dashboar
       }
     } catch {}
 
-    // 4. Return the synced data
+    // 4. return the synced data
     const metrics = getLocalDailyMetrics();
     const historyData = getLocalHistory();
     const greetingName = getLocalGreetingName();
@@ -256,7 +256,7 @@ export const syncDashboardData = async (userId: string | null): Promise<Dashboar
   } catch (error) {
     console.error('Error syncing dashboard data:', error);
     
-    // Fallback to local data
+
     const metrics = getLocalDailyMetrics();
     const historyData = getLocalHistory();
     const greetingName = getLocalGreetingName();
@@ -269,7 +269,7 @@ export const syncDashboardData = async (userId: string | null): Promise<Dashboar
   }
 };
 
-// Get initial data (for SSR/initial load)
+
 export const getInitialDashboardData = (): DashboardData => {
   const metrics = getLocalDailyMetrics();
   const historyData = getLocalHistory();
@@ -282,7 +282,7 @@ export const getInitialDashboardData = (): DashboardData => {
   };
 };
 
-// Update metrics (for real-time updates)
+
 export const updateDashboardMetrics = async (
   userId: string | null,
   updates: {
@@ -294,7 +294,7 @@ export const updateDashboardMetrics = async (
   const attemptedDelta = Math.round(updates.questionsAttempted || 0);
   
   if (!userId) {
-    // Anonymous user: update local storage only
+
     const currentStats = getLocalDailyMetrics();
     const updatedStats: DailyMetrics = {
       ...currentStats,
@@ -314,11 +314,11 @@ export const updateDashboardMetrics = async (
     return updatedStats;
   }
   
-  // Logged-in user: update both local storage and Supabase
+
   const today = getTodayKey();
   
   try {
-    // Get current stats for today
+
     const currentData = await fetchDailyUserStatsRow(userId, today);
     const currentStats = currentData ? {
       questionsAttempted: currentData.questions_attempted || 0,
@@ -334,7 +334,7 @@ export const updateDashboardMetrics = async (
       gamePoints: 0,
     };
 
-    // Calculate new stats
+
     const updatedStats = {
       user_id: userId,
       date: today,
@@ -352,7 +352,7 @@ export const updateDashboardMetrics = async (
       game_points: currentStats.gamePoints
     };
 
-    // Update Supabase
+
     let { data, error } = await (supabase as any)
       .from('user_stats')
       .upsert(updatedStats as any, { onConflict: 'user_id,date' })
@@ -379,7 +379,7 @@ export const updateDashboardMetrics = async (
       }
     }
 
-    // Mirror to localStorage
+
     const localMetrics: DailyMetrics = {
       questionsAttempted: data.questions_attempted,
       correctAnswers: data.correct_answers,
@@ -396,7 +396,7 @@ export const updateDashboardMetrics = async (
   }
 };
 
-// Clear all localStorage keys except the theme preference. Also signals name reset.
+
 export function resetAllLocalStorageExceptTheme(): void {
   try {
     const preservedTheme = localStorage.getItem('theme');
@@ -404,10 +404,10 @@ export function resetAllLocalStorageExceptTheme(): void {
     if (preservedTheme !== null) {
       localStorage.setItem('theme', preservedTheme);
     }
-    // Explicitly ensure common cache keys are absent after clear (defensive)
+
     try { localStorage.removeItem(GREETING_NAME_KEY); } catch {}
     try { localStorage.removeItem('scio_chart_type'); } catch {}
-    // Notify listeners that display name was cleared
+
     try { window.dispatchEvent(new CustomEvent('scio-display-name-updated', { detail: '' })); } catch {}
   } catch {}
 }

@@ -5,7 +5,7 @@ import { geminiService } from '@/lib/services/gemini';
 import { edits as editsTable } from '@/lib/db/schema';
 import { desc, eq, and } from 'drizzle-orm';
 
-// Helper to handle jsonb (object) or string-encoded JSON seamlessly
+
 function parseMaybeJson(value: unknown): Record<string, unknown> {
   if (value === null || value === undefined) return {};
   if (typeof value === 'string') {
@@ -22,7 +22,7 @@ function parseMaybeJson(value: unknown): Record<string, unknown> {
   return { value } as Record<string, unknown>;
 }
 
-// GET /api/edits - Get edits (optionally filtered by event)
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       .orderBy(desc(editsTable.updatedAt));
 
     if (event) {
-      // Return edits array for specific event
+
       const edits: Array<{
         original: Record<string, unknown>;
         edited: Record<string, unknown>;
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
         edits,
       });
     } else {
-      // Return all edits grouped by event
+
       const edits: Record<string, Array<{
         original: Record<string, unknown>;
         edited: Record<string, unknown>;
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/edits - Submit an edit
+
 export async function POST(request: NextRequest) {
   try {
     const body: EditRequest = await request.json();
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
       aiReason = 'Edit bypassed AI validation and was accepted by administrator';
       console.log('🔧 [EDIT/SUBMIT] Bypass mode: Edit accepted without AI validation');
     } else {
-      // AI validation using Gemini
+
       if (geminiService.isAvailable()) {
         console.log('🤖 [EDIT/SUBMIT] Sending request to Gemini AI for edit validation');
 
@@ -170,13 +170,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (isValid) {
-      // Save edit to database
+
       const originalJSON = JSON.stringify(body.originalQuestion);
       const editedJSON = JSON.stringify(body.editedQuestion);
 
       try {
-        // Check if edit already exists
-        // Check if edit already exists
+
+
         const existing = await db
           .select({ id: editsTable.id })
           .from(editsTable)

@@ -21,23 +21,23 @@ const ChartRangeSlider: React.FC<ChartRangeSliderProps> = ({
   const sliderRef = useRef<HTMLDivElement>(null);
   const { darkMode } = useTheme();
 
-  // Initialize range based on device type
+
   useEffect(() => {
     if (dataPoints.length > 0) {
       if (isMobile) {
-        // On mobile, show the 30% most recent data points
+
         const recentCount = Math.max(1, Math.floor(dataPoints.length * 0.3));
         setStartIndex(dataPoints.length - recentCount);
         setEndIndex(dataPoints.length - 1);
       } else {
-        // On desktop, show all data points
+
         setStartIndex(0);
         setEndIndex(dataPoints.length - 1);
       }
     }
   }, [dataPoints.length, isMobile]);
 
-  // Update parent when range changes
+
   useEffect(() => {
     if (dataPoints.length > 0) {
       onRangeChange(startIndex, endIndex);
@@ -112,7 +112,7 @@ const ChartRangeSlider: React.FC<ChartRangeSliderProps> = ({
     }
   }, [isDragging, handleMouseMove, handleTouchMove]);
 
-    // Use the imported formatDate function from eloDataProcessor
+
 
   if (dataPoints.length === 0) return null;
 

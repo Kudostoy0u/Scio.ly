@@ -34,12 +34,12 @@ export const TestPrintConfigModal: React.FC<TestPrintConfigModalProps> = ({
   };
 
   const getSuggestedPoints = (question: any) => {
-    // For tests, we can suggest points based on question complexity
-    // Multiple choice questions might be worth less than free response
+
+
     if (question.options && question.options.length > 0) {
-      return 2; // Multiple choice questions
+      return 2;
     } else {
-      return 5; // Free response questions
+      return 5;
     }
   };
 

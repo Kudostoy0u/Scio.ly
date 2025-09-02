@@ -9,7 +9,7 @@ const SHELL_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      // Cache essential assets with error handling
+
       return Promise.allSettled(
         SHELL_ASSETS.map(url => 
           cache.add(url).catch(err => {
@@ -30,22 +30,22 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Basic runtime caching: cache-first for same-origin static, network-first for others
+
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
-  // Only handle GET
+
   if (request.method !== 'GET') return;
 
-  // Never touch cross-origin (e.g., Supabase) requests
+
   if (url.origin !== location.origin) return;
 
   const isApi = url.pathname.startsWith('/api/');
   const isDocument = request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html');
   const isAsset = ['image', 'style', 'script', 'font'].includes(request.destination) || url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/_next/image');
 
-  // Network-first for API requests; for documents prefer cached shell when offline
+
   if (isApi) {
     event.respondWith(fetch(request).catch(() => new Response('Offline', { status: 503, statusText: 'Service Unavailable' })));
     return;
@@ -55,14 +55,14 @@ self.addEventListener('fetch', (event) => {
     event.respondWith((async () => {
       try {
         const res = await fetch(request);
-        // Cache successful document responses for offline reuse
+
         if (res && res.ok && res.type === 'basic') {
           const cache = await caches.open(CACHE_NAME);
           cache.put(request, res.clone());
         }
         return res;
       } catch {
-        // Prefer cached page, then home shell, then offline page
+
         const cachedDoc = await caches.match(request);
         if (cachedDoc) return cachedDoc;
         const cachedHome = await caches.match('/');
@@ -75,7 +75,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for static assets; on offline miss, return safe fallbacks
+
   if (isAsset) {
     event.respondWith((async () => {
       const cached = await caches.match(request);
@@ -89,7 +89,7 @@ self.addEventListener('fetch', (event) => {
         }
         return res;
       } catch {
-        // Fallbacks when offline and not cached
+
         if (request.destination === 'image' || url.pathname.startsWith('/_next/image')) {
           const fallback = await caches.match('/site-logo.png');
           if (fallback) return fallback;
@@ -111,7 +111,7 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-// Background Sync handler (one-off)
+
 self.addEventListener('sync', (event) => {
   if (event.tag === 'scio-sync') {
     event.waitUntil(
@@ -127,7 +127,7 @@ self.addEventListener('sync', (event) => {
   }
 });
 
-// Periodic Background Sync handler (if supported)
+
 self.addEventListener('periodicsync', (event) => {
   if (event.tag === 'scio-periodic') {
     event.waitUntil(

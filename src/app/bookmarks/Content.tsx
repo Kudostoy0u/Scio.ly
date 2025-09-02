@@ -25,13 +25,13 @@ interface BookmarkedQuestion {
   timestamp: number;
 }
 
-// Simple component to display a bookmarked question's text, options, and answer
+
 const BookmarkedQuestionDisplay = ({ bookmarkedQuestion, darkMode, onRemove }: { 
   bookmarkedQuestion: BookmarkedQuestion; 
   darkMode: boolean; 
   onRemove: (questionToRemove: BookmarkedQuestion) => void; 
 }) => {
-  const { question } = bookmarkedQuestion; // Extract question object
+  const { question } = bookmarkedQuestion;
 
   return (
     <div className={`relative p-4 rounded-md ${darkMode ? 'bg-gray-800/50' : 'bg-gray-100/80'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
@@ -53,7 +53,7 @@ const BookmarkedQuestionDisplay = ({ bookmarkedQuestion, darkMode, onRemove }: {
       {question.options && question.options.length > 0 && (
         <div className="space-y-2 mb-3">
           {question.options.map((option, idx) => {
-            // Strict zero-based: numeric indices or text match
+
             const isCorrect = question.answers.includes(idx) ||
                               (typeof question.answers[0] === 'string' && question.answers.includes(option));
             
@@ -139,7 +139,7 @@ export default function Content() {
   };
 
   const handleTakeTimedTest = (eventName: string, _questions: BookmarkedQuestion[]) => {
-    // Repurposed to CLEAR ALL for this event (rightmost button)
+
     (async () => {
       if (!user) {
         toast.info('Please sign in to manage bookmarks');
@@ -167,20 +167,20 @@ export default function Content() {
   };
 
   const handleTakeQuickTest = (eventName: string, questions: BookmarkedQuestion[]) => {
-    // Generate a clean test with these questions (no timer)
+
     try {
-      // Clear any previous session/state to avoid "Skipped" artifacts
+
       clearTestSession();
       localStorage.removeItem('testUserAnswers');
       localStorage.removeItem('testSubmitted');
       localStorage.removeItem('contestedQuestions');
       localStorage.removeItem('testFromBookmarks');
 
-      // Compute time: 5 minutes per question, minimum 5 minutes
+
       const questionCount = Math.max(1, questions.length);
       const timeLimitMinutes = Math.max(5, questionCount * 5);
 
-      // Set data in both localStorage and cookie for compatibility
+
       localStorage.setItem('testQuestions', JSON.stringify(questions.map(q => q.question)));
       localStorage.setItem('testParams', JSON.stringify({
         eventName: eventName,
@@ -190,7 +190,7 @@ export default function Content() {
       }));
       localStorage.setItem('testFromBookmarks', 'true');
       
-      // Set cookie for server-side rendering
+
       const testParams = {
         eventName: eventName,
         questionCount: questionCount.toString(),
@@ -213,7 +213,7 @@ export default function Content() {
     }));
   };
 
-  // Function to remove a single bookmark
+
   const handleRemoveSingleBookmark = async (questionToRemove: BookmarkedQuestion) => {
     if (!user) {
       toast.info('Please sign in to manage bookmarks');
@@ -221,13 +221,13 @@ export default function Content() {
     }
 
     const questionKey = `${questionToRemove.eventName}-${questionToRemove.timestamp}`;
-    if (isRemoving[questionKey]) return; // Prevent double clicks
+    if (isRemoving[questionKey]) return;
     setIsRemoving(prev => ({ ...prev, [questionKey]: true }));
 
     try {
       await removeBookmark(user.id, questionToRemove.question, questionToRemove.source);
       
-      // Update state to remove the question immediately
+
       setBookmarkedQuestions(prev => {
         const updatedEvents = { ...prev };
         const eventName = questionToRemove.eventName;
@@ -235,7 +235,7 @@ export default function Content() {
           updatedEvents[eventName] = updatedEvents[eventName].filter(
             q => !(q.question.question === questionToRemove.question.question && q.source === questionToRemove.source && q.timestamp === questionToRemove.timestamp)
           );
-          // If the event becomes empty, remove the event key
+
           if (updatedEvents[eventName].length === 0) {
             delete updatedEvents[eventName];
           }
@@ -378,9 +378,9 @@ export default function Content() {
                       {questions.map((q, index) => (
                         <BookmarkedQuestionDisplay 
                           key={`${eventName}-${index}-${q.timestamp}`} 
-                          bookmarkedQuestion={q} // Pass the full object
+                          bookmarkedQuestion={q}
                           darkMode={darkMode} 
-                          onRemove={handleRemoveSingleBookmark} // Pass the removal handler
+                          onRemove={handleRemoveSingleBookmark}
                         />
                       ))}
                     </div>

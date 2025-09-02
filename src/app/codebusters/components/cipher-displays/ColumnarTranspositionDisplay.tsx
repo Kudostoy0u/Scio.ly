@@ -23,7 +23,7 @@ export const ColumnarTranspositionDisplay = ({
     const { darkMode } = useTheme();
     const quote = quotes[quoteIndex];
 
-    // Build correct mapping of encrypted position -> plaintext letter, preserving non-letters
+
     const correctMapping = useMemo(() => {
         const mapping: { [key: number]: string } = {};
         if (!isTestSubmitted) return mapping;
@@ -44,26 +44,26 @@ export const ColumnarTranspositionDisplay = ({
         return mapping;
     }, [isTestSubmitted, quote.quote, text]);
 
-    // Determine padding positions by counting the last N cipher letters as padding,
-    // where N = (#cipher inputs) - (#alphabetic characters in the original quote)
+
+    // where n = (#cipher inputs) - (#alphabetic characters in the original quote)
     const paddingPositions = useMemo(() => {
         const positions = new Set<number>();
         if (!isTestSubmitted) return positions;
 
-        // Collect original indices of all cipher letters (A-Z)
+
         const cipherLetterIndices: number[] = [];
         for (let i = 0; i < text.length; i++) {
             if (/[A-Z]/.test(text[i])) cipherLetterIndices.push(i);
         }
         const cipherInputs = cipherLetterIndices.length;
 
-        // Count alphabetic characters in the original quote
+
         const cleanPlainLength = quote.quote.toUpperCase().replace(/[^A-Z]/g, '').length;
 
         const paddingCount = Math.max(0, cipherInputs - cleanPlainLength);
         if (paddingCount === 0) return positions;
 
-        // Mark the last paddingCount cipher-letter indices as padding
+
         const start = Math.max(0, cipherLetterIndices.length - paddingCount);
         for (let idx = start; idx < cipherLetterIndices.length; idx++) {
             positions.add(cipherLetterIndices[idx]);
@@ -72,8 +72,8 @@ export const ColumnarTranspositionDisplay = ({
         return positions;
     }, [isTestSubmitted, quote.quote, text]);
 
-    // Create a char array with spaces inserted every 5 letters for grouping
-    // Also create a mapping from display index to original text index
+
+
     const { displayChars, displayToOriginalIndex } = useMemo(() => {
         const chars: string[] = [];
         const indexMapping: { [key: number]: number } = {};
@@ -113,7 +113,7 @@ export const ColumnarTranspositionDisplay = ({
                     const correctLetter = isTestSubmitted && isLetter && originalIndex !== undefined ? correctMapping[originalIndex] : '';
                     const isCorrect = value.toUpperCase() === correctLetter;
                     
-                    // Treat the last N cipher-letter inputs as padding after submission
+
                     const isPadding = isLetter && isTestSubmitted && originalIndex !== undefined && paddingPositions.has(originalIndex);
 
                     return (

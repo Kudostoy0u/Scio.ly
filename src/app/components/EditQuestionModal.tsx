@@ -5,8 +5,8 @@ import { toast } from 'react-toastify';
 import { Bot } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { geminiService, EditSuggestion, Question } from '@/app/utils/geminiService';
-// Removed upload API usage since image edits are disabled
-// Removed in-modal success/failure icons for optimistic flow
+
+
 
 interface EditQuestionModalProps {
   isOpen: boolean;
@@ -17,7 +17,7 @@ interface EditQuestionModalProps {
   darkMode: boolean;
   question?: Question;
   eventName: string;
-  canEditAnswers?: boolean; // Whether user can edit answers (true after test submission, false during test)
+  canEditAnswers?: boolean;
 }
 
 const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
@@ -26,26 +26,26 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
   onSubmit,
   darkMode,
   question,
-  canEditAnswers = true // Default to true for backward compatibility
+  canEditAnswers = true
 }) => {
 
   const [editedQuestion, setEditedQuestion] = useState('');
   const [editedOptions, setEditedOptions] = useState<string[]>([]);
-  const [correctAnswers, setCorrectAnswers] = useState<number[]>([]); // zero-based indices for MCQ
+  const [correctAnswers, setCorrectAnswers] = useState<number[]>([]); // zero-based indices for mcq
   const [frqAnswer, setFrqAnswer] = useState('');
   const [difficulty, setDifficulty] = useState(0.5);
   const [reason, setReason] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isFRQ, setIsFRQ] = useState(false);
-  // Optimistic flow: no in-modal success/failure screen
+
   const [originalOptionCount, setOriginalOptionCount] = useState(0);
   
-  // AI suggestion states
+
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<EditSuggestion | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Image-related state (read-only display)
+
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
 
   useEffect(() => {
@@ -54,18 +54,18 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
       setEditedQuestion(question.question);
       setOriginalOptionCount(Array.isArray(question.options) ? question.options.length : 0);
       
-      // Set image URL if question has image
+
       if (question.imageData || (question as any).imageUrl) {
         setCurrentImageUrl(question.imageData || (question as any).imageUrl);
       }
       
-      // Determine if this is a free response question
+
       const hasMCQOptions = question.options && question.options.length > 0;
       setIsFRQ(!hasMCQOptions);
       
       if (hasMCQOptions) {
         setEditedOptions([...question.options!]);
-        // If answers are editable (test submitted), pre-select correct answers (zero-based indices)
+
         if (canEditAnswers) {
           const indices = computeCorrectAnswerIndices(question.options!, question.answers ?? []);
           setCorrectAnswers(indices);
@@ -95,22 +95,22 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
     setSuggestions(null);
     setShowSuggestions(false);
     setIsLoadingSuggestions(false);
-    // Reset image state
+
     setCurrentImageUrl('');
-    // No in-modal status when optimistic
+
     setOriginalOptionCount(0);
   };
 
   const computeCorrectAnswerIndices = (options: string[], answers: unknown[]): number[] => {
     if (!Array.isArray(options) || options.length === 0 || !Array.isArray(answers)) return [];
-    // Strict zero-based: accept numeric (or numeric-string) indices within [0, options.length)
+
     const zeroBasedNums = answers
       .map(a => (typeof a === 'number' ? a : (typeof a === 'string' && /^\d+$/.test(a) ? parseInt(a, 10) : null)))
       .filter((n): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n < options.length);
     if (zeroBasedNums.length > 0) {
       return Array.from(new Set(zeroBasedNums)).sort((a, b) => a - b);
     }
-    // Otherwise, match by exact option text (case-insensitive)
+
     const lowerOptions = options.map(o => o.toLowerCase());
     const indices = answers
       .map(a => {
@@ -126,14 +126,14 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
     onClose();
   };
 
-  // No image upload or removal; image is permanent
+
 
   const handleGetSuggestions = async () => {
     if (!question) return;
 
     setIsLoadingSuggestions(true);
     try {
-      // Prepare question data with image information
+
       const questionWithImage = {
         ...question,
         imageData: currentImageUrl || question.imageData || (question as any).imageUrl
@@ -159,7 +159,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
       setEditedOptions([...suggestions.suggestedOptions]);
       setIsFRQ(false);
       
-      // Only set correct answers if user can edit them (test has been submitted)
+
       if (canEditAnswers) {
         const indices = computeCorrectAnswerIndices(
           suggestions.suggestedOptions,
@@ -169,13 +169,13 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
       }
     } else {
       setIsFRQ(true);
-      // Only set FRQ answer if user can edit them (test has been submitted)
+
       if (canEditAnswers) {
         setFrqAnswer(String(suggestions.suggestedAnswers[0] || ''));
       }
     }
 
-    // Add AI reasoning to user's reason
+
     const aiReason = `${suggestions.reasoning || 'No reasoning provided'}`;
     setReason(prev => prev + aiReason);
     
@@ -202,12 +202,12 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
         tournament: question.tournament,
         division: question.division,
         subtopic: question.subtopic,
-        // Include image data if present
+
         ...(finalImageUrl && { imageData: finalImageUrl })
       };
 
       toast.info('Judging edits');
-      // Fire-and-forget submission; close modal immediately
+
       const submitPromise = onSubmit(editedQuestionData, reason.trim() || "User did not specify a reason", question);
       handleClose();
       submitPromise
@@ -241,7 +241,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
   const removeOption = (index: number) => {
     const newOptions = editedOptions.filter((_, i) => i !== index);
     setEditedOptions(newOptions);
-    // Adjust zero-based correct answer indices after removal
+
     const adjusted = correctAnswers
       .filter(ans => ans !== index)
       .map(ans => (ans > index ? ans - 1 : ans));

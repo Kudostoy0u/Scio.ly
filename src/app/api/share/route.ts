@@ -6,13 +6,13 @@ import { ShareCodeData } from '@/lib/types/api';
 
 interface TestParamsRaw {
   questionIds?: string[];
-  idQuestionIds?: string[]; // IDs of questions that are ID questions (have imageData)
+  idQuestionIds?: string[];
   testParamsRaw?: Record<string, unknown>;
   timeRemainingSeconds?: number | null;
   createdAtMs?: number;
 }
 
-// GET /api/share - Get share code data
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`🔍 [SHARE/GET] Looking up share code: ${code}`);
 
-    // Get share code data, ensuring it hasn't expired
+
     const result = await db
       .select({
         testParamsRaw: shareCodes.testParamsRaw,
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     const shareData = result[0];
     
     try {
-      // testParamsRaw is already a JSON object (JSONB column)
+      // testparamsraw is already a json object (jsonb column)
       const testParamsRaw = shareData.testParamsRaw as TestParamsRaw;
       
       if (!testParamsRaw) {
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
         success: true,
         data: {
           questionIds: testParamsRaw.questionIds || [],
-          idQuestionIds: testParamsRaw.idQuestionIds || [], // Return which questions are ID questions
+          idQuestionIds: testParamsRaw.idQuestionIds || [],
           testParamsRaw: testParamsRaw.testParamsRaw || {},
           timeRemainingSeconds: testParamsRaw.timeRemainingSeconds ?? undefined,
           createdAtMs: testParamsRaw.createdAtMs || Date.now(),
@@ -93,14 +93,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// DELETE /api/share/cleanup - Cleanup expired share codes
+
 export async function DELETE() {
   try {
     console.log('🧹 [SHARE/CLEANUP] Starting cleanup of expired share codes');
 
     await db.delete(shareCodes).where(lte(shareCodes.expiresAt, new Date()));
 
-    // Note: Neon doesn't return rowsAffected in serverless mode
+
     console.log('🧹 [SHARE/CLEANUP] Cleanup completed');
 
     return NextResponse.json({

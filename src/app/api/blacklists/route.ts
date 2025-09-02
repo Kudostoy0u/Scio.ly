@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       .orderBy(desc(blacklistsTable.createdAt));
 
     if (event) {
-      // Return just the blacklist array for specific event
+
       const blacklist: unknown[] = [];
       let rowCount = 0;
       
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
         blacklist,
       });
     } else {
-      // Return all blacklists grouped by event
+
       const blacklists: Record<string, unknown[]> = {};
       let rowCount = 0;
       
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     const questionDataJSON = JSON.stringify(body.questionData);
 
     try {
-      // Add to blacklist
+
       await db
         .insert(blacklistsTable)
         .values({ event: body.event, questionData: JSON.parse(questionDataJSON) });

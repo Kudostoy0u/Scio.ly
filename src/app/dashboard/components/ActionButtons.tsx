@@ -21,7 +21,7 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
 
   const handleLoadTest = async (code: string) => {
     try {
-      // Use centralized share-code handling which fetches, prepares state, and redirects appropriately
+
       await handleShareCodeRedirect(code);
     } catch (error) {
       console.error('Error loading test:', error);
@@ -32,7 +32,7 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>, index: number) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text');
-    // Keep only alphanumeric characters and uppercase them
+
     const chars = pastedData
       .replace(/[^a-zA-Z0-9]/g, '')
       .toUpperCase()
@@ -48,14 +48,14 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
     
     setTestCodeDigits(newDigits);
     
-    // Auto-submit if we have 6 digits
+
     if (newDigits.every(d => d !== '') && newDigits.join('').length === 6) {
       handleLoadTest(newDigits.join(''));
     }
   };
 
   const handleDigitChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
-    // Only allow a single alphanumeric character; auto-capitalize letters
+
     const sanitized = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
     const value = sanitized.slice(0, 1);
     
@@ -63,7 +63,7 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
     newDigits[index] = value;
     setTestCodeDigits(newDigits);
     
-    // Move to next input if value is entered
+
     if (value && index < 5) {
       const nextInput = document.getElementById(`digit-${index + 1}`) as HTMLInputElement;
       if (nextInput) {
@@ -71,7 +71,7 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
       }
     }
     
-    // Auto-submit if we have 6 digits
+
     if (newDigits.every(d => d !== '') && newDigits.join('').length === 6) {
       handleLoadTest(newDigits.join(''));
     }
@@ -79,7 +79,7 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
     if (e.key === 'Backspace' && !testCodeDigits[index] && index > 0) {
-      // Move to previous input on backspace if current is empty
+
       const prevInput = document.getElementById(`digit-${index - 1}`) as HTMLInputElement;
       if (prevInput) {
         prevInput.focus();

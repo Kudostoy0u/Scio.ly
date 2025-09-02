@@ -1,8 +1,8 @@
-// localStorage keys for different event types
+// localstorage keys for different event types
 export const NORMAL_EVENT_PREFERENCES = 'scio_normal_event_preferences';
 export const CODEBUSTERS_PREFERENCES = 'scio_codebusters_preferences';
 
-// Default values
+
 export const NORMAL_DEFAULTS = {
   questionCount: 10,
   timeLimit: 15
@@ -13,7 +13,7 @@ export const CODEBUSTERS_DEFAULTS = {
   timeLimit: 15
 };
 
-// Helper functions for localStorage
+
 export const savePreferences = (eventName: string, questionCount: number, timeLimit: number) => {
   const isCodebusters = eventName === 'Codebusters';
   const key = isCodebusters ? CODEBUSTERS_PREFERENCES : NORMAL_EVENT_PREFERENCES;

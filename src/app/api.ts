@@ -1,4 +1,4 @@
-// Using migrated TypeScript Next.js API routes
+
 const API_BASE_URL = '/api'
 const api = {
     baseUrl: API_BASE_URL,
@@ -9,7 +9,7 @@ const api = {
     subtopics: `${API_BASE_URL}/meta/subtopics`,
     stats: `${API_BASE_URL}/meta/stats`,
     
-    // New endpoints for migrated functionality
+
     blacklists: `${API_BASE_URL}/blacklists`,
     edits: `${API_BASE_URL}/edits`,
     share: `${API_BASE_URL}/share`,
@@ -22,7 +22,7 @@ const api = {
     reportAll: `${API_BASE_URL}/report/all`,
     admin: `${API_BASE_URL}/admin`,
     
-    // Gemini AI endpoints
+
     geminiSuggestEdit: `${API_BASE_URL}/gemini/suggest-edit`,
     geminiAnalyzeQuestion: `${API_BASE_URL}/gemini/analyze-question`,
     geminiImproveReason: `${API_BASE_URL}/gemini/improve-reason`,
@@ -34,7 +34,7 @@ const api = {
     uploadImage: `${API_BASE_URL}/upload-image`,
     
     arr: JSON.parse(process.env.NEXT_PUBLIC_API_KEYS || "[]"),
-    // Legacy support - keep for backward compatibility
+
     api: `${API_BASE_URL}/questions`
 };
 

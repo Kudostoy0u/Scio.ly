@@ -11,7 +11,7 @@ export function useBannerState() {
     
     checkBannerVisibility();
     
-    // Listen for storage changes
+
     window.addEventListener('storage', checkBannerVisibility);
     return () => window.removeEventListener('storage', checkBannerVisibility);
   }, []);

@@ -13,7 +13,7 @@ interface CodebustersSummaryProps {
   questionPoints?: {[key: number]: number};
 }
 
-// Function to calculate grade based on points
+
 const calculateGrade = (earnedPoints: number, totalPoints: number): string => {
   if (totalPoints === 0) return 'N/A';
   
@@ -26,7 +26,7 @@ const calculateGrade = (earnedPoints: number, totalPoints: number): string => {
   return 'F';
 };
 
-// Non-compact layout component
+
 function NonCompactCodebustersSummary({ items, cipherTypes, darkMode }: { 
   items: SummaryItem[]; 
   cipherTypes: string[]; 
@@ -63,7 +63,7 @@ function NonCompactCodebustersSummary({ items, cipherTypes, darkMode }: {
   );
 }
 
-// Compact layout component
+
 function CompactCodebustersSummary({ items, darkMode }: { 
   items: SummaryItem[]; 
   darkMode: boolean; 
@@ -77,7 +77,7 @@ function CompactCodebustersSummary({ items, darkMode }: {
   );
 }
 
-// Mobile compact layout component
+
 function MobileCompactCodebustersSummary({ items, darkMode }: { 
   items: SummaryItem[]; 
   darkMode: boolean; 
@@ -104,26 +104,26 @@ export default function CodebustersSummary({ quotes, darkMode, hintedLetters = {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Calculate points-based scoring using the new grading system
+
   let totalPointsEarned = 0;
   let totalPointsAttempted = 0;
   let totalInputs = 0;
   
   quotes.forEach((quote, quoteIndex) => {
-    // Calculate grade for this cipher using the new grading system
+
     const gradeResult = calculateCipherGrade(quote, quoteIndex, hintedLetters, questionPoints);
     
-    // Add to totals
+
     totalPointsEarned += gradeResult.score;
     totalPointsAttempted += gradeResult.attemptedScore;
     totalInputs += gradeResult.totalInputs;
   });
   
-  // Calculate accuracy percentage based on points earned vs points attempted
+
   const accuracyPercentage = totalPointsAttempted > 0 ? Math.round((totalPointsEarned / totalPointsAttempted) * 100) : 'N/A';
   const cipherTypes = [...new Set(quotes.map(quote => quote.cipherType))];
 
-  // Calculate grade - show N/A if no questions were attempted
+
   const grade = totalInputs > 0 ? calculateGrade(totalPointsEarned, totalPointsAttempted) : 'N/A';
 
   const items: SummaryItem[] = [
@@ -153,7 +153,7 @@ export default function CodebustersSummary({ quotes, darkMode, hintedLetters = {
     },
   ];
 
-  // Calculate opacity for desktop fade transitions
+
   const fadeThreshold = 160;
   const fadeRange = 100; // pixels over which to fade
   const nonCompactOpacity = scrollY > fadeThreshold 
@@ -163,8 +163,8 @@ export default function CodebustersSummary({ quotes, darkMode, hintedLetters = {
     ? Math.min(1, ((scrollY - fadeThreshold) / fadeRange)) 
     : 0;
 
-  // Mobile transition logic - show compact layout if user has scrolled to top AND is currently scrolled down
-  // Note: This is now handled by the fade transitions instead of conditional rendering
+
+
 
   return (
     <>

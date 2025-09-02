@@ -248,7 +248,7 @@ export const setupPrintWindow = (printContent: string): Promise<Window> => {
     printWindow.document.close();
     
     printWindow.onload = () => {
-      // Immediately try to print as soon as the window loads
+
         setTimeout(() => {
         try { 
           printWindow.focus(); 
@@ -258,13 +258,13 @@ export const setupPrintWindow = (printContent: string): Promise<Window> => {
         }
       }, 200);
 
-      // After the window loads, wait for Paged.js (if present) to be available, then render and attempt to auto-print again.
+
       const start = Date.now();
       const maxWaitMs = 15000; // 15s max wait
 
       const tryRenderAndPrint = async () => {
         try {
-          // If paged polyfill is available, run preview and wait a short while for layout
+
           if ((printWindow as any).PagedPolyfill && typeof (printWindow as any).PagedPolyfill.preview === 'function') {
             try {
               (printWindow as any).PagedPolyfill.preview();
@@ -272,17 +272,17 @@ export const setupPrintWindow = (printContent: string): Promise<Window> => {
               console.warn('Paged preview threw', e);
             }
 
-            // Give paged.js some time to render the pages
+
             await new Promise((res) => setTimeout(res, 600));
 
-            // Try to focus and auto-print again (may be blocked depending on browser policy)
+
             try { printWindow.focus(); } catch {}
             try { printWindow.print(); } catch (e) { console.warn('Auto-print failed', e); }
             resolve(printWindow);
             return;
           }
 
-          // If no paged polyfill, inject fallback instructions and allow manual print
+
           const fallbackInstructions = printWindow.document.createElement('div');
           fallbackInstructions.innerHTML = `
             <div style="position: fixed; top: 0; left: 0; right: 0; background: #dc3545; color: white; padding: 15px; text-align: center; z-index: 9999; font-family: Arial, sans-serif;">
@@ -302,7 +302,7 @@ export const setupPrintWindow = (printContent: string): Promise<Window> => {
           if (printBtn) printBtn.addEventListener('click', () => printWindow.print());
           if (closeBtn) closeBtn.addEventListener('click', () => printWindow.close());
           
-          // Inject banner so user can manually print
+
       try {
         const banner = printWindow.document.createElement('div');
         banner.setAttribute('id', '__paged_banner__');
@@ -324,7 +324,7 @@ export const setupPrintWindow = (printContent: string): Promise<Window> => {
           try { printWindow.focus(); } catch {}
           resolve(printWindow);
         } catch {
-          // If we've waited too long, resolve anyway so caller doesn't hang
+
           if (Date.now() - start > maxWaitMs) {
       try { printWindow.focus(); } catch {}
       resolve(printWindow);
@@ -345,11 +345,11 @@ export const setupPrintWindow = (printContent: string): Promise<Window> => {
 };
 
 export const createInPagePrint = async (config: PrintConfig, printStyles: string): Promise<void> => {
-  // Save original content so we can restore after printing
+
   (window as any).__originalBody = document.body.innerHTML;
   (window as any).__originalTitle = document.title;
 
-  // Build print HTML (in-page) without auto-print to avoid blocked prints
+
   const printHtml = `
     ${printStyles}
     <div class="tournament-header">${config.tournamentName}</div>
@@ -361,11 +361,11 @@ export const createInPagePrint = async (config: PrintConfig, printStyles: string
     <\/script>
   `;
 
-  // Replace page content and title
+
   document.title = 'Codebusters Test';
   document.body.innerHTML = printHtml;
 
-  // Create a restore function
+
   const restore = () => {
     try {
       if ((window as any).__originalBody) {
@@ -379,7 +379,7 @@ export const createInPagePrint = async (config: PrintConfig, printStyles: string
     }
   };
 
-  // Inject banner with Print and Close buttons
+
   const banner = document.createElement('div');
   banner.setAttribute('id', '__inpage_banner__');
   banner.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; background: #007bff; color: white; padding: 12px; text-align: center; z-index: 99999; font-family: Arial, sans-serif; display:flex; justify-content:center; gap:12px; align-items:center;';
@@ -394,23 +394,23 @@ export const createInPagePrint = async (config: PrintConfig, printStyles: string
   const cbtn = document.getElementById('__inpage_close_btn__');
   if (pbtn) pbtn.addEventListener('click', () => {
     try { window.focus(); } catch {}
-    // Hide banner while printing
+
     const b = document.getElementById('__inpage_banner__'); if (b) (b as HTMLElement).style.display = 'none';
     window.print();
   });
   if (cbtn) cbtn.addEventListener('click', () => restore());
 
-  // When print dialog opens, change banner text to tournament name and hide buttons
+
   const beforePrintHandler = () => {
     try {
-      // Completely hide the banner during printing
+
       banner.style.display = 'none';
     } catch (e) { console.error(e); }
   };
 
   const afterPrintHandler = () => {
     try {
-      // Show banner again after printing
+
       banner.style.display = 'flex';
       restore();
     } catch (e) { console.error(e); }
@@ -421,7 +421,7 @@ export const createInPagePrint = async (config: PrintConfig, printStyles: string
   window.addEventListener('beforeprint', beforePrintHandler);
   window.addEventListener('afterprint', afterPrintHandler);
 
-  // Add keydown listener to update banner when user presses Ctrl/Cmd+P (beforeprint will also fire)
+
   const keyHandler = (e: KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
       try { banner.style.display = 'none'; } catch {}
@@ -429,12 +429,12 @@ export const createInPagePrint = async (config: PrintConfig, printStyles: string
   };
   document.addEventListener('keydown', keyHandler);
 
-  // Ensure we remove key handler when restoring
+
   const cleanupOnRestore = () => { document.removeEventListener('keydown', keyHandler); };
   // also call on afterprint
   window.addEventListener('afterprint', cleanupOnRestore);
 
-  // Try to run paged.js preview if available to render pages before user prints
+
   try {
     if ((window as any).PagedPolyfill && typeof (window as any).PagedPolyfill.preview === 'function') {
       (window as any).PagedPolyfill.preview();
@@ -444,10 +444,10 @@ export const createInPagePrint = async (config: PrintConfig, printStyles: string
     console.error('Paged preview failed', e);
   }
 
-  // Small delay to let DOM settle, then auto-print
+
   await new Promise((res) => setTimeout(res, 200));
   
-  // Try to auto-print after the delay
+
   try { 
     window.focus(); 
     window.print(); 

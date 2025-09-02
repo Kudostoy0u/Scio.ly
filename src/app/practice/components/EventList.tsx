@@ -13,7 +13,7 @@ interface EventListProps {
   onSortChange: (option: string) => void;
   loading: boolean;
   error: string | null;
-  // When offline, non-downloaded events should be disabled
+
   isOffline?: boolean;
   downloadedSlugs?: Set<string>;
   viewMode: 'current' | 'all';
@@ -35,7 +35,7 @@ export default function EventList({
 }: EventListProps) {
   const { darkMode } = useTheme();
 
-  // Sort events based on selected option
+
   const sortedEvents = [...events].sort((a, b) => {
     if (sortOption === 'alphabetical') {
       return a.name.localeCompare(b.name);

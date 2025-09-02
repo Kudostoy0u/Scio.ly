@@ -3,12 +3,12 @@ import { db } from '@/lib/db';
 import { shareCodes } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
-// POST /api/codebusters/share/generate - Generate Codebusters-specific share code
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Generate 6-character code (same as regular share codes)
+
     const charset = "0123456789abcdefghijklmnopqrstuvwxyz";
     let shareCode = '';
     for (let i = 0; i < 6; i++) {
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
     shareCode = shareCode.toUpperCase(); // 6-character code, no prefix
 
-    // Check if code already exists
+
     const existingResult = await db
       .select({ id: shareCodes.id })
       .from(shareCodes)
@@ -29,11 +29,11 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Calculate expiration time (7 days from now)
+
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-    // Store Codebusters-specific data with quote UUIDs and cipher types
+
     const dataToStore = {
       eventName: 'Codebusters',
       testParams: body.testParams || {},
@@ -46,8 +46,8 @@ export async function POST(request: NextRequest) {
     
     await db.insert(shareCodes).values({
       code: shareCode,
-      indices: shareData, // Store complete share data including encryption details
-      testParamsRaw: dataToStore, // Store other test params
+      indices: shareData,
+      testParamsRaw: dataToStore,
       expiresAt: expiresAt,
     });
 

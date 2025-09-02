@@ -3,14 +3,14 @@ import 'server-only';
 const BUCKET = 'docs';
 
 export async function ensureDocsBucket(): Promise<void> {
-  // Best-effort: try to create the bucket if it doesn't exist
+
   try {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return;
     const { supabase } = await import('@/lib/supabase');
     const { error } = await supabase.storage.createBucket(BUCKET, { public: true, fileSizeLimit: 5 * 1024 * 1024 });
     if (error && !String(error.message || '').includes('already exists')) {
-      // Silently ignore to avoid blocking UX
-      // console.warn('Bucket creation error', error.message);
+
+      // console.warn('bucket creation error', error.message);
     }
   } catch {
     // ignore
@@ -46,22 +46,22 @@ export async function getLocalEventMarkdown(slug: string): Promise<string | null
     const { constants } = await import('node:fs');
 
     const candidatePaths: string[] = [];
-    // Default location under content
+
     candidatePaths.push(
       pathMod.join(process.cwd(), 'src', 'app', 'docs', 'content', '2026', ...parts) + '.md'
     );
 
-    // Special handling for Codebusters ciphers which currently live under public/codebusters/ciphers
+
     if (parts[0] === 'codebusters' && parts.length >= 2) {
       const cipher = parts[1];
-      // Optional content locations if moved into docs/content
+
       candidatePaths.push(
         pathMod.join(process.cwd(), 'src', 'app', 'docs', 'content', '2026', 'codebusters', `${cipher}.md`)
       );
       candidatePaths.push(
         pathMod.join(process.cwd(), 'src', 'app', 'docs', 'content', '2026', 'codebusters', 'ciphers', `${cipher}.md`)
       );
-      // Current public location fallback
+
       candidatePaths.push(
         pathMod.join(process.cwd(), 'public', 'codebusters', 'ciphers', `${cipher}.md`)
       );

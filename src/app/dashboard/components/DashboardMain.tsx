@@ -29,7 +29,7 @@ function DashboardContent({ initialUser }: { initialUser?: User | null }) {
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const { bannerVisible, closeBanner } = useBannerContext();
 
-  // Use the new simplified data management hook
+
   const {
     metrics,
     historyData,
@@ -37,27 +37,27 @@ function DashboardContent({ initialUser }: { initialUser?: User | null }) {
     isLoading,
   } = useDashboardData(currentUser);
 
-  // View states for metrics cards
+
   const [correctView, setCorrectView] = useState<'daily' | 'weekly' | 'allTime'>('daily');
   const [accuracyView, setAccuracyView] = useState<'daily' | 'weekly' | 'allTime'>('daily');
 
-  // Card style for consistent theming
+
   const cardStyle = darkMode 
     ? 'bg-gray-800 border border-gray-700' 
     : 'bg-white border border-gray-200';
 
-  // Fetch user data and listen to auth state changes
+
   useEffect(() => {
     const setupAuthListener = async () => {
       try {
         const { supabase } = await import('@/lib/supabase');
         
-        // Get initial user
+
         const { data: { user } } = await supabase.auth.getUser();
         const effectiveUser = user || initialUser || null;
         setCurrentUser(effectiveUser);
 
-        // Listen to auth state changes
+
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
           console.log('DashboardMain: Auth state changed:', _event, session?.user?.id);
           const effectiveUser = session?.user || initialUser || null;
@@ -78,7 +78,7 @@ function DashboardContent({ initialUser }: { initialUser?: User | null }) {
     };
   }, [initialUser]);
 
-  // Handle contact form submission
+
   const handleContact = async (data: ContactFormData) => {
     try {
       await handleContactSubmission(data);
@@ -90,7 +90,7 @@ function DashboardContent({ initialUser }: { initialUser?: User | null }) {
     }
   };
 
-  // Calculate accuracy based on current view
+
   const getAccuracyForView = (view: 'daily' | 'weekly' | 'allTime'): number => {
     switch (view) {
       case 'daily':
@@ -104,7 +104,7 @@ function DashboardContent({ initialUser }: { initialUser?: User | null }) {
     }
   };
 
-  // Calculate weekly accuracy
+
   const calculateWeeklyAccuracy = (): number => {
     const last7Days: string[] = [];
     for (let i = 6; i >= 0; i--) {
@@ -128,7 +128,7 @@ function DashboardContent({ initialUser }: { initialUser?: User | null }) {
     return totals.attempted > 0 ? (totals.correct / totals.attempted) * 100 : 0;
   };
 
-  // Calculate all-time accuracy
+
   const calculateAllTimeAccuracy = (): number => {
     const allStats = Object.values(historyData);
     const totals = allStats.reduce(

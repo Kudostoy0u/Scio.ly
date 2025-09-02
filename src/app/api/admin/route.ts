@@ -5,10 +5,10 @@ import { ApiResponse } from '@/lib/types/api';
 import { and, desc, eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
-// Admin password for authentication
+
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
-// Function to check admin password
+
 function checkAdminPassword(request: NextRequest): boolean {
   const password = request.headers.get('X-Admin-Password');
   return password === ADMIN_PASSWORD;
@@ -86,9 +86,9 @@ function buildQuestionPayload(
   } as any;
 }
 
-// GET /api/admin - Overview: list all edits and blacklists with IDs
+
 export async function GET(request: NextRequest) {
-  // Check admin password
+
   if (!checkAdminPassword(request)) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
       db.select().from(blacklistsTable).orderBy(desc(blacklistsTable.createdAt)),
     ]);
 
-    // Compute stats and enrich with resolvability
+
     let editsResolvable = 0;
     let removedResolvable = 0;
     const byEvent: Record<string, { edits: number; removed: number }> = {};
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
       const candidateId = (edited.id as string | undefined) || (original.id as string | undefined);
       let canLocate = Boolean(candidateId);
       if (!canLocate) {
-        // Try by original content first (likely DB has originals)
+
         const idByOriginal = await locateQuestionIdByContent(event, original);
         canLocate = Boolean(idByOriginal);
       }
@@ -176,9 +176,9 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/admin - Perform actions (undo/edit/delete)
+
 export async function POST(request: NextRequest) {
-  // Check admin password
+
   if (!checkAdminPassword(request)) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
       let targetId: string | null = initialTargetId;
 
       if (!targetId) {
-        // Prefer locating by original content (we want to revert to original)
+
         const idByOriginal = await locateQuestionIdByContent(event, original);
         targetId = idByOriginal || (await locateQuestionIdByContent(event, edited)) || null;
       }
@@ -241,7 +241,7 @@ export async function POST(request: NextRequest) {
       const original = parseMaybeJson(row.originalQuestion);
       const edited = parseMaybeJson(row.editedQuestion);
 
-      // Locate by original first (most likely case
+
       const targetId = (original.id as string | undefined)
         || (await locateQuestionIdByContent(event, original))
         || (edited.id as string | undefined)
@@ -286,7 +286,7 @@ export async function POST(request: NextRequest) {
         await db.insert(questionsTable).values(values);
         inserted = true;
       } catch {
-        // If insert failed (likely due to existing id), perform update
+
         await db.update(questionsTable).set({
           question: values.question,
           tournament: values.tournament,
@@ -331,7 +331,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response);
     }
 
-    // Bulk actions
+
     if (action === 'applyAllEdits') {
       const edits = await db.select().from(editsTable).orderBy(desc(editsTable.updatedAt));
       let applied = 0, skipped = 0;
@@ -368,7 +368,7 @@ export async function POST(request: NextRequest) {
         if (!targetId) { skipped++; continue; }
         const payload = buildQuestionPayload(event, original);
         await db.update(questionsTable).set({ ...(payload as any), updatedAt: new Date() }).where(eq(questionsTable.id, targetId));
-        // Remove the edit record after reverting
+
         await db.delete(editsTable).where(eq(editsTable.id, row.id));
         reverted++;
       }
@@ -422,7 +422,7 @@ export async function POST(request: NextRequest) {
             failed++;
           }
         }
-        // Remove blacklist record after successful restore/update attempt
+
         await db.delete(blacklistsTable).where(eq(blacklistsTable.id, row.id));
       }
       const response: ApiResponse = { success: true, message: `Restored ${restored}, updated ${updated}, failed ${failed}` };

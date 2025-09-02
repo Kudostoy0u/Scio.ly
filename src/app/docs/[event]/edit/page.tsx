@@ -65,7 +65,7 @@ export default function EditEventDocsPage() {
   if (!evt) return null;
 
   async function onSave() {
-    // Temporarily disabled; show toast and do nothing
+
     try {
       const { toast } = await import('react-toastify');
       toast.info('Editing is temporarily disabled.');

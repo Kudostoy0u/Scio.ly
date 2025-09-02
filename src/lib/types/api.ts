@@ -1,4 +1,4 @@
-// API Types matching the Go server models
+
 
 export interface Question {
   id: string;
@@ -10,10 +10,10 @@ export interface Question {
   subtopics: string[];
   difficulty: number;
   event: string;
-  imageData?: string; // Optional CDN URL for ID questions
+  imageData?: string;
   created_at?: string;
   updated_at?: string;
-  base52?: string; // 5-character code: CXYZD where D is S (standard) or P (picture)
+  base52?: string; // 5-character code: cxyzd where d is s (standard) or p (picture)
 }
 
 export interface CreateQuestionRequest {
@@ -68,10 +68,10 @@ export interface PaginatedResponse<T = unknown> {
   };
 }
 
-// Share-related types
+
 export interface ShareCodeRequest {
   questionIds: string[];
-  idQuestionIds?: string[]; // IDs of questions that are ID questions (have imageData)
+  idQuestionIds?: string[];
   testParamsRaw: Record<string, unknown>;
   timeRemainingSeconds?: number;
   code?: string;
@@ -90,7 +90,7 @@ export interface ShareCodeData {
   success: boolean;
   data?: {
     questionIds: string[];
-    idQuestionIds?: string[]; // IDs of questions that are ID questions (have imageData)
+    idQuestionIds?: string[];
     testParamsRaw: Record<string, unknown>;
     timeRemainingSeconds?: number;
     createdAtMs: number;
@@ -98,14 +98,14 @@ export interface ShareCodeData {
   error?: string;
 }
 
-// Blacklist types
+
 export interface BlacklistRequest {
   event: string;
   questionData: Record<string, unknown>;
   reason?: string;
 }
 
-// Edit types
+
 export interface EditRequest {
   event: string;
   originalQuestion: Record<string, unknown>;
@@ -124,7 +124,7 @@ export interface EditResponse {
   blacklist?: Record<string, unknown>[];
 }
 
-// Report types
+
 export interface ReportEditRequest {
   originalQuestion: Record<string, unknown>;
   editedQuestion: Record<string, unknown>;
@@ -139,7 +139,7 @@ export interface ReportRemoveRequest {
   event: string;
 }
 
-// Gemini AI types
+
 export interface GeminiSuggestEditRequest {
   question: Record<string, unknown>;
   userReason?: string;
@@ -175,7 +175,7 @@ export interface GeminiImproveReasonRequest {
   question: Record<string, unknown>;
 }
 
-// Stats types
+
 export interface EventStat {
   event: string;
   count: string;
@@ -192,7 +192,7 @@ export interface StatsResponse {
   byDivision: DivisionStat[];
 }
 
-// Base52 code types
+
 export interface Base52GenerateRequest {
   questionIds: string[];
   table?: 'questions' | 'idEvents';

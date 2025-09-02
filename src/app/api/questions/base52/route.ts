@@ -20,10 +20,10 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Generate base52 codes for the questions
+
     const codeMap = await generateQuestionCodes(questionIds, table);
 
-    // Convert Map to object for JSON response
+
     const codes: Record<string, string> = {};
     codeMap.forEach((code, id) => {
       codes[id] = code;
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Import the function here to avoid circular dependencies
+
     const { getQuestionByCode } = await import('@/lib/utils/base52');
     
     const result = await getQuestionByCode(code);

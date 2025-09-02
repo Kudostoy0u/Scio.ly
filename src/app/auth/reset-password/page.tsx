@@ -18,7 +18,7 @@ function ResetPasswordContent() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Check if we have the access token
+
     const accessToken = searchParams.get('access_token');
     
     if (!accessToken) {
@@ -26,8 +26,8 @@ function ResetPasswordContent() {
       return;
     }
 
-    // For password reset, we don't need to set a session manually
-    // Supabase will handle the authentication automatically when the user clicks the link
+
+
     setIsValidLink(true);
   }, [searchParams]);
 

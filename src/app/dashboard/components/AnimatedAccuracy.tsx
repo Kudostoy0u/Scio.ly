@@ -15,7 +15,7 @@ export default function AnimatedAccuracy({
     setIsMounted(true);
   }, []);
 
-  // Return consistent content for server-side rendering
+
   const content = `${value}%`;
   
   if (!isMounted) {

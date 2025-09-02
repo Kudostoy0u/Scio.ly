@@ -21,7 +21,7 @@ export async function createSupabaseServerClient() {
       },
       remove(name: string, options?: Record<string, unknown>) {
         try {
-          // Use immediate expiration to remove cookie reliably
+
           (cookieStore as any).set({ name, value: '', maxAge: 0, ...(options || {}) });
         } catch {
           // ignore in read-only contexts

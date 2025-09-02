@@ -143,7 +143,7 @@ export default function AdminPage() {
       });
       const json = await res.json().catch(() => ({ success: false, error: 'Empty response' }));
       if (!json.success) throw new Error(json.error || 'Action failed');
-      // Optimistically remove from local state without full refresh
+
       if (action === 'undoEdit') {
         setData(prev => ({
           ...prev,
@@ -188,7 +188,7 @@ export default function AdminPage() {
     }
   };
 
-  // Show password authentication if not authenticated
+
   if (!isAuthenticated) {
     return <PasswordAuth onAuthenticated={handleAuthenticated} />;
   }
@@ -238,7 +238,7 @@ export default function AdminPage() {
                   <button onClick={() => bulk('applyAllEdits')} disabled={!!bulkBusy['applyAllEdits']} className={`px-3 py-1 rounded-md ${bulkBusy['applyAllEdits'] ? 'opacity-50' : 'bg-blue-600 text-white'}`}>Apply All Edits</button>
                   <button onClick={() => bulk('applyAllEdits' as any /* placeholder to align UI */)} disabled className="hidden" />
                   <button onClick={async () => {
-                    // Reuse bulk API for undo all edits
+
                     setBulkBusy(prev => ({ ...prev, undoAllEdits: true } as any));
                     try {
                       const res = await fetch(api.admin, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword }, body: JSON.stringify({ action: 'undoAllEdits' }) });
@@ -293,7 +293,7 @@ export default function AdminPage() {
                 <div className="flex items-center gap-3 mb-2">
                   <button onClick={() => bulk('applyAllRemoved')} disabled={!!bulkBusy['applyAllRemoved']} className={`px-3 py-1 rounded-md ${bulkBusy['applyAllRemoved'] ? 'opacity-50' : 'bg-blue-600 text-white'}`}>Apply All Removes</button>
                   <button onClick={async () => {
-                    // Undo all removes (restore all)
+
                     setBulkBusy(prev => ({ ...prev, restoreAllRemoved: true } as any));
                     try {
                       const res = await fetch(api.admin, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword }, body: JSON.stringify({ action: 'restoreAllRemoved' }) });

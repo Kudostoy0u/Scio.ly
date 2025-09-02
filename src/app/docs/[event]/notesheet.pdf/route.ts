@@ -6,7 +6,7 @@ import { Page, Text, Document, StyleSheet, View } from '@react-pdf/renderer';
 
 export const dynamic = 'force-dynamic';
 
-// Server-side PDF component (not client-side)
+
 function NotesheetPDFDocument({ evt }: { evt: any }) {
   const styles = StyleSheet.create({
     page: {

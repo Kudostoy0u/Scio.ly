@@ -12,8 +12,8 @@ import type { EloData } from '../types/elo';
 
 export interface DataLoadOptions {
   division: 'b' | 'c';
-  states?: string[]; // For future: specific states to load
-  forceReload?: boolean; // For future: bypass cache
+  states?: string[];
+  forceReload?: boolean;
 }
 
 export interface DataLoadResult {
@@ -23,7 +23,7 @@ export interface DataLoadResult {
   error: string | null;
 }
 
-// Cache for loaded data (for future optimization)
+
 const dataCache = new Map<string, { data: EloData; metadata: any; timestamp: number }>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
@@ -38,11 +38,11 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 export async function loadEloData(options: DataLoadOptions): Promise<DataLoadResult> {
   const { division, states, forceReload = false } = options;
   
-  // Clear cache to ensure fresh data with metadata is loaded
+
   dataCache.clear();
   
   try {
-    // Check cache first (for future optimization)
+
     const cacheKey = `${division}-${states?.join(',') || 'all'}`;
     const cached = dataCache.get(cacheKey);
     
@@ -55,7 +55,7 @@ export async function loadEloData(options: DataLoadOptions): Promise<DataLoadRes
       };
     }
 
-    // Load state-based files
+
     const metaResponse = await fetch(`/states${division.toUpperCase()}/meta.json`);
     if (!metaResponse.ok) {
       throw new Error(`Failed to load metadata for division ${division}: ${metaResponse.status} ${metaResponse.statusText}`);
@@ -63,17 +63,17 @@ export async function loadEloData(options: DataLoadOptions): Promise<DataLoadRes
     
     const metadata = await metaResponse.json();
     
-    // Determine which states to load
+
     const statesToLoad = states || Object.keys(metadata.states);
     const data: EloData = {};
     
-    // Load each state's data
+
     for (const stateCode of statesToLoad) {
       try {
         const stateResponse = await fetch(`/states${division.toUpperCase()}/${stateCode}.json`);
         if (stateResponse.ok) {
           const stateData = await stateResponse.json();
-          // State data is already in the correct format, no conversion needed
+
           data[stateCode] = stateData;
         } else {
           console.warn(`Failed to load data for state ${stateCode}: ${stateResponse.status}`);
@@ -83,7 +83,7 @@ export async function loadEloData(options: DataLoadOptions): Promise<DataLoadRes
       }
     }
     
-    // Cache the result
+
     dataCache.set(cacheKey, { data, metadata, timestamp: Date.now() });
     
     return {
@@ -110,7 +110,7 @@ export async function loadEloData(options: DataLoadOptions): Promise<DataLoadRes
  */
 export async function preloadEloData(): Promise<void> {
   try {
-    // Preload both divisions
+
     await Promise.all([
       loadEloData({ division: 'b' }),
       loadEloData({ division: 'c' })

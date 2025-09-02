@@ -39,7 +39,7 @@ export default async function Page() {
     | undefined = undefined;
 
   if (eventName && questionCount) {
-    // Build API params
+
     const params = new URLSearchParams();
     params.set('event', eventName);
     params.set('limit', String(Math.max(parseInt(questionCount) * 3, 50)));
@@ -57,7 +57,7 @@ export default async function Page() {
       if (res.ok) {
         const json = await res.json();
         const questions = Array.isArray(json.data) ? json.data : json.data?.questions || [];
-        // Filter and select
+
         const valid = questions.filter((q: any) => q.answers && Array.isArray(q.answers) && q.answers.length > 0);
         const selected = valid.slice(0, parseInt(questionCount));
         initialData = selected.map((q: any, idx: number) => ({ ...q, originalIndex: idx }));
@@ -76,7 +76,7 @@ export default async function Page() {
     }
   }
 
-// Always forward the router data even if server fetch failed
+
 const baseRouterData = {
   eventName,
   questionCount,
@@ -87,7 +87,7 @@ const baseRouterData = {
   idPercentage,
 };
 
-// Use stable object to prevent unnecessary re-renders
+
 const finalRouterData = initialRouterData || baseRouterData;
 
 return <Content initialData={initialData} initialRouterData={finalRouterData} />;

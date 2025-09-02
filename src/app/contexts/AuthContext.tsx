@@ -32,7 +32,7 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
       }
     };
 
-    // If SSR provided a user, we can render immediately but still sync the client session once
+
     init();
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -40,7 +40,7 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
       setUser(session?.user ?? null);
     });
 
-    // Lightweight recovery on focus/visibility change
+
     const resync = async () => {
       try {
         const { data } = await supabase.auth.getSession();
@@ -65,7 +65,7 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
     };
   }, [initialUser]);
 
-  // After login (including Google OAuth), sync profile names in `users` table
+
   useEffect(() => {
     const syncProfileFromAuth = async () => {
       console.log('syncProfileFromAuth called with user:', user);
@@ -78,7 +78,7 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
         return;
       }
 
-      // Validate user object has required fields
+
       if (!user.id || typeof user.id !== 'string' || user.id.trim() === '') {
         console.warn('Invalid user ID for profile sync:', user.id);
         return;
@@ -88,7 +88,7 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
         const isGoogle = (user as any)?.app_metadata?.provider === 'google'
           || Array.isArray((user as any)?.identities) && (user as any).identities.some((i: any) => i.provider === 'google');
 
-        // Read existing profile
+
         const { data: existing, error: readError } = await (supabase as any)
           .from('users')
           .select('id, email, first_name, last_name, display_name, username, photo_url')
@@ -97,10 +97,10 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
 
         if (readError) {
           console.warn('Error reading existing profile:', readError);
-          // Non-fatal; continue with sensible defaults
+
         }
 
-        // Extract names from OAuth metadata if available
+
         const meta: any = user.user_metadata || {};
         const given = (meta.given_name || meta.givenName || '').toString().trim();
         const family = (meta.family_name || meta.familyName || '').toString().trim();
@@ -128,19 +128,19 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
         const displayName = existing?.display_name || full || given || null;
         const photoUrl = existing?.photo_url || meta.avatar_url || meta.picture || null;
 
-        // If this session is Google OAuth, always update names from Google/derived
-        // Otherwise, only fill if missing
+
+
         const shouldForceUpdateNames = Boolean(isGoogle) && (firstName || lastName);
         const shouldFillMissing = !isGoogle && (!existing?.first_name || !existing?.last_name);
 
         if (!existing || shouldForceUpdateNames || shouldFillMissing || !existing.display_name || !existing.username || !existing.photo_url) {
-          // Ensure we have valid required fields
+
           if (!user.id || !email || !username) {
             console.warn('Missing required user fields for upsert:', { id: user.id, email, username });
             return;
           }
 
-          // Additional validation
+
           if (typeof user.id !== 'string' || user.id.trim() === '' || 
               typeof email !== 'string' || email.trim() === '' ||
               typeof username !== 'string' || username.trim() === '') {
@@ -158,7 +158,7 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
             username: username.trim(),
           };
           
-          // Only add fields that have valid values
+
           if (shouldForceUpdateNames || (!existing?.first_name && firstName !== null)) {
             if (firstName !== null && firstName !== undefined) {
               upsertPayload.first_name = firstName;
@@ -180,7 +180,7 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
             }
           }
 
-          // Always attempt upsert if we have the required fields
+
           try {
             console.log('Attempting upsert with payload:', upsertPayload);
             const { error: upsertError } = await (supabase as any)

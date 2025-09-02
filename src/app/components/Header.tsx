@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import AuthButton from '@/app/components/AuthButton';
-// ToastContainer is globally provided in Providers
+
 import { usePathname } from 'next/navigation';
 import { Upload, SquarePlus, Chrome as ChromeIcon, Smartphone, MonitorSmartphone, CheckCircle2, AlertTriangle, X as CloseIcon, Compass, Download, ChevronDown } from 'lucide-react';
 import { FaFirefoxBrowser } from 'react-icons/fa';
@@ -27,19 +27,19 @@ export default function Header() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const moreDropdownRef = useRef<HTMLDivElement>(null);
   const [scrollOpacity, setScrollOpacity] = useState(0);
-  // Dedicated opacity for test pages so we re-render on every scroll step
+
   const [headerOpacity, setHeaderOpacity] = useState(1);
 
-  // Determine if we're on the homepage
+
   const isHomePage = pathname === '/';
   const isDashboard = pathname?.startsWith('/dashboard');
   const isTestPage = pathname?.startsWith('/test') || pathname?.startsWith('/codebusters') || pathname?.startsWith('/unlimited');
   
-  // Only check banner context on dashboard pages
+
   const [bannerVisible, setBannerVisible] = useState<boolean | null>(null);
   
   useEffect(() => {
-    if (isDashboard) {
+    if (isDashboard || isHomePage) {
       const checkBannerVisibility = () => {
         const bannerClosed = localStorage.getItem('hylas-banner-closed') === 'true';
         setBannerVisible(!bannerClosed);
@@ -47,7 +47,7 @@ export default function Header() {
       
       checkBannerVisibility();
       
-      // Listen for storage changes and custom banner events
+
       window.addEventListener('storage', checkBannerVisibility);
       window.addEventListener('banner-closed', checkBannerVisibility);
       return () => {
@@ -55,23 +55,23 @@ export default function Header() {
         window.removeEventListener('banner-closed', checkBannerVisibility);
       };
     }
-  }, [isDashboard]);
+  }, [isDashboard, isHomePage]);
   
 
   
-  // Handle scroll events to change header appearance
+
   const handleScroll = useCallback(() => {
     const currentY = window.scrollY || 0;
     
     if (isTestPage) {
-      // For test pages, update an explicit opacity state so it can reach 0 and re-render smoothly
+
       const fadeThreshold = 100; // px until header starts fading
       const fadeProgress = Math.max(0, Math.min(1, (currentY - fadeThreshold) / 100));
       const nextOpacity = Math.max(0, 1 - fadeProgress);
       setHeaderOpacity(nextOpacity);
       setScrolled(currentY > fadeThreshold);
     } else {
-      // For other pages, use the original logic
+
       const threshold = 300; // px until fully opaque
       const progress = Math.min(currentY / threshold, 1);
       setScrollOpacity(progress);
@@ -80,30 +80,30 @@ export default function Header() {
   }, [isTestPage]);
   
   useEffect(() => {
-    // Add scroll event listener
+
     window.addEventListener('scroll', handleScroll);
     
-    // Initial check for scroll position
+
     handleScroll();
     
-    // Cleanup
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, [isFirefox, isTestPage, handleScroll]);
 
-  // Detect environment for PWA instructions
+
   useEffect(() => {
     const ua = (navigator.userAgent || '').toLowerCase();
     const uaData = (navigator as any).userAgentData;
 
-    // iOS (including iPadOS masquerading as Mac)
+    // ios (including ipados masquerading as mac)
     const isIOSDevice = /iphone|ipad|ipod/.test(ua) || (((navigator as any).platform === 'MacIntel') && (navigator as any).maxTouchPoints > 1);
 
-    // Brand-based detection when available (Chromium browsers expose userAgentData)
+
     const isChromiumBrand = !!uaData?.brands?.some((b: any) => /Chromium|Google Chrome|Microsoft Edge|Opera|OPR|Brave|Vivaldi|YaBrowser|Samsung Internet/i.test(b.brand));
 
-    // UA fallbacks
+
     const isEdge = /edg\//.test(ua);
     const isOpera = /opr\//.test(ua);
     const isFirefoxUA = /firefox|fxios/.test(ua);
@@ -111,10 +111,10 @@ export default function Header() {
     const isChromeLikeUA = /chrome|crios|crmo/.test(ua) && !isEdge && !isOpera && !isFirefoxUA;
     const chromiumDetected = isChromiumBrand || isChromeLikeUA || isEdge || isOpera || isSamsung;
 
-    // Safari engine (on macOS/iOS only; avoid misclassifying Chromium as Safari)
+
     const isSafariEngine = /safari/.test(ua) && !/chrome|crios|crmo|edg|opr|firefox|fxios|brave|electron/.test(ua);
 
-    // On iOS, all browsers use the Safari share-sheet flow for Add to Home Screen
+
     setIsSafari(isSafariEngine || isIOSDevice);
     setIsChromium(chromiumDetected && !isIOSDevice);
     const standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || (navigator as any).standalone;
@@ -139,7 +139,7 @@ export default function Header() {
     
       } catch {}
     };
-    // silently handle PWA without noisy logs
+    // silently handle pwa without noisy logs
     window.addEventListener('beforeinstallprompt', beforeInstall);
     window.addEventListener('appinstalled', onInstalled);
     return () => {
@@ -148,7 +148,7 @@ export default function Header() {
     };
   }, []);
 
-  // Recover any deferred prompt saved earlier (in case the event fired before this component mounted)
+
   useEffect(() => {
     const deferred = (typeof window !== 'undefined') && (window as any).__deferredInstallPrompt__;
     if (deferred && !installPromptRef.current) {
@@ -163,7 +163,7 @@ export default function Header() {
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        // Only close if the click is not on the hamburger button itself
+
         const target = event.target as HTMLElement;
         const hamburgerButton = target.closest('button[aria-label="Toggle mobile menu"]');
         if (!hamburgerButton) {
@@ -172,7 +172,7 @@ export default function Header() {
       }
       
       if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target as Node)) {
-        // Only close if the click is not on the more dropdown button itself
+
         const target = event.target as HTMLElement;
         const moreButton = target.closest('button[aria-label="Toggle more menu"]');
         if (!moreButton) {
@@ -224,9 +224,9 @@ export default function Header() {
   };
 
   const shouldBeTransparent = isHomePage && !scrolled;
-  // Compute dynamic background/border opacity for smooth fade on homepage
+
   const targetOpacity = 0.95;
-  // For test pages, use state-driven opacity; otherwise compute based on scrollOpacity
+
   const computedOpacity = isTestPage
     ? headerOpacity
     : (isHomePage ? Math.min(scrollOpacity * targetOpacity, targetOpacity) : targetOpacity);
@@ -240,7 +240,7 @@ export default function Header() {
       : `rgba(229, 231, 235, ${computedOpacity})`; // gray-200
   const showBlur = (!isHomePage && !isTestPage) || (computedOpacity > 0.02 && !isTestPage);
 
-  // Set a static scrollbar context for CSS to style the track consistently
+
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.documentElement.setAttribute('data-scrollbar-context', isHomePage ? 'home' : 'nav');
@@ -259,12 +259,12 @@ export default function Header() {
       <nav
         className={`fixed left-0 right-0 z-50 ${showBlur ? 'backdrop-blur-sm' : ''} border-b transition-[top] duration-300 ease-out`}
         style={{ 
-          top: isDashboard && bannerVisible ? '32px' : '0px',
-          transition: isDashboard && bannerVisible ? 'none' : 'top 0.3s ease-out',
+          top: ((isDashboard || isHomePage) && bannerVisible) ? '32px' : '0px',
+          transition: ((isDashboard || isHomePage) && bannerVisible) ? 'none' : 'top 0.3s ease-out',
           backgroundColor, 
           borderBottomColor: borderColor,
           opacity: isTestPage ? computedOpacity : 1,
-          // When fully transparent on test pages, allow interactions to pass through
+
           pointerEvents: isTestPage && computedOpacity <= 0.01 ? 'none' : 'auto'
         }}
       >

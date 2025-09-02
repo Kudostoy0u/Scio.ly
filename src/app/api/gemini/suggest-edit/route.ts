@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse, GeminiSuggestEditRequest } from '@/lib/types/api';
 import { geminiService } from '@/lib/services/gemini';
 
-// post /api/gemini/suggest-edit for AI suggestions for improving a question
+// post /api/gemini/suggest-edit for ai suggestions for improving a question
 export async function POST(request: NextRequest) {
   try {
     const body: GeminiSuggestEditRequest = await request.json();
@@ -15,13 +15,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 400 });
     }
 
-    console.log('🤖 [GEMINI/SUGGEST-EDIT] Request received');
+    console.log('Request received');
     if (body.userReason) {
-      console.log(`📝 [GEMINI/SUGGEST-EDIT] User reason: ${body.userReason}`);
+      console.log(`User reason: ${body.userReason}`);
     }
 
     if (!geminiService.isAvailable()) {
-      console.log('❌ [GEMINI/SUGGEST-EDIT] Gemini AI not available');
+      console.log('Gemini AI not available');
       const response: ApiResponse = {
         success: false,
         error: 'Gemini AI not available',
@@ -29,15 +29,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 503 });
     }
 
-    console.log('📋 [GEMINI/SUGGEST-EDIT] Question:', body.question);
-    console.log('🤖 [GEMINI/SUGGEST-EDIT] Sending request to Gemini AI');
+    console.log('Question:', body.question);
+    console.log('Sending request to Gemini AI');
 
     try {
       const result = await geminiService.suggestEdit(body.question, body.userReason);
 
-      console.log('✅ [GEMINI/SUGGEST-EDIT] Gemini AI response received:', result);
+      console.log('Gemini AI response received:', result);
 
-      console.log('🎯 [GEMINI/SUGGEST-EDIT] AI Suggestions:');
+      console.log('AI Suggestions:');
       if (result.suggestedQuestion) {
         console.log(`   - Suggested Question: ${result.suggestedQuestion}`);
       }
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(response);
     } catch (error) {
-      console.log('❌ [GEMINI/SUGGEST-EDIT] Gemini AI error:', error);
+      console.log('Gemini AI error:', error);
       const response: ApiResponse = {
         success: false,
         error: 'Failed to generate edit suggestions',

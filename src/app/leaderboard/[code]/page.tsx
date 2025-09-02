@@ -26,12 +26,12 @@ export default function JoinLeaderboardPage({ params }: { params: Promise<{ code
     const { data: { user } } = await client.auth.getUser();
     
     if (!user) {
-      // Redirect to home with join code in query params
+
       router.push(`/?join=${code}`);
       return;
     }
 
-    // Try to join the leaderboard
+
     const { error } = await client.rpc('join_leaderboard_by_code', { 
       p_join_code: code.toUpperCase() 
     });

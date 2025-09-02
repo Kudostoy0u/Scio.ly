@@ -59,19 +59,19 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   const [gradingFRQs, setGradingFRQs] = useState<Record<number, boolean>>({});
   const [isResetting, setIsResetting] = useState(false);
 
-  // Create stable router data to prevent unnecessary re-renders
+
   const routerDataKey = JSON.stringify(initialRouterData);
   const stableRouterData = useMemo(() => {
     return initialRouterData || {};
   }, [routerDataKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Initialize component
+
   useEffect(() => {
     setIsMounted(true);
     if (localStorage.getItem("loaded")) {
       localStorage.removeItem('testUserAnswers')
       localStorage.removeItem('testGradingResults')
-      // Do not toast on resume/share-load; keep UX quiet
+
       localStorage.removeItem("loaded");
     }
     
@@ -86,20 +86,20 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     }
   }, []);
 
-  // Load test data
+
   useEffect(() => {
     
-    // Clear any existing bookmarked state that might interfere
+
     localStorage.removeItem('testFromBookmarks');
     
-    // Prevent duplicate fetching with multiple guards
+
     if (fetchStartedRef.current || fetchCompletedRef.current || data.length > 0 || isLoading === false) {
       return;
     }
     
     fetchStartedRef.current = true;
 
-    // Prefer stableRouterData from server. Fallback to localStorage.
+
     const storedParams = localStorage.getItem('testParams');
     const routerParams = stableRouterData || (storedParams ? JSON.parse(storedParams) : {});
     if (!routerParams || Object.keys(routerParams).length === 0) {
@@ -111,7 +111,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     const eventName = routerParams.eventName || 'Unknown Event';
     const timeLimit = parseInt(routerParams.timeLimit || '30');
     
-    // If there's an existing session but router params indicate a different/new test, reset session and persisted results
+
     try {
       const existingSession = getCurrentTestSession();
       if (
@@ -142,7 +142,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     if (session) {
       setTimeLeft(session.timeState.timeLeft);
       setIsSubmitted(session.isSubmitted);
-      // If already submitted, ensure we restore gradingResults to drive summary
+
       if (session.isSubmitted) {
         const storedGrading = localStorage.getItem('testGradingResults');
         if (storedGrading) {
@@ -179,7 +179,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           if (eventBookmarks.length > 0) {
             const questions = eventBookmarks.map(b => b.question);
             setData(questions);
-            // Store questions with imageData intact (CDN URLs are small)
+
             localStorage.setItem('testQuestions', JSON.stringify(questions));
           } else {
             setFetchError('No bookmarked questions found for this event.');
@@ -220,7 +220,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
 
         let selectedQuestions: Question[] = [];
 
-        // 1) Base (non-ID) questions from regular endpoint
+        // 1) base (non-id) questions from regular endpoint
         if (baseCount > 0) {
           const requestCount = Math.max(baseCount, 50);
           const params = buildApiParams({ ...routerParams }, requestCount);
@@ -228,16 +228,16 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           
           let apiResponse: any = null;
           
-          // Check if we're offline first
+
           const isOffline = !navigator.onLine;
           if (isOffline) {
-            // Use offline data immediately when offline
+
             const evt = routerParams.eventName as string | undefined;
             if (evt) {
               const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
               const cached = await getEventOfflineQuestions(slug);
               if (Array.isArray(cached) && cached.length > 0) {
-                // Respect question type selection when offline
+
                 const typesSel = (routerParams.types as string) || 'multiple-choice';
                 const filtered = typesSel === 'multiple-choice'
                   ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
@@ -249,20 +249,20 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
             }
             if (!apiResponse) throw new Error('No offline data available for this event. Please download it first.');
           } else {
-            // Online: try API first, fallback to offline
+
             let response: Response | null = null;
             try { response = await fetch(apiUrl); } catch { response = null; }
             
             if (response && response.ok) {
               apiResponse = await response.json();
             } else {
-              // Fallback to offline data
+
               const evt = routerParams.eventName as string | undefined;
               if (evt) {
                 const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
                 const cached = await getEventOfflineQuestions(slug);
                 if (Array.isArray(cached) && cached.length > 0) {
-                  // Respect question type selection when offline
+
                   const typesSel = (routerParams.types as string) || 'multiple-choice';
                   const filtered = typesSel === 'multiple-choice'
                     ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
@@ -277,27 +277,27 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           }
           
           const allQuestions = apiResponse.data || [];
-          const questions: Question[] = allQuestions; // Removed quality filtering - assume all questions are high quality
+          const questions: Question[] = allQuestions;
           console.log(`Question filtering: ${allQuestions.length} total questions, ${questions.length} questions after filtering (quality filtering removed)`);
           selectedQuestions = shuffleArray(questions).slice(0, baseCount);
         }
 
-        // 2) ID questions from new endpoint for supported events
+        // 2) id questions from new endpoint for supported events
         if (idCount > 0) {
           const isOffline = !navigator.onLine;
           let source: any[] = [];
           
           if (isOffline) {
-            // When offline, ID questions are not available - we'll fill with base questions later
+
             console.log('ID questions not available in offline mode');
           } else {
-            // Online: try to fetch ID questions
+
             try {
               const params = new URLSearchParams();
               params.set('event', routerParams.eventName);
               params.set('limit', String(Math.max(idCount * 3, 50)));
               
-              // Add subtopic filter if specified
+
               if (routerParams.subtopics && routerParams.subtopics.length > 0) {
                 params.set('subtopics', routerParams.subtopics.join(','));
               }
@@ -310,7 +310,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
             }
           }
           
-          // Filter by types (MCQ/FRQ)
+
           const typesSel = (routerParams.types as string) || 'multiple-choice';
           const filtered = source.filter((row: any) => {
             const isMcq = Array.isArray(row.options) && row.options.length > 0;
@@ -319,38 +319,38 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
             return true; // both
           });
           const idQuestions: Question[] = filtered.map((row: any) => ({
-            id: row.id, // Add the missing id field!
+            id: row.id,
             question: row.question,
             options: row.options || [],
             answers: row.answers || [],
             difficulty: row.difficulty ?? 0.5,
             event: row.event,
-            subtopics: row.subtopics || [], // Preserve subtopics field
+            subtopics: row.subtopics || [],
             imageData: Array.isArray(row.images) && row.images.length ? row.images[Math.floor(Math.random()*row.images.length)] : undefined,
           }));
-          // Take only up to idCount
+
           const pickedId = shuffleArray(idQuestions).slice(0, idCount);
-          // If not enough ID questions, we'll fill with base later
+
           selectedQuestions = selectedQuestions.concat(pickedId);
         }
 
-        // Top-up with base questions if we still don't have enough
+
         if (selectedQuestions.length < total && baseCount > 0) {
           const need = total - selectedQuestions.length;
           const isOffline = !navigator.onLine;
           
           if (isOffline) {
-            // When offline, we can't fetch more questions - just use what we have
+
             console.log(`Offline mode: only ${selectedQuestions.length} questions available, need ${total}`);
           } else {
-            // Online: try to fetch more questions
+
             try {
               const requestCount = Math.max(need, 50);
               const params2 = buildApiParams({ ...routerParams }, requestCount);
               const apiUrl2 = `${api.questions}?${params2}`;
               const r2 = await fetch(apiUrl2).catch(() => null);
               const j2 = r2 && r2.ok ? await r2.json() : null;
-              const extras: Question[] = (j2?.data || []); // Removed quality filtering - assume all questions are high quality
+              const extras: Question[] = (j2?.data || []);
               selectedQuestions = selectedQuestions.concat(shuffleArray(extras).slice(0, need));
             } catch {
               console.log('Failed to fetch additional questions for top-up');
@@ -358,35 +358,35 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           }
         }
 
-        // No deduplication needed - all questions are unique
+
         const shuffledFinal = shuffleArray(selectedQuestions).slice(0, total);
         console.log(`Final questions after slicing to ${total}: ${shuffledFinal.length} questions`);
         const questionsWithIndex = shuffledFinal.map((q, idx) => ({ ...q, originalIndex: idx }));
         
         // ========================================
-        // TEMPORARY FIX: Replace delta symbols with en dashes
-        // WARNING: This is a temporary workaround for delta symbol display issues
-        // TODO: Remove this script once proper delta symbol handling is implemented
+
+
+
         // ========================================
         questionsWithIndex.forEach(question => {
-          // Replace delta symbols (Δ or ∆) between numbers with en dashes (–)
+
           const deltaToEnDash = (text: string) => {
             return text.replace(/(\d+)\s*[Δ∆]\s*(\d+)/g, '$1–$2');
           };
           
-          // Apply to question text
+
           if (question.question) {
             question.question = deltaToEnDash(question.question);
           }
           
-          // Apply to options
+
           if (Array.isArray(question.options)) {
             question.options = question.options.map(option => 
               typeof option === 'string' ? deltaToEnDash(option) : option
             );
           }
           
-          // Apply to answers
+
           if (Array.isArray(question.answers)) {
             question.answers = question.answers.map(answer => 
               typeof answer === 'string' ? deltaToEnDash(answer) : answer
@@ -394,10 +394,10 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           }
         });
         // ========================================
-        // END TEMPORARY FIX
+
         // ========================================
         
-        // Store questions with imageData intact (CDN URLs are small)
+
         localStorage.setItem('testQuestions', JSON.stringify(questionsWithIndex));
         setData(questionsWithIndex);
       } catch {
@@ -413,7 +413,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, initialData, stableRouterData]);
 
-  // Timer logic (for non-shared tests, decrement from stored timeLeft only while mounted)
+
   useEffect(() => {
     if (timeLeft === null || isSubmitted) return;
 
@@ -450,16 +450,16 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     return () => clearInterval(timer);
   }, [timeLeft, isSubmitted]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Setup visibility handling
+
   useEffect(() => {
     const cleanup = setupVisibilityHandling();
     return cleanup;
   }, []);
 
-  // Backfill gradingResults on reload when submitted and results are missing
+
   useEffect(() => {
     if (!isSubmitted || data.length === 0) return;
-    // Identify indices lacking results
+
     const missing: number[] = [];
     for (let i = 0; i < data.length; i++) {
       if (typeof gradingResults[i] === 'undefined') missing.push(i);
@@ -468,7 +468,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
 
     const newResults: GradingResults = {};
 
-    // Simple fuzzy grading for FRQs like in submit fallback
+
     const normalize = (s: string) => s
       .toLowerCase()
       .normalize('NFKD')
@@ -540,19 +540,19 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     }
   }, [isSubmitted, data, userAnswers, gradingResults, setGradingResults]);
 
-  // Pause timer when leaving the page/component
+
   useEffect(() => {
     return () => {
       try { pauseTestSession(); } catch {}
     };
   }, []);
 
-  // On mount, ensure we clear paused state so ticking resumes
+
   useEffect(() => {
     try { resumeFromPause(); } catch {}
   }, []);
 
-  // Load user bookmarks
+
   useEffect(() => {
     const loadUserBookmarks = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -597,7 +597,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     });
   };
 
-  // Persist grading results whenever they change (for reload summary)
+
   useEffect(() => {
     try { localStorage.setItem('testGradingResults', JSON.stringify(gradingResults)); } catch {}
   }, [gradingResults]);
@@ -655,12 +655,12 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           continue;
         }
         
-        // Count as attempted if there's an answer, regardless of correctness
+
         if (answer.length > 0 && answer[0] !== null) {
           mcqTotal += 1;
         }
         
-        // Compute fractional score for MCQ using shared helper
+
         const frac = calculateMCQScore(question, answer);
         mcqScore += Math.max(0, Math.min(1, frac));
         setGradingResults(prev => ({ ...prev, [i]: frac }));
@@ -686,12 +686,12 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     }
     
     if (frqsToGrade.length > 0) {
-      // Set loading state for FRQ questions
+
       frqsToGrade.forEach(item => {
         setGradingFRQs(prev => ({ ...prev, [item.index]: true }));
       });
       
-      // Fuzzy grading fallback for offline or API failure
+
       const fuzzyGrade = (student: string, corrects: (string | number)[]): number => {
         const normalize = (s: string) => s
           .toLowerCase()
@@ -781,12 +781,12 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
       }
     }
     
-    // Persist submission state and results so reload shows summary
+
     try {
       markTestSubmitted();
       localStorage.setItem('testGradingResults', JSON.stringify(gradingResults));
-      // Keep user answers so TestSummary can show attempted/accuracy after reload
-      // localStorage.setItem('testUserAnswers', JSON.stringify(userAnswers)); // answers are already persisted on change
+
+      // localstorage.setitem('testuseranswers', json.stringify(useranswers)); // answers are already persisted on change
       localStorage.removeItem('testFromBookmarks');
     } catch {}
     
@@ -822,7 +822,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
 
       let selectedQuestions: Question[] = [];
 
-      // 1) Base (non-ID) questions from regular endpoint
+      // 1) base (non-id) questions from regular endpoint
       if (baseCount > 0) {
         const requestCount = Math.max(baseCount, 50);
         const params = buildApiParams({ ...routerData }, requestCount);
@@ -830,16 +830,16 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         
         let apiResponse: any = null;
         
-        // Check if we're offline first
+
         const isOffline = !navigator.onLine;
         if (isOffline) {
-          // Use offline data immediately when offline
+
           const evt = routerData.eventName as string | undefined;
           if (evt) {
             const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
             const cached = await getEventOfflineQuestions(slug);
             if (Array.isArray(cached) && cached.length > 0) {
-              // Respect question type selection when offline
+
               const typesSel = (routerData.types as string) || 'multiple-choice';
               const filtered = typesSel === 'multiple-choice'
                 ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
@@ -851,20 +851,20 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           }
           if (!apiResponse) throw new Error('No offline data available for this event. Please download it first.');
         } else {
-          // Online: try API first, fallback to offline
+
           let response: Response | null = null;
           try { response = await fetch(apiUrl); } catch { response = null; }
           
           if (response && response.ok) {
             apiResponse = await response.json();
           } else {
-            // Fallback to offline data
+
             const evt = routerData.eventName as string | undefined;
             if (evt) {
               const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
               const cached = await getEventOfflineQuestions(slug);
               if (Array.isArray(cached) && cached.length > 0) {
-                // Respect question type selection when offline
+
                 const typesSel = (routerData.types as string) || 'multiple-choice';
                 const filtered = typesSel === 'multiple-choice'
                   ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
@@ -883,22 +883,22 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         selectedQuestions = shuffleArray(questions).slice(0, baseCount);
       }
 
-      // 2) ID questions from new endpoint for supported events
+      // 2) id questions from new endpoint for supported events
       if (idCount > 0) {
         const isOffline = !navigator.onLine;
         let source: any[] = [];
         
         if (isOffline) {
-          // When offline, ID questions are not available - we'll fill with base questions later
+
           console.log('ID questions not available in offline mode');
         } else {
-          // Online: try to fetch ID questions
+
           try {
             const params = new URLSearchParams();
             params.set('event', routerData.eventName || '');
             params.set('limit', String(Math.max(idCount * 3, 50)));
             
-            // Add subtopic filter if specified
+
             if (routerData.subtopics && routerData.subtopics.length > 0) {
               params.set('subtopics', routerData.subtopics.join(','));
             }
@@ -911,7 +911,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           }
         }
         
-        // Filter by types (MCQ/FRQ)
+
         const typesSel = (routerData.types as string) || 'multiple-choice';
         const filtered = source.filter((row: any) => {
           const isMcq = Array.isArray(row.options) && row.options.length > 0;
@@ -920,38 +920,38 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           return true; // both
         });
         const idQuestions: Question[] = filtered.map((row: any) => ({
-          id: row.id, // Add the missing id field!
+          id: row.id,
           question: row.question,
           options: row.options || [],
           answers: row.answers || [],
           difficulty: row.difficulty ?? 0.5,
           event: row.event,
-          subtopics: row.subtopics || [], // Preserve subtopics field
+          subtopics: row.subtopics || [],
           imageData: Array.isArray(row.images) && row.images.length ? row.images[Math.floor(Math.random()*row.images.length)] : undefined,
         }));
-        // Take only up to idCount
+
         const pickedId = shuffleArray(idQuestions).slice(0, idCount);
-        // If not enough ID questions, we'll fill with base later
+
         selectedQuestions = selectedQuestions.concat(pickedId);
       }
 
-      // Top-up with base questions if we still don't have enough
+
       if (selectedQuestions.length < total && baseCount > 0) {
         const need = total - selectedQuestions.length;
         const isOffline = !navigator.onLine;
         
         if (isOffline) {
-          // When offline, we can't fetch more questions - just use what we have
+
           console.log(`Offline mode: only ${selectedQuestions.length} questions available, need ${total}`);
         } else {
-          // Online: try to fetch more questions
+
           try {
             const requestCount = Math.max(need, 50);
             const params2 = buildApiParams({ ...routerData }, requestCount);
             const apiUrl2 = `${api.questions}?${params2}`;
             const r2 = await fetch(apiUrl2).catch(() => null);
             const j2 = r2 && r2.ok ? await r2.json() : null;
-            const extras: Question[] = (j2?.data || []); // Removed quality filtering - assume all questions are high quality
+            const extras: Question[] = (j2?.data || []);
             selectedQuestions = selectedQuestions.concat(shuffleArray(extras).slice(0, need));
           } catch {
             console.log('Failed to fetch additional questions for top-up');
@@ -959,33 +959,33 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         }
       }
 
-      // Final shuffle and set data
+
       const finalQuestions = shuffleArray(selectedQuestions).slice(0, total);
       
       // ========================================
-      // TEMPORARY FIX: Replace delta symbols with en dashes
-      // WARNING: This is a temporary workaround for delta symbol display issues
-      // TODO: Remove this script once proper delta symbol handling is implemented
+
+
+
       // ========================================
       finalQuestions.forEach(question => {
-        // Replace delta symbols (Δ or ∆) between numbers with en dashes (–)
+
         const deltaToEnDash = (text: string) => {
           return text.replace(/(\d+)\s*[Δ∆]\s*(\d+)/g, '$1–$2');
         };
         
-        // Apply to question text
+
         if (question.question) {
           question.question = deltaToEnDash(question.question);
         }
         
-        // Apply to options
+
         if (Array.isArray(question.options)) {
           question.options = question.options.map(option => 
             typeof option === 'string' ? deltaToEnDash(option) : option
           );
         }
         
-        // Apply to answers
+
         if (Array.isArray(question.answers)) {
           question.answers = question.answers.map(answer => 
             typeof answer === 'string' ? deltaToEnDash(answer) : answer
@@ -993,7 +993,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         }
       });
       // ========================================
-      // END TEMPORARY FIX
+
       // ========================================
       
       setData(finalQuestions);
@@ -1008,7 +1008,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   };
 
   const handleResetTest = () => {
-    // Scroll to top when resetting test
+
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }, 200);
@@ -1024,14 +1024,14 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     localStorage.removeItem('contestedQuestions');
     localStorage.removeItem('testFromBookmarks');
     
-    // Use current routerData instead of reading from localStorage to preserve idPercentage
+
     const timeLimit = routerData.timeLimit || "30";
     const eventName = routerData.eventName || "Unknown Event";
     const newSession = resetTestSession(eventName, parseInt(timeLimit));
     
     setTimeLeft(newSession.timeState.timeLeft);
     
-    // Reload questions instead of reloading the page
+
     reloadQuestions();
   };
 
@@ -1070,10 +1070,10 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   };
 
   const handleQuestionRemoved = (questionIndex: number) => {
-    // Use a more robust approach to prevent DOM manipulation errors
+
     setData(prevData => {
       const newData = prevData.filter((_, index) => index !== questionIndex);
-      // Update localStorage after state update to ensure consistency
+
       setTimeout(() => {
         localStorage.setItem('testQuestions', JSON.stringify(newData));
       }, 0);
@@ -1092,7 +1092,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         }
       });
       
-      // Update localStorage after state update
+
       setTimeout(() => {
         localStorage.setItem('testUserAnswers', JSON.stringify(newAnswers));
       }, 0);
@@ -1238,7 +1238,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   };
 
   return {
-    // State
+
     isLoading,
     data,
     routerData,
@@ -1259,7 +1259,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     editingQuestion,
     isResetting,
     
-    // Handlers
+
     handleAnswerChange,
     handleSubmit,
     handleResetTest,

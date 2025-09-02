@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse, GeminiExplainRequest } from '@/lib/types/api';
 import { geminiService } from '@/lib/services/gemini';
 
-// POST /api/gemini/explain - Get AI explanation for a question
+
 export async function POST(request: NextRequest) {
   try {
     const body: GeminiExplainRequest = await request.json();
@@ -15,11 +15,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 400 });
     }
 
-    console.log('🤖 [GEMINI/EXPLAIN] Request received');
-    console.log(`📋 [GEMINI/EXPLAIN] Event: ${body.event}`);
+    console.log('Request received');
+    console.log(`Event: ${body.event}`);
 
     if (!geminiService.isAvailable()) {
-      console.log('❌ [GEMINI/EXPLAIN] Gemini AI not available');
+      console.log('Gemini AI not available');
       const response: ApiResponse = {
         success: false,
         error: 'Gemini AI not available',
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 503 });
     }
 
-    console.log('🤖 [GEMINI/EXPLAIN] Sending request to Gemini AI');
+    console.log('Sending request to Gemini AI');
 
     try {
       const result = await geminiService.explain(
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
         body.event
       );
 
-      console.log('✅ [GEMINI/EXPLAIN] Gemini AI response received:', result);
+      console.log('Gemini AI response received:', result);
 
       const response: ApiResponse = {
         success: true,
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(response);
     } catch (error) {
-      console.log('❌ [GEMINI/EXPLAIN] Gemini AI error:', error);
+      console.log('Gemini AI error:', error);
       const response: ApiResponse = {
         success: false,
         error: 'Failed to generate explanation',

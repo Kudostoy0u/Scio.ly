@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-// Error handling utilities
+
 export class ApiError extends Error {
   constructor(
     public statusCode: number,
@@ -47,12 +47,12 @@ export const handleApiError = (error: unknown): NextResponse => {
   );
 };
 
-// Validation utilities
+
 export const createValidationSchema = <T extends z.ZodRawShape>(schema: T) => {
   return z.object(schema);
 };
 
-// Response utilities
+
 export const createSuccessResponse = <T>(data: T, message?: string) => {
   return NextResponse.json({
     success: true,
@@ -72,7 +72,7 @@ export const createErrorResponse = (error: string, statusCode: number = 500, cod
   );
 };
 
-// Input parsing utilities
+
 export const parseQueryParams = <T extends z.ZodRawShape>(
   searchParams: URLSearchParams,
   schema: z.ZodObject<T>
@@ -94,17 +94,17 @@ export const parseRequestBody = async <T extends z.ZodRawShape>(
   return schema.parse(body);
 };
 
-// Database query utilities
+
 export const buildWhereCondition = <T>(conditions: T[]) => {
   if (conditions.length === 0) return undefined;
   if (conditions.length === 1) return conditions[0];
   
-  // This assumes you're using drizzle-orm's 'and' function
-  // You'll need to import it in the specific file
+
+
   return conditions;
 };
 
-// Rate limiting utilities (for future use)
+
 export const createRateLimiter = (maxRequests: number, windowMs: number) => {
   const requests = new Map<string, { count: number; resetTime: number }>();
   
@@ -126,7 +126,7 @@ export const createRateLimiter = (maxRequests: number, windowMs: number) => {
   };
 };
 
-// Logging utilities
+
 export const logApiRequest = (method: string, path: string, params?: Record<string, unknown>) => {
   console.log(`[API] ${method} ${path}`, params ? `- Params: ${JSON.stringify(params)}` : '');
 };
@@ -135,7 +135,7 @@ export const logApiResponse = (method: string, path: string, statusCode: number,
   console.log(`[API] ${method} ${path} - ${statusCode} (${duration}ms)`);
 };
 
-// Caching utilities (for future use)
+
 export const createCacheKey = (prefix: string, params: Record<string, unknown>) => {
   const sortedParams = Object.keys(params)
     .sort()
@@ -145,9 +145,9 @@ export const createCacheKey = (prefix: string, params: Record<string, unknown>) 
   return `${prefix}:${sortedParams}`;
 };
 
-// Security utilities
+
 export const sanitizeInput = (input: string): string => {
-  // Basic XSS prevention
+
   return input
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -160,19 +160,19 @@ export const validateUUID = (uuid: string): boolean => {
   return uuidRegex.test(uuid);
 };
 
-// Pagination utilities
+
 export const createPaginationParams = (page?: string, limit?: string) => {
   const pageNum = page ? parseInt(page) : 1;
   const limitNum = limit ? parseInt(limit) : 10;
   
   return {
     offset: (pageNum - 1) * limitNum,
-    limit: Math.min(limitNum, 100), // Cap at 100 items
+    limit: Math.min(limitNum, 100),
     page: pageNum,
   };
 };
 
-// Sorting utilities
+
 export const createSortParams = (sortBy?: string, sortOrder?: string) => {
   const validSortOrders = ['asc', 'desc'] as const;
   const order = sortOrder && validSortOrders.includes(sortOrder as 'asc' | 'desc') 

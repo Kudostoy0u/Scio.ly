@@ -23,14 +23,14 @@ export default function FavoriteConfigsCard() {
     try {
       setFavorites(getFavoriteConfigs());
     } catch {}
-    // Listen to storage changes from other tabs/windows
+
     const onStorage = (e: StorageEvent) => {
       if (e.key === 'scio_favorite_test_configs') {
         setFavorites(getFavoriteConfigs());
       }
     };
     window.addEventListener('storage', onStorage);
-    // Setup offline state and downloaded events
+
     const updateOnline = () => setIsOffline(!navigator.onLine);
     updateOnline();
     window.addEventListener('online', updateOnline);
@@ -48,7 +48,7 @@ export default function FavoriteConfigsCard() {
     };
   }, []);
 
-  // Global click handler to close selected card when clicking outside
+
   useEffect(() => {
     const handleClickOutside = (_event: MouseEvent) => {
       if (selectedMobileCard !== null) {
@@ -225,9 +225,9 @@ export default function FavoriteConfigsCard() {
   );
 }
 
-// local normalization no longer used; centralized via buildTestParams
+// local normalization no longer used; centralized via buildtestparams
 
-// summarizeSettings retained historically; currently unused after grid redesign
+// summarizesettings retained historically; currently unused after grid redesign
 
 function ConfigSummaryGrid({ settings, darkMode, isMobile = false }: { settings: Settings; darkMode: boolean; isMobile?: boolean }) {
   const typeLabel = settings.types === 'both' ? 'MCQ+FRQ' : settings.types === 'free-response' ? 'FRQ' : 'MCQ';

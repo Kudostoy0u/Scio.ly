@@ -32,7 +32,7 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
   const [focusedDigit, setFocusedDigit] = React.useState<string | null>(null);
   const [focusedPos, setFocusedPos] = React.useState<number | null>(null);
 
-  // Flatten all digit groups into a single inline sequence with word-boundary markers
+
   const inlineDigits = React.useMemo(() => {
     if (!cryptarithmData?.digitGroups) return { digits: [] as string[], boundaries: new Set<number>() };
     const digits: string[] = [];
@@ -51,7 +51,7 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
     return { digits, boundaries };
   }, [cryptarithmData]);
 
-  // Build digit -> positions map for syncing
+
   const digitToPositions = React.useMemo(() => {
     const map: { [digit: string]: number[] } = {};
     inlineDigits.digits.forEach((d, i) => {
@@ -61,7 +61,7 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
     return map;
   }, [inlineDigits]);
 
-  // Create a mapping of positions to correct letters
+
   const correctMapping: { [key: number]: string } = {};
   if (isTestSubmitted && cryptarithmData?.digitGroups) {
     const allLetters = cryptarithmData.digitGroups.map(group => group.word.replace(/\s/g, '')).join('');

@@ -14,7 +14,7 @@ import {
   ApiError
 } from '@/lib/api/utils';
 
-// Database result type
+
 type DatabaseQuestion = {
   id: string;
   question: string;
@@ -29,7 +29,7 @@ type DatabaseQuestion = {
   updatedAt: Date | null;
 };
 
-// Validation schemas
+
 const QuestionFiltersSchema = z.object({
   event: z.string().optional(),
   division: z.string().optional(),
@@ -53,11 +53,11 @@ const CreateQuestionSchema = z.object({
   difficulty: z.number().min(0).max(1).optional().default(0.5),
 });
 
-// Types
+
 type ValidatedQuestionFilters = z.infer<typeof QuestionFiltersSchema>;
 type ValidatedCreateQuestion = z.infer<typeof CreateQuestionSchema>;
 
-// Query building utilities
+
 class QueryBuilder {
   private conditions: SQL[] = [];
   private limit = 50;
@@ -130,7 +130,7 @@ class QueryBuilder {
 
   setLimit(limit: string | undefined): this {
     const parsedLimit = limit ? parseInt(limit) : 50;
-    // Ensure limit is between 1 and 200
+
     this.limit = Math.min(Math.max(parsedLimit > 0 ? parsedLimit : 50, 1), 200);
     return this;
   }
@@ -145,9 +145,9 @@ class QueryBuilder {
   }
 }
 
-// Data transformation utilities
+
 const transformDatabaseResult = async (result: DatabaseQuestion): Promise<Question> => {
-  // Generate base52 code for this question
+
   const { generateQuestionCode } = await import('@/lib/utils/base52');
   let base52Code: string | undefined;
   
@@ -174,7 +174,7 @@ const transformDatabaseResult = async (result: DatabaseQuestion): Promise<Questi
   };
 };
 
-// Business logic functions
+
 const parseAndValidateFilters = (searchParams: URLSearchParams): ValidatedQuestionFilters => {
   const rawFilters = {
     event: searchParams.get('event') || undefined,
@@ -206,7 +206,7 @@ const buildSubtopicsArray = (filters: ValidatedQuestionFilters): string[] => {
 const fetchQuestions = async (filters: ValidatedQuestionFilters): Promise<Question[]> => {
   const queryBuilder = new QueryBuilder();
   
-  // Apply filters
+
   if (filters.event) {
     queryBuilder.addEventFilter(filters.event);
   }
@@ -231,7 +231,7 @@ const fetchQuestions = async (filters: ValidatedQuestionFilters): Promise<Questi
   queryBuilder.addDifficultyRange(filters.difficulty_min, filters.difficulty_max);
   queryBuilder.setLimit(filters.limit);
 
-  // Two-phase indexed random selection using random_f with fallback
+
   const whereCondition = queryBuilder.getWhereCondition();
   const limit = queryBuilder.getLimit();
   const r = Math.random();
@@ -268,7 +268,7 @@ const fetchQuestions = async (filters: ValidatedQuestionFilters): Promise<Questi
     return Promise.all(allResults.map(transformDatabaseResult));
   } catch (err) {
     console.log('Error fetching questions', err);
-    // Fallback while migrations roll out: random() sort
+
     const base = whereCondition
       ? db.select().from(questions).where(whereCondition).orderBy(sql`RANDOM()`).limit(limit)
       : db.select().from(questions).orderBy(sql`RANDOM()`).limit(limit);
@@ -290,7 +290,7 @@ const createQuestion = async (data: ValidatedCreateQuestion): Promise<Question> 
     answers: data.answers,
     subtopics: data.subtopics,
     difficulty: data.difficulty.toString(),
-    // randomF will default to random() via schema
+    // randomf will default to random() via schema
   }).returning();
   
   const question = result[0];
@@ -301,7 +301,7 @@ const createQuestion = async (data: ValidatedCreateQuestion): Promise<Question> 
   return await transformDatabaseResult(question);
 };
 
-// API Handlers
+
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
   logApiRequest('GET', '/api/questions', Object.fromEntries(request.nextUrl.searchParams));

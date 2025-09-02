@@ -4,13 +4,13 @@ import { useTheme } from '@/app/contexts/ThemeContext';
 import { QuoteData } from '../../types';
 import { ReplacementTable } from './ReplacementTable';
 
-// Helper function for keyword-based alphabet generation (copied from cipher-utils)
+
 const generateKeywordAlphabet = (keyword: string): string => {
     const cleanKeyword = keyword.toUpperCase().replace(/[^A-Z]/g, '');
     const used = new Set<string>();
     const result: string[] = [];
     
-    // Add keyword letters first (removing duplicates)
+
     for (const char of cleanKeyword) {
         if (!used.has(char)) {
             used.add(char);
@@ -18,7 +18,7 @@ const generateKeywordAlphabet = (keyword: string): string => {
         }
     }
     
-    // Add remaining alphabet letters
+
     for (const char of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
         if (!used.has(char)) {
             result.push(char);
@@ -106,34 +106,34 @@ export const SubstitutionDisplay = ({
         }
     };
 
-    // Create mapping for correct answers (for k1/k2/k3 variants, caesar, atbash, affine)
+
     const correctMapping: { [key: string]: string } = {};
     if (isTestSubmitted && quotes[quoteIndex]) {
         const quote = quotes[quoteIndex];
         
-        // Handle keyword-based ciphers (K1, K2, K3)
+
         if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'K1 Xenocrypt', 'K2 Xenocrypt'].includes(cipherType) && quote.key) {
-            // Reconstruct the substitution mapping from the keyword
+
             const keyword = quote.key;
             
             if (cipherType.includes('K1')) {
                 if (cipherType.includes('Xenocrypt')) {
-                    // K1 Xenocrypt: Plain alphabet is keyed + Ñ, cipher alphabet is standard (27 letters)
+
                     const plainAlphabet = generateKeywordAlphabet(keyword) + 'Ñ';
                     const cipherAlphabet = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ';
                     
-                    // Create substitution mapping: cipherLetter -> plainLetter
+
                     for (let i = 0; i < 27; i++) {
                         const cipherLetter = cipherAlphabet[i];
                         const plainLetter = plainAlphabet[i];
                         correctMapping[cipherLetter] = plainLetter;
                     }
                 } else {
-                    // K1 Aristocrat/Patristocrat: Plain alphabet is keyed, cipher alphabet is standard (26 letters)
+
                     const plainAlphabet = generateKeywordAlphabet(keyword);
                     const cipherAlphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
                     
-                    // Create substitution mapping: cipherLetter -> plainLetter
+
                     for (let i = 0; i < 26; i++) {
                         const cipherLetter = cipherAlphabet[i];
                         const plainLetter = plainAlphabet[i];
@@ -142,22 +142,22 @@ export const SubstitutionDisplay = ({
                 }
             } else if (cipherType.includes('K2')) {
                 if (cipherType.includes('Xenocrypt')) {
-                    // K2 Xenocrypt: Plain alphabet is standard, cipher alphabet is keyed + Ñ (27 letters)
+
                     const plainAlphabet = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ';
                     const cipherAlphabet = generateKeywordAlphabet(keyword) + 'Ñ';
                     
-                    // Create substitution mapping: cipherLetter -> plainLetter
+
                     for (let i = 0; i < 27; i++) {
                         const cipherLetter = cipherAlphabet[i];
                         const plainLetter = plainAlphabet[i];
                         correctMapping[cipherLetter] = plainLetter;
                     }
                 } else {
-                    // K2 Aristocrat/Patristocrat: Plain alphabet is standard, cipher alphabet is keyed (26 letters)
+
                     const plainAlphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
                     const cipherAlphabet = generateKeywordAlphabet(keyword);
                     
-                    // Create substitution mapping: cipherLetter -> plainLetter
+
                     for (let i = 0; i < 26; i++) {
                         const cipherLetter = cipherAlphabet[i];
                         const plainLetter = plainAlphabet[i];
@@ -165,19 +165,19 @@ export const SubstitutionDisplay = ({
                     }
                 }
             } else if (cipherType.includes('K3')) {
-                // K3: Both alphabets use the same keyword with 1-position shift (26 letters only)
+
                 const alphabet = generateKeywordAlphabet(keyword);
                 
-                // Create substitution mapping: cipherLetter -> plainLetter
+
                 for (let i = 0; i < 26; i++) {
-                    const shiftedIndex = (i + 1) % 26; // Shift by 1 to avoid self-mapping
+                    const shiftedIndex = (i + 1) % 26;
                     const cipherLetter = alphabet[shiftedIndex];
                     const plainLetter = alphabet[i];
                     correctMapping[cipherLetter] = plainLetter;
                 }
             }
         } else if (['Random Aristocrat', 'Random Patristocrat', 'Random Xenocrypt'].includes(cipherType) && quote.key) {
-            // Handle random substitution ciphers (old format)
+
             for (let i = 0; i < 26; i++) {
                 const plainLetter = String.fromCharCode(65 + i);
                 const cipherLetter = quote.key[i];
@@ -206,14 +206,14 @@ export const SubstitutionDisplay = ({
                 correctMapping[cipherLetter] = plainLetter;
             }
         } else if (cipherType === 'Xenocrypt' && quote.key) {
-            // Xenocrypt is a substitution cipher like aristocrats
+
             for (let i = 0; i < 26; i++) {
                 const plainLetter = String.fromCharCode(65 + i);
                 const cipherLetter = quote.key[i];
                 correctMapping[cipherLetter] = plainLetter;
             }
         } else if (['Nihilist', 'Fractionated Morse', 'Complete Columnar'].includes(cipherType) && quote.key) {
-            // These are also substitution ciphers like aristocrats
+
             for (let i = 0; i < 26; i++) {
                 const plainLetter = String.fromCharCode(65 + i);
                 const cipherLetter = quote.key[i];

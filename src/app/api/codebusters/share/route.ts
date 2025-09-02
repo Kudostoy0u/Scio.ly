@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     const shareData = result[0] as ShareDataResult;
     
     try {
-      // testParamsRaw is already a JSON object (JSONB column)
+      // testparamsraw is already a json object (jsonb column)
       const testParamsRaw = shareData.testParamsRaw;
       
       if (!testParamsRaw) {
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
         }, { status: 500 });
       }
       
-      // Check if this is actually a codebusters test
+
       if (testParamsRaw.eventName !== 'Codebusters') {
         console.log(`❌ [CODEBUSTERS/SHARE/GET] Code is not for Codebusters event: ${testParamsRaw.eventName}`);
         return NextResponse.json({
@@ -74,16 +74,16 @@ export async function GET(request: NextRequest) {
       
       console.log(`✅ [CODEBUSTERS/SHARE/GET] Found code: ${code}`);
       
-      // Load complete share data including encryption details
+
       let shareDataComplete: Record<string, unknown> | null = null;
       
-      // Since indices is stored as JSONB, it's already parsed as an object
+
       if (shareData.indices && typeof shareData.indices === 'object' && shareData.indices !== null) {
-        // New format: Complete share data with encryption details
+
         shareDataComplete = shareData.indices as Record<string, unknown>;
         console.log(`🔍 [CODEBUSTERS/SHARE/GET] Found complete share data with ${(shareDataComplete.processedQuotes as unknown[])?.length || 0} quotes`);
       } else {
-        // Legacy format - try to handle gracefully
+
         console.warn(`Legacy format detected for code ${code}, attempting migration`);
         shareDataComplete = null;
       }
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
         }, { status: 400 });
       }
 
-      // Use the stored processed quotes directly - no need to regenerate encryption
+
       const processedQuotes = shareDataComplete.processedQuotes as Array<{
         author: string;
         quote: string;
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
       
       console.log(`✅ [CODEBUSTERS/SHARE/GET] Using stored processed quotes with encryption details`);
 
-      // Use the stored processed quotes directly - no need to regenerate encryption
+
       const finalProcessedQuotes = processedQuotes.map(quote => ({
         author: quote.author,
         quote: quote.quote,

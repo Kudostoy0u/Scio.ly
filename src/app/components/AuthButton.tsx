@@ -8,7 +8,7 @@ import { useTheme } from '@/app/contexts/ThemeContext';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/app/contexts/AuthContext';
-// Removed SocialAuth to use a custom-styled Google button
+
 
 export default function AuthButton() {
   const { darkMode } = useTheme();
@@ -40,50 +40,50 @@ export default function AuthButton() {
     ? 'text-blue-300 hover:text-blue-200'
     : 'text-blue-500 hover:text-blue-600';
 
-  // Sync with centralized auth context; avoid localStorage hacks
+
   useEffect(() => {
     setUser(ctxUser ?? null);
     setLoading(false);
   }, [ctxUser]);
 
-  // Load cached profile picture immediately on mount
+
   useEffect(() => {
     if (ctxUser?.id) {
-      // Try to load cached profile picture immediately
+
       try {
         const cachedPhotoUrl = localStorage.getItem(`scio_profile_photo_${ctxUser.id}`);
         if (cachedPhotoUrl) {
           setPhotoUrl(cachedPhotoUrl);
-          // Preload the cached image to ensure it's ready
+
           preloadImage(cachedPhotoUrl).catch(() => {
-            // If cached image fails to load, remove it from cache
+
             localStorage.removeItem(`scio_profile_photo_${ctxUser.id}`);
             setPhotoUrl(null);
           });
         }
               } catch {
-          // Ignore localStorage errors
+
         }
     }
   }, [ctxUser?.id]);
 
-  // Save user data to localStorage
+
   
 
-  // Clear user data from localStorage
+
   const clearUserFromLocalStorage = () => {
     try {
       localStorage.removeItem('scio_user_data');
       localStorage.setItem('scio_is_logged_in', '0');
       localStorage.removeItem('scio_display_name');
-      // Clear cached profile photo
+
       if (user?.id) {
         localStorage.removeItem(`scio_profile_photo_${user.id}`);
       }
     } catch {}
   };
 
-  // Handle online/offline status
+
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
@@ -98,7 +98,7 @@ export default function AuthButton() {
     };
   }, []);
 
-  // Preload profile image to prevent jittery transitions
+
   const preloadImage = (url: string): Promise<void> => {
     return new Promise((resolve, reject) => {
       const img = document.createElement('img');
@@ -113,7 +113,7 @@ export default function AuthButton() {
     const supabase = client;
     (async () => {
       try {
-        // Only make the query if we have a valid user ID
+
         if (!ctxUser?.id || typeof ctxUser.id !== 'string' || ctxUser.id.trim() === '') {
           return;
         }
@@ -129,16 +129,16 @@ export default function AuthButton() {
         const photo = (profile as any)?.photo_url as string | undefined;
         if (photo) {
           try {
-            // Cache the photo URL immediately
+
             localStorage.setItem(`scio_profile_photo_${ctxUser.id}`, photo);
             
-            // Preload the image before setting it
+
             await preloadImage(photo);
             if (active) {
               setPhotoUrl(photo);
             }
           } catch {
-            // If image fails to load, remove from cache
+
             localStorage.removeItem(`scio_profile_photo_${ctxUser.id}`);
           }
         }
@@ -191,7 +191,7 @@ export default function AuthButton() {
         });
         
         if (error) {
-          // Check for various error messages that indicate existing account
+
           if (error.message.includes('already registered') || 
               error.message.includes('already exists') ||
               error.message.includes('already been registered') ||
@@ -201,7 +201,7 @@ export default function AuthButton() {
             setAuthError(error.message);
           }
         } else {
-          // Check if the response indicates user already exists
+
           if (data.user && data.user.email_confirmed_at) {
             setAuthError('An account with this email already exists. Please sign in instead.');
           } else {
@@ -280,16 +280,16 @@ export default function AuthButton() {
     } catch (err) {
       setAuthError(`An unexpected error occurred: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
-      // Usually redirects immediately; this is just to satisfy UI states in non-redirect environments
+
       setOauthLoading(false);
     }
   };
 
   const handleSignOut = async () => {
     try {
-      // Fast local clear to avoid stale UI when session is expired or network is slow
+
       await client.auth.signOut({ scope: 'local' }).catch(() => undefined);
-      // Reset all local state except theme
+
       try {
         const { resetAllLocalStorageExceptTheme } = await import('@/app/utils/dashboardData');
         resetAllLocalStorageExceptTheme();
@@ -299,12 +299,12 @@ export default function AuthButton() {
       setUser(null);
       setIsDropdownOpen(false);
 
-      // Attempt global sign-out in the background; if it fails, UI is still cleared
+
       client.auth.signOut({ scope: 'global' }).catch((err) => {
         console.warn('Non-fatal global sign-out issue:', err);
       });
 
-      // Hard reload to ensure all client state is reset
+
       window.location.reload();
     } catch (error) {
       console.error('Error signing out:', error);
@@ -323,7 +323,7 @@ export default function AuthButton() {
     setConfirmPassword('');
   };
 
-  // Close dropdown when clicking outside
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {

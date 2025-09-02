@@ -34,20 +34,20 @@ const ReportModal = ({ isOpen, onClose, onSubmit, darkMode, question, event }: R
       if (isOpen) {
         setEditedQuestion(question.question);
         
-        // Determine if this is a free response question (no options)
+
         const hasMCQOptions = question.options && question.options.length > 0;
         setIsFRQ(!hasMCQOptions);
         
         if (hasMCQOptions) {
-          // Handle MCQ
+
           setEditedOptions(question.options || []);
-          // Strict zero-based: accept numeric (or numeric-string) indices in range
+
           const nums = (question.answers || [])
             .map(a => (typeof a === 'number' ? a : (typeof a === 'string' && /^\d+$/.test(a) ? parseInt(a, 10) : null)))
             .filter((n): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n < (question.options?.length || 0));
           setCorrectAnswers(nums);
         } else {
-          // Handle FRQ
+
           const answer = Array.isArray(question.answers) && question.answers.length > 0
             ? typeof question.answers[0] === 'string' 
               ? question.answers[0]
@@ -81,9 +81,9 @@ const ReportModal = ({ isOpen, onClose, onSubmit, darkMode, question, event }: R
         reason: reason
       };
 
-      // Send the edited question data
 
-      // Instead of making the API call directly, pass the data to the parent component
+
+
       
       resetForm();
       onClose();
@@ -150,7 +150,7 @@ const ReportModal = ({ isOpen, onClose, onSubmit, darkMode, question, event }: R
   const removeOption = (index: number) => {
     const newOptions = editedOptions.filter((_, i) => i !== index);
     setEditedOptions(newOptions);
-    // Update correct answers (zero-based) to remove or shift after removal
+
     setCorrectAnswers(prev => {
       const filtered = prev.filter(ans => ans !== index).map(ans => (ans > index ? ans - 1 : ans));
       return Array.from(new Set(filtered)).sort((a, b) => a - b);
@@ -235,7 +235,7 @@ const ReportModal = ({ isOpen, onClose, onSubmit, darkMode, question, event }: R
                       value={difficulty}
                       onChange={(e) => {
                         const value = parseFloat(e.target.value);
-                        // Ensure difficulty is at least 0.1 (10%)
+
                         setDifficulty(value === 0 ? 0.1 : value);
                       }}
                       className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
@@ -265,7 +265,7 @@ const ReportModal = ({ isOpen, onClose, onSubmit, darkMode, question, event }: R
 
               {/* Conditional rendering based on question type */}
               {isFRQ ? (
-                // Free Response Question Answer
+
                 <div>
                   <label className="block mb-2 font-medium">Correct Answer</label>
                   <textarea
@@ -282,7 +282,7 @@ const ReportModal = ({ isOpen, onClose, onSubmit, darkMode, question, event }: R
                   />
                 </div>
               ) : (
-                // Multiple Choice Question Options
+
                 <div>
                   <label className="block mb-2 font-medium">Answer Options</label>
                   <div className="space-y-2">

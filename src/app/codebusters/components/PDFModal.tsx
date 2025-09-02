@@ -32,7 +32,7 @@ export const PDFModal: React.FC<PDFModalProps> = ({
 
   if (!showPDFViewer) return null;
 
-  // On mobile or if iframe fails, show option to open in new window
+
   if (isMobile || iframeError) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75" onClick={onClose}>

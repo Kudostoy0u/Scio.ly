@@ -40,7 +40,7 @@ export const loadQuestionsFromDatabase = async (
 ) => {
   console.log('loadQuestionsFromDatabase called');
   
-  // If a previous submission exists, restore it and skip loading new questions
+
   const testAlreadySubmitted = localStorage.getItem('codebustersIsTestSubmitted') === 'true';
   const existingQuotes = localStorage.getItem('codebustersQuotes');
   if (testAlreadySubmitted && existingQuotes) {
@@ -62,7 +62,7 @@ export const loadQuestionsFromDatabase = async (
   setIsLoading(true);
   setError(null);
 
-  // Load custom word bank if present (used by cryptarithm)
+
   try {
     if (!getCustomWordBank()) {
       const resp = await fetch('/words.json');
@@ -73,24 +73,24 @@ export const loadQuestionsFromDatabase = async (
     }
   } catch {}
   
-  // Check if test was already submitted and preserve state
+
   const testParamsStr = localStorage.getItem('testParams');
   const testParams = testParamsStr ? JSON.parse(testParamsStr) : {};
   const eventName = testParams.eventName || 'Codebusters';
   const preferences = loadPreferences(eventName);
   
-  // Check if test was already submitted
+
   const wasTestSubmitted = localStorage.getItem('codebustersIsTestSubmitted') === 'true';
   const savedTestScore = localStorage.getItem('codebustersTestScore');
   const savedTimeLeft = localStorage.getItem('codebustersTimeLeft');
   
   if (wasTestSubmitted) {
-    // Preserve submitted test state
+
     setIsTestSubmitted(true);
     setTestScore(savedTestScore ? parseFloat(savedTestScore) : 0);
     setTimeLeft(savedTimeLeft ? parseInt(savedTimeLeft) : 0);
   } else {
-    // Reset for new test
+
     setTimeLeft(preferences.timeLimit * 60);
     setIsTestSubmitted(false);
     setTestScore(null);
@@ -100,7 +100,7 @@ export const loadQuestionsFromDatabase = async (
   }
 
   try {
-    // Get test parameters from localStorage
+
     const testParamsStr = localStorage.getItem('testParams');
     if (!testParamsStr) {
       setError('No test parameters found. Please configure a test from the practice page.');
@@ -114,10 +114,10 @@ export const loadQuestionsFromDatabase = async (
     const questionCount = parseInt(testParams.questionCount) || preferences.questionCount;
     let cipherTypes = (testParams.cipherTypes || testParams.subtopics || []).map((type: string) => type.toLowerCase());
     
-    // Map subtopic names to cipher type names for Codebusters
+
     if (testParams.eventName === 'Codebusters') {
       const subtopicToCipherMap: { [key: string]: string } = {
-        // Handle lowercase versions (from old format)
+
         'k1 aristocrat': 'K1 Aristocrat',
         'k2 aristocrat': 'K2 Aristocrat',
         'k3 aristocrat': 'K3 Aristocrat',
@@ -139,7 +139,7 @@ export const loadQuestionsFromDatabase = async (
         'k1 xenocrypt': 'K1 Xenocrypt',
         'k2 xenocrypt': 'K2 Xenocrypt',
         'checkerboard': 'Checkerboard',
-        // Handle correct format (from practice page)
+
         'K1 Aristocrat': 'K1 Aristocrat',
         'K2 Aristocrat': 'K2 Aristocrat',
         'K3 Aristocrat': 'K3 Aristocrat',
@@ -162,7 +162,7 @@ export const loadQuestionsFromDatabase = async (
         'K2 Xenocrypt': 'K2 Xenocrypt',
         'Checkerboard': 'Checkerboard',
         'Cryptarithm': 'Cryptarithm',
-        // Handle standalone entries (should be mapped to Misc variants)
+
         'aristocrat': 'Random Aristocrat',
         'patristocrat': 'Random Patristocrat'
       };
@@ -172,10 +172,10 @@ export const loadQuestionsFromDatabase = async (
       );
     }
 
-    // Determine cipher types in advance for each question
+
     const division = testParams.division || 'any';
     
-    // Define division-based cipher types
+
     const divisionBCipherTypes = {
               'B': ['K1 Aristocrat', 'K2 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'Random Patristocrat', 'Baconian', 'Fractionated Morse', 'Complete Columnar', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt', 'Porta', 'Nihilist', 'Atbash', 'Caesar', 'Affine', 'Checkerboard', 'Cryptarithm'],
               'C': ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Baconian', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt', 'Fractionated Morse', 'Porta', 'Complete Columnar', 'Nihilist', 'Hill 2x2', 'Hill 3x3', 'Checkerboard', 'Cryptarithm']
@@ -187,28 +187,28 @@ export const loadQuestionsFromDatabase = async (
         ? divisionBCipherTypes[division] 
         : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Hill 2x2', 'Hill 3x3', 'Porta', 'Baconian', 'Nihilist', 'Fractionated Morse', 'Complete Columnar', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt', 'Cryptarithm'];
 
-    // Determine cipher types for each question in advance
+
     const questionCipherTypes: QuoteData['cipherType'][] = [];
     for (let i = 0; i < questionCount; i++) {
       const cipherType = availableCipherTypes[Math.floor(Math.random() * availableCipherTypes.length)] as QuoteData['cipherType'];
       questionCipherTypes.push(cipherType);
     }
 
-    // Count xenocrypt vs non-xenocrypt questions
+
     const xenocryptCount = questionCipherTypes.filter(type => type === 'Random Xenocrypt' || type === 'K1 Xenocrypt' || type === 'K2 Xenocrypt').length;
     const nonXenocryptCount = questionCount - xenocryptCount;
     
     console.log(`🔍 Quote requirements: ${nonXenocryptCount} English, ${xenocryptCount} Spanish, total: ${questionCount}`);
     console.log(`🔍 Cipher types:`, questionCipherTypes);
 
-    // Fetch quotes (check offline first, then try network)
+
     let englishQuotes: Array<{id: string, author: string, quote: string}> = [];
     let spanishQuotes: Array<{id: string, author: string, quote: string}> = [];
     
-    // Check if we're offline first
+
     const isOffline = !navigator.onLine;
     if (isOffline) {
-      // Use offline data immediately when offline
+
       const stored = await getEventOfflineQuestions('codebusters');
       console.log('🔍 Retrieved codebusters data from IndexedDB:', stored);
       console.log('🔍 Data type:', typeof stored);
@@ -231,7 +231,7 @@ export const loadQuestionsFromDatabase = async (
       if (nonXenocryptCount > 0) {
         if (storedEn.length < nonXenocryptCount) {
           console.warn(`⚠️ Not enough offline English quotes. Need ${nonXenocryptCount}, got ${storedEn.length}. Using all available quotes.`);
-          // Use all available quotes instead of throwing an error
+
           englishQuotes = storedEn;
         } else {
           englishQuotes = storedEn.slice(0, nonXenocryptCount);
@@ -240,16 +240,16 @@ export const loadQuestionsFromDatabase = async (
       if (xenocryptCount > 0) {
         if (storedEs.length < xenocryptCount) {
           console.warn(`⚠️ Not enough offline Spanish quotes. Need ${xenocryptCount}, got ${storedEs.length}. Using all available quotes.`);
-          // Use all available quotes instead of throwing an error
+
           spanishQuotes = storedEs;
         } else {
           spanishQuotes = storedEs.slice(0, xenocryptCount);
         }
       }
     } else {
-      // Online: try API first, fallback to offline
+
       try {
-        // Build character length range parameters if specified
+
         const charLengthParams = testParams.charLengthMin && testParams.charLengthMax 
           ? `&charLengthMin=${testParams.charLengthMin}&charLengthMax=${testParams.charLengthMax}`
           : '';
@@ -267,7 +267,7 @@ export const loadQuestionsFromDatabase = async (
           spanishQuotes = spanishData.data?.quotes || spanishData.quotes || [];
         }
       } catch {
-        // Fallback to offline data
+
         const stored = await getEventOfflineQuestions('codebusters');
         console.log('🔍 Fallback: Retrieved codebusters data from IndexedDB:', stored);
         console.log('🔍 Fallback: Data type:', typeof stored);
@@ -290,7 +290,7 @@ export const loadQuestionsFromDatabase = async (
         if (nonXenocryptCount > 0) {
           if (storedEn.length < nonXenocryptCount) {
             console.warn(`⚠️ Not enough offline English quotes in fallback. Need ${nonXenocryptCount}, got ${storedEn.length}. Using all available quotes.`);
-            // Use all available quotes instead of throwing an error
+
             englishQuotes = storedEn;
           } else {
             englishQuotes = storedEn.slice(0, nonXenocryptCount);
@@ -299,7 +299,7 @@ export const loadQuestionsFromDatabase = async (
         if (xenocryptCount > 0) {
           if (storedEs.length < xenocryptCount) {
             console.warn(`⚠️ Not enough offline Spanish quotes in fallback. Need ${xenocryptCount}, got ${storedEs.length}. Using all available quotes.`);
-            // Use all available quotes instead of throwing an error
+
             spanishQuotes = storedEs;
           } else {
             spanishQuotes = storedEs.slice(0, xenocryptCount);
@@ -308,11 +308,11 @@ export const loadQuestionsFromDatabase = async (
       }
     }
 
-    // Handle insufficient quotes gracefully
+
     if (nonXenocryptCount > 0 && englishQuotes.length < nonXenocryptCount) {
       console.warn(`⚠️ Not enough English quotes in selected range. Need ${nonXenocryptCount}, got ${englishQuotes.length}. Trying fallback...`);
       
-      // Try to fetch more quotes without character length restrictions
+
       try {
         const fallbackResponse = await fetch(`/api/quotes?language=en&limit=${Math.min(nonXenocryptCount, 200)}`);
         if (fallbackResponse.ok) {
@@ -329,7 +329,7 @@ export const loadQuestionsFromDatabase = async (
         }
       } catch (fallbackError) {
         if (fallbackError instanceof Error && fallbackError.message.includes('character length range')) {
-          throw fallbackError; // Re-throw our custom error message
+          throw fallbackError;
         }
         throw new Error(`Not enough English quotes available. Your character length range (${testParams.charLengthMin || 1}-${testParams.charLengthMax || 100}) is too restrictive. Try expanding the range or reducing the number of questions. Available: ${englishQuotes.length}, needed: ${nonXenocryptCount}.`);
       }
@@ -338,7 +338,7 @@ export const loadQuestionsFromDatabase = async (
     if (xenocryptCount > 0 && spanishQuotes.length < xenocryptCount) {
       console.warn(`⚠️ Not enough Spanish quotes in selected range. Need ${xenocryptCount}, got ${spanishQuotes.length}. Trying fallback...`);
       
-      // Try to fetch more quotes without character length restrictions
+
       try {
         const fallbackResponse = await fetch(`/api/quotes?language=es&limit=${Math.min(xenocryptCount, 200)}`);
         if (fallbackResponse.ok) {
@@ -355,7 +355,7 @@ export const loadQuestionsFromDatabase = async (
         }
       } catch (fallbackError) {
         if (fallbackError instanceof Error && fallbackError.message.includes('character length range')) {
-          throw fallbackError; // Re-throw our custom error message
+          throw fallbackError;
         }
         throw new Error(`Not enough Spanish quotes available. Your character length range (${testParams.charLengthMin || 1}-${testParams.charLengthMax || 100}) is too restrictive. Try expanding the range or reducing the number of questions. Available: ${spanishQuotes.length}, needed: ${xenocryptCount}.`);
       }
@@ -363,13 +363,13 @@ export const loadQuestionsFromDatabase = async (
     
     console.log(`🔍 Quote validation passed: ${englishQuotes.length} English, ${spanishQuotes.length} Spanish quotes available`);
     
-    // Prepare quotes for processing
+
     const processedQuotes: QuoteData[] = [];
     const quoteUUIDs: Array<{id: string, language: string, cipherType: string}> = [];
     let englishQuoteIndex = 0;
     let spanishQuoteIndex = 0;
 
-    // Calculate how many questions we can actually create with available quotes
+
     const availableEnglishQuotes = englishQuotes.length;
     const availableSpanishQuotes = spanishQuotes.length;
     const actualQuestionCount = Math.min(questionCount, availableEnglishQuotes + availableSpanishQuotes);
@@ -378,7 +378,7 @@ export const loadQuestionsFromDatabase = async (
       console.warn(`⚠️ Not enough quotes available. Requested ${questionCount} questions, but only ${actualQuestionCount} can be created.`);
     }
     
-    // Helper: compute difficulty from type/length/advanced attributes
+
     const computeDifficulty = (q: {
       cipherType: string;
       quote: string;
@@ -409,11 +409,11 @@ export const loadQuestionsFromDatabase = async (
         'Cryptarithm': 0.7,
       };
       let d = baseByType[q.cipherType] ?? 0.5;
-      // Length adjustment
+
       const len = q.quote.replace(/[^A-Za-z]/g, '').length;
       const norm = Math.max(0, Math.min(1, (len - 40) / 160)); // 0 at 40, 1 at 200
       d += (norm - 0.5) * 0.25; // +/-0.125
-      // Advanced: Baconian binary type nuance
+
       if (q.cipherType === 'Baconian' && q.baconianBinaryType) {
         const t = q.baconianBinaryType;
         if (t === 'A/B') d -= 0.15;
@@ -427,17 +427,17 @@ export const loadQuestionsFromDatabase = async (
 
     for (let i = 0; i < actualQuestionCount; i++) {
       const cipherType = questionCipherTypes[i];
-      // Normalize cipher type to handle case sensitivity
+
       const normalizedCipherType = cipherType.split(' ').map(word => 
         word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
       ).join(' ');
       let quoteData: { quote: string; author: string; originalIndex: number; isSpanish?: boolean; id?: string };
 
       if (cipherType === 'Random Xenocrypt' || cipherType === 'K1 Xenocrypt' || cipherType === 'K2 Xenocrypt') {
-        // Use Spanish quote for xenocrypt variants
+
         if (spanishQuoteIndex >= spanishQuotes.length) {
           console.warn(`⚠️ Not enough Spanish quotes for xenocrypt. Using English quote instead.`);
-          // Fallback to English quote if no Spanish quotes available
+
           if (englishQuoteIndex >= englishQuotes.length) {
             console.warn(`⚠️ No more quotes available. Stopping at ${i} questions.`);
             break;
@@ -465,7 +465,7 @@ export const loadQuestionsFromDatabase = async (
           spanishQuoteIndex++;
         }
       } else {
-        // Use English quote for non-xenocrypt
+
         if (englishQuoteIndex >= englishQuotes.length) {
           console.warn(`⚠️ Not enough English quotes. Stopping at ${i} questions.`);
           break;
@@ -482,10 +482,10 @@ export const loadQuestionsFromDatabase = async (
         englishQuoteIndex++;
       }
 
-      // Clean the quote before encryption to remove bracketed content
+
       const cleanedQuote = cleanQuote(quoteData.quote);
       
-      // Encrypt the quote based on cipher type
+
       let cipherResult: { 
         encrypted: string; 
         key?: string; 
@@ -571,11 +571,11 @@ export const loadQuestionsFromDatabase = async (
           throw new Error(`Unknown cipher type: ${cipherType} (normalized: ${normalizedCipherType})`);
       }
 
-      // Determine if this question should ask for keyword/key phrase (15% chance for K1, K2, K3 ciphers)
+
       const isK1K2K3Cipher = ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'K1 Xenocrypt', 'K2 Xenocrypt'].includes(normalizedCipherType);
       const askForKeyword = isK1K2K3Cipher && Math.random() < 0.15;
 
-      // Compute base difficulty
+
       const questionEntry = {
         author: quoteData.author,
         quote: cleanedQuote,
@@ -601,7 +601,7 @@ export const loadQuestionsFromDatabase = async (
         askForKeyword: askForKeyword,
         points: undefined,
       } as any;
-      // Compute difficulty and points from cipher attributes
+
       questionEntry.difficulty = computeDifficulty({
         cipherType: questionEntry.cipherType,
         quote: questionEntry.quote,
@@ -611,12 +611,12 @@ export const loadQuestionsFromDatabase = async (
       processedQuotes.push(questionEntry);
     }
 
-    // Store the complete quote data for sharing (including encryption details)
+
     const shareData = {
       quoteUUIDs,
       processedQuotes: processedQuotes.map(quote => ({
         author: quote.author,
-        quote: quote.quote, // This is already the cleaned quote from processedQuotes
+        quote: quote.quote,
         encrypted: quote.encrypted,
         cipherType: quote.cipherType,
         key: quote.key,

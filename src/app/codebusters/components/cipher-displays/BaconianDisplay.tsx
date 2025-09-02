@@ -34,7 +34,7 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
 
         const cleanedQuote = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
         
-        // Baconian cipher mapping (24-letter alphabet)
+
         const letterToBinary: { [key: string]: string } = {
             'A': 'AAAAA', 'B': 'AAAAB', 'C': 'AAABA', 'D': 'AAABB', 'E': 'AABAA',
             'F': 'AABAB', 'G': 'AABBA', 'H': 'AABBB', 'I': 'ABAAA', 'J': 'ABAAA',
@@ -44,7 +44,7 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
             'Z': 'BABBB'
         };
 
-        // Convert each letter to its 5-bit binary representation
+
         const binaryGroups: string[] = [];
         for (let i = 0; i < cleanedQuote.length; i++) {
             const letter = cleanedQuote[i];
@@ -53,9 +53,9 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
             }
         }
         
-        // Apply binary type filter to convert A/B to the appropriate symbols
+
         const applyBinaryFilter = (binaryGroup: string): string => {
-            // Find the scheme for the current binary type
+
             const allSchemes = [
                 ...baconianSchemes.schemes.traditional,
                 ...baconianSchemes.schemes.emoji,
@@ -68,7 +68,7 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
                 return renderBinaryGroup(binaryGroup, scheme);
             }
             
-            return binaryGroup; // Default fallback
+            return binaryGroup;
         };
         
         const filteredGroups = binaryGroups.map(applyBinaryFilter);
@@ -81,30 +81,30 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
         };
     }, [quotes, quoteIndex]);
 
-    // Function to handle input changes with syncing for traditional A/B
+
     const handleInputChange = (groupIndex: number, value: string) => {
         if (!onSolutionChange) return;
         
         const upperValue = value.toUpperCase();
         
-        // Only sync if sync is enabled
+
         if (syncEnabled) {
             const currentOriginalGroup = baconianData.originalBinaryGroups?.[groupIndex];
             
-            // For schemes that support syncing, sync all inputs with the same binary pattern
+
             if (currentOriginalGroup && baconianData.originalBinaryGroups) {
-                // Find all groups with the same original binary pattern
+
                 baconianData.originalBinaryGroups.forEach((group, index) => {
                     if (group === currentOriginalGroup) {
                         onSolutionChange(quoteIndex, index, upperValue);
                     }
                 });
             } else {
-                // For other schemes, just update the specific input
+
                 onSolutionChange(quoteIndex, groupIndex, upperValue);
             }
         } else {
-            // When sync is disabled, only update the specific input
+
             onSolutionChange(quoteIndex, groupIndex, upperValue);
         }
     };
@@ -130,7 +130,7 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
                     const correctLetter = baconianData.originalQuote[i] || '';
                     const isCorrect = value === correctLetter;
                     
-                    // Check if this input should be highlighted (same binary pattern as focused input, and sync is enabled)
+
                     const shouldHighlight = syncEnabled && focusedGroupIndex !== null && 
                         baconianData.originalBinaryGroups?.[focusedGroupIndex] === baconianData.originalBinaryGroups?.[i];
                     
@@ -140,7 +140,7 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
                                 darkMode ? 'text-gray-400' : 'text-gray-600'
                             } ${baconianData.binaryType && baconianSchemes.schemes.emoji.some(s => s.type === baconianData.binaryType) ? 'baconian-emoji' : ''}`}>
                                 {Array.from(group).map((char, j) => {
-                                    // Find the scheme for the current binary type
+
                                     const allSchemes = [
                                         ...baconianSchemes.schemes.traditional,
                                         ...baconianSchemes.schemes.emoji,
@@ -154,7 +154,7 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
                                         const position = `${i}-${j}`;
                                         const displayLetter = getDisplayLetter(char, position, scheme);
                                         
-                                        // Handle highlight vs plain with inline styles for better control
+
                                         let inlineStyle = {};
                                         if (scheme.type === 'Highlight vs Plain' && char === 'A') {
                                             inlineStyle = {

@@ -16,7 +16,7 @@ export const getAllSchools = (eloData: EloData): string[] => {
   const schools: string[] = [];
   for (const stateCode in eloData) {
     for (const schoolName in eloData[stateCode]) {
-      // Include state code to distinguish between schools with same name in different states
+
       schools.push(`${schoolName} (${stateCode})`);
     }
   }
@@ -42,12 +42,12 @@ export const getAllEvents = (eloData: EloData): string[] => {
   return Array.from(events).sort();
 };
 
-// Helper function to find a school by name across all states
+
 const findSchool = (eloData: EloData, schoolNameWithState: string) => {
-  // Parse school name and state code from format "School Name (ST)"
+
   const match = schoolNameWithState.match(/^(.+?)\s*\(([A-Z]{2})\)$/);
   if (!match) {
-    // Fallback: try to find by exact name across all states
+
     for (const stateCode in eloData) {
       if (eloData[stateCode][schoolNameWithState]) {
         return eloData[stateCode][schoolNameWithState];
@@ -90,25 +90,25 @@ export const processOverallByTournament = (eloData: EloData, selectedSchools: st
         const overallEvent = seasonData.events['__OVERALL__'];
         if (overallEvent && overallEvent.history) {
           overallEvent.history.forEach(entry => {
-            // Convert from optimized format to expected format
+
             data[schoolNameWithState].push({
-              date: entry.d, // Convert 'd' to 'date'
-              tournament: metadata?.tournaments?.[entry.t] || `Tournament ${entry.t}`, // Map tournament ID to name
-              place: entry.p, // Place
-              elo: entry.e, // Convert 'e' to 'elo'
-              duosmiumLink: entry.l, // Link
+              date: entry.d,
+              tournament: metadata?.tournaments?.[entry.t] || `Tournament ${entry.t}`,
+              place: entry.p,
+              elo: entry.e,
+              duosmiumLink: entry.l,
               season
             });
           });
         }
       });
       
-      // Sort by date
+
       data[schoolNameWithState].sort((a, b) => {
         const dateA = new Date(a.date);
         const dateB = new Date(b.date);
         
-        // Handle invalid dates by placing them at the end
+
         if (isNaN(dateA.getTime()) && isNaN(dateB.getTime())) return 0;
         if (isNaN(dateA.getTime())) return 1;
         if (isNaN(dateB.getTime())) return -1;
@@ -156,25 +156,25 @@ export const processEventByTournament = (eloData: EloData, selectedSchools: stri
           const eventData = seasonData.events[event];
           if (eventData && eventData.history) {
             eventData.history.forEach(entry => {
-              // Convert from optimized format to expected format
+
               data[schoolNameWithState][event].push({
-                date: entry.d, // Convert 'd' to 'date'
-                tournament: metadata?.tournaments?.[entry.t] || `Tournament ${entry.t}`, // Map tournament ID to name
-                place: entry.p, // Place
-                elo: entry.e, // Convert 'e' to 'elo'
-                duosmiumLink: entry.l, // Link
+                date: entry.d,
+                tournament: metadata?.tournaments?.[entry.t] || `Tournament ${entry.t}`,
+                place: entry.p,
+                elo: entry.e,
+                duosmiumLink: entry.l,
                 season
               });
             });
           }
         });
         
-        // Sort by date
+
         data[schoolNameWithState][event].sort((a, b) => {
           const dateA = new Date(a.date);
           const dateB = new Date(b.date);
           
-          // Handle invalid dates by placing them at the end
+
           if (isNaN(dateA.getTime()) && isNaN(dateB.getTime())) return 0;
           if (isNaN(dateA.getTime())) return 1;
           if (isNaN(dateB.getTime())) return -1;
@@ -207,11 +207,11 @@ export const processChartData = (
   }
 };
 
-// Helper function to find Elo rating at a specific date using binary search
+
 const findEloAtDate = (history: any[], targetDate: string): number | null => {
   if (!history || history.length === 0) return null;
   
-  // Binary search for the most recent entry before or on the target date
+
   let left = 0;
   let right = history.length - 1;
   let bestMatch: any = null;
@@ -221,7 +221,7 @@ const findEloAtDate = (history: any[], targetDate: string): number | null => {
   while (left <= right) {
     const mid = Math.floor((left + right) / 2);
     const entry = history[mid];
-    const entryTime = new Date(entry.d).getTime(); // Use 'd' property for date
+    const entryTime = new Date(entry.d).getTime();
     
     if (entryTime <= targetTime) {
       bestMatch = entry;
@@ -231,10 +231,10 @@ const findEloAtDate = (history: any[], targetDate: string): number | null => {
     }
   }
   
-  return bestMatch ? bestMatch.e : null; // Use 'e' property for elo rating
+  return bestMatch ? bestMatch.e : null;
 };
 
-// New function to get leaderboard data
+
 export const getLeaderboard = (
   eloData: EloData,
   event?: string,
@@ -252,16 +252,16 @@ export const getLeaderboard = (
         if (season && seasonKey !== season) return;
         
         if (event) {
-          // Event-specific leaderboard
+
           const eventData = seasonData.events[event];
           if (eventData) {
             let eloRating = eventData.rating;
             
-            // If a specific date is provided, find the Elo rating at that date
+
             if (date && eventData.history && eventData.history.length > 0) {
-              // Sort history by date if not already sorted
+
               const sortedHistory = [...eventData.history].sort((a, b) => {
-                const dateA = new Date(a.d).getTime(); // Use 'd' property for date
+                const dateA = new Date(a.d).getTime();
                 const dateB = new Date(b.d).getTime();
                 return dateA - dateB;
               });
@@ -270,7 +270,7 @@ export const getLeaderboard = (
               if (historicalElo !== null) {
                 eloRating = historicalElo;
               } else {
-                // No tournaments before this date - use starting Elo (1500)
+
                 eloRating = 1500;
               }
             }
@@ -284,16 +284,16 @@ export const getLeaderboard = (
             });
           }
         } else {
-          // Overall leaderboard
+
           const overallEvent = seasonData.events['__OVERALL__'];
           if (overallEvent) {
             let eloRating = overallEvent.rating;
             
-            // If a specific date is provided, find the Elo rating at that date
+
             if (date && overallEvent.history && overallEvent.history.length > 0) {
-              // Sort history by date if not already sorted
+
               const sortedHistory = [...overallEvent.history].sort((a, b) => {
-                const dateA = new Date(a.d).getTime(); // Use 'd' property for date
+                const dateA = new Date(a.d).getTime();
                 const dateB = new Date(b.d).getTime();
                 return dateA - dateB;
               });
@@ -302,7 +302,7 @@ export const getLeaderboard = (
               if (historicalElo !== null) {
                 eloRating = historicalElo;
               } else {
-                // No tournaments before this date - use starting Elo (1500)
+
                 eloRating = 1500;
               }
             }
@@ -319,19 +319,19 @@ export const getLeaderboard = (
     }
   }
   
-  // Sort by Elo rating (highest first) and limit results
+
   return entries
     .sort((a, b) => b.elo - a.elo)
     .slice(0, limit);
 };
 
-// New function to calculate win probability between two schools
+
 export const calculateWinProbability = (elo1: number, elo2: number): number => {
   const eloDifference = elo1 - elo2;
   return 1 / (1 + Math.pow(10, -eloDifference / 400));
 };
 
-// List of trial events to exclude from comparisons
+
 const TRIAL_EVENTS_2025 = [
   'Aerial Scramble',
   'Agricultural Science',
@@ -341,7 +341,7 @@ const TRIAL_EVENTS_2025 = [
   'Protein Modeling'
 ];
 
-// New function to compare two schools
+
 export const compareSchools = (
   eloData: EloData,
   school1: string,
@@ -358,7 +358,7 @@ export const compareSchools = (
     return { eventResults, overallResult };
   }
   
-  // Get overall Elo ratings for comparison
+
   let school1OverallElo = 0;
   let school2OverallElo = 0;
   let school1OverallFound = false;
@@ -384,7 +384,7 @@ export const compareSchools = (
     }
   });
   
-  // Calculate overall win probability
+
   if (school1OverallFound && school2OverallFound) {
     const overallWinPercentage = calculateWinProbability(school1OverallElo, school2OverallElo) * 100;
     overallResult = {
@@ -395,7 +395,7 @@ export const compareSchools = (
     };
   }
   
-  // Get all events that both schools have participated in
+
   const events = new Set<string>();
   
   Object.values(school1Data.seasons).forEach(seasonData => {
@@ -414,9 +414,9 @@ export const compareSchools = (
     });
   });
   
-  // Calculate win probabilities for each event
+
   events.forEach(eventName => {
-    // Skip trial events from 2025 season
+
     if (TRIAL_EVENTS_2025.includes(eventName)) {
       return;
     }
@@ -426,7 +426,7 @@ export const compareSchools = (
     let school1Found = false;
     let school2Found = false;
     
-    // Find the most recent Elo ratings for both schools in this event
+
     Object.entries(school1Data.seasons).forEach(([seasonKey, seasonData]) => {
       if (season && seasonKey !== season) return;
       
@@ -458,7 +458,7 @@ export const compareSchools = (
     }
   });
   
-  // Sort by win percentage (highest first)
+
   eventResults.sort((a, b) => b.school1WinPercentage - a.school1WinPercentage);
   
   return { eventResults, overallResult };
@@ -483,14 +483,14 @@ export const formatDate = (dateString: string): string => {
  * Groups tournaments by date to handle multiple tournaments on the same day
  */
 export const getAllTournamentDates = (eloData: EloData, metadata?: any): Array<{ x: Date; y: number; tournament: string; link?: string }> => {
-  // Use the precalculated metadata to get all tournament dates efficiently
+
   if (metadata?.tournamentTimeline) {
     const allDataPoints: Array<{ x: Date; y: number; tournament: string; link?: string }> = [];
     
-    // Process all seasons in the timeline
+
     Object.entries(metadata.tournamentTimeline).forEach(([_season, tournaments]) => {
       if (Array.isArray(tournaments)) {
-        // Group tournaments by date
+
         const tournamentsByDate = new Map<string, Array<{ tournament: string; link?: string }>>();
         
         tournaments.forEach((tournament: any) => {
@@ -505,24 +505,24 @@ export const getAllTournamentDates = (eloData: EloData, metadata?: any): Array<{
           }
         });
         
-        // Create data points for each date, combining multiple tournaments
+
         tournamentsByDate.forEach((tournaments, date) => {
           if (tournaments.length === 1) {
-            // Single tournament on this date
+
             allDataPoints.push({
               x: new Date(date),
-              y: 0, // Placeholder value for timeline display
+              y: 0,
               tournament: tournaments[0].tournament,
               link: tournaments[0].link
             });
           } else {
-            // Multiple tournaments on this date - combine them
+
             const tournamentNames = tournaments.map(t => t.tournament).join(', ');
-            const firstLink = tournaments[0].link; // Use first link as representative
+            const firstLink = tournaments[0].link;
             
             allDataPoints.push({
               x: new Date(date),
-              y: 0, // Placeholder value for timeline display
+              y: 0,
               tournament: tournamentNames,
               link: firstLink
             });
@@ -531,10 +531,10 @@ export const getAllTournamentDates = (eloData: EloData, metadata?: any): Array<{
       }
     });
     
-    // Sort by date
+
     return allDataPoints.sort((a, b) => a.x.getTime() - b.x.getTime());
   }
   
-  // If no metadata available, return empty array
+
   return [];
 };

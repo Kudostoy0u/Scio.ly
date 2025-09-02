@@ -11,7 +11,7 @@ interface TestSummaryProps {
   darkMode: boolean;
 }
 
-// Function to calculate grade based on points
+
 const calculateGrade = (earnedPoints: number, totalPoints: number): string => {
   if (totalPoints === 0) return 'N/A';
   
@@ -24,7 +24,7 @@ const calculateGrade = (earnedPoints: number, totalPoints: number): string => {
   return 'F';
 };
 
-// Non-compact layout component
+
 function NonCompactSummary({ items, subtopics, darkMode }: { 
   items: SummaryItem[]; 
   subtopics: string[]; 
@@ -57,7 +57,7 @@ function NonCompactSummary({ items, subtopics, darkMode }: {
   );
 }
 
-// Compact layout component
+
 function CompactSummary({ items, darkMode }: { 
   items: SummaryItem[]; 
   darkMode: boolean; 
@@ -71,7 +71,7 @@ function CompactSummary({ items, darkMode }: {
   );
 }
 
-// Mobile compact layout component
+
 function MobileCompactSummary({ items, darkMode }: { 
   items: SummaryItem[]; 
   darkMode: boolean; 
@@ -98,7 +98,7 @@ export default function TestSummary({ data, userAnswers, gradingResults, darkMod
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   
-  // Stats
+
   const totalQuestions = data.length;
   const answeredQuestions = Object.keys(userAnswers).length;
   const correctQuestions = Object.values(gradingResults).filter(score => score >= 1).length;
@@ -106,16 +106,16 @@ export default function TestSummary({ data, userAnswers, gradingResults, darkMod
   const totalPoints = totalQuestions;
   const earnedPoints = Object.values(gradingResults).reduce((sum, score) => sum + Math.min(1, score), 0);
   
-  // Calculate grade
+
   const grade = calculateGrade(earnedPoints, totalPoints);
   
-  // Extract all subtopics from questions - handle both API data structure and interface
+
   const allSubtopics = data.flatMap(question => {
-    // Handle API data structure (subtopics array)
+
     if (question.subtopics && Array.isArray(question.subtopics)) {
       return question.subtopics;
     }
-    // Handle geminiService interface (subtopic string)
+
     else if (question.subtopic) {
       return [question.subtopic];
     }
@@ -123,7 +123,7 @@ export default function TestSummary({ data, userAnswers, gradingResults, darkMod
   });
   const subtopics = [...new Set(allSubtopics)].filter(Boolean);
   
-  // Debug: Log the first few questions to see their structure
+
   if (data.length > 0 && subtopics.length === 0) {
     console.log('Debug: First question structure:', data[0]);
     console.log('Debug: All questions subtopic fields:', data.map(q => ({ 
@@ -159,7 +159,7 @@ export default function TestSummary({ data, userAnswers, gradingResults, darkMod
     },
   ];
 
-  // Calculate opacity for desktop fade transitions
+
   const fadeThreshold = 160;
   const fadeRange = 100; // pixels over which to fade
   const nonCompactOpacity = scrollY > fadeThreshold 
@@ -169,8 +169,8 @@ export default function TestSummary({ data, userAnswers, gradingResults, darkMod
     ? Math.min(1, ((scrollY - fadeThreshold) / fadeRange)) 
     : 0;
 
-  // Mobile transition logic - show compact layout if user has scrolled to top AND is currently scrolled down
-  // Note: This is now handled by the fade transitions instead of conditional rendering
+
+
 
   return (
     <>

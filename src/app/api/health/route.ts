@@ -8,7 +8,7 @@ import {
   logApiResponse
 } from '@/lib/api/utils';
 
-// Types
+
 interface HealthData {
   status: 'healthy' | 'unhealthy' | 'error';
   timestamp: string;
@@ -26,14 +26,14 @@ interface HealthData {
   environment: string;
 }
 
-// Business logic functions
+
 const performHealthCheck = async (): Promise<HealthData> => {
   console.log('💚 [HEALTH] Health check requested');
 
-  // Test database connection
+
   const dbHealthy = await testConnection();
   
-  // Check Gemini AI availability
+
   const aiHealthy = geminiService.isAvailable();
 
   const healthData: HealthData = {
@@ -62,7 +62,7 @@ const performHealthCheck = async (): Promise<HealthData> => {
   return healthData;
 };
 
-// API Handlers
+
 export async function GET() {
   const startTime = Date.now();
   logApiRequest('GET', '/api/health');
@@ -78,7 +78,7 @@ export async function GET() {
   } catch (error) {
     console.error('❌ [HEALTH] Health check failed:', error);
     
-    // Log error data for debugging
+
     console.error('Health check error data:', {
       status: 'error',
       timestamp: new Date().toISOString(),

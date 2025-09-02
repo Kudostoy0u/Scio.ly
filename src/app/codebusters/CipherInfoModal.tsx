@@ -54,7 +54,7 @@ function parseH2Sections(markdown: string): TabSection[] {
       currentContent = [];
     } else {
       if (currentTitle === null) {
-        // ignore preface until first H2; tabs are driven by H2s
+        // ignore preface until first h2; tabs are driven by h2s
         continue;
       }
       currentContent.push(line);
@@ -124,21 +124,21 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
     const handleScroll = () => {
       const containerTop = container.scrollTop;
       
-      // Find which heading is currently at the top of the viewport
+
       let currentSection = '';
       
       for (let i = headings.length - 1; i >= 0; i--) {
         const heading = headings[i];
         const headingTop = heading.offsetTop - container.offsetTop;
         
-        // If this heading is at or above the current scroll position
+
         if (headingTop <= containerTop + 100) {
           currentSection = heading.id;
           break;
         }
       }
       
-      // If no section found, use the first one
+
       if (!currentSection && headings.length > 0) {
         currentSection = headings[0].id;
       }
@@ -159,8 +159,8 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
     if (!container) return;
     const el = container.querySelector(`#${CSS.escape(id)}`) as HTMLElement | null;
     if (el) {
-      // Calculate the offset to account for the header and navigation
-      const headerHeight = 80; // Approximate height of header + navigation
+
+      const headerHeight = 80;
       const elementTop = el.offsetTop - headerHeight;
       
       container.scrollTo({

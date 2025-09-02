@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Simple in-memory rate limit (per IP) for low volume; replace with durable store if needed
+
 const REQUESTS: Record<string, { count: number; resetAt: number }> = {}
 const WINDOW_MS = 60_000
-const MAX_PER_WINDOW = 5 // Lower limit for careers submissions
+const MAX_PER_WINDOW = 5
 
 function rateLimited(ip: string): boolean {
   const now = Date.now()
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     const embed = {
       title: '🎯 New Job Application',
-      color: 0x00ff00, // Green color for careers
+      color: 0x00ff00,
       fields: [
         { name: '👤 Name', value: String(name), inline: true },
         { name: '📧 Email', value: String(email), inline: true },

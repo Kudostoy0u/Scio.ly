@@ -1,15 +1,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-// Environment variables for API keys
+
 const GEMINI_API_KEYS = process.env.GEMINI_API_KEYS?.split(',').map(key => key.trim()) || [];
 
-// Gemini AI service class with key rotation
+
 export class GeminiService {
   private aiClients: GoogleGenAI[] = [];
   private currentKeyIndex = 0;
 
   constructor() {
-    // Initialize clients for each API key
+
     GEMINI_API_KEYS.forEach(apiKey => {
       if (apiKey) {
         this.aiClients.push(new GoogleGenAI({ apiKey }));
@@ -19,14 +19,14 @@ export class GeminiService {
     if (this.aiClients.length === 0) {
       console.warn('No Gemini API keys provided, AI features will be disabled');
     } else {
-      // Only relax logging in non-production; otherwise treat like production
+
       if (process.env.NODE_ENV !== 'production') {
         console.log(`Initialized Gemini client with ${this.aiClients.length} API keys`);
       }
     }
   }
 
-  // Get current AI client with rotation
+
   private getCurrentClient(): GoogleGenAI {
     if (this.aiClients.length === 0) {
       throw new Error('Gemini client not initialized');
@@ -37,24 +37,24 @@ export class GeminiService {
     return client;
   }
 
-  // Check if service is available
+
   public isAvailable(): boolean {
     return this.aiClients.length > 0;
   }
 
-  // Resolve answers to textual form, fixing 1-based vs 0-based indices for MCQ
+
   private resolveAnswersToText(optionsUnknown: unknown, answersUnknown: unknown): string[] {
     const options = Array.isArray(optionsUnknown) ? optionsUnknown.map(v => String(v)) : [] as string[];
     const answersArray = Array.isArray(answersUnknown) ? answersUnknown : [];
 
     if (answersArray.length === 0) return [];
 
-    // If no options, treat as FRQ and return answers as strings
+
     if (options.length === 0) {
       return answersArray.map(a => String(a));
     }
 
-    // If answers are numeric (or numeric strings), interpret as indices and normalize to 0-based
+
     const areAllNumeric = answersArray.every(a => typeof a === 'number' || (typeof a === 'string' && /^\d+$/.test(a)));
     if (areAllNumeric) {
       const numeric = answersArray.map(a => typeof a === 'number' ? a : parseInt(String(a), 10));
@@ -64,7 +64,7 @@ export class GeminiService {
         .map(n => options[n]);
     }
 
-    // Otherwise, try to match answer strings directly to options (case-insensitive)
+
     const lowerOptions = options.map(o => o.toLowerCase());
     return answersArray.map(a => {
       const s = String(a);
@@ -73,7 +73,7 @@ export class GeminiService {
     });
   }
 
-  // Generate structured content with JSON schema
+
   private async generateStructuredContent(
     prompt: string, 
     schema: unknown, 
@@ -88,7 +88,7 @@ export class GeminiService {
       config: {
         responseMimeType: "application/json",
         responseSchema: schema,
-        temperature: 0.1, // Low temperature for consistent structured output
+        temperature: 0.1,
         topP: 0.8,
         topK: 40,
       },
@@ -98,7 +98,7 @@ export class GeminiService {
     return JSON.parse(text) as Record<string, unknown>;
   }
 
-  // Stream structured content: yields partial JSON-safe text and emits final parsed object at end
+
   public async *streamStructuredContent(
     prompt: string,
     schema: unknown,
@@ -111,7 +111,7 @@ export class GeminiService {
       config: {
         responseMimeType: 'application/json',
         responseSchema: schema,
-        temperature: 0.1, // Low temperature for consistent streaming
+        temperature: 0.1,
         topP: 0.8,
         topK: 40,
       },
@@ -122,21 +122,21 @@ export class GeminiService {
       const piece = part.text || '';
       if (piece) {
         fullText += piece;
-        // Emit as plain text chunks so the client can progressively render
+
         yield { type: 'text', chunk: piece };
       }
     }
-    // Try to parse final JSON
+
     try {
       const parsed = (fullText ? JSON.parse(fullText) : {}) as Record<string, unknown>;
       yield { type: 'final', data: parsed };
     } catch {
-      // Fallback to empty object if parsing failed
+
       yield { type: 'final', data: {} };
     }
   }
 
-  // Suggest edit for a question
+
   public async suggestEdit(question: Record<string, unknown>, userReason?: string): Promise<Record<string, unknown>> {
     const questionText = question.question || '';
     const options = question.options || [];
@@ -185,7 +185,7 @@ Also provide:
 
     let contents: any = prompt;
     
-    // If question has an image, include it in the request
+
     if (hasImage) {
       try {
         const imageBase64 = await this.fetchImageAsBase64(question.imageData as string);
@@ -205,7 +205,7 @@ Also provide:
         ];
       } catch (error) {
         console.warn('Failed to fetch image for suggestions, proceeding with text-only:', error);
-        // Continue with text-only prompt if image fetch fails
+
       }
     }
 
@@ -230,7 +230,7 @@ Also provide:
     return await this.generateStructuredContent(prompt, schema, 'gemini-2.5-flash', contents);
   }
 
-  // Analyze question for issues
+
   public async analyzeQuestion(question: Record<string, unknown>): Promise<Record<string, unknown>> {
     const questionText = question.question || '';
     const options = question.options || [];
@@ -263,7 +263,7 @@ Based on your analysis, determine if this question should be removed from the da
     return await this.generateStructuredContent(prompt, schema);
   }
 
-  // Validate edit submission
+
   public async validateEdit(
     originalQuestion: Record<string, unknown>,
     editedQuestion: Record<string, unknown>,
@@ -278,7 +278,7 @@ Based on your analysis, determine if this question should be removed from the da
     const editedAnswers = editedQuestion?.answers ?? [];
     const hasImage = originalQuestion?.imageData && typeof originalQuestion.imageData === 'string';
 
-    // Normalize and resolve answers to their textual form for clearer validation
+
     const origAnswersText = this.resolveAnswersToText(origOptions, origAnswers);
     const editedAnswersText = this.resolveAnswersToText(editedOptions, editedAnswers);
 
@@ -315,7 +315,7 @@ console.log(prompt);
 
     let contents: any = prompt;
     
-    // If question has an image, include it in the validation request
+
     if (hasImage) {
       try {
         const imageBase64 = await this.fetchImageAsBase64(originalQuestion.imageData as string);
@@ -335,7 +335,7 @@ console.log(prompt);
         ];
       } catch (error) {
         console.warn('Failed to fetch image for validation, proceeding with text-only:', error);
-        // Continue with text-only prompt if image fetch fails
+
       }
     }
 
@@ -351,7 +351,7 @@ console.log(prompt);
     return await this.generateStructuredContent(prompt, schema, 'gemini-2.5-flash', contents);
   }
 
-  // Helper method to fetch image and convert to base64
+
   private async fetchImageAsBase64(imageUrl: string): Promise<string> {
     try {
       const response = await fetch(imageUrl);
@@ -364,7 +364,7 @@ console.log(prompt);
     }
   }
 
-  // Explain a question with structured output
+
   public async explain(
     question: Record<string, unknown>,
     userAnswer: unknown,
@@ -372,15 +372,15 @@ console.log(prompt);
   ): Promise<Record<string, unknown>> {
     const hasImage = question.imageData && typeof question.imageData === 'string';
     
-    // Extract and format question components strategically
+
     const questionText = question.question || '';
     const options = Array.isArray(question.options) ? question.options : [];
     const answers = Array.isArray(question.answers) ? question.answers : [];
     
-    // Format options with indices
+
     const formattedOptions = options.map((option, index) => `${index}: ${option}`).join('\n');
     
-    // Map answer indices to their corresponding options
+
     const formattedAnswers = answers.map(answerIndex => {
       const index = typeof answerIndex === 'number' ? answerIndex : parseInt(String(answerIndex), 10);
       const option = options[index];
@@ -412,7 +412,7 @@ Keep your text-based answer in the explanation field using markdown-based format
 
     let contents: any = prompt;
     
-    // If question has an image, include it in the request
+
     if (hasImage) {
       try {
         const imageBase64 = await this.fetchImageAsBase64(question.imageData as string);
@@ -431,7 +431,7 @@ Keep your text-based answer in the explanation field using markdown-based format
           }
         ];
       } catch (error) {
-        // If image fetch fails, fall back to text-only explanation
+
         console.warn('Failed to fetch image, falling back to text-only explanation:', error);
         contents = prompt;
       }
@@ -459,7 +459,7 @@ Keep your text-based answer in the explanation field using markdown-based format
 
 
 
-  // Grade free response questions
+
   public async gradeFreeResponses(responses: Array<Record<string, unknown>>): Promise<Record<string, unknown>> {
     const prompt = `You are a Science Olympiad free-response grader. Your job is to evaluate student answers and assign appropriate scores.
 
@@ -498,7 +498,7 @@ Provide scores that reflect the student's actual understanding and knowledge dem
     return await this.generateStructuredContent(prompt, schema);
   }
 
-  // Extract questions from text
+
   public async extractQuestions(text: string): Promise<Record<string, unknown>> {
     const prompt = `You are a Science Olympiad test parser. Your job is to extract all questions from this test content and organize them properly.
 
@@ -545,7 +545,7 @@ Provide a comprehensive extraction that captures all questions while maintaining
     return await this.generateStructuredContent(prompt, schema);
   }
 
-  // Improve user reasoning
+
   public async improveReason(reason: string, question: Record<string, unknown>): Promise<Record<string, unknown>> {
     const prompt = `You are a Science Olympiad editing assistant. Your job is to improve the reasoning provided by a user for editing a question.
 
@@ -572,7 +572,7 @@ Provide an improved version that maintains the user's intent while making it mor
     return await this.generateStructuredContent(prompt, schema);
   }
 
-  // Validate report edit (same as validateEdit but for reports)
+
   public async validateReportEdit(
     originalQuestion: Record<string, unknown>,
     editedQuestion: Record<string, unknown>,
@@ -583,5 +583,5 @@ Provide an improved version that maintains the user's intent while making it mor
   }
 }
 
-// Export singleton instance
+
 export const geminiService = new GeminiService();

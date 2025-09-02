@@ -48,7 +48,7 @@ export function getFavoriteConfigs(): FavoriteConfig[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as FavoriteConfig[];
     if (!Array.isArray(parsed)) return [];
-    // Ensure normalization and cap
+
     const cleaned = parsed
       .filter(x => x && typeof x.eventName === 'string' && x.settings)
       .map(x => normalizeConfig(x));

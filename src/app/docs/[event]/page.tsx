@@ -20,7 +20,7 @@ export default async function EventDocsPage({ params }: any) {
   const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-');
   const extractToc = (content: string | null) => {
     if (!content) return [] as { level: number; text: string; id: string }[];
-    // Normalize LaTeX delimiters early so IDs match rendered headings
+
     const normalized = content
       .replace(/\\\[([\s\S]*?)\\\]/g, (_, inner) => `$$${inner}$$`)
       .replace(/\\\(([^]*?)\\\)/g, (_, inner) => `$${inner}$`);

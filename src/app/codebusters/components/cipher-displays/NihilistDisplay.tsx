@@ -27,22 +27,22 @@ export const NihilistDisplay = ({
     const { darkMode } = useTheme();
     const quote = quotes[quoteIndex];
 
-    // Split the ciphertext into blocks and preserve block structure
-    const blocks = text.split('  '); // Split by double spaces to preserve blocks
+
+    const blocks = text.split('  ');
     const numberGroups: string[] = [];
-    const blockBoundaries: number[] = []; // Track where blocks end
+    const blockBoundaries: number[] = [];
     
     blocks.forEach((block, blockIndex) => {
         const pairs = block.split(' ').filter(group => group.length === 2);
         numberGroups.push(...pairs);
         
-        // Mark the end of each block (except the last one)
+
         if (blockIndex < blocks.length - 1) {
             blockBoundaries.push(numberGroups.length - 1);
         }
     });
 
-    // Create a mapping of positions to correct letters
+
     const correctMapping: { [key: number]: string } = {};
     if (isTestSubmitted) {
         const originalQuote = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');

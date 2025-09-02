@@ -27,7 +27,7 @@ export default function NotesheetPreview() {
           position: "top-right"
         }
       );
-      // Redirect back to the event docs page
+
       router.push(`/docs/${evt.slug}`);
     }
   }, [evt, router]);

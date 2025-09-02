@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState, useCallback } from 'react';
-// ToastContainer is globally provided in Providers
+
 import { updateMetrics } from '@/app/utils/metrics';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/app/contexts/ThemeContext';
@@ -29,7 +29,7 @@ import {
 
 
 
-// Question type now imported from geminiService
+
 
 
 
@@ -52,7 +52,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  // For the current question, the answer is stored as an array.
+
   const [currentAnswer, setCurrentAnswer] = useState<(string | null)[]>([]);
   const [routerData, setRouterData] = useState<RouterParams>(initialRouterData || {});
   const { darkMode } = useTheme();
@@ -61,25 +61,25 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
   const [loadingExplanation, setLoadingExplanation] = useState<LoadingExplanation>({});
   const [lastCallTime, setLastCallTime] = useState<number>(0);
   const RATE_LIMIT_DELAY = 2000;
-  // Updated gradingResults now holds a numeric score.
+
   const [gradingResults, setGradingResults] = useState<GradingResults>({});
   const [bookmarkedQuestions, setBookmarkedQuestions] = useState<Record<string, boolean>>({});
-  // State to track submitted reports and edits per question index
+
   const [submittedReports, setSubmittedReports] = useState<Record<number, boolean>>({});
   const [submittedEdits, setSubmittedEdits] = useState<Record<number, boolean>>({});
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   
-  // For lazy loading ID questions
+
   const [idQuestionIndices, setIdQuestionIndices] = useState<Set<number>>(new Set());
   const [idQuestionCache, setIdQuestionCache] = useState<Map<number, Question>>(new Map());
   const [namePool, setNamePool] = useState<string[]>([]);
   const [isLoadingIdQuestion, setIsLoadingIdQuestion] = useState(false);
 
-  // Fetch and filter questions on mount
+
   useEffect(() => {
-    // Prevent multiple executions - only run once on mount
+
     if (data.length > 0 || isLoading === false) {
       return;
     }
@@ -92,13 +92,13 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     }
     setRouterData(routerParams);
 
-    // Check if we have stored questions
+
     const storedQuestions = localStorage.getItem('unlimitedQuestions');
     if (storedQuestions) {
       const parsedQuestions = JSON.parse(storedQuestions);
       setData(parsedQuestions);
       
-      // Loaded stored questions data
+
 
       setIsLoading(false);
       return;
@@ -110,22 +110,22 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
 
     const fetchData = async () => {
       try {
-        // Request a large number of base questions
+
         const params = buildApiParams(routerParams, 1000);
         const apiUrl = `${api.questions}?${params}`;
         
         let apiResponse: any = null;
         
-        // Check if we're offline first
+
         const isOffline = !navigator.onLine;
         if (isOffline) {
-          // Use offline data immediately when offline
+
           const evt = routerParams.eventName as string | undefined;
           if (evt) {
             const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
             const cached = await getEventOfflineQuestions(slug);
             if (Array.isArray(cached) && cached.length > 0) {
-              // Respect selected question types when offline
+
               const typesSel = (routerParams.types as string) || 'multiple-choice';
               const filtered = typesSel === 'multiple-choice'
                 ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
@@ -137,7 +137,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           }
           if (!apiResponse) throw new Error('No offline data available for this event. Please download it first.');
         } else {
-          // Online: try API first, fallback to offline
+
           let response: Response | null = null;
           try {
             response = await fetch(apiUrl);
@@ -148,13 +148,13 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           if (response && response.ok) {
             apiResponse = await response.json();
           } else {
-            // Fallback to offline data
+
             const evt = routerParams.eventName as string | undefined;
             if (evt) {
               const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
               const cached = await getEventOfflineQuestions(slug);
               if (Array.isArray(cached) && cached.length > 0) {
-                // Respect selected question types when offline
+
                 const typesSel = (routerParams.types as string) || 'multiple-choice';
                 const filtered = typesSel === 'multiple-choice'
                   ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
@@ -173,7 +173,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
         }
         const baseQuestions: Question[] = apiResponse.data || [];
 
-        // For ID-enabled events, create placeholders for ID questions
+
         let finalQuestions: Question[] = baseQuestions;
         const idPct = (routerParams as any).idPercentage;
         const supportsId = routerParams.eventName === 'Rocks and Minerals' || 
@@ -193,7 +193,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           
           
           
-          // Create placeholder questions for ID positions
+
           const idPlaceholders: Question[] = Array.from({ length: idCount }, (_, i) => ({
             question: '[Loading ID Question...]',
             answers: [],
@@ -203,17 +203,17 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             _placeholderId: i,
           } as any));
           
-          // Mix base questions and placeholders with proper shuffling
+
           if (pct === 100) {
             finalQuestions = idPlaceholders;
           } else {
             const trimmedBase = baseQuestions.slice(0, baseCount);
-            // Create array with base questions and placeholders, then shuffle properly
+
             const combined = [...trimmedBase, ...idPlaceholders];
             finalQuestions = shuffleArray(combined);
           }
           
-          // Track which indices are ID questions
+
           const idIndices = new Set<number>();
           finalQuestions.forEach((q, idx) => {
             if ((q as any)._isIdPlaceholder) {
@@ -222,12 +222,12 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           });
           setIdQuestionIndices(idIndices);
           
-          // Preload ID questions for replacements from new endpoint
+
           const idParams = new URLSearchParams();
           idParams.set('event', routerParams.eventName);
           idParams.set('limit', String(Math.max(idCount * 3, 50)));
           
-          // Add subtopic filter if specified
+
           if (routerParams.subtopics && routerParams.subtopics.length > 0) {
             idParams.set('subtopics', routerParams.subtopics.join(','));
           }
@@ -236,7 +236,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             .then(r => r.json())
             .then(j => {
               const src = Array.isArray(j?.data) ? j.data : [];
-              // Filter by types
+
               const typesSel = (routerParams.types as string) || 'multiple-choice';
               const filtered = src.filter((row: any) => {
                 const isMcq = Array.isArray(row.options) && row.options.length > 0;
@@ -244,7 +244,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
                 if (typesSel === 'free-response') return !isMcq;
                 return true;
               });
-              // Cache a pool for on-demand replacements
+
               const pool = filtered.map((row: any) => ({
                 question: row.question,
                 options: row.options || [],
@@ -254,7 +254,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
                 imageData: Array.isArray(row.images) && row.images.length ? row.images[Math.floor(Math.random()*row.images.length)] : undefined,
               } as Question));
               setNamePool(pool.map(q => q.question)); // not used, but maintained
-              // Pre-fill some placeholders immediately
+
               setIdQuestionCache(prev => {
                 const m = new Map(prev);
                 const picks = [...pool];
@@ -269,7 +269,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             .catch(() => {});
         }
 
-        // Strip image blobs to avoid quota issues; images are embedded per question at render-time already
+
         const serialized = JSON.stringify(finalQuestions, (key, value) => key === 'imageData' ? undefined : value);
         localStorage.setItem('unlimitedQuestions', serialized);
         setData(finalQuestions);
@@ -283,16 +283,16 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
 
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array - only run once on mount to prevent re-fetching
+  }, []);
 
-  // Update the useEffect that loads bookmarks
+
   useEffect(() => {
     const loadUserBookmarks = async () => {
           const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const bookmarks = await loadBookmarksFromSupabase(user.id);
         
-        // Create a map of question text to bookmark status
+
         const bookmarkMap: Record<string, boolean> = {};
         bookmarks.forEach(bookmark => {
           if (bookmark.source === 'unlimited') {
@@ -309,7 +309,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     
     loadUserBookmarks();
 
-    // Cleanup effect to clear localStorage on unmount
+
     return () => {
       if (window.location.pathname !== '/unlimited') {
         localStorage.removeItem('unlimitedQuestions');
@@ -319,7 +319,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     };
   }, []);
 
-  // Function to load ID question on demand
+
   const loadIdQuestion = useCallback(async (index: number) => {
     if (!idQuestionIndices.has(index) || idQuestionCache.has(index)) {
       return;
@@ -329,12 +329,12 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     try {
       console.log('[IDGEN][unlimited] loading ID question for index', index);
       
-      // Use the centralized id-questions endpoint for all ID events
+
       const params = new URLSearchParams();
       params.set('event', routerData.eventName || 'Unknown Event');
       params.set('limit', '1');
       
-      // Add subtopic filter if specified
+
       if (routerData.subtopics && routerData.subtopics.length > 0) {
         params.set('subtopics', routerData.subtopics.join(','));
       }
@@ -347,11 +347,11 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           const imgs: string[] = Array.isArray(item.images) ? item.images : [];
           const chosenImg = imgs.length ? imgs[Math.floor(Math.random() * imgs.length)] : undefined;
           
-          // Determine if this should be MCQ or FRQ
+
           const types = routerData.types || 'multiple-choice';
           let question: Question;
           
-          // Handle different event types
+
           const isEnt = routerData.eventName === 'Entomology';
           const isRocks = routerData.eventName === 'Rocks and Minerals';
           const isAnatomy = routerData.eventName?.startsWith('Anatomy');
@@ -400,7 +400,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             };
           }
         
-        // Update cache and data array
+
         setIdQuestionCache(prev => new Map(prev).set(index, question));
         setData(prev => {
           const newData = [...prev];
@@ -417,23 +417,23 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     }
   }, [idQuestionIndices, idQuestionCache, namePool, routerData]);
 
-  // Load ID question when navigating to one
+
   useEffect(() => {
     if (idQuestionIndices.has(currentQuestionIndex) && !idQuestionCache.has(currentQuestionIndex)) {
       loadIdQuestion(currentQuestionIndex);
     }
   }, [currentQuestionIndex, idQuestionIndices, idQuestionCache, loadIdQuestion]);
 
-  // Grab the current question (if available)
+
   const currentQuestion = idQuestionCache.get(currentQuestionIndex) || data[currentQuestionIndex];
 
-  // Update the answer for the current question.
-  // For checkboxes (multiselect) the answer array is updated;
+
+
   // for radio buttons or free-response we simply store a single value.
   const handleAnswerChange = (answer: string | null, multiselect = false) => {
     if (multiselect) {
       setCurrentAnswer((prev) => {
-        // Toggle the answer
+
         if (prev.includes(answer)) {
           return prev.filter((ans) => ans !== answer);
         }
@@ -456,17 +456,17 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
       return calculateMCQScore(question, answers);
     }
 
-    // For free-response questions, use gradeWithGemini
+
     if (!answers[0]) return 0;
     return await gradeWithGemini(answers[0], question.answers, question.question);
   };
 
-  // Mark the current question as submitted and store the numeric score.
+
   const handleSubmit = async () => {
     setIsSubmitted(true);
 
     try {
-      // 🔍 DEBUG: Log submission details
+      // 🔍 debug: log submission details
       
       
       const score = await isCorrect(currentQuestion, currentAnswer);
@@ -475,9 +475,9 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
       
       setGradingResults((prev) => ({ ...prev, [currentQuestionIndex]: score }));
 
-      // Only count if there's an actual answer. Partial credit contributes fractionally; skipped does not count
+
       const wasAttempted = currentAnswer.length > 0 && currentAnswer[0] !== null && currentAnswer[0] !== '';
-      // Allow fractional correctness for MCQ multiselect or FRQ
+
       const fractionalCorrect = Math.max(0, Math.min(1, score));
       
       const { data: { user } } = await supabase.auth.getUser();
@@ -491,9 +491,9 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     }
   };
 
-  // When "Next Question" is clicked, load a random question.
+
   const handleNext = () => {
-    if (data.length > 0) { // Ensure there are questions to pick from
+    if (data.length > 0) {
       const randomIndex = Math.floor(Math.random() * data.length);
       
       setCurrentQuestionIndex(randomIndex);
@@ -501,14 +501,14 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
       setIsSubmitted(false);
     } else {
       console.warn("No questions available to select randomly.");
-      // Optionally handle the case where there are no questions, e.g., show a message to the user.
+
     }
   };
 
 
 
   const handleGetExplanation = async (index: number, question: Question, userAnswer: (string | null)[]) => {
-    // For unlimited practice, we need custom logic for re-evaluation after explanation
+
     const originalGetExplanation = () => getExplanation(
       index,
       question,
@@ -522,13 +522,13 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
       setData,
       gradingResults,
       setGradingResults,
-      undefined, // no userAnswers for unlimited
+      undefined, // no useranswers for unlimited
       RATE_LIMIT_DELAY
     );
 
     await originalGetExplanation();
     
-    // Additional logic for unlimited practice: re-evaluate current answer after explanation
+
     if (question.options && question.options.length > 0) {
       const newScore = await isCorrect(question, userAnswer);
       if (newScore !== gradingResults[index]) {
@@ -536,14 +536,14 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
       }
     }
     
-    // Update submission status after attempt
+
     setSubmittedReports(prev => ({ ...prev, [index]: true }));
   };
 
 
 
 
-  // Helper functions for managing bookmarks and submissions
+
   const handleBookmarkChange = (key: string, isBookmarked: boolean) => {
     setBookmarkedQuestions(prev => ({
       ...prev,
@@ -560,7 +560,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
   };
 
   const handleQuestionRemoved = (_questionIndex: number) => {
-    // For unlimited practice, we just move to the next question
+
     // since there's only one question shown at a time
     handleNext();
   };
@@ -589,14 +589,14 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
       if (result.success) {
         if (editingQuestion) {
           const questionIndex = currentQuestionIndex;
-          // Update the question data in the state to reflect the changes immediately
+
           setData(prevData => {
             const newData = [...prevData];
             newData[questionIndex] = editedQuestion;
             return newData;
           });
           
-          // Update localStorage with the new question data
+
           const updatedData = data.map((q, idx) => 
             idx === questionIndex ? editedQuestion : q
           );
@@ -821,7 +821,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     );
   };
 
-  // Removed reloadQuestions as the Reset button is no longer available
+
 
   const handleResetTest = () => {
     setCurrentAnswer([]);
@@ -831,7 +831,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     setIsSubmitted(false);
     setExplanations({});
     
-    // Clear unlimited practice-related localStorage items
+
     localStorage.removeItem('unlimitedQuestions');
     localStorage.removeItem('testParams');
     localStorage.removeItem('contestedUnlimitedQuestions');

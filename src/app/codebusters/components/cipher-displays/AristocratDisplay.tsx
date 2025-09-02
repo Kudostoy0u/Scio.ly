@@ -32,7 +32,7 @@ export const AristocratDisplay = ({
 }: AristocratDisplayProps) => {
     const { darkMode } = useTheme();
     
-    // Create mapping for correct answers
+
     const correctMapping: { [key: string]: string } = {};
     if (isTestSubmitted && quotes[quoteIndex].key) {
         for (let i = 0; i < 26; i++) {
