@@ -1,5 +1,4 @@
 import { supabase } from '@/lib/supabase';
-
 interface Question {
   id?: string;
   question: string;
@@ -43,7 +42,6 @@ export const loadBookmarksFromSupabase = async (userId: string): Promise<Bookmar
   }
 };
 
-// Keep the old function name for backward compatibility
 export const loadBookmarksFromFirebase = loadBookmarksFromSupabase;
 
 export const addBookmark = async (
@@ -55,7 +53,6 @@ export const addBookmark = async (
   if (!userId) return;
 
   try {
-    // Check if bookmark already exists (prefer question id when present)
     let exists = false;
 
     if (question.id) {
@@ -69,7 +66,6 @@ export const addBookmark = async (
       if (error) throw error;
       exists = !!(data && data.length > 0);
     } else {
-      // For image ID questions, include imageUrl in uniqueness check
       let query = (supabase as any)
         .from('bookmarks')
         .select('id')
@@ -90,7 +86,6 @@ export const addBookmark = async (
       return;
     }
 
-    // Add new bookmark
     const { error } = await (supabase as any)
       .from('bookmarks')
       .insert({

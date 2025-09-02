@@ -2,6 +2,7 @@
 
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { ExternalLink, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface HylasBannerProps {
   onClose: () => void;
@@ -9,6 +10,35 @@ interface HylasBannerProps {
 
 export default function HylasBanner({ onClose }: HylasBannerProps) {
   const { darkMode } = useTheme();
+  const [scrollOpacity, setScrollOpacity] = useState(0);
+  const isHomePage = typeof window !== 'undefined' && window.location.pathname === '/';
+
+  console.log('HylasBanner: Rendering banner, darkMode:', darkMode, 'isHomePage:', isHomePage);
+
+  useEffect(() => {
+    console.log('HylasBanner: Banner mounted');
+    const handleScroll = () => {
+      const currentY = window.scrollY || 0;
+      const threshold = 300; // px until fully opaque
+      const progress = Math.min(currentY / threshold, 1);
+      setScrollOpacity(progress);
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+    
+    return () => {
+      console.log('HylasBanner: Banner unmounted');
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  // Compute dynamic background opacity for smooth fade on homepage
+  const targetOpacity = 0.95;
+  const computedOpacity = isHomePage ? Math.min(scrollOpacity * targetOpacity, targetOpacity) : targetOpacity;
+  const backgroundColor = darkMode
+    ? `rgba(17, 24, 39, ${computedOpacity})` // gray-900
+    : `rgba(255, 255, 255, ${computedOpacity})`;
 
   const handleClose = () => {
     localStorage.setItem('hylas-banner-closed', 'true');
@@ -19,11 +49,8 @@ export default function HylasBanner({ onClose }: HylasBannerProps) {
 
   return (
     <div 
-      className={`fixed top-0 left-0 right-0 z-40 shadow-lg transition-colors duration-300 ${
-        darkMode 
-          ? 'bg-gray-900' 
-          : 'bg-white'
-      }`}
+      className="fixed top-0 left-0 right-0 z-40 shadow-lg transition-colors duration-300"
+      style={{ backgroundColor }}
     >
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-center h-8 px-4 sm:px-6">
@@ -43,7 +70,7 @@ export default function HylasBanner({ onClose }: HylasBannerProps) {
                 Hylas SO
                 <ExternalLink className="inline w-3 h-3 ml-1" />
               </a>
-              , hosted by LAHS!
+              , a satellite tournament hosted by LAHS!
             </span>
             <span className="hidden sm:block">
               Check out{' '}
@@ -58,7 +85,7 @@ export default function HylasBanner({ onClose }: HylasBannerProps) {
                 Hylas SO
                 <ExternalLink className="inline w-3 h-3 ml-1" />
               </a>
-              , a tournament hosted by part of our team @ Los Altos High School, CA!
+              , a satellite tournament hosted by part of our team @ Los Altos High School, CA!
             </span>
           </div>
         </div>

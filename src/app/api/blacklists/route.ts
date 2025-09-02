@@ -4,7 +4,6 @@ import { db } from '@/lib/db';
 import { blacklists as blacklistsTable, questions as questionsTable } from '@/lib/db/schema';
 import { desc, eq } from 'drizzle-orm';
 
-// Helper to handle jsonb (object) or string-encoded JSON seamlessly
 function parseMaybeJson(value: unknown): Record<string, unknown> {
   if (value === null || value === undefined) return {};
   if (typeof value === 'string') {
@@ -21,15 +20,14 @@ function parseMaybeJson(value: unknown): Record<string, unknown> {
   return { value } as Record<string, unknown>;
 }
 
-// GET /api/blacklists - Get blacklisted questions (optionally filtered by event)
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const event = searchParams.get('event');
 
-    console.log(`🔍 [BLACKLIST/GET] Request received - Event: ${event}`);
+    console.log(`blacklist/get: Request received - Event: ${event}`);
 
-    console.log(`🔍 [BLACKLIST/GET] Executing Drizzle query`);
+    console.log(`blacklist/get: Executing Drizzle query`);
 
     const result = await db
       .select()
@@ -45,14 +43,13 @@ export async function GET(request: NextRequest) {
       for (const row of result) {
         rowCount++;
         const preview = typeof row.questionData === 'string' ? row.questionData.slice(0, 80) : JSON.stringify(row.questionData).slice(0, 80);
-        console.log(`📝 [BLACKLIST/GET] Row ${rowCount} - Event: ${row.event}, QuestionData: ${preview}`);
-        
+        console.log(`blacklist/get: Row ${rowCount} - Event: ${row.event}, QuestionData: ${preview}`);
+
         const questionObj = parseMaybeJson(row.questionData);
         blacklist.push(questionObj);
       }
 
-      console.log(`✅ [BLACKLIST/GET] Found ${blacklist.length} blacklist items for event ${event}`);
-      
+      console.log(`blacklist/get: Found ${blacklist.length} blacklist items for event ${event}`);
       return NextResponse.json({
         success: true,
         blacklist,
@@ -65,8 +62,8 @@ export async function GET(request: NextRequest) {
       for (const row of result) {
         rowCount++;
         const preview = typeof row.questionData === 'string' ? row.questionData.slice(0, 80) : JSON.stringify(row.questionData).slice(0, 80);
-        console.log(`📝 [BLACKLIST/GET] Row ${rowCount} - Event: ${row.event}, QuestionData: ${preview}`);
-        
+        console.log(`blacklist/get: Row ${rowCount} - Event: ${row.event}, QuestionData: ${preview}`);
+
         if (!blacklists[row.event]) {
           blacklists[row.event] = [];
         }
@@ -75,15 +72,15 @@ export async function GET(request: NextRequest) {
         blacklists[row.event].push(questionObj);
       }
 
-      console.log(`✅ [BLACKLIST/GET] Found blacklists for ${Object.keys(blacklists).length} events`);
-      
+      console.log(`blacklist/get: Found blacklists for ${Object.keys(blacklists).length} events`);
+
       return NextResponse.json({
         success: true,
         blacklists,
       });
     }
   } catch (error) {
-    console.error('❌ [BLACKLIST/GET] Database error:', error);
+    console.error('blacklist/get Database error:', error);
     const response: ApiResponse = {
       success: false,
       error: 'Failed to fetch blacklists',
@@ -92,7 +89,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/blacklists - Add question to blacklist
+// post /api/blacklists - add question to blacklist
 export async function POST(request: NextRequest) {
   try {
     const body: BlacklistRequest = await request.json();
@@ -107,20 +104,19 @@ export async function POST(request: NextRequest) {
 
     const questionDataJSON = JSON.stringify(body.questionData);
 
-    // Start transaction-like operations (Neon doesn't support transactions in serverless)
     try {
-      // Add to blacklist via Drizzle
+      // Add to blacklist
       await db
         .insert(blacklistsTable)
         .values({ event: body.event, questionData: JSON.parse(questionDataJSON) });
 
-      // Remove from main questions table if it exists
+      // remove from main questions table if exists
       const questionId = body.questionData.id;
       if (questionId) {
         try {
           await db.delete(questionsTable).where(eq(questionsTable.id, questionId as unknown as string));
         } catch (error) {
-          // Log error but don't fail the request
+          // log error but don't fail the request
           console.log('Question might not exist in main table:', error);
         }
       }

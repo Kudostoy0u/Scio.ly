@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse, GeminiSuggestEditRequest } from '@/lib/types/api';
 import { geminiService } from '@/lib/services/gemini';
 
-// POST /api/gemini/suggest-edit - Get AI suggestions for improving a question
+// post /api/gemini/suggest-edit for AI suggestions for improving a question
 export async function POST(request: NextRequest) {
   try {
     const body: GeminiSuggestEditRequest = await request.json();

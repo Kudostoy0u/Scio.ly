@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Simple in-memory rate limit (per IP) for low volume; replace with durable store if needed
 const REQUESTS: Record<string, { count: number; resetAt: number }> = {}
 const WINDOW_MS = 60_000
 const MAX_PER_WINDOW = 10
