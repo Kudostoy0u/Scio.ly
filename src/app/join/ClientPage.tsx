@@ -72,7 +72,7 @@ export default function JoinClientPage() {
         <div className="max-w-2xl mx-auto">
           <div className="mb-8">
             <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Join Our Team</h1>
-            <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Help us make Science Olympiad practice accessible to everyone. We&apos;re looking for passionate individuals to join our mission!</p>
+            <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Become a Scio.ly developer! Join a team of highly motivated high school and college students working on a site that thousands of competitors use every day. <span className="font-semibold">Better Science Olympiad practice, for everyone.</span></p>
           </div>
           <div className={`${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'} rounded-lg p-6`}>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -166,42 +166,42 @@ export default function JoinClientPage() {
                   value={formData.experience}
                   onChange={(e) => {
                     const text = e.target.value;
-                    if (countWords(text) <= 250) {
+                    if (countWords(text) <= 50) {
                       handleInputChange('experience', text);
                     }
                   }}
-                  placeholder="Tell us about your relevant experience, skills, and background... (250 words max)"
+                  placeholder="Tell us about your relevant experience, skills, and background... (50 words max)"
                   rows={4}
                   className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'}`}
                 />
                 <div className="flex justify-between items-center mt-1">
                   <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                    We&apos;re looking for people ready to hit the ground running! Please link any projects, a Github, LinkedIn, Instagram, or any other profiles that may be relevant to your position.
+                    We&apos;re looking for people ready to hustle! If you have any, link relevant projects, Instagram accounts if you want to market, GitHub if you want to write code, etc.
                   </p>
-                  <span className={`text-xs ${experienceWordCount > 250 ? 'text-red-500' : darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {experienceWordCount}/250 words
+                  <span className={`text-xs ${experienceWordCount > 50 ? 'text-red-500' : darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                    {experienceWordCount}/50 words
                   </span>
                 </div>
               </div>
               <div>
-                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Cover Letter *</label>
+                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Why do ya wanna join? *</label>
                 <textarea
                   value={formData.message}
                   onChange={(e) => {
                     const text = e.target.value;
-                    if (countWords(text) <= 250) {
+                    if (countWords(text) <= 50) {
                       handleInputChange('message', text);
                     }
                   }}
-                  placeholder="Please tell us why you&apos;d like to join our team and what you can bring to Scio.ly... (250 words max)"
+                  placeholder="Please tell us why you&apos;d like to join our team and what you can bring to Scio.ly... (50 words max)"
                   rows={6}
                   className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'}`}
                   required
                 />
                 <div className="flex justify-between items-center mt-1">
-                  <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Please be as detailed as possible to help us understand your interest</p>
-                  <span className={`text-xs ${messageWordCount > 250 ? 'text-red-500' : darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {messageWordCount}/250 words
+                  <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Yes, it&apos;s a resume line. But what else interests you about a position with Scio.ly?</p>
+                  <span className={`text-xs ${messageWordCount > 50 ? 'text-red-500' : darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                    {messageWordCount}/50 words
                   </span>
                 </div>
               </div>
