@@ -1280,8 +1280,7 @@ export const encryptCryptarithm = (_text: string): {
         const eq = `${line1}\n${line2}\n${line3}\n${line4}`;
 
 
-        const digitsGroup = resultDigits.split('').join(' ');
-        const wordGroup = sR;
+        // choose not to include equation words in the plaintext groups
 
 
         const cryptLettersSet = new Set<string>([...displayA, ...displayB, ...resultWord].filter(ch => /[A-Z]/.test(ch)));
@@ -1308,10 +1307,7 @@ export const encryptCryptarithm = (_text: string): {
             cryptarithmData: {
                 equation: eq,
                 numericExample: null,
-                digitGroups: [
-                    { digits: digitsGroup, word: wordGroup },
-                    ...extraGroups
-                ]
+                digitGroups: shuffleArray(extraGroups)
             }
         };
     }
