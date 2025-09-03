@@ -88,24 +88,33 @@ export const useAnswerChecking = (quotes: QuoteData[]) => {
       }
       
 
-      if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'K1 Xenocrypt', 'K2 Xenocrypt'].includes(quote.cipherType)) {
+      if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'K1 Xenocrypt', 'K2 Xenocrypt', 'K3 Xenocrypt'].includes(quote.cipherType)) {
 
         const keyword = quote.key || '';
-        const plainAlphabet = generateKeywordAlphabet(keyword);
-        const cipherAlphabet = quote.cipherType.includes('K1') || quote.cipherType.includes('K3') 
-          ? 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 
-          : generateKeywordAlphabet(keyword);
-        
-
-        const shift = quote.cipherType.includes('K3') ? 1 : 0;
-        
+        const isXeno = quote.cipherType.includes('Xenocrypt');
 
         const substitutionMap: { [key: string]: string } = {};
-        for (let i = 0; i < 26; i++) {
-          const shiftedIndex = (i + shift) % 26;
-          substitutionMap[plainAlphabet[i]] = cipherAlphabet[shiftedIndex];
+
+        if (quote.cipherType.includes('K3')) {
+          const base = generateKeywordAlphabet(keyword);
+          const alpha = isXeno ? base + 'Ñ' : base;
+          const len = isXeno ? 27 : 26;
+          for (let i = 0; i < len; i++) {
+            const shiftedIndex = (i + 1) % len;
+            substitutionMap[alpha[i]] = alpha[shiftedIndex];
+          }
+        } else {
+          const plainAlphabet = quote.cipherType.includes('K1')
+            ? (isXeno ? generateKeywordAlphabet(keyword) + 'Ñ' : generateKeywordAlphabet(keyword))
+            : (isXeno ? 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ' : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+          const cipherAlphabet = quote.cipherType.includes('K1')
+            ? (isXeno ? 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ' : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+            : (isXeno ? generateKeywordAlphabet(keyword) + 'Ñ' : generateKeywordAlphabet(keyword));
+          const len = isXeno ? 27 : 26;
+          for (let i = 0; i < len; i++) {
+            substitutionMap[plainAlphabet[i]] = cipherAlphabet[i];
+          }
         }
-        
 
         for (const [cipherLetter, plainLetter] of Object.entries(quote.solution)) {
           if (substitutionMap[plainLetter] !== cipherLetter) return false;

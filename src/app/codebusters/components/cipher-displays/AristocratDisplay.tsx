@@ -132,17 +132,18 @@ export const AristocratDisplay = ({
                                             char,
                                             e.target.value.toUpperCase()
                                         )}
+                                        autoComplete="off"
                                         className={`w-5 h-5 sm:w-6 sm:h-6 text-center border rounded mt-1 text-xs sm:text-sm ${
                                             darkMode 
-                                                ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
-                                                : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
-                                        } ${
-                                            showCorrectAnswer
-                                                ? isCorrect
-                                                    ? 'border-green-500 bg-green-100/10'
-                                                    : 'border-red-500 bg-red-100/10'
-                                                : ''
-                                        }`}
+                                                ? 'bg-gray-800 border-gray-600 text-gray-300' 
+                                                : 'bg-white border-gray-300 text-gray-900'
+                                        } focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                                             showCorrectAnswer
+                                                 ? isCorrect
+                                                     ? 'border-green-500 bg-green-100/10'
+                                                     : 'border-red-500 bg-red-100/10'
+                                                 : ''
+                                         }`}
                                     />
                                     {showCorrectAnswer && !isCorrect && (
                                         <div className={`absolute top-8 sm:top-10 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs ${

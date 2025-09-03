@@ -86,6 +86,7 @@ export const CheckerboardDisplay = ({
                 maxLength={1}
                 value={solution?.[idx] || ''}
                 onChange={(e) => onSolutionChange(quoteIndex, idx, e.target.value.toUpperCase())}
+                autoComplete="off"
                 disabled={isTestSubmitted}
                 className={`w-8 h-8 text-center border rounded text-sm ${
                   isTestSubmitted

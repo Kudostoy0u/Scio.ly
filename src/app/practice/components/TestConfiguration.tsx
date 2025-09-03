@@ -7,6 +7,8 @@ import { toast } from 'react-toastify';
 import { Heart } from 'lucide-react';
 import { isConfigFavorited, toggleFavoriteConfig, getFavoriteConfigs } from '@/app/utils/favorites';
 import QuoteLengthSlider from './QuoteLengthSlider';
+import { DISABLED_CIPHERS } from '@/app/codebusters/config';
+import type { QuoteData } from '@/app/codebusters/types';
 
 interface TestConfigurationProps {
   selectedEvent: Event | null;
@@ -725,22 +727,19 @@ export default function TestConfiguration({
                           ];
                           
 
-                          const disabledCiphers = [
-                            "K2 Patristocrat",
-                            "K3 Patristocrat",
-                            "Random Patristocrat"
-                          ];
+                          const disabledCiphers = DISABLED_CIPHERS;
                           
 
-                          const divisionCOnlyCiphers = [
+                          const divisionCOnlyAll: QuoteData['cipherType'][] = [
                             "Hill 2x2",
                             "Hill 3x3",
                             "K3 Aristocrat",
                             "K3 Xenocrypt"
-                          ].filter(cipher => !disabledCiphers.includes(cipher));
+                          ];
+                          const divisionCOnlyCiphers = divisionCOnlyAll.filter(cipher => !disabledCiphers.includes(cipher));
                           
 
-                          const bothDivisionsCiphers = [
+                          const bothDivisionsAll: QuoteData['cipherType'][] = [
                             "Baconian",
                             "Checkerboard",
                             "Complete Columnar",
@@ -748,14 +747,19 @@ export default function TestConfiguration({
                             "Fractionated Morse",
                             "K1 Aristocrat",
                             "K2 Aristocrat",
-                            "Nihilist",
-                            "Porta",
                             "Random Aristocrat",
                             "K1 Patristocrat",
-                            "Random Xenocrypt",
+                            "K2 Patristocrat",
+                            "Random Patristocrat",
+                            "K3 Patristocrat",
                             "K1 Xenocrypt",
-                            "K2 Xenocrypt"
-                          ].filter(cipher => !disabledCiphers.includes(cipher));
+                            "K2 Xenocrypt",
+                            "Random Xenocrypt",
+                            "K3 Xenocrypt",
+                            "Nihilist",
+                            "Porta"
+                          ];
+                          const bothDivisionsCiphers = bothDivisionsAll.filter(cipher => !disabledCiphers.includes(cipher));
                           
 
                           let cipherTypes: string[] = [];

@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import TeamsContent from "./TeamsContent";
+import TeamsDashboard from "./teams-dashboard/TeamsDashboard";
 
 export const metadata: Metadata = {
   title: "Scio.ly | Team Analysis",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function TeamsPage() {
-  return <TeamsContent />;
+  return <TeamsDashboard />;
 }

@@ -952,6 +952,37 @@ export const encryptK2Xenocrypt = (text: string): { encrypted: string; key: stri
 };
 
 
+export const encryptK3Xenocrypt = (text: string): { encrypted: string; key: string } => {
+    const keyword = generateRandomKeyword();
+    const baseAlphabet = generateKeywordAlphabet(keyword);
+    const plainAlphabet = baseAlphabet + 'Ñ';
+    const cipherAlphabet = baseAlphabet + 'Ñ';
+    
+
+    const substitutionMap: { [key: string]: string } = {};
+    for (let i = 0; i < 27; i++) {
+        const shiftedIndex = (i + 1) % 27;
+        substitutionMap[plainAlphabet[i]] = cipherAlphabet[shiftedIndex];
+    }
+    
+
+    const normalizedText = text.toUpperCase()
+        .replace(/Á/g, 'A')
+        .replace(/É/g, 'E')
+        .replace(/Í/g, 'I')
+        .replace(/Ó/g, 'O')
+        .replace(/Ú/g, 'U')
+        .replace(/Ü/g, 'U');
+
+    
+    const encrypted = normalizedText.replace(/[A-ZÑ]/g, char => 
+        substitutionMap[char] || char
+    );
+
+    return { encrypted, key: keyword };
+};
+
+
 export const getLetterFrequencies = (text: string): { [key: string]: number } => {
     const frequencies: { [key: string]: number } = {};
     

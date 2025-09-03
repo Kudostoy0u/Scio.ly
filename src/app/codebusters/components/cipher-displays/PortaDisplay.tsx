@@ -169,6 +169,7 @@ export const PortaDisplay = ({
                                             char,
                                             e.target.value.toUpperCase()
                                         )}
+                                        autoComplete="off"
                                         className={`w-5 h-5 sm:w-6 sm:h-6 text-center border rounded mt-1 text-xs sm:text-sm ${
                                             darkMode 
                                                 ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 

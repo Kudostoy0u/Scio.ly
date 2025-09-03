@@ -101,6 +101,8 @@ export const SubstitutionDisplay = ({
                 return 'K1 Xenocrypt Cipher';
             case 'K2 Xenocrypt':
                 return 'K2 Xenocrypt Cipher';
+            case 'K3 Xenocrypt':
+                return 'K3 Xenocrypt Cipher';
             default:
                 return 'Substitution Cipher';
         }
@@ -112,7 +114,7 @@ export const SubstitutionDisplay = ({
         const quote = quotes[quoteIndex];
         
 
-        if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'K1 Xenocrypt', 'K2 Xenocrypt'].includes(cipherType) && quote.key) {
+        if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'K1 Xenocrypt', 'K2 Xenocrypt', 'K3 Xenocrypt'].includes(cipherType) && quote.key) {
 
             const keyword = quote.key;
             
@@ -165,15 +167,23 @@ export const SubstitutionDisplay = ({
                     }
                 }
             } else if (cipherType.includes('K3')) {
-
-                const alphabet = generateKeywordAlphabet(keyword);
-                
-
-                for (let i = 0; i < 26; i++) {
-                    const shiftedIndex = (i + 1) % 26;
-                    const cipherLetter = alphabet[shiftedIndex];
-                    const plainLetter = alphabet[i];
-                    correctMapping[cipherLetter] = plainLetter;
+                if (cipherType.includes('Xenocrypt')) {
+                    const baseAlphabet = generateKeywordAlphabet(keyword);
+                    const alphabet = baseAlphabet + 'Ñ';
+                    for (let i = 0; i < 27; i++) {
+                        const shiftedIndex = (i + 1) % 27;
+                        const cipherLetter = alphabet[shiftedIndex];
+                        const plainLetter = alphabet[i];
+                        correctMapping[cipherLetter] = plainLetter;
+                    }
+                } else {
+                    const alphabet = generateKeywordAlphabet(keyword);
+                    for (let i = 0; i < 26; i++) {
+                        const shiftedIndex = (i + 1) % 26;
+                        const cipherLetter = alphabet[shiftedIndex];
+                        const plainLetter = alphabet[i];
+                        correctMapping[cipherLetter] = plainLetter;
+                    }
                 }
             }
         } else if (['Random Aristocrat', 'Random Patristocrat', 'Random Xenocrypt'].includes(cipherType) && quote.key) {
@@ -320,6 +330,7 @@ export const SubstitutionDisplay = ({
                                         )}
                                         onFocus={() => setFocusedCipherLetter(char)}
                                         onBlur={() => setFocusedCipherLetter(null)}
+                                        autoComplete="off"
                                         className={`w-5 h-5 sm:w-6 sm:h-6 text-center border rounded mt-1 text-xs sm:text-sm ${
                                             isSameCipherLetter
                                                 ? 'border-2 border-blue-500'
@@ -352,7 +363,7 @@ export const SubstitutionDisplay = ({
             </div>
             
             {/* Replacement Table for substitution ciphers */}
-            {['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt'].includes(cipherType) && (
+            {['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt', 'K3 Xenocrypt'].includes(cipherType) && (
                 <ReplacementTable
                     text={text}
                     solution={solution}

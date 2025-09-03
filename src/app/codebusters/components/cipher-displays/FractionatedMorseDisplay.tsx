@@ -311,6 +311,7 @@ export const FractionatedMorseDisplay = ({
                                                     clearReplacementTableFromTriplet(char, finalValue);
                                                 }
                                             }}
+                                            autoComplete="off"
                                             className={`w-8 h-5 sm:w-10 sm:h-6 text-center border rounded mt-1 text-xs sm:text-sm ${
                                                 isSameCipherLetter
                                                     ? 'border-2 border-blue-500'
@@ -434,6 +435,7 @@ export const FractionatedMorseDisplay = ({
 
                                                         handleReplacementTableChange(triplet, e.target.value);
                                                     }}
+                                                    autoComplete="off"
                                                     className={`w-full text-center text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-900'} focus:outline-none focus:ring-1 focus:ring-blue-500 ${
                                                         'border-0'
                                                     }`}

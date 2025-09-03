@@ -34,6 +34,7 @@ export const FrequencyTable = ({
                             maxLength={1}
                             value={frequencyNotes?.[letter] || ''}
                             onChange={(e) => onNoteChange(letter, e.target.value)}
+                            autoComplete="off"
                             className={`w-5 h-5 sm:w-6 sm:h-6 text-center border rounded text-xs sm:text-sm mt-1 ${
                                 darkMode 
                                     ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 

@@ -133,8 +133,9 @@ export const ReplacementTable = ({
                                                 onChange={(e) => handleReplacementTableChange(letter, e.target.value.toUpperCase())}
                                                 onFocus={() => onCipherLetterFocus?.(letter)}
                                                 onBlur={onCipherLetterBlur}
-                                                className={`w-full text-center text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-900'} focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                                                    focusedCipherLetter === letter ? 'border-2 border-blue-500' : 'border-0'
+                                                autoComplete="off"
+                                                className={`w-full text-center text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-900'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                                                    focusedCipherLetter === letter ? 'ring-2 ring-blue-500' : 'border-0'
                                                 }`}
                                                 placeholder=""
                                             />

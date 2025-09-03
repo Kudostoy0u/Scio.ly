@@ -153,6 +153,7 @@ export const HillDisplay = ({
                                                 : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
                                         }`}
                                         placeholder="?"
+                                        autoComplete="off"
                                     />
                                 );
                             })
@@ -205,6 +206,7 @@ export const HillDisplay = ({
                                                     : 'border-red-500 bg-red-100/10'
                                                 : ''
                                         }`}
+                                        autoComplete="off"
                                     />
                                     {isTestSubmitted && isPadding && (
                                         <div className={`absolute top-8 sm:top-10 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs ${

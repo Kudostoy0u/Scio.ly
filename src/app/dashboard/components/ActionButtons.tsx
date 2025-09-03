@@ -169,9 +169,9 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
           </div>
         </motion.div>
         
-        {/* Scio.ly for Teams Button */}
+        {/* Analytics Button */}
         <motion.div 
-          onClick={() => router.push('/teams')}
+          onClick={() => router.push('/analytics')}
           className={`rounded-lg cursor-pointer ${cardStyle} hover:border-gray-600`}
         >
           <div className={`w-full h-full p-6 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'}`}>
@@ -179,9 +179,9 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
               <FaUsers className="text-2xl text-blue-500" />
             </div>
             <div className="flex-1">
-              <h3 className="text-xl font-bold mb-1">Scio.ly for Teams</h3>
+              <h3 className="text-xl font-bold mb-1">Analytics</h3>
               <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                Collaborative features for your Science Olympiad team
+                Elo, charts, and comparisons across teams
               </p>
             </div>
           </div>

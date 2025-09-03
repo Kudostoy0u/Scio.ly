@@ -81,6 +81,7 @@ export const NihilistDisplay = ({
                                     maxLength={1}
                                     value={solution?.[index] || ''}
                                     onChange={(e) => onSolutionChange(quoteIndex, index, e.target.value.toUpperCase())}
+                                    autoComplete="off"
                                     disabled={isTestSubmitted}
                                     className={`w-8 h-8 text-center border rounded text-sm ${
                                         isTestSubmitted

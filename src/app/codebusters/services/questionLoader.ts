@@ -1,6 +1,7 @@
 import { QuoteData } from '../types';
 import { getEventOfflineQuestions } from '@/app/utils/storage';
 import { cleanQuote } from '../utils/quoteCleaner';
+import { filterEnabledCiphers } from '../config';
 import {
   encryptK1Aristocrat,
   encryptK2Aristocrat,
@@ -23,6 +24,7 @@ import {
   encryptRandomXenocrypt,
   encryptK1Xenocrypt,
   encryptK2Xenocrypt,
+  encryptK3Xenocrypt,
   encryptCheckerboard,
   encryptCryptarithm,
   setCustomWordBank,
@@ -138,6 +140,7 @@ export const loadQuestionsFromDatabase = async (
         'random xenocrypt': 'Random Xenocrypt',
         'k1 xenocrypt': 'K1 Xenocrypt',
         'k2 xenocrypt': 'K2 Xenocrypt',
+        'k3 xenocrypt': 'K3 Xenocrypt',
         'checkerboard': 'Checkerboard',
 
         'K1 Aristocrat': 'K1 Aristocrat',
@@ -160,6 +163,7 @@ export const loadQuestionsFromDatabase = async (
         'Random Xenocrypt': 'Random Xenocrypt',
         'K1 Xenocrypt': 'K1 Xenocrypt',
         'K2 Xenocrypt': 'K2 Xenocrypt',
+        'K3 Xenocrypt': 'K3 Xenocrypt',
         'Checkerboard': 'Checkerboard',
         'Cryptarithm': 'Cryptarithm',
 
@@ -177,15 +181,25 @@ export const loadQuestionsFromDatabase = async (
     
 
     const divisionBCipherTypes = {
-              'B': ['K1 Aristocrat', 'K2 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'Random Patristocrat', 'Baconian', 'Fractionated Morse', 'Complete Columnar', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt', 'Porta', 'Nihilist', 'Atbash', 'Caesar', 'Affine', 'Checkerboard', 'Cryptarithm'],
-              'C': ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Baconian', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt', 'Fractionated Morse', 'Porta', 'Complete Columnar', 'Nihilist', 'Hill 2x2', 'Hill 3x3', 'Checkerboard', 'Cryptarithm']
+              'B': ['K1 Aristocrat', 'K2 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'Random Patristocrat', 'Baconian', 'Fractionated Morse', 'Complete Columnar', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt', 'Porta', 'Nihilist', 'Atbash', 'Caesar', 'Affine', 'Checkerboard', 'Cryptarithm'] as QuoteData['cipherType'][],
+              'C': ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Baconian', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt', 'Fractionated Morse', 'Porta', 'Complete Columnar', 'Nihilist', 'Hill 2x2', 'Hill 3x3', 'Checkerboard', 'Cryptarithm'] as QuoteData['cipherType'][]
     };
     
-    const availableCipherTypes = cipherTypes && cipherTypes.length > 0 
-      ? cipherTypes 
-      : (division === 'B' || division === 'C') 
-        ? divisionBCipherTypes[division] 
-        : ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Hill 2x2', 'Hill 3x3', 'Porta', 'Baconian', 'Nihilist', 'Fractionated Morse', 'Complete Columnar', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt', 'Cryptarithm'];
+    const baseDefault: QuoteData['cipherType'][] = ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'Random Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Hill 2x2', 'Hill 3x3', 'Porta', 'Baconian', 'Nihilist', 'Fractionated Morse', 'Complete Columnar', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt', 'Cryptarithm'];
+
+    const preFiltered = (cipherTypes && cipherTypes.length > 0)
+      ? (cipherTypes as QuoteData['cipherType'][])
+      : ((division === 'B' || division === 'C') ? divisionBCipherTypes[division] : baseDefault);
+
+    let availableCipherTypes = filterEnabledCiphers(preFiltered);
+    if (availableCipherTypes.length === 0) {
+      // Fallback to non-disabled basics if user/division choices filter to nothing
+      availableCipherTypes = filterEnabledCiphers(baseDefault);
+      if (availableCipherTypes.length === 0) {
+        // As a last resort, allow K1/K2 Aristocrat
+        availableCipherTypes = ['K1 Aristocrat', 'K2 Aristocrat'];
+      }
+    }
 
 
     const questionCipherTypes: QuoteData['cipherType'][] = [];
@@ -195,7 +209,7 @@ export const loadQuestionsFromDatabase = async (
     }
 
 
-    const xenocryptCount = questionCipherTypes.filter(type => type === 'Random Xenocrypt' || type === 'K1 Xenocrypt' || type === 'K2 Xenocrypt').length;
+    const xenocryptCount = questionCipherTypes.filter(type => type === 'Random Xenocrypt' || type === 'K1 Xenocrypt' || type === 'K2 Xenocrypt' || type === 'K3 Xenocrypt').length;
     const nonXenocryptCount = questionCount - xenocryptCount;
     
     console.log(`🔍 Quote requirements: ${nonXenocryptCount} English, ${xenocryptCount} Spanish, total: ${questionCount}`);
@@ -406,6 +420,7 @@ export const loadQuestionsFromDatabase = async (
         'Random Xenocrypt': 0.95,
         'K1 Xenocrypt': 0.8,
         'K2 Xenocrypt': 0.85,
+        'K3 Xenocrypt': 0.9,
         'Cryptarithm': 0.7,
       };
       let d = baseByType[q.cipherType] ?? 0.5;
@@ -433,7 +448,7 @@ export const loadQuestionsFromDatabase = async (
       ).join(' ');
       let quoteData: { quote: string; author: string; originalIndex: number; isSpanish?: boolean; id?: string };
 
-      if (cipherType === 'Random Xenocrypt' || cipherType === 'K1 Xenocrypt' || cipherType === 'K2 Xenocrypt') {
+      if (cipherType === 'Random Xenocrypt' || cipherType === 'K1 Xenocrypt' || cipherType === 'K2 Xenocrypt' || cipherType === 'K3 Xenocrypt') {
 
         if (spanishQuoteIndex >= spanishQuotes.length) {
           console.warn(`⚠️ Not enough Spanish quotes for xenocrypt. Using English quote instead.`);
@@ -561,6 +576,9 @@ export const loadQuestionsFromDatabase = async (
         case 'K2 Xenocrypt':
           cipherResult = encryptK2Xenocrypt(cleanedQuote);
           break;
+        case 'K3 Xenocrypt':
+          cipherResult = encryptK3Xenocrypt(cleanedQuote);
+          break;
         case 'Checkerboard':
           cipherResult = encryptCheckerboard(cleanedQuote);
           break;
@@ -572,7 +590,7 @@ export const loadQuestionsFromDatabase = async (
       }
 
 
-      const isK1K2K3Cipher = ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'K1 Xenocrypt', 'K2 Xenocrypt'].includes(normalizedCipherType);
+      const isK1K2K3Cipher = ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'K1 Xenocrypt', 'K2 Xenocrypt', 'K3 Xenocrypt'].includes(normalizedCipherType);
       const askForKeyword = isK1K2K3Cipher && Math.random() < 0.15;
 
 
