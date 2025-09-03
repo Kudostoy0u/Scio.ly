@@ -38,14 +38,14 @@ export default function ThemeColorMeta() {
     const rgbToHex = (r: number, g: number, b: number) => `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 
     if (isTest || isCodebusters || isUnlimited || isPractice) {
-      const color = darkMode ? '#111827' /* gray-900 */ : '#f9fafb' /* gray-50 */;
+      const color = darkMode ? '#111827' /* gray-900 */ : '#ffffff' /* white */;
       meta.setAttribute('content', color);
       return;
     }
 
 
     if (!isHome) {
-      const color = darkMode ? '#111827' /* gray-900 */ : '#f9fafb';
+      const color = darkMode ? '#111827' /* gray-900 */ : '#ffffff';
       meta.setAttribute('content', color);
       return;
     }
@@ -54,7 +54,7 @@ export default function ThemeColorMeta() {
     if (!darkMode) {
 
       const navbarActive = scrollOpacity > 0;
-      const color = navbarActive ? '#ffffff' : '#f9fafb' /* gray-50 */;
+      const color = navbarActive ? '#ffffff' : '#ffffff' /* white */;
       meta.setAttribute('content', color);
       return;
     }

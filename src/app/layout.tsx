@@ -81,7 +81,7 @@ export default async function RootLayout({
         <meta charSet="utf-8" />
         <link rel="icon" href="/site-logo.png" sizes="any" />
         <link rel="manifest" href="/manifest.webmanifest" />
-        <meta name="theme-color" content="${initialDarkMode ? '#020617' : '#f9fafb'}" />
+        <meta name="theme-color" content="${initialDarkMode ? '#020617' : '#ffffff'}" />
         {initialDisplayFirstName ? (
           <meta name="scio-display-name" content={initialDisplayFirstName} />
         ) : null}

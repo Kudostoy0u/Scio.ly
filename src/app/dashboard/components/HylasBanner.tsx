@@ -2,7 +2,7 @@
 
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { ExternalLink, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 interface HylasBannerProps {
   onClose: () => void;
@@ -10,40 +10,16 @@ interface HylasBannerProps {
 
 export default function HylasBanner({ onClose }: HylasBannerProps) {
   const { darkMode } = useTheme();
-  const [scrollOpacity, setScrollOpacity] = useState(0);
-  const isHomePage = typeof window !== 'undefined' && window.location.pathname === '/';
 
-  console.log('HylasBanner: Rendering banner, darkMode:', darkMode, 'isHomePage:', isHomePage);
+  // Banner background is fully opaque at all times; no scroll-based effects
+  useEffect(() => {}, []);
 
-  useEffect(() => {
-    console.log('HylasBanner: Banner mounted');
-    const handleScroll = () => {
-      const currentY = window.scrollY || 0;
-      const threshold = 300; // px until fully opaque
-      const progress = Math.min(currentY / threshold, 1);
-      setScrollOpacity(progress);
-    };
-    
-    window.addEventListener('scroll', handleScroll);
-    handleScroll();
-    
-    return () => {
-      console.log('HylasBanner: Banner unmounted');
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
-
-
-  const targetOpacity = 0.95;
-  const computedOpacity = isHomePage ? Math.min(scrollOpacity * targetOpacity, targetOpacity) : targetOpacity;
   const backgroundColor = darkMode
-    ? `rgba(17, 24, 39, ${computedOpacity})` // gray-900
-    : `rgba(255, 255, 255, ${computedOpacity})`;
-  const borderColor = computedOpacity === 0
-    ? 'transparent'
-    : darkMode
-      ? `rgba(31, 41, 55, ${computedOpacity})` // gray-800
-      : `rgba(229, 231, 235, ${computedOpacity})`; // gray-200
+    ? 'rgb(17, 24, 39)'
+    : 'rgb(255, 255, 255)';
+  const borderColor = darkMode
+    ? 'rgb(31, 41, 55)'
+    : 'rgb(229, 231, 235)';
 
   const handleClose = () => {
     localStorage.setItem('hylas-banner-closed', 'true');
@@ -54,7 +30,7 @@ export default function HylasBanner({ onClose }: HylasBannerProps) {
 
   return (
     <div 
-      className="fixed top-0 left-0 right-0 z-40 shadow-lg transition-colors duration-300"
+      className={`fixed top-0 left-0 right-0 z-40 shadow-lg transition-colors duration-300`}
       style={{ backgroundColor }}
     >
       <div className="max-w-7xl mx-auto">
