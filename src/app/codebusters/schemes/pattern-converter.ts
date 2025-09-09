@@ -6,16 +6,29 @@ export function convertBinaryPattern(pattern: string, scheme: BaconianScheme): s
       return pattern.replace(/A/g, scheme.zero as string).replace(/B/g, scheme.one as string);
       
     case 'category':
+      {
+        const VOWELS = 'AEIOU';
+        const CONSONANTS = 'BCDFGHJKLMNPQRSTVWXYZ';
+        const ODD = 'ACEGIKMOQSUWY';
+        const EVEN = 'BDFHJLNPRTVXZ';
 
-      return pattern.split('').map((char) => {
-        if (char === 'A') {
-          const zeroSet = scheme.zero as string;
-          return zeroSet[Math.floor(Math.random() * zeroSet.length)];
-        } else {
-          const oneSet = scheme.one as string;
-          return oneSet[Math.floor(Math.random() * oneSet.length)];
+        const zeroSet = (scheme.zero as string);
+        const oneSet = (scheme.one as string);
+
+        const pick = (set: string) => set[Math.floor(Math.random() * set.length)];
+        let out = '';
+        for (let i = 0; i < pattern.length; i++) {
+          const bit = pattern[i];
+          if (scheme.type === 'Vowels/Consonants') {
+            out += bit === 'A' ? pick(VOWELS) : pick(CONSONANTS);
+          } else if (scheme.type === 'Odd/Even') {
+            out += bit === 'A' ? pick(ODD) : pick(EVEN);
+          } else {
+            out += bit === 'A' ? pick(zeroSet) : pick(oneSet);
+          }
         }
-      }).join('');
+        return out;
+      }
       
     case 'set':
 

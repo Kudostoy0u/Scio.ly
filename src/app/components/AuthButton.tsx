@@ -35,10 +35,10 @@ export default function AuthButton() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const subtleLinkClass = darkMode
     ? 'text-blue-300 hover:text-blue-200'
     : 'text-blue-500 hover:text-blue-600';
+  // Notifications removed
 
 
   useEffect(() => {
@@ -334,25 +334,6 @@ export default function AuthButton() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (!isDropdownOpen) return;
-    const compute = () => {
-      const el = triggerRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const top = rect.bottom + 8;
-      const tentativeLeft = rect.right - 240; // assume ~240px width
-      const left = Math.max(8, Math.min(tentativeLeft, window.innerWidth - 248));
-      setDropdownPos({ top, left });
-    };
-    compute();
-    window.addEventListener('resize', compute);
-    window.addEventListener('scroll', compute, true);
-    return () => {
-      window.removeEventListener('resize', compute);
-      window.removeEventListener('scroll', compute, true);
-    };
-  }, [isDropdownOpen]);
 
   if (loading) {
     return (
@@ -398,6 +379,7 @@ export default function AuthButton() {
           <span className="hidden sm:block">
             {displayName || user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
           </span>
+          
           <svg
             className={`w-4 h-4 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}
             fill="none"
@@ -408,16 +390,18 @@ export default function AuthButton() {
           </svg>
         </button>
 
-        {isDropdownOpen && dropdownPos && createPortal(
+        {isDropdownOpen && (
           <div
-            ref={dropdownRef}
-            style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, minWidth: 192, zIndex: 10000 }}
-            className={`rounded-md shadow-lg py-1 border ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}
+            className={`absolute right-0 top-full mt-2 w-64 rounded-md shadow-lg py-1 border z-50 ${
+              darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'
+            }`}
           >
             <div className={`px-4 py-2 text-sm border-b ${darkMode ? 'text-gray-200 border-gray-600' : 'text-gray-700 border-gray-100'}`}>
               <div className="font-medium truncate">{displayName || user.user_metadata?.name || user.user_metadata?.full_name || 'User'}</div>
               <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} break-all`}>{user.email}</div>
             </div>
+
+            <div className="mt-2 border-t" />
             <Link href="/leaderboard" className={`block w-full text-left px-4 py-2 text-sm transition-colors duration-200 flex items-center gap-2 ${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
               <Trophy className="w-4 h-4" />
               Leaderboards
@@ -429,7 +413,7 @@ export default function AuthButton() {
             <button onClick={handleSignOut} className={`block w-full text-left px-4 py-2 text-sm transition-colors duration-200 ${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
               Sign out
             </button>
-          </div>, document.body
+          </div>
         )}
       </div>
     );

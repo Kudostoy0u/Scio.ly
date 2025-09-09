@@ -4,6 +4,7 @@ export interface QuoteData {
     encrypted: string;
     cipherType: 'Random Aristocrat' | 'K1 Aristocrat' | 'K2 Aristocrat' | 'K3 Aristocrat' | 'Random Patristocrat' | 'K1 Patristocrat' | 'K2 Patristocrat' | 'K3 Patristocrat' | 'Caesar' | 'Atbash' | 'Affine' | 'Hill 2x2' | 'Hill 3x3' | 'Baconian' | 'Porta' | 'Nihilist' | 'Fractionated Morse' | 'Complete Columnar' | 'Random Xenocrypt' | 'K1 Xenocrypt' | 'K2 Xenocrypt' | 'K3 Xenocrypt' | 'Checkerboard' | 'Cryptarithm';
     key?: string;
+    kShift?: number;
     matrix?: number[][];
     decryptionMatrix?: number[][];
     portaKeyword?: string;
@@ -47,11 +48,16 @@ export interface QuoteData {
     difficulty?: number;
     askForKeyword?: boolean;
     keywordSolution?: string;
+    plainAlphabet?: string;
+    cipherAlphabet?: string;
 }
 
 export interface CipherResult {
     encrypted: string;
     key?: string;
+    kShift?: number;
+    plainAlphabet?: string;
+    cipherAlphabet?: string;
     matrix?: number[][];
     decryptionMatrix?: number[][];
     portaKeyword?: string;

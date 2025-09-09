@@ -198,6 +198,7 @@ const details: Record<string, Partial<DocsEvent>> = {
     links: [
       { label: 'SciOly Wiki', url: wikiUrl('Disease_Detectives') },
       { label: 'CDC Principles of Epidemiology', url: 'https://www.cdc.gov/csels/dsepd/ss1978/index.html' },
+      { label: 'See notesheet', url: 'https://docs.google.com/document/d/1QhIeMbt8uSFQx89Y5789uombsuuCIy36__WBcW3Qnm4/edit?usp=sharing' },
     ],
     materialsNote: 'Usually notes/binder allowed. Non-graphing calculator commonly allowed; verify current rules.',
   },
@@ -252,6 +253,7 @@ const details: Record<string, Partial<DocsEvent>> = {
     ],
     links: [
       { label: 'SciOly Wiki', url: wikiUrl('Water_Quality') },
+      { label: 'See notesheet', url: 'https://docs.google.com/document/d/1yuR-Dt2-WyXPqjKb7HhQt72f56BpywZAViUH_vEzpms/edit?usp=sharing' },
     ],
     materialsNote: 'Notes/binder and non-programmable calculator typically allowed; specific equipment varies by tournament.',
   },

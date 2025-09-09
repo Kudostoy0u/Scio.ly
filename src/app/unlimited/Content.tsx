@@ -184,7 +184,8 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
                           routerParams.eventName === 'Dynamic Planet - Oceanography' ||
                           routerParams.eventName === 'Water Quality - Freshwater' ||
                           routerParams.eventName === 'Remote Sensing' ||
-                          routerParams.eventName === 'Circuit Lab';
+                          routerParams.eventName === 'Circuit Lab' ||
+                          routerParams.eventName === 'Astronomy';
         if (supportsId && typeof idPct !== 'undefined' && parseInt(idPct) > 0) {
           const pct = Math.max(0, Math.min(100, parseInt(idPct)));
           const totalQuestionsCount = pct === 100 ? 1000 : baseQuestions.length;

@@ -95,21 +95,29 @@ export const useAnswerChecking = (quotes: QuoteData[]) => {
 
         const substitutionMap: { [key: string]: string } = {};
 
-        if (quote.cipherType.includes('K3')) {
+        if (quote.plainAlphabet && quote.cipherAlphabet) {
+          const pa = quote.plainAlphabet;
+          const ca = quote.cipherAlphabet;
+          const len = Math.min(pa.length, ca.length);
+          for (let i = 0; i < len; i++) substitutionMap[pa[i]] = ca[i];
+        } else if (quote.cipherType.includes('K3')) {
           const base = generateKeywordAlphabet(keyword);
           const alpha = isXeno ? base + 'Ñ' : base;
           const len = isXeno ? 27 : 26;
+          const kShift = (quotes[quoteIndex] as any).kShift ?? 1;
           for (let i = 0; i < len; i++) {
-            const shiftedIndex = (i + 1) % len;
+            const shiftedIndex = (i + kShift) % len;
             substitutionMap[alpha[i]] = alpha[shiftedIndex];
           }
         } else {
           const plainAlphabet = quote.cipherType.includes('K1')
             ? (isXeno ? generateKeywordAlphabet(keyword) + 'Ñ' : generateKeywordAlphabet(keyword))
             : (isXeno ? 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ' : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
-          const cipherAlphabet = quote.cipherType.includes('K1')
+          const baseCipher = quote.cipherType.includes('K1')
             ? (isXeno ? 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ' : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
             : (isXeno ? generateKeywordAlphabet(keyword) + 'Ñ' : generateKeywordAlphabet(keyword));
+          const kShift = (quotes[quoteIndex] as any).kShift ?? 0;
+          const cipherAlphabet = baseCipher.slice(kShift) + baseCipher.slice(0, kShift);
           const len = isXeno ? 27 : 26;
           for (let i = 0; i < len; i++) {
             substitutionMap[plainAlphabet[i]] = cipherAlphabet[i];

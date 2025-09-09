@@ -212,7 +212,8 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
                           routerParams.eventName === 'Dynamic Planet - Oceanography' ||
                           routerParams.eventName === 'Water Quality - Freshwater' ||
                           routerParams.eventName === 'Remote Sensing' ||
-                          routerParams.eventName === 'Circuit Lab';
+                          routerParams.eventName === 'Circuit Lab' ||
+                          routerParams.eventName === 'Astronomy';
         const requestedIdCount = Math.round((idPct / 100) * total);
         const idCount = supportsId ? requestedIdCount : 0;
         const baseCount = Math.max(0, total - idCount);
@@ -798,6 +799,20 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         eventName: routerData.eventName
       });
     }
+
+    try {
+      const assignmentIdStr = localStorage.getItem('currentAssignmentId');
+      if (assignmentIdStr) {
+        const assignmentId = Number(assignmentIdStr);
+        const name = (user?.user_metadata?.name || user?.email || '').toString();
+        await fetch('/api/assignments/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ assignmentId, userId: user?.id || null, name, eventName: routerData.eventName, score: mcqScore, detail: { total: mcqTotal } })
+        });
+        localStorage.removeItem('currentAssignmentId');
+      }
+    } catch {}
   }, [data, userAnswers, gradingResults, routerData]);
 
   const reloadQuestions = async () => {
@@ -815,7 +830,8 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
                         routerData.eventName === 'Anatomy - Sense Organs' ||
                         routerData.eventName === 'Dynamic Planet - Oceanography' ||
                         routerData.eventName === 'Remote Sensing' ||
-                        routerData.eventName === 'Circuit Lab';
+                        routerData.eventName === 'Circuit Lab' ||
+                        routerData.eventName === 'Astronomy';
       const requestedIdCount = Math.round((idPct / 100) * total);
       const idCount = supportsId ? requestedIdCount : 0;
       const baseCount = Math.max(0, total - idCount);

@@ -24,6 +24,7 @@ export const PortaDisplay = ({
 }: PortaDisplayProps) => {
     const { darkMode } = useTheme();
     const [hoveredChar, setHoveredChar] = useState<{ rowIndex: number; charIndex: number } | null>(null);
+    const [showTable, setShowTable] = useState<boolean>(false);
     
 
     const originalQuote = quotes[quoteIndex].quote.toUpperCase();
@@ -197,12 +198,20 @@ export const PortaDisplay = ({
                 })}
             </div>
 
-            {/* Porta Table - moved below cipher text */}
+            {/* Porta Table - collapsible */}
             <div className={`porta-table p-4 rounded ${darkMode ? 'bg-gray-800/50' : 'bg-gray-100'} hidden md:block`}>
-                <h3 className={`text-sm font-semibold mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Porta Table
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <button
+                    type="button"
+                    onClick={() => { setHoveredChar(null); setShowTable((s: boolean) => !s); }}
+                    className={`flex items-center gap-2 text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                    aria-expanded={(showTable as any)}
+                    aria-controls="porta-table-content"
+                >
+                    <span>Porta Table</span>
+                    <span className={`transform transition-transform ${showTable ? 'rotate-90' : ''}`}>▸</span>
+                </button>
+                {showTable && (
+                <div id="porta-table-content" className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {portaTableDisplay.map((row, index) => (
                         <div key={index} className={`p-3 rounded border min-h-[80px] ${
                             darkMode ? 'bg-gray-700/30 border-gray-600' : 'bg-white border-gray-200'
@@ -241,6 +250,7 @@ export const PortaDisplay = ({
                         </div>
                     ))}
                 </div>
+                )}
             </div>
             
             {/* Show original quote after submission */}

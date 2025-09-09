@@ -602,7 +602,7 @@ export const useHintSystem = (
 
       revealRandomLetter(questionIndex);
     }
-  }, [quotes, activeHints, setActiveHints, getHintContent, revealRandomLetter, hintCounts, setHintCounts]);
+  }, [quotes, activeHints, setActiveHints, getHintContent, revealRandomLetter, hintCounts, setHintCounts, setQuotes]);
 
   return {
     getHintContent,

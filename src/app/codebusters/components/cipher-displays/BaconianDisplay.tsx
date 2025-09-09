@@ -71,7 +71,13 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
             return binaryGroup;
         };
         
-        const filteredGroups = binaryGroups.map(applyBinaryFilter);
+        // Prefer pre-generated encrypted groups from the question (stable and synchronized with grading)
+        const storedGroups = (quote.encrypted || '').trim().length > 0 
+            ? (quote.encrypted as string).trim().split(/\s+/)
+            : null;
+        const filteredGroups = storedGroups && storedGroups.length > 0
+            ? storedGroups
+            : binaryGroups.map(applyBinaryFilter);
         
         return {
             originalQuote: cleanedQuote,
@@ -187,7 +193,7 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
                                         focusedGroupIndex === i
                                             ? 'border-2 border-blue-500'
                                             : shouldHighlight
-                                                ? 'border-2 border-blue-300 bg-blue-50 dark:bg-blue-900/20'
+                                                ? 'border-2 border-blue-300'
                                                 : darkMode 
                                                     ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
                                                     : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'

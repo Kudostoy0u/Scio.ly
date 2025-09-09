@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
-import { getLetterFrequencies } from '../../cipher-utils';
+import { getLetterFrequencies } from '../../utils/substitution';
 
 interface ReplacementTableProps {
     text: string;

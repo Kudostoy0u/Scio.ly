@@ -3,12 +3,12 @@ import { getEventOfflineQuestions } from '@/app/utils/storage';
 import { cleanQuote } from '../utils/quoteCleaner';
 import { filterEnabledCiphers } from '../config';
 import {
-  encryptK1Aristocrat,
-  encryptK2Aristocrat,
-  encryptK3Aristocrat,
-  encryptK1Patristocrat,
-  encryptK2Patristocrat,
-  encryptK3Patristocrat,
+  k1Aristo as encryptK1Aristocrat,
+  k2Aristo as encryptK2Aristocrat,
+  k3Aristo as encryptK3Aristocrat,
+  k1Patri as encryptK1Patristocrat,
+  k2Patri as encryptK2Patristocrat,
+  k3Patri as encryptK3Patristocrat,
   encryptRandomAristocrat,
   encryptRandomPatristocrat,
   encryptCaesar,
@@ -22,14 +22,14 @@ import {
   encryptFractionatedMorse,
   encryptColumnarTransposition,
   encryptRandomXenocrypt,
-  encryptK1Xenocrypt,
-  encryptK2Xenocrypt,
-  encryptK3Xenocrypt,
-  encryptCheckerboard,
+  k1Xeno as encryptK1Xenocrypt,
+  k2Xeno as encryptK2Xenocrypt,
+  k3Xeno as encryptK3Xenocrypt,
+  
   encryptCryptarithm,
-  setCustomWordBank,
-  getCustomWordBank
+  
 } from '../cipher-utils';
+import { setCustomWordBank, getCustomWordBank } from '../utils/common';
 
 export const loadQuestionsFromDatabase = async (
   setIsLoading: (loading: boolean) => void,
@@ -580,8 +580,8 @@ export const loadQuestionsFromDatabase = async (
           cipherResult = encryptK3Xenocrypt(cleanedQuote);
           break;
         case 'Checkerboard':
-          cipherResult = encryptCheckerboard(cleanedQuote);
-          break;
+          // Temporarily disabled or moved; skip generation for this type
+          throw new Error('Checkerboard cipher generation not available');
         case 'Cryptarithm':
           cipherResult = encryptCryptarithm(cleanedQuote);
           break;
@@ -600,6 +600,9 @@ export const loadQuestionsFromDatabase = async (
         encrypted: cipherResult.encrypted,
         cipherType: normalizedCipherType,
         key: cipherResult.key || undefined,
+        kShift: (cipherResult as any).kShift || (normalizedCipherType.includes('K3') ? 1 : undefined),
+        plainAlphabet: (cipherResult as any).plainAlphabet,
+        cipherAlphabet: (cipherResult as any).cipherAlphabet,
         matrix: cipherResult.matrix || undefined,
         decryptionMatrix: 'decryptionMatrix' in cipherResult ? (cipherResult as { decryptionMatrix: number[][] }).decryptionMatrix : undefined,
         portaKeyword: cipherResult.keyword || undefined,

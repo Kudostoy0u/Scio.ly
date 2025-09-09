@@ -123,6 +123,9 @@ export const HillDisplay = ({
                             Array.from({ length: matrixSize }, (_, j) => {
                                 const value = solution?.matrix?.[i]?.[j] || '';
                                 const numValue = parseInt(value) || 0;
+                                const correctNum = quote.decryptionMatrix?.[i]?.[j] ?? 0;
+                                const correctLetter = numberToLetter(correctNum);
+                                const isCorrect = isTestSubmitted && numValue === correctNum;
                                 
                                 return is3x3 ? (
 
@@ -134,27 +137,40 @@ export const HillDisplay = ({
                                     </div>
                                 ) : (
 
-                                    <input
-                                        key={`solution-${i}-${j}`}
-                                        type="text"
-                                        id={`hill-matrix-${i}-${j}`}
-                                        name={`hill-matrix-${i}-${j}`}
-                                        maxLength={2}
-                                        disabled={isTestSubmitted}
-                                        value={value}
-                                        onChange={(e) => {
-                                            const newMatrix = solution?.matrix || Array.from({ length: matrixSize }, () => Array(matrixSize).fill(''));
-                                            newMatrix[i][j] = e.target.value;
-                                            onSolutionChange('matrix', newMatrix);
-                                        }}
-                                        className={`w-10 h-10 sm:w-12 sm:h-12 text-center border rounded text-base sm:text-lg ${
-                                            darkMode 
-                                                ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
-                                                : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
-                                        }`}
-                                        placeholder="?"
-                                        autoComplete="off"
-                                    />
+                                    <div key={`solution-${i}-${j}`} className="flex flex-col items-center">
+                                        <input
+                                            type="text"
+                                            id={`hill-matrix-${i}-${j}`}
+                                            name={`hill-matrix-${i}-${j}`}
+                                            maxLength={2}
+                                            disabled={isTestSubmitted}
+                                            value={value}
+                                            onChange={(e) => {
+                                                const newMatrix = solution?.matrix || Array.from({ length: matrixSize }, () => Array(matrixSize).fill(''));
+                                                newMatrix[i][j] = e.target.value;
+                                                onSolutionChange('matrix', newMatrix);
+                                            }}
+                                            className={`w-10 h-10 sm:w-12 sm:h-12 text-center border rounded text-base sm:text-lg ${
+                                                darkMode 
+                                                    ? 'bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500' 
+                                                    : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
+                                            } ${
+                                                isTestSubmitted
+                                                    ? (isCorrect
+                                                        ? 'border-green-500 bg-green-100/10'
+                                                        : 'border-red-500 bg-red-100/10')
+                                                    : ''
+                                            }`}
+                                            placeholder="?"
+                                            autoComplete="off"
+                                            style={{ textTransform: 'uppercase' }}
+                                        />
+                                        {isTestSubmitted && !isCorrect && (
+                                            <div className={`${darkMode ? 'text-red-400' : 'text-red-600'} text-[10px] sm:text-xs mt-1`}>
+                                                {correctLetter}
+                                            </div>
+                                        )}
+                                    </div>
                                 );
                             })
                         )}

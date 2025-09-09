@@ -84,7 +84,7 @@ export const SubstitutionDisplay = ({
             case 'K3 Patristocrat':
                 return 'K3 Patristocrat Cipher';
             case 'Caesar':
-                return `Caesar Cipher (Shift: ${caesarShift || '?'})`;
+                return `Caesar Cipher${caesarShift !== undefined ? ` (Shift: ${caesarShift})` : ''}`;
             case 'Atbash':
                 return 'Atbash Cipher';
             case 'Affine':
@@ -118,11 +118,23 @@ export const SubstitutionDisplay = ({
 
             const keyword = quote.key;
             
-            if (cipherType.includes('K1')) {
+            // Prefer stored alphabets if present for exact mapping
+            if (quote.plainAlphabet && quote.cipherAlphabet) {
+                const pa = quote.plainAlphabet;
+                const ca = quote.cipherAlphabet;
+                const len = Math.min(pa.length, ca.length);
+                for (let i = 0; i < len; i++) {
+                    const cipherLetter = ca[i];
+                    const plainLetter = pa[i];
+                    correctMapping[cipherLetter] = plainLetter;
+                }
+            } else if (cipherType.includes('K1')) {
+                const kShift = (quotes[quoteIndex] as any).kShift ?? 0;
                 if (cipherType.includes('Xenocrypt')) {
 
                     const plainAlphabet = generateKeywordAlphabet(keyword) + 'Ñ';
-                    const cipherAlphabet = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ';
+                    const baseCipher = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ';
+                    const cipherAlphabet = baseCipher.slice(kShift) + baseCipher.slice(0, kShift);
                     
 
                     for (let i = 0; i < 27; i++) {
@@ -133,7 +145,8 @@ export const SubstitutionDisplay = ({
                 } else {
 
                     const plainAlphabet = generateKeywordAlphabet(keyword);
-                    const cipherAlphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                    const baseCipher = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                    const cipherAlphabet = baseCipher.slice(kShift) + baseCipher.slice(0, kShift);
                     
 
                     for (let i = 0; i < 26; i++) {
@@ -143,10 +156,12 @@ export const SubstitutionDisplay = ({
                     }
                 }
             } else if (cipherType.includes('K2')) {
+                const kShift = (quotes[quoteIndex] as any).kShift ?? 0;
                 if (cipherType.includes('Xenocrypt')) {
 
                     const plainAlphabet = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ';
-                    const cipherAlphabet = generateKeywordAlphabet(keyword) + 'Ñ';
+                    const baseCipher = generateKeywordAlphabet(keyword) + 'Ñ';
+                    const cipherAlphabet = baseCipher.slice(kShift) + baseCipher.slice(0, kShift);
                     
 
                     for (let i = 0; i < 27; i++) {
@@ -157,7 +172,8 @@ export const SubstitutionDisplay = ({
                 } else {
 
                     const plainAlphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-                    const cipherAlphabet = generateKeywordAlphabet(keyword);
+                    const baseCipher = generateKeywordAlphabet(keyword);
+                    const cipherAlphabet = baseCipher.slice(kShift) + baseCipher.slice(0, kShift);
                     
 
                     for (let i = 0; i < 26; i++) {
@@ -167,19 +183,22 @@ export const SubstitutionDisplay = ({
                     }
                 }
             } else if (cipherType.includes('K3')) {
+                const kShift = (quotes[quoteIndex] as any).kShift ?? 1;
                 if (cipherType.includes('Xenocrypt')) {
                     const baseAlphabet = generateKeywordAlphabet(keyword);
                     const alphabet = baseAlphabet + 'Ñ';
-                    for (let i = 0; i < 27; i++) {
-                        const shiftedIndex = (i + 1) % 27;
+                    const len = 27;
+                    for (let i = 0; i < len; i++) {
+                        const shiftedIndex = (i + kShift) % len;
                         const cipherLetter = alphabet[shiftedIndex];
                         const plainLetter = alphabet[i];
                         correctMapping[cipherLetter] = plainLetter;
                     }
                 } else {
                     const alphabet = generateKeywordAlphabet(keyword);
-                    for (let i = 0; i < 26; i++) {
-                        const shiftedIndex = (i + 1) % 26;
+                    const len = 26;
+                    for (let i = 0; i < len; i++) {
+                        const shiftedIndex = (i + kShift) % len;
                         const cipherLetter = alphabet[shiftedIndex];
                         const plainLetter = alphabet[i];
                         correctMapping[cipherLetter] = plainLetter;
@@ -378,7 +397,7 @@ export const SubstitutionDisplay = ({
                 />
             )}
             
-            {/* Show original quote after submission */}
+            {/* Show original quote and keyword after submission */}
             {isTestSubmitted && (
                 <div className={`mt-8 p-4 rounded ${
                     darkMode ? 'bg-gray-700/50' : 'bg-gray-50'
@@ -389,6 +408,36 @@ export const SubstitutionDisplay = ({
                     <p className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
                         {quotes[quoteIndex].quote.replace(/\[.*?\]/g, '')}
                     </p>
+                    {quotes[quoteIndex].key && (
+                        <div className="mt-3">
+                            <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                Keyword:
+                            </p>
+                            <p className={`font-mono text-sm ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                                {quotes[quoteIndex].key}
+                            </p>
+                        </div>
+                    )}
+                    {(quotes[quoteIndex].plainAlphabet || quotes[quoteIndex].cipherAlphabet) && (
+                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {quotes[quoteIndex].plainAlphabet && (
+                                <div>
+                                    <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Plain Alphabet:</p>
+                                    <p className={`font-mono text-xs break-all ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                                        {quotes[quoteIndex].plainAlphabet}
+                                    </p>
+                                </div>
+                            )}
+                            {quotes[quoteIndex].cipherAlphabet && (
+                                <div>
+                                    <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Cipher Alphabet:</p>
+                                    <p className={`font-mono text-xs break-all ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                                        {quotes[quoteIndex].cipherAlphabet}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

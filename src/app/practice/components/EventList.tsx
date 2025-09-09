@@ -79,7 +79,7 @@ export default function EventList({
           }`}>
             {(() => {
               const CurrentIcon = (Icons as any)['ClockArrowDown'] || (Icons as any)['History'] || (Icons as any)['Clock'];
-              const AllIcon = (Icons as any)['ClockFading'] || (Icons as any)['ClockDashed'] || (Icons as any)['Clock'];
+              const AllIcon = (Icons as any)['ClockFading'] || (Icons as any)['Archive'] || (Icons as any)['Clock'];
               return (
                 <>
                   <button

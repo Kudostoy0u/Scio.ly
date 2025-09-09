@@ -104,10 +104,7 @@ export function EventDocsClient({ evt, md, meta, toc }: EventDocsClientProps) {
             <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>Download a printable, rule-compliant sample notesheet. Customize with your notes.</p>
             <div className="flex gap-3">
               <Link className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" href={`/docs/${evt.slug}/notesheet.pdf`} prefetch={false}>
-                Download PDF
-              </Link>
-              <Link className={`px-4 py-2 rounded border hover:bg-gray-50 ${darkMode ? 'border-gray-700 text-gray-100 hover:bg-gray-800' : 'border-gray-300 text-gray-900'}`} href={`/docs/${evt.slug}/notesheet`} prefetch={false}>
-                Preview in browser
+                See notesheet
               </Link>
             </div>
           </section>

@@ -393,7 +393,8 @@ export default function TestConfiguration({
             selectedEvent?.name === 'Dynamic Planet - Oceanography' ||
             selectedEvent?.name === 'Water Quality - Freshwater' ||
             selectedEvent?.name === 'Remote Sensing' ||
-            selectedEvent?.name === 'Circuit Lab') && (
+            selectedEvent?.name === 'Circuit Lab' ||
+            selectedEvent?.name === 'Astronomy') && (
             <div>
               <label htmlFor="idPercentage" className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 Picture Questions
@@ -733,8 +734,7 @@ export default function TestConfiguration({
                           const divisionCOnlyAll: QuoteData['cipherType'][] = [
                             "Hill 2x2",
                             "Hill 3x3",
-                            "K3 Aristocrat",
-                            "K3 Xenocrypt"
+                            "K3 Aristocrat"
                           ];
                           const divisionCOnlyCiphers = divisionCOnlyAll.filter(cipher => !disabledCiphers.includes(cipher));
                           
@@ -750,12 +750,8 @@ export default function TestConfiguration({
                             "Random Aristocrat",
                             "K1 Patristocrat",
                             "K2 Patristocrat",
-                            "Random Patristocrat",
-                            "K3 Patristocrat",
                             "K1 Xenocrypt",
                             "K2 Xenocrypt",
-                            "Random Xenocrypt",
-                            "K3 Xenocrypt",
                             "Nihilist",
                             "Porta"
                           ];

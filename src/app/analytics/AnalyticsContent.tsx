@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Header from '@/app/components/Header';
-import EloViewer from './components/EloViewer';
-import type { EloData } from './types/elo';
+import EloViewer from '../teams/components/EloViewer';
+import type { EloData } from '../teams/types/elo';
 import { useTheme } from '@/app/contexts/ThemeContext';
-import { loadEloData } from './utils/dataLoader';
+import { loadEloData } from '../teams/utils/dataLoader';
 
-export default function TeamsContent() {
+export default function AnalyticsContent() {
   const [eloData, setEloData] = useState<EloData | null>(null);
   const [metadata, setMetadata] = useState<any>(null);
   const [loading, setLoading] = useState(true);

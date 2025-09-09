@@ -6,19 +6,19 @@ export const useProgressCalculation = (quotes: QuoteData[]) => {
   const calculateQuoteProgress = (quote: QuoteData): number => {
     if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Nihilist', 'Fractionated Morse', 'Xenocrypt'].includes(quote.cipherType)) {
       const totalLetters = [...new Set(quote.encrypted.match(/[A-Z]/g) || [])].length;
-      const filledLetters = quote.solution ? Object.keys(quote.solution).length : 0;
+      const filledLetters = quote.solution ? Object.values(quote.solution).filter(value => value && value.trim() !== '').length : 0;
       return totalLetters > 0 ? (filledLetters / totalLetters) * 100 : 0;
     } else if (quote.cipherType === 'Hill 2x2') {
 
       const matrixSize = 4; // 2x2 = 4 cells
       const matrixProgress = quote.hillSolution?.matrix.reduce((acc, row) => 
         acc + row.filter(cell => cell !== '').length, 0) || 0;
-      const plaintextProgress = Object.keys(quote.hillSolution?.plaintext || {}).length / 
+      const plaintextProgress = Object.values(quote.hillSolution?.plaintext || {}).filter(value => value && value.trim() !== '').length / 
         (quote.encrypted.match(/[A-Z]/g)?.length || 1);
       return ((matrixProgress / matrixSize) * 50) + (plaintextProgress * 50);
     } else if (quote.cipherType === 'Hill 3x3') {
 
-      const plaintextProgress = Object.keys(quote.hillSolution?.plaintext || {}).length / 
+      const plaintextProgress = Object.values(quote.hillSolution?.plaintext || {}).filter(value => value && value.trim() !== '').length / 
         (quote.encrypted.match(/[A-Z]/g)?.length || 1);
       return plaintextProgress * 100;
     } else if (quote.cipherType === 'Complete Columnar') {
@@ -29,8 +29,28 @@ export const useProgressCalculation = (quotes: QuoteData[]) => {
     } else if (quote.cipherType === 'Nihilist') {
 
       const originalLength = quote.quote.toUpperCase().replace(/[^A-Z]/g, '').length;
-      const filledPositions = Object.keys(quote.nihilistSolution || {}).length;
+      const filledPositions = Object.values(quote.nihilistSolution || {}).filter(value => value && value.trim() !== '').length;
       return originalLength > 0 ? (filledPositions / originalLength) * 100 : 0;
+    } else if (quote.cipherType === 'Checkerboard') {
+
+      const originalLength = quote.quote.toUpperCase().replace(/[^A-Z]/g, '').length;
+      const filledPositions = Object.values(quote.checkerboardSolution || {}).filter(value => value && value.trim() !== '').length;
+      return originalLength > 0 ? (filledPositions / originalLength) * 100 : 0;
+    } else if (quote.cipherType === 'Cryptarithm') {
+
+      const totalDigits = quote.cryptarithmData?.digitGroups.reduce((acc, group) => acc + group.digits.length, 0) || 0;
+      const filledDigits = Object.values(quote.cryptarithmSolution || {}).filter(value => value && value.trim() !== '').length;
+      return totalDigits > 0 ? (filledDigits / totalDigits) * 100 : 0;
+    } else if (quote.cipherType === 'Baconian') {
+
+      const originalLength = quote.quote.toUpperCase().replace(/[^A-Z]/g, '').length;
+      const filledPositions = Object.values(quote.solution || {}).filter(value => value && value.trim() !== '').length;
+      return originalLength > 0 ? (filledPositions / originalLength) * 100 : 0;
+    } else if (quote.cipherType === 'Porta') {
+
+      const totalLetters = [...new Set(quote.encrypted.match(/[A-Z]/g) || [])].length;
+      const filledLetters = quote.solution ? Object.values(quote.solution).filter(value => value && value.trim() !== '').length : 0;
+      return totalLetters > 0 ? (filledLetters / totalLetters) * 100 : 0;
     } else {
       return 0;
     }

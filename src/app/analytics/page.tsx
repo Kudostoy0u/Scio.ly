@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import TeamsContent from '@/app/teams/TeamsContent';
+import AnalyticsContent from './AnalyticsContent';
 
 export const metadata: Metadata = {
   title: 'Scio.ly | Analytics',
@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 };
 
 export default function AnalyticsPage() {
-  return <TeamsContent />;
+  return <AnalyticsContent />;
 }
 
 

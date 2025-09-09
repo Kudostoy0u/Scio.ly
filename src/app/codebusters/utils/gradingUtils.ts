@@ -126,7 +126,7 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
   let filledInputs = 0;
 
 
-  if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt'].includes(quote.cipherType)) {
+  if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt', 'K3 Xenocrypt'].includes(quote.cipherType)) {
     if (quote.solution && Object.keys(quote.solution).length > 0) {
 
       const uniqueLetters = new Set(quote.encrypted.replace(/[^A-Z]/g, ''));
@@ -171,21 +171,21 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
           }
           const expectedPlainLetter = String.fromCharCode(((aInverse * (cipherLetter.charCodeAt(0) - 65 - b + 26)) % 26) + 65);
           isCorrect = userAnswer === expectedPlainLetter;
-        } else if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'K1 Xenocrypt', 'K2 Xenocrypt'].includes(quote.cipherType)) {
+        } else if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'K1 Xenocrypt', 'K2 Xenocrypt', 'K3 Xenocrypt'].includes(quote.cipherType)) {
 
           const keyword = quote.key || '';
-          const plainAlphabet = generateKeywordAlphabet(keyword);
-          const cipherAlphabet = quote.cipherType.includes('K1') || quote.cipherType.includes('K3') 
-            ? 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 
-            : generateKeywordAlphabet(keyword);
-          
-
-          const shift = quote.cipherType.includes('K3') ? 1 : 0;
-          const shiftedCipherAlphabet = cipherAlphabet.slice(shift) + cipherAlphabet.slice(0, shift);
-          
-          const cipherIndex = shiftedCipherAlphabet.indexOf(cipherLetter);
-          if (cipherIndex !== -1) {
-            const expectedPlainLetter = plainAlphabet[cipherIndex];
+          const isXeno = quote.cipherType.includes('Xenocrypt');
+          const basePlain = quote.cipherType.includes('K1') || quote.cipherType.includes('K3')
+            ? (isXeno ? generateKeywordAlphabet(keyword) + 'Ñ' : generateKeywordAlphabet(keyword))
+            : (isXeno ? 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ' : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+          const baseCipher = quote.cipherType.includes('K2') || quote.cipherType.includes('K3')
+            ? (isXeno ? generateKeywordAlphabet(keyword) + 'Ñ' : generateKeywordAlphabet(keyword))
+            : (isXeno ? 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ' : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+          const shift = typeof (quote as any).kShift === 'number' ? (quote as any).kShift : (quote.cipherType.includes('K3') ? 1 : 0);
+          const rotatedCipher = baseCipher.slice(shift) + baseCipher.slice(0, shift);
+          const idx = rotatedCipher.indexOf(cipherLetter);
+          if (idx !== -1) {
+            const expectedPlainLetter = basePlain[idx];
             isCorrect = userAnswer === expectedPlainLetter;
           }
         } else if (['Random Aristocrat', 'Random Patristocrat', 'Random Xenocrypt'].includes(quote.cipherType) && quote.key) {

@@ -520,7 +520,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division, metadata }) =>
           Team Performance Analysis
         </h1>
         <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
-          Track team performance across seasons and events
+          Track team performance across seasons and events.
         </p>
       </div>
 
