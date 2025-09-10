@@ -28,6 +28,17 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
     const { darkMode } = useTheme();
     const [focusedGroupIndex, setFocusedGroupIndex] = useState<number | null>(null);
 
+    const toGraphemes = (str: string): string[] => {
+        try {
+            // Use grapheme segmentation so multi-codepoint emojis count as a single symbol
+            // Fallback to Array.from if Intl.Segmenter is unavailable
+            const seg: any = new (Intl as any).Segmenter(undefined, { granularity: 'grapheme' });
+            return Array.from(seg.segment(str), (s: any) => s.segment);
+        } catch {
+            return Array.from(str);
+        }
+    };
+
     const baconianData = useMemo(() => {
         const quote = quotes[quoteIndex];
         if (!quote) return { originalQuote: '', originalBinaryGroups: [], binaryGroups: [], binaryType: '' };
@@ -75,9 +86,18 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
         const storedGroups = (quote.encrypted || '').trim().length > 0 
             ? (quote.encrypted as string).trim().split(/\s+/)
             : null;
-        const filteredGroups = storedGroups && storedGroups.length > 0
+        let filteredGroups = storedGroups && storedGroups.length > 0
             ? storedGroups
             : binaryGroups.map(applyBinaryFilter);
+
+        // Ensure groups align exactly with 5-bit Baconian groups
+        // If the stored groups length doesn't match, regenerate deterministically from the pattern
+        if (filteredGroups.length !== binaryGroups.length) {
+            filteredGroups = binaryGroups.map(applyBinaryFilter);
+        }
+
+        // Clamp to the exact number of plaintext groups so no extras render or get graded
+        filteredGroups = filteredGroups.slice(0, binaryGroups.length);
         
         return {
             originalQuote: cleanedQuote,
@@ -145,7 +165,7 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
                             <div className={`text-xs sm:text-sm mb-1 font-mono ${
                                 darkMode ? 'text-gray-400' : 'text-gray-600'
                             } ${baconianData.binaryType && baconianSchemes.schemes.emoji.some(s => s.type === baconianData.binaryType) ? 'baconian-emoji' : ''}`}>
-                                {Array.from(group).map((char, j) => {
+                                {toGraphemes(group).slice(0, 5).map((char, j) => {
 
                                     const allSchemes = [
                                         ...baconianSchemes.schemes.traditional,

@@ -86,6 +86,34 @@ export const useHintSystem = (
     return null;
   };
 
+  // Choose crib word: 50% min length 4, 50% min length 5; otherwise longest word
+  const chooseCribWordFromQuote = (raw: string): string => {
+    const words = (raw.match(/[A-Za-z]+/g) || []).map(w => w.toUpperCase());
+    if (words.length === 0) return '';
+    const minLen = Math.random() < 0.5 ? 4 : 5;
+    const candidates = words.filter(w => w.length >= minLen);
+    if (candidates.length > 0) {
+      const minLength = candidates.reduce((m, w) => Math.min(m, w.length), Number.MAX_SAFE_INTEGER);
+      const found = candidates.find(w => w.length === minLength);
+      return found || candidates[0];
+    }
+    // Fallback: pick the longest word
+    return words.reduce((longest, w) => (w.length > longest.length ? w : longest), words[0]);
+  };
+
+  // Ensure a stable crib word is stored on the quote and returned consistently
+  const ensureCribWordForIndex = (index: number, sourceText: string): string => {
+    const existing = (quotes[index] as any).cribWord as string | undefined;
+    if (existing && existing.length > 0) return existing;
+    const cribWord = chooseCribWordFromQuote(sourceText);
+    if (cribWord && cribWord.length > 0) {
+      const newQuotes = quotes.map((q, i) => (i === index ? ({ ...q, cribWord }) as QuoteData : q));
+      setQuotes(newQuotes);
+      return cribWord;
+    }
+    return '';
+  };
+
 
   const getHintContent = useCallback((quote: QuoteData): string => {
     if (!quote) return 'No hint available';
@@ -109,12 +137,10 @@ export const useHintSystem = (
       if (currentHintCount === 0 && (quote as any).baconianBinaryType) {
         return `Binary Type: ${(quote as any).baconianBinaryType}`;
       } else if (currentHintCount >= 1) {
-        const words = (quote.quote.match(/[A-Za-z]+/g) || [])
-          .map(w => w.toUpperCase())
-          .filter(w => w.length >= 3)
-          .sort((a, b) => a.length - b.length);
-        if (words.length > 0) {
-          return `Crib: ${words[0]}`;
+        const idx = quotes.indexOf(quote);
+        const cribWord = ensureCribWordForIndex(idx, quote.quote);
+        if (cribWord) {
+          return `Crib: ${cribWord}`;
         }
       }
 
@@ -134,7 +160,9 @@ export const useHintSystem = (
           return `Second Crib: ${cribWord}`;
         } else {
 
-          return `Crib: ${words[0]}`;
+          const idx = quotes.indexOf(quote);
+          const cribWord = ensureCribWordForIndex(idx, quote.quote);
+          return `Crib: ${cribWord}`;
         }
       }
 
@@ -142,46 +170,40 @@ export const useHintSystem = (
 
 
     if (quote.cipherType === 'Affine') {
-      const words = (quote.quote.match(/[A-Za-z]+/g) || [])
-        .map(w => w.toUpperCase())
-        .sort((a, b) => a.length - b.length);
-      
-      if (words.length > 0) {
-
-        const wordsWith4Plus = words.filter(w => w.length >= 4);
-        if (wordsWith4Plus.length > 0) {
-          return `Crib: ${wordsWith4Plus[0]}`;
-        } else {
-
-          return `Crib: ${words[words.length - 1]}`;
-        }
+      const idx = quotes.indexOf(quote);
+      const cribWord = ensureCribWordForIndex(idx, quote.quote);
+      if (cribWord) {
+        return `Crib: ${cribWord}`;
       }
 
     }
 
 
-    let crib = find5LetterCrib(cipherText, plainText);
-    if (crib) return `Crib: ${crib}`;
-
-    crib = find3LetterCrib(cipherText, plainText);
-    if (crib) return `Crib: ${crib}`;
-
-    crib = find2LetterCrib(cipherText, plainText);
-    if (crib) return `Crib: ${crib}`;
-
-    crib = findWordCrib(cipherText, plainText);
-    if (crib) return `Crib: ${crib}`;
-
-
-    if (quote.cipherType === 'Random Xenocrypt' || quote.cipherType === 'K1 Xenocrypt' || quote.cipherType === 'K2 Xenocrypt') {
-      crib = findSpanishWordCrib(cipherText, plainText);
-      if (crib) return `Crib: ${crib}`;
+    // General crib rule for all other ciphers (avoid single-character cribs)
+    {
+      const idx = quotes.indexOf(quote);
+      const cribWord = ensureCribWordForIndex(idx, quote.quote);
+      if (cribWord) return `Crib: ${cribWord}`;
     }
 
-    crib = findSingleLetterCrib(cipherText, plainText);
-    if (crib) return `Crib: ${crib}`;
 
-    return 'No crib found';
+    // Xenocrypts: normalized Spanish letters; still apply min 4/5 rule
+    if (quote.cipherType === 'Random Xenocrypt' || quote.cipherType === 'K1 Xenocrypt' || quote.cipherType === 'K2 Xenocrypt') {
+      const normalized = quote.quote
+        .toUpperCase()
+        .replace(/Á/g, 'A')
+        .replace(/É/g, 'E')
+        .replace(/Í/g, 'I')
+        .replace(/Ó/g, 'O')
+        .replace(/Ú/g, 'U')
+        .replace(/Ü/g, 'U')
+        .replace(/Ñ/g, 'N');
+      const idx = quotes.indexOf(quote);
+      const cribWord = ensureCribWordForIndex(idx, normalized);
+      if (cribWord) return `Crib: ${cribWord}`;
+    }
+
+    return 'No hint found';
   }, [activeHints, quotes, hintCounts]);
 
 

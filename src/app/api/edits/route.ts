@@ -134,10 +134,49 @@ export async function POST(request: NextRequest) {
     let isValid = false;
     let aiReason = '';
 
-    if (body.bypass) {
+    const toText = (opts: string[] | undefined, answers: unknown[]): string[] => {
+      if (!opts || opts.length === 0) return answers.map(a => String(a));
+      return answers.map(a => {
+        if (typeof a === 'number') return (a >= 0 && a < opts.length) ? opts[a] : String(a);
+        const s = String(a);
+        const idx = opts.map(o => o.toLowerCase()).indexOf(s.toLowerCase());
+        return idx >= 0 ? opts[idx] : s;
+      });
+    };
+
+    const arraysEqual = (a?: string[], b?: string[]) => {
+      if (!a && !b) return true;
+      if (!a || !b) return false;
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) { if (a[i] !== b[i]) return false; }
+      return true;
+    };
+
+    let canBypass = !!body.bypass;
+    if ((body as any).aiSuggestion) {
+      try {
+        const ai = (body as any).aiSuggestion as { question: string; options?: string[]; answers: string[] };
+        const aiQ = String(ai.question || '');
+        const aiOpts = Array.isArray(ai.options) ? ai.options.map(String) : undefined;
+        const aiAns = Array.isArray(ai.answers) ? ai.answers.map(String) : [];
+
+        const editedQ = String((body.editedQuestion as any)?.question || '');
+        const editedOpts = Array.isArray((body.editedQuestion as any)?.options) ? ((body.editedQuestion as any)?.options as unknown[]).map(String) : undefined;
+        const editedAnsRaw = Array.isArray((body.editedQuestion as any)?.answers) ? ((body.editedQuestion as any)?.answers as unknown[]) : [];
+        const editedAnsText = toText(editedOpts, editedAnsRaw);
+
+        const matches = editedQ === aiQ && arraysEqual(editedOpts, aiOpts) && arraysEqual(editedAnsText, aiAns);
+        console.log('🔒 [EDIT/SUBMIT] AI bypass verification:', { matches, editedAnsText, aiAns });
+        if (matches) canBypass = true;
+      } catch (e) {
+        console.log('⚠️ [EDIT/SUBMIT] AI bypass verification failed:', e);
+      }
+    }
+
+    if (canBypass) {
       isValid = true;
-      aiReason = 'Edit bypassed AI validation and was accepted by administrator';
-      console.log('🔧 [EDIT/SUBMIT] Bypass mode: Edit accepted without AI validation');
+      aiReason = 'Edit accepted!';
+      console.log('🤖 [EDIT/SUBMIT] AI bypass mode: Edit accepted as untampered AI suggestion');
     } else {
 
       if (geminiService.isAvailable()) {

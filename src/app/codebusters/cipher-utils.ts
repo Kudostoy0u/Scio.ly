@@ -344,12 +344,15 @@ export const encryptFractionatedMorse = (text: string): { encrypted: string; key
 
     let encrypted = '';
     for (const triplet of triplets) {
+        // Skip pure separators; do not assign letters to 'xxx'
+        if (triplet === 'xxx') continue;
 
         if (tripletToLetter[triplet]) {
             encrypted += tripletToLetter[triplet];
         } else {
-
             const letter = shuffledAlphabet[alphabetIndex];
+            // Guard against overflow (should not occur since non-'xxx' triplets max at 26)
+            if (!letter) break;
             tripletToLetter[triplet] = letter;
             letterToTriplet[letter] = triplet;
             encrypted += letter;

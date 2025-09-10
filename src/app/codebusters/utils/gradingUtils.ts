@@ -125,6 +125,33 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
   let correctInputs = 0;
   let filledInputs = 0;
 
+  // Special grading: keyword-only ciphers
+  if (quote.askForKeyword && quote.key) {
+    const keyStr = (quote.key || '').toUpperCase();
+    const userStr = (quote.keywordSolution || '').toUpperCase();
+
+    totalInputs = keyStr.length;
+    for (let i = 0; i < totalInputs; i++) {
+      const expected = keyStr[i] || '';
+      const provided = userStr[i] || '';
+      if (provided && provided.trim().length > 0) {
+        filledInputs++;
+        if (provided === expected) correctInputs++;
+      }
+    }
+
+    const attemptedScore = totalInputs > 0 ? (filledInputs / totalInputs) * questionPointValue : 0;
+    const score = filledInputs > 0 ? (correctInputs / filledInputs) * attemptedScore : 0;
+
+    return {
+      totalInputs,
+      correctInputs,
+      filledInputs,
+      score,
+      maxScore: questionPointValue,
+      attemptedScore
+    };
+  }
 
   if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt', 'K3 Xenocrypt'].includes(quote.cipherType)) {
     if (quote.solution && Object.keys(quote.solution).length > 0) {

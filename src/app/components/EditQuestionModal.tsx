@@ -11,7 +11,7 @@ import { geminiService, EditSuggestion, Question } from '@/app/utils/geminiServi
 interface EditQuestionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (editedQuestion: Question, reason: string, originalQuestion: Question) => Promise<{
+  onSubmit: (editedQuestion: Question, reason: string, originalQuestion: Question, aiBypass?: boolean, aiSuggestion?: { question: string; options?: string[]; answers: string[]; answerIndices?: number[] }) => Promise<{
     reason: string; success: boolean; message: string; 
 }>;
   darkMode: boolean;
@@ -44,7 +44,10 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<EditSuggestion | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
-
+  
+  // Track if AI suggestions have been tampered with
+  const [aiSuggestionsApplied, setAiSuggestionsApplied] = useState(false);
+  const [suggestionsTampered, setSuggestionsTampered] = useState(false);
 
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
 
@@ -83,6 +86,46 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
     }
   }, [question, isOpen, canEditAnswers]);
 
+  // Detect when user tampers with AI suggestions
+  useEffect(() => {
+    if (aiSuggestionsApplied && suggestions && !suggestionsTampered) {
+      // Check if current values differ from AI suggestions
+      const questionChanged = editedQuestion !== suggestions.suggestedQuestion;
+      const optionsChanged = suggestions.suggestedOptions && 
+        (editedOptions.length !== suggestions.suggestedOptions.length ||
+         editedOptions.some((opt, i) => opt !== suggestions.suggestedOptions?.[i]));
+      
+      let answersChanged = false;
+      if (canEditAnswers) {
+        if (isFRQ) {
+          answersChanged = frqAnswer !== String(suggestions.suggestedAnswers[0] || '');
+        } else if (suggestions.suggestedOptions) {
+          // Check if current selected indices match the AI suggested text answers
+          const expectedIndices = computeCorrectAnswerIndices(
+            suggestions.suggestedOptions,
+            suggestions.suggestedAnswers as unknown[]
+          );
+          answersChanged = !correctAnswers.every(idx => expectedIndices.includes(idx)) ||
+                          !expectedIndices.every(idx => correctAnswers.includes(idx));
+        }
+      }
+      
+      console.log('🔍 [TAMPER-CHECK]', {
+        questionChanged,
+        optionsChanged, 
+        answersChanged,
+        currentAnswers: correctAnswers,
+        suggestedAnswers: suggestions.suggestedAnswers,
+        expectedIndices: suggestions.suggestedOptions ? computeCorrectAnswerIndices(suggestions.suggestedOptions, suggestions.suggestedAnswers as unknown[]) : []
+      });
+      
+      if (questionChanged || optionsChanged || answersChanged) {
+        console.log('🚨 [TAMPER-DETECTED] Setting suggestionsTampered to true');
+        setSuggestionsTampered(true);
+      }
+    }
+  }, [editedQuestion, editedOptions, correctAnswers, frqAnswer, aiSuggestionsApplied, suggestions, suggestionsTampered, isFRQ, canEditAnswers]);
+
   const resetForm = () => {
     setEditedQuestion('');
     setEditedOptions([]);
@@ -95,6 +138,8 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
     setSuggestions(null);
     setShowSuggestions(false);
     setIsLoadingSuggestions(false);
+    setAiSuggestionsApplied(false);
+    setSuggestionsTampered(false);
 
     setCurrentImageUrl('');
 
@@ -104,21 +149,29 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
   const computeCorrectAnswerIndices = (options: string[], answers: unknown[]): number[] => {
     if (!Array.isArray(options) || options.length === 0 || !Array.isArray(answers)) return [];
 
+    console.log('🔍 [COMPUTE-INDICES] Input:', { options, answers });
+
     const zeroBasedNums = answers
       .map(a => (typeof a === 'number' ? a : (typeof a === 'string' && /^\d+$/.test(a) ? parseInt(a, 10) : null)))
       .filter((n): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n < options.length);
     if (zeroBasedNums.length > 0) {
+      console.log('🔍 [COMPUTE-INDICES] Using numeric indices:', zeroBasedNums);
       return Array.from(new Set(zeroBasedNums)).sort((a, b) => a - b);
     }
 
     const lowerOptions = options.map(o => o.toLowerCase());
     const indices = answers
       .map(a => {
-        const idx = lowerOptions.indexOf(String(a).toLowerCase());
+        const str = String(a);
+        const idx = lowerOptions.indexOf(str.toLowerCase());
+        console.log('🔍 [COMPUTE-INDICES] Text match:', { searchFor: str, foundAt: idx, inOptions: lowerOptions });
         return idx >= 0 ? idx : null;
       })
       .filter((x): x is number => typeof x === 'number');
-    return Array.from(new Set(indices)).sort((a, b) => a - b);
+    
+    const result = Array.from(new Set(indices)).sort((a, b) => a - b);
+    console.log('🔍 [COMPUTE-INDICES] Final result:', result);
+    return result;
   };
 
   const handleClose = () => {
@@ -165,6 +218,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
           suggestions.suggestedOptions,
           suggestions.suggestedAnswers as unknown[]
         );
+        console.log('🔍 [APPLY-SUGGESTIONS] Setting indices:', indices);
         setCorrectAnswers(indices);
       }
     } else {
@@ -178,6 +232,10 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
 
     const aiReason = `${suggestions.reasoning || 'No reasoning provided'}`;
     setReason(prev => prev + aiReason);
+    
+    // Mark that AI suggestions have been applied and not tampered with
+    setAiSuggestionsApplied(true);
+    setSuggestionsTampered(false);
     
     toast.success('AI suggestions applied! Please review and adjust as needed.');
   };
@@ -208,7 +266,31 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
 
       toast.info('Judging edits');
 
-      const submitPromise = onSubmit(editedQuestionData, reason.trim() || "User did not specify a reason", question);
+      // Check if we can bypass AI validation (untampered AI suggestions)
+      const canBypassValidation = aiSuggestionsApplied && !suggestionsTampered;
+
+      console.log('🔍 [EDIT-MODAL] Bypass check:', {
+        aiSuggestionsApplied,
+        suggestionsTampered,
+        canBypassValidation
+      });
+
+      const aiSuggestionPayload = suggestions && aiSuggestionsApplied && !suggestionsTampered ? {
+        question: suggestions.suggestedQuestion,
+        options: suggestions.suggestedOptions,
+        answers: (suggestions.suggestedAnswers as unknown[]).map(String),
+        answerIndices: suggestions.suggestedOptions 
+          ? computeCorrectAnswerIndices(suggestions.suggestedOptions, suggestions.suggestedAnswers as unknown[])
+          : undefined,
+      } : undefined;
+
+      const submitPromise = onSubmit(
+        editedQuestionData, 
+        reason.trim() || "User did not specify a reason", 
+        question,
+        canBypassValidation,
+        aiSuggestionPayload
+      );
       handleClose();
       submitPromise
         .then((result) => {

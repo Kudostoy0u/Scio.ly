@@ -7,7 +7,6 @@ export function renderBinaryGroup(binaryGroup: string, scheme: BaconianScheme): 
       return binaryGroup.replace(/A/g, scheme.zero as string).replace(/B/g, scheme.one as string);
       
     case 'category':
-
       return binaryGroup.split('').map((char, index) => {
         const cacheKey = `${scheme.type}_${char}_${index}`;
         if (!categoryLetterCache.has(cacheKey)) {
@@ -23,15 +22,13 @@ export function renderBinaryGroup(binaryGroup: string, scheme: BaconianScheme): 
       }).join('');
       
     case 'set':
-
-      const zeroSet = Array.isArray(scheme.zero) ? scheme.zero : [scheme.zero];
-      const oneSet = Array.isArray(scheme.one) ? scheme.one : [scheme.one];
-      return binaryGroup.split('').map((char, index) => {
-        if (char === 'A') {
-          return zeroSet[index % zeroSet.length];
-        } else {
-          return oneSet[index % oneSet.length];
-        }
+      // For emoji/symbol sets, select a random item from the set per bit to avoid repetition patterns
+      // Also guard against undefined values by falling back to the first item when needed
+      const zeroSet = (Array.isArray(scheme.zero) ? scheme.zero : [scheme.zero]).filter(Boolean) as string[];
+      const oneSet = (Array.isArray(scheme.one) ? scheme.one : [scheme.one]).filter(Boolean) as string[];
+      const pick = (arr: string[]) => arr.length ? arr[Math.floor(Math.random() * arr.length)] : '';
+      return binaryGroup.split('').map((char) => {
+        return char === 'A' ? (pick(zeroSet) || zeroSet[0] || '') : (pick(oneSet) || oneSet[0] || '');
       }).join('');
       
     case 'formatting':

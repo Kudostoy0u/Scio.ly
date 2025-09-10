@@ -571,18 +571,23 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     setIsEditModalOpen(true);
   };
 
-  const handleEditSubmit = async (editedQuestion: Question, reason: string, originalQuestion: Question): Promise<{ success: boolean; message: string; reason: string; }> => {
+  const handleEditSubmit = async (editedQuestion: Question, reason: string, originalQuestion: Question, aiBypass?: boolean, aiSuggestion?: { question: string; options?: string[]; answers: string[]; answerIndices?: number[] }): Promise<{ success: boolean; message: string; reason: string; }> => {
     try {
+      console.log('🔍 [CONTENT] Edit submit with aiBypass:', aiBypass, 'aiSuggestion:', aiSuggestion);
+      const payload = {
+        originalQuestion: originalQuestion,
+        editedQuestion: editedQuestion,
+        reason: reason,
+        event: routerData.eventName,
+        bypass: !!aiBypass,
+        aiSuggestion
+      } as any;
+      console.log('🔍 [CONTENT] Final POST body to /api/report/edit:', payload);
+      
       const response = await fetch(api.reportEdit, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          originalQuestion: originalQuestion,
-          editedQuestion: editedQuestion,
-          reason: reason,
-          event: routerData.eventName,
-          bypass: false
-        }),
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();

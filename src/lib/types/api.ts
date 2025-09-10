@@ -112,6 +112,12 @@ export interface EditRequest {
   editedQuestion: Record<string, unknown>;
   reason?: string;
   bypass?: boolean;
+  aiSuggestion?: {
+    question: string;
+    options?: string[];
+    answers: string[];
+    answerIndices?: number[];
+  };
 }
 
 export interface EditResponse {
@@ -131,6 +137,12 @@ export interface ReportEditRequest {
   event: string;
   reason?: string;
   bypass?: boolean;
+  aiSuggestion?: {
+    question: string;
+    options?: string[];
+    answers: string[];
+    answerIndices?: number[];
+  };
 }
 
 export interface ReportRemoveRequest {

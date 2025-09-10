@@ -1086,109 +1086,135 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   };
 
   const handleQuestionRemoved = (questionIndex: number) => {
+    const fetchReplacement = async (): Promise<Question | null> => {
+      try {
+        const typesSel = (routerData.types as string) || 'multiple-choice';
+        const requestCount = 50;
+        const params = buildApiParams({ ...routerData }, requestCount);
+        const apiUrl = `${api.questions}?${params}`;
 
-    setData(prevData => {
-      const newData = prevData.filter((_, index) => index !== questionIndex);
+        const existingQuestions = data.map(q => q.question);
+        const isOffline = !navigator.onLine;
+        let pool: Question[] = [];
 
-      setTimeout(() => {
-        localStorage.setItem('testQuestions', JSON.stringify(newData));
-      }, 0);
-      return newData;
-    });
-
-    setUserAnswers(prevAnswers => {
-      const newAnswers: Record<number, (string | null)[] | null> = {};
-      
-      Object.keys(prevAnswers).forEach(key => {
-        const index = parseInt(key);
-        if (index < questionIndex) {
-          newAnswers[index] = prevAnswers[index];
-        } else if (index > questionIndex) {
-          newAnswers[index - 1] = prevAnswers[index];
+        if (isOffline) {
+          const evt = routerData.eventName as string | undefined;
+          if (evt) {
+            const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            const cached = await getEventOfflineQuestions(slug);
+            if (Array.isArray(cached) && cached.length > 0) {
+              const filtered = typesSel === 'multiple-choice'
+                ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
+                : typesSel === 'free-response'
+                  ? cached.filter((q: any) => !Array.isArray(q.options) || q.options.length === 0)
+                  : cached;
+              pool = filtered;
+            }
+          }
+        } else {
+          let response: Response | null = null;
+          try { response = await fetch(apiUrl); } catch { response = null; }
+          if (response && response.ok) {
+            const j = await response.json();
+            pool = (j?.data || []) as Question[];
+          } else {
+            const evt = routerData.eventName as string | undefined;
+            if (evt) {
+              const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+              const cached = await getEventOfflineQuestions(slug);
+              if (Array.isArray(cached) && cached.length > 0) {
+                const filtered = typesSel === 'multiple-choice'
+                  ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
+                  : typesSel === 'free-response'
+                    ? cached.filter((q: any) => !Array.isArray(q.options) || q.options.length === 0)
+                    : cached;
+                pool = filtered;
+              }
+            }
+          }
         }
-      });
-      
 
-      setTimeout(() => {
-        localStorage.setItem('testUserAnswers', JSON.stringify(newAnswers));
-      }, 0);
-      return newAnswers;
-    });
+        const candidates = (pool as Question[]).filter(q => !existingQuestions.includes(q.question));
+        if (candidates.length === 0) return null;
+        const pick = candidates[Math.floor(Math.random() * candidates.length)];
+        return pick;
+      } catch {
+        return null;
+      }
+    };
 
-    setGradingResults(prevResults => {
-      const newResults: GradingResults = {};
-      
-      Object.keys(prevResults).forEach(key => {
-        const index = parseInt(key);
-        if (index < questionIndex) {
-          newResults[index] = prevResults[index];
-        } else if (index > questionIndex) {
-          newResults[index - 1] = prevResults[index];
-        }
-      });
-      
-      return newResults;
-    });
+    (async () => {
+      const replacement = await fetchReplacement();
+      if (replacement) {
+        setData(prevData => {
+          const newData = [...prevData];
+          newData[questionIndex] = replacement;
+          setTimeout(() => {
+            localStorage.setItem('testQuestions', JSON.stringify(newData));
+          }, 0);
+          return newData;
+        });
 
-    setExplanations(prevExplanations => {
-      const newExplanations: Explanations = {};
-      
-      Object.keys(prevExplanations).forEach(key => {
-        const index = parseInt(key);
-        if (index < questionIndex) {
-          newExplanations[index] = prevExplanations[index];
-        } else if (index > questionIndex) {
-          newExplanations[index - 1] = prevExplanations[index];
-        }
-      });
-      
-      return newExplanations;
-    });
+        setUserAnswers(prev => ({ ...prev, [questionIndex]: null }));
+        setGradingResults(prev => ({ ...prev, [questionIndex]: 0 }));
+        setExplanations(prev => { const c = { ...prev }; delete c[questionIndex]; return c; });
+        setLoadingExplanation(prev => { const c = { ...prev }; delete c[questionIndex]; return c; });
+        setSubmittedReports(prev => { const c = { ...prev }; delete c[questionIndex]; return c; });
+        setSubmittedEdits(prev => { const c = { ...prev }; delete c[questionIndex]; return c; });
+      } else {
+        // fallback to original removal behavior
+        setData(prevData => {
+          const newData = prevData.filter((_, index) => index !== questionIndex);
+          setTimeout(() => {
+            localStorage.setItem('testQuestions', JSON.stringify(newData));
+          }, 0);
+          return newData;
+        });
 
-    setLoadingExplanation(prevLoading => {
-      const newLoading: LoadingExplanation = {};
-      
-      Object.keys(prevLoading).forEach(key => {
-        const index = parseInt(key);
-        if (index < questionIndex) {
-          newLoading[index] = prevLoading[index];
-        } else if (index > questionIndex) {
-          newLoading[index - 1] = prevLoading[index];
-        }
-      });
-      
-      return newLoading;
-    });
+        setUserAnswers(prevAnswers => {
+          const newAnswers: Record<number, (string | null)[] | null> = {};
+          Object.keys(prevAnswers).forEach(key => {
+            const index = parseInt(key);
+            if (index < questionIndex) newAnswers[index] = prevAnswers[index];
+            else if (index > questionIndex) newAnswers[index - 1] = prevAnswers[index];
+          });
+          setTimeout(() => {
+            localStorage.setItem('testUserAnswers', JSON.stringify(newAnswers));
+          }, 0);
+          return newAnswers;
+        });
 
-    setSubmittedReports(prevReports => {
-      const newReports: Record<number, boolean> = {};
-      
-      Object.keys(prevReports).forEach(key => {
-        const index = parseInt(key);
-        if (index < questionIndex) {
-          newReports[index] = prevReports[index];
-        } else if (index > questionIndex) {
-          newReports[index - 1] = prevReports[index];
-        }
-      });
-      
-      return newReports;
-    });
+        setGradingResults(prevResults => {
+          const newResults: GradingResults = {};
+          Object.keys(prevResults).forEach(key => {
+            const index = parseInt(key);
+            if (index < questionIndex) newResults[index] = prevResults[index];
+            else if (index > questionIndex) newResults[index - 1] = prevResults[index];
+          });
+          return newResults;
+        });
 
-    setSubmittedEdits(prevEdits => {
-      const newEdits: Record<number, boolean> = {};
-      
-      Object.keys(prevEdits).forEach(key => {
-        const index = parseInt(key);
-        if (index < questionIndex) {
-          newEdits[index] = prevEdits[index];
-        } else if (index > questionIndex) {
-          newEdits[index - 1] = prevEdits[index];
-        }
-      });
-      
-      return newEdits;
-    });
+        setExplanations(prevExplanations => {
+          const newExplanations: Explanations = {};
+          Object.keys(prevExplanations).forEach(key => {
+            const index = parseInt(key);
+            if (index < questionIndex) newExplanations[index] = prevExplanations[index];
+            else if (index > questionIndex) newExplanations[index - 1] = prevExplanations[index];
+          });
+          return newExplanations;
+        });
+
+        setLoadingExplanation(prevLoading => {
+          const newLoading: LoadingExplanation = {};
+          Object.keys(prevLoading).forEach(key => {
+            const index = parseInt(key);
+            if (index < questionIndex) newLoading[index] = prevLoading[index];
+            else if (index > questionIndex) newLoading[index - 1] = prevLoading[index];
+          });
+          return newLoading;
+        });
+      }
+    })();
   };
 
   const handleEditOpen = (question: Question) => {
@@ -1196,8 +1222,9 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     setIsEditModalOpen(true);
   };
 
-  const handleEditSubmit = async (editedQuestion: Question, reason: string, originalQuestion: Question): Promise<{ success: boolean; message: string; reason: string; }> => {
+  const handleEditSubmit = async (editedQuestion: Question, reason: string, originalQuestion: Question, aiBypass?: boolean, aiSuggestion?: { question: string; options?: string[]; answers: string[]; answerIndices?: number[] }): Promise<{ success: boolean; message: string; reason: string; }> => {
     try {
+      console.log('🔍 [TEST] Edit submit with aiBypass:', aiBypass, 'aiSuggestion:', aiSuggestion);
       const response = await fetch(api.reportEdit, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1206,7 +1233,8 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           editedQuestion: editedQuestion,
           reason: reason,
           event: routerData.eventName,
-          bypass: false
+          bypass: !!aiBypass,
+          aiSuggestion
         }),
       });
 

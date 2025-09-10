@@ -52,6 +52,16 @@ export const FractionatedMorseDisplay = ({
         fractionationTable ? Object.keys(fractionationTable).filter(triplet => triplet !== 'xxx' && !triplet.includes('xxx')).sort() : [], 
         [fractionationTable]
     );
+
+    const validCipherLetters = useMemo(() => {
+        const set = new Set<string>();
+        if (fractionationTable) {
+            Object.values(fractionationTable).forEach((letter) => {
+                if (letter && /^[A-Z]$/.test(letter)) set.add(letter);
+            });
+        }
+        return set;
+    }, [fractionationTable]);
     
 
     const cipherToTriplet: { [key: string]: string } = {};
@@ -246,9 +256,27 @@ export const FractionatedMorseDisplay = ({
                     
 
                     const plaintextLetters = calculatePlaintextLetters(triplets);
+
+                    // Remove trailing inputs that do not correspond to a complete morse letter boundary
+                    // i.e., trailing partial segment that never closes with 'x'
+                    const morseJoined = triplets.join('');
+                    const lastSeparator = morseJoined.lastIndexOf('x');
+                    if (lastSeparator !== -1) {
+                        const trailing = morseJoined.slice(lastSeparator + 1);
+                        const isTrailingPartial = /[.-]/.test(trailing);
+                        if (isTrailingPartial) {
+                            // compute how many triplets that trailing segment spans and drop them
+                            const dropFrom = Math.floor((lastSeparator + 1) / 3);
+                            triplets.splice(dropFrom);
+                        }
+                    }
                     
                     return text.split('').map((char, i) => {
                         const isLetter = /[A-Z]/.test(char);
+                        if (isLetter && fractionationTable && !validCipherLetters.has(char)) {
+                            // Skip rendering inputs for cipher letters that do not map to any triplet
+                            return <div key={i} className="w-5 h-12 sm:w-6 sm:h-14 mt-1" />;
+                        }
                         const value = solution?.[char] || '';
                         const isCorrect = isTestSubmitted && correctMapping[char] && value.toLowerCase() === correctMapping[char].toLowerCase();
                         const isHinted = isLetter && hintedLetters[quoteIndex]?.[char];
