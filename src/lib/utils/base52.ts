@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { questions, idEvents, base52Codes } from '@/lib/db/schema';
-import { eq, and, inArray, sql } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 const BASE = ALPHABET.length; // 52
@@ -121,52 +121,54 @@ export async function getQuestionByCode(code: string): Promise<{ question: any; 
     throw new Error('Invalid type suffix. Expected S or P.');
   }
   
-  // Determine which table the code maps to based on suffix, but we infer the table from the UNION result below
+  // Step 1: Look up mapping to get question id and table name
+  const mapping = await db
+    .select({ questionId: base52Codes.questionId, tableName: base52Codes.tableName })
+    .from(base52Codes)
+    .where(eq(base52Codes.code, code))
+    .limit(1);
 
-  try {
-    // Collapse to a single round-trip using a UNION query
-    const rows = await db.execute(
-      sql<{
-        table_name: 'questions' | 'idEvents';
-        id: string;
-        question: unknown;
-        tournament: string;
-        division: string;
-        options: unknown;
-        answers: unknown;
-        subtopics: unknown;
-        difficulty: number;
-        event: string;
-        random_f: number;
-        created_at: Date | null;
-        updated_at: Date | null;
-      }>`
-        (
-          SELECT 'questions'::text AS table_name, q.*
-          FROM ${sql.identifier('questions')} q
-          JOIN ${sql.identifier('base52_codes')} b ON b.question_id = q.id AND b.table_name = 'questions'
-          WHERE b.code = ${code}
-        )
-        UNION ALL
-        (
-          SELECT 'idEvents'::text AS table_name, i.*
-          FROM ${sql.identifier('id_events')} i
-          JOIN ${sql.identifier('base52_codes')} b ON b.question_id = i.id AND b.table_name = 'idEvents'
-          WHERE b.code = ${code}
-        )
-        LIMIT 1
-      `
-    );
+  if (mapping.length === 0) {
+    throw new Error(`Question not found for code: ${code}`);
+  }
 
-    if (rows.length === 0) {
+  const { questionId, tableName } = mapping[0];
+
+  // Step 2: Fetch the row from the appropriate table by primary key
+  if (tableName === 'questions') {
+    const row = await db
+      .select()
+      .from(questions)
+      .where(eq(questions.id, questionId))
+      .limit(1);
+
+    if (row.length === 0) {
       throw new Error(`Question not found for code: ${code}`);
     }
-
-    const row = rows[0] as any;
-    return { question: row, table: row.table_name };
-  } catch {
-    throw new Error(`Failed to decode question code: ${code}`);
+    return { question: row[0], table: 'questions' };
   }
+
+  if (tableName === 'idEvents') {
+    const row = await db
+      .select()
+      .from(idEvents)
+      .where(eq(idEvents.id, questionId))
+      .limit(1);
+
+    if (row.length === 0) {
+      throw new Error(`Question not found for code: ${code}`);
+    }
+    return { question: row[0], table: 'idEvents' };
+  }
+
+  // Fallback on suffix if an unexpected table name is stored
+  const fallbackTable: 'questions' | 'idEvents' = typeSuffix === 'P' ? 'idEvents' : 'questions';
+  const table = fallbackTable === 'questions' ? questions : idEvents;
+  const row = await db.select().from(table).where(eq(table.id, questionId)).limit(1);
+  if (row.length === 0) {
+    throw new Error(`Question not found for code: ${code}`);
+  }
+  return { question: row[0], table: fallbackTable };
 }
 
 

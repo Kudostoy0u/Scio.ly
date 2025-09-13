@@ -21,8 +21,7 @@ export interface EditSuggestion {
   suggestedQuestion: string;
   suggestedOptions?: string[];
   suggestedAnswers: (number | string)[];
-  reasoning: string;
-  confidence: number;
+  suggestedDifficulty?: number;
 }
 
 export interface ReportAnalysis {
@@ -84,8 +83,7 @@ class GeminiService {
         suggestedQuestion: question.question,
         suggestedOptions: question.options,
         suggestedAnswers: question.answers,
-        reasoning: 'Unable to generate suggestions at this time.',
-        confidence: 0
+        suggestedDifficulty: question.difficulty
       };
     }
   }

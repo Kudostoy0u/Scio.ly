@@ -47,11 +47,8 @@ export async function POST(request: NextRequest) {
       if (result.suggestedAnswers) {
         console.log(`   - Suggested Answers: ${JSON.stringify(result.suggestedAnswers)}`);
       }
-      if (result.reasoning) {
-        console.log(`   - Reasoning: ${result.reasoning}`);
-      }
-      if (result.confidence) {
-        console.log(`   - Confidence: ${result.confidence}`);
+      if ((result as any).suggestedDifficulty !== undefined) {
+        console.log(`   - Suggested Difficulty: ${(result as any).suggestedDifficulty}`);
       }
 
       const response: ApiResponse = {

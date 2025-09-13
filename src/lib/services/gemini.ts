@@ -195,9 +195,8 @@ ANSWER FORMAT REQUIREMENTS:
   suggestedOptions: [] (empty or omitted)
   suggestedAnswers: [ 'mitochondria', 'powerhouse of the cell' ]
 
-Also provide:
-- reasoning: A brief explanation of what changes were made and why
-- confidence: A number between 0.00 and 1.00 indicating how confident you are in your suggestions (1 = very confident, 0 = not confident)`;
+Think very lightly, only as much as needed to turn it into a good question with an accurate answer.
+Also include suggestedDifficulty (0.0-1.0) when you recommend an updated difficulty.`;
 
     let contents: any = prompt;
     
@@ -240,13 +239,12 @@ Also provide:
           type: Type.ARRAY,
           items: { type: Type.STRING }
         },
-        reasoning: { type: Type.STRING },
-        confidence: { type: Type.NUMBER },
+        suggestedDifficulty: { type: Type.NUMBER },
       },
-      propertyOrdering: ["suggestedQuestion", "suggestedOptions", "suggestedAnswers", "reasoning", "confidence"],
+      propertyOrdering: ["suggestedQuestion", "suggestedOptions", "suggestedAnswers", "suggestedDifficulty"],
     };
 
-    return await this.generateStructuredContent(prompt, schema, 'gemini-2.5-flash', contents);
+    return await this.generateStructuredContent(prompt, schema, 'gemini-2.5-flash-lite', contents);
   }
 
 
@@ -424,16 +422,13 @@ CORRECT ANSWER(S): ${answers.join(', ')}`}${hasImage ? `
 IMPORTANT: This question includes an image that you should reference in your explanation. The image contains visual information that is essential for understanding and answering the question correctly.` : ''}
 
 EXPLANATION REQUIREMENTS:
-1. ${hasImage ? 'First, describe what you see in the image and how it relates to the question' : 'Break down the problem into logical steps'}
-2. ${hasImage ? 'Break down the problem into logical steps, referencing specific visual elements from the image' : 'Explain the scientific concepts involved'}
-3. ${hasImage ? 'Explain the scientific concepts involved, connecting them to the visual evidence' : 'Clearly identify the correct answer(s)'}
-4. ${hasImage ? 'Clearly identify the correct answer(s) and explain how the image supports this answer' : 'Explain why the correct answer is right'}
-5. ${hasImage ? 'Briefly address why other options are wrong, using evidence from the image when applicable' : 'Briefly address why other options are wrong'}
-6. Use language appropriate for Science Olympiad students${hasImage ? `
-7. Be specific about visual details, patterns, or features in the image that are relevant to the answer` : ''}
+- Aim for three short paragraphs: (1) what the question gives/asks${hasImage ? ' (include key visual details and how they relate)' : ''}, (2) the reasoning/steps and core concepts, (3) the conclusion stating the correct answer and briefly why other options are wrong (if applicable).
+- If the problem is complex, write more than three paragraphs as needed; if it's a simple recall or "know it or you don't" question, one concise paragraph is fine.
+- Use clear, student-friendly language${hasImage ? ' and reference specific visual features when relevant' : ''}.
 
+Think minimally until you confidently have an accurate answer.
 Provide an educational explanation that helps students understand both the answer and the scientific reasoning behind it${hasImage ? ', with clear references to the visual information provided' : ''}.
-Keep your text-based answer in the explanation field using markdown-based formatting (newlines (\\n) for paragraph structuring, bolding with double asterisks, etc, latex if necessary. no lists using asterisks, use newlines plenty) and do not make it overly long. Keep your thinking short, just figure out the right answer with it asap. Make sure to conclude your explanation appropriately, do not cut it short.`;
+Keep your text-based answer in the explanation field using markdown-based formatting (newlines (\\n) for paragraph structuring, bolding with double asterisks, etc; LaTeX if necessary). Prefer paragraphs over bullet lists and keep it concise while complete. Make sure to conclude your explanation appropriately, do not cut it short.`;
 
     let contents: any = prompt;
     

@@ -659,8 +659,7 @@ GET /api/meta/subtopics?event=Chemistry%20Lab
     "suggestedQuestion": "What is the molecular formula for dihydrogen monoxide?",
     "suggestedOptions": ["H2O", "H2O2", "H2SO4", "H3PO4"],
     "suggestedAnswers": ["H2O"],
-    "reasoning": "Using 'dihydrogen monoxide' makes the question more challenging...",
-    "confidence": 0.85
+    "suggestedDifficulty": 0.4
   }
 }`}
                   </Example>

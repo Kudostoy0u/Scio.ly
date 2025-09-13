@@ -50,6 +50,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
   const [suggestionsTampered, setSuggestionsTampered] = useState(false);
 
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
+  const [autoFetched, setAutoFetched] = useState(false);
 
   useEffect(() => {
     if (question && isOpen) {
@@ -85,6 +86,17 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
       setDifficulty(question.difficulty === 0 ? 0.1 : question.difficulty || 0.5);
     }
   }, [question, isOpen, canEditAnswers]);
+
+  // Auto-fetch and apply AI suggestions when modal opens
+  useEffect(() => {
+    if (isOpen && question && !autoFetched) {
+      setAutoFetched(true);
+      // Fire and forget; internal function handles loading and errors
+      void handleGetSuggestions();
+    }
+    // We intentionally exclude handleGetSuggestions from deps to avoid re-creating effect
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, question, autoFetched]);
 
   // Detect when user tampers with AI suggestions
   useEffect(() => {
@@ -195,6 +207,31 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
       const suggestion = await geminiService.suggestQuestionEdit(questionWithImage, reason);
       setSuggestions(suggestion);
       setShowSuggestions(true);
+      
+      // Auto-apply suggestions immediately
+      setEditedQuestion(suggestion.suggestedQuestion);
+      if (suggestion.suggestedOptions && suggestion.suggestedOptions.length > 0) {
+        setEditedOptions([...suggestion.suggestedOptions]);
+        setIsFRQ(false);
+        if (canEditAnswers) {
+          const indices = computeCorrectAnswerIndices(
+            suggestion.suggestedOptions,
+            suggestion.suggestedAnswers as unknown[]
+          );
+          setCorrectAnswers(indices);
+        }
+      } else {
+        setIsFRQ(true);
+        if (canEditAnswers) {
+          setFrqAnswer(String(suggestion.suggestedAnswers[0] || ''));
+        }
+      }
+      if (typeof suggestion.suggestedDifficulty === 'number') {
+        setDifficulty(suggestion.suggestedDifficulty === 0 ? 0.1 : suggestion.suggestedDifficulty);
+      }
+      setAiSuggestionsApplied(true);
+      setSuggestionsTampered(false);
+      toast.success('AI suggestions applied automatically');
     } catch (error) {
       console.error('Failed to get suggestions:', error);
       toast.error('Failed to generate suggestions. Please continue manually.');
@@ -203,42 +240,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
     }
   };
 
-  const applySuggestions = () => {
-    if (!suggestions) return;
-
-    setEditedQuestion(suggestions.suggestedQuestion);
-    
-    if (suggestions.suggestedOptions) {
-      setEditedOptions([...suggestions.suggestedOptions]);
-      setIsFRQ(false);
-      
-
-      if (canEditAnswers) {
-        const indices = computeCorrectAnswerIndices(
-          suggestions.suggestedOptions,
-          suggestions.suggestedAnswers as unknown[]
-        );
-        console.log('🔍 [APPLY-SUGGESTIONS] Setting indices:', indices);
-        setCorrectAnswers(indices);
-      }
-    } else {
-      setIsFRQ(true);
-
-      if (canEditAnswers) {
-        setFrqAnswer(String(suggestions.suggestedAnswers[0] || ''));
-      }
-    }
-
-
-    const aiReason = `${suggestions.reasoning || 'No reasoning provided'}`;
-    setReason(prev => prev + aiReason);
-    
-    // Mark that AI suggestions have been applied and not tampered with
-    setAiSuggestionsApplied(true);
-    setSuggestionsTampered(false);
-    
-    toast.success('AI suggestions applied! Please review and adjust as needed.');
-  };
+  // applySuggestions removed; auto-apply happens in handleGetSuggestions
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -422,41 +424,17 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-semibold mb-2 text-green-600 dark:text-green-400">Suggested Improvements:</p>
+                      {/* Reasoning removed from AI response; keep area minimal */}
                       <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-                        {suggestions.reasoning || 'No reasoning provided'}
+                        Suggestions generated for this question.
                       </p>
                     </div>
                   </div>
                   
                   <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-600">
-                    <div className="flex items-center space-x-2">
-                      <span className={`text-xs px-3 py-1.5 rounded-full font-medium border ${
-                        (suggestions.confidence || 0) > 0.8
-                          ? darkMode 
-                            ? 'bg-green-800/30 text-green-300 border-green-600' 
-                            : 'bg-transparent text-green-700 border-green-600'
-                          : (suggestions.confidence || 0) > 0.6
-                            ? darkMode 
-                              ? 'bg-yellow-800/30 text-yellow-300 border-yellow-600' 
-                              : 'bg-transparent text-yellow-700 border-yellow-600'
-                            : darkMode 
-                              ? 'bg-red-800/30 text-red-300 border-red-600' 
-                              : 'bg-transparent text-red-700 border-red-600'
-                      }`}>
-                        {Math.round((suggestions.confidence || 0) * 100)}% confidence
-                      </span>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      Suggestions have been auto-applied
                     </div>
-                    
-                    <button
-                      type="button"
-                      onClick={applySuggestions}
-                      className="px-4 py-2 text-sm rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition-colors duration-200 flex items-center space-x-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>Apply Suggestions</span>
-                    </button>
                   </div>
                 </div>
               )
