@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { shareCodes, questions, idEvents } from '@/lib/db/schema';
+import { shareLinks, questions, idEvents } from '@/lib/db/schema';
 import { eq, inArray } from 'drizzle-orm';
 import { ShareCodeRequest, ShareCodeResponse } from '@/lib/types/api';
 
@@ -51,9 +51,9 @@ export async function POST(request: NextRequest) {
 
 
     const existingResult = await db
-      .select({ id: shareCodes.id })
-      .from(shareCodes)
-      .where(eq(shareCodes.code, shareCode));
+      .select({ id: shareLinks.id })
+      .from(shareLinks)
+      .where(eq(shareLinks.code, shareCode));
 
     if (existingResult.length > 0) {
       const response: ShareCodeResponse = {
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     expiresAt.setDate(expiresAt.getDate() + 7);
 
 
-    await db.insert(shareCodes).values({
+    await db.insert(shareLinks).values({
       code: shareCode,
       indices: [],
       testParamsRaw: dataToStore,

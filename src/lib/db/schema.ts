@@ -40,7 +40,7 @@ export const longquotes = pgTable('longquotes', {
 });
 
 
-export const shareCodes = pgTable('share_codes', {
+export const shareLinks = pgTable('share_links', {
   id: uuid('id').primaryKey().defaultRandom(),
   code: text('code').notNull().unique(),
   indices: jsonb('indices'),

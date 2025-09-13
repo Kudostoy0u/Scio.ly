@@ -394,6 +394,7 @@ export const SubstitutionDisplay = ({
                     focusedCipherLetter={focusedCipherLetter}
                     onCipherLetterFocus={setFocusedCipherLetter}
                     onCipherLetterBlur={() => setFocusedCipherLetter(null)}
+                    hintedLetters={hintedLetters}
                 />
             )}
             

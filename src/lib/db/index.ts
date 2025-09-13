@@ -5,9 +5,15 @@ import * as schema from './schema';
 
 const connectionString = process.env.DATABASE_URL!;
 
-const client = postgres(connectionString, {
-  max: 20,
-  idle_timeout: 20,
+declare global {
+  var __pgClient__: ReturnType<typeof postgres> | undefined;
+  var __drizzleDb__: ReturnType<typeof drizzle<typeof schema>> | undefined;
+}
+
+const client = globalThis.__pgClient__ ?? postgres(connectionString, {
+  // Keep footprint small in serverless and avoid connection churn
+  max: 2,
+  idle_timeout: 300,
   connect_timeout: 10,
 
   ssl: (() => {
@@ -24,9 +30,15 @@ const client = postgres(connectionString, {
   max_lifetime: 60 * 30,
 });
 
+if (!globalThis.__pgClient__) {
+  globalThis.__pgClient__ = client;
+}
 
-export const db = drizzle(client, { schema });
+export const db = globalThis.__drizzleDb__ ?? drizzle(client, { schema });
 
+if (!globalThis.__drizzleDb__) {
+  globalThis.__drizzleDb__ = db;
+}
 
 export { client };
 

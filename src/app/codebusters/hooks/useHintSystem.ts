@@ -15,104 +15,26 @@ export const useHintSystem = (
   setHintCounts: (counts: {[questionIndex: number]: number}) => void
 ) => {
 
-  const find2LetterCrib = (cipherText: string, plainText: string) => {
-    for (let i = 0; i < cipherText.length - 1; i++) {
-      const crib = cipherText.substring(i, i + 2);
-      if (plainText.includes(crib)) {
-        return crib;
-      }
-    }
-    return null;
-  };
-
-  const find3LetterCrib = (cipherText: string, plainText: string) => {
-    for (let i = 0; i < cipherText.length - 2; i++) {
-      const crib = cipherText.substring(i, i + 3);
-      if (plainText.includes(crib)) {
-        return crib;
-      }
-    }
-    return null;
-  };
-
-  const find5LetterCrib = (cipherText: string, plainText: string) => {
-    for (let i = 0; i < cipherText.length - 4; i++) {
-      const crib = cipherText.substring(i, i + 5);
-      if (plainText.includes(crib)) {
-        return crib;
-      }
-    }
-    return null;
-  };
-
-  const findSingleLetterCrib = (cipherText: string, plainText: string) => {
-    for (let i = 0; i < cipherText.length; i++) {
-      const crib = cipherText[i];
-      if (plainText.includes(crib)) {
-        return crib;
-      }
-    }
-    return null;
-  };
-
-  const findWordCrib = (cipherText: string, plainText: string) => {
-    const words = plainText.split(' ').filter(word => word.length > 2);
-    for (const word of words) {
-      if (cipherText.includes(word)) {
-        return word;
-      }
-    }
-    return null;
-  };
-
-  const findSpanishWordCrib = (cipherText: string, plainText: string) => {
-
-    const normalizedPlain = plainText
-      .toUpperCase()
-      .replace(/Á/g, 'A')
-      .replace(/É/g, 'E')
-      .replace(/Í/g, 'I')
-      .replace(/Ó/g, 'O')
-      .replace(/Ú/g, 'U')
-      .replace(/Ü/g, 'U')
-      .replace(/Ñ/g, 'N');
-    
-    const words = normalizedPlain.split(' ').filter(word => word.length > 2);
-    for (const word of words) {
-      if (cipherText.includes(word)) {
-        return word;
-      }
-    }
-    return null;
-  };
-
-  // Choose crib word: 50% min length 4, 50% min length 5; otherwise longest word
+  // Deterministic crib word selection: prefer smallest word >=5, else >=4, else longest
   const chooseCribWordFromQuote = (raw: string): string => {
     const words = (raw.match(/[A-Za-z]+/g) || []).map(w => w.toUpperCase());
     if (words.length === 0) return '';
-    const minLen = Math.random() < 0.5 ? 4 : 5;
-    const candidates = words.filter(w => w.length >= minLen);
-    if (candidates.length > 0) {
-      const minLength = candidates.reduce((m, w) => Math.min(m, w.length), Number.MAX_SAFE_INTEGER);
-      const found = candidates.find(w => w.length === minLength);
-      return found || candidates[0];
-    }
-    // Fallback: pick the longest word
-    return words.reduce((longest, w) => (w.length > longest.length ? w : longest), words[0]);
+    const pickWithMin = (min: number) => {
+      const cand = words.filter(w => w.length >= min);
+      if (cand.length === 0) return '';
+      const minLen = cand.reduce((m, w) => Math.min(m, w.length), Number.MAX_SAFE_INTEGER);
+      const first = cand.find(w => w.length === minLen);
+      return first || cand[0];
+    };
+    return pickWithMin(5) || pickWithMin(4) || words.reduce((longest, w) => (w.length > longest.length ? w : longest), words[0]);
   };
 
-  // Ensure a stable crib word is stored on the quote and returned consistently
-  const ensureCribWordForIndex = (index: number, sourceText: string): string => {
-    const existing = (quotes[index] as any).cribWord as string | undefined;
-    if (existing && existing.length > 0) return existing;
-    const cribWord = chooseCribWordFromQuote(sourceText);
-    if (cribWord && cribWord.length > 0) {
-      const newQuotes = quotes.map((q, i) => (i === index ? ({ ...q, cribWord }) as QuoteData : q));
-      setQuotes(newQuotes);
-      return cribWord;
-    }
-    return '';
-  };
+  // Return a stable crib word without mutating state during render
+  const ensureCribWordForIndex = useCallback((index: number, sourceText: string): string => {
+    const q = quotes[index] as any;
+    if (q && typeof q.cribWord === 'string' && q.cribWord.length > 0) return q.cribWord;
+    return chooseCribWordFromQuote(sourceText);
+  }, [quotes]);
 
 
   const getHintContent = useCallback((quote: QuoteData): string => {
@@ -128,9 +50,7 @@ export const useHintSystem = (
       }
     }
 
-    const cipherText = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
-    const plainText = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
-
+    // Removed unused cipherText/plainText to satisfy lint
 
     if (quote.cipherType === 'Baconian') {
       const currentHintCount = hintCounts[quotes.indexOf(quote)] || 0;
@@ -204,7 +124,7 @@ export const useHintSystem = (
     }
 
     return 'No hint found';
-  }, [activeHints, quotes, hintCounts]);
+  }, [activeHints, quotes, hintCounts, ensureCribWordForIndex]);
 
 
   const revealRandomLetter = useCallback((questionIndex: number) => {
@@ -345,20 +265,52 @@ export const useHintSystem = (
         const newQuotes = quotes.map((q, idx) => {
           if (idx !== questionIndex) return q;
           const prevSol = (q.solution || {}) as { [key: number]: string };
+          const prevHinted = (q as any).baconianHinted || {};
           const updated: { [key: number]: string } = { ...prevSol };
+          const updatedHinted: { [key: number]: boolean } = { ...prevHinted } as any;
           groupTokens.forEach((tok, orderIdx) => {
             if (tok === targetToken) {
               const pIdx = groupParsedIdxs[orderIdx];
               updated[pIdx] = correctPlainLetter;
+              updatedHinted[pIdx] = true;
             }
           });
-          return { ...q, solution: updated } as QuoteData;
+          return { ...q, solution: updated, baconianHinted: updatedHinted } as QuoteData;
         });
         setQuotes(newQuotes);
       }
       return;
     }
 
+
+    // For Hill ciphers, we hint plaintext positions (not cipher letters)
+    if ((quote.cipherType === 'Hill 2x2' || quote.cipherType === 'Hill 3x3') && quote.matrix) {
+      const plain = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+      const size = quote.cipherType === 'Hill 2x2' ? 2 : 3;
+      const required = Math.ceil(plain.length / size) * size;
+      const actualSlots = required - (required - plain.length);
+      const current = (quote.hillSolution?.plaintext || {}) as { [key: number]: string };
+      const candidates: number[] = [];
+      for (let i = 0; i < actualSlots; i++) {
+        if (!current[i] || current[i].length === 0) candidates.push(i);
+      }
+      if (candidates.length > 0) {
+        const target = candidates[Math.floor(Math.random() * candidates.length)];
+        const newQuotes = quotes.map((q, idx) => {
+          if (idx !== questionIndex) return q;
+          const prev = q.hillSolution || { matrix: [], plaintext: {} };
+          return {
+            ...q,
+            hillSolution: {
+              matrix: prev.matrix || [],
+              plaintext: { ...(prev.plaintext || {}), [target]: plain[target] }
+            }
+          } as QuoteData;
+        });
+        setQuotes(newQuotes);
+      }
+      return;
+    }
 
     const availableLetters = quote.encrypted
       .toUpperCase()
@@ -374,7 +326,14 @@ export const useHintSystem = (
 
     let correctPlainLetter = '';
     
-    if (quote.cipherType === 'Caesar' && quote.caesarShift !== undefined) {
+    if (quote.plainAlphabet && quote.cipherAlphabet) {
+      const pa = quote.plainAlphabet;
+      const ca = quote.cipherAlphabet;
+      const idx = ca.indexOf(randomCipherLetter);
+      if (idx !== -1 && idx < pa.length) {
+        correctPlainLetter = pa[idx];
+      }
+    } else if (quote.cipherType === 'Caesar' && quote.caesarShift !== undefined) {
       const cipherIndex = randomCipherLetter.charCodeAt(0) - 65;
       const plainIndex = (cipherIndex - quote.caesarShift + 26) % 26;
       correctPlainLetter = String.fromCharCode(plainIndex + 65);

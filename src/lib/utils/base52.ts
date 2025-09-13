@@ -35,12 +35,12 @@ export function decodeBase52(core: string): number {
 
 export async function generateQuestionCode(questionId: string, table: 'questions' | 'idEvents' = 'questions'): Promise<string> {
   const baseTable = table === 'idEvents' ? idEvents : questions;
-  
 
   const result = await db
     .select({ id: baseTable.id })
     .from(baseTable)
-    .where(eq(baseTable.id, questionId));
+    .where(eq(baseTable.id, questionId))
+    .limit(1);
   
   if (result.length === 0) {
     throw new Error(`Question not found: ${questionId}`);
@@ -50,7 +50,8 @@ export async function generateQuestionCode(questionId: string, table: 'questions
   const existingCode = await db
     .select({ code: base52Codes.code })
     .from(base52Codes)
-    .where(and(eq(base52Codes.questionId, questionId), eq(base52Codes.tableName, table)));
+    .where(and(eq(base52Codes.questionId, questionId), eq(base52Codes.tableName, table)))
+    .limit(1);
   
   if (existingCode.length > 0) {
     return existingCode[0].code;
@@ -121,32 +122,49 @@ export async function getQuestionByCode(code: string): Promise<{ question: any; 
   }
   
   const table = typeSuffix === 'P' ? 'idEvents' : 'questions';
-  const baseTable = table === 'idEvents' ? idEvents : questions;
-  
+
   try {
+    // Collapse to a single round-trip using a UNION query
+    const rows = await db.execute(
+      // eslint-disable-next-line drizzle/enforce-query-usage
+      sql<{
+        table_name: 'questions' | 'idEvents';
+        id: string;
+        question: unknown;
+        tournament: string;
+        division: string;
+        options: unknown;
+        answers: unknown;
+        subtopics: unknown;
+        difficulty: number;
+        event: string;
+        random_f: number;
+        created_at: Date | null;
+        updated_at: Date | null;
+      }>`
+        (
+          SELECT 'questions'::text AS table_name, q.*
+          FROM ${sql.identifier('questions')} q
+          JOIN ${sql.identifier('base52_codes')} b ON b.question_id = q.id AND b.table_name = 'questions'
+          WHERE b.code = ${code}
+        )
+        UNION ALL
+        (
+          SELECT 'idEvents'::text AS table_name, i.*
+          FROM ${sql.identifier('id_events')} i
+          JOIN ${sql.identifier('base52_codes')} b ON b.question_id = i.id AND b.table_name = 'idEvents'
+          WHERE b.code = ${code}
+        )
+        LIMIT 1
+      `
+    );
 
-    const codeEntry = await db
-      .select({ questionId: base52Codes.questionId, tableName: base52Codes.tableName })
-      .from(base52Codes)
-      .where(eq(base52Codes.code, code))
-      .limit(1);
-    
-    if (codeEntry.length === 0) {
+    if (rows.length === 0) {
       throw new Error(`Question not found for code: ${code}`);
     }
-    
 
-    const question = await db
-      .select()
-      .from(baseTable)
-      .where(eq(baseTable.id, codeEntry[0].questionId))
-      .limit(1);
-    
-    if (question.length === 0) {
-      throw new Error(`Question not found for code: ${code}`);
-    }
-    
-    return { question: question[0], table };
+    const row = rows[0] as any;
+    return { question: row, table: row.table_name };
   } catch {
     throw new Error(`Failed to decode question code: ${code}`);
   }

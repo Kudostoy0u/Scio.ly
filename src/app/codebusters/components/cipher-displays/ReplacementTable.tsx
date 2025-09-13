@@ -14,6 +14,7 @@ interface ReplacementTableProps {
     focusedCipherLetter?: string | null;
     onCipherLetterFocus?: (cipherLetter: string) => void;
     onCipherLetterBlur?: () => void;
+    hintedLetters?: { [questionIndex: number]: { [letter: string]: boolean } };
 }
 
 export const ReplacementTable = ({ 
@@ -26,7 +27,8 @@ export const ReplacementTable = ({
     onSolutionChange,
     focusedCipherLetter,
     onCipherLetterFocus,
-    onCipherLetterBlur
+    onCipherLetterBlur,
+    hintedLetters
 }: ReplacementTableProps) => {
     const { darkMode } = useTheme();
     const frequencies = getLetterFrequencies(text);
@@ -93,13 +95,14 @@ export const ReplacementTable = ({
                                 const correctValue = correctMapping?.[letter] || '';
                                 const isCorrect = userValue === correctValue;
                                 const hasUserInput = userValue !== '';
+                                const isHinted = Boolean(hintedLetters?.[quoteIndex]?.[letter]);
                                 
                                 return (
                                     <td key={letter} className={`p-1 border min-w-[2rem] ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
                                         {isTestSubmitted ? (
 
                                             <div className="relative w-full h-full flex items-center justify-center">
-                                                {hasUserInput && !isCorrect ? (
+                                                {hasUserInput && !isCorrect && !isHinted ? (
 
                                                     <div className="flex items-center justify-center space-x-1">
                                                         <div className={`text-xs line-through ${
@@ -116,9 +119,11 @@ export const ReplacementTable = ({
                                                 ) : (
 
                                                     <div className={`text-center text-xs font-medium ${
-                                                        isCorrect 
-                                                            ? (darkMode ? 'text-green-400' : 'text-green-600')
-                                                            : (darkMode ? 'text-red-400' : 'text-red-600')
+                                                        isHinted
+                                                            ? (darkMode ? 'text-yellow-300' : 'text-yellow-600')
+                                                            : isCorrect 
+                                                                ? (darkMode ? 'text-green-400' : 'text-green-600')
+                                                                : (darkMode ? 'text-red-400' : 'text-red-600')
                                                     }`}>
                                                         {correctValue}
                                                     </div>

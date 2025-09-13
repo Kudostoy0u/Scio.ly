@@ -31,6 +31,7 @@ export interface GradingResult {
   score: number;
   maxScore: number;
   attemptedScore: number;
+  unitLabel?: string;
 }
 
 /**
@@ -38,6 +39,8 @@ export interface GradingResult {
  * Returns the number of correct inputs out of total inputs
  */
 
+// Compute a suggested default point value purely from cipher type/length.
+// This serves as a fallback when no explicit points are provided or overridden.
 function getSuggestedPoints(quote: QuoteData): number {
 
   const cipherMultipliers: { [key: string]: number } = {
@@ -119,8 +122,29 @@ function getSuggestedPoints(quote: QuoteData): number {
   return Math.max(2.5, Math.min(20, Number((finalPoints / 7).toFixed(1))));
 }
 
+/**
+ * Resolve the authoritative point value for a question.
+ * Priority order:
+ * 1) Per-test override in questionPoints map
+ * 2) Embedded `quote.points` computed when questions are generated/loaded
+ * 3) Heuristic fallback based on cipher type/length (getSuggestedPoints)
+ */
+export function resolveQuestionPoints(
+  quote: QuoteData,
+  quoteIndex: number,
+  questionPoints: { [key: number]: number } = {}
+): number {
+  if (typeof questionPoints[quoteIndex] === 'number' && questionPoints[quoteIndex]! > 0) {
+    return questionPoints[quoteIndex]!;
+  }
+  if (typeof (quote as any).points === 'number' && (quote as any).points > 0) {
+    return (quote as any).points as number;
+  }
+  return getSuggestedPoints(quote);
+}
+
 export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hintedLetters: {[questionIndex: number]: {[letter: string]: boolean}} = {}, questionPoints: {[key: number]: number} = {}): GradingResult {
-  const questionPointValue = questionPoints[quoteIndex] || getSuggestedPoints(quote);
+  const questionPointValue = resolveQuestionPoints(quote, quoteIndex, questionPoints);
   let totalInputs = 0;
   let correctInputs = 0;
   let filledInputs = 0;
@@ -156,18 +180,23 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
   if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt', 'K3 Xenocrypt'].includes(quote.cipherType)) {
     if (quote.solution && Object.keys(quote.solution).length > 0) {
 
-      const uniqueLetters = new Set(quote.encrypted.replace(/[^A-Z]/g, ''));
-      totalInputs = uniqueLetters.size;
+      const allUniqueLetters = [...new Set(quote.encrypted.replace(/[^A-Z]/g, ''))];
+      const nonHintedLetters = allUniqueLetters.filter(c => !Boolean(hintedLetters[quoteIndex]?.[c]));
+      totalInputs = nonHintedLetters.length;
       
+      // Prefer exact mapping from stored alphabets when available
+      let storedMap: { [cipher: string]: string } | null = null;
+      if (quote.plainAlphabet && quote.cipherAlphabet) {
+        storedMap = {};
+        const pa = quote.plainAlphabet;
+        const ca = quote.cipherAlphabet;
+        const len = Math.min(pa.length, ca.length);
+        for (let i = 0; i < len; i++) storedMap[ca[i]] = pa[i];
+      }
 
-      for (const cipherLetter of uniqueLetters) {
+      for (const cipherLetter of nonHintedLetters) {
         const userAnswer = quote.solution[cipherLetter];
-        const isHinted = Boolean(hintedLetters[quoteIndex]?.[cipherLetter]);
-        
-
-        if (isHinted === true) {
-          continue;
-        }
+        // nonHintedLetters already filters hints
         
 
         if (userAnswer && userAnswer.trim().length > 0) {
@@ -176,8 +205,10 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
         
 
         let isCorrect = false;
-        
-        if (quote.cipherType === 'Caesar' && quote.caesarShift !== undefined) {
+        if (storedMap) {
+          const expectedPlainLetter = storedMap[cipherLetter];
+          if (expectedPlainLetter) isCorrect = userAnswer === expectedPlainLetter;
+        } else if (quote.cipherType === 'Caesar' && quote.caesarShift !== undefined) {
           const shift = quote.caesarShift;
           const expectedPlainLetter = String.fromCharCode(((cipherLetter.charCodeAt(0) - 65 - shift + 26) % 26) + 65);
           isCorrect = userAnswer === expectedPlainLetter;
@@ -316,7 +347,8 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
           filledInputs,
           score: hillScore,
           maxScore: questionPointValue,
-          attemptedScore: hillAttemptedScore
+          attemptedScore: hillAttemptedScore,
+          unitLabel: 'matrix cells + plaintext letters'
         };
       } else {
 
@@ -362,7 +394,8 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
           filledInputs,
           score,
           maxScore: questionPointValue,
-          attemptedScore
+          attemptedScore,
+          unitLabel: 'plaintext letters'
         };
       }
     }
@@ -525,14 +558,13 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
   else if (quote.cipherType === 'Fractionated Morse') {
     if (quote.solution && Object.keys(quote.solution).length > 0) {
 
-      const uniqueLetters = new Set(quote.encrypted.replace(/[^A-Z]/g, ''));
-      totalInputs = uniqueLetters.size;
+      const allUnique = [...new Set(quote.encrypted.replace(/[^A-Z]/g, ''))];
+      const nonHinted = allUnique.filter(c => !Boolean(hintedLetters[quoteIndex]?.[c]));
+      totalInputs = nonHinted.length;
       
 
       for (const [cipherLetter, triplet] of Object.entries(quote.solution)) {
-        const isHinted = Boolean(hintedLetters[quoteIndex]?.[cipherLetter]);
-
-        if (!isHinted && triplet && triplet.trim().length === 3) {
+        if (nonHinted.includes(cipherLetter) && triplet && triplet.trim().length === 3) {
           filledInputs++;
 
           if (quote.fractionationTable && quote.fractionationTable[triplet] === cipherLetter) {
@@ -570,7 +602,9 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
 
       const expectedWords = quote.cryptarithmData?.digitGroups.map(group => group.word.replace(/\s/g, '')) || [];
       const allExpectedLetters = expectedWords.join('');
-      totalInputs = allExpectedLetters.length;
+      const hintedPositions = Object.entries((quote as any).cryptarithmHinted || {}).filter(([, v]) => v === true).map(([k]) => Number(k));
+      const hintedCount = hintedPositions.length;
+      totalInputs = Math.max(0, allExpectedLetters.length - hintedCount);
       
 
       for (let i = 0; i < totalInputs; i++) {
@@ -597,6 +631,11 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
     filledInputs,
     score,
     maxScore: questionPointValue,
-    attemptedScore
+    attemptedScore,
+    unitLabel: ['K1 Aristocrat','K2 Aristocrat','K3 Aristocrat','K1 Patristocrat','K2 Patristocrat','K3 Patristocrat','Random Aristocrat','Random Patristocrat','Random Xenocrypt','K1 Xenocrypt','K2 Xenocrypt','K3 Xenocrypt','Caesar','Atbash','Affine'].includes(quote.cipherType)
+      ? 'unique cipher letters'
+      : ['Complete Columnar','Nihilist','Baconian','Checkerboard','Porta','Fractionated Morse','Cryptarithm'].includes(quote.cipherType)
+      ? 'plaintext/cipher units'
+      : 'units'
   };
 }

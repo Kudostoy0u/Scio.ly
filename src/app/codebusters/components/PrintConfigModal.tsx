@@ -1,5 +1,6 @@
 import React from 'react';
 import { QuoteData } from '../types';
+import { resolveQuestionPoints } from '../utils/gradingUtils';
 
 interface PrintConfigModalProps {
   isOpen: boolean;
@@ -100,7 +101,7 @@ export const PrintConfigModal: React.FC<PrintConfigModalProps> = ({
             <div className="space-y-3">
               {quotes.map((quote, index) => {
                 const charCount = getCharCount(quote);
-                const effectivePoints = (questionPoints[index] ?? quote.points ?? ((quote.difficulty || 0.5) * 20 + 5 | 0));
+                const effectivePoints = resolveQuestionPoints(quote, index, questionPoints);
 
                 return (
                   <div key={index} className={`p-4 border rounded-lg ${darkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-200 bg-gray-50'}`}>

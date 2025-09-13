@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { shareCodes } from '@/lib/db/schema';
+import { shareLinks } from '@/lib/db/schema';
 import { eq, gt, and } from 'drizzle-orm';
 
 interface TestParamsRaw {
@@ -34,12 +34,12 @@ export async function GET(request: NextRequest) {
 
     const result = await db
       .select({
-        testParamsRaw: shareCodes.testParamsRaw,
-        indices: shareCodes.indices,
-        expiresAt: shareCodes.expiresAt
+        testParamsRaw: shareLinks.testParamsRaw,
+        indices: shareLinks.indices,
+        expiresAt: shareLinks.expiresAt
       })
-      .from(shareCodes)
-      .where(and(eq(shareCodes.code, code), gt(shareCodes.expiresAt, new Date())));
+      .from(shareLinks)
+      .where(and(eq(shareLinks.code, code), gt(shareLinks.expiresAt, new Date())));
 
     if (result.length === 0) {
       console.log(`❌ [CODEBUSTERS/SHARE/GET] Code not found or expired: ${code}`);

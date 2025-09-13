@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { shareCodes } from '@/lib/db/schema';
+import { shareLinks } from '@/lib/db/schema';
 import { eq, gt, and, lte } from 'drizzle-orm';
 import { ShareCodeData } from '@/lib/types/api';
 
@@ -31,11 +31,11 @@ export async function GET(request: NextRequest) {
 
     const result = await db
       .select({
-        testParamsRaw: shareCodes.testParamsRaw,
-        expiresAt: shareCodes.expiresAt
+        testParamsRaw: shareLinks.testParamsRaw,
+        expiresAt: shareLinks.expiresAt
       })
-      .from(shareCodes)
-      .where(and(eq(shareCodes.code, code), gt(shareCodes.expiresAt, new Date())));
+      .from(shareLinks)
+      .where(and(eq(shareLinks.code, code), gt(shareLinks.expiresAt, new Date())));
 
     if (result.length === 0) {
       console.log(`❌ [SHARE/GET] Share code not found or expired: ${code}`);
@@ -98,7 +98,7 @@ export async function DELETE() {
   try {
     console.log('🧹 [SHARE/CLEANUP] Starting cleanup of expired share codes');
 
-    await db.delete(shareCodes).where(lte(shareCodes.expiresAt, new Date()));
+    await db.delete(shareLinks).where(lte(shareLinks.expiresAt, new Date()));
 
 
     console.log('🧹 [SHARE/CLEANUP] Cleanup completed');

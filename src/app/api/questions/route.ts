@@ -1,18 +1,17 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { questions } from '@/lib/db/schema';
 import { Question } from '@/lib/types/api';
 import { v4 as uuidv4 } from 'uuid';
-import { eq, and, or, gte, lte, lt, sql, SQL } from 'drizzle-orm';
+import { eq, and, or, gte, lte, sql, SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { 
   handleApiError, 
-  createSuccessResponse, 
   parseRequestBody,
-  logApiRequest,
-  logApiResponse,
   ApiError
 } from '@/lib/api/utils';
+
+export const runtime = 'nodejs';
 
 
 type DatabaseQuestion = {
@@ -146,18 +145,32 @@ class QueryBuilder {
 }
 
 
-const transformDatabaseResult = async (result: DatabaseQuestion): Promise<Question> => {
-
-  const { generateQuestionCode } = await import('@/lib/utils/base52');
-  let base52Code: string | undefined;
-  
-  try {
-    base52Code = await generateQuestionCode(result.id, 'questions');
-  } catch (error) {
-    console.warn(`Failed to generate base52 code for question ${result.id}:`, error);
-    base52Code = undefined;
+function encodeBase52Local(index: number): string {
+  const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  const BASE = ALPHABET.length;
+  const CORE_LENGTH = 4;
+  let n = index;
+  let out = '';
+  for (let i = 0; i < CORE_LENGTH; i++) {
+    out = ALPHABET[n % BASE] + out;
+    n = Math.floor(n / BASE);
   }
+  return out;
+}
 
+function hashIdToInt(id: string): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    const char = id.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0;
+  }
+  return Math.abs(hash) % 7311616; // 52^4
+}
+
+const transformDatabaseResult = (result: DatabaseQuestion): Question => {
+  const core = encodeBase52Local(hashIdToInt(result.id));
+  const base52Code = core + 'S';
   return {
     id: result.id,
     question: result.question,
@@ -173,6 +186,18 @@ const transformDatabaseResult = async (result: DatabaseQuestion): Promise<Questi
     base52: base52Code,
   };
 };
+
+const CACHE_TTL_MS = 60000;
+const questionsCache = new Map<string, { expiresAt: number; data: Question[] }>();
+const inflight = new Map<string, Promise<Question[]>>();
+
+function makeCacheKey(filters: ValidatedQuestionFilters): string {
+  const parts: string[] = [];
+  const entries = Object.entries(filters).filter(([, v]) => v !== undefined) as Array<[string, string]>;
+  entries.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  for (const [k, v] of entries) parts.push(`${k}=${v}`);
+  return parts.join('&');
+}
 
 
 const parseAndValidateFilters = (searchParams: URLSearchParams): ValidatedQuestionFilters => {
@@ -237,43 +262,53 @@ const fetchQuestions = async (filters: ValidatedQuestionFilters): Promise<Questi
   const r = Math.random();
 
   try {
-    const first = await db
-      .select()
+    // Single query approach using a CASE expression to wrap-around ordering around random pivot r
+    // Equivalent to two-phase query but in one pass
+    const rows = await db
+      .select({
+        id: questions.id,
+        question: questions.question,
+        tournament: questions.tournament,
+        division: questions.division,
+        event: questions.event,
+        difficulty: questions.difficulty,
+        options: questions.options,
+        answers: questions.answers,
+        subtopics: questions.subtopics,
+        createdAt: questions.createdAt,
+        updatedAt: questions.updatedAt,
+        randomF: questions.randomF,
+      })
       .from(questions)
-      .where(
-        whereCondition
-          ? and(whereCondition, gte(questions.randomF, r))
-          : gte(questions.randomF, r)
-      )
-      .orderBy(questions.randomF)
+      .where(whereCondition)
+      .orderBy(sql`CASE WHEN ${questions.randomF} >= ${r} THEN 0 ELSE 1 END`, questions.randomF)
       .limit(limit);
 
-    if (first.length >= limit) {
-      return Promise.all(first.map(transformDatabaseResult));
-    }
-
-    const remaining = limit - first.length;
-    const second = await db
-      .select()
-      .from(questions)
-      .where(
-        whereCondition
-          ? and(whereCondition, lt(questions.randomF, r))
-          : lt(questions.randomF, r)
-      )
-      .orderBy(questions.randomF)
-      .limit(remaining);
-
-    const allResults = [...first, ...second];
-    return Promise.all(allResults.map(transformDatabaseResult));
+    return rows.map((r) => transformDatabaseResult(r as any));
   } catch (err) {
     console.log('Error fetching questions', err);
 
-    const base = whereCondition
-      ? db.select().from(questions).where(whereCondition).orderBy(sql`RANDOM()`).limit(limit)
-      : db.select().from(questions).orderBy(sql`RANDOM()`).limit(limit);
-    const rows = await base;
-    return Promise.all(rows.map(transformDatabaseResult));
+    const rows = await db
+      .select({
+        id: questions.id,
+        question: questions.question,
+        tournament: questions.tournament,
+        division: questions.division,
+        event: questions.event,
+        difficulty: questions.difficulty,
+        options: questions.options,
+        answers: questions.answers,
+        subtopics: questions.subtopics,
+        createdAt: questions.createdAt,
+        updatedAt: questions.updatedAt,
+        randomF: questions.randomF,
+      })
+      .from(questions)
+      .where(whereCondition)
+      .orderBy(sql`RANDOM()`)
+      .limit(limit);
+
+    return rows.map((r) => transformDatabaseResult(r as any));
   }
 };
 
@@ -298,44 +333,46 @@ const createQuestion = async (data: ValidatedCreateQuestion): Promise<Question> 
     throw new ApiError(500, 'Failed to create question', 'CREATE_FAILED');
   }
   
-  return await transformDatabaseResult(question);
+  return transformDatabaseResult(question as any);
 };
 
 
 export async function GET(request: NextRequest) {
-  const startTime = Date.now();
-  logApiRequest('GET', '/api/questions', Object.fromEntries(request.nextUrl.searchParams));
-  
   try {
     const searchParams = request.nextUrl.searchParams;
     const filters = parseAndValidateFilters(searchParams);
-    
-    const questions = await fetchQuestions(filters);
-    
-    const response = createSuccessResponse(questions);
-    logApiResponse('GET', '/api/questions', 200, Date.now() - startTime);
-    return response;
+
+    const cacheKey = makeCacheKey(filters);
+    const now = Date.now();
+    const cached = questionsCache.get(cacheKey);
+    if (cached && cached.expiresAt > now) {
+      const res = NextResponse.json({ success: true, data: cached.data });
+      res.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+      return res;
+    }
+
+    let promise = inflight.get(cacheKey);
+    if (!promise) {
+      promise = fetchQuestions(filters);
+      inflight.set(cacheKey, promise);
+    }
+    const data = await promise.finally(() => inflight.delete(cacheKey));
+    questionsCache.set(cacheKey, { expiresAt: now + CACHE_TTL_MS, data });
+
+    const res = NextResponse.json({ success: true, data });
+    res.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+    return res;
   } catch (error) {
-    const response = handleApiError(error);
-    logApiResponse('GET', '/api/questions', response.status, Date.now() - startTime);
-    return response;
+    return handleApiError(error);
   }
 }
 
 export async function POST(request: NextRequest) {
-  const startTime = Date.now();
-  logApiRequest('POST', '/api/questions');
-  
   try {
     const validatedData = await parseRequestBody(request, CreateQuestionSchema);
     const question = await createQuestion(validatedData);
-    
-    const response = createSuccessResponse(question, 'Question created successfully');
-    logApiResponse('POST', '/api/questions', 201, Date.now() - startTime);
-    return response;
+    return NextResponse.json({ success: true, data: question, message: 'Question created successfully' });
   } catch (error) {
-    const response = handleApiError(error);
-    logApiResponse('POST', '/api/questions', response.status, Date.now() - startTime);
-    return response;
+    return handleApiError(error);
   }
 }

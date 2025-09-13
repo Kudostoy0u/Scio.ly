@@ -155,6 +155,7 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
                     const value = solution?.[i] || '';
                     const correctLetter = baconianData.originalQuote[i] || '';
                     const isCorrect = value === correctLetter;
+                    const isHinted = Boolean((quotes[quoteIndex] as any).baconianHinted?.[i]);
                     
 
                     const shouldHighlight = syncEnabled && focusedGroupIndex !== null && 
@@ -219,9 +220,11 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
                                                     : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
                                     } ${
                                         isTestSubmitted
-                                            ? isCorrect
-                                                ? 'border-green-500 bg-green-100/10'
-                                                : 'border-red-500 bg-red-100/10'
+                                            ? isHinted
+                                                ? 'border-yellow-500 bg-yellow-100/10'
+                                                : isCorrect
+                                                    ? 'border-green-500 bg-green-100/10'
+                                                    : 'border-red-500 bg-red-100/10'
                                             : ''
                                     }`}
                                     maxLength={1}

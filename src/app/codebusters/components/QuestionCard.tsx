@@ -11,6 +11,7 @@ import {
   CheckerboardDisplay,
   CryptarithmDisplay
 } from './cipher-displays';
+import { resolveQuestionPoints } from '../utils/gradingUtils';
 
 
 const processAuthor = (author: string): string => {
@@ -128,7 +129,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           data-question-header
           className={`font-semibold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}
         >
-          Question {index + 1} [{(questionPoints[index] ?? item.points ?? ((item.difficulty || 0.5) * 20 + 5 | 0))} pts]
+          {(() => {
+            const pts = resolveQuestionPoints(item, index, questionPoints);
+            return `Question ${index + 1} [${pts} pts]`;
+          })()}
         </h3>
         <div className="flex items-center gap-2">
           <span className={`px-2 py-1 rounded text-sm ${

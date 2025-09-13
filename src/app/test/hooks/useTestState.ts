@@ -31,6 +31,7 @@ import {
 } from '@/app/utils/timeManagement';
 import api from '../../api';
 import { getEventOfflineQuestions } from '@/app/utils/storage';
+import { normalizeTestText, normalizeQuestionText } from '../utils/normalizeTestText';
 
 export function useTestState({ initialData, initialRouterData }: { initialData?: any[]; initialRouterData?: any } = {}) {
   const router = useRouter();
@@ -371,26 +372,21 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         // ========================================
         questionsWithIndex.forEach(question => {
 
-          const deltaToEnDash = (text: string) => {
-            return text.replace(/(\d+)\s*[Δ∆]\s*(\d+)/g, '$1–$2');
-          };
-          
-
           if (question.question) {
-            question.question = deltaToEnDash(question.question);
+            question.question = normalizeQuestionText(question.question);
           }
           
 
           if (Array.isArray(question.options)) {
             question.options = question.options.map(option => 
-              typeof option === 'string' ? deltaToEnDash(option) : option
+              typeof option === 'string' ? normalizeTestText(option) : option
             );
           }
           
 
           if (Array.isArray(question.answers)) {
             question.answers = question.answers.map(answer => 
-              typeof answer === 'string' ? deltaToEnDash(answer) : answer
+              typeof answer === 'string' ? normalizeTestText(answer) : answer
             );
           }
         });
@@ -985,26 +981,21 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
       // ========================================
       finalQuestions.forEach(question => {
 
-        const deltaToEnDash = (text: string) => {
-          return text.replace(/(\d+)\s*[Δ∆]\s*(\d+)/g, '$1–$2');
-        };
-        
-
         if (question.question) {
-          question.question = deltaToEnDash(question.question);
+          question.question = normalizeQuestionText(question.question);
         }
         
 
         if (Array.isArray(question.options)) {
           question.options = question.options.map(option => 
-            typeof option === 'string' ? deltaToEnDash(option) : option
+            typeof option === 'string' ? normalizeTestText(option) : option
           );
         }
         
 
         if (Array.isArray(question.answers)) {
           question.answers = question.answers.map(answer => 
-            typeof answer === 'string' ? deltaToEnDash(answer) : answer
+            typeof answer === 'string' ? normalizeTestText(answer) : answer
           );
         }
       });

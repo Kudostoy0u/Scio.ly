@@ -88,6 +88,9 @@ export class GeminiService {
       config: {
         responseMimeType: "application/json",
         responseSchema: schema,
+        thinkingConfig: {
+          thinkingBudget: 2048,
+        },
         temperature: 0.1,
         topP: 0.8,
         topK: 40,
@@ -251,21 +254,18 @@ Also provide:
     const questionText = question.question || '';
     const options = question.options || [];
     const subject = question.subject || '';
-    const difficulty = question.difficulty || 0.5;
-
     const prompt = `You are a Science Olympiad question answerability analyst. Analyze this question for potential issues.
 
 Question: ${questionText}
 Options: ${JSON.stringify(options)}
 Subject: ${subject}
-Difficulty: ${difficulty}
 
 ANALYSIS CRITERIA:
 1. Unanswerabiliy (Question is not self contained, and cannot be answered without external or additional information. For example if it mentions "Substance B" which is clearly a lab substance and cannot be included in a text question.)
 2. Inappropriate content
 3. Unable to have minor edits to be a good question
 
-Based on your analysis, determine if this question should be removed from the database. Consider removal if the question has is not answerable, aka not enough context. The reason field should be a brief 2 sentence explanation`;
+Based on your analysis, determine if this question is question that is so bad that it should be straight up removed from the DB. The reason field should be a brief 2 sentence explanation`;
 
     const schema = {
       type: Type.OBJECT,

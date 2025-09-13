@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { shareCodes } from '@/lib/db/schema';
+import { shareLinks } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 
@@ -18,9 +18,9 @@ export async function POST(request: NextRequest) {
 
 
     const existingResult = await db
-      .select({ id: shareCodes.id })
-      .from(shareCodes)
-      .where(eq(shareCodes.code, shareCode));
+      .select({ id: shareLinks.id })
+      .from(shareLinks)
+      .where(eq(shareLinks.code, shareCode));
 
     if (existingResult.length > 0) {
       return NextResponse.json({
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     const shareData = body.shareData || {};
     console.log(`🔍 [CODEBUSTERS/SHARE/GENERATE] Storing complete share data with ${shareData.processedQuotes?.length || 0} quotes`);
     
-    await db.insert(shareCodes).values({
+    await db.insert(shareLinks).values({
       code: shareCode,
       indices: shareData,
       testParamsRaw: dataToStore,

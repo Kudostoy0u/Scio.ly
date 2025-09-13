@@ -46,6 +46,7 @@ import {
 } from './components';
 import { FloatingActionButtons } from '@/app/components/FloatingActionButtons';
 import { createPrintStyles, createPrintContent, setupPrintWindow, createInPagePrint } from './utils/printUtils';
+import { resolveQuestionPoints } from './utils/gradingUtils';
 
 export default function CodeBusters() {
     const { darkMode } = useTheme();
@@ -472,9 +473,8 @@ export default function CodeBusters() {
 
         const questionHeaders = clonedContainer.querySelectorAll('[data-question-header]');
         questionHeaders.forEach((header, index) => {
-            const fallback = (((quotes[index]?.difficulty || 0.5) * 20 + 5) | 0);
-            const points = (questionPoints[index] ?? quotes[index]?.points ?? fallback);
-            header.textContent = `Question ${index + 1} [${points} pts]`;
+            const pts = resolveQuestionPoints(quotes[index], index, questionPoints);
+            header.textContent = `Question ${index + 1} [${pts} pts]`;
         });
 
 

@@ -5,7 +5,7 @@ import { useTheme } from '@/app/contexts/ThemeContext';
 import Header from '@/app/components/Header';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Rocket, Lightbulb, Database, Zap, Users, Shield } from 'lucide-react';
+import { Rocket, Lightbulb } from 'lucide-react';
 
 export default function AboutClientPage() {
   const { darkMode } = useTheme();
@@ -131,48 +131,19 @@ export default function AboutClientPage() {
           </div>
         </section>
 
-        <section className={`mb-16 p-6 rounded-xl max-w-4xl mx-auto ${darkMode ? 'bg-gray-800/50 backdrop-blur-sm' : 'bg-white/90 shadow-lg backdrop-blur-sm'}`}>
-          <h2 className={`text-3xl font-bold mb-6 text-center ${darkMode ? 'text-white' : 'text-gray-900'}`}>Scio.ly API</h2>
-          <p className={`text-center max-w-3xl mx-auto mb-8 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-            Access our comprehensive REST API to integrate Science Olympiad questions into your applications. 
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100/50'} p-4 rounded-lg text-center`}>
-              <div className="flex justify-center mb-3">
-                <Database className="w-8 h-8 text-blue-500" />
-              </div>
-              <h3 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Question Database</h3>
-              <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} text-sm`}>~500k questions and quotes combined</p>
-            </div>
-            <div className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100/50'} p-4 rounded-lg text-center`}>
-              <div className="flex justify-center mb-3">
-                <Zap className="w-8 h-8 text-yellow-500" />
-              </div>
-              <h3 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>AI Features</h3>
-              <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} text-sm`}>Get quick explanations and FRQ grading.</p>
-            </div>
-            <div className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100/50'} p-4 rounded-lg text-center`}>
-              <div className="flex justify-center mb-3">
-                <Users className="w-8 h-8 text-green-500" />
-              </div>
-              <h3 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Collaboration</h3>
-              <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} text-sm`}>Endpoints to share questions</p>
-            </div>
-            <div className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100/50'} p-4 rounded-lg text-center`}>
-              <div className="flex justify-center mb-3">
-                <Shield className="w-8 h-8 text-purple-500" />
-              </div>
-              <h3 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Secure & Reliable</h3>
-              <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} text-sm`}>Well documented API with zero logging.</p>
-            </div>
-          </div>
-          <div className="text-center">
-            <button
-              className={`px-6 py-3 rounded-lg font-medium transition-all transform hover:scale-105 ${darkMode ? 'bg-blue-600 text-white shadow-lg hover:bg-blue-700' : 'bg-blue-500 text-white shadow-lg hover:bg-blue-600'}`}
-              onClick={() => router.push('/docs/api')}
-            >
-              View API Documentation
-            </button>
+        <section className={`mb-16 p-6 rounded-xl max-w-4xl mx-auto ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+          <div className="flex flex-col items-center text-center gap-4">
+            <Image
+              src="/SoCal.png"
+              alt="Sponsor logo"
+              width={480}
+              height={200}
+              className="h-24 w-auto object-contain"
+              priority
+            />
+            <p className={`${darkMode ? 'text-gray-200' : 'text-gray-800'} text-lg font-medium`}>
+              Thank you to our partner for supporting us!
+            </p>
           </div>
         </section>
 
