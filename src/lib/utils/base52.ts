@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { questions, idEvents, base52Codes } from '@/lib/db/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 const BASE = ALPHABET.length; // 52
@@ -121,12 +121,11 @@ export async function getQuestionByCode(code: string): Promise<{ question: any; 
     throw new Error('Invalid type suffix. Expected S or P.');
   }
   
-  const table = typeSuffix === 'P' ? 'idEvents' : 'questions';
+  // Determine which table the code maps to based on suffix, but we infer the table from the UNION result below
 
   try {
     // Collapse to a single round-trip using a UNION query
     const rows = await db.execute(
-      // eslint-disable-next-line drizzle/enforce-query-usage
       sql<{
         table_name: 'questions' | 'idEvents';
         id: string;

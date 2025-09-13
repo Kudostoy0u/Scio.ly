@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Trophy, Users, Plus, LogOut, Copy, Check, User } from 'lucide-react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { useRouter } from 'next/navigation';
@@ -101,26 +101,7 @@ export default function LeaderboardClientPage() {
     }
   }, [client]);
 
-  useEffect(() => {
-    if (authLoading) return;
-    loadUserAndLeaderboards();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading]);
-
-  useEffect(() => {
-    if (selectedLeaderboard) {
-      loadLeaderboardMembers(selectedLeaderboard);
-    }
-  }, [selectedLeaderboard, loadLeaderboardMembers]);
-
-
-  useEffect(() => {
-    if (!selectedLeaderboard && leaderboards.length > 0) {
-      setSelectedLeaderboard(leaderboards[0].id);
-    }
-  }, [leaderboards, selectedLeaderboard]);
-
-  const loadUserAndLeaderboards = async () => {
+  const loadUserAndLeaderboards = useCallback(async () => {
     const supabase = client as any;
     if (!authUser) {
       setLoading(false);
@@ -128,7 +109,7 @@ export default function LeaderboardClientPage() {
       return;
     }
     
-
+    
     const { data: userProfile } = await supabase
       .from('users')
       .select('display_name')
@@ -186,7 +167,28 @@ export default function LeaderboardClientPage() {
       setPublicLeaderboard(null);
     }
     setLoading(false);
-  };
+  }, [client, authUser, router]);
+
+  const canLoad = useMemo(() => !authLoading, [authLoading]);
+  useEffect(() => {
+    if (!canLoad) return;
+    loadUserAndLeaderboards();
+  }, [canLoad, loadUserAndLeaderboards]);
+
+  useEffect(() => {
+    if (selectedLeaderboard) {
+      loadLeaderboardMembers(selectedLeaderboard);
+    }
+  }, [selectedLeaderboard, loadLeaderboardMembers]);
+
+
+  useEffect(() => {
+    if (!selectedLeaderboard && leaderboards.length > 0) {
+      setSelectedLeaderboard(leaderboards[0].id);
+    }
+  }, [leaderboards, selectedLeaderboard]);
+
+  
 
   
 

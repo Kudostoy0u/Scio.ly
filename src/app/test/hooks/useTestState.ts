@@ -61,10 +61,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   const [isResetting, setIsResetting] = useState(false);
 
 
-  const routerDataKey = JSON.stringify(initialRouterData);
-  const stableRouterData = useMemo(() => {
-    return initialRouterData || {};
-  }, [routerDataKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const stableRouterData = useMemo(() => initialRouterData || {}, [initialRouterData]);
 
 
   useEffect(() => {
