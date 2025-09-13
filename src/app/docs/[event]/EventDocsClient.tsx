@@ -13,6 +13,14 @@ interface EventDocsClientProps {
 
 export function EventDocsClient({ evt, md, meta, toc }: EventDocsClientProps) {
   const { darkMode } = useTheme();
+  // Prefer a Google Docs notesheet link if one exists in evt.links
+  const googleNotesheetLink = Array.isArray(evt?.links)
+    ? evt.links.find((l: any) => typeof l?.url === 'string' && /https?:\/\/docs\.google\.com\//.test(l.url) && /notesheet/i.test(l?.label ?? ''))
+    : null;
+  const hasGoogleNotesheet = Boolean(googleNotesheetLink?.url);
+  const filteredLinks = Array.isArray(evt?.links)
+    ? evt.links.filter((l: any) => !(typeof l?.url === 'string' && /https?:\/\/docs\.google\.com\//.test(l.url) && /notesheet/i.test(l?.label ?? '')))
+    : [];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -90,7 +98,7 @@ export function EventDocsClient({ evt, md, meta, toc }: EventDocsClientProps) {
         <section>
           <h2 className={`text-xl font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Official references</h2>
           <ul className={`list-disc pl-5 space-y-1 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-            {evt.links.map((link: any) => (
+            {filteredLinks.map((link: any) => (
               <li key={link.url}>
                 <a className={`hover:underline ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} href={link.url} target="_blank" rel="noopener noreferrer">{link.label}</a>
               </li>
@@ -103,9 +111,15 @@ export function EventDocsClient({ evt, md, meta, toc }: EventDocsClientProps) {
             <h2 className={`text-xl font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Sample notesheet</h2>
             <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>Download a printable, rule-compliant sample notesheet. Customize with your notes.</p>
             <div className="flex gap-3">
-              <Link className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" href={`/docs/${evt.slug}/notesheet.pdf`} prefetch={false}>
-                See notesheet
-              </Link>
+              {hasGoogleNotesheet ? (
+                <a className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" href={googleNotesheetLink.url} target="_blank" rel="noopener noreferrer">
+                  See sample notesheet
+                </a>
+              ) : (
+                <Link className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" href={`/docs/${evt.slug}/notesheet.pdf`} prefetch={false}>
+                  See sample notesheet
+                </Link>
+              )}
             </div>
           </section>
         )}
@@ -115,42 +129,30 @@ export function EventDocsClient({ evt, md, meta, toc }: EventDocsClientProps) {
             <h2 className={`text-xl font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Sample notesheet</h2>
             <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>Download a printable, rule-compliant sample notesheet. Customize with your notes.</p>
             <div className="flex gap-3">
-              <button 
-                onClick={() => {
-                  toast.info(
-                    <div>
-                      A notesheet is not available for this event (yet). If you have notesheets for this season, please help us out and send it through{' '}
-                      <a href="https://discord.gg/wF4k27vt" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Discord</a> or{' '}
-                      <a href="mailto:team.scio.ly@gmail.com" className="text-blue-500 hover:underline">Email</a>!
-                    </div>,
-                    {
-                      autoClose: 6000,
-                      position: "top-right"
-                    }
-                  );
-                }}
-                className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
-              >
-                Download PDF
-              </button>
-              <button 
-                onClick={() => {
-                  toast.info(
-                    <div>
-                      A notesheet is not available for this event (yet). If you have notesheets for this season, please help us out and send it through{' '}
-                      <a href="https://discord.gg/wF4k27vt" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Discord</a> or{' '}
-                      <a href="mailto:team.scio.ly@gmail.com" className="text-blue-500 hover:underline">Email</a>!
-                    </div>,
-                    {
-                      autoClose: 6000,
-                      position: "top-right"
-                    }
-                  );
-                }}
-                className={`px-4 py-2 rounded border hover:bg-gray-50 ${darkMode ? 'border-gray-700 text-gray-100 hover:bg-gray-800' : 'border-gray-300 text-gray-900'}`}
-              >
-                Preview in browser
-              </button>
+              {hasGoogleNotesheet ? (
+                <a className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" href={googleNotesheetLink.url} target="_blank" rel="noopener noreferrer">
+                  See sample notesheet
+                </a>
+              ) : (
+                <button 
+                  onClick={() => {
+                    toast.info(
+                      <div>
+                        A notesheet is not available for this event (yet). If you have notesheets for this season, please help us out and send it through{' '}
+                        <a href="https://discord.gg/wF4k27vt" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Discord</a> or{' '}
+                        <a href="mailto:team.scio.ly@gmail.com" className="text-blue-500 hover:underline">Email</a>!
+                      </div>,
+                      {
+                        autoClose: 6000,
+                        position: "top-right"
+                      }
+                    );
+                  }}
+                  className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  See sample notesheet
+                </button>
+              )}
             </div>
           </section>
         )}

@@ -149,6 +149,45 @@ export const createTestPrintStyles = (getStylesheets: () => string) => `
       display: none !important; 
     }
     
+    /* Replacement table print styles */
+    .replacement-table-container {
+      page-break-inside: avoid;
+      margin: 10px 0;
+    }
+    
+    .replacement-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+      page-break-inside: auto;
+    }
+    
+    .replacement-table td {
+      border: 1px solid #000;
+      padding: 2px;
+      text-align: center;
+      min-width: 20px;
+      max-width: 25px;
+      word-wrap: break-word;
+    }
+    
+    /* Allow table to break across pages if needed */
+    .replacement-table tbody {
+      page-break-inside: auto;
+    }
+    
+    .replacement-table tr {
+      page-break-inside: avoid;
+      page-break-after: auto;
+    }
+    
+    /* If table is too wide, allow horizontal scrolling in print */
+    .replacement-table-wrapper {
+      overflow-x: auto;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    
     /* Non-print styles for preview */
     body { 
       font-family: 'Times New Roman', serif; 

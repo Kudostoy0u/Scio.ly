@@ -56,12 +56,12 @@ export const ReplacementTable = ({
 
 
     return (
-        <div className={`mt-4 mb-4 p-3 rounded border ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-300'}`}>
+        <div className={`mt-4 mb-4 p-3 rounded border replacement-table-container ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-300'}`}>
             <div className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 Replacement Table
             </div>
-            <div className="overflow-x-auto">
-                <table className="text-xs border-collapse min-w-full">
+            <div className="overflow-x-auto replacement-table-wrapper">
+                <table className="text-xs border-collapse min-w-full replacement-table">
                     <tbody>
                         {/* Cipher letters row */}
                         <tr>
