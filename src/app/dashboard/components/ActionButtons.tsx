@@ -132,7 +132,7 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
         </div>
         
         {/* Right: Bookmarked + Teams split */}
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Bookmarked Questions Button */}
           <motion.div 
             onClick={() => router.push('/bookmarks')}
