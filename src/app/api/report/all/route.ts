@@ -26,8 +26,8 @@ export async function GET() {
   try {
     console.log('🔍 [REPORT/ALL] Fetching all reports');
 
-
-    const editsResult = await db
+    // Fetch edits and blacklists concurrently for better latency
+    const editsResultPromise = db
       .select()
       .from(editsTable)
       .orderBy(desc(editsTable.updatedAt));
@@ -37,6 +37,14 @@ export async function GET() {
         edited: Record<string, unknown>;
         timestamp: string;
       }>> = {};
+
+    const [editsResult, blacklistsResult] = await Promise.all([
+      editsResultPromise,
+      db
+        .select()
+        .from(blacklistsTable)
+        .orderBy(desc(blacklistsTable.createdAt)),
+    ]);
 
     for (const row of editsResult) {
       if (!edits[row.event]) {
@@ -51,12 +59,6 @@ export async function GET() {
         timestamp: String(row.updatedAt),
       });
     }
-
-
-    const blacklistsResult = await db
-      .select()
-      .from(blacklistsTable)
-      .orderBy(desc(blacklistsTable.createdAt));
 
           const blacklists: Record<string, unknown[]> = {};
 

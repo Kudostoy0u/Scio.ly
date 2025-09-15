@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
@@ -46,13 +46,19 @@ import {
 } from './components';
 import { FloatingActionButtons } from '@/app/components/FloatingActionButtons';
 import { createPrintStyles, createPrintContent, setupPrintWindow, createInPagePrint } from './utils/printUtils';
-import { resolveQuestionPoints } from './utils/gradingUtils';
+import { resolveQuestionPoints, calculateCipherGrade } from './utils/gradingUtils';
 
 export default function CodeBusters() {
     const { darkMode } = useTheme();
     const router = useRouter();
+    const isClient = typeof window !== 'undefined';
+    const search = isClient ? new URLSearchParams(window.location.search) : null;
+    const isPreview = !!(search && search.get('preview') === '1');
+    const previewScope = search?.get('scope') || 'all';
+    const previewTeam = search?.get('team') || 'A';
     const [isOffline, setIsOffline] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
+    const previewResetAppliedRef = useRef(false);
     
 
     useEffect(() => {
@@ -67,6 +73,39 @@ export default function CodeBusters() {
         };
     }, []);
 
+    const previewToastsShownRef = useRef(false);
+    useEffect(() => {
+        if (!isPreview) return;
+        if (previewToastsShownRef.current) return;
+        previewToastsShownRef.current = true;
+        try {
+            toast.info('Tip: Use the delete icon on a question to replace it.', { autoClose: 6000 });
+            setTimeout(() => {
+                toast.info('When finished, click “Send Test” at the bottom to assign.', { autoClose: 6000 });
+            }, 1200);
+        } catch {}
+    }, [isPreview]);
+
+
+    // If preview, clear any persisted Codebusters state so we fetch fresh quotes and generate new ciphers
+    if (isClient && isPreview && !previewResetAppliedRef.current) {
+        try {
+            localStorage.removeItem('codebustersQuotes');
+            localStorage.removeItem('codebustersQuoteIndices');
+            localStorage.removeItem('codebustersQuoteUUIDs');
+            localStorage.removeItem('codebustersShareData');
+            localStorage.removeItem('codebustersIsTestSubmitted');
+            localStorage.removeItem('codebustersTestScore');
+            localStorage.removeItem('codebustersTimeLeft');
+            localStorage.removeItem('codebustersRevealedLetters');
+            localStorage.removeItem('codebustersHintedLetters');
+            localStorage.removeItem('codebustersHintCounts');
+            localStorage.removeItem('codebustersQuotesLoadedFromStorage');
+            // Ensure the loader performs a fresh fetch
+            localStorage.setItem('codebustersForceRefresh', 'true');
+        } catch {}
+        previewResetAppliedRef.current = true;
+    }
 
     const {
         quotes,
@@ -135,7 +174,7 @@ export default function CodeBusters() {
         handleCryptarithmSolutionChange,
         handleKeywordSolutionChange
     } = useSolutionHandlers(quotes, setQuotes);
-    const { totalProgress, calculateQuoteProgress } = useProgressCalculation(quotes);
+    const { totalProgress } = useProgressCalculation(quotes);
 
 
 
@@ -144,6 +183,15 @@ export default function CodeBusters() {
         const cleanup = setupVisibilityHandling();
         return cleanup;
     }, []);
+
+    useEffect(() => {
+        if (!isPreview) return;
+        if (quotes.length === 0) return;
+        if (isTestSubmitted) return;
+        // Auto-submit to show solutions
+        handleSubmitTest();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isPreview, quotes.length]);
 
 
     useEffect(() => {
@@ -200,19 +248,49 @@ export default function CodeBusters() {
 
         markTestSubmitted();
 
-
+        // Compute points (attempted and earned) consistent with TestSummary using calculateCipherGrade
         let attemptedPoints = 0;
         let correctPoints = 0;
-        quotes.forEach((q) => {
-            const diff = typeof (q as any).difficulty === 'number' ? (q as any).difficulty : 0.5;
-            const weight = Math.round(20 * Math.max(0, Math.min(1, diff)));
-            const pct = Math.max(0, Math.min(100, calculateQuoteProgress(q)));
-            if (pct > 0) {
-                attemptedPoints += weight;
-                // fractional correctness credit: weight * percent solved
-                correctPoints += weight * (pct / 100);
-            }
+        quotes.forEach((q, idx) => {
+            const grade = calculateCipherGrade(q, idx, hintedLetters, questionPoints);
+            attemptedPoints += grade.attemptedScore;
+            correctPoints += grade.score;
         });
+
+        // Submit to team if launched from an assignment, mirroring /test behavior
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            const assignmentIdStr = localStorage.getItem('currentAssignmentId');
+            if (assignmentIdStr) {
+                const assignmentId = Number(assignmentIdStr);
+                if (!assignmentId || Number.isNaN(assignmentId)) {
+                    try { toast.error('Could not submit results (invalid assignment).'); } catch {}
+                } else {
+                    const name = (user?.user_metadata?.name || user?.email || '').toString();
+                    const res = await fetch('/api/assignments/submit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        // Send Codebusters points so Team Results shows points earned out of possible
+                        body: JSON.stringify({ assignmentId: String(assignmentIdStr), userId: user?.id || null, name, eventName: 'Codebusters', score: correctPoints, detail: { total: attemptedPoints } })
+                    });
+                    if (res.ok) {
+                        try {
+                            const selStr = localStorage.getItem('teamsSelection') || '';
+                            const sel = selStr ? JSON.parse(selStr) : null;
+                            const teamName = sel?.school ? `${sel.school} ${sel.division || ''}`.trim() : null;
+                            if (teamName) { toast.success(`Sent results to ${teamName}!`); }
+                        } catch {}
+                    } else {
+                        try {
+                            const j = await res.json().catch(()=>null);
+                            const msg = j?.error || 'Failed to submit results';
+                            toast.error(msg);
+                        } catch {}
+                    }
+                    localStorage.removeItem('currentAssignmentId');
+                }
+            }
+        } catch {}
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -225,7 +303,7 @@ export default function CodeBusters() {
         } catch (e) {
             console.error('Failed to update metrics for Codebusters:', e);
         }
-    }, [quotes, checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer, checkCheckerboardAnswer, checkCryptarithmAnswer, setTestScore, setIsTestSubmitted, calculateQuoteProgress, timeLeft]);
+    }, [quotes, checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer, checkCheckerboardAnswer, checkCryptarithmAnswer, setTestScore, setIsTestSubmitted, timeLeft, hintedLetters, questionPoints]);
 
 
     useEffect(() => {
@@ -606,15 +684,17 @@ export default function CodeBusters() {
 
                     {/* Progress Bar or Summary */}
                     {isTestSubmitted ? (
-                        <div className="w-full">
-                            <CodebustersSummary
-                                quotes={quotes}
-                                darkMode={darkMode}
-                                hintedLetters={hintedLetters}
-                                _hintCounts={hintCounts}
-                                questionPoints={questionPoints}
-                            />
-                        </div>
+                        isPreview ? null : (
+                            <div className="w-full max-w-[80vw]">
+                                <CodebustersSummary
+                                    quotes={quotes}
+                                    darkMode={darkMode}
+                                    hintedLetters={hintedLetters}
+                                    _hintCounts={hintCounts}
+                                    questionPoints={questionPoints}
+                                />
+                            </div>
+                        )
                     ) : (
                         <div
                             className={`sticky top-4 z-10 w-full max-w-[80vw] bg-white border-2 border-gray-300 rounded-full h-5 mb-6 shadow-lg`}
@@ -691,13 +771,67 @@ export default function CodeBusters() {
                         
                         {/* Submit Button */}
                         {!isLoading && !error && quotes.length > 0 && hasAttemptedLoad && !isResetting && (
-                            <SubmitButton 
-                                isTestSubmitted={isTestSubmitted}
-                                darkMode={darkMode}
-                                onSubmit={handleSubmitTest}
-                                onReset={handleTestReset}
-                                onGoBack={handleGoToPractice}
-                            />
+                            isPreview ? (
+                                <div className="mt-6 flex items-center gap-3">
+                                  <button
+                                    onClick={handleGoToPractice}
+                                    className={`w-1/5 px-4 py-2 font-semibold rounded-lg border-2 transition-colors flex items-center justify-center text-center ${
+                                      darkMode
+                                        ? 'bg-transparent text-yellow-300 border-yellow-400 hover:text-yellow-200 hover:border-yellow-300'
+                                        : 'bg-transparent text-yellow-600 border-yellow-500 hover:text-yellow-500 hover:border-yellow-400'
+                                    }`}
+                                  >
+                                    Back
+                                  </button>
+                                  <button
+                                    onClick={async ()=>{
+                                      try {
+                                        const selectionStr = localStorage.getItem('teamsSelection');
+                                        const sel = selectionStr ? JSON.parse(selectionStr) : null;
+                                        const school = sel?.school;
+                                        const divisionSel = sel?.division;
+                                        if (!school || !divisionSel) { alert('Missing team selection'); return; }
+                                        const params = JSON.parse(localStorage.getItem('testParams')||'{}');
+                                        const assignees = previewScope === 'all' ? [{ name: 'ALL' }] : [{ name: previewScope }];
+                                        const res = await fetch('/api/assignments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ school, division: divisionSel, teamId: previewTeam, eventName: 'Codebusters', assignees, params, questions: quotes }) });
+                                        if (res.ok) {
+                                          const json = await res.json();
+                                          const assignmentId = json?.data?.id;
+                                          try {
+                                            const mres = await fetch(`/api/teams/units?school=${encodeURIComponent(school)}&division=${divisionSel}&teamId=${previewTeam}&members=1`);
+                                            const mj = mres.ok ? await mres.json() : null;
+                                            const members = Array.isArray(mj?.data) ? mj.data : [];
+                                            const targets = previewScope === 'all' ? members : members.filter((m:any)=>{
+                                              const full = [m.firstName, m.lastName].filter(Boolean).join(' ').trim();
+                                              const label = full || m.displayName || m.username || '';
+                                              return label === previewScope;
+                                            });
+                                            await Promise.all(targets.filter((m:any)=>m.userId).map((m:any)=>
+                                              fetch('/api/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action:'create', userId: m.userId, type: 'assignment', title: `New Codebusters test assigned`, data: { assignmentId, eventName: 'Codebusters', url: `/assign/${assignmentId}` } }) })
+                                            ));
+                                          } catch {}
+                                          window.location.href = '/teams/results';
+                                        }
+                                      } catch {}
+                                    }}
+                                    className={`w-4/5 px-4 py-2 font-semibold rounded-lg border-2 flex items-center justify-center text-center ${
+                                      darkMode
+                                        ? 'bg-transparent text-blue-300 border-blue-300 hover:text-blue-200 hover:border-blue-200'
+                                        : 'bg-transparent text-blue-700 border-blue-700 hover:text-blue-600 hover:border-blue-600'
+                                    }`}
+                                  >
+                                    Send Test
+                                  </button>
+                                </div>
+                            ) : (
+                                <SubmitButton 
+                                    isTestSubmitted={isTestSubmitted}
+                                    darkMode={darkMode}
+                                    onSubmit={handleSubmitTest}
+                                    onReset={handleTestReset}
+                                    onGoBack={handleGoToPractice}
+                                />
+                            )
                         )}
                     </main>
 

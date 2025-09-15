@@ -69,16 +69,34 @@ export const useSolutionHandlers = (
 
   const handleCheckerboardSolutionChange = useCallback((quoteIndex: number, position: number, plainLetter: string) => {
     setQuotes((prevQuotes) => prevQuotes.map((quote, index) => {
-      if (index === quoteIndex) {
-        return {
-          ...quote,
-          checkerboardSolution: {
-            ...(quote.checkerboardSolution || {}),
-            [position]: plainLetter.toUpperCase()
-          }
-        };
-      }
-      return quote;
+      if (index !== quoteIndex) return quote;
+
+      // Build tokens honoring block separators (triple spaces)
+      const blocks = (quote.encrypted || '').trim().split(/\s{3,}/);
+      const tokens: string[] = [];
+      blocks.forEach(block => {
+        const compact = block.replace(/\s+/g, '');
+        for (let i = 0; i < compact.length; i += 2) {
+          const a = compact[i];
+          const b = compact[i + 1] || '';
+          tokens.push(b ? a + b : a);
+        }
+      });
+
+      const targetToken = tokens[position];
+      const upper = plainLetter.toUpperCase();
+
+      const updated: { [key: number]: string } = { ...(quote.checkerboardSolution || {}) };
+      tokens.forEach((tok, idx) => {
+        if (tok === targetToken) {
+          updated[idx] = upper;
+        }
+      });
+
+      return {
+        ...quote,
+        checkerboardSolution: updated
+      };
     }));
   }, [setQuotes]);
 

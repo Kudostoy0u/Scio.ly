@@ -42,11 +42,12 @@ export const useHintSystem = (
 
 
     if (quote.cipherType === 'Checkerboard') {
-      const r1 = (quote as any).checkerboardR1 as number;
-      const r2 = (quote as any).checkerboardR2 as number;
-      const keyword = (quote as any).checkerboardKeyword as string;
-      if (typeof r1 === 'number' && typeof r2 === 'number') {
-        return `Digits ${r1} and ${r2} start two-digit codes. Keyword: ${keyword}. Top row letters are single-digit columns except ${r1}, ${r2}.`;
+      const rowKey = (quote as any).checkerboardRowKey as string;
+      const colKey = (quote as any).checkerboardColKey as string;
+      const polyKey = (quote as any).checkerboardPolybiusKey as string;
+      const usesIJ = (quote as any).checkerboardUsesIJ as boolean;
+      if (rowKey && colKey) {
+        return `Row key: ${rowKey}. Column key: ${colKey}. Polybius key: ${polyKey}. ${usesIJ ? 'I/J combined.' : ''}`;
       }
     }
 
@@ -139,18 +140,12 @@ export const useHintSystem = (
 
 
     if (quote.cipherType === 'Checkerboard') {
-      const r1 = (quote as any).checkerboardR1 as number;
-      const r2 = (quote as any).checkerboardR2 as number;
-      const digits = quote.encrypted.replace(/\s+/g, '').split('');
+      const letters = quote.encrypted.replace(/\s+/g, '');
       const tokens: string[] = [];
-      for (let i = 0; i < digits.length; i++) {
-        const d = parseInt(digits[i], 10);
-        if (d === r1 || d === r2) {
-          tokens.push(digits[i] + (digits[i + 1] || ''));
-          i++;
-        } else {
-          tokens.push(digits[i]);
-        }
+      for (let i = 0; i < letters.length; i += 2) {
+        const a = letters[i];
+        const b = letters[i + 1] || '';
+        tokens.push(b ? a + b : a);
       }
       const plain = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
       const current = (quote as any).checkerboardSolution || {};
@@ -162,10 +157,24 @@ export const useHintSystem = (
       }
       if (candidates.length > 0) {
         const target = candidates[Math.floor(Math.random() * candidates.length)];
+        const targetToken = tokens[target];
         const newQuotes = quotes.map((q, idx) => {
           if (idx !== questionIndex) return q;
           const prev = (q as any).checkerboardSolution || {};
-          return { ...q, checkerboardSolution: { ...prev, [target]: plain[target] } } as QuoteData;
+          const prevHinted = (q as any).checkerboardHinted || {};
+          const updated: { [key: number]: string } = { ...prev };
+          const updatedHinted: { [key: number]: boolean } = { ...prevHinted };
+          tokens.forEach((tok, i) => {
+            if (tok === targetToken && i < plain.length) {
+              updated[i] = plain[i];
+              updatedHinted[i] = true;
+            }
+          });
+          return { 
+            ...q, 
+            checkerboardSolution: updated,
+            checkerboardHinted: updatedHinted
+          } as QuoteData;
         });
         setQuotes(newQuotes);
       }
@@ -188,7 +197,8 @@ export const useHintSystem = (
         const newQuotes = quotes.map((q, idx) => {
           if (idx !== questionIndex) return q;
           const prev = q.nihilistSolution || {};
-          return { ...q, nihilistSolution: { ...prev, [target]: plain[target] } } as QuoteData;
+          const prevHinted = (q as any).nihilistHinted || {};
+          return { ...q, nihilistSolution: { ...prev, [target]: plain[target] }, nihilistHinted: { ...prevHinted, [target]: true } } as QuoteData;
         });
         setQuotes(newQuotes);
       }

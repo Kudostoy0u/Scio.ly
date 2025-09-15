@@ -429,15 +429,23 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
     if (quote.nihilistSolution && Object.keys(quote.nihilistSolution).length > 0) {
 
       const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
-      totalInputs = expectedPlaintext.length;
+      const hintedPositions = Object.entries((quote as any).nihilistHinted || {}).filter(([, v]) => v === true).map(([k]) => Number(k));
+      const hintedCount = hintedPositions.length;
+      totalInputs = Math.max(0, expectedPlaintext.length - hintedCount);
       
 
-      for (let i = 0; i < totalInputs; i++) {
-        const userAnswer = quote.nihilistSolution[i];
+      for (let i = 0; i < expectedPlaintext.length; i++) {
+        const isHinted = Boolean((quote as any).nihilistHinted?.[i]);
+        if (isHinted) continue;
+        let userAnswer = quote.nihilistSolution[i];
+        // Normalize I/J equivalence
+        const norm = (s: string) => s ? s.toUpperCase().replace(/J/g, 'I') : s;
+        userAnswer = norm(userAnswer || '');
+        const expected = norm(expectedPlaintext[i]);
         if (userAnswer && userAnswer.trim().length > 0) {
           filledInputs++;
 
-          if (userAnswer.trim() === expectedPlaintext[i]) {
+          if (userAnswer.trim() === expected) {
             correctInputs++;
           }
         }
@@ -580,10 +588,14 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
     if (quote.checkerboardSolution && Object.keys(quote.checkerboardSolution).length > 0) {
 
       const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
-      totalInputs = expectedPlaintext.length;
+      const hintedPositions = Object.entries((quote as any).checkerboardHinted || {}).filter(([, v]) => v === true).map(([k]) => Number(k));
+      const hintedCount = hintedPositions.length;
+      totalInputs = Math.max(0, expectedPlaintext.length - hintedCount);
       
 
-      for (let i = 0; i < totalInputs; i++) {
+      for (let i = 0; i < expectedPlaintext.length; i++) {
+        const isHinted = Boolean((quote as any).checkerboardHinted?.[i]);
+        if (isHinted) continue;
         const userAnswer = quote.checkerboardSolution[i];
         if (userAnswer && userAnswer.trim().length > 0) {
           filledInputs++;

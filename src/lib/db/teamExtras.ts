@@ -8,9 +8,7 @@ const pool = new Pool({
 export async function initExtrasDatabase() {
   const client = await pool.connect();
   try {
-    // Purged legacy notifications and team_links tables
-    await client.query(`DROP TABLE IF EXISTS notifications`);
-    await client.query(`DROP TABLE IF EXISTS team_links`);
+    // Ensure extras tables exist (do not drop unrelated tables)
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS assignments (
@@ -108,6 +106,39 @@ export async function listRecentResults(school: string, division: 'B'|'C') {
       [school, division]
     );
     return res.rows;
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteAssignmentResult(id: number | string) {
+  const client = await pool.connect();
+  try {
+    await initExtrasDatabase();
+    await client.query(`DELETE FROM assignment_results WHERE id=$1::INT8`, [id]);
+    return true;
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteAssignment(id: number | string) {
+  const client = await pool.connect();
+  try {
+    await initExtrasDatabase();
+    await client.query(`DELETE FROM assignments WHERE id=$1::INT8`, [id]);
+    return true;
+  } finally {
+    client.release();
+  }
+}
+
+export async function getAssignmentById(id: number | string) {
+  const client = await pool.connect();
+  try {
+    await initExtrasDatabase();
+    const res = await client.query(`SELECT * FROM assignments WHERE id=$1::INT8`, [id]);
+    return res.rows[0] || null;
   } finally {
     client.release();
   }

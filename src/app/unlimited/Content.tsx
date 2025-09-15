@@ -111,7 +111,8 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     const fetchData = async () => {
       try {
 
-        const params = buildApiParams(routerParams, 1000);
+        // For unlimited mode, request 50 questions at a time
+        const params = buildApiParams(routerParams, 50);
         const apiUrl = `${api.questions}?${params}`;
         
         let apiResponse: any = null;
@@ -225,13 +226,9 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           
 
           const idParams = new URLSearchParams();
+          // Use the full event name for ID questions API - it doesn't support subtopics as separate params
           idParams.set('event', routerParams.eventName);
-          idParams.set('limit', String(Math.max(idCount * 3, 50)));
-          
-
-          if (routerParams.subtopics && routerParams.subtopics.length > 0) {
-            idParams.set('subtopics', routerParams.subtopics.join(','));
-          }
+          idParams.set('limit', String(idCount));
           
           fetch(`${api.idQuestions}?${idParams.toString()}`)
             .then(r => r.json())

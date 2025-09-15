@@ -84,6 +84,18 @@ export default function ProfilePage() {
         }
       } else {
         toast.success('Profile updated successfully!');
+        try {
+          if (user?.id) {
+            if (displayName) {
+              localStorage.setItem(`scio_display_name_${user.id}`, displayName);
+            } else {
+              localStorage.removeItem(`scio_display_name_${user.id}`);
+            }
+            if (username) {
+              localStorage.setItem(`scio_username_${user.id}`, username);
+            }
+          }
+        } catch {}
       }
     } catch (error) {
       console.error('Error updating profile:', error);

@@ -539,8 +539,12 @@ const Pagination = ({
 
 export default function ReportsPage() {
   const { darkMode } = useTheme();
+  // Lazy-loaded per-event data caches
   const [blacklistedQuestions, setBlacklistedQuestions] = useState<Record<string, string[]>>({});
   const [editedQuestions, setEditedQuestions] = useState<Record<string, Array<{original: string, edited: string, timestamp: string}>>>({});
+  // Metadata counts by event
+  const [editsByEvent, setEditsByEvent] = useState<Record<string, number>>({});
+  const [removedByEvent, setRemovedByEvent] = useState<Record<string, number>>({});
   const [activeTab, setActiveTab] = useState<'blacklisted' | 'edited'>('blacklisted');
   const [selectedEvent, setSelectedEvent] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -549,39 +553,59 @@ export default function ReportsPage() {
 
   const ITEMS_PER_PAGE = 10;
 
+  // Initial load: fetch metadata only
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchMeta = async () => {
       setLoading(true);
       try {
-
-        const blacklistResponse = await fetch(api.blacklists);
-        if (!blacklistResponse.ok) {
-          throw new Error('Failed to fetch blacklisted questions');
-        }
-        const blacklistData = await blacklistResponse.json();
-        setBlacklistedQuestions(blacklistData.blacklists || {});
-
-
-        const editedResponse = await fetch(api.edits);
-        if (!editedResponse.ok) {
-          throw new Error('Failed to fetch edited questions');
-        }
-        const editedData = await editedResponse.json();
-        setEditedQuestions(editedData.edits || {});
+        const res = await fetch(api.reportMeta);
+        if (!res.ok) throw new Error('Failed to fetch report metadata');
+        const json = await res.json();
+        const meta = (json.data || {}) as { editsByEvent?: Record<string, number>; removedByEvent?: Record<string, number> };
+        setEditsByEvent(meta.editsByEvent || {});
+        setRemovedByEvent(meta.removedByEvent || {});
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setLoading(false);
       }
     };
-
-    fetchData();
+    fetchMeta();
   }, []);
 
 
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedEvent]);
+
+  // Lazy-load per-event data when needed
+  useEffect(() => {
+    const load = async () => {
+      if (!selectedEvent) return;
+      try {
+        setLoading(true);
+        if (activeTab === 'blacklisted' && blacklistedQuestions[selectedEvent] === undefined) {
+          const res = await fetch(`${api.blacklists}?event=${encodeURIComponent(selectedEvent)}`);
+          if (!res.ok) throw new Error('Failed to fetch blacklisted questions');
+          const json = await res.json();
+          const list = (json.blacklist || []) as string[];
+          setBlacklistedQuestions(prev => ({ ...prev, [selectedEvent]: list }));
+        }
+        if (activeTab === 'edited' && editedQuestions[selectedEvent] === undefined) {
+          const res = await fetch(`${api.edits}?event=${encodeURIComponent(selectedEvent)}`);
+          if (!res.ok) throw new Error('Failed to fetch edited questions');
+          const json = await res.json();
+          const list = (json.edits || []) as Array<{original: string, edited: string, timestamp: string}>;
+          setEditedQuestions(prev => ({ ...prev, [selectedEvent]: list }));
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [selectedEvent, activeTab, blacklistedQuestions, editedQuestions]);
 
   const formatDate = (timestamp: string) => {
     return new Date(timestamp).toLocaleString();
@@ -600,41 +624,25 @@ export default function ReportsPage() {
 
 
   const getEventsWithReports = () => {
-    const eventsWithReports = new Set<string>();
-    
-
-    Object.keys(blacklistedQuestions).forEach(event => {
-      if (blacklistedQuestions[event] && blacklistedQuestions[event].length > 0) {
-        eventsWithReports.add(event);
-      }
-    });
-    
-
-    Object.keys(editedQuestions).forEach(event => {
-      if (editedQuestions[event] && editedQuestions[event].length > 0) {
-        eventsWithReports.add(event);
-      }
-    });
-    
+    const eventsWithReports = new Set<string>([
+      ...Object.keys(editsByEvent).filter(e => (editsByEvent[e] || 0) > 0),
+      ...Object.keys(removedByEvent).filter(e => (removedByEvent[e] || 0) > 0),
+    ]);
     return approvedEvents.filter(event => eventsWithReports.has(event.name));
   };
 
 
   const getEventReportCount = (eventName: string) => {
-    const blacklistedCount = blacklistedQuestions[eventName]?.length || 0;
-    const editedCount = editedQuestions[eventName]?.length || 0;
+    const blacklistedCount = removedByEvent[eventName] || 0;
+    const editedCount = editsByEvent[eventName] || 0;
     return blacklistedCount + editedCount;
   };
 
 
   const getTotalReportCount = () => {
     let total = 0;
-    Object.values(blacklistedQuestions).forEach(questions => {
-      total += questions.length;
-    });
-    Object.values(editedQuestions).forEach(edits => {
-      total += edits.length;
-    });
+    Object.values(removedByEvent).forEach(n => { total += n || 0; });
+    Object.values(editsByEvent).forEach(n => { total += n || 0; });
     return total;
   };
 

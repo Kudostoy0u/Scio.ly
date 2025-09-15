@@ -15,6 +15,7 @@ const Filters = z.object({
   difficulty_min: z.string().optional(),
   difficulty_max: z.string().optional(),
   limit: z.string().optional(),
+  question_type: z.string().optional(),
 });
 
 const toArray = (v: unknown) => (Array.isArray(v) ? v : []);
@@ -32,6 +33,12 @@ export async function GET(request: NextRequest) {
     if (subtopics.length > 0) conds.push(sql`${idEvents.subtopics} @> ${JSON.stringify(subtopics)}`);
     if (p.difficulty_min) conds.push(gte(idEvents.difficulty, String(parseFloat(p.difficulty_min))));
     if (p.difficulty_max) conds.push(lt(idEvents.difficulty, String(parseFloat(p.difficulty_max))));
+
+    // Filter by question type if provided (mcq | frq | both)
+    const qt = (p.question_type || '').toLowerCase();
+    if (qt === 'mcq' || qt === 'frq') {
+      conds.push(sql`${idEvents.questionType} = ${qt}`);
+    }
 
     const where = conds.length === 0 ? undefined : (conds.length === 1 ? conds[0] : and(...conds));
     const limit = Math.min(Math.max(parseInt(p.limit || '50') || 50, 1), 200);

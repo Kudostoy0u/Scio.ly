@@ -27,6 +27,7 @@ interface QuestionCardProps {
   onQuestionRemoved: (questionIndex: number) => void;
   onGetExplanation: (index: number, question: Question, userAnswer: (string | null)[]) => void;
   isOffline?: boolean;
+  hideResultText?: boolean; // when true, suppress Correct/Wrong/Skipped text (used for preview)
 }
 
 export default function QuestionCard({
@@ -50,7 +51,8 @@ export default function QuestionCard({
   onEdit,
   onQuestionRemoved,
   onGetExplanation,
-  isOffline
+  isOffline,
+  hideResultText = false
 }: QuestionCardProps) {
   const isMultiSelect = isMultiSelectQuestion(question.question, question.answers);
   const currentAnswers = userAnswers || [];
@@ -177,9 +179,9 @@ export default function QuestionCard({
         />
       )}
 
-      {isSubmitted && (
+      {isSubmitted && !hideResultText && (
         <>
-                     {(() => {
+          {(() => {
              const score = gradingResults[index] ?? 0;
              const isGrading = gradingFRQs[index];
              
@@ -219,35 +221,37 @@ export default function QuestionCard({
                  )}
                </>
              );
-           })()}
-          
-          <div className="mt-2">
-            {!explanations[index] ? (
-              <button
-                onClick={() => onGetExplanation(index, question, currentAnswers)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-300 ${
-                  darkMode
-                    ? 'bg-gray-700 hover:bg-gray-600 text-blue-400'
-                    : 'bg-blue-50 hover:bg-blue-100 text-blue-600'
-                }`}
-                disabled={loadingExplanation[index] || isOffline}
-              >
-                {loadingExplanation[index] ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
-                ) : (
-                  <>
-                    <span>Explain</span>
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </>
-                )}
-              </button>
-            ) : (
-              <MarkdownExplanation text={explanations[index]} />
-            )}
-          </div>
+          })()}
         </>
+      )}
+
+      {isSubmitted && (
+        <div className="mt-2">
+          {!explanations[index] ? (
+            <button
+              onClick={() => onGetExplanation(index, question, currentAnswers)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-300 ${
+                darkMode
+                  ? 'bg-gray-700 hover:bg-gray-600 text-blue-400'
+                  : 'bg-blue-50 hover:bg-blue-100 text-blue-600'
+              }`}
+              disabled={loadingExplanation[index] || isOffline}
+            >
+              {loadingExplanation[index] ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
+              ) : (
+                <>
+                  <span>Explain</span>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </>
+              )}
+            </button>
+          ) : (
+            <MarkdownExplanation text={explanations[index]} />
+          )}
+        </div>
       )}
       
       <br />

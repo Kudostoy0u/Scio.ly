@@ -25,6 +25,7 @@ import {
   k1Xeno as encryptK1Xenocrypt,
   k2Xeno as encryptK2Xenocrypt,
   k3Xeno as encryptK3Xenocrypt,
+  encryptCheckerboard,
   
   encryptCryptarithm,
   
@@ -580,8 +581,8 @@ export const loadQuestionsFromDatabase = async (
           cipherResult = encryptK3Xenocrypt(cleanedQuote);
           break;
         case 'Checkerboard':
-          // Temporarily disabled or moved; skip generation for this type
-          throw new Error('Checkerboard cipher generation not available');
+          cipherResult = encryptCheckerboard(cleanedQuote);
+          break;
         case 'Cryptarithm':
           cipherResult = encryptCryptarithm(cleanedQuote);
           break;
@@ -608,9 +609,11 @@ export const loadQuestionsFromDatabase = async (
         portaKeyword: cipherResult.keyword || undefined,
         nihilistPolybiusKey: 'polybiusKey' in cipherResult ? (cipherResult as { polybiusKey: string }).polybiusKey : undefined,
         nihilistCipherKey: 'cipherKey' in cipherResult ? (cipherResult as { cipherKey: string }).cipherKey : undefined,
-        checkerboardKeyword: (cipherResult as any).checkerboardKeyword,
-        checkerboardR1: (cipherResult as any).checkerboardR1,
-        checkerboardR2: (cipherResult as any).checkerboardR2,
+        checkerboardRowKey: (cipherResult as any).checkerboardRowKey,
+        checkerboardColKey: (cipherResult as any).checkerboardColKey,
+        checkerboardPolybiusKey: (cipherResult as any).checkerboardPolybiusKey,
+        checkerboardUsesIJ: (cipherResult as any).checkerboardUsesIJ,
+        blockSize: (cipherResult as any).blockSize,
         columnarKey: normalizedCipherType === 'Complete Columnar' ? cipherResult.key : undefined,
         fractionationTable: cipherResult.fractionationTable || undefined,
         caesarShift: cipherResult.shift || undefined,
@@ -646,9 +649,11 @@ export const loadQuestionsFromDatabase = async (
         portaKeyword: quote.portaKeyword,
         nihilistPolybiusKey: quote.nihilistPolybiusKey,
         nihilistCipherKey: quote.nihilistCipherKey,
-            checkerboardKeyword: (quote as any).checkerboardKeyword,
-            checkerboardR1: (quote as any).checkerboardR1,
-            checkerboardR2: (quote as any).checkerboardR2,
+            checkerboardRowKey: (quote as any).checkerboardRowKey,
+            checkerboardColKey: (quote as any).checkerboardColKey,
+            checkerboardPolybiusKey: (quote as any).checkerboardPolybiusKey,
+            checkerboardUsesIJ: (quote as any).checkerboardUsesIJ,
+            blockSize: (quote as any).blockSize,
         columnarKey: quote.columnarKey,
         fractionationTable: quote.fractionationTable,
         caesarShift: quote.caesarShift,

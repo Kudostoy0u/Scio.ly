@@ -362,9 +362,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       ) : item.cipherType === 'Checkerboard' ? (
         <CheckerboardDisplay
           text={item.encrypted}
-          keyword={item.checkerboardKeyword!}
-          r1={item.checkerboardR1!}
-          r2={item.checkerboardR2!}
+          rowKey={item.checkerboardRowKey!}
+          colKey={item.checkerboardColKey!}
+          polybiusKey={item.checkerboardPolybiusKey!}
+          usesIJ={!!item.checkerboardUsesIJ}
           quoteIndex={index}
           solution={item.checkerboardSolution}
           isTestSubmitted={isTestSubmitted}

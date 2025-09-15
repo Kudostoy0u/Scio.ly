@@ -20,6 +20,7 @@ const api = {
     reportEdit: `${API_BASE_URL}/report/edit`,
     reportRemove: `${API_BASE_URL}/report/remove`,
     reportAll: `${API_BASE_URL}/report/all`,
+    reportMeta: `${API_BASE_URL}/report/meta`,
     admin: `${API_BASE_URL}/admin`,
     
 

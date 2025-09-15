@@ -50,7 +50,6 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
   const [suggestionsTampered, setSuggestionsTampered] = useState(false);
 
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
-  const [autoFetched, setAutoFetched] = useState(false);
 
   useEffect(() => {
     if (question && isOpen) {
@@ -87,16 +86,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
     }
   }, [question, isOpen, canEditAnswers]);
 
-  // Auto-fetch and apply AI suggestions when modal opens
-  useEffect(() => {
-    if (isOpen && question && !autoFetched) {
-      setAutoFetched(true);
-      // Fire and forget; internal function handles loading and errors
-      void handleGetSuggestions();
-    }
-    // We intentionally exclude handleGetSuggestions from deps to avoid re-creating effect
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, question, autoFetched]);
+  
 
   // Detect when user tampers with AI suggestions
   useEffect(() => {
@@ -266,10 +256,11 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
         ...(finalImageUrl && { imageData: finalImageUrl })
       };
 
-      toast.info('Judging edits');
-
       // Check if we can bypass AI validation (untampered AI suggestions)
       const canBypassValidation = aiSuggestionsApplied && !suggestionsTampered;
+      if (!canBypassValidation) {
+        toast.info('Judging edits');
+      }
 
       console.log('🔍 [EDIT-MODAL] Bypass check:', {
         aiSuggestionsApplied,

@@ -2,8 +2,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Header from '@/app/components/Header';
 import { useTheme } from '@/app/contexts/ThemeContext';
-import { Edit, Check, Share2 } from 'lucide-react';
+import { useAuth } from '@/app/contexts/AuthContext';
+import { Edit, Check, Share2, Trash2, Crown, Link as LinkIcon, AlertTriangle } from 'lucide-react';
+import { toast } from 'react-toastify';
+import { useRouter } from 'next/navigation';
+import { Save as SaveIcon } from 'lucide-react';
 import TeamShareModal from '../components/TeamShareModal';
+import Link from 'next/link';
+import TestConfiguration from '@/app/practice/components/TestConfiguration';
+import type { Event as PracticeEvent, Settings as PracticeSettings } from '@/app/practice/types';
 
 
 type TeamSelection = {
@@ -11,7 +18,6 @@ type TeamSelection = {
   captain: boolean;
   division: 'B' | 'C';
 };
-
 
 
 
@@ -53,19 +59,21 @@ function extractUniqueSchools(meta: any): string[] {
   return Array.from(new Set(names.map(n => n.replace(/\s+(Varsity|JV)$/i, '').trim()))).sort((a, b) => a.localeCompare(b));
 }
 
-export default function TeamsDashboard({ initialLinkedSelection }: { initialLinkedSelection?: { school: string; division: 'B'|'C'; team_id: string; member_name?: string } | null }) {
+export default function TeamsDashboard({ initialLinkedSelection, initialSlug, initialGroupSlug, initialIsCaptain }: { initialLinkedSelection?: { school: string; division: 'B'|'C'; team_id: string; member_name?: string } | null, initialSlug?: string | null, initialGroupSlug?: string | null, initialIsCaptain?: boolean | null }) {
   const { darkMode } = useTheme();
+  const { user } = useAuth();
+  const router = useRouter();
   const [availableSchools, setAvailableSchools] = useState<string[]>([]);
   const [schoolQuery, setSchoolQuery] = useState('');
   const [selection, setSelection] = useState<TeamSelection | null>(null);
   const [teams, setTeams] = useState<Array<{ id: string; name: string; roster: Record<string, string[]> }>>([{ id: 'A', name: 'Team A', roster: {} }]);
+  const [teamUnits, setTeamUnits] = useState<Array<{ teamId: string; name: string; slug?: string }>>([]);
   const [activeTeamIdx, setActiveTeamIdx] = useState<number>(0);
   const [editingTeamIdx, setEditingTeamIdx] = useState<number | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState<number>(40);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [chosenSchool, setChosenSchool] = useState<string | null>(null);
-  const [pendingCaptain, setPendingCaptain] = useState<boolean>(false);
   const [pendingDivision, setPendingDivision] = useState<'B' | 'C'>('C');
   const [isTrackerOpen, setIsTrackerOpen] = useState<boolean>(false);
   const [tournaments, setTournaments] = useState<Array<{ id: string; name: string; dateTime: string }>>([]);
@@ -83,11 +91,28 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
   const [tick, setTick] = useState<number>(0);
   const [nameAddingEvent, setNameAddingEvent] = useState<string | null>(null);
   const [selectedEventForName, setSelectedEventForName] = useState<string>('');
-  const [newMemberName, setNewMemberName] = useState<string>('');
-  const [newMemberEvent, setNewMemberEvent] = useState<string>('');
-  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const [nameInviting, setNameInviting] = useState<string | null>(null);
+  const [invitingUsername, setInvitingUsername] = useState<string>('');
+  const [members, setMembers] = useState<Array<{ userId: string; username: string | null; displayName: string | null; firstName: string | null; lastName: string | null; role: 'captain'|'user' }>>([]);
+  const [topAddOpen, setTopAddOpen] = useState<boolean>(false);
+  const [topInviteOpen, setTopInviteOpen] = useState<boolean>(false);
+  const [topAddName, setTopAddName] = useState<string>('');
+  const [topInviteUsername, setTopInviteUsername] = useState<string>('');
+  const [extraUnlinkedNames, setExtraUnlinkedNames] = useState<string[]>([]);
   // Linking UI removed in new architecture
   const [saving, setSaving] = useState<boolean>(false);
+  const [existingTeamWarning, setExistingTeamWarning] = useState<{ school: string; division: 'B' | 'C' } | null>(null);
+  const [joinError, setJoinError] = useState<string>('');
+  const [createError, setCreateError] = useState<string>('');
+  const [currentSlug, setCurrentSlug] = useState<string | null>(null);
+  const groupSlugRef = useRef<string | null>(initialGroupSlug || null);
+  const lastLoadKeyRef = useRef<string | null>(null);
+  const [initializedFromSlug, setInitializedFromSlug] = useState<boolean>(false);
+  const [addingTeam, setAddingTeam] = useState<boolean>(false);
+  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; teamId?: string; teamName?: string }>(false as any);
+  const [assignModal, setAssignModal] = useState<{ open: boolean; eventName: string; scope: 'all' | string } | null>(null);
+  const [assignSettings, setAssignSettings] = useState<PracticeSettings>({ questionCount: 10, timeLimit: 15, difficulties: [], types: 'multiple-choice', division: 'any', tournament: '', subtopics: [], idPercentage: 0 });
+  const [assignEvent, setAssignEvent] = useState<PracticeEvent | null>(null);
 
 
   useEffect(() => {
@@ -105,86 +130,151 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
     load();
   }, []);
 
+  const desiredTeamIdRef = useRef<string | null>(initialLinkedSelection?.team_id || null);
+  const desiredSelectionSetRef = useRef<boolean>(false);
   useEffect(() => {
     try {
-      const savedSelStr = localStorage.getItem('teamsSelection');
-      if (savedSelStr) {
-        const raw = JSON.parse(savedSelStr);
-        const normalized: TeamSelection = {
-          school: raw.school,
-          captain: !!raw.captain,
-          division: (raw.division || raw.preferredDivision || 'C') as 'B' | 'C',
-        };
-        setSelection(normalized);
-        return;
-      }
       if (initialLinkedSelection && initialLinkedSelection.school && (initialLinkedSelection.division === 'B' || initialLinkedSelection.division === 'C')) {
-        setSelection({ school: initialLinkedSelection.school, captain: false, division: initialLinkedSelection.division });
+        setSelection({ school: initialLinkedSelection.school, captain: !!initialIsCaptain, division: initialLinkedSelection.division });
         setTeams([{ id: initialLinkedSelection.team_id || 'A', name: `Team ${initialLinkedSelection.team_id || 'A'}`, roster: {} }]);
         setActiveTeamIdx(0);
+        desiredTeamIdRef.current = initialLinkedSelection.team_id || null;
+        desiredSelectionSetRef.current = true;
       }
     } catch {}
-  }, [initialLinkedSelection]);
+  }, [initialLinkedSelection, initialIsCaptain]);
 
+  // If a unit slug is given (legacy), load that unit directly once
   useEffect(() => {
-    try { if (selection) localStorage.setItem('teamsSelection', JSON.stringify(selection)); } catch {}
-    try {
-      if (selection && typeof document !== 'undefined') {
-        const val = encodeURIComponent(JSON.stringify(selection));
-        document.cookie = `teamsSelection=${val}; path=/; max-age=${60 * 60 * 24 * 30}`;
-      }
-    } catch {}
-  }, [selection]);
+    const loadBySlug = async () => {
+      if (!initialSlug || initializedFromSlug) return;
+      try {
+        const res = await fetch(`/api/teams/units/${initialSlug}`);
+        if (res.ok) {
+          const json = await res.json();
+          const unit = json?.data;
+          if (unit) {
+            setSelection({ school: unit.school, captain: json?.role === 'captain', division: unit.division });
+            setTeams([{ id: unit.teamId, name: unit.name, roster: unit.roster || {} }]);
+            setActiveTeamIdx(0);
+            setCurrentSlug(unit.slug);
+            // Remember the teamId so tabs can highlight the correct subteam once loaded
+            desiredTeamIdRef.current = unit.teamId;
+            setInitializedFromSlug(true);
+          }
+        }
+      } catch {}
+    };
+    void loadBySlug();
+  }, [initialSlug, initializedFromSlug]);
 
-  const storageKey = (sel: TeamSelection) => `teamsData:${sel.school}:${sel.division}`;
-  const trackerKey = (sel: TeamSelection) => `teamsTournaments:${sel.school}:${sel.division}`;
+  // If a group slug is given (new model), load group and units
+  useEffect(() => {
+    const loadByGroupSlug = async () => {
+      if (!initialGroupSlug || initializedFromSlug) return;
+      try {
+        const res = await fetch(`/api/teams/group/${initialGroupSlug}`);
+        if (res.ok) {
+          const json = await res.json();
+          const group = json?.data?.group;
+          const units = json?.data?.units || [];
+          if (group && Array.isArray(units) && units.length > 0) {
+            setSelection({ school: group.school, captain: json?.role === 'captain', division: group.division });
+            setTeamUnits(units.map((u: any) => ({ teamId: u.teamId, name: u.name, slug: u.slug })));
+            const desiredId = initialLinkedSelection?.team_id || units[0].teamId;
+            const idx = Math.max(0, units.findIndex((u: any) => u.teamId === desiredId));
+            const chosen = units[idx] || units[0];
+            setTeams([{ id: chosen.teamId, name: chosen.name, roster: chosen.roster || {} }]);
+            setActiveTeamIdx(idx);
+            setCurrentSlug(chosen.slug || null);
+            groupSlugRef.current = group.slug || initialGroupSlug;
+            desiredTeamIdRef.current = chosen.teamId;
+            setInitializedFromSlug(true);
+          }
+        }
+      } catch {}
+    };
+    void loadByGroupSlug();
+  }, [initialGroupSlug, initializedFromSlug, initialLinkedSelection?.team_id]);
 
   useEffect(() => {
     if (!selection) return;
-    try {
-      const saved = localStorage.getItem(storageKey(selection));
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) setTeams(parsed);
-      }
-    } catch {}
-    // Also attempt to load from API if available
+    // Load available team units even when initialized by slug; prefer group when available
     const loadFromApi = async () => {
       try {
-        const res = await fetch(`/api/teams/share?school=${encodeURIComponent(selection.school)}&division=${selection.division}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data?.success && data?.data && Array.isArray(data.data.teams) && data.data.teams.length > 0) {
-          setTeams(data.data.teams);
+        const preferredId = desiredTeamIdRef.current || (teams[activeTeamIdx]?.id) || 'A';
+        const loadKey = `${selection.school}:${selection.division}:${preferredId}`;
+        if (lastLoadKeyRef.current === loadKey) return;
+        if (groupSlugRef.current) {
+          const groupRes = await fetch(`/api/teams/group/${groupSlugRef.current}`);
+          if (groupRes.ok) {
+            const groupJson = await groupRes.json();
+            const units = Array.isArray(groupJson?.data?.units) ? groupJson.data.units : [];
+            if (units.length > 0) {
+              const mapped = units.map((u: any) => ({ teamId: u.teamId, name: u.name, slug: u.slug }));
+              setTeamUnits(mapped);
+              const desiredId = desiredTeamIdRef.current
+                || (currentSlug ? (units.find((u: any) => u.slug === currentSlug)?.teamId || null) : null)
+                || (teams[activeTeamIdx]?.id)
+                || units[0].teamId;
+              const idx = Math.max(0, mapped.findIndex((u: any) => u.teamId === desiredId));
+              const targetTeamId = mapped[idx >= 0 ? idx : 0].teamId;
+              if ((teams[activeTeamIdx]?.id) !== targetTeamId) {
+                try {
+                  const res = await fetch(`/api/teams/units?school=${encodeURIComponent(selection.school)}&division=${selection.division}&teamId=${targetTeamId}`);
+                  if (res.ok) {
+                    const data = await res.json();
+                    if (data?.success && data?.data) {
+                      setTeams([{ id: data.data.teamId, name: data.data.name, roster: data.data.roster || {} }]);
+                      setCurrentSlug(data.data.slug || null);
+                    }
+                  }
+                } catch {}
+              }
+              setActiveTeamIdx(idx >= 0 ? idx : 0);
+              lastLoadKeyRef.current = loadKey;
+              desiredTeamIdRef.current = null;
+              return;
+            }
+          }
+        } else {
+          const unitsRes = await fetch(`/api/teams/units?school=${encodeURIComponent(selection.school)}&division=${selection.division}`);
+          if (unitsRes.ok) {
+            const unitsJson = await unitsRes.json();
+            if (unitsJson?.success && Array.isArray(unitsJson.data) && unitsJson.data.length > 0) {
+              const mapped = unitsJson.data.map((u: any) => ({ teamId: u.teamId, name: u.name, slug: u.slug }));
+              setTeamUnits(mapped);
+              const desiredId = desiredTeamIdRef.current
+                || (currentSlug ? (unitsJson.data.find((u: any) => u.slug === currentSlug)?.teamId || null) : null)
+                || (teams[activeTeamIdx]?.id)
+                || unitsJson.data[0].teamId;
+              const idx = Math.max(0, mapped.findIndex((u: any) => u.teamId === desiredId));
+              const targetTeamId = mapped[idx >= 0 ? idx : 0].teamId;
+              if ((teams[activeTeamIdx]?.id) !== targetTeamId) {
+                try {
+                  const res = await fetch(`/api/teams/units?school=${encodeURIComponent(selection.school)}&division=${selection.division}&teamId=${targetTeamId}`);
+                  if (res.ok) {
+                    const data = await res.json();
+                    if (data?.success && data?.data) {
+                      setTeams([{ id: data.data.teamId, name: data.data.name, roster: data.data.roster || {} }]);
+                      setCurrentSlug(data.data.slug || null);
+                    }
+                  }
+                } catch {}
+              }
+              setActiveTeamIdx(idx >= 0 ? idx : 0);
+              lastLoadKeyRef.current = loadKey;
+              desiredTeamIdRef.current = null;
+              return;
+            }
+          }
         }
       } catch {}
     };
     loadFromApi();
-  }, [selection]);
+  }, [selection, initialSlug, initializedFromSlug, currentSlug, teams, activeTeamIdx]);
 
-  useEffect(() => {
-    if (!selection) return;
-    try { localStorage.setItem(storageKey(selection), JSON.stringify(teams)); } catch {}
-  }, [teams, selection]);
-
-  // Load/save tournament tracker per school/division
-  useEffect(() => {
-    if (!selection) return;
-    try {
-      const saved = localStorage.getItem(trackerKey(selection));
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) setTournaments(parsed);
-      } else {
-        setTournaments([]);
-      }
-    } catch {}
-  }, [selection]);
-
-  useEffect(() => {
-    if (!selection) return;
-    try { localStorage.setItem(trackerKey(selection), JSON.stringify(tournaments)); } catch {}
-  }, [tournaments, selection]);
+  // Removed clearing tournaments on selection change to prevent flicker/disappear
 
   // Live ticking for countdowns
   useEffect(() => {
@@ -230,52 +320,49 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
     setEditingTeamIdx(null);
   };
 
-  const handleJoinTeam = (teamData: any, type: 'captain' | 'user') => {
-    // Update selection with new team data
-    setSelection({
-      school: teamData.school,
-      captain: type === 'captain',
-      division: teamData.division
-    });
-    
-    // Update teams with the loaded team data
-    setTeams(teamData.teams);
-    setActiveTeamIdx(0);
-  };
+  // Deprecated: join handled via slug navigation
 
   // Save team data to database
   const saveTeamDataToDB = useCallback(async () => {
     if (!selection) return;
-    
     try {
       setSaving(true);
-      const response = await fetch('/api/teams/share', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'save',
-          school: selection.school,
-          division: selection.division,
-          teams: teams
-        })
-      });
-      
-      if (!response.ok) {
-        console.error('Failed to save team data to database');
+      // If normalized units available, save the active team's roster only
+      const active = teams[activeTeamIdx] || teams[0];
+      if (active?.id && currentSlug) {
+        const resp = await fetch(`/api/teams/units/${currentSlug}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'saveRoster', roster: active.roster })
+        });
+        if (!resp.ok) {
+          try {
+            const err = await resp.json();
+            console.error('Failed to save roster', err);
+            // Optionally integrate toast here if available in app
+            toast.error(err?.error || 'Failed to save roster');
+          } catch { console.error('Failed to save roster'); }
+        }
+        if (resp.ok) toast.success('Roster saved');
+      } else if (active?.id) {
+        const resp = await fetch('/api/teams/units', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'saveRoster', school: selection.school, division: selection.division, teamId: active.id, roster: active.roster })
+        });
+        if (!resp.ok) {
+          try {
+            const err = await resp.json();
+            console.error('Failed to save roster', err);
+            toast.error(err?.error || 'Failed to save roster');
+          } catch { console.error('Failed to save roster'); }
+        }
+        if (resp.ok) toast.success('Roster saved');
       }
     } catch (error) {
       console.error('Error saving team data:', error);
     } finally { setSaving(false); }
-  }, [selection, teams]);
+  }, [selection, teams, activeTeamIdx, currentSlug]);
 
-  // Debounced save to database whenever teams change
-  useEffect(() => {
-    if (!selection || teams.length === 0) return;
-    const handle = setTimeout(() => {
-      saveTeamDataToDB();
-    }, 800);
-    return () => clearTimeout(handle);
-  }, [teams, selection, saveTeamDataToDB]);
+  // Manual save only (no autosave to reduce DB load)
 
   // Reference tick to satisfy linter and trigger countdown re-renders
   useEffect(() => {
@@ -298,14 +385,17 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
     });
   };
 
-  const clearSelection = () => setSelection(null);
+  // clearSelection deprecated; use unlinkFromTeam instead
   const unlinkFromTeam = () => {
-    try {
-      localStorage.removeItem('teamsSelection');
-      document.cookie = `teamsSelection=; path=/; max-age=0`;
-    } catch {}
     setSelection(null);
-    fetch('/api/teams/unlink', { method: 'POST' }).catch(() => undefined);
+    setCurrentSlug(null);
+    try { if (typeof document !== 'undefined') document.cookie = `teamsJustUnlinked=1; path=/; max-age=10`; } catch {}
+    fetch('/api/teams/unlink', { method: 'POST' })
+      .then(() => {
+        router.push('/teams');
+        setTimeout(() => { try { if (typeof document !== 'undefined') document.cookie = `teamsJustUnlinked=; path=/; max-age=0`; } catch {} }, 500);
+      })
+      .catch(() => { router.push('/teams'); });
   };
 
   // Helper function to get theme-aware colors
@@ -350,17 +440,53 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
     return colorMap[colorKey as keyof typeof colorMap] || colorMap.blue;
   };
 
+  // Load tournaments from API when group slug becomes available
+  useEffect(() => {
+    const load = async () => {
+      if (!groupSlugRef.current) return;
+      try {
+        const res = await fetch(`/api/teams/group/${groupSlugRef.current}`, { cache: 'no-store' });
+        const json = await res.json();
+        if (json?.success && json?.data?.tournaments) {
+          setTournaments(json.data.tournaments.map((t: any) => ({ id: String(t.id), name: t.name, dateTime: t.dateTime })));
+        }
+      } catch {}
+    };
+    load();
+  }, [initialGroupSlug, currentSlug, selection?.school, selection?.division]);
+
   // Tracker helpers
   const addTournament = () => {
     if (!newTournamentName.trim() || !newTournamentDateTime) return;
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    setTournaments((prev) => [...prev, { id, name: newTournamentName.trim(), dateTime: newTournamentDateTime }]);
-    setNewTournamentName('');
-    setNewTournamentDateTime('');
+    if (!groupSlugRef.current) return;
+    const name = newTournamentName.trim();
+    const dateTime = newTournamentDateTime;
+    (async () => {
+      try {
+        const res = await fetch(`/api/teams/group/${groupSlugRef.current}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, dateTime })
+        });
+        const json = await res.json();
+        if (json?.success && json?.data) {
+          setTournaments((prev) => [...prev, { id: String(json.data.id), name: json.data.name, dateTime: json.data.dateTime }]);
+          setNewTournamentName('');
+          setNewTournamentDateTime('');
+        }
+      } catch {}
+    })();
   };
 
   const removeTournament = (id: string) => {
-    setTournaments((prev) => prev.filter((t) => t.id !== id));
+    if (!groupSlugRef.current) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/teams/group/${groupSlugRef.current}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+        const json = await res.json();
+        if (json?.success) setTournaments((prev) => prev.filter((t) => t.id !== id));
+      } catch {}
+    })();
   };
 
   function formatDayAndDate(dt: Date): string {
@@ -431,6 +557,79 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
     return map;
   }, [activeTeam]);
 
+  // Merge account-linked members into the roster view (show even if no events)
+  const mergedMemberNames = useMemo(() => {
+    const names = new Set<string>(Object.keys(nameToEvents));
+    for (const m of members) {
+      const full = [m.firstName, m.lastName].filter(Boolean).join(' ').trim();
+      const label = full || m.displayName || m.username || '';
+      if (label) names.add(label);
+    }
+    for (const nm of extraUnlinkedNames) {
+      const name = (nm || '').trim();
+      if (name) names.add(name);
+    }
+    return Array.from(names);
+  }, [nameToEvents, members, extraUnlinkedNames]);
+
+  // Detect duplicate members in the same event group (block) with detailed info
+  const duplicateMembersInfo = useMemo(() => {
+    const memberDuplicates: Record<string, { groups: string[], events: string[] }> = {}; // member name -> { groups: [], events: [] }
+    const activeTeam = teams[activeTeamIdx] || teams[0];
+    if (!activeTeam || !selection) return memberDuplicates;
+
+    const groups = selection.division === 'B' ? DIVISION_B_GROUPS : DIVISION_C_GROUPS;
+    
+    groups.forEach(group => {
+      const nameToEvents: Record<string, string[]> = {}; // name -> events they're in within this group
+      
+      // Collect all names from all events in this group
+      group.events.forEach(eventName => {
+        const eventNames = activeTeam.roster[eventName] || [];
+        eventNames.forEach(name => {
+          const trimmedName = (name || '').trim();
+          if (trimmedName) {
+            if (!nameToEvents[trimmedName]) {
+              nameToEvents[trimmedName] = [];
+            }
+            nameToEvents[trimmedName].push(eventName);
+          }
+        });
+      });
+      
+      // Find duplicates within this group
+      Object.entries(nameToEvents).forEach(([name, events]) => {
+        if (events.length > 1) {
+          if (!memberDuplicates[name]) {
+            memberDuplicates[name] = { groups: [], events: [] };
+          }
+          memberDuplicates[name].groups.push(group.label);
+          memberDuplicates[name].events.push(...events);
+          // Remove duplicates from events array
+          memberDuplicates[name].events = [...new Set(memberDuplicates[name].events)];
+        }
+      });
+    });
+    
+    return memberDuplicates;
+  }, [teams, activeTeamIdx, selection]);
+
+
+  useEffect(() => {
+    const loadMembers = async () => {
+      if (!selection) return;
+      const teamId = teams[activeTeamIdx]?.id || teams[0]?.id || 'A';
+      try {
+        const res = await fetch(`/api/teams/units?school=${encodeURIComponent(selection.school)}&division=${selection.division}&teamId=${teamId}&members=1`);
+        if (res.ok) {
+          const j = await res.json();
+          if (j?.success && Array.isArray(j.data)) setMembers(j.data);
+        }
+      } catch {}
+    };
+    loadMembers();
+  }, [selection, teams, activeTeamIdx]);
+
   const addPersonToEvent = (personName: string, eventName: string) => {
     if (!selection) return;
     setTeams((prev) => {
@@ -464,46 +663,6 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
       return copy;
     });
   };
-  const addNewMember = () => {
-    const name = newMemberName.trim();
-    if (!name || !newMemberEvent) return;
-    addPersonToEvent(name, newMemberEvent);
-    setNewMemberName('');
-    setNewMemberEvent('');
-  };
-  const exportRoster = () => {
-    const team = teams[activeTeamIdx] || teams[0];
-    const data = JSON.stringify(team?.roster || {}, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${selection?.school || 'team'}_${selection?.division || ''}_roster.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-  const triggerImport = () => {
-    importInputRef.current?.click();
-  };
-  const onImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const json = JSON.parse(String(reader.result || '{}'));
-        if (!json || typeof json !== 'object') return;
-        setTeams((prev) => {
-          const copy = prev.map((t) => ({ ...t, roster: { ...t.roster } }));
-          const team = copy[activeTeamIdx] || copy[0];
-          team.roster = json as Record<string, string[]>;
-          return copy;
-        });
-      } catch {}
-    };
-    reader.readAsText(file);
-    e.currentTarget.value = '';
-  };
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -523,7 +682,7 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
                 <Share2 className="w-4 h-4" />
                 Share
               </button>
-              <button onClick={clearSelection} className={`px-2 py-1 border rounded transition-colors ${darkMode ? 'text-white hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-800'}`}>Change</button>
+              <button onClick={unlinkFromTeam} className={`px-2 py-1 border rounded transition-colors ${darkMode ? 'text-white hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-800'}`}>Unlink</button>
             </div>
           )}
         </div>
@@ -533,15 +692,18 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
           <div className={`${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'} rounded-lg p-4 mb-6`}>
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Tournament Tracker</h2>
-              <button
-                onClick={() => setIsTrackerOpen((o) => !o)}
-                className={`text-sm px-3 py-1 rounded ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}`}
-              >
-                {isTrackerOpen ? 'Hide' : 'Show'}
-              </button>
+              {isLeader && (
+                <button
+                  onClick={() => setIsTrackerOpen((o) => !o)}
+                  className={`text-sm px-3 py-1 rounded ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}`}
+                >
+                  {isTrackerOpen ? 'Hide Add' : 'Add Tournament'}
+                </button>
+              )}
             </div>
-            {isTrackerOpen && (
-              <div className="mt-4 space-y-4">
+            {/* Add Tournament Section - Only for leaders */}
+            {isLeader && isTrackerOpen && (
+              <div className="mt-4 mb-4">
                 <div className="flex flex-col md:flex-row gap-3 items-stretch">
                   <input
                     value={newTournamentName}
@@ -562,42 +724,46 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
                     Add
                   </button>
                 </div>
-                {tournaments.length > 0 && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {tournaments.map((t) => {
-                      const target = new Date(t.dateTime);
-                      const p = getCountdownParts(t.dateTime);
-                      return (
-                        <div key={t.id} className={`${darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-gray-50 border border-gray-200'} rounded-lg p-4`}>
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <div className="text-base font-semibold">{t.name}</div>
-                              <div className={`${darkMode ? 'text-gray-400' : 'text-gray-600'} text-sm`}>{formatDayAndDate(target)}</div>
-                            </div>
-                            <button
-                              onClick={() => removeTournament(t.id)}
-                              className={`${darkMode ? 'text-gray-300 hover:text-red-400' : 'text-gray-500 hover:text-red-600'} text-sm`}
-                              title="Remove"
-                            >
-                              ×
-                            </button>
-                          </div>
-                          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                            {getTopThreeUnits(p).map((u) => (
-                              <div key={u.key} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded p-2`}>
-                                <div className="text-xl font-bold">{u.value}</div>
-                                <div className="text-xs opacity-70">{u.label}</div>
-                              </div>
-                            ))}
-                          </div>
-                          <div className={`mt-2 text-sm ${p.past ? 'text-red-500' : darkMode ? 'text-green-400' : 'text-green-600'}`}>
-                            {p.past ? 'Started' : 'Upcoming'}
-                          </div>
+              </div>
+            )}
+            
+            {/* Tournament Timers - Always visible if tournaments exist */}
+            {tournaments.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {tournaments.map((t) => {
+                  const target = new Date(t.dateTime);
+                  const p = getCountdownParts(t.dateTime);
+                  return (
+                    <div key={t.id} className={`${darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-gray-50 border border-gray-200'} rounded-lg p-4`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-base font-semibold">{t.name}</div>
+                          <div className={`${darkMode ? 'text-gray-400' : 'text-gray-600'} text-sm`}>{formatDayAndDate(target)}</div>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+                        {isLeader && (
+                          <button
+                            onClick={() => removeTournament(t.id)}
+                            className={`${darkMode ? 'text-gray-300 hover:text-red-400' : 'text-gray-500 hover:text-red-600'} text-sm`}
+                            title="Remove"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                        {getTopThreeUnits(p).map((u) => (
+                          <div key={u.key} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded p-2`}>
+                            <div className="text-xl font-bold">{u.value}</div>
+                            <div className="text-xs opacity-70">{u.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className={`mt-2 text-sm ${p.past ? 'text-red-500' : darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                        {p.past ? 'Started' : 'Upcoming'}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -605,7 +771,7 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
 
         {!selection && (
           <div className={`rounded-lg ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'} p-4 mb-6`}>
-            <h2 className="font-semibold mb-3">Join your school</h2>
+            <h2 className="font-semibold mb-3">Create a Team</h2>
             <div className="flex flex-col md:flex-row items-stretch gap-3">
               <div className="flex-1">
                 <input
@@ -616,10 +782,6 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
                 />
               </div>
               <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={pendingCaptain} onChange={(e) => setPendingCaptain(e.target.checked)} />
-                  I am a team captain
-                </label>
                 <select
                   value={pendingDivision}
                   onChange={(e) => setPendingDivision(e.target.value as 'B' | 'C')}
@@ -629,23 +791,56 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
                   <option value="C">Division C</option>
                 </select>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (!chosenSchool) return;
-                    setSelection({ school: chosenSchool, captain: pendingCaptain, division: pendingDivision });
-                    setTeams([{ id: 'A', name: 'Team A', roster: {} }]);
-                    setActiveTeamIdx(0);
+                    if (!user?.id) { setCreateError('You must be signed in to create a team.'); toast.error('You must be signed in to create a team.'); return; }
+                    try {
+                      setCreateError('');
+                      // Always offer creating a new team unit even if others exist
+                      const unitsRes = await fetch(`/api/teams/units?school=${encodeURIComponent(chosenSchool)}&division=${pendingDivision}`);
+                      if (unitsRes.ok) {
+                        const unitsJson = await unitsRes.json();
+                        if (unitsJson?.success && Array.isArray(unitsJson.data) && unitsJson.data.length > 0) {
+                          setExistingTeamWarning({ school: chosenSchool, division: pendingDivision });
+                          return;
+                        }
+                      }
+                    } catch {}
+                    // Do not set local selection/teams here; create and navigate to the new slug
+                    // Persist immediately to generate permanent codes
+                    try {
+                      const createRes = await fetch('/api/teams/units', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create', school: chosenSchool, division: pendingDivision }) });
+                      if (!createRes.ok) {
+                        if (createRes.status === 401) { setCreateError('You must be signed in to create a team.'); toast.error('You must be signed in to create a team.'); }
+                        try { const err = await createRes.json(); if (err?.error) toast.error(err.error); } catch {}
+                      } else {
+                        const created = await createRes.json();
+                        if (created?.success && (created?.groupSlug || created?.data?.slug)) {
+                          // Replace local team with empty roster and new tab
+                          const slug = created.groupSlug || created.data.slug;
+                          router.push(`/teams/${slug}`);
+                          toast.success('Team created!');
+                        }
+                      }
+                    } catch {
+                      setCreateError('You must be signed in to create a team.');
+                      toast.error('You must be signed in to create a team.');
+                    }
                   }}
                   disabled={!chosenSchool}
                   className={`inline-flex items-center gap-2 px-3 py-2 rounded-md ${chosenSchool ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
                 >
-                  Continue
+                  Create Team
                 </button>
               </div>
             </div>
+            {!!createError && (
+              <div className={`${darkMode ? 'text-red-300' : 'text-red-600'} text-sm mt-2`} role="alert">{createError}</div>
+            )}
             <div className="mt-4 flex items-center gap-2">
               <input
                 id="team-join-code"
-                placeholder="Enter team code (school::division::teamId)"
+                placeholder="Enter team code..."
                 className={`flex-1 rounded-md px-3 py-2 ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-50 text-gray-900'}`}
               />
               <button
@@ -653,21 +848,32 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
                   const el = document.getElementById('team-join-code') as HTMLInputElement | null;
                   const code = (el?.value || '').trim();
                   if (!code) return;
+                  if (!user?.id) { setJoinError('You must be signed in to join a team.'); toast.error('You must be signed in to join a team.'); return; }
                   try {
-                    const res = await fetch('/api/teams/join', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+                    setJoinError('');
+                    const res = await fetch('/api/teams/join-by-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
                     const json = await res.json();
-                    if (json?.success && json?.data) {
-                      setSelection({ school: json.data.school, division: json.data.division, captain: false });
-                      setTeams([{ id: json.data.teamId, name: `Team ${json.data.teamId}`, roster: {} }]);
-                      setActiveTeamIdx(0);
+                    if (json?.success && json?.slug) {
+                      router.push(`/teams/${json.slug}`);
+                      el!.value = '';
+                      toast.success('Joined team');
+                    } else {
+                      setJoinError(json?.error || 'Unable to join team');
+                      toast.error(json?.error || 'Unable to join team');
                     }
-                  } catch {}
+                  } catch {
+                    setJoinError('You must be signed in to join a team.');
+                    toast.error('You must be signed in to join a team.');
+                  }
                 }}
-                className={`px-3 py-2 rounded-md ${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+                className={`${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'} px-3 py-2 rounded-md`}
               >
-                Join by Code
+                Join Team
               </button>
             </div>
+            {!!joinError && (
+              <div className={`${darkMode ? 'text-red-300' : 'text-red-600'} text-sm mt-2`} role="alert">{joinError}</div>
+            )}
             {filteredSchools.length > 0 && (
               <div className="mt-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-48 overflow-auto text-sm p-2">
                 {filteredSchools.slice(0, visibleCount).map((s) => (
@@ -690,16 +896,50 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
           {/* Team tabs */}
           <div className={`${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'} rounded-lg p-3 mb-4`}>
             <div className="flex items-center gap-2 flex-wrap">
-              {teams.map((t, idx) => (
+              {(teamUnits.length > 0 ? teamUnits.map((u) => ({ id: u.teamId, name: u.name, slug: u.slug, roster: {} as Record<string, string[]> })) : teams).map((t, idx) => (
                 <div key={t.id} className="flex items-center gap-2">
                   <button
-                    onClick={() => setActiveTeamIdx(idx)}
+                    onClick={async () => {
+                      // Prevent route changes to avoid flicker; switch client-side
+                      desiredTeamIdRef.current = (t as any).id;
+                      setActiveTeamIdx(idx);
+                      if (teamUnits.length > 0) {
+                        // keep internal slug in sync for saving, without changing URL
+                        setCurrentSlug((t as any).slug || null);
+                      }
+                      if (teamUnits.length > 0 && selection) {
+                        try {
+                          const res = await fetch(`/api/teams/units?school=${encodeURIComponent(selection.school)}&division=${selection.division}&teamId=${t.id}`);
+                          if (res.ok) {
+                            const data = await res.json();
+                            if (data?.success && data?.data) {
+                              setTeams([{ id: data.data.teamId, name: data.data.name, roster: data.data.roster || {} }]);
+                              setCurrentSlug(data.data.slug || (t as any).slug || null);
+                            }
+                          }
+                        } catch {}
+                      }
+                    }}
                     className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md min-w-fit ${activeTeamIdx === idx ? 'bg-blue-600 text-white' : darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-900'}`}
                   >
                     {editingTeamIdx === idx ? (
                       <input
                         value={t.name}
-                        onChange={(e) => setTeams((prev) => prev.map((tt, i) => i === idx ? { ...tt, name: e.target.value } : tt))}
+                        onChange={async (e) => {
+                          const newName = e.target.value;
+                          // Update both teams (content) and teamUnits (tabs) for immediate UX response
+                          setTeams((prev) => prev.map((tt, i) => i === idx ? { ...tt, name: newName } : tt));
+                          setTeamUnits((prev) => prev.map((u) => (u.teamId === (t as any).id ? { ...u, name: newName } : u)));
+                          // Persist rename (lightweight, no block)
+                          if (selection) {
+                            try {
+                              await fetch('/api/teams/units', {
+                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'rename', school: selection.school, division: selection.division, teamId: (t as any).id, name: newName })
+                              });
+                            } catch {}
+                          }
+                        }}
                         className={`bg-transparent outline-none min-w-0 ${activeTeamIdx === idx ? 'font-semibold' : ''}`}
                         style={{ width: `${Math.max(t.name.length, 4)}ch` }}
                         autoFocus
@@ -710,13 +950,22 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
                   </button>
                   {isLeader && (
                     editingTeamIdx === idx ? (
-                      <button
-                        onClick={() => handleSaveTeam(idx)}
-                        className="p-1 rounded hover:bg-green-600 hover:text-white transition-colors"
-                        title="Save changes"
-                      >
-                        <Check className="w-3 h-3" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleSaveTeam(idx)}
+                          className="p-1 rounded hover:bg-green-600 hover:text-white transition-colors"
+                          title="Save changes"
+                        >
+                          <Check className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => setConfirmDelete({ open: true, teamId: t.id, teamName: t.name })}
+                          className="p-1 rounded hover:bg-red-600 hover:text-white transition-colors"
+                          title="Delete subteam"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
                     ) : (
                       <button
                         onClick={() => handleEditTeam(idx)}
@@ -731,27 +980,78 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
               ))}
               {isLeader && (
                 <button
-                  onClick={() => {
-                    const nextLetter = String.fromCharCode(65 + teams.length);
-                    setTeams((prev) => [...prev, { id: nextLetter, name: `Team ${nextLetter}`, roster: {} }]);
-                    setActiveTeamIdx(teams.length);
+                  onClick={async () => {
+                    if (!selection || addingTeam) return;
+                    setAddingTeam(true);
+                    // determine next letter from existing teamUnits or fallback to teams length
+                    const existingIds = (teamUnits.length > 0 ? teamUnits.map(u => u.teamId) : teams.map(tt => tt.id)) as string[];
+                    const nextLetter = (() => {
+                      if (existingIds.length === 0) return 'A';
+                      const sorted = existingIds.slice().sort();
+                      const last = sorted[sorted.length - 1];
+                      const code = last.charCodeAt(0);
+                      return String.fromCharCode(code + 1);
+                    })();
+                    // optimistic UI add
+                    const optimistic = { teamId: nextLetter, name: `Team ${nextLetter}`, slug: undefined as unknown as string };
+                    setTeamUnits((prev) => [...prev, optimistic]);
+                    setActiveTeamIdx((teamUnits.length));
+                    setTeams([{ id: nextLetter, name: `Team ${nextLetter}`, roster: {} }]);
+                    try {
+                      const res = await fetch('/api/teams/units', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'create', school: selection.school, division: selection.division, groupSlug: groupSlugRef.current || undefined })
+                      });
+                      if (!res.ok) {
+                        try { const err = await res.json(); toast.error(err?.error || 'Failed to add subteam'); } catch { toast.error('Failed to add subteam'); }
+                        // rollback optimistic
+                        setTeamUnits((prev) => prev.filter(u => u.teamId !== nextLetter));
+                        return;
+                      }
+                      const json = await res.json();
+                      if (json?.success && json?.data) {
+                        setTeamUnits((prev) => prev.map(u => u.teamId === nextLetter ? { teamId: json.data.teamId, name: json.data.name, slug: json.data.slug } : u));
+                        setTeams([{ id: json.data.teamId, name: json.data.name, roster: {} }]);
+                        setActiveTeamIdx(teamUnits.length); // focus new tab
+                        toast.success('Subteam created');
+                      }
+                    } catch {
+                      // rollback optimistic
+                      setTeamUnits((prev) => prev.filter(u => u.teamId !== nextLetter));
+                      toast.error('Failed to add subteam');
+                    } finally {
+                      setAddingTeam(false);
+                    }
                   }}
-                  className="px-3 py-1.5 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-50"
+                  disabled={addingTeam}
+                  className={`px-3 py-1.5 rounded-md border ${addingTeam ? 'border-gray-400 text-gray-400 cursor-not-allowed' : 'border-blue-600 text-blue-600 hover:bg-blue-50'}`}
                 >
-                  Add Team
+                  {addingTeam ? 'Adding…' : 'Add Team'}
                 </button>
               )}
               <div className="ml-auto text-sm flex items-center gap-2">
                 <span className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Division {selection.division}</span>
                 {saving && <span className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Saving…</span>}
-                <button onClick={unlinkFromTeam} className={`px-2 py-1 border rounded transition-colors ${darkMode ? 'text-white hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-800'}`}>Unlink</button>
               </div>
             </div>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className={`${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'} rounded-lg p-4 lg:col-span-2`}>
-              <h2 className="text-lg font-semibold mb-4">Division {selection.division}</h2>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Division {selection.division}</h2>
+                {isLeader && (
+                  <button
+                    onClick={saveTeamDataToDB}
+                    disabled={saving}
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded ${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white disabled:bg-blue-900/50' : 'bg-blue-600 hover:bg-blue-700 text-white disabled:bg-blue-300'}`}
+                    title="Save roster"
+                  >
+                    <SaveIcon className="w-4 h-4" />
+                    {saving ? 'Saving…' : 'Save'}
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {(selection.division === 'B' ? DIVISION_B_GROUPS : DIVISION_C_GROUPS).map((group, index) => {
                   const colors = getGroupColors(group.colorKey);
                   const isLastGroup = index === (selection.division === 'B' ? DIVISION_B_GROUPS : DIVISION_C_GROUPS).length - 1;
@@ -771,7 +1071,22 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
                               return (
                                 <div key={evt} className="space-y-2">
                                   <div className={`text-sm font-medium ${colors.text} flex items-center justify-between`}>
-                                    <span>{evt} {selection.division}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span>{evt}</span>
+                                      {isLeader && false && (
+                                        <div className="relative inline-block text-left">
+                                          <details className="group">
+                                            <summary className={`list-none cursor-pointer inline-flex items-center gap-1 text-xs ${darkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-700'}`}>Assign test ▾</summary>
+                                            <div className={`absolute left-0 mt-1 w-64 rounded-md shadow-lg z-10 ${darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200'}`}>
+                                              <button className={`block w-full text-left px-3 py-2 text-sm ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`} onClick={(e)=>{e.preventDefault(); e.stopPropagation(); setAssignEvent({ id: 0, name: evt, subject: '', divisions: selection?.division ? [selection.division] : ['B','C'] }); setAssignSettings((prev)=> ({ ...prev, division: (selection?.division||'any') as any })); setAssignModal({ open: true, eventName: evt, scope: 'all' });}}>Assign to All</button>
+                                              {slots.filter((n)=> (n||'').trim()).map((n, idx) => (
+                                                <button key={idx} className={`block w-full text-left px-3 py-2 text-sm ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`} onClick={(e)=>{e.preventDefault(); e.stopPropagation(); setAssignEvent({ id: 0, name: evt, subject: '', divisions: selection?.division ? [selection.division] : ['B','C'] }); setAssignSettings((prev)=> ({ ...prev, division: (selection?.division||'any') as any })); setAssignModal({ open: true, eventName: evt, scope: (n||'').trim() });}}>Assign to {n}</button>
+                                              ))}
+                                            </div>
+                                          </details>
+                                        </div>
+                                      )}
+                                    </div>
                                     <span className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{slots.filter((n) => (n || '').trim()).length}/{max}</span>
                                   </div>
                                   <div className="grid grid-cols-3 gap-2">
@@ -786,21 +1101,6 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
                                       />
                                     ))}
                                   </div>
-                                  {isLeader && (
-                                    <div className="flex justify-end">
-                                      <div className="relative inline-block text-left">
-                                        <details className="group">
-                                          <summary className={`list-none cursor-pointer inline-flex items-center gap-1 text-xs ${darkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-700'}`}>Assign test ▾</summary>
-                                          <div className={`absolute right-0 mt-1 w-64 rounded-md shadow-lg z-10 ${darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200'}`}>
-                                            <button className={`block w-full text-left px-3 py-2 text-sm ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`} onClick={(e)=>{e.preventDefault(); e.stopPropagation(); navigator.clipboard.writeText(`${location.origin}/teams/assign?event=${encodeURIComponent(evt)}&scope=all&team=${encodeURIComponent((teams[activeTeamIdx]?.id)||'A')}`);}}>Copy Link: Assign to All</button>
-                                            {slots.filter((n)=> (n||'').trim()).map((n, idx) => (
-                                              <button key={idx} className={`block w-full text-left px-3 py-2 text-sm ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`} onClick={(e)=>{e.preventDefault(); e.stopPropagation(); navigator.clipboard.writeText(`${location.origin}/teams/assign?event=${encodeURIComponent(evt)}&scope=${encodeURIComponent((n||'').trim())}&team=${encodeURIComponent((teams[activeTeamIdx]?.id)||'A')}`);}}>Copy Link: Assign to {n}</button>
-                                            ))}
-                                          </div>
-                                        </details>
-                                      </div>
-                                    </div>
-                                  )}
                                 </div>
                               );
                             })}
@@ -816,7 +1116,22 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
                               return (
                                 <div key={evt} className="space-y-2">
                                   <div className={`text-sm font-medium ${colors.text} flex items-center justify-between`}>
-                                    <span>{evt} {selection.division}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span>{evt}</span>
+                                      {isLeader && false && (
+                                        <div className="relative inline-block text-left">
+                                          <details className="group">
+                                            <summary className={`list-none cursor-pointer inline-flex items-center gap-1 text-xs ${darkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-700'}`}>Assign test ▾</summary>
+                                            <div className={`absolute left-0 mt-1 w-64 rounded-md shadow-lg z-10 ${darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200'}`}>
+                                              <button className={`block w-full text-left px-3 py-2 text-sm ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`} onClick={(e)=>{e.preventDefault(); e.stopPropagation(); setAssignEvent({ id: 0, name: evt, subject: '', divisions: selection?.division ? [selection.division] : ['B','C'] }); setAssignSettings((prev)=> ({ ...prev, division: (selection?.division||'any') as any })); setAssignModal({ open: true, eventName: evt, scope: 'all' });}}>Assign to All</button>
+                                              {slots.filter((n)=> (n||'').trim()).map((n, idx) => (
+                                                <button key={idx} className={`block w-full text-left px-3 py-2 text-sm ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`} onClick={(e)=>{e.preventDefault(); e.stopPropagation(); setAssignEvent({ id: 0, name: evt, subject: '', divisions: selection?.division ? [selection.division] : ['B','C'] }); setAssignSettings((prev)=> ({ ...prev, division: (selection?.division||'any') as any })); setAssignModal({ open: true, eventName: evt, scope: (n||'').trim() });}}>Assign to {n}</button>
+                                              ))}
+                                            </div>
+                                          </details>
+                                        </div>
+                                      )}
+                                    </div>
                                     <span className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{slots.filter((n) => (n || '').trim()).length}/{max}</span>
                                   </div>
                                   <div className="grid grid-cols-3 gap-2">
@@ -831,21 +1146,6 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
                                       />
                                     ))}
                                   </div>
-                                  {isLeader && (
-                                    <div className="flex justify-end">
-                                      <div className="relative inline-block text-left">
-                                        <details className="group">
-                                          <summary className={`list-none cursor-pointer inline-flex items-center gap-1 text-xs ${darkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-700'}`}>Assign test ▾</summary>
-                                          <div className={`absolute right-0 mt-1 w-64 rounded-md shadow-lg z-10 ${darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200'}`}>
-                                            <button className={`block w-full text-left px-3 py-2 text-sm ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`} onClick={(e)=>{e.preventDefault(); e.stopPropagation(); navigator.clipboard.writeText(`${location.origin}/teams/assign?event=${encodeURIComponent(evt)}&scope=all&team=${encodeURIComponent((teams[activeTeamIdx]?.id)||'A')}`);}}>Copy Link: Assign to All</button>
-                                            {slots.filter((n)=> (n||'').trim()).map((n, idx) => (
-                                              <button key={idx} className={`block w-full text-left px-3 py-2 text-sm ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`} onClick={(e)=>{e.preventDefault(); e.stopPropagation(); navigator.clipboard.writeText(`${location.origin}/teams/assign?event=${encodeURIComponent(evt)}&scope=${encodeURIComponent((n||'').trim())}&team=${encodeURIComponent((teams[activeTeamIdx]?.id)||'A')}`);}}>Copy Link: Assign to {n}</button>
-                                            ))}
-                                          </div>
-                                        </details>
-                                      </div>
-                                    </div>
-                                  )}
                                 </div>
                               );
                             })}
@@ -866,7 +1166,22 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
                             return (
                               <div key={evt} className="space-y-2">
                                 <div className={`text-sm font-medium ${colors.text} flex items-center justify-between`}>
-                                  <span>{evt} {selection.division}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span>{evt}</span>
+                                    {isLeader && !/engineering cad|experimental design/i.test(evt) && (
+                                      <div className="relative inline-block text-left">
+                                        <details className="group">
+                                          <summary className={`list-none cursor-pointer inline-flex items-center gap-1 text-xs ${darkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-700'}`}>Assign test ▾</summary>
+                                          <div className={`absolute left-0 mt-1 w-64 rounded-md shadow-lg z-10 ${darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200'}`}>
+                                            <button className={`block w-full text-left px-3 py-2 text-sm ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`} onClick={(e)=>{e.preventDefault(); e.stopPropagation(); setAssignEvent({ id: 0, name: evt, subject: '', divisions: selection?.division ? [selection.division] : ['B','C'] }); setAssignSettings((prev)=> ({ ...prev, division: (selection?.division||'any') as any })); setAssignModal({ open: true, eventName: evt, scope: 'all' });}}>Assign to All</button>
+                                            {slots.filter((n)=> (n||'').trim()).map((n, idx) => (
+                                              <button key={idx} className={`block w-full text-left px-3 py-2 text-sm ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`} onClick={(e)=>{e.preventDefault(); e.stopPropagation(); setAssignEvent({ id: 0, name: evt, subject: '', divisions: selection?.division ? [selection.division] : ['B','C'] }); setAssignSettings((prev)=> ({ ...prev, division: (selection?.division||'any') as any })); setAssignModal({ open: true, eventName: evt, scope: (n||'').trim() });}}>Assign to {n}</button>
+                                              ))}
+                                          </div>
+                                        </details>
+                                      </div>
+                                    )}
+                                  </div>
                                   <span className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{slots.filter((n) => (n || '').trim()).length}/{max}</span>
                                 </div>
                                 <div className="grid grid-cols-3 gap-2">
@@ -881,21 +1196,6 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
                                     />
                                   ))}
                                 </div>
-                                {isLeader && (
-                                  <div className="flex justify-end">
-                                    <div className="relative inline-block text-left">
-                                      <details className="group">
-                                        <summary className={`list-none cursor-pointer inline-flex items-center gap-1 text-xs ${darkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-700'}`}>Assign test ▾</summary>
-                                        <div className={`absolute right-0 mt-1 w-64 rounded-md shadow-lg z-10 ${darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200'}`}>
-                                          <button className={`block w-full text-left px-3 py-2 text-sm ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`} onClick={(e)=>{e.preventDefault(); e.stopPropagation(); navigator.clipboard.writeText(`${location.origin}/teams/assign?event=${encodeURIComponent(evt)}&scope=all&team=${encodeURIComponent((teams[activeTeamIdx]?.id)||'A')}`);}}>Copy Link: Assign to All</button>
-                                          {slots.filter((n)=> (n||'').trim()).map((n, idx) => (
-                                            <button key={idx} className={`block w-full text-left px-3 py-2 text-sm ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`} onClick={(e)=>{e.preventDefault(); e.stopPropagation(); navigator.clipboard.writeText(`${location.origin}/teams/assign?event=${encodeURIComponent(evt)}&scope=${encodeURIComponent((n||'').trim())}&team=${encodeURIComponent((teams[activeTeamIdx]?.id)||'A')}`);}}>Copy Link: Assign to {n}</button>
-                                          ))}
-                                        </div>
-                                      </details>
-                                    </div>
-                                  </div>
-                                )}
                               </div>
                             );
                           })}
@@ -911,55 +1211,262 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">Members</h2>
                 <div className="flex items-center gap-2 text-sm">
-                  <button onClick={exportRoster} className={`${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'} px-2 py-1 rounded`}>Export</button>
-                  <button onClick={triggerImport} className={`${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'} px-2 py-1 rounded`}>Import</button>
-                  <input ref={importInputRef} type="file" accept="application/json" className="hidden" onChange={onImportFile} />
-                  <a href="/teams/results" className={`${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'} px-2 py-1 rounded`}>Results</a>
+                  {isLeader && (
+                    <>
+                      {topAddOpen ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            value={topAddName}
+                            onChange={(e) => setTopAddName(e.target.value)}
+                            placeholder="Member name"
+                            className={`${darkMode ? 'bg-gray-800 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-300'} rounded px-2 h-8 text-sm`}
+                          />
+                          <button
+                            onClick={() => {
+                              const nm = (topAddName || '').trim();
+                              if (!nm) return;
+                              setExtraUnlinkedNames((prev) => Array.from(new Set([...prev, nm])));
+                              setTopAddName('');
+                              setTopAddOpen(false);
+                            }}
+                            className={`${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'} rounded px-3 h-8 text-sm`}
+                          >
+                            Add
+                          </button>
+                          <button
+                            onClick={() => { setTopAddOpen(false); setTopAddName(''); }}
+                            className={`${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'} rounded px-3 h-8 text-sm`}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setTopAddOpen(true); setTopInviteOpen(false); }}
+                          className={`${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'} rounded px-2 h-8 text-xs`}
+                        >
+                          + Add
+                        </button>
+                      )}
+                      {topInviteOpen ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            value={topInviteUsername}
+                            onChange={(e) => setTopInviteUsername(e.target.value)}
+                            placeholder="Username"
+                            className={`${darkMode ? 'bg-gray-800 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-300'} rounded px-2 h-8 text-sm`}
+                          />
+                          <button
+                            onClick={async () => {
+                              const uname = (topInviteUsername || '').trim();
+                              if (!uname || !selection) return;
+                              try {
+                                const res = await fetch('/api/teams/invite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: uname, school: selection.school, division: selection.division, teamId: teams[activeTeamIdx]?.id || teams[0]?.id || 'A' }) });
+                                if (!res.ok) {
+                                  try { const e = await res.json(); toast.error(e?.error || 'Failed to send invite'); } catch { toast.error('Failed to send invite'); }
+                                } else {
+                                  toast.success('Invite sent');
+                                }
+                              } catch { toast.error('Failed to send invite'); }
+                              setTopInviteUsername('');
+                              setTopInviteOpen(false);
+                            }}
+                            className={`${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'} rounded px-3 h-8 text-sm`}
+                          >
+                            Invite
+                          </button>
+                          <button
+                            onClick={() => { setTopInviteOpen(false); setTopInviteUsername(''); }}
+                            className={`${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'} rounded px-3 h-8 text-sm`}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setTopInviteOpen(true); setTopAddOpen(false); }}
+                          className={`${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'} rounded px-2 h-8 text-xs`}
+                        >
+                          + Invite
+                        </button>
+                      )}
+                    </>
+                  )}
+                  <Link href="/teams/results" className={`${darkMode ? 'bg-yellow-600 hover:bg-yellow-700 text-white' : 'bg-yellow-500 hover:bg-yellow-600 text-white'} px-2 h-8 rounded text-xs flex items-center`}>Results</Link>
                 </div>
               </div>
 
-              {isLeader && (
-                <div className="mb-4 flex flex-col md:flex-row gap-2 items-stretch">
-                  <input
-                    value={newMemberName}
-                    onChange={(e) => setNewMemberName(e.target.value)}
-                    placeholder="New member name"
-                    className={`${darkMode ? 'bg-gray-900 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-300'} rounded px-3 py-2 flex-1`}
-                  />
-                  <select
-                    value={newMemberEvent}
-                    onChange={(e) => setNewMemberEvent(e.target.value)}
-                    className={`${darkMode ? 'bg-gray-900 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-300'} rounded px-3 py-2`}
-                  >
-                    <option value="">Select event</option>
-                    {(selection.division === 'B' ? DIVISION_B_GROUPS : DIVISION_C_GROUPS).flatMap((g) => g.events).map((evt) => (
-                      <option key={evt} value={evt}>{evt}</option>
-                    ))}
-                  </select>
-                  <button onClick={addNewMember} className={`${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'} rounded px-3 py-2`}>Add</button>
-                </div>
-              )}
-              {Object.keys(nameToEvents).length === 0 ? (
+              {mergedMemberNames.length === 0 ? (
                 <div className={`${darkMode ? 'text-gray-400' : 'text-gray-600'} text-sm`}>Start filling in names above to see a consolidated member list.</div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Object.keys(nameToEvents).sort((a, b) => a.localeCompare(b)).map((name) => {
-                    const personEvents = nameToEvents[name];
+                  {mergedMemberNames.sort((a, b) => a.localeCompare(b)).map((name) => {
+                    const personEvents = nameToEvents[name] || [];
                     const allEvents = (selection.division === 'B' ? DIVISION_B_GROUPS : DIVISION_C_GROUPS).flatMap((g) => g.events);
                     const availableToAdd = allEvents.filter((e) => !personEvents.includes(e));
                     return (
                       <div key={name} className={`${darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-gray-50 border border-gray-200'} rounded-lg p-3`}>
                         <div className="flex items-center justify-between gap-2">
-                          <div className="font-semibold truncate" title={name}>{name}</div>
                           <div className="flex items-center gap-2">
+                            <div className="font-semibold truncate">{name}</div>
+                            {(() => {
+                              // Check if this member appears in multiple events within the same group
+                              const duplicateInfo = duplicateMembersInfo[name];
+                              const isDuplicate = duplicateInfo && duplicateInfo.events.length > 1;
+                              return isDuplicate ? (
+                                <div className="relative group">
+                                  <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0 cursor-help" />
+                                  <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-sm rounded-lg shadow-lg z-50 w-64 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${darkMode ? 'bg-gray-800 text-white border border-gray-600' : 'bg-gray-900 text-white border border-gray-700'}`}>
+                                    <div className="text-xs font-medium">Conflicting events in same block:</div>
+                                    <div className="text-xs mt-1">{duplicateInfo.events.join(', ')}</div>
+                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent" style={{ borderTopColor: darkMode ? '#1f2937' : '#111827' }}></div>
+                                  </div>
+                                </div>
+                              ) : null;
+                            })()}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {(() => {
+                              const m = members.find((mm) => {
+                                const full = [mm.firstName, mm.lastName].filter(Boolean).join(' ').trim();
+                                return (full || mm.displayName || mm.username || '') === name;
+                              });
+                              const isCaptain = m?.role === 'captain';
+                              const isLinked = !!m?.userId;
+                              const isSelf = !!(m?.userId && user?.id && m.userId === user.id);
+                              const canToggleBase = !!isLeader && !!m?.userId;
+                              const canToggle = canToggleBase && (!isSelf || isCaptain); // still show crown; prevent self-demote via server. UI keeps click but server enforces.
+                              const showCrown = isLeader || isCaptain;
+                              return (
+                                <>
+                                  {/* Hide controls while inviting/adding to give space */}
+                                  {nameInviting === name || nameAddingEvent === name ? null : (
+                                  showCrown ? (
+                                  <button
+                                    onClick={async () => {
+                                      if (!canToggle || !selection) return;
+                                      const teamId = teams[activeTeamIdx]?.id || teams[0]?.id || 'A';
+                                      const newRole = isCaptain ? 'user' : 'captain';
+                                      try {
+                                        const res = await fetch('/api/teams/units', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setRole', school: selection.school, division: selection.division, teamId, userId: m.userId, role: newRole }) });
+                                        if (res.ok) setMembers((prev)=> prev.map(x=> x.userId===m.userId? { ...x, role: newRole }: x));
+                                      } catch {}
+                                    }}
+                                    className={`${isCaptain ? 'text-yellow-400' : darkMode ? 'text-gray-400' : 'text-gray-500'} ${canToggle ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+                                    title={canToggle ? (isCaptain ? (isSelf ? 'Captain' : 'Captain (click to demote)') : 'Make captain') : (isCaptain ? 'Captain' : 'Not linked')}
+                                  >
+                                    <Crown className="w-4 h-4" />
+                                  </button>
+                                  ) : null
+                                  )}
+                                  {nameInviting === name || nameAddingEvent === name ? null : (
+                                  <span title={isLinked ? 'Linked' : 'Not linked'} className={`${isLinked ? 'text-green-400' : 'text-red-400'}`}>
+                                    <LinkIcon className="w-4 h-4" />
+                                  </span>
+                                  )}
+                                  {isLeader && !(nameInviting === name || nameAddingEvent === name) && (
+                                    <button
+                                      onClick={async () => {
+                                        if (!selection) return;
+                                        const teamId = teams[activeTeamIdx]?.id || teams[0]?.id || 'A';
+                                        try {
+                                          let res;
+                                          if (m?.userId) {
+                                            res = await fetch('/api/teams/units', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'removeMember', school: selection.school, division: selection.division, teamId, userId: m.userId, name }) });
+                                          } else {
+                                            res = await fetch('/api/teams/units', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'removePerson', school: selection.school, division: selection.division, teamId, name }) });
+                                          }
+                                          if (res.ok) {
+                                            // Remove from linked members (if present)
+                                            setMembers((prev)=> prev.filter(x=> (x.firstName||'')+' '+(x.lastName||'') !== name && (x.displayName||x.username||'') !== name && x.userId !== m?.userId));
+                                            // Remove from extra unlinked list
+                                            setExtraUnlinkedNames((prev) => prev.filter((nm) => nm !== name));
+                                            // Remove from local roster across all events
+                                            setTeams((prev) => {
+                                              const copy = prev.map((t) => ({ ...t, roster: { ...t.roster } }));
+                                              const team = copy[activeTeamIdx] || copy[0];
+                                              const events = Object.keys(team.roster || {});
+                                              for (const evt of events) {
+                                                const arr = Array.isArray(team.roster[evt]) ? team.roster[evt].slice() : [];
+                                                for (let i = 0; i < arr.length; i++) {
+                                                  if (((arr[i] || '') as string).trim() === name) arr[i] = '';
+                                                }
+                                                team.roster[evt] = arr;
+                                              }
+                                              return copy;
+                                            });
+                                          }
+                                        } catch {}
+                                      }}
+                                      className={`${darkMode ? 'text-gray-300 hover:text-red-400' : 'text-gray-500 hover:text-red-600'}`}
+                                      title="Remove member"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </>
+                              );
+                            })()}
                             {isLeader && (
                               <>
-                                {nameAddingEvent === name ? (
+                                {nameInviting === name ? (
+                                  <>
+                                    <input
+                                      value={invitingUsername}
+                                      onChange={(e) => setInvitingUsername(e.target.value)}
+                                      placeholder="Username"
+                                      className={`${darkMode ? 'bg-gray-800 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-300'} rounded px-2 h-8 text-sm`}
+                                    />
+                                    <button
+                                      onClick={async () => {
+                                        const uname = (invitingUsername || '').trim();
+                                        if (!uname) return;
+                                        try {
+                                          const res = await fetch('/api/teams/invite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: uname, school: selection.school, division: selection.division, teamId: teams[activeTeamIdx]?.id || teams[0]?.id || 'A', memberName: name }) });
+                                          if (!res.ok) {
+                                            try { const e = await res.json(); toast.error(e?.error || 'Failed to send invite'); } catch { toast.error('Failed to send invite'); }
+                                          } else {
+                                            toast.success('Invite sent');
+                                          }
+                                        } catch { toast.error('Failed to send invite'); }
+                                        setNameInviting(null);
+                                        setInvitingUsername('');
+                                      }}
+                                      className={`${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'} rounded px-3 h-8 text-sm`}
+                                      title="Invite user"
+                                    >
+                                      Invite
+                                    </button>
+                                    <button
+                                      onClick={() => { setNameInviting(null); setInvitingUsername(''); }}
+                                      className={`${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'} rounded px-3 h-8 text-sm`}
+                                    >
+                                      Cancel
+                                    </button>
+                                  </>
+                                ) : (
+                                  !members.find((mm) => {
+                                      const full = [mm.firstName, mm.lastName].filter(Boolean).join(' ').trim();
+                                      return (full || mm.displayName || mm.username || '') === name && mm.userId; 
+                                    }) ? (
+                                    <button
+                                      onClick={() => { setNameInviting(name); setInvitingUsername(''); setNameAddingEvent(null); setSelectedEventForName(''); }}
+                                      className={`${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'} rounded px-2 h-8 text-xs`}
+                                      title="Invite user"
+                                    >
+                                      + Invite
+                                    </button>
+                                  ) : null
+                                )}
+
+                                {nameInviting === name ? (
+                                  null
+                                ) : nameAddingEvent === name ? (
                                   <div className="flex items-center gap-2">
                                     <select
                                       value={selectedEventForName}
                                       onChange={(e) => setSelectedEventForName(e.target.value)}
-                                      className={`${darkMode ? 'bg-gray-800 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-300'} rounded px-2 py-1 text-sm`}
+                                      className={`${darkMode ? 'bg-gray-800 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-300'} rounded px-2 h-8 text-sm`}
                                     >
                                       <option value="">Select event</option>
                                       {availableToAdd.map((evt) => (
@@ -973,21 +1480,21 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
                                         setSelectedEventForName('');
                                         setNameAddingEvent(null);
                                       }}
-                                      className={`px-2 py-1 rounded ${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'} text-sm`}
+                                      className={`${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'} rounded px-3 h-8 text-sm`}
                                     >
                                       Add
                                     </button>
                                     <button
                                       onClick={() => { setNameAddingEvent(null); setSelectedEventForName(''); }}
-                                      className={`px-2 py-1 rounded ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'} text-sm`}
+                                      className={`${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'} rounded px-3 h-8 text-sm`}
                                     >
                                       Cancel
                                     </button>
                                   </div>
                                 ) : (
                                   <button
-                                    onClick={() => { setNameAddingEvent(name); setSelectedEventForName(''); }}
-                                    className={`px-2 py-1 rounded ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'} text-xs`}
+                                    onClick={() => { setNameAddingEvent(name); setSelectedEventForName(''); setNameInviting(null); setInvitingUsername(''); }}
+                                    className={`${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'} rounded px-2 h-8 text-xs`}
                                     title="Add to event"
                                   >
                                     + Add
@@ -1030,8 +1537,154 @@ export default function TeamsDashboard({ initialLinkedSelection }: { initialLink
           school={selection?.school || ''}
           division={selection?.division || 'C'}
           isCaptain={isLeader}
-          onJoinTeam={handleJoinTeam}
         />
+        {assignModal?.open && assignEvent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={()=>setAssignModal(null)}>
+            <div className={`${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} w-full lg:w-[26rem] rounded-xl shadow-xl p-5`} onClick={(e)=>e.stopPropagation()}>
+              <div className="relative mb-4">
+                <div className="text-lg font-semibold text-center">Assign {assignModal.scope === 'all' ? 'to All' : `to ${assignModal.scope}`}: {assignEvent.name}</div>
+                <button onClick={()=>setAssignModal(null)} className={`absolute top-0 right-0 ${darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-500 hover:text-gray-800'}`}>×</button>
+              </div>
+              <div className="flex items-center justify-center">
+                <div className="w-full max-w-md">
+                  <TestConfiguration
+                    selectedEvent={assignEvent}
+                    settings={assignSettings}
+                    onSettingsChange={setAssignSettings}
+                    forceBothDivision
+                    onGenerateTest={async ()=>{
+                      try {
+                        const normalizeSpecialEvent = (name: string, subtopics: string[]) => {
+                          const n = name || '';
+                          if (n === 'Dynamic Planet') {
+                            return { eventName: 'Dynamic Planet - Oceanography', subtopics };
+                          }
+                          if (n === 'Water Quality') {
+                            return { eventName: 'Water Quality - Freshwater', subtopics };
+                          }
+                          if (n === 'Materials Science') {
+                            return { eventName: 'Materials Science - Nanomaterials', subtopics };
+                          }
+                          return { eventName: n, subtopics };
+                        };
+                        const special = normalizeSpecialEvent(assignEvent.name, assignSettings.subtopics || []);
+                        const testParams = {
+                          eventName: special.eventName,
+                          questionCount: assignSettings.questionCount,
+                          timeLimit: assignSettings.timeLimit,
+                          difficulties: assignSettings.difficulties,
+                          types: assignSettings.types as any,
+                          division: assignSettings.division as any,
+                          tournament: assignSettings.tournament,
+                          subtopics: special.subtopics,
+                          idPercentage: assignSettings.idPercentage,
+                          charLengthMin: assignSettings.charLengthMin,
+                          charLengthMax: assignSettings.charLengthMax,
+                        };
+                        try { localStorage.removeItem('testQuestions'); } catch {}
+                        try {
+                          localStorage.setItem('testParams', JSON.stringify(testParams));
+                          document.cookie = `scio_test_params=${encodeURIComponent(JSON.stringify(testParams))}; Path=/; Max-Age=600; SameSite=Lax`;
+                        } catch {}
+                        const isCodebusters = assignEvent.name === 'Codebusters';
+                        const route = isCodebusters ? '/codebusters' : '/test';
+                        const sp = new URLSearchParams();
+                        sp.set('preview', '1');
+                        sp.set('teamsAssign', '1');
+                        sp.set('event', testParams.eventName);
+                        sp.set('scope', assignModal.scope);
+                        sp.set('team', teams[activeTeamIdx]?.id || teams[0]?.id || 'A');
+                        if (selection?.school) sp.set('school', selection.school);
+                        if (selection?.division) sp.set('division', selection.division);
+                        router.push(`${route}?${sp.toString()}`);
+                      } catch {}
+                    }}
+                    onUnlimited={()=>{}}
+                    generateLabel="Preview Test"
+                    hideUnlimited
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {existingTeamWarning && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className={`${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} rounded-lg shadow-xl max-w-md w-full p-6`}>
+              <div className="text-lg font-semibold mb-2">Team already exists</div>
+              <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-sm`}>
+                Someone has already created a team for this school in Division {existingTeamWarning.division}. Do you want to create a new one?
+              </p>
+              <div className="mt-4 flex items-center justify-end gap-2">
+                <button
+                  onClick={() => setExistingTeamWarning(null)}
+                  className={`${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'} px-3 py-1.5 rounded`}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    const warn = existingTeamWarning;
+                    setExistingTeamWarning(null);
+                    if (!warn) return;
+                    try {
+                      const res = await fetch('/api/teams/units', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'createNewGroup', school: warn.school, division: warn.division })
+                      });
+                      if (!res.ok) {
+                        try { const err = await res.json(); toast.error(err?.error || 'Failed to create team'); } catch { toast.error('Failed to create team'); }
+                        return;
+                      }
+                      const json = await res.json();
+                      if (json?.success && json?.data?.group?.slug) {
+                        toast.success('Team created!');
+                        router.push(`/teams/${json.data.group.slug}`);
+                      } else {
+                        toast.error('Failed to create team');
+                      }
+                    } catch {
+                      toast.error('Failed to create team');
+                    }
+                  }}
+                  className={`${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'} px-3 py-1.5 rounded`}
+                >
+                  Create New Team
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      {/* Confirm Delete Modal */}
+      {confirmDelete.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className={`${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} w-full max-w-sm rounded-lg shadow-xl p-5`}>
+            <div className="text-lg font-semibold mb-2">Delete subteam</div>
+            <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-sm mb-4`}>Are you sure you want to delete &quot;{confirmDelete.teamName || ''}&quot;? This cannot be undone.</div>
+            <div className="flex items-center justify-end gap-2">
+              <button onClick={() => setConfirmDelete({ open: false })} className={`${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'} px-3 py-1.5 rounded`}>Cancel</button>
+              <button
+                onClick={async () => {
+                  if (!selection || !confirmDelete.teamId) return;
+                  try {
+                    const res = await fetch('/api/teams/units', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', school: selection.school, division: selection.division, teamId: confirmDelete.teamId }) });
+                    if (!res.ok) { try { const e = await res.json(); toast.error(e?.error || 'Failed to delete'); } catch { toast.error('Failed to delete'); } return; }
+                    setTeamUnits((prev) => prev.filter(u => u.teamId !== confirmDelete.teamId));
+                    setTeams([{ id: 'A', name: 'Team A', roster: {} }]);
+                    setActiveTeamIdx(0);
+                    setEditingTeamIdx(null);
+                    toast.success('Subteam deleted');
+                    setConfirmDelete({ open: false });
+                  } catch { toast.error('Failed to delete'); }
+                }}
+                className={`${darkMode ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-red-600 hover:bg-red-700 text-white'} px-3 py-1.5 rounded`}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );

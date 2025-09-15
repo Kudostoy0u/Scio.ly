@@ -172,58 +172,39 @@ export const encryptNihilist = (text: string): { encrypted: string; polybiusKey:
 
 
     const createPolybiusSquare = (key: string): string[][] => {
+        // Build 25-letter square with I/J combined
+        const mapIJ = (ch: string) => ch === 'J' ? 'I' : ch;
         const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        const usedLetters = new Set<string>();
-        const square: string[][] = [];
-        
-
+        const used = new Set<string>();
+        const seq: string[] = [];
+        const k = key.toUpperCase().replace(/[^A-Z]/g, '');
+        for (const c0 of k) {
+            const c = mapIJ(c0);
+            if (c !== 'J' && !used.has(c)) { used.add(c); seq.push(c); }
+            if (seq.length >= 25) break;
+        }
+        for (const c0 of alphabet) {
+            const c = mapIJ(c0);
+            if (c === 'J') continue;
+            if (!used.has(c)) { used.add(c); seq.push(c); }
+            if (seq.length >= 25) break;
+        }
+        const square: string[][] = Array.from({ length: 5 }, () => Array.from({ length: 5 }, () => ''));
+        let kIdx = 0;
         for (let i = 0; i < 5; i++) {
-            square[i] = [];
             for (let j = 0; j < 5; j++) {
-                square[i][j] = '';
+                square[i][j] = seq[kIdx++] || '';
             }
         }
-
-
-        let keyIndex = 0;
-        let alphabetIndex = 0;
-        
-        for (let i = 0; i < 5; i++) {
-            for (let j = 0; j < 5; j++) {
-                if (keyIndex < key.length) {
-                    const keyChar = key[keyIndex].toUpperCase();
-                    if (!usedLetters.has(keyChar)) {
-                        square[i][j] = keyChar;
-                        usedLetters.add(keyChar);
-                        keyIndex++;
-                    } else {
-                        keyIndex++;
-                        j--;
-                    }
-                } else {
-
-                    while (alphabetIndex < alphabet.length) {
-                        const alphaChar = alphabet[alphabetIndex];
-                        if (!usedLetters.has(alphaChar)) {
-                            square[i][j] = alphaChar;
-                            usedLetters.add(alphaChar);
-                            alphabetIndex++;
-                            break;
-                        }
-                        alphabetIndex++;
-                    }
-                }
-            }
-        }
-
         return square;
     };
 
 
     const letterToCoordinates = (letter: string, square: string[][]): string => {
+        const L = letter === 'J' ? 'I' : letter;
         for (let i = 0; i < 5; i++) {
             for (let j = 0; j < 5; j++) {
-                if (square[i][j] === letter) {
+                if (square[i][j] === L) {
                     return `${i + 1}${j + 1}`;
                 }
             }
@@ -265,24 +246,38 @@ export const encryptNihilist = (text: string): { encrypted: string; polybiusKey:
     }
 
 
-    const blockSizes = [3, 3, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6]; // weighted distribution
-    const blockSize = blockSizes[Math.floor(Math.random() * blockSizes.length)];
-    
-
-    const numberString = ciphertextNumbers.join(' ');
-    
-
-    const blocks: string[] = [];
+    // New distribution for visual grouping: 0 (20%), 4 (20%), 5 (40%), 6 (20%)
+    const numberString = ciphertextNumbers.map(n => n.toString().padStart(2, '0')).join(' ');
     const pairs = numberString.split(' ');
-    
-    for (let i = 0; i < pairs.length; i += blockSize) {
-        const block = pairs.slice(i, i + blockSize).join(' ');
-        if (block.trim()) {
-            blocks.push(block);
+    let encrypted = '';
+    {
+        const roll = Math.random();
+        const chosen = roll < 0.2 ? 0 : roll < 0.4 ? 4 : roll < 0.8 ? 5 : 6;
+        if (chosen === 0) {
+            const original = text;
+            let pi = 0;
+            for (let i = 0; i < original.length && pi < pairs.length; i++) {
+                const ch = original[i];
+                if (/^[A-Za-z]$/.test(ch)) {
+                    if (encrypted.length > 0 && !encrypted.endsWith(' ')) encrypted += ' ';
+                    encrypted += pairs[pi++];
+                } else if (ch === ' ') {
+                    encrypted += '   ';
+                }
+            }
+            while (pi < pairs.length) {
+                if (encrypted.length > 0 && !encrypted.endsWith(' ')) encrypted += ' ';
+                encrypted += pairs[pi++];
+            }
+        } else {
+            const blocks: string[] = [];
+            for (let i = 0; i < pairs.length; i += chosen) {
+                const block = pairs.slice(i, i + chosen).join(' ');
+                if (block.trim()) blocks.push(block);
+            }
+            encrypted = blocks.join('   ');
         }
     }
-    
-    const encrypted = blocks.join('  '); // double space between blocks for clear separation
 
     return { encrypted, polybiusKey, cipherKey };
 };
@@ -656,4 +651,119 @@ export const encryptCryptarithm = (_text: string): {
 
 
     return encryptCryptarithm(_text);
+};
+
+
+export const encryptCheckerboard = (text: string): {
+    encrypted: string;
+    checkerboardRowKey: string;
+    checkerboardColKey: string;
+    checkerboardPolybiusKey: string;
+    checkerboardUsesIJ: boolean;
+    blockSize?: number;
+} => {
+    const toAZ = (s: string) => s.toUpperCase().replace(/[^A-Z]/g, '');
+    const normalizeIJ = (s: string) => s.replace(/J/g, 'I');
+    const custom = getCustomWordBank();
+    const wordBank = (custom && custom.length > 0 ? custom : FALLBACK_WORDS).map(w => toAZ(w));
+
+    const pickWordOfLenAtLeast = (min: number): string => {
+        const candidates = wordBank.filter(w => w.length >= min);
+        if (candidates.length === 0) return (wordBank[0] || 'SCIO');
+        return candidates[Math.floor(Math.random() * candidates.length)];
+    };
+
+    const pickWordOfExactLen = (len: number): string => {
+        const exact = wordBank.filter(w => w.length === len);
+        const fallbacks = ['SCION','ALPHA','DELTA','SIGMA','OMEGA'];
+        if (exact.length > 0) return exact[Math.floor(Math.random() * exact.length)];
+        return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    };
+
+    const rowKeyRaw = pickWordOfExactLen(5);
+    let colKeyRaw = pickWordOfExactLen(5);
+    let attempts = 0;
+    while (colKeyRaw === rowKeyRaw && attempts < 5) { colKeyRaw = pickWordOfLenAtLeast(5).slice(0, 5); attempts++; }
+    const rowKey = rowKeyRaw;
+    const colKey = colKeyRaw;
+
+    const polybiusKeyRaw = pickWordOfLenAtLeast(5);
+    const seen = new Set<string>();
+    const mixed: string[] = [];
+    for (const ch0 of normalizeIJ(toAZ(polybiusKeyRaw))) {
+        const ch = ch0 === 'J' ? 'I' : ch0;
+        if (/^[A-Z]$/.test(ch) && ch !== 'J' && !seen.has(ch)) { seen.add(ch); mixed.push(ch); }
+    }
+    for (let c = 0; c < 26; c++) {
+        const ch0 = String.fromCharCode(65 + c);
+        const ch = ch0 === 'J' ? 'I' : ch0;
+        if (ch !== 'J' && !seen.has(ch)) { seen.add(ch); mixed.push(ch); }
+    }
+    // mixed now length 25 with I/J combined
+    const grid: string[][] = [[], [], [], [], []];
+    let k = 0;
+    for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 5; c++) {
+            grid[r][c] = mixed[k++];
+        }
+    }
+
+    const letterPos: Record<string, { r: number; c: number }> = {};
+    for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 5; c++) {
+            const ch = grid[r][c];
+            letterPos[ch] = { r, c };
+        }
+    }
+
+    const plain = normalizeIJ(toAZ(text));
+    const tokens: string[] = [];
+    for (const ch of plain) {
+        const key = ch === 'J' ? 'I' : ch;
+        const pos = letterPos[key];
+        if (pos) {
+            // Row-first token using raw key letters (no I/J merging for labels)
+            const r = rowKey[pos.r];
+            const c = colKey[pos.c];
+            tokens.push(r + c);
+        }
+    }
+
+    // Determine block size distribution: 20% -> 0, 20% -> 4, 40% -> 5, 20% -> 6
+    const roll = Math.random();
+    const blockSize = roll < 0.2 ? 0 : roll < 0.4 ? 4 : roll < 0.8 ? 5 : 6;
+    let encrypted = '';
+    if (blockSize === 0) {
+        // Map spaces in original quote to gaps between tokens
+        const original = text;
+        let ti = 0;
+        for (let i = 0; i < original.length && ti < tokens.length; i++) {
+            const ch = original[i];
+            if (/^[A-Za-z]$/.test(ch)) {
+                if (encrypted.length > 0 && !encrypted.endsWith(' ')) encrypted += ' ';
+                encrypted += tokens[ti++];
+            } else if (ch === ' ') {
+                if (!encrypted.endsWith('   ')) encrypted += '   ';
+            }
+        }
+        while (ti < tokens.length) {
+            if (encrypted.length > 0 && !encrypted.endsWith(' ')) encrypted += ' ';
+            encrypted += tokens[ti++];
+        }
+    } else {
+        const grouped: string[] = [];
+        for (let i = 0; i < tokens.length; i += blockSize) {
+            grouped.push(tokens.slice(i, i + blockSize).join(' '));
+        }
+        encrypted = grouped.join('   '); // triple-space between blocks for clarity
+    }
+
+    return {
+        encrypted,
+        checkerboardRowKey: rowKey,
+        checkerboardColKey: colKey,
+        checkerboardPolybiusKey: polybiusKeyRaw,
+        checkerboardUsesIJ: true,
+        blockSize
+    };
 };

@@ -7,6 +7,8 @@
     "build": "cross-env NODE_ENV=production next build",
     "start": "next start",
     "lint": "next lint --dir src/app --dir src/lib",
+    "test": "vitest --run",
+    "test:ui": "vitest",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
@@ -65,7 +67,12 @@
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0",
     "tailwindcss": "^4.1.12",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "2.1.8",
+    "@testing-library/react": "16.0.1",
+    "@testing-library/jest-dom": "6.6.3",
+    "@testing-library/user-event": "14.6.1",
+    "jsdom": "25.0.1"
   },
   "packageManager": "pnpm@9.15.4+sha512.b2dc20e2fc72b3e18848459b37359a32064663e5627a51e4c74b2c29dd8e8e0491483c3abb40789cfd578bf362fb6ba8261b05f0387d76792ed6e23ea3b1b6a0"
 }

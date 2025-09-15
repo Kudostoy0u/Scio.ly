@@ -75,7 +75,7 @@ postgresql://kundan:jTucKCVvP7D1cRbB8doSVg@scioly-14433.j77.aws-us-east-2.cockro
 
 ### 3. API Endpoints
 The team sharing functionality is exposed through:
-- `POST /api/teams/share` - Handle code generation and team joining
+- `POST /api/teams/join-by-code` - Join a team using a permanent code (returns slug)
 
 ## Usage
 
@@ -110,7 +110,7 @@ The team sharing functionality is exposed through:
 - `TeamsDashboard` - Updated with share button
 
 ### Backend API
-- `src/app/api/teams/share/route.ts` - API endpoint for sharing operations
+- `src/app/api/teams/join-by-code/route.ts` - Join via code; persists membership and returns slug
 - `src/lib/db/teams.ts` - Database operations and utilities
 
 ### Database Operations

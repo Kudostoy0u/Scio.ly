@@ -1,36 +1,36 @@
 import { Metadata } from "next";
 import TeamsDashboard from "./teams-dashboard/TeamsDashboard";
+import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 
 export const metadata: Metadata = {
-  title: "Scio.ly | Team Analysis",
-  description: "Analyze Science Olympiad team performance with Elo ratings, leaderboards, and comparisons"
+  title: "Scio.ly | Teams",
+  description: "Join and coordinate with your Science Olympiad team."
 };
 
 async function getAutoLinkSelection() {
   try {
-    const cookieStore = await cookies();
-    const saved = cookieStore.get('teamsSelection');
-    if (saved?.value) return null; // user already has selection
-    // legacy origin unused
-    // First check persistent team_code on user profile
     const supa = await (await import('@/lib/supabaseServer')).createSupabaseServerClient();
     const { data: { user } } = await supa.auth.getUser();
-    if (user?.id) {
-      const { data: profile } = await supa.from('users').select('team_code, division, school').eq('id', user.id).maybeSingle();
-      const teamCode = (profile as any)?.team_code as string | undefined;
-      if (teamCode) {
-        const [school, division, team_id] = teamCode.split('::');
-        if (school && (division === 'B' || division === 'C') && team_id) {
-          return { school, division, team_id } as any;
-        }
-      }
+    if (!user?.id) return null;
+    // Prefer group slug for redirect
+    const { getPrimaryGroupForUser } = await import('@/lib/db/teams');
+    const primary = await getPrimaryGroupForUser(user.id);
+    if (primary && primary.group) {
+      // Use preferred team id if available
+      const group = primary.group;
+      return { school: group.school, division: group.division, team_id: primary.preferredTeamId || 'A', slug: group.slug } as any;
     }
     return null;
   } catch { return null; }
 }
 
 export default async function TeamsPage() {
+  const cookieStore = await cookies();
+  const justUnlinked = cookieStore.get('teamsJustUnlinked');
   const auto = await getAutoLinkSelection();
-  return <TeamsDashboard initialLinkedSelection={auto} />;
+  if (!justUnlinked && auto?.slug) {
+    redirect(`/teams/${auto.slug}`);
+  }
+  return <TeamsDashboard initialLinkedSelection={auto} initialGroupSlug={auto?.slug} />;
 }

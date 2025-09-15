@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Question } from '@/app/utils/geminiService';
 import SummaryGrid, { SummaryItem } from '@/app/components/SummaryGrid';
 import { CheckCircle, MessageCircle, Target, Trophy } from 'lucide-react';
+import { getLetterGradeFromPercentage } from '@/lib/utils/grade';
 
 interface TestSummaryProps {
   data: Question[];
@@ -12,17 +13,7 @@ interface TestSummaryProps {
 }
 
 
-const calculateGrade = (earnedPoints: number, totalPoints: number): string => {
-  if (totalPoints === 0) return 'N/A';
-  
-  const percentage = (earnedPoints / totalPoints) * 100;
-  
-  if (percentage >= 90) return 'A';
-  if (percentage >= 80) return 'B';
-  if (percentage >= 70) return 'C';
-  if (percentage >= 60) return 'D';
-  return 'F';
-};
+// Grade is now derived directly from accuracy percentage using a standard HS scale
 
 
 function NonCompactSummary({ items, subtopics, darkMode }: { 
@@ -99,15 +90,11 @@ export default function TestSummary({ data, userAnswers, gradingResults, darkMod
   }, []);
   
 
-  const totalQuestions = data.length;
   const answeredQuestions = Object.keys(userAnswers).length;
   const correctQuestions = Object.values(gradingResults).filter(score => score >= 1).length;
   const accuracyPercentage = answeredQuestions > 0 ? Math.round((correctQuestions / answeredQuestions) * 100) : 0;
-  const totalPoints = totalQuestions;
-  const earnedPoints = Object.values(gradingResults).reduce((sum, score) => sum + Math.min(1, score), 0);
-  
 
-  const grade = calculateGrade(earnedPoints, totalPoints);
+  const grade = getLetterGradeFromPercentage(accuracyPercentage);
   
 
   const allSubtopics = data.flatMap(question => {

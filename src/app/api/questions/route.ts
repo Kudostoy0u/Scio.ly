@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { questions } from '@/lib/db/schema';
 import { Question } from '@/lib/types/api';
 import { v4 as uuidv4 } from 'uuid';
-import { eq, and, or, gte, lte, sql, SQL } from 'drizzle-orm';
+import { eq, and, or, gte, lte, lt, sql, SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { 
   handleApiError, 
@@ -12,6 +12,9 @@ import {
 } from '@/lib/api/utils';
 
 export const runtime = 'nodejs';
+
+// Feature flag: when true, use efficient two-phase indexed random selection
+const trulyRandom = true;
 
 
 type DatabaseQuestion = {
@@ -261,10 +264,63 @@ const fetchQuestions = async (filters: ValidatedQuestionFilters): Promise<Questi
   const limit = queryBuilder.getLimit();
   const r = Math.random();
 
+  if (!trulyRandom) {
+    try {
+      // Single scan using CASE wrap-around
+      const rows = await db
+        .select({
+          id: questions.id,
+          question: questions.question,
+          tournament: questions.tournament,
+          division: questions.division,
+          event: questions.event,
+          difficulty: questions.difficulty,
+          options: questions.options,
+          answers: questions.answers,
+          subtopics: questions.subtopics,
+          createdAt: questions.createdAt,
+          updatedAt: questions.updatedAt,
+          randomF: questions.randomF,
+        })
+        .from(questions)
+        .where(whereCondition)
+        .orderBy(sql`CASE WHEN ${questions.randomF} >= ${r} THEN 0 ELSE 1 END`, questions.randomF)
+        .limit(limit);
+
+      return rows.map((row) => transformDatabaseResult(row as any));
+    } catch (err) {
+      console.log('Error fetching questions (single scan)', err);
+
+      const rows = await db
+        .select({
+          id: questions.id,
+          question: questions.question,
+          tournament: questions.tournament,
+          division: questions.division,
+          event: questions.event,
+          difficulty: questions.difficulty,
+          options: questions.options,
+          answers: questions.answers,
+          subtopics: questions.subtopics,
+          createdAt: questions.createdAt,
+          updatedAt: questions.updatedAt,
+          randomF: questions.randomF,
+        })
+        .from(questions)
+        .where(whereCondition)
+        .orderBy(sql`RANDOM()`)
+        .limit(limit);
+
+      return rows.map((row) => transformDatabaseResult(row as any));
+    }
+  }
+
+  // Two-phase indexed random seek for truly random selection
   try {
-    // Single query approach using a CASE expression to wrap-around ordering around random pivot r
-    // Equivalent to two-phase query but in one pass
-    const rows = await db
+    console.log('Two-phase indexed random seek');
+    const whereFirst = whereCondition ? and(whereCondition, gte(questions.randomF, r)) : gte(questions.randomF, r);
+
+    const firstRows = await db
       .select({
         id: questions.id,
         question: questions.question,
@@ -280,13 +336,42 @@ const fetchQuestions = async (filters: ValidatedQuestionFilters): Promise<Questi
         randomF: questions.randomF,
       })
       .from(questions)
-      .where(whereCondition)
-      .orderBy(sql`CASE WHEN ${questions.randomF} >= ${r} THEN 0 ELSE 1 END`, questions.randomF)
+      .where(whereFirst)
+      .orderBy(questions.randomF)
       .limit(limit);
 
-    return rows.map((r) => transformDatabaseResult(r as any));
+    let rows = firstRows;
+
+    if (rows.length < limit) {
+      const remaining = limit - rows.length;
+      const whereSecond = whereCondition ? and(whereCondition, lt(questions.randomF, r)) : lt(questions.randomF, r);
+
+      const secondRows = await db
+        .select({
+          id: questions.id,
+          question: questions.question,
+          tournament: questions.tournament,
+          division: questions.division,
+          event: questions.event,
+          difficulty: questions.difficulty,
+          options: questions.options,
+          answers: questions.answers,
+          subtopics: questions.subtopics,
+          createdAt: questions.createdAt,
+          updatedAt: questions.updatedAt,
+          randomF: questions.randomF,
+        })
+        .from(questions)
+        .where(whereSecond)
+        .orderBy(questions.randomF)
+        .limit(remaining);
+
+      rows = rows.concat(secondRows);
+    }
+
+    return rows.map((row) => transformDatabaseResult(row as any));
   } catch (err) {
-    console.log('Error fetching questions', err);
+    console.log('Error fetching questions (two-phase)', err);
 
     const rows = await db
       .select({
@@ -308,7 +393,7 @@ const fetchQuestions = async (filters: ValidatedQuestionFilters): Promise<Questi
       .orderBy(sql`RANDOM()`)
       .limit(limit);
 
-    return rows.map((r) => transformDatabaseResult(r as any));
+    return rows.map((row) => transformDatabaseResult(row as any));
   }
 };
 

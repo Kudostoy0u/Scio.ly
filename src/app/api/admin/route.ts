@@ -104,6 +104,7 @@ export async function GET(request: NextRequest) {
     let removedResolvable = 0;
     const byEvent: Record<string, { edits: number; removed: number }> = {};
 
+    // Speed optimization: avoid per-row DB lookups. Treat presence of an id as "resolvable".
     const enrichedEdits = await Promise.all(edits.map(async (row) => {
       const event = row.event;
       byEvent[event] = byEvent[event] || { edits: 0, removed: 0 };
@@ -112,12 +113,7 @@ export async function GET(request: NextRequest) {
       const original = parseMaybeJson(row.originalQuestion);
       const edited = parseMaybeJson(row.editedQuestion);
       const candidateId = (edited.id as string | undefined) || (original.id as string | undefined);
-      let canLocate = Boolean(candidateId);
-      if (!canLocate) {
-
-        const idByOriginal = await locateQuestionIdByContent(event, original);
-        canLocate = Boolean(idByOriginal);
-      }
+      const canLocate = Boolean(candidateId);
       if (canLocate) editsResolvable += 1;
       return {
         id: row.id,
@@ -129,6 +125,7 @@ export async function GET(request: NextRequest) {
       };
     }));
 
+    // Speed optimization: avoid per-row DB lookups. Treat presence of an id as "exists".
     const enrichedBlacklists = await Promise.all(blacklists.map(async (row) => {
       const event = row.event;
       byEvent[event] = byEvent[event] || { edits: 0, removed: 0 };
@@ -136,14 +133,7 @@ export async function GET(request: NextRequest) {
 
       const q = parseMaybeJson(row.questionData);
       const candidateId = (q.id as string | undefined) || undefined;
-      let exists = false;
-      if (candidateId) {
-        const found = await db.select({ id: questionsTable.id }).from(questionsTable).where(eq(questionsTable.id, candidateId)).limit(1);
-        exists = found.length > 0;
-      } else {
-        const idByContent = await locateQuestionIdByContent(event, q);
-        exists = Boolean(idByContent);
-      }
+      const exists = Boolean(candidateId);
       if (exists) removedResolvable += 1;
       return {
         id: row.id,

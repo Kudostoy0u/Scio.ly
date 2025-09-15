@@ -164,23 +164,28 @@ export default function PracticeDashboard() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-
       const sessionStr = localStorage.getItem('currentTestSession');
       const session = sessionStr ? JSON.parse(sessionStr) as { eventName?: string; isSubmitted?: boolean } : null;
-      if (session && session.isSubmitted) {
-        setContinueInfo(null);
+
+      // 1) Active session takes precedence
+      if (session && !session.isSubmitted && session.eventName) {
+        const route: '/test' | '/codebusters' = session.eventName === 'Codebusters' ? '/codebusters' : '/test';
+        setContinueInfo({ eventName: session.eventName, route });
         return;
       }
 
+      const testSubmitted = localStorage.getItem('testSubmitted') === 'true';
+      const cbSubmitted = localStorage.getItem('codebustersIsTestSubmitted') === 'true';
 
+      // 2) Detect general practice progress
       const testAnswersStr = localStorage.getItem('testUserAnswers');
       const testAnswers = testAnswersStr ? JSON.parse(testAnswersStr) as Record<string, (string | null)[]> : null;
-      const hasGeneralProgress = !!testAnswers && Object.values(testAnswers).some(arr => Array.isArray(arr) ? arr.some(v => v && String(v).length > 0) : !!testAnswersStr);
+      const hasGeneralProgress = !testSubmitted && !!testAnswers && Object.values(testAnswers).some(arr => Array.isArray(arr) ? arr.some(v => v && String(v).length > 0) : !!testAnswersStr);
 
-
+      // 3) Detect Codebusters progress
       const cbQuotesStr = localStorage.getItem('codebustersQuotes');
       let hasCodebustersProgress = false;
-      if (cbQuotesStr) {
+      if (!cbSubmitted && cbQuotesStr) {
         try {
           const quotes = JSON.parse(cbQuotesStr) as Array<any>;
           hasCodebustersProgress = Array.isArray(quotes) && quotes.some(q => {
@@ -196,18 +201,16 @@ export default function PracticeDashboard() {
         } catch {}
       }
 
-
-      if (hasCodebustersProgress || (session && session.eventName === 'Codebusters')) {
+      // 4) Prefer general progress over legacy Codebusters leftovers when both exist
+      if (hasGeneralProgress) {
         const params = localStorage.getItem('testParams');
-        const eventName = (() => { try { return (params ? JSON.parse(params).eventName : undefined) || 'Codebusters'; } catch { return 'Codebusters'; }})();
-        setContinueInfo({ eventName, route: '/codebusters' });
+        const eventName = (() => { try { const p = params ? JSON.parse(params) : undefined; return (p?.eventName as string | undefined) || 'Practice Test'; } catch { return 'Practice Test'; } })();
+        setContinueInfo({ eventName, route: '/test' });
         return;
       }
 
-      if (hasGeneralProgress) {
-        const params = localStorage.getItem('testParams');
-        const eventName = (() => { try { return (params ? JSON.parse(params).eventName : undefined) || 'Practice Test'; } catch { return 'Practice Test'; }})();
-        setContinueInfo({ eventName, route: '/test' });
+      if (hasCodebustersProgress) {
+        setContinueInfo({ eventName: 'Codebusters', route: '/codebusters' });
         return;
       }
 

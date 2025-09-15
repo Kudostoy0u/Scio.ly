@@ -89,7 +89,7 @@ export class GeminiService {
         responseMimeType: "application/json",
         responseSchema: schema,
         thinkingConfig: {
-          thinkingBudget: 2048,
+          thinkingBudget: 1000,
         },
         temperature: 0.1,
         topP: 0.8,
@@ -401,20 +401,21 @@ console.log('🧪 [GEMINI/VALIDATE-EDIT] Prompt:\n', prompt);
     const answers = Array.isArray(question.answers) ? question.answers : [];
     
 
-    const formattedOptions = options.map((option, index) => `${index}: ${option}`).join('\n');
+    const formattedOptions = options.map((option, index) => `${index+1}: ${option}`).join('\n');
     
 
     const formattedAnswers = answers.map(answerIndex => {
       const index = typeof answerIndex === 'number' ? answerIndex : parseInt(String(answerIndex), 10);
       const option = options[index];
-      return `${answerIndex} (${option})`;
+      return `${answerIndex+1} (${option})`;
     }).join(', ');
     
-    const prompt = `You are an expert Science Olympiad tutor providing explanations for questions${hasImage ? ' with images' : ''}. Your job is to help students understand how to solve this question step-by-step.
+    const prompt = `You are an expert Science Olympiad tutor providing explanations for questions${hasImage ? ' with images' : ''}. Your job is to help students understand how to solve this question step-by-step. 
+    Use MINIMAL reasoning, start giving JSON as soon as you confidently have an answer.
 
 QUESTION: ${questionText}
 EVENT: ${event}${options.length > 0 ? `
-OPTIONS:
+OPTIONS (use 1-indexing in your explanation, BUT USE 0-INDEXING IN YOUR CORRECT INDICES):
 ${formattedOptions}
 CORRECT ANSWER(S): ${formattedAnswers}` : `
 CORRECT ANSWER(S): ${answers.join(', ')}`}${hasImage ? `
@@ -425,10 +426,11 @@ EXPLANATION REQUIREMENTS:
 - Aim for three short paragraphs: (1) what the question gives/asks${hasImage ? ' (include key visual details and how they relate)' : ''}, (2) the reasoning/steps and core concepts, (3) the conclusion stating the correct answer and briefly why other options are wrong (if applicable).
 - If the problem is complex, write more than three paragraphs as needed; if it's a simple recall or "know it or you don't" question, one concise paragraph is fine.
 - Use clear, student-friendly language${hasImage ? ' and reference specific visual features when relevant' : ''}.
-
-Think minimally until you confidently have an accurate answer.
+- The correct answer may be actually incorrect. You may change the correct answer through correctIndices and correctedAnswers, or keep it the same. 
 Provide an educational explanation that helps students understand both the answer and the scientific reasoning behind it${hasImage ? ', with clear references to the visual information provided' : ''}.
-Keep your text-based answer in the explanation field using markdown-based formatting (newlines (\\n) for paragraph structuring, bolding with double asterisks, etc; LaTeX if necessary). Prefer paragraphs over bullet lists and keep it concise while complete. Make sure to conclude your explanation appropriately, do not cut it short.`;
+Keep your text-based answer in the explanation field using markdown-based formatting (newlines (\\n) for paragraph structuring, bolding with double asterisks, etc; LaTeX if necessary). 
+Prefer paragraphs over bullet lists and keep it concise while complete. 
+Make sure to conclude your explanation appropriately, do not cut it short.`;
 
     let contents: any = prompt;
     
@@ -473,10 +475,8 @@ Keep your text-based answer in the explanation field using markdown-based format
       },
       propertyOrdering: ["explanation","correctIndices","correctedAnswers"],
     };
-
     return await this.generateStructuredContent(prompt, schema, 'gemini-2.5-flash', contents);
   }
-
 
 
 

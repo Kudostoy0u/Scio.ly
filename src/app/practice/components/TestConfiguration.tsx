@@ -16,6 +16,9 @@ interface TestConfigurationProps {
   onSettingsChange: (settings: Settings) => void;
   onGenerateTest: () => void;
   onUnlimited: () => void;
+  generateLabel?: string;
+  hideUnlimited?: boolean;
+  forceBothDivision?: boolean;
 }
 
 export default function TestConfiguration({
@@ -23,7 +26,10 @@ export default function TestConfiguration({
   settings,
   onSettingsChange,
   onGenerateTest,
-  onUnlimited
+  onUnlimited,
+  generateLabel = 'Generate Test',
+  hideUnlimited = false,
+  forceBothDivision = false
 }: TestConfigurationProps) {
   const { darkMode } = useTheme();
   const [isSubtopicDropdownOpen, setIsSubtopicDropdownOpen] = useState(false);
@@ -224,6 +230,26 @@ export default function TestConfiguration({
   }, []);
 
   const isCodebusters = selectedEvent?.name === 'Codebusters';
+  const supportsPictureQuestions = (() => {
+    const name = selectedEvent?.name || '';
+    const base = name.split(' - ')[0];
+    const candidates = [
+      'Rocks and Minerals',
+      'Entomology',
+      'Anatomy - Nervous',
+      'Anatomy - Endocrine',
+      'Anatomy - Sense Organs',
+      'Anatomy & Physiology',
+      'Dynamic Planet',
+      'Dynamic Planet - Oceanography',
+      'Water Quality',
+      'Water Quality - Freshwater',
+      'Remote Sensing',
+      'Circuit Lab',
+      'Astronomy'
+    ];
+    return candidates.includes(name) || candidates.includes(base);
+  })();
 
   return (
     <div 
@@ -385,16 +411,7 @@ export default function TestConfiguration({
           </div>
 
           {/* Identification slider for events with image ID */}
-          {(selectedEvent?.name === 'Rocks and Minerals' ||
-            selectedEvent?.name === 'Entomology' ||
-            selectedEvent?.name === 'Anatomy - Nervous' ||
-            selectedEvent?.name === 'Anatomy - Endocrine' ||
-            selectedEvent?.name === 'Anatomy - Sense Organs' ||
-            selectedEvent?.name === 'Dynamic Planet - Oceanography' ||
-            selectedEvent?.name === 'Water Quality - Freshwater' ||
-            selectedEvent?.name === 'Remote Sensing' ||
-            selectedEvent?.name === 'Circuit Lab' ||
-            selectedEvent?.name === 'Astronomy') && (
+          {supportsPictureQuestions && (
             <div>
               <label htmlFor="idPercentage" className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 Picture Questions
@@ -493,8 +510,8 @@ export default function TestConfiguration({
             }`}>
               {(() => {
                 const availableDivisions = selectedEvent?.divisions || ['B', 'C'];
-                const canShowB = availableDivisions.includes('B');
-                const canShowC = availableDivisions.includes('C');
+                const canShowB = forceBothDivision ? true : availableDivisions.includes('B');
+                const canShowC = forceBothDivision ? true : availableDivisions.includes('C');
 
                 return (
                   <>
@@ -837,21 +854,23 @@ export default function TestConfiguration({
                     : 'border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white'
               }`}
             >
-              Generate Test
+              {generateLabel}
             </button>
-            <button
-              onClick={onUnlimited}
-              disabled={!selectedEvent}
-              className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-300 border-2 ${
-                !selectedEvent
-                  ? 'opacity-50 cursor-not-allowed ' + (darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-500')
-                  : darkMode
-                    ? 'border-indigo-500 text-indigo-400 hover:bg-indigo-500 hover:text-white'
-                    : 'border-indigo-500 text-indigo-600 hover:bg-indigo-500 hover:text-white'
-              }`}
-            >
-              Unlimited
-            </button>
+            {hideUnlimited ? null : (
+              <button
+                onClick={onUnlimited}
+                disabled={!selectedEvent}
+                className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-300 border-2 ${
+                  !selectedEvent
+                    ? 'opacity-50 cursor-not-allowed ' + (darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-500')
+                    : darkMode
+                      ? 'border-indigo-500 text-indigo-400 hover:bg-indigo-500 hover:text-white'
+                      : 'border-indigo-500 text-indigo-600 hover:bg-indigo-500 hover:text-white'
+                }`}
+              >
+                Unlimited
+              </button>
+            )}
           </div>
         </div>
       </div>

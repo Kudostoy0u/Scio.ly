@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse, GeminiExtractQuestionsRequest } from '@/lib/types/api';
 import { geminiService } from '@/lib/services/gemini';
 
+export const maxDuration = 60;
+
 
 export async function POST(request: NextRequest) {
   try {

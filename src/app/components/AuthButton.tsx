@@ -3,11 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { User } from '@supabase/supabase-js';
-import { Eye, EyeOff, X, Settings, Trophy } from 'lucide-react';
+import { Eye, EyeOff, X, Settings, Trophy, Bell } from 'lucide-react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/app/contexts/AuthContext';
+import { useNotifications } from '@/app/contexts/NotificationsContext';
 
 
 export default function AuthButton() {
@@ -38,13 +39,26 @@ export default function AuthButton() {
   const subtleLinkClass = darkMode
     ? 'text-blue-300 hover:text-blue-200'
     : 'text-blue-500 hover:text-blue-600';
-  // Notifications removed
+  const { notifications: notifs, unreadCount: unread, markAllRead, markReadById } = useNotifications();
+  const [username, setUsername] = useState<string | null>(null);
+  const [clearingAll, setClearingAll] = useState(false);
 
 
   useEffect(() => {
     setUser(ctxUser ?? null);
     setLoading(false);
   }, [ctxUser]);
+  useEffect(() => {
+    if (ctxUser?.id) {
+      try {
+        const cachedName = localStorage.getItem(`scio_display_name_${ctxUser.id}`);
+        if (cachedName) setDisplayName(cachedName);
+        const cachedUsername = localStorage.getItem(`scio_username_${ctxUser.id}`);
+        if (cachedUsername) setUsername(cachedUsername);
+      } catch {}
+    }
+  }, [ctxUser?.id]);
+  // Notifications are now handled globally via NotificationsProvider
 
 
   useEffect(() => {
@@ -79,6 +93,8 @@ export default function AuthButton() {
 
       if (user?.id) {
         localStorage.removeItem(`scio_profile_photo_${user.id}`);
+        localStorage.removeItem(`scio_display_name_${user.id}`);
+        localStorage.removeItem(`scio_username_${user.id}`);
       }
     } catch {}
   };
@@ -120,12 +136,20 @@ export default function AuthButton() {
         
         const { data: profile } = await supabase
           .from('users')
-          .select('display_name, first_name, photo_url')
+          .select('display_name, first_name, photo_url, username')
           .eq('id', ctxUser.id)
           .maybeSingle();
         if (!active) return;
         const dn = (profile as any)?.display_name as string | undefined;
-        if (dn) setDisplayName(dn);
+        if (dn) {
+          setDisplayName(dn);
+          try { localStorage.setItem(`scio_display_name_${ctxUser.id}`, dn); } catch {}
+        }
+        const un = (profile as any)?.username as string | undefined;
+        if (un) {
+          setUsername(un);
+          try { localStorage.setItem(`scio_username_${ctxUser.id}`, un); } catch {}
+        }
         const photo = (profile as any)?.photo_url as string | undefined;
         if (photo) {
           try {
@@ -176,6 +200,21 @@ export default function AuthButton() {
           setAuthError('Passwords do not match');
           return;
         }
+        // Pre-check if email already exists in our public users table.
+        // If this check is blocked by RLS or fails, we will still rely on the signUp error handling below.
+        try {
+          const { data: existing, error: existsErr } = await (client as any)
+            .from('users')
+            .select('id')
+            .eq('email', email)
+            .maybeSingle();
+          if (existing && !existsErr) {
+            setAuthError('Email is already in use.');
+            return;
+          }
+        } catch {
+          // ignore and proceed to signUp
+        }
         const { data, error } = await client.auth.signUp({
           email,
           password,
@@ -191,19 +230,19 @@ export default function AuthButton() {
         });
         
         if (error) {
-
-          if (error.message.includes('already registered') || 
-              error.message.includes('already exists') ||
-              error.message.includes('already been registered') ||
-              error.message.includes('User already registered')) {
-            setAuthError('An account with this email already exists. Please sign in instead.');
+          if (
+            error.message.includes('already registered') ||
+            error.message.includes('already exists') ||
+            error.message.includes('already been registered') ||
+            error.message.includes('User already registered')
+          ) {
+            setAuthError('Email is already in use.');
           } else {
             setAuthError(error.message);
           }
         } else {
-
           if (data.user && data.user.email_confirmed_at) {
-            setAuthError('An account with this email already exists. Please sign in instead.');
+            setAuthError('Email is already in use.');
           } else {
             setAuthSuccess('Check your email for the confirmation link. Don\'t forget to check your spam folder.');
             setEmail('');
@@ -221,7 +260,22 @@ export default function AuthButton() {
         
         if (error) {
           if (error.message.includes('Invalid login credentials')) {
-            setAuthError('No account found with this email. Please sign up instead.');
+            try {
+              const { data: existing, error: readErr } = await (client as any)
+                .from('users')
+                .select('id')
+                .eq('email', email)
+                .maybeSingle();
+              if (existing && !readErr) {
+                setAuthError('Incorrect password.');
+              } else if (!existing && !readErr) {
+                setAuthError('No account found with this email. Please sign up instead.');
+              } else {
+                setAuthError('Incorrect email or password.');
+              }
+            } catch {
+              setAuthError('Incorrect email or password.');
+            }
           } else {
             setAuthError(error.message);
           }
@@ -355,6 +409,11 @@ export default function AuthButton() {
               : 'bg-white hover:bg-gray-50 border-gray-300 text-gray-700'
           }`}
         >
+          {unread > 0 && (
+            <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-600 text-white text-[10px]">
+              {unread > 9 ? '9+' : unread}
+            </span>
+          )}
           {photoUrl ? (
             <Image
               src={photoUrl}
@@ -377,7 +436,7 @@ export default function AuthButton() {
             </div>
           )}
           <span className="hidden sm:block">
-            {displayName || user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
+            {displayName || username || user.email?.split('@')[0] || 'User'}
           </span>
           
           <svg
@@ -397,11 +456,91 @@ export default function AuthButton() {
             }`}
           >
             <div className={`px-4 py-2 text-sm border-b ${darkMode ? 'text-gray-200 border-gray-600' : 'text-gray-700 border-gray-100'}`}>
-              <div className="font-medium truncate">{displayName || user.user_metadata?.name || user.user_metadata?.full_name || 'User'}</div>
-              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} break-all`}>{user.email}</div>
+              <div className="font-medium truncate">{displayName || username || 'User'}</div>
+              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} break-all`}>{username || (user.email?.split('@')[0] || '')}</div>
             </div>
-
-            <div className="mt-2 border-t" />
+            {/* Notifications */}
+            <div className={`px-4 py-2 text-sm ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+              <div className="flex items-center justify-between">
+                <div className="font-medium flex items-center gap-2"><Bell className="w-4 h-4" /> Notifications</div>
+                <div className="flex items-center gap-2">
+                  {unread > 0 && <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-600 text-white text-[10px]">{unread > 9 ? '9+' : unread}</span>}
+                  {notifs.length > 0 && (
+                    <button
+                      disabled={clearingAll}
+                      onClick={async () => {
+                        setClearingAll(true);
+                        await markAllRead();
+                        setClearingAll(false);
+                      }}
+                      className={`${darkMode ? 'text-gray-300 hover:text-gray-100' : 'text-gray-600 hover:text-gray-800'} text-[10px] underline`}
+                      title="Clear all notifications"
+                    >
+                      {clearingAll ? 'Clearing…' : 'Clear all'}
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="mt-2 max-h-56 overflow-auto space-y-2">
+                {notifs.length === 0 ? (
+                  <div className={`${darkMode ? 'text-gray-400' : 'text-gray-500'} text-xs`}>No notifications</div>
+                ) : (
+                  notifs.map((n) => (
+                    <div key={n.id} className={`rounded border ${darkMode ? 'border-gray-700' : 'border-gray-200'} p-2 text-xs`}>
+                      <div className="font-medium">{n.title}</div>
+                      {!!n.body && <div className={`${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{n.body}</div>}
+                      {n.type === 'assignment' ? (
+                        <div className="mt-2 flex items-center gap-2">
+                          <button
+                            onClick={async () => {
+                              await markReadById(n.id);
+                              window.location.href = n.data?.url || '/test';
+                            }}
+                            className={`px-2 py-1 rounded text-white bg-blue-600 hover:bg-blue-700`}
+                          >
+                            Start
+                          </button>
+                          <button
+                            onClick={async () => {
+                              await markReadById(n.id);
+                            }}
+                            className={`px-2 py-1 rounded ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      ) : n.type === 'team_invite' && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <button
+                            onClick={async () => {
+                              try {
+                                const res = await fetch('/api/notifications/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: n.id, school: n.data?.school, division: n.data?.division, teamId: n.data?.teamId, memberName: n.data?.memberName }) });
+                                const j = await res.json();
+                                if (res.ok && j?.success) {
+                                  await markReadById(n.id);
+                                  if (j?.slug) window.location.href = `/teams/${j.slug}`;
+                                }
+                              } catch {}
+                            }}
+                            className={`px-2 py-1 rounded text-white bg-blue-600 hover:bg-blue-700`}
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={async () => {
+                              await markReadById(n.id);
+                            }}
+                            className={`px-2 py-1 rounded ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
             <Link href="/leaderboard" className={`block w-full text-left px-4 py-2 text-sm transition-colors duration-200 flex items-center gap-2 ${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
               <Trophy className="w-4 h-4" />
               Leaderboards

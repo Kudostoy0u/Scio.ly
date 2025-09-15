@@ -42,7 +42,7 @@ export default async function Page() {
 
     const params = new URLSearchParams();
     params.set('event', eventName);
-    params.set('limit', String(Math.max(parseInt(questionCount) * 3, 50)));
+    params.set('limit', String(parseInt(questionCount)));
     if (types === 'multiple-choice') params.set('question_type', 'mcq');
     if (types === 'free-response') params.set('question_type', 'frq');
     if (division && division !== 'any') params.set('division', division);

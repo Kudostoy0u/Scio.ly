@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { FaFileAlt, FaBookmark, FaDiscord, FaBook, FaUsers } from 'react-icons/fa';
+import { ChartPie } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { handleShareCodeRedirect } from '@/app/utils/shareCodeUtils';
 
@@ -89,11 +90,11 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
 
   return (
     <>
-      {/* Row 1: Load Test with Code and Bookmarked Questions */}
+      {/* Row 1: Load Test with Code and Bookmarked/Teams */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Load Test with Code */}
         <div className={`rounded-lg cursor-pointer ${cardStyle} hover:border-gray-600`}>
-          <div className={`w-full h-full p-6 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'}`}>
+          <div className={`w-full h-full p-4 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'}`}>
             <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
               <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -122,7 +123,7 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
                     darkMode
                       ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-500'
                       : 'bg-gray-50 border-gray-300 text-gray-900 focus:border-blue-500'
-                  } focus:outline-none`}
+                  } focus:outline-none focus:placeholder-transparent`}
                   placeholder="•"
                 />
               ))}
@@ -130,23 +131,44 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
           </div>
         </div>
         
-        {/* Bookmarked Questions Button */}
-        <motion.div 
-          onClick={() => router.push('/bookmarks')}
-          className={`rounded-lg cursor-pointer ${cardStyle} hover:border-gray-600`}
-        >
-          <div className={`w-full h-full p-6 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'}`}>
-            <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-              <FaBookmark className="text-2xl text-green-500" />
+        {/* Right: Bookmarked + Teams split */}
+        <div className="grid grid-cols-2 gap-6">
+          {/* Bookmarked Questions Button */}
+          <motion.div 
+            onClick={() => router.push('/bookmarks')}
+            className={`rounded-lg cursor-pointer ${cardStyle} hover:border-gray-600`}
+          >
+            <div className={`w-full h-full p-4 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'}`}>
+              <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                <FaBookmark className="text-2xl text-green-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold mb-1">Bookmarks</h3>
+                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  View and practice over your bookmarked questions
+                </p>
+              </div>
             </div>
-            <div className="flex-1">
-              <h3 className="text-xl font-bold mb-1">Bookmarked Questions</h3>
-              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                View and practice over your bookmarked questions
-              </p>
+          </motion.div>
+
+          {/* Teams Button */}
+          <motion.div 
+            onClick={() => router.push('/teams')}
+            className={`rounded-lg cursor-pointer ${cardStyle} hover:border-gray-600`}
+          >
+            <div className={`w-full h-full p-4 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'}`}>
+              <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                <FaUsers className="text-2xl text-blue-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold mb-1">Teams</h3>
+                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Organize, collaborate, and test-take with your team
+                </p>
+              </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
       
       {/* Row 2: Recent Reports and Scio.ly for Teams */}
@@ -169,14 +191,15 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
           </div>
         </motion.div>
         
-        {/* Analytics Button */}
+        {/* Analytics Button */
+        }
         <motion.div 
           onClick={() => router.push('/analytics')}
           className={`rounded-lg cursor-pointer ${cardStyle} hover:border-gray-600`}
         >
           <div className={`w-full h-full p-6 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'}`}>
             <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-              <FaUsers className="text-2xl text-blue-500" />
+              <ChartPie className="w-6 h-6 text-blue-500" />
             </div>
             <div className="flex-1">
               <h3 className="text-xl font-bold mb-1">Analytics</h3>

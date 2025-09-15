@@ -14,7 +14,7 @@ const client = globalThis.__pgClient__ ?? postgres(connectionString, {
   // Keep footprint small in serverless and avoid connection churn
   max: 2,
   idle_timeout: 300,
-  connect_timeout: 20,
+  connect_timeout: 40,
 
   ssl: (() => {
     const b64 = process.env.PGSSLROOTCERT;

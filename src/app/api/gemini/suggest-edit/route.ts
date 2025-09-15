@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse, GeminiSuggestEditRequest } from '@/lib/types/api';
 import { geminiService } from '@/lib/services/gemini';
 
+export const maxDuration = 60;
+
 // post /api/gemini/suggest-edit for ai suggestions for improving a question
 export async function POST(request: NextRequest) {
   try {

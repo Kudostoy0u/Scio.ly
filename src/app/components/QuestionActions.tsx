@@ -156,7 +156,7 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
               onClick={handleDirectReport}
               disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions}
               className={`${buttonClass} ${(isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions) ? disabledClass : 'hover:text-red-500'}`}
-              title={isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : shouldDisableActions ? 'Unavailable offline' : 'Remove question'}
+              title={isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : shouldDisableActions ? 'Unavailable offline' : 'Permanently delete question from DB'}
             >
               {isProcessingDirectReport ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />

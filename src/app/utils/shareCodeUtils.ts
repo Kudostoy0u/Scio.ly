@@ -177,6 +177,10 @@ export const handleShareCodeRedirect = async (code: string): Promise<boolean> =>
 
   // 4. set up local storage based on the test type
   localStorage.setItem('testParams', JSON.stringify(result.testParams));
+  try {
+    const cookiePayload = encodeURIComponent(JSON.stringify(result.testParams));
+    document.cookie = `scio_test_params=${cookiePayload}; Path=/; Max-Age=600; SameSite=Lax`;
+  } catch {}
 
   // 5. initialize time management session
   const eventName = result.eventName || 'Unknown Event';

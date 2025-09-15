@@ -32,7 +32,7 @@ export default function AssignPage() {
       try {
         const sp = new URLSearchParams();
         sp.set('event', eventName);
-        sp.set('limit', String(Math.max(questionCount * 3, 50)));
+        sp.set('limit', String(questionCount));
         if (types === 'multiple-choice') sp.set('question_type', 'mcq');
         if (types === 'free-response') sp.set('question_type', 'frq');
         if (division && division !== 'any') sp.set('division', division);

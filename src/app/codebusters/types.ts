@@ -11,9 +11,10 @@ export interface QuoteData {
     nihilistPolybiusKey?: string;
     nihilistCipherKey?: string;
 
-    checkerboardKeyword?: string;
-    checkerboardR1?: number;
-    checkerboardR2?: number;
+    checkerboardRowKey?: string;
+    checkerboardColKey?: string;
+    checkerboardPolybiusKey?: string;
+    checkerboardUsesIJ?: boolean;
     columnarKey?: string;
     fractionatedKey?: string;
     fractionationTable?: { [key: string]: string };
@@ -22,6 +23,7 @@ export interface QuoteData {
     affineA?: number;
     affineB?: number;
     baconianBinaryType?: string;
+    blockSize?: number;
 
     cryptarithmData?: {
       equation: string;
@@ -41,6 +43,7 @@ export interface QuoteData {
     };
     nihilistSolution?: { [key: number]: string };
     checkerboardSolution?: { [key: number]: string };
+    checkerboardHinted?: { [key: number]: boolean };
     fractionatedSolution?: { [key: number]: string };
     columnarSolution?: { [key: number]: string };
     xenocryptSolution?: { [key: number]: string };
@@ -63,9 +66,10 @@ export interface CipherResult {
     portaKeyword?: string;
     nihilistPolybiusKey?: string;
     nihilistCipherKey?: string;
-    checkerboardKeyword?: string;
-    checkerboardR1?: number;
-    checkerboardR2?: number;
+    checkerboardRowKey?: string;
+    checkerboardColKey?: string;
+    checkerboardPolybiusKey?: string;
+    checkerboardUsesIJ?: boolean;
     columnarKey?: string;
     fractionatedKey?: string;
     fractionationTable?: { [key: string]: string };
@@ -73,6 +77,7 @@ export interface CipherResult {
     caesarShift?: number;
     affineA?: number;
     affineB?: number;
+    blockSize?: number;
 }
 
 export interface HillSolution {

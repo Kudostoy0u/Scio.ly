@@ -5,6 +5,8 @@ import { geminiService } from '@/lib/services/gemini';
 import { edits as editsTable, questions as questionsTable } from '@/lib/db/schema';
 import { and, eq } from 'drizzle-orm';
 
+export const maxDuration = 60;
+
 
 export async function POST(request: NextRequest) {
   try {

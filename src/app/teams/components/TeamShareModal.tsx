@@ -1,7 +1,9 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, Copy, Share2, Users, Crown } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useTheme } from '@/app/contexts/ThemeContext';
+import { toast } from 'react-toastify';
 
 interface TeamShareModalProps {
   isOpen: boolean;
@@ -9,7 +11,7 @@ interface TeamShareModalProps {
   school: string;
   division: 'B' | 'C';
   isCaptain: boolean;
-  onJoinTeam: (teamData: any, type: 'captain' | 'user') => void;
+  onJoinTeam?: (teamData: any, type: 'captain' | 'user') => void;
 }
 
 export default function TeamShareModal({ 
@@ -17,10 +19,10 @@ export default function TeamShareModal({
   onClose, 
   school, 
   division, 
-  isCaptain, 
-  onJoinTeam 
+  isCaptain
 }: TeamShareModalProps) {
   const { darkMode } = useTheme();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'share' | 'join'>('share');
   const [captainCode, setCaptainCode] = useState<string>('');
   const [userCode, setUserCode] = useState<string>('');
@@ -29,34 +31,27 @@ export default function TeamShareModal({
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
 
-  const generateCodes = useCallback(async () => {
+  const loadCodes = useCallback(async () => {
     try {
       setIsLoading(true);
       setError('');
-      
-      const captainResponse = await fetch('/api/teams/share', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create', school, division, type: 'captain' })
-      });
-      
-      const userResponse = await fetch('/api/teams/share', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create', school, division, type: 'user' })
-      });
-      
-      if (captainResponse.ok && userResponse.ok) {
-        const captainData = await captainResponse.json();
-        const userData = await userResponse.json();
-        setCaptainCode(captainData.code);
-        setUserCode(userData.code);
+      const res = await fetch(`/api/teams/units?school=${encodeURIComponent(school)}&division=${division}`);
+      if (!res.ok) {
+        if (res.status === 401) toast.error('You must be signed in to view team codes.');
+        throw new Error('Failed to load codes');
+      }
+      const data = await res.json();
+      if (data?.success && Array.isArray(data?.data) && data.data.length > 0) {
+        // show first unit's codes by default
+        setCaptainCode(data.data[0].captainCode || '');
+        setUserCode(data.data[0].userCode || '');
       } else {
-        throw new Error('Failed to generate codes');
+        setCaptainCode('');
+        setUserCode('');
       }
     } catch (err) {
-      setError('Failed to generate share codes');
-      console.error('Error generating codes:', err);
+      setError('Failed to load team codes');
+      console.error('Error loading codes:', err);
     } finally {
       setIsLoading(false);
     }
@@ -73,20 +68,21 @@ export default function TeamShareModal({
       setError('');
       setSuccess('');
 
-      const response = await fetch('/api/teams/share', {
+      const response = await fetch('/api/teams/join-by-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'join', code: joinCode.trim() })
+        body: JSON.stringify({ code: joinCode.trim() })
       });
 
       const result = await response.json();
       
       if (!result.success) {
         setError(result.error || 'Invalid or expired code');
+        if (response.status === 401) toast.error('You must be signed in to join a team.');
         return;
       }
 
-      onJoinTeam(result.teamData, result.type);
+      router.push(`/teams/${result.slug}`);
       setSuccess('Successfully joined team!');
       
       setTimeout(() => {
@@ -112,14 +108,14 @@ export default function TeamShareModal({
 
   useEffect(() => {
     if (isOpen) {
-      generateCodes();
+      loadCodes();
     }
-  }, [isOpen, generateCodes]);
+  }, [isOpen, loadCodes]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{backgroundColor: 'rgba(0, 0, 0, 0.5)'}}>
       <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-md w-full p-6`}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -156,7 +152,7 @@ export default function TeamShareModal({
         {activeTab === 'share' ? (
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
-              Share these codes with your team members. Codes expire in 24 hours.
+              Share these permanent codes with your team members.
             </p>
 
             {isCaptain && (
@@ -209,13 +205,7 @@ export default function TeamShareModal({
               </p>
             </div>
 
-            <button
-              onClick={generateCodes}
-              disabled={isLoading}
-              className="w-full py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300"
-            >
-              {isLoading ? 'Generating...' : 'Generate New Codes'}
-            </button>
+            
           </div>
         ) : (
           <div className="space-y-4">

@@ -4,6 +4,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { useEffect } from 'react';
+import { NotificationsProvider } from '@/app/contexts/NotificationsContext';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const { darkMode } = useTheme();
@@ -35,7 +36,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {children}
+      <NotificationsProvider>
+        {children}
+      </NotificationsProvider>
       <ToastContainer
         position="top-right"
         autoClose={3000}

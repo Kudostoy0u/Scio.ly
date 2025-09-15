@@ -11,9 +11,17 @@ import { useTestState } from './hooks/useTestState';
 import { TestLayout, TestHeader, ProgressBar, TestSummary, QuestionCard, TestFooter, TestPrintConfigModal } from './components';
 import { FloatingActionButtons } from '@/app/components/FloatingActionButtons';
 import { createTestPrintStyles, createTestPrintContent, setupTestPrintWindow } from './utils/printUtils';
+import { useRef } from 'react';
 import { toast } from 'react-toastify';
 
 export default function TestContent({ initialData, initialRouterData }: { initialData?: any[]; initialRouterData?: any }) {
+  const isClient = typeof window !== 'undefined';
+  const search = isClient ? new URLSearchParams(window.location.search) : null;
+  const isPreview = !!(search && search.get('preview') === '1');
+  const previewScope = search?.get('scope') || 'all';
+  const previewTeam = search?.get('team') || 'A';
+  const previewSchool = search?.get('school') || null;
+  const previewDivision = search?.get('division') || null;
   const { darkMode } = useTheme();
   const [isOffline, setIsOffline] = useState(false);
   const [printModalOpen, setPrintModalOpen] = useState(false);
@@ -74,6 +82,19 @@ export default function TestContent({ initialData, initialRouterData }: { initia
     setIsEditModalOpen
   } = useTestState({ initialData, initialRouterData });
 
+
+  const previewToastsShownRef = useRef(false);
+  useEffect(() => {
+    if (!isPreview) return;
+    if (previewToastsShownRef.current) return;
+    previewToastsShownRef.current = true; // prevent StrictMode double effect
+    try {
+      toast.info('Tip: Use the delete icon on a question to replace it.', { autoClose: 6000 });
+      setTimeout(() => {
+        toast.info('When finished, click “Send Test” at the bottom to assign.', { autoClose: 6000 });
+      }, 1200);
+    } catch {}
+  }, [isPreview]);
 
   const handlePrintConfig = () => {
     setPrintModalOpen(true);
@@ -246,12 +267,14 @@ export default function TestContent({ initialData, initialRouterData }: { initia
         </div>
 
         {isSubmitted ? (
-          <TestSummary
-            data={data}
-            userAnswers={userAnswers}
-            gradingResults={gradingResults}
-            darkMode={darkMode}
-          />
+          isPreview ? null : (
+            <TestSummary
+              data={data}
+              userAnswers={userAnswers}
+              gradingResults={gradingResults}
+              darkMode={darkMode}
+            />
+          )
         ) : (
           <ProgressBar
             answeredCount={Object.keys(userAnswers).length}
@@ -335,7 +358,7 @@ export default function TestContent({ initialData, initialRouterData }: { initia
                   {data.map((question, index) => {
                     const isBookmarked = isQuestionBookmarked(question);
 
-                    const questionKey = question.id || `question-${index}-${question.question.substring(0, 50)}`;
+                    const questionKey = question.id ? `${question.id}-${index}` : `question-${index}-${question.question.substring(0, 50)}`;
 
                     return (
                     <QuestionCard
@@ -361,6 +384,7 @@ export default function TestContent({ initialData, initialRouterData }: { initia
                             onQuestionRemoved={handleQuestionRemoved}
                       onGetExplanation={handleGetExplanation}
                       isOffline={isOffline}
+                      hideResultText={isPreview}
                     />
                     );
                   })}
@@ -369,13 +393,71 @@ export default function TestContent({ initialData, initialRouterData }: { initia
             </div>
 
             {!isLoading && !fetchError && !(routerData.eventName === "Codebusters" && routerData.types === 'multiple-choice') && data.length > 0 && (
-              <TestFooter
-                isSubmitted={isSubmitted}
-                darkMode={darkMode}
-                onSubmit={handleSubmit}
-                onReset={handleResetTest}
-                onBackToMain={handleBackToMain}
-              />
+              isPreview ? (
+                <div className="mt-6 flex items-center gap-3">
+                  <button
+                    onClick={handleBackToMain}
+                    className={`w-1/5 px-4 py-2 font-semibold rounded-lg border-2 transition-colors flex items-center justify-center text-center ${
+                      darkMode
+                        ? 'bg-transparent text-yellow-300 border-yellow-400 hover:text-yellow-200 hover:border-yellow-300'
+                        : 'bg-transparent text-yellow-600 border-yellow-500 hover:text-yellow-500 hover:border-yellow-400'
+                    }`}
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={async ()=>{
+                      try {
+                        const selectionStr = localStorage.getItem('teamsSelection');
+                        const sel = selectionStr ? JSON.parse(selectionStr) : null;
+                        const school = previewSchool || sel?.school;
+                        const divisionSel = (previewDivision as any) || sel?.division;
+                        if (!school || !divisionSel) { toast.error('Missing team selection'); return; }
+                        toast.info('Sending test...');
+                        const params = JSON.parse(localStorage.getItem('testParams')||'{}');
+                        const assignees = previewScope === 'all' ? [{ name: 'ALL' }] : [{ name: previewScope }];
+                        const res = await fetch('/api/assignments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ school, division: divisionSel, teamId: previewTeam, eventName: routerData.eventName, assignees, params, questions: data }) });
+                        if (res.ok) {
+                          const json = await res.json();
+                          const assignmentId = json?.data?.id;
+                          try {
+                            const mres = await fetch(`/api/teams/units?school=${encodeURIComponent(school)}&division=${divisionSel}&teamId=${previewTeam}&members=1`);
+                            const mj = mres.ok ? await mres.json() : null;
+                            const members = Array.isArray(mj?.data) ? mj.data : [];
+                            const targets = previewScope === 'all' ? members : members.filter((m:any)=>{
+                              const full = [m.firstName, m.lastName].filter(Boolean).join(' ').trim();
+                              const label = full || m.displayName || m.username || '';
+                              return label === previewScope;
+                            });
+                            await Promise.all(targets.filter((m:any)=>m.userId).map((m:any)=>
+                              fetch('/api/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action:'create', userId: m.userId, type: 'assignment', title: `New ${routerData.eventName} test assigned`, data: { assignmentId, eventName: routerData.eventName, url: `/assign/${assignmentId}` } }) })
+                            ));
+                          } catch {}
+                          const recipientsLabel = previewScope === 'all' ? 'all members' : previewScope;
+                          toast.success(`Test sent to ${recipientsLabel}!`);
+                          const qp = new URLSearchParams({ school, division: divisionSel });
+                          setTimeout(()=>{ window.location.href = `/teams/results?${qp.toString()}`; }, 600);
+                        }
+                      } catch {}
+                    }}
+                    className={`w-4/5 px-4 py-2 font-semibold rounded-lg border-2 flex items-center justify-center text-center ${
+                      darkMode
+                        ? 'bg-transparent text-blue-300 border-blue-300 hover:text-blue-200 hover:border-blue-200'
+                        : 'bg-transparent text-blue-700 border-blue-700 hover:text-blue-600 hover:border-blue-600'
+                    }`}
+                  >
+                    Send Test
+                  </button>
+                </div>
+              ) : (
+                <TestFooter
+                  isSubmitted={isSubmitted}
+                  darkMode={darkMode}
+                  onSubmit={handleSubmit}
+                  onReset={handleResetTest}
+                  onBackToMain={handleBackToMain}
+                />
+              )
             )}
           </main>
         </div>

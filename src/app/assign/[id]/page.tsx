@@ -1,0 +1,75 @@
+"use client";
+import { useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+
+export default function Page() {
+  const router = useRouter();
+  const params = useParams<{ id: string }>();
+
+  useEffect(() => {
+    const go = async () => {
+      const idStr = params?.id as string | undefined;
+      if (!idStr) return;
+      try {
+        console.log('[assign] fetching assignment', { idStr });
+        const res = await fetch(`/api/assignments?id=${encodeURIComponent(idStr)}`, { cache: 'no-store' });
+        const j = await res.json();
+        console.log('[assign] api response', { ok: res.ok, status: res.status, data: j?.data });
+        const row = j?.data;
+        if (!row) { console.warn('[assign] missing assignment'); router.replace('/assign/error'); return; }
+        const eventName: string | undefined = row?.event_name;
+        const paramsObj = row?.params || {};
+        const questions = Array.isArray(row?.questions) ? row.questions : [];
+        try {
+          localStorage.setItem('currentAssignmentId', String(idStr));
+          localStorage.setItem('testParams', JSON.stringify({ ...paramsObj, eventName }));
+          document.cookie = `scio_test_params=${encodeURIComponent(JSON.stringify({ ...paramsObj, eventName }))}; Path=/; Max-Age=600; SameSite=Lax`;
+          // Ensure /teams/results can resolve team context without query
+          try {
+            const sel = { school: row.school, division: row.division, captain: false };
+            localStorage.setItem('teamsSelection', JSON.stringify(sel));
+            console.log('[assign] set teamsSelection', sel);
+          } catch {}
+          // Seed exact questions for the assignee
+          if (eventName === 'Codebusters') {
+            console.log('[assign] seeding codebusters quotes', { count: questions.length });
+            try {
+              localStorage.setItem('codebustersQuotes', JSON.stringify(questions));
+              localStorage.setItem('codebustersQuotesLoadedFromStorage', 'true');
+              localStorage.removeItem('codebustersIsTestSubmitted');
+              localStorage.removeItem('codebustersTestScore');
+              localStorage.removeItem('codebustersTimeLeft');
+            } catch {}
+          } else {
+            console.log('[assign] seeding test questions', { count: questions.length });
+            try {
+              // strip any originalIndex and reindex freshly
+              const seeded = questions.map((q: any, idx: number) => ({ ...q, originalIndex: idx }));
+              localStorage.setItem('testQuestions', JSON.stringify(seeded));
+              localStorage.removeItem('testUserAnswers');
+              localStorage.removeItem('testGradingResults');
+            } catch {}
+          }
+        } catch {}
+        const isCodebusters = eventName === 'Codebusters';
+        const route = isCodebusters ? '/codebusters' : '/test';
+        const sp = new URLSearchParams();
+        // Assignee should take a normal test (no preview)
+        sp.set('teamsAssign', '1');
+        if (row.team_id) sp.set('team', row.team_id);
+        if (row.school) sp.set('school', row.school);
+        if (row.division) sp.set('division', row.division);
+        const target = `${route}?${sp.toString()}`;
+        console.log('[assign] redirecting to', target);
+        router.replace(target);
+      } catch {
+        router.replace('/assign/error');
+      }
+    };
+    void go();
+  }, [params?.id, router]);
+
+  return <div className="min-h-screen flex items-center justify-center">Loading…</div>;
+}
+
+

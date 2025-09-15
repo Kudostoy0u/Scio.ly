@@ -78,6 +78,7 @@ export const idEvents = pgTable('id_events', {
   difficulty: numeric('difficulty').default('0.5'),
   event: text('event').notNull(),
   images: jsonb('images').default('[]').notNull(),
+  questionType: text('question_type'),
   randomF: doublePrecision('random_f').notNull().default(sql`random()`),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
