@@ -43,10 +43,31 @@ export async function POST(request: NextRequest) {
 
     const shareData = body.shareData || {};
     console.log(`🔍 [CODEBUSTERS/SHARE/GENERATE] Storing complete share data with ${shareData.processedQuotes?.length || 0} quotes`);
+
+    // CockroachDB can reject JSONB with invalid surrogate pairs (common with emoji).
+    // Sanitize by stripping surrogate code units to ensure valid UTF-8 JSON.
+    const sanitizeJsonForDb = (val: unknown): any => {
+      if (val == null) return val as any;
+      if (Array.isArray(val)) return val.map(sanitizeJsonForDb);
+      if (typeof val === 'object') {
+        const o: Record<string, any> = {};
+        for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
+          o[k] = sanitizeJsonForDb(v);
+        }
+        return o;
+      }
+      if (typeof val === 'string') {
+        // Remove all UTF-16 surrogate halves to avoid broken pairs
+        return val.replace(/[\uD800-\uDFFF]/g, '');
+      }
+      return val;
+    };
+
+    const sanitizedShareData = sanitizeJsonForDb(shareData);
     
     await db.insert(shareLinks).values({
       code: shareCode,
-      indices: shareData,
+      indices: sanitizedShareData,
       testParamsRaw: dataToStore,
       expiresAt: expiresAt,
     });

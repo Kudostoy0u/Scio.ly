@@ -140,7 +140,7 @@ export const CheckerboardDisplay = ({
     const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const used = new Set<string>();
     const seq: string[] = [];
-    const k = key.toUpperCase().replace(/[^A-Z]/g, '');
+    const k = (key || '').toUpperCase().replace(/[^A-Z]/g, '');
     for (const ch0 of k) {
       const ch = ch0 === 'J' ? 'I' : ch0;
       if (!used.has(ch)) { used.add(ch); seq.push(ch); }

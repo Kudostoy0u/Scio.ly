@@ -63,7 +63,7 @@ export const NihilistDisplay = ({
         const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         const used = new Set<string>();
         const seq: string[] = [];
-        const k = key.toUpperCase().replace(/[^A-Z]/g, '');
+        const k = (key || '').toUpperCase().replace(/[^A-Z]/g, '');
         for (const ch0 of k) {
             const ch = mapIJ(ch0);
             if (ch !== 'J' && !used.has(ch)) { used.add(ch); seq.push(ch); }

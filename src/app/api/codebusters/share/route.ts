@@ -105,11 +105,22 @@ export async function GET(request: NextRequest) {
         cipherType: string;
         key?: string;
         matrix?: number[][];
+        decryptionMatrix?: number[][];
         portaKeyword?: string;
+        nihilistPolybiusKey?: string;
+        nihilistCipherKey?: string;
+        checkerboardRowKey?: string;
+        checkerboardColKey?: string;
+        checkerboardPolybiusKey?: string;
+        checkerboardUsesIJ?: boolean;
+        blockSize?: number;
+        columnarKey?: string;
         fractionationTable?: { [key: string]: string };
         caesarShift?: number;
         affineA?: number;
         affineB?: number;
+        baconianBinaryType?: string;
+        cryptarithmData?: unknown;
         difficulty: number;
       }>;
       
@@ -123,11 +134,22 @@ export async function GET(request: NextRequest) {
         cipherType: quote.cipherType,
         key: quote.key,
         matrix: quote.matrix,
+        decryptionMatrix: quote.decryptionMatrix,
         portaKeyword: quote.portaKeyword,
+        nihilistPolybiusKey: quote.nihilistPolybiusKey,
+        nihilistCipherKey: quote.nihilistCipherKey,
+        checkerboardRowKey: quote.checkerboardRowKey,
+        checkerboardColKey: quote.checkerboardColKey,
+        checkerboardPolybiusKey: quote.checkerboardPolybiusKey,
+        checkerboardUsesIJ: quote.checkerboardUsesIJ,
+        blockSize: quote.blockSize,
+        columnarKey: quote.columnarKey,
         fractionationTable: quote.fractionationTable,
         caesarShift: quote.caesarShift,
         affineA: quote.affineA,
         affineB: quote.affineB,
+        baconianBinaryType: quote.baconianBinaryType,
+        cryptarithmData: quote.cryptarithmData,
         difficulty: quote.difficulty || Math.random() * 0.8 + 0.2,
       }));
       
