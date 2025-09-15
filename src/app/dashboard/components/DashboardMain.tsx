@@ -38,13 +38,34 @@ function DashboardContent({ initialUser }: { initialUser?: User | null }) {
   } = useDashboardData(currentUser);
 
 
-  const [correctView, setCorrectView] = useState<'daily' | 'weekly' | 'allTime'>('daily');
-  const [accuracyView, setAccuracyView] = useState<'daily' | 'weekly' | 'allTime'>('daily');
+  const [correctView, setCorrectView] = useState<'daily' | 'weekly' | 'allTime'>(() => {
+    if (typeof window === 'undefined') return 'daily';
+    const stored = localStorage.getItem('dashboard.correctView');
+    return stored === 'daily' || stored === 'weekly' || stored === 'allTime' ? (stored as 'daily' | 'weekly' | 'allTime') : 'daily';
+  });
+  const [accuracyView, setAccuracyView] = useState<'daily' | 'weekly' | 'allTime'>(() => {
+    if (typeof window === 'undefined') return 'daily';
+    const stored = localStorage.getItem('dashboard.accuracyView');
+    return stored === 'daily' || stored === 'weekly' || stored === 'allTime' ? (stored as 'daily' | 'weekly' | 'allTime') : 'daily';
+  });
 
 
   const cardStyle = darkMode 
     ? 'bg-gray-800 border border-gray-700' 
     : 'bg-white border border-gray-200';
+
+  // Persist selected views for Correct Answers card and Accuracy card
+
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('dashboard.correctView', correctView);
+        localStorage.setItem('dashboard.accuracyView', accuracyView);
+      }
+    } catch (error) {
+      console.error('Error saving dashboard view preferences to localStorage:', error);
+    }
+  }, [correctView, accuracyView]);
 
 
   useEffect(() => {
