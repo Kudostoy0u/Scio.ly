@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'node:crypto';
 import { db } from '@/lib/db';
 import { questions } from '@/lib/db/schema';
 import { Question } from '@/lib/types/api';
@@ -12,6 +13,8 @@ import {
 } from '@/lib/api/utils';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // Feature flag: when true, use efficient two-phase indexed random selection
 const trulyRandom = true;
@@ -262,7 +265,15 @@ const fetchQuestions = async (filters: ValidatedQuestionFilters): Promise<Questi
 
   const whereCondition = queryBuilder.getWhereCondition();
   const limit = queryBuilder.getLimit();
-  const r = Math.random();
+  const r = (() => {
+    try {
+      const buf = crypto.randomBytes(6); // 48 bits
+      const n = parseInt(buf.toString('hex'), 16);
+      return n / 2 ** 48;
+    } catch {
+      return Math.random();
+    }
+  })();
 
   if (!trulyRandom) {
     try {
@@ -427,6 +438,15 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const filters = parseAndValidateFilters(searchParams);
 
+    // For truly random selection, bypass caches entirely and disable response caching
+    if (trulyRandom) {
+      const data = await fetchQuestions(filters);
+      const res = NextResponse.json({ success: true, data });
+      res.headers.set('Cache-Control', 'no-store');
+      return res;
+    }
+
+    // Existing behavior with short-term caching
     const cacheKey = makeCacheKey(filters);
     const now = Date.now();
     const cached = questionsCache.get(cacheKey);
