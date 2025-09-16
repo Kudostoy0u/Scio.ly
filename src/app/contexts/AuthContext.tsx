@@ -24,7 +24,13 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
       try {
         const { data } = await supabase.auth.getSession();
         if (!isMounted) return;
-        setUser(data.session?.user ?? null);
+        const incoming = data.session?.user ?? null;
+        setUser((prev) => {
+          const prevId = prev?.id ?? null;
+          const nextId = incoming?.id ?? null;
+          if (prevId === nextId) return prev;
+          return incoming;
+        });
       } catch {
         // ignore
       } finally {
@@ -37,7 +43,13 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!isMounted) return;
-      setUser(session?.user ?? null);
+      const incoming = session?.user ?? null;
+      setUser((prev) => {
+        const prevId = prev?.id ?? null;
+        const nextId = incoming?.id ?? null;
+        if (prevId === nextId) return prev;
+        return incoming;
+      });
     });
 
 
@@ -45,7 +57,13 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
       try {
         const { data } = await supabase.auth.getSession();
         if (!isMounted) return;
-        setUser(data.session?.user ?? null);
+        const incoming = data.session?.user ?? null;
+        setUser((prev) => {
+          const prevId = prev?.id ?? null;
+          const nextId = incoming?.id ?? null;
+          if (prevId === nextId) return prev;
+          return incoming;
+        });
       } catch {
         /* noop */
       }
@@ -66,15 +84,13 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
   }, [initialUser]);
 
 
+  // Run profile sync; guarded so it no-ops if already synced for this user
   useEffect(() => {
     const syncProfileFromAuth = async () => {
-      console.log('syncProfileFromAuth called with user:', user);
       if (!user) {
-        console.log('No user, returning early');
         return;
       }
       if (hasSyncedRef.current === user.id) {
-        console.log('Already synced for user ID:', user.id);
         return;
       }
 

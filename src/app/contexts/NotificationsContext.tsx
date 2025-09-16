@@ -26,9 +26,17 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const isFetchingRef = useRef(false);
-  const intervalRef = useRef<number | null>(null);
-  const visibilityListenerRef = useRef<(() => void) | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const hasFetchedThisLoadRef = useRef(false);
+
+  const shouldFetchOnLoad = useCallback(() => {
+    try {
+      const flag = localStorage.getItem('fetchNotif');
+      return flag === null || flag === 'true';
+    } catch {
+      return true;
+    }
+  }, []);
 
   const fetchOnce = useCallback(async () => {
     if (!user?.id) return;
@@ -38,7 +46,6 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      console.log('fetching notifications');
       const res = await fetch('/api/notifications', { signal: controller.signal, cache: 'no-store' });
       if (!res.ok) return;
       const json = await res.json();
@@ -55,53 +62,33 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     }
   }, [user?.id]);
 
-  const startPolling = useCallback(() => {
-    if (intervalRef.current) return; // already polling
-    // Visibility-aware polling: only poll when tab visible
-    const tick = async () => {
-      if (document.visibilityState === 'visible') {
-        await fetchOnce();
-      }
-    };
-    // Initial tick shortly after mount to coalesce with others
-    const id = window.setInterval(tick, 15000);
-    intervalRef.current = id as unknown as number;
-    // Also refresh on visibility gain
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') {
-        void fetchOnce();
-      }
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    visibilityListenerRef.current = () => document.removeEventListener('visibilitychange', onVisible);
-  }, [fetchOnce]);
-
-  const stopPolling = useCallback(() => {
-    if (intervalRef.current) {
-      window.clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    if (visibilityListenerRef.current) {
-      visibilityListenerRef.current();
-      visibilityListenerRef.current = null;
-    }
-    abortRef.current?.abort();
-    isFetchingRef.current = false;
-  }, []);
-
   useEffect(() => {
     // Reset state when user changes
     setNotifications([]);
     setUnreadCount(0);
-    stopPolling();
-    if (user?.id) {
-      // Single initial fetch; then start polling
-      void fetchOnce().then(() => startPolling());
+    abortRef.current?.abort();
+    isFetchingRef.current = false;
+    if (user?.id && shouldFetchOnLoad() && !hasFetchedThisLoadRef.current) {
+      // Global page-load guard to prevent multiple fetches from any source
+      const w = typeof window !== 'undefined' ? (window as any) : undefined;
+      if (w && w.__scioNotifFetched === true) {
+        return;
+      }
+      hasFetchedThisLoadRef.current = true;
+      try {
+        if (w) w.__scioNotifFetched = true;
+        // Flip the flag immediately to avoid double-invocation in React StrictMode
+        localStorage.setItem('fetchNotif', 'false');
+      } catch {
+        // ignore
+      }
+      void fetchOnce();
     }
     return () => {
-      stopPolling();
+      abortRef.current?.abort();
+      isFetchingRef.current = false;
     };
-  }, [user?.id, fetchOnce, startPolling, stopPolling]);
+  }, [user?.id, fetchOnce, shouldFetchOnLoad]);
 
   const refresh = useCallback(async () => {
     await fetchOnce();
