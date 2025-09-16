@@ -38,6 +38,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     const controller = new AbortController();
     abortRef.current = controller;
     try {
+      console.log('fetching notifications');
       const res = await fetch('/api/notifications', { signal: controller.signal, cache: 'no-store' });
       if (!res.ok) return;
       const json = await res.json();

@@ -48,7 +48,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
   const router = useRouter();
 
   const [data, setData] = useState<Question[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(Math.floor(Math.random() * 200));
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -282,6 +282,17 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+
+  // Ensure the current question index is valid once data is loaded
+  useEffect(() => {
+    if (data.length > 0) {
+      setCurrentQuestionIndex((prev) => {
+        if (prev >= 0 && prev < data.length) return prev;
+        return Math.floor(Math.random() * data.length);
+      });
+    }
+  }, [data.length]);
 
 
   useEffect(() => {
