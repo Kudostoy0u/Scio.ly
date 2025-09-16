@@ -299,6 +299,7 @@ export default function HomeClient() {
                    src="/scrapbook/scrapbook-1.png"
                    alt="Naperville North Science Olympiad team"
                    fill
+                   sizes="(min-width: 1024px) 16rem, 12rem"
                    className="rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.4),0_10px_20px_-5px_rgba(0,0,0,0.3)] object-cover transform hover:scale-105 transition-transform duration-300"
                  />
                </motion.div>
@@ -315,6 +316,7 @@ export default function HomeClient() {
                    src="/scrapbook/scrapbook-2.png"
                    alt="Neuqua Valley Science Olympiad team"
                    fill
+                   sizes="(min-width: 1024px) 16rem, 12rem"
                    className="rounded-2xl shadow-[0_20px_40px_-8px_rgba(0,0,0,0.35),0_8px_16px_-4px_rgba(0,0,0,0.25)] object-cover transform hover:scale-105 transition-transform duration-300"
                  />
                </motion.div>
@@ -330,6 +332,7 @@ export default function HomeClient() {
                    src="/scrapbook/scrapbook-3.jpg"
                    alt="Neuqua Valley Science Olympiad competition"
                    fill
+                   sizes="(min-width: 1024px) 16rem, 12rem"
                    className="rounded-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.45),0_15px_30px_-8px_rgba(0,0,0,0.35)] object-cover transform hover:scale-105 transition-transform duration-300"
                  />
                </motion.div>

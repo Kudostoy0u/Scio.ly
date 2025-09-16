@@ -21,10 +21,12 @@ import HylasBanner from './HylasBanner';
 
 import { useDashboardData } from '../hooks/useDashboardData';
 import { BannerProvider, useBannerContext } from '../contexts/BannerContext';
+import { useAuth } from '@/app/contexts/AuthContext';
 
 function DashboardContent({ initialUser }: { initialUser?: User | null }) {
   const router = useRouter();
   const { darkMode, setDarkMode } = useTheme();
+  const { user: authUser } = useAuth();
   const [currentUser, setCurrentUser] = useState<User | null>(initialUser ?? null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const { bannerVisible, closeBanner } = useBannerContext();
@@ -68,36 +70,10 @@ function DashboardContent({ initialUser }: { initialUser?: User | null }) {
   }, [correctView, accuracyView]);
 
 
+  // Source of truth for auth is AuthContext; reflect changes locally
   useEffect(() => {
-    const setupAuthListener = async () => {
-      try {
-        const { supabase } = await import('@/lib/supabase');
-        
-
-        const { data: { user } } = await supabase.auth.getUser();
-        const effectiveUser = user || initialUser || null;
-        setCurrentUser(effectiveUser);
-
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-          console.log('DashboardMain: Auth state changed:', _event, session?.user?.id);
-          const effectiveUser = session?.user || initialUser || null;
-          setCurrentUser(effectiveUser);
-        });
-
-        return () => {
-          subscription.unsubscribe();
-        };
-      } catch (error) {
-        console.error('Error setting up auth listener:', error);
-      }
-    };
-
-    const cleanup = setupAuthListener();
-    return () => {
-      cleanup.then(cleanupFn => cleanupFn?.());
-    };
-  }, [initialUser]);
+    setCurrentUser(authUser ?? initialUser ?? null);
+  }, [authUser, initialUser]);
 
 
   const handleContact = async (data: ContactFormData) => {

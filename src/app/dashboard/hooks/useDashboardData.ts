@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+// import { supabase } from '@/lib/supabase';
 import { 
-  syncDashboardData, 
+  coalescedSyncDashboardData as syncDashboardData, 
   getInitialDashboardData, 
   updateDashboardMetrics,
   type DashboardData,
@@ -156,47 +156,7 @@ export function useDashboardData(user: User | null): UseDashboardDataReturn {
   }, [user]);
 
 
-  useEffect(() => {
-    let unsub: (() => void) | undefined;
-    
-    (async () => {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        console.log('Auth state changed:', _event, session?.user?.id);
-        if (session?.user) {
-
-          console.log('User logged in, syncing data from Supabase to localStorage');
-          
-          const syncDataOnLogin = async () => {
-            try {
-
-              const newData = await syncDashboardData(session.user.id);
-              
-
-              setData(newData);
-              lastSyncedUserId.current = session.user.id;
-              
-              console.log('Successfully synced data on login');
-            } catch (err) {
-              console.error('Error syncing data on login:', err);
-              setError('Failed to sync data on login');
-            }
-          };
-          
-          syncDataOnLogin();
-        } else {
-
-          console.log('User logged out, resetting to local data');
-          setData(getInitialDashboardData());
-          lastSyncedUserId.current = null;
-        }
-      });
-      unsub = () => subscription.unsubscribe();
-    })();
-    
-    return () => {
-      if (unsub) unsub();
-    };
-  }, []);
+  // Auth state handling moved to AuthContext; no additional auth listeners here
 
   return {
     metrics: data.metrics,

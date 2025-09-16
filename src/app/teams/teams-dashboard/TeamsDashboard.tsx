@@ -107,6 +107,7 @@ export default function TeamsDashboard({ initialLinkedSelection, initialSlug, in
   const [currentSlug, setCurrentSlug] = useState<string | null>(null);
   const groupSlugRef = useRef<string | null>(initialGroupSlug || null);
   const lastLoadKeyRef = useRef<string | null>(null);
+  const inFlightFetchesRef = useRef<Map<string, Promise<any>>>(new Map());
   const [initializedFromSlug, setInitializedFromSlug] = useState<boolean>(false);
   const [addingTeam, setAddingTeam] = useState<boolean>(false);
   const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; teamId?: string; teamName?: string }>(false as any);
@@ -173,7 +174,13 @@ export default function TeamsDashboard({ initialLinkedSelection, initialSlug, in
     const loadByGroupSlug = async () => {
       if (!initialGroupSlug || initializedFromSlug) return;
       try {
-        const res = await fetch(`/api/teams/group/${initialGroupSlug}`);
+        const url = `/api/teams/group/${initialGroupSlug}`;
+        let p = inFlightFetchesRef.current.get(url);
+        if (!p) {
+          p = fetch(url);
+          inFlightFetchesRef.current.set(url, p);
+        }
+        const res = await p;
         if (res.ok) {
           const json = await res.json();
           const group = json?.data?.group;
@@ -189,6 +196,10 @@ export default function TeamsDashboard({ initialLinkedSelection, initialSlug, in
             setCurrentSlug(chosen.slug || null);
             groupSlugRef.current = group.slug || initialGroupSlug;
             desiredTeamIdRef.current = chosen.teamId;
+            // Seed tournaments if provided to avoid extra fetch
+            if (Array.isArray(json?.data?.tournaments) && json.data.tournaments.length > 0) {
+              setTournaments(json.data.tournaments.map((t: any) => ({ id: String(t.id), name: t.name, dateTime: t.dateTime })));
+            }
             setInitializedFromSlug(true);
           }
         }
@@ -206,35 +217,71 @@ export default function TeamsDashboard({ initialLinkedSelection, initialSlug, in
         const loadKey = `${selection.school}:${selection.division}:${preferredId}`;
         if (lastLoadKeyRef.current === loadKey) return;
         if (groupSlugRef.current) {
-          const groupRes = await fetch(`/api/teams/group/${groupSlugRef.current}`);
-          if (groupRes.ok) {
-            const groupJson = await groupRes.json();
-            const units = Array.isArray(groupJson?.data?.units) ? groupJson.data.units : [];
-            if (units.length > 0) {
-              const mapped = units.map((u: any) => ({ teamId: u.teamId, name: u.name, slug: u.slug }));
-              setTeamUnits(mapped);
-              const desiredId = desiredTeamIdRef.current
-                || (currentSlug ? (units.find((u: any) => u.slug === currentSlug)?.teamId || null) : null)
-                || (teams[activeTeamIdx]?.id)
-                || units[0].teamId;
-              const idx = Math.max(0, mapped.findIndex((u: any) => u.teamId === desiredId));
-              const targetTeamId = mapped[idx >= 0 ? idx : 0].teamId;
-              if ((teams[activeTeamIdx]?.id) !== targetTeamId) {
-                try {
-                  const res = await fetch(`/api/teams/units?school=${encodeURIComponent(selection.school)}&division=${selection.division}&teamId=${targetTeamId}`);
-                  if (res.ok) {
-                    const data = await res.json();
-                    if (data?.success && data?.data) {
-                      setTeams([{ id: data.data.teamId, name: data.data.name, roster: data.data.roster || {} }]);
-                      setCurrentSlug(data.data.slug || null);
-                    }
+          // If we already have units from group, avoid re-fetching group
+          if (teamUnits.length > 0) {
+            const mapped = teamUnits;
+            const desiredId = desiredTeamIdRef.current
+              || (currentSlug ? (mapped.find((u: any) => u.slug === currentSlug)?.teamId || null) : null)
+              || (teams[activeTeamIdx]?.id)
+              || mapped[0].teamId;
+            const idx = Math.max(0, mapped.findIndex((u: any) => u.teamId === desiredId));
+            const targetTeamId = mapped[idx >= 0 ? idx : 0].teamId;
+            if ((teams[activeTeamIdx]?.id) !== targetTeamId) {
+              try {
+                const url = `/api/teams/units?school=${encodeURIComponent(selection.school)}&division=${selection.division}&teamId=${targetTeamId}`;
+                let p = inFlightFetchesRef.current.get(url);
+                if (!p) { p = fetch(url); inFlightFetchesRef.current.set(url, p); }
+                const res = await p;
+                if (res.ok) {
+                  const data = await res.json();
+                  if (data?.success && data?.data) {
+                    setTeams([{ id: data.data.teamId, name: data.data.name, roster: data.data.roster || {} }]);
+                    setCurrentSlug(data.data.slug || null);
                   }
-                } catch {}
+                }
+              } catch {}
+            }
+            setActiveTeamIdx(idx >= 0 ? idx : 0);
+            lastLoadKeyRef.current = loadKey;
+            desiredTeamIdRef.current = null;
+            return;
+          } else {
+            const url = `/api/teams/group/${groupSlugRef.current}`;
+            let p = inFlightFetchesRef.current.get(url);
+            if (!p) { p = fetch(url); inFlightFetchesRef.current.set(url, p); }
+            const groupRes = await p;
+            if (groupRes.ok) {
+              const groupJson = await groupRes.json();
+              const units = Array.isArray(groupJson?.data?.units) ? groupJson.data.units : [];
+              if (units.length > 0) {
+                const mapped = units.map((u: any) => ({ teamId: u.teamId, name: u.name, slug: u.slug }));
+                setTeamUnits(mapped);
+                const desiredId = desiredTeamIdRef.current
+                  || (currentSlug ? (units.find((u: any) => u.slug === currentSlug)?.teamId || null) : null)
+                  || (teams[activeTeamIdx]?.id)
+                  || units[0].teamId;
+                const idx = Math.max(0, mapped.findIndex((u: any) => u.teamId === desiredId));
+                const targetTeamId = mapped[idx >= 0 ? idx : 0].teamId;
+                if ((teams[activeTeamIdx]?.id) !== targetTeamId) {
+                  try {
+                    const u2 = `/api/teams/units?school=${encodeURIComponent(selection.school)}&division=${selection.division}&teamId=${targetTeamId}`;
+                    let p2 = inFlightFetchesRef.current.get(u2);
+                    if (!p2) { p2 = fetch(u2); inFlightFetchesRef.current.set(u2, p2); }
+                    const res = await p2;
+                    if (res.ok) {
+                      const data = await res.json();
+                      if (data?.success && data?.data) {
+                        setTeams([{ id: data.data.teamId, name: data.data.name, roster: data.data.roster || {} }]);
+                        setCurrentSlug(data.data.slug || null);
+                      }
+                    }
+                  } catch {}
+                }
+                setActiveTeamIdx(idx >= 0 ? idx : 0);
+                lastLoadKeyRef.current = loadKey;
+                desiredTeamIdRef.current = null;
+                return;
               }
-              setActiveTeamIdx(idx >= 0 ? idx : 0);
-              lastLoadKeyRef.current = loadKey;
-              desiredTeamIdRef.current = null;
-              return;
             }
           }
         } else {
@@ -272,7 +319,7 @@ export default function TeamsDashboard({ initialLinkedSelection, initialSlug, in
       } catch {}
     };
     loadFromApi();
-  }, [selection, initialSlug, initializedFromSlug, currentSlug, teams, activeTeamIdx]);
+  }, [selection, initialSlug, initializedFromSlug, currentSlug, teams, activeTeamIdx, teamUnits]);
 
   // Removed clearing tournaments on selection change to prevent flicker/disappear
 
@@ -444,8 +491,12 @@ export default function TeamsDashboard({ initialLinkedSelection, initialSlug, in
   useEffect(() => {
     const load = async () => {
       if (!groupSlugRef.current) return;
+      if (tournaments.length > 0) return;
       try {
-        const res = await fetch(`/api/teams/group/${groupSlugRef.current}`, { cache: 'no-store' });
+        const url = `/api/teams/group/${groupSlugRef.current}`;
+        let p = inFlightFetchesRef.current.get(url);
+        if (!p) { p = fetch(url, { cache: 'no-store' }); inFlightFetchesRef.current.set(url, p); }
+        const res = await p;
         const json = await res.json();
         if (json?.success && json?.data?.tournaments) {
           setTournaments(json.data.tournaments.map((t: any) => ({ id: String(t.id), name: t.name, dateTime: t.dateTime })));
@@ -453,7 +504,7 @@ export default function TeamsDashboard({ initialLinkedSelection, initialSlug, in
       } catch {}
     };
     load();
-  }, [initialGroupSlug, currentSlug, selection?.school, selection?.division]);
+  }, [initialGroupSlug, currentSlug, selection, tournaments.length]);
 
   // Tracker helpers
   const addTournament = () => {
@@ -619,8 +670,11 @@ export default function TeamsDashboard({ initialLinkedSelection, initialSlug, in
     const loadMembers = async () => {
       if (!selection) return;
       const teamId = teams[activeTeamIdx]?.id || teams[0]?.id || 'A';
+      const url = `/api/teams/units?school=${encodeURIComponent(selection.school)}&division=${selection.division}&teamId=${teamId}&members=1`;
       try {
-        const res = await fetch(`/api/teams/units?school=${encodeURIComponent(selection.school)}&division=${selection.division}&teamId=${teamId}&members=1`);
+        let p = inFlightFetchesRef.current.get(url);
+        if (!p) { p = fetch(url); inFlightFetchesRef.current.set(url, p); }
+        const res = await p;
         if (res.ok) {
           const j = await res.json();
           if (j?.success && Array.isArray(j.data)) setMembers(j.data);
@@ -628,7 +682,7 @@ export default function TeamsDashboard({ initialLinkedSelection, initialSlug, in
       } catch {}
     };
     loadMembers();
-  }, [selection, teams, activeTeamIdx]);
+  }, [selection, selection?.school, selection?.division, teams, activeTeamIdx]);
 
   const addPersonToEvent = (personName: string, eventName: string) => {
     if (!selection) return;
@@ -1265,7 +1319,7 @@ export default function TeamsDashboard({ initialLinkedSelection, initialSlug, in
                                 if (!res.ok) {
                                   try { const e = await res.json(); toast.error(e?.error || 'Failed to send invite'); } catch { toast.error('Failed to send invite'); }
                                 } else {
-                                  toast.success('Invite sent');
+                                  toast.success('Invite sent. Ask them to join by opening the dropdown from their account button');
                                 }
                               } catch { toast.error('Failed to send invite'); }
                               setTopInviteUsername('');
@@ -1426,7 +1480,7 @@ export default function TeamsDashboard({ initialLinkedSelection, initialSlug, in
                                           if (!res.ok) {
                                             try { const e = await res.json(); toast.error(e?.error || 'Failed to send invite'); } catch { toast.error('Failed to send invite'); }
                                           } else {
-                                            toast.success('Invite sent');
+                                            toast.success('Invite sent. Ask them to join by opening the dropdown from their account button');
                                           }
                                         } catch { toast.error('Failed to send invite'); }
                                         setNameInviting(null);

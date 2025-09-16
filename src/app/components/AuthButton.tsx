@@ -39,7 +39,7 @@ export default function AuthButton() {
   const subtleLinkClass = darkMode
     ? 'text-blue-300 hover:text-blue-200'
     : 'text-blue-500 hover:text-blue-600';
-  const { notifications: notifs, unreadCount: unread, markAllRead, markReadById } = useNotifications();
+  const { notifications: notifs, unreadCount: unread, markAllRead, markReadById, refresh } = useNotifications();
   const [username, setUsername] = useState<string | null>(null);
   const [clearingAll, setClearingAll] = useState(false);
 
@@ -402,7 +402,13 @@ export default function AuthButton() {
       <div className="relative" ref={dropdownRef}>
         <button
           ref={triggerRef}
-          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          onClick={async () => {
+            const nextOpen = !isDropdownOpen;
+            setIsDropdownOpen(nextOpen);
+            if (nextOpen) {
+              try { await refresh(); } catch {}
+            }
+          }}
           className={`flex items-center space-x-2 border rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-200 ${
             darkMode 
               ? 'bg-gray-800 hover:bg-gray-700 border-gray-600 text-gray-200' 

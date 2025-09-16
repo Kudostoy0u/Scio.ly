@@ -29,15 +29,6 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const abortRef = useRef<AbortController | null>(null);
   const hasFetchedThisLoadRef = useRef(false);
 
-  const shouldFetchOnLoad = useCallback(() => {
-    try {
-      const flag = localStorage.getItem('fetchNotif');
-      return flag === null || flag === 'true';
-    } catch {
-      return true;
-    }
-  }, []);
-
   const fetchOnce = useCallback(async () => {
     if (!user?.id) return;
     if (isFetchingRef.current) return;
@@ -63,32 +54,17 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   }, [user?.id]);
 
   useEffect(() => {
-    // Reset state when user changes
+    // Reset state when user changes; do not auto-fetch
     setNotifications([]);
     setUnreadCount(0);
     abortRef.current?.abort();
     isFetchingRef.current = false;
-    if (user?.id && shouldFetchOnLoad() && !hasFetchedThisLoadRef.current) {
-      // Global page-load guard to prevent multiple fetches from any source
-      const w = typeof window !== 'undefined' ? (window as any) : undefined;
-      if (w && w.__scioNotifFetched === true) {
-        return;
-      }
-      hasFetchedThisLoadRef.current = true;
-      try {
-        if (w) w.__scioNotifFetched = true;
-        // Flip the flag immediately to avoid double-invocation in React StrictMode
-        localStorage.setItem('fetchNotif', 'false');
-      } catch {
-        // ignore
-      }
-      void fetchOnce();
-    }
+    hasFetchedThisLoadRef.current = false;
     return () => {
       abortRef.current?.abort();
       isFetchingRef.current = false;
     };
-  }, [user?.id, fetchOnce, shouldFetchOnLoad]);
+  }, [user?.id]);
 
   const refresh = useCallback(async () => {
     await fetchOnce();

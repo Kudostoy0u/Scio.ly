@@ -102,7 +102,7 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
 
       try {
         const isGoogle = (user as any)?.app_metadata?.provider === 'google'
-          || Array.isArray((user as any)?.identities) && (user as any).identities.some((i: any) => i.provider === 'google');
+          || (Array.isArray((user as any)?.identities) && (user as any).identities.some((i: any) => i.provider === 'google'));
 
 
         const { data: existing, error: readError } = await (supabase as any)
@@ -147,66 +147,63 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
 
 
         const shouldForceUpdateNames = Boolean(isGoogle) && (firstName || lastName);
-        const shouldFillMissing = !isGoogle && (!existing?.first_name || !existing?.last_name);
 
-        if (!existing || shouldForceUpdateNames || shouldFillMissing || !existing.display_name || !existing.username || !existing.photo_url) {
+        if (!user.id || !email || !username) {
+          console.warn('Missing required user fields for upsert:', { id: user.id, email, username });
+          return;
+        }
 
-          if (!user.id || !email || !username) {
-            console.warn('Missing required user fields for upsert:', { id: user.id, email, username });
-            return;
-          }
+        if (typeof user.id !== 'string' || user.id.trim() === '' || 
+            typeof email !== 'string' || email.trim() === '' ||
+            typeof username !== 'string' || username.trim() === '') {
+          console.warn('Invalid field types or empty values for upsert:', { 
+            id: user.id, idType: typeof user.id, 
+            email, emailType: typeof email, 
+            username, usernameType: typeof username 
+          });
+          return;
+        }
 
+        // Build a minimal payload containing only fields that would actually change
+        const upsertPayload: Record<string, any> = {
+          id: user.id.trim(),
+          email: email.trim(),
+          username: username.trim(),
+        };
 
-          if (typeof user.id !== 'string' || user.id.trim() === '' || 
-              typeof email !== 'string' || email.trim() === '' ||
-              typeof username !== 'string' || username.trim() === '') {
-            console.warn('Invalid field types or empty values for upsert:', { 
-              id: user.id, idType: typeof user.id, 
-              email, emailType: typeof email, 
-              username, usernameType: typeof username 
-            });
-            return;
-          }
+        const changes: Record<string, any> = {};
+        if (!existing) {
+          changes.email = upsertPayload.email;
+          changes.username = upsertPayload.username;
+        } else {
+          if (!existing.username && upsertPayload.username) changes.username = upsertPayload.username;
+          if (existing.email !== upsertPayload.email) changes.email = upsertPayload.email; // rare
+        }
 
-          const upsertPayload: Record<string, any> = {
-            id: user.id.trim(),
-            email: email.trim(),
-            username: username.trim(),
-          };
-          
+        const shouldWriteFirst = shouldForceUpdateNames || (!existing?.first_name && firstName !== null && firstName !== undefined);
+        if (shouldWriteFirst && firstName !== null && firstName !== undefined && existing?.first_name !== firstName) {
+          changes.first_name = firstName;
+        }
+        const shouldWriteLast = shouldForceUpdateNames || (!existing?.last_name && lastName !== null && lastName !== undefined);
+        if (shouldWriteLast && lastName !== null && lastName !== undefined && existing?.last_name !== lastName) {
+          changes.last_name = lastName;
+        }
+        if (!existing?.display_name && displayName !== null && displayName !== undefined && existing?.display_name !== displayName) {
+          changes.display_name = displayName;
+        }
+        if (!existing?.photo_url && photoUrl && existing?.photo_url !== photoUrl) {
+          changes.photo_url = photoUrl;
+        }
 
-          if (shouldForceUpdateNames || (!existing?.first_name && firstName !== null)) {
-            if (firstName !== null && firstName !== undefined) {
-              upsertPayload.first_name = firstName;
-            }
-          }
-          if (shouldForceUpdateNames || (!existing?.last_name && lastName !== undefined)) {
-            if (lastName !== undefined) {
-              upsertPayload.last_name = lastName;
-            }
-          }
-          if (!existing?.display_name && displayName !== undefined) {
-            if (displayName !== null && displayName !== undefined) {
-              upsertPayload.display_name = displayName;
-            }
-          }
-          if (!existing?.photo_url && photoUrl) {
-            if (photoUrl !== null && photoUrl !== undefined) {
-              upsertPayload.photo_url = photoUrl;
-            }
-          }
-
-
+        const hasMeaningfulChanges = !existing || Object.keys(changes).length > 0;
+        if (hasMeaningfulChanges) {
           try {
-            console.log('Attempting upsert with payload:', upsertPayload);
+            const payload = { id: upsertPayload.id, ...changes };
             const { error: upsertError } = await (supabase as any)
               .from('users')
-              .upsert(upsertPayload as any, { onConflict: 'id' });
-            
+              .upsert(payload as any, { onConflict: 'id' });
             if (upsertError) {
               console.warn('Failed to upsert user profile:', upsertError);
-            } else {
-              console.log('Successfully upserted user profile');
             }
           } catch (error) {
             console.warn('Error upserting user profile:', error);

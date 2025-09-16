@@ -269,6 +269,18 @@ export const syncDashboardData = async (userId: string | null): Promise<Dashboar
   }
 };
 
+// Coalesce multiple concurrent sync requests per user into a single in-flight Promise
+const userIdToInFlightSync: Record<string, Promise<DashboardData> | undefined> = {};
+export const coalescedSyncDashboardData = async (userId: string | null): Promise<DashboardData> => {
+  if (!userId) return syncDashboardData(userId);
+  if (userIdToInFlightSync[userId]) return userIdToInFlightSync[userId] as Promise<DashboardData>;
+  const p = syncDashboardData(userId)
+    .catch((e) => { throw e; })
+    .finally(() => { userIdToInFlightSync[userId] = undefined; });
+  userIdToInFlightSync[userId] = p;
+  return p;
+};
+
 
 export const getInitialDashboardData = (): DashboardData => {
   const metrics = getLocalDailyMetrics();
