@@ -50,7 +50,7 @@ Scio.ly is built with:
 * **Backend:** Also Next.js!
 * **Database:** Vercel KV
 * **AI:** Gemini 2.0 (for explanations and grading)
-* **Authentication** Firebase
+* **Authentication** Supabase / Google OAuth
 
 ## Getting Started
 
