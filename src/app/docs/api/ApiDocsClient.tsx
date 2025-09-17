@@ -6,6 +6,7 @@ import { useTheme } from '@/app/contexts/ThemeContext';
 import Endpoint from './components/Endpoint';
 import Param from './components/Param';
 import Example from './components/Example';
+import CollapsibleExample from './components/CollapsibleExample';
 import Schema from './components/Schema';
 import { InfoBox, WarningBox } from './components/InfoBox';
 
@@ -33,11 +34,10 @@ export default function ApiDocsClient() {
     { id: 'authentication', title: 'Authentication', icon: <Shield className="w-6 h-6" /> },
     { id: 'questions', title: 'Question Management', icon: <FileText className="w-6 h-6" /> },
     { id: 'metadata', title: 'Metadata & Statistics', icon: <Code className="w-6 h-6" /> },
-    { id: 'sharing', title: 'Collaborative Testing', icon: <Users className="w-6 h-6" /> },
+    { id: 'sharing', title: 'Sharing & Codes', icon: <Users className="w-6 h-6" /> },
     { id: 'quotes', title: 'Quotes Management', icon: <MessageSquare className="w-6 h-6" /> },
     { id: 'ai', title: 'AI-Powered Features', icon: <Zap className="w-6 h-6" /> },
-    { id: 'frontend-integration', title: 'Frontend Integration', icon: <Code className="w-6 h-6" /> },
-    { id: 'moderation', title: 'Content Moderation', icon: <Shield className="w-6 h-6" /> },
+    { id: 'content', title: 'Content Management', icon: <FileText className="w-6 h-6" /> },
     { id: 'system', title: 'System Endpoints', icon: <ExternalLink className="w-6 h-6" /> },
   ];
 
@@ -617,6 +617,458 @@ GET /api/meta/subtopics?event=Chemistry%20Lab
             </div>
           </div>
 
+          {/* Sharing & Codes Section */}
+          <div id="sharing">
+            <SectionHeader icon={<Users className="w-6 h-6" />} title="Sharing & Codes" id="sharing" />
+            
+            <div className="space-y-6">
+              <Endpoint 
+                method="GET" 
+                url="/api/share" 
+                description="Retrieve shared test data by code for collaborative testing."
+                features={['Collaborative Testing']}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Query Parameters</h4>
+                    <div className="space-y-2">
+                      <Param name="code" type="string" required description="6-character share code" />
+                    </div>
+                  </div>
+
+                  <Example title="Request" variant="request">
+GET /api/share?code=ABC123
+                  </Example>
+
+                  <Example title="Response" variant="response">
+{`{
+  "success": true,
+  "data": {
+    "questions": [...],
+    "metadata": {
+      "event": "Chemistry Lab",
+      "division": "C",
+      "tournament": "MIT Invitational 2024"
+    }
+  }
+}`}
+                  </Example>
+                </div>
+              </Endpoint>
+
+              <Endpoint 
+                method="POST" 
+                url="/api/share/generate" 
+                description="Generate a shareable code for test data."
+                features={['Code Generation']}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Request Body Schema</h4>
+                    <div className="space-y-2">
+                      <Param name="questions" type="array" required description="Array of question objects to share" />
+                      <Param name="metadata" type="object" description="Optional metadata about the test" />
+                    </div>
+                  </div>
+
+                  <Example title="Request" variant="request">
+{`{
+  "questions": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "question": "What is the chemical formula for water?",
+      "options": ["H2O", "CO2", "NaCl", "CH4"],
+      "answers": ["H2O"]
+    }
+  ],
+  "metadata": {
+    "event": "Chemistry Lab",
+    "division": "C"
+  }
+}`}
+                  </Example>
+
+                  <Example title="Response" variant="response">
+{`{
+  "success": true,
+  "data": {
+    "code": "ABC123",
+    "expiresAt": "2024-01-16T10:30:00Z"
+  }
+}`}
+                  </Example>
+                </div>
+              </Endpoint>
+
+              <Endpoint 
+                method="GET" 
+                url="/api/codebusters/share" 
+                description="Retrieve Codebusters-specific shared content."
+                features={['Codebusters']}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Query Parameters</h4>
+                    <div className="space-y-2">
+                      <Param name="code" type="string" required description="Share code for Codebusters content" />
+                    </div>
+                  </div>
+
+                  <Example title="Response" variant="response">
+{`{
+  "success": true,
+  "data": {
+    "cipher": "Caesar",
+    "text": "Encrypted message here",
+    "key": "3"
+  }
+}`}
+                  </Example>
+                </div>
+              </Endpoint>
+
+              <Endpoint 
+                method="POST" 
+                url="/api/codebusters/share/generate" 
+                description="Generate Codebusters-specific share codes."
+                features={['Codebusters', 'Code Generation']}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Request Body Schema</h4>
+                    <div className="space-y-2">
+                      <Param name="cipher" type="string" required description="Type of cipher (Caesar, Vigenere, etc.)" />
+                      <Param name="text" type="string" required description="Encrypted text" />
+                      <Param name="key" type="string" description="Encryption key" />
+                    </div>
+                  </div>
+
+                  <Example title="Request" variant="request">
+{`{
+  "cipher": "Caesar",
+  "text": "Khoor Zruog",
+  "key": "3"
+}`}
+                  </Example>
+
+                  <Example title="Response" variant="response">
+{`{
+  "success": true,
+  "data": {
+    "code": "XYZ789",
+    "expiresAt": "2024-01-16T10:30:00Z"
+  }
+}`}
+                  </Example>
+                </div>
+              </Endpoint>
+            </div>
+          </div>
+
+          {/* Quotes Management Section */}
+          <div id="quotes">
+            <SectionHeader icon={<MessageSquare className="w-6 h-6" />} title="Quotes Management" id="quotes" />
+            
+            <div className="space-y-6">
+              <Endpoint 
+                method="GET" 
+                url="/api/quotes" 
+                description="Retrieve inspirational quotes with filtering options."
+                features={['Filtering', 'Character Length']}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Query Parameters</h4>
+                    <div className="space-y-2">
+                      <Param name="language" type="string" description="Language filter (default: en)" />
+                      <Param name="limit" type="integer" description="Maximum quotes to return" />
+                      <Param name="charLengthMin" type="integer" description="Minimum character length" />
+                      <Param name="charLengthMax" type="integer" description="Maximum character length" />
+                    </div>
+                  </div>
+
+                  <Example title="Request" variant="request">
+GET /api/quotes?language=en&limit=5&charLengthMin=50&charLengthMax=200
+                  </Example>
+
+                  <Example title="Response" variant="response">
+{`{
+  "success": true,
+  "data": {
+    "quotes": [
+      {
+        "quote": "The only way to do great work is to love what you do."
+      },
+      {
+        "quote": "Innovation distinguishes between a leader and a follower."
+      }
+    ]
+  }
+}`}
+                  </Example>
+                </div>
+              </Endpoint>
+            </div>
+          </div>
+
+          {/* Content Management Section */}
+          <div id="content">
+            <SectionHeader icon={<FileText className="w-6 h-6" />} title="Content Management" id="content" />
+            
+            <div className="space-y-6">
+              <Endpoint 
+                method="POST" 
+                url="/api/upload-image" 
+                description="Upload images for questions with validation and CDN storage."
+                features={['File Upload', 'Image Processing']}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Request Format</h4>
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Send as multipart/form-data with image file.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>File Requirements</h4>
+                    <ul className={`text-sm space-y-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      <li>• <strong>Format:</strong> Image files only (JPEG, PNG, GIF, etc.)</li>
+                      <li>• <strong>Size:</strong> Maximum 5MB</li>
+                      <li>• <strong>Field name:</strong> &quot;image&quot;</li>
+                    </ul>
+                  </div>
+
+                  <Example title="cURL Example" variant="request">
+{`curl -X POST \\
+  -F "image=@/path/to/image.jpg" \\
+  https://scio.ly/api/upload-image`}
+                  </Example>
+
+                  <Example title="Response" variant="response">
+{`{
+  "success": true,
+  "data": {
+    "url": "https://cdn.scio.ly/images/1642248600000-image.jpg",
+    "filename": "image.jpg",
+    "size": 1024000,
+    "type": "image/jpeg"
+  }
+}`}
+                  </Example>
+                </div>
+              </Endpoint>
+
+              <Endpoint 
+                method="GET" 
+                url="/api/id-questions" 
+                description="Retrieve identification questions with images (e.g., Rocks and Minerals, Entomology)."
+                features={['ID Questions', 'Images']}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Query Parameters</h4>
+                    <div className="space-y-2">
+                      <Param name="event" type="string" description="Filter by event name (exact match)" />
+                      <Param name="division" type="string" description="Filter by division (B, C, B/C)" />
+                      <Param name="subtopic" type="string" description="Filter by single subtopic" />
+                      <Param name="subtopics" type="string" description="Filter by multiple subtopics (comma-separated)" />
+                      <Param name="difficulty_min" type="float" description="Minimum difficulty (0.0-1.0)" />
+                      <Param name="difficulty_max" type="float" description="Maximum difficulty (0.0-1.0)" />
+                      <Param name="limit" type="integer" description="Maximum questions to return (default: 50, max: 200)" />
+                    </div>
+                  </div>
+
+                  <Example title="Request" variant="request">
+GET /api/id-questions?event=Rocks%20and%20Minerals&division=C&limit=10
+                  </Example>
+
+                  <Example title="Response" variant="response">
+{`{
+  "success": true,
+  "data": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
+      "question": "Identify this rock sample",
+      "tournament": "MIT Invitational 2024",
+      "division": "C",
+      "event": "Rocks and Minerals",
+      "options": ["Granite", "Basalt", "Marble", "Limestone"],
+      "answers": ["Granite"],
+      "subtopics": ["igneous rocks", "plutonic"],
+      "difficulty": 0.6,
+      "images": [
+        "https://cdn.example.com/rock-sample-1.jpg",
+        "https://cdn.example.com/rock-sample-1-closeup.jpg"
+      ],
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-15T10:30:00Z"
+    }
+  ]
+}`}
+                  </Example>
+                </div>
+              </Endpoint>
+
+              <Endpoint 
+                method="GET" 
+                url="/api/questions/base52" 
+                description="Retrieve a question by its base52 code."
+                features={['Base52 Lookup']}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Query Parameters</h4>
+                    <div className="space-y-2">
+                      <Param name="code" type="string" required description="5-character base52 code" />
+                    </div>
+                  </div>
+
+                  <Example title="Request" variant="request">
+GET /api/questions/base52?code=ABC12
+                  </Example>
+
+                  <Example title="Response" variant="response">
+{`{
+  "success": true,
+  "data": {
+    "question": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "question": "What is the chemical formula for water?",
+      "tournament": "MIT Invitational 2024",
+      "division": "C",
+      "event": "Chemistry Lab",
+      "options": ["H2O", "CO2", "NaCl", "CH4"],
+      "answers": ["H2O"],
+      "subtopics": ["molecular formulas"],
+      "difficulty": 0.3,
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-15T10:30:00Z"
+    },
+    "table": "questions"
+  }
+}`}
+                  </Example>
+                </div>
+              </Endpoint>
+
+              <Endpoint 
+                method="POST" 
+                url="/api/questions/base52" 
+                description="Generate base52 codes for multiple questions."
+                features={['Code Generation']}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Request Body Schema</h4>
+                    <div className="space-y-2">
+                      <Param name="questionIds" type="string[]" required description="Array of question UUIDs" />
+                      <Param name="table" type="string" description="Table name: 'questions' or 'idEvents' (default: 'questions')" />
+                    </div>
+                  </div>
+
+                  <Example title="Request" variant="request">
+{`{
+  "questionIds": ["550e8400-e29b-41d4-a716-446655440000", "550e8400-e29b-41d4-a716-446655440001"],
+  "table": "questions"
+}`}
+                  </Example>
+
+                  <Example title="Response" variant="response">
+{`{
+  "success": true,
+  "data": {
+    "codes": {
+      "550e8400-e29b-41d4-a716-446655440000": "ABC12",
+      "550e8400-e29b-41d4-a716-446655440001": "DEF34"
+    },
+    "table": "questions"
+  }
+}`}
+                  </Example>
+                </div>
+              </Endpoint>
+
+              <Endpoint 
+                method="GET" 
+                url="/api/blacklists" 
+                description="List blacklisted questions (admin functionality)."
+                features={['Content Moderation']}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Query Parameters</h4>
+                    <div className="space-y-2">
+                      <Param name="event" type="string" description="Filter by event name" />
+                      <Param name="limit" type="integer" description="Maximum results to return" />
+                    </div>
+                  </div>
+
+                  <Example title="Request" variant="request">
+GET /api/blacklists?event=Chemistry%20Lab&limit=10
+                  </Example>
+
+                  <Example title="Response" variant="response">
+{`{
+  "success": true,
+  "data": [
+    {
+      "id": "blacklist-uuid-here",
+      "event": "Chemistry Lab",
+      "questionData": {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "question": "Inappropriate question content"
+      },
+      "createdAt": "2024-01-15T10:30:00Z"
+    }
+  ]
+}`}
+                  </Example>
+                </div>
+              </Endpoint>
+
+              <Endpoint 
+                method="POST" 
+                url="/api/blacklists" 
+                description="Add a question to the blacklist (admin functionality)."
+                features={['Content Moderation']}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Request Body Schema</h4>
+                    <div className="space-y-2">
+                      <Param name="question" type="object" required description="Question object to blacklist" />
+                      <Param name="event" type="string" required description="Event name" />
+                      <Param name="reason" type="string" description="Reason for blacklisting" />
+                    </div>
+                  </div>
+
+                  <Example title="Request" variant="request">
+{`{
+  "question": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "question": "Inappropriate question content",
+    "event": "Chemistry Lab"
+  },
+  "event": "Chemistry Lab",
+  "reason": "Contains inappropriate content"
+}`}
+                  </Example>
+
+                  <Example title="Response" variant="response">
+{`{
+  "success": true,
+  "data": {
+    "blacklisted": true,
+    "id": "blacklist-uuid-here"
+  }
+}`}
+                  </Example>
+                </div>
+              </Endpoint>
+            </div>
+          </div>
+
           {/* AI Features Section */}
           <div id="ai">
             <SectionHeader icon={<Zap className="w-6 h-6" />} title="AI-Powered Features" id="ai" />
@@ -819,9 +1271,6 @@ This is a fundamental concept in chemistry that explains why water is essential 
             </div>
           </div>
 
-          {/* Frontend Integration Section */}
-          <div id="frontend-integration">
-            <SectionHeader icon={<Code className="w-6 h-6" />} title="Frontend Integration" id="frontend-integration" />
             
             <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm border ${darkMode ? 'border-gray-700' : 'border-gray-200'} p-6 mb-6`}>
               <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>🧠 Using the Explanations API</h3>
@@ -833,7 +1282,7 @@ This is a fundamental concept in chemistry that explains why water is essential 
                        The explanations API is designed for simple integration. Here&apos;s how to use it in your frontend application:
                      </p>
                   
-                  <Example title="JavaScript/TypeScript Example" variant="request">
+                  <CollapsibleExample title="JavaScript/TypeScript Example" variant="request">
 {`// Function to get explanation for a question
 async function getExplanation(question, userAnswer, event) {
   try {
@@ -887,7 +1336,7 @@ try {
 } catch (error) {
   console.error('Failed to get explanation:', error);
 }`}
-                  </Example>
+                  </CollapsibleExample>
                 </div>
 
                 <div>
@@ -896,7 +1345,7 @@ try {
                      Here&apos;s how to create a custom React hook for managing explanations:
                    </p>
                   
-                  <Example title="Custom React Hook" variant="request">
+                  <CollapsibleExample title="Custom React Hook" variant="request">
 {`import { useState, useCallback } from 'react';
 
 export function useExplanation() {
@@ -980,7 +1429,7 @@ function QuestionComponent({ question, userAnswer, event }) {
     </div>
   );
 }`}
-                  </Example>
+                  </CollapsibleExample>
                 </div>
 
                 <div>
@@ -989,7 +1438,7 @@ function QuestionComponent({ question, userAnswer, event }) {
                     The API returns structured error responses that you should handle appropriately:
                   </p>
                   
-                  <Example title="Error Response Examples" variant="response">
+                  <CollapsibleExample title="Error Response Examples" variant="response">
 {`// Rate limit exceeded
 {
   "success": false,
@@ -1013,7 +1462,7 @@ function QuestionComponent({ question, userAnswer, event }) {
   "success": false,
   "error": "Invalid request body"
 }`}
-                  </Example>
+                  </CollapsibleExample>
                 </div>
 
                 <div>
@@ -1034,7 +1483,7 @@ function QuestionComponent({ question, userAnswer, event }) {
                      Here&apos;s how to implement client-side rate limiting:
                    </p>
                   
-                  <Example title="Rate Limiting Hook" variant="request">
+                  <CollapsibleExample title="Rate Limiting Hook" variant="request">
 {`import { useState, useRef, useCallback } from 'react';
 
 export function useRateLimitedExplanation(delayMs = 2000) {
@@ -1078,9 +1527,9 @@ export function useRateLimitedExplanation(delayMs = 2000) {
     }
   }, [delayMs]);
 
-                    return { getExplanation, loading };
+  return { getExplanation, loading };
 }`}
-                  </Example>
+                  </CollapsibleExample>
                 </div>
               </div>
             </div>
@@ -1096,7 +1545,7 @@ export function useRateLimitedExplanation(delayMs = 2000) {
                     Use the `/api/questions` endpoint to retrieve filtered questions with pagination:
                   </p>
                   
-                  <Example title="Question Fetching Service" variant="request">
+                  <CollapsibleExample title="Question Fetching Service" variant="request">
 {`// Service for fetching questions with filters
 class QuestionService {
   constructor(apiKey) {
@@ -1164,7 +1613,7 @@ async function loadChemistryQuestions() {
     return [];
   }
 }`}
-                  </Example>
+                  </CollapsibleExample>
                 </div>
 
                 <div>
@@ -1173,7 +1622,7 @@ async function loadChemistryQuestions() {
                     Custom React hook for managing question state and fetching:
                   </p>
                   
-                  <Example title="useQuestions Hook" variant="request">
+                  <CollapsibleExample title="useQuestions Hook" variant="request">
 {`import { useState, useEffect, useCallback } from 'react';
 
 export function useQuestions(apiKey, initialFilters = {}) {
@@ -1284,7 +1733,7 @@ function QuestionList({ apiKey }) {
     </div>
   );
 }`}
-                  </Example>
+                  </CollapsibleExample>
                 </div>
 
                 <div>
@@ -1293,7 +1742,7 @@ function QuestionList({ apiKey }) {
                     Use `/api/questions/batch` to fetch multiple specific questions by their IDs:
                   </p>
                   
-                  <Example title="Batch Questions Service" variant="request">
+                  <CollapsibleExample title="Batch Questions Service" variant="request">
 {`// Service for batch fetching questions
 async function getBatchQuestions(questionIds, apiKey) {
   try {
@@ -1386,7 +1835,7 @@ function BookmarkedQuestions({ bookmarkedIds, apiKey }) {
     </div>
   );
 }`}
-                  </Example>
+                  </CollapsibleExample>
                 </div>
 
                 <div>
@@ -1395,7 +1844,7 @@ function BookmarkedQuestions({ bookmarkedIds, apiKey }) {
                     Fetch identification questions from `/api/id-questions` for events like Rocks and Minerals:
                   </p>
                   
-                  <Example title="ID Questions Service" variant="request">
+                  <CollapsibleExample title="ID Questions Service" variant="request">
 {`// Service for ID questions with images
 async function getIdQuestions(filters = {}, apiKey) {
   const params = new URLSearchParams();
@@ -1512,7 +1961,7 @@ function RocksAndMineralsQuiz({ apiKey }) {
     </div>
   );
 }`}
-                  </Example>
+                  </CollapsibleExample>
                 </div>
               </div>
             </div>
@@ -1528,7 +1977,7 @@ function RocksAndMineralsQuiz({ apiKey }) {
                     Use `/api/gemini/suggest-edit` to get AI suggestions for improving questions:
                   </p>
                   
-                  <Example title="Question Improvement Service" variant="request">
+                  <CollapsibleExample title="Question Improvement Service" variant="request">
 {`// Service for AI question suggestions
 async function getSuggestionForQuestion(question, userReason = '', apiKey) {
   try {
@@ -1668,7 +2117,7 @@ function QuestionImprovement({ question, apiKey }) {
     </div>
   );
 }`}
-                  </Example>
+                  </CollapsibleExample>
                 </div>
 
                 <div>
@@ -1677,7 +2126,7 @@ function QuestionImprovement({ question, apiKey }) {
                     A complete example combining question fetching, explanations, and AI suggestions:
                   </p>
                   
-                  <Example title="Complete Question Management App" variant="request">
+                  <CollapsibleExample title="Complete Question Management App" variant="request">
 {`// Complete question management component
 function QuestionManagementApp({ apiKey }) {
   const [selectedEvent, setSelectedEvent] = useState('Chemistry Lab');
@@ -1856,7 +2305,7 @@ function QuestionManagementApp({ apiKey }) {
     </div>
   );
 }`}
-                  </Example>
+                  </CollapsibleExample>
                 </div>
               </div>
             </div>
@@ -1931,9 +2380,9 @@ function QuestionManagementApp({ apiKey }) {
         {/* Footer */}
         <div className={`mt-16 pt-8 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                          <div>
-                                <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Error Codes</h3>
-                <div className={`space-y-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <div>
+              <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Error Codes</h3>
+              <div className={`space-y-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 <div>• <code className={`${darkMode ? 'bg-gray-800' : 'bg-gray-100'} px-2 py-1 rounded`}>400</code> - Bad Request (invalid parameters)</div>
                 <div>• <code className={`${darkMode ? 'bg-gray-800' : 'bg-gray-100'} px-2 py-1 rounded`}>404</code> - Not Found (resource doesn&apos;t exist)</div>
                 <div>• <code className={`${darkMode ? 'bg-gray-800' : 'bg-gray-100'} px-2 py-1 rounded`}>429</code> - Too Many Requests (rate limit exceeded)</div>
@@ -1941,9 +2390,9 @@ function QuestionManagementApp({ apiKey }) {
                 <div>• <code className={`${darkMode ? 'bg-gray-800' : 'bg-gray-100'} px-2 py-1 rounded`}>503</code> - Service Unavailable (AI service down)</div>
               </div>
             </div>
-                          <div>
-                                <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Best Practices</h3>
-                <div className={`space-y-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <div>
+              <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Best Practices</h3>
+              <div className={`space-y-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 <div>• Implement exponential backoff for rate-limited endpoints</div>
                 <div>• Cache metadata endpoints (events, tournaments, subtopics)</div>
                 <div>• Use appropriate limits to avoid overwhelming the system</div>
@@ -1954,6 +2403,5 @@ function QuestionManagementApp({ apiKey }) {
           </div>
         </div>
       </div>
-    </div>
   );
 }
