@@ -1066,6 +1066,106 @@ GET /api/blacklists?event=Chemistry%20Lab&limit=10
                   </Example>
                 </div>
               </Endpoint>
+
+              <Endpoint 
+                method="POST" 
+                url="/api/report/remove" 
+                description="Report a question for removal with AI validation and automatic blacklisting."
+                features={['Content Moderation', 'AI Validation']}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Request Body Schema</h4>
+                    <div className="space-y-2">
+                      <Param name="question" type="object" required description="Question object to report" />
+                      <Param name="event" type="string" required description="Science Olympiad event name" />
+                    </div>
+                  </div>
+
+                  <Example title="Request Example" variant="request">
+{`{
+  "question": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "question": "Inappropriate question content",
+    "event": "Chemistry Lab"
+  },
+  "event": "Chemistry Lab"
+}`}
+                  </Example>
+
+                  <Example title="Response" variant="response">
+{`{
+  "success": true,
+  "message": "Question removed and blacklisted",
+  "data": {
+    "reason": "Question contains inappropriate content",
+    "removed": true
+  }
+}`}
+                  </Example>
+
+                  <InfoBox>
+                    <strong>AI Validation:</strong> Uses Gemini AI to analyze if the question should be removed.<br />
+                    <strong>Automatic Actions:</strong> If approved, adds to blacklist and removes from questions table.
+                  </InfoBox>
+                </div>
+              </Endpoint>
+
+              <Endpoint 
+                method="POST" 
+                url="/api/report/edit" 
+                description="Report a question edit with AI validation and automatic application."
+                features={['Content Moderation', 'AI Validation', 'Auto-Apply']}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Request Body Schema</h4>
+                    <div className="space-y-2">
+                      <Param name="originalQuestion" type="object" required description="Original question object" />
+                      <Param name="editedQuestion" type="object" required description="Edited question object" />
+                      <Param name="event" type="string" required description="Science Olympiad event name" />
+                      <Param name="reason" type="string" description="Reason for the edit" />
+                      <Param name="bypass" type="boolean" description="Bypass AI validation (admin only)" />
+                      <Param name="aiSuggestion" type="object" description="AI-generated suggestion for validation" />
+                    </div>
+                  </div>
+
+                  <Example title="Request Example" variant="request">
+{`{
+  "originalQuestion": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "question": "What is water?",
+    "options": ["H2O", "CO2", "NaCl"],
+    "answers": ["H2O"]
+  },
+  "editedQuestion": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "question": "What is the chemical formula for water?",
+    "options": ["H2O", "CO2", "NaCl"],
+    "answers": ["H2O"]
+  },
+  "event": "Chemistry Lab",
+  "reason": "Improve question clarity"
+}`}
+                  </Example>
+
+                  <Example title="Response" variant="response">
+{`{
+  "success": true,
+  "message": "Question edit saved and applied",
+  "data": {
+    "reason": "Edit improves question clarity and maintains scientific accuracy"
+  }
+}`}
+                  </Example>
+
+                  <InfoBox>
+                    <strong>AI Validation:</strong> Uses Gemini AI to validate edit quality and accuracy.<br />
+                    <strong>Auto-Apply:</strong> If approved, automatically updates the question in the database.<br />
+                    <strong>Bypass Mode:</strong> Admin can bypass AI validation for trusted edits.
+                  </InfoBox>
+                </div>
+              </Endpoint>
             </div>
           </div>
 
@@ -1263,6 +1363,53 @@ This is a fundamental concept in chemistry that explains why water is essential 
         "suggestions": ["Include the role of chlorophyll"]
       }
     ]
+  }
+}`}
+                  </Example>
+                </div>
+              </Endpoint>
+
+              <Endpoint 
+                method="POST" 
+                url="/api/gemini/validate-edit" 
+                description="Validate question edits using AI analysis to ensure quality and accuracy."
+                features={['Quality Control', 'Edit Validation']}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Request Body Schema</h4>
+                    <div className="space-y-2">
+                      <Param name="originalQuestion" type="object" required description="Original question object" />
+                      <Param name="editedQuestion" type="object" required description="Edited question object" />
+                      <Param name="event" type="string" required description="Science Olympiad event name" />
+                      <Param name="reason" type="string" required description="Reason for the edit" />
+                    </div>
+                  </div>
+
+                  <Example title="Request Example" variant="request">
+{`{
+  "originalQuestion": {
+    "question": "What is the chemical formula for water?",
+    "options": ["H2O", "CO2", "NaCl"],
+    "answers": ["H2O"]
+  },
+  "editedQuestion": {
+    "question": "What is the molecular formula for dihydrogen monoxide?",
+    "options": ["H2O", "CO2", "NaCl"],
+    "answers": ["H2O"]
+  },
+  "event": "Chemistry Lab",
+  "reason": "Make the question more challenging"
+}`}
+                  </Example>
+
+                  <Example title="Response" variant="response">
+{`{
+  "success": true,
+  "data": {
+    "isValid": true,
+    "reason": "Edit improves question clarity and maintains scientific accuracy",
+    "confidence": 0.85
   }
 }`}
                   </Example>
