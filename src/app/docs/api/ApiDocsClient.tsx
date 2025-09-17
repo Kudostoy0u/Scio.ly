@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ExternalLink, Code, Database, Zap, Shield, Users, MessageSquare, FileText } from 'lucide-react';
+import { ExternalLink, Code, Database, Zap, Shield, Users, MessageSquare, FileText, Pencil } from 'lucide-react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import Endpoint from './components/Endpoint';
 import Param from './components/Param';
@@ -32,12 +32,12 @@ export default function ApiDocsClient() {
   const sections = [
     { id: 'overview', title: 'Overview', icon: <Database className="w-6 h-6" /> },
     { id: 'authentication', title: 'Authentication', icon: <Shield className="w-6 h-6" /> },
-    { id: 'questions', title: 'Question Management', icon: <FileText className="w-6 h-6" /> },
+    { id: 'questions', title: 'Question Retrieval', icon: <FileText className="w-6 h-6" /> },
     { id: 'metadata', title: 'Metadata & Statistics', icon: <Code className="w-6 h-6" /> },
     { id: 'sharing', title: 'Sharing & Codes', icon: <Users className="w-6 h-6" /> },
     { id: 'quotes', title: 'Quotes Management', icon: <MessageSquare className="w-6 h-6" /> },
     { id: 'ai', title: 'AI-Powered Features', icon: <Zap className="w-6 h-6" /> },
-    { id: 'content', title: 'Content Management', icon: <FileText className="w-6 h-6" /> },
+    { id: 'editing', title: 'Content Editing', icon: <Pencil className="w-6 h-6" /> },
     { id: 'system', title: 'System Endpoints', icon: <ExternalLink className="w-6 h-6" /> },
   ];
 
@@ -277,16 +277,16 @@ Authorization: Bearer your-api-key-here`}
             </div>
           </div>
 
-          {/* Question Management Section */}
+          {/* Question Retrieval Section */}
           <div id="questions">
-            <SectionHeader icon={<FileText className="w-6 h-6" />} title="Question Management" id="questions" />
+            <SectionHeader icon={<FileText className="w-6 h-6" />} title="Question Retrieval" id="questions" />
             
             <div className="space-y-6">
               <Endpoint 
                 method="GET" 
                 url="/api/questions" 
                 description="Retrieve questions with advanced filtering and two-phase random selection for optimal performance."
-                features={['Filtering', 'Pagination']}
+                features={['Retrieval', 'Filtering']}
               >
                 <div className="space-y-4">
                   <div>
@@ -341,7 +341,7 @@ GET /api/questions?event=Chemistry%20Lab&division=C&question_type=mcq&limit=10
                 method="POST" 
                 url="/api/questions" 
                 description="Create a new question with validation and automatic ID generation."
-                features={['Create']}
+                features={['Retrieval', 'Create']}
               >
                 <div className="space-y-4">
                   <div>
@@ -398,7 +398,7 @@ GET /api/questions?event=Chemistry%20Lab&division=C&question_type=mcq&limit=10
                 method="POST" 
                 url="/api/questions/batch" 
                 description="Fetch multiple questions by IDs, including both regular questions and ID questions with images."
-                features={['Batch', 'ID Questions']}
+                features={['Retrieval', 'Batch']}
               >
                 <div className="space-y-4">
                   <div>
@@ -462,7 +462,7 @@ GET /api/questions?event=Chemistry%20Lab&division=C&question_type=mcq&limit=10
                 method="GET" 
                 url="/api/id-questions" 
                 description="Retrieve identification questions with images (e.g., Rocks and Minerals, Entomology)."
-                features={['ID Questions', 'Images']}
+                features={['Retrieval', 'Images']}
               >
                 <div className="space-y-4">
                   <div>
@@ -525,6 +525,7 @@ GET /api/id-questions?event=Rocks%20and%20Minerals&division=C&limit=10
                 method="GET" 
                 url="/api/meta/events" 
                 description="Get all available Science Olympiad events in alphabetical order."
+                features={['Metadata']}
               >
                 <Example title="Response" variant="response">
 {`{
@@ -545,6 +546,7 @@ GET /api/id-questions?event=Rocks%20and%20Minerals&division=C&limit=10
                 method="GET" 
                 url="/api/meta/tournaments" 
                 description="Get all tournament names in the database, sorted by frequency."
+                features={['Metadata']}
               >
                 <Example title="Response" variant="response">
 {`{
@@ -563,6 +565,7 @@ GET /api/id-questions?event=Rocks%20and%20Minerals&division=C&limit=10
                 method="GET" 
                 url="/api/meta/subtopics" 
                 description="Get all subtopics, optionally filtered by event."
+                features={['Metadata']}
               >
                 <div className="space-y-4">
                   <div>
@@ -595,6 +598,7 @@ GET /api/meta/subtopics?event=Chemistry%20Lab
                 method="GET" 
                 url="/api/meta/stats" 
                 description="Get comprehensive database statistics including total questions and breakdowns."
+                features={['Metadata', 'Statistics']}
               >
                 <Example title="Response" variant="response">
 {`{
@@ -626,7 +630,7 @@ GET /api/meta/subtopics?event=Chemistry%20Lab
                 method="GET" 
                 url="/api/share" 
                 description="Retrieve shared test data by code for collaborative testing."
-                features={['Collaborative Testing']}
+                features={['Sharing']}
               >
                 <div className="space-y-4">
                   <div>
@@ -660,7 +664,7 @@ GET /api/share?code=ABC123
                 method="POST" 
                 url="/api/share/generate" 
                 description="Generate a shareable code for test data."
-                features={['Code Generation']}
+                features={['Sharing', 'Code Generation']}
               >
                 <div className="space-y-4">
                   <div>
@@ -704,7 +708,7 @@ GET /api/share?code=ABC123
                 method="GET" 
                 url="/api/codebusters/share" 
                 description="Retrieve Codebusters-specific shared content."
-                features={['Codebusters']}
+                features={['Sharing', 'Codebusters']}
               >
                 <div className="space-y-4">
                   <div>
@@ -731,7 +735,7 @@ GET /api/share?code=ABC123
                 method="POST" 
                 url="/api/codebusters/share/generate" 
                 description="Generate Codebusters-specific share codes."
-                features={['Codebusters', 'Code Generation']}
+                features={['Sharing', 'Codebusters', 'Code Generation']}
               >
                 <div className="space-y-4">
                   <div>
@@ -762,159 +766,12 @@ GET /api/share?code=ABC123
                   </Example>
                 </div>
               </Endpoint>
-            </div>
-          </div>
-
-          {/* Quotes Management Section */}
-          <div id="quotes">
-            <SectionHeader icon={<MessageSquare className="w-6 h-6" />} title="Quotes Management" id="quotes" />
-            
-            <div className="space-y-6">
-              <Endpoint 
-                method="GET" 
-                url="/api/quotes" 
-                description="Retrieve inspirational quotes with filtering options."
-                features={['Filtering', 'Character Length']}
-              >
-                <div className="space-y-4">
-                  <div>
-                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Query Parameters</h4>
-                    <div className="space-y-2">
-                      <Param name="language" type="string" description="Language filter (default: en)" />
-                      <Param name="limit" type="integer" description="Maximum quotes to return" />
-                      <Param name="charLengthMin" type="integer" description="Minimum character length" />
-                      <Param name="charLengthMax" type="integer" description="Maximum character length" />
-                    </div>
-                  </div>
-
-                  <Example title="Request" variant="request">
-GET /api/quotes?language=en&limit=5&charLengthMin=50&charLengthMax=200
-                  </Example>
-
-                  <Example title="Response" variant="response">
-{`{
-  "success": true,
-  "data": {
-    "quotes": [
-      {
-        "quote": "The only way to do great work is to love what you do."
-      },
-      {
-        "quote": "Innovation distinguishes between a leader and a follower."
-      }
-    ]
-  }
-}`}
-                  </Example>
-                </div>
-              </Endpoint>
-            </div>
-          </div>
-
-          {/* Content Management Section */}
-          <div id="content">
-            <SectionHeader icon={<FileText className="w-6 h-6" />} title="Content Management" id="content" />
-            
-            <div className="space-y-6">
-              <Endpoint 
-                method="POST" 
-                url="/api/upload-image" 
-                description="Upload images for questions with validation and CDN storage."
-                features={['File Upload', 'Image Processing']}
-              >
-                <div className="space-y-4">
-                  <div>
-                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Request Format</h4>
-                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Send as multipart/form-data with image file.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>File Requirements</h4>
-                    <ul className={`text-sm space-y-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                      <li>• <strong>Format:</strong> Image files only (JPEG, PNG, GIF, etc.)</li>
-                      <li>• <strong>Size:</strong> Maximum 5MB</li>
-                      <li>• <strong>Field name:</strong> &quot;image&quot;</li>
-                    </ul>
-                  </div>
-
-                  <Example title="cURL Example" variant="request">
-{`curl -X POST \\
-  -F "image=@/path/to/image.jpg" \\
-  https://scio.ly/api/upload-image`}
-                  </Example>
-
-                  <Example title="Response" variant="response">
-{`{
-  "success": true,
-  "data": {
-    "url": "https://cdn.scio.ly/images/1642248600000-image.jpg",
-    "filename": "image.jpg",
-    "size": 1024000,
-    "type": "image/jpeg"
-  }
-}`}
-                  </Example>
-                </div>
-              </Endpoint>
-
-              <Endpoint 
-                method="GET" 
-                url="/api/id-questions" 
-                description="Retrieve identification questions with images (e.g., Rocks and Minerals, Entomology)."
-                features={['ID Questions', 'Images']}
-              >
-                <div className="space-y-4">
-                  <div>
-                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Query Parameters</h4>
-                    <div className="space-y-2">
-                      <Param name="event" type="string" description="Filter by event name (exact match)" />
-                      <Param name="division" type="string" description="Filter by division (B, C, B/C)" />
-                      <Param name="subtopic" type="string" description="Filter by single subtopic" />
-                      <Param name="subtopics" type="string" description="Filter by multiple subtopics (comma-separated)" />
-                      <Param name="difficulty_min" type="float" description="Minimum difficulty (0.0-1.0)" />
-                      <Param name="difficulty_max" type="float" description="Maximum difficulty (0.0-1.0)" />
-                      <Param name="limit" type="integer" description="Maximum questions to return (default: 50, max: 200)" />
-                    </div>
-                  </div>
-
-                  <Example title="Request" variant="request">
-GET /api/id-questions?event=Rocks%20and%20Minerals&division=C&limit=10
-                  </Example>
-
-                  <Example title="Response" variant="response">
-{`{
-  "success": true,
-  "data": [
-    {
-      "id": "550e8400-e29b-41d4-a716-446655440002",
-      "question": "Identify this rock sample",
-      "tournament": "MIT Invitational 2024",
-      "division": "C",
-      "event": "Rocks and Minerals",
-      "options": ["Granite", "Basalt", "Marble", "Limestone"],
-      "answers": ["Granite"],
-      "subtopics": ["igneous rocks", "plutonic"],
-      "difficulty": 0.6,
-      "images": [
-        "https://cdn.example.com/rock-sample-1.jpg",
-        "https://cdn.example.com/rock-sample-1-closeup.jpg"
-      ],
-      "created_at": "2024-01-15T10:30:00Z",
-      "updated_at": "2024-01-15T10:30:00Z"
-    }
-  ]
-}`}
-                  </Example>
-                </div>
-              </Endpoint>
 
               <Endpoint 
                 method="GET" 
                 url="/api/questions/base52" 
                 description="Retrieve a question by its base52 code."
-                features={['Base52 Lookup']}
+                features={['Sharing', 'Base52']}
               >
                 <div className="space-y-4">
                   <div>
@@ -956,7 +813,7 @@ GET /api/questions/base52?code=ABC12
                 method="POST" 
                 url="/api/questions/base52" 
                 description="Generate base52 codes for multiple questions."
-                features={['Code Generation']}
+                features={['Sharing', 'Base52', 'Code Generation']}
               >
                 <div className="space-y-4">
                   <div>
@@ -988,12 +845,110 @@ GET /api/questions/base52?code=ABC12
                   </Example>
                 </div>
               </Endpoint>
+            </div>
+          </div>
+
+          {/* Quotes Management Section */}
+          <div id="quotes">
+            <SectionHeader icon={<MessageSquare className="w-6 h-6" />} title="Quotes Management" id="quotes" />
+            
+            <div className="space-y-6">
+              <Endpoint 
+                method="GET" 
+                url="/api/quotes" 
+                description="Retrieve inspirational quotes with filtering options."
+                features={['Quotes']}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Query Parameters</h4>
+                    <div className="space-y-2">
+                      <Param name="language" type="string" description="Language filter (default: en)" />
+                      <Param name="limit" type="integer" description="Maximum quotes to return" />
+                      <Param name="charLengthMin" type="integer" description="Minimum character length" />
+                      <Param name="charLengthMax" type="integer" description="Maximum character length" />
+                    </div>
+                  </div>
+
+                  <Example title="Request" variant="request">
+GET /api/quotes?language=en&limit=5&charLengthMin=50&charLengthMax=200
+                  </Example>
+
+                  <Example title="Response" variant="response">
+{`{
+  "success": true,
+  "data": {
+    "quotes": [
+      {
+        "quote": "The only way to do great work is to love what you do."
+      },
+      {
+        "quote": "Innovation distinguishes between a leader and a follower."
+      }
+    ]
+  }
+}`}
+                  </Example>
+                </div>
+              </Endpoint>
+            </div>
+          </div>
+
+          {/* Content Editing Section */}
+          <div id="editing">
+            <SectionHeader icon={<Pencil className="w-6 h-6" />} title="Content Editing" id="editing" />
+            
+            <div className="space-y-6">
+              <Endpoint 
+                method="POST" 
+                url="/api/upload-image" 
+                description="Upload images for questions with validation and CDN storage."
+                features={['Editing', 'File Upload']}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Request Format</h4>
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Send as multipart/form-data with image file.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>File Requirements</h4>
+                    <ul className={`text-sm space-y-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      <li>• <strong>Format:</strong> Image files only (JPEG, PNG, GIF, etc.)</li>
+                      <li>• <strong>Size:</strong> Maximum 5MB</li>
+                      <li>• <strong>Field name:</strong> &quot;image&quot;</li>
+                    </ul>
+                  </div>
+
+                  <Example title="cURL Example" variant="request">
+{`curl -X POST \\
+  -F "image=@/path/to/image.jpg" \\
+  https://scio.ly/api/upload-image`}
+                  </Example>
+
+                  <Example title="Response" variant="response">
+{`{
+  "success": true,
+  "data": {
+    "url": "https://cdn.scio.ly/images/1642248600000-image.jpg",
+    "filename": "image.jpg",
+    "size": 1024000,
+    "type": "image/jpeg"
+  }
+}`}
+                  </Example>
+                </div>
+              </Endpoint>
+
+
 
               <Endpoint 
                 method="GET" 
                 url="/api/blacklists" 
                 description="List blacklisted questions (admin functionality)."
-                features={['Content Moderation']}
+                features={['Editing']}
               >
                 <div className="space-y-4">
                   <div>
@@ -1031,7 +986,7 @@ GET /api/blacklists?event=Chemistry%20Lab&limit=10
                 method="POST" 
                 url="/api/blacklists" 
                 description="Add a question to the blacklist (admin functionality)."
-                features={['Content Moderation']}
+                features={['Editing']}
               >
                 <div className="space-y-4">
                   <div>
@@ -1071,7 +1026,7 @@ GET /api/blacklists?event=Chemistry%20Lab&limit=10
                 method="POST" 
                 url="/api/report/remove" 
                 description="Report a question for removal with AI validation and automatic blacklisting."
-                features={['Content Moderation', 'AI Validation']}
+                features={['Editing', 'AI']}
               >
                 <div className="space-y-4">
                   <div>
@@ -1115,7 +1070,7 @@ GET /api/blacklists?event=Chemistry%20Lab&limit=10
                 method="POST" 
                 url="/api/report/edit" 
                 description="Report a question edit with AI validation and automatic application."
-                features={['Content Moderation', 'AI Validation', 'Auto-Apply']}
+                features={['Editing', 'AI']}
               >
                 <div className="space-y-4">
                   <div>
@@ -1182,7 +1137,7 @@ GET /api/blacklists?event=Chemistry%20Lab&limit=10
                 method="POST" 
                 url="/api/gemini/suggest-edit" 
                 description="Get AI suggestions for improving question quality, clarity, and accuracy."
-                features={['AI Assistant']}
+                features={['AI']}
               >
                 <div className="space-y-4">
                   <div>
@@ -1222,7 +1177,7 @@ GET /api/blacklists?event=Chemistry%20Lab&limit=10
                 method="POST" 
                 url="/api/gemini/analyze-question" 
                 description="AI analysis of question quality, potential issues, and improvement areas."
-                features={['Quality Control']}
+                features={['AI']}
               >
                 <div className="space-y-4">
                   <div>
@@ -1251,7 +1206,7 @@ GET /api/blacklists?event=Chemistry%20Lab&limit=10
                 method="POST" 
                 url="/api/gemini/explain" 
                 description="Generate AI-powered explanations for Science Olympiad questions to aid learning and understanding."
-                features={['Learning Aid', 'Answer Validation', 'Concept Breakdown']}
+                features={['AI']}
               >
                 <div className="space-y-4">
                   <div>
@@ -1329,7 +1284,7 @@ This is a fundamental concept in chemistry that explains why water is essential 
                 method="POST" 
                 url="/api/gemini/grade-free-responses" 
                 description="Automatically grade free-response questions using AI analysis."
-                features={['Auto-Grading']}
+                features={['AI']}
               >
                 <div className="space-y-4">
                   <div>
@@ -1373,7 +1328,7 @@ This is a fundamental concept in chemistry that explains why water is essential 
                 method="POST" 
                 url="/api/gemini/validate-edit" 
                 description="Validate question edits using AI analysis to ensure quality and accuracy."
-                features={['Quality Control', 'Edit Validation']}
+                features={['AI']}
               >
                 <div className="space-y-4">
                   <div>
@@ -2467,7 +2422,7 @@ function QuestionManagementApp({ apiKey }) {
                 method="POST" 
                 url="/api/contact" 
                 description="Submit contact form messages with rate limiting and Discord webhook integration."
-                features={['Contact']}
+                features={['System']}
               >
                 <div className="space-y-4">
                   <div>
@@ -2507,6 +2462,7 @@ function QuestionManagementApp({ apiKey }) {
                 method="GET" 
                 url="/api/health" 
                 description="Health check endpoint for monitoring system status and database connectivity."
+                features={['System']}
               >
                 <Example title="Response" variant="response">
 {`{
