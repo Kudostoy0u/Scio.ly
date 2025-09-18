@@ -279,6 +279,8 @@ export default function PracticeDashboard() {
       } catch {}
       router.push('/codebusters');
     } else {
+      // ensure old grading results don't carry over to the new test
+      try { localStorage.removeItem('testGradingResults'); } catch {}
       router.push('/test');
     }
   };
