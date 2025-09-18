@@ -406,7 +406,7 @@ export default function AuthButton() {
             const nextOpen = !isDropdownOpen;
             setIsDropdownOpen(nextOpen);
             if (nextOpen) {
-              try { await refresh(); } catch {}
+              try { await refresh(false); } catch {} // Use cached data if available
             }
           }}
           className={`flex items-center space-x-2 border rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-200 ${
@@ -471,20 +471,31 @@ export default function AuthButton() {
                 <div className="font-medium flex items-center gap-2"><Bell className="w-4 h-4" /> Notifications</div>
                 <div className="flex items-center gap-2">
                   {unread > 0 && <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-600 text-white text-[10px]">{unread > 9 ? '9+' : unread}</span>}
-                  {notifs.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    {notifs.length > 0 && (
+                      <button
+                        disabled={clearingAll}
+                        onClick={async () => {
+                          setClearingAll(true);
+                          await markAllRead();
+                          setClearingAll(false);
+                        }}
+                        className={`${darkMode ? 'text-gray-300 hover:text-gray-100' : 'text-gray-600 hover:text-gray-800'} text-[10px] underline`}
+                        title="Clear all notifications"
+                      >
+                        {clearingAll ? 'Clearing…' : 'Clear all'}
+                      </button>
+                    )}
                     <button
-                      disabled={clearingAll}
                       onClick={async () => {
-                        setClearingAll(true);
-                        await markAllRead();
-                        setClearingAll(false);
+                        try { await refresh(true); } catch {} // Force refresh from server
                       }}
                       className={`${darkMode ? 'text-gray-300 hover:text-gray-100' : 'text-gray-600 hover:text-gray-800'} text-[10px] underline`}
-                      title="Clear all notifications"
+                      title="Refresh notifications"
                     >
-                      {clearingAll ? 'Clearing…' : 'Clear all'}
+                      Refresh
                     </button>
-                  )}
+                  </div>
                 </div>
               </div>
               <div className="mt-2 max-h-56 overflow-auto space-y-2">

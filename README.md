@@ -1,6 +1,5 @@
 <img src="https://github.com/user-attachments/assets/826258cf-e654-4bd6-b6e7-85400c17e03b" alt="drawing" width="300"/><br/>
 
-
 # Scio.ly - The Ultimate Science Olympiad Practice Platform
 **Making Science Olympiad practice accessible to everyone.**
 
@@ -50,7 +49,7 @@ Scio.ly is built with:
 * **Backend:** Also Next.js!
 * **Database:** Vercel KV
 * **AI:** Gemini 2.0 (for explanations and grading)
-* **Authentication** Firebase
+* **Authentication** Supabase / Google OAuth
 
 ## Getting Started
 

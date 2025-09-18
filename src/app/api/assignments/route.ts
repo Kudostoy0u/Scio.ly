@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
       try {
         const row = await getAssignmentById(idStr);
         return NextResponse.json({ success: true, data: row, debug: { id: idStr } });
-      } catch (e) {
+      } catch {
         return NextResponse.json({ success: false, error: 'Lookup failed', debug: { id: idStr } }, { status: 500 });
       }
     }

@@ -186,7 +186,9 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
                           routerParams.eventName === 'Water Quality - Freshwater' ||
                           routerParams.eventName === 'Remote Sensing' ||
                           routerParams.eventName === 'Circuit Lab' ||
-                          routerParams.eventName === 'Astronomy';
+                          routerParams.eventName === 'Astronomy' ||
+                          routerParams.eventName === 'Designer Genes' ||
+                          routerParams.eventName === 'Forensics';
         if (supportsId && typeof idPct !== 'undefined' && parseInt(idPct) > 0) {
           const pct = Math.max(0, Math.min(100, parseInt(idPct)));
           const totalQuestionsCount = pct === 100 ? 1000 : baseQuestions.length;
@@ -368,6 +370,8 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           const isWaterQuality = routerData.eventName === 'Water Quality - Freshwater';
           const isRemoteSensing = routerData.eventName === 'Remote Sensing';
           const isCircuitLab = routerData.eventName === 'Circuit Lab';
+          const isDesignerGenes = routerData.eventName === 'Designer Genes';
+          const isForensics = routerData.eventName === 'Forensics';
           
           let frqPrompt = 'Identify the specimen shown in the image.';
           if (isEnt) {
@@ -384,6 +388,10 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             frqPrompt = 'Analyze the remote sensing data shown in the image.';
           } else if (isCircuitLab) {
             frqPrompt = 'Analyze the circuit diagram or measurement shown in the image.';
+          } else if (isDesignerGenes) {
+            frqPrompt = 'Identify the genetic structure or process shown in the image.';
+          } else if (isForensics) {
+            frqPrompt = 'Analyze the forensic evidence shown in the image.';
           }
           
           if (types === 'free-response' || (types === 'both' && Math.random() < 0.5)) {

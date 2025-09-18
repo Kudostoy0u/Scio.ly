@@ -265,7 +265,9 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
             'Water Quality',
             'Remote Sensing',
             'Circuit Lab',
-            'Astronomy'
+            'Astronomy',
+            'Designer Genes',
+            'Forensics'
           ]);
           
           // Handle anatomy events specifically (they use "Anatomy - ..." format but map to "Anatomy & Physiology")
@@ -1091,7 +1093,9 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
                         routerData.eventName === 'Dynamic Planet - Oceanography' ||
                         routerData.eventName === 'Remote Sensing' ||
                         routerData.eventName === 'Circuit Lab' ||
-                        routerData.eventName === 'Astronomy';
+                        routerData.eventName === 'Astronomy' ||
+                        routerData.eventName === 'Designer Genes' ||
+                        routerData.eventName === 'Forensics';
       const requestedIdCount = Math.round((idPct / 100) * total);
       const idCount = supportsId ? requestedIdCount : 0;
       const baseCount = Math.max(0, total - idCount);

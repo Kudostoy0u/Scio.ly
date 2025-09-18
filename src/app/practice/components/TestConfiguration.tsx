@@ -246,7 +246,9 @@ export default function TestConfiguration({
       'Water Quality - Freshwater',
       'Remote Sensing',
       'Circuit Lab',
-      'Astronomy'
+      'Astronomy',
+      'Designer Genes',
+      'Forensics'
     ];
     return candidates.includes(name) || candidates.includes(base);
   })();
