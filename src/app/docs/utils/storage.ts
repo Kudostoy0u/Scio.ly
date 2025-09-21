@@ -83,9 +83,11 @@ export async function getLocalEventMarkdown(slug: string): Promise<string | null
 }
 
 export async function getAnyEventMarkdown(slug: string): Promise<string | null> {
-  const remote = await getEventMarkdown(slug);
-  if (remote) return remote;
-  return getLocalEventMarkdown(slug);
+  // Prefer local repo content first (bundled at build time for SSG),
+  // then fall back to Supabase if available.
+  const local = await getLocalEventMarkdown(slug);
+  if (local) return local;
+  return getEventMarkdown(slug);
 }
 
 
