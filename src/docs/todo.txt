@@ -1,0 +1,35 @@
+# Documentation implementation tracker (Division C preferred; use B if C absent)
+# Status values: untouched | scaffolded | partial | full
+
+anatomy-and-physiology | B,C | full
+astronomy | C | full
+boomilever | B,C | full
+bungee-drop | C | full
+chemistry-lab | C | full
+circuit-lab | B,C | full
+codebusters | B,C | full
+crime-busters | B | partial
+designer-genes | C | partial
+disease-detectives | B,C | full
+dynamic-planet | B,C | full
+electric-vehicle | C | full
+engineering-cad | C | full
+entomology | B,C | full
+experimental-design | B,C | full
+forensics | C | full
+helicopter | B,C | full
+heredity | B | full
+hovercraft | B,C | full
+machines | B,C | full
+materials-science | C | full
+metric-mastery | B | full
+mission-possible | B | full
+meteorology | B | full
+potions-and-poisons | B | full
+remote-sensing | B,C | full
+robot-tour | C | full
+rocks-and-minerals | B,C | full
+scrambler | B | full
+solar-system | B | full
+water-quality | B,C | full
+write-it-do-it | B | full

@@ -1,0 +1,1 @@
+"take this text, and create a folder not meant to be exposed to the public in the src/docs folder, with markdown files. for each markdown file, it should be the rules for a different event (plus a "C" at the end to indicate division c) : [rulebook in text form]"

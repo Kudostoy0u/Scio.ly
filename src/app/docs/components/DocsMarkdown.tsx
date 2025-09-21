@@ -4,8 +4,11 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
+import rehypeSlug from 'rehype-slug';
 import 'katex/dist/katex.min.css';
 import { useTheme } from '@/app/contexts/ThemeContext';
+import { normalizeMath } from '@/lib/utils/markdown';
 
 type DocsMarkdownProps = {
   content: string;
@@ -14,26 +17,10 @@ type DocsMarkdownProps = {
 
 export function DocsMarkdown({ content, withHeadingIds = true }: DocsMarkdownProps) {
   const { darkMode } = useTheme();
-  const headingIdCounts = React.useRef<Record<string, number>>({});
-  React.useEffect(() => {
-    headingIdCounts.current = {};
-  }, [content]);
-
-  const normalizeMath = (input: string): string => {
-
-    let out = input.replace(/\\\[([\s\S]*?)\\\]/g, (_, inner) => `$$${inner}$$`);
-
-    out = out.replace(/\\\(([^]*?)\\\)/g, (_, inner) => `$${inner}$`);
-    return out;
-  };
   const processed = normalizeMath(content);
 
-  const slugify = (s: string) =>
-    s
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .trim()
-      .replace(/\s+/g, '-');
+  // IDs handled by rehypeSlug; no manual counters needed
+
 
   const className = [
     'prose',
@@ -55,50 +42,14 @@ export function DocsMarkdown({ content, withHeadingIds = true }: DocsMarkdownPro
     <div className={className} style={styleVars}>
       <ReactMarkdown
         remarkPlugins={[remarkMath, remarkGfm]}
-        rehypePlugins={[rehypeKatex] as any}
+        rehypePlugins={[rehypeKatex, rehypeSlug, rehypeRaw] as any}
         components={withHeadingIds ? {
-          h1: ({ children }) => {
-            const base = slugify(String(children));
-            const n = (headingIdCounts.current[base] ?? 0) + 1;
-            headingIdCounts.current[base] = n;
-            const id = n > 1 ? `${base}-${n}` : base;
-            return <h1 id={id} className="scroll-mt-24 lg:scroll-mt-28">{children}</h1>;
-          },
-          h2: ({ children }) => {
-            const base = slugify(String(children));
-            const n = (headingIdCounts.current[base] ?? 0) + 1;
-            headingIdCounts.current[base] = n;
-            const id = n > 1 ? `${base}-${n}` : base;
-            return <h2 id={id} className="scroll-mt-24 lg:scroll-mt-28">{children}</h2>;
-          },
-          h3: ({ children }) => {
-            const base = slugify(String(children));
-            const n = (headingIdCounts.current[base] ?? 0) + 1;
-            headingIdCounts.current[base] = n;
-            const id = n > 1 ? `${base}-${n}` : base;
-            return <h3 id={id} className="scroll-mt-24 lg:scroll-mt-28">{children}</h3>;
-          },
-          h4: ({ children }) => {
-            const base = slugify(String(children));
-            const n = (headingIdCounts.current[base] ?? 0) + 1;
-            headingIdCounts.current[base] = n;
-            const id = n > 1 ? `${base}-${n}` : base;
-            return <h4 id={id} className="scroll-mt-24 lg:scroll-mt-28">{children}</h4>;
-          },
-          h5: ({ children }) => {
-            const base = slugify(String(children));
-            const n = (headingIdCounts.current[base] ?? 0) + 1;
-            headingIdCounts.current[base] = n;
-            const id = n > 1 ? `${base}-${n}` : base;
-            return <h5 id={id} className="scroll-mt-24 lg:scroll-mt-28">{children}</h5>;
-          },
-          h6: ({ children }) => {
-            const base = slugify(String(children));
-            const n = (headingIdCounts.current[base] ?? 0) + 1;
-            headingIdCounts.current[base] = n;
-            const id = n > 1 ? `${base}-${n}` : base;
-            return <h6 id={id} className="scroll-mt-24 lg:scroll-mt-28">{children}</h6>;
-          },
+          h1: (props) => <h1 {...props} className={["scroll-mt-24 lg:scroll-mt-28", props.className].filter(Boolean).join(' ')} />,
+          h2: (props) => <h2 {...props} className={["scroll-mt-24 lg:scroll-mt-28", props.className].filter(Boolean).join(' ')} />,
+          h3: (props) => <h3 {...props} className={["scroll-mt-24 lg:scroll-mt-28", props.className].filter(Boolean).join(' ')} />,
+          h4: (props) => <h4 {...props} className={["scroll-mt-24 lg:scroll-mt-28", props.className].filter(Boolean).join(' ')} />,
+          h5: (props) => <h5 {...props} className={["scroll-mt-24 lg:scroll-mt-28", props.className].filter(Boolean).join(' ')} />,
+          h6: (props) => <h6 {...props} className={["scroll-mt-24 lg:scroll-mt-28", props.className].filter(Boolean).join(' ')} />,
         } : undefined}
       >
         {processed}

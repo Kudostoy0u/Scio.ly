@@ -3,11 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getEventBySlug } from '@/app/docs/utils/events2026';
 import { getEventMarkdown } from '@/app/docs/utils/storageClient';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-import 'katex/dist/katex.min.css';
+import { DocsMarkdown } from '@/app/docs/components/DocsMarkdown';
 import { useTheme } from '@/app/contexts/ThemeContext';
 
 const starter = (name: string) => `# ${name} (2026)
@@ -92,10 +88,8 @@ export default function EditEventDocsPage() {
         ) : tab === 'edit' ? (
           <textarea className={`w-full h-[70vh] border rounded p-3 font-mono text-sm ${darkMode ? 'border-gray-700 bg-gray-900 text-gray-100' : 'border-gray-300 bg-white text-gray-900'}`} value={md} onChange={e=>setMd(e.target.value)} />
         ) : (
-          <div className={`prose prose-slate max-w-none border rounded p-4 ${darkMode ? 'prose-invert border-gray-800' : 'border-gray-200'}`}>
-            <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex] as any}>
-              {md}
-            </ReactMarkdown>
+          <div className={`border rounded p-4 ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+            <DocsMarkdown content={md} />
           </div>
         )}
       </div>

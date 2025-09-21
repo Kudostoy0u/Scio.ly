@@ -11,6 +11,7 @@ import TeamShareModal from '../components/TeamShareModal';
 import Link from 'next/link';
 import TestConfiguration from '@/app/practice/components/TestConfiguration';
 import type { Event as PracticeEvent, Settings as PracticeSettings } from '@/app/practice/types';
+import { useInfiniteScroll } from '@/lib/hooks/useInfiniteScroll';
 
 
 type TeamSelection = {
@@ -43,14 +44,10 @@ const DIVISION_C_GROUPS: { label: string; events: string[]; colorKey: string }[]
 ];
 
 
+import { getJsonOnce } from '@/lib/utils/network';
+
 async function loadPublicJson(path: string) {
-  try {
-    const res = await fetch(path);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
-  }
+  return await getJsonOnce(path);
 }
 
 function extractUniqueSchools(meta: any): string[] {
@@ -176,10 +173,7 @@ export default function TeamsDashboard({ initialLinkedSelection, initialSlug, in
       try {
         const url = `/api/teams/group/${initialGroupSlug}`;
         let p = inFlightFetchesRef.current.get(url);
-        if (!p) {
-          p = fetch(url);
-          inFlightFetchesRef.current.set(url, p);
-        }
+        if (!p) { p = fetch(url); inFlightFetchesRef.current.set(url, p); }
         const res = await p;
         if (res.ok) {
           const json = await res.json();
@@ -340,21 +334,9 @@ export default function TeamsDashboard({ initialLinkedSelection, initialSlug, in
     setVisibleCount(40);
   }, [schoolQuery, availableSchools.length]);
 
-  useEffect(() => {
-    const target = loadMoreRef.current;
-    if (!target) return;
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setVisibleCount((c) => Math.min(c + 40, filteredSchools.length));
-        }
-      });
-    }, { root: null, rootMargin: '0px', threshold: 0.1 });
-    observer.observe(target);
-    return () => {
-      observer.disconnect();
-    };
-  }, [filteredSchools.length]);
+  useInfiniteScroll(loadMoreRef.current, () => {
+    setVisibleCount((c) => Math.min(c + 40, filteredSchools.length));
+  });
 
   const isLeader = !!selection?.captain;
   const getMaxSlots = (eventName: string) => (eventName.toLowerCase().includes('codebusters') || eventName.toLowerCase().includes('experimental design') ? 3 : 2);

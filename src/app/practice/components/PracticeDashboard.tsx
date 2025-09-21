@@ -279,6 +279,8 @@ export default function PracticeDashboard() {
       } catch {}
       router.push('/codebusters');
     } else {
+      // ensure old grading results don't carry over to the new test
+      try { localStorage.removeItem('testGradingResults'); } catch {}
       router.push('/test');
     }
   };
@@ -615,7 +617,7 @@ export default function PracticeDashboard() {
           "Forensics": ["Evidence Analysis", "Fingerprints", "DNA", "Toxicology", "Crime Scene"],
           "Heredity": ["Genetics", "DNA", "Proteins", "Evolution", "Population Genetics"],
           "Machines": ["Simple Machines", "Mechanical Advantage", "Efficiency", "Compound Machines", "Design", "unknown"],
-          "Materials Science - Nanomaterials": ["Basics","Quantum Effects","Properties","Classification","Carbon Nanomaterials","Specific Types","Synthesis Methods","Top-Down","Bottom-Up","Microscopy","Spectroscopy","Analysis Techniques","Physical Properties","Mechanical Properties","Thermal Properties","Electronics","Biomedical","Energy","Materials"],
+          "Materials Science - Nanomaterials": ["Types of Nanomaterials", "Structure & Chemistry", "Applications of Nanomaterials", "Optical Properties", "Electrical Properties", "Thermal Properties", "Mechanical Properties", "Magnetic Properties", "Surfaces & Interfaces", "Diffusion & Crystal Defects", "Diffraction & Scattering", "Bottom-Up Synthesis", "Top-Down Synthesis", "Chemistry", "Characterization", "Theory", "Spectroscopy Techniques", "Crystal Defects", "Microscopy Techniques", "UV-Vis Spectroscopy", "Photoluminescence", "Raman Spectroscopy", "EDS", "Mass Spectrometry", "Physical Properties", "Characterization Techniques", "Modeling", "Calculations", "Experimental Methods", "Size Effects on Mechanical Properties", "Plasticity & Dislocations", "Adhesion & Interfaces", "Hardness & Wear", "Advanced Topics", "Fracture & Toughness", "Fatigue & Cyclic Loading", "Extreme Environments", "Scattering", "Absorption", "Plasmons", "Quantum Confinement", "Color", "Luminescence & Fluorescence", "Reflection & Refraction", "Transmission", "Physics of Materials", "Nanomaterials", "Interfaces", "Techniques"],
           "Meteorology": ["Weather Systems", "Clouds", "Precipitation", "Temperature", "Pressure"],
           "Metric Mastery": ["Estimation", "Orders of Magnitude", "Problem Solving", "Scientific Reasoning", "Calculations"],
           "Potions and Poisons": ["Toxicology", "Pharmacology", "Dosage", "Symptoms", "Antidotes"],

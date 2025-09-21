@@ -1,4 +1,5 @@
 "use client";
+import React from 'react';
 import Link from 'next/link';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { DocsMarkdown } from '@/app/docs/components/DocsMarkdown';
@@ -14,6 +15,17 @@ interface EventSubsectionClientProps {
 export function EventSubsectionClient({ evt, sub, md, meta, toc }: EventSubsectionClientProps) {
   const { darkMode } = useTheme();
 
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.location.hash) {
+      const id = decodeURIComponent(window.location.hash.slice(1));
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [md]);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
       <aside className="lg:col-span-3 order-last lg:order-first">
@@ -22,11 +34,27 @@ export function EventSubsectionClient({ evt, sub, md, meta, toc }: EventSubsecti
             <h2 className={`text-sm font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>On this page</h2>
             <Link href={`/docs/${evt.slug}/${sub.slug}/edit`} className={`text-xs font-medium hover:underline ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>Edit</Link>
           </div>
-          <nav className="text-sm">
+          <nav className="text-sm max-h-[calc(100vh-8rem)] overflow-y-auto pr-1">
             <ul className="space-y-2">
               {toc.map(item => (
                 <li key={item.id} className={item.level === 2 ? 'ml-0' : item.level === 3 ? 'ml-4' : item.level >= 4 ? 'ml-8' : ''}>
-                  <a href={`#${item.id}`} className={`hover:underline block py-0.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{item.text}</a>
+                  <a
+                    href={`#${item.id}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const targetId = item.id;
+                      const el = document.getElementById(targetId);
+                      if (el) {
+                        try {
+                          window.location.hash = targetId;
+                        } catch {}
+                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    }}
+                    className={`hover:underline block py-0.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                  >
+                    {item.text}
+                  </a>
                 </li>
               ))}
             </ul>
@@ -35,9 +63,20 @@ export function EventSubsectionClient({ evt, sub, md, meta, toc }: EventSubsecti
       </aside>
 
       <article className="lg:col-span-9 space-y-10">
-        <header className="flex items-center justify-between">
-          <h1 className={`text-3xl font-bold ${darkMode ? 'text-gray-100' : 'text-black'}`}>{evt.name} - {sub.title}</h1>
-          <Link href={`/docs/${evt.slug}/${sub.slug}/edit`} className={`text-sm font-medium hover:underline ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>Edit</Link>
+        <header className="space-y-1">
+          <div className="flex items-center justify-between">
+            <h1 className={`text-3xl font-bold ${darkMode ? 'text-gray-100' : 'text-black'}`}>{evt.name} - {sub.title}</h1>
+            <Link href={`/docs/${evt.slug}/${sub.slug}/edit`} className={`text-sm font-medium hover:underline ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>Edit</Link>
+          </div>
+          <div>
+            <Link
+              href={`/docs/${evt.slug}`}
+              className={`group inline-flex items-center text-base font-medium ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              <span className="transition-transform duration-200 group-hover:-translate-x-1">←</span>
+              <span className="ml-2">Go back</span>
+            </Link>
+          </div>
         </header>
         <section>
           <div className={`rounded-lg border p-4 text-sm ${darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}`}>

@@ -5,7 +5,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
+import { slugifyText } from '@/lib/utils/markdown';
 import { VideoCarousel } from './components/VideoCarousel';
 import { getVideosForCipher } from './data/cipherVideos';
 
@@ -23,14 +25,10 @@ type TabSection = {
 };
 
 function slugifyCipherType(cipherType: string): string {
-  return cipherType
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-');
+  return slugifyText(cipherType);
 }
 
-function parseH2Sections(markdown: string): TabSection[] {
+export function parseH2Sections(markdown: string): TabSection[] {
   const lines = markdown.split(/\r?\n/);
   const sections: TabSection[] = [];
   let currentTitle: string | null = null;
@@ -89,7 +87,7 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
     if (!isOpen) return;
     const controller = new AbortController();
     const slug = slugifyCipherType(cipherType);
-    const url = `/codebusters/ciphers/${slug}.md`;
+    const url = `/api/docs/codebusters/${slug}`;
     setError(null);
     setRawMarkdown('');
     setActiveTabId('');
@@ -170,12 +168,7 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
     }
   };
 
-  const slugify = (text: string) =>
-    text
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .trim()
-      .replace(/\s+/g, '-');
+  const slugify = (text: string) => slugifyText(text);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75" onClick={onClose}>
@@ -266,7 +259,7 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
                 <div className={`prose max-w-none ${darkMode ? 'prose-invert' : ''}`}>
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm, remarkMath]}
-                    rehypePlugins={[rehypeKatex] as any}
+                    rehypePlugins={[rehypeKatex, rehypeRaw] as any}
                     components={{
                       h2: ({ children }) => {
                         const text = Array.isArray(children) ? children.join(' ') : String(children ?? '');
