@@ -1,0 +1,19 @@
+# Event Type Descriptions B
+
+See General Rules, Eye Protection & other Policies on www.soinc.org as they apply to every event.
+
+While a Science Olympiad tournament typically consists of 23 different events, those 23 events can be classified into one of four event types. This information is being provided so that Science Olympiad participants more easily can identify events that they may enjoy competing in regardless of the event content, coaches can approach coaching from the perspective of event type as opposed to event content, and teams can be aware of how the format of the tournament they are intending to compete may affect available events. The symbol to the left of each description has been added to the upper right-hand corner of each Event Rule to identify the event by event type.
+
+Core Knowledge Event: An event where participants are given a set of topics that they are expected to research and master the factual content. Mastery is demonstrated at a tournament by taking a paper-pencil, station, or computer test.
+Core Knowledge Events can be run regardless of the tournament format that has been chosen by the Tournament Director.
+
+Build Event: An event where participants are given some specifications about a device or object they are expected to design, create, and test in advance of the tournament. The devices or objects are often modified on site to account for an unknown parameter prior to testing or evaluation.
+In some cases, Build Events may or may not be run depending upon the format of Science Olympiad tournament being conducted. The Tournament Director will make these decisions to ensure safety and fairness for all teams. If a Build Event is not to be run at a tournament, the Tournament Director will notify all teams in advance of the given tournament.
+
+Laboratory/Hands-On Event: An event where participants are given a general topic in which they will be expected to deepen their content knowledge of the topic and associated research techniques prior to the tournament. At the tournament they will be assessed by the completion of a hands-on task, which may or may not require a written report, within a defined timeframe.
+Depending upon the format of Science Olympiad Tournament being held, there may be some alterations to or cancelation of Lab Events. To the greatest extent possible, Tournament Directors will work to ensure Lab Events are conducted; though, that may mean in some cases participants will be working with previously collected data and hands-on activities will be omitted. The Tournament Director will make these decisions to ensure safety and fairness for all teams. If a Lab Event is altered or not to be run at a tournament, the Tournament Director will notify all teams in advance of the given tournament.
+
+Hybrid Event: An event which contains elements from two, or more, of the above event types in combination. The most common combination mixes elements of a Core Knowledge event with elements of a Building or Lab event.
+As with the previous events, Hybrid Events may be altered to fit the format of the Science Olympiad Tournament being held. This may mean that Lab or Build elements of the event are modified or not conducted. The Tournament Director will make these decisions to ensure safety and fairness for all teams. If a Hybrid Event is not to be run at a tournament, the Tournament Director will notify all teams in advance of the given tournament.
+
+©2026 - B2

@@ -9,8 +9,11 @@ const supabaseAnonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim()
 
 
 let browserClient: ReturnType<typeof createBrowserClient<Database>> | null = null;
-export const supabase = (() => {
+function getClient() {
   if (browserClient) return browserClient;
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('@supabase/ssr: Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  }
   browserClient = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: true,
@@ -21,7 +24,14 @@ export const supabase = (() => {
     db: { schema: 'public' },
   });
   return browserClient;
-})();
+}
+
+export const supabase: ReturnType<typeof getClient> = new Proxy({} as any, {
+  get(_target, prop) {
+    const client = getClient();
+    return (client as any)[prop as any];
+  }
+}) as any;
 
 
 export const getCurrentUser = async () => {

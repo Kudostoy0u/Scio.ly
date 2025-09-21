@@ -137,17 +137,7 @@ const notesheetByName: Record<string, boolean> = {
 
 };
 
-function makeSlug(name: string) {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-}
-
-function wikiUrl(name: string): string {
-  const map: Record<string, string> = {
-    'Write It Do It': 'Write_It,_Do_It',
-  };
-  const title = map[name] ?? name.replace(/ /g, '_');
-  return `https://scioly.org/wiki/index.php/${title}`;
-}
+import { eventSlug as makeSlug, wikiUrl } from '@/app/docs/utils/shared';
 
 const details: Record<string, Partial<DocsEvent>> = {
   'Anatomy and Physiology': {
@@ -165,6 +155,7 @@ const details: Record<string, Partial<DocsEvent>> = {
     ],
     links: [
       { label: 'SciOly Wiki', url: wikiUrl('Anatomy_and_Physiology') },
+      { label: 'See notesheet', url: 'https://docs.google.com/document/d/1726W_qOKBIxzszqFQ3xccaX7OMVibxRYF0BLt-cSoHo/edit?usp=sharing' },
     ],
     materialsNote: 'Typically 2 students; binders/notes allowed per current rules. Bring non-programmable calculator if permitted.',
     subsections: [

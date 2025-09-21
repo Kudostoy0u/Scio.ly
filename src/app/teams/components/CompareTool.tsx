@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { EloData, ComparisonResult } from '../types/elo';
 import { compareSchools, getAllSchools } from '../utils/eloDataProcessor';
+import { stripTrailingParenthetical } from '@/lib/utils/string';
 import { useTheme } from '@/app/contexts/ThemeContext';
 
 interface CompareToolProps {
@@ -283,7 +284,7 @@ const CompareTool: React.FC<CompareToolProps> = ({ eloData }) => {
           <h3 className={`text-lg font-semibold mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Overall Result</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}><strong>{school1.replace(/\s*\([^)]*\)$/, '')}</strong> Win Probability:</span>
+              <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}><strong>{stripTrailingParenthetical(school1)}</strong> Win Probability:</span>
               <div className={`text-lg font-semibold ${getWinPercentageColor(overallResult.school1WinPercentage)}`}>
                 {overallResult.school1WinPercentage.toFixed(1)}%
               </div>
@@ -338,7 +339,7 @@ const CompareTool: React.FC<CompareToolProps> = ({ eloData }) => {
                           {result.school1WinPercentage.toFixed(1)}%
                         </div>
                         <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} max-w-32`}>
-                          {getWinPercentageText(result.school1WinPercentage, school1.replace(/\s*\([^)]*\)$/, ''))}
+                          {getWinPercentageText(result.school1WinPercentage, stripTrailingParenthetical(school1))}
                         </div>
                       </div>
                     </div>
@@ -358,10 +359,10 @@ const CompareTool: React.FC<CompareToolProps> = ({ eloData }) => {
                           Event
                         </th>
                         <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                          <strong>{school1.replace(/\s*\([^)]*\)$/, '')}</strong> Elo
+                          <strong>{stripTrailingParenthetical(school1)}</strong> Elo
                         </th>
                         <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                          <strong>{school2.replace(/\s*\([^)]*\)$/, '')}</strong> Elo
+                          <strong>{stripTrailingParenthetical(school2)}</strong> Elo
                         </th>
                         <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                           <strong>{school1.replace(/\s*\([^)]*\)$/, '')}</strong> Win %
