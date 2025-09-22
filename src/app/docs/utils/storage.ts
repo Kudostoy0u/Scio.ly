@@ -40,42 +40,45 @@ export async function saveEventMarkdown(slug: string, content: string): Promise<
 
 export async function getLocalEventMarkdown(slug: string): Promise<string | null> {
   try {
-    const parts = slug.split('/');
-    const pathMod = await import('node:path');
-    const { readFile, access } = await import('node:fs/promises');
-    const { constants } = await import('node:fs');
+    // First try reading from the filesystem (works at build time / SSG)
+    try {
+      const parts = slug.split('/');
+      const pathMod = await import('node:path');
+      const { readFile, access } = await import('node:fs/promises');
+      const { constants } = await import('node:fs');
 
-    const candidatePaths: string[] = [];
-
-    candidatePaths.push(
-      pathMod.join(process.cwd(), 'src', 'app', 'docs', 'content', '2026', ...parts) + '.md'
-    );
-
-
-    if (parts[0] === 'codebusters' && parts.length >= 2) {
-      const cipher = parts[1];
-
+      const candidatePaths: string[] = [];
       candidatePaths.push(
-        pathMod.join(process.cwd(), 'src', 'app', 'docs', 'content', '2026', 'codebusters', `${cipher}.md`)
+        pathMod.join(process.cwd(), 'src', 'app', 'docs', 'content', '2026', ...parts) + '.md'
       );
-      candidatePaths.push(
-        pathMod.join(process.cwd(), 'src', 'app', 'docs', 'content', '2026', 'codebusters', 'ciphers', `${cipher}.md`)
-      );
-
-      candidatePaths.push(
-        pathMod.join(process.cwd(), 'public', 'codebusters', 'ciphers', `${cipher}.md`)
-      );
-    }
-
-    for (const filePath of candidatePaths) {
-      try {
-        await access(filePath, constants.R_OK);
-        const buf = await readFile(filePath);
-        return buf.toString('utf-8');
-      } catch {
-        // try next candidate
+      if (parts[0] === 'codebusters' && parts.length >= 2) {
+        const cipher = parts[1];
+        candidatePaths.push(
+          pathMod.join(process.cwd(), 'src', 'app', 'docs', 'content', '2026', 'codebusters', `${cipher}.md`)
+        );
+        candidatePaths.push(
+          pathMod.join(process.cwd(), 'src', 'app', 'docs', 'content', '2026', 'codebusters', 'ciphers', `${cipher}.md`)
+        );
+        candidatePaths.push(
+          pathMod.join(process.cwd(), 'public', 'codebusters', 'ciphers', `${cipher}.md`)
+        );
       }
+      for (const filePath of candidatePaths) {
+        try {
+          await access(filePath, constants.R_OK);
+          const buf = await readFile(filePath);
+          return buf.toString('utf-8');
+        } catch {
+          // try next candidate
+        }
+      }
+    } catch {
+      // skip to endpoint fallback
     }
+
+    // Fallback to hitting the served file endpoint (works on serverless at runtime)
+    const res = await fetch(`/docs/content/2026/${slug}.md`, { cache: 'no-store' as RequestCache });
+    if (res.ok) return await res.text();
     return null;
   } catch {
     return null;
