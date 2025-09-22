@@ -13,7 +13,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ slug: string[]
     let filename = last.endsWith('.md') ? last : `${last}.md`;
     const filePath = path.join(process.cwd(), 'src', 'app', 'docs', 'content', '2026', ...fsParts, filename);
     const buf = await fs.readFile(filePath);
-    return new NextResponse(buf, {
+    const text = buf.toString('utf-8');
+    return new NextResponse(text, {
       status: 200,
       headers: {
         'Content-Type': 'text/markdown; charset=utf-8',
