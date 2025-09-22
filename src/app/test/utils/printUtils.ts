@@ -294,7 +294,7 @@ export const createTestPrintContent = (config: TestPrintConfig, printStyles: str
       window.PagedConfig = {
         auto: false,
         after: (flow) => {
-          console.log("Rendered", flow.total, "pages.");
+          import('@/lib/utils/logger').then(m => m.default.log('Rendered pages', flow.total)).catch(()=>{});
           
           // Create a prominent print instruction
           const printInstructions = document.createElement('div');
@@ -323,14 +323,14 @@ export const createTestPrintContent = (config: TestPrintConfig, printStyles: str
       
       // Handle print dialog events
       window.addEventListener('beforeprint', () => {
-        console.log('Print dialog opened');
+        import('@/lib/utils/logger').then(m => m.default.log('Print dialog opened')).catch(()=>{});
         // Hide the instructions when printing
         const instructions = document.querySelector('div[style*="position: fixed"]');
         if (instructions) instructions.style.display = 'none';
       });
       
       window.addEventListener('afterprint', () => {
-        console.log('Print dialog closed');
+        import('@/lib/utils/logger').then(m => m.default.log('Print dialog closed')).catch(()=>{});
         // Show the instructions again after printing
         const instructions = document.querySelector('div[style*="position: fixed"]');
         if (instructions) instructions.style.display = 'block';
@@ -387,7 +387,7 @@ export const setupTestPrintWindow = (printContent: string): Promise<Window> => {
             printWindow.focus(); 
             printWindow.print(); 
           } catch (e) { 
-            console.warn('Immediate auto-print failed', e); 
+            import('@/lib/utils/logger').then(m => m.default.warn('Immediate auto-print failed', e)).catch(()=>{}); 
           }
         }, 200);
 
@@ -441,7 +441,7 @@ export const setupTestPrintWindow = (printContent: string): Promise<Window> => {
           if (cbtn) cbtn.addEventListener('click', () => printWindow.close());
         } catch (e) {
           // ignore dom injection errors
-          console.error('Failed to inject banner into print window', e);
+          import('@/lib/utils/logger').then(m => m.default.error('Failed to inject banner into print window', e)).catch(()=>{});
         }
 
 
@@ -476,7 +476,7 @@ export const createTestInPagePrint = async (config: TestPrintConfig, printStyles
         window.PagedConfig = {
           auto: false,
           after: (flow) => {
-            console.log("Rendered", flow.total, "pages.");
+            import('@/lib/utils/logger').then(m => m.default.log('Rendered pages', flow.total)).catch(()=>{});
             
             // Create a prominent print instruction
             const printInstructions = document.createElement('div');
@@ -505,14 +505,14 @@ export const createTestInPagePrint = async (config: TestPrintConfig, printStyles
         
         // Handle print dialog events
         window.addEventListener('beforeprint', () => {
-          console.log('Print dialog opened');
+          import('@/lib/utils/logger').then(m => m.default.log('Print dialog opened')).catch(()=>{});
           // Hide the instructions when printing
           const instructions = document.querySelector('div[style*="position: fixed"]');
           if (instructions) instructions.style.display = 'none';
         });
         
         window.addEventListener('afterprint', () => {
-          console.log('Print dialog closed');
+          import('@/lib/utils/logger').then(m => m.default.log('Print dialog closed')).catch(()=>{});
           // Show the instructions again after printing
           const instructions = document.querySelector('div[style*="position: fixed"]');
           if (instructions) instructions.style.display = 'block';
@@ -551,7 +551,7 @@ export const createTestInPagePrint = async (config: TestPrintConfig, printStyles
         printWindow.focus(); 
         printWindow.print(); 
       } catch (e) { 
-        console.warn('Immediate auto-print failed', e); 
+        import('@/lib/utils/logger').then(m => m.default.warn('Immediate auto-print failed', e)).catch(()=>{}); 
       }
     }, 200);
 
@@ -603,7 +603,7 @@ export const createTestInPagePrint = async (config: TestPrintConfig, printStyles
       });
       if (cbtn) cbtn.addEventListener('click', () => printWindow.close());
     } catch (e) {
-      console.error('Failed to inject banner into print window', e);
+      import('@/lib/utils/logger').then(m => m.default.error('Failed to inject banner into print window', e)).catch(()=>{});
     }
 
 

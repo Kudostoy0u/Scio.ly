@@ -111,13 +111,19 @@ export default function TestSummary({ data, userAnswers, gradingResults, darkMod
   const subtopics = [...new Set(allSubtopics)].filter(Boolean);
   
 
-  if (data.length > 0 && subtopics.length === 0) {
-    console.log('Debug: First question structure:', data[0]);
-    console.log('Debug: All questions subtopic fields:', data.map(q => ({ 
-      subtopic: q.subtopic, 
-      subtopics: q.subtopics 
-    })));
-  }
+  useEffect(() => {
+    if (data.length > 0 && subtopics.length === 0) {
+      import('@/lib/utils/logger').then(m => {
+        const logger = m.default;
+        logger.log('Debug: First question structure:', data[0]);
+        logger.log('Debug: All questions subtopic fields:', data.map(q => ({ 
+          subtopic: (q as any).subtopic, 
+          subtopics: (q as any).subtopics 
+        })));
+      }).catch(()=>{});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.length]);
 
   const items: SummaryItem[] = [
     { 

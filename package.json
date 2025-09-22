@@ -13,7 +13,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:init": "node scripts/init-db.js"
+    "db:init": "node scripts/init-db.js",
+    "analyze:long": "node scripts/find-long-files.mjs",
+    "analyze:long:json": "node scripts/find-long-files.mjs --json"
   },
   "dependencies": {
     "@google/genai": "1.14.0",

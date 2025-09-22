@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import logger from '@/lib/utils/logger';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { supabase } from '@/lib/supabase';
@@ -51,6 +52,8 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   const RATE_LIMIT_DELAY = 2000;
   const [gradingResults, setGradingResults] = useState<GradingResults>({});
   const [isMounted, setIsMounted] = useState(false);
+  const ssrAppliedRef = useRef(false);
+  const mountLoggedRef = useRef(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [inputCode, setInputCode] = useState<string>('');
   const [bookmarkedQuestions, setBookmarkedQuestions] = useState<Record<string, boolean>>({});
@@ -63,12 +66,141 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   const isClient = typeof window !== 'undefined';
   const previewSearch = isClient ? new URLSearchParams(window.location.search) : null;
   const isPreviewMode = !!(previewSearch && previewSearch.get('preview') === '1');
+  const buildAbsoluteUrl = (src?: string): string | undefined => {
+    if (!src) return undefined;
+    try {
+      if (/^https?:\/\//i.test(src)) return src;
+      if (isClient && src.startsWith('/')) return `${window.location.origin}${src}`;
+      return src;
+    } catch {
+      return src;
+    }
+  };
+
+  const normalizeQuestionMedia = (qs: Question[]): Question[] => {
+    return qs.map((q: any) => {
+      const out: any = { ...q };
+      // Prefer explicit imageData, else imageUrl, else images[0]
+      let candidate: string | undefined = out.imageData || out.imageUrl;
+      if (!candidate && Array.isArray(out.images) && out.images.length > 0) {
+        const pick = out.images[Math.floor(Math.random() * out.images.length)];
+        if (typeof pick === 'string') candidate = pick;
+      }
+      const abs = buildAbsoluteUrl(candidate);
+      if (abs) {
+        out.imageData = abs;
+        if (!out.imageUrl) out.imageUrl = abs;
+      }
+      return out as Question;
+    });
+  };
+
+  const fetchIdQuestionsForParams = async (routerParams: any, idCount: number): Promise<Question[]> => {
+    if (idCount <= 0) return [];
+    const isOffline = !navigator.onLine;
+    let source: any[] = [];
+    if (isOffline) {
+      logger.log('ID questions not available offline');
+      return [];
+    }
+    try {
+      const params = new URLSearchParams();
+      params.set('event', routerParams.eventName || '');
+      params.set('limit', String(idCount));
+      if (routerParams.types === 'multiple-choice') params.set('question_type', 'mcq');
+      if (routerParams.types === 'free-response') params.set('question_type', 'frq');
+      if (routerParams.difficulties && routerParams.difficulties.length > 0) {
+        const allRanges = routerParams.difficulties.map((d: string) => difficultyRanges[d]).filter(Boolean);
+        if (allRanges.length > 0) {
+          const minValue = Math.min(...allRanges.map((r: any) => r.min));
+          const maxValue = Math.max(...allRanges.map((r: any) => r.max));
+          params.set('difficulty_min', minValue.toFixed(2));
+          params.set('difficulty_max', maxValue.toFixed(2));
+        }
+      }
+      if (routerParams.subtopics && routerParams.subtopics.length > 0) {
+        params.set('subtopics', routerParams.subtopics.join(','));
+      }
+      const resp = await fetch(`${api.idQuestions}?${params.toString()}`);
+      const json = await resp.json();
+      source = Array.isArray(json?.data) ? json.data : [];
+      logger.log('ID API (SSR top-up) ok', { count: source.length, event: routerParams.eventName });
+    } catch (e) {
+      logger.warn('ID API (SSR top-up) failed', e);
+    }
+    const idQs: Question[] = source.map((row: any) => ({
+      id: row.id,
+      question: row.question,
+      options: row.options || [],
+      answers: row.answers || [],
+      difficulty: row.difficulty ?? 0.5,
+      event: row.event,
+      subtopics: row.subtopics || [],
+      imageData: buildAbsoluteUrl(Array.isArray(row.images) && row.images.length ? row.images[Math.floor(Math.random()*row.images.length)] : undefined),
+    }));
+    return normalizeQuestionMedia(idQs).slice(0, idCount);
+  };
+
 
 
   const stableRouterData = useMemo(() => initialRouterData || {}, [initialRouterData]);
 
 
   useEffect(() => {
+    // Short-circuit if SSR provided data
+    if (ssrAppliedRef.current) return;
+    if (Array.isArray(initialData) && initialData.length > 0 && isLoading && !fetchCompletedRef.current) {
+      ssrAppliedRef.current = true;
+      logger.log('short-circuit: applying SSR initialData', { count: initialData.length });
+      // If the event supports ID questions and types require images, prefetch ID questions to ensure image items present on first load
+      const paramsStr = localStorage.getItem('testParams');
+      const routerParams = (initialRouterData && Object.keys(initialRouterData).length > 0)
+        ? initialRouterData
+        : (paramsStr ? JSON.parse(paramsStr) : {});
+      const total = parseInt((routerParams?.questionCount as string) || '10');
+      const idPctRaw = (routerParams as any)?.idPercentage;
+      const idPct = typeof idPctRaw !== 'undefined' ? Math.max(0, Math.min(100, parseInt(idPctRaw))) : 0;
+      const requestedIdCount = Math.round((idPct / 100) * total);
+      // const baseCount = Math.max(0, total - requestedIdCount);
+      const useId = requestedIdCount > 0;
+
+      (async () => {
+        // Normalize and tag base
+        const baseQs = normalizeQuestionMedia((initialData as Question[]).map((q, idx) => ({ ...q, originalIndex: idx })));
+        if (!useId) {
+          setData(baseQs);
+          setIsLoading(false);
+          fetchCompletedRef.current = true;
+          return;
+        }
+        try {
+          const idQs = await fetchIdQuestionsForParams(routerParams, requestedIdCount);
+          const desiredId = Math.min(requestedIdCount, idQs.length);
+          const baseSlots = Math.max(0, total - desiredId);
+          const pickedBase = shuffleArray(baseQs).slice(0, baseSlots);
+          const pickedId = shuffleArray(idQs).slice(0, desiredId);
+          const merged = shuffleArray(pickedBase.concat(pickedId)).map((q, idx) => ({ ...q, originalIndex: idx }));
+          setData(merged);
+          localStorage.setItem('testQuestions', JSON.stringify(merged));
+        } catch {
+          setData(baseQs);
+        } finally {
+          setIsLoading(false);
+          fetchCompletedRef.current = true;
+        }
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData]);
+
+  useEffect(() => {
+    if (!mountLoggedRef.current) {
+      mountLoggedRef.current = true;
+      logger.log('useTestState mount', {
+        initialDataLen: Array.isArray(initialData) ? initialData.length : 0,
+        hasInitialRouterData: !!initialRouterData && Object.keys(initialRouterData || {}).length > 0,
+      });
+    }
     setIsMounted(true);
     if (localStorage.getItem("loaded")) {
       localStorage.removeItem('testUserAnswers')
@@ -86,7 +218,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     if (storedGrading) {
       try { setGradingResults(JSON.parse(storedGrading)); } catch {}
     }
-  }, []);
+  }, [initialData, initialRouterData]);
 
   // If in preview mode, auto-fill answers with correct ones (all correct for multi-select) and mark submitted once data is loaded
   useEffect(() => {
@@ -148,9 +280,16 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
 
 
     const storedParams = localStorage.getItem('testParams');
-    const routerParams = stableRouterData || (storedParams ? JSON.parse(storedParams) : {});
+    const hasInitial = stableRouterData && Object.keys(stableRouterData).length > 0;
+    const routerParams = hasInitial
+      ? stableRouterData
+      : (storedParams ? JSON.parse(storedParams) : {});
+    logger.log('init routerParams', { hasInitial, routerParams, hasStoredParams: !!storedParams });
     if (!routerParams || Object.keys(routerParams).length === 0) {
-      router.push('/');
+      logger.warn('empty routerParams; staying on page with friendly message');
+      setFetchError('No test parameters found. Go to Practice to start a test.');
+      setIsLoading(false);
+      fetchCompletedRef.current = true;
       return;
     }
     setRouterData(routerParams);
@@ -203,17 +342,28 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
 
     // Prefer explicitly shared/local stored questions (from share code) over SSR initialData
     if (storedQuestions) {
-      const parsedQuestions = JSON.parse(storedQuestions);
-      setData(parsedQuestions);
-      setIsLoading(false);
-      fetchCompletedRef.current = true;
-      return;
+      try {
+        const parsedQuestions = JSON.parse(storedQuestions);
+        const hasQuestions = Array.isArray(parsedQuestions) && parsedQuestions.length > 0;
+        if (hasQuestions) {
+          setData(normalizeQuestionMedia(parsedQuestions));
+          setIsLoading(false);
+          fetchCompletedRef.current = true;
+          logger.log('loaded questions from localStorage', { count: parsedQuestions.length });
+          return;
+        } else {
+          // Ignore empty cache
+          logger.warn('ignoring empty testQuestions cache');
+          localStorage.removeItem('testQuestions');
+        }
+      } catch {}
     }
 
     if (Array.isArray(initialData) && initialData.length > 0) {
-      setData(initialData as Question[]);
+      setData(normalizeQuestionMedia(initialData as Question[]));
       setIsLoading(false);
       fetchCompletedRef.current = true;
+      logger.log('using initialData from SSR', { count: initialData.length });
       return;
     }
 
@@ -248,6 +398,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     }
   
     const fetchData = async () => {
+      logger.log('fetchData start');
       try {
         const total = parseInt(routerParams.questionCount || '10');
         const idPctRaw = (routerParams as any).idPercentage;
@@ -299,9 +450,9 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
             const apiUrl = `${api.questions}?${params}`;
             let pool: Question[] = [];
             try {
-              console.log(`Fetching Anatomy & Physiology questions for subtopic: ${sub} as event Anatomy - ${sub}`);
+          logger.log(`Fetching Anatomy & Physiology questions`, { sub });
               const r = await fetch(apiUrl).catch((error) => {
-                console.error(`Failed to fetch questions for ${sub}:`, error);
+                logger.error(`Failed to fetch questions for ${sub}:`, error);
                 return null;
               });
               if (r && r.ok) {
@@ -316,12 +467,12 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
                 });
                 // Shuffle pool to ensure variety across requests
                 pool = shuffleArray(pool);
-                console.log(`Successfully fetched ${pool.length} questions for Anatomy - ${sub}`);
+                logger.log(`Fetched questions for subtopic`, { sub, count: pool.length });
               } else {
-                console.error(`API request failed for Anatomy - ${sub}:`, r?.status, r?.statusText);
+                logger.error(`API request failed for subtopic`, { sub, status: r?.status, statusText: r?.statusText });
               }
             } catch (error) {
-              console.error(`Exception fetching questions for Anatomy - ${sub}:`, error);
+              logger.error(`Exception fetching questions for subtopic`, { sub, error });
             }
             return pool;
           };
@@ -332,8 +483,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
             fetchPoolFor('Sense Organs'),
           ]);
 
-          console.log(`Anatomy & Physiology pools: Endocrine=${poolEndo.length}, Nervous=${poolNerv.length}, Sense Organs=${poolSense.length}`);
-          console.log(`Target thirds: Endocrine=${wants[0]}, Nervous=${wants[1]}, Sense Organs=${wants[2]}`);
+          logger.log('Anatomy pools', { endocrine: poolEndo.length, nervous: poolNerv.length, sense: poolSense.length, wants });
 
           const normalizeText = (t: string) => normalizeQuestionText(t).trim().toLowerCase();
           const takenTexts = new Set<string>();
@@ -365,7 +515,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           }
 
           selectedQuestions = pickedAll.slice(0, countTarget);
-          console.log(`Anatomy & Physiology final picked: ${selectedQuestions.length} questions`);
+          logger.log('Anatomy final picked', { selected: selectedQuestions.length });
         }
 
         // 1) base (non-id) questions from regular endpoint
@@ -434,8 +584,8 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           }
           
           const allQuestions = apiResponse.data || [];
-          const questions: Question[] = allQuestions;
-          console.log(`Question filtering: ${allQuestions.length} total questions, ${questions.length} questions after filtering (quality filtering removed)`);
+          const questions: Question[] = normalizeQuestionMedia(allQuestions);
+          logger.log('Question filtering counts', { total: allQuestions.length, filtered: questions.length });
           selectedQuestions = shuffleArray(questions).slice(0, baseCount);
         }
 
@@ -446,7 +596,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           
           if (isOffline) {
 
-            console.log('ID questions not available in offline mode');
+            logger.log('ID questions not available in offline mode');
           } else {
 
             try {
@@ -483,15 +633,15 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
               const resp = await fetch(`${api.idQuestions}?${params.toString()}`);
               const json = await resp.json();
               source = Array.isArray(json?.data) ? json.data : [];
-              console.log(`[ID QUESTIONS DEBUG] API returned ${source.length} questions for ${routerParams.eventName} with filtering`);
+              logger.log('ID API ok', { count: source.length, event: routerParams.eventName });
             } catch {
-              console.log('Failed to fetch ID questions, continuing without them');
+              logger.warn('Failed to fetch ID questions, continuing without them');
             }
           }
           
 
           // No need for client-side filtering since API now handles it
-          console.log(`[ID QUESTIONS DEBUG] Using all ${source.length} questions from API (filtering done server-side)`);
+          logger.log('ID using from API', { count: source.length });
           const idQuestions: Question[] = source.map((row: any) => ({
             id: row.id,
             question: row.question,
@@ -500,11 +650,11 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
             difficulty: row.difficulty ?? 0.5,
             event: row.event,
             subtopics: row.subtopics || [],
-            imageData: Array.isArray(row.images) && row.images.length ? row.images[Math.floor(Math.random()*row.images.length)] : undefined,
+            imageData: buildAbsoluteUrl(Array.isArray(row.images) && row.images.length ? row.images[Math.floor(Math.random()*row.images.length)] : undefined),
           }));
 
           const pickedId = shuffleArray(idQuestions).slice(0, idCount);
-          console.log(`[ID QUESTIONS DEBUG] Selected ${pickedId.length}/${idQuestions.length} ID questions for final test (requested ${idCount})`);
+          logger.log('ID selected', { picked: pickedId.length, total: idQuestions.length, requested: idCount });
 
           selectedQuestions = selectedQuestions.concat(pickedId);
         }
@@ -516,7 +666,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           
           if (isOffline) {
 
-            console.log(`Offline mode: only ${selectedQuestions.length} questions available, need ${total}`);
+            logger.log('Offline mode need top-up', { have: selectedQuestions.length, total });
           } else {
 
             try {
@@ -528,7 +678,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
               const extras: Question[] = (j2?.data || []);
               selectedQuestions = selectedQuestions.concat(shuffleArray(extras).slice(0, need));
             } catch {
-              console.log('Failed to fetch additional questions for top-up');
+              logger.warn('Failed to fetch additional questions for top-up');
             }
           }
         }
@@ -562,12 +712,12 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           }
           return out;
         };
-        console.log(`[ID QUESTIONS DEBUG] Before deduplication: ${selectedQuestions.length} total questions`);
+        logger.log('Before deduplication', { count: selectedQuestions.length });
         selectedQuestions = dedupeByTextFinal(dedupeByIdFinal(selectedQuestions));
-        console.log(`[ID QUESTIONS DEBUG] After deduplication: ${selectedQuestions.length} total questions`);
+        logger.log('After deduplication', { count: selectedQuestions.length });
         const shuffledFinal = shuffleArray(selectedQuestions).slice(0, total);
-        console.log(`[ID QUESTIONS DEBUG] Final questions after slicing to ${total}: ${shuffledFinal.length} questions`);
-        const questionsWithIndex = shuffledFinal.map((q, idx) => ({ ...q, originalIndex: idx }));
+        logger.log('Final slice count', { total, count: shuffledFinal.length });
+        const questionsWithIndex = normalizeQuestionMedia(shuffledFinal).map((q, idx) => ({ ...q, originalIndex: idx }));
         
         // Special split for Anatomy & Physiology rotating subtopics across thirds
         try {
@@ -638,7 +788,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         localStorage.setItem('testQuestions', JSON.stringify(questionsWithIndex));
         setData(questionsWithIndex);
       } catch (error) {
-        console.error('Failed to load questions:', error);
+        logger.error('Failed to load questions:', error);
         console.error('Router params:', routerParams);
         console.error('Event name:', routerParams.eventName);
         console.error('Is Anatomy & Physiology:', (routerParams.eventName || '') === 'Anatomy & Physiology');
@@ -1257,7 +1407,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
       }
 
 
-      const finalQuestions = shuffleArray(selectedQuestions).slice(0, total);
+      const finalQuestions = normalizeQuestionMedia(shuffleArray(selectedQuestions).slice(0, total));
       
       // ========================================
 

@@ -11,8 +11,23 @@ export async function GET(_req: Request, ctx: { params: Promise<{ slug: string[]
     const last = parts[parts.length - 1];
     const fsParts = parts.slice(0, -1);
     const filename = last.endsWith('.md') ? last : `${last}.md`;
-    const filePath = path.join(process.cwd(), 'src', 'app', 'docs', 'content', '2026', ...fsParts, filename);
-    const buf = await fs.readFile(filePath);
+    const baseDir = path.join(process.cwd(), 'src', 'app', 'docs', 'content', '2026');
+    const candidates: string[] = [];
+    // Exact path based on requested segments
+    candidates.push(path.join(baseDir, ...fsParts, filename));
+    // Codebusters cipher fallback: /codebusters/ciphers/<name>.md
+    if (parts[0] === 'codebusters') {
+      candidates.push(path.join(baseDir, 'codebusters', 'ciphers', filename));
+    }
+
+    let buf: Buffer | null = null;
+    for (const p of candidates) {
+      try {
+        buf = await fs.readFile(p);
+        break;
+      } catch {}
+    }
+    if (!buf) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     const text = buf.toString('utf-8');
     return new NextResponse(text, {
       status: 200,
