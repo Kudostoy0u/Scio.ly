@@ -24,7 +24,7 @@ export default function PracticeDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sortOption, setSortOption] = useState('alphabetical');
-  const [continueInfo, setContinueInfo] = useState<{ eventName: string; route: '/test' | '/codebusters' } | null>(null);
+  const [continueInfo, setContinueInfo] = useState<{ eventName: string; route: '/test' | '/codebusters'; label: string } | null>(null);
   const [panelHeight, setPanelHeight] = useState<number | null>(null);
   const [isLarge, setIsLarge] = useState<boolean>(false);
   const [isOffline, setIsOffline] = useState<boolean>(false);
@@ -167,12 +167,14 @@ export default function PracticeDashboard() {
     if (typeof window === 'undefined') return;
     try {
       const sessionStr = localStorage.getItem('currentTestSession');
+      const isSubmittedFlag = localStorage.getItem('testSubmitted') === 'true';
       const session = sessionStr ? JSON.parse(sessionStr) as { eventName?: string; isSubmitted?: boolean } : null;
 
       // 1) Active session takes precedence
-      if (session && !session.isSubmitted && session.eventName) {
+      if (session && session.eventName) {
         const route: '/test' | '/codebusters' = session.eventName === 'Codebusters' ? '/codebusters' : '/test';
-        setContinueInfo({ eventName: session.eventName, route });
+        const label = (session.isSubmitted || isSubmittedFlag) ? `View results for ${session.eventName}?` : `Continue test for ${session.eventName}?`;
+        setContinueInfo({ eventName: session.eventName, route, label });
         return;
       }
 
@@ -204,15 +206,17 @@ export default function PracticeDashboard() {
       }
 
       // 4) Prefer general progress over legacy Codebusters leftovers when both exist
-      if (hasGeneralProgress) {
+      if (hasGeneralProgress || testSubmitted) {
         const params = localStorage.getItem('testParams');
         const eventName = (() => { try { const p = params ? JSON.parse(params) : undefined; return (p?.eventName as string | undefined) || 'Practice Test'; } catch { return 'Practice Test'; } })();
-        setContinueInfo({ eventName, route: '/test' });
+        const label = testSubmitted ? `View results for ${eventName}?` : `Continue test for ${eventName}?`;
+        setContinueInfo({ eventName, route: '/test', label });
         return;
       }
 
-      if (hasCodebustersProgress) {
-        setContinueInfo({ eventName: 'Codebusters', route: '/codebusters' });
+      if (hasCodebustersProgress || cbSubmitted) {
+        const label = cbSubmitted ? 'View results for Codebusters?' : 'Continue test for Codebusters?';
+        setContinueInfo({ eventName: 'Codebusters', route: '/codebusters', label });
         return;
       }
 
@@ -282,7 +286,10 @@ export default function PracticeDashboard() {
       router.push('/codebusters');
     } else {
       // ensure old grading results don't carry over to the new test
-      try { localStorage.removeItem('testGradingResults'); } catch {}
+      try {
+        localStorage.removeItem('testGradingResults');
+        localStorage.removeItem('testSubmitted');
+      } catch {}
       router.push('/test');
     }
   };
@@ -750,7 +757,7 @@ export default function PracticeDashboard() {
                   : 'bg-transparent border-yellow-500/70 text-yellow-700 hover:border-yellow-500'
               }`}
             >
-              <span>{`Continue test for ${continueInfo.eventName}?`}</span>
+              <span>{continueInfo.label}</span>
               <ArrowUpRight
                 className="w-4 h-4 transform transition-transform duration-200 rotate-45 group-hover:rotate-0"
               />

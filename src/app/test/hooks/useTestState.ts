@@ -86,6 +86,21 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           if (hasQs) {
             const normalized = normalizeQuestionMedia(parsed as Question[]);
             setData(normalized);
+            // Restore submitted state and grading/user answers if present
+            try {
+              const session = getCurrentTestSession();
+              if (session) {
+                setIsSubmitted(session.isSubmitted);
+              }
+              const storedAnswers = localStorage.getItem('testUserAnswers');
+              if (storedAnswers) {
+                try { setUserAnswers(JSON.parse(storedAnswers)); } catch {}
+              }
+              const storedGrades = localStorage.getItem('testGradingResults');
+              if (storedGrades) {
+                try { setGradingResults(JSON.parse(storedGrades)); } catch {}
+              }
+            } catch {}
             setIsLoading(false);
             fetchCompletedRef.current = true;
             logger.log('resume from localStorage before SSR', { count: normalized.length });
@@ -116,6 +131,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         const baseQs = normalizeQuestionMedia((initialData as Question[]).map((q, idx) => ({ ...q, originalIndex: idx })));
         if (!useId) {
           setData(baseQs);
+          try { localStorage.setItem('testQuestions', JSON.stringify(baseQs)); } catch {}
           setIsLoading(false);
           fetchCompletedRef.current = true;
           return;
@@ -273,6 +289,19 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         const storedGrading = localStorage.getItem('testGradingResults');
         if (storedGrading) {
           try { setGradingResults(JSON.parse(storedGrading)); } catch {}
+        }
+        const storedQuestions = localStorage.getItem('testQuestions');
+        if (storedQuestions) {
+          try {
+            const parsedQuestions = JSON.parse(storedQuestions);
+            if (Array.isArray(parsedQuestions) && parsedQuestions.length > 0) {
+              setData(normalizeQuestionMedia(parsedQuestions));
+              setIsLoading(false);
+              fetchCompletedRef.current = true;
+              logger.log('resume submitted test from localStorage', { count: parsedQuestions.length });
+              return;
+            }
+          } catch {}
         }
       }
     }
@@ -855,6 +884,17 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
 
   const handleSubmit = useCallback(async () => {
     setIsSubmitted(true);
+    try {
+      const session = getCurrentTestSession();
+      if (session && !session.isSubmitted) {
+        markTestSubmitted();
+      } else if (!session) {
+        // Ensure a session exists so submitted state persists
+        initializeTestSession(routerData.eventName || 'Unknown Event', parseInt((routerData.timeLimit as string) || '30'), false);
+        markTestSubmitted();
+      }
+      localStorage.setItem('testSubmitted', 'true');
+    } catch {}
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
     interface FRQToGrade {
