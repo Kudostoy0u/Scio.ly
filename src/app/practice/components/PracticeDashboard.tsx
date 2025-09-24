@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -631,7 +633,7 @@ export default function PracticeDashboard() {
         window.eventSubtopicsMapping = eventSubtopics;
 
       } catch (err) {
-        console.error('Error fetching data:', err);
+        logger.error('Error fetching data:', err);
         setError('Failed to load events. Please try again later.');
       } finally {
         setLoading(false);
@@ -671,7 +673,7 @@ export default function PracticeDashboard() {
           } catch {}
         }
       } catch (err) {
-        console.error('Error loading all events:', err);
+        logger.error('Error loading all events:', err);
         setError('Failed to load events. Please try again later.');
       } finally {
         setLoading(false);

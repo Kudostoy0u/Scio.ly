@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
@@ -112,7 +114,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
         }
       }
       
-      console.log('🔍 [TAMPER-CHECK]', {
+      logger.log('🔍 [TAMPER-CHECK]', {
         questionChanged,
         optionsChanged, 
         answersChanged,
@@ -122,7 +124,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
       });
       
       if (questionChanged || optionsChanged || answersChanged) {
-        console.log('🚨 [TAMPER-DETECTED] Setting suggestionsTampered to true');
+        logger.log('🚨 [TAMPER-DETECTED] Setting suggestionsTampered to true');
         setSuggestionsTampered(true);
       }
     }
@@ -151,13 +153,13 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
   const computeCorrectAnswerIndices = (options: string[], answers: unknown[]): number[] => {
     if (!Array.isArray(options) || options.length === 0 || !Array.isArray(answers)) return [];
 
-    console.log('🔍 [COMPUTE-INDICES] Input:', { options, answers });
+    logger.log('🔍 [COMPUTE-INDICES] Input:', { options, answers });
 
     const zeroBasedNums = answers
       .map(a => (typeof a === 'number' ? a : (typeof a === 'string' && /^\d+$/.test(a) ? parseInt(a, 10) : null)))
       .filter((n): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n < options.length);
     if (zeroBasedNums.length > 0) {
-      console.log('🔍 [COMPUTE-INDICES] Using numeric indices:', zeroBasedNums);
+      logger.log('🔍 [COMPUTE-INDICES] Using numeric indices:', zeroBasedNums);
       return Array.from(new Set(zeroBasedNums)).sort((a, b) => a - b);
     }
 
@@ -166,13 +168,13 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
       .map(a => {
         const str = String(a);
         const idx = lowerOptions.indexOf(str.toLowerCase());
-        console.log('🔍 [COMPUTE-INDICES] Text match:', { searchFor: str, foundAt: idx, inOptions: lowerOptions });
+        logger.log('🔍 [COMPUTE-INDICES] Text match:', { searchFor: str, foundAt: idx, inOptions: lowerOptions });
         return idx >= 0 ? idx : null;
       })
       .filter((x): x is number => typeof x === 'number');
     
     const result = Array.from(new Set(indices)).sort((a, b) => a - b);
-    console.log('🔍 [COMPUTE-INDICES] Final result:', result);
+    logger.log('🔍 [COMPUTE-INDICES] Final result:', result);
     return result;
   };
 
@@ -223,7 +225,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
       setSuggestionsTampered(false);
       toast.success('AI suggestions applied automatically');
     } catch (error) {
-      console.error('Failed to get suggestions:', error);
+      logger.error('Failed to get suggestions:', error);
       toast.error('Failed to generate suggestions. Please continue manually.');
     } finally {
       setIsLoadingSuggestions(false);
@@ -262,7 +264,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
         toast.info('Judging edits');
       }
 
-      console.log('🔍 [EDIT-MODAL] Bypass check:', {
+      logger.log('🔍 [EDIT-MODAL] Bypass check:', {
         aiSuggestionsApplied,
         suggestionsTampered,
         canBypassValidation
@@ -294,11 +296,11 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
           }
         })
         .catch((error) => {
-          console.error('Error processing edit:', error);
+          logger.error('Error processing edit:', error);
           toast.error('An unexpected error occurred.');
         });
     } catch (error) {
-      console.error('Error processing edit:', error);
+      logger.error('Error processing edit:', error);
       toast.error('An unexpected error occurred.');
     } finally {
       setIsProcessing(false);

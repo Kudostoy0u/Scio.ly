@@ -3,27 +3,8 @@ Participants apply investigative and analytical skills to the scientific study o
 
 This event rewards clear reasoning grounded in epidemiologic methods. You will define and classify cases, orient data by person–place–time, propose hypotheses consistent with the evidence, and select appropriate analytic approaches to test those hypotheses. You may be provided signs/symptoms, causative agents, or incubation periods as supportive background, but the task is to use such inputs to reason through the scenario—e.g., to frame a plausible transmission pathway, differentiate point-source from propagated outbreaks, or choose the most appropriate study design.
 
-Teams consist of up to two students. Time on task is approximately 50 minutes. Calculators are permitted within the event’s class limitations (see Event Parameters), and solutions typically combine short written justifications with calculations, tables/graphs, and well-supported interpretations. High-performing teams communicate concisely, show their work in tables, and explicitly link conclusions to data.
-
-## EVENT PARAMETERS
-Each team may bring one 8.5" × 11" sheet of paper, which may be sealed in a sheet protector (taped) or laminated. Both sides may contain information in any form from any source. No loose annotations or labels may be affixed to the outside of the protector/lamination. In addition, each team may bring two stand‑alone, non‑programmable, non‑graphing calculators (Class II). Always confirm the current manual for calculator classification and any updates to the notesheet policy.
-
-Recommended content for your single notesheet
-- Core measures and formulas: risk, rate, prevalence; attack rates; RR, OR, AR, PAR; screening metrics (Se/Sp/PPV/NPV); vaccine effectiveness; herd immunity threshold; R0/Re relationships. Include units and typical denominators to reduce mistakes.
-- Decision guides: which study design to use (cohort vs case–control vs cross‑sectional), outbreak 10‑step checklist, person–place–time triad cues, epi curve pattern mnemonics, bias/confounding control options, Bradford Hill checklist.
-- Mini‑templates: a blank 2×2 table with labeled cells (a,b,c,d); a line‑list column template; quick table for stratification (two 2×2s side‑by‑side) to check for confounding/effect modification quickly.
-- Common pitfalls list: wrong denominator, mixing risk vs rate, using odds where risks are available, misreading axes/legends, over‑interpreting small cell counts.
-
-Calculator guidance (Class II)
-- Non‑programmable and non‑graphing; typical scientific calculators are acceptable. Ensure familiarity with fraction/percentage conversions, order of operations, and basic statistics (if present) so time isn’t lost to operator errors. Bring fresh batteries.
-
-Logistics tips
-- Use the notesheet as a navigational aid, not a crutch: outline your approach (define the problem → analyze tables/graphs → compute key measures → interpret → recommend controls). Keep the sheet legible under time pressure. If allowed, laminate with matte finish to reduce glare.
-
 ## Overview
 Applied epidemiology: outbreak investigations, surveillance, study designs, measures of disease frequency and association, screening, bias/confounding, and interpretation of public health data. Emphasis on data tables, epi curves, case definitions, and concise reasoning.
-
-## THE COMPETITION
 
 ### Background & Surveillance
 
@@ -689,26 +670,4 @@ Answer style
 - Use concise sentences anchored in computed numbers: “AR_e=0.62 vs AR_u=0.08 (RR≈7.5) suggests egg salad as likely vehicle; remove item, audit temperature logs, and reinforce cross‑contamination prevention; confirm with lab.”  
 - When uncertain, outline next steps: “If WGS links cases across counties, expand traceback; if not, consider alternative exposures with similar timing.”
 
-## Scoring
-High score wins. Scoring emphasizes broad, foundational understanding and sound reasoning over obscure details. Tie‑breakers may be selected questions.
-
-How points are awarded
-- Calculations: correctness, proper units, and appropriate rounding; use of correct denominators/time windows.  
-- Interpretation/explanations: align conclusions with data; avoid overreach; acknowledge uncertainty.  
-- Graphs/tables: clarity of labels, correct structure (e.g., 2×2 tables), and legibility.  
-- Scientific method: hypothesis generation, testing, and iteration; selection of appropriate study designs; bias/confounding awareness and control.
-
-Example scoring rubric (illustrative)
-- Case definition (precise, sensitive then refined): 5–10 pts  
-- Person–place–time orientation (line list/epi curve interpretation): 10–15 pts  
-- Correct AR/RR/OR computations with denominators: 10–20 pts  
-- Study design choice and justification: 5–10 pts  
-- Control and prevention recommendations (feasible, proportionate): 10–15 pts  
-- Communication: concise, data‑anchored statements: 5–10 pts  
-- Tie‑breakers: selected computation or interpretation items.
-
-Strategy for maximizing points
-- Show work for every calculation (even if brief); label variables and denominators.  
-- Translate numbers to decisions (what will you do differently given AR/RR/OR?).  
-- Use stratification or clear statements about potential confounding when appropriate.  
-- If a figure/table is ambiguous, state your interpretation and note alternative readings.
+ 

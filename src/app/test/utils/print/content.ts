@@ -1,0 +1,25 @@
+import type { TestPrintConfig } from '../printUtils';
+
+export const createTestPrintContent = (_config: TestPrintConfig, _printStyles: string) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Science Olympiad Test</title>
+  ${'${_printStyles}'}
+  <script src="https://unpkg.com/pagedjs/dist/paged.polyfill.js"></script>
+  <script>
+    window.PagedConfig = { auto: false, after: (flow) => { import('/lib/utils/logger').then(m => m.default.log('Rendered pages', flow.total)).catch(()=>{}); window.focus(); } };
+    window.addEventListener('beforeprint', () => { const instructions = document.querySelector('div[style*="position: fixed"]'); if (instructions) instructions.style.display = 'none'; });
+    window.addEventListener('afterprint', () => { const instructions = document.querySelector('div[style*="position: fixed"]'); if (instructions) instructions.style.display = 'block'; });
+    document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'p') { e.preventDefault(); window.print(); } });
+    setTimeout(() => { window.focus(); }, 100);
+  </script>
+  </head>
+  <body>
+    <div class="tournament-header">${'${_config.tournamentName}'}</div>
+    ${'${_config.questionsHtml}'}
+  </body>
+  </html>
+`;
+
+

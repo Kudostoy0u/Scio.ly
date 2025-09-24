@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -25,7 +27,7 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
 
       await handleShareCodeRedirect(code);
     } catch (error) {
-      console.error('Error loading test:', error);
+      logger.error('Error loading test:', error);
       toast.error('An error occurred while loading the test.');
     }
   };

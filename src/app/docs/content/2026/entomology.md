@@ -1,54 +1,26 @@
 ## Overview
-Identification and biology of insects by order (and families where applicable), including anatomy, life cycles, ecology, and importance.
+Entomology problems boil down to reading morphology and life history quickly and justifying an identification with the fewest, most discriminating traits. Learn external anatomy in enough detail to recognize mouthparts and wing venation, memorize order‑level diagnostics with a handful of families, and practice explaining IDs in two sentences that cite independent traits. Context matters: life stage and metamorphosis often separate look‑alikes that color and size will not.
 
-## Core Topics
-- External Anatomy: head, thorax, abdomen; mouthparts; wings; legs; antennae
-- Internal/Physiology: respiration (tracheae), circulation, nervous, reproduction
-- Development: ametaboly, hemimetaboly, holometaboly
-- Orders: diagnostic traits, examples, significance
-- Ecology/Behavior: pollination, predation, parasitism, communication
-- IPM and human impact; beneficial vs pest species
+## Anatomy and development in context
+Heads, thoraxes, and abdomens carry conserved structures that reveal function. Mouthparts telegraph feeding—piercing‑sucking beaks point to Hemiptera, siphoning proboscises to Lepidoptera, and sponging or piercing mouthparts in Diptera follow familiar patterns—while wing coupling, venation, and the presence of halteres separate orders at a glance. Metamorphosis divides insects into ametabolous, hemimetabolous, and holometabolous groups, which explains why “nymphs” resemble adults in Hemiptera and Orthoptera but not in Lepidoptera or Coleoptera. When in doubt, add ecological roles: pollination syndromes, parasitoid wasp waist constriction, or aquatic nymph adaptations (e.g., Odonata labial mask) frequently clinch the call.
 
-## High-Yield Skills
-- Rapid order-level ID from photos/specimens  
-- Distinguish similar orders (e.g., Hemiptera vs Homoptera historic usage)  
-- Recognize mouthparts and wing venation patterns
-
-## Diagnostic cheatsheet (order-level)
+## Diagnostic cheatsheet (order‑level)
 - Coleoptera: elytra (hardened forewings), chewing mouthparts; holometabolous
-- Diptera: one pair of wings + halteres; varied mouthparts (sponging, piercing); holometabolous
-- Hymenoptera: two pairs membranous; narrow waist in many; chewing/chewing-lapping; holometabolous
+- Diptera: one pair of wings plus halteres; sponging/piercing mouthparts; holometabolous
+- Hymenoptera: two pairs membranous; narrow “wasp waist” common; chewing/chewing‑lapping; holometabolous
 - Lepidoptera: scaled wings; siphoning proboscis; holometabolous
-- Hemiptera: piercing-sucking beak; hemelytra in Heteroptera; hemimetabolous
-- Orthoptera: enlarged hind legs; chewing; hemimetabolous
-- Odonata: two pairs equal wings with net venation; aquatic nymphs with labial mask; hemimetabolous
+- Hemiptera: piercing‑sucking beak; hemelytra in Heteroptera; hemimetabolous
+- Orthoptera: enlarged hind legs; chewing mouthparts; hemimetabolous
+- Odonata: two equal pairs with net venation; aquatic nymph labial mask; hemimetabolous
 
-## Strategy
-- Build laminated order/family cards with diagnostics & exemplars  
-- Practice timed ID rounds; explain reasoning succinctly  
-- Include life stage and metamorphosis clues
+## Strategy and study flow
+Build compact order/family cards with diagnostic traits and exemplars and drill under time with mixed photo sets. When explaining an ID, cite at least two independent traits—“piercing‑sucking beak and hemelytra with X‑pattern” is stronger than “brown bug.” Integrate life stage clues, because larva vs nymph mistakes are common. Finally, add one sentence on ecological or economic importance to round out answers when asked.
 
-## Study Roadmap
-1) Memorize order diagnostics with images  
-2) Add common families and economic/ecological notes  
-3) Drill mixed-photo sets; time constrained  
-4) Review life cycles and morphology vocabulary
-
-## Pitfalls
-- Over-reliance on size/color  
-- Ignoring mouthparts and wing coupling/venation  
-- Confusing nymph vs larva characteristics
-
-## Practice Prompts
-- Identify order + key trait from image  
-- Explain life cycle and role in ecosystem  
-- Compare/contrast two similar orders
-
-## Worked IDs
-1) Halteres visible; sponging mouthparts → Diptera (house fly family vs blow fly distinguish by bristles/color)
-2) Piercing-sucking beak; X-pattern hemelytra → Hemiptera (Heteroptera)
-3) Scaled wings; coiled proboscis → Lepidoptera; antennae clubbed (butterfly) vs filamentous/plumose (moths)
+## Practice prompts
+- Identify order and one key trait from an image and justify with a second trait if visible.
+- Explain a life cycle and ecological role for a pictured insect based on order‑level biology.
+- Contrast two similar orders (e.g., Hemiptera vs Homoptera usage; butterflies vs moths) with two discriminating traits.
 
 ## References
-- SciOly Wiki: https://scioly.org/wiki/index.php/Entomology
+- SciOly Wiki – Entomology: https://scioly.org/wiki/index.php/Entomology
 - Field guides (Peterson, Audubon) and BugGuide.net

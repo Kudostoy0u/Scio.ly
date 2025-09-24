@@ -1,65 +1,94 @@
 ## Overview
-Advanced genetics and biotechnology: molecular mechanisms, gene regulation, genomics, population genetics, and lab methods interpretation.
+Designer Genes is a written event covering classical, molecular, and evolutionary genetics. Tests emphasize quantitative reasoning, interpretation of experimental data, and clear, evidence‑based conclusions. This article synthesizes the 2026 scope into a concise study reference with worked examples and common pitfalls.
 
-## Core Topics
-- Molecular genetics: DNA replication (enzymes, directionality), repair (MMR/BER/NER basics)
-- Transcription and regulation: promoters, enhancers, silencers, transcription factors; prokaryotic operons (lac/trp)
-- RNA processing: capping, splicing (introns/exons), poly(A); alternative splicing
-- Translation: ribosome, tRNA, codons; wobble; post‑translational modifications (concepts)
-- Gene regulation in eukaryotes: chromatin (acetylation/methylation), epigenetics, non‑coding RNAs (miRNA/siRNA)
-- Biotechnology methods: PCR/qPCR, RT‑PCR, cloning, restriction enzymes/ligase, plasmids/vectors, Sanger sequencing, gel electrophoresis, blotting (S/N/W), CRISPR‑Cas basics
-- Population genetics: allele/genotype frequencies, Hardy–Weinberg assumptions, simple calculations and deviations
+## Syllabus (structured guide)
+### 1) Mendelian genetics
+- Laws and extensions: segregation; independent assortment; violations (linkage, incomplete/ codominance, complementation).
+- Punnett squares: mono‑, di‑, and trihybrid crosses; probability trees; conditional probability.
+- Pedigrees: dominant vs recessive; autosomal vs sex‑linked; mitochondrial inheritance cues.
+- Epistasis: 9:3:3:1 baseline modified to 9:7, 12:3:1, 9:3:4, 15:1, etc. by gene interactions.
+- Linkage and mapping: recombination frequency (RF) as an estimate of map distance (cM); two‑point and (States/Nationals) three‑point mapping with double‑crossover detection.
 
-## Skills
-- Interpret gels, blots, and qPCR curves
-- Predict effects of mutations (nonsense, missense, frameshift, splice‑site)
-- Design primers conceptually; reason about restriction maps
-- Apply Hardy–Weinberg to compute carrier frequencies and expected counts
+### 2) Mitosis and meiosis
+- Cell division stages and structures: mitosis vs meiosis I/II; synapsis and crossing over.
+- Nondisjunction: aneuploidy patterns and karyotype interpretation (trisomy/monosomy; meiotic stage inferences).
+- (States/Nationals) Somatic recombination context: immune cell V(D)J and class switching (qualitative).
 
-## Molecular Techniques (quick reference)
-- PCR: denaturation → annealing → extension; primers flank target; product length = distance between primers
-- qPCR: amplification curves; Ct earlier → higher starting template; ΔΔCt for relative expression (conceptual)
-- RT‑PCR: reverse transcription of RNA → cDNA prior to PCR
-- Restriction analysis: cut sites produce predictable fragment sizes; loss/gain of a site alters band pattern
-- Cloning: insert into vector with compatible ends; selection markers and screens (e.g., blue/white)
-- Sanger sequencing: chain‑terminating ddNTPs; read from electropherogram (5'→3') of newly synthesized strand
-- Blots: Southern (DNA), Northern (RNA), Western (protein) — probe/antibody specificity
-- CRISPR‑Cas9: guide RNA targets sequence; Cas9 creates DSB; NHEJ causes indels, HDR can introduce precise edits (if template present)
+### 3) Population and evolutionary genetics
+- Hardy–Weinberg equilibrium (HWE): assumptions; p + q = 1; p² + 2pq + q² = 1.
+- Deviations and forces: genetic drift, bottlenecks, founder effects; migration; selection via relative fitness.
+- Quantitative traits: additive alleles and continuous variation; rough gene‑number estimation from phenotypic classes.
+- Gene duplication and homology: homologs; orthologs vs paralogs; role in innovation.
+- Phylogenetics: reading trees, rooting, monophyly/paraphyly; basics of tree building from sequences (alignment → model → inference) at a conceptual level.
+- (States/Nationals) Heritability: H² (broad‑sense), h² (narrow‑sense), realized heritability.
 
-## Gene Regulation Highlights
-- Prokaryotes (lac): lactose present → allolactose inactivates repressor; glucose low → ↑cAMP–CAP enhances transcription
-- Eukaryotes: open chromatin (euchromatin) favors transcription; histone acetylation opens chromatin; DNA methylation often represses
-- Alternative splicing yields multiple isoforms from one gene; miRNAs guide RISC to repress translation/trigger mRNA decay
+### 4) Molecular biology of DNA
+- Structure: nucleotide components; antiparallel strands; base pairing.
+- Replication: pre‑replication complex; origin firing; leading/lagging strands; Okazaki fragments; termination.
+- Fidelity: polymerase selection/ proofreading; mismatch repair.
+- Organization: plasmids; chromatin (euchromatin vs heterochromatin); chromosomes.
+- Damage and repair: UV (pyrimidine dimers), oxidation, double‑strand breaks; BER/NER/MMR (scope‑appropriate).
+- Mutations: chromosomal rearrangements, insertions/deletions, substitutions; protein‑level consequences (silent, missense, nonsense, frameshift).
 
-## Problem Types and Strategies
-- Gel reading: sum fragment sizes to original; heterozygotes show both fragments; ladder alignment for approximate sizes
-- Mutation reasoning: frameshifts downstream of indels not multiple of 3; splice‑site mutations can cause intron retention/exon skipping
-- Operon logic: predict β‑galactosidase/permease levels under combinations of lactose/glucose and operator/promoter mutations
-- qPCR ΔΔCt (concept): ΔCt = Ct(target) − Ct(ref); ΔΔCt = ΔCt(treated) − ΔCt(control); relative expression ≈ 2^(−ΔΔCt)
+### 5) Prokaryotic gene expression and regulation
+- Central dogma and reverse transcription (conceptual).
+- Transcription: initiation → elongation → termination; RNA polymerase function.
+- Regulatory logic: cis vs trans elements; promoters, operators, enhancers/silencers (conceptual), riboswitches; lac and trp operons (induction vs repression).
+- Translation: ribosome, tRNA, codons; initiation → elongation → termination; regulation overview.
+- (States/Nationals) Protein secretion systems: Sec and Tat (qualitative roles and differences).
 
-## Population Genetics
-- Hardy–Weinberg: p + q = 1; p² + 2pq + q² = 1
-- Given recessive disease frequency q², compute q = √q², p = 1 − q; carrier frequency ≈ 2pq
-- Deviations: selection, non‑random mating, migration, drift, mutation; recognize when assumptions break
+### 6) Technology and techniques
+- PCR: steps, required components, temperature cycle logic; what questions PCR can answer.
+- Sanger sequencing: ddNTPs; how it differs from PCR; read electropherograms.
+- Next‑gen vs third‑gen: Illumina vs Nanopore (high‑level platforms, typical outputs, trade‑offs).
+- Molecular cloning: restriction enzymes, ligase or Gibson assembly; vectors; selection/blue‑white screening; expression considerations.
+- Knockout/knockdown: functional genomics logic; when to prefer each; (States/Nationals) techniques: RNAi, homologous recombination, CRISPR/TALENs (purpose and limits).
+- (States/Nationals) ChIP‑seq, Hi‑C, RNA‑seq: what each measures, canonical outputs, and basic limitations.
 
-## Worked Examples
-1) Restriction digest: loss of an EcoRI site converts bands 700+300 bp → single 1000 bp band; heterozygote shows 1000, 700, and 300 bp
-2) qPCR: Ct_control=22, Ct_treated=24 for target; ref gene Ct both 18 → ΔCt_control=4, ΔCt_treated=6 → ΔΔCt=2 → expression ≈ 2^(−2)=0.25×
-3) Operon: lacI− (no functional repressor) with lactose absent, glucose present → high basal transcription from constitutive expression is still limited without CAP activation (qualitative)
-4) HWE: disease incidence 1/10,000 → q²=0.0001 → q=0.01, p=0.99 → carrier ≈ 2pq ≈ 0.0198 (≈1.98%)
+## Worked examples
+1) Epistasis ratio recognition
+- Observation: dihybrid cross yields ~9:7 (presence of either recessive allele at either locus eliminates pigment).
+- Interpretation: complementary gene action; both dominant alleles needed for full phenotype.
 
-## Pitfalls
-- Confusing template vs coding strand and 5'/3' orientation
-- Misreading heterozygote banding patterns
-- Treating ΔΔCt as linear instead of exponential
-- Ignoring reading frame/splice signals when predicting mutation effects
+2) Two‑point mapping from testcross data
+- Data: 18 recombinants among 200 progeny → RF ≈ 9 cM.
+- Caution: RF underestimates larger distances due to multiple crossovers.
 
-## Study Roadmap
-1) Build technique one‑pagers (purpose, inputs, outputs, typical readouts)
-2) Drill gel/blot/qPCR interpretation problems
-3) Practice operon/regulation logic and mutation consequences
-4) Work HW genetics problems (probability, HWE) under time
+3) Three‑point mapping (States/Nationals concept)
+- Identify parental and double‑crossover (DCO) classes; gene order is the allele that flips in DCOs. Compute distances with DCOs counted twice.
 
-## References
+4) Nondisjunction inference
+- Karyotype shows trisomy; if all gametes show aneuploidy for multiple chromosomes, suspect meiosis I error; if sister chromatids fail to separate, meiosis II.
+
+5) HWE carrier frequency
+- Disease incidence q² = 1/10,000 → q = 0.01; p = 0.99; carriers 2pq ≈ 0.0198 (~1.98%).
+
+6) Operon logic
+- lac operon: lactose present (allolactose inactivates repressor); low glucose (↑cAMP–CAP) → maximal transcription. Mutations in operator/promoter have predictable phenotypes.
+
+7) Gel/sequence interpretation
+- Loss of a restriction site converts two fragments (700 + 300 bp) to one (1000 bp); heterozygotes show all three bands. Sanger: call sequence from the smallest band (5′→3′ of the newly synthesized strand).
+
+## Common pitfalls and exam cues
+- Mixing coding vs template strand orientation; writing the wrong mRNA direction.
+- Treating ΔΔCt (qPCR) as linear instead of exponential (expression ≈ 2^(−ΔΔCt)).
+- Ignoring frameshift effects on downstream codons.
+- Misclassifying epistasis patterns; forgetting that 9:3:3:1 is the comparison baseline.
+- Over‑interpreting RF > ~20–25 cM without considering double crossovers.
+
+## Rapid reference
+- HWE: p + q = 1; p² + 2pq + q² = 1.
+- Map distance (approx.): RF% ≈ cM (small distances).
+- Operon outcomes: repressor off + CAP on → high expression; repressor off + CAP off → moderate; repressor on → low.
+- Mutation effects: nonsense → premature stop; missense → amino‑acid change (effect varies); frameshift → altered reading frame downstream.
+
+## Practice prompts
+- Classify inheritance from a three‑generation pedigree with skipped generations and male predominance.
+- Compute two‑point map distance from progeny counts; discuss biases.
+- Interpret a Sanger trace with overlapping peaks (heterozygous site) and infer genotype.
+- Given ΔCt values, compute relative expression (ΔΔCt) and interpret regulation.
+- Outline a cloning strategy for expressing a gene in bacteria: vector choice, restriction sites or Gibson, selection marker, screening.
+
+## Further reading
 - SciOly Wiki: https://scioly.org/wiki/index.php/Designer_Genes
-- OpenStax Biology; NCBI primers on PCR/sequencing basics
+- OpenStax Biology (Genetics units); NCBI primers on PCR and sequencing

@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import React from 'react';
 import { FaBookmark, FaRegBookmark } from 'react-icons/fa';
@@ -73,7 +75,7 @@ const BookmarkManager: React.FC<BookmarkManagerProps> = ({
         toast.success('Question bookmarked!');
       }
     } catch (error) {
-      console.error('Error managing bookmark:', error);
+      logger.error('Error managing bookmark:', error);
       toast.error(isBookmarked ? 'Failed to remove bookmark' : 'Failed to bookmark question');
     } finally {
       setIsProcessing(false);

@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 import React, { useMemo, useState } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { QuoteData } from '../../types';
@@ -103,17 +105,17 @@ export const FractionatedMorseDisplay = ({
     const updateReplacementTableFromTriplet = (cipherLetter: string, triplet: string) => {
         if (!fractionationTable) return;
         
-        console.log('Updating replacement table from triplet:', { cipherLetter, triplet, fractionationTable });
+        logger.log('Updating replacement table from triplet:', { cipherLetter, triplet, fractionationTable });
         
 
         const matchingTriplet = usedTriplets.find(t => t === triplet);
         if (matchingTriplet) {
-            console.log('Found matching triplet:', matchingTriplet);
+            logger.log('Found matching triplet:', matchingTriplet);
 
             onSolutionChange(quoteIndex, `replacement_${matchingTriplet}`, cipherLetter);
         } else {
-            console.log('No matching triplet found for:', triplet);
-            console.log('Available triplets:', usedTriplets);
+            logger.log('No matching triplet found for:', triplet);
+            logger.log('Available triplets:', usedTriplets);
         }
     };
 
@@ -121,7 +123,7 @@ export const FractionatedMorseDisplay = ({
     const clearReplacementTableFromTriplet = (cipherLetter: string, incompleteTriplet: string) => {
         if (!fractionationTable) return;
         
-        console.log('Clearing replacement table from incomplete triplet:', { cipherLetter, incompleteTriplet });
+        logger.log('Clearing replacement table from incomplete triplet:', { cipherLetter, incompleteTriplet });
         
 
         const matchingTriplet = usedTriplets.find(t => {
@@ -130,7 +132,7 @@ export const FractionatedMorseDisplay = ({
         });
         
         if (matchingTriplet) {
-            console.log('Found triplet to clear:', matchingTriplet);
+            logger.log('Found triplet to clear:', matchingTriplet);
 
             onSolutionChange(quoteIndex, `replacement_${matchingTriplet}`, '');
         }
@@ -289,7 +291,7 @@ export const FractionatedMorseDisplay = ({
                         
 
                         if (isLetter && plaintextLetter) {
-                            console.log(`Plaintext for ${char}: ${plaintextLetter}, triplet: ${triplets[i]}`);
+                            logger.log(`Plaintext for ${char}: ${plaintextLetter}, triplet: ${triplets[i]}`);
                         }
                         
                         return (
@@ -324,18 +326,18 @@ export const FractionatedMorseDisplay = ({
                                                     e.target.value = finalValue;
                                                 }
                                                 
-                                                console.log('Cipher input change:', { char, finalValue, length: finalValue.length });
+                                                logger.log('Cipher input change:', { char, finalValue, length: finalValue.length });
                                                 
 
                                                 onSolutionChange(quoteIndex, char, finalValue);
                                                 
 
                                                 if (finalValue.length === 3) {
-                                                    console.log('Complete triplet detected, updating replacement table');
+                                                    logger.log('Complete triplet detected, updating replacement table');
                                                     updateReplacementTableFromTriplet(char, finalValue);
                                                 } else if (finalValue.length < 3) {
 
-                                                    console.log('Triplet became incomplete, clearing replacement table');
+                                                    logger.log('Triplet became incomplete, clearing replacement table');
                                                     clearReplacementTableFromTriplet(char, finalValue);
                                                 }
                                             }}
@@ -452,11 +454,11 @@ export const FractionatedMorseDisplay = ({
                                                         
 
                                                         if (existingLetters.includes(newLetter) && newLetter !== replacementValue) {
-                                                            console.log('Letter already used:', newLetter);
+                                                            logger.log('Letter already used:', newLetter);
                                                             return;
                                                         }
                                                         
-                                                        console.log('Updating replacement table:', { triplet, newLetter, existingLetters });
+                                                        logger.log('Updating replacement table:', { triplet, newLetter, existingLetters });
                                                         
 
                                                         onSolutionChange(quoteIndex, `replacement_${triplet}`, newLetter);

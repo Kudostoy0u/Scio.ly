@@ -1,68 +1,42 @@
 ## Overview
-Glaciers form where snowfall persists and compacts into ice, flow under their own weight, and sculpt landscapes through erosion and deposition. This section covers formation, thermal regimes, motion, mass balance and ELA, glacial hydrology, landforms, climate links, and practical calculations.
+Glaciers form where snowfall persists and compacts into ice, then flow under their own weight to sculpt landscapes through erosion and deposition. To work problems quickly, connect mass balance and equilibrium‑line altitude to climate, tie thermal regime to motion and geomorphic signature, and read landforms and stake data into consistent histories of advance and retreat.
 
-## Learning Objectives
-- Describe firnification from snow to glacial ice and define the equilibrium line altitude (ELA).
-- Distinguish warm-based (temperate) vs. cold-based (polar) glaciers and their geomorphic signatures.
-- Explain glacier motion mechanisms (internal deformation, basal sliding, subglacial till deformation).
-- Interpret glacier budgets, calculate simple mass balance and velocity from stake data, and estimate ELA from hypsometry.
-- Identify erosional and depositional glacial landforms on maps and imagery.
+## Learning objectives
+- Describe firnification from snow to ice and define the equilibrium line altitude (ELA)
+- Distinguish warm‑based (temperate) versus cold‑based (polar) glaciers and their geomorphic signatures
+- Explain glacier motion mechanisms (internal deformation, basal sliding, subglacial till deformation)
+- Interpret budgets, calculate simple mass balance and velocity from stake data, and estimate ELA from hypsometry
+- Identify erosional and depositional glacial landforms on maps and imagery
 
-## Formation and Thermal Regimes
-- **Accumulation vs. ablation**: net gain by snowfall/drift/rime vs. loss by melt/sublimation/calving.
-- **Firn → ice**: snow compacts to firn (~0.4–0.8 g/cm³), then recrystallizes into ice (~>0.83 g/cm³).
-- **ELA**: altitude where annual net balance is zero; separates accumulation area (above) from ablation area (below).
-- **Thermal types**: temperate (at pressure-melting point; abundant meltwater; efficient erosion) vs. polar (below melting; frozen beds; limited erosion); polythermal glaciers mix behaviors.
+## Formation, thermal regimes, and motion
+Accumulation and ablation set net balance: snowfall, drift, and rime add mass while melt, sublimation, and calving remove it. Snow compacts to firn (~0.4–0.8 g/cm³) and recrystallizes into glacier ice (>~0.83 g/cm³). The ELA marks where annual balance is zero and divides accumulation from ablation areas. Thermal regime governs motion and geomorphology: temperate glaciers at the pressure‑melting point generate abundant meltwater, slide efficiently, and erode strongly; polar glaciers remain frozen to their beds, deform internally, and erode less. Internal deformation (creep) rises with ice thickness and surface slope, basal sliding accelerates over lubricated beds and obstacles (regelation), and soft‑bedded systems can deform subglacial till. Velocity peaks near the surface and center, with friction slowing margins and basal ice; crevasses open where strain exceeds strength—transverse in extending flow, longitudinal in compressing flow, chevron in shear—and bergschrunds form near headwalls.
 
-## Motion and Structures
-- **Internal deformation** (creep) dominates in cold interiors; deformation increases with ice thickness and slope (concept: Glen’s flow law).
-- **Basal sliding** occurs over lubricated beds; enhanced by meltwater and regelation around obstacles.
-- **Subglacial till deformation** contributes in soft-bedded systems.
-- **Velocity profile**: fastest near surface/center; slower at margins/basal ice due to friction.
-- **Crevasses**: brittle upper ice fractures where strain exceeds strength—transverse (extensional flow), longitudinal (compressional flow), chevron (shear), bergschrund near headwalls.
+## Mass balance, hydrology, and landforms
+Specific balance b = c − a integrates over the glacier to yield net change; hypsometry (area–elevation distribution) supports ELA estimates via the accumulation‑area ratio method (commonly 0.5–0.7 for valley glaciers, region dependent). Response times run from years–decades (small glaciers) to centuries (ice sheets). Drainage evolves seasonally from distributed linked cavities to efficient channelized systems (R‑channels), modulating sliding speeds and hazards such as jökulhlaups. Erosional landforms include cirques, arêtes, horns, U‑shaped valleys, hanging valleys, fjords, roche moutonnée with stoss/lee asymmetry, and striations indicating flow direction; depositional forms include moraines (lateral, medial, terminal, recessional), drumlins, eskers, kames/kettles, outwash plains, varves, and erratics. Postglacial isostatic rebound lifts crust and tilts shorelines.
 
-## Mass Balance and Response
-- **Specific balance**: b = c − a (accumulation minus ablation). Annual balance integrates over the glacier area to give net mass change.
-- **Hypsometry**: area–elevation distribution; ELA can be estimated by the accumulation-area ratio (AAR) method (common AAR ~0.5–0.7 for many valley glaciers, but varies by climate/region).
-- **Response time**: years to decades (small valley glaciers) to centuries (ice sheets). Thinning/thickening waves propagate down-glacier with lag.
-
-## Glacial Hydrology and Hazards
-- **Drainage pathways**: supraglacial streams, englacial conduits, subglacial channels (R-channels) and distributed systems (linked cavities). Seasonal switch from distributed to channelized systems.
-- **Jökulhlaups**: sudden outburst floods from subglacial lakes or ice-dammed basins.
-- **Calving**: dominant ablation for tidewater/lake-terminating glaciers; produces icebergs.
-
-## Landforms and Evidence
-- **Erosional**: cirques, horns, arêtes, U-shaped valleys, hanging valleys, fjords; roche moutonnée with stoss/lee asymmetry; striations/grooves show ice flow direction.
-- **Depositional**: moraines (lateral, medial, terminal, recessional), drumlins (streamlined till hills), eskers (sinuous sand/gravel ridges), kames/kettles, outwash plains (sandur), varves (annual lake couplets), erratics.
-- **Isostatic rebound**: crust uplifts after deglaciation; raised shorelines and tilted lake terraces.
-
-## Calculations and Examples
-- Stake velocity: marker moves 36 m over 90 days → 0.4 m/day ≈ 146 m/yr.
-- Simple mass balance: accumulation 1.2 m w.e., ablation 1.6 m w.e. → b = −0.4 m w.e. (net loss).
-- ELA via AAR: if accumulation area is 12 km² and total area 20 km², AAR = 0.6; choose elevation where cumulative area above equals ~60% as ELA estimate.
+## Calculations and quick checks
+- Stake velocity: 36 m in 90 days is 0.4 m/day ≈ 146 m/yr
+- Annual mass balance: accumulation 1.2 m w.e. minus ablation 1.6 m w.e. gives b = −0.4 m w.e.
+- ELA via AAR: if accumulation area is 12 km² of a 20 km² glacier, AAR = 0.6; choose the elevation where cumulative area above equals ~60%
 
 ## Advanced topics (qualitative)
-- Surging glaciers: short-lived speedups due to subglacial hydrology and thermal conditions; leave looped moraines/contorted flowlines
-- Debris-covered glaciers: suppressed melt under thick debris; enhanced melt at thin debris and ice cliffs; kettle formation
-- Tidewater glacier cycle: calving dynamics, terminus stability, and climate vs geometry controls
+Surging glaciers exhibit short‑lived speedups linked to subglacial hydrology and thermal conditions, leaving looped moraines and contorted flowlines. Debris‑covered glaciers suppress melt under thick debris while enhancing it on thin debris and at ice cliffs; kettle formation follows. Tidewater glaciers cycle through calving‑dominated stability modes where geometry and climate interact.
 
-## Map and Image Skills
-- Identify glacial landforms on shaded relief or aerial images; infer former ice flow directions from drumlins/striations.
-- Delineate moraines and reconstruct glacier retreat sequences using recessional moraines and varved lake sediments.
-- Use topographic profiles to recognize U-shaped valley cross-sections vs. V-shaped fluvial valleys.
+## Map and image skills
+Identify landforms on shaded relief and aerial images and infer paleo‑flow directions from drumlin elongation and striations. Delineate moraines and reconstruct retreat sequences from recessional positions and varve counts. Use cross‑sections to separate U‑shaped glacial from V‑shaped fluvial valleys.
 
-## Practice Prompts
-1. Given an area–elevation histogram and seasonal snow/wind data, estimate the ELA and justify the chosen AAR.
-2. A glacier transitions from distributed to channelized drainage in late spring. Predict changes in water pressure and sliding speed.
-3. Distinguish between drumlins and roche moutonnée in the field based on shape and stoss/lee asymmetry.
+## Practice prompts
+- Given an area–elevation histogram and seasonal snow/wind data, estimate the ELA and justify the AAR you used
+- A glacier shifts from distributed to channelized drainage in late spring; predict pressure and sliding changes
+- Separate drumlins from roche moutonnée in the field based on shape and stoss/lee asymmetry
 
 ## Glossary
-- AAR (Accumulation Area Ratio): fraction of glacier area above the ELA.
-- Ablation/Accumulation: loss/gain processes for glacier mass.
-- Bergschrund: crevasse separating moving glacier ice from near-stationary headwall ice.
-- ELA: equilibrium line altitude where net balance is zero.
-- Jökulhlaup: catastrophic glacial outburst flood.
+- AAR (Accumulation Area Ratio): fraction of glacier area above the ELA
+- Ablation/Accumulation: loss/gain processes for glacier mass
+- Bergschrund: crevasse separating moving glacier ice from near‑stationary headwall ice
+- ELA: equilibrium line altitude where net balance is zero
+- Jökulhlaup: catastrophic glacial outburst flood
 
 ## References
-- "USGS Glaciers and Climate Change" — accessible glacier primers and monitoring methods.
-- "Benn & Evans, Glaciers and Glaciation" — classic reference for processes and landforms (advanced reference; consult summaries).
+- USGS Glaciers and Climate Change (primers and monitoring methods)
+- Benn & Evans, Glaciers and Glaciation (advanced reference; consult summaries)

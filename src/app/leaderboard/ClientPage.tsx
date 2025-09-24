@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Trophy, Users, Plus, LogOut, Copy, Check, User } from 'lucide-react';
@@ -72,7 +74,7 @@ export default function LeaderboardClientPage() {
       .order('accuracy_percentage', { ascending: false });
 
     if (error) {
-      console.error('Error loading members:', error);
+      logger.error('Error loading members:', error);
       return;
     }
 
@@ -141,7 +143,7 @@ export default function LeaderboardClientPage() {
       .eq('user_id', authUser.id);
     
     if (leaderboardError) {
-      console.error('Error loading leaderboards:', leaderboardError);
+      logger.error('Error loading leaderboards:', leaderboardError);
     }
 
     if (leaderboardData) {
@@ -201,7 +203,7 @@ export default function LeaderboardClientPage() {
     }
     const { error } = await client.rpc('join_public_leaderboard');
     if (error) {
-      console.error('Error joining public leaderboard:', error);
+      logger.error('Error joining public leaderboard:', error);
     } else {
       await loadUserAndLeaderboards();
     }
@@ -217,7 +219,7 @@ export default function LeaderboardClientPage() {
     
     const { error } = await client.rpc('join_leaderboard_by_code', { p_join_code: joinCode });
     if (error) {
-      console.error('Error joining private leaderboard:', error);
+      logger.error('Error joining private leaderboard:', error);
     } else {
       setShowJoinModal(false);
       setJoinCode('');
@@ -579,7 +581,7 @@ function CreateLeaderboardModal({ onClose, onCreated }: { onClose: () => void; o
     });
     
     if (error) {
-      console.error('Error creating leaderboard:', error);
+      logger.error('Error creating leaderboard:', error);
     } else if (data) {
       onCreated();
       onClose();

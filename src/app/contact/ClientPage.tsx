@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import { useState } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
@@ -40,7 +42,7 @@ export default function ContactClientPage() {
         toast.error(result.message);
       }
     } catch (error) {
-      console.error('Contact form error:', error);
+      logger.error('Contact form error:', error);
       toast.error('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);

@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -131,7 +133,7 @@ export default function Content() {
         setBookmarkedQuestions({});
       }
     } catch (error) {
-      console.error('Error loading bookmarks:', error);
+      logger.error('Error loading bookmarks:', error);
       toast.error('Failed to load bookmarks');
     } finally {
       setIsLoadingBookmarks(false);
@@ -160,7 +162,7 @@ export default function Content() {
         });
         toast.success('Cleared all bookmarks for this event');
       } catch (err) {
-        console.error('Error clearing bookmarks:', err);
+        logger.error('Error clearing bookmarks:', err);
         toast.error('Failed to clear bookmarks');
       }
     })();
@@ -201,7 +203,7 @@ export default function Content() {
       
       router.push('/test');
     } catch (err) {
-      console.error('Error starting test from bookmarks:', err);
+      logger.error('Error starting test from bookmarks:', err);
       toast.error('Failed to start test');
     }
   };
@@ -245,7 +247,7 @@ export default function Content() {
 
       toast.success('Bookmark removed!');
     } catch (error) {
-      console.error('Error removing bookmark:', error);
+      logger.error('Error removing bookmark:', error);
       toast.error('Failed to remove bookmark');
     } finally {
       setIsRemoving(prev => ({ ...prev, [questionKey]: false }));

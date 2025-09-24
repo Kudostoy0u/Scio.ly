@@ -113,24 +113,7 @@ export function getPrimaryBadgeForEvent(evt: DocsEvent): EventBadge | null {
   return null;
 }
 
-const bLife = [
-  'Anatomy and Physiology',
-  'Disease Detectives',
-  'Entomology',
-  'Heredity',
-  'Water Quality',
-] as const;
-
-const bEarth = ['Dynamic Planet', 'Meteorology', 'Remote Sensing', 'Rocks and Minerals', 'Solar System'] as const;
-const bPhys = ['Circuit Lab', 'Crime Busters', 'Hovercraft', 'Machines', 'Potions and Poisons'] as const;
-const bTech = ['Boomilever', 'Helicopter', 'Mission Possible', 'Scrambler'] as const;
-const bInquiry = ['Codebusters', 'Experimental Design', 'Metric Mastery', 'Write It Do It'] as const;
-
-const cLife = ['Anatomy and Physiology', 'Designer Genes', 'Disease Detectives', 'Entomology', 'Water Quality'] as const;
-const cEarth = ['Astronomy', 'Dynamic Planet', 'Remote Sensing', 'Rocks and Minerals'] as const;
-const cPhys = ['Chemistry Lab', 'Circuit Lab', 'Forensics', 'Hovercraft', 'Machines', 'Materials Science'] as const;
-const cTech = ['Boomilever', 'Electric Vehicle', 'Helicopter', 'Robot Tour'] as const;
-const cInquiry = ['Bungee Drop', 'Codebusters', 'Engineering CAD', 'Experimental Design'] as const;
+import { bLife, bEarth, bPhys, bTech, bInquiry, cLife, cEarth, cPhys, cTech, cInquiry } from './events.data';
 
 const notesheetByName: Record<string, boolean> = {
 

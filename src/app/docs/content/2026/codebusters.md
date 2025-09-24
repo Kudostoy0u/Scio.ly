@@ -1,25 +1,8 @@
 ## Overview
-Teams cryptanalyze and decode messages using classic hand ciphers under strict time limits. Success depends on fast pattern recognition, strong mental arithmetic, systematic crib usage, and disciplined team coordination.
+Codebusters is a speed puzzle: you win by turning a jumble of symbols into words through disciplined pattern hunting, quick arithmetic, and crisp team choreography. Study by learning the characteristic fingerprints of each cipher family, practicing how to place cribs without painting yourself into contradictions, and drilling until you can recognize archetypal patterns on sight. During competition, write the obvious first, exploit mistakes to your advantage, and speak answers aloud before submitting.
 
-## Official References
-- [SOINC Division B](https://www.soinc.org/codebusters-b)
-- [SOINC Division C](https://www.soinc.org/codebusters-c)
-- [SciOly Wiki – Codebusters](https://scioly.org/wiki/index.php/Codebusters)
-
-## Event format and scoring
-- First question: Timed Aristocrat (with spaces, no spelling errors). Submit as soon as solved; attempts before correct answer do not penalize. Typical timing bonus: `2 × (600 − seconds)`; 0 after 10 minutes.
-- Remaining questions: mixture by difficulty and type. Close answers within 1–2 letters (excluding keyword/key phrase) may receive full or partial credit per current rules. After two errors, additional errors usually −100 each, not below 0 for that problem.
-- Tiebreakers: designated problems in order (often the highest value), then degree of correctness and number attempted.
-
-### Typical allowed materials (confirm annually)
-- Up to three non‑programmable, Class I calculators
-- No notes, no internet, no devices beyond calculators and writing utensils
-
-## Team roles and workflow
-- Substitution lead: Aristocrats/Patristocrats/Porta; frequency analysis; word shapes; contractions
-- Math lead: Affine/Hill/cryptarithms; modular arithmetic; matrix operations
-- Morse/Crib lead: Pollux/Morbit/Fractionated Morse/Columnar/Xenocrypt; mapping and crib placement
-- All: Cross‑check mappings, read answers aloud before submission, and manage the timed first question
+## Team workflow
+Strong teams divide labor by cipher family and rotate based on the set in front of them. One person lays down the alphabet line and fills common English patterns for substitutions; another tackles math‑heavy items such as Affine, Hill, and cryptarithms; a third handles Morse‑based encodings and transpositions where crib placement and separator rules matter most. Everyone cross‑checks mappings and keeps the timed first question in view.
 
 ## Covered cipher types (2026)
 - Monoalphabetic substitution (K1/K2/random)
@@ -34,151 +17,24 @@ Teams cryptanalyze and decode messages using classic hand ciphers under strict t
 - Nihilist (Polybius + additive keyword; keys/cribs provided)
 - Complete Columnar (≤9 columns; crib ≥ columns − 1)
 
-Division B common adds: Caesar, Atbash, Affine (with given a, b).  
-Division C common adds: K3 monoalphabetic, Hill 2×2 (encrypt/decrypt; 3×3 given decryption matrix when used).
+Division B often adds Caesar, Atbash, and Affine (with given a, b), while Division C commonly includes K3 monoalphabetic and Hill 2×2 (and 3×3 with provided inverse).
 
----
-
-## Solving playbook by cipher
-
-### Cipher reference index (links to full guides)
-Each link opens our in-depth, decryption-focused guide for that cipher. Divisions reflect what is typically used in practice selection for B vs C.
-
-### Substitution (Aristocrats/Patristocrats)
-- Single‑letter words: A, I (poetry may include O). Short words and triads: THE, AND, OF, TO, IN, THAT
-- Frequency: ETAOIN SHRDLU; consider text length before over‑relying on frequency
-- Contractions and apostrophes: 's, 't, 're, 've, 'll, 'm, 'd
-- Doubled letters: LL, EE, SS, OO, TT; common bigrams: TH, HE, IN, ER, AN, RE, ED, ON, ES, ST
-- Misspelled aristocrats: prioritize phonetics and grammar; common words usually spelled correctly
-
-Worked micro‑example
-
-| Ciphertext | …. …. …. …. |
-|---|---|
-| Pattern | 1‑2‑3 1‑4‑5 6‑7‑1 8‑3‑9 |
-
-If the first word ends in a single letter, try A or I; test THE/AND patterns, then propagate.
-
-### Baconian
-- Partition tokens into two classes (A/B) based on visible property (e.g., font, capitalization, glyph, or letter set). Group five at a time, map 5‑bit groups to letters.
-- Check variant: 24‑letter (I/J together, U/V together) vs 26‑letter. If decoding fails, flip A/B designation and retry.
-
-Reference (26‑letter): A=AAAAA … Z=BBBBA. For 24‑letter, consult host’s mapping.
-
-### Caesar / Atbash
-- Caesar: try all 26 shifts; reject implausible English immediately. A quick scan of 3–4 letters usually narrows to 1–2 candidates.
-- Atbash: mirror alphabet; encryption equals decryption (A↔Z, B↔Y, …).
-
-### Affine
-- Encryption: E(x) = (a·x + b) mod 26, with a ∈ {1,3,5,7,9,11,15,17,19,21,23,25}
-- Decryption: D(y) = a⁻¹·(y − b) mod 26
-- Cryptanalysis with crib: form two equations from paired plaintext/cipher letters, solve for a, b mod 26
-
-Affine inverses (mod 26)
-
-| a | a⁻¹ | a | a⁻¹ |
-|---:|---:|---:|---:|
-| 1 | 1 | 15 | 7 |
-| 3 | 9 | 17 | 23 |
-| 5 | 21 | 19 | 11 |
-| 7 | 15 | 21 | 5 |
-| 9 | 3 | 23 | 17 |
-| 11 | 19 | 25 | 25 |
-
-### Porta
-- 13 paired alphabets; each key letter selects a fixed substitution pair (period‑2 effect). For plaintext P and key K: map using the alphabet row indexed by K’s pair (AB, CD, …, YZ).
-- Practical: pre‑write the 13 row pairs or use a compact table; slide the key over text; decode letter‑by‑letter.
-
-### Nihilist
-- Construct Polybius square (usually 5×5 with I/J together) from keyword 1, fill remaining letters. Convert plaintext/cipher to numbers. Add keyword 2 (digit‑wise, mod 10 or 100 depending on format).
-- With crib ≤ keyword length: align crib, subtract to recover square indices and infer keys.
-
-### Complete Columnar
-- Choose column count ≤ 9; write ciphertext by columns, read by rows after permuting columns by key order. With crib ≥ columns − 1, place crib across rows to test column orders quickly.
-- Heuristics: try column counts that divide length; check short words crossing column boundaries.
-
-### Fractionated Morse
-- Convert digits/symbols to Morse with separators; group into triads; map via key table to letters. A ≥4‑letter crib anchors the triad stream to recover the key ordering.
-- Enforce separator rules and plausible Morse sequences; propagate from short words.
-
-### Pollux / Morbit
-- Replace known digits with •/–/separators. Constraints: at most two separators in a row; Pollux cannot end with a separator; no letter has more than five Morse elements.
-- Use word‑length patterns and tiny dictionaries (OF, TO, THE, AND) to confirm placements; backfill digit→symbol mapping.
-
-### Xenocrypt (Spanish)
-- Normalize accents; include ñ. Frequencies and anchors: DE, LA, QUE, EL, EN, LOS, LAS, DEL, POR, CON. Grammar (articles/adjective agreement) prunes false fits.
-
-### Hill (Div C)
-- 2×2 matrices over mod 26. Decrypt via E⁻¹ = det(E)⁻¹·adj(E) (mod 26). Confirm det(E) is coprime to 26. For 3×3, a decryption matrix is provided when used.
-
-Hill 2×2 mini-reference
-- det = a·d − b·c (mod 26); det inverse via affine inverse table; adj(E) = [[d, −b], [−c, a]] (mod 26)
-- Multiply matrices with letters as 0–25 (A=0 … Z=25); wrap negatives into 0–25
-
-### Cryptarithms
-- Map letters→digits respecting leading‑zero rules and columnar addition with carries. Start with columns that force carry/no‑carry outcomes (0/9/10 patterns). Extract the required keyword from the mapping.
-
----
-
-## The timed first question
-- Pre‑assign roles; one person writes an alphabet line and fills common patterns (THE/AND/OF) immediately.
-- Read the solution aloud; confirm spelling and punctuation; submit instantly. There’s no penalty for pre‑solve attempts until correct.
-
-## Weekly drills (suggested)
-- 1 timed Aristocrat; 2 substitutions (incl. 1 Patristocrat)
-- 1 math cipher (Affine/Hill)
-- 1 transposition (Columnar)
-- 1 Morse (Pollux/Morbit)
-- 1 cribbed polyalphabetic (Porta/Nihilist/Fractionated Morse)
-- 1 specialty (Xenocrypt or cryptarithm)
-Track average times and error types.
-
-## Compact reference contents
-- EN/ES frequencies; contractions and common trigrams
-- Affine inverse table; mod‑26 arithmetic tips; gcd shortcuts
-- Hill 2×2: determinant, adjugate formulas; inverses mod 26
-- Morse chart; Pollux/Morbit separator rules
-- Porta paired alphabets; Nihilist Polybius layout
-- Columnar grid templates and crib placement checklist
+## Playbook highlights by cipher
+Substitutions live on word shapes and short anchor words—single letters A/I, common trigrams (THE, AND, ING), doubled letters, and apostrophes. Frequency helps only when texts are long enough. Baconian depends on partitioning the token set into two classes and grouping by five; if it fails, flip the class mapping or confirm the 24‑ vs 26‑letter variant. Affine requires modular inverses and two letter pairs from a crib to solve for a and b; errors usually come from forgetting to wrap negatives mod 26. Porta uses 13 fixed paired alphabets—pre‑write the pairs and slide the key. Columnar with a strong crib prunes column permutations fast; contradictions show up as letters forced into two columns at once. Morse family ciphers obey separator rules; enforce them to eliminate impossible mappings. Xenocrypts reward Spanish anchors (DE, LA, QUE, EL) and agreement rules; Hill 2×2 demands checking invertibility (det coprime to 26) and using adjugate formulas.
 
 ## Worked mini‑examples
+- Affine decrypt (a=21, b=14): x = a⁻¹·(y − b) → with a⁻¹=5, y=24 (Y), x=5·(24−14)=50 ≡ 24 mod 26 → Y (self‑check).
+- Columnar with crib: try 7–9 columns; laying the crib across rows that force a letter into two columns rules out an ordering immediately.
+- Pollux constraint: a ciphertext ending with a separator contradicts Pollux rules—adjust digit→symbol mapping.
 
-### Affine decrypt (a=21, b=14)
-Given Y → P: x = a⁻¹·(y − b) = 5·(24 − 14) ≡ 5·10 ≡ 50 ≡ 24 ≡ Y → maps to Y (self‑check). Use table above for a⁻¹.
-
-### Columnar with crib
-Try 7–9 columns first; place crib across rows. If a letter must appear in two columns simultaneously, that key ordering is impossible.
-
-### Pollux constraint
-If the last symbol is a separator, contradiction: Pollux cannot end with a separator. Adjust digit→symbol mapping.
-
-## Deep dives
-### Porta quick table patterning
-- Pre-write the 13 alphabet pairs (AB, CD, …, YZ) and note repeating columns; train to read mappings without constructing full tableau under pressure.
-
-### Columnar brute-force strategy
-- For ≤9 columns with a crib ≥ columns−1, enumerate column counts first, then use the crib to prune permutations. Keep a grid template and mark contradictions rapidly.
-
-### Fractionated Morse key recovery
-- With a ≥4-letter crib, align Morse triads and infer key ordering by consistent triad-to-letter mappings; enforce separator constraints to prune.
-
-### Hill pitfalls
-- Confirm that det(E) is coprime to 26; if not invertible, error in problem setup or intended decryption-only with provided inverse.
-
-### Xenocrypt grammar heuristics
-- Articles/adjectives must agree in gender/number (el/la/los/las; buen/buena); verbs conjugate per subject; use these to eliminate false plaintexts.
-
-### Worked cipher walkthrough (Porta example)
-Cipher: UJXWZ … with key SCIOLY.  
-1) Write paired alphabets; align with SCIOLY repeating.  
-2) Decode letter-by-letter; spot probable THE/AND patterns to validate key alignment.  
-3) If mismatch persists, re-check alphabet rows and ensure A=0 mapping.
+## Weekly drills (suggested)
+- 1 timed Aristocrat; 2 substitutions (include 1 Patristocrat)
+- 1 math cipher (Affine/Hill); 1 transposition (Columnar)
+- 1 Morse (Pollux/Morbit); 1 cribbed polyalphabetic (Porta/Nihilist/Fractionated Morse)
+- 1 specialty (Xenocrypt or cryptarithm); track average times and error types
 
 ## Pitfalls
-- Anchoring on an early wrong guess
-- Ignoring Morse/separator constraints
-- Modular arithmetic slips (especially negative mods)
-- Over‑reliance on frequency in short texts
+Anchoring on an early wrong guess, ignoring separator constraints, slipping modular arithmetic (especially negatives), and over‑relying on frequency in short texts account for most unforced errors. Writing mappings cleanly and checking for contradictions before committing prevents wasted minutes.
 
 ## Practice prompts
 - Timed Aristocrat (10‑minute bonus window)
@@ -190,15 +46,52 @@ Cipher: UJXWZ … with key SCIOLY.
 - Pollux with four unknown digits; Morbit partial map
 - Spanish Xenocrypt with DE/LA/QUE anchors
 
-## Helpful links and tools
-- Use the in‑site practice tool: [/codebusters](/codebusters) for live cipher drills
-- Past tests and writeups on the SciOly forums/wiki
+## References
+- SciOly Wiki – Codebusters: https://scioly.org/wiki/index.php/Codebusters
 
-## Tournament checklist
-- Three Class I calculators + spare batteries
-- Pencils/pens, scratch paper
-- Pre‑discussed timing plan and submission protocol
+## Crib cookbook and pattern cues
+Cribs work because they constrain structure. Start with words that encode unique shapes (THE, AND, ING, THAT), then place them where punctuation or structure suggests. In Porta and Nihilist, use the crib to align key rows or subtract to recover Polybius indices; in Columnar, slide the crib across rows and cross out permutations that force a letter into two columns at once. In Affine and Hill, short plaintext–ciphertext pairs generate solvable equations—write them cleanly and check inverses before committing.
 
----
+- Shape anchors: one‑letter words (A/I), two‑letter function words (TO, OF, IN), apostrophe forms (’S, ’RE, ’LL) that rarely vary
+- Bigram/trigram habits: TH/HE/IN/ER/AN/RE and ING/ION; doubled letters LL/EE/SS are strong constraints
+- Affine pairs: pick two non‑collinear pairs from a crib; solve for a and b mod 26; verify with a third letter before propagating
+- Porta rows: pre‑write the 13 paired alphabets; verify period‑2 behavior (same row every other letter); slide key until multiple letters fit sensibly
+- Columnar contradictions: any placement that requires the same cipher column for two positions of one plaintext letter is impossible—prune hard
+- Morse rules: Pollux cannot end with a separator; at most two separators in a row; enforce triad plausibility for Fractionated Morse
+- Hill sanity checks: det(E) must be coprime to 26; if not invertible, you’re intended to use a provided inverse or the cipher is mis‑set
 
-Contribute corrections, worked examples, and updated clarifications for 2026.
+## Team communication checklist
+- Say mappings aloud before writing final answers; a second voice catches transpositions and misspellings
+- Mark contradictions with a clear symbol and do not erase them—failed paths prevent repeats under time
+- Timebox stuck items (e.g., 90 seconds), then rotate ciphers or swap roles to regain momentum
+
+## Advanced timed drills (team rotation)
+Build speed and reliability with structured sprints. Run 12–15 minute sets cycling roles every 3 minutes: Substitution → Math → Morse/Transposition → Review. Score as solved/partial/unsolved and track error types. Increase difficulty by mixing in K3 substitutions, Hill with noisy cribs, and Columnar near the 9‑column limit. Finish with a 90‑second Aristocrat lightning round from a clean alphabet line. Rotate who handles the timed first question so every member practices signaling and reading answers aloud under pressure.
+
+## Mod arithmetic quick tips (Affine/Hill)
+Working mod 26 is easier with a few habits. Always wrap negatives back into 0–25 (e.g., −3 ≡ 23). When a must be inverted in Affine, restrict choices to values coprime to 26; memorize a small inverse table (e.g., 3↔9, 5↔21, 7↔15, 11↔19, 17↔23, 25↔25). For Hill 2×2, det = a·d − b·c must be coprime to 26; find det⁻¹ from the same inverse set and compute E⁻¹ = det⁻¹·adj(E) with adj(E) = [[d, −b], [−c, a]] before multiplying. Reduce each multiplication and addition mod 26 as you go to keep numbers small and mistakes visible.
+
+## Decision tree and error recovery
+Open with structure. If spaces are preserved and letter shapes look English‑like, start with Aristocrat; if grouped and spacing is removed, treat as Patristocrat and rely on word‑shape anchors and frequency only when text is long. If typography alternates or encodes two classes, try Baconian. If a crib is supplied and the text is arranged in lines with hints at columns, prioritize Columnar. Digit‑rich Morse‑like strings suggest Pollux/Morbit or Fractionated Morse; enforce separator rules and triad plausibility. Keys provided usually point to Porta or Nihilist; place cribs and verify against multiple letters before committing. Spanish text with K1/K2 hints is a Xenocrypt—apply grammar anchors.
+
+- When stuck on a substitution, write a clean alphabet line, fill A/I and THE/AND/OF, and test 2–3 bigrams; abandon frequency if length is short
+- On Columnar, switch column counts quickly if the crib never lands cleanly across rows; contradictions early save minutes
+- For Affine/Hill, verify with a third letter before propagating a mapping; bad inverses produce entire lines of noise—reset fast
+- In Morse families, re‑check separators first; most errors are illegal runs or endings; remap a single digit to flip a dead end
+- Rotate roles on a timer; a fresh pair of eyes turns dead ends into progress under time
+
+## Xenocrypt (Spanish) anchors and cues
+Spanish plaintext unlocks quickly with a few anchors and agreement checks. Articles and prepositions (DE, LA/EL, LOS/LAS, DEL, AL, EN, POR, CON) appear frequently and set gender/number downstream. Common bigrams and words (QUE, UNA/UNO, COMO, PARA, ESTE/ESTA) confirm placements. Adjectives agree with nouns (plural ‑S/‑ES; feminine ‑A), participles and verbs mark tense/person, and accent marks are often dropped in puzzles but the underlying grammar still constrains vowels. Use these grammatical hooks to prune false fits rapidly after placing a short crib.
+
+## Patristocrat heuristics (spacing removed)
+When spaces vanish, lean harder on vowels, digrams, and syllable shape. English pushes vowels into every few letters; test placements that keep words pronounceable and avoid long consonant runs. Common digrams (TH, HE, IN, ER, AN, RE, ON, EN) and trigrams (ING, THE) still apply; doubled letters LL/EE/SS often sit mid‑word. Apostrophes are gone, but contractions leave residue (DNT for DON’T, ILL for I’LL). Start by penciling likely vowels into patterns like CVCVC or CVCCV, then propagate with two or three high‑probability consonants. If a path yields impossible clusters (e.g., JQZ patterns without vowels), reset rather than forcing a bad mapping.
+
+## Advanced Hill inversion (2×2 and 3×3)
+Hill relies on linear algebra mod 26. With plaintext–ciphertext pairs treated as column vectors (A=0 … Z=25), E·P ≡ C (mod 26). If you have two consistent pairs for a 2×2, form P = [p1 p2] and C = [c1 c2]; if det(P) is coprime to 26, then P⁻¹ exists and E ≡ C·P⁻¹ (mod 26). Compute det(P), find det(P)⁻¹ in the small inverse set, build adj(P), then P⁻¹ ≡ det(P)⁻¹·adj(P) (reduce each entry mod 26). Verify E against a third letter pair; if it fails, your crib alignment is wrong or the pairs are not independent. For 3×3 (when given or when three independent pairs exist), assemble 3 columns; if det(P) is invertible, the same E ≡ C·P⁻¹ logic holds. Practically, many contests provide E or E⁻¹ for 3×3; use the provided inverse to decrypt via P ≡ E⁻¹·C, keeping all arithmetic reduced mod 26 at every multiply/add to prevent error growth.
+
+A fast sanity cycle: check det(E) coprime to 26; confirm that E·E⁻¹ ≡ I on a test vector; and always validate the recovered matrix on extra pairs before propagating to the full text. When negatives appear, wrap immediately into 0–25; do not postpone reduction.
+
+## Nihilist crib-driven decoding
+Nihilist builds numbers from a Polybius square (keyworded K1; typically I/J combined) and adds a digit stream from a second keyword K2. Encryption is digit‑wise addition (row and column digits separately), usually mod 10 without carry; decryption subtracts K2’s digits mod 10 to recover valid Polybius pairs (11–55) that map back through K1. With a crib, slide its numeric Polybius over the ciphertext and subtract mod 10 digit‑wise. Alignments that yield many valid 1–5 pairs indicate the correct offset. From there, the K2 digit stream is fixed; extend it to the whole message and decode.
+
+Keep conventions straight: confirm whether the Polybius reads row‑digit first or column‑digit first (stick to one and test on a short known word), and whether I/J are merged. If subtraction produces 0 or >5 digits, that alignment is invalid. Cross‑check with language: common bigrams and word shapes should appear as soon as a few pairs decode, otherwise adjust the alignment or re‑key the square. If two keys are given, generate both K1 and K2 numerics directly; if one is missing, a good crib plus valid pairs typically reveals K2’s digit pattern within a few placements.

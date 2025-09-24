@@ -1,5 +1,5 @@
 ## Overview
-Advanced chemistry: stoichiometry, equilibrium, kinetics, thermodynamics, acid–base, and lab techniques. Emphasis on fast, unit-checked calculations; safe technique; and clear, concise reasoning.
+Chemistry Lab rewards clear chemical reasoning under time pressure. Study by turning narrative questions into quantitative setups, choosing justified approximations, and explaining results succinctly, while maintaining safe, competent technique and unit‑checked calculations throughout.
 
 ## Core Topics (coverage target)
 - Stoichiometry: limiting/excess reagents; percent yield; solution prep (molarity, dilution M1V1=M2V2)

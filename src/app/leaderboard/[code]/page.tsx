@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import { useEffect, useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -37,7 +39,7 @@ export default function JoinLeaderboardPage({ params }: { params: Promise<{ code
     });
 
     if (error) {
-      console.error('Error joining leaderboard:', error);
+      logger.error('Error joining leaderboard:', error);
       router.push('/leaderboard');
     } else {
       router.push('/leaderboard');

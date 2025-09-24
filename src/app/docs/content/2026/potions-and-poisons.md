@@ -1,24 +1,42 @@
 ## Overview
-Chemistry of household substances and toxins: identification, reactions, safety, and SDS literacy.
-
-## Core Topics
-- Acids/bases; solutions; reactions; ID tests  
-- Toxicology basics; symptom recognition  
-- SDS interpretation; safe handling/disposal
+Potions and Poisons blends basic chemistry of household/consumer substances with toxicology and safety data interpretation. Master identification tests, reaction patterns, and SDS literacy.
 
 ## Identification and reactions
-- Common household reagents: indicators (pH strips/phenolphthalein), solubility, gas evolution (CO2 from carbonates), precipitation
-- Recognize classes: acids vs bases (pH, reactions), oxidizers/reducers (qualitatively), common salts
+- Acids/bases: pH indicators (litmus, phenolphthalein), reactions with carbonates (CO₂ effervescence), neutralization and heat.
+- Solubility: water vs organic; miscibility; density layering; polarity cues.
+- Oxidizers/reducers: qualitative recognition (bleach/chlorine oxidizers, hydrogen peroxide); avoid hazardous mixes (bleach + ammonia → chloramines; bleach + acids → chlorine gas).
+- Common substances: salts (NaCl, NaHCO₃, CaCO₃), sugars (reducing with Benedict’s conceptually), vinegar (acetic acid), ammonia solution, isopropyl alcohol.
 
-## Toxicology
-- Dose–response concept; routes of exposure; acute vs chronic effects
-- Symptom patterns for common agents (e.g., bleach+ammonia → chloramines; never mix cleaners)
+## Toxicology basics
+- Dose–response: threshold, LD₅₀ concept (comparative, not for memorization); acute vs chronic effects.
+- Routes: ingestion, inhalation, dermal; exposure duration and concentration matter.
+- Symptoms: correlate agents to syndromes (solvent inhalation → CNS depression; acids/bases → burns; CO → hypoxia; organophosphates → cholinergic signs).
 
 ## SDS literacy
-- Sections: hazards, handling, storage, first aid, disposal; pictograms and signal words
+- Sections: identification; hazards; composition; first‑aid; firefighting; accidental release; handling/storage; exposure controls/PPE; physical/chemical properties; stability/reactivity; toxicological information.
+- Pictograms: corrosive, oxidizer, flammable, toxic, irritant; signal words (Danger/Warning).
+- First aid and response: decontamination, dilution, airway/breathing/circulation; do not induce vomiting unless directed; consult poison control.
 
-## Safety
-- PPE, ventilation, labeling; safe neutralization and cleanup (follow rules and SDS)
+## Worked micro‑examples
+1) Household mix warning
+- Cleaning bathroom with bleach and vinegar → chlorine gas risk: eye/lung irritation, coughing; response: ventilate, leave area, seek medical advice if symptoms.
+
+2) Unknown ID plan
+- Test sequence: pH → carbonate test (acid) → solubility/odor → oxidizer test (potassium iodide starch paper concept). Record observations before conclusions.
+
+3) SDS interpretation
+- Given an SDS excerpt, identify required PPE, storage temperature, incompatible materials, and first‑aid for skin exposure.
+
+## Pitfalls
+- Performing unsafe tests or mixing unknowns; rely on provided reagents and rules.
+- Misinterpreting indicator colors; forgetting control tests.
+- Confusing concentration (w/w vs w/v) and units in SDS or labels.
+
+## Practice prompts
+- Design a safe identification sequence for three clear household liquids (vinegar, isopropyl alcohol, ammonia) using pH, odor (if allowed), and solubility.
+- From a mock SDS, extract hazard statements and appropriate spill response.
+- Explain how to neutralize small acid vs base spills safely (scope: concept only).
 
 ## References
-- SciOly Wiki: https://scioly.org/wiki/index.php/Potions_and_Poisons
+- SciOly Wiki – Potions and Poisons: https://scioly.org/wiki/index.php/Potions_and_Poisons
+- CDC/NIOSH guides on household chemical safety (summaries)

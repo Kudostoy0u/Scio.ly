@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
@@ -40,20 +42,20 @@ export function useDashboardData(user: User | null): UseDashboardDataReturn {
 
 
   const refreshData = useCallback(async () => {
-    console.log('refreshData called with user:', user);
+    logger.log('refreshData called with user:', user);
     if (!user || !user.id) {
-      console.log('No user or user.id, returning early');
+      logger.log('No user or user.id, returning early');
       return;
     }
     
     if (typeof user.id !== 'string' || user.id.trim() === '') {
-      console.warn('Invalid user.id:', user.id);
+      logger.warn('Invalid user.id:', user.id);
       return;
     }
 
 
     if (lastSyncedUserId.current === user.id) {
-      console.log('Already synced for this user ID, skipping:', user.id);
+      logger.log('Already synced for this user ID, skipping:', user.id);
       return;
     }
     
@@ -65,12 +67,12 @@ export function useDashboardData(user: User | null): UseDashboardDataReturn {
     setError(null);
     
     try {
-      console.log('Calling syncDashboardData with userId:', user.id);
+      logger.log('Calling syncDashboardData with userId:', user.id);
       const newData = await syncDashboardData(user.id);
       setData(newData);
       lastSyncedUserId.current = user.id;
     } catch (err) {
-      console.error('Error refreshing dashboard data:', err);
+      logger.error('Error refreshing dashboard data:', err);
       setError('Failed to refresh data');
     } finally {
       setIsLoading(false);
@@ -99,24 +101,24 @@ export function useDashboardData(user: User | null): UseDashboardDataReturn {
         }));
       }
     } catch (err) {
-      console.error('Error updating metrics:', err);
+      logger.error('Error updating metrics:', err);
       setError('Failed to update metrics');
     }
   }, [user]);
 
 
   useEffect(() => {
-    console.log('Initial data load effect triggered with user:', user);
+    logger.log('Initial data load effect triggered with user:', user);
     if (!user) {
 
-      console.log('No user, using local data only');
+      logger.log('No user, using local data only');
       setData(getInitialDashboardData());
       lastSyncedUserId.current = null;
       return;
     }
 
     if (!user.id || typeof user.id !== 'string' || user.id.trim() === '') {
-      console.log('Invalid user ID, using local data only');
+      logger.log('Invalid user ID, using local data only');
       setData(getInitialDashboardData());
       lastSyncedUserId.current = null;
       return;
@@ -124,12 +126,12 @@ export function useDashboardData(user: User | null): UseDashboardDataReturn {
 
 
     if (lastSyncedUserId.current === user.id) {
-      console.log('Already synced for this user ID, skipping initial sync:', user.id);
+      logger.log('Already synced for this user ID, skipping initial sync:', user.id);
       return;
     }
 
 
-    console.log('Initial load with valid user, syncing with server');
+    logger.log('Initial load with valid user, syncing with server');
     
     const syncData = async () => {
 
@@ -140,12 +142,12 @@ export function useDashboardData(user: User | null): UseDashboardDataReturn {
       setError(null);
       
       try {
-        console.log('Calling syncDashboardData with userId:', user.id);
+        logger.log('Calling syncDashboardData with userId:', user.id);
         const newData = await syncDashboardData(user.id);
         setData(newData);
         lastSyncedUserId.current = user.id;
       } catch (err) {
-        console.error('Error refreshing dashboard data:', err);
+        logger.error('Error refreshing dashboard data:', err);
         setError('Failed to refresh data');
       } finally {
         setIsLoading(false);

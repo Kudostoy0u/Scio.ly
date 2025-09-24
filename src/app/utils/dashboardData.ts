@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import { supabase } from '@/lib/supabase';
 import type { DailyMetrics } from './metrics';
@@ -121,7 +123,7 @@ const fetchUserStatsSince = async (userId: string, fromDate: string): Promise<an
     data = retry.data; error = retry.error;
   }
   if (error) {
-    console.error('Error fetching user_stats since date:', error);
+    logger.error('Error fetching user_stats since date:', error);
     return [];
   }
   return data || [];
@@ -161,7 +163,7 @@ const fetchDailyUserStatsRow = async (userId: string, date: string): Promise<any
     data = retry.data; error = retry.error;
   }
   if (error && (error as any).code !== 'PGRST116') {
-    console.error('Error fetching daily user_stats row:', error);
+    logger.error('Error fetching daily user_stats row:', error);
     return null;
   }
   return data || null;
@@ -218,11 +220,11 @@ export const syncDashboardData = async (userId: string | null): Promise<Dashboar
     // 3. sync greeting name
     try {
       if (!userId) {
-        console.warn('No userId provided for greeting name sync');
+        logger.warn('No userId provided for greeting name sync');
       } else if (typeof userId !== 'string' || userId.trim() === '') {
-        console.warn('Invalid userId for greeting name sync:', userId);
+        logger.warn('Invalid userId for greeting name sync:', userId);
       } else {
-        console.log('Fetching user profile for greeting name, userId:', userId);
+        logger.log('Fetching user profile for greeting name, userId:', userId);
         const { data: profile } = await supabase
           .from('users')
           .select('first_name, display_name')
@@ -254,7 +256,7 @@ export const syncDashboardData = async (userId: string | null): Promise<Dashboar
       greetingName,
     };
   } catch (error) {
-    console.error('Error syncing dashboard data:', error);
+    logger.error('Error syncing dashboard data:', error);
     
 
     const metrics = getLocalDailyMetrics();
@@ -380,13 +382,13 @@ export const updateDashboardMetrics = async (
           .select()
           .single();
         if (retry.error) {
-          console.error('Error updating metrics after refresh:', retry.error);
+          logger.error('Error updating metrics after refresh:', retry.error);
           return null;
         }
         data = retry.data;
         error = retry.error;
       } else {
-        console.error('Error updating metrics:', error);
+        logger.error('Error updating metrics:', error);
         return null;
       }
     }
@@ -403,7 +405,7 @@ export const updateDashboardMetrics = async (
 
     return localMetrics;
   } catch (error) {
-    console.error('Error updating metrics:', error);
+    logger.error('Error updating metrics:', error);
     return null;
   }
 };

@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import { useState } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
@@ -46,7 +48,7 @@ export default function JoinClientPage() {
         toast.error(result.message);
       }
     } catch (error) {
-      console.error('Careers form error:', error);
+      logger.error('Careers form error:', error);
       toast.error('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);

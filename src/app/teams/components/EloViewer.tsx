@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Line } from 'react-chartjs-2';
@@ -103,7 +105,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division, metadata }) =>
       setChartData(data);
     } catch (err) {
       setError('Error generating chart data');
-      console.error(err);
+      logger.error(err);
       setChartData({});
     } finally {
       setIsLoading(false);
@@ -196,7 +198,7 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division, metadata }) =>
 
       return getAllTournamentDates(eloData, metadata);
     } catch (error) {
-      console.error('Error getting tournament dates:', error);
+      logger.error('Error getting tournament dates:', error);
 
       return [];
     }

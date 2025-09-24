@@ -1,3 +1,5 @@
+import logger from '@/lib/utils/logger';
+
 
 
 export interface PrintConfig {
@@ -211,7 +213,7 @@ export const createPrintContent = (config: PrintConfig, printStyles: string) => 
       window.PagedConfig = {
         auto: false,
         after: (flow) => {
-          console.log("Rendered", flow.total, "pages.");
+          logger.log("Rendered", flow.total, "pages.");
           
           // Create a prominent print instruction
           const printInstructions = document.createElement('div');
@@ -240,14 +242,14 @@ export const createPrintContent = (config: PrintConfig, printStyles: string) => 
       
       // Handle print dialog events
       window.addEventListener('beforeprint', () => {
-        console.log('Print dialog opened');
+        logger.log('Print dialog opened');
         // Hide the instructions when printing
         const instructions = document.querySelector('div[style*="position: fixed"]');
         if (instructions) instructions.style.display = 'none';
       });
       
       window.addEventListener('afterprint', () => {
-        console.log('Print dialog closed');
+        logger.log('Print dialog closed');
         // Show the instructions again after printing
         const instructions = document.querySelector('div[style*="position: fixed"]');
         if (instructions) instructions.style.display = 'block';
@@ -293,7 +295,7 @@ export const setupPrintWindow = (printContent: string): Promise<Window> => {
           printWindow.focus(); 
           printWindow.print(); 
         } catch (e) { 
-          console.warn('Immediate auto-print failed', e); 
+          logger.warn('Immediate auto-print failed', e); 
         }
       }, 200);
 
@@ -308,7 +310,7 @@ export const setupPrintWindow = (printContent: string): Promise<Window> => {
             try {
               (printWindow as any).PagedPolyfill.preview();
             } catch (e) {
-              console.warn('Paged preview threw', e);
+              logger.warn('Paged preview threw', e);
             }
 
 
@@ -316,7 +318,7 @@ export const setupPrintWindow = (printContent: string): Promise<Window> => {
 
 
             try { printWindow.focus(); } catch {}
-            try { printWindow.print(); } catch (e) { console.warn('Auto-print failed', e); }
+            try { printWindow.print(); } catch (e) { logger.warn('Auto-print failed', e); }
             resolve(printWindow);
             return;
           }
@@ -358,7 +360,7 @@ export const setupPrintWindow = (printContent: string): Promise<Window> => {
         const cbtn = printWindow.document.getElementById('__paged_close_btn__');
             if (pbtn) pbtn.addEventListener('click', () => { try { printWindow.focus(); } catch {}; printWindow.print(); });
         if (cbtn) cbtn.addEventListener('click', () => printWindow.close());
-          } catch (e) { console.error('Failed to inject banner into print window', e); }
+          } catch (e) { logger.error('Failed to inject banner into print window', e); }
         
           try { printWindow.focus(); } catch {}
           resolve(printWindow);
@@ -414,7 +416,7 @@ export const createInPagePrint = async (config: PrintConfig, printStyles: string
         delete (window as any).__originalTitle;
       }
     } catch (e) {
-      console.error('Failed to restore original content', e);
+      logger.error('Failed to restore original content', e);
     }
   };
 
@@ -444,7 +446,7 @@ export const createInPagePrint = async (config: PrintConfig, printStyles: string
     try {
 
       banner.style.display = 'none';
-    } catch (e) { console.error(e); }
+    } catch (e) { logger.error(e); }
   };
 
   const afterPrintHandler = () => {
@@ -452,7 +454,7 @@ export const createInPagePrint = async (config: PrintConfig, printStyles: string
 
       banner.style.display = 'flex';
       restore();
-    } catch (e) { console.error(e); }
+    } catch (e) { logger.error(e); }
     window.removeEventListener('beforeprint', beforePrintHandler);
     window.removeEventListener('afterprint', afterPrintHandler);
   };
@@ -480,7 +482,7 @@ export const createInPagePrint = async (config: PrintConfig, printStyles: string
     }
   } catch (e) {
     // ignore preview errors; user can still print
-    console.error('Paged preview failed', e);
+    logger.error('Paged preview failed', e);
   }
 
 
@@ -491,6 +493,6 @@ export const createInPagePrint = async (config: PrintConfig, printStyles: string
     window.focus(); 
     window.print(); 
   } catch (e) { 
-    console.warn('Auto-print failed', e); 
+    logger.warn('Auto-print failed', e); 
   }
 };

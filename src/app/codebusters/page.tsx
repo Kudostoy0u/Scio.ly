@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { toast } from 'react-toastify';
@@ -45,6 +47,9 @@ import {
   PrintConfigModal
 } from './components';
 import { FloatingActionButtons } from '@/app/components/FloatingActionButtons';
+import { clearPreviewLocalStorage, showPreviewToasts } from './utils/preview';
+import { useOnlineStatus } from './utils/useOnlineStatus';
+import { parsePreviewParams } from './utils/previewParams';
 import { createPrintStyles, createPrintContent, setupPrintWindow, createInPagePrint } from './utils/printUtils';
 import { resolveQuestionPoints, calculateCipherGrade } from './utils/gradingUtils';
 
@@ -53,57 +58,26 @@ export default function CodeBusters() {
     const router = useRouter();
     const isClient = typeof window !== 'undefined';
     const search = isClient ? new URLSearchParams(window.location.search) : null;
-    const isPreview = !!(search && search.get('preview') === '1');
-    const previewScope = search?.get('scope') || 'all';
-    const previewTeam = search?.get('team') || 'A';
-    const [isOffline, setIsOffline] = useState(false);
+    const { isPreview, previewScope, previewTeam } = parsePreviewParams(search);
+    const { isOffline } = useOnlineStatus();
     const [isResetting, setIsResetting] = useState(false);
     const previewResetAppliedRef = useRef(false);
     
 
-    useEffect(() => {
-        const updateOnline = () => setIsOffline(!navigator.onLine);
-        updateOnline();
-        window.addEventListener('online', updateOnline);
-        window.addEventListener('offline', updateOnline);
-        
-        return () => {
-            window.removeEventListener('online', updateOnline);
-            window.removeEventListener('offline', updateOnline);
-        };
-    }, []);
+    // online status handled by useOnlineStatus
 
     const previewToastsShownRef = useRef(false);
     useEffect(() => {
         if (!isPreview) return;
         if (previewToastsShownRef.current) return;
         previewToastsShownRef.current = true;
-        try {
-            toast.info('Tip: Use the delete icon on a question to replace it.', { autoClose: 6000 });
-            setTimeout(() => {
-                toast.info('When finished, click “Send Test” at the bottom to assign.', { autoClose: 6000 });
-            }, 1200);
-        } catch {}
+        showPreviewToasts(toast);
     }, [isPreview]);
 
 
     // If preview, clear any persisted Codebusters state so we fetch fresh quotes and generate new ciphers
     if (isClient && isPreview && !previewResetAppliedRef.current) {
-        try {
-            localStorage.removeItem('codebustersQuotes');
-            localStorage.removeItem('codebustersQuoteIndices');
-            localStorage.removeItem('codebustersQuoteUUIDs');
-            localStorage.removeItem('codebustersShareData');
-            localStorage.removeItem('codebustersIsTestSubmitted');
-            localStorage.removeItem('codebustersTestScore');
-            localStorage.removeItem('codebustersTimeLeft');
-            localStorage.removeItem('codebustersRevealedLetters');
-            localStorage.removeItem('codebustersHintedLetters');
-            localStorage.removeItem('codebustersHintCounts');
-            localStorage.removeItem('codebustersQuotesLoadedFromStorage');
-            // Ensure the loader performs a fresh fetch
-            localStorage.setItem('codebustersForceRefresh', 'true');
-        } catch {}
+        clearPreviewLocalStorage();
         previewResetAppliedRef.current = true;
     }
 
@@ -301,7 +275,7 @@ export default function CodeBusters() {
                 eventName: 'Codebusters'
             });
         } catch (e) {
-            console.error('Failed to update metrics for Codebusters:', e);
+            logger.error('Failed to update metrics for Codebusters:', e);
         }
     }, [quotes, checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer, checkCheckerboardAnswer, checkCryptarithmAnswer, setTestScore, setIsTestSubmitted, timeLeft, hintedLetters, questionPoints]);
 
@@ -572,7 +546,7 @@ export default function CodeBusters() {
                     });
                 } catch {
 
-                    console.log('Skipping external stylesheet:', sheet.href);
+                    logger.log('Skipping external stylesheet:', sheet.href);
                 }
             });
             
@@ -645,7 +619,7 @@ export default function CodeBusters() {
 
     useEffect(() => {
         if (hasAttemptedLoad && quotes.length === 0 && !isLoading && !error && !quotesLoadedFromStorage) {
-            console.log('Triggering loadQuestionsFromDatabase');
+            logger.log('Triggering loadQuestionsFromDatabase');
             handleLoadQuestions();
         }
     }, [hasAttemptedLoad, quotes.length, isLoading, error, quotesLoadedFromStorage, handleLoadQuestions]);

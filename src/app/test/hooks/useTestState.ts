@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { supabase } from '@/lib/supabase';
 import { Question } from '@/app/utils/geminiService';
+import { buildAbsoluteUrl, normalizeQuestionMedia } from '../utils/questionMedia';
+import { fetchIdQuestionsForParams } from '../utils/idFetch';
 import { updateMetrics } from '@/app/utils/metrics';
 import { loadBookmarksFromSupabase } from '@/app/utils/bookmarks';
 import {
@@ -12,7 +14,6 @@ import {
   GradingResults,
   Explanations,
   LoadingExplanation,
-  gradeFreeResponses,
   buildApiParams,
   shuffleArray,
   getExplanation,
@@ -26,10 +27,8 @@ import {
   markTestSubmitted,
   resetTestSession,
   migrateFromLegacyStorage,
-    setupVisibilityHandling,
-    pauseTestSession,
-    resumeFromPause
 } from '@/app/utils/timeManagement';
+import { usePauseOnUnmount, useResumeOnMount, useSetupVisibility } from './utils/timeHooks';
 import api from '../../api';
 import { getEventOfflineQuestions } from '@/app/utils/storage';
 import { normalizeTestText, normalizeQuestionText, normalizeOptionAnswerLabels } from '../utils/normalizeTestText';
@@ -66,80 +65,10 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   const isClient = typeof window !== 'undefined';
   const previewSearch = isClient ? new URLSearchParams(window.location.search) : null;
   const isPreviewMode = !!(previewSearch && previewSearch.get('preview') === '1');
-  const buildAbsoluteUrl = (src?: string): string | undefined => {
-    if (!src) return undefined;
-    try {
-      if (/^https?:\/\//i.test(src)) return src;
-      if (isClient && src.startsWith('/')) return `${window.location.origin}${src}`;
-      return src;
-    } catch {
-      return src;
-    }
-  };
 
-  const normalizeQuestionMedia = (qs: Question[]): Question[] => {
-    return qs.map((q: any) => {
-      const out: any = { ...q };
-      // Prefer explicit imageData, else imageUrl, else images[0]
-      let candidate: string | undefined = out.imageData || out.imageUrl;
-      if (!candidate && Array.isArray(out.images) && out.images.length > 0) {
-        const pick = out.images[Math.floor(Math.random() * out.images.length)];
-        if (typeof pick === 'string') candidate = pick;
-      }
-      const abs = buildAbsoluteUrl(candidate);
-      if (abs) {
-        out.imageData = abs;
-        if (!out.imageUrl) out.imageUrl = abs;
-      }
-      return out as Question;
-    });
-  };
+  
 
-  const fetchIdQuestionsForParams = async (routerParams: any, idCount: number): Promise<Question[]> => {
-    if (idCount <= 0) return [];
-    const isOffline = !navigator.onLine;
-    let source: any[] = [];
-    if (isOffline) {
-      logger.log('ID questions not available offline');
-      return [];
-    }
-    try {
-      const params = new URLSearchParams();
-      params.set('event', routerParams.eventName || '');
-      params.set('limit', String(idCount));
-      if (routerParams.types === 'multiple-choice') params.set('question_type', 'mcq');
-      if (routerParams.types === 'free-response') params.set('question_type', 'frq');
-      if (routerParams.difficulties && routerParams.difficulties.length > 0) {
-        const allRanges = routerParams.difficulties.map((d: string) => difficultyRanges[d]).filter(Boolean);
-        if (allRanges.length > 0) {
-          const minValue = Math.min(...allRanges.map((r: any) => r.min));
-          const maxValue = Math.max(...allRanges.map((r: any) => r.max));
-          params.set('difficulty_min', minValue.toFixed(2));
-          params.set('difficulty_max', maxValue.toFixed(2));
-        }
-      }
-      if (routerParams.subtopics && routerParams.subtopics.length > 0) {
-        params.set('subtopics', routerParams.subtopics.join(','));
-      }
-      const resp = await fetch(`${api.idQuestions}?${params.toString()}`);
-      const json = await resp.json();
-      source = Array.isArray(json?.data) ? json.data : [];
-      logger.log('ID API (SSR top-up) ok', { count: source.length, event: routerParams.eventName });
-    } catch (e) {
-      logger.warn('ID API (SSR top-up) failed', e);
-    }
-    const idQs: Question[] = source.map((row: any) => ({
-      id: row.id,
-      question: row.question,
-      options: row.options || [],
-      answers: row.answers || [],
-      difficulty: row.difficulty ?? 0.5,
-      event: row.event,
-      subtopics: row.subtopics || [],
-      imageData: buildAbsoluteUrl(Array.isArray(row.images) && row.images.length ? row.images[Math.floor(Math.random()*row.images.length)] : undefined),
-    }));
-    return normalizeQuestionMedia(idQs).slice(0, idCount);
-  };
+  
 
 
 
@@ -147,6 +76,24 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
 
 
   useEffect(() => {
+    // Prefer locally stored questions over SSR on reload to resume tests
+    if (!ssrAppliedRef.current) {
+      try {
+        const stored = localStorage.getItem('testQuestions');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          const hasQs = Array.isArray(parsed) && parsed.length > 0;
+          if (hasQs) {
+            const normalized = normalizeQuestionMedia(parsed as Question[]);
+            setData(normalized);
+            setIsLoading(false);
+            fetchCompletedRef.current = true;
+            logger.log('resume from localStorage before SSR', { count: normalized.length });
+            return;
+          }
+        }
+      } catch {}
+    }
     // Short-circuit if SSR provided data
     if (ssrAppliedRef.current) return;
     if (Array.isArray(initialData) && initialData.length > 0 && isLoading && !fetchCompletedRef.current) {
@@ -175,11 +122,8 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         }
         try {
           const idQs = await fetchIdQuestionsForParams(routerParams, requestedIdCount);
-          const desiredId = Math.min(requestedIdCount, idQs.length);
-          const baseSlots = Math.max(0, total - desiredId);
-          const pickedBase = shuffleArray(baseQs).slice(0, baseSlots);
-          const pickedId = shuffleArray(idQs).slice(0, desiredId);
-          const merged = shuffleArray(pickedBase.concat(pickedId)).map((q, idx) => ({ ...q, originalIndex: idx }));
+          const { mergeBaseAndIdQuestions } = await import('./utils/mergeQuestions');
+          const merged = mergeBaseAndIdQuestions(baseQs, idQs, total);
           setData(merged);
           localStorage.setItem('testQuestions', JSON.stringify(merged));
         } catch {
@@ -209,15 +153,11 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
       localStorage.removeItem("loaded");
     }
     
-    const storedUserAnswers = localStorage.getItem('testUserAnswers');
-    if (storedUserAnswers) {
-      setUserAnswers(JSON.parse(storedUserAnswers));
-    }
-
-    const storedGrading = localStorage.getItem('testGradingResults');
-    if (storedGrading) {
-      try { setGradingResults(JSON.parse(storedGrading)); } catch {}
-    }
+    import('./utils/storageRestore').then(({ restoreStoredState }) => {
+      const restored = restoreStoredState();
+      if (restored.userAnswers) setUserAnswers(restored.userAnswers);
+      if (restored.gradingResults) setGradingResults(restored.gradingResults);
+    }).catch(() => {});
   }, [initialData, initialRouterData]);
 
   // If in preview mode, auto-fill answers with correct ones (all correct for multi-select) and mark submitted once data is loaded
@@ -343,14 +283,14 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     // Prefer explicitly shared/local stored questions (from share code) over SSR initialData
     if (storedQuestions) {
       try {
-        const parsedQuestions = JSON.parse(storedQuestions);
+      const parsedQuestions = JSON.parse(storedQuestions);
         const hasQuestions = Array.isArray(parsedQuestions) && parsedQuestions.length > 0;
         if (hasQuestions) {
           setData(normalizeQuestionMedia(parsedQuestions));
-          setIsLoading(false);
-          fetchCompletedRef.current = true;
+      setIsLoading(false);
+      fetchCompletedRef.current = true;
           logger.log('loaded questions from localStorage', { count: parsedQuestions.length });
-          return;
+      return;
         } else {
           // Ignore empty cache
           logger.warn('ignoring empty testQuestions cache');
@@ -361,10 +301,10 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
 
     if (Array.isArray(initialData) && initialData.length > 0) {
       setData(normalizeQuestionMedia(initialData as Question[]));
-      setIsLoading(false);
-      fetchCompletedRef.current = true;
+        setIsLoading(false);
+        fetchCompletedRef.current = true;
       logger.log('using initialData from SSR', { count: initialData.length });
-      return;
+        return;
     }
 
     const loadBookmarkedQuestionsFromSupabase = async () => {
@@ -383,7 +323,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
             setFetchError('No bookmarked questions found for this event.');
           }
         } catch (error) {
-          console.error('Error loading bookmarked questions:', error);
+          logger.error('Error loading bookmarked questions:', error);
           setFetchError('Failed to load bookmarked questions.');
         } finally {
           setIsLoading(false);
@@ -396,7 +336,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
       loadBookmarkedQuestionsFromSupabase();
       return;
     }
-  
+    
     const fetchData = async () => {
       logger.log('fetchData start');
       try {
@@ -789,9 +729,9 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         setData(questionsWithIndex);
       } catch (error) {
         logger.error('Failed to load questions:', error);
-        console.error('Router params:', routerParams);
-        console.error('Event name:', routerParams.eventName);
-        console.error('Is Anatomy & Physiology:', (routerParams.eventName || '') === 'Anatomy & Physiology');
+        logger.error('Router params:', routerParams);
+        logger.error('Event name:', routerParams.eventName);
+        logger.error('Is Anatomy & Physiology:', (routerParams.eventName || '') === 'Anatomy & Physiology');
         
         const errorMessage = routerParams.eventName === 'Anatomy & Physiology' 
           ? 'Failed to load Anatomy & Physiology questions. Check console for details.'
@@ -845,10 +785,9 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   }, [timeLeft, isSubmitted]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
-  useEffect(() => {
-    const cleanup = setupVisibilityHandling();
-    return cleanup;
-  }, []);
+  usePauseOnUnmount();
+  useResumeOnMount();
+  useSetupVisibility();
 
 
   useEffect(() => {
@@ -860,112 +799,30 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     }
     if (missing.length === 0) return;
 
-    const newResults: GradingResults = {};
-
-
-    const normalize = (s: string) => s
-      .toLowerCase()
-      .normalize('NFKD')
-      .replace(/[^a-z0-9\s]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    const levenshtein = (a: string, b: string): number => {
-      const m = a.length, n = b.length;
-      if (m === 0) return n;
-      if (n === 0) return m;
-      const prev: number[] = Array.from({ length: n + 1 }, (_, j) => j);
-      for (let i = 1; i <= m; i++) {
-        let lastDiag = i - 1;
-        prev[0] = i;
-        for (let j = 1; j <= n; j++) {
-          const temp = prev[j];
-          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-          prev[j] = Math.min(
-            prev[j] + 1,
-            prev[j - 1] + 1,
-            lastDiag + cost
-          );
-          lastDiag = temp;
+    (async () => {
+      try {
+        const { gradeMissing } = await import('./utils/grading');
+        const computed: GradingResults = gradeMissing(
+          data,
+          userAnswers,
+          calculateMCQScore,
+          missing
+        );
+        if (Object.keys(computed).length > 0) {
+          setGradingResults((prev) => ({ ...prev, ...computed }));
         }
-      }
-      return prev[n];
-    };
-    const fuzzyGrade = (student: string, corrects: (string | number)[]): number => {
-      const s = normalize(student);
-      if (!s) return 0;
-      let best = 0;
-      for (const ans of corrects) {
-        const a = normalize(String(ans));
-        if (!a) continue;
-        if (s === a) return 1;
-        if (a.includes(s) || s.includes(a)) best = Math.max(best, 0.85);
-        const dist = levenshtein(s, a);
-        const maxLen = Math.max(s.length, a.length);
-        if (maxLen > 0) {
-          const sim = 1 - dist / maxLen;
-          best = Math.max(best, sim);
-        }
-      }
-      if (best >= 0.9) return 1;
-      if (best >= 0.75) return 0.75;
-      if (best >= 0.6) return 0.5;
-      if (best >= 0.45) return 0.25;
-      return 0;
-    };
-
-    missing.forEach((i) => {
-      const q = data[i];
-      const ans = userAnswers[i] || [];
-      if (q?.options && q.options.length > 0) {
-        const frac = calculateMCQScore(q, ans);
-        newResults[i] = frac;
-      } else {
-        const val = ans[0];
-        if (val && Array.isArray(q?.answers) && q.answers.length > 0) {
-          newResults[i] = fuzzyGrade(String(val), q.answers);
-        } else {
-          newResults[i] = 0;
-        }
-      }
-    });
-
-    if (Object.keys(newResults).length > 0) {
-      setGradingResults(prev => ({ ...prev, ...newResults }));
-    }
+      } catch {}
+    })();
   }, [isSubmitted, data, userAnswers, gradingResults, setGradingResults]);
 
 
   useEffect(() => {
-    return () => {
-      try { pauseTestSession(); } catch {}
-    };
-  }, []);
-
-
-  useEffect(() => {
-    try { resumeFromPause(); } catch {}
-  }, []);
-
-
-  useEffect(() => {
-    const loadUserBookmarks = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const bookmarks = await loadBookmarksFromSupabase(user.id);
-        const bookmarkMap: Record<string, boolean> = {};
-        bookmarks.forEach(bookmark => {
-          if (bookmark.source === 'test') {
-                         const key = (bookmark.question as any).imageData
-               ? `id:${(bookmark.question as any).imageData}`
-               : bookmark.question.question;
-            bookmarkMap[key] = true;
-          }
-        });
-        setBookmarkedQuestions(bookmarkMap);
-      }
-    };
-    
-    loadUserBookmarks();
+    import('./utils/bookmarks').then(async ({ fetchUserBookmarks }) => {
+      try {
+        const map = await fetchUserBookmarks(supabase as any, loadBookmarksFromSupabase);
+        setBookmarkedQuestions(map);
+      } catch {}
+    }).catch(() => {});
   }, []);
 
   const handleAnswerChange = (
@@ -1086,93 +943,17 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
       });
       
 
-      const fuzzyGrade = (student: string, corrects: (string | number)[]): number => {
-        const normalize = (s: string) => s
-          .toLowerCase()
-          .normalize('NFKD')
-          .replace(/[^a-z0-9\s]/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-        const levenshtein = (a: string, b: string): number => {
-          const m = a.length, n = b.length;
-          if (m === 0) return n;
-          if (n === 0) return m;
-          const prev: number[] = Array.from({ length: n + 1 }, (_, j) => j);
-          for (let i = 1; i <= m; i++) {
-            let lastDiag = i - 1;
-            prev[0] = i;
-            for (let j = 1; j <= n; j++) {
-              const temp = prev[j];
-              const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-              prev[j] = Math.min(
-                prev[j] + 1,
-                prev[j - 1] + 1,
-                lastDiag + cost
-              );
-              lastDiag = temp;
-            }
-          }
-          return prev[n];
-        };
-        const s = normalize(student);
-        if (!s) return 0;
-        let best = 0;
-        for (const ans of corrects) {
-          const a = normalize(String(ans));
-          if (!a) continue;
-          if (s === a) return 1;
-          if (a.includes(s) || s.includes(a)) best = Math.max(best, 0.85);
-          const dist = levenshtein(s, a);
-          const maxLen = Math.max(s.length, a.length);
-          if (maxLen > 0) {
-            const sim = 1 - dist / maxLen;
-            best = Math.max(best, sim);
-          }
-        }
-        if (best >= 0.9) return 1;
-        if (best >= 0.75) return 0.75;
-        if (best >= 0.6) return 0.5;
-        if (best >= 0.45) return 0.25;
-        return 0;
-      };
-
-      const gradeViaApi = async () => {
-        const scores = await gradeFreeResponses(
-          frqsToGrade.map(item => ({
-            question: item.question,
-            correctAnswers: item.correctAnswers,
-            studentAnswer: item.studentAnswer
-          }))
-        );
-        scores.forEach((score, idx) => {
-          const questionIndex = frqsToGrade[idx].index;
-          setGradingResults(prev => ({ ...prev, [questionIndex]: score }));
-          setGradingFRQs(prev => ({ ...prev, [questionIndex]: false }));
-          mcqTotal += 1;
-          mcqScore += Math.max(0, Math.min(1, score));
-        });
-      };
-
-      const gradeViaFuzzy = async () => {
-        frqsToGrade.forEach(item => {
-          const score = fuzzyGrade(item.studentAnswer, item.correctAnswers);
-          setGradingResults(prev => ({ ...prev, [item.index]: score }));
-          setGradingFRQs(prev => ({ ...prev, [item.index]: false }));
-          mcqTotal += 1;
-          mcqScore += Math.max(0, Math.min(1, score));
-        });
-      };
-
       const online = typeof navigator !== 'undefined' ? navigator.onLine : true;
-      if (!online) {
-        await gradeViaFuzzy();
-      } else {
-        try {
-          await gradeViaApi();
-        } catch {
-          await gradeViaFuzzy();
-        }
-      }
+      const { gradeFrqBatch } = await import('./utils/grading');
+      const scores = await gradeFrqBatch(frqsToGrade as any, online);
+      scores.forEach((score, idx) => {
+        const questionIndex = frqsToGrade[idx].index;
+        setGradingResults(prev => ({ ...prev, [questionIndex]: score }));
+        setGradingFRQs(prev => ({ ...prev, [questionIndex]: false }));
+        mcqTotal += 1;
+        mcqScore += Math.max(0, Math.min(1, score));
+      });
+
     }
     
 
@@ -1320,7 +1101,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         
         if (isOffline) {
 
-          console.log('ID questions not available in offline mode');
+          logger.log('ID questions not available in offline mode');
         } else {
 
           try {
@@ -1357,15 +1138,15 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
             const resp = await fetch(`${api.idQuestions}?${params.toString()}`);
             const json = await resp.json();
             source = Array.isArray(json?.data) ? json.data : [];
-            console.log(`[ID QUESTIONS DEBUG - RELOAD] API returned ${source.length} questions for ${routerData.eventName} with filtering`);
+            logger.log(`[ID QUESTIONS DEBUG - RELOAD] API returned ${source.length} questions for ${routerData.eventName} with filtering`);
           } catch {
-            console.log('Failed to fetch ID questions, continuing without them');
+            logger.log('Failed to fetch ID questions, continuing without them');
           }
         }
         
 
         // No need for client-side filtering since API now handles it
-        console.log(`[ID QUESTIONS DEBUG - RELOAD] Using all ${source.length} questions from API (filtering done server-side)`);
+        logger.log(`[ID QUESTIONS DEBUG - RELOAD] Using all ${source.length} questions from API (filtering done server-side)`);
         const idQuestions: Question[] = source.map((row: any) => ({
           id: row.id,
           question: row.question,
@@ -1389,7 +1170,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         
         if (isOffline) {
 
-          console.log(`Offline mode: only ${selectedQuestions.length} questions available, need ${total}`);
+          logger.log(`Offline mode: only ${selectedQuestions.length} questions available, need ${total}`);
         } else {
 
           try {
@@ -1401,7 +1182,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
             const extras: Question[] = (j2?.data || []);
             selectedQuestions = selectedQuestions.concat(shuffleArray(extras).slice(0, need));
           } catch {
-            console.log('Failed to fetch additional questions for top-up');
+            logger.log('Failed to fetch additional questions for top-up');
           }
         }
       }
@@ -1451,7 +1232,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
       localStorage.setItem('testQuestions', JSON.stringify(finalQuestions));
       
     } catch (error) {
-      console.error('Error reloading questions:', error);
+      logger.error('Error reloading questions:', error);
       setFetchError('Failed to reload questions. Please try again.');
     } finally {
       setIsResetting(false);
@@ -1659,7 +1440,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
 
   const handleEditSubmit = async (editedQuestion: Question, reason: string, originalQuestion: Question, aiBypass?: boolean, aiSuggestion?: { question: string; options?: string[]; answers: string[]; answerIndices?: number[] }): Promise<{ success: boolean; message: string; reason: string; }> => {
     try {
-      console.log('🔍 [TEST] Edit submit with aiBypass:', aiBypass, 'aiSuggestion:', aiSuggestion);
+      logger.log('🔍 [TEST] Edit submit with aiBypass:', aiBypass, 'aiSuggestion:', aiSuggestion);
       const response = await fetch(api.reportEdit, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1697,7 +1478,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         return { success: false, message: result.message || 'Failed to submit edit', reason: result.message || 'Failed to submit edit' };
       }
     } catch (error) {
-      console.error('Error submitting edit:', error);
+      logger.error('Error submitting edit:', error);
       return { success: false, message: 'An unexpected error occurred. Please try again.', reason: 'An unexpected error occurred. Please try again.' };
     }
   };
@@ -1707,8 +1488,12 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   }, []);
 
   const handleBackToMain = () => {
-    try { pauseTestSession(); } catch {}
-    router.push('/practice');
+    try {
+      router.push('/practice');
+    } catch (e) {
+      logger.error('Error navigating back to practice:', e);
+      window.location.href = '/practice';
+    }
   };
 
   const getBookmarkKey = (q: Question): string => (q as any).imageData ? `id:${(q as any).imageData}` : q.question;

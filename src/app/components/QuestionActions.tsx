@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import React, { useState, useEffect } from 'react';
 import { FaEdit, FaTrash } from 'react-icons/fa';
@@ -108,7 +110,7 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
         setHasRemovalFailed(true);
       }
     } catch (error) {
-      console.error('Error submitting direct report:', error);
+      logger.error('Error submitting direct report:', error);
       toast.error('Failed to submit report. Please try again.');
       setHasRemovalFailed(true);
     } finally {

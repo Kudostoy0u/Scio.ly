@@ -1,61 +1,30 @@
 ## Overview
-Design and conduct an experiment from provided materials, analyze data, and write a structured lab report under time constraints.
+Experimental Design rewards process. You earn points by defining a clear, testable question, writing operational definitions for variables, designing a fair test with enough trials, organizing data so trends are obvious, and concluding with concise, data‑anchored statements and realistic improvements. Think like a scientist under time: plan, execute, and communicate.
 
-## Core Topics
-- Variables: IV/DV/constants; hypothesis  
-- Procedure design: control/replication  
-- Data tables/graphs; analysis and error  
-- Conclusion and future improvements
+## Building a fair test
+Start by articulating the hypothesis as a directional relationship between the independent and dependent variables and state a mechanism in a single sentence. Define levels for the independent variable that are far enough apart to reveal a trend, and hold constants steady with simple, enforceable procedures. Use at least three trials per level to average out noise and randomize order if carryover or learning effects are plausible. Before you touch materials, sketch the apparatus and draft a numbered procedure that someone else could follow—then leave space in your report to record deviations, because real experiments rarely go exactly to plan.
 
-## Strategy
-- Use a consistent report template  
-- Practice with random material sets  
-- Time management: allocate build, run, and write blocks
+## Data organization and analysis
+Well‑designed tables, with units and spaces for raw and processed values, save time later. Choose graphs that match the data: line plots for continuous variables across ordered levels and bar charts for categorical comparisons. Label axes with units, title the plot with IV→DV language, and, if allowed, include basic statistics such as mean and range or standard deviation. In analysis, describe trends (increase, decrease, non‑linear), note outliers with plausible causes, and distinguish systematic from random error. When possible, connect results back to the hypothesized mechanism so your conclusion is more than a restatement of a slope.
 
-## Complete rubric breakdown (typical)
-- Statement of Problem/Hypothesis: testable, includes IV/DV, operational language
-- Variables and Operational Definitions: IV levels, DV units, constants controlled; clear definitions
-- Experimental Design: materials list, repeated trials (≥3), detailed step-by-step procedure referencing controls and randomization when relevant
-- Data Collection and Organization: labeled tables with units, space for raw and processed data, dates/times, uncertainties if applicable
-- Graphs and Statistics: appropriate graph type, axes with units, title, legend; calculations (mean, range, percent error); optional basic stats (SD) if allowed
+## Rubric spine (typical elements)
+- Statement of Problem/Hypothesis: testable, includes IV/DV, uses operational language
+- Variables and Operational Definitions: IV levels, DV with units, constants, and control if applicable
+- Experimental Design: materials list and step‑by‑step procedure; repeated trials (≥3); randomization/ordering where relevant
+- Data Collection and Organization: labeled tables with units; spaces for raw and processed data; dates/times; uncertainties if applicable
+- Graphs and Statistics: appropriate graph type with labeled axes; calculations (mean, range; SD if allowed)
+- Analysis and Interpretation: trends, relationships, error sources (systematic vs random), and limitations
+- Conclusion: accept/reject hypothesis with specific data and propose concrete improvements or next steps
 
-Rubric pitfalls to avoid
-- Hypothesis not directly testable or not tied to IV/DV  
-- Missing constants/control; unclear operational definitions  
-- No repeated trials or insufficient levels for IV  
-- Data tables missing units/labels; graphs without error depiction (if allowed)
-- Analysis and Interpretation: trends, relationships, outliers, sources of error (systematic vs random), limitations
-- Conclusion: restate hypothesis outcome; support with specific data; propose improvements and future work
-
-## Report template (fill-in)
-- Title: [Effect of IV on DV]
-- Purpose/Hypothesis: If [IV] is [increased/decreased], then [DV] will [increase/decrease/remain] because [mechanism].
-- Variables: IV = … (levels …); DV = … (units …); Constants = …; Control group = …
-- Materials: list with sizes/quantities
-- Procedure: numbered steps; include control and randomization; specify trials (n≥3) and timing
-- Data: table(s) with units; sample calculation; graph with labeled axes and title
-- Analysis: trend description; error sources and impact; unexpected observations
-- Conclusion: accept/reject hypothesis with data; improvements and next steps
-
-## Quick statistics (as allowed)
-- Mean: x̄ = Σx/n; Range = max−min; Percent error = |measured−true|/true ×100%
-- If SD permitted: s = √(Σ(x−x̄)²/(n−1)); Use error bars consistently
-
-## Common pitfalls and fixes
-- Vague variables → write operational definitions with specific units/ranges
-- Insufficient trials → plan ≥3 per level; stagger timing to manage clock
-- Missing control → designate and treat as baseline in analysis
-- Unclear graphs → label units; choose correct plot (bar for categories, line for continuous)
+## Common fixes for common pitfalls
+Ambiguity vanishes when variables are operationally defined with units and ranges. Insufficient trials are solved by planning levels and repetitions before timing starts. Missing controls are addressed by dedicating one baseline level where the independent variable is absent or neutral. Unclear graphs improve the moment you label axes with units and pick a plot type that matches the variable types.
 
 ## Worked prompt (example)
-Materials: cups, baking soda, vinegar, thermometer, stopwatches, scale.  
-Question: How does vinegar concentration affect peak temperature change in a fixed-mass reaction with baking soda?  
-Plan: Vary percent vinegar (5%, 20%, 35% by volume) at constant total volume and baking soda mass; measure ΔT peak; 3 trials per level.  
-Data: Prepare a table with initial T, peak T, ΔT, trial notes. Graph ΔT vs concentration; discuss confounders (heat losses, mixing rate) and improvements (insulation, calibration).
+Materials: cups, baking soda, vinegar, thermometer, stopwatches, scale. Question: How does vinegar concentration affect peak temperature change in a fixed‑mass reaction with baking soda? Plan: vary percent vinegar (5%, 20%, 35% by volume) at constant total volume and baking soda mass; measure ΔT peak with three trials per level. Organize data into a table with initial temperature, peak temperature, ΔT, and trial notes, then graph ΔT versus concentration. In analysis, discuss confounders such as heat losses and mixing rate and propose improvements like insulation and thermometer calibration.
 
 ## Practice prompts (timed)
-- Given materials [list], design an experiment to test [IV→DV]; produce full report structure in 20 minutes
-- Convert raw data to a clear table and graph; write a 4–6 sentence analysis with two concrete improvements
+- Given a materials list, design an experiment to test a specified IV→DV and produce a complete report structure in 20 minutes.
+- Convert a set of raw measurements into a clear table and graph, then write a six‑sentence analysis including two specific improvements.
 
 ## References
-- SciOly Wiki: https://scioly.org/wiki/index.php/Experimental_Design
+- SciOly Wiki – Experimental Design: https://scioly.org/wiki/index.php/Experimental_Design

@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
@@ -104,7 +106,7 @@ const ReportModal = ({ isOpen, onClose, onSubmit, darkMode, question, event }: R
         JSON.stringify(question)
       );
     } catch (error) {
-      console.error('Error processing report:', error);
+      logger.error('Error processing report:', error);
       toast.error('Failed to process report. Please try again.', {
         position: "top-right",
         autoClose: 5000,

@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import { useState, useEffect } from 'react';
 import Header from '@/app/components/Header';
@@ -31,7 +33,7 @@ export default function AnalyticsContent() {
         setMetadata(result.metadata);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load Elo data');
-        console.error('Error loading Elo data:', err);
+        logger.error('Error loading Elo data:', err);
       } finally {
         setLoading(false);
       }

@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, Copy, Share2, Users, Crown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -51,7 +53,7 @@ export default function TeamShareModal({
       }
     } catch (err) {
       setError('Failed to load team codes');
-      console.error('Error loading codes:', err);
+      logger.error('Error loading codes:', err);
     } finally {
       setIsLoading(false);
     }
@@ -90,7 +92,7 @@ export default function TeamShareModal({
       }, 1500);
     } catch (err) {
       setError('Failed to join team');
-      console.error('Error joining team:', err);
+      logger.error('Error joining team:', err);
     } finally {
       setIsLoading(false);
     }

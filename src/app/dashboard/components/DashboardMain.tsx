@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -65,7 +67,7 @@ function DashboardContent({ initialUser }: { initialUser?: User | null }) {
         localStorage.setItem('dashboard.accuracyView', accuracyView);
       }
     } catch (error) {
-      console.error('Error saving dashboard view preferences to localStorage:', error);
+      logger.error('Error saving dashboard view preferences to localStorage:', error);
     }
   }, [correctView, accuracyView]);
 
@@ -82,7 +84,7 @@ function DashboardContent({ initialUser }: { initialUser?: User | null }) {
       setContactModalOpen(false);
       toast.success('Message sent successfully!');
     } catch (error) {
-      console.error('Error sending contact message:', error);
+      logger.error('Error sending contact message:', error);
       toast.error('Failed to send message. Please try again.');
     }
   };

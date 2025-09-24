@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FaRegClipboard } from 'react-icons/fa';
 import { toast } from 'react-toastify';
@@ -150,7 +152,7 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
             await navigator.clipboard.writeText(data.data.shareCode);
             toast.success('Share code copied to clipboard!');
           } catch (error) {
-            console.error('Failed to copy share code to clipboard:', error);
+            logger.error('Failed to copy share code to clipboard:', error);
 
           }
         }
@@ -211,13 +213,13 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
             await navigator.clipboard.writeText(data.data.shareCode);
             toast.success('Share code copied to clipboard!');
           } catch (error) {
-            console.error('Failed to copy share code to clipboard:', error);
+            logger.error('Failed to copy share code to clipboard:', error);
 
           }
         }
       }
     } catch (error) {
-      console.error('Error generating share code:', error);
+      logger.error('Error generating share code:', error);
       toast.error((error as Error).message);
     } finally {
       setIsGenerating(false);
@@ -240,7 +242,7 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
       const { handleShareCodeRedirect } = await import('@/app/utils/shareCodeUtils');
       await handleShareCodeRedirect(code);
     } catch (error) {
-      console.error('Error loading shared test:', error);
+      logger.error('Error loading shared test:', error);
       toast.error((error as Error).message);
     }
   };
@@ -255,7 +257,7 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
       const { handleShareCodeRedirect } = await import('@/app/utils/shareCodeUtils');
       await handleShareCodeRedirect(inputCode);
     } catch (error) {
-      console.error('Error loading shared test:', error);
+      logger.error('Error loading shared test:', error);
       toast.error((error as Error).message);
     } finally {
 

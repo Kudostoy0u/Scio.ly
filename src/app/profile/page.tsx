@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -79,7 +81,7 @@ export default function ProfilePage() {
         if ((error as any)?.code === '23505') {
           toast.error('That username is already taken.');
         } else {
-        console.error('Error updating profile:', error);
+        logger.error('Error updating profile:', error);
         toast.error('Failed to update profile. Please try again.');
         }
       } else {
@@ -98,7 +100,7 @@ export default function ProfilePage() {
         } catch {}
       }
     } catch (error) {
-      console.error('Error updating profile:', error);
+      logger.error('Error updating profile:', error);
       toast.error('An unexpected error occurred. Please try again.');
     } finally {
       setSaving(false);
@@ -127,7 +129,7 @@ export default function ProfilePage() {
         upsert: true,
       });
       if (uploadError) {
-        console.error('Upload error:', uploadError);
+        logger.error('Upload error:', uploadError);
         toast.error('Failed to upload image. Ensure the avatars bucket exists and is public.');
         return;
       }
@@ -141,7 +143,7 @@ export default function ProfilePage() {
         .eq('id', user.id);
       toast.success('Profile picture updated!');
     } catch (err) {
-      console.error('Photo upload failed:', err);
+      logger.error('Photo upload failed:', err);
       toast.error('Photo upload failed.');
     } finally {
       setUploadingPhoto(false);

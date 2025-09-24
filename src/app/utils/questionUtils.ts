@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import { toast } from 'react-toastify';
 import api from '../api';
@@ -77,7 +79,7 @@ export const gradeFreeResponses = async (
     });
     
     if (!response.ok) {
-      console.error('API error:', await response.text());
+      logger.error('API error:', await response.text());
       return freeResponses.map(() => 0);
     }
     
@@ -88,7 +90,7 @@ export const gradeFreeResponses = async (
       return freeResponses.map(() => 0);
     }
   } catch (error) {
-    console.error("Error grading with API:", error);
+    logger.error("Error grading with API:", error);
     return freeResponses.map(() => 0);
   }
 };
@@ -116,7 +118,7 @@ export const gradeWithGemini = async (
     });
 
     if (!response.ok) {
-      console.error('API error:', await response.text());
+      logger.error('API error:', await response.text());
       return 0;
     }
 
@@ -126,7 +128,7 @@ export const gradeWithGemini = async (
     }
     return 0;
   } catch (error) {
-    console.error('Error grading with API:', error);
+    logger.error('Error grading with API:', error);
     return 0;
   }
 };
@@ -226,7 +228,7 @@ export const getExplanation = async (
   try {
     const isMCQ = question.options && question.options.length > 0;
 
-    console.log('🚀 Making request to:', api.geminiExplain);
+    logger.log('🚀 Making request to:', api.geminiExplain);
     const response = await fetch(api.geminiExplain, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -239,13 +241,13 @@ export const getExplanation = async (
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('API Response error:', errorText);
+      logger.error('API Response error:', errorText);
       throw new Error(`Failed to fetch explanation: ${response.status} ${response.statusText}`);
     }
 
-    console.log('✅ Received response, status:', response.status);
+    logger.log('✅ Received response, status:', response.status);
     const data = await response.json();
-    console.log('📦 Received data:', data);
+    logger.log('📦 Received data:', data);
     if (!data.success || !data.data) {
       throw new Error('Invalid response format from API');
     }
@@ -255,7 +257,7 @@ export const getExplanation = async (
 
 
     if (isMCQ && correctIndices && correctIndices.length > 0) {
-      console.log('🔍 Found correct indices in explanation');
+      logger.log('🔍 Found correct indices in explanation');
       try {
         const suggestedIndices = correctIndices.filter(n => !isNaN(n));
         if (suggestedIndices.length > 0) {
@@ -268,10 +270,10 @@ export const getExplanation = async (
           
           const normalizedNewAnswers = correctedAnswers;
           
-          console.log('🔍 Answer Comparison Debug:');
-          console.log('  Original question.answers:', currentAnswers);
-          console.log('  Normalized current answers:', normalizedCurrentAnswers);
-          console.log('  Explanation suggested answers:', normalizedNewAnswers);
+          logger.log('🔍 Answer Comparison Debug:');
+          logger.log('  Original question.answers:', currentAnswers);
+          logger.log('  Normalized current answers:', normalizedCurrentAnswers);
+          logger.log('  Explanation suggested answers:', normalizedNewAnswers);
           
           const answersChanged = !(
             normalizedNewAnswers.length === normalizedCurrentAnswers.length &&
@@ -279,10 +281,10 @@ export const getExplanation = async (
             normalizedCurrentAnswers.every(val => normalizedNewAnswers.includes(val))
           );
           
-          console.log('  Answers changed?', answersChanged);
+          logger.log('  Answers changed?', answersChanged);
 
           if (answersChanged) {
-            console.log("✅ Explanation suggested different answers, submitting edit request.");
+            logger.log("✅ Explanation suggested different answers, submitting edit request.");
             const newQ = { ...question, answers: correctedAnswers };
             
             toast.info('Answer has been updated based on explanation');
@@ -302,10 +304,10 @@ export const getExplanation = async (
                 }),
               });
             } catch (editError) {
-              console.error("Failed to submit auto-edit request:", editError);
+              logger.error("Failed to submit auto-edit request:", editError);
             }
           } else {
-            console.log("✅ Explanation confirmed existing answers are correct - no edit needed.");
+            logger.log("✅ Explanation confirmed existing answers are correct - no edit needed.");
           }
 
 
@@ -333,21 +335,21 @@ export const getExplanation = async (
                 isNowCorrect = correctAnswers.includes(userNumericAnswers[0]);
               }
 
-              console.log(`🔍 MCQ Grading Debug for question ${index + 1}:`);
-              console.log(`  User's numeric answers:`, userNumericAnswers);
-              console.log(`  Corrected answers:`, correctAnswers);
-              console.log(`  Is multi-select:`, isMulti);
-              console.log(`  Is now correct:`, isNowCorrect);
-              console.log(`  Current grading result:`, gradingResults[index]);
+              logger.log(`🔍 MCQ Grading Debug for question ${index + 1}:`);
+              logger.log(`  User's numeric answers:`, userNumericAnswers);
+              logger.log(`  Corrected answers:`, correctAnswers);
+              logger.log(`  Is multi-select:`, isMulti);
+              logger.log(`  Is now correct:`, isNowCorrect);
+              logger.log(`  Current grading result:`, gradingResults[index]);
 
               if (isNowCorrect && (gradingResults[index] ?? 0) !== 1) {
-                console.log(`✅ Updating grading result for question ${index + 1} to Correct based on explanation.`);
+                logger.log(`✅ Updating grading result for question ${index + 1} to Correct based on explanation.`);
                 setGradingResults(prev => ({ ...prev, [index]: 1 }));
               } else if (!isNowCorrect && gradingResults[index] === 1) {
-                console.log(`❌ Updating grading result for question ${index + 1} to Incorrect based on explanation.`);
+                logger.log(`❌ Updating grading result for question ${index + 1} to Incorrect based on explanation.`);
                 setGradingResults(prev => ({ ...prev, [index]: 0 }));
               } else {
-                console.log(`ℹ️ No grading change needed for question ${index + 1}`);
+                logger.log(`ℹ️ No grading change needed for question ${index + 1}`);
               }
             }
 
@@ -355,14 +357,14 @@ export const getExplanation = async (
           });
         }
       } catch (parseError) {
-        console.error("Failed to parse correct indices:", parseError);
+        logger.error("Failed to parse correct indices:", parseError);
         explanationText = explanation;
       }
     }
     
 
     if (!isMCQ && correctedAnswers && correctedAnswers.length > 0) {
-      console.log('🔍 Found corrected answers for FRQ in explanation');
+      logger.log('🔍 Found corrected answers for FRQ in explanation');
       try {
         const currentAnswers = question.answers || [];
         
@@ -373,13 +375,13 @@ export const getExplanation = async (
           )
         );
         
-        console.log('🔍 FRQ Answer Comparison Debug:');
-        console.log('  Original question.answers:', currentAnswers);
-        console.log('  Explanation suggested answers:', correctedAnswers);
-        console.log('  Answers changed?', answersChanged);
+        logger.log('🔍 FRQ Answer Comparison Debug:');
+        logger.log('  Original question.answers:', currentAnswers);
+        logger.log('  Explanation suggested answers:', correctedAnswers);
+        logger.log('  Answers changed?', answersChanged);
         
         if (answersChanged) {
-          console.log("✅ Explanation suggested different answers for FRQ, submitting edit request.");
+          logger.log("✅ Explanation suggested different answers for FRQ, submitting edit request.");
           const newQ = { ...question, answers: correctedAnswers };
           
           toast.info('Answer has been updated based on explanation');
@@ -399,7 +401,7 @@ export const getExplanation = async (
               }),
             });
           } catch (editError) {
-            console.error("Failed to submit auto-edit request:", editError);
+            logger.error("Failed to submit auto-edit request:", editError);
           }
           
           setData(prevData => {
@@ -418,10 +420,10 @@ export const getExplanation = async (
               }
               
               if (isNowCorrect && (gradingResults[index] ?? 0) !== 1) {
-                console.log(`Updating grading result for question ${index + 1} to Correct based on explanation.`);
+                logger.log(`Updating grading result for question ${index + 1} to Correct based on explanation.`);
                 setGradingResults(prev => ({ ...prev, [index]: 1 }));
               } else if (!isNowCorrect && gradingResults[index] === 1) {
-                console.log(`Updating grading result for question ${index + 1} to Incorrect based on explanation.`);
+                logger.log(`Updating grading result for question ${index + 1} to Incorrect based on explanation.`);
                 setGradingResults(prev => ({ ...prev, [index]: 0 }));
               }
             }
@@ -429,18 +431,18 @@ export const getExplanation = async (
             return newData;
           });
         } else {
-          console.log("✅ Explanation confirmed existing FRQ answers are correct - no edit needed.");
+          logger.log("✅ Explanation confirmed existing FRQ answers are correct - no edit needed.");
         }
       } catch (parseError) {
-        console.error("Failed to parse corrected answers for FRQ:", parseError);
+        logger.error("Failed to parse corrected answers for FRQ:", parseError);
       }
     }
 
-    console.log('🎯 Setting explanation text:', explanationText);
+    logger.log('🎯 Setting explanation text:', explanationText);
     setExplanations((prev) => ({ ...prev, [index]: explanationText }));
 
   } catch (error) {
-    console.error('Error in getExplanation:', error);
+    logger.error('Error in getExplanation:', error);
     const errorMsg = `Failed to load explanation: ${(error as Error).message}`;
     setExplanations((prev) => ({
       ...prev,

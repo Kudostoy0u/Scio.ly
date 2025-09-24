@@ -1,5 +1,6 @@
 import { toast } from 'react-toastify';
 import api from '../api';
+import logger from '@/lib/utils/logger';
 import {
   initializeTestSession,
   clearTestSession
@@ -53,10 +54,10 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
     
     if (response.ok) {
       const data = await response.json();
-      console.log('🔍 Codebusters API Response:', data);
+      logger.log('🔍 Codebusters API Response:', data);
       
       if (data.success && data.data && data.data.quotes && data.data.testParams) {
-        console.log('🔍 Successfully got encrypted quotes from codebusters endpoint:', data.data.quotes.length, 'quotes');
+        logger.log('🔍 Successfully got encrypted quotes from codebusters endpoint:', data.data.quotes.length, 'quotes');
 
         localStorage.setItem('testParams', JSON.stringify(data.data.testParams));
         
@@ -78,12 +79,12 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
     
     if (response.ok) {
       const data = await response.json();
-      console.log('🔍 General API Response:', data);
+      logger.log('🔍 General API Response:', data);
       
       if (data.success && data.data && data.data.testParamsRaw) {
         const testParams = data.data.testParamsRaw;
         
-        console.log('🔍 Processing regular test with eventName:', testParams.eventName);
+        logger.log('🔍 Processing regular test with eventName:', testParams.eventName);
         
 
         localStorage.setItem('testParams', JSON.stringify(testParams));
@@ -94,7 +95,7 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
         const questionIds = data.data.questionIds || [];
         if (questionIds.length > 0) {
           try {
-            console.log('🔍 Fetching questions by IDs:', questionIds);
+            logger.log('🔍 Fetching questions by IDs:', questionIds);
             const questionsResponse = await fetch(api.questionsBatch, {
               method: 'POST',
               headers: {
@@ -105,7 +106,7 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
             if (questionsResponse.ok) {
               const questionsData = await questionsResponse.json();
               if (questionsData.success && questionsData.data) {
-                console.log('🔍 Successfully fetched questions:', questionsData.data.length);
+                logger.log('🔍 Successfully fetched questions:', questionsData.data.length);
                 
                 return {
                   success: true,
@@ -118,7 +119,7 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
               }
             }
           } catch (fetchError) {
-            console.error('Error fetching questions by IDs:', fetchError);
+            logger.error('Error fetching questions by IDs:', fetchError);
           }
         }
         
@@ -138,7 +139,7 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
       error: 'Invalid or expired test code',
     };
   } catch (error) {
-    console.error('Error loading shared test code:', error);
+    logger.error('Error loading shared test code:', error);
     return {
       success: false,
       error: 'Failed to load shared test code',
@@ -171,7 +172,7 @@ export const handleShareCodeRedirect = async (code: string): Promise<boolean> =>
     await navigator.clipboard.writeText(code);
     toast.success('Share code copied to clipboard!');
   } catch (error) {
-    console.error('Failed to copy share code to clipboard:', error);
+    logger.error('Failed to copy share code to clipboard:', error);
 
   }
 

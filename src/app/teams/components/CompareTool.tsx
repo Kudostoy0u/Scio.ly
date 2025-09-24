@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { EloData, ComparisonResult } from '../types/elo';
@@ -135,7 +137,7 @@ const CompareTool: React.FC<CompareToolProps> = ({ eloData }) => {
       setOverallResult(overallResult);
     } catch (err) {
       setError('Error comparing schools');
-      console.error(err);
+      logger.error(err);
     } finally {
       setIsLoading(false);
     }

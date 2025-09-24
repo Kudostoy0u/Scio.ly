@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 import { db } from './db';
 
 export function slugifyEventName(name: string): string {
@@ -125,7 +127,7 @@ export async function saveOfflineEvent(eventSlug: string, questions: any): Promi
     broadcastDownloadUpdate(eventSlug);
     return true;
   } catch (error) {
-    console.error('Failed to save offline event:', error);
+    logger.error('Failed to save offline event:', error);
     return false;
   }
 }

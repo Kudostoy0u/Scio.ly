@@ -1,4 +1,6 @@
 "use client";
+import logger from '@/lib/utils/logger';
+
 import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
@@ -11,12 +13,12 @@ export default function Page() {
       const idStr = params?.id as string | undefined;
       if (!idStr) return;
       try {
-        console.log('[assign] fetching assignment', { idStr });
+        logger.log('[assign] fetching assignment', { idStr });
         const res = await fetch(`/api/assignments?id=${encodeURIComponent(idStr)}`, { cache: 'no-store' });
         const j = await res.json();
-        console.log('[assign] api response', { ok: res.ok, status: res.status, data: j?.data });
+        logger.log('[assign] api response', { ok: res.ok, status: res.status, data: j?.data });
         const row = j?.data;
-        if (!row) { console.warn('[assign] missing assignment'); router.replace('/assign/error'); return; }
+        if (!row) { logger.warn('[assign] missing assignment'); router.replace('/assign/error'); return; }
         const eventName: string | undefined = row?.event_name;
         const paramsObj = row?.params || {};
         const questions = Array.isArray(row?.questions) ? row.questions : [];
@@ -28,11 +30,11 @@ export default function Page() {
           try {
             const sel = { school: row.school, division: row.division, captain: false };
             localStorage.setItem('teamsSelection', JSON.stringify(sel));
-            console.log('[assign] set teamsSelection', sel);
+            logger.log('[assign] set teamsSelection', sel);
           } catch {}
           // Seed exact questions for the assignee
           if (eventName === 'Codebusters') {
-            console.log('[assign] seeding codebusters quotes', { count: questions.length });
+            logger.log('[assign] seeding codebusters quotes', { count: questions.length });
             try {
               localStorage.setItem('codebustersQuotes', JSON.stringify(questions));
               localStorage.setItem('codebustersQuotesLoadedFromStorage', 'true');
@@ -41,7 +43,7 @@ export default function Page() {
               localStorage.removeItem('codebustersTimeLeft');
             } catch {}
           } else {
-            console.log('[assign] seeding test questions', { count: questions.length });
+            logger.log('[assign] seeding test questions', { count: questions.length });
             try {
               // strip any originalIndex and reindex freshly
               const seeded = questions.map((q: any, idx: number) => ({ ...q, originalIndex: idx }));
@@ -60,7 +62,7 @@ export default function Page() {
         if (row.school) sp.set('school', row.school);
         if (row.division) sp.set('division', row.division);
         const target = `${route}?${sp.toString()}`;
-        console.log('[assign] redirecting to', target);
+        logger.log('[assign] redirecting to', target);
         router.replace(target);
       } catch {
         router.replace('/assign/error');

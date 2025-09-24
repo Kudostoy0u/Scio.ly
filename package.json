@@ -37,7 +37,6 @@
     "embla-carousel-react": "8.6.0",
     "framer-motion": "12.23.12",
     "github-slugger": "^2.0.0",
-    "glob": "^11.0.3",
     "js-yaml": "^4.1.0",
     "lucide-react": "0.539.0",
     "next": "15.4.6",
@@ -58,6 +57,10 @@
     "zod": "4.0.17"
   },
   "devDependencies": {
+    "@babel/generator": "^7.28.3",
+    "@babel/parser": "^7.28.4",
+    "@babel/traverse": "^7.28.4",
+    "@babel/types": "^7.28.4",
     "@eslint/eslintrc": "^3.3.1",
     "@tailwindcss/postcss": "^4.1.12",
     "@tailwindcss/typography": "^0.5.16",
@@ -71,6 +74,7 @@
     "drizzle-kit": "^0.31.4",
     "eslint": "^9.33.0",
     "eslint-config-next": "^15",
+    "glob": "^11.0.3",
     "jsdom": "25.0.1",
     "katex": "^0.16.22",
     "rehype-katex": "^7.0.1",

@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
@@ -157,7 +159,7 @@ export default function AdminPage() {
       }
       toast.success(json.message || 'Success');
     } catch (e) {
-      console.error(e);
+      logger.error(e);
       toast.error(e instanceof Error ? e.message : 'Action failed');
     } finally {
       setBusy(prev => ({ ...prev, [id]: false }));
@@ -181,7 +183,7 @@ export default function AdminPage() {
       await fetchData();
       setBulkMessage(json.message || 'Done');
     } catch (e) {
-      console.error(e);
+      logger.error(e);
       setBulkMessage(e instanceof Error ? e.message : 'Action failed');
     } finally {
       setBulkBusy(prev => ({ ...prev, [action]: false }));

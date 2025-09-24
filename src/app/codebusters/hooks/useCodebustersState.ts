@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { QuoteData } from '../types';
+import logger from '@/lib/utils/logger';
+
 // import { toast } from 'react-toastify';
 import {
   getCurrentTestSession,
@@ -39,7 +41,7 @@ const loadPreferences = (eventName: string) => {
       };
     }
   } catch (error) {
-    console.error('Error loading preferences:', error);
+    logger.error('Error loading preferences:', error);
   }
   
   return defaults;
@@ -113,24 +115,24 @@ export const useCodebustersState = () => {
         setIsLoading(false);
         return;
       } catch (e) {
-        console.error('Error parsing saved quotes:', e);
+        logger.error('Error parsing saved quotes:', e);
         // fall through to normal path
       }
     }
 
     if (testParamsStr) {
-      console.log('Found testParams, checking for saved quotes...');
+      logger.log('Found testParams, checking for saved quotes...');
 
       if (forceRefresh === 'true') {
-        console.log('Force refresh detected, clearing quotes');
+        logger.log('Force refresh detected, clearing quotes');
         localStorage.removeItem('codebustersQuotes');
         localStorage.removeItem('codebustersForceRefresh');
 
         setIsLoading(false);
       } else if (savedQuotes) {
-        console.log('Found saved quotes, loading them');
-        console.log('savedIsTestSubmitted:', savedIsTestSubmitted);
-        console.log('savedTestScore:', savedTestScore);
+        logger.log('Found saved quotes, loading them');
+        logger.log('savedIsTestSubmitted:', savedIsTestSubmitted);
+        logger.log('savedTestScore:', savedTestScore);
         
         try {
           const parsedQuotes: QuoteData[] = JSON.parse(savedQuotes);
@@ -145,19 +147,19 @@ export const useCodebustersState = () => {
           if (savedIsTestSubmitted) {
             try {
               const isSubmitted = JSON.parse(savedIsTestSubmitted);
-              console.log('Setting isTestSubmitted to:', isSubmitted);
+              logger.log('Setting isTestSubmitted to:', isSubmitted);
               setIsTestSubmitted(isSubmitted);
             } catch (error) {
-              console.error('Error parsing saved test submitted:', error);
+              logger.error('Error parsing saved test submitted:', error);
             }
           }
           if (savedTestScore) {
             try {
               const score = JSON.parse(savedTestScore);
-              console.log('Setting testScore to:', score);
+              logger.log('Setting testScore to:', score);
               setTestScore(score);
             } catch (error) {
-              console.error('Error parsing saved test score:', error);
+              logger.error('Error parsing saved test score:', error);
             }
           }
           setQuotes(updatedQuotes);
@@ -166,11 +168,11 @@ export const useCodebustersState = () => {
           setQuotesLoadedFromStorage(true);
           localStorage.setItem('codebustersQuotesLoadedFromStorage', 'true');
         } catch (error) {
-          console.error('Error parsing saved quotes:', error);
+          logger.error('Error parsing saved quotes:', error);
           setError('Could not load test data. It might be corrupted.');
         }
       } else {
-        console.log('No saved quotes found, will trigger fresh load');
+        logger.log('No saved quotes found, will trigger fresh load');
 
 
         setIsLoading(false);
@@ -238,14 +240,14 @@ export const useCodebustersState = () => {
 
 
     if (savedQuotesLoadedFromStorage === 'true') {
-      console.log('Restoring quotesLoadedFromStorage flag');
+      logger.log('Restoring quotesLoadedFromStorage flag');
       setQuotesLoadedFromStorage(true);
     }
     
 
     
 
-    console.log('Setting isLoading to false');
+    logger.log('Setting isLoading to false');
     setIsLoading(false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

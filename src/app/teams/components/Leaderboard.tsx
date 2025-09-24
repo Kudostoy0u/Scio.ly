@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { EloData, LeaderboardEntry } from '../types/elo';
@@ -237,7 +239,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
     }
     
 
-    console.warn('No metadata available for tournament timeline');
+    logger.warn('No metadata available for tournament timeline');
     return [];
   }, [metadata]);
 
@@ -328,7 +330,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
       });
       
     } catch (error) {
-      console.error('Error calculating ranking changes:', error);
+      logger.error('Error calculating ranking changes:', error);
     }
     
     return changes;
@@ -378,7 +380,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
       
       return data;
     } catch (error) {
-      console.error('Error loading leaderboard:', error);
+      logger.error('Error loading leaderboard:', error);
       return [];
     }
   }, [eloData, selectedEvent, selectedSeason, selectedState, selectedDate]);

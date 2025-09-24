@@ -1,4 +1,6 @@
 'use client';
+import logger from '@/lib/utils/logger';
+
 
 import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
@@ -96,7 +98,7 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
 
 
       if (!user.id || typeof user.id !== 'string' || user.id.trim() === '') {
-        console.warn('Invalid user ID for profile sync:', user.id);
+        logger.warn('Invalid user ID for profile sync:', user.id);
         return;
       }
 
@@ -112,7 +114,7 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
           .maybeSingle();
 
         if (readError) {
-          console.warn('Error reading existing profile:', readError);
+          logger.warn('Error reading existing profile:', readError);
 
         }
 
@@ -149,14 +151,14 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
         const shouldForceUpdateNames = Boolean(isGoogle) && (firstName || lastName);
 
         if (!user.id || !email || !username) {
-          console.warn('Missing required user fields for upsert:', { id: user.id, email, username });
+          logger.warn('Missing required user fields for upsert:', { id: user.id, email, username });
           return;
         }
 
         if (typeof user.id !== 'string' || user.id.trim() === '' || 
             typeof email !== 'string' || email.trim() === '' ||
             typeof username !== 'string' || username.trim() === '') {
-          console.warn('Invalid field types or empty values for upsert:', { 
+          logger.warn('Invalid field types or empty values for upsert:', { 
             id: user.id, idType: typeof user.id, 
             email, emailType: typeof email, 
             username, usernameType: typeof username 
@@ -203,10 +205,10 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
               .from('users')
               .upsert(payload as any, { onConflict: 'id' });
             if (upsertError) {
-              console.warn('Failed to upsert user profile:', upsertError);
+              logger.warn('Failed to upsert user profile:', upsertError);
             }
           } catch (error) {
-            console.warn('Error upserting user profile:', error);
+            logger.warn('Error upserting user profile:', error);
           }
         }
 

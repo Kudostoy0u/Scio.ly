@@ -8,8 +8,8 @@ bungee-drop | C | full
 chemistry-lab | C | full
 circuit-lab | B,C | full
 codebusters | B,C | full
-crime-busters | B | partial
-designer-genes | C | partial
+crime-busters | B | full
+designer-genes | C | full
 disease-detectives | B,C | full
 dynamic-planet | B,C | full
 electric-vehicle | C | full
