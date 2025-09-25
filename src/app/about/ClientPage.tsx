@@ -131,22 +131,6 @@ export default function AboutClientPage() {
           </div>
         </section>
 
-        <section className={`mb-16 p-6 rounded-xl max-w-4xl mx-auto ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-          <div className="flex flex-col items-center text-center gap-4">
-            <Image
-              src="/SoCal.png"
-              alt="Sponsor logo"
-              width={480}
-              height={200}
-              className="h-24 w-auto object-contain"
-              priority
-            />
-            <p className={`${darkMode ? 'text-gray-200' : 'text-gray-800'} text-lg font-medium`}>
-              Thank you to our partner for supporting us!
-            </p>
-          </div>
-        </section>
-
         <section className={`mb-16 p-6 rounded-xl max-w-4xl mx-auto ${darkMode ? 'bg-gray-800/50 backdrop-blur-sm' : 'bg-white/90 shadow-lg backdrop-blur-sm'}`}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
             <div className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100/60'} p-5 rounded-lg flex items-start gap-4`}>

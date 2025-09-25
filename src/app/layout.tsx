@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Analytics } from "@vercel/analytics/react"
 import { GoogleAnalytics } from '@next/third-parties/google'
 import Script from 'next/script'
 import "./globals.css";
@@ -100,7 +99,6 @@ export default async function RootLayout({
             </Providers>
           </AuthProvider>
         </ThemeProvider>
-        <Analytics />
         <GoogleAnalytics gaId="G-P9SVV3TY4G" />
         <Script
           src="https://static.cloudflareinsights.com/beacon.min.js"

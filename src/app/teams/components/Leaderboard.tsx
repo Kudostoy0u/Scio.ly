@@ -7,6 +7,8 @@ import type { EloData, LeaderboardEntry } from '../types/elo';
 import { getLeaderboard } from '../utils/eloDataProcessor';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { ChevronLeft, ChevronRight, Search, Calendar } from 'lucide-react';
+import { EVENT_WHITELISTS } from './leaderboard/constants';
+import { collectSeasons, collectStates, eventsForSeason, buildTournamentDates, TournamentDate, computeRankingChanges, formatRankingChange, rankColor, formatDate } from './leaderboard/utils';
 
 interface LeaderboardProps {
   eloData: EloData;
@@ -14,129 +16,10 @@ interface LeaderboardProps {
   metadata?: any;
 }
 
-interface TournamentDate {
-  date: string;
-  tournament: string;
-  allTournaments: string[];
-  season: string;
-}
+// TournamentDate moved to utils
 
 
-const EVENT_WHITELISTS: Record<string, Record<string, string[]>> = {
-  '2018': {
-    'C': [
-      'Anatomy and Physiology', 'Astronomy', 'Chemistry Lab', 'Disease Detectives', 'Dynamic Planet',
-      'Ecology', 'Experimental Design', 'Fermi Questions', 'Forensics', 'Game On', 'Helicopters',
-      'Herpetology', 'Hovercraft', 'Materials Science', 'Microbe Mission', 'Mission Possible',
-      'Mousetrap Vehicle', 'Optics', 'Remote Sensing', 'Rocks and Minerals', 'Thermodynamics',
-      'Towers', 'Write It Do It'
-    ],
-    'B': [
-      'Anatomy and Physiology', 'Battery Buggy', 'Crime Busters', 'Disease Detectives', 'Dynamic Planet',
-      'Ecology', 'Experimental Design', 'Fast Facts', 'Herpetology', 'Hovercraft', 'Meteorology',
-      'Microbe Mission', 'Mystery Architecture', 'Optics', 'Potions and Poisons', 'Road Scholar',
-      'Rocks and Minerals', 'Roller Coaster', 'Solar System', 'Thermodynamics', 'Towers', 'Wright Stuff', 'Write It Do It'
-    ]
-  },
-  '2019': {
-    'C': [
-      'Anatomy and Physiology', 'Astronomy', 'Boomilever', 'Chemistry Lab', 'Circuit Lab', 'Codebusters',
-      'Designer Genes', 'Disease Detectives', 'Dynamic Planet', 'Experimental Design', 'Fermi Questions',
-      'Forensics', 'Fossils', 'Geologic Mapping', 'Herpetology', 'Mission Possible', 'Mousetrap Vehicle',
-      'Protein Modeling', 'Sounds of Music', 'Thermodynamics', 'Water Quality', 'Wright Stuff', 'Write It Do It'
-    ],
-    'B': [
-      'Anatomy and Physiology', 'Battery Buggy', 'Boomilever', 'Circuit Lab', 'Crime Busters', 'Density Lab',
-      'Disease Detectives', 'Dynamic Planet', 'Elastic Launched Glider', 'Experimental Design', 'Fossils',
-      'Game On', 'Heredity', 'Herpetology', 'Meteorology', 'Mystery Architecture', 'Potions and Poisons',
-      'Road Scholar', 'Roller Coaster', 'Solar System', 'Thermodynamics', 'Water Quality', 'Write It Do It'
-    ]
-  },
-  '2020': {
-    'C': [
-      'Anatomy and Physiology', 'Astronomy', 'Boomilever', 'Chemistry Lab', 'Circuit Lab', 'Codebusters',
-      'Designer Genes', 'Detector Building', 'Disease Detectives', 'Dynamic Planet', 'Experimental Design',
-      'Forensics', 'Fossils', 'Geologic Mapping', 'Gravity Vehicle', 'Machines', 'Ornithology',
-      'Ping Pong Parachute', 'Protein Modeling', 'Sounds of Music', 'Water Quality', 'Wright Stuff', 'Write It Do It'
-    ],
-    'B': [
-      'Anatomy and Physiology', 'Boomilever', 'Circuit Lab', 'Crime Busters', 'Density Lab', 'Disease Detectives',
-      'Dynamic Planet', 'Elastic Launched Glider', 'Experimental Design', 'Food Science', 'Fossils',
-      'Game On', 'Heredity', 'Machines', 'Meteorology', 'Mission Possible', 'Mousetrap Vehicle', 'Ornithology',
-      'Ping Pong Parachute', 'Reach for the Stars', 'Road Scholar', 'Water Quality', 'Write It Do It'
-    ]
-  },
-  '2021': {
-    'C': [
-      'Anatomy and Physiology', 'Astronomy', 'Boomilever', 'Chemistry Lab', 'Circuit Lab', 'Codebusters',
-      'Designer Genes', 'Detector Building', 'Disease Detectives', 'Dynamic Planet', 'Experimental Design',
-      'Forensics', 'Fossils', 'Geologic Mapping', 'Gravity Vehicle', 'Machines', 'Ornithology',
-      'Ping Pong Parachute', 'Protein Modeling', 'Sounds of Music', 'Water Quality', 'Wright Stuff', 'Write It Do It'
-    ],
-    'B': [
-      'Anatomy and Physiology', 'Boomilever', 'Circuit Lab', 'Crime Busters', 'Density Lab', 'Disease Detectives',
-      'Dynamic Planet', 'Elastic Launched Glider', 'Experimental Design', 'Food Science', 'Fossils',
-      'Game On', 'Heredity', 'Machines', 'Meteorology', 'Mission Possible', 'Mousetrap Vehicle', 'Ornithology',
-      'Ping Pong Parachute', 'Reach for the Stars', 'Road Scholar', 'Water Quality', 'Write It Do It'
-    ]
-  },
-  '2022': {
-    'C': [
-      'Anatomy and Physiology', 'Astronomy', 'Bridge', 'Cell Biology', 'Chemistry Lab', 'Codebusters',
-      'Detector Building', 'Disease Detectives', 'Dynamic Planet', 'Environmental Chemistry', 'Experimental Design',
-      'Forensics', 'Gravity Vehicle', 'Green Generation', 'It\'s About Time', 'Ornithology', 'Ping Pong Parachute',
-      'Remote Sensing', 'Rocks and Minerals', 'Trajectory', 'WiFi Lab', 'Wright Stuff', 'Write It Do It'
-    ],
-    'B': [
-      'Anatomy and Physiology', 'Bio-Process Lab', 'Bridge', 'Codebusters', 'Crave the Wave', 'Crime Busters',
-      'Disease Detectives', 'Dynamic Planet', 'Electric Wright Stuff', 'Experimental Design', 'Food Science',
-      'Green Generation', 'Meteorology', 'Mission Possible', 'Mousetrap Vehicle', 'Ornithology', 'Ping Pong Parachute',
-      'Road Scholar', 'Rocks and Minerals', 'Solar System', 'Sounds of Music', 'Storm the Castle', 'Write It Do It'
-    ]
-  },
-  '2023': {
-    'C': [
-      'Anatomy and Physiology', 'Astronomy', 'Bridge', 'Cell Biology', 'Chemistry Lab', 'Codebusters',
-      'Detector Building', 'Disease Detectives', 'Dynamic Planet', 'Environmental Chemistry', 'Experimental Design',
-      'Fermi Questions', 'Flight', 'Forensics', 'Forestry', 'Green Generation', 'It\'s About Time',
-      'Remote Sensing', 'Rocks and Minerals', 'Scrambler', 'Trajectory', 'WiFi Lab', 'Write It Do It'
-    ],
-    'B': [
-      'Anatomy and Physiology', 'Bio-Process Lab', 'Bridge', 'Can\'t Judge a Powder', 'Codebusters', 'Crave the Wave',
-      'Crime Busters', 'Disease Detectives', 'Dynamic Planet', 'Experimental Design', 'Fast Facts', 'Flight',
-      'Forestry', 'Green Generation', 'Meteorology', 'Road Scholar', 'Rocks and Minerals', 'Roller Coaster',
-      'Solar System', 'Sounds of Music', 'Storm the Castle', 'Wheeled Vehicle', 'Write It Do It'
-    ]
-  },
-  '2024': {
-    'C': [
-      'Air Trajectory', 'Anatomy and Physiology', 'Astronomy', 'Chemistry Lab', 'Codebusters', 'Detector Building',
-      'Disease Detectives', 'Dynamic Planet', 'Ecology', 'Experimental Design', 'Fermi Questions', 'Flight',
-      'Forensics', 'Forestry', 'Fossils', 'Geologic Mapping', 'Microbe Mission', 'Optics', 'Robot Tour',
-      'Scrambler', 'Tower', 'Wind Power', 'Write It Do It'
-    ],
-    'B': [
-      'Air Trajectory', 'Anatomy and Physiology', 'Can\'t Judge a Powder', 'Codebusters', 'Crime Busters',
-      'Disease Detectives', 'Dynamic Planet', 'Ecology', 'Experimental Design', 'Fast Facts', 'Flight',
-      'Forestry', 'Fossils', 'Meteorology', 'Microbe Mission', 'Optics', 'Reach for the Stars', 'Road Scholar',
-      'Roller Coaster', 'Tower', 'Wheeled Vehicle', 'Wind Power', 'Write It Do It'
-    ]
-  },
-  '2025': {
-    'C': [
-      'Air Trajectory', 'Anatomy and Physiology', 'Astronomy', 'Bungee Drop', 'Chemistry Lab', 'Codebusters',
-      'Disease Detectives', 'Dynamic Planet', 'Ecology', 'Electric Vehicle', 'Entomology', 'Experimental Design',
-      'Forensics', 'Fossils', 'Geologic Mapping', 'Helicopter', 'Materials Science', 'Microbe Mission',
-      'Optics', 'Robot Tour', 'Tower', 'Wind Power', 'Write It Do It'
-    ],
-    'B': [
-      'Air Trajectory', 'Anatomy and Physiology', 'Codebusters', 'Crime Busters', 'Disease Detectives',
-      'Dynamic Planet', 'Ecology', 'Entomology', 'Experimental Design', 'Fossils', 'Helicopter', 'Meteorology',
-      'Metric Mastery', 'Microbe Mission', 'Mission Possible', 'Optics', 'Potions and Poisons', 'Reach for the Stars',
-      'Road Scholar', 'Scrambler', 'Tower', 'Wind Power', 'Write It Do It'
-    ]
-  }
-};
+// Whitelists moved to constants
 
 const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }) => {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
@@ -152,96 +35,15 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
   const prevSearchTerm = useRef<string>('');
 
 
-  const allSeasons = useMemo(() => {
-    const seasons = new Set<string>();
-    
-    for (const stateCode in eloData) {
-      for (const schoolName in eloData[stateCode]) {
-        const school = eloData[stateCode][schoolName];
-        Object.keys(school.seasons).forEach(season => {
-          seasons.add(season);
-        });
-      }
-    }
-    
-    return Array.from(seasons).sort();
-  }, [eloData]);
+  const allSeasons = useMemo(() => collectSeasons(eloData), [eloData]);
 
-  const allStates = useMemo(() => {
-    return Object.keys(eloData).sort();
-  }, [eloData]);
+  const allStates = useMemo(() => collectStates(eloData), [eloData]);
 
 
-  const eventsForSelectedSeason = useMemo(() => {
-
-    const whitelist = EVENT_WHITELISTS[selectedSeason]?.[division.toUpperCase() as 'B' | 'C'] || [];
-    
-
-    const events = new Set<string>();
-    
-    for (const stateCode in eloData) {
-      for (const schoolName in eloData[stateCode]) {
-        const school = eloData[stateCode][schoolName];
-        const seasonData = school.seasons[selectedSeason];
-        if (seasonData) {
-          Object.keys(seasonData.events).forEach(event => {
-            if (event !== '__OVERALL__' && whitelist.includes(event)) {
-              events.add(event);
-            }
-          });
-        }
-      }
-    }
-    
-    return Array.from(events).sort();
-  }, [eloData, selectedSeason, division]);
+  const eventsForSelectedSeason = useMemo(() => eventsForSeason(eloData, selectedSeason, division, EVENT_WHITELISTS), [eloData, selectedSeason, division]);
 
 
-  const getTournamentDatesForSeason = useCallback((season: string): TournamentDate[] => {
-
-    if (metadata?.tournamentTimeline?.[season]) {
-      const tournaments = metadata.tournamentTimeline[season];
-      
-
-      const tournamentsByDate = new Map<string, string[]>();
-      
-      tournaments.forEach((tournament: any) => {
-        if (tournament.date && tournament.tournamentName) {
-          if (!tournamentsByDate.has(tournament.date)) {
-            tournamentsByDate.set(tournament.date, []);
-          }
-          tournamentsByDate.get(tournament.date)!.push(tournament.tournamentName);
-        }
-      });
-      
-      const result = Array.from(tournamentsByDate.entries())
-        .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
-        .map(([date, tournaments]) => {
-
-          let displayText = '';
-          if (tournaments.length === 1) {
-            displayText = tournaments[0];
-          } else if (tournaments.length === 2) {
-            displayText = tournaments.join(', ');
-          } else {
-            displayText = `${tournaments[0]}, ${tournaments[1]} and ${tournaments.length - 2} more`;
-          }
-          
-          return {
-            date,
-            tournament: displayText,
-            allTournaments: tournaments,
-            season
-          };
-        });
-      
-      return result;
-    }
-    
-
-    logger.warn('No metadata available for tournament timeline');
-    return [];
-  }, [metadata]);
+  const getTournamentDatesForSeason = useCallback((season: string): TournamentDate[] => buildTournamentDates(metadata, season), [metadata]);
 
   const mostRecentSeason = allSeasons[allSeasons.length - 1] || '2024';
   
@@ -277,64 +79,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
   }, [selectedSeason, division]);
 
 
-  const rankingChanges = useMemo(() => {
-    const changes = new Map<string, number>();
-    
-    try {
-      const currentYear = parseInt(selectedSeason);
-      const previousYear = (currentYear - 1).toString();
-      
-
-      let currentYearData = getLeaderboard(eloData, selectedEvent || undefined, selectedSeason, 1000, selectedDate);
-      
-
-      let previousYearData = getLeaderboard(eloData, selectedEvent || undefined, previousYear, 1000);
-      
-
-      if (selectedState) {
-        currentYearData = currentYearData
-          .filter(entry => entry.state === selectedState)
-          .sort((a, b) => b.elo - a.elo);
-        
-        previousYearData = previousYearData
-          .filter(entry => entry.state === selectedState)
-          .sort((a, b) => b.elo - a.elo);
-      }
-      
-
-      const currentRankMap = new Map<string, number>();
-      const previousRankMap = new Map<string, number>();
-      
-      currentYearData.forEach((entry, index) => {
-        const key = `${entry.school}-${entry.state}`;
-        currentRankMap.set(key, index + 1);
-      });
-      
-      previousYearData.forEach((entry, index) => {
-        const key = `${entry.school}-${entry.state}`;
-        previousRankMap.set(key, index + 1);
-      });
-      
-
-      currentYearData.forEach(entry => {
-        const key = `${entry.school}-${entry.state}`;
-        const currentRank = currentRankMap.get(key) || 0;
-        const previousRank = previousRankMap.get(key) || 0;
-        
-        if (currentRank > 0 && previousRank > 0) {
-
-          changes.set(key, previousRank - currentRank);
-        } else {
-          changes.set(key, 0);
-        }
-      });
-      
-    } catch (error) {
-      logger.error('Error calculating ranking changes:', error);
-    }
-    
-    return changes;
-  }, [eloData, selectedEvent, selectedSeason, selectedState, selectedDate]);
+  const rankingChanges = useMemo(() => computeRankingChanges(eloData, selectedEvent, selectedSeason, selectedState, selectedDate), [eloData, selectedEvent, selectedSeason, selectedState, selectedDate]);
   
 
   const getRankingChange = (entry: LeaderboardEntry): number => {
@@ -343,27 +88,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
   };
 
 
-  const formatRankingChange = (change: number): { text: string; colorClass: string } => {
-    if (change > 0) {
-
-      return {
-        text: `+${change}`,
-        colorClass: darkMode ? 'text-green-400' : 'text-green-600'
-      };
-    } else if (change < 0) {
-
-      return {
-        text: `${change}`,
-        colorClass: darkMode ? 'text-red-400' : 'text-red-600'
-      };
-    } else {
-
-      return {
-        text: '-',
-        colorClass: darkMode ? 'text-gray-400' : 'text-gray-500'
-      };
-    }
-  };
+  const formatChangeLocal = (change: number) => formatRankingChange(!!darkMode, change);
 
 
   const leaderboardDataMemo = useMemo(() => {
@@ -445,21 +170,9 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
     setCurrentPage(1);
   }, [selectedSeason, selectedEvent, selectedState, selectedDate]);
 
-  const getRankColor = (rank: number) => {
-    if (rank === 1) return darkMode ? 'bg-yellow-900/30 text-yellow-200' : 'bg-yellow-100 text-yellow-800';
-    if (rank === 2) return darkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-800';
-    if (rank === 3) return darkMode ? 'bg-orange-900/30 text-orange-200' : 'bg-orange-100 text-orange-800';
-    return darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-50 text-gray-600';
-  };
+  const getRankColor = (rank: number) => rankColor(!!darkMode, rank);
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
-  };
+  // formatDate moved to utils
 
   const selectedTournament = tournamentDates.find(t => t.date === selectedDate);
 
@@ -734,7 +447,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
                       <td className={`hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm font-semibold`}>
                         {(() => {
                           const change = getRankingChange(entry);
-                          const formatted = formatRankingChange(change);
+                          const formatted = formatChangeLocal(change);
                           return (
                             <span className={formatted.colorClass}>
                               {formatted.text}

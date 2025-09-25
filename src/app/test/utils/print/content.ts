@@ -5,7 +5,7 @@ export const createTestPrintContent = (_config: TestPrintConfig, _printStyles: s
 <html>
 <head>
   <title>Science Olympiad Test</title>
-  ${'${_printStyles}'}
+  ${_printStyles}
   <script src="https://unpkg.com/pagedjs/dist/paged.polyfill.js"></script>
   <script>
     window.PagedConfig = { auto: false, after: (flow) => { import('/lib/utils/logger').then(m => m.default.log('Rendered pages', flow.total)).catch(()=>{}); window.focus(); } };
@@ -16,8 +16,8 @@ export const createTestPrintContent = (_config: TestPrintConfig, _printStyles: s
   </script>
   </head>
   <body>
-    <div class="tournament-header">${'${_config.tournamentName}'}</div>
-    ${'${_config.questionsHtml}'}
+    <div class="tournament-header">${_config.tournamentName}</div>
+    ${_config.questionsHtml}
   </body>
   </html>
 `;

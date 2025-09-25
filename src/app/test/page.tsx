@@ -25,8 +25,10 @@ export default async function Page() {
   const subtopics = Array.isArray(parsed?.subtopics) ? parsed.subtopics as string[] : undefined;
   const idPercentage = typeof parsed?.idPercentage !== 'undefined' ? Number(parsed.idPercentage) : undefined;
 
-  let initialData: any[] | undefined = undefined;
-  let initialRouterData:
+  // Do not SSR-fetch questions. Client logic handles ID/base composition.
+  // Only pass through router parameters so the client can fetch appropriately.
+  const initialData: any[] | undefined = undefined;
+  const initialRouterData:
     | {
         eventName?: string;
         questionCount?: string;
@@ -37,44 +39,6 @@ export default async function Page() {
         idPercentage?: number;
       }
     | undefined = undefined;
-
-  if (eventName && questionCount) {
-
-    const params = new URLSearchParams();
-    params.set('event', eventName);
-    params.set('limit', String(parseInt(questionCount)));
-    if (types === 'multiple-choice') params.set('question_type', 'mcq');
-    if (types === 'free-response') params.set('question_type', 'frq');
-    if (division && division !== 'any') params.set('division', division);
-    if (subtopics && subtopics.length > 0) params.set('subtopics', subtopics.join(','));
-
-    try {
-      const origin = process.env.NEXT_PUBLIC_SITE_URL ?? '';
-      const res = await fetch(`${origin}/api/questions?${params.toString()}`, {
-        // ensure no caching per-user
-        cache: 'no-store',
-      });
-      if (res.ok) {
-        const json = await res.json();
-        const questions = Array.isArray(json.data) ? json.data : json.data?.questions || [];
-
-        const valid = questions.filter((q: any) => q.answers && Array.isArray(q.answers) && q.answers.length > 0);
-        const selected = valid.slice(0, parseInt(questionCount));
-        initialData = selected.map((q: any, idx: number) => ({ ...q, originalIndex: idx }));
-        initialRouterData = {
-          eventName,
-          questionCount,
-          timeLimit,
-          types,
-          division,
-          subtopics,
-          idPercentage,
-        };
-      }
-    } catch {
-      // fall back to client fetch
-    }
-  }
 
 
 const baseRouterData = {

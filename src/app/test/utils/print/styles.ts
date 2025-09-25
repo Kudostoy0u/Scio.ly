@@ -1,6 +1,6 @@
 export const createTestPrintStyles = (_getStylesheets: () => string) => `
   <style>
-    ${'${_getStylesheets()}'}
+    ${_getStylesheets()}
     @page { margin: 0.5in; size: letter; @top-center { content: element(tournament-header); } @bottom-center { content: counter(page); } }
     body { margin: 0; font-family: Arial, sans-serif; counter-reset: page 1; }
     .question { page-break-inside: avoid; page-break-after: auto; margin-bottom: 25px; margin-top: 15px; padding: 0; border: none; font-family: 'Times New Roman', serif; }

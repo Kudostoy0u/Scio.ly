@@ -20,6 +20,7 @@ import CreateTeamCard from './components/CreateTeamCard';
 import DivisionHeader from './components/DivisionHeader';
 import ExistingTeamWarning from './components/ExistingTeamWarning';
 import PageHeader from './components/PageHeader';
+import { checkExistingUnits, createTeam, joinByCode } from './utils/createJoin';
 
 
 type TeamSelection = {
@@ -31,25 +32,7 @@ type TeamSelection = {
 
 
 
-const DIVISION_B_GROUPS: { label: string; events: string[]; colorKey: string }[] = [
-  { label: 'Group 1', events: ['Codebusters', 'Disease Detectives', 'Remote Sensing'], colorKey: 'blue' },
-  { label: 'Group 2', events: ['Entomology', 'Experimental Design', 'Solar System'], colorKey: 'green' },
-  { label: 'Group 3', events: ['Machines', 'Meteorology', 'Metric Mastery'], colorKey: 'yellow' },
-  { label: 'Group 4', events: ['Circuit Lab', 'Dynamic Planet', 'Water Quality'], colorKey: 'purple' },
-  { label: 'Group 5', events: ['Heredity', 'Potions & Poisons', 'Rocks and Minerals'], colorKey: 'pink' },
-  { label: 'Group 6', events: ['Anatomy & Physiology', 'Crime Busters', 'Write It Do It'], colorKey: 'indigo' },
-  { label: 'Group 7', events: ['Boomilever', 'Helicopter', 'Hovercraft', 'Mission Possible', 'Scrambler'], colorKey: 'orange' },
-];
-
-const DIVISION_C_GROUPS: { label: string; events: string[]; colorKey: string }[] = [
-  { label: 'Group 1', events: ['Anatomy & Physiology', 'Engineering CAD', 'Forensics'], colorKey: 'blue' },
-  { label: 'Group 2', events: ['Codebusters', 'Disease Detectives', 'Remote Sensing'], colorKey: 'green' },
-  { label: 'Group 3', events: ['Astronomy', 'Entomology', 'Experimental Design'], colorKey: 'yellow' },
-  { label: 'Group 4', events: ['Chemistry Lab', 'Machines'], colorKey: 'purple' },
-  { label: 'Group 5', events: ['Circuit Lab', 'Dynamic Planet', 'Water Quality'], colorKey: 'pink' },
-  { label: 'Group 6', events: ['Designer Genes', 'Materials Science', 'Rocks and Minerals'], colorKey: 'indigo' },
-  { label: 'Group 7', events: ['Boomilever', 'Bungee Drop', 'Electric Vehicle', 'Helicopter', 'Hovercraft', 'Robot Tour'], colorKey: 'orange' },
-];
+import { DIVISION_B_GROUPS, DIVISION_C_GROUPS, getGroupColors } from './utils/groups';
 
 
 import { getJsonOnce } from '@/lib/utils/network';
@@ -436,46 +419,7 @@ export default function TeamsDashboard({ initialLinkedSelection, initialSlug, in
   };
 
   // Helper function to get theme-aware colors
-  const getGroupColors = (colorKey: string) => {
-    const colorMap = {
-      blue: {
-        bg: darkMode ? 'bg-blue-950/30' : 'bg-blue-50/80',
-        border: darkMode ? 'border-blue-500/60' : 'border-blue-400/80',
-        text: darkMode ? 'text-blue-100' : 'text-blue-900'
-      },
-      green: {
-        bg: darkMode ? 'bg-green-950/30' : 'bg-green-50/80',
-        border: darkMode ? 'border-green-500/60' : 'border-green-400/80',
-        text: darkMode ? 'text-green-100' : 'text-green-900'
-      },
-      yellow: {
-        bg: darkMode ? 'bg-yellow-950/30' : 'bg-yellow-50/80',
-        border: darkMode ? 'border-yellow-500/60' : 'border-yellow-400/80',
-        text: darkMode ? 'text-yellow-100' : 'text-yellow-900'
-      },
-      purple: {
-        bg: darkMode ? 'bg-purple-950/30' : 'bg-purple-50/80',
-        border: darkMode ? 'border-purple-500/60' : 'border-purple-400/80',
-        text: darkMode ? 'text-purple-100' : 'text-purple-900'
-      },
-      pink: {
-        bg: darkMode ? 'bg-pink-950/30' : 'bg-pink-50/80',
-        border: darkMode ? 'border-pink-500/60' : 'border-pink-400/80',
-        text: darkMode ? 'text-pink-100' : 'text-pink-900'
-      },
-      indigo: {
-        bg: darkMode ? 'bg-indigo-950/30' : 'bg-indigo-50/80',
-        border: darkMode ? 'border-indigo-500/60' : 'border-indigo-400/80',
-        text: darkMode ? 'text-indigo-100' : 'text-indigo-900'
-      },
-      orange: {
-        bg: darkMode ? 'bg-orange-950/30' : 'bg-orange-50/80',
-        border: darkMode ? 'border-orange-500/60' : 'border-orange-400/80',
-        text: darkMode ? 'text-orange-100' : 'text-orange-900'
-      }
-    };
-    return colorMap[colorKey as keyof typeof colorMap] || colorMap.blue;
-  };
+  const getGroupColorsLocal = (colorKey: string) => getGroupColors(!!darkMode, colorKey);
 
   // Load tournaments from API when group slug becomes available
   useEffect(() => {
@@ -654,53 +598,24 @@ export default function TeamsDashboard({ initialLinkedSelection, initialSlug, in
             onCreateTeam={async ()=>{
                     if (!chosenSchool) return;
                     if (!user?.id) { setCreateError('You must be signed in to create a team.'); toast.error('You must be signed in to create a team.'); return; }
-                    try {
-                      setCreateError('');
-                      const unitsRes = await fetch(`/api/teams/units?school=${encodeURIComponent(chosenSchool)}&division=${pendingDivision}`);
-                      if (unitsRes.ok) {
-                        const unitsJson = await unitsRes.json();
-                        if (unitsJson?.success && Array.isArray(unitsJson.data) && unitsJson.data.length > 0) {
-                          setExistingTeamWarning({ school: chosenSchool, division: pendingDivision });
-                          return;
-                        }
-                      }
-                    } catch {}
-                    try {
-                      const createRes = await fetch('/api/teams/units', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create', school: chosenSchool, division: pendingDivision }) });
-                      if (!createRes.ok) {
-                        if (createRes.status === 401) { setCreateError('You must be signed in to create a team.'); toast.error('You must be signed in to create a team.'); }
-                        try { const err = await createRes.json(); if (err?.error) toast.error(err.error); } catch {}
-                      } else {
-                        const created = await createRes.json();
-                        if (created?.success && (created?.groupSlug || created?.data?.slug)) {
-                          const slug = created.groupSlug || created.data.slug;
-                          router.push(`/teams/${slug}`);
-                          toast.success('Team created!');
-                        }
-                      }
-                    } catch {
-                      setCreateError('You must be signed in to create a team.');
-                      toast.error('You must be signed in to create a team.');
-                    }
+                    setCreateError('');
+                    const exists = await checkExistingUnits(chosenSchool, pendingDivision);
+                    if (exists) { setExistingTeamWarning({ school: chosenSchool, division: pendingDivision }); return; }
+                    const slug = await createTeam(chosenSchool, pendingDivision);
+                    if (slug) { router.push(`/teams/${slug}`); toast.success('Team created!'); }
                   }}
             onJoinTeam={async (code: string)=>{
                   if (!code) return;
                   if (!user?.id) { setJoinError('You must be signed in to join a team.'); toast.error('You must be signed in to join a team.'); return; }
-                  try {
-                    setJoinError('');
-                    const res = await fetch('/api/teams/join-by-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
-                    const json = await res.json();
-                    if (json?.success && json?.slug) {
-                      router.push(`/teams/${json.slug}`);
-                  try { const el = document.getElementById('team-join-code') as HTMLInputElement | null; if (el) el.value = ''; } catch {}
-                      toast.success('Joined team');
-                    } else {
-                      setJoinError(json?.error || 'Unable to join team');
-                      toast.error(json?.error || 'Unable to join team');
-                    }
-                  } catch {
-                    setJoinError('You must be signed in to join a team.');
-                    toast.error('You must be signed in to join a team.');
+                  setJoinError('');
+                  const { slug, error } = await joinByCode(code);
+                  if (slug) {
+                    router.push(`/teams/${slug}`);
+                    try { const el = document.getElementById('team-join-code') as HTMLInputElement | null; if (el) el.value = ''; } catch {}
+                    toast.success('Joined team');
+                  } else if (error) {
+                    setJoinError(error);
+                    toast.error(error);
                   }
                 }}
             createError={createError}
@@ -745,7 +660,7 @@ export default function TeamsDashboard({ initialLinkedSelection, initialSlug, in
                 activeTeamIdx={activeTeamIdx}
                 isLeader={isLeader}
                 setName={setName}
-                getGroupColors={getGroupColors}
+                getGroupColors={getGroupColorsLocal}
                 groups={selection.division === 'B' ? DIVISION_B_GROUPS : DIVISION_C_GROUPS}
                 setAssignEvent={setAssignEvent as any}
                 setAssignSettings={setAssignSettings as any}

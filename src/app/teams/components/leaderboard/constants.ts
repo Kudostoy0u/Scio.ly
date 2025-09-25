@@ -1,0 +1,117 @@
+export const EVENT_WHITELISTS: Record<string, Record<string, string[]>> = {
+  '2018': {
+    'C': [
+      'Anatomy and Physiology', 'Astronomy', 'Chemistry Lab', 'Disease Detectives', 'Dynamic Planet',
+      'Ecology', 'Experimental Design', 'Fermi Questions', 'Forensics', 'Game On', 'Helicopters',
+      'Herpetology', 'Hovercraft', 'Materials Science', 'Microbe Mission', 'Mission Possible',
+      'Mousetrap Vehicle', 'Optics', 'Remote Sensing', 'Rocks and Minerals', 'Thermodynamics',
+      'Towers', 'Write It Do It'
+    ],
+    'B': [
+      'Anatomy and Physiology', 'Battery Buggy', 'Crime Busters', 'Disease Detectives', 'Dynamic Planet',
+      'Ecology', 'Experimental Design', 'Fast Facts', 'Herpetology', 'Hovercraft', 'Meteorology',
+      'Microbe Mission', 'Mystery Architecture', 'Optics', 'Potions and Poisons', 'Road Scholar',
+      'Rocks and Minerals', 'Roller Coaster', 'Solar System', 'Thermodynamics', 'Towers', 'Wright Stuff', 'Write It Do It'
+    ]
+  },
+  '2019': {
+    'C': [
+      'Anatomy and Physiology', 'Astronomy', 'Boomilever', 'Chemistry Lab', 'Circuit Lab', 'Codebusters',
+      'Designer Genes', 'Disease Detectives', 'Dynamic Planet', 'Experimental Design', 'Fermi Questions',
+      'Forensics', 'Fossils', 'Geologic Mapping', 'Herpetology', 'Mission Possible', 'Mousetrap Vehicle',
+      'Protein Modeling', 'Sounds of Music', 'Thermodynamics', 'Water Quality', 'Wright Stuff', 'Write It Do It'
+    ],
+    'B': [
+      'Anatomy and Physiology', 'Battery Buggy', 'Boomilever', 'Circuit Lab', 'Crime Busters', 'Density Lab',
+      'Disease Detectives', 'Dynamic Planet', 'Elastic Launched Glider', 'Experimental Design', 'Fossils',
+      'Game On', 'Heredity', 'Herpetology', 'Meteorology', 'Mystery Architecture', 'Potions and Poisons',
+      'Road Scholar', 'Roller Coaster', 'Solar System', 'Thermodynamics', 'Water Quality', 'Write It Do It'
+    ]
+  },
+  '2020': {
+    'C': [
+      'Anatomy and Physiology', 'Astronomy', 'Boomilever', 'Chemistry Lab', 'Circuit Lab', 'Codebusters',
+      'Designer Genes', 'Detector Building', 'Disease Detectives', 'Dynamic Planet', 'Experimental Design',
+      'Forensics', 'Fossils', 'Geologic Mapping', 'Gravity Vehicle', 'Machines', 'Ornithology',
+      'Ping Pong Parachute', 'Protein Modeling', 'Sounds of Music', 'Water Quality', 'Wright Stuff', 'Write It Do It'
+    ],
+    'B': [
+      'Anatomy and Physiology', 'Boomilever', 'Circuit Lab', 'Crime Busters', 'Density Lab', 'Disease Detectives',
+      'Dynamic Planet', 'Elastic Launched Glider', 'Experimental Design', 'Food Science', 'Fossils',
+      'Game On', 'Heredity', 'Machines', 'Meteorology', 'Mission Possible', 'Mousetrap Vehicle', 'Ornithology',
+      'Ping Pong Parachute', 'Reach for the Stars', 'Road Scholar', 'Water Quality', 'Write It Do It'
+    ]
+  },
+  '2021': {
+    'C': [
+      'Anatomy and Physiology', 'Astronomy', 'Boomilever', 'Chemistry Lab', 'Circuit Lab', 'Codebusters',
+      'Designer Genes', 'Detector Building', 'Disease Detectives', 'Dynamic Planet', 'Experimental Design',
+      'Forensics', 'Fossils', 'Geologic Mapping', 'Gravity Vehicle', 'Machines', 'Ornithology',
+      'Ping Pong Parachute', 'Protein Modeling', 'Sounds of Music', 'Water Quality', 'Wright Stuff', 'Write It Do It'
+    ],
+    'B': [
+      'Anatomy and Physiology', 'Boomilever', 'Circuit Lab', 'Crime Busters', 'Density Lab', 'Disease Detectives',
+      'Dynamic Planet', 'Elastic Launched Glider', 'Experimental Design', 'Food Science', 'Fossils',
+      'Game On', 'Heredity', 'Machines', 'Meteorology', 'Mission Possible', 'Mousetrap Vehicle', 'Ornithology',
+      'Ping Pong Parachute', 'Reach for the Stars', 'Road Scholar', 'Water Quality', 'Write It Do It'
+    ]
+  },
+  '2022': {
+    'C': [
+      'Anatomy and Physiology', 'Astronomy', 'Bridge', 'Cell Biology', 'Chemistry Lab', 'Codebusters',
+      'Detector Building', 'Disease Detectives', 'Dynamic Planet', 'Environmental Chemistry', 'Experimental Design',
+      'Forensics', 'Gravity Vehicle', 'Green Generation', "It's About Time", 'Ornithology', 'Ping Pong Parachute',
+      'Remote Sensing', 'Rocks and Minerals', 'Trajectory', 'WiFi Lab', 'Wright Stuff', 'Write It Do It'
+    ],
+    'B': [
+      'Anatomy and Physiology', 'Bio-Process Lab', 'Bridge', 'Codebusters', 'Crave the Wave', 'Crime Busters',
+      'Disease Detectives', 'Dynamic Planet', 'Electric Wright Stuff', 'Experimental Design', 'Food Science',
+      'Green Generation', 'Meteorology', 'Mission Possible', 'Mousetrap Vehicle', 'Ornithology', 'Ping Pong Parachute',
+      'Road Scholar', 'Rocks and Minerals', 'Solar System', 'Sounds of Music', 'Storm the Castle', 'Write It Do It'
+    ]
+  },
+  '2023': {
+    'C': [
+      'Anatomy and Physiology', 'Astronomy', 'Bridge', 'Cell Biology', 'Chemistry Lab', 'Codebusters',
+      'Detector Building', 'Disease Detectives', 'Dynamic Planet', 'Environmental Chemistry', 'Experimental Design',
+      'Fermi Questions', 'Flight', 'Forensics', 'Forestry', 'Green Generation', "It's About Time",
+      'Remote Sensing', 'Rocks and Minerals', 'Scrambler', 'Trajectory', 'WiFi Lab', 'Write It Do It'
+    ],
+    'B': [
+      'Anatomy and Physiology', 'Bio-Process Lab', 'Bridge', "Can't Judge a Powder", 'Codebusters', 'Crave the Wave',
+      'Crime Busters', 'Disease Detectives', 'Dynamic Planet', 'Experimental Design', 'Fast Facts', 'Flight',
+      'Forestry', 'Green Generation', 'Meteorology', 'Road Scholar', 'Rocks and Minerals', 'Roller Coaster',
+      'Solar System', 'Sounds of Music', 'Storm the Castle', 'Wheeled Vehicle', 'Write It Do It'
+    ]
+  },
+  '2024': {
+    'C': [
+      'Air Trajectory', 'Anatomy and Physiology', 'Astronomy', 'Chemistry Lab', 'Codebusters', 'Detector Building',
+      'Disease Detectives', 'Dynamic Planet', 'Ecology', 'Experimental Design', 'Fermi Questions', 'Flight',
+      'Forensics', 'Forestry', 'Fossils', 'Geologic Mapping', 'Microbe Mission', 'Optics', 'Robot Tour',
+      'Scrambler', 'Tower', 'Wind Power', 'Write It Do It'
+    ],
+    'B': [
+      'Air Trajectory', 'Anatomy and Physiology', "Can't Judge a Powder", 'Codebusters', 'Crime Busters',
+      'Disease Detectives', 'Dynamic Planet', 'Ecology', 'Experimental Design', 'Fast Facts', 'Flight',
+      'Forestry', 'Fossils', 'Meteorology', 'Microbe Mission', 'Optics', 'Reach for the Stars', 'Road Scholar',
+      'Roller Coaster', 'Tower', 'Wheeled Vehicle', 'Wind Power', 'Write It Do It'
+    ]
+  },
+  '2025': {
+    'C': [
+      'Air Trajectory', 'Anatomy and Physiology', 'Astronomy', 'Bungee Drop', 'Chemistry Lab', 'Codebusters',
+      'Disease Detectives', 'Dynamic Planet', 'Ecology', 'Electric Vehicle', 'Entomology', 'Experimental Design',
+      'Forensics', 'Fossils', 'Geologic Mapping', 'Helicopter', 'Materials Science', 'Microbe Mission',
+      'Optics', 'Robot Tour', 'Tower', 'Wind Power', 'Write It Do It'
+    ],
+    'B': [
+      'Air Trajectory', 'Anatomy and Physiology', 'Codebusters', 'Crime Busters', 'Disease Detectives',
+      'Dynamic Planet', 'Ecology', 'Entomology', 'Experimental Design', 'Fossils', 'Helicopter', 'Meteorology',
+      'Metric Mastery', 'Microbe Mission', 'Mission Possible', 'Optics', 'Potions and Poisons', 'Reach for the Stars',
+      'Road Scholar', 'Scrambler', 'Tower', 'Wind Power', 'Write It Do It'
+    ]
+  }
+};
+
+

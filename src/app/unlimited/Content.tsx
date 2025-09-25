@@ -535,7 +535,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
         ></div>
 
         <div className="relative flex flex-col items-center p-6 pt-20">
-          <header className="w-full max-w-3xl flex justify-between items-center py-4 ">
+          <header className="w-full max-w-3xl flex justify-between items-center py-2">
             <h1 className={`text-xl md:text-3xl font-extrabold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
               {routerData.eventName || 'Loading...'}
             </h1>
@@ -543,7 +543,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           </header>
 
           {/* Inline back link to Practice */}
-          <div className="w-full max-w-3xl mt-0.5 mb-5">
+          <div className="w-full max-w-3xl">
             <button
               onClick={handleResetTest}
               className={`group inline-flex items-center text-base font-medium ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}

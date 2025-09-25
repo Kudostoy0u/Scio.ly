@@ -7,14 +7,17 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import Header from '@/app/components/Header';
-import { clearTestSession } from '@/app/utils/timeManagement';
+//
 import { Event, Settings } from '../types';
 import { NORMAL_DEFAULTS, savePreferences } from '../utils';
-import { buildTestParams, saveTestParams } from '@/app/utils/testParams';
+//
 import EventList from './EventList';
 import TestConfiguration from './TestConfiguration';
 import { ArrowUpRight } from 'lucide-react';
-import { listDownloadedEventSlugs, subscribeToDownloads, hasOfflineEvent } from '@/app/utils/storage';
+import { hasOfflineEvent } from '@/app/utils/storage';
+import { useOfflineDownloads } from './hooks/useOfflineDownloads';
+import { computeContinueInfo } from './utils/continueBanner';
+import { proceedWithTest as proceedWithTestNav, proceedWithUnlimited as proceedWithUnlimitedNav } from './utils/navigate';
 
 export default function PracticeDashboard() {
   const router = useRouter();
@@ -27,8 +30,7 @@ export default function PracticeDashboard() {
   const [continueInfo, setContinueInfo] = useState<{ eventName: string; route: '/test' | '/codebusters'; label: string } | null>(null);
   const [panelHeight, setPanelHeight] = useState<number | null>(null);
   const [isLarge, setIsLarge] = useState<boolean>(false);
-  const [isOffline, setIsOffline] = useState<boolean>(false);
-  const [downloadedSet, setDownloadedSet] = useState<Set<string>>(new Set());
+  const { isOffline, downloadedSet } = useOfflineDownloads();
   const [viewMode, setViewMode] = useState<'current' | 'all'>('current');
 
   const [settings, setSettings] = useState<Settings>({
@@ -75,51 +77,16 @@ export default function PracticeDashboard() {
   }, []);
 
 
-  useEffect(() => {
-    const updateOnline = () => setIsOffline(!navigator.onLine);
-    updateOnline();
-    window.addEventListener('online', updateOnline);
-    window.addEventListener('offline', updateOnline);
-    
-    const loadDownloadedSlugs = async () => {
-      try {
-        const keys = await listDownloadedEventSlugs();
-        setDownloadedSet(new Set(keys));
-      } catch {}
-    };
-    
-    loadDownloadedSlugs();
-    
-
-    const unsubscribe = subscribeToDownloads(loadDownloadedSlugs);
-    
-    return () => {
-      window.removeEventListener('online', updateOnline);
-      window.removeEventListener('offline', updateOnline);
-      try { unsubscribe(); } catch {}
-    };
-  }, []);
+  // offline/downloads handled by useOfflineDownloads
 
 
   useEffect(() => {
-
     if (typeof window === 'undefined') return;
     const mq = window.matchMedia('(min-width: 1024px)');
     const apply = () => setIsLarge(mq.matches);
-    try {
-      mq.addEventListener('change', apply);
-    } catch {
-
-      mq.addListener(apply);
-    }
+    try { mq.addEventListener('change', apply); } catch { mq.addListener(apply); }
     apply();
-    return () => {
-      try {
-        mq.removeEventListener('change', apply);
-      } catch {
-        mq.removeListener(apply);
-      }
-    };
+    return () => { try { mq.removeEventListener('change', apply); } catch { mq.removeListener(apply); } };
   }, []);
 
   useEffect(() => {
@@ -163,68 +130,7 @@ export default function PracticeDashboard() {
     return () => clearTimeout(t);
   }, [darkMode, selectedEvent]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const sessionStr = localStorage.getItem('currentTestSession');
-      const isSubmittedFlag = localStorage.getItem('testSubmitted') === 'true';
-      const session = sessionStr ? JSON.parse(sessionStr) as { eventName?: string; isSubmitted?: boolean } : null;
-
-      // 1) Active session takes precedence
-      if (session && session.eventName) {
-        const route: '/test' | '/codebusters' = session.eventName === 'Codebusters' ? '/codebusters' : '/test';
-        const label = (session.isSubmitted || isSubmittedFlag) ? `View results for ${session.eventName}?` : `Continue test for ${session.eventName}?`;
-        setContinueInfo({ eventName: session.eventName, route, label });
-        return;
-      }
-
-      const testSubmitted = localStorage.getItem('testSubmitted') === 'true';
-      const cbSubmitted = localStorage.getItem('codebustersIsTestSubmitted') === 'true';
-
-      // 2) Detect general practice progress
-      const testAnswersStr = localStorage.getItem('testUserAnswers');
-      const testAnswers = testAnswersStr ? JSON.parse(testAnswersStr) as Record<string, (string | null)[]> : null;
-      const hasGeneralProgress = !testSubmitted && !!testAnswers && Object.values(testAnswers).some(arr => Array.isArray(arr) ? arr.some(v => v && String(v).length > 0) : !!testAnswersStr);
-
-      // 3) Detect Codebusters progress
-      const cbQuotesStr = localStorage.getItem('codebustersQuotes');
-      let hasCodebustersProgress = false;
-      if (!cbSubmitted && cbQuotesStr) {
-        try {
-          const quotes = JSON.parse(cbQuotesStr) as Array<any>;
-          hasCodebustersProgress = Array.isArray(quotes) && quotes.some(q => {
-            const hasSolution = !!(q && q.solution && Object.values(q.solution).some((v) => typeof v === 'string' && v.length > 0));
-            const hasHill = !!(q && q.hillSolution && q.hillSolution.plaintext && Object.values(q.hillSolution.plaintext).some((v) => typeof v === 'string' && v.length > 0));
-            const hasNihilist = !!(q && q.nihilistSolution && Object.values(q.nihilistSolution).some((v) => typeof v === 'string' && v.length > 0));
-            const hasFractionated = !!(q && q.fractionatedSolution && Object.values(q.fractionatedSolution).some((v) => typeof v === 'string' && v.length > 0));
-            const hasColumnar = !!(q && q.columnarSolution && Object.values(q.columnarSolution).some((v) => typeof v === 'string' && v.length > 0));
-            const hasXeno = !!(q && q.xenocryptSolution && Object.values(q.xenocryptSolution).some((v) => typeof v === 'string' && v.length > 0));
-            const hasNotes = !!(q && q.frequencyNotes && Object.values(q.frequencyNotes).some((v) => typeof v === 'string' && v.length > 0));
-            return hasSolution || hasHill || hasNihilist || hasFractionated || hasColumnar || hasXeno || hasNotes;
-          });
-        } catch {}
-      }
-
-      // 4) Prefer general progress over legacy Codebusters leftovers when both exist
-      if (hasGeneralProgress || testSubmitted) {
-        const params = localStorage.getItem('testParams');
-        const eventName = (() => { try { const p = params ? JSON.parse(params) : undefined; return (p?.eventName as string | undefined) || 'Practice Test'; } catch { return 'Practice Test'; } })();
-        const label = testSubmitted ? `View results for ${eventName}?` : `Continue test for ${eventName}?`;
-        setContinueInfo({ eventName, route: '/test', label });
-        return;
-      }
-
-      if (hasCodebustersProgress || cbSubmitted) {
-        const label = cbSubmitted ? 'View results for Codebusters?' : 'Continue test for Codebusters?';
-        setContinueInfo({ eventName: 'Codebusters', route: '/codebusters', label });
-        return;
-      }
-
-      setContinueInfo(null);
-    } catch {
-      setContinueInfo(null);
-    }
-  }, []);
+  useEffect(() => { setContinueInfo(computeContinueInfo()); }, []);
 
 
   // const handlechange = (e: react.changeevent<htmlinputelement | htmlselectelement>) => {
@@ -267,31 +173,7 @@ export default function PracticeDashboard() {
 
   const proceedWithTest = (selectedEventObj: Event) => {
 
-    clearTestSession();
-
-    // ensure no stale sessions affect timer
-    try { clearTestSession(); } catch {}
-    const testParams = buildTestParams(selectedEventObj.name, settings);
-    saveTestParams(testParams);
-    if (selectedEventObj.name === 'Codebusters') {
-      // clear codebusters legacy local keys for safety
-      try {
-        localStorage.removeItem('codebustersQuotes');
-        localStorage.removeItem('codebustersIsTestSubmitted');
-        localStorage.removeItem('codebustersTestScore');
-        localStorage.removeItem('codebustersTimeLeft');
-        localStorage.removeItem('codebustersQuotesLoadedFromStorage');
-        localStorage.removeItem('shareCode');
-      } catch {}
-      router.push('/codebusters');
-    } else {
-      // ensure old grading results don't carry over to the new test
-      try {
-        localStorage.removeItem('testGradingResults');
-        localStorage.removeItem('testSubmitted');
-      } catch {}
-      router.push('/test');
-    }
+    proceedWithTestNav(selectedEventObj.name, settings, router.push);
   };
 
   const handleUnlimited = () => {
@@ -327,39 +209,7 @@ export default function PracticeDashboard() {
   const proceedWithUnlimited = (selectedEventObj: Event) => {
 
     savePreferences(selectedEventObj.name, settings.questionCount, settings.timeLimit);
-
-
-    clearTestSession();
-
-
-    if (selectedEventObj.name === 'Codebusters') {
-      const cbParams = buildTestParams(selectedEventObj.name, { ...settings, questionCount: 1 });
-      saveTestParams(cbParams);
-      try {
-        localStorage.removeItem('codebustersQuotes');
-        localStorage.removeItem('codebustersIsTestSubmitted');
-        localStorage.removeItem('codebustersTestScore');
-        localStorage.removeItem('codebustersTimeLeft');
-        localStorage.removeItem('codebustersQuotesLoadedFromStorage');
-        localStorage.removeItem('shareCode');
-      } catch {}
-      router.push('/codebusters');
-      return;
-    }
-
-
-    try {
-      const cookiePayload = encodeURIComponent(JSON.stringify({
-        eventName: selectedEventObj.name,
-        types: settings.types,
-        division: settings.division,
-        difficulties: settings.difficulties,
-        subtopics: settings.subtopics,
-        idPercentage: settings.idPercentage,
-      }));
-      document.cookie = `scio_unlimited_params=${cookiePayload}; Path=/; Max-Age=600; SameSite=Lax`;
-    } catch {}
-    router.push('/unlimited');
+    proceedWithUnlimitedNav(selectedEventObj.name, settings, router.push);
   };
 
   const selectEvent = (id: number) => {

@@ -1,0 +1,64 @@
+import logger from '@/lib/utils/logger';
+
+export type ContinueInfo = { eventName: string; route: '/test' | '/codebusters'; label: string } | null;
+
+export function computeContinueInfo(): ContinueInfo {
+  if (typeof window === 'undefined') return null;
+  try {
+    const sessionStr = localStorage.getItem('currentTestSession');
+    // Read submission flags up front for both test types
+    const testSubmitted = localStorage.getItem('testSubmitted') === 'true';
+    const cbSubmitted = localStorage.getItem('codebustersIsTestSubmitted') === 'true';
+    const session = sessionStr ? (JSON.parse(sessionStr) as { eventName?: string; isSubmitted?: boolean }) : null;
+    if (session && session.eventName) {
+      const route: '/test' | '/codebusters' = session.eventName === 'Codebusters' ? '/codebusters' : '/test';
+      // Use the correct submitted flag based on the active event
+      const eventSubmitted = session.eventName === 'Codebusters' ? cbSubmitted : testSubmitted;
+      const label = (session.isSubmitted || eventSubmitted) ? `View results for ${session.eventName}?` : `Continue test for ${session.eventName}?`;
+      return { eventName: session.eventName, route, label };
+    }
+    const testAnswersStr = localStorage.getItem('testUserAnswers');
+    const testAnswers = testAnswersStr ? (JSON.parse(testAnswersStr) as Record<string, (string | null)[]>) : null;
+    const hasGeneralProgress = !testSubmitted && !!testAnswers && Object.values(testAnswers).some((arr) => (Array.isArray(arr) ? arr.some((v) => v && String(v).length > 0) : !!testAnswersStr));
+    const cbQuotesStr = localStorage.getItem('codebustersQuotes');
+    let hasCodebustersProgress = false;
+    if (!cbSubmitted && cbQuotesStr) {
+      try {
+        const quotes = JSON.parse(cbQuotesStr) as Array<any>;
+        hasCodebustersProgress = Array.isArray(quotes) && quotes.some((q) => {
+          const hasSolution = !!(q && q.solution && Object.values(q.solution).some((v) => typeof v === 'string' && v.length > 0));
+          const hasHill = !!(q && q.hillSolution && q.hillSolution.plaintext && Object.values(q.hillSolution.plaintext).some((v) => typeof v === 'string' && v.length > 0));
+          const hasNihilist = !!(q && q.nihilistSolution && Object.values(q.nihilistSolution).some((v) => typeof v === 'string' && v.length > 0));
+          const hasFractionated = !!(q && q.fractionatedSolution && Object.values(q.fractionatedSolution).some((v) => typeof v === 'string' && v.length > 0));
+          const hasColumnar = !!(q && q.columnarSolution && Object.values(q.columnarSolution).some((v) => typeof v === 'string' && v.length > 0));
+          const hasXeno = !!(q && q.xenocryptSolution && Object.values(q.xenocryptSolution).some((v) => typeof v === 'string' && v.length > 0));
+          const hasNotes = !!(q && q.frequencyNotes && Object.values(q.frequencyNotes).some((v) => typeof v === 'string' && v.length > 0));
+          return hasSolution || hasHill || hasNihilist || hasFractionated || hasColumnar || hasXeno || hasNotes;
+        });
+      } catch {}
+    }
+    if (hasGeneralProgress || testSubmitted) {
+      const params = localStorage.getItem('testParams');
+      const eventName = (() => {
+        try {
+          const p = params ? JSON.parse(params) : undefined;
+          return (p?.eventName as string | undefined) || 'Practice Test';
+        } catch {
+          return 'Practice Test';
+        }
+      })();
+      const label = testSubmitted ? `View results for ${eventName}?` : `Continue test for ${eventName}?`;
+      return { eventName, route: '/test', label };
+    }
+    if (hasCodebustersProgress || cbSubmitted) {
+      const label = cbSubmitted ? 'View results for Codebusters?' : 'Continue test for Codebusters?';
+      return { eventName: 'Codebusters', route: '/codebusters', label };
+    }
+    return null;
+  } catch (e) {
+    logger.error('Error checking for continue info:', e);
+    return null;
+  }
+}
+
+
