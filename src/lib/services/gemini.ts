@@ -77,7 +77,7 @@ export class GeminiService {
   private async generateStructuredContent(
     prompt: string, 
     schema: unknown, 
-    model: string = 'gemini-2.5-flash-lite',
+    model: string = 'gemini-flash-lite-latest',
     contents?: any
   ): Promise<Record<string, unknown>> {
     const ai = this.getCurrentClient();
@@ -105,7 +105,7 @@ export class GeminiService {
   public async *streamStructuredContent(
     prompt: string,
     schema: unknown,
-    model: string = 'gemini-2.5-flash-lite'
+    model: string = 'gemini-flash-lite-latest'
   ): AsyncGenerator<{ type: 'text'; chunk: string } | { type: 'final'; data: Record<string, unknown> }, void, unknown> {
     const ai = this.getCurrentClient();
     const stream = await ai.models.generateContentStream({
@@ -244,7 +244,7 @@ Also include suggestedDifficulty (0.0-1.0) when you recommend an updated difficu
       propertyOrdering: ["suggestedQuestion", "suggestedOptions", "suggestedAnswers", "suggestedDifficulty"],
     };
 
-    return await this.generateStructuredContent(prompt, schema, 'gemini-2.5-flash-lite', contents);
+    return await this.generateStructuredContent(prompt, schema, 'gemini-flash-lite-latest', contents);
   }
 
 
@@ -371,7 +371,7 @@ console.log('🧪 [GEMINI/VALIDATE-EDIT] Prompt:\n', prompt);
       propertyOrdering: ["isValid", "reason"],
     };
 
-    return await this.generateStructuredContent(prompt, schema, 'gemini-2.5-flash', contents);
+    return await this.generateStructuredContent(prompt, schema, 'gemini-flash-latest', contents);
   }
 
 
@@ -475,7 +475,7 @@ Make sure to conclude your explanation appropriately, do not cut it short.`;
       },
       propertyOrdering: ["explanation","correctIndices","correctedAnswers"],
     };
-    return await this.generateStructuredContent(prompt, schema, 'gemini-2.5-flash', contents);
+    return await this.generateStructuredContent(prompt, schema, 'gemini-flash-lite-latest', contents);
   }
 
 
