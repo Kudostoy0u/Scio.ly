@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const inv = await acceptInvite(Number(inviteId));
     if (!inv) return NextResponse.json({ success: false, error: 'Invalid invite' }, { status: 400 });
     const teamCode = `${inv.school}::${inv.division}::${inv.team_id}`;
-    await supabase.from('users').update({ team_code: teamCode }).eq('id', user.id);
+    await (supabase as any).from('users').update({ team_code: teamCode }).eq('id', user.id);
     return NextResponse.json({ success: true, data: { teamCode } });
   } catch {
     return NextResponse.json({ success: false, error: 'Server error' }, { status: 500 });

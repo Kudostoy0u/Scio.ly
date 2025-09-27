@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing parameters' }, { status: 400 });
     }
     // Resolve invitee username to user_id if exists
-    const { data: target } = await supabase.from('users').select('id, username').ilike('username', String(inviteeUsername)).maybeSingle();
+    const { data: target } = await supabase.from('users').select('id, username').ilike('username', String(inviteeUsername)).maybeSingle() as any;
     const inv = await createInvite(user.id, String(target?.username || inviteeUsername), String(school), division, String(teamId));
     return NextResponse.json({ success: true, data: inv });
   } catch {

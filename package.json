@@ -25,6 +25,7 @@
     "@supabase/supabase-js": "^2.57.4",
     "@types/pg": "^8.15.5",
     "@types/uuid": "10.0.0",
+    "@typescript/native-preview": "7.0.0-dev.20250926.1",
     "apexcharts": "5.3.3",
     "chart.js": "^4.5.0",
     "chartjs-adapter-date-fns": "^3.0.0",

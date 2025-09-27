@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     if (!username || !school || !division || !teamId) return NextResponse.json({ success: false, error: 'Missing parameters' }, { status: 400 });
 
     // Lookup target user by username
-    const { data: match, error } = await supa.from('users').select('id, username').eq('username', username).maybeSingle();
+    const { data: match, error } = await supa.from('users').select('id, username').eq('username', username).maybeSingle() as any;
     if (error || !match?.id) return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
 
     // Verify team exists

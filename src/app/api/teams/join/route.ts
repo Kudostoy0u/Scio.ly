@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     if (!teamExists) return NextResponse.json({ success: false, error: 'Team not found' }, { status: 404 });
 
     const teamCode = `${school}::${division}::${teamId}`;
-    await supabase.from('users').update({ team_code: teamCode }).eq('id', user.id);
+    await (supabase as any).from('users').update({ team_code: teamCode }).eq('id', user.id);
 
     return NextResponse.json({ success: true, data: { school, division, teamId, teams: data.teams } });
   } catch {

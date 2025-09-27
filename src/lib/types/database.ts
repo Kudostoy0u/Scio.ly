@@ -10,6 +10,7 @@ export interface Database {
           last_name: string | null
           display_name: string | null
           photo_url: string | null
+          team_code: string | null
           created_at: string
         }
         Insert: {
@@ -20,6 +21,7 @@ export interface Database {
           last_name?: string | null
           display_name?: string | null
           photo_url?: string | null
+          team_code?: string | null
           created_at?: string
         }
         Update: {
@@ -30,6 +32,7 @@ export interface Database {
           last_name?: string | null
           display_name?: string | null
           photo_url?: string | null
+          team_code?: string | null
           created_at?: string
         }
       }

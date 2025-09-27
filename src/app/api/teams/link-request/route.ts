@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       .from('users')
       .select('id, username')
       .ilike('username', targetUsername)
-      .maybeSingle();
+      .maybeSingle() as any;
     if (!target?.id) {
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }

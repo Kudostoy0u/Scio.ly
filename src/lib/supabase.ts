@@ -26,12 +26,7 @@ function getClient() {
   return browserClient;
 }
 
-export const supabase: ReturnType<typeof getClient> = new Proxy({} as any, {
-  get(_target, prop) {
-    const client = getClient();
-    return (client as any)[prop as any];
-  }
-}) as any;
+export const supabase = getClient();
 
 
 export const getCurrentUser = async () => {

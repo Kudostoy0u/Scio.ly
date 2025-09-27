@@ -10,7 +10,7 @@ export async function updateLeaderboardStats(questionsAttempted: number, correct
     p_user_id: user.id,
     p_questions_attempted: questionsAttempted,
     p_correct_answers: correctAnswers
-  });
+  } as any);
 }
 
 export async function checkAndJoinFromUrl() {
@@ -25,7 +25,7 @@ export async function checkAndJoinFromUrl() {
 
       await supabase.rpc('join_leaderboard_by_code', { 
         p_join_code: joinCode.toUpperCase() 
-      });
+      } as any);
       
 
       urlParams.delete('join');

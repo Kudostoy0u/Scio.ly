@@ -46,14 +46,14 @@ export default function ProfileSettings({ onClose }: { onClose: () => void }) {
     if (!user) return;
 
     setSaving(true);
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('users')
       .update({
         display_name: (displayName || null),
         first_name: (firstName || null),
         last_name: (lastName || null),
         username: username || (user.email?.split('@')[0] || 'user')
-      } as any)
+      })
       .match({ email: user.email || '' });
 
     if (!error) {
