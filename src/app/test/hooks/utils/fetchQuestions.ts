@@ -1,6 +1,7 @@
 import logger from '@/lib/utils/logger';
 import { Question } from '@/app/utils/geminiService';
 import { RouterParams, supportsIdEvent, finalizeQuestions, fetchBaseQuestions, fetchIdQuestions, dedupeById, dedupeByText } from '../../services/questionLoader';
+import { shuffleArray } from '@/app/utils/questionUtils';
 
 export async function fetchQuestionsForParams(routerParams: RouterParams, total: number): Promise<Question[]> {
   const idPctRaw = (routerParams as any).idPercentage;
@@ -68,8 +69,9 @@ export async function fetchQuestionsForParams(routerParams: RouterParams, total:
     selectedQuestions = selectedQuestions.concat(extras.slice(0, need));
   }
 
-  // Deduplicate and finalize
+  // Deduplicate and shuffle to ensure picture-based questions are randomly distributed
   let final = dedupeByText(dedupeById(selectedQuestions)).slice(0, total);
+  final = shuffleArray(final);
   final = finalizeQuestions(final).map((q, idx) => ({ ...q, originalIndex: idx }));
 
   // Special thirds split fallback if Anatomy & Physiology but empty (edge case)
