@@ -3,7 +3,7 @@ import logger from '@/lib/utils/logger';
 
 
 import { useRouter } from 'next/navigation';
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 import { updateMetrics } from '@/app/utils/metrics';
 import { supabase } from '@/lib/supabase';
@@ -15,7 +15,7 @@ import api from '../api';
 import EditQuestionModal from '@/app/components/EditQuestionModal';
 import { loadBookmarksFromSupabase } from '@/app/utils/bookmarks';
 import { Question } from '@/app/utils/geminiService';
-import { shuffleArray } from '@/app/utils/questionUtils';
+//
 import {
   RouterParams,
   GradingResults,
@@ -25,7 +25,8 @@ import {
   getExplanation,
   calculateMCQScore
 } from '@/app/utils/questionUtils';
-import { buildIdQuestionFromApiRow } from './utils/idBuild';
+// Reuse the tested /test question loader to avoid divergence
+import { fetchQuestionsForParams } from '@/app/test/hooks/utils/fetchQuestions';
 
 
 
@@ -34,10 +35,8 @@ import { buildIdQuestionFromApiRow } from './utils/idBuild';
 
 
 import LoadingFallback from './components/LoadingFallback';
-import { supportsId } from './utils/idSupport';
-import { prepareUnlimitedQuestions } from './utils/prepare';
 import QuestionCard from './components/QuestionCard';
-import { fetchBaseQuestions } from './utils/baseFetch';
+//
 import { buildEditPayload } from './utils/editPayload';
 
 
@@ -73,14 +72,18 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   
 
-  const [idQuestionIndices, setIdQuestionIndices] = useState<Set<number>>(new Set());
-  const [idQuestionCache, setIdQuestionCache] = useState<Map<number, Question>>(new Map());
-  const [namePool, setNamePool] = useState<string[]>([]);
-  const [isLoadingIdQuestion, setIsLoadingIdQuestion] = useState(false);
+  // No explicit namePool state needed; built per-batch
+  const BATCH_SIZE = 20;
+  const [answeredInBatch, setAnsweredInBatch] = useState<number>(0);
+  const fetchStartedRef = useRef(false);
+  const batchReloadingRef = useRef(false);
 
 
   useEffect(() => {
 
+    if (fetchStartedRef.current) {
+      return;
+    }
     if (data.length > 0 || isLoading === false) {
       return;
     }
@@ -98,9 +101,6 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     if (storedQuestions) {
       const parsedQuestions = JSON.parse(storedQuestions);
       setData(parsedQuestions);
-      
-
-
       setIsLoading(false);
       return;
     }
@@ -109,97 +109,59 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
 
 
 
-    const fetchData = async () => {
+    const loadBatch = async () => {
       try {
-
-        // For unlimited mode, request 50 questions at a time
-        const { success, data: fetched, error } = await fetchBaseQuestions(routerParams, 50);
-        if (!success) throw new Error(error || 'API request failed');
-        const apiResponse: any = { success, data: fetched };
-        
-        if (!apiResponse.success) {
-          throw new Error(apiResponse.error || 'API request failed');
+        fetchStartedRef.current = true;
+        // Reuse test loader for consistent normalization and ID behavior
+        let questions = await fetchQuestionsForParams(routerParams, BATCH_SIZE);
+        // Deterministic shuffle per-batch to provide a fixed order
+        const seed = Date.now();
+        const rng = (() => {
+          let s = seed % 2147483647;
+          return () => (s = (s * 48271) % 2147483647) / 2147483647;
+        })();
+        const arr = [...questions];
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(rng() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
         }
-        const baseQuestions: Question[] = apiResponse.data || [];
-
-
-        let finalQuestions: Question[] = baseQuestions;
-        const idPct = (routerParams as any).idPercentage;
-        const idSupported = supportsId(routerParams.eventName);
-        if (idSupported && typeof idPct !== 'undefined' && parseInt(idPct) > 0) {
-          const prepared = prepareUnlimitedQuestions({ baseQuestions, eventName: routerParams.eventName, idPercentage: idPct });
-          const idIndices = new Set<number>(prepared.idIndices);
-          const idCount = prepared.idCount;
-          // Shuffle to mix placeholders among base
-          finalQuestions = shuffleArray(prepared.finalQuestions);
-          setIdQuestionIndices(idIndices);
-          
-
-          const idParams = new URLSearchParams();
-          // Use the full event name for ID questions API - it doesn't support subtopics as separate params
-          idParams.set('event', routerParams.eventName);
-          idParams.set('limit', String(idCount));
-          
-          fetch(`${api.idQuestions}?${idParams.toString()}`)
-            .then(r => r.json())
-            .then(j => {
-              const src = Array.isArray(j?.data) ? j.data : [];
-
-              const typesSel = (routerParams.types as string) || 'multiple-choice';
-              const filtered = src.filter((row: any) => {
-                const isMcq = Array.isArray(row.options) && row.options.length > 0;
-                if (typesSel === 'multiple-choice') return isMcq;
-                if (typesSel === 'free-response') return !isMcq;
-                return true;
-              });
-
-              const pool = filtered.map((row: any) => ({
-                question: row.question,
-                options: row.options || [],
-                answers: row.answers || [],
-                difficulty: row.difficulty ?? 0.5,
-                event: row.event,
-                imageData: Array.isArray(row.images) && row.images.length ? row.images[Math.floor(Math.random()*row.images.length)] : undefined,
-              } as Question));
-              setNamePool(pool.map(q => q.question)); // not used, but maintained
-
-              setIdQuestionCache(prev => {
-                const m = new Map(prev);
-                const picks = [...pool];
-                let idx = 0;
-                for (const i of idIndices.values()) {
-                  if (idx >= picks.length) break;
-                  m.set(i, picks[idx++]);
-                }
-                return m;
-              });
-            })
-            .catch(() => {});
-        }
-
-
-        const serialized = JSON.stringify(finalQuestions, (key, value) => key === 'imageData' ? undefined : value);
+        // Dedup by normalized text and id
+        const seen = new Set<string>();
+        const deduped = arr.filter((q: any) => {
+          const id = q.id ? String(q.id) : '';
+          const text = typeof q.question === 'string' ? q.question.trim().toLowerCase() : '';
+          const key = id || text;
+          if (!key) return true;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        questions = deduped;
+        setData(questions);
+        setCurrentQuestionIndex(0);
+        setAnsweredInBatch(0);
+        const serialized = JSON.stringify(questions, (key, value) => key === 'imageData' ? undefined : value);
         localStorage.setItem('unlimitedQuestions', serialized);
-        setData(finalQuestions);
-      } catch {
-        
-        setFetchError('Failed to load questions. Please try again later.');
-      } finally {
         setIsLoading(false);
+      } catch {
+        setFetchError('Failed to load questions. Please try again later.');
+        setIsLoading(false);
+      } finally {
+        fetchStartedRef.current = true;
       }
     };
 
-    fetchData();
+    loadBatch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
-  // Ensure the current question index is valid once data is loaded
+  // Ensure the current question index is valid/stable once data is loaded
   useEffect(() => {
     if (data.length > 0) {
       setCurrentQuestionIndex((prev) => {
         if (prev >= 0 && prev < data.length) return prev;
-        return Math.floor(Math.random() * data.length);
+        return 0; // start at the first question in this batch
       });
     }
   }, [data.length]);
@@ -239,62 +201,10 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
   }, []);
 
 
-  const loadIdQuestion = useCallback(async (index: number) => {
-    if (!idQuestionIndices.has(index) || idQuestionCache.has(index)) {
-      return;
-    }
-    
-    setIsLoadingIdQuestion(true);
-    try {
-      logger.log('[IDGEN][unlimited] loading ID question for index', index);
-      
-
-      const params = new URLSearchParams();
-      params.set('event', routerData.eventName || 'Unknown Event');
-      params.set('limit', '1');
-      
-
-      if (routerData.subtopics && routerData.subtopics.length > 0) {
-        params.set('subtopics', routerData.subtopics.join(','));
-      }
-      
-      const resp = await fetch(`${api.idQuestions}?${params.toString()}`);
-      const { success, data } = await resp.json();
-      
-              if (success && data.length > 0) {
-          const item = data[0];
-          
-
-          const types = routerData.types || 'multiple-choice';
-          const question: Question | undefined = buildIdQuestionFromApiRow(item, { eventName: routerData.eventName, types, namePool });
-        
-
-        if (!question) return;
-        setIdQuestionCache(prev => new Map(prev).set(index, question));
-        setData(prev => {
-          const newData = [...prev];
-          newData[index] = question;
-          return newData;
-        });
-        
-        
-      }
-    } catch {
-      
-    } finally {
-      setIsLoadingIdQuestion(false);
-    }
-  }, [idQuestionIndices, idQuestionCache, namePool, routerData]);
+  // ID placeholders no longer used; ID questions are built during batch load
 
 
-  useEffect(() => {
-    if (idQuestionIndices.has(currentQuestionIndex) && !idQuestionCache.has(currentQuestionIndex)) {
-      loadIdQuestion(currentQuestionIndex);
-    }
-  }, [currentQuestionIndex, idQuestionIndices, idQuestionCache, loadIdQuestion]);
-
-
-  const currentQuestion = idQuestionCache.get(currentQuestionIndex) || data[currentQuestionIndex];
+  const currentQuestion = data[currentQuestionIndex];
 
 
 
@@ -358,16 +268,64 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     } catch (error) {
       logger.error('Error updating metrics:', error);
     }
+
+    setAnsweredInBatch((prev) => prev + 1);
   };
 
 
   const handleNext = () => {
     if (data.length > 0) {
-      const randomIndex = Math.floor(Math.random() * data.length);
-      
-      setCurrentQuestionIndex(randomIndex);
+      setCurrentQuestionIndex((prev) => Math.min(prev + 1, data.length - 1));
       setCurrentAnswer([]);
       setIsSubmitted(false);
+      // If finished the batch, load another batch and replace
+      if (answeredInBatch + 1 >= BATCH_SIZE) {
+        if (batchReloadingRef.current) return;
+        batchReloadingRef.current = true;
+        // Clear stored batch so next mount won't restore old
+        try { localStorage.removeItem('unlimitedQuestions'); } catch {}
+        // Trigger fresh load by re-running initial effect logic minimally
+        (async () => {
+          setIsLoading(true);
+          setFetchError(null);
+          try {
+            const paramsStr = localStorage.getItem('testParams');
+            const routerParams = initialRouterData || (paramsStr ? JSON.parse(paramsStr) : {});
+            let questions = await fetchQuestionsForParams(routerParams, BATCH_SIZE);
+            const seed = Date.now();
+            const rng = (() => {
+              let s = seed % 2147483647;
+              return () => (s = (s * 48271) % 2147483647) / 2147483647;
+            })();
+            const arr = [...questions];
+            for (let i = arr.length - 1; i > 0; i--) {
+              const j = Math.floor(rng() * (i + 1));
+              [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            const seen = new Set<string>();
+            const deduped = arr.filter((q: any) => {
+              const id = q.id ? String(q.id) : '';
+              const text = typeof q.question === 'string' ? q.question.trim().toLowerCase() : '';
+              const key = id || text;
+              if (!key) return true;
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            });
+            questions = deduped;
+            setData(questions);
+            setCurrentQuestionIndex(0);
+            setAnsweredInBatch(0);
+            const serialized = JSON.stringify(questions, (key, value) => key === 'imageData' ? undefined : value);
+            localStorage.setItem('unlimitedQuestions', serialized);
+          } catch {
+            setFetchError('Failed to load questions. Please try again later.');
+          } finally {
+            setIsLoading(false);
+            batchReloadingRef.current = false;
+          }
+        })();
+      }
     } else {
       logger.warn("No questions available to select randomly.");
 
@@ -488,8 +446,8 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
         isSubmitted={isSubmitted}
         gradingScore={gradingResults[currentQuestionIndex]}
         currentAnswers={currentAnswers}
-        isLoadingId={isLoadingIdQuestion}
-        showIdSpinner={idQuestionIndices.has(currentQuestionIndex)}
+        isLoadingId={false}
+        showIdSpinner={false}
         onAnswerToggle={(ans, multi) => handleAnswerChange(ans, multi)}
         onGetExplanation={() => handleGetExplanation(currentQuestionIndex, question, currentAnswers ?? [])}
         explanation={explanations[currentQuestionIndex]}
