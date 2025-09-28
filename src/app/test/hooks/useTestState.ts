@@ -183,7 +183,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
   useEffect(() => {
     if (fetchStartedRef.current || fetchCompletedRef.current || data.length > 0 || isLoading === false) return;
     fetchStartedRef.current = true;
-    initLoad({ initialData, stableRouterData, setRouterData, setFetchError, setIsLoading, setData, fetchCompletedRef });
+    initLoad({ initialData, stableRouterData, setRouterData, setFetchError, setIsLoading, setData, setTimeLeft, fetchCompletedRef });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, initialData, stableRouterData]);
 

@@ -21,6 +21,7 @@ export async function initLoad({
   setFetchError,
   setIsLoading,
   setData,
+  setTimeLeft,
   fetchCompletedRef,
 }: {
   initialData?: any[];
@@ -29,6 +30,7 @@ export async function initLoad({
   setFetchError: SetState<string | null>;
   setIsLoading: SetState<boolean>;
   setData: SetState<Question[]>;
+  setTimeLeft: SetState<number | null>;
   fetchCompletedRef: { current: boolean };
 }): Promise<void> {
   localStorage.removeItem('testFromBookmarks');
@@ -59,7 +61,9 @@ export async function initLoad({
         (existingSession.timeLimit && existingSession.timeLimit !== timeLimit)
       )
     ) {
-      resetTestSession(eventName, timeLimit);
+      // Reset and adopt new session
+      const newSession = resetTestSession(eventName, timeLimit);
+      try { setTimeLeft(newSession.timeState.timeLeft); } catch {}
       localStorage.removeItem('testQuestions');
       localStorage.removeItem('testUserAnswers');
       localStorage.removeItem('testGradingResults');
@@ -75,6 +79,9 @@ export async function initLoad({
       session = resumeTestSession();
     }
   }
+
+  // Ensure timer is visible immediately
+  try { if (session) setTimeLeft(session.timeState.timeLeft); } catch {}
 
   if (session?.isSubmitted) {
     const storedGrading = localStorage.getItem('testGradingResults');
