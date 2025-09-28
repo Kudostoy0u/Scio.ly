@@ -24,6 +24,7 @@ import {
   initializeTestSession,
   markTestSubmitted,
   resetTestSession,
+  resumeTestSession,
 } from '@/app/utils/timeManagement';
 import { usePauseOnUnmount, useResumeOnMount, useSetupVisibility, useCountdown } from './utils/timeHooks';
 import { initLoad } from './utils/initLoad';
@@ -165,6 +166,18 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
       localStorage.setItem('testGradingResults', JSON.stringify(grades));
         } catch {}
   }, [isPreviewMode, data, isSubmitted]);
+
+
+  // Ensure timer shows immediately by syncing from session when available
+  useEffect(() => {
+    try {
+      const session = resumeTestSession() || getCurrentTestSession();
+      if (session) {
+        setTimeLeft(session.timeState.timeLeft);
+      }
+    } catch {}
+    // Re-run when router params are established (session is created in initLoad)
+  }, [routerData]);
 
 
   useEffect(() => {
