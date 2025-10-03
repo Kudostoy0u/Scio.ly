@@ -36,12 +36,9 @@ export async function GET(request: NextRequest) {
     if (p.difficulty_max) conds.push(lt(idEvents.difficulty, String(parseFloat(p.difficulty_max))));
 
     // Filter by question type if provided (mcq | frq | both)
-    // Derive from options: MCQ has options, FRQ has empty options
     const qt = (p.question_type || '').toLowerCase();
-    if (qt === 'mcq') {
-      conds.push(sql`jsonb_array_length(${idEvents.options}) > 0`);
-    } else if (qt === 'frq') {
-      conds.push(sql`jsonb_array_length(${idEvents.options}) = 0`);
+    if (qt === 'mcq' || qt === 'frq') {
+      conds.push(sql`${idEvents.questionType} = ${qt}`);
     }
 
     // Filter by pure_id if requested
