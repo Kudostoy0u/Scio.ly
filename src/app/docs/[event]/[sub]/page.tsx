@@ -5,9 +5,21 @@ import { getEventMeta } from '@/app/docs/utils/eventMeta';
 import { extractToc } from '@/lib/utils/markdown';
 import { EventSubsectionClient } from './EventSubsectionClient';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
-export function generateStaticParams() { return []; }
+export function generateStaticParams() {
+  const slugs = getEventBySlug.allSlugs?.() || [];
+  const params: Array<{ event: string; sub: string }> = [];
+  for (const event of slugs) {
+    const evt = getEventBySlug(event);
+    if (evt?.subsections) {
+      for (const s of evt.subsections) {
+        params.push({ event, sub: s.slug });
+      }
+    }
+  }
+  return params;
+}
 
 export default async function EventSubsectionPage({ params }: { params: Promise<{ event: string; sub: string }> }) {
   const { event, sub: subSlug } = await params;
