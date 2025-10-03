@@ -42,6 +42,7 @@ export default function PracticeDashboard() {
     tournament: '',
     subtopics: [],
     idPercentage: 0,
+    pureIdOnly: false,
   });
 
 
@@ -52,12 +53,14 @@ export default function PracticeDashboard() {
       const storedDivision = localStorage.getItem('defaultDivision') || 'any';
       const storedQuestionTypes = localStorage.getItem('defaultQuestionTypes') || 'multiple-choice';
       const storedIdPercentage = localStorage.getItem('defaultIdPercentage');
+      const storedPureIdOnly = localStorage.getItem('defaultPureIdOnly');
       const storedCharLengthMin = localStorage.getItem('codebustersCharLengthMin');
       const storedCharLengthMax = localStorage.getItem('codebustersCharLengthMax');
       
       const questionCount = storedQuestionCount ? parseInt(storedQuestionCount) : NORMAL_DEFAULTS.questionCount;
       const timeLimit = storedTimeLimit ? parseInt(storedTimeLimit) : NORMAL_DEFAULTS.timeLimit;
       const idPercentage = storedIdPercentage ? parseInt(storedIdPercentage) : 0;
+      const pureIdOnly = storedPureIdOnly === 'true';
       const charLengthMin = storedCharLengthMin ? parseInt(storedCharLengthMin) : 1;
       const charLengthMax = storedCharLengthMax ? parseInt(storedCharLengthMax) : 100;
       
@@ -70,6 +73,7 @@ export default function PracticeDashboard() {
           ? storedQuestionTypes as any
           : 'multiple-choice',
         idPercentage: isNaN(idPercentage) ? 0 : idPercentage,
+        pureIdOnly: pureIdOnly,
         charLengthMin: isNaN(charLengthMin) ? 1 : charLengthMin,
         charLengthMax: isNaN(charLengthMax) ? 100 : charLengthMax
       }));
@@ -305,6 +309,11 @@ export default function PracticeDashboard() {
           const parsed = stored ? parseInt(stored) : 0;
           return isNaN(parsed) ? 0 : parsed;
         })();
+        const savedPureIdOnly = (() => {
+          if (typeof window === 'undefined') return false;
+          const stored = localStorage.getItem('defaultPureIdOnly');
+          return stored === 'true';
+        })();
         const availableDivisions = selectedEventObj.divisions || ['B', 'C'];
         const canShowB = availableDivisions.includes('B');
         const canShowC = availableDivisions.includes('C');
@@ -325,7 +334,8 @@ export default function PracticeDashboard() {
           types: savedTypes as any,
           division: divisionForEvent as any,
           subtopics: [],
-          idPercentage: savedIdPercentage
+          idPercentage: savedIdPercentage,
+          pureIdOnly: savedPureIdOnly
         }));
       }
     }

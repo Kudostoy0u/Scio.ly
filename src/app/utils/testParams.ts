@@ -14,6 +14,7 @@ export type TestParams = {
   idPercentage?: number;
   charLengthMin?: number;
   charLengthMax?: number;
+  pureIdOnly?: boolean;
 };
 
 function normalizeArray(values: string[] | undefined): string[] {
@@ -40,7 +41,7 @@ export function buildTestParams(eventName: string, settings: Settings): TestPara
     ? Math.max(10, Math.min(200, settings.charLengthMax))
     : undefined;
 
-  return {
+  const params = {
     eventName,
     questionCount: normalizedQuestionCount,
     timeLimit: normalizedTimeLimit,
@@ -52,7 +53,13 @@ export function buildTestParams(eventName: string, settings: Settings): TestPara
     idPercentage: normalizedIdPct,
     charLengthMin: normalizedCharLengthMin,
     charLengthMax: normalizedCharLengthMax,
+    pureIdOnly: settings.pureIdOnly || false,
   };
+  
+  console.log('[DEBUG] buildTestParams - settings.pureIdOnly:', settings.pureIdOnly);
+  console.log('[DEBUG] buildTestParams - final params:', JSON.stringify(params, null, 2));
+  
+  return params;
 }
 
 export function saveTestParams(params: TestParams) {

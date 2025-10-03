@@ -206,6 +206,17 @@ export default function TestConfiguration({
     return candidates.includes(name) || candidates.includes(base);
   })();
 
+  const supportsIdentificationOnly = (() => {
+    const name = selectedEvent?.name || '';
+    const candidates = [
+      'Rocks and Minerals',
+      'Entomology',
+      'Water Quality - Freshwater',
+      'Astronomy'
+    ];
+    return candidates.includes(name);
+  })();
+
   return (
     <div 
       data-test-config
@@ -423,6 +434,34 @@ export default function TestConfiguration({
                   })()}
                 </span>
               </div>
+              
+              {/* Identification Only checkbox */}
+              {supportsIdentificationOnly && (
+                <div className="mt-3 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="pureIdOnly"
+                    checked={settings.pureIdOnly || false}
+                    onChange={(e) => {
+                      onSettingsChange({ ...settings, pureIdOnly: e.target.checked });
+                      if (typeof window !== 'undefined') {
+                        localStorage.setItem('defaultPureIdOnly', e.target.checked ? 'true' : 'false');
+                      }
+                    }}
+                    className={`w-4 h-4 rounded border ${
+                      darkMode 
+                        ? 'bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500' 
+                        : 'bg-gray-50 border-gray-300 text-blue-600 focus:ring-blue-600'
+                    } focus:ring-2 focus:ring-offset-0 cursor-pointer`}
+                  />
+                  <label 
+                    htmlFor="pureIdOnly" 
+                    className={`text-sm cursor-pointer ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                  >
+                    Identification Only
+                  </label>
+                </div>
+              )}
             </div>
           )}
 

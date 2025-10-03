@@ -17,6 +17,7 @@ export interface Settings {
   idPercentage?: number;
   charLengthMin?: number;
   charLengthMax?: number;
+  pureIdOnly?: boolean;
 }
 
 

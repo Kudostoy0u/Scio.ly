@@ -40,6 +40,8 @@ export async function initLoad({
   const storedParams = localStorage.getItem('testParams');
   const hasInitial = stableRouterData && Object.keys(stableRouterData).length > 0;
   const routerParams = hasInitial ? stableRouterData : (storedParams ? JSON.parse(storedParams) : {});
+  console.log('[DEBUG] initLoad - storedParams raw:', storedParams);
+  console.log('[DEBUG] initLoad - routerParams parsed:', JSON.stringify(routerParams, null, 2));
   logger.log('init routerParams', { hasInitial, routerParams, hasStoredParams: !!storedParams });
   if (!routerParams || Object.keys(routerParams).length === 0) {
     logger.warn('empty routerParams; staying on page with friendly message');

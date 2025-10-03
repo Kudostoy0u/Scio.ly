@@ -24,6 +24,7 @@ export default async function Page() {
   const division = parsed?.division as string | undefined;
   const subtopics = Array.isArray(parsed?.subtopics) ? parsed.subtopics as string[] : undefined;
   const idPercentage = typeof parsed?.idPercentage !== 'undefined' ? Number(parsed.idPercentage) : undefined;
+  const pureIdOnly = parsed?.pureIdOnly === true;
 
   // Do not SSR-fetch questions. Client logic handles ID/base composition.
   // Only pass through router parameters so the client can fetch appropriately.
@@ -37,6 +38,7 @@ export default async function Page() {
         division?: string;
         subtopics?: string[];
         idPercentage?: number;
+        pureIdOnly?: boolean;
       }
     | undefined = undefined;
 
@@ -49,6 +51,7 @@ const baseRouterData = {
   division,
   subtopics,
   idPercentage,
+  pureIdOnly,
 };
 
 

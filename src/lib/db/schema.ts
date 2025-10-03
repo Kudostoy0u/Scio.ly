@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, jsonb, numeric, doublePrecision, integer } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, jsonb, numeric, doublePrecision, integer, boolean } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 
@@ -79,6 +79,7 @@ export const idEvents = pgTable('id_events', {
   event: text('event').notNull(),
   images: jsonb('images').default('[]').notNull(),
   questionType: text('question_type'),
+  pureId: boolean('pure_id').default(false),
   randomF: doublePrecision('random_f').notNull().default(sql`random()`),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),

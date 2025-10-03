@@ -35,6 +35,7 @@ export function proceedWithUnlimited(selectedEventName: string, settings: Settin
       difficulties: settings.difficulties,
       subtopics: settings.subtopics,
       idPercentage: settings.idPercentage,
+      pureIdOnly: settings.pureIdOnly,
     }));
     document.cookie = `scio_unlimited_params=${cookiePayload}; Path=/; Max-Age=600; SameSite=Lax`;
   } catch {}
