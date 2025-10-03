@@ -16,27 +16,40 @@ export default function CertifiedPage() {
             <h1 className="text-3xl font-bold mb-3">Certified Tournaments</h1>
             <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
               Here are the certified tournaments from which we pull test questions.
+              They have been vetted by our team and upserted into our database needing any AI enhancements.
             </p>
             <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
-              These tournaments have been vetted by our team and upserted into our database without passing through AI.
-            </p>
-            <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
-              This list contains all tournaments that granted permission for use of their questions or are marked public on the test exchange.
+              Specifically, this list contains all tournaments that granted permission for use of their questions or are marked public on the test exchange and meet our quality standards.
             </p>
 
             <div className="mt-4">
-              <h2 className="text-xl font-semibold mb-1">Scio.ly Test Bank List</h2>
-              <ul className="space-y-2">
-                {PUBLIC_TOURNAMENTS.map((name) => (
-                  <li
+              <h2 className="text-xl font-semibold mb-1">Manually certified</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {MANUAL_TOURNAMENTS.map((name) => (
+                  <div
                     key={name}
                     className={`${darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200 text-gray-900'} border rounded-md px-4 py-2 flex items-center gap-3`}
                   >
                     <Trophy className={`w-4 h-4 ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />
                     <span className="font-medium">{name}</span>
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <h2 className="text-xl font-semibold mb-1">Public and certified tournaments</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {PUBLIC_TOURNAMENTS.map((name) => (
+                  <div
+                    key={name}
+                    className={`${darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200 text-gray-900'} border rounded-md px-4 py-2 flex items-center gap-3`}
+                  >
+                    <Trophy className={`w-4 h-4 ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />
+                    <span className="font-medium">{name}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
         </div>
@@ -45,6 +58,33 @@ export default function CertifiedPage() {
     </div>
   );
 }
+
+// Manually certified tournaments provided by organizers or curated by Scio.ly
+const MANUAL_TOURNAMENTS: string[] = [
+  'Arcadia High School Tryouts',
+  'Athens (Twin Tiers)',
+  'Battle of the Bees',
+  'Belleville',
+  'Blue Dragon Invitational',
+  'Boyceville',
+  'Camas',
+  "Captain's Exchange",
+  'Cerritos',
+  'Chattahoochee',
+  'Cheyenne Mountain',
+  'Christensen',
+  'Cobra',
+  'Cornell',
+  'Crystal Lake',
+  'Cyfalls',
+  'Cypress Falls',
+  'Dartmouth',
+  'Davidson Mini',
+  'Dick Smith Memorial',
+  'Dodgen Walton',
+  'Eagle Invitational',
+  'Eagle View',
+];
 
 // Public tournaments extracted from "Peter - Peter.csv" where Public? == TRUE
 // Snapshot at creation time; source-of-truth remains the CSV/script.

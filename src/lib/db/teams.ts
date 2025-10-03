@@ -2,7 +2,7 @@ import { Pool } from 'pg';
 
 // Database connection pool
 const pool = new Pool({
-  connectionString: "postgresql://kundan:jTucKCVvP7D1cRbB8doSVg@scioly-14433.j77.aws-us-east-2.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full",
+  connectionString: process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: false
   }

@@ -374,10 +374,8 @@ export default function HomeClient() {
           <h2 className={`text-5xl font-bold mb-16 text-center ${titleColor}`}>Frequently Asked Questions</h2>
           <div className="grid md:grid-cols-2 gap-8">
             {[...Array(4)].map((_, index) => (
-              <motion.div
+              <div
                 key={index}
-                whileHover={{ scale: 1.03, boxShadow: darkMode ? '0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2)' : '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)' }}
-                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                 className={`rounded-xl p-6 border ${
                 darkMode
                   ? 'bg-gray-800/50 border-gray-700'
@@ -390,12 +388,17 @@ export default function HomeClient() {
                    'How can I contribute?'}
                 </h3>
                 <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
-                  {index === 0 ? 'Our questions are sourced from real Science Olympiad tests and resources, ensuring a comprehensive and diverse question bank.' :
+                  {index === 0 ? (
+                    <>
+                      Our questions are sourced from real Science Olympiad tests and resources, ensuring a comprehensive and diverse question bank.{' '}
+                      We only use <Link href="/certified" className={`${darkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-700'} underline`}>approved tests</Link> for use on our platform.
+                    </>
+                  ) :
                    index === 1 ? 'AI is primarily used for grading free response, providing explanations, and processing reports. Excluding MatSci, all questions are from real Science Olympiad tests - AI isn\'t being used to generate them.' :
                    index === 2 ? 'No, Scio.ly is not endorsed by Science Olympiad Inc. Our platform provides practice materials based on past exams but we do not make any guarantees about content on future exams.' :
                    'We welcome contributions! Check out our GitHub repository to see how you can help improve the platform, suggest features, or report issues. You can also help by sending feedback through our contact form.'}
                 </p>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>

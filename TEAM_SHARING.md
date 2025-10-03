@@ -70,7 +70,7 @@ This will:
 ### 2. Database Connection
 The system connects to the PostgreSQL database at:
 ```
-postgresql://kundan:jTucKCVvP7D1cRbB8doSVg@scioly-14433.j77.aws-us-east-2.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full
+process.env.DATABASE_URL
 ```
 
 ### 3. API Endpoints
