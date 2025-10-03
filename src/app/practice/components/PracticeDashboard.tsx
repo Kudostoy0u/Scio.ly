@@ -303,17 +303,57 @@ export default function PracticeDashboard() {
           const stored = localStorage.getItem('defaultQuestionTypes');
           return stored === 'multiple-choice' || stored === 'both' || stored === 'free-response' ? stored : 'multiple-choice';
         })();
+        // Check if this event supports picture questions
+        const supportsPictureQuestions = (() => {
+          const name = selectedEventObj.name || '';
+          const base = name.split(' - ')[0];
+          const candidates = [
+            'Rocks and Minerals',
+            'Entomology',
+            'Anatomy - Nervous',
+            'Anatomy - Endocrine',
+            'Anatomy - Sense Organs',
+            'Anatomy & Physiology',
+            'Dynamic Planet',
+            'Dynamic Planet - Oceanography',
+            'Water Quality',
+            'Water Quality - Freshwater',
+            'Remote Sensing',
+            'Circuit Lab',
+            'Astronomy',
+            'Designer Genes',
+            'Forensics'
+          ];
+          return candidates.includes(name) || candidates.includes(base);
+        })();
+        
+        // Check if this event supports identification-only questions
+        const supportsIdentificationOnly = (() => {
+          const name = selectedEventObj.name || '';
+          const candidates = [
+            'Rocks and Minerals',
+            'Entomology',
+            'Water Quality - Freshwater',
+            'Astronomy'
+          ];
+          return candidates.includes(name);
+        })();
+        
         const savedIdPercentage = (() => {
           if (typeof window === 'undefined') return 0;
           const stored = localStorage.getItem('defaultIdPercentage');
           const parsed = stored ? parseInt(stored) : 0;
-          return isNaN(parsed) ? 0 : parsed;
+          // Only use the cached value if this event supports picture questions
+          return supportsPictureQuestions && !isNaN(parsed) ? parsed : 0;
         })();
+        
         const savedPureIdOnly = (() => {
           if (typeof window === 'undefined') return false;
           const stored = localStorage.getItem('defaultPureIdOnly');
-          return stored === 'true';
+          // Only use the cached value if this event supports pure ID
+          return supportsIdentificationOnly && stored === 'true';
         })();
+        
         const availableDivisions = selectedEventObj.divisions || ['B', 'C'];
         const canShowB = availableDivisions.includes('B');
         const canShowC = availableDivisions.includes('C');
