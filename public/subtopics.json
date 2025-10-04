@@ -16,7 +16,7 @@
     "Chemistry Lab": ["Acids and Bases", "Aqueous Solutions", "Electrochemistry", "Equilibrium", "Gas Laws", "Periodicity", "Physical Properties", "Redox Reactions", "Stoichiometry", "Thermodynamics"],
     "Circuit Lab": [],
     "Detector Building": ["Circuits", "Sensors", "Calibration", "Design", "Troubleshooting", "unknown"],
-    "Disease Detectives": ["Disease Detectives", "Epidemiology", "Outbreak Investigation", "Pathogens", "Prevention", "Statistics", "Study Design", "Surveillance"],
+    "Disease Detectives": ["Epidemiology", "Outbreak Investigation", "Pathogens", "Prevention", "Statistics", "Study Design", "Surveillance"],
     "Dynamic Planet - Glaciers": ["Formation", "Movement", "Climate", "Landforms", "Ice Ages", "unknown"],
     "Dynamic Planet - Earthquakes, Volcanoes, and Tectonics": ["Plate Tectonics", "Seismic Waves", "Volcanic Activity", "Mountain Building", "Hazards", "unknown"],
     "Dynamic Planet - Earth's Fresh Waters": ["Hydrology", "Rivers", "Lakes", "Groundwater", "Pollution", "unknown"],
