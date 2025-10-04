@@ -23,6 +23,7 @@ export default async function Page() {
   const types = parsed?.types as string | undefined;
   const division = parsed?.division as string | undefined;
   const subtopics = Array.isArray(parsed?.subtopics) ? parsed.subtopics as string[] : undefined;
+  const difficulties = Array.isArray(parsed?.difficulties) ? parsed.difficulties as string[] : undefined;
   const idPercentage = typeof parsed?.idPercentage !== 'undefined' ? Number(parsed.idPercentage) : undefined;
   const pureIdOnly = parsed?.pureIdOnly === true;
 
@@ -37,6 +38,7 @@ export default async function Page() {
         types?: string;
         division?: string;
         subtopics?: string[];
+        difficulties?: string[];
         idPercentage?: number;
         pureIdOnly?: boolean;
       }
@@ -50,6 +52,7 @@ const baseRouterData = {
   types,
   division,
   subtopics,
+  difficulties,
   idPercentage,
   pureIdOnly,
 };
