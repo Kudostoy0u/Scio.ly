@@ -11,7 +11,7 @@
     "Anatomy - Nervous": ["Brain", "Nerves", "Neurotransmitters", "Pathology"],
     "Anatomy - Sense Organs": ["Ears", "Eyes", "Skin", "Tongue"],
     "Anatomy - Endocrine": ["Glands", "Hormones", "Pathology", "Regulation"],
-    "Astronomy": ["Cosmology", "Deep Sky Objects", "Galaxies", "Instruments", "Reach for the Stars", "Solar System", "Stars", "Stellar Evolution"],
+    "Astronomy": ["Cosmology", "Deep Sky Objects", "Galaxies", "Instruments", "Solar System", "Stars", "Stellar Evolution"],
     "Cell Biology": ["Cell Structure", "Organelles", "Metabolism", "Division", "Transport", "unknown"],
     "Chemistry Lab": ["Acids and Bases", "Aqueous Solutions", "Electrochemistry", "Equilibrium", "Gas Laws", "Periodicity", "Physical Properties", "Redox Reactions", "Stoichiometry", "Thermodynamics"],
     "Circuit Lab": [],

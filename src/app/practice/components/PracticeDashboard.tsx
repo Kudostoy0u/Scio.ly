@@ -510,34 +510,21 @@ export default function PracticeDashboard() {
         setEvents(eventsWithIds);
 
 
-        const eventSubtopics: Record<string, string[]> = {
-          "Anatomy - Nervous": ["Brain Anatomy", "Spinal Cord", "Cranial Nerves", "Peripheral Nervous System", "Autonomic Nervous System", "Neurons", "Synapses", "Neurotransmitters", "Reflexes", "Sensory Pathways", "Motor Pathways", "Brain Functions"],
-          "Anatomy - Endocrine": ["Pituitary Gland", "Thyroid Gland", "Adrenal Glands", "Pancreas", "Gonads", "Hormones", "Hormone Regulation", "Endocrine Disorders", "Metabolism", "Growth and Development", "Stress Response", "Reproductive Endocrinology"],
-          "Anatomy - Sense Organs": ["Eye Anatomy", "Eye Physiology", "Ear Anatomy", "Ear Physiology", "Olfactory System", "Integumentary System", "Visual Pathway", "Hearing Physiology", "Balance (Equilibrium)", "Sensory Receptors", "Nervous System Anatomy", "Nervous System Physiology"],
-          "Astronomy": ["Solar System", "Stars", "Galaxies", "Cosmology", "Instruments"],
-          "Chemistry Lab": ["Stoichiometry", "Equilibrium", "Periodicity", "Redox Reactions", "Aqueous Solutions", "Acids and Bases", "Physical Properties", "Thermodynamics", "Gas Laws", "Kinetics", "Electrochemistry"],
-          "Circuit Lab": ["Circuits", "Sensors", "Calibration", "Design", "Troubleshooting"],
-          "Codebusters": ["Random Aristocrat", "K1 Aristocrat", "K2 Aristocrat", "K3 Aristocrat", "Random Patristocrat", "K1 Patristocrat", "K2 Patristocrat", "K3 Patristocrat", "Caesar", "Atbash", "Affine", "Hill 2x2", "Hill 3x3", "Baconian", "Porta", "Nihilist", "Fractionated Morse", "Complete Columnar", "Xenocrypt", "Checkerboard"],
-          "Crime Busters": ["Evidence Analysis", "Fingerprints", "DNA", "Toxicology", "Crime Scene"],
-          "Designer Genes": ["Genetics", "DNA", "Proteins", "Evolution", "Population Genetics"],
-          "Disease Detectives": ["Epidemiology", "Pathogens", "Prevention", "Outbreak Investigation", "Statistics"],
-          "Dynamic Planet - Oceanography": ["Plate Tectonics", "Earthquakes", "Volcanoes", "Mountain Building", "Ocean Basins", "Continental Drift", "Seafloor Spreading", "Subduction", "Faulting", "Folding", "Geologic Time", "Rock Deformation"],
-          "Entomology": ["Insect Anatomy", "Life Cycles", "Behavior", "Classification", "Ecology"],
-          "Forensics": ["Evidence Analysis", "Fingerprints", "DNA", "Toxicology", "Crime Scene"],
-          "Heredity": ["Genetics", "DNA", "Proteins", "Evolution", "Population Genetics"],
-          "Machines": ["Simple Machines", "Mechanical Advantage", "Efficiency", "Compound Machines", "Design", "unknown"],
-          "Materials Science - Nanomaterials": ["Types of Nanomaterials", "Structure & Chemistry", "Applications of Nanomaterials", "Optical Properties", "Electrical Properties", "Thermal Properties", "Mechanical Properties", "Magnetic Properties", "Surfaces & Interfaces", "Diffusion & Crystal Defects", "Diffraction & Scattering", "Bottom-Up Synthesis", "Top-Down Synthesis", "Chemistry", "Characterization", "Theory", "Spectroscopy Techniques", "Crystal Defects", "Microscopy Techniques", "UV-Vis Spectroscopy", "Photoluminescence", "Raman Spectroscopy", "EDS", "Mass Spectrometry", "Physical Properties", "Characterization Techniques", "Modeling", "Calculations", "Experimental Methods", "Size Effects on Mechanical Properties", "Plasticity & Dislocations", "Adhesion & Interfaces", "Hardness & Wear", "Advanced Topics", "Fracture & Toughness", "Fatigue & Cyclic Loading", "Extreme Environments", "Scattering", "Absorption", "Plasmons", "Quantum Confinement", "Color", "Luminescence & Fluorescence", "Reflection & Refraction", "Transmission", "Physics of Materials", "Nanomaterials", "Interfaces", "Techniques"],
-          "Meteorology": ["Weather Systems", "Clouds", "Precipitation", "Temperature", "Pressure"],
-          "Metric Mastery": ["Estimation", "Orders of Magnitude", "Problem Solving", "Scientific Reasoning", "Calculations"],
-          "Potions and Poisons": ["Toxicology", "Pharmacology", "Dosage", "Symptoms", "Antidotes"],
-          "Remote Sensing": ["Satellites", "Imaging", "Data Analysis", "Applications", "Technology"],
-          "Rocks and Minerals": ["Igneous", "Sedimentary", "Metamorphic", "Mineral Properties", "Crystal Systems"],
-          "Solar System": ["Planets", "Moons", "Asteroids", "Comets", "Galaxies"],
-          "Water Quality - Freshwater": ["pH", "Dissolved Oxygen", "Nutrients", "Pollutants", "Testing", "Classification"]
-        };
-
-
-        window.eventSubtopicsMapping = eventSubtopics;
+        // Load subtopics from JSON file
+        try {
+          const subtopicsRes = await fetch('/subtopics.json');
+          if (subtopicsRes.ok) {
+            const eventSubtopics = await subtopicsRes.json();
+            window.eventSubtopicsMapping = eventSubtopics;
+          } else {
+            // Fallback to empty object if fetch fails
+            window.eventSubtopicsMapping = {};
+          }
+        } catch (err) {
+          logger.error('Error loading subtopics:', err);
+          // Fallback to empty object if fetch fails
+          window.eventSubtopicsMapping = {};
+        }
 
       } catch (err) {
         logger.error('Error fetching data:', err);
