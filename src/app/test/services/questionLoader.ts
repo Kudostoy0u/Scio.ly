@@ -21,6 +21,7 @@ export function supportsIdEvent(eventName?: string): boolean {
     'Astronomy',
     'Designer Genes',
     'Forensics',
+    'Meteorology',
   ]);
   if (base === 'Anatomy') return supportedEvents.has('Anatomy & Physiology');
   return supportedEvents.has(eventName) || supportedEvents.has(base);

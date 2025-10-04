@@ -201,7 +201,8 @@ export default function TestConfiguration({
       'Circuit Lab',
       'Astronomy',
       'Designer Genes',
-      'Forensics'
+      'Forensics',
+      'Meteorology'
     ];
     return candidates.includes(name) || candidates.includes(base);
   })();
