@@ -56,9 +56,6 @@ export function buildTestParams(eventName: string, settings: Settings): TestPara
     pureIdOnly: settings.pureIdOnly || false,
   };
   
-  console.log('[DEBUG] buildTestParams - settings.pureIdOnly:', settings.pureIdOnly);
-  console.log('[DEBUG] buildTestParams - final params:', JSON.stringify(params, null, 2));
-  
   return params;
 }
 

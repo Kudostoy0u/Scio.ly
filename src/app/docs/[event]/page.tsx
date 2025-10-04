@@ -5,9 +5,12 @@ import { getEventMeta } from '@/app/docs/utils/eventMeta';
 import { EventDocsClient } from './EventDocsClient';
 import { extractToc } from '@/lib/utils/markdown';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
-export function generateStaticParams() { return []; }
+export function generateStaticParams() {
+  const slugs = getEventBySlug.allSlugs?.() || [];
+  return slugs.map((event) => ({ event }));
+}
 
 export default async function EventDocsPage({ params }: { params: Promise<{ event: string }> }) {
   const { event } = await params;

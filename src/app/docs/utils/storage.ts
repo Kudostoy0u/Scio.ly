@@ -1,5 +1,4 @@
 import 'server-only';
-import { headers } from 'next/headers';
 
 const BUCKET = 'docs';
 
@@ -78,13 +77,12 @@ export async function getLocalEventMarkdown(slug: string): Promise<string | null
     }
 
     // Fallback to hitting the served file endpoint (works on serverless at runtime)
-    // Build absolute URL to avoid relative-fetch issues in serverless
-    const hdrs = await headers();
-    const host = (hdrs.get('x-forwarded-host') || hdrs.get('host') || process.env.VERCEL_URL || '').trim();
-    const proto = (hdrs.get('x-forwarded-proto') || (host && !host.startsWith('localhost') ? 'https' : 'http')).trim();
-    const base = process.env.NEXT_PUBLIC_SITE_URL?.trim() || (host ? `${proto}://${host}` : 'http://localhost:3000');
-    const absUrl = `${base}/docs/content/2026/${slug}.md`;
-    const res = await fetch(absUrl, { cache: 'no-store' as RequestCache });
+    // Prefer absolute base from env to allow static rendering without headers()
+    const base = (process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || '').toString().trim();
+    const absUrl = base
+      ? `${base.startsWith('http') ? base : `https://${base}`}/docs/content/2026/${slug}.md`
+      : `/docs/content/2026/${slug}.md`;
+    const res = await fetch(absUrl, { cache: 'force-cache' as RequestCache, next: { revalidate: 3600 } });
     if (res.ok) return await res.text();
     return null;
   } catch {

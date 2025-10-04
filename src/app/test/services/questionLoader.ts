@@ -117,12 +117,9 @@ export async function fetchIdQuestions(routerParams: RouterParams, idCount: numb
       if (routerParams.subtopics && routerParams.subtopics.length > 0) {
         params.set('subtopics', routerParams.subtopics.join(','));
       }
-      console.log('[DEBUG] routerParams.pureIdOnly:', routerParams.pureIdOnly);
       if (routerParams.pureIdOnly === true) {
-        console.log('[DEBUG] Adding pure_id_only=true to params');
         params.set('pure_id_only', 'true');
       }
-      console.log('[DEBUG] Final ID questions URL:', `${api.idQuestions}?${params.toString()}`);
       const resp = await fetch(`${api.idQuestions}?${params.toString()}`);
       const json = await resp.json();
       source = Array.isArray(json?.data) ? json.data : [];
