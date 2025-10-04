@@ -13,11 +13,8 @@ export function normalizeTestText(input: string): string {
   // U+F088 -> ⇌
   text = text.replace(/\uF088/g, '⇌');
 
-  // 2) Smart delta to en dash replacement
-  // Replace when there is an alphanumeric immediately before ∆ (ignoring spaces)
-  // but DO NOT replace if ∆ is followed by optional spaces and then S/H/G (case-insensitive)
-  // This prevents turning mathematical "∆s", "∆h", "∆g" into dashes.
-  text = text.replace(/([A-Za-z0-9])\s*∆(?!\s*[sShHgG])\s*/g, '$1–');
+  // 2) Replace ^∆ with ^- in all scenarios
+  text = text.replace(/\^∆/g, '^-');
 
   // 3) Remove point annotations like [2 pt], [3 pts], [1 point], [5 points]
   // and their parenthesized forms (2 pt), etc., anywhere in the string (case-insensitive)
