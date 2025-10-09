@@ -20,6 +20,7 @@ import CreateTeamCard from './components/CreateTeamCard';
 import DivisionHeader from './components/DivisionHeader';
 import ExistingTeamWarning from './components/ExistingTeamWarning';
 import PageHeader from './components/PageHeader';
+import MigrationWarningModal from './components/MigrationWarningModal';
 import { checkExistingUnits, createTeam, joinByCode } from './utils/createJoin';
 
 
@@ -102,6 +103,7 @@ export default function TeamsDashboard({ initialLinkedSelection, initialSlug, in
   const [assignModal, setAssignModal] = useState<{ open: boolean; eventName: string; scope: 'all' | string } | null>(null);
   const [assignSettings, setAssignSettings] = useState<PracticeSettings>({ questionCount: 10, timeLimit: 15, difficulties: [], types: 'multiple-choice', division: 'any', tournament: '', subtopics: [], idPercentage: 0 });
   const [assignEvent, setAssignEvent] = useState<PracticeEvent | null>(null);
+  const [showMigrationWarning, setShowMigrationWarning] = useState<boolean>(true);
 
 
   useEffect(() => {
@@ -699,6 +701,13 @@ export default function TeamsDashboard({ initialLinkedSelection, initialSlug, in
                         </div>
           </>
         )}
+
+        {/* Migration Warning Modal */}
+        <MigrationWarningModal
+          darkMode={!!darkMode}
+          isOpen={showMigrationWarning}
+          onClose={() => setShowMigrationWarning(false)}
+        />
 
         {/* Team Share Modal */}
         <TeamShareModal
