@@ -18,7 +18,10 @@ interface TimerManagerProps {
 
 export default function TimerManager({ darkMode, events, selectedEventTypes, onAddTimer, isDropdownOpen, onToggleDropdown, onEventTypeChange }: TimerManagerProps) {
   const getFilteredEvents = () => {
-    return events.filter(event => selectedEventTypes.includes(event.event_type));
+    return events.filter(event => 
+      selectedEventTypes.includes(event.event_type) && 
+      event.event_type !== 'personal' // Exclude personal events from team timer section
+    );
   };
 
   const availableEvents = getFilteredEvents().filter(event => !event.has_timer);
@@ -70,7 +73,7 @@ export default function TimerManager({ darkMode, events, selectedEventTypes, onA
                 <span className={`font-medium text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                   {event.title}
                 </span>
-                <span className={`text-xs px-2 py-1 rounded-full ${getEventTypeColor(event.event_type)}`}>
+                <span className={`text-xs px-2 py-1 rounded-full ${getEventTypeColor(event.event_type, darkMode)}`}>
                   {event.event_type}
                 </span>
               </div>

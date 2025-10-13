@@ -45,13 +45,32 @@ export interface RosterData {
   removedEvents: string[];
 }
 
+export interface StreamComment {
+  id: string;
+  post_id: string;
+  author_name: string;
+  author_email: string;
+  content: string;
+  created_at: string;
+}
+
 export interface StreamPost {
   id: string;
-  title: string;
   content: string;
-  author: string;
+  show_tournament_timer: boolean;
+  tournament_id: string | null;
+  tournament_title: string | null;
+  tournament_start_time: string | null;
+  author_name: string;
+  author_email: string;
   created_at: string;
-  type: string;
+  attachment_url: string | null;
+  attachment_title: string | null;
+  comments: StreamComment[];
+  // Legacy fields for backward compatibility
+  author?: string;
+  title?: string;
+  type?: string;
 }
 
 export interface Assignment {
@@ -66,19 +85,20 @@ export interface Assignment {
 
 export interface Tournament {
   id: string;
-  name: string;
-  date: string;
-  location: string;
-  events: string[];
+  title: string;
+  start_time: string;
+  location: string | null;
+  event_type: string;
+  has_timer: boolean;
 }
 
 export interface Timer {
   id: string;
-  event_id: string;
-  event_title: string;
+  title: string;
   start_time: string;
-  duration: number;
-  is_active: boolean;
+  location: string | null;
+  event_type: string;
+  added_at: string;
 }
 
 // Store State
@@ -920,6 +940,7 @@ export type {
   TeamMember as TeamMemberType, 
   RosterData as TeamRosterData, 
   StreamPost as TeamStreamPost, 
+  StreamComment as TeamStreamComment,
   Assignment as TeamAssignment, 
   Tournament as TeamTournament, 
   Timer as TeamTimer 

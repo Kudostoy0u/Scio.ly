@@ -352,7 +352,7 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
             const eventData = {
               ...eventForm,
               created_by: user.id,
-              team_id: userTeams.length > 0 ? userTeams[0].id : null,
+              team_id: null, // Personal events should have null team_id
               start_time: eventForm.start_time ? 
                 `${eventForm.date}T${eventForm.start_time}` : 
                 `${eventForm.date}T00:00:00`,
@@ -540,6 +540,14 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
 
   // Helper function to remove event from UI and cache
   const removeEventFromUI = (eventId: string) => {
+    // Check if this is a recurring event occurrence
+    if (eventId.startsWith('recurring-')) {
+      // For recurring events, we don't remove from recurringMeetings state
+      // as they are generated dynamically. We just blacklist the specific occurrence.
+      blacklistEventId(eventId);
+      return;
+    }
+    
     // Remove from local state immediately
     setEvents(prev => prev.filter(event => event.id !== eventId));
     setRecurringMeetings(prev => prev.filter(meeting => meeting.id !== eventId));
@@ -559,6 +567,20 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
   // Delete event
   const deleteEvent = async (eventId: string) => {
     try {
+      // Check if this is a recurring event occurrence
+      if (eventId.startsWith('recurring-')) {
+        // For recurring events, we need to handle them differently
+        // Extract the meeting ID and date from the event ID
+        const parts = eventId.split('-');
+        if (parts.length >= 3) {
+          // For now, we'll just remove it from the UI and cache
+          // In the future, we could add an exception to the recurring meeting
+          toast.success('Recurring event occurrence removed from view');
+          removeEventFromUI(eventId);
+          return;
+        }
+      }
+      
       const res = await fetch(`/api/teams/calendar/events/${eventId}`, {
         method: 'DELETE'
       });
@@ -638,6 +660,7 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
           onEventClick={handleEventClick}
           onDeleteEvent={handleDeleteEvent}
           onAddEventForDate={handleAddEventForDate}
+          isEventBlacklisted={isEventBlacklisted}
         />
       ) : (
         <EventList
@@ -647,6 +670,7 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
           eventTypeFilter={eventTypeFilter}
           onEventClick={handleEventClick}
           onDeleteEvent={handleDeleteEvent}
+          isEventBlacklisted={isEventBlacklisted}
         />
       )}
 

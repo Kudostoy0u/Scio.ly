@@ -17,7 +17,7 @@ export default function ActiveTimers({ darkMode, activeTimers, onRemoveTimer }: 
   return (
     <div className={`mb-6 p-4 rounded-lg border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {activeTimers.filter(event => event.start_time && event.title).map(event => {
+        {activeTimers.filter(event => event.start_time && event.title && event.event_type !== 'personal').map(event => {
           const timeRemaining = calculateTimeRemaining(event.start_time);
           const displayUnits = getDisplayTimeUnits(timeRemaining);
           const status = getEventStatus(event.start_time);
@@ -30,7 +30,7 @@ export default function ActiveTimers({ darkMode, activeTimers, onRemoveTimer }: 
                   <span className={`font-medium text-base ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                     {event.title}
                   </span>
-                  <span className={`text-xs px-2 py-1 rounded-full ${getEventTypeColor(event.event_type)}`}>
+                  <span className={`text-xs px-2 py-1 rounded-full ${getEventTypeColor(event.event_type, darkMode)}`}>
                     {event.event_type}
                   </span>
                 </div>
@@ -61,11 +61,19 @@ export default function ActiveTimers({ darkMode, activeTimers, onRemoveTimer }: 
               <div className="flex justify-between gap-2 mb-3">
                 {displayUnits.map((unit, _index) => (
                   <div key={unit.key} className="flex-1">
-                    <div className="bg-white rounded-lg p-3 text-center border border-gray-200">
-                      <div className="text-xl font-bold text-gray-900">
+                    <div className={`rounded-lg p-3 text-center border ${
+                      darkMode 
+                        ? 'bg-gray-700 border-gray-600' 
+                        : 'bg-white border-gray-200'
+                    }`}>
+                      <div className={`text-xl font-bold ${
+                        darkMode ? 'text-white' : 'text-gray-900'
+                      }`}>
                         {isNaN(unit.value) ? 0 : unit.value}
                       </div>
-                      <div className="text-xs text-gray-600">
+                      <div className={`text-xs ${
+                        darkMode ? 'text-gray-300' : 'text-gray-600'
+                      }`}>
                         {unit.label}
                       </div>
                     </div>

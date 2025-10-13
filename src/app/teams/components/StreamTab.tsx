@@ -28,7 +28,8 @@ export default function StreamTab({ team, isCaptain, activeSubteamId }: StreamTa
     getTournaments, 
     getTimers, 
     loadStreamData,
-    loadTimers
+    loadTimers,
+    invalidateCache
   } = useTeamStore();
   const [posting, setPosting] = useState(false);
   
@@ -56,7 +57,7 @@ export default function StreamTab({ team, isCaptain, activeSubteamId }: StreamTa
   }, [team.slug, activeSubteamId, loadStreamData]);
 
   // Create a new post
-  const handleCreatePost = async () => {
+  const handleCreatePost = async (attachmentData?: { title: string; url: string }) => {
     if (!newPostContent.trim() || !activeSubteamId) return;
 
     setPosting(true);
@@ -69,13 +70,15 @@ export default function StreamTab({ team, isCaptain, activeSubteamId }: StreamTa
           content: newPostContent.trim(),
           showTournamentTimer: false,
           tournamentId: null,
-          attachmentUrl: null,
-          attachmentTitle: null
+          attachmentUrl: attachmentData?.url || null,
+          attachmentTitle: attachmentData?.title || null
         })
       });
 
       if (response.ok) {
         setNewPostContent('');
+        // Clear the stream cache to force a fresh fetch
+        invalidateCache();
         await loadData(); // Reload posts
         toast.success('Post created successfully');
       } else {
@@ -104,9 +107,12 @@ export default function StreamTab({ team, isCaptain, activeSubteamId }: StreamTa
       });
 
       if (response.ok) {
-        // Reload timers to get updated data
+        // Immediately reload timers and stream data for instant UI update
         if (activeSubteamId) {
-          await loadTimers(team.slug, activeSubteamId);
+          await Promise.all([
+            loadTimers(team.slug, activeSubteamId),
+            loadStreamData(team.slug, activeSubteamId)
+          ]);
         }
         toast.success(`Added timer for ${event.title}`);
       } else {
@@ -132,9 +138,12 @@ export default function StreamTab({ team, isCaptain, activeSubteamId }: StreamTa
       });
 
       if (response.ok) {
-        // Reload timers to get updated data
+        // Immediately reload timers and stream data for instant UI update
         if (activeSubteamId) {
-          await loadTimers(team.slug, activeSubteamId);
+          await Promise.all([
+            loadTimers(team.slug, activeSubteamId),
+            loadStreamData(team.slug, activeSubteamId)
+          ]);
         }
         toast.success('Timer removed');
       } else {
@@ -180,6 +189,8 @@ export default function StreamTab({ team, isCaptain, activeSubteamId }: StreamTa
 
       if (response.ok) {
         setNewComments(prev => ({ ...prev, [postId]: '' }));
+        // Clear the stream cache to force a fresh fetch
+        invalidateCache();
         await loadData(); // Reload posts to get updated comments
         toast.success('Comment added');
       } else {
@@ -189,6 +200,87 @@ export default function StreamTab({ team, isCaptain, activeSubteamId }: StreamTa
     } catch (error) {
       console.error('Error adding comment:', error);
       toast.error('Failed to add comment');
+    }
+  };
+
+  // Delete a post
+  const handleDeletePost = async (postId: string) => {
+    if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/teams/${team.slug}/stream?postId=${postId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        // Clear the stream cache to force a fresh fetch
+        invalidateCache();
+        await loadData(); // Reload posts
+        toast.success('Post deleted successfully');
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to delete post');
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      toast.error('Failed to delete post');
+    }
+  };
+
+  // Edit a post
+  const handleEditPost = async (postId: string, content: string, attachmentUrl?: string, attachmentTitle?: string) => {
+    try {
+      const response = await fetch(`/api/teams/${team.slug}/stream`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postId,
+          content,
+          attachmentUrl,
+          attachmentTitle
+        })
+      });
+
+      if (response.ok) {
+        // Clear the stream cache to force a fresh fetch
+        invalidateCache();
+        await loadData(); // Reload posts
+        toast.success('Post updated successfully');
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to update post');
+      }
+    } catch (error) {
+      console.error('Error updating post:', error);
+      toast.error('Failed to update post');
+    }
+  };
+
+  // Delete a comment
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm('Are you sure you want to delete this comment? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/teams/${team.slug}/stream/comments?commentId=${commentId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        // Clear the stream cache to force a fresh fetch
+        invalidateCache();
+        await loadData(); // Reload posts to get updated comments
+        toast.success('Comment deleted successfully');
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to delete comment');
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      toast.error('Failed to delete comment');
     }
   };
 
@@ -225,35 +317,35 @@ export default function StreamTab({ team, isCaptain, activeSubteamId }: StreamTa
   const posts = rawPosts.map(post => ({
     id: post.id,
     content: post.content,
-    show_tournament_timer: false,
-    tournament_id: null,
-    tournament_title: null,
-    tournament_start_time: null,
-    author_name: post.author,
-    author_email: '',
+    show_tournament_timer: post.show_tournament_timer || false,
+    tournament_id: post.tournament_id,
+    tournament_title: post.tournament_title,
+    tournament_start_time: post.tournament_start_time,
+    author_name: post.author_name || post.author || 'Unknown',
+    author_email: post.author_email || '',
     created_at: post.created_at,
-    attachment_url: null,
-    attachment_title: null,
-    comments: []
+    attachment_url: post.attachment_url,
+    attachment_title: post.attachment_title,
+    comments: post.comments || []
   }));
 
   // Transform tournaments to match Event interface
   const events = rawTournaments.map(tournament => ({
     id: tournament.id,
-    title: tournament.name,
-    start_time: tournament.date,
+    title: tournament.title, // Use title instead of name
+    start_time: tournament.start_time, // Use start_time instead of date
     location: tournament.location,
-    event_type: 'tournament' as const,
-    has_timer: false
+    event_type: tournament.event_type as 'practice' | 'tournament' | 'meeting' | 'deadline' | 'personal' | 'other', // Cast to proper type
+    has_timer: tournament.has_timer || false
   }));
 
   // Transform timers to match Event interface
   const activeTimers = rawTimers.map(timer => ({
     id: timer.id,
-    title: timer.event_title,
+    title: timer.title, // Use title instead of event_title
     start_time: timer.start_time,
-    location: null,
-    event_type: 'tournament' as const,
+    location: timer.location, // Use actual location instead of null
+    event_type: timer.event_type as 'practice' | 'tournament' | 'meeting' | 'deadline' | 'personal' | 'other', // Cast to proper type
     has_timer: true
   }));
 
@@ -304,6 +396,10 @@ export default function StreamTab({ team, isCaptain, activeSubteamId }: StreamTa
           onToggleComments={toggleComments}
           onCommentChange={(postId, content) => setNewComments(prev => ({ ...prev, [postId]: content }))}
           onAddComment={handleAddComment}
+          isCaptain={isCaptain}
+          onDeletePost={handleDeletePost}
+          onEditPost={handleEditPost}
+          onDeleteComment={handleDeleteComment}
         />
       </div>
     </div>

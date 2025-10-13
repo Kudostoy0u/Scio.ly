@@ -22,47 +22,8 @@ function safeJsonParse(jsonString: string | null | any, fallback: any = []): any
   }
 }
 
-// Utility function to get the first occurrence of a day of week
-function getFirstOccurrenceOfDay(startDate: Date, targetDayOfWeek: number): Date {
-  const startOfDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-  const currentDayOfWeek = startOfDay.getDay();
-  
-  // Calculate days until target day
-  let daysToAdd = (targetDayOfWeek - currentDayOfWeek + 7) % 7;
-  
-  // If we're already on the target day, move to next week
-  if (daysToAdd === 0) {
-    daysToAdd = 7;
-  }
-  
-  // Return the first occurrence date
-  return new Date(startOfDay.getTime() + (daysToAdd * 24 * 60 * 60 * 1000));
-}
-
-// Utility function to create event times
-function createEventTimes(eventDate: Date, startTime?: string, endTime?: string) {
-  if (!startTime || !endTime) {
-    // All-day event
-    const startOfDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate(), 0, 0, 0, 0);
-    const endOfDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate(), 23, 59, 59, 999);
-    return {
-      start_time: startOfDay.toISOString(),
-      end_time: endOfDay.toISOString(),
-      is_all_day: true
-    };
-  } else {
-    // Timed event
-    const startDateTime = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate(), 
-      parseInt(startTime.split(':')[0]), parseInt(startTime.split(':')[1]), 0, 0);
-    const endDateTime = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate(), 
-      parseInt(endTime.split(':')[0]), parseInt(endTime.split(':')[1]), 0, 0);
-    return {
-      start_time: startDateTime.toISOString(),
-      end_time: endDateTime.toISOString(),
-      is_all_day: false
-    };
-  }
-}
+// Note: Utility functions removed as they are no longer needed
+// since we no longer create individual events in the API
 
 export async function POST(request: NextRequest) {
   try {
@@ -182,8 +143,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check if user is a captain (for team-wide meetings) or just a member (for personal meetings)
-    const isCaptain = membershipResult.rows.some(m => ['captain', 'co_captain'].includes(m.role));
+    // Check if user is a member (for personal meetings)
     const isMember = membershipResult.rows.some(m => ['member', 'captain', 'co_captain'].includes(m.role));
     
     // For team meetings, user must be a member. For personal meetings, this check is not required.
@@ -243,153 +203,10 @@ export async function POST(request: NextRequest) {
 
     const meetingIds = results.map(r => r.rows[0]?.id).filter(Boolean);
 
-    // Create individual events based on meeting type
-    if (meetingIds.length > 0) {
-      if (meeting_type === 'team' && isCaptain) {
-        // Team meeting: create events for all team members
-      try {
-        // Get all team members for the target teams
-        const teamMembersResult = await queryCockroachDB<{
-          user_id: string;
-          role: string;
-          team_id: string;
-        }>(
-          `SELECT tm.user_id, tm.role, tm.team_id
-           FROM new_team_memberships tm
-           WHERE tm.team_id = ANY($1) AND tm.status = 'active'
-           ORDER BY tm.joined_at ASC`,
-          [targetTeamIds]
-        );
-
-        // Create individual calendar events for each team member and each selected day
-        for (const dayOfWeek of days_of_week) {
-          for (const member of teamMembersResult.rows) {
-            // Calculate the first occurrence date for this day of week
-            const startDate = new Date(start_date);
-            const firstOccurrence = getFirstOccurrenceOfDay(startDate, dayOfWeek);
-            
-
-            // Generate events for this day of week from start_date to end_date
-            const endDate = end_date ? new Date(end_date) : new Date(startDate.getTime() + (365 * 24 * 60 * 60 * 1000)); // Default to 1 year if no end date
-            const currentEventDate = new Date(firstOccurrence);
-            
-            while (currentEventDate <= endDate) {
-              // Skip if this date is in exceptions
-              const dateStr = currentEventDate.toISOString().split('T')[0];
-              if (exceptions && exceptions.includes(dateStr)) {
-                currentEventDate.setDate(currentEventDate.getDate() + 7);
-                continue;
-              }
-
-              // Create the event for this specific date
-              const eventTimes = createEventTimes(currentEventDate, start_time, end_time);
-              const eventResult = await queryCockroachDB<{ id: string }>(
-                `INSERT INTO new_team_events (
-                  team_id, created_by, title, description, event_type,
-                  start_time, end_time, location, is_all_day, is_recurring, recurrence_pattern
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                RETURNING id`,
-                [
-                  member.team_id,
-                  created_by || user.id,
-                  title,
-                  description || null,
-                  'meeting',
-                  eventTimes.start_time,
-                  eventTimes.end_time,
-                  location || null,
-                  eventTimes.is_all_day,
-                  false, // Individual events, not recurring
-                  null
-                ]
-              );
-
-              const eventId = eventResult.rows[0]?.id;
-
-              // Add the team member as an attendee
-              if (eventId) {
-                await queryCockroachDB(
-                  `INSERT INTO new_team_event_attendees (event_id, user_id, status)
-                   VALUES ($1, $2, 'pending')`,
-                  [eventId, member.user_id]
-                );
-              }
-
-              // Move to next week
-              currentEventDate.setDate(currentEventDate.getDate() + 7);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error creating individual events for team members:', error);
-        // Don't fail the entire operation if individual event creation fails
-      }
-      } else {
-        // Personal meeting: create events for the user only
-        try {
-          // Generate events for each selected day of the week
-          for (const dayOfWeek of days_of_week) {
-            // Calculate the first occurrence date for this day of week
-            const startDate = new Date(start_date);
-            const firstOccurrence = getFirstOccurrenceOfDay(startDate, dayOfWeek);
-            
-
-            // Generate events for this day of week from start_date to end_date
-            const endDate = end_date ? new Date(end_date) : new Date(startDate.getTime() + (365 * 24 * 60 * 60 * 1000)); // Default to 1 year if no end date
-            const currentEventDate = new Date(firstOccurrence);
-            
-            while (currentEventDate <= endDate) {
-              // Skip if this date is in exceptions
-              const dateStr = currentEventDate.toISOString().split('T')[0];
-              if (exceptions && exceptions.includes(dateStr)) {
-                currentEventDate.setDate(currentEventDate.getDate() + 7);
-                continue;
-              }
-
-              // Create the event for this specific date
-              const eventTimes = createEventTimes(currentEventDate, start_time, end_time);
-              const eventResult = await queryCockroachDB<{ id: string }>(
-                `INSERT INTO new_team_events (
-                  team_id, created_by, title, description, event_type,
-                  start_time, end_time, location, is_all_day, is_recurring, recurrence_pattern
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                RETURNING id`,
-                [
-                  targetTeamIds[0], // Use first team ID for personal meetings
-                  created_by || user.id,
-                  title,
-                  description || null,
-                  'meeting',
-                  eventTimes.start_time,
-                  eventTimes.end_time,
-                  location || null,
-                  eventTimes.is_all_day,
-                  false, // Individual events, not recurring
-                  null
-                ]
-              );
-
-              const eventId = eventResult.rows[0]?.id;
-
-              // Add the user as an attendee
-              if (eventId) {
-                await queryCockroachDB(
-                  `INSERT INTO new_team_event_attendees (event_id, user_id, status)
-                   VALUES ($1, $2, 'attending')`,
-                  [eventId, user.id]
-                );
-              }
-
-              // Move to next week
-              currentEventDate.setDate(currentEventDate.getDate() + 7);
-            }
-          }
-        } catch (error) {
-          console.error('Error creating personal events:', error);
-          // Don't fail the entire operation if personal event creation fails
-        }
-      }
-    }
+    // Note: We no longer create individual events here to avoid duplicates.
+    // The frontend will generate events from the recurring meeting pattern.
+    // This prevents the "ghost event" issue where both recurring meetings
+    // and individual events were being displayed simultaneously.
 
     return NextResponse.json({ 
       success: true, 

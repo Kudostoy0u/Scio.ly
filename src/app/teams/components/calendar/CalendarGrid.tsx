@@ -36,6 +36,7 @@ interface RecurringMeeting {
   description?: string;
   location?: string;
   exceptions: string[];
+  created_by?: string;
 }
 
 interface CalendarGridProps {
@@ -46,6 +47,7 @@ interface CalendarGridProps {
   onEventClick: (event: CalendarEvent) => void;
   onDeleteEvent: (eventId: string) => void;
   onAddEventForDate: (date: Date) => void;
+  isEventBlacklisted?: (eventId: string) => boolean;
 }
 
 const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -57,7 +59,8 @@ export default function CalendarGrid({
   recurringMeetings,
   onEventClick,
   onDeleteEvent,
-  onAddEventForDate
+  onAddEventForDate,
+  isEventBlacklisted
 }: CalendarGridProps) {
   // Generate calendar days
   const generateCalendarDays = () => {
@@ -108,13 +111,52 @@ export default function CalendarGrid({
     const dayOfWeek = date.getDay();
     const dateStr = date.toISOString().split('T')[0];
     
-    return recurringMeetings.filter(meeting => {
-      if (!Array.isArray(meeting.days_of_week) || !meeting.days_of_week.includes(dayOfWeek)) return false;
-      if (meeting.exceptions && Array.isArray(meeting.exceptions) && meeting.exceptions.includes(dateStr)) return false;
-      if (meeting.start_date && dateStr < meeting.start_date) return false;
-      if (meeting.end_date && dateStr > meeting.end_date) return false;
-      return true;
-    });
+    return recurringMeetings
+      .filter(meeting => {
+        if (!Array.isArray(meeting.days_of_week) || !meeting.days_of_week.includes(dayOfWeek)) return false;
+        if (meeting.exceptions && Array.isArray(meeting.exceptions) && meeting.exceptions.includes(dateStr)) return false;
+        if (meeting.start_date && dateStr < meeting.start_date) return false;
+        if (meeting.end_date && dateStr > meeting.end_date) return false;
+        return true;
+      })
+      .map(meeting => {
+        // Convert recurring meeting to event format for display
+        const startTime = meeting.start_time ? 
+          `${dateStr}T${meeting.start_time}` : 
+          `${dateStr}T00:00:00`;
+        const endTime = meeting.end_time ? 
+          `${dateStr}T${meeting.end_time}` : 
+          undefined;
+        
+        const eventId = `recurring-${meeting.id}-${dateStr}`;
+        
+        // Skip if this event is blacklisted
+        if (isEventBlacklisted && isEventBlacklisted(eventId)) {
+          return null;
+        }
+        
+        return {
+          id: eventId,
+          title: meeting.title,
+          description: meeting.description,
+          start_time: startTime,
+          end_time: endTime,
+          location: meeting.location,
+          event_type: 'meeting' as const,
+          is_all_day: !meeting.start_time || !meeting.end_time,
+          is_recurring: true,
+          recurrence_pattern: {
+            days_of_week: meeting.days_of_week,
+            start_date: meeting.start_date,
+            end_date: meeting.end_date,
+            exceptions: meeting.exceptions
+          },
+          created_by: meeting.created_by || '',
+          team_id: meeting.team_id,
+          attendees: []
+        };
+      })
+      .filter(event => event !== null);
   };
 
   const getEventColors = (type: string) => {
@@ -123,6 +165,10 @@ export default function CalendarGrid({
         return darkMode 
           ? 'bg-red-900/20 text-red-300 border-red-800' 
           : 'bg-red-100 text-red-800 border-red-200';
+      case 'practice':
+        return darkMode 
+          ? 'bg-green-900/20 text-green-300 border-green-800' 
+          : 'bg-green-100 text-green-800 border-green-200';
       case 'meeting':
         return darkMode 
           ? 'bg-blue-900/20 text-blue-300 border-blue-800' 

@@ -64,9 +64,13 @@ export default function RosterSelectionStep({
               key={member.student_name}
               className={`p-3 border rounded-lg transition-colors ${
                 !member.isLinked
-                  ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-300'
+                  ? darkMode
+                    ? 'opacity-50 cursor-not-allowed bg-gray-800 border-gray-600'
+                    : 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-300'
                   : selectedRoster.includes(member.student_name)
-                  ? 'bg-blue-100 border-blue-300 cursor-pointer'
+                  ? darkMode
+                    ? 'bg-blue-900/20 border-blue-400 cursor-pointer'
+                    : 'bg-blue-100 border-blue-300 cursor-pointer'
                   : darkMode
                   ? 'bg-gray-700 border-gray-600 hover:bg-gray-600 cursor-pointer'
                   : 'bg-white border-gray-200 hover:bg-gray-50 cursor-pointer'

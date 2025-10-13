@@ -172,7 +172,9 @@ export const AristocratDisplay = ({
                 isTestSubmitted={isTestSubmitted}
                 cipherType={cipherType}
                 correctMapping={correctMapping}
-                onSolutionChange={onSolutionChange}
+                onSolutionChange={(cipherLetter: string, plainLetter: string) => 
+                    onSolutionChange(quoteIndex, cipherLetter, plainLetter)
+                }
             />
         </div>
     );

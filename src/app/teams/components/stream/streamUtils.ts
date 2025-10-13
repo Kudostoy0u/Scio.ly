@@ -76,20 +76,32 @@ export const formatEventDateTime = (startTime: string) => {
 };
 
 // Get event type color
-export const getEventTypeColor = (eventType: string) => {
+export const getEventTypeColor = (eventType: string, darkMode: boolean = false) => {
   switch (eventType) {
     case 'tournament':
-      return 'bg-blue-100 text-blue-800';
+      return darkMode 
+        ? 'bg-blue-900/20 text-blue-300 border-blue-800' 
+        : 'bg-blue-100 text-blue-800';
     case 'practice':
-      return 'bg-green-100 text-green-800';
+      return darkMode 
+        ? 'bg-green-900/20 text-green-300 border-green-800' 
+        : 'bg-green-100 text-green-800';
     case 'meeting':
-      return 'bg-purple-100 text-purple-800';
+      return darkMode 
+        ? 'bg-purple-900/20 text-purple-300 border-purple-800' 
+        : 'bg-purple-100 text-purple-800';
     case 'deadline':
-      return 'bg-red-100 text-red-800';
+      return darkMode 
+        ? 'bg-red-900/20 text-red-300 border-red-800' 
+        : 'bg-red-100 text-red-800';
     case 'personal':
-      return 'bg-yellow-100 text-yellow-800';
+      return darkMode 
+        ? 'bg-yellow-900/20 text-yellow-300 border-yellow-800' 
+        : 'bg-yellow-100 text-yellow-800';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return darkMode 
+        ? 'bg-gray-700/50 text-gray-200 border-gray-600' 
+        : 'bg-gray-100 text-gray-800';
   }
 };
 

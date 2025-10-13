@@ -290,25 +290,38 @@ export async function GET(
         // });
         
         // Only add as unlinked if the roster entry is not linked to any user
+        // AND the student name doesn't match any existing linked member
         if (!rosterData.isLinked && studentName.trim()) {
-          // Get subteam info from the map
-          const subteamInfo = subteamInfoMap.get(teamUnitId);
-          // console.log('Members API: Adding unlinked entry:', {
-          //   studentName,
-          //   subteamInfo,
-          //   events: rosterData.events
-          // });
-          
-          unlinkedEntries.push({
-            id: null, // No user ID for unlinked entries
-            name: studentName,
-            email: '',
-            role: 'member',
-            joinedAt: new Date().toISOString(),
-            subteam: subteamInfo || { id: teamUnitId, name: 'Unknown', teamId: '' },
-            events: [...new Set(rosterData.events)],
-            eventCount: rosterData.events.length
+          // Check if this student name matches any existing linked member
+          const studentNameLower = studentName.toLowerCase().trim();
+          const isAlreadyLinkedMember = members.some(member => {
+            const memberNameLower = member.name.toLowerCase().trim();
+            
+            // Exact case-insensitive match only
+            return memberNameLower === studentNameLower;
           });
+          
+          // Only create unlinked entry if this student is not already a linked member
+          if (!isAlreadyLinkedMember) {
+            // Get subteam info from the map
+            const subteamInfo = subteamInfoMap.get(teamUnitId);
+            // console.log('Members API: Adding unlinked entry:', {
+            //   studentName,
+            //   subteamInfo,
+            //   events: rosterData.events
+            // });
+            
+            unlinkedEntries.push({
+              id: null, // No user ID for unlinked entries
+              name: studentName,
+              email: '',
+              role: 'member',
+              joinedAt: new Date().toISOString(),
+              subteam: subteamInfo || { id: teamUnitId, name: 'Unknown', teamId: '' },
+              events: [...new Set(rosterData.events)],
+              eventCount: rosterData.events.length
+            });
+          }
         }
       });
     });

@@ -35,6 +35,7 @@ interface RecurringMeeting {
   description?: string;
   location?: string;
   exceptions: string[];
+  created_by?: string;
 }
 
 interface EventListProps {
@@ -44,6 +45,7 @@ interface EventListProps {
   eventTypeFilter: string;
   onEventClick: (event: CalendarEvent) => void;
   onDeleteEvent: (eventId: string) => void;
+  isEventBlacklisted?: (eventId: string) => boolean;
 }
 
 export default function EventList({
@@ -52,7 +54,8 @@ export default function EventList({
   recurringMeetings,
   eventTypeFilter,
   onEventClick,
-  onDeleteEvent
+  onDeleteEvent,
+  isEventBlacklisted
 }: EventListProps) {
   const getEventColors = (type: string) => {
     switch (type) {
@@ -60,6 +63,10 @@ export default function EventList({
         return darkMode 
           ? 'bg-red-900/20 text-red-300 border-red-800' 
           : 'bg-red-100 text-red-800 border-red-200';
+      case 'practice':
+        return darkMode 
+          ? 'bg-green-900/20 text-green-300 border-green-800' 
+          : 'bg-green-100 text-green-800 border-green-200';
       case 'meeting':
         return darkMode 
           ? 'bg-blue-900/20 text-blue-300 border-blue-800' 
@@ -81,14 +88,72 @@ export default function EventList({
 
   // Get filtered events for list view
   const getFilteredEvents = () => {
-    const allEvents = [...events, ...recurringMeetings.flatMap(meeting => 
-      meeting.days_of_week.map(_day => ({
-        ...meeting,
-        start_time: `${meeting.start_date}T${meeting.start_time || '00:00:00'}`,
-        end_time: meeting.end_time ? `${meeting.start_date}T${meeting.end_time}` : undefined,
-        event_type: 'meeting'
-      }))
-    )];
+    // Generate recurring events for the current month and next month
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+    const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+    
+    const recurringEvents: CalendarEvent[] = [];
+    
+    // Generate events for current and next month
+    for (let monthOffset = 0; monthOffset < 2; monthOffset++) {
+      const targetMonth = monthOffset === 0 ? currentMonth : nextMonth;
+      const targetYear = monthOffset === 0 ? currentYear : nextYear;
+      const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+      
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(targetYear, targetMonth, day);
+        const dayOfWeek = date.getDay();
+        const dateStr = date.toISOString().split('T')[0];
+        
+        recurringMeetings.forEach(meeting => {
+          if (Array.isArray(meeting.days_of_week) && meeting.days_of_week.includes(dayOfWeek)) {
+            if (meeting.exceptions && Array.isArray(meeting.exceptions) && meeting.exceptions.includes(dateStr)) return;
+            if (meeting.start_date && dateStr < meeting.start_date) return;
+            if (meeting.end_date && dateStr > meeting.end_date) return;
+            
+            const startTime = meeting.start_time ? 
+              `${dateStr}T${meeting.start_time}` : 
+              `${dateStr}T00:00:00`;
+            const endTime = meeting.end_time ? 
+              `${dateStr}T${meeting.end_time}` : 
+              undefined;
+            
+            const eventId = `recurring-${meeting.id}-${dateStr}`;
+            
+            // Skip if this event is blacklisted
+            if (isEventBlacklisted && isEventBlacklisted(eventId)) {
+              return;
+            }
+            
+            recurringEvents.push({
+              id: eventId,
+              title: meeting.title,
+              description: meeting.description,
+              start_time: startTime,
+              end_time: endTime,
+              location: meeting.location,
+              event_type: 'meeting',
+              is_all_day: !meeting.start_time || !meeting.end_time,
+              is_recurring: true,
+              recurrence_pattern: {
+                days_of_week: meeting.days_of_week,
+                start_date: meeting.start_date,
+                end_date: meeting.end_date,
+                exceptions: meeting.exceptions
+              },
+              created_by: meeting.created_by || '',
+              team_id: meeting.team_id,
+              attendees: []
+            });
+          }
+        });
+      }
+    }
+
+    const allEvents = [...events, ...recurringEvents];
 
     if (eventTypeFilter === 'all') {
       return allEvents.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
@@ -134,10 +199,14 @@ export default function EventList({
                         <span className={`px-2 py-1 text-xs rounded-full ${
                           eventType === 'tournament' 
                             ? darkMode ? 'bg-red-800 text-red-200' : 'bg-red-200 text-red-800'
+                            : eventType === 'practice'
+                            ? darkMode ? 'bg-green-800 text-green-200' : 'bg-green-200 text-green-800'
                             : eventType === 'meeting'
                             ? darkMode ? 'bg-blue-800 text-blue-200' : 'bg-blue-200 text-blue-800'
                             : eventType === 'personal'
                             ? darkMode ? 'bg-green-800 text-green-200' : 'bg-green-200 text-green-800'
+                            : eventType === 'deadline'
+                            ? darkMode ? 'bg-orange-800 text-orange-200' : 'bg-orange-200 text-orange-800'
                             : darkMode ? 'bg-gray-600 text-gray-200' : 'bg-gray-200 text-gray-800'
                         }`}>
                           {eventType.charAt(0).toUpperCase() + eventType.slice(1)}

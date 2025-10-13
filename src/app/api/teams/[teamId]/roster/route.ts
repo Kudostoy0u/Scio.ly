@@ -186,13 +186,51 @@ export async function POST(
       return NextResponse.json({ error: 'Subteam not found' }, { status: 404 });
     }
 
-    // Upsert roster data
+    // Try to find a matching team member for auto-linking
+    let userIdToLink: string | null = null;
+    if (studentName && studentName.trim()) {
+      // Get all team members for this group to check for name matches
+      const teamMembersResult = await queryCockroachDB<{
+        user_id: string;
+        display_name: string;
+        first_name: string;
+        last_name: string;
+      }>(
+        `SELECT u.id as user_id, u.display_name, u.first_name, u.last_name
+         FROM users u
+         JOIN new_team_memberships tm ON u.id = tm.user_id
+         JOIN new_team_units tu ON tm.team_id = tu.id
+         WHERE tu.group_id = $1 AND tm.status = 'active' AND tu.status = 'active'`,
+        [groupId]
+      );
+
+      // Try to find a matching team member
+      const studentNameLower = studentName.toLowerCase().trim();
+      for (const member of teamMembersResult.rows) {
+        const displayName = member.display_name || 
+          (member.first_name && member.last_name 
+            ? `${member.first_name} ${member.last_name}` 
+            : '');
+        
+        if (displayName) {
+          const memberNameLower = displayName.toLowerCase().trim();
+          
+          // Exact case-insensitive match only
+          if (memberNameLower === studentNameLower) {
+            userIdToLink = member.user_id;
+            break;
+          }
+        }
+      }
+    }
+
+    // Upsert roster data with user_id if we found a match
     await queryCockroachDB(
-      `INSERT INTO new_team_roster_data (team_unit_id, event_name, slot_index, student_name, updated_at)
-       VALUES ($1, $2, $3, $4, NOW())
+      `INSERT INTO new_team_roster_data (team_unit_id, event_name, slot_index, student_name, user_id, updated_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
        ON CONFLICT (team_unit_id, event_name, slot_index)
-       DO UPDATE SET student_name = $4, updated_at = NOW()`,
-      [subteamId, eventName, slotIndex, studentName || null]
+       DO UPDATE SET student_name = $4, user_id = $5, updated_at = NOW()`,
+      [subteamId, eventName, slotIndex, studentName || null, userIdToLink]
     );
 
     return NextResponse.json({ message: 'Roster data saved successfully' });

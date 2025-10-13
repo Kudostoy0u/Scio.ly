@@ -33,6 +33,7 @@ export interface RecurringMeeting {
   description?: string;
   location?: string;
   exceptions: string[];
+  created_by?: string;
 }
 
 export interface EventForm {

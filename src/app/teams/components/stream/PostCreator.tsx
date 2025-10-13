@@ -7,7 +7,7 @@ interface PostCreatorProps {
   darkMode: boolean;
   newPostContent: string;
   onContentChange: (content: string) => void;
-  onSubmit: () => void;
+  onSubmit: (attachmentData?: { title: string; url: string }) => void;
   posting: boolean;
 }
 
@@ -51,7 +51,7 @@ export default function PostCreator({
   };
 
   const handleSubmit = () => {
-    onSubmit();
+    onSubmit(pendingAttachment || undefined);
     // Reset form after successful submission
     setPendingAttachment(null);
   };
@@ -139,16 +139,22 @@ export default function PostCreator({
         )}
 
         {pendingAttachment && (
-          <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+          <div className={`flex items-center justify-between p-3 rounded-lg ${
+            darkMode ? 'bg-gray-700' : 'bg-gray-100'
+          }`}>
             <div className="flex items-center space-x-2">
               <FileText className="w-4 h-4 text-blue-500" />
-              <span className="text-sm font-medium text-gray-900">
+              <span className={`text-sm font-medium ${
+                darkMode ? 'text-gray-100' : 'text-gray-900'
+              }`}>
                 {pendingAttachment.title}
               </span>
             </div>
             <button
               onClick={handleRemovePendingAttachment}
-              className="text-gray-500 hover:text-gray-700"
+              className={`${
+                darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'
+              }`}
             >
               <X className="w-4 h-4" />
             </button>

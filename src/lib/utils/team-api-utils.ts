@@ -110,7 +110,39 @@ export async function getStreamPosts(subteamId: string) {
     [subteamId]
   );
 
-  return result.rows;
+  // Get comments for each post
+  const postsWithComments = await Promise.all(
+    result.rows.map(async (post) => {
+      const commentsResult = await queryCockroachDB<{
+        id: string;
+        post_id: string;
+        author_name: string;
+        author_email: string;
+        content: string;
+        created_at: string;
+      }>(
+        `SELECT 
+           sc.id,
+           sc.post_id,
+           CONCAT(u.first_name, ' ', u.last_name) as author_name,
+           u.email as author_email,
+           sc.content,
+           sc.created_at
+         FROM new_team_stream_comments sc
+         JOIN public.users u ON sc.author_id = u.id
+         WHERE sc.post_id = $1
+         ORDER BY sc.created_at ASC`,
+        [post.id]
+      );
+
+      return {
+        ...post,
+        comments: commentsResult.rows
+      };
+    })
+  );
+
+  return postsWithComments;
 }
 
 /**
