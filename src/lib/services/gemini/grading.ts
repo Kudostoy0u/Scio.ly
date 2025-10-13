@@ -31,14 +31,14 @@ export class GeminiGradingService {
     let prompt = `You are a Science Olympiad question grader. Your task is to grade free response answers and return ONLY the scores.
 
 GRADING CRITERIA:
-- 1.0 (Full Credit): Answer is completely correct and demonstrates full understanding
-- 0.5 (Partial Credit): Answer shows some understanding but has minor errors or is incomplete
+- 1.0 (Full Credit): Answer is correct and demonstrates full understanding
+- 0.5 (Partial Credit): Answer shows some understanding but has errors or is incomplete
 - 0.0 (No Credit): Answer is incorrect, irrelevant, or shows no understanding
 
 GRADING INSTRUCTIONS:
 1. Compare each student answer to the correct answers
 2. Consider partial credit for answers that show understanding but have minor issues
-3. Be fair but strict - only give full credit for completely correct answers
+3. You can be a bit lenient as long as their answer has the correct answer in it.
 4. Return ONLY an array of scores in the exact order of the questions
 
 QUESTIONS TO GRADE:`;
@@ -84,7 +84,7 @@ QUESTIONS TO GRADE:`;
         responseMimeType: "application/json",
         responseSchema: schema,
         thinkingConfig: {
-          thinkingBudget: 1000,
+          thinkingBudget: 3000,
         },
         temperature: 0.1,
         topP: 0.8,
