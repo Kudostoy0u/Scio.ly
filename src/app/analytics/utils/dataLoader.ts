@@ -15,6 +15,7 @@ export interface DataLoadOptions {
   division: 'b' | 'c';
   states?: string[];
   forceReload?: boolean;
+  onBatchLoaded?: (loadedStates: string[], totalStates: number) => void;
 }
 
 export interface DataLoadResult {
@@ -44,7 +45,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
  * - Lazy loads remaining states in background
  */
 export async function loadEloData(options: DataLoadOptions): Promise<DataLoadResult> {
-  const { division, states, forceReload = false } = options;
+  const { division, states, forceReload = false, onBatchLoaded } = options;
   
   try {
     const cacheKey = `${division}-${states?.join(',') || 'all'}`;
@@ -97,7 +98,7 @@ export async function loadEloData(options: DataLoadOptions): Promise<DataLoadRes
     const remainingStates = allStates.filter(state => !defaultStates.includes(state));
     
     // Start background loading
-    loadRemainingStates(division, remainingStates, data, metadata, cacheKey);
+    loadRemainingStates(division, remainingStates, data, metadata, cacheKey, onBatchLoaded);
     
     return {
       data,
@@ -136,28 +137,66 @@ async function loadStateData(division: 'b' | 'c', stateCode: string): Promise<an
 }
 
 /**
- * Load remaining states in background and update cache
+ * Load remaining states in background and update cache in batches
+ * Updates state every 5 states loaded to improve performance
  */
 async function loadRemainingStates(
   division: 'b' | 'c', 
   remainingStates: string[], 
   data: EloData, 
   metadata: any, 
-  cacheKey: string
+  cacheKey: string,
+  onBatchLoaded?: (loadedStates: string[], totalStates: number) => void
 ) {
-  for (const stateCode of remainingStates) {
-    if (loadingStates.has(stateCode)) continue; // Avoid duplicate loading
+  const BATCH_SIZE = 5;
+  const batches: string[][] = [];
+  
+  // Split states into batches of 5
+  for (let i = 0; i < remainingStates.length; i += BATCH_SIZE) {
+    batches.push(remainingStates.slice(i, i + BATCH_SIZE));
+  }
+  
+  // Process each batch
+  for (const batch of batches) {
+    const batchData: { [key: string]: any } = {};
+    const batchLoadingStates = new Set<string>();
     
-    loadingStates.add(stateCode);
-    try {
-      const stateData = await loadStateData(division, stateCode);
-      if (stateData) {
-        data[stateCode] = stateData;
-        // Update cache with new data
-        dataCache.set(cacheKey, { data: { ...data }, metadata, timestamp: Date.now() });
+    // Load all states in current batch
+    const loadPromises = batch.map(async (stateCode) => {
+      if (loadingStates.has(stateCode)) return null;
+      
+      loadingStates.add(stateCode);
+      batchLoadingStates.add(stateCode);
+      
+      try {
+        const stateData = await loadStateData(division, stateCode);
+        if (stateData) {
+          batchData[stateCode] = stateData;
+        }
+        return stateData;
+      } finally {
+        loadingStates.delete(stateCode);
+        batchLoadingStates.delete(stateCode);
       }
-    } finally {
-      loadingStates.delete(stateCode);
+    });
+    
+    // Wait for all states in batch to load
+    await Promise.all(loadPromises);
+    
+    // Update data and cache with entire batch
+    if (Object.keys(batchData).length > 0) {
+      Object.assign(data, batchData);
+      dataCache.set(cacheKey, { data: { ...data }, metadata, timestamp: Date.now() });
+      
+      // Notify UI about batch completion
+      if (onBatchLoaded) {
+        onBatchLoaded(Object.keys(batchData), remainingStates.length);
+      }
+    }
+    
+    // Small delay between batches to prevent overwhelming the browser
+    if (batches.indexOf(batch) < batches.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
 }
