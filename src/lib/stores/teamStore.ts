@@ -31,13 +31,22 @@ export interface Subteam {
 }
 
 export interface TeamMember {
-  id: string;
+  id: string | null; // null for unlinked roster members
   name: string;
-  email: string;
+  email: string | null; // null for unlinked roster members
   role: string;
   events: string[];
   isPendingInvitation: boolean;
   subteamId?: string;
+  isUnlinked?: boolean; // true for unlinked roster members
+  username?: string | null; // null for unlinked roster members
+  subteam?: {
+    id: string;
+    name: string;
+    description: string;
+  };
+  joinedAt?: string | null;
+  isCreator?: boolean;
 }
 
 export interface RosterData {
@@ -176,6 +185,7 @@ interface TeamStoreActions {
   addAssignment: (teamSlug: string, assignment: Assignment) => void;
   updateTimer: (teamSlug: string, subteamId: string, timer: Timer) => void;
   addSubteam: (teamSlug: string, subteam: Subteam) => void;
+  updateSubteam: (teamSlug: string, subteamId: string, updates: Partial<Subteam>) => void;
   deleteSubteam: (teamSlug: string, subteamId: string) => void;
   invalidateCache: (key?: string) => void;
   preloadData: (userId: string, teamSlug?: string) => Promise<void>;
@@ -755,18 +765,35 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
       }));
       
       try {
-        const streamData = await fetchWithDeduplication(key, async () => {
-          const response = await fetch(`/api/teams/${teamSlug}/stream-data?subteamId=${subteamId}`);
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const result = await response.json();
-          return result.data;
+        const { stream, tournaments, timers } = await fetchWithDeduplication(key, async () => {
+          const [streamRes, tournamentsRes, timersRes] = await Promise.all([
+            fetch(`/api/teams/${teamSlug}/stream?subteamId=${subteamId}`),
+            fetch(`/api/teams/${teamSlug}/tournaments?subteamId=${subteamId}`),
+            fetch(`/api/teams/${teamSlug}/timers?subteamId=${subteamId}`)
+          ]);
+
+          if (!streamRes.ok) throw new Error(`HTTP ${streamRes.status}`);
+          if (!tournamentsRes.ok) throw new Error(`HTTP ${tournamentsRes.status}`);
+          if (!timersRes.ok) throw new Error(`HTTP ${timersRes.status}`);
+
+          const [streamJson, tournamentsJson, timersJson] = await Promise.all([
+            streamRes.json(),
+            tournamentsRes.json(),
+            timersRes.json()
+          ]);
+
+          return {
+            stream: streamJson.posts || [],
+            tournaments: tournamentsJson.events || [],
+            timers: timersJson.timers || []
+          };
         });
-        
+
         // Update all related caches
         set(state => ({
-          stream: { ...state.stream, [streamKey]: streamData.stream.posts || [] },
-          tournaments: { ...state.tournaments, [tournamentsKey]: streamData.tournaments || [] },
-          timers: { ...state.timers, [timersKey]: streamData.timers || [] },
+          stream: { ...state.stream, [streamKey]: stream },
+          tournaments: { ...state.tournaments, [tournamentsKey]: tournaments },
+          timers: { ...state.timers, [timersKey]: timers },
           loading: { 
             ...state.loading, 
             stream: { ...state.loading.stream, [streamKey]: false },
@@ -780,12 +807,8 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
             [timersKey]: Date.now()
           }
         }));
-        
-        return {
-          stream: streamData.stream.posts || [],
-          tournaments: streamData.tournaments || [],
-          timers: streamData.timers || []
-        };
+
+        return { stream, tournaments, timers };
       } catch (error) {
         const errorMessage = handleApiError(error, 'fetchStreamData');
         set(state => ({
@@ -858,6 +881,21 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
         subteams: { 
           ...state.subteams, 
           [teamSlug]: [...(state.subteams[teamSlug] || []), subteam]
+        },
+        cacheTimestamps: { 
+          ...state.cacheTimestamps, 
+          [get().getCacheKey('subteams', teamSlug)]: Date.now()
+        }
+      }));
+    },
+    
+    updateSubteam: (teamSlug: string, subteamId: string, updates: Partial<Subteam>) => {
+      set(state => ({
+        subteams: { 
+          ...state.subteams, 
+          [teamSlug]: (state.subteams[teamSlug] || []).map(subteam => 
+            subteam.id === subteamId ? { ...subteam, ...updates } : subteam
+          )
         },
         cacheTimestamps: { 
           ...state.cacheTimestamps, 

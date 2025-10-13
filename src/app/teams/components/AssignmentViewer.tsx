@@ -151,9 +151,6 @@ export default function AssignmentViewer({
             <span className={`px-2 py-1 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
               {assignment.questions.length} questions
             </span>
-            <span className={`px-2 py-1 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-              {assignment.points} points
-            </span>
             {assignment.due_date && (
               <span className={`px-2 py-1 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                 Due: {new Date(assignment.due_date).toLocaleDateString()}
@@ -212,9 +209,6 @@ export default function AssignmentViewer({
           <div className="flex items-center justify-between mb-2">
             <span className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               Question {currentQuestion + 1} ({currentQ.question_type.replace('_', ' ')})
-            </span>
-            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              {currentQ.points} point{currentQ.points !== 1 ? 's' : ''}
             </span>
           </div>
           <h3 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>

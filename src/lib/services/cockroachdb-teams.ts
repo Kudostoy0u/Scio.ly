@@ -3,9 +3,42 @@ import { dbPg } from '@/lib/db';
 import { 
   newTeamMemberships, 
   newTeamUnits, 
-  newTeamGroups 
+  newTeamGroups
 } from '@/lib/db/schema';
 import { eq, and, inArray, or } from 'drizzle-orm';
+import { createSupabaseServerClient } from '@/lib/supabaseServer';
+
+// Type for user profile data
+interface UserProfile {
+  id: string;
+  email: string;
+  display_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  username: string | null;
+}
+
+// Helper function to get real user data from Supabase
+async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, email, display_name, first_name, last_name, username')
+      .eq('id', userId)
+      .single();
+    
+    if (error || !data) {
+      console.warn(`Failed to fetch user profile for ${userId}:`, error);
+      return null;
+    }
+    
+    return data as UserProfile;
+  } catch (error) {
+    console.warn(`Error fetching user profile for ${userId}:`, error);
+    return null;
+  }
+}
 
 export interface TeamMembership {
   id: string;
@@ -123,12 +156,18 @@ export class CockroachDBTeamsService {
             captain_code: team.captainCode,
             user_code: team.userCode,
             user_role: membership.role,
-            members: members.map(m => ({
-              id: m.user_id,
-              name: `User ${m.user_id.substring(0, 8)}`, // Placeholder name
-              email: `user-${m.user_id.substring(0, 8)}@example.com`, // Placeholder email
-              role: m.role,
-              joined_at: m.joined_at
+            members: await Promise.all(members.map(async (m) => {
+              const userProfile = await getUserProfile(m.user_id);
+              return {
+                id: m.user_id,
+                name: userProfile?.display_name || 
+                      (userProfile?.first_name && userProfile?.last_name 
+                        ? `${userProfile.first_name} ${userProfile.last_name}` 
+                        : `User ${m.user_id.substring(0, 8)}`),
+                email: userProfile?.email || `user-${m.user_id.substring(0, 8)}@example.com`,
+                role: m.role,
+                joined_at: m.joined_at
+              };
             }))
           };
         })
@@ -183,11 +222,17 @@ export class CockroachDBTeamsService {
             description: team.description || undefined,
             captain_code: team.captain_code,
             user_code: team.user_code,
-            members: members.map(m => ({
-              id: m.user_id,
-              name: `User ${m.user_id.substring(0, 8)}`,
-              email: `user-${m.user_id.substring(0, 8)}@example.com`,
-              role: m.role
+            members: await Promise.all(members.map(async (m) => {
+              const userProfile = await getUserProfile(m.user_id);
+              return {
+                id: m.user_id,
+                name: userProfile?.display_name || 
+                      (userProfile?.first_name && userProfile?.last_name 
+                        ? `${userProfile.first_name} ${userProfile.last_name}` 
+                        : `User ${m.user_id.substring(0, 8)}`),
+                email: userProfile?.email || `user-${m.user_id.substring(0, 8)}@example.com`,
+                role: m.role
+              };
             }))
           };
         })
@@ -484,12 +529,18 @@ export class CockroachDBTeamsService {
           captain_code: team.captainCode,
           user_code: team.userCode,
           user_role: existingMemberships[0].role,
-          members: members.map(m => ({
-            id: m.user_id,
-            name: `User ${m.user_id.substring(0, 8)}`,
-            email: `user-${m.user_id.substring(0, 8)}@example.com`,
-            role: m.role,
-            joined_at: m.joined_at
+          members: await Promise.all(members.map(async (m) => {
+            const userProfile = await getUserProfile(m.user_id);
+            return {
+              id: m.user_id,
+              name: userProfile?.display_name || 
+                    (userProfile?.first_name && userProfile?.last_name 
+                      ? `${userProfile.first_name} ${userProfile.last_name}` 
+                      : `User ${m.user_id.substring(0, 8)}`),
+              email: userProfile?.email || `user-${m.user_id.substring(0, 8)}@example.com`,
+              role: m.role,
+              joined_at: m.joined_at
+            };
           }))
         };
       }
@@ -519,12 +570,18 @@ export class CockroachDBTeamsService {
         captain_code: team.captainCode,
         user_code: team.userCode,
         user_role: membership.role,
-        members: members.map(m => ({
-          id: m.user_id,
-          name: `User ${m.user_id.substring(0, 8)}`,
-          email: `user-${m.user_id.substring(0, 8)}@example.com`,
-          role: m.role,
-          joined_at: m.joined_at
+        members: await Promise.all(members.map(async (m) => {
+          const userProfile = await getUserProfile(m.user_id);
+          return {
+            id: m.user_id,
+            name: userProfile?.display_name || 
+                  (userProfile?.first_name && userProfile?.last_name 
+                    ? `${userProfile.first_name} ${userProfile.last_name}` 
+                    : `User ${m.user_id.substring(0, 8)}`),
+            email: userProfile?.email || `user-${m.user_id.substring(0, 8)}@example.com`,
+            role: m.role,
+            joined_at: m.joined_at
+          };
         }))
       };
     } catch (error) {

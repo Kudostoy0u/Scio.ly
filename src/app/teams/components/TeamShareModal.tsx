@@ -117,8 +117,9 @@ export default function TeamShareModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{backgroundColor: 'rgba(0, 0, 0, 0.5)'}}>
-      <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-md w-full p-6`}>
+    <div className="fixed inset-0 z-50 overflow-y-auto" style={{backgroundColor: 'rgba(0, 0, 0, 0.5)'}}>
+      <div className="min-h-full flex items-center justify-center p-4">
+        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl w-full max-w-md sm:max-w-lg p-4 sm:p-6`}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Share2 className="w-5 h-5" />
@@ -132,7 +133,7 @@ export default function TeamShareModal({
           </button>
         </div>
 
-        <div className="flex border-b mb-4">
+          <div className="flex border-b mb-4 text-sm">
           <button
             onClick={() => setActiveTab('share')}
             className={`flex-1 py-2 px-4 text-sm font-medium ${
@@ -152,7 +153,7 @@ export default function TeamShareModal({
         </div>
 
         {activeTab === 'share' ? (
-          <div className="space-y-4">
+            <div className="space-y-4">
             <p className="text-sm text-gray-600">
               Share these permanent codes with your team members.
             </p>
@@ -163,16 +164,16 @@ export default function TeamShareModal({
                   <Crown className="w-4 h-4 text-yellow-500" />
                   Captain Code
                 </label>
-                <div className="flex gap-2 mb-2">
+                  <div className="flex flex-col sm:flex-row gap-2 mb-2">
                   <input
                     type="text"
                     value={captainCode}
                     readOnly
-                    className="flex-1 px-3 py-2 border rounded text-sm font-mono"
+                      className="flex-1 px-3 py-2 border rounded text-sm font-mono"
                   />
                   <button
                     onClick={() => copyToClipboard(captainCode, 'Captain')}
-                    className="px-3 py-2 border rounded hover:bg-gray-100"
+                      className="px-3 py-2 border rounded hover:bg-gray-100"
                   >
                     <Copy className="w-4 h-4" />
                   </button>
@@ -188,7 +189,7 @@ export default function TeamShareModal({
                 <Users className="w-4 h-4 text-blue-500" />
                 User Code
               </label>
-              <div className="flex gap-2 mb-2">
+                <div className="flex flex-col sm:flex-row gap-2 mb-2">
                 <input
                   type="text"
                   value={userCode}
@@ -246,6 +247,7 @@ export default function TeamShareModal({
             {success}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

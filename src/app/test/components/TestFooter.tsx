@@ -7,6 +7,7 @@ interface TestFooterProps {
   onSubmit: () => void;
   onReset: () => void;
   onBackToMain: () => void;
+  isAssignment?: boolean;
 }
 
 export default function TestFooter({ 
@@ -14,7 +15,8 @@ export default function TestFooter({
   darkMode, 
   onSubmit, 
   onReset, 
-  onBackToMain 
+  onBackToMain,
+  isAssignment = false
 }: TestFooterProps) {
   return (
     <div className="mt-6 flex items-center gap-3">
@@ -29,7 +31,7 @@ export default function TestFooter({
         Back
       </button>
 
-      {isSubmitted ? (
+      {isSubmitted && !isAssignment ? (
         <button
           onClick={onReset}
           className={`w-4/5 px-4 py-2 font-semibold rounded-lg border-2 flex items-center justify-center text-center ${
@@ -40,7 +42,7 @@ export default function TestFooter({
         >
           Reset Test
         </button>
-      ) : (
+      ) : !isSubmitted ? (
         <button
           onClick={onSubmit}
           className={`w-4/5 px-4 py-2 font-semibold rounded-lg border-2 flex items-center justify-center text-center ${
@@ -51,6 +53,10 @@ export default function TestFooter({
         >
           Submit Answers
         </button>
+      ) : (
+        <div className="w-4/5 px-4 py-2 text-center text-gray-500">
+          Assignment Submitted
+        </div>
       )}
     </div>
   );

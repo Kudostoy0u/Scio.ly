@@ -1,90 +1,76 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
 import { queryCockroachDB } from '@/lib/cockroachdb';
+import { getServerUser } from '@/lib/supabaseServer';
+import { checkTeamGroupLeadershipCockroach } from '@/lib/utils/team-auth';
 
+// POST /api/teams/[teamId]/members/remove - Remove a linked member from team and purge roster entries
+// Frontend Usage:
+// - src/app/teams/components/PeopleTab.tsx (removeMember)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
-    const supa = await createSupabaseServerClient();
-    const { data: { user } } = await supa.auth.getUser();
-    
+    if (!process.env.DATABASE_URL) {
+      return NextResponse.json({
+        error: 'Database configuration error',
+        details: 'DATABASE_URL environment variable is missing'
+      }, { status: 500 });
+    }
+
+    const user = await getServerUser();
     if (!user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { userId } = await request.json();
-    
+    const { teamId } = await params;
+    const body = await request.json();
+    const { userId } = body as { userId?: string };
+
     if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+      return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
 
-    const { teamId } = await params;
-
-    // First, resolve the slug to team group
+    // Resolve slug to group id
     const groupResult = await queryCockroachDB<{ id: string }>(
       `SELECT id FROM new_team_groups WHERE slug = $1`,
       [teamId]
     );
-
     if (groupResult.rows.length === 0) {
       return NextResponse.json({ error: 'Team group not found' }, { status: 404 });
     }
-
     const groupId = groupResult.rows[0].id;
 
-    // Check if the requesting user is a captain of this team
-    const captainCheck = await queryCockroachDB<{ role: string }>(
-      `SELECT tm.role FROM new_team_memberships tm
-       JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tm.user_id = $1 AND tu.group_id = $2 AND tm.status = 'active'`,
-      [user.id, groupId]
-    );
-
-    if (captainCheck.rows.length === 0 || captainCheck.rows[0].role !== 'captain') {
-      return NextResponse.json({ error: 'Only team captains can remove members' }, { status: 403 });
+    // Ensure requester has leadership privileges in this group
+    const leadershipResult = await checkTeamGroupLeadershipCockroach(user.id, groupId);
+    if (!leadershipResult.hasLeadership) {
+      return NextResponse.json({ error: 'Only captains and co-captains can remove members' }, { status: 403 });
     }
 
-    // Check if the user to be removed is a captain
-    const memberCheck = await queryCockroachDB<{ role: string }>(
-      `SELECT tm.role FROM new_team_memberships tm
-       JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tm.user_id = $1 AND tu.group_id = $2 AND tm.status = 'active'`,
-      [userId, groupId]
-    );
-
-    if (memberCheck.rows.length === 0) {
-      return NextResponse.json({ error: 'User is not a member of this team' }, { status: 404 });
-    }
-
-    if (memberCheck.rows[0].role === 'captain') {
-      return NextResponse.json({ error: 'Cannot remove team captain' }, { status: 403 });
-    }
-
-    // Remove the user from team memberships
+    // Remove team memberships for this user within the group
     await queryCockroachDB(
-      `DELETE FROM new_team_memberships 
+      `DELETE FROM new_team_memberships
        WHERE user_id = $1 AND team_id IN (
-         SELECT tu.id FROM new_team_units tu WHERE tu.group_id = $2
+         SELECT id FROM new_team_units WHERE group_id = $2
        )`,
       [userId, groupId]
     );
 
-    // Remove the user from roster data (unlink them from roster entries)
+    // Purge their roster entries across the group
     await queryCockroachDB(
-      `UPDATE new_team_roster_data 
-       SET user_id = NULL, updated_at = NOW()
+      `DELETE FROM new_team_roster_data
        WHERE user_id = $1 AND team_unit_id IN (
-         SELECT tu.id FROM new_team_units tu WHERE tu.group_id = $2
+         SELECT id FROM new_team_units WHERE group_id = $2
        )`,
       [userId, groupId]
     );
 
-    return NextResponse.json({ success: true, message: 'Member removed successfully' });
-
+    return NextResponse.json({ message: 'Member removed successfully' });
   } catch (error) {
-    console.error('Error removing team member:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Error removing member:', error);
+    return NextResponse.json({
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }

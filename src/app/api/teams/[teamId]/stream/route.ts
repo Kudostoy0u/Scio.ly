@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryCockroachDB } from '@/lib/cockroachdb';
 import { getServerUser } from '@/lib/supabaseServer';
+import { checkTeamGroupAccessCockroach } from '@/lib/utils/team-auth';
 
 // GET /api/teams/[teamId]/stream - Get stream posts for a subteam
+// Frontend Usage:
+// - src/lib/stores/teamStore.ts (fetchStream, fetchStreamData)
+// - src/app/hooks/useEnhancedTeamData.ts (fetchStream)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
@@ -48,17 +52,10 @@ export async function GET(
 
     const groupId = groupResult.rows[0].id;
 
-    // Check if user is a member of this team group
-    const membershipResult = await queryCockroachDB<{ role: string }>(
-      `SELECT tm.role 
-       FROM new_team_memberships tm
-       JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tm.user_id = $1 AND tu.group_id = $2 AND tm.status = 'active'`,
-      [user.id, groupId]
-    );
-
-    if (membershipResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
+    // Check if user has access to this team group (membership OR roster entry)
+    const authResult = await checkTeamGroupAccessCockroach(user.id, groupId);
+    if (!authResult.isAuthorized) {
+      return NextResponse.json({ error: 'Not authorized to access this team' }, { status: 403 });
     }
 
     // Get stream posts with author information and tournament details
@@ -140,6 +137,8 @@ export async function GET(
 }
 
 // POST /api/teams/[teamId]/stream - Create a new stream post
+// Frontend Usage:
+// - src/app/teams/components/StreamTab.tsx (createPost)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
@@ -252,6 +251,8 @@ export async function POST(
 }
 
 // PUT /api/teams/[teamId]/stream - Edit a stream post
+// Frontend Usage:
+// - src/app/teams/components/StreamTab.tsx (editPost)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
@@ -352,6 +353,8 @@ export async function PUT(
 }
 
 // DELETE /api/teams/[teamId]/stream - Delete a stream post
+// Frontend Usage:
+// - src/app/teams/components/StreamTab.tsx (deletePost)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }

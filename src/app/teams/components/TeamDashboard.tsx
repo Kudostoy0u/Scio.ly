@@ -78,6 +78,7 @@ export default function TeamDashboard({
     getSubteams, 
     loadSubteams,
     addSubteam,
+    updateSubteam,
     deleteSubteam
   } = useTeamStore();
 
@@ -252,6 +253,9 @@ export default function TeamDashboard({
 
   const handleEditSubteam = async (subteamId: string, newName: string) => {
     try {
+      // Optimistically update the UI immediately
+      updateSubteam(team.slug, subteamId, { name: newName });
+      
       const response = await fetch(`/api/teams/${team.slug}/subteams/${subteamId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -259,11 +263,24 @@ export default function TeamDashboard({
       });
       
       if (response.ok) {
-        // Reload subteams to get updated data
+        // Show success toast
+        toast.success(`Subteam renamed to "${newName}" successfully!`);
+        
+        // Reload subteams to ensure we have the latest data from server
         await loadSubteams(team.slug);
+      } else {
+        // Revert optimistic update on error
+        await loadSubteams(team.slug);
+        
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Failed to update subteam name');
       }
     } catch (error) {
       console.error('Failed to edit subteam:', error);
+      
+      // Revert optimistic update on error
+      await loadSubteams(team.slug);
+      toast.error('Failed to update subteam name. Please try again.');
     }
   };
 
@@ -489,7 +506,7 @@ export default function TeamDashboard({
                 animate={{ x: 0 }}
                 exit={{ x: -300 }}
                 transition={{ type: "tween", duration: 0.3, ease: "easeOut" }}
-                className={`w-64 h-full ${darkMode ? 'bg-gray-900' : 'bg-white'} shadow-xl`}
+                className={`w-64 h-full ${darkMode ? 'bg-gray-900' : 'bg-white'} shadow-xl overflow-hidden`}
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="p-6 pt-20">

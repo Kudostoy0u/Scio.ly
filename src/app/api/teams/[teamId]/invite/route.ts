@@ -5,6 +5,8 @@ import { resolveTeamSlugToUnits } from '@/lib/utils/team-resolver';
 import { NotificationSyncService } from '@/lib/services/notification-sync';
 
 // POST /api/teams/[teamId]/invite - Invite user to team
+// Frontend Usage:
+// - src/app/teams/components/PeopleTab.tsx (inviteUser)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
@@ -189,6 +191,8 @@ export async function POST(
 }
 
 // GET /api/teams/[teamId]/invite - Search users to invite
+// Frontend Usage:
+// - src/app/teams/components/PeopleTab.tsx (searchUsers)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }

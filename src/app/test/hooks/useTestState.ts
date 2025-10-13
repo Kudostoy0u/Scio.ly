@@ -109,6 +109,22 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           console.log('=== CLIENT SIDE ASSIGNMENT LOADING ===');
           console.log('Loading assignment ID:', stableRouterData.assignmentId);
           
+          // Reset test state when loading assignment via notifications
+          console.log('Resetting test state for assignment loading...');
+          setIsSubmitted(false);
+          setUserAnswers({});
+          setData([]);
+          setRouterData({});
+          setGradingResults({});
+          
+          // Clear localStorage test state
+          localStorage.removeItem('testSubmitted');
+          localStorage.removeItem('testUserAnswers');
+          localStorage.removeItem('testQuestions');
+          localStorage.removeItem('testParams');
+          localStorage.removeItem('testGradingResults');
+          localStorage.removeItem('currentTestSession');
+          
           const response = await fetch(`/api/assignments/${stableRouterData.assignmentId}`);
           if (response.ok) {
             const data = await response.json();
@@ -425,6 +441,11 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         if (res.ok) {
           try {
             (await import('react-toastify')).toast.success('Assignment submitted successfully!');
+            
+            // Remove assignment query parameter from URL after successful submission
+            const url = new URL(window.location.href);
+            url.searchParams.delete('assignment');
+            window.history.replaceState({}, '', url.pathname + url.search);
           } catch {}
         } else {
           try {

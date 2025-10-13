@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cockroachDBTeamsService } from '@/lib/services/cockroachdb-teams';
 import { getServerUser } from '@/lib/supabaseServer';
 
+// GET /api/teams/user-teams - Get all teams for the current user
+// Frontend Usage:
+// - src/lib/stores/teamStore.ts (fetchUserTeams)
+// - src/lib/utils/globalApiCache.ts (getUserTeams)
+// - src/lib/services/notification-service.ts (getUserTeams)
+// - src/lib/utils/userTeamsCache.ts (getUserTeams)
+// - src/app/hooks/useEnhancedTeamData.ts (fetchUserTeams)
+// - src/app/hooks/useTeamData.ts (fetchUserTeams)
+// - src/app/teams/components/TeamCalendar.tsx (fetchUserTeams)
+// - src/app/teams/calendar/page.tsx (fetchUserTeams)
 export async function GET(_request: NextRequest) {
   try {
     // Check if CockroachDB is properly configured

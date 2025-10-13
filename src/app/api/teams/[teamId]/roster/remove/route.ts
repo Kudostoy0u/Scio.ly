@@ -1,85 +1,137 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
 import { queryCockroachDB } from '@/lib/cockroachdb';
+import { getServerUser } from '@/lib/supabaseServer';
+import { checkTeamGroupLeadershipCockroach } from '@/lib/utils/team-auth';
 
+// POST /api/teams/[teamId]/roster/remove - Remove all roster occurrences by student name or userId across the team group
+// Frontend Usage:
+// - src/app/teams/components/PeopleTab.tsx (removeMember, removeSubteamBadge, removeEventBadge)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
-    const supa = await createSupabaseServerClient();
-    const { data: { user } } = await supa.auth.getUser();
-    
+    if (!process.env.DATABASE_URL) {
+      return NextResponse.json({
+        error: 'Database configuration error',
+        details: 'DATABASE_URL environment variable is missing'
+      }, { status: 500 });
+    }
+
+    const user = await getServerUser();
     if (!user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { studentName } = await request.json();
+    const { teamId } = await params;
+    const body = await request.json();
+    const { studentName, userId, eventName, subteamId } = body as { 
+      studentName?: string; 
+      userId?: string; 
+      eventName?: string; 
+      subteamId?: string; 
+    };
     
-    if (!studentName) {
-      return NextResponse.json({ error: 'Student name is required' }, { status: 400 });
+    console.log('Roster remove API called with:', { studentName, userId, eventName, subteamId, teamId });
+
+    if ((!studentName || !studentName.trim()) && !userId) {
+      return NextResponse.json({ error: 'studentName or userId is required' }, { status: 400 });
     }
 
-    const { teamId } = await params;
-
-    // First, resolve the slug to team group
+    // Resolve slug to group id
     const groupResult = await queryCockroachDB<{ id: string }>(
       `SELECT id FROM new_team_groups WHERE slug = $1`,
       [teamId]
     );
-
     if (groupResult.rows.length === 0) {
       return NextResponse.json({ error: 'Team group not found' }, { status: 404 });
     }
-
     const groupId = groupResult.rows[0].id;
 
-    // Check if the requesting user is a captain of this team
-    const captainCheck = await queryCockroachDB<{ role: string }>(
-      `SELECT tm.role FROM new_team_memberships tm
-       JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tm.user_id = $1 AND tu.group_id = $2 AND tm.status = 'active'`,
-      [user.id, groupId]
-    );
-
-    if (captainCheck.rows.length === 0 || captainCheck.rows[0].role !== 'captain') {
-      return NextResponse.json({ error: 'Only team captains can remove roster entries' }, { status: 403 });
+    // Ensure user has leadership privileges in this group
+    const leadershipResult = await checkTeamGroupLeadershipCockroach(user.id, groupId);
+    if (!leadershipResult.hasLeadership) {
+      return NextResponse.json({ error: 'Only captains and co-captains can modify roster' }, { status: 403 });
     }
 
-    // First, let's see what roster entries exist for this student
-    const checkResult = await queryCockroachDB(
-      `SELECT trd.team_unit_id, trd.event_name, trd.slot_index, trd.student_name, tu.description as subteam_name
-       FROM new_team_roster_data trd
-       JOIN new_team_units tu ON trd.team_unit_id = tu.id
-       WHERE trd.student_name = $1 AND tu.group_id = $2`,
-      [studentName, groupId]
-    );
-    
-    console.log(`Found ${checkResult.rows.length} roster entries for "${studentName}":`, checkResult.rows);
-
-    // Remove the student from all roster entries in this team group
-    const deleteResult = await queryCockroachDB(
-      `DELETE FROM new_team_roster_data 
-       WHERE student_name = $1 AND team_unit_id IN (
-         SELECT tu.id FROM new_team_units tu WHERE tu.group_id = $2
-       )`,
-      [studentName, groupId]
-    );
-
-    console.log(`Removed ${deleteResult.rowCount} roster entries for "${studentName}"`);
-
-    if (deleteResult.rowCount === 0) {
-      return NextResponse.json({ error: 'Student not found in roster' }, { status: 404 });
+    // Build deletion
+    if (userId) {
+      if (eventName && eventName.trim()) {
+        // Remove specific event entries for this user
+        const deleteByUserEvent = await queryCockroachDB<{ id: string }>(
+          `DELETE FROM new_team_roster_data r
+           WHERE r.user_id = $1 AND LOWER(r.event_name) = LOWER($2) AND r.team_unit_id IN (
+             SELECT id FROM new_team_units WHERE group_id = $3 AND status = 'active'
+           )
+           RETURNING r.team_unit_id`,
+          [userId, eventName.trim(), groupId]
+        );
+        return NextResponse.json({ removedEntries: deleteByUserEvent.rows.length });
+      } else {
+        if (subteamId) {
+          console.log('Removing from specific subteam:', { userId, subteamId });
+          // Remove roster entries and team membership for this user from specific subteam only
+          const deleteByUserSubteam = await queryCockroachDB<{ id: string }>(
+            `DELETE FROM new_team_roster_data r
+             WHERE r.user_id = $1 AND r.team_unit_id = $2
+             RETURNING r.team_unit_id`,
+            [userId, subteamId]
+          );
+          
+          console.log('Deleted roster entries:', deleteByUserSubteam.rows.length);
+          
+          // Also remove team membership for this user from the specific subteam
+          const deleteMembership = await queryCockroachDB(
+            `DELETE FROM new_team_memberships
+             WHERE user_id = $1 AND team_id = $2`,
+            [userId, subteamId]
+          );
+          
+          console.log('Deleted team memberships:', deleteMembership.rowCount);
+          
+          return NextResponse.json({ removedEntries: deleteByUserSubteam.rows.length });
+        } else {
+          // Remove all roster entries AND team memberships for this user across the group
+          const deleteByUser = await queryCockroachDB<{ id: string }>(
+            `DELETE FROM new_team_roster_data r
+             WHERE r.user_id = $1 AND r.team_unit_id IN (
+               SELECT id FROM new_team_units WHERE group_id = $2 AND status = 'active'
+             )
+             RETURNING r.team_unit_id`,
+            [userId, groupId]
+          );
+          
+          // Also remove team memberships for this user within the group
+          await queryCockroachDB(
+            `DELETE FROM new_team_memberships
+             WHERE user_id = $1 AND team_id IN (
+               SELECT id FROM new_team_units WHERE group_id = $2
+             )`,
+            [userId, groupId]
+          );
+          
+          return NextResponse.json({ removedEntries: deleteByUser.rows.length });
+        }
+      }
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      message: `${studentName} has been removed from the roster`,
-      removedEntries: deleteResult.rowCount
-    });
+    const deleteByName = await queryCockroachDB<{ count: string }>(
+      `WITH target_units AS (
+         SELECT id FROM new_team_units WHERE group_id = $1 AND status = 'active'
+       )
+       DELETE FROM new_team_roster_data r
+       USING target_units u
+       WHERE r.team_unit_id = u.id AND LOWER(COALESCE(r.student_name,'')) = LOWER($2)
+       RETURNING 1`,
+      [groupId, (studentName || '').trim()]
+    );
 
+    return NextResponse.json({ removedEntries: deleteByName.rows.length });
   } catch (error) {
-    console.error('Error removing roster entry:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Error removing roster entries:', error);
+    return NextResponse.json({
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }

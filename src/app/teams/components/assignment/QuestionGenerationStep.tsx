@@ -170,7 +170,11 @@ export default function QuestionGenerationStep({
       <div className="flex justify-between">
         <button
           onClick={onBack}
-          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+          className={`px-4 py-2 border rounded-lg ${
+            darkMode 
+              ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
+              : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+          }`}
         >
           Back
         </button>

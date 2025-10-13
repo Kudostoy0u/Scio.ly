@@ -35,11 +35,14 @@ export default function CalendarHeader({
   onEventTypeFilterChange,
   onAddEvent,
   onAddRecurring,
-  onShowSettings
+  onShowSettings: _onShowSettings
 }: CalendarHeaderProps) {
+  const [showActions, setShowActions] = React.useState(false);
+
   return (
-    <div className="flex items-center justify-between mb-6">
-      <div className="flex items-center space-x-4">
+    <div className="mb-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center space-x-4">
         <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
           Upcoming Events
         </h2>
@@ -60,9 +63,46 @@ export default function CalendarHeader({
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
-      </div>
-      
-      <div className="flex items-center space-x-2">
+        </div>
+
+        {/* Mobile actions toggle with inline view toggle */}
+        <div className="md:hidden flex items-center gap-2 ml-3">
+          <button
+            onClick={() => setShowActions((v) => !v)}
+            className={`px-3 py-2 rounded-lg text-sm font-medium ${
+              darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-900'
+            }`}
+            aria-expanded={showActions}
+            aria-controls="calendar-actions"
+          >
+            {showActions ? 'Hide' : 'Actions'}
+          </button>
+          <div className={`flex rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+            <button
+              onClick={() => onToggleView(false)}
+              className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                !showListView
+                  ? darkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'
+                  : darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Calendar
+            </button>
+            <button
+              onClick={() => onToggleView(true)}
+              className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                showListView
+                  ? darkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'
+                  : darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              List
+            </button>
+          </div>
+        </div>
+
+        {/* Desktop actions */}
+        <div className="hidden md:flex items-center space-x-2 flex-wrap">
         {/* View Toggle */}
         <div className={`flex rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
           <button
@@ -107,7 +147,7 @@ export default function CalendarHeader({
           </select>
         )}
         
-        {/* Action Buttons */}
+        {/* Action Buttons (Settings removed) */}
         <button
           onClick={onAddEvent}
           className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -133,17 +173,60 @@ export default function CalendarHeader({
             <span>Recurring</span>
           </button>
         )}
-        
-        <button
-          onClick={onShowSettings}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-            darkMode 
-              ? 'bg-gray-600 hover:bg-gray-700 text-white' 
-              : 'bg-gray-500 hover:bg-gray-600 text-white'
-          }`}
-        >
-          <span>Settings</span>
-        </button>
+        </div>
+      </div>
+
+      {/* Mobile actions collapsible panel */}
+      <div
+        id="calendar-actions"
+        className={`${showActions ? 'block' : 'hidden'} md:hidden mt-4 space-y-3 w-full`}
+      >
+        <div className="flex items-center gap-2 flex-wrap">
+          {showListView && (
+            <select
+              value={eventTypeFilter}
+              onChange={(e) => onEventTypeFilterChange(e.target.value)}
+              className={`flex-1 px-3 py-2 text-sm rounded-lg border ${
+                darkMode 
+                  ? 'bg-gray-700 border-gray-600 text-white' 
+                  : 'bg-white border-gray-300 text-gray-900'
+              }`}
+            >
+              <option value="all">All</option>
+              <option value="meeting">Meetings</option>
+              <option value="practice">Practice</option>
+              <option value="tournament">Tournament</option>
+              <option value="competition">Competition</option>
+              <option value="social">Social</option>
+            </select>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 w-full">
+          <button
+            onClick={onAddEvent}
+            className={`${
+              darkMode 
+                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                : 'bg-blue-500 hover:bg-blue-600 text-white'
+            } px-3 py-2 rounded-lg text-sm font-medium`}
+          >
+            Add Event
+          </button>
+
+          {isCaptain && (
+            <button
+              onClick={onAddRecurring}
+              className={`${
+                darkMode 
+                  ? 'bg-green-600 hover:bg-green-700 text-white' 
+                  : 'bg-green-500 hover:bg-green-600 text-white'
+              } px-3 py-2 rounded-lg text-sm font-medium`}
+            >
+              Recurring
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

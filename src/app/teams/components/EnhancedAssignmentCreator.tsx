@@ -36,7 +36,6 @@ export default function EnhancedAssignmentCreator({
     description: '',
     assignmentType: 'homework',
     dueDate: '',
-    points: 100,
     timeLimitMinutes: 30,
     eventName: prefillEventName
   });
@@ -183,7 +182,6 @@ export default function EnhancedAssignmentCreator({
         description: details.description,
         assignment_type: details.assignmentType,
         due_date: details.dueDate,
-        points: details.points,
         time_limit_minutes: details.timeLimitMinutes,
         event_name: details.eventName,
         questions: generatedQuestions,
@@ -323,7 +321,6 @@ export default function EnhancedAssignmentCreator({
           {/* Step 3: Question Preview */}
           {step === 3 && (
             <QuestionPreviewStep
-              darkMode={darkMode}
               onNext={handleNext}
               onBack={handleBack}
               onError={handleError}

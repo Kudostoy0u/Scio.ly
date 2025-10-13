@@ -58,8 +58,10 @@ export default function AssignmentsTab({
 
   // Load assignments using enhanced hook
   useEffect(() => {
+    // Invalidate cache to ensure fresh data
+    invalidateCache(`assignments-${teamId}`);
     loadAssignments(teamId);
-  }, [teamId, loadAssignments]);
+  }, [teamId, loadAssignments, invalidateCache]);
 
   const handleDeleteAssignment = async (assignmentId: string) => {
     try {
@@ -311,9 +313,6 @@ export default function AssignmentsTab({
                           <span>Due: {formatDate(assignment.due_date)}</span>
                         </div>
                       )}
-                      <div className="flex items-center space-x-1">
-                        <span>{assignment.points} points</span>
-                      </div>
                       {assignment.time_limit_minutes && (
                         <div className="flex items-center space-x-1">
                           <Clock className="w-4 h-4" />
@@ -327,12 +326,11 @@ export default function AssignmentsTab({
                       )}
                       {isCaptain && assignment.roster_count && (
                         <div className="flex items-center space-x-1">
-                          <span>{assignment.submitted_count || 0}/{assignment.roster_count} submitted</span>
-                        </div>
-                      )}
-                      {assignment.user_submission && (
-                        <div className="flex items-center space-x-1">
-                          <span>Attempt {assignment.user_submission.attempt_number}/{assignment.max_attempts}</span>
+                          <span>
+                            {assignment.submitted_count || 0}/{assignment.roster_count} {
+                              (assignment.submitted_count || 0) === assignment.roster_count ? 'completed' : 'submitted'
+                            }
+                          </span>
                         </div>
                       )}
                     </div>
@@ -341,7 +339,7 @@ export default function AssignmentsTab({
                         Submitted: {formatDate(assignment.user_submission.submitted_at)}
                         {assignment.user_submission.grade !== null && (
                           <span className="ml-2 font-medium">
-                            Grade: {assignment.user_submission.grade}/{assignment.points}
+                            Grade: {assignment.user_submission.grade}%
                           </span>
                         )}
                       </div>
@@ -352,7 +350,7 @@ export default function AssignmentsTab({
                       <div className="mt-3">
                         <div className="flex justify-between text-xs mb-1">
                           <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
-                            Submissions
+                            {(assignment.submitted_count || 0) === assignment.roster_count ? 'Completed' : 'Submissions'}
                           </span>
                           <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
                             {assignment.submitted_count || 0}/{assignment.roster_count}

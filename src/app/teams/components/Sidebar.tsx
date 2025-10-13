@@ -43,10 +43,10 @@ export default function Sidebar({
   };
 
   return (
-    <div className={`w-64 h-full flex flex-col ${
+    <div className={`w-full h-full flex flex-col ${
       darkMode 
-        ? 'bg-gray-900 border-r border-gray-800' 
-        : 'bg-white border-r border-gray-200'
+        ? 'bg-gray-900 md:border-r border-gray-800' 
+        : 'bg-white md:border-r border-gray-200'
     }`}>
 
       {/* Main Navigation */}

@@ -191,18 +191,18 @@ export default function CalendarGrid({
   const calendarDays = generateCalendarDays();
 
   return (
-    <div className={`rounded-lg border ${darkMode ? 'border-gray-700' : 'border-gray-200'} h-[600px] overflow-hidden`}>
+    <div className={`rounded-lg border ${darkMode ? 'border-gray-700' : 'border-gray-200'} h-[500px] md:h-[600px] overflow-hidden`}>
       {/* Day Headers */}
       <div className={`grid grid-cols-7 ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
         {dayNames.map((day) => (
-          <div key={day} className={`p-3 text-center font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          <div key={day} className={`p-2 md:p-3 text-center text-xs md:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
             {day}
           </div>
         ))}
       </div>
       
       {/* Calendar Days */}
-      <div className="grid grid-cols-7 h-[calc(600px-60px)]">
+      <div className="grid grid-cols-7 grid-rows-6 h-[calc(500px-48px)] md:h-[calc(600px-60px)]">
         {calendarDays.map((day, index) => {
           const isCurrentMonth = day.date.getMonth() === currentDate.getMonth();
           const isToday = day.date.toDateString() === new Date().toDateString();
@@ -213,13 +213,13 @@ export default function CalendarGrid({
           return (
             <div
               key={index}
-              className={`p-2 border-r border-b overflow-hidden ${
+              className={`p-1 md:p-2 border-r border-b overflow-hidden max-h-[200%] flex flex-col ${
                 darkMode ? 'border-gray-700' : 'border-gray-200'
               } ${!isCurrentMonth ? (darkMode ? 'bg-gray-800 text-gray-500' : 'bg-gray-50 text-gray-400') : ''}`}
             >
               <div className="flex items-center justify-between mb-1">
                 <span
-                  className={`text-sm font-medium ${
+                  className={`text-xs md:text-sm font-medium ${
                     isToday
                       ? darkMode ? 'text-blue-400' : 'text-blue-600'
                       : isCurrentMonth
@@ -242,14 +242,14 @@ export default function CalendarGrid({
               </div>
               
               {/* Events */}
-              <div className="space-y-1 overflow-y-auto max-h-[calc(100%-30px)]">
-                {allEvents.slice(0, 3).map((event, eventIndex) => {
+              <div className="space-y-1 overflow-y-auto flex-1 min-h-0">
+                {allEvents.map((event, eventIndex) => {
                   const eventType = 'event_type' in event ? event.event_type : 'practice';
 
                   return (
                     <div
                       key={eventIndex}
-                      className={`text-xs p-1 rounded border cursor-pointer transition-colors hover:opacity-80 ${getEventColors(eventType)}`}
+                      className={`text-[10px] md:text-xs p-1 rounded border cursor-pointer transition-colors hover:opacity-80 ${getEventColors(eventType)}`}
                       onClick={() => {
                         if ('event_type' in event) {
                           onEventClick(event as CalendarEvent);
@@ -260,7 +260,7 @@ export default function CalendarGrid({
                         <div className="flex-1 min-w-0">
                           <div className="truncate font-medium">{event.title}</div>
                           {event.start_time && (
-                            <div className="text-xs opacity-75 mt-0.5">
+                            <div className="text-[10px] md:text-xs opacity-75 mt-0.5">
                               {new Date(event.start_time).toLocaleTimeString([], { 
                                 hour: '2-digit', 
                                 minute: '2-digit' 
@@ -273,7 +273,7 @@ export default function CalendarGrid({
                             e.stopPropagation();
                             onDeleteEvent(event.id);
                           }}
-                          className={`flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                          className={`flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[10px] md:text-xs font-bold transition-colors ${
                             darkMode 
                               ? 'text-red-400 hover:bg-red-900/30 hover:text-red-300' 
                               : 'text-red-500 hover:bg-red-100 hover:text-red-700'
@@ -286,11 +286,6 @@ export default function CalendarGrid({
                     </div>
                   );
                 })}
-                {allEvents.length > 3 && (
-                  <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    +{allEvents.length - 3} more
-                  </div>
-                )}
               </div>
             </div>
           );

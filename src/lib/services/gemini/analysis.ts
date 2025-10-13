@@ -3,7 +3,7 @@
  */
 
 import { GoogleGenAI, Type } from "@google/genai";
-import type { QuestionAnalysisResult } from './types';
+import type { QuestionAnalysisResult, QuestionRemovalAnalysis } from './types';
 
 /**
  * Question analysis service
@@ -64,6 +64,90 @@ Provide a comprehensive analysis that helps the user understand both the questio
         suggestions: { type: Type.STRING },
       },
       propertyOrdering: ["analysis", "correctness", "suggestions"],
+    };
+
+    return await this.generateStructuredContent(prompt, schema);
+  }
+
+  /**
+   * Analyzes a question to determine if it should be removed
+   * @param {Record<string, unknown>} question - Question data
+   * @param {string} event - Event name
+   * @returns {Promise<QuestionRemovalAnalysis>} Removal analysis result
+   */
+  public async analyzeQuestionForRemoval(
+    question: Record<string, unknown>,
+    event: string
+  ): Promise<QuestionRemovalAnalysis> {
+    const questionText = question.question || '';
+    const options = question.options || [];
+    const answers = question.answers || [];
+    const answersText = this.resolveAnswersToText(Array.isArray(options) ? options : [], Array.isArray(answers) ? answers : []);
+    const difficulty = question.difficulty || 0.5;
+    const hasImage = question.imageData && typeof question.imageData === 'string';
+    const tournament = question.tournament || '';
+    const division = question.division || '';
+
+    let prompt = `You are a Science Olympiad question quality analyzer. Your task is to determine if a question should be REMOVED from the database due to quality issues.
+
+QUESTION: ${questionText}
+OPTIONS: ${JSON.stringify(options)}
+CORRECT ANSWERS: ${JSON.stringify(answersText)}
+EVENT: ${event}
+TOURNAMENT: ${tournament}
+DIVISION: ${division}
+DIFFICULTY: ${difficulty}`;
+
+    if (hasImage) {
+      prompt += `
+
+IMPORTANT: This question includes an image that contains visual information essential for understanding and answering the question correctly.`;
+    }
+
+    prompt += `
+
+REMOVAL CRITERIA - Remove the question if it has ANY of these issues:
+1. SCIENTIFIC INACCURACY: Contains factually incorrect scientific information
+2. AMBIGUOUS LANGUAGE: Unclear wording that makes the question confusing or unanswerable
+3. MISSING ESSENTIAL INFORMATION: Lacks critical details needed to answer correctly
+4. INAPPROPRIATE CONTENT: Contains offensive, biased, or inappropriate material
+5. TECHNICAL ERRORS: Has formatting issues, broken images, or technical problems
+6. OUTDATED INFORMATION: Contains information that is no longer scientifically accurate
+7. POOR EDUCATIONAL VALUE: Does not effectively test Science Olympiad knowledge
+8. DUPLICATE CONTENT: Appears to be a duplicate of another question
+
+ANALYSIS REQUIREMENTS:
+- Carefully evaluate the question against ALL removal criteria
+- Consider the Science Olympiad event context and difficulty level
+- Be conservative - only recommend removal for clear quality issues
+- Provide specific reasoning for your decision
+
+Respond with your analysis and removal recommendation.`;
+
+    const schema = {
+      type: Type.OBJECT,
+      properties: {
+        shouldRemove: { 
+          type: Type.BOOLEAN,
+          description: "Whether the question should be removed from the database"
+        },
+        reason: { 
+          type: Type.STRING,
+          description: "Detailed explanation of why the question should or should not be removed"
+        },
+        issues: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "List of specific issues found (if any)"
+        },
+        confidence: {
+          type: Type.NUMBER,
+          minimum: 0,
+          maximum: 1,
+          description: "Confidence level in the removal decision (0-1)"
+        }
+      },
+      propertyOrdering: ["shouldRemove", "reason", "issues", "confidence"],
     };
 
     return await this.generateStructuredContent(prompt, schema);

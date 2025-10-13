@@ -3,7 +3,6 @@ export interface Question {
   question_type: 'multiple_choice' | 'free_response' | 'codebusters';
   options?: Array<{ id: string; text: string; isCorrect: boolean }>;
   correct_answer?: string;
-  points: number;
   order_index: number;
   imageData?: string;
 }
@@ -31,7 +30,6 @@ export interface AssignmentDetails {
   description: string;
   assignmentType: 'homework' | 'project' | 'study' | 'other';
   dueDate: string;
-  points: number;
   timeLimitMinutes: number;
   eventName: string;
 }
@@ -73,7 +71,10 @@ export interface QuestionGenerationStepProps extends AssignmentStepProps {
   generatingQuestions: boolean;
 }
 
-export interface QuestionPreviewStepProps extends AssignmentStepProps {
+export interface QuestionPreviewStepProps {
+  onNext: () => void;
+  onBack: () => void;
+  onError: (error: string) => void;
   questions: Question[];
   showAnswers: boolean;
   onShowAnswersChange: (show: boolean) => void;

@@ -1,5 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cockroachDBTeamsService } from '@/lib/services/cockroachdb-teams';
+import { createSupabaseServerClient } from '@/lib/supabaseServer';
+
+// POST /api/teams/create - Create a new team
+// Frontend Usage:
+// - src/app/teams/components/TeamsPageClient.tsx (createTeam)
+
+// Type for user profile data
+interface UserProfile {
+  id: string;
+  email: string;
+  display_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  username: string | null;
+}
+
+// Helper function to get real user data from Supabase
+async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, email, display_name, first_name, last_name, username')
+      .eq('id', userId)
+      .single();
+    
+    if (error || !data) {
+      console.warn(`Failed to fetch user profile for ${userId}:`, error);
+      return null;
+    }
+    
+    return data as UserProfile;
+  } catch (error) {
+    console.warn(`Error fetching user profile for ${userId}:`, error);
+    return null;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -78,11 +115,17 @@ export async function POST(request: NextRequest) {
       description: team.description,
       captain_code: team.captain_code,
       user_code: team.user_code,
-      members: members.map(m => ({
-        id: m.user_id,
-        name: `User ${m.user_id.substring(0, 8)}`,
-        email: `user-${m.user_id.substring(0, 8)}@example.com`,
-        role: m.role
+      members: await Promise.all(members.map(async (m) => {
+        const userProfile = await getUserProfile(m.user_id);
+        return {
+          id: m.user_id,
+          name: userProfile?.display_name || 
+                (userProfile?.first_name && userProfile?.last_name 
+                  ? `${userProfile.first_name} ${userProfile.last_name}` 
+                  : `User ${m.user_id.substring(0, 8)}`),
+          email: userProfile?.email || `user-${m.user_id.substring(0, 8)}@example.com`,
+          role: m.role
+        };
       })),
       // Add flag to indicate if team was reactivated (for cache clearing)
       wasReactivated: team.created_at !== team.updated_at

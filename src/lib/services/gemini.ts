@@ -9,6 +9,7 @@ import { GeminiAnalysisService } from './gemini/analysis';
 import { GeminiExplanationService } from './gemini/explanation';
 import { GeminiEditingService } from './gemini/editing';
 import { GeminiValidationService } from './gemini/validation';
+import { GeminiGradingService } from './gemini/grading';
 // import type { GeminiStreamChunk } from './gemini/types';
 
 /**
@@ -21,6 +22,7 @@ export class GeminiService {
   private explanationService: GeminiExplanationService;
   private editingService: GeminiEditingService;
   private validationService: GeminiValidationService;
+  private gradingService: GeminiGradingService;
 
   /**
    * Initializes the Gemini service with available API keys
@@ -37,6 +39,7 @@ export class GeminiService {
     this.explanationService = new GeminiExplanationService(client);
     this.editingService = new GeminiEditingService(client);
     this.validationService = new GeminiValidationService(client);
+    this.gradingService = new GeminiGradingService(client);
   }
 
   /**
@@ -48,6 +51,16 @@ export class GeminiService {
     event: string
   ) {
     return await this.analysisService.analyzeQuestion(question, userAnswer, event);
+  }
+
+  /**
+   * Analyzes a question to determine if it should be removed
+   */
+  public async analyzeQuestionForRemoval(
+    question: Record<string, unknown>,
+    event: string
+  ) {
+    return await this.analysisService.analyzeQuestionForRemoval(question, event);
   }
 
   /**
@@ -133,19 +146,12 @@ export class GeminiService {
   /**
    * Grades free response answers
    */
-  public async gradeFreeResponses(responses: unknown[]): Promise<Record<string, unknown>> {
-    const client = this.clientManager.getCurrentClient();
-    const response = await client.models.generateContent({
-      model: "gemini-flash-lite-latest",
-      contents: `Grade these free response answers: ${JSON.stringify(responses)}`,
-      config: {
-        responseMimeType: "application/json",
-        temperature: 0.1,
-        topP: 0.8,
-        topK: 40,
-      },
-    });
-    return JSON.parse(response.text || '{}');
+  public async gradeFreeResponses(responses: Array<{
+    question: string;
+    correctAnswers: (string | number)[];
+    studentAnswer: string;
+  }>): Promise<{ scores: number[] }> {
+    return await this.gradingService.gradeFreeResponses(responses);
   }
 
   /**

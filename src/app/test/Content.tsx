@@ -456,6 +456,7 @@ export default function TestContent({ initialData, initialRouterData }: { initia
                   onSubmit={handleSubmit}
                   onReset={handleResetTest}
                   onBackToMain={handleBackToMain}
+                  isAssignment={!!routerData.assignmentId}
                 />
               )
             )}

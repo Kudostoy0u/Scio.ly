@@ -46,7 +46,7 @@ export async function POST(
 
     const assignment = assignmentResult.rows[0];
 
-    // Check if user has already submitted (if max_attempts is enforced)
+    // Check if user has already submitted - prevent multiple submissions
     const existingSubmissionResult = await queryCockroachDB<any>(
       `SELECT id, attempt_number, status
        FROM new_team_assignment_submissions
@@ -57,7 +57,16 @@ export async function POST(
     );
 
     const existingSubmission = existingSubmissionResult.rows[0];
-    const attemptNumber = existingSubmission ? existingSubmission.attempt_number + 1 : 1;
+    
+    // Prevent multiple submissions to the same assignment
+    if (existingSubmission) {
+      return NextResponse.json({ 
+        error: 'Assignment already submitted',
+        details: 'You have already submitted this assignment and cannot submit again'
+      }, { status: 400 });
+    }
+    
+    const attemptNumber = 1;
 
     // Create submission record
     const submissionResult = await queryCockroachDB<any>(

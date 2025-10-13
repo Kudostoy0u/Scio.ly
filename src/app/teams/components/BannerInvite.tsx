@@ -57,15 +57,16 @@ export default function BannerInvite({ isOpen, onClose, teamSlug }: BannerInvite
 
   return (
     <div 
-      className="fixed inset-0 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 z-50 overflow-y-auto"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
     >
-      <div className={`w-full max-w-2xl rounded-lg border ${
+      <div className="min-h-full flex items-center justify-center p-4">
+        <div className={`w-full max-w-md sm:max-w-xl rounded-lg border ${
         darkMode 
           ? 'bg-gray-800 border-gray-700' 
           : 'bg-white border-gray-200'
       }`}>
-        <div className="p-6">
+          <div className="p-4 sm:p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
               Team Invite Codes
@@ -88,9 +89,9 @@ export default function BannerInvite({ isOpen, onClose, teamSlug }: BannerInvite
               <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${darkMode ? 'border-white' : 'border-gray-900'}`}></div>
             </div>
           ) : codes ? (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Captain Code */}
-              <div className={`p-6 rounded-lg border-2 ${
+              <div className={`p-4 sm:p-6 rounded-lg border-2 ${
                 darkMode 
                   ? 'bg-yellow-900/20 border-yellow-700' 
                   : 'bg-yellow-50 border-yellow-200'
@@ -104,8 +105,8 @@ export default function BannerInvite({ isOpen, onClose, teamSlug }: BannerInvite
                 <p className={`text-sm mb-4 ${darkMode ? 'text-yellow-200' : 'text-yellow-700'}`}>
                   Share this code with potential captains. They can join as co-captains.
                 </p>
-                <div className="flex items-center space-x-3">
-                  <div className={`flex-1 px-4 py-3 rounded-lg font-mono text-lg ${
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <div className={`flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-lg font-mono text-base sm:text-lg ${
                     darkMode 
                       ? 'bg-gray-700 text-white border border-gray-600' 
                       : 'bg-white text-gray-900 border border-gray-300'
@@ -114,7 +115,7 @@ export default function BannerInvite({ isOpen, onClose, teamSlug }: BannerInvite
                   </div>
                   <button
                     onClick={() => copyToClipboard(codes.captainCode, 'Captain')}
-                    className={`px-4 py-3 rounded-lg font-medium transition-colors ${
+                    className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg font-medium transition-colors ${
                       darkMode 
                         ? 'bg-yellow-600 text-white hover:bg-yellow-700' 
                         : 'bg-yellow-600 text-white hover:bg-yellow-700'
@@ -126,7 +127,7 @@ export default function BannerInvite({ isOpen, onClose, teamSlug }: BannerInvite
               </div>
 
               {/* User Code */}
-              <div className={`p-6 rounded-lg border-2 ${
+              <div className={`p-4 sm:p-6 rounded-lg border-2 ${
                 darkMode 
                   ? 'bg-blue-900/20 border-blue-700' 
                   : 'bg-blue-50 border-blue-200'
@@ -140,8 +141,8 @@ export default function BannerInvite({ isOpen, onClose, teamSlug }: BannerInvite
                 <p className={`text-sm mb-4 ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>
                   Share this code with potential team members. They can join as regular members.
                 </p>
-                <div className="flex items-center space-x-3">
-                  <div className={`flex-1 px-4 py-3 rounded-lg font-mono text-lg ${
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <div className={`flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-lg font-mono text-base sm:text-lg ${
                     darkMode 
                       ? 'bg-gray-700 text-white border border-gray-600' 
                       : 'bg-white text-gray-900 border border-gray-300'
@@ -150,7 +151,7 @@ export default function BannerInvite({ isOpen, onClose, teamSlug }: BannerInvite
                   </div>
                   <button
                     onClick={() => copyToClipboard(codes.userCode, 'User')}
-                    className={`px-4 py-3 rounded-lg font-medium transition-colors ${
+                    className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg font-medium transition-colors ${
                       darkMode 
                         ? 'bg-blue-600 text-white hover:bg-blue-700' 
                         : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -162,7 +163,7 @@ export default function BannerInvite({ isOpen, onClose, teamSlug }: BannerInvite
               </div>
 
               {/* Instructions */}
-              <div className={`p-4 rounded-lg ${
+              <div className={`p-3 sm:p-4 rounded-lg ${
                 darkMode 
                   ? 'bg-gray-700' 
                   : 'bg-gray-100'
@@ -193,6 +194,7 @@ export default function BannerInvite({ isOpen, onClose, teamSlug }: BannerInvite
               </button>
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>

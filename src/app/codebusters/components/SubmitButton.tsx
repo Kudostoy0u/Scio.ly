@@ -6,6 +6,7 @@ interface SubmitButtonProps {
   onSubmit: () => void;
   onReset: () => void;
   onGoBack: () => void;
+  isAssignment?: boolean;
 }
 
 export const SubmitButton: React.FC<SubmitButtonProps> = ({ 
@@ -14,6 +15,7 @@ export const SubmitButton: React.FC<SubmitButtonProps> = ({
   onSubmit, 
   onReset,
   onGoBack,
+  isAssignment = false,
 }) => {
   return (
     <div className="mt-6 flex items-center gap-3">
@@ -40,7 +42,7 @@ export const SubmitButton: React.FC<SubmitButtonProps> = ({
         >
           Submit Answers
         </button>
-      ) : (
+      ) : !isAssignment ? (
         <button
           onClick={onReset}
           className={`w-4/5 px-4 py-2 font-semibold rounded-lg border-2 flex items-center justify-center text-center ${
@@ -51,6 +53,10 @@ export const SubmitButton: React.FC<SubmitButtonProps> = ({
         >
           Reset Test
         </button>
+      ) : (
+        <div className="w-4/5 px-4 py-2 text-center text-gray-500">
+          Assignment Submitted
+        </div>
       )}
     </div>
   );

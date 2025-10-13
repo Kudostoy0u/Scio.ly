@@ -3,6 +3,8 @@ import { queryCockroachDB } from '@/lib/cockroachdb';
 import { getServerUser } from '@/lib/supabaseServer';
 
 // PUT /api/teams/[teamId]/subteams/[subteamId] - Update a subteam
+// Frontend Usage:
+// - src/app/teams/components/TeamDashboard.tsx (updateSubteam)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string; subteamId: string }> }
@@ -68,14 +70,14 @@ export async function PUT(
       return NextResponse.json({ error: 'Only captains can update subteams' }, { status: 403 });
     }
 
-    // Update the subteam description
+    // Update the subteam name (teamId field)
     const updateResult = await queryCockroachDB<{
       id: string;
       team_id: string;
       description: string;
     }>(
       `UPDATE new_team_units 
-       SET description = $1, updated_at = NOW()
+       SET team_id = $1, updated_at = NOW()
        WHERE id = $2
        RETURNING id, team_id, description`,
       [name.trim(), subteamId]
@@ -89,7 +91,7 @@ export async function PUT(
 
     return NextResponse.json({
       id: updatedSubteam.id,
-      name: updatedSubteam.description,
+      name: updatedSubteam.team_id,
       team_id: updatedSubteam.team_id,
       description: updatedSubteam.description
     });
@@ -104,6 +106,8 @@ export async function PUT(
 }
 
 // DELETE /api/teams/[teamId]/subteams/[subteamId] - Delete a subteam
+// Frontend Usage:
+// - src/app/teams/components/TeamDashboard.tsx (deleteSubteam)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string; subteamId: string }> }

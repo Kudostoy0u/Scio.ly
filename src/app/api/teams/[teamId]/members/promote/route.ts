@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerUser } from '@/lib/supabaseServer';
 import { queryCockroachDB } from '@/lib/cockroachdb';
 
+// POST /api/teams/[teamId]/members/promote - Promote a member to captain or co-captain
+// Frontend Usage:
+// - src/app/teams/components/PeopleTab.tsx (promoteMember)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }

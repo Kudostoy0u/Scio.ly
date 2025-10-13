@@ -9,6 +9,8 @@ import { globalApiCache } from '@/lib/utils/globalApiCache';
 // Import calendar components
 import CalendarHeader from './calendar/CalendarHeader';
 import CalendarGrid from './calendar/CalendarGrid';
+import MobileCalendar from './calendar/MobileCalendar';
+import MobileDayEvents from './calendar/MobileDayEvents';
 import EventList from './calendar/EventList';
 import EventModal from './calendar/EventModal';
 import RecurringMeetingModal from './calendar/RecurringMeetingModal';
@@ -44,6 +46,7 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
   
   // Filter state
   const [eventTypeFilter, setEventTypeFilter] = useState<string>('all');
+  const [selectedMobileDate, setSelectedMobileDate] = useState<Date>(new Date());
   
   // Modal states
   const [showEventModal, setShowEventModal] = useState(false);
@@ -652,16 +655,50 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
 
       {/* Calendar or List View */}
       {!showListView ? (
-        <CalendarGrid
-          darkMode={darkMode}
-          currentDate={currentDate}
-          events={events}
-          recurringMeetings={recurringMeetings}
-          onEventClick={handleEventClick}
-          onDeleteEvent={handleDeleteEvent}
-          onAddEventForDate={handleAddEventForDate}
-          isEventBlacklisted={isEventBlacklisted}
-        />
+        <>
+          {/* Mobile: compact calendar with dots */}
+          <div className="md:hidden">
+            <MobileCalendar
+              darkMode={darkMode}
+              currentDate={currentDate}
+              events={events}
+              recurringMeetings={recurringMeetings}
+              selectedDate={selectedMobileDate}
+              onSelectDate={setSelectedMobileDate}
+              isEventBlacklisted={isEventBlacklisted}
+            />
+
+            {/* Selected day events list */}
+            <div className="mt-4">
+              <h3 className={`text-sm font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                {selectedMobileDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+              </h3>
+              <MobileDayEvents
+                darkMode={darkMode}
+                date={selectedMobileDate}
+                events={events}
+                recurringMeetings={recurringMeetings}
+                onEventClick={handleEventClick}
+                onDeleteEvent={handleDeleteEvent}
+                isEventBlacklisted={isEventBlacklisted}
+              />
+            </div>
+          </div>
+
+          {/* Desktop: full grid */}
+          <div className="hidden md:block">
+            <CalendarGrid
+              darkMode={darkMode}
+              currentDate={currentDate}
+              events={events}
+              recurringMeetings={recurringMeetings}
+              onEventClick={handleEventClick}
+              onDeleteEvent={handleDeleteEvent}
+              onAddEventForDate={handleAddEventForDate}
+              isEventBlacklisted={isEventBlacklisted}
+            />
+          </div>
+        </>
       ) : (
         <EventList
           darkMode={darkMode}

@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryCockroachDB } from '@/lib/cockroachdb';
 import { getServerUser } from '@/lib/supabaseServer';
-import { resolveTeamSlugToUnits, getUserTeamMemberships } from '@/lib/utils/team-resolver';
+import { resolveTeamSlugToUnits } from '@/lib/utils/team-resolver';
+import { checkTeamGroupAccessCockroach, checkTeamGroupLeadershipCockroach } from '@/lib/utils/team-auth';
 
 // GET /api/teams/[teamId]/timers - Get active timers for a team
+// Frontend Usage:
+// - src/lib/stores/teamStore.ts (fetchTimers, fetchStreamData)
+// - src/app/hooks/useEnhancedTeamData.ts (fetchTimers)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
@@ -45,11 +49,15 @@ export async function GET(
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     }
 
-    // Check if the user is a member of the team
-    const userMemberships = await getUserTeamMemberships(user.id, teamInfo.teamUnitIds);
-    const isMemberOfTeam = userMemberships.some(membership => membership.team_id === subteamId);
+    // Validate that requested subteam belongs to this team group
+    const subteamBelongsToGroup = teamInfo.teamUnitIds.includes(subteamId);
+    if (!subteamBelongsToGroup) {
+      return NextResponse.json({ error: 'Subteam not found' }, { status: 404 });
+    }
 
-    if (!isMemberOfTeam) {
+    // Check if user has access to this team group (membership OR roster entry)
+    const authResult = await checkTeamGroupAccessCockroach(user.id, teamInfo.groupId);
+    if (!authResult.isAuthorized) {
       return NextResponse.json({ error: 'Not authorized to view this team' }, { status: 403 });
     }
 
@@ -90,6 +98,8 @@ export async function GET(
 }
 
 // POST /api/teams/[teamId]/timers - Add a timer for an event
+// Frontend Usage:
+// - src/app/teams/components/StreamTab.tsx (addTimer)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
@@ -131,11 +141,15 @@ export async function POST(
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     }
 
-    // Check if the user is a captain/co-captain of the team
-    const userMemberships = await getUserTeamMemberships(user.id, teamInfo.teamUnitIds);
-    const membership = userMemberships.find(m => m.team_id === subteamId);
-    
-    if (!membership || !['captain', 'co-captain'].includes(membership.role)) {
+    // Validate subteam belongs to this team group
+    const subteamBelongsToGroup = teamInfo.teamUnitIds.includes(subteamId);
+    if (!subteamBelongsToGroup) {
+      return NextResponse.json({ error: 'Subteam not found' }, { status: 404 });
+    }
+
+    // Check if the user has leadership privileges in the team group
+    const leadershipResult = await checkTeamGroupLeadershipCockroach(user.id, teamInfo.groupId);
+    if (!leadershipResult.hasLeadership) {
       return NextResponse.json({ error: 'Only captains and co-captains can manage timers' }, { status: 403 });
     }
 
@@ -185,6 +199,8 @@ export async function POST(
 }
 
 // DELETE /api/teams/[teamId]/timers - Remove a timer for an event
+// Frontend Usage:
+// - src/app/teams/components/StreamTab.tsx (removeTimer)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
@@ -226,11 +242,15 @@ export async function DELETE(
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     }
 
-    // Check if the user is a captain/co-captain of the team
-    const userMemberships = await getUserTeamMemberships(user.id, teamInfo.teamUnitIds);
-    const membership = userMemberships.find(m => m.team_id === subteamId);
-    
-    if (!membership || !['captain', 'co-captain'].includes(membership.role)) {
+    // Validate subteam belongs to this team group
+    const subteamBelongsToGroup = teamInfo.teamUnitIds.includes(subteamId);
+    if (!subteamBelongsToGroup) {
+      return NextResponse.json({ error: 'Subteam not found' }, { status: 404 });
+    }
+
+    // Check if the user has leadership privileges in the team group
+    const leadershipResult = await checkTeamGroupLeadershipCockroach(user.id, teamInfo.groupId);
+    if (!leadershipResult.hasLeadership) {
       return NextResponse.json({ error: 'Only captains and co-captains can manage timers' }, { status: 403 });
     }
 

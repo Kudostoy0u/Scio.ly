@@ -122,23 +122,6 @@ export default function AssignmentDetailsStep({
           />
         </div>
 
-        <div>
-          <label htmlFor="assignment-points" className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-            Points
-          </label>
-          <input
-            id="assignment-points"
-            type="number"
-            value={details.points}
-            onChange={(e) => onDetailsChange({ points: parseInt(e.target.value) || 0 })}
-            className={`w-full px-3 py-2 border rounded-lg ${
-              darkMode 
-                ? 'bg-gray-700 border-gray-600 text-white' 
-                : 'bg-white border-gray-300 text-gray-900'
-            }`}
-            min="1"
-          />
-        </div>
       </div>
 
       <div>

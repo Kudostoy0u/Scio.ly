@@ -4,6 +4,8 @@ import { NotificationSyncService } from '@/lib/services/notification-sync';
 import { getServerUser } from '@/lib/supabaseServer';
 
 // GET /api/teams/[teamId]/roster/invite - Search users to invite for roster linking
+// Frontend Usage:
+// - src/app/teams/components/RosterLinkIndicator.tsx (searchUsers)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
@@ -92,6 +94,9 @@ export async function GET(
 }
 
 // POST /api/teams/[teamId]/roster/invite - Send roster link invitation
+// Frontend Usage:
+// - src/app/teams/components/RosterLinkIndicator.tsx (sendInvite)
+// - src/app/teams/components/PeopleTab.tsx (linkRoster)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }

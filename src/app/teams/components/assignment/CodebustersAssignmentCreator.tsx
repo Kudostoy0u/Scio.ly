@@ -77,7 +77,6 @@ export default function CodebustersAssignmentCreator({
     description: '',
     assignmentType: 'homework',
     dueDate: '',
-    points: 100,
     timeLimitMinutes: 15,
     eventName: prefillEventName
   });
@@ -170,9 +169,6 @@ export default function CodebustersAssignmentCreator({
     setError(null);
 
     try {
-      // Calculate points automatically: 10 points per question
-      const calculatedPoints = settings.questionCount * 10;
-
       const assignment = await createAssignment(
         teamId,
         subteamId,
@@ -181,7 +177,6 @@ export default function CodebustersAssignmentCreator({
           description: details.description,
           assignment_type: details.assignmentType,
           due_date: details.dueDate,
-          points: calculatedPoints,
           time_limit_minutes: details.timeLimitMinutes,
           event_name: details.eventName,
           questions: [], // Empty array - questions will be generated dynamically
@@ -350,7 +345,7 @@ export default function CodebustersAssignmentCreator({
                 onClick={onCancel}
                 className={`px-4 py-2 border rounded-lg transition-colors ${
                   darkMode
-                    ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                    ? 'border-gray-600 text-gray-300 hover:bg-gray-800'
                     : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
               >
@@ -568,7 +563,7 @@ export default function CodebustersAssignmentCreator({
                 onClick={handleBack}
                 className={`px-4 py-2 border rounded-lg transition-colors ${
                   darkMode
-                    ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                    ? 'border-gray-600 text-gray-300 hover:bg-gray-800'
                     : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
               >
@@ -669,7 +664,7 @@ export default function CodebustersAssignmentCreator({
                 onClick={handleBack}
                 className={`px-4 py-2 border rounded-lg transition-colors ${
                   darkMode
-                    ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                    ? 'border-gray-600 text-gray-300 hover:bg-gray-800'
                     : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
               >
@@ -714,7 +709,7 @@ export default function CodebustersAssignmentCreator({
             <button
               onClick={onCancel}
               className={`p-2 rounded-full hover:bg-gray-100 transition-colors ${
-                darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
               }`}
               aria-label="Close"
             >

@@ -286,6 +286,11 @@ export default function CodeBusters() {
                 if (response.ok) {
                     console.log('Assignment submitted successfully');
                     toast.success('Assignment submitted successfully!');
+                    
+                    // Remove assignment query parameter from URL after successful submission
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('assignment');
+                    window.history.replaceState({}, '', url.pathname + url.search);
                 } else {
                     console.error('Failed to submit assignment');
                     toast.error('Failed to submit assignment');
@@ -896,6 +901,7 @@ export default function CodeBusters() {
                                 onSubmit={handleSubmitTest}
                                 onReset={handleTestReset}
                                 onGoBack={handleGoToPractice}
+                                isAssignment={!!assignmentId}
                             />
                         )}
                     </main>

@@ -226,7 +226,11 @@ export interface GeminiExplainRequest {
 }
 
 export interface GeminiGradeFreeResponsesRequest {
-  responses: Array<Record<string, unknown>>;
+  responses: Array<{
+    question: string;
+    correctAnswers: (string | number)[];
+    studentAnswer: string;
+  }>;
 }
 
 export interface GeminiExtractQuestionsRequest {

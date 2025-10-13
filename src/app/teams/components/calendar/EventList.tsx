@@ -46,6 +46,9 @@ interface EventListProps {
   onEventClick: (event: CalendarEvent) => void;
   onDeleteEvent: (eventId: string) => void;
   isEventBlacklisted?: (eventId: string) => boolean;
+  title?: string;
+  hideHeader?: boolean;
+  hideEmptyState?: boolean;
 }
 
 export default function EventList({
@@ -55,7 +58,10 @@ export default function EventList({
   eventTypeFilter,
   onEventClick,
   onDeleteEvent,
-  isEventBlacklisted
+  isEventBlacklisted,
+  title = 'Upcoming Events',
+  hideHeader = false,
+  hideEmptyState = false
 }: EventListProps) {
   const getEventColors = (type: string) => {
     switch (type) {
@@ -169,14 +175,17 @@ export default function EventList({
   return (
     <div className={`rounded-lg border ${darkMode ? 'border-gray-700' : 'border-gray-200'} h-[600px] overflow-y-auto`}>
       <div className="p-4">
-        <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-          Upcoming Events
-        </h3>
-        
+        {!hideHeader && (
+          <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            {title}
+          </h3>
+        )}
         {filteredEvents.length === 0 ? (
-          <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            No events found for the selected filter.
-          </div>
+          hideEmptyState ? null : (
+            <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              No events found for the selected filter.
+            </div>
+          )
         ) : (
           <div className="space-y-3">
             {filteredEvents.map((event, index) => {

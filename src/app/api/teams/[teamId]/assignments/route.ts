@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerUser } from '@/lib/supabaseServer';
 import { resolveTeamSlugToUnits, getUserTeamMemberships } from '@/lib/utils/team-resolver';
+import { hasLeadershipAccessCockroach } from '@/lib/utils/team-auth-v2';
 import { dbPg } from '@/lib/db';
 import { 
   newTeamAssignments,
@@ -13,12 +14,22 @@ import {
 import { eq, and, inArray, sql, desc, asc } from 'drizzle-orm';
 
 // GET /api/teams/[teamId]/assignments - Get team assignments
+// Frontend Usage:
+// - src/lib/stores/teamStore.ts (fetchAssignments)
+// - src/app/hooks/useEnhancedTeamData.ts (fetchAssignments)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
 ) {
+  // const startTime = Date.now();
+  console.log('📚 [ASSIGNMENTS API] GET request started', { 
+    timestamp: new Date().toISOString(),
+    url: request.url 
+  });
+
   try {
     if (!process.env.DATABASE_URL) {
+      console.log('❌ [ASSIGNMENTS API] Database configuration missing');
       return NextResponse.json({
         error: 'Database configuration error',
         details: 'DATABASE_URL environment variable is missing'
@@ -27,6 +38,7 @@ export async function GET(
 
     const user = await getServerUser();
     if (!user?.id) {
+      console.log('❌ [ASSIGNMENTS API] Unauthorized - no user ID');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -99,14 +111,14 @@ export async function GET(
           .where(eq(newTeamAssignmentRoster.assignmentId, assignment.id))
           .orderBy(newTeamAssignmentRoster.studentName);
 
-        // Get submission counts using Drizzle ORM
+        // Get submission counts using Drizzle ORM (include both 'submitted' and 'graded' statuses)
         const submissionCountResult = await dbPg
           .select({ submittedCount: sql<number>`COUNT(*)` })
           .from(newTeamAssignmentSubmissions)
           .where(
             and(
               eq(newTeamAssignmentSubmissions.assignmentId, assignment.id),
-              eq(newTeamAssignmentSubmissions.status, 'submitted')
+              sql`${newTeamAssignmentSubmissions.status} IN ('submitted', 'graded')`
             )
           );
 
@@ -149,6 +161,8 @@ export async function GET(
 }
 
 // POST /api/teams/[teamId]/assignments - Create new assignment
+// Frontend Usage:
+// - src/app/teams/components/assignment/assignmentUtils.ts (createAssignment)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
@@ -168,7 +182,7 @@ export async function POST(
 
     const { teamId } = await params;
     const body = await request.json();
-    const { title, description, assignment_type = 'homework', due_date, points, is_required = true, max_attempts } = body;
+    const { title, description, assignment_type = 'homework', due_date, is_required = true, max_attempts } = body;
 
     if (!title) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
@@ -177,19 +191,14 @@ export async function POST(
     // Resolve team slug to team units
     const teamInfo = await resolveTeamSlugToUnits(teamId);
     
-    // Check if user is captain or co-captain of any team unit in this group
-    const memberships = await getUserTeamMemberships(user.id, teamInfo.teamUnitIds);
-
-    if (memberships.length === 0) {
-      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
-    }
-
-    const isCaptain = memberships.some(m => ['captain', 'co_captain'].includes(m.role));
-    if (!isCaptain) {
-      return NextResponse.json({ error: 'Only captains can create assignments' }, { status: 403 });
+    // Check if user has leadership privileges in this team group (including team creator)
+    const hasLeadership = await hasLeadershipAccessCockroach(user.id, teamInfo.groupId);
+    if (!hasLeadership) {
+      return NextResponse.json({ error: 'Only captains and co-captains can create assignments' }, { status: 403 });
     }
 
     // Create the assignment for the first team unit (or the one the user is captain of)
+    const memberships = await getUserTeamMemberships(user.id, teamInfo.teamUnitIds);
     const captainMembership = memberships.find(m => ['captain', 'co_captain'].includes(m.role));
     const targetTeamId = captainMembership?.team_id || teamInfo.teamUnitIds[0];
     
@@ -203,7 +212,6 @@ export async function POST(
         description,
         assignmentType: assignment_type,
         dueDate: due_date ? new Date(due_date) : null,
-        points,
         isRequired: is_required,
         maxAttempts: max_attempts
       })

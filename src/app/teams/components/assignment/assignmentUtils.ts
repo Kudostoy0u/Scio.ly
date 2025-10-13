@@ -238,7 +238,6 @@ export const createAssignment = async (
     description: string;
     assignment_type: string;
     due_date: string;
-    points: number;
     time_limit_minutes: number;
     event_name: string;
     questions: Question[];
@@ -254,7 +253,10 @@ export const createAssignment = async (
 ) => {
   // Check if this is a Codebusters assignment
   if (assignmentData.event_name === 'Codebusters') {
-    return createCodebustersAssignment(teamId, subteamId, assignmentData);
+    return createCodebustersAssignment(teamId, subteamId, {
+      ...assignmentData,
+      points: 100 // Default points for Codebusters assignments
+    });
   }
 
   const url = subteamId 

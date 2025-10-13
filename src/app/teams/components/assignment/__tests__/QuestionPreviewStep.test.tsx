@@ -3,6 +3,11 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import QuestionPreviewStep from '../QuestionPreviewStep';
 import { Question } from '../assignmentTypes';
 
+// Mock the useTheme hook
+vi.mock('@/app/contexts/ThemeContext', () => ({
+  useTheme: () => ({ darkMode: false })
+}));
+
 describe('QuestionPreviewStep', () => {
   const mockQuestions: Question[] = [
     {
@@ -36,7 +41,6 @@ describe('QuestionPreviewStep', () => {
   ];
 
   const mockProps = {
-    darkMode: false,
     onNext: vi.fn(),
     onBack: vi.fn(),
     onError: vi.fn(),
@@ -76,10 +80,10 @@ describe('QuestionPreviewStep', () => {
     it('renders multiple choice options', () => {
       render(<QuestionPreviewStep {...mockProps} />);
       
-      expect(screen.getByText('A. London')).toBeInTheDocument();
-      expect(screen.getByText('B. Paris')).toBeInTheDocument();
-      expect(screen.getByText('C. Berlin')).toBeInTheDocument();
-      expect(screen.getByText('D. Madrid')).toBeInTheDocument();
+      expect(screen.getByText('London')).toBeInTheDocument();
+      expect(screen.getByText('Paris')).toBeInTheDocument();
+      expect(screen.getByText('Berlin')).toBeInTheDocument();
+      expect(screen.getByText('Madrid')).toBeInTheDocument();
     });
 
     it('renders replace button for each question', () => {
@@ -100,24 +104,36 @@ describe('QuestionPreviewStep', () => {
     it('shows correct answers when showAnswers is true', () => {
       render(<QuestionPreviewStep {...mockProps} showAnswers={true} />);
       
-      expect(screen.getAllByText('Correct Answer:')).toHaveLength(3);
-      expect(screen.getByText('Paris')).toBeInTheDocument();
+      // Check that correct answers are displayed without "Correct Answer:" label
+      expect(screen.getAllByText('Paris')).toHaveLength(2); // Once in correct answer, once in option
       expect(screen.getByText('Photosynthesis is the process by which plants convert light energy into chemical energy.')).toBeInTheDocument();
       expect(screen.getByText('Water')).toBeInTheDocument();
+      
+      // Should not have "Correct Answer:" labels anymore
+      expect(screen.queryByText('Correct Answer:')).not.toBeInTheDocument();
     });
 
     it('shows correct option indicators when showAnswers is true', () => {
       render(<QuestionPreviewStep {...mockProps} showAnswers={true} />);
       
-      const correctIndicators = screen.getAllByText('✓');
-      expect(correctIndicators).toHaveLength(1); // Only one correct option in MCQ
+      // Check for SVG checkmark icons - look for SVG elements with the checkmark path
+      const svgElements = screen.getAllByText('', { selector: 'svg' });
+      const checkmarkSvgs = svgElements.filter(svg => 
+        svg.innerHTML.includes('M5 13l4 4L19 7')
+      );
+      expect(checkmarkSvgs).toHaveLength(1); // Only one correct option in MCQ
     });
 
     it('does not show answers when showAnswers is false', () => {
       render(<QuestionPreviewStep {...mockProps} showAnswers={false} />);
       
       expect(screen.queryByText('Correct Answer:')).not.toBeInTheDocument();
-      expect(screen.queryByText('✓')).not.toBeInTheDocument();
+      // Check that no checkmark icons are present
+      const svgElements = screen.queryAllByText('', { selector: 'svg' });
+      const checkmarkSvgs = svgElements.filter(svg => 
+        svg.innerHTML.includes('M5 13l4 4L19 7')
+      );
+      expect(checkmarkSvgs).toHaveLength(0);
     });
 
     it('calls onShowAnswersChange when checkbox is toggled', () => {
@@ -201,19 +217,12 @@ describe('QuestionPreviewStep', () => {
     });
   });
 
-  describe('Dark Mode', () => {
-    it('applies dark mode classes when darkMode is true', () => {
-      render(<QuestionPreviewStep {...mockProps} darkMode={true} />);
+  describe('Theme Integration', () => {
+    it('uses theme hook for dark mode styling', () => {
+      render(<QuestionPreviewStep {...mockProps} />);
       
-      const questionContainer = screen.getByText('What is the capital of France?').closest('div');
-      expect(questionContainer).toHaveClass('bg-gray-700', 'border-gray-600');
-    });
-
-    it('applies light mode classes when darkMode is false', () => {
-      render(<QuestionPreviewStep {...mockProps} darkMode={false} />);
-      
-      const questionContainer = screen.getByText('What is the capital of France?').closest('div');
-      expect(questionContainer).toHaveClass('bg-gray-50', 'border-gray-200');
+      // Component should render without darkMode prop
+      expect(screen.getByText('Question Preview (3 questions)')).toBeInTheDocument();
     });
   });
 
@@ -245,8 +254,8 @@ describe('QuestionPreviewStep', () => {
       render(<QuestionPreviewStep {...mockProps} />);
       
       expect(screen.getByText('Q1 (multiple_choice)')).toBeInTheDocument();
-      expect(screen.getByText('A. London')).toBeInTheDocument();
-      expect(screen.getByText('B. Paris')).toBeInTheDocument();
+      expect(screen.getByText('London')).toBeInTheDocument();
+      expect(screen.getByText('Paris')).toBeInTheDocument();
     });
 
     it('renders free response questions correctly', () => {

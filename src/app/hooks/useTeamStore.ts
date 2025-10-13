@@ -43,6 +43,7 @@ export function useTeamStore() {
     addAssignment,
     updateTimer,
     addSubteam,
+    updateSubteam,
     deleteSubteam,
     invalidateCache,
     preloadData,
@@ -306,6 +307,7 @@ export function useTeamStore() {
     addAssignment,
     updateTimer,
     addSubteam,
+    updateSubteam,
     deleteSubteam,
     
     // Cache management

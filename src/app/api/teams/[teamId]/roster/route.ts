@@ -1,14 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryCockroachDB } from '@/lib/cockroachdb';
 import { getServerUser } from '@/lib/supabaseServer';
+import { checkTeamGroupAccessCockroach } from '@/lib/utils/team-auth';
 
 // GET /api/teams/[teamId]/roster - Get roster data for a subteam
+// Frontend Usage:
+// - src/lib/stores/teamStore.ts (fetchRoster)
+// - src/app/teams/components/assignment/assignmentUtils.ts (getTeamMembersAndRoster)
+// - src/app/hooks/useEnhancedTeamData.ts (fetchRoster)
+// - src/app/hooks/useTeamData.ts (fetchRoster)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
 ) {
+  // const startTime = Date.now();
+  console.log('📋 [ROSTER API] GET request started', { 
+    timestamp: new Date().toISOString(),
+    url: request.url 
+  });
+
   try {
     if (!process.env.DATABASE_URL) {
+      console.log('❌ [ROSTER API] Database configuration missing');
       return NextResponse.json({
         error: 'Database configuration error',
         details: 'DATABASE_URL environment variable is missing'
@@ -17,6 +30,7 @@ export async function GET(
 
     const user = await getServerUser();
     if (!user?.id) {
+      console.log('❌ [ROSTER API] Unauthorized - no user ID');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -48,17 +62,10 @@ export async function GET(
 
     const groupId = groupResult.rows[0].id;
 
-    // Check if user is a member of this team group
-    const membershipResult = await queryCockroachDB<{ role: string }>(
-      `SELECT tm.role 
-       FROM new_team_memberships tm
-       JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tm.user_id = $1 AND tu.group_id = $2 AND tm.status = 'active'`,
-      [user.id, groupId]
-    );
-
-    if (membershipResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
+    // Check if user has access to this team group (membership OR roster entry)
+    const authResult = await checkTeamGroupAccessCockroach(user.id, groupId);
+    if (!authResult.isAuthorized) {
+      return NextResponse.json({ error: 'Not authorized to access this team' }, { status: 403 });
     }
 
     // Get roster data for the specific subteam
@@ -115,6 +122,8 @@ export async function GET(
 }
 
 // POST /api/teams/[teamId]/roster - Save roster data for a subteam
+// Frontend Usage:
+// - src/app/teams/components/RosterTab.tsx (saveRoster)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
@@ -162,17 +171,10 @@ export async function POST(
 
     const groupId = groupResult.rows[0].id;
 
-    // Check if user is a member of this team group
-    const membershipResult = await queryCockroachDB<{ role: string }>(
-      `SELECT tm.role 
-       FROM new_team_memberships tm
-       JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tm.user_id = $1 AND tu.group_id = $2 AND tm.status = 'active'`,
-      [user.id, groupId]
-    );
-
-    if (membershipResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
+    // Check if user has access to this team group (membership OR roster entry)
+    const authResult = await checkTeamGroupAccessCockroach(user.id, groupId);
+    if (!authResult.isAuthorized) {
+      return NextResponse.json({ error: 'Not authorized to access this team' }, { status: 403 });
     }
 
     // Check if the subteam belongs to this group

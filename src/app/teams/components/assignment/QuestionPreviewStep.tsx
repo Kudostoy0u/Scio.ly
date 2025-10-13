@@ -1,17 +1,18 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { useTheme } from '@/app/contexts/ThemeContext';
 import { QuestionPreviewStepProps } from './assignmentTypes';
 
 export default function QuestionPreviewStep({
-  darkMode,
   onNext,
   onBack,
   questions,
   showAnswers,
   onShowAnswersChange,
   onReplaceQuestion
-}: QuestionPreviewStepProps) {
+}: Omit<QuestionPreviewStepProps, 'darkMode'>) {
+  const { darkMode } = useTheme();
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -69,25 +70,30 @@ export default function QuestionPreviewStep({
             )}
             
             {showAnswers && question.correct_answer && (
-              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
-                <p className="text-xs font-medium text-green-800 mb-1">Correct Answer:</p>
-                <p className="text-sm text-green-700">{question.correct_answer}</p>
+              <div className="mt-2">
+                <p className={`text-sm ${darkMode ? 'text-green-400' : 'text-green-700'}`}>
+                  {question.correct_answer}
+                </p>
               </div>
             )}
             
             {question.options && (
               <div className="mt-2 space-y-1">
                 {question.options.map((option, optIndex) => (
-                  <div key={optIndex} className={`text-xs p-2 rounded ${
+                  <div key={optIndex} className={`text-xs p-2 rounded flex items-center ${
                     showAnswers && option.isCorrect
-                      ? 'bg-green-100 text-green-800'
+                      ? darkMode 
+                        ? 'bg-green-800/40 text-green-300' 
+                        : 'bg-green-100 text-green-700'
                       : darkMode 
                         ? 'bg-gray-600 text-gray-300' 
                         : 'bg-gray-100 text-gray-700'
                   }`}>
-                    {String.fromCharCode(65 + optIndex)}. {option.text}
+                    <span className="flex-grow">{option.text}</span>
                     {showAnswers && option.isCorrect && (
-                      <span className="ml-2 text-green-600 font-medium">✓</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ml-2 ${darkMode ? 'text-green-400' : 'text-green-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
                     )}
                   </div>
                 ))}
@@ -100,7 +106,11 @@ export default function QuestionPreviewStep({
       <div className="flex justify-between">
         <button
           onClick={onBack}
-          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+          className={`px-4 py-2 border rounded-lg ${
+            darkMode 
+              ? 'border-gray-600 text-gray-300 hover:bg-gray-800' 
+              : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+          }`}
         >
           Back
         </button>

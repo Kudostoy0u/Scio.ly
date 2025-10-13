@@ -1,184 +1,245 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { queryCockroachDB } from '@/lib/cockroachdb';
+import { dbPg } from '@/lib/db';
+import { newTeamGroups, newTeamUnits } from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
 import { getServerUser } from '@/lib/supabaseServer';
+import { getTeamAccessCockroach } from '@/lib/utils/team-auth-v2';
 
 // GET /api/teams/[teamId]/subteams - Get all subteams for a team group
+// Frontend Usage:
+// - src/lib/stores/teamStore.ts (fetchSubteams)
+// - src/lib/utils/globalApiCache.ts (getSubteams)
+// - src/app/hooks/useEnhancedTeamData.ts (fetchSubteams)
+// - src/app/hooks/useTeamData.ts (fetchSubteams)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
 ) {
-  try {
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
-    }
+  const startTime = Date.now();
+  let teamId: string | undefined;
+  let user: any;
+  
+  console.log('🏢 [SUBNTEAMS API] GET request started', { 
+    timestamp: new Date().toISOString(),
+    url: request.url 
+  });
 
-    const user = await getServerUser();
+  try {
+    user = await getServerUser();
     if (!user?.id) {
+      console.log('❌ [SUBNTEAMS API] Unauthorized - no user ID');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { teamId } = await params;
+    const { teamId: paramTeamId } = await params;
+    teamId = paramTeamId;
+    console.log('📋 [SUBNTEAMS API] Request params', { teamId, userId: user.id });
 
-    // First, resolve the slug to team group
-    const groupResult = await queryCockroachDB<{ id: string }>(
-      `SELECT id FROM new_team_groups WHERE slug = $1`,
-      [teamId]
-    );
+    // Resolve team slug to group ID using Drizzle ORM
+    console.log('🔍 [SUBNTEAMS API] Resolving team slug to group ID');
+    const groupResult = await dbPg
+      .select({ id: newTeamGroups.id })
+      .from(newTeamGroups)
+      .where(eq(newTeamGroups.slug, teamId));
 
-    if (groupResult.rows.length === 0) {
-      console.log(`Team group not found for slug: ${teamId}`);
+    if (groupResult.length === 0) {
+      console.log('❌ [SUBNTEAMS API] Team group not found', { teamId });
       return NextResponse.json({ error: 'Team group not found' }, { status: 404 });
     }
 
-    const groupId = groupResult.rows[0].id;
-    console.log(`Resolved team slug ${teamId} to group ID: ${groupId}`);
+    const groupId = groupResult[0].id;
+    console.log('✅ [SUBNTEAMS API] Team group resolved', { teamId, groupId });
 
-    // Get all team units for this group
-    console.log(`Looking for team units in group ID: ${groupId}`);
-    const unitsResult = await queryCockroachDB<{
-      id: string;
-      team_id: string;
-      description: string;
-      created_at: string;
-    }>(
-      `SELECT id, team_id, description, created_at FROM new_team_units 
-       WHERE group_id = $1 AND status = 'active' ORDER BY team_id ASC`,
-      [groupId]
-    );
-    
-    console.log(`Found ${unitsResult.rows.length} team units in database query:`, unitsResult.rows);
+    // Check if user has access to this team group using new auth system
+    console.log('🔐 [SUBNTEAMS API] Checking team access');
+    const teamAccess = await getTeamAccessCockroach(user.id, groupId);
+    console.log('🔐 [SUBNTEAMS API] Team access result', { 
+      userId: user.id, 
+      groupId, 
+      hasAccess: teamAccess.hasAccess 
+    });
 
-    const subteams = unitsResult.rows.map(unit => ({
-      id: unit.id,
-      name: unit.description, // Use description as the display name
-      team_id: unit.team_id,
-      description: unit.description,
-      created_at: unit.created_at
+    if (!teamAccess.hasAccess) {
+      console.log('❌ [SUBNTEAMS API] Access denied', { userId: user.id, groupId });
+      return NextResponse.json({ error: 'Not authorized to access this team' }, { status: 403 });
+    }
+
+    // Get all subteams for this group using Drizzle ORM
+    console.log('🏢 [SUBNTEAMS API] Fetching subteams');
+    const subteamsResult = await dbPg
+      .select({
+        id: newTeamUnits.id,
+        teamId: newTeamUnits.teamId,
+        description: newTeamUnits.description,
+        createdAt: newTeamUnits.createdAt
+      })
+      .from(newTeamUnits)
+      .where(
+        and(
+          eq(newTeamUnits.groupId, groupId),
+          eq(newTeamUnits.status, 'active')
+        )
+      )
+      .orderBy(newTeamUnits.createdAt);
+
+    const subteams = subteamsResult.map(subteam => ({
+      id: subteam.id,
+      name: subteam.description || `Team ${subteam.teamId}`, // Use description as name, fallback to Team + letter
+      teamId: subteam.teamId,
+      description: subteam.description,
+      createdAt: subteam.createdAt
     }));
 
-    console.log(`Found ${subteams.length} subteams for team ${teamId}:`, subteams);
+    const duration = Date.now() - startTime;
+    console.log('✅ [SUBNTEAMS API] Request completed successfully', {
+      duration: `${duration}ms`,
+      subteamCount: subteams.length,
+      teamId: teamId,
+      userId: user.id
+    });
 
     return NextResponse.json({ subteams });
-
   } catch (error) {
-    console.error('Error fetching subteams:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    const duration = Date.now() - startTime;
+    console.error('❌ [SUBNTEAMS API] Error fetching subteams:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      duration: `${duration}ms`,
+      teamId: teamId,
+      userId: user?.id
+    });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
 // POST /api/teams/[teamId]/subteams - Create a new subteam
+// Frontend Usage:
+// - src/app/teams/components/TeamDashboard.tsx (createSubteam)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
 ) {
-  try {
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
-    }
+  const startTime = Date.now();
+  let teamId: string | undefined;
+  let user: any;
+  
+  console.log('🏢 [SUBNTEAMS API] POST request started', { 
+    timestamp: new Date().toISOString(),
+    url: request.url 
+  });
 
-    const user = await getServerUser();
+  try {
+    user = await getServerUser();
     if (!user?.id) {
+      console.log('❌ [SUBNTEAMS API] Unauthorized - no user ID');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { teamId } = await params;
+    const { teamId: paramTeamId } = await params;
+    teamId = paramTeamId;
     const body = await request.json();
-    const { name } = body;
+    const { name, description } = body;
 
-    if (!name || !name.trim()) {
-      return NextResponse.json({ error: 'Subteam name is required' }, { status: 400 });
+    console.log('📋 [SUBNTEAMS API] Request params', { 
+      teamId, 
+      name, 
+      description, 
+      userId: user.id 
+    });
+
+    if (!name || !description) {
+      console.log('❌ [SUBNTEAMS API] Missing required fields');
+      return NextResponse.json({ 
+        error: 'Name and description are required' 
+      }, { status: 400 });
     }
 
-    // First, resolve the slug to team group
-    const groupResult = await queryCockroachDB<{ id: string }>(
-      `SELECT id FROM new_team_groups WHERE slug = $1`,
-      [teamId]
-    );
+    // Resolve team slug to group ID using Drizzle ORM
+    console.log('🔍 [SUBNTEAMS API] Resolving team slug to group ID');
+    const groupResult = await dbPg
+      .select({ id: newTeamGroups.id })
+      .from(newTeamGroups)
+      .where(eq(newTeamGroups.slug, teamId));
 
-    if (groupResult.rows.length === 0) {
+    if (groupResult.length === 0) {
+      console.log('❌ [SUBNTEAMS API] Team group not found', { teamId });
       return NextResponse.json({ error: 'Team group not found' }, { status: 404 });
     }
 
-    const groupId = groupResult.rows[0].id;
+    const groupId = groupResult[0].id;
+    console.log('✅ [SUBNTEAMS API] Team group resolved', { teamId, groupId });
 
-    // Check if user is a captain of this team group
-    const membershipResult = await queryCockroachDB<{ role: string }>(
-      `SELECT tm.role 
-       FROM new_team_memberships tm
-       JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tm.user_id = $1 AND tu.group_id = $2 AND tm.status = 'active'`,
-      [user.id, groupId]
-    );
+    // Check if user has leadership access
+    console.log('🔐 [SUBNTEAMS API] Checking leadership access');
+    const teamAccess = await getTeamAccessCockroach(user.id, groupId);
+    const hasLeadership = teamAccess.isCreator || 
+      teamAccess.subteamMemberships.some(m => ['captain', 'co_captain'].includes(m.role));
 
-    if (membershipResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
-    }
-
-    const membership = membershipResult.rows[0];
-    if (!['captain', 'co_captain'].includes(membership.role)) {
-      return NextResponse.json({ error: 'Only captains can create subteams' }, { status: 403 });
-    }
-
-    // Get the next team_id (A, B, C, etc.)
-    const existingUnitsResult = await queryCockroachDB<{ team_id: string }>(
-      `SELECT team_id FROM new_team_units WHERE group_id = $1 ORDER BY team_id ASC`,
-      [groupId]
-    );
-
-    const existingTeamIds = existingUnitsResult.rows.map(row => row.team_id);
-    let nextTeamId = 'A';
-    for (let i = 0; i < 26; i++) {
-      const teamId = String.fromCharCode(65 + i); // A, B, C, etc.
-      if (!existingTeamIds.includes(teamId)) {
-        nextTeamId = teamId;
-        break;
-      }
-    }
-
-    // Create new team unit
-    const newUnitResult = await queryCockroachDB<{
-      id: string;
-      team_id: string;
-      captain_code: string;
-      user_code: string;
-    }>(
-      `INSERT INTO new_team_units (group_id, team_id, description, captain_code, user_code, created_by, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-       RETURNING id, team_id, captain_code, user_code`,
-      [
-        groupId,
-        nextTeamId,
-        name.trim(),
-        `CAP${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-        `USR${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-        user.id
-      ]
-    );
-
-    const newUnit = newUnitResult.rows[0];
-
-    return NextResponse.json({
-      id: newUnit.id,
-      name: name.trim(), // Use the provided name as the display name
-      team_id: newUnit.team_id,
-      captain_code: newUnit.captain_code,
-      user_code: newUnit.user_code
+    console.log('🔐 [SUBNTEAMS API] Leadership check result', { 
+      userId: user.id, 
+      groupId, 
+      hasLeadership,
+      isCreator: teamAccess.isCreator,
+      leadershipRoles: teamAccess.subteamMemberships.filter(m => ['captain', 'co_captain'].includes(m.role))
     });
 
+    if (!hasLeadership) {
+      console.log('❌ [SUBNTEAMS API] Leadership access denied', { userId: user.id, groupId });
+      return NextResponse.json({ 
+        error: 'Only captains and co-captains can create subteams' 
+      }, { status: 403 });
+    }
+
+    // Create new subteam using Drizzle ORM
+    console.log('🏢 [SUBNTEAMS API] Creating new subteam');
+    
+    // Extract the team ID letter from the name (e.g., "Team A" -> "A")
+    const teamIdLetter = name.replace(/^Team\s+/i, '');
+    
+    const [newSubteam] = await dbPg
+      .insert(newTeamUnits)
+      .values({
+        groupId: groupId,
+        teamId: teamIdLetter,
+        description: name, // Store the full name in description
+        captainCode: `CAP${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+        userCode: `USR${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+        createdBy: user.id
+      })
+      .returning();
+
+    const duration = Date.now() - startTime;
+    console.log('✅ [SUBNTEAMS API] Subteam created successfully', {
+      duration: `${duration}ms`,
+      subteamId: newSubteam.id,
+      teamId: teamId,
+      userId: user.id
+    });
+
+    return NextResponse.json({ 
+      subteam: {
+        id: newSubteam.id,
+        name: newSubteam.description || `Team ${newSubteam.teamId}`, // Use description as name, fallback to Team + letter
+        teamId: newSubteam.teamId,
+        description: newSubteam.description,
+        createdAt: newSubteam.createdAt
+      }
+    });
   } catch (error) {
-    console.error('Error creating subteam:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    const duration = Date.now() - startTime;
+    console.error('❌ [SUBNTEAMS API] Error creating subteam:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      duration: `${duration}ms`,
+      teamId: teamId,
+      userId: user?.id
+    });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

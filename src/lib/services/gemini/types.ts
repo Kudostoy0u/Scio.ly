@@ -14,8 +14,19 @@ export interface QuestionAnalysisResult {
   suggestions: string;
 }
 
+export interface QuestionRemovalAnalysis {
+  shouldRemove: boolean;
+  reason: string;
+  issues: string[];
+  confidence: number;
+}
+
 export interface ExplanationResult {
   explanation: string;
+}
+
+export interface GradingResult {
+  scores: number[];
 }
 
 export interface EditSuggestionResult {

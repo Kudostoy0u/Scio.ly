@@ -1,0 +1,239 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { dbPg } from '@/lib/db';
+import { newTeamGroups, newTeamUnits } from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
+import { getServerUser } from '@/lib/supabaseServer';
+import { getTeamAccessCockroach } from '@/lib/utils/team-auth-v2';
+
+// GET /api/teams/[teamId]/subteams - Get all subteams for a team group
+// Frontend Usage:
+// - src/lib/stores/teamStore.ts (fetchSubteams)
+// - src/lib/utils/globalApiCache.ts (getSubteams)
+// - src/app/hooks/useEnhancedTeamData.ts (fetchSubteams)
+// - src/app/hooks/useTeamData.ts (fetchSubteams)
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ teamId: string }> }
+) {
+  const startTime = Date.now();
+  console.log('🏢 [SUBNTEAMS API] GET request started', { 
+    timestamp: new Date().toISOString(),
+    url: request.url 
+  });
+
+  try {
+    const user = await getServerUser();
+    if (!user?.id) {
+      console.log('❌ [SUBNTEAMS API] Unauthorized - no user ID');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { teamId } = await params;
+    console.log('📋 [SUBNTEAMS API] Request params', { teamId, userId: user.id });
+
+    // Resolve team slug to group ID using Drizzle ORM
+    console.log('🔍 [SUBNTEAMS API] Resolving team slug to group ID');
+    const groupResult = await dbPg
+      .select({ id: newTeamGroups.id })
+      .from(newTeamGroups)
+      .where(eq(newTeamGroups.slug, teamId));
+
+    if (groupResult.length === 0) {
+      console.log('❌ [SUBNTEAMS API] Team group not found', { teamId });
+      return NextResponse.json({ error: 'Team group not found' }, { status: 404 });
+    }
+
+    const groupId = groupResult[0].id;
+    console.log('✅ [SUBNTEAMS API] Team group resolved', { teamId, groupId });
+
+    // Check if user has access to this team group using new auth system
+    console.log('🔐 [SUBNTEAMS API] Checking team access');
+    const teamAccess = await getTeamAccessCockroach(user.id, groupId);
+    console.log('🔐 [SUBNTEAMS API] Team access result', { 
+      userId: user.id, 
+      groupId, 
+      hasAccess: teamAccess.hasAccess 
+    });
+
+    if (!teamAccess.hasAccess) {
+      console.log('❌ [SUBNTEAMS API] Access denied', { userId: user.id, groupId });
+      return NextResponse.json({ error: 'Not authorized to access this team' }, { status: 403 });
+    }
+
+    // Get all subteams for this group using Drizzle ORM
+    console.log('🏢 [SUBNTEAMS API] Fetching subteams');
+    const subteamsResult = await dbPg
+      .select({
+        id: newTeamUnits.id,
+        teamId: newTeamUnits.teamId,
+        description: newTeamUnits.description,
+        createdAt: newTeamUnits.createdAt
+      })
+      .from(newTeamUnits)
+      .where(
+        and(
+          eq(newTeamUnits.groupId, groupId),
+          eq(newTeamUnits.status, 'active')
+        )
+      )
+      .orderBy(newTeamUnits.createdAt);
+
+    const subteams = subteamsResult.map(subteam => ({
+      id: subteam.id,
+      name: subteam.teamId,
+      teamId: subteam.teamId,
+      description: subteam.description,
+      createdAt: subteam.createdAt
+    }));
+
+    const duration = Date.now() - startTime;
+    console.log('✅ [SUBNTEAMS API] Request completed successfully', {
+      duration: `${duration}ms`,
+      subteamCount: subteams.length,
+      teamId,
+      userId: user.id
+    });
+
+    return NextResponse.json({ subteams });
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    const { teamId } = await params;
+    const user = await getServerUser();
+    console.error('❌ [SUBNTEAMS API] Error fetching subteams:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      duration: `${duration}ms`,
+      teamId,
+      userId: user?.id
+    });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/teams/[teamId]/subteams - Create a new subteam
+// Frontend Usage:
+// - src/app/teams/components/TeamDashboard.tsx (createSubteam)
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ teamId: string }> }
+) {
+  const startTime = Date.now();
+  console.log('🏢 [SUBNTEAMS API] POST request started', { 
+    timestamp: new Date().toISOString(),
+    url: request.url 
+  });
+
+  try {
+    const user = await getServerUser();
+    if (!user?.id) {
+      console.log('❌ [SUBNTEAMS API] Unauthorized - no user ID');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { teamId } = await params;
+    const body = await request.json();
+    const { name, description } = body;
+
+    console.log('📋 [SUBNTEAMS API] Request params', { 
+      teamId, 
+      name, 
+      description, 
+      userId: user.id 
+    });
+
+    if (!name || !description) {
+      console.log('❌ [SUBNTEAMS API] Missing required fields');
+      return NextResponse.json({ 
+        error: 'Name and description are required' 
+      }, { status: 400 });
+    }
+
+    // Resolve team slug to group ID using Drizzle ORM
+    console.log('🔍 [SUBNTEAMS API] Resolving team slug to group ID');
+    const groupResult = await dbPg
+      .select({ id: newTeamGroups.id })
+      .from(newTeamGroups)
+      .where(eq(newTeamGroups.slug, teamId));
+
+    if (groupResult.length === 0) {
+      console.log('❌ [SUBNTEAMS API] Team group not found', { teamId });
+      return NextResponse.json({ error: 'Team group not found' }, { status: 404 });
+    }
+
+    const groupId = groupResult[0].id;
+    console.log('✅ [SUBNTEAMS API] Team group resolved', { teamId, groupId });
+
+    // Check if user has leadership access
+    console.log('🔐 [SUBNTEAMS API] Checking leadership access');
+    const teamAccess = await getTeamAccessCockroach(user.id, groupId);
+    const hasLeadership = teamAccess.isCreator || 
+      teamAccess.subteamMemberships.some(m => ['captain', 'co_captain'].includes(m.role));
+
+    console.log('🔐 [SUBNTEAMS API] Leadership check result', { 
+      userId: user.id, 
+      groupId, 
+      hasLeadership,
+      isCreator: teamAccess.isCreator,
+      leadershipRoles: teamAccess.subteamMemberships.filter(m => ['captain', 'co_captain'].includes(m.role))
+    });
+
+    if (!hasLeadership) {
+      console.log('❌ [SUBNTEAMS API] Leadership access denied', { userId: user.id, groupId });
+      return NextResponse.json({ 
+        error: 'Only captains and co-captains can create subteams' 
+      }, { status: 403 });
+    }
+
+    // Create new subteam using Drizzle ORM
+    console.log('🏢 [SUBNTEAMS API] Creating new subteam');
+    const [newSubteam] = await dbPg
+      .insert(newTeamUnits)
+      .values({
+        groupId,
+        teamId: name,
+        description,
+        captainCode: `captain_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        userCode: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        createdBy: user.id,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .returning();
+
+    const duration = Date.now() - startTime;
+    console.log('✅ [SUBNTEAMS API] Subteam created successfully', {
+      duration: `${duration}ms`,
+      subteamId: newSubteam.id,
+      teamId,
+      userId: user.id
+    });
+
+    return NextResponse.json({ 
+      subteam: {
+        id: newSubteam.id,
+        name: newSubteam.teamId,
+        teamId: newSubteam.teamId,
+        description: newSubteam.description,
+        createdAt: newSubteam.createdAt
+      }
+    });
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    const { teamId } = await params;
+    const user = await getServerUser();
+    console.error('❌ [SUBNTEAMS API] Error creating subteam:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      duration: `${duration}ms`,
+      teamId,
+      userId: user?.id
+    });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

@@ -44,9 +44,9 @@ export default function InlineInvite({ isOpen, onClose, onSubmit }: InlineInvite
         ? 'bg-gray-800 border-gray-700' 
         : 'bg-gray-50 border-gray-200'
     }`}>
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-3 sm:space-x-4">
         <UserPlus className={`w-5 h-5 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
-        <form onSubmit={handleSubmit} className="flex-1 flex items-center space-x-3">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-3">
           <input
             type="text"
             placeholder="Enter username..."
@@ -62,7 +62,7 @@ export default function InlineInvite({ isOpen, onClose, onSubmit }: InlineInvite
           <button
             type="submit"
             disabled={!username.trim() || submitting}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`px-4 py-2 rounded-lg font-medium transition-colors sm:w-auto w-full ${
               username.trim() && !submitting
                 ? 'bg-blue-600 text-white hover:bg-blue-700'
                 : 'bg-gray-400 text-gray-200 cursor-not-allowed'
@@ -77,7 +77,7 @@ export default function InlineInvite({ isOpen, onClose, onSubmit }: InlineInvite
           <button
             type="button"
             onClick={handleClose}
-            className={`p-2 rounded-lg transition-colors ${
+            className={`p-2 rounded-lg transition-colors sm:w-auto w-full ${
               darkMode 
                 ? 'hover:bg-gray-700 text-gray-400' 
                 : 'hover:bg-gray-200 text-gray-500'

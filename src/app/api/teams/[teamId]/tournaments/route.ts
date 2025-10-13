@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryCockroachDB } from '@/lib/cockroachdb';
 import { getServerUser } from '@/lib/supabaseServer';
+import { checkTeamGroupAccessCockroach } from '@/lib/utils/team-auth';
 
 // GET /api/teams/[teamId]/tournaments - Get upcoming tournaments for a subteam
+// Frontend Usage:
+// - src/lib/stores/teamStore.ts (fetchTournaments, fetchStreamData)
+// - src/app/hooks/useEnhancedTeamData.ts (fetchTournaments)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
@@ -48,17 +52,10 @@ export async function GET(
 
     const groupId = groupResult.rows[0].id;
 
-    // Check if user is a member of this team group
-    const membershipResult = await queryCockroachDB<{ role: string }>(
-      `SELECT tm.role 
-       FROM new_team_memberships tm
-       JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tm.user_id = $1 AND tu.group_id = $2 AND tm.status = 'active'`,
-      [user.id, groupId]
-    );
-
-    if (membershipResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
+    // Check if user has access to this team group (membership OR roster entry)
+    const authResult = await checkTeamGroupAccessCockroach(user.id, groupId);
+    if (!authResult.isAuthorized) {
+      return NextResponse.json({ error: 'Not authorized to access this team' }, { status: 403 });
     }
 
     // Get upcoming events for the team group with timer information

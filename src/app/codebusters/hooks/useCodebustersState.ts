@@ -51,7 +51,7 @@ export const useCodebustersState = (assignmentId?: string | null) => {
   const [quotes, setQuotes] = useState<QuoteData[]>([]);
   const [isTestSubmitted, setIsTestSubmitted] = useState(false);
   const [testScore, setTestScore] = useState<number | null>(null);
-  const [timeLeft, setTimeLeft] = useState<number>(CODEBUSTERS_DEFAULTS.timeLimit * 60);
+  const [timeLeft, setTimeLeft] = useState<number | null>(CODEBUSTERS_DEFAULTS.timeLimit * 60);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPDFViewer, setShowPDFViewer] = useState(false);
@@ -83,7 +83,25 @@ export const useCodebustersState = (assignmentId?: string | null) => {
     
     // Skip localStorage loading if we're in assignment mode
     if (assignmentId) {
-      console.log('Assignment mode detected, skipping localStorage loading');
+      console.log('Assignment mode detected, resetting test state and skipping localStorage loading');
+      
+      // Reset test state when loading assignment via notifications
+      setIsTestSubmitted(false);
+      setTestScore(null);
+      setTimeLeft(null);
+      setQuotes([]);
+      setQuotesLoadedFromStorage(false);
+      
+      // Clear localStorage test state
+      localStorage.removeItem('codebustersIsTestSubmitted');
+      localStorage.removeItem('codebustersTestScore');
+      localStorage.removeItem('codebustersTimeLeft');
+      localStorage.removeItem('codebustersQuotes');
+      localStorage.removeItem('codebustersQuotesLoadedFromStorage');
+      localStorage.removeItem('testParams');
+      localStorage.removeItem('testGradingResults');
+      localStorage.removeItem('currentTestSession');
+      
       setIsLoading(false);
       return;
     }

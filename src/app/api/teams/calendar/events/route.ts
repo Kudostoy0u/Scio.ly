@@ -3,6 +3,9 @@ import { getServerUser } from '@/lib/supabaseServer';
 import { queryCockroachDB } from '@/lib/cockroachdb';
 import { resolveTeamSlugToUnits } from '@/lib/utils/team-resolver';
 
+// POST /api/teams/calendar/events - Create team event
+// Frontend Usage:
+// - src/app/teams/components/TeamCalendar.tsx (createEvent)
 export async function POST(request: NextRequest) {
   try {
     const user = await getServerUser();
