@@ -202,7 +202,9 @@ export default function TestConfiguration({
       'Astronomy',
       'Designer Genes',
       'Forensics',
-      'Meteorology'
+      'Meteorology',
+      'Potions and Poisons',
+      'Solar System'
     ];
     return candidates.includes(name) || candidates.includes(base);
   })();
@@ -213,7 +215,9 @@ export default function TestConfiguration({
       'Rocks and Minerals',
       'Entomology',
       'Water Quality - Freshwater',
-      'Astronomy'
+      'Astronomy',
+      'Potions and Poisons',
+      'Solar System'
     ];
     return candidates.includes(name);
   })();

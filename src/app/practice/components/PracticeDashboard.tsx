@@ -323,7 +323,10 @@ export default function PracticeDashboard() {
             'Circuit Lab',
             'Astronomy',
             'Designer Genes',
-            'Forensics'
+            'Forensics',
+            'Meteorology',
+            'Potions and Poisons',
+            'Solar System'
           ];
           return candidates.includes(name) || candidates.includes(base);
         })();
@@ -335,7 +338,9 @@ export default function PracticeDashboard() {
             'Rocks and Minerals',
             'Entomology',
             'Water Quality - Freshwater',
-            'Astronomy'
+            'Astronomy',
+            'Potions and Poisons',
+            'Solar System'
           ];
           return candidates.includes(name);
         })();
