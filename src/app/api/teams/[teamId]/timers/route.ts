@@ -61,7 +61,7 @@ export async function GET(
       return NextResponse.json({ error: 'Not authorized to view this team' }, { status: 403 });
     }
 
-    // Get active timers with event details
+    // Get active timers with event details (including recurring events)
     const timersResult = await queryCockroachDB<{
       id: string;
       title: string;
@@ -72,13 +72,22 @@ export async function GET(
     }>(
       `SELECT 
          at.event_id as id,
-         te.title,
-         te.start_time,
-         te.location,
-         te.event_type,
+         COALESCE(te.title, rm.title) as title,
+         COALESCE(te.start_time, 
+           CASE 
+             WHEN rm.start_time IS NOT NULL THEN 
+               CONCAT(SUBSTRING(at.event_id::text FROM 'recurring-[^-]+-(.+)'), 'T', rm.start_time)::timestamptz
+             ELSE 
+               CONCAT(SUBSTRING(at.event_id::text FROM 'recurring-[^-]+-(.+)'), 'T00:00:00')::timestamptz
+           END
+         ) as start_time,
+         COALESCE(te.location, rm.location) as location,
+         COALESCE(te.event_type, 'meeting') as event_type,
          at.added_at
        FROM new_team_active_timers at
-       JOIN new_team_events te ON at.event_id = te.id
+       LEFT JOIN new_team_events te ON at.event_id = te.id
+       LEFT JOIN new_team_recurring_meetings rm ON 
+         at.event_id::text LIKE 'recurring-' || rm.id::text || '-%'
        WHERE at.team_unit_id = $1
        ORDER BY at.added_at ASC`,
       [subteamId]
@@ -153,18 +162,37 @@ export async function POST(
       return NextResponse.json({ error: 'Only captains and co-captains can manage timers' }, { status: 403 });
     }
 
-    // Verify the event belongs to the team
-    const eventResult = await queryCockroachDB<{ id: string }>(
-      `SELECT id FROM new_team_events 
-       WHERE id = $1 AND team_id IN (
-         SELECT id FROM new_team_units WHERE group_id = (
-           SELECT group_id FROM new_team_units WHERE id = $2
-         )
-       )`,
-      [eventId, subteamId]
-    );
+    // Verify the event belongs to the team (handle both regular and recurring events)
+    let eventExists = false;
+    
+    if (eventId.startsWith('recurring-')) {
+      // For recurring events, extract the meeting ID and verify it belongs to the team
+      const meetingId = eventId.split('-')[1];
+      const recurringEventResult = await queryCockroachDB<{ id: string }>(
+        `SELECT id FROM new_team_recurring_meetings 
+         WHERE id = $1 AND team_id IN (
+           SELECT id FROM new_team_units WHERE group_id = (
+             SELECT group_id FROM new_team_units WHERE id = $2
+           )
+         )`,
+        [meetingId, subteamId]
+      );
+      eventExists = recurringEventResult.rows.length > 0;
+    } else {
+      // For regular events
+      const eventResult = await queryCockroachDB<{ id: string }>(
+        `SELECT id FROM new_team_events 
+         WHERE id = $1 AND team_id IN (
+           SELECT id FROM new_team_units WHERE group_id = (
+             SELECT group_id FROM new_team_units WHERE id = $2
+           )
+         )`,
+        [eventId, subteamId]
+      );
+      eventExists = eventResult.rows.length > 0;
+    }
 
-    if (eventResult.rows.length === 0) {
+    if (!eventExists) {
       return NextResponse.json({ error: 'Event not found or not accessible to this team' }, { status: 404 });
     }
 

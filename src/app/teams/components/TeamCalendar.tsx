@@ -255,9 +255,15 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
   };
 
   const handleAddEventForDate = (date: Date) => {
+    // Create date string in local timezone to avoid UTC conversion issues
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const localDateString = `${year}-${month}-${day}`;
+    
     setEventForm(prev => ({ 
       ...prev, 
-      date: date.toISOString().split('T')[0],
+      date: localDateString,
       title: '',
       description: '',
       start_time: '',
@@ -272,9 +278,15 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
 
   const handleAddEvent = () => {
     const today = new Date();
+    // Create date string in local timezone to avoid UTC conversion issues
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const localDateString = `${year}-${month}-${day}`;
+    
     setEventForm(prev => ({ 
       ...prev, 
-      date: today.toISOString().split('T')[0],
+      date: localDateString,
       title: '',
       description: '',
       start_time: '',
@@ -293,6 +305,38 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
 
   const handleRecurringFormChange = (updates: Partial<RecurringForm>) => {
     setRecurringForm(prev => ({ ...prev, ...updates }));
+  };
+
+  // Helper function to create timezone-aware date strings
+  const createTimezoneAwareDateTime = (dateStr: string, timeStr?: string) => {
+    const time = timeStr || '00:00:00';
+    
+    // Create a date string in local timezone format
+    // This ensures the date and time are preserved exactly as entered
+    const dateTimeString = `${dateStr}T${time}`;
+    
+    // Create a Date object from the local date/time
+    const localDate = new Date(dateTimeString);
+    
+    // Get timezone offset in minutes (positive for behind UTC, negative for ahead)
+    const timezoneOffset = localDate.getTimezoneOffset();
+    
+    // Convert offset to hours and minutes for ISO string format
+    const offsetHours = Math.floor(Math.abs(timezoneOffset) / 60);
+    const offsetMinutes = Math.abs(timezoneOffset) % 60;
+    const offsetSign = timezoneOffset <= 0 ? '+' : '-';
+    const offsetString = `${offsetSign}${String(offsetHours).padStart(2, '0')}:${String(offsetMinutes).padStart(2, '0')}`;
+    
+    // Format the date components
+    const year = localDate.getFullYear();
+    const month = String(localDate.getMonth() + 1).padStart(2, '0');
+    const day = String(localDate.getDate()).padStart(2, '0');
+    const hours = String(localDate.getHours()).padStart(2, '0');
+    const minutes = String(localDate.getMinutes()).padStart(2, '0');
+    const seconds = String(localDate.getSeconds()).padStart(2, '0');
+    
+    // Return ISO string with timezone offset
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${offsetString}`;
   };
 
   // Create new event
@@ -337,11 +381,9 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
               ...eventForm,
               created_by: user.id,
               team_id: teamId,
-              start_time: eventForm.start_time ? 
-                `${eventForm.date}T${eventForm.start_time}` : 
-                `${eventForm.date}T00:00:00`,
+              start_time: createTimezoneAwareDateTime(eventForm.date, eventForm.start_time),
               end_time: eventForm.end_time ? 
-                `${eventForm.date}T${eventForm.end_time}` : 
+                createTimezoneAwareDateTime(eventForm.date, eventForm.end_time) : 
                 undefined
             };
             
@@ -356,11 +398,9 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
               ...eventForm,
               created_by: user.id,
               team_id: null, // Personal events should have null team_id
-              start_time: eventForm.start_time ? 
-                `${eventForm.date}T${eventForm.start_time}` : 
-                `${eventForm.date}T00:00:00`,
+              start_time: createTimezoneAwareDateTime(eventForm.date, eventForm.start_time),
               end_time: eventForm.end_time ? 
-                `${eventForm.date}T${eventForm.end_time}` : 
+                createTimezoneAwareDateTime(eventForm.date, eventForm.end_time) : 
                 undefined
             };
             

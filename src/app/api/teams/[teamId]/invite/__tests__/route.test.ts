@@ -42,15 +42,15 @@ describe('/api/teams/[teamId]/invite', () => {
     team_id: 'team-unit-1'
   };
 
-  const mockInvitation = {
-    id: 'invitation-123',
-    team_id: 'team-unit-1',
-    invited_by: 'user-123',
-    email: 'invited@example.com',
-    role: 'member',
-    invitation_code: 'abc123',
-    expires_at: '2024-01-01T00:00:00.000Z',
-    message: null
+  const mockTeamCodes = {
+    user_code: 'user123',
+    captain_code: 'captain123'
+  };
+
+  const mockTeamGroup = {
+    school: 'Test School',
+    division: 'C',
+    slug: 'test-school-c'
   };
 
   const mockNotification = {
@@ -82,7 +82,8 @@ describe('/api/teams/[teamId]/invite', () => {
         .mockResolvedValueOnce({ rows: [mockInvitedUser] }) // user lookup
         .mockResolvedValueOnce({ rows: [] }) // existing membership check
         .mockResolvedValueOnce({ rows: [] }) // existing invitation check
-        .mockResolvedValueOnce({ rows: [mockInvitation] }) // create invitation
+        .mockResolvedValueOnce({ rows: [mockTeamCodes] }) // get team codes
+        .mockResolvedValueOnce({ rows: [mockTeamGroup] }) // get team group
         .mockResolvedValueOnce({ rows: [mockNotification] }); // create notification
 
       const request = new NextRequest('http://localhost:3000/api/teams/test-team/invite', {
@@ -101,7 +102,7 @@ describe('/api/teams/[teamId]/invite', () => {
 
       expect(response.status).toBe(200);
       expect(data.message).toBe('Invitation sent successfully');
-      expect(data.invitation).toEqual(mockInvitation);
+      expect(data.joinCode).toBe('user123'); // member role should use user_code
       
       // Verify notification sync was called
       expect(mockNotificationSyncService.syncNotificationToSupabase).toHaveBeenCalledWith('notification-123');
@@ -291,7 +292,8 @@ describe('/api/teams/[teamId]/invite', () => {
         .mockResolvedValueOnce({ rows: [mockInvitedUser] }) // user lookup
         .mockResolvedValueOnce({ rows: [] }) // existing membership check
         .mockResolvedValueOnce({ rows: [] }) // existing invitation check
-        .mockResolvedValueOnce({ rows: [mockInvitation] }) // create invitation
+        .mockResolvedValueOnce({ rows: [mockTeamCodes] }) // get team codes
+        .mockResolvedValueOnce({ rows: [mockTeamGroup] }) // get team group
         .mockResolvedValueOnce({ rows: [mockNotification] }); // create notification
 
       mockNotificationSyncService.syncNotificationToSupabase.mockRejectedValue(new Error('Sync failed'));

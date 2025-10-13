@@ -85,8 +85,109 @@ export async function GET(
       [groupId, subteamId]
     );
 
+    // Get recurring meetings for the team group
+    const recurringMeetingsResult = await queryCockroachDB<{
+      id: string;
+      title: string;
+      description: string | null;
+      location: string | null;
+      days_of_week: string;
+      start_time: string | null;
+      end_time: string | null;
+      start_date: string | null;
+      end_date: string | null;
+      exceptions: string;
+      team_id: string;
+    }>(
+      `SELECT 
+         rm.id, 
+         rm.title, 
+         rm.description, 
+         rm.location, 
+         rm.days_of_week, 
+         rm.start_time, 
+         rm.end_time, 
+         rm.start_date, 
+         rm.end_date, 
+         rm.exceptions,
+         rm.team_id
+       FROM new_team_recurring_meetings rm
+       WHERE rm.team_id IN (
+         SELECT id FROM new_team_units WHERE group_id = $1
+       )
+       ORDER BY rm.created_at DESC`,
+      [groupId]
+    );
+
+    // Generate recurring events from recurring meetings
+    const recurringEvents: Array<{
+      id: string;
+      title: string;
+      start_time: string;
+      location: string | null;
+      event_type: string;
+      has_timer: boolean;
+    }> = [];
+
+    const now = new Date();
+    const futureDate = new Date();
+    futureDate.setDate(now.getDate() + 30); // Look ahead 30 days
+
+    for (const meeting of recurringMeetingsResult.rows) {
+      try {
+        const daysOfWeek = JSON.parse(meeting.days_of_week || '[]');
+        const exceptions = JSON.parse(meeting.exceptions || '[]');
+        const startDate = meeting.start_date ? new Date(meeting.start_date) : now;
+        const endDate = meeting.end_date ? new Date(meeting.end_date) : futureDate;
+
+        // Generate events for the next 30 days
+        for (let date = new Date(Math.max(now.getTime(), startDate.getTime())); 
+             date <= futureDate && date <= endDate; 
+             date.setDate(date.getDate() + 1)) {
+          
+          const dayOfWeek = date.getDay();
+          const dateStr = date.toISOString().split('T')[0];
+          
+          // Check if this day matches the recurring pattern
+          if (daysOfWeek.includes(dayOfWeek) && !exceptions.includes(dateStr)) {
+            const startTime = meeting.start_time ? 
+              `${dateStr}T${meeting.start_time}` : 
+              `${dateStr}T00:00:00`;
+            
+            const eventId = `recurring-${meeting.id}-${dateStr}`;
+            
+            // Check if this recurring event already has a timer
+            const hasTimerResult = await queryCockroachDB<{ id: string }>(
+              `SELECT id FROM new_team_active_timers 
+               WHERE event_id = $1 AND team_unit_id = $2`,
+              [eventId, subteamId]
+            );
+            
+            recurringEvents.push({
+              id: eventId,
+              title: meeting.title,
+              start_time: startTime,
+              location: meeting.location,
+              event_type: 'meeting',
+              has_timer: hasTimerResult.rows.length > 0
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error processing recurring meeting:', meeting.id, error);
+        // Continue with other meetings even if one fails
+      }
+    }
+
+    // Combine regular events and recurring events
+    const allEvents = [...eventsResult.rows, ...recurringEvents];
+    
+    // Sort by start time and limit to 50 total events
+    allEvents.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+    const limitedEvents = allEvents.slice(0, 50);
+
     return NextResponse.json({ 
-      events: eventsResult.rows 
+      events: limitedEvents 
     });
 
   } catch (error) {

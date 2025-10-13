@@ -372,6 +372,38 @@ export async function GET(
       }
     });
 
+    // 5. Update members without roster data to show "Unknown team"
+    console.log('🔍 [MEMBERS API] Checking for members without roster data');
+    const membersWithRosterData = new Set(linkedRosterResult.rows.map(r => r.user_id));
+    
+    allMembers.forEach((member, _memberId) => {
+      // Skip unlinked roster members
+      if (member.isUnlinked) {
+        return;
+      }
+      
+      // If member has no roster data, set their subteam to "Unknown team"
+      // This applies to both regular members and creators who are also members
+      if (!membersWithRosterData.has(member.id)) {
+        console.log('🔄 [MEMBERS API] Member has no roster data, setting to Unknown team', { 
+          userId: member.id, 
+          name: member.name,
+          isCreator: member.isCreator,
+          currentSubteam: member.subteam?.name 
+        });
+        
+        member.subteam = {
+          id: null,
+          name: 'Unknown team',
+          description: 'Not assigned to any roster'
+        };
+        
+        // Clear subteams array and events since they're not on roster
+        member.subteams = [];
+        member.events = [];
+      }
+    });
+
     // Convert map to array
     const formattedMembers = Array.from(allMembers.values());
     const duration = Date.now() - startTime;

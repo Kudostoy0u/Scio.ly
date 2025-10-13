@@ -26,7 +26,7 @@ export async function POST(
 
     const { teamId } = await params;
     const body = await request.json();
-    const { username, email, role = 'member', message, targetTeamUnitId: requestedTeamUnitId } = body;
+    const { username, email, role = 'member', targetTeamUnitId: requestedTeamUnitId } = body;
 
     if (!username && !email) {
       return NextResponse.json({ error: 'Username or email is required' }, { status: 400 });
@@ -129,23 +129,33 @@ export async function POST(
       return NextResponse.json({ error: 'Invitation already sent' }, { status: 400 });
     }
 
-    // Generate invitation code
-    const invitationCode = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
-
-    // Create invitation
-    const invitationResult = await queryCockroachDB<any>(
-      `INSERT INTO new_team_invitations 
-       (team_id, invited_by, email, role, invitation_code, expires_at, message)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING *`,
-      [targetTeamUnitId, user.id, invitedUser.email, role, invitationCode, expiresAt, message]
+    // Get the team's join code (user_code for members, captain_code for captains)
+    const teamCodeResult = await queryCockroachDB<{ user_code: string, captain_code: string }>(
+      `SELECT user_code, captain_code FROM new_team_units WHERE id = $1`,
+      [targetTeamUnitId]
     );
 
-    const invitation = invitationResult.rows[0];
+    if (teamCodeResult.rows.length === 0) {
+      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
+    }
 
-    // Create notification for invited user
+    const teamCodes = teamCodeResult.rows[0];
+    const joinCode = role === 'captain' ? teamCodes.captain_code : teamCodes.user_code;
+
+    // Get team group info for notification
+    const teamGroupResult = await queryCockroachDB<{ school: string, division: string, slug: string }>(
+      `SELECT school, division, slug FROM new_team_groups 
+       WHERE id = (SELECT group_id FROM new_team_units WHERE id = $1)`,
+      [targetTeamUnitId]
+    );
+
+    if (teamGroupResult.rows.length === 0) {
+      return NextResponse.json({ error: 'Team group not found' }, { status: 404 });
+    }
+
+    const teamGroup = teamGroupResult.rows[0];
+
+    // Create notification for invited user using team_invite type (like the old system)
     const notificationResult = await queryCockroachDB(
       `INSERT INTO new_team_notifications 
        (user_id, team_id, notification_type, title, message, data)
@@ -154,12 +164,15 @@ export async function POST(
       [
         invitedUser.id,
         targetTeamUnitId,
-        'team_invitation',
+        'team_invite',
         'Team Invitation',
-        `You've been invited to join a team`,
+        `You've been invited to join ${teamGroup.school} - Division ${teamGroup.division}`,
         JSON.stringify({ 
-          invitation_id: invitation.id, 
-          invitation_code: invitationCode,
+          school: teamGroup.school,
+          division: teamGroup.division,
+          teamId: targetTeamUnitId,
+          memberName: invitedUser.display_name || invitedUser.username || invitedUser.email,
+          joinCode: joinCode,
           inviter_name: user.email,
           role: role
         })
@@ -177,8 +190,8 @@ export async function POST(
     }
 
     return NextResponse.json({ 
-      invitation,
-      message: 'Invitation sent successfully'
+      message: 'Invitation sent successfully',
+      joinCode: joinCode
     });
 
   } catch (error) {

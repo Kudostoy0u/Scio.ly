@@ -143,7 +143,7 @@ export async function POST(
 
     const { teamId } = await params;
     const body = await request.json();
-    const { subteamId, eventName, slotIndex, studentName } = body;
+    const { subteamId, eventName, slotIndex, studentName, userId } = body;
 
     if (!subteamId || !eventName || slotIndex === undefined) {
       return NextResponse.json({ 
@@ -188,10 +188,14 @@ export async function POST(
       return NextResponse.json({ error: 'Subteam not found' }, { status: 404 });
     }
 
-    // Try to find a matching team member for auto-linking
+    // Determine user ID to link - use provided userId if available, otherwise auto-link by name
     let userIdToLink: string | null = null;
-    if (studentName && studentName.trim()) {
-      // Get all team members for this group to check for name matches
+    
+    if (userId) {
+      // Use the explicitly provided userId
+      userIdToLink = userId;
+    } else if (studentName && studentName.trim()) {
+      // Auto-link by matching student name to team members
       const teamMembersResult = await queryCockroachDB<{
         user_id: string;
         display_name: string;

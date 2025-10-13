@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth';
 import { queryCockroachDB } from '@/lib/cockroachdb';
-import { acceptInvite } from '@/lib/db/teamExtras';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,64 +9,40 @@ export async function POST(request: NextRequest) {
     if (error) return error;
 
     const body = await request.json();
-    const { id, type, invitationId, school, division, teamId, memberName } = body;
+    const { id, type, invitationId } = body;
 
     if (!id || !type) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     if (type === 'team_invite') {
-      // Handle team invitation acceptance
-      if (!school || !division || !teamId || !memberName) {
-        return NextResponse.json({ error: 'Missing team invitation data' }, { status: 400 });
-      }
-
+      // Handle team invitation acceptance using join code
       try {
-        // Accept the team invitation using the existing acceptInvite function
-        const invite = await acceptInvite(parseInt(id));
-        
-        if (!invite) {
-          return NextResponse.json({ error: 'Invitation not found or already processed' }, { status: 404 });
-        }
-
-        // Get the team unit ID for the new team system
-        const teamUnitResult = await queryCockroachDB<{ id: string }>(
-          `SELECT id FROM new_team_units WHERE group_id = $1`,
-          [teamId]
+        // Get the notification data to extract the join code
+        const notificationResult = await queryCockroachDB<{ data: any, team_id: string }>(
+          `SELECT data, team_id FROM new_team_notifications WHERE id = $1 AND user_id = $2`,
+          [id, user!.id]
         );
 
-        if (teamUnitResult.rows.length === 0) {
-          return NextResponse.json({ error: 'Team unit not found' }, { status: 404 });
+        if (notificationResult.rows.length === 0) {
+          return NextResponse.json({ error: 'Notification not found' }, { status: 404 });
         }
 
-        const teamUnitId = teamUnitResult.rows[0].id;
+        const notification = notificationResult.rows[0];
+        const notificationData = notification.data;
+        const joinCode = notificationData?.joinCode;
 
-        // Check if user is already a member
-        const existingMembership = await queryCockroachDB<{ id: string }>(
-          `SELECT id FROM new_team_memberships WHERE user_id = $1 AND team_id = $2`,
-          [user!.id, teamUnitId]
-        );
-
-        if (existingMembership.rows.length === 0) {
-          // Create team membership in the new system
-          await queryCockroachDB(
-            `INSERT INTO new_team_memberships (user_id, team_id, role, status, joined_at)
-             VALUES ($1, $2, 'member', 'active', NOW())`,
-            [user!.id, teamUnitId]
-          );
+        if (!joinCode) {
+          return NextResponse.json({ error: 'Join code not found in notification' }, { status: 400 });
         }
 
-        // Get the team slug for redirect
-        const teamResult = await queryCockroachDB<{ slug: string }>(
-          `SELECT slug FROM new_team_groups WHERE school = $1 AND division = $2 AND id = $3`,
-          [school, division, teamId]
-        );
+        // Use the existing join team by code functionality
+        const { cockroachDBTeamsService } = await import('@/lib/services/cockroachdb-teams');
+        const team = await cockroachDBTeamsService.joinTeamByCode(user!.id, joinCode);
 
-        if (teamResult.rows.length === 0) {
-          return NextResponse.json({ error: 'Team not found' }, { status: 404 });
+        if (!team) {
+          return NextResponse.json({ error: 'Invalid or expired join code' }, { status: 400 });
         }
-
-        const teamSlug = teamResult.rows[0].slug;
 
         // Mark the notification as read
         await queryCockroachDB(
@@ -79,7 +54,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ 
           success: true, 
-          slug: teamSlug,
+          slug: team.slug,
           message: 'Team invitation accepted successfully'
         });
       } catch (inviteError) {

@@ -104,6 +104,9 @@ export default function PeopleTab({
   const [selectedSubteam, setSelectedSubteam] = useState<string>('all');
   const [showInlineInvite, setShowInlineInvite] = useState(false);
   const [linkInviteStates, setLinkInviteStates] = useState<Record<string, boolean>>({});
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [showSubteamDropdown, setShowSubteamDropdown] = useState<string | null>(null);
 
   // Conflict detection function for member events
   const detectMemberConflicts = useCallback((_members: Member[]) => {
@@ -498,7 +501,7 @@ export default function PeopleTab({
       )}
 
       {/* Members Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
         {filteredMembers.length === 0 ? (
           <div className={`col-span-full text-center py-12 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
             <p>No members found</p>
@@ -605,9 +608,10 @@ export default function PeopleTab({
                   )}
                 </div>
 
-                {/* Subteams with hover-remove for captains */}
+                {/* All Badges - Subteams, Events, and Add Event */}
                 {!member.isPendingInvitation && (
-                  <div className="flex flex-wrap gap-1 gap-y-2">
+                  <div className="flex flex-wrap gap-1 gap-y-2 justify-center">
+                    {/* Subteam badges */}
                     {(member.subteams && member.subteams.length > 0 ? member.subteams : [member.subteam]).filter(Boolean).map((subteam, index) => (
                       <div key={subteam?.id || index} className="relative group">
                         <div className={`px-2 py-1 rounded-full text-xs font-medium border ${
@@ -616,6 +620,17 @@ export default function PeopleTab({
                             : 'bg-green-100 text-green-800 border-green-200'
                         }`}>
                           {subteam?.name || 'Unknown'}
+                          {/* Show "set?" for captains when subteam is "Unknown team" */}
+                          {isCaptain && member.id && subteam?.name === 'Unknown team' && (
+                            <span className="cursor-pointer" 
+                                  onClick={() => {
+                                    setSelectedMember(member);
+                                    setShowSubteamDropdown(showSubteamDropdown === member.id ? null : member.id);
+                                  }}
+                                  title="Set subteam for this user">
+                              <span>,</span><span className="text-blue-600 hover:text-blue-800"> set?</span>
+                            </span>
+                          )}
                         </div>
                         {isCaptain && member.id && subteam?.id && (
                           <button
@@ -657,41 +672,47 @@ export default function PeopleTab({
                         )}
                       </div>
                     ))}
-                  </div>
-                )}
 
-                {/* Events with hover-remove for captains */}
-                {member.events.length > 0 && (() => {
-                  // Create a list of all events with their subteams
-                  const eventsWithSubteams: Array<{event: string, subteam: string, subteamId: string}> = [];
-                  
-                  // If member has multiple subteams, show each event for each subteam it appears in
-                  if (member.subteams && member.subteams.length > 0) {
-                    member.subteams.forEach(subteam => {
-                      if (subteam.events) {
-                        subteam.events.forEach(event => {
+                    {/* Event badges */}
+                    {member.events.length > 0 && (() => {
+                      // Create a list of all events with their subteams
+                      const eventsWithSubteams: Array<{event: string, subteam: string, subteamId: string}> = [];
+                      
+                      // If member has multiple subteams, show each event for each subteam it appears in
+                      if (member.subteams && member.subteams.length > 0) {
+                        member.subteams.forEach(subteam => {
+                          if (subteam.events) {
+                            subteam.events.forEach(event => {
+                              eventsWithSubteams.push({
+                                event,
+                                subteam: subteam.name,
+                                subteamId: subteam.id
+                              });
+                            });
+                          }
+                        });
+                      } else if (member.subteam) {
+                        // Fallback for single subteam
+                        member.events.forEach(event => {
                           eventsWithSubteams.push({
                             event,
-                            subteam: subteam.name,
-                            subteamId: subteam.id
+                            subteam: member.subteam?.name || 'Unknown',
+                            subteamId: member.subteam?.id || ''
                           });
                         });
                       }
-                    });
-                  } else if (member.subteam) {
-                    // Fallback for single subteam
-                    member.events.forEach(event => {
-                      eventsWithSubteams.push({
-                        event,
-                        subteam: member.subteam?.name || 'Unknown',
-                        subteamId: member.subteam?.id || ''
-                      });
-                    });
-                  }
-                  
-                  return (
-                    <div className="flex flex-wrap gap-1 gap-y-2 justify-center">
-                      {eventsWithSubteams.map((eventData, eventIndex) => (
+                      
+                      // Filter out "General" events if there are specific events
+                      const hasSpecificEvents = eventsWithSubteams.some(e => e.event !== 'General');
+                      const filteredEvents = hasSpecificEvents 
+                        ? eventsWithSubteams.filter(e => e.event !== 'General')
+                        : eventsWithSubteams;
+                      
+                      // Check if person is only on one subteam
+                      const uniqueSubteams = [...new Set(filteredEvents.map(e => e.subteamId))];
+                      const isSingleSubteam = uniqueSubteams.length === 1;
+                      
+                      return filteredEvents.map((eventData, eventIndex) => (
                         <div key={`${eventData.event}-${eventData.subteamId}-${eventIndex}`} className="relative group">
                           <span
                             className={`px-2 py-1 rounded-full text-xs font-medium border ${
@@ -700,7 +721,7 @@ export default function PeopleTab({
                                 : 'bg-blue-100 text-blue-800 border-blue-200'
                             }`}
                           >
-                            {eventData.event} - {eventData.subteam}
+                            {isSingleSubteam ? eventData.event : `${eventData.event} - ${eventData.subteam}`}
                           </span>
                           {isCaptain && member.id && (
                             <button
@@ -741,10 +762,82 @@ export default function PeopleTab({
                             </button>
                           )}
                         </div>
-                      ))}
+                      ));
+                    })()}
+
+                    {/* Add event badge for captains */}
+                    {isCaptain && member.id && member.subteam && member.subteam.name !== 'Unknown team' && (
+                      <button
+                        onClick={() => {
+                          setSelectedMember(member);
+                          setShowEventModal(true);
+                        }}
+                        className={`px-2 py-1 rounded-full text-xs font-medium border ${
+                          darkMode 
+                            ? 'bg-purple-900 text-purple-300 border-purple-700 hover:bg-purple-800' 
+                            : 'bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200'
+                        }`}
+                        title="Add this user to an event"
+                      >
+                        Add event?
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Subteam assignment dropdown */}
+                {showSubteamDropdown === member.id && selectedMember && (
+                  <div className="mt-2">
+                    <div className={`relative inline-block text-left ${darkMode ? 'bg-gray-800' : 'bg-white'} border ${darkMode ? 'border-gray-600' : 'border-gray-300'} rounded-md shadow-lg`}>
+                      <div className="py-1">
+                        {subteams.map((subteam) => (
+                          <button
+                            key={subteam.id}
+                            onClick={async () => {
+                              try {
+                                // Add user to roster in the selected subteam
+                                const response = await fetch(`/api/teams/${team.slug}/roster`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    subteamId: subteam.id,
+                                    eventName: 'General', // Placeholder event
+                                    slotIndex: 0,
+                                    studentName: selectedMember.name,
+                                    userId: selectedMember.id // Link to existing user
+                                  })
+                                });
+
+                                if (response.ok) {
+                                  // Invalidate caches to refresh the data
+                                  invalidateCache(`members-${team.slug}-all`);
+                                  invalidateCache(`members-${team.slug}-${selectedSubteam}`);
+                                  subteams.forEach(s => {
+                                    invalidateCache(`roster-${team.slug}-${s.id}`);
+                                  });
+                                  
+                                  // Reload members to show updated data
+                                  loadMembers(team.slug, selectedSubteam);
+                                  
+                                  setShowSubteamDropdown(null);
+                                  setSelectedMember(null);
+                                } else {
+                                  const error = await response.json();
+                                  console.error('Error assigning subteam:', error);
+                                }
+                              } catch (error) {
+                                console.error('Error assigning subteam:', error);
+                              }
+                            }}
+                            className={`w-full text-left px-4 py-2 text-sm ${darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}
+                          >
+                            {subteam.name}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  );
-                })()}
+                  </div>
+                )}
 
                 {/* Link Status */}
                 {member.isPendingInvitation ? (
@@ -818,6 +911,99 @@ export default function PeopleTab({
           ))
         )}
       </div>
+
+
+      {/* Event Assignment Modal */}
+      {showEventModal && selectedMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className={`relative ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-lg w-full max-h-[80vh] overflow-hidden`}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} px-4 pt-5 pb-4 sm:p-6 sm:pb-4`}>
+              <h3 className={`text-lg leading-6 font-medium ${darkMode ? 'text-white' : 'text-gray-900'} mb-4`}>
+                Add Event for {selectedMember.name}
+              </h3>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-3`}>
+                  Select an event to add {selectedMember.name} to in {selectedMember.subteam?.name}.
+                </p>
+                {/* Common Science Olympiad events for Division C */}
+                {[
+                  'Anatomy and Physiology',
+                  'Astronomy',
+                  'Chemistry Lab',
+                  'Circuit Lab',
+                  'Codebusters',
+                  'Designer Genes',
+                  'Disease Detectives',
+                  'Dynamic Planet',
+                  'Entomology',
+                  'Experimental Design',
+                  'Forensics',
+                  'Machines',
+                  'Materials Science',
+                  'Meteorology',
+                  'Remote Sensing',
+                  'Rocks and Minerals',
+                  'Solar System',
+                  'Water Quality'
+                ].map((event) => (
+                  <button
+                    key={event}
+                    onClick={async () => {
+                      try {
+                        // Add user to the selected event in their subteam
+                        const response = await fetch(`/api/teams/${team.slug}/roster`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            subteamId: selectedMember.subteam?.id,
+                            eventName: event,
+                            slotIndex: 0, // Add to first slot
+                            studentName: selectedMember.name
+                          })
+                        });
+
+                        if (response.ok) {
+                          // Invalidate caches to refresh the data
+                          invalidateCache(`members-${team.slug}-all`);
+                          invalidateCache(`members-${team.slug}-${selectedSubteam}`);
+                          subteams.forEach(s => {
+                            invalidateCache(`roster-${team.slug}-${s.id}`);
+                          });
+                          
+                          // Reload members to show updated data
+                          loadMembers(team.slug, selectedSubteam);
+                          
+                          setShowEventModal(false);
+                          setSelectedMember(null);
+                        } else {
+                          const error = await response.json();
+                          console.error('Error adding event:', error);
+                        }
+                      } catch (error) {
+                        console.error('Error adding event:', error);
+                      }
+                    }}
+                    className={`w-full text-left px-4 py-2 border ${darkMode ? 'border-gray-600 hover:bg-gray-700 text-white' : 'border-gray-300 hover:bg-gray-50 text-gray-900'} rounded-md`}
+                  >
+                    {event}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'} px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse`}>
+              <button
+                onClick={() => {
+                  setShowEventModal(false);
+                  setSelectedMember(null);
+                }}
+                className={`w-full inline-flex justify-center rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'} shadow-sm px-4 py-2 text-base font-medium sm:ml-3 sm:w-auto sm:text-sm`}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

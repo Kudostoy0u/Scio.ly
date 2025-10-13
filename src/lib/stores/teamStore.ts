@@ -644,7 +644,7 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
           const response = await fetch(`/api/teams/${teamSlug}/tournaments?subteamId=${subteamId}`);
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           const result = await response.json();
-          return result.tournaments || [];
+          return result.events || [];
         });
         
         set(state => ({

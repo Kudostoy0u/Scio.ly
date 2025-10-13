@@ -76,17 +76,30 @@ export interface UserTeam {
 
 // Get events for a specific date
 export const getEventsForDate = (date: Date, events: CalendarEvent[]) => {
-  const dateStr = date.toISOString().split('T')[0];
+  // Create date string in local timezone to avoid UTC conversion issues
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const dateStr = `${year}-${month}-${day}`;
+  
   return events.filter(event => {
-    const eventDate = new Date(event.start_time).toISOString().split('T')[0];
-    return eventDate === dateStr;
+    const eventDate = new Date(event.start_time);
+    const eventYear = eventDate.getFullYear();
+    const eventMonth = String(eventDate.getMonth() + 1).padStart(2, '0');
+    const eventDay = String(eventDate.getDate()).padStart(2, '0');
+    const eventDateStr = `${eventYear}-${eventMonth}-${eventDay}`;
+    return eventDateStr === dateStr;
   });
 };
 
 // Get recurring events for a specific date
 export const getRecurringEventsForDate = (date: Date, recurringMeetings: RecurringMeeting[]) => {
   const dayOfWeek = date.getDay();
-  const dateStr = date.toISOString().split('T')[0];
+  // Create date string in local timezone to avoid UTC conversion issues
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const dateStr = `${year}-${month}-${day}`;
   
   return recurringMeetings.filter(meeting => {
     if (!Array.isArray(meeting.days_of_week) || !meeting.days_of_week.includes(dayOfWeek)) return false;

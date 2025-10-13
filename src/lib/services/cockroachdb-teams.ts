@@ -434,17 +434,30 @@ export class CockroachDBTeamsService {
         .limit(1);
 
       if (existingMembership.length > 0) {
-        console.log(`Membership already exists for user ${data.userId} in team ${data.teamId}, using existing membership`);
-        const membership = existingMembership[0];
+        console.log(`Membership already exists for user ${data.userId} in team ${data.teamId}, updating status to ${data.status}`);
+        // Update the existing membership with new status and role
+        const [updatedMembership] = await dbPg
+          .update(newTeamMemberships)
+          .set({
+            role: data.role,
+            status: data.status,
+            joinedAt: new Date() // Update joined_at to reflect the new join
+          })
+          .where(and(
+            eq(newTeamMemberships.userId, data.userId),
+            eq(newTeamMemberships.teamId, data.teamId)
+          ))
+          .returning();
+
         return {
-          id: membership.id,
-          user_id: membership.userId,
-          team_id: membership.teamId,
-          role: membership.role as 'captain' | 'co_captain' | 'member' | 'observer',
-          joined_at: membership.joinedAt?.toISOString() || new Date().toISOString(),
-          invited_by: membership.invitedBy || undefined,
-          status: membership.status as 'active' | 'inactive' | 'pending' | 'banned',
-          permissions: membership.permissions as Record<string, any> | undefined
+          id: updatedMembership.id,
+          user_id: updatedMembership.userId,
+          team_id: updatedMembership.teamId,
+          role: updatedMembership.role as 'captain' | 'co_captain' | 'member' | 'observer',
+          joined_at: updatedMembership.joinedAt?.toISOString() || new Date().toISOString(),
+          invited_by: updatedMembership.invitedBy || undefined,
+          status: updatedMembership.status as 'active' | 'inactive' | 'pending' | 'banned',
+          permissions: updatedMembership.permissions as Record<string, any> | undefined
         };
       }
 

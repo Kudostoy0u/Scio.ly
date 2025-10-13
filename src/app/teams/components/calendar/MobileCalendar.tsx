@@ -80,7 +80,11 @@ export default function MobileCalendar({
   const eventsByDate: Record<string, CalendarEvent[]> = React.useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {};
     for (const evt of events) {
-      const d = new Date(evt.start_time).toISOString().split('T')[0];
+      const eventDate = new Date(evt.start_time);
+      const year = eventDate.getFullYear();
+      const month = String(eventDate.getMonth() + 1).padStart(2, '0');
+      const day = String(eventDate.getDate()).padStart(2, '0');
+      const d = `${year}-${month}-${day}`;
       if (!map[d]) map[d] = [];
       map[d].push(evt);
     }
