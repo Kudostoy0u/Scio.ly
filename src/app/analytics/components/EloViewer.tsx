@@ -22,6 +22,7 @@ import { getChartConfig } from './ChartConfig';
 import Leaderboard from '../../teams/components/Leaderboard';
 import CompareTool from './CompareTool';
 import ChartRangeSlider from './ChartRangeSlider';
+import LoadingIndicator from './LoadingIndicator';
 import { useTheme } from '@/app/contexts/ThemeContext';
 
 ChartJS.register(
@@ -75,6 +76,16 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division, metadata }) =>
 
   const schools = getAllSchools(eloData);
   const events = getAllEvents(eloData);
+
+  // Helper function to check if a school is available in current data
+  const isSchoolAvailable = (schoolName: string): boolean => {
+    const stateMatch = schoolName.match(/\(([A-Z]{2})\)$/);
+    if (!stateMatch) return false;
+    
+    const stateCode = stateMatch[1];
+    const schoolNameOnly = schoolName.replace(` (${stateCode})`, '');
+    return eloData[stateCode]?.[schoolNameOnly] !== undefined;
+  };
 
   const filteredSchools = schools.filter(school =>
     school.toLowerCase().includes(schoolSearch.toLowerCase())
@@ -298,23 +309,34 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division, metadata }) =>
                 className={`w-full px-3 py-2 border rounded-md ${darkMode ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400' : 'border-gray-300 bg-white text-gray-900 placeholder-gray-500'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
               />
               <div className={`max-h-48 overflow-y-auto border rounded-md ${darkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-300 bg-white'}`}>
-                {filteredSchools.map(school => (
-                  <div
-                    key={school}
-                    className={`px-3 py-2 cursor-pointer border-b last:border-b-0 transition-colors ${
-                      selectedSchools.includes(school) 
-                        ? darkMode 
-                          ? 'bg-blue-900/20 text-blue-300' 
-                          : 'bg-blue-50 text-blue-700'
-                        : darkMode 
-                          ? 'border-gray-600 hover:bg-gray-600 text-gray-300' 
-                          : 'border-gray-100 hover:bg-gray-50 text-gray-700'
-                    }`}
-                    onClick={() => handleSchoolToggle(school)}
-                  >
-                    {school}
-                  </div>
-                ))}
+                {filteredSchools.map(school => {
+                  const isAvailable = isSchoolAvailable(school);
+                  return (
+                    <div
+                      key={school}
+                      className={`px-3 py-2 cursor-pointer border-b last:border-b-0 transition-colors ${
+                        selectedSchools.includes(school) 
+                          ? darkMode 
+                            ? 'bg-blue-900/20 text-blue-300' 
+                            : 'bg-blue-50 text-blue-700'
+                          : darkMode 
+                            ? 'border-gray-600 hover:bg-gray-600 text-gray-300' 
+                            : 'border-gray-100 hover:bg-gray-50 text-gray-700'
+                      } ${!isAvailable ? 'opacity-60' : ''}`}
+                      onClick={() => isAvailable && handleSchoolToggle(school)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>{school}</span>
+                        {!isAvailable && (
+                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                            <div className="animate-spin rounded-full h-3 w-3 border-b border-gray-400"></div>
+                            <span>Loading...</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
               <div className="flex flex-wrap gap-2 items-center">
                 {selectedSchools.map(school => (
