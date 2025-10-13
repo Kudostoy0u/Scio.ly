@@ -182,7 +182,7 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
 
         {/* SciConnect Button */}
         <motion.div 
-          onClick={() => router.push('/leaderboard')}
+          onClick={() => window.open('https://www.sciconnect.org/', '_blank')}
           className={`rounded-lg cursor-pointer ${cardStyle}`}
         >
           <div className={`w-full h-full p-6 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'} transition-transform duration-300 group-hover:translate-x-2`}>
