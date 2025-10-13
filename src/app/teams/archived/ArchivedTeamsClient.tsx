@@ -5,9 +5,7 @@ import { useTheme } from '@/app/contexts/ThemeContext';
 import { useRouter } from 'next/navigation';
 import { Archive, Users, ArrowLeft, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
-import Link from 'next/link';
-import Image from 'next/image';
-import AuthButton from '@/app/components/AuthButton';
+import TeamLayout from '../components/TeamLayout';
 
 interface Team {
   id: string;
@@ -47,6 +45,20 @@ export default function ArchivedTeamsClient() {
     }
   };
 
+  const handleTabChange = (tab: 'home' | 'upcoming' | 'settings') => {
+    if (tab === 'home') {
+      router.push('/teams');
+    } else if (tab === 'upcoming') {
+      router.push('/teams/calendar');
+    } else if (tab === 'settings') {
+      router.push('/teams?tab=settings');
+    }
+  };
+
+  const handleNavigateToMainDashboard = () => {
+    router.push('/teams?view=all');
+  };
+
   const handleDeleteTeam = async (teamSlug: string) => {
     if (!confirm('Are you sure you want to permanently delete this team? This action cannot be undone.')) {
       return;
@@ -77,65 +89,27 @@ export default function ArchivedTeamsClient() {
 
   if (isLoading) {
     return (
-      <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-        {/* Top Navigation Bar */}
-        <div className={`border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
-          <div className="w-full px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-3">
-                <Link href="/" className="flex items-center">
-                  <Image
-                    src="/site-logo.png"
-                    alt="Scio.ly Logo"
-                    width={32}
-                    height={32}
-                    className="rounded-md"
-                  />
-                  <span className={`ml-2 text-xl font-bold hidden md:block ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Scio.ly
-                  </span>
-                </Link>
-              </div>
-              <AuthButton />
-            </div>
-          </div>
-        </div>
-
+      <TeamLayout
+        activeTab="home"
+        onTabChange={handleTabChange}
+        onNavigateToMainDashboard={handleNavigateToMainDashboard}
+      >
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto mb-4"></div>
             <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Loading archived teams...</p>
           </div>
         </div>
-      </div>
+      </TeamLayout>
     );
   }
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      {/* Top Navigation Bar */}
-      <div className={`border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <Link href="/" className="flex items-center">
-                <Image
-                  src="/site-logo.png"
-                  alt="Scio.ly Logo"
-                  width={32}
-                  height={32}
-                  className="rounded-md"
-                />
-                <span className={`ml-2 text-xl font-bold hidden md:block ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Scio.ly
-                </span>
-              </Link>
-            </div>
-            <AuthButton />
-          </div>
-        </div>
-      </div>
-
+    <TeamLayout
+      activeTab="home"
+      onTabChange={handleTabChange}
+      onNavigateToMainDashboard={handleNavigateToMainDashboard}
+    >
       {/* Main Content */}
       <div className="p-8">
         <div className="max-w-4xl mx-auto">
@@ -270,6 +244,6 @@ export default function ArchivedTeamsClient() {
           )}
         </div>
       </div>
-    </div>
+    </TeamLayout>
   );
 }

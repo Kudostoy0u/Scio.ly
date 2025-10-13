@@ -4,14 +4,10 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
-import { X, Menu, UserPlus, LogOut, Archive } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import Link from 'next/link';
-import Image from 'next/image';
-import Sidebar from './Sidebar';
+import { UserPlus, LogOut, Archive } from 'lucide-react';
+import TeamLayout from './TeamLayout';
 import TabNavigation from './TabNavigation';
 import BannerInvite from './BannerInvite';
-import AuthButton from '@/app/components/AuthButton';
 import { useTeamStore } from '@/app/hooks/useTeamStore';
 
 // Lazy load heavy components
@@ -62,7 +58,6 @@ export default function TeamDashboard({
   
   // Sidebar state
   const [sidebarTab, setSidebarTab] = useState<'home' | 'upcoming' | 'settings'>('home');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Home tab state
   const [activeTab] = useState<'roster' | 'stream' | 'assignments' | 'people'>(initialActiveTab);
@@ -77,9 +72,9 @@ export default function TeamDashboard({
     userTeams, 
     getSubteams, 
     loadSubteams,
-    addSubteam,
     updateSubteam,
-    deleteSubteam
+    deleteSubteam,
+    invalidateCache
   } = useTeamStore();
 
   // Mock data for demonstration
@@ -221,26 +216,17 @@ export default function TeamDashboard({
       if (response.ok) {
         const data = await response.json();
         
-        // Create subteam object for optimistic update
-        const newSubteam = {
-          id: data.id,
-          name: data.name,
-          team_id: data.team_id,
-          description: data.name,
-          created_at: new Date().toISOString()
-        };
-        
-        // Optimistically add the subteam to the store
-        addSubteam(team.slug, newSubteam);
-        
-        // Set the new subteam as active
-        setActiveSubteamId(data.id);
-        
         // Show success toast
         toast.success(`Subteam "${subteamName}" created successfully!`);
         
-        // Reload subteams to ensure we have the latest data from server
+        // Clear subteams cache to ensure fresh data
+        invalidateCache(`subteams-${team.slug}`);
+        
+        // Reload subteams to get the latest data from server
         await loadSubteams(team.slug);
+        
+        // Set the new subteam as active after reload
+        setActiveSubteamId(data.id);
       } else {
         const errorData = await response.json();
         toast.error(errorData.error || 'Failed to create subteam');
@@ -447,112 +433,15 @@ export default function TeamDashboard({
   };
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      {/* Fixed Top Navigation Bar */}
-      <div className={`fixed top-0 left-0 right-0 z-40 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Left side - Logo and mobile menu */}
-            <div className="flex items-center space-x-3">
-              <Link href="/" className="flex items-center">
-                <Image
-                  src="/site-logo.png"
-                  alt="Scio.ly Logo"
-                  width={32}
-                  height={32}
-                  className="rounded-md"
-                />
-                <span className={`ml-2 text-xl font-bold hidden md:block ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Scio.ly
-                </span>
-              </Link>
-              
-              {/* Mobile menu button */}
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className={`md:hidden p-2 rounded-lg ${darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'}`}
-              >
-                <Menu className="w-6 h-6" />
-              </button>
-            </div>
-
-            {/* Right side - Actions */}
-            <div className="flex items-center space-x-3">
-              <button className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </button>
-              <AuthButton />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex h-screen pt-16">
-        {/* Mobile Menu Overlay */}
-        <AnimatePresence>
-          {isMobileMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 md:hidden"
-              style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <motion.div
-                initial={{ x: -300 }}
-                animate={{ x: 0 }}
-                exit={{ x: -300 }}
-                transition={{ type: "tween", duration: 0.3, ease: "easeOut" }}
-                className={`w-64 h-full ${darkMode ? 'bg-gray-900' : 'bg-white'} shadow-xl overflow-hidden`}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="p-6 pt-20">
-                  <div className="flex items-center justify-between mb-8">
-                    <span className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Menu
-                    </span>
-                    <button
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`p-2 rounded-lg transition-colors ${darkMode ? 'text-gray-300 hover:bg-gray-800 hover:text-white' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-                  
-                  <Sidebar
-                    activeTab={sidebarTab}
-                    onTabChange={(tab) => {
-                      handleTabChange(tab);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    userTeams={userTeams}
-                    currentTeamSlug={team.slug}
-                    onTeamSelect={handleTeamSelect}
-                    onNavigateToMainDashboard={handleNavigateToMainDashboard}
-                  />
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Fixed Desktop Sidebar */}
-        <div className="hidden md:block fixed left-0 top-16 bottom-0 z-30">
-          <Sidebar
-            activeTab={sidebarTab}
-            onTabChange={handleTabChange}
-            userTeams={userTeams}
-            currentTeamSlug={team.slug}
-            onTeamSelect={handleTeamSelect}
-            onNavigateToMainDashboard={handleNavigateToMainDashboard}
-          />
-        </div>
-
-        {/* Main Content Area */}
-        <div className="flex-1 w-full md:ml-64 pb-16 md:pb-0 overflow-y-auto">
+    <>
+      <TeamLayout
+        activeTab={sidebarTab}
+        onTabChange={handleTabChange}
+        userTeams={userTeams}
+        currentTeamSlug={team.slug}
+        onTeamSelect={handleTeamSelect}
+        onNavigateToMainDashboard={handleNavigateToMainDashboard}
+      >
           {/* Team Header Banner - Scrollable */}
           <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
             <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
@@ -613,9 +502,7 @@ export default function TeamDashboard({
           )}
           
           {sidebarTab !== 'home' && renderSidebarContent()}
-        </div>
-      </div>
-
+      </TeamLayout>
 
       {/* Banner Invite */}
       <BannerInvite
@@ -747,7 +634,6 @@ export default function TeamDashboard({
           </div>
         </div>
       )}
-
-    </div>
+    </>
   );
 }

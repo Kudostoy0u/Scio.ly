@@ -62,6 +62,12 @@ interface Member {
     name: string;
     description: string;
   };
+  subteams?: Array<{
+    id: string;
+    name: string;
+    description: string;
+    events?: string[];
+  }>;
   subteamId?: string;
   events: string[];
   eventCount?: number;
@@ -599,27 +605,29 @@ export default function PeopleTab({
                   )}
                 </div>
 
-                {/* Subteam with hover-remove for captains */}
+                {/* Subteams with hover-remove for captains */}
                 {!member.isPendingInvitation && (
-                  <div className="relative group">
-                    <div className={`px-2 py-1 rounded-full text-xs font-medium border ${
-                      darkMode 
-                        ? 'bg-green-900 text-green-300 border-green-700' 
-                        : 'bg-green-100 text-green-800 border-green-200'
-                    }`}>
-                      {member.subteam?.name || 'Unknown'}
-                    </div>
-                    {isCaptain && member.id && member.subteam?.id && (
-                      <button
-                        onClick={async () => {
-                          try {
-                            // Remove all roster entries for this user from specific subteam (badge removal)
-                            const response = await fetch(`/api/teams/${team.slug}/roster/remove`, {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
+                  <div className="flex flex-wrap gap-1 gap-y-2">
+                    {(member.subteams && member.subteams.length > 0 ? member.subteams : [member.subteam]).filter(Boolean).map((subteam, index) => (
+                      <div key={subteam?.id || index} className="relative group">
+                        <div className={`px-2 py-1 rounded-full text-xs font-medium border ${
+                          darkMode 
+                            ? 'bg-green-900 text-green-300 border-green-700' 
+                            : 'bg-green-100 text-green-800 border-green-200'
+                        }`}>
+                          {subteam?.name || 'Unknown'}
+                        </div>
+                        {isCaptain && member.id && subteam?.id && (
+                          <button
+                            onClick={async () => {
+                              try {
+                                // Remove all roster entries for this user from specific subteam (badge removal)
+                                const response = await fetch(`/api/teams/${team.slug}/roster/remove`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ 
                                 userId: member.id,
-                                subteamId: member.subteam?.id 
+                                subteamId: subteam?.id 
                               })
                             });
                             if (response.ok) {
@@ -638,62 +646,11 @@ export default function PeopleTab({
                             console.error(e);
                             toast.error('Failed to remove subteam badge');
                           }
-                        }}
-                        className={`absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity px-1 py-0.5 rounded ${
-                          darkMode ? 'bg-red-600 text-white' : 'bg-red-600 text-white'
-                        }`}
-                        title="Remove subteam badge"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Events with hover-remove for captains */}
-                {member.events.length > 0 && (
-                  <div className="flex flex-wrap gap-1 justify-center">
-                    {member.events.map((event, eventIndex) => (
-                      <div key={eventIndex} className="relative group">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium border ${
-                            darkMode 
-                              ? 'bg-blue-900 text-blue-300 border-blue-700' 
-                              : 'bg-blue-100 text-blue-800 border-blue-200'
-                          }`}
-                        >
-                          {event}
-                        </span>
-                        {isCaptain && member.id && (
-                          <button
-                            onClick={async () => {
-                              try {
-                                // Remove this user's event badge across the group by clearing roster rows matching this event and user
-                                const response = await fetch(`/api/teams/${team.slug}/roster/remove`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ userId: member.id, eventName: event })
-                                });
-                                if (response.ok) {
-                                  toast.success(`Removed ${member.name} from ${event}`);
-                                  invalidateCache(`members-${team.slug}-${selectedSubteam}`);
-                                  subteams.forEach(subteam => {
-                                    invalidateCache(`roster-${team.slug}-${subteam.id}`);
-                                  });
-                                  loadMembers(team.slug, selectedSubteam);
-                                } else {
-                                  const err = await response.json();
-                                  toast.error(err.error || 'Failed to remove event badge');
-                                }
-                              } catch (e) {
-                                console.error(e);
-                                toast.error('Failed to remove event badge');
-                              }
                             }}
                             className={`absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity px-1 py-0.5 rounded ${
                               darkMode ? 'bg-red-600 text-white' : 'bg-red-600 text-white'
                             }`}
-                            title={`Remove ${event}`}
+                            title="Remove subteam badge"
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -702,6 +659,92 @@ export default function PeopleTab({
                     ))}
                   </div>
                 )}
+
+                {/* Events with hover-remove for captains */}
+                {member.events.length > 0 && (() => {
+                  // Create a list of all events with their subteams
+                  const eventsWithSubteams: Array<{event: string, subteam: string, subteamId: string}> = [];
+                  
+                  // If member has multiple subteams, show each event for each subteam it appears in
+                  if (member.subteams && member.subteams.length > 0) {
+                    member.subteams.forEach(subteam => {
+                      if (subteam.events) {
+                        subteam.events.forEach(event => {
+                          eventsWithSubteams.push({
+                            event,
+                            subteam: subteam.name,
+                            subteamId: subteam.id
+                          });
+                        });
+                      }
+                    });
+                  } else if (member.subteam) {
+                    // Fallback for single subteam
+                    member.events.forEach(event => {
+                      eventsWithSubteams.push({
+                        event,
+                        subteam: member.subteam?.name || 'Unknown',
+                        subteamId: member.subteam?.id || ''
+                      });
+                    });
+                  }
+                  
+                  return (
+                    <div className="flex flex-wrap gap-1 gap-y-2 justify-center">
+                      {eventsWithSubteams.map((eventData, eventIndex) => (
+                        <div key={`${eventData.event}-${eventData.subteamId}-${eventIndex}`} className="relative group">
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium border ${
+                              darkMode 
+                                ? 'bg-blue-900 text-blue-300 border-blue-700' 
+                                : 'bg-blue-100 text-blue-800 border-blue-200'
+                            }`}
+                          >
+                            {eventData.event} - {eventData.subteam}
+                          </span>
+                          {isCaptain && member.id && (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  // Remove this user's event badge from the specific subteam
+                                  const response = await fetch(`/api/teams/${team.slug}/roster/remove`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ 
+                                      userId: member.id, 
+                                      eventName: eventData.event,
+                                      subteamId: eventData.subteamId
+                                    })
+                                  });
+                                  if (response.ok) {
+                                    toast.success(`Removed ${member.name} from ${eventData.event} in ${eventData.subteam}`);
+                                    invalidateCache(`members-${team.slug}-${selectedSubteam}`);
+                                    subteams.forEach(subteam => {
+                                      invalidateCache(`roster-${team.slug}-${subteam.id}`);
+                                    });
+                                    loadMembers(team.slug, selectedSubteam);
+                                  } else {
+                                    const err = await response.json();
+                                    toast.error(err.error || 'Failed to remove event badge');
+                                  }
+                                } catch (e) {
+                                  console.error(e);
+                                  toast.error('Failed to remove event badge');
+                                }
+                              }}
+                              className={`absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity px-1 py-0.5 rounded ${
+                                darkMode ? 'bg-red-600 text-white' : 'bg-red-600 text-white'
+                              }`}
+                              title={`Remove ${eventData.event} from ${eventData.subteam}`}
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
 
                 {/* Link Status */}
                 {member.isPendingInvitation ? (

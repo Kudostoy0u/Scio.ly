@@ -1,10 +1,8 @@
 'use client';
-import logger from '@/lib/utils/logger';
 
 import { useState } from 'react';
 import Header from '@/app/components/Header';
 import EloViewer from './components/EloViewer';
-import LoadingIndicator from './components/LoadingIndicator';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { useLazyEloData } from './hooks/useLazyEloData';
 
@@ -17,7 +15,9 @@ export default function AnalyticsContent() {
     metadata, 
     loading, 
     backgroundLoading, 
-    error 
+    error,
+    loadingProgress,
+    loadedStates
   } = useLazyEloData({ division });
 
   if (loading) {
@@ -115,7 +115,14 @@ export default function AnalyticsContent() {
           {backgroundLoading && (
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-              <span>Loading additional teams in background...</span>
+              <span>
+                Loading additional teams in background... 
+                {loadingProgress.total > 0 && (
+                  <span className="ml-2">
+                    ({loadedStates.length} states loaded)
+                  </span>
+                )}
+              </span>
             </div>
           )}
         </div>

@@ -266,6 +266,7 @@ export default function RosterTab({
       });
 
       if (response.ok) {
+        const result = await response.json();
         const newRemovedEvents = new Set([...removedEvents, eventName]);
         setRemovedEvents(newRemovedEvents);
         // Update cache
@@ -276,7 +277,13 @@ export default function RosterTab({
           delete newRoster[eventName];
           return newRoster;
         });
-        toast.success(`${eventName} removed from ${conflictBlock}`);
+        
+        const deletedCount = result.deletedRosterEntries || 0;
+        if (deletedCount > 0) {
+          toast.success(`${eventName} removed from ${conflictBlock} (cleared ${deletedCount} roster entries)`);
+        } else {
+          toast.success(`${eventName} removed from ${conflictBlock}`);
+        }
       } else {
         const error = await response.json();
         toast.error(error.error || 'Failed to remove event');
