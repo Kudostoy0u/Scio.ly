@@ -1,46 +1,24 @@
 'use client';
 import logger from '@/lib/utils/logger';
 
-
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Header from '@/app/components/Header';
 import EloViewer from './components/EloViewer';
-import type { EloData } from './types/elo';
+import LoadingIndicator from './components/LoadingIndicator';
 import { useTheme } from '@/app/contexts/ThemeContext';
-import { loadEloData } from './utils/dataLoader';
+import { useLazyEloData } from './hooks/useLazyEloData';
 
 export default function AnalyticsContent() {
-  const [eloData, setEloData] = useState<EloData | null>(null);
-  const [metadata, setMetadata] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [division, setDivision] = useState<'b' | 'c'>('c');
   const { darkMode } = useTheme();
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const result = await loadEloData({ division });
-        
-        if (result.error) {
-          throw new Error(result.error);
-        }
-        
-        setEloData(result.data);
-        setMetadata(result.metadata);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load Elo data');
-        logger.error('Error loading Elo data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, [division]);
+  
+  const { 
+    data: eloData, 
+    metadata, 
+    loading, 
+    backgroundLoading, 
+    error 
+  } = useLazyEloData({ division });
 
   if (loading) {
     return (
@@ -49,7 +27,8 @@ export default function AnalyticsContent() {
         <div className="flex items-center justify-center min-h-[60vh] pt-24">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-lg">Loading team data (this can take a while)...</p>
+            <p className="text-lg">Loading default teams...</p>
+            <p className="text-sm text-gray-500 mt-2">Stevenson (IL) and Seven Lakes (TX) will appear first</p>
           </div>
         </div>
       </div>
@@ -105,7 +84,7 @@ export default function AnalyticsContent() {
       <Header />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
         {/* Division Selector */}
-        <div className="flex justify-center mb-8">
+        <div className="flex flex-col items-center gap-4 mb-8">
           <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-1 shadow-sm border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <button 
               className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -132,6 +111,13 @@ export default function AnalyticsContent() {
               Division C
             </button>
           </div>
+          
+          {backgroundLoading && (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <span>Loading additional teams in background...</span>
+            </div>
+          )}
         </div>
         
         <EloViewer eloData={eloData} division={division} metadata={metadata} />
