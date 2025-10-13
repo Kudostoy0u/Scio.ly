@@ -131,18 +131,18 @@ const BookmarkManager: React.FC<BookmarkManagerProps> = ({
   };
 
   return (
-    <button
-      onClick={handleBookmark}
-      disabled={isProcessing}
-      className={`flex items-center space-x-1 p-2 rounded-md transition-all duration-200 ${
-        isProcessing 
-          ? 'opacity-50 cursor-not-allowed' 
-          : darkMode
-            ? 'hover:bg-gray-700 text-gray-300 hover:text-yellow-400'
-            : 'hover:bg-gray-100 text-gray-600 hover:text-yellow-600'
-      }`}
-      title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
-    >
+    <div className="relative group">
+      <button
+        onClick={handleBookmark}
+        disabled={isProcessing}
+        className={`flex items-center space-x-1 p-2 rounded-md transition-all duration-200 ${
+          isProcessing 
+            ? 'opacity-50 cursor-not-allowed' 
+            : darkMode
+              ? 'hover:bg-gray-700 text-gray-300 hover:text-yellow-400'
+              : 'hover:bg-gray-100 text-gray-600 hover:text-yellow-600'
+        }`}
+      >
       {isProcessing ? (
         <div className={`animate-spin rounded-full border-2 border-current border-t-transparent ${sizeClasses[size]}`} />
       ) : isBookmarked ? (
@@ -155,7 +155,17 @@ const BookmarkManager: React.FC<BookmarkManagerProps> = ({
           {isBookmarked ? 'Bookmarked' : 'Bookmark'}
         </span>
       )}
-    </button>
+      </button>
+      {/* Custom tooltip */}
+      <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${
+        darkMode ? 'bg-gray-800 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-200 shadow-lg'
+      }`}>
+        {isBookmarked ? 'Remove bookmark' : 'Bookmark this question?'}
+        <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent ${
+          darkMode ? 'border-t-gray-800' : 'border-t-white'
+        }`}></div>
+      </div>
+    </div>
   );
 };
 

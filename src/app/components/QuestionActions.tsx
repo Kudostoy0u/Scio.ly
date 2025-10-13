@@ -148,27 +148,47 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
           size="sm"
         />
         <>
-          <button
-            onClick={onEdit}
-            disabled={isSubmittedEdit || shouldDisableActions}
-            className={`${buttonClass} ${(isSubmittedEdit || shouldDisableActions) ? disabledClass : 'hover:text-blue-500'}`}
-            title={isSubmittedEdit ? 'Edit already submitted' : shouldDisableActions ? 'Unavailable offline' : 'Edit question'}
-          >
-            <FaEdit className="w-4 h-4" />
-          </button>
-          {!isIdQuestion && (
+          <div className="relative group">
             <button
-              onClick={handleDirectReport}
-              disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions}
-              className={`${buttonClass} ${(isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions) ? disabledClass : 'hover:text-red-500'}`}
-              title={isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : shouldDisableActions ? 'Unavailable offline' : 'Permanently delete question from DB'}
+              onClick={onEdit}
+              disabled={isSubmittedEdit || shouldDisableActions}
+              className={`${buttonClass} ${(isSubmittedEdit || shouldDisableActions) ? disabledClass : 'hover:text-blue-500'}`}
             >
-              {isProcessingDirectReport ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
-              ) : (
-                <FaTrash className="w-4 h-4" />
-              )}
+              <FaEdit className="w-4 h-4" />
             </button>
+            {/* Custom tooltip */}
+            <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${
+              darkMode ? 'bg-gray-800 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-200 shadow-lg'
+            }`}>
+              {isSubmittedEdit ? 'Edit already submitted' : shouldDisableActions ? 'Unavailable offline' : 'Edit this question?'}
+              <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent ${
+                darkMode ? 'border-t-gray-800' : 'border-t-white'
+              }`}></div>
+            </div>
+          </div>
+          {!isIdQuestion && (
+            <div className="relative group">
+              <button
+                onClick={handleDirectReport}
+                disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions}
+                className={`${buttonClass} ${(isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions) ? disabledClass : 'hover:text-red-500'}`}
+              >
+                {isProcessingDirectReport ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
+                ) : (
+                  <FaTrash className="w-4 h-4" />
+                )}
+              </button>
+              {/* Custom tooltip */}
+              <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${
+                darkMode ? 'bg-gray-800 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-200 shadow-lg'
+              }`}>
+                {isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : shouldDisableActions ? 'Unavailable offline' : 'Delete this question from our database?'}
+                <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent ${
+                  darkMode ? 'border-t-gray-800' : 'border-t-white'
+                }`}></div>
+              </div>
+            </div>
           )}
         </>
       </div>
@@ -187,37 +207,57 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
         showLabel={true}
       />
       <>
-        <button
-          onClick={onEdit}
-          disabled={isSubmittedEdit || shouldDisableActions}
-          className={`${buttonClass} ${(isSubmittedEdit || shouldDisableActions) ? disabledClass : 'hover:text-blue-500'}`}
-          title={isSubmittedEdit ? 'Edit already submitted' : shouldDisableActions ? 'Unavailable offline' : 'Edit question'}
-        >
-          <div className="flex items-center space-x-1">
-            <FaEdit className="w-4 h-4" />
-            <span className="text-sm">
-              {isSubmittedEdit ? 'Edit Submitted' : 'Edit'}
-            </span>
-          </div>
-        </button>
-        {!isIdQuestion && (
+        <div className="relative group">
           <button
-            onClick={handleDirectReport}
-            disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions}
-            className={`${buttonClass} ${(isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions) ? disabledClass : 'hover:text-red-600'}`}
-            title={isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : shouldDisableActions ? 'Unavailable offline' : 'Quick remove question'}
+            onClick={onEdit}
+            disabled={isSubmittedEdit || shouldDisableActions}
+            className={`${buttonClass} ${(isSubmittedEdit || shouldDisableActions) ? disabledClass : 'hover:text-blue-500'}`}
           >
             <div className="flex items-center space-x-1">
-              {isProcessingDirectReport ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
-              ) : (
-                <FaTrash className="w-4 h-4" />
-              )}
+              <FaEdit className="w-4 h-4" />
               <span className="text-sm">
-                {isProcessingDirectReport ? 'Removing...' : hasRemovalFailed || isRemovalFailed ? 'Failed' : 'Remove'}
+                {isSubmittedEdit ? 'Edit Submitted' : 'Edit'}
               </span>
             </div>
           </button>
+          {/* Custom tooltip */}
+          <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${
+            darkMode ? 'bg-gray-800 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-200 shadow-lg'
+          }`}>
+            {isSubmittedEdit ? 'Edit already submitted' : shouldDisableActions ? 'Unavailable offline' : 'Edit this question?'}
+            <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent ${
+              darkMode ? 'border-t-gray-800' : 'border-t-white'
+            }`}></div>
+          </div>
+        </div>
+        {!isIdQuestion && (
+          <div className="relative group">
+            <button
+              onClick={handleDirectReport}
+              disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions}
+              className={`${buttonClass} ${(isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions) ? disabledClass : 'hover:text-red-600'}`}
+            >
+              <div className="flex items-center space-x-1">
+                {isProcessingDirectReport ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
+                ) : (
+                  <FaTrash className="w-4 h-4" />
+                )}
+                <span className="text-sm">
+                  {isProcessingDirectReport ? 'Removing...' : hasRemovalFailed || isRemovalFailed ? 'Failed' : 'Remove'}
+                </span>
+              </div>
+            </button>
+            {/* Custom tooltip */}
+            <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${
+              darkMode ? 'bg-gray-800 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-200 shadow-lg'
+            }`}>
+              {isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : shouldDisableActions ? 'Unavailable offline' : 'Delete this question from our database?'}
+              <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent ${
+                darkMode ? 'border-t-gray-800' : 'border-t-white'
+              }`}></div>
+            </div>
+          </div>
         )}
       </>
     </div>
