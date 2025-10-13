@@ -49,7 +49,7 @@ export function useLazyEloData(options: DataLoadOptions) {
     };
 
     loadData();
-  }, [options.division, options.states, options.forceReload]);
+  }, [options]);
 
   const refetch = useCallback(async () => {
     try {
@@ -66,7 +66,7 @@ export function useLazyEloData(options: DataLoadOptions) {
     } finally {
       setLoading(false);
     }
-  }, [options.division, options.states, options.forceReload]);
+  }, [options]);
 
   // Check if a specific state is loaded
   const isStateLoaded = useCallback((stateCode: string) => {

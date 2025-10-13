@@ -1,10 +1,8 @@
 'use client';
-import logger from '@/lib/utils/logger';
 
 import { useState } from 'react';
 import Header from '@/app/components/Header';
 import EloViewer from './components/EloViewer';
-import LoadingIndicator from './components/LoadingIndicator';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { useLazyEloData } from './hooks/useLazyEloData';
 

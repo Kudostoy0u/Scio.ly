@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
-import { useRouter } from 'next/navigation';
 import { X, Menu } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';

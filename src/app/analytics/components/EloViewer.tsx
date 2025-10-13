@@ -22,7 +22,6 @@ import { getChartConfig } from './ChartConfig';
 import Leaderboard from '../../teams/components/Leaderboard';
 import CompareTool from './CompareTool';
 import ChartRangeSlider from './ChartRangeSlider';
-import LoadingIndicator from './LoadingIndicator';
 import { useTheme } from '@/app/contexts/ThemeContext';
 
 ChartJS.register(
