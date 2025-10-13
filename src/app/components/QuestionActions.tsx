@@ -99,12 +99,15 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
       });
 
       const result = await response.json();
-      if (result.success) {
+      if (result.success && result.data.removed) {
         toast.success(result.data.reason || 'Question removed successfully!');
 
         onReportSubmitted?.(questionIndex);
 
         onQuestionRemoved?.(questionIndex);
+      } else if (result.success && !result.data.removed) {
+        toast.error(result.data.reason || 'Question removal not justified by AI');
+        setHasRemovalFailed(true);
       } else {
         toast.error(result.data.reason || 'Failed to remove question');
         setHasRemovalFailed(true);

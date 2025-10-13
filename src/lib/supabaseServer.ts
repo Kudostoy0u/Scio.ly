@@ -1,30 +1,39 @@
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import type { Database } from './types/database';
+import type { CookieOptions } from '@supabase/ssr';
+
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable');
+}
+
+if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable');
+}
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
 
-  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+  return createServerClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {
       get(name: string) {
-        return (cookieStore as any).get(name)?.value as string | undefined;
+        return cookieStore.get(name)?.value;
       },
-      set(name: string, value: string, options?: Record<string, unknown>) {
+      set(name: string, value: string, options: CookieOptions) {
         try {
-          (cookieStore as any).set({ name, value, ...(options || {}) });
+          cookieStore.set({ name, value, ...options });
         } catch {
-          // ignore in read-only contexts
+          // Ignore errors in read-only contexts (e.g., Server Components)
         }
       },
-      remove(name: string, options?: Record<string, unknown>) {
+      remove(name: string, options: CookieOptions) {
         try {
-
-          (cookieStore as any).set({ name, value: '', maxAge: 0, ...(options || {}) });
+          cookieStore.set({ name, value: '', ...options, maxAge: 0 });
         } catch {
-          // ignore in read-only contexts
+          // Ignore errors in read-only contexts
         }
       },
     },

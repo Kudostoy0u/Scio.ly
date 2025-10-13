@@ -1,72 +1,53 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { ApiResponse, GeminiAnalyzeQuestionRequest } from '@/lib/types/api';
+import { NextRequest } from 'next/server';
+import { ApiResponse } from '@/lib/types/api';
 import { geminiService } from '@/lib/services/gemini';
+import { validateFields, ApiErrors, successResponse, handleApiError } from '@/lib/api/utils';
+import logger from '@/lib/utils/logger';
 
 export const maxDuration = 60;
 
+interface AnalyzeQuestionRequest extends Record<string, unknown> {
+  question: Record<string, unknown>;
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const body: GeminiAnalyzeQuestionRequest = await request.json();
+    const body = await request.json();
+    const validation = validateFields<AnalyzeQuestionRequest>(body, ['question']);
 
-    if (!body.question) {
-      const response: ApiResponse = {
-        success: false,
-        error: 'Missing required field: question',
-      };
-      return NextResponse.json(response, { status: 400 });
-    }
+    if (!validation.valid) return validation.error;
 
-    console.log('Request received');
+    const { question } = validation.data;
+
+    logger.info('Gemini analyze-question request received');
 
     if (!geminiService.isAvailable()) {
-      console.log('Gemini AI not available');
-      const response: ApiResponse = {
-        success: false,
-        error: 'Gemini AI not available',
-      };
-      return NextResponse.json(response, { status: 503 });
+      logger.warn('Gemini AI not available');
+      return ApiErrors.serverError('Gemini AI not available');
     }
 
+    logger.debug('Question details', {
+      questionText: question.question || '',
+      options: question.options || [],
+      answers: question.answers || [],
+      subject: question.subject || '',
+      difficulty: question.difficulty || 0.5,
+    });
 
-    const questionText = body.question.question || '';
-    const options = body.question.options || [];
-    const answers = body.question.answers || [];
-    const subject = body.question.subject || '';
-    const difficulty = body.question.difficulty || 0.5;
-
-    console.log(`Question: ${questionText}`);
-    console.log(`Options: ${JSON.stringify(options)}`);
-    console.log(`Answers: ${JSON.stringify(answers)}`);
-    console.log(`Subject: ${subject}, Difficulty: ${difficulty}`);
-
-    console.log('Sending request to Gemini AI');
+    logger.info('Sending analyze-question request to Gemini AI');
 
     try {
-      const result = await geminiService.analyzeQuestion(body.question);
+      const result = await geminiService.analyzeQuestion(question, '', question.event as string || '');
 
-      console.log('Gemini AI response received:', result);
+      logger.info('Gemini AI analyze-question response received');
 
-      const response: ApiResponse = {
-        success: true,
-        data: result,
-      };
-
-      return NextResponse.json(response);
+      return successResponse<ApiResponse['data']>(result);
     } catch (error) {
-      console.log('Gemini AI error:', error);
-      const response: ApiResponse = {
-        success: false,
-        error: 'Failed to analyze question',
-      };
-      return NextResponse.json(response, { status: 500 });
+      logger.error('Gemini AI analyze-question error:', error);
+      return ApiErrors.serverError('Failed to analyze question');
     }
   } catch (error) {
-    console.error('POST /api/gemini/analyze-question error:', error);
-    const response: ApiResponse = {
-      success: false,
-      error: 'Invalid request body',
-    };
-    return NextResponse.json(response, { status: 400 });
+    logger.error('POST /api/gemini/analyze-question error:', error);
+    return handleApiError(error);
   }
 }

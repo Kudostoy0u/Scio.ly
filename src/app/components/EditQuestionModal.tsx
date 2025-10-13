@@ -343,8 +343,8 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-      style={{ display: isOpen ? 'flex' : 'none' }}
+      className="fixed inset-0 flex items-center justify-center z-50"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', display: isOpen ? 'flex' : 'none' }}
       onClick={handleClose}
     >
       <div
@@ -441,7 +441,6 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
                   darkMode ? 'border-gray-600 bg-gray-700/50' : 'border-gray-300 bg-gray-50'
                 }`}>
                   <div className="mb-2">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img 
                       src={currentImageUrl || question?.imageData || (question as any)?.imageUrl} 
                       alt="Question" 

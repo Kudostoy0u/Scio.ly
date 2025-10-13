@@ -6,6 +6,7 @@ export function normalizeTestText(input: string): string {
   // 1) Replace private-use glyphs from the problematic font with intended symbols
   // U+F0AE -> →
   text = text.replace(/\uF0AE/g, '→');
+  text = text.replace(/\uF0E0/g, '→');
 
   // U+F0D7 followed by U+F020 (space) -> ×
   text = text.replace(/\uF0D7\uF020/g, '×');
@@ -13,8 +14,7 @@ export function normalizeTestText(input: string): string {
   // U+F088 -> ⇌
   text = text.replace(/\uF088/g, '⇌');
 
-  // 2) Replace ^∆ with ^- in all scenarios
-  text = text.replace(/\^∆/g, '^-');
+  text = text.replace(/([A-Za-z0-9])\s*∆(?!\s*[sShHgG])\s*/g, '$1–');
 
   // 3) Remove point annotations like [2 pt], [3 pts], [1 point], [5 points]
   // and their parenthesized forms (2 pt), etc., anywhere in the string (case-insensitive)

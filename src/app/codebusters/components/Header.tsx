@@ -10,7 +10,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ darkMode, timeLeft, isTestSubmitted = false }) => {
   return (
     <>
-      <header className="w-full max-w-[80vw] flex justify-between items-center pt-3 pb-0">
+      <header className="w-full max-w-[90vw] md:max-w-6xl flex justify-between items-center pt-3 pb-0">
         <div className="flex items-center flex-1 min-w-0">
           <h1 className={`text-lg md:text-xl lg:text-3xl font-extrabold break-words ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
             Codebusters

@@ -175,12 +175,60 @@ export const createPaginationParams = (page?: string, limit?: string) => {
 
 export const createSortParams = (sortBy?: string, sortOrder?: string) => {
   const validSortOrders = ['asc', 'desc'] as const;
-  const order = sortOrder && validSortOrders.includes(sortOrder as 'asc' | 'desc') 
-    ? sortOrder as 'asc' | 'desc' 
+  const order = sortOrder && validSortOrders.includes(sortOrder as 'asc' | 'desc')
+    ? sortOrder as 'asc' | 'desc'
     : 'desc';
-  
+
   return {
     sortBy: sortBy || 'createdAt',
     sortOrder: order,
   };
-}; 
+};
+
+/**
+ * Create a successful API response (alias for consistency)
+ */
+export const successResponse = createSuccessResponse;
+
+/**
+ * Common error responses
+ */
+export const ApiErrors = {
+  unauthorized: () => createErrorResponse('Unauthorized', 401),
+  forbidden: () => createErrorResponse('Forbidden', 403),
+  notFound: (resource?: string) =>
+    createErrorResponse(resource ? `${resource} not found` : 'Not found', 404),
+  badRequest: (message: string = 'Bad request') => createErrorResponse(message, 400),
+  missingFields: (fields: string[]) =>
+    createErrorResponse(`Missing required fields: ${fields.join(', ')}`, 400),
+  serverError: (message: string = 'Internal server error') => createErrorResponse(message, 500),
+  tooManyRequests: () => createErrorResponse('Too many requests - Please try again later', 429),
+} as const;
+
+/**
+ * Validate required fields in request body
+ */
+export function validateFields<T extends Record<string, unknown>>(
+  body: unknown,
+  requiredFields: (keyof T)[]
+): { valid: true; data: T } | { valid: false; error: NextResponse } {
+  if (!body || typeof body !== 'object') {
+    return {
+      valid: false,
+      error: ApiErrors.badRequest('Invalid request body'),
+    };
+  }
+
+  const missingFields = requiredFields.filter(
+    (field) => !(field in body) || (body as Record<string, unknown>)[field as string] == null
+  );
+
+  if (missingFields.length > 0) {
+    return {
+      valid: false,
+      error: ApiErrors.missingFields(missingFields as string[]),
+    };
+  }
+
+  return { valid: true, data: body as T };
+} 

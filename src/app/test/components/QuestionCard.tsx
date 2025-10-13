@@ -89,7 +89,6 @@ export default function QuestionCard({
       
               {(question.imageUrl || (question as any).imageData) && (
           <div className="mb-4 w-full flex justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={(question as any).imageData || question.imageUrl} alt="Mineral" className="max-h-64 rounded-md border" />
           </div>
         )}

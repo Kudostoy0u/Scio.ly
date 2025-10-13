@@ -1,16 +1,34 @@
 import { supabase } from '@/lib/supabase';
 import { getDailyMetrics, DailyMetrics } from './metrics';
 
+/**
+ * Game points management utilities for Science Olympiad platform
+ * Provides comprehensive game points tracking, updates, and analytics
+ */
+
+/**
+ * Saves daily metrics to localStorage
+ * 
+ * @param {DailyMetrics} metrics - Daily metrics to save
+ */
 const saveLocalMetrics = (metrics: DailyMetrics) => {
   const today = new Date().toISOString().split('T')[0];
   localStorage.setItem(`metrics_${today}`, JSON.stringify(metrics));
 };
 
 /**
- * Updates the game points for the current day.
- * @param userId The user's ID, or null for anonymous users.
- * @param pointsChange The amount to change the game points by (e.g., 1, -1, 0).
- * @returns The updated DailyMetrics or null if an error occurs.
+ * Updates the game points for the current day
+ * Handles both authenticated and anonymous users
+ * 
+ * @param {string | null} userId - The user's ID, or null for anonymous users
+ * @param {number} pointsChange - The amount to change the game points by (e.g., 1, -1, 0)
+ * @returns {Promise<DailyMetrics | null>} The updated DailyMetrics or null if an error occurs
+ * @throws {Error} When database operation fails
+ * @example
+ * ```typescript
+ * const updatedMetrics = await updateGamePoints('user-123', 10);
+ * console.log(updatedMetrics?.gamePoints); // Updated game points
+ * ```
  */
 export const updateGamePoints = async (
   userId: string | null,
@@ -101,11 +119,18 @@ export const updateGamePoints = async (
 };
 
 /**
- * Sets the game points for a specific user for the current day directly.
- * Intended for admin use.
- * @param userId The user's ID.
- * @param newScore The new integer score to set.
- * @returns boolean Indicating success or failure.
+ * Sets the game points for a specific user for the current day directly
+ * Intended for admin use and direct score management
+ * 
+ * @param {string} userId - The user's ID
+ * @param {number} newScore - The new integer score to set
+ * @returns {Promise<boolean>} Boolean indicating success or failure
+ * @throws {Error} When user ID is invalid or database operation fails
+ * @example
+ * ```typescript
+ * const success = await setGamePoints('user-123', 100);
+ * console.log(success); // true or false
+ * ```
  */
 export const setGamePoints = async (
   userId: string,
@@ -176,8 +201,16 @@ export const setGamePoints = async (
 
 /**
  * Gets the total game points for a user across all time
- * @param userId The user's ID
- * @returns Total game points or 0 if error
+ * Calculates cumulative game points from all transactions
+ * 
+ * @param {string} userId - The user's ID
+ * @returns {Promise<number>} Total game points or 0 if error
+ * @throws {Error} When database operation fails
+ * @example
+ * ```typescript
+ * const totalPoints = await getTotalGamePoints('user-123');
+ * console.log(totalPoints); // Total accumulated points
+ * ```
  */
 export const getTotalGamePoints = async (userId: string): Promise<number> => {
   if (!userId) return 0;
@@ -202,9 +235,17 @@ export const getTotalGamePoints = async (userId: string): Promise<number> => {
 
 /**
  * Gets the game point transaction history for a user
- * @param userId The user's ID
- * @param limit Number of transactions to return (default: 50)
- * @returns Array of game point transactions
+ * Retrieves chronological list of all game point transactions
+ * 
+ * @param {string} userId - The user's ID
+ * @param {number} [limit=50] - Number of transactions to return (default: 50)
+ * @returns {Promise<Array<{id: string; user_id: string; points: number; source: string; description: string | null; created_at: string}>>} Array of game point transactions
+ * @throws {Error} When database operation fails
+ * @example
+ * ```typescript
+ * const history = await getGamePointHistory('user-123', 20);
+ * console.log(history); // Array of transaction records
+ * ```
  */
 export const getGamePointHistory = async (userId: string, limit: number = 50): Promise<Array<{
   id: string;

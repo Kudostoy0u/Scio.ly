@@ -131,7 +131,14 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         >
           {(() => {
             const pts = resolveQuestionPoints(item, index, questionPoints);
-            return `Question ${index + 1} [${pts} pts]`;
+            return (
+              <>
+                Question {index + 1}
+                <br className="md:hidden" />
+                <span className="hidden md:inline"> </span>
+                [{pts} pts]
+              </>
+            );
           })()}
         </h3>
         <div className="flex items-center gap-2">

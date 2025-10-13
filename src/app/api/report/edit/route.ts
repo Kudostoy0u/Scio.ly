@@ -1,27 +1,33 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { ApiResponse, ReportEditRequest } from '@/lib/types/api';
+import { ApiResponse } from '@/lib/types/api';
 import { geminiService } from '@/lib/services/gemini';
 import { edits as editsTable, questions as questionsTable } from '@/lib/db/schema';
 import { and, eq } from 'drizzle-orm';
+import { validateFields, ApiErrors, successResponse, handleApiError } from '@/lib/api/utils';
+import logger from '@/lib/utils/logger';
 
 export const maxDuration = 60;
 
+interface EditRequest extends Record<string, unknown> {
+  originalQuestion: Record<string, unknown>;
+  editedQuestion: Record<string, unknown>;
+  event: string;
+  reason?: string;
+  bypass?: boolean;
+  aiSuggestion?: Record<string, unknown>;
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const body: ReportEditRequest = await request.json();
+    const body = await request.json();
+    const validation = validateFields<EditRequest>(body, ['originalQuestion', 'editedQuestion', 'event']);
 
-    console.log('🔍 [REPORT/EDIT] Request body bypass flag:', body.bypass);
-    console.log('🔍 [REPORT/EDIT] Received aiSuggestion:', body.aiSuggestion);
+    if (!validation.valid) return validation.error;
 
-    if (!body.originalQuestion || !body.editedQuestion || !body.event) {
-      const response: ApiResponse = {
-        success: false,
-        error: 'Missing required fields: originalQuestion, editedQuestion, event',
-      };
-      return NextResponse.json(response, { status: 400 });
-    }
+    const { originalQuestion, editedQuestion, event, reason, bypass, aiSuggestion } = validation.data;
+
+    logger.debug('Report edit request', { bypass, hasAiSuggestion: !!aiSuggestion });
 
     let isValid = false;
     let aiReason = '';
@@ -45,73 +51,73 @@ export async function POST(request: NextRequest) {
     };
 
     // Compute canBypass: either flag is true OR aiSuggestion matches exactly
-    let canBypass = !!body.bypass;
-    if (body.aiSuggestion) {
+    let canBypass = !!bypass;
+    if (aiSuggestion) {
       try {
-        const aiQ = String(body.aiSuggestion.question || '');
-        const aiOpts = Array.isArray(body.aiSuggestion.options) ? body.aiSuggestion.options.map(String) : undefined;
-        const aiAns = Array.isArray(body.aiSuggestion.answers) ? body.aiSuggestion.answers.map(String) : [];
+        const aiQ = String(aiSuggestion.question || '');
+        const aiOpts = Array.isArray(aiSuggestion.options) ? aiSuggestion.options.map(String) : undefined;
+        const aiAns = Array.isArray(aiSuggestion.answers) ? aiSuggestion.answers.map(String) : [];
 
-        const editedQ = String((body.editedQuestion as any)?.question || '');
-        const editedOpts = Array.isArray((body.editedQuestion as any)?.options) ? ((body.editedQuestion as any)?.options as unknown[]).map(String) : undefined;
-        const editedAnsRaw = Array.isArray((body.editedQuestion as any)?.answers) ? ((body.editedQuestion as any)?.answers as unknown[]) : [];
+        const editedQ = String(editedQuestion.question || '');
+        const editedOpts = Array.isArray(editedQuestion.options) ? (editedQuestion.options as unknown[]).map(String) : undefined;
+        const editedAnsRaw = Array.isArray(editedQuestion.answers) ? (editedQuestion.answers as unknown[]) : [];
         const editedAnsText = toText(editedOpts, editedAnsRaw);
 
         const matches = editedQ === aiQ && arraysEqual(editedOpts, aiOpts) && arraysEqual(editedAnsText, aiAns);
-        console.log('🔒 [REPORT/EDIT] AI bypass verification:', { matches, editedAnsText, aiAns });
+        logger.debug('AI bypass verification', { matches, editedAnsText, aiAns });
         if (matches) canBypass = true;
       } catch (e) {
-        console.log('⚠️ [REPORT/EDIT] AI bypass verification failed:', e);
+        logger.warn('AI bypass verification failed', e);
       }
     }
 
     if (canBypass) {
       isValid = true;
       aiReason = 'Edit accepted!';
-      console.log('🤖 [REPORT/EDIT] AI bypass mode: Edit accepted as untampered AI suggestion');
+      logger.info('AI bypass mode: Edit accepted as untampered AI suggestion');
     } else {
 
       if (geminiService.isAvailable()) {
-        console.log('🤖 [REPORT/EDIT] Sending request to Gemini AI for edit validation');
-        console.log(`📝 [REPORT/EDIT] Event: ${body.event}, Reason: ${body.reason}`);
+        logger.info('Sending request to Gemini AI for edit validation');
+        logger.debug('Edit validation request', { event, reason });
 
         try {
           const result = await geminiService.validateReportEdit(
-            body.originalQuestion,
-            body.editedQuestion,
-            body.event,
-            body.reason || ''
+            originalQuestion,
+            editedQuestion,
+            event,
+            reason || ''
           );
 
-          console.log('✅ [REPORT/EDIT] Gemini AI response received:', result);
+          logger.info('Gemini AI edit validation response received');
 
           isValid = Boolean(result.isValid) || false;
           aiReason = String(result.reason || 'AI evaluation completed');
 
-          console.log(`🎯 [REPORT/EDIT] AI Decision: ${isValid}, Reason: ${aiReason}`);
+          logger.info(`AI Decision: ${isValid ? 'accepted' : 'rejected'}`, { reason: aiReason });
         } catch (error) {
           isValid = false;
           aiReason = 'AI evaluation failed';
-          console.log('❌ [REPORT/EDIT] Gemini AI error:', error);
+          logger.error('Gemini AI edit validation error:', error);
         }
       } else {
         isValid = false;
         aiReason = 'AI validation not available';
-        console.log('⚠️ [REPORT/EDIT] Gemini AI client not available');
+        logger.warn('Gemini AI client not available');
       }
     }
 
     if (isValid) {
 
-      const originalJSON = JSON.stringify(body.originalQuestion);
-      const editedJSON = JSON.stringify(body.editedQuestion);
+      const originalJSON = JSON.stringify(originalQuestion);
+      const editedJSON = JSON.stringify(editedQuestion);
 
       try {
 
         const existing = await db
           .select({ id: editsTable.id })
           .from(editsTable)
-          .where(and(eq(editsTable.event, body.event), eq(editsTable.originalQuestion, JSON.parse(originalJSON))))
+          .where(and(eq(editsTable.event, event), eq(editsTable.originalQuestion, JSON.parse(originalJSON))))
           .limit(1);
 
         if (existing.length > 0) {
@@ -119,41 +125,36 @@ export async function POST(request: NextRequest) {
             .update(editsTable)
             .set({ editedQuestion: JSON.parse(editedJSON), updatedAt: new Date() })
             .where(eq(editsTable.id, existing[0].id));
-          console.log('📝 [REPORT/EDIT] Updated existing edit in database');
+          logger.info('Updated existing edit in database');
         } else {
           await db
             .insert(editsTable)
-            .values({ event: body.event, originalQuestion: JSON.parse(originalJSON), editedQuestion: JSON.parse(editedJSON) });
-          console.log('📝 [REPORT/EDIT] Created new edit in database');
+            .values({ event, originalQuestion: JSON.parse(originalJSON), editedQuestion: JSON.parse(editedJSON) });
+          logger.info('Created new edit in database');
         }
 
-        console.log('✅ [REPORT/EDIT] Edit successfully saved to database');
+        logger.info('Edit successfully saved to database');
 
 
-        const original = body.originalQuestion as Record<string, unknown>;
-        const edited = body.editedQuestion as Record<string, unknown>;
-
-
-        const event = body.event;
-        let targetId: string | undefined = (original.id as string | undefined) || (edited.id as string | undefined);
+        let targetId: string | undefined = (originalQuestion.id as string | undefined) || (editedQuestion.id as string | undefined);
         if (!targetId) {
 
           const conditions: any[] = [
-            eq(questionsTable.question, String(original.question || '')),
+            eq(questionsTable.question, String(originalQuestion.question || '')),
             eq(questionsTable.event, String(event)),
           ];
-          if (original.tournament) conditions.push(eq(questionsTable.tournament, String(original.tournament)));
-          if (original.division) conditions.push(eq(questionsTable.division, String(original.division)));
+          if (originalQuestion.tournament) conditions.push(eq(questionsTable.tournament, String(originalQuestion.tournament)));
+          if (originalQuestion.division) conditions.push(eq(questionsTable.division, String(originalQuestion.division)));
           const found = await db.select({ id: questionsTable.id }).from(questionsTable).where(and(...conditions)).limit(1);
           targetId = found[0]?.id as string | undefined;
           if (!targetId) {
 
             const cond2: any[] = [
-              eq(questionsTable.question, String(edited.question || '')),
+              eq(questionsTable.question, String(editedQuestion.question || '')),
               eq(questionsTable.event, String(event)),
             ];
-            if (edited.tournament) cond2.push(eq(questionsTable.tournament, String(edited.tournament)));
-            if (edited.division) cond2.push(eq(questionsTable.division, String(edited.division)));
+            if (editedQuestion.tournament) cond2.push(eq(questionsTable.tournament, String(editedQuestion.tournament)));
+            if (editedQuestion.division) cond2.push(eq(questionsTable.division, String(editedQuestion.division)));
             const found2 = await db.select({ id: questionsTable.id }).from(questionsTable).where(and(...cond2)).limit(1);
             targetId = found2[0]?.id as string | undefined;
           }
@@ -161,62 +162,46 @@ export async function POST(request: NextRequest) {
 
         if (targetId) {
           const payload: Partial<typeof questionsTable.$inferInsert> = {
-            question: String(edited.question || ''),
-            tournament: String(edited.tournament || ''),
-            division: String(edited.division || ''),
-            event: String(event || edited.event || ''),
-            options: Array.isArray(edited.options) ? (edited.options as unknown[]) : [],
-            answers: Array.isArray(edited.answers) ? (edited.answers as unknown[]) : [],
-            subtopics: Array.isArray((edited as any).subtopics)
-              ? ((edited as any).subtopics as unknown[])
-              : (edited as any).subtopic
-                ? [String((edited as any).subtopic)]
+            question: String(editedQuestion.question || ''),
+            tournament: String(editedQuestion.tournament || ''),
+            division: String(editedQuestion.division || ''),
+            event: String(event || editedQuestion.event || ''),
+            options: Array.isArray(editedQuestion.options) ? (editedQuestion.options as unknown[]) : [],
+            answers: Array.isArray(editedQuestion.answers) ? (editedQuestion.answers as unknown[]) : [],
+            subtopics: Array.isArray((editedQuestion as any).subtopics)
+              ? ((editedQuestion as any).subtopics as unknown[])
+              : (editedQuestion as any).subtopic
+                ? [String((editedQuestion as any).subtopic)]
                 : [],
-            difficulty: typeof (edited as any).difficulty === 'number'
-              ? (edited as any).difficulty.toString()
-              : typeof (edited as any).difficulty === 'string'
-                ? String((edited as any).difficulty)
+            difficulty: typeof (editedQuestion as any).difficulty === 'number'
+              ? (editedQuestion as any).difficulty.toString()
+              : typeof (editedQuestion as any).difficulty === 'string'
+                ? String((editedQuestion as any).difficulty)
                 : '0.5',
           } as any;
           await db.update(questionsTable).set({ ...(payload as any), updatedAt: new Date() }).where(eq(questionsTable.id, targetId));
-          console.log('🧩 [REPORT/EDIT] Applied edit to questions table for id:', targetId);
+          logger.info('Applied edit to questions table', { targetId });
         } else {
-          console.log('⚠️ [REPORT/EDIT] Could not locate target question to auto-apply edit');
+          logger.warn('Could not locate target question to auto-apply edit');
         }
-        
-        const response: ApiResponse = {
-          success: true,
-          message: aiReason || 'Question edit saved and applied',
-          data: {
-            reason: aiReason,
-          },
-        };
-        return NextResponse.json(response);
+
+        return successResponse<ApiResponse['data']>(
+          { reason: aiReason },
+          aiReason || 'Question edit saved and applied'
+        );
       } catch (error) {
-        console.log('❌ [REPORT/EDIT] Database error:', error);
-        const response: ApiResponse = {
-          success: false,
-          error: 'Failed to save edit',
-        };
-        return NextResponse.json(response, { status: 500 });
+        logger.error('Database error saving edit:', error);
+        return ApiErrors.serverError('Failed to save edit');
       }
     } else {
-      console.log('❌ [REPORT/EDIT] Edit rejected by AI validation');
-      const response: ApiResponse = {
-        success: false,
-        message: aiReason || 'Edit was not accepted',
-        data: {
-          reason: aiReason,
-        },
-      };
-      return NextResponse.json(response);
+      logger.info('Edit rejected by AI validation');
+      return successResponse<ApiResponse['data']>(
+        { reason: aiReason },
+        aiReason || 'Edit was not accepted'
+      );
     }
   } catch (error) {
-    console.error('POST /api/report/edit error:', error);
-    const response: ApiResponse = {
-      success: false,
-      error: 'Invalid request body',
-    };
-    return NextResponse.json(response, { status: 400 });
+    logger.error('POST /api/report/edit error:', error);
+    return handleApiError(error);
   }
 }

@@ -1,17 +1,36 @@
 import { supabase } from '@/lib/supabase';
 
+/**
+ * User profile utilities for Science Olympiad platform
+ * Provides user profile management for both authenticated and anonymous users
+ */
 
+/**
+ * User profile interface
+ * Contains all user profile information
+ */
 export interface UserProfile {
+  /** User's first name */
   firstName?: string | null;
+  /** User's last name */
   lastName?: string | null;
+  /** User's username */
   username?: string | null;
+  /** User's display name */
   displayName?: string | null;
 }
 
+/** Default empty profile */
 const defaultProfile: UserProfile = {};
 
 // --- local storage functions for anonymous users ---
 
+/**
+ * Get local profile from localStorage
+ * Retrieves profile data for anonymous users
+ * 
+ * @returns {UserProfile} Local profile data
+ */
 const getLocalProfile = (): UserProfile => {
   const localProfile = localStorage.getItem('userProfile');
   if (localProfile) {
@@ -25,6 +44,12 @@ const getLocalProfile = (): UserProfile => {
   return { ...defaultProfile };
 };
 
+/**
+ * Save local profile to localStorage
+ * Stores profile data for anonymous users
+ * 
+ * @param {UserProfile} profile - Profile data to save
+ */
 const saveLocalProfile = (profile: UserProfile) => {
   localStorage.setItem('userProfile', JSON.stringify(profile));
 };
@@ -32,10 +57,16 @@ const saveLocalProfile = (profile: UserProfile) => {
 // --- supabase functions for logged-in users ---
 
 /**
- * Fetches the user's profile data.
- * Returns default profile if not found or for anonymous users.
- * @param userId The user's ID, or null for anonymous users.
- * @returns The user's profile data.
+ * Fetches the user's profile data
+ * Returns default profile if not found or for anonymous users
+ * 
+ * @param {string | null} userId - The user's ID, or null for anonymous users
+ * @returns {Promise<UserProfile>} The user's profile data
+ * @example
+ * ```typescript
+ * const profile = await getUserProfile('user-123');
+ * console.log(profile.displayName);
+ * ```
  */
 export const getUserProfile = async (userId: string | null): Promise<UserProfile> => {
   if (!userId) {

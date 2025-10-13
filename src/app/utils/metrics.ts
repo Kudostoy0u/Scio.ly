@@ -1,14 +1,34 @@
 import { supabase } from '@/lib/supabase';
 import { updateLeaderboardStats } from './leaderboardUtils';
+import { withAuthRetry } from '@/lib/utils/supabaseRetry';
+import logger from '@/lib/utils/logger';
 
+/**
+ * Metrics management utilities for Science Olympiad platform
+ * Provides comprehensive metrics tracking, analytics, and performance monitoring
+ */
+
+/**
+ * Daily metrics interface for user performance tracking
+ */
 export interface DailyMetrics {
+  /** Number of questions attempted */
   questionsAttempted: number;
+  /** Number of correct answers */
   correctAnswers: number;
+  /** List of events practiced */
   eventsPracticed: string[];
+  /** Questions per event breakdown */
   eventQuestions: Record<string, number>;
+  /** Game points earned */
   gamePoints: number;
 }
 
+/**
+ * Retrieves local metrics from localStorage
+ * 
+ * @returns {DailyMetrics} Local metrics or default metrics
+ */
 const getLocalMetrics = (): DailyMetrics => {
   const today = new Date().toISOString().split('T')[0];
   const localStats = typeof window !== 'undefined' ? localStorage.getItem(`metrics_${today}`) : null;
@@ -22,6 +42,11 @@ const getLocalMetrics = (): DailyMetrics => {
   return localStats ? { ...defaultMetrics, ...JSON.parse(localStats) } : defaultMetrics;
 };
 
+/**
+ * Saves metrics to localStorage
+ * 
+ * @param {DailyMetrics} metrics - Metrics to save
+ */
 const saveLocalMetrics = (metrics: DailyMetrics) => {
   const today = new Date().toISOString().split('T')[0];
   if (typeof window !== 'undefined') {
@@ -29,6 +54,19 @@ const saveLocalMetrics = (metrics: DailyMetrics) => {
   }
 };
 
+/**
+ * Gets daily metrics for a user
+ * Retrieves metrics from database or localStorage for anonymous users
+ * 
+ * @param {string | null} userId - User ID or null for anonymous users
+ * @returns {Promise<DailyMetrics | null>} Daily metrics or null if error
+ * @throws {Error} When database operation fails
+ * @example
+ * ```typescript
+ * const metrics = await getDailyMetrics('user-123');
+ * console.log(metrics?.questionsAttempted); // Daily questions attempted
+ * ```
+ */
 export const getDailyMetrics = async (userId: string | null): Promise<DailyMetrics | null> => {
   const defaultMetrics = {
     questionsAttempted: 0,
@@ -60,11 +98,24 @@ export const getDailyMetrics = async (userId: string | null): Promise<DailyMetri
     saveLocalMetrics(defaultMetrics);
     return defaultMetrics;
   } catch (error) {
-    console.error('Error getting metrics:', error);
+    logger.error('Error getting metrics:', error);
     return defaultMetrics;
   }
 };
 
+/**
+ * Gets weekly metrics for a user
+ * Aggregates daily metrics over the past 7 days
+ * 
+ * @param {string | null} userId - User ID or null for anonymous users
+ * @returns {Promise<DailyMetrics | null>} Weekly aggregated metrics or null if error
+ * @throws {Error} When database operation fails
+ * @example
+ * ```typescript
+ * const weeklyMetrics = await getWeeklyMetrics('user-123');
+ * console.log(weeklyMetrics?.questionsAttempted); // Weekly questions attempted
+ * ```
+ */
 export const getWeeklyMetrics = async (userId: string | null): Promise<DailyMetrics | null> => {
   if (!userId) return null;
 
@@ -94,11 +145,24 @@ export const getWeeklyMetrics = async (userId: string | null): Promise<DailyMetr
 
     return aggregated;
   } catch (error) {
-    console.error('Error getting weekly metrics:', error);
+    logger.error('Error getting weekly metrics:', error);
     return null;
   }
 };
 
+/**
+ * Gets monthly metrics for a user
+ * Aggregates daily metrics over the past 30 days
+ * 
+ * @param {string | null} userId - User ID or null for anonymous users
+ * @returns {Promise<DailyMetrics | null>} Monthly aggregated metrics or null if error
+ * @throws {Error} When database operation fails
+ * @example
+ * ```typescript
+ * const monthlyMetrics = await getMonthlyMetrics('user-123');
+ * console.log(monthlyMetrics?.questionsAttempted); // Monthly questions attempted
+ * ```
+ */
 export const getMonthlyMetrics = async (userId: string | null): Promise<DailyMetrics | null> => {
   if (!userId) return null;
 
@@ -128,11 +192,31 @@ export const getMonthlyMetrics = async (userId: string | null): Promise<DailyMet
 
     return aggregated;
   } catch (error) {
-    console.error('Error getting monthly metrics:', error);
+    logger.error('Error getting monthly metrics:', error);
     return null;
   }
 };
 
+/**
+ * Updates user metrics
+ * Updates both database and localStorage with new metrics
+ * 
+ * @param {string | null} userId - User ID or null for anonymous users
+ * @param {Object} updates - Metrics updates to apply
+ * @param {number} [updates.questionsAttempted] - Number of questions attempted
+ * @param {number} [updates.correctAnswers] - Number of correct answers
+ * @param {string} [updates.eventName] - Event name for tracking
+ * @returns {Promise<DailyMetrics | null>} Updated metrics or null if error
+ * @throws {Error} When database operation fails
+ * @example
+ * ```typescript
+ * const updatedMetrics = await updateMetrics('user-123', {
+ *   questionsAttempted: 5,
+ *   correctAnswers: 4,
+ *   eventName: 'Anatomy & Physiology'
+ * });
+ * ```
+ */
 export const updateMetrics = async (
   userId: string | null,
   updates: {
@@ -210,31 +294,20 @@ export const updateMetrics = async (
       game_points: currentStats.game_points
     };
 
-    let data;
-    {
-      const { data: upserted, error } = await (supabase as any)
-        .from('user_stats')
-        .upsert(updatedStats as any, { onConflict: 'user_id,date' })
-        .select()
-        .single();
-      if (error && (error as any).status && [401, 403].includes((error as any).status)) {
-        try { await supabase.auth.refreshSession(); } catch {}
-        const retry = await (supabase as any)
+    const { data, error } = await withAuthRetry(
+      async () => {
+        const query = supabase
           .from('user_stats')
           .upsert(updatedStats as any, { onConflict: 'user_id,date' })
           .select()
           .single();
-        if (retry.error) {
-          console.error('Error updating metrics after refresh:', retry.error);
-          return null;
-        }
-        data = retry.data;
-      } else if (error) {
-        console.error('Error updating metrics:', error);
-        return null;
-      } else {
-        data = upserted;
-      }
+        return await query;
+      },
+      'updateMetrics'
+    );
+
+    if (error || !data) {
+      return null;
     }
 
     saveLocalMetrics({
@@ -251,20 +324,19 @@ export const updateMetrics = async (
       try {
         await updateLeaderboardStats(attemptedDelta, correctDelta);
       } catch (leaderboardError) {
-        console.error('Error updating leaderboard stats:', leaderboardError);
-
+        logger.error('Error updating leaderboard stats:', leaderboardError);
       }
     }
 
     return {
-      questionsAttempted: data.questions_attempted,
-      correctAnswers: data.correct_answers,
-      eventsPracticed: data.events_practiced || [],
-      eventQuestions: data.event_questions || {},
-      gamePoints: data.game_points
+      questionsAttempted: (data as any).questions_attempted,
+      correctAnswers: (data as any).correct_answers,
+      eventsPracticed: (data as any).events_practiced || [],
+      eventQuestions: (data as any).event_questions || {},
+      gamePoints: (data as any).game_points
     };
   } catch (error) {
-    console.error('Error updating metrics:', error);
+    logger.error('Error updating metrics:', error);
     return null;
   }
 };
@@ -282,42 +354,34 @@ type UserStatsRow = {
 };
 
 export async function fetchDailyUserStatsRow(userId: string, date: string): Promise<UserStatsRow | null> {
-  const exec = async () => (supabase as any)
-    .from('user_stats')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('date', date)
-    .maybeSingle();
+  const { data } = await withAuthRetry(
+    async () => {
+      const query = supabase
+        .from('user_stats')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('date', date)
+        .maybeSingle();
+      return await query;
+    },
+    'fetchDailyUserStatsRow'
+  );
 
-  let { data, error } = await exec();
-  if (error && (error as any).status && [401, 403].includes((error as any).status)) {
-    try { await supabase.auth.refreshSession(); } catch {}
-    const retry = await exec();
-    data = retry.data; error = retry.error;
-  }
-  if (error && (error as any).code !== 'PGRST116') {
-    console.error('Error fetching daily user_stats row:', error);
-    return null;
-  }
   return data || null;
 }
 
 export async function fetchUserStatsSince(userId: string, fromDate: string): Promise<UserStatsRow[]> {
-  const exec = async () => (supabase as any)
-    .from('user_stats')
-    .select('*')
-    .eq('user_id', userId)
-    .gte('date', fromDate);
+  const { data } = await withAuthRetry(
+    async () => {
+      const query = supabase
+        .from('user_stats')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('date', fromDate);
+      return await query;
+    },
+    'fetchUserStatsSince'
+  );
 
-  let { data, error } = await exec();
-  if (error && (error as any).status && [401, 403].includes((error as any).status)) {
-    try { await supabase.auth.refreshSession(); } catch {}
-    const retry = await exec();
-    data = retry.data; error = retry.error;
-  }
-  if (error) {
-    console.error('Error fetching user_stats since date:', error);
-    return [];
-  }
   return data || [];
 }

@@ -47,7 +47,7 @@ const loadPreferences = (eventName: string) => {
   return defaults;
 };
 
-export const useCodebustersState = () => {
+export const useCodebustersState = (assignmentId?: string | null) => {
   const [quotes, setQuotes] = useState<QuoteData[]>([]);
   const [isTestSubmitted, setIsTestSubmitted] = useState(false);
   const [testScore, setTestScore] = useState<number | null>(null);
@@ -80,6 +80,13 @@ export const useCodebustersState = () => {
     }
     
     setHasAttemptedLoad(true);
+    
+    // Skip localStorage loading if we're in assignment mode
+    if (assignmentId) {
+      console.log('Assignment mode detected, skipping localStorage loading');
+      setIsLoading(false);
+      return;
+    }
     
     const testParamsStr = localStorage.getItem('testParams');
     const savedQuotes = localStorage.getItem('codebustersQuotes');
@@ -249,7 +256,7 @@ export const useCodebustersState = () => {
 
     logger.log('Setting isLoading to false');
     setIsLoading(false);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [assignmentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   useEffect(() => {

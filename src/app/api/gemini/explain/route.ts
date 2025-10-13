@@ -1,65 +1,47 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { ApiResponse, GeminiExplainRequest } from '@/lib/types/api';
+import { NextRequest } from 'next/server';
+import { ApiResponse } from '@/lib/types/api';
 import { geminiService } from '@/lib/services/gemini';
+import { validateFields, ApiErrors, successResponse, handleApiError } from '@/lib/api/utils';
+import logger from '@/lib/utils/logger';
 
 export const maxDuration = 60;
 
+interface ExplainRequest extends Record<string, unknown> {
+  question: Record<string, unknown>;
+  event: string;
+  userAnswer?: string;
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const body: GeminiExplainRequest = await request.json();
+    const body = await request.json();
+    const validation = validateFields<ExplainRequest>(body, ['question', 'event']);
 
-    if (!body.question || !body.event) {
-      const response: ApiResponse = {
-        success: false,
-        error: 'Missing required fields: question, event',
-      };
-      return NextResponse.json(response, { status: 400 });
-    }
+    if (!validation.valid) return validation.error;
 
-    console.log('Request received');
-    console.log(`Event: ${body.event}`);
+    const { question, event, userAnswer } = validation.data;
+
+    logger.info(`Gemini explain request received for event: ${event}`);
 
     if (!geminiService.isAvailable()) {
-      console.log('Gemini AI not available');
-      const response: ApiResponse = {
-        success: false,
-        error: 'Gemini AI not available',
-      };
-      return NextResponse.json(response, { status: 503 });
+      logger.warn('Gemini AI not available');
+      return ApiErrors.serverError('Gemini AI not available');
     }
 
-    console.log('Sending request to Gemini AI');
+    logger.info('Sending explain request to Gemini AI');
 
     try {
-      const result = await geminiService.explain(
-        body.question,
-        body.userAnswer,
-        body.event
-      );
+      const result = await geminiService.explain(question, userAnswer || '', event);
 
-      console.log('Gemini AI response received:', result);
+      logger.info('Gemini AI explain response received');
 
-      const response: ApiResponse = {
-        success: true,
-        data: result,
-      };
-
-      return NextResponse.json(response);
+      return successResponse<ApiResponse['data']>(result);
     } catch (error) {
-      console.log('Gemini AI error:', error);
-      const response: ApiResponse = {
-        success: false,
-        error: 'Failed to generate explanation',
-      };
-      return NextResponse.json(response, { status: 500 });
+      logger.error('Gemini AI explain error:', error);
+      return ApiErrors.serverError('Failed to generate explanation');
     }
   } catch (error) {
-    console.error('POST /api/gemini/explain error:', error);
-    const response: ApiResponse = {
-      success: false,
-      error: 'Invalid request body',
-    };
-    return NextResponse.json(response, { status: 400 });
+    logger.error('POST /api/gemini/explain error:', error);
+    return handleApiError(error);
   }
 }

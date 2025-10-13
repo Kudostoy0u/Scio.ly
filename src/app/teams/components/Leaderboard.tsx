@@ -3,8 +3,8 @@ import logger from '@/lib/utils/logger';
 
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import type { EloData, LeaderboardEntry } from '../types/elo';
-import { getLeaderboard } from '../utils/eloDataProcessor';
+import type { EloData, LeaderboardEntry } from '../../analytics/types/elo';
+import { getLeaderboard } from '../../analytics/utils/eloDataProcessor';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { ChevronLeft, ChevronRight, Search, Calendar } from 'lucide-react';
 import { EVENT_WHITELISTS } from './leaderboard/constants';

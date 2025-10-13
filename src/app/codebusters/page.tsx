@@ -1,10 +1,8 @@
 'use client';
-import logger from '@/lib/utils/logger';
-
-import React, { useEffect, useCallback, useState, useRef } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { toast } from 'react-toastify';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import MainHeader from '@/app/components/Header';
 
@@ -24,8 +22,36 @@ import { loadQuestionsFromDatabase } from './services/questionLoader';
 import { supabase } from '@/lib/supabase';
 import { updateMetrics } from '@/app/utils/metrics';
 import { QuoteData } from './types';
+import { cleanQuote } from './utils/quoteCleaner';
+import { calculateCipherGrade } from './utils/gradingUtils';
+import {
+  k1Aristo as encryptK1Aristocrat,
+  k2Aristo as encryptK2Aristocrat,
+  k3Aristo as encryptK3Aristocrat,
+  k1Patri as encryptK1Patristocrat,
+  k2Patri as encryptK2Patristocrat,
+  k3Patri as encryptK3Patristocrat,
+  encryptRandomAristocrat,
+  encryptRandomPatristocrat,
+  encryptCaesar,
+  encryptAtbash,
+  encryptAffine,
+  encryptHill2x2,
+  encryptHill3x3,
+  encryptPorta,
+  encryptBaconian,
+  encryptNihilist,
+  encryptFractionatedMorse,
+  encryptColumnarTransposition,
+  encryptRandomXenocrypt,
+  k1Xeno as encryptK1Xenocrypt,
+  k2Xeno as encryptK2Xenocrypt,
+  k3Xeno as encryptK3Xenocrypt,
+  encryptCheckerboard,
+  encryptCryptarithm,
+} from './cipher-utils';
 
-
+// Import hooks
 import { 
   useCodebustersState, 
   useAnswerChecking, 
@@ -34,7 +60,7 @@ import {
   useProgressCalculation 
 } from './hooks';
 
-
+// Import components
 import { 
   Header, 
   LoadingState, 
@@ -43,44 +69,34 @@ import {
   QuestionCard, 
   SubmitButton, 
   PDFModal,
-  CodebustersSummary,
-  PrintConfigModal
+  CodebustersSummary
 } from './components';
 import { FloatingActionButtons } from '@/app/components/FloatingActionButtons';
-import { clearPreviewLocalStorage, showPreviewToasts } from './utils/preview';
-import { useOnlineStatus } from './utils/useOnlineStatus';
-import { parsePreviewParams } from './utils/previewParams';
-import { createPrintStyles, createPrintContent, setupPrintWindow, createInPagePrint } from './utils/printUtils';
-import { resolveQuestionPoints, calculateCipherGrade } from './utils/gradingUtils';
 
 export default function CodeBusters() {
     const { darkMode } = useTheme();
     const router = useRouter();
-    const isClient = typeof window !== 'undefined';
-    const search = isClient ? new URLSearchParams(window.location.search) : null;
-    const { isPreview, previewScope, previewTeam } = parsePreviewParams(search);
-    const { isOffline } = useOnlineStatus();
+    const searchParams = useSearchParams();
+    const [isOffline, setIsOffline] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
-    const previewResetAppliedRef = useRef(false);
     
-
-    // online status handled by useOnlineStatus
-
-    const previewToastsShownRef = useRef(false);
+    // Check for assignment parameter in URL
+    const assignmentId = searchParams.get('assignment');
+    
+    // Detect offline status
     useEffect(() => {
-        if (!isPreview) return;
-        if (previewToastsShownRef.current) return;
-        previewToastsShownRef.current = true;
-        showPreviewToasts(toast);
-    }, [isPreview]);
+        const updateOnline = () => setIsOffline(!navigator.onLine);
+        updateOnline();
+        window.addEventListener('online', updateOnline);
+        window.addEventListener('offline', updateOnline);
+        
+        return () => {
+            window.removeEventListener('online', updateOnline);
+            window.removeEventListener('offline', updateOnline);
+        };
+    }, []);
 
-
-    // If preview, clear any persisted Codebusters state so we fetch fresh quotes and generate new ciphers
-    if (isClient && isPreview && !previewResetAppliedRef.current) {
-        clearPreviewLocalStorage();
-        previewResetAppliedRef.current = true;
-    }
-
+    // Use custom hooks for state management
     const {
         quotes,
         setQuotes,
@@ -101,7 +117,6 @@ export default function CodeBusters() {
         setInputCode,
 
         hasAttemptedLoad,
-        quotesLoadedFromStorage,
         activeHints,
         setActiveHints,
         revealedLetters,
@@ -114,19 +129,11 @@ export default function CodeBusters() {
         setInfoModalOpen,
         selectedCipherType,
         setSelectedCipherType,
-        printModalOpen,
-        setPrintModalOpen,
-        tournamentName,
-        setTournamentName,
-        questionPoints,
-        setQuestionPoints,
-        resetTrigger,
-        setResetTrigger,
         loadPreferences
-    } = useCodebustersState();
+    } = useCodebustersState(assignmentId);
 
-
-    const { checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer, checkCheckerboardAnswer, checkCryptarithmAnswer } = useAnswerChecking(quotes);
+    // Use custom hooks for functionality
+    const { checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer, checkCheckerboardAnswer } = useAnswerChecking(quotes);
     const { getHintContent, handleHintClick } = useHintSystem(
         quotes, 
         activeHints, 
@@ -141,48 +148,37 @@ export default function CodeBusters() {
     );
     const { 
         handleSolutionChange, 
-        handleBaconianSolutionChange,
+        handleBaconianSolutionChange, 
         handleHillSolutionChange, 
         handleNihilistSolutionChange,
         handleCheckerboardSolutionChange,
-        handleCryptarithmSolutionChange,
-        handleKeywordSolutionChange
+        handleKeywordSolutionChange,
+        handleCryptarithmSolutionChange
     } = useSolutionHandlers(quotes, setQuotes);
-    const { totalProgress } = useProgressCalculation(quotes);
+    const { totalProgress, calculateQuoteProgress } = useProgressCalculation(quotes);
 
-
-
-
+    // Setup visibility handling for time management
     useEffect(() => {
         const cleanup = setupVisibilityHandling();
         return cleanup;
     }, []);
 
-    useEffect(() => {
-        if (!isPreview) return;
-        if (quotes.length === 0) return;
-        if (isTestSubmitted) return;
-        // Auto-submit to show solutions
-        handleSubmitTest();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isPreview, quotes.length]);
-
-
+    // Pause timer when navigating away/unmounting
     useEffect(() => {
         return () => {
             try { pauseTestSession(); } catch {}
         };
     }, []);
 
-
+    // Ensure we resume from pause on mount so the ticker runs while on page
     useEffect(() => {
         try { resumeFromPause(); } catch {}
     }, []);
 
-
+    // Handle test submission
     const handleSubmitTest = useCallback(async () => {
         let correctCount = 0;
-
+        // Legacy correctness for UI percent
         quotes.forEach((quote, index) => {
             const isCorrect = ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Xenocrypt'].includes(quote.cipherType)
                 ? checkSubstitutionAnswer(index)
@@ -192,94 +188,116 @@ export default function CodeBusters() {
                         ? checkPortaAnswer(index)
                         : quote.cipherType === 'Baconian'
                             ? checkBaconianAnswer(index)
-                                    : quote.cipherType === 'Checkerboard'
-            ? checkCheckerboardAnswer(index)
-            : quote.cipherType === 'Cryptarithm'
-                ? checkCryptarithmAnswer(index)
-                : false;
+                            : quote.cipherType === 'Checkerboard'
+                                ? checkCheckerboardAnswer(index)
+                                : false;
             if (isCorrect) correctCount++;
         });
 
-
+        // Calculate UI score as percentage
         const score = (correctCount / Math.max(1, quotes.length)) * 100;
         setTestScore(score);
         setIsTestSubmitted(true);
         
-
-        try {
-            localStorage.setItem('codebustersIsTestSubmitted', 'true');
-            localStorage.setItem('codebustersTestScore', score.toString());
-            localStorage.setItem('codebustersTimeLeft', timeLeft?.toString() || '0');
-            localStorage.setItem('codebustersQuotes', JSON.stringify(quotes));
-            localStorage.setItem('codebustersQuotesLoadedFromStorage', 'true');
-        } catch {}
-        
-
+        // Scroll to top when test is submitted - more robust approach
         setTimeout(() => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }, 200);
         
-
+        // Mark test as submitted using new time management system
         markTestSubmitted();
 
-        // Compute points (attempted and earned) consistent with TestSummary using calculateCipherGrade
-        let attemptedPoints = 0;
-        let correctPoints = 0;
-        quotes.forEach((q, idx) => {
-            const grade = calculateCipherGrade(q, idx, hintedLetters, questionPoints);
-            attemptedPoints += grade.attemptedScore;
-            correctPoints += grade.score;
+        // Calculate points using the exact same method as the test summary
+        let totalPointsEarned = 0;
+        let totalPointsAttempted = 0;
+        let totalInputs = 0;
+        
+        quotes.forEach((quote, quoteIndex) => {
+            // Import the grading function (we'll need to add this import)
+            const gradeResult = calculateCipherGrade(quote, quoteIndex, {}, {});
+            totalPointsEarned += gradeResult.score;
+            totalPointsAttempted += gradeResult.attemptedScore;
+            totalInputs += gradeResult.totalInputs;
         });
-
-        // Submit to team if launched from an assignment, mirroring /test behavior
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            const assignmentIdStr = localStorage.getItem('currentAssignmentId');
-            if (assignmentIdStr) {
-                const assignmentId = Number(assignmentIdStr);
-                if (!assignmentId || Number.isNaN(assignmentId)) {
-                    try { toast.error('Could not submit results (invalid assignment).'); } catch {}
-                } else {
-                    const name = (user?.user_metadata?.name || user?.email || '').toString();
-                    const res = await fetch('/api/assignments/submit', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        // Send Codebusters points so Team Results shows points earned out of possible
-                        body: JSON.stringify({ assignmentId: String(assignmentIdStr), userId: user?.id || null, name, eventName: 'Codebusters', score: correctPoints, detail: { total: attemptedPoints } })
-                    });
-                    if (res.ok) {
-                        try {
-                            const selStr = localStorage.getItem('teamsSelection') || '';
-                            const sel = selStr ? JSON.parse(selStr) : null;
-                            const teamName = sel?.school ? `${sel.school} ${sel.division || ''}`.trim() : null;
-                            if (teamName) { toast.success(`Sent results to ${teamName}!`); }
-                        } catch {}
-                    } else {
-                        try {
-                            const j = await res.json().catch(()=>null);
-                            const msg = j?.error || 'Failed to submit results';
-                            toast.error(msg);
-                        } catch {}
-                    }
-                    localStorage.removeItem('currentAssignmentId');
-                }
-            }
-        } catch {}
+        
+        // Store these values for assignment submission
+        const codebustersPoints = {
+            totalPointsEarned: Math.round(totalPointsEarned),
+            totalPointsAttempted: Math.round(totalPointsAttempted),
+            totalInputs: totalInputs
+        };
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
             await updateMetrics(user?.id || null, {
-                questionsAttempted: Math.round(attemptedPoints),
-                // fractional credit on correctness: weight * percent solved, rounded for storage
-                correctAnswers: Math.round(correctPoints),
+                questionsAttempted: Math.round(totalPointsAttempted),
+                // Use the exact same calculation as the test summary
+                correctAnswers: Math.round(totalPointsEarned),
                 eventName: 'Codebusters'
             });
         } catch (e) {
-            logger.error('Failed to update metrics for Codebusters:', e);
+            console.error('Failed to update metrics for Codebusters:', e);
         }
-    }, [quotes, checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer, checkCheckerboardAnswer, checkCryptarithmAnswer, setTestScore, setIsTestSubmitted, timeLeft, hintedLetters, questionPoints]);
 
+        // If this is an assignment, save the results
+        if (assignmentId) {
+            try {
+                console.log('Submitting Codebusters assignment results...');
+                
+                // Prepare submission data
+                const submissionData = {
+                    assignmentId: assignmentId,
+                    answers: quotes.map((quote, index) => ({
+                        questionId: quote.id,
+                        answer: quote.solution || '',
+                        isCorrect: ['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Xenocrypt'].includes(quote.cipherType)
+                            ? checkSubstitutionAnswer(index)
+                            : (quote.cipherType === 'Hill 2x2' || quote.cipherType === 'Hill 3x3')
+                                ? checkHillAnswer(index)
+                                : quote.cipherType === 'Porta'
+                                    ? checkPortaAnswer(index)
+                                    : quote.cipherType === 'Baconian'
+                                        ? checkBaconianAnswer(index)
+                                        : quote.cipherType === 'Checkerboard'
+                                            ? checkCheckerboardAnswer(index)
+                                            : false,
+                        points: quote.points || 10,
+                        timeSpent: 0, // Could track time per question if needed
+                        // Add progress and difficulty for proper point calculation
+                        progress: calculateQuoteProgress(quote),
+                        difficulty: typeof quote.difficulty === 'number' ? quote.difficulty : 0.5
+                    })),
+                    totalScore: score,
+                    timeSpent: 0, // Could track total time if needed
+                    submittedAt: new Date().toISOString(),
+                    isDynamicCodebusters: true, // Flag to indicate this is a dynamic Codebusters assignment
+                    // Send the exact same values as the test summary
+                    codebustersPoints: codebustersPoints
+                };
 
+                const response = await fetch(`/api/assignments/${assignmentId}/submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(submissionData)
+                });
+
+                if (response.ok) {
+                    console.log('Assignment submitted successfully');
+                    toast.success('Assignment submitted successfully!');
+                } else {
+                    console.error('Failed to submit assignment');
+                    toast.error('Failed to submit assignment');
+                }
+            } catch (error) {
+                console.error('Error submitting assignment:', error);
+                toast.error('Error submitting assignment');
+            }
+        }
+    }, [quotes, checkSubstitutionAnswer, checkHillAnswer, checkPortaAnswer, checkBaconianAnswer, checkCheckerboardAnswer, setTestScore, setIsTestSubmitted, calculateQuoteProgress, assignmentId]);
+
+    // Handle time management
     useEffect(() => {
         if (timeLeft === null || isTestSubmitted) return;
 
@@ -302,9 +320,9 @@ export default function CodeBusters() {
             const session = getCurrentTestSession();
             if (!session) return;
             
-
+            // Update time based on session state
             if (session.timeState.isTimeSynchronized && session.timeState.syncTimestamp && session.timeState.originalTimeAtSync) {
-
+                // Synchronized test - calculate based on original sync point
                 const now = Date.now();
                 const elapsedMs = now - session.timeState.syncTimestamp;
                 const elapsedSeconds = Math.floor(elapsedMs / 1000);
@@ -313,7 +331,7 @@ export default function CodeBusters() {
                 updateTimeLeft(newTimeLeft);
 
             } else if (!session.timeState.isPaused) {
-
+                // Non-synchronized test - decrement from stored timeLeft only while mounted/not paused
                 const newTimeLeft = Math.max(0, (session.timeState.timeLeft || 0) - 1);
                 setTimeLeft(newTimeLeft);
                 updateTimeLeft(newTimeLeft);
@@ -323,7 +341,248 @@ export default function CodeBusters() {
         return () => clearInterval(timer);
     }, [timeLeft, isTestSubmitted, handleSubmitTest, setTimeLeft]);
 
+    // Handle loading assignment questions
+    const handleLoadAssignmentQuestions = useCallback(async (assignmentId: string) => {
+        try {
+            console.log('=== LOADING CODEBUSTERS ASSIGNMENT ===');
+            console.log('Assignment ID:', assignmentId);
+            
+            const response = await fetch(`/api/assignments/${assignmentId}`);
+            console.log('Assignment API response status:', response.status);
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Assignment data:', data);
+                
+                const assignment = data.assignment;
+                const questions = assignment.questions;
+                console.log('Questions from assignment:', questions);
+                console.log('Questions length:', questions?.length || 0);
+                
+                if (questions && questions.length > 0) {
+                    // Check if this is a parameters-based assignment (dynamic generation)
+                    const paramsQuestion = questions.find((q: any) => q.question_type === 'codebusters_params');
+                    console.log('Looking for parameters question:', paramsQuestion);
+                    
+                    if (paramsQuestion && paramsQuestion.parameters) {
+                        console.log('Found parameters question, generating Codebusters questions dynamically from parameters:', paramsQuestion.parameters);
+                        
+                        // Generate questions dynamically using the parameters
+                        try {
+                            const generatedQuestions = await generateCodebustersQuestionsFromParams(paramsQuestion.parameters);
+                            setQuotes(generatedQuestions);
+                            
+                            // Set time limit from assignment
+                            const timeLimit = assignment.time_limit_minutes || 15;
+                            setTimeLeft(timeLimit * 60);
+                            
+                            setIsLoading(false);
+                            console.log('=== DYNAMIC QUESTIONS GENERATED SUCCESSFULLY ===');
+                        } catch (error) {
+                            console.error('Error generating dynamic questions:', error);
+                            setError('Failed to generate questions for this assignment');
+                            setIsLoading(false);
+                        }
+                    } else {
+                        console.log('No parameters question found, converting pre-generated questions');
+                        // Convert pre-generated assignment questions to QuoteData format
+                        const codebustersQuotes: QuoteData[] = questions.map((q: any, index: number) => ({
+                            id: q.id || `assignment-${index}`,
+                            quote: q.quote || q.question_text || '',
+                            author: q.author || 'Unknown',
+                            cipherType: q.cipherType || 'Random Aristocrat',
+                            difficulty: q.difficulty || 'Medium',
+                            division: q.division || 'C',
+                            charLength: q.charLength || 100,
+                            encrypted: q.encrypted || '',
+                            key: q.key || '',
+                            hint: q.hint || '',
+                            solution: q.solution || q.correct_answer || ''
+                        }));
+                        
+                        console.log('Converted to Codebusters format:', codebustersQuotes);
+                        setQuotes(codebustersQuotes);
+                        
+                        // Set time limit from assignment
+                        const timeLimit = assignment.time_limit_minutes || 15;
+                        setTimeLeft(timeLimit * 60);
+                        
+                        setIsLoading(false);
+                        console.log('=== ASSIGNMENT LOADED SUCCESSFULLY ===');
+                    }
+                } else {
+                    console.log('No questions found in assignment, setting error');
+                    setError('No questions found in this assignment');
+                    setIsLoading(false);
+                }
+            } else {
+                setError('Failed to load assignment');
+                setIsLoading(false);
+            }
+        } catch (error) {
+            console.error('Error loading assignment:', error);
+            setError('Failed to load assignment');
+            setIsLoading(false);
+        }
+    }, [setQuotes, setTimeLeft, setIsLoading, setError]);
 
+    // Generate Codebusters questions from assignment parameters
+    const generateCodebustersQuestionsFromParams = async (params: any): Promise<QuoteData[]> => {
+        try {
+            console.log('Generating questions with params:', params);
+            
+            // Fetch quotes from the API
+            const quotesResponse = await fetch(`/api/quotes?language=en&limit=${params.questionCount * 2}&charLengthMin=${params.charLengthMin}&charLengthMax=${params.charLengthMax}`);
+            if (!quotesResponse.ok) {
+                throw new Error('Failed to fetch quotes');
+            }
+            
+            const quotesData = await quotesResponse.json();
+            const quotes = quotesData.data?.quotes || quotesData.quotes || [];
+            
+            if (quotes.length === 0) {
+                throw new Error('No quotes available');
+            }
+
+            // Generate encrypted quotes using the selected cipher types
+            const generatedQuestions: QuoteData[] = [];
+            const cipherTypes = params.cipherTypes || ['Caesar'];
+            
+            for (let i = 0; i < params.questionCount; i++) {
+                const quote = quotes[i % quotes.length];
+                const cipherType = cipherTypes[i % cipherTypes.length];
+                
+                console.log(`Generating question ${i + 1} with cipher type: ${cipherType}`);
+                
+                // Clean the quote for encryption
+                const cleanedQuote = cleanQuote(quote.quote);
+                console.log(`Cleaned quote: ${cleanedQuote}`);
+                
+                // Encrypt the quote using the appropriate cipher
+                let cipherResult: { 
+                    encrypted: string; 
+                    key?: string; 
+                    matrix?: number[][]; 
+                    keyword?: string; 
+                    fractionationTable?: { [key: string]: string }; 
+                    shift?: number; 
+                    a?: number; 
+                    b?: number; 
+                };
+
+                switch (cipherType) {
+                    case 'K1 Aristocrat':
+                        cipherResult = encryptK1Aristocrat(cleanedQuote);
+                        break;
+                    case 'K2 Aristocrat':
+                        cipherResult = encryptK2Aristocrat(cleanedQuote);
+                        break;
+                    case 'K3 Aristocrat':
+                        cipherResult = encryptK3Aristocrat(cleanedQuote);
+                        break;
+                    case 'K1 Patristocrat':
+                        cipherResult = encryptK1Patristocrat(cleanedQuote);
+                        break;
+                    case 'K2 Patristocrat':
+                        cipherResult = encryptK2Patristocrat(cleanedQuote);
+                        break;
+                    case 'K3 Patristocrat':
+                        cipherResult = encryptK3Patristocrat(cleanedQuote);
+                        break;
+                    case 'Random Aristocrat':
+                        cipherResult = encryptRandomAristocrat(cleanedQuote);
+                        break;
+                    case 'Random Patristocrat':
+                        cipherResult = encryptRandomPatristocrat(cleanedQuote);
+                        break;
+                    case 'Caesar':
+                        cipherResult = encryptCaesar(cleanedQuote);
+                        break;
+                    case 'Atbash':
+                        cipherResult = encryptAtbash(cleanedQuote);
+                        break;
+                    case 'Affine':
+                        cipherResult = encryptAffine(cleanedQuote);
+                        break;
+                    case 'Hill 2x2':
+                        cipherResult = encryptHill2x2(cleanedQuote);
+                        break;
+                    case 'Hill 3x3':
+                        cipherResult = encryptHill3x3(cleanedQuote);
+                        break;
+                    case 'Porta':
+                        cipherResult = encryptPorta(cleanedQuote);
+                        break;
+                    case 'Baconian':
+                        cipherResult = encryptBaconian(cleanedQuote);
+                        break;
+                    case 'Nihilist':
+                        cipherResult = encryptNihilist(cleanedQuote);
+                        break;
+                    case 'Fractionated Morse':
+                        cipherResult = encryptFractionatedMorse(cleanedQuote);
+                        break;
+                    case 'Complete Columnar':
+                        cipherResult = encryptColumnarTransposition(cleanedQuote);
+                        break;
+                    case 'Random Xenocrypt':
+                        cipherResult = encryptRandomXenocrypt(cleanedQuote);
+                        break;
+                    case 'K1 Xenocrypt':
+                        cipherResult = encryptK1Xenocrypt(cleanedQuote);
+                        break;
+                    case 'K2 Xenocrypt':
+                        cipherResult = encryptK2Xenocrypt(cleanedQuote);
+                        break;
+                    case 'K3 Xenocrypt':
+                        cipherResult = encryptK3Xenocrypt(cleanedQuote);
+                        break;
+                    case 'Checkerboard':
+                        cipherResult = encryptCheckerboard(cleanedQuote);
+                        break;
+                    case 'Cryptarithm':
+                        cipherResult = encryptCryptarithm(cleanedQuote);
+                        break;
+                    default:
+                        console.warn(`Unknown cipher type: ${cipherType}, defaulting to Caesar`);
+                        cipherResult = encryptCaesar(cleanedQuote);
+                }
+                
+                console.log(`Encryption result:`, cipherResult);
+                
+                // Create the question with proper encryption
+                const question: QuoteData = {
+                    id: `assignment-${i}`,
+                    author: quote.author,
+                    quote: quote.quote,
+                    encrypted: cipherResult.encrypted,
+                    cipherType: cipherType as any,
+                    difficulty: 0.5,
+                    division: params.division || 'C',
+                    charLength: quote.quote.length,
+                    key: cipherResult.key || '',
+                    hint: '', // Could be generated based on cipher type if needed
+                    solution: {}, // Initialize as empty object for progress tracking
+                    points: 10,
+                    // Add cipher-specific properties
+                    ...(cipherResult.matrix && { matrix: cipherResult.matrix }),
+                    ...(cipherResult.keyword && { portaKeyword: cipherResult.keyword }),
+                    ...(cipherResult.shift && { caesarShift: cipherResult.shift }),
+                    ...(cipherResult.a && cipherResult.b && { affineA: cipherResult.a, affineB: cipherResult.b }),
+                    ...(cipherResult.fractionationTable && { fractionationTable: cipherResult.fractionationTable })
+                };
+                
+                generatedQuestions.push(question);
+            }
+            
+            return generatedQuestions;
+        } catch (error) {
+            console.error('Error generating Codebusters questions:', error);
+            throw error;
+        }
+    };
+
+    // Handle loading questions from database
     const handleLoadQuestions = useCallback(async () => {
         await loadQuestionsFromDatabase(
             setIsLoading,
@@ -336,18 +595,18 @@ export default function CodeBusters() {
         );
     }, [setIsLoading, setError, setQuotes, setTimeLeft, setIsTestSubmitted, setTestScore, loadPreferences]);
 
-
+    // Handle reset functionality
     const handleReset = useCallback(() => {
-
+        // Get test params before clearing localStorage
         const testParams = JSON.parse(localStorage.getItem('testParams') || '{}');
         const eventName = testParams.eventName || 'Codebusters';
         const preferences = loadPreferences(eventName);
         const timeLimit = parseInt(testParams.timeLimit) || preferences.timeLimit;
         
-
+        // Clear all codebusters-related localStorage items
         localStorage.removeItem('codebustersQuotes');
-        localStorage.removeItem('codebustersQuoteIndices');
-        localStorage.removeItem('codebustersQuoteUUIDs');
+        localStorage.removeItem('codebustersQuoteIndices'); // Legacy
+        localStorage.removeItem('codebustersQuoteUUIDs'); // Legacy
         localStorage.removeItem('codebustersShareData');
         localStorage.removeItem('codebustersIsTestSubmitted');
         localStorage.removeItem('codebustersTestScore');
@@ -357,31 +616,32 @@ export default function CodeBusters() {
         localStorage.removeItem('codebustersHintCounts');
         localStorage.removeItem('shareCode');
         
-
+        // Set force refresh flag to get new random quotes
         localStorage.setItem('codebustersForceRefresh', 'true');
         
-
+        // Clear time management session completely
         clearTestSession();
         
-
+        // Initialize a fresh session with the correct time limit
         initializeTestSession(eventName, timeLimit, false);
         
-
+        // Set resetting state and update other state
         setIsResetting(true);
         setIsTestSubmitted(false);
         setTestScore(0);
         setTimeLeft(timeLimit * 60);
         
-
+        // Clear hint states
         setActiveHints({});
         setRevealedLetters({});
         setHintedLetters({});
         setHintCounts({});
-        setResetTrigger(prev => prev + 1);
+        setHintedLetters({});
+        setHintCounts({});
         
-
+        // Use the original loader but with a custom callback to avoid clearing quotes immediately
         const customSetLoading = (loading: boolean) => {
-
+            // Don't set loading to true during reset to keep old quotes visible
             if (!loading) {
                 setIsLoading(false);
             }
@@ -401,48 +661,48 @@ export default function CodeBusters() {
             setTestScore,
             loadPreferences
         );
-    }, [loadPreferences, setQuotes, setIsTestSubmitted, setTestScore, setTimeLeft, setError, setIsLoading, setActiveHints, setRevealedLetters, setHintedLetters, setHintCounts, setResetTrigger]);
+    }, [loadPreferences, setQuotes, setIsTestSubmitted, setTestScore, setTimeLeft, setError, setIsLoading, setActiveHints, setRevealedLetters, setHintedLetters, setHintCounts]);
 
-
+    // Handle back navigation: preserve Codebusters progress for resume banner on Practice
     const handleBack = useCallback(() => {
         try {
-
+            // Ensure timer is paused when exiting
             pauseTestSession();
-
+            // Only clear unrelated unlimited cache; keep Codebusters keys and testParams so Practice can detect progress
             localStorage.removeItem('unlimitedQuestions');
         } catch {}
         router.push('/practice');
     }, [router]);
 
-
+    // Handle retry loading
     const handleRetry = useCallback(() => {
         setError(null);
         setIsLoading(true);
         handleLoadQuestions();
     }, [setError, setIsLoading, handleLoadQuestions]);
 
-
+    // Handle navigation to practice page
     const handleGoToPractice = useCallback(() => {
         router.push('/practice');
     }, [router]);
 
-
+    // Handle test reset after submission
     const handleTestReset = useCallback(() => {
-
+        // Scroll to top when resetting test
         setTimeout(() => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }, 200);
         
-
+        // Get test params before clearing localStorage
         const testParams = JSON.parse(localStorage.getItem('testParams') || '{}');
         const eventName = testParams.eventName || 'Codebusters';
         const preferences = loadPreferences(eventName);
         const timeLimit = parseInt(testParams.timeLimit) || preferences.timeLimit;
         
-
+        // Clear all codebusters-related localStorage items
         localStorage.removeItem('codebustersQuotes');
-        localStorage.removeItem('codebustersQuoteIndices');
-        localStorage.removeItem('codebustersQuoteUUIDs');
+        localStorage.removeItem('codebustersQuoteIndices'); // Legacy
+        localStorage.removeItem('codebustersQuoteUUIDs'); // Legacy
         localStorage.removeItem('codebustersShareData');
         localStorage.removeItem('codebustersIsTestSubmitted');
         localStorage.removeItem('codebustersTestScore');
@@ -450,31 +710,30 @@ export default function CodeBusters() {
         localStorage.removeItem('codebustersRevealedLetters');
         localStorage.removeItem('codebustersHintedLetters');
         localStorage.removeItem('codebustersHintCounts');
-        localStorage.removeItem('codebustersQuotesLoadedFromStorage');
         localStorage.removeItem('shareCode');
         
-
+        // Set force refresh flag to get new random quotes
         localStorage.setItem('codebustersForceRefresh', 'true');
         
-
+        // Clear time management session completely
         clearTestSession();
         
-
+        // Initialize a fresh session with the correct time limit
         initializeTestSession(eventName, timeLimit, false);
         
-
+        // Set resetting state and update other state
         setIsResetting(true);
         setIsTestSubmitted(false);
         setTestScore(0);
         setTimeLeft(timeLimit * 60);
         
-
+        // Clear hint states
         setActiveHints({});
         setRevealedLetters({});
         
-
+        // Use the original loader but with a custom callback to avoid clearing quotes immediately
         const customSetLoading = (loading: boolean) => {
-
+            // Don't set loading to true during reset to keep old quotes visible
             if (!loading) {
                 setIsLoading(false);
             }
@@ -496,133 +755,29 @@ export default function CodeBusters() {
         );
     }, [loadPreferences, setQuotes, setIsTestSubmitted, setTestScore, setTimeLeft, setError, setIsLoading, setActiveHints, setRevealedLetters]);
 
-
-    const handlePrintConfig = useCallback(() => {
-        setPrintModalOpen(true);
-    }, [setPrintModalOpen]);
-
-
-    const handleActualPrint = useCallback(async () => {
-        if (!tournamentName.trim()) {
-            toast.error('Tournament name is required');
-            return;
-        }
-
-
-        const questionsContainer = document.querySelector('[data-questions-container]');
-        if (!questionsContainer) {
-            toast.error('Could not find questions to print');
-            return;
-        }
-
-
-        const clonedContainer = questionsContainer.cloneNode(true) as HTMLElement;
-        
-
-        const interactiveElements = clonedContainer.querySelectorAll('button, .hint-button, .info-button, .floating-buttons');
-        interactiveElements.forEach(el => el.remove());
-
-
-        const questionHeaders = clonedContainer.querySelectorAll('[data-question-header]');
-        questionHeaders.forEach((header, index) => {
-            const pts = resolveQuestionPoints(quotes[index], index, questionPoints);
-            header.textContent = `Question ${index + 1} [${pts} pts]`;
-        });
-
-
-
-        // onto the same page when space allows.
-
-
-        const getStylesheets = () => {
-            const stylesheets = Array.from(document.styleSheets);
-            let cssText = '';
-            
-            stylesheets.forEach(sheet => {
-                try {
-                    const rules = Array.from(sheet.cssRules || sheet.rules || []);
-                    rules.forEach(rule => {
-                        cssText += rule.cssText + '\n';
-                    });
-                } catch {
-
-                    logger.log('Skipping external stylesheet:', sheet.href);
-                }
-            });
-            
-            return cssText;
-        };
-
-
-        const printStyles = createPrintStyles(getStylesheets);
-
-
-        const createCodebustersAnswerKey = () => {
-            let answerKeyHtml = '<div class="answer-key-section">';
-            answerKeyHtml += '<div class="answer-key-header">ANSWER KEY</div>';
-            answerKeyHtml += '<div class="answer-key-content">';
-            
-
-            const totalQuestions = quotes.length;
-            const columns = Math.min(2, Math.ceil(totalQuestions / 10)); // 10 questions per column max
-            const questionsPerColumn = Math.ceil(totalQuestions / columns);
-            
-            for (let col = 0; col < columns; col++) {
-                answerKeyHtml += '<div class="answer-column">';
-                
-                for (let i = col * questionsPerColumn; i < Math.min((col + 1) * questionsPerColumn, totalQuestions); i++) {
-                    const quote = quotes[i];
-                    const questionNumber = i + 1;
-                    
-
-                    const decryptedQuote = quote.quote || '[No solution available]';
-                    answerKeyHtml += `<div class="answer-item"><strong>${questionNumber}.</strong> ${decryptedQuote}</div>`;
-                }
-                
-                answerKeyHtml += '</div>';
-            }
-            
-            answerKeyHtml += '</div>';
-            answerKeyHtml += '</div>';
-            
-            return answerKeyHtml;
-        };
-
-
-        const printContent = createPrintContent({
-            tournamentName,
-            questionsHtml: clonedContainer.innerHTML + createCodebustersAnswerKey(),
-            questionPoints
-        }, printStyles);
-
-
-        try {
-
-            await createInPagePrint({
-                tournamentName,
-                questionsHtml: clonedContainer.innerHTML + createCodebustersAnswerKey(),
-                questionPoints
-            }, printStyles);
-        } catch {
-
-            try {
-                await setupPrintWindow(printContent);
-            } catch (err) {
-                toast.error(err instanceof Error ? err.message : 'Failed to print questions');
-            }
-        }
-
-
-        setPrintModalOpen(false);
-    }, [quotes, tournamentName, questionPoints, setPrintModalOpen]);
-
-
+    // Load questions if needed
     useEffect(() => {
-        if (hasAttemptedLoad && quotes.length === 0 && !isLoading && !error && !quotesLoadedFromStorage) {
-            logger.log('Triggering loadQuestionsFromDatabase');
-            handleLoadQuestions();
+        console.log('=== CODEBUSTERS LOADING EFFECT DEBUG ===');
+        console.log('hasAttemptedLoad:', hasAttemptedLoad);
+        console.log('quotes.length:', quotes.length);
+        console.log('isLoading:', isLoading);
+        console.log('error:', error);
+        console.log('assignmentId:', assignmentId);
+        
+        if (hasAttemptedLoad && quotes.length === 0 && !isLoading && !error) {
+            if (assignmentId) {
+                console.log('=== CODEBUSTERS ASSIGNMENT LOADING DEBUG ===');
+                console.log('Assignment ID:', assignmentId);
+                console.log('Loading assignment questions for Codebusters');
+                handleLoadAssignmentQuestions(assignmentId);
+            } else {
+                console.log('No assignment ID, triggering loadQuestionsFromDatabase');
+                handleLoadQuestions();
+            }
+        } else {
+            console.log('Loading conditions not met, skipping load');
         }
-    }, [hasAttemptedLoad, quotes.length, isLoading, error, quotesLoadedFromStorage, handleLoadQuestions]);
+    }, [hasAttemptedLoad, quotes.length, isLoading, error, handleLoadQuestions, handleLoadAssignmentQuestions, assignmentId]);
 
     return (
         <>
@@ -638,7 +793,7 @@ export default function CodeBusters() {
                 {/* Global scrollbar theme is centralized in globals.css */}
 
                 {/* Page Content */}
-                <div className="relative flex flex-col items-center p-6 pt-20">
+                <div className="relative flex flex-col items-center p-3 md:p-6 pt-24 md:pt-24">
                     <Header 
                         darkMode={darkMode}
                         timeLeft={timeLeft}
@@ -646,7 +801,7 @@ export default function CodeBusters() {
                     />
 
                     {/* Inline back link to Practice */}
-                    <div className="w-full max-w-[80vw] mt-0 mb-3">
+                    <div className="w-full max-w-[90vw] md:max-w-6xl mt-0 mb-3">
                       <button
                         onClick={handleBack}
                         className={`group inline-flex items-center text-base font-medium ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}
@@ -658,20 +813,17 @@ export default function CodeBusters() {
 
                     {/* Progress Bar or Summary */}
                     {isTestSubmitted ? (
-                        isPreview ? null : (
-                            <div className="w-full max-w-[80vw]">
-                                <CodebustersSummary
-                                    quotes={quotes}
-                                    darkMode={darkMode}
-                                    hintedLetters={hintedLetters}
-                                    _hintCounts={hintCounts}
-                                    questionPoints={questionPoints}
-                                />
-                            </div>
-                        )
+                        <div className="w-full">
+                            <CodebustersSummary
+                                quotes={quotes}
+                                darkMode={darkMode}
+                                hintedLetters={hintedLetters}
+                                _hintCounts={hintCounts}
+                            />
+                        </div>
                     ) : (
                         <div
-                            className={`sticky top-4 z-10 w-full max-w-[80vw] bg-white border-2 border-gray-300 rounded-full h-5 mb-6 shadow-lg`}
+                            className={`sticky top-4 z-10 w-full max-w-[90vw] md:max-w-6xl bg-white border-2 border-gray-300 rounded-full h-5 mb-6 shadow-lg`}
                         >
                             <div
                                 className="bg-blue-500 h-4 rounded-full transition-[width] duration-700 ease-in-out shadow-md"
@@ -681,7 +833,7 @@ export default function CodeBusters() {
                     )}
 
                     <main
-                        className={`w-full max-w-[80vw] rounded-lg shadow-md p-6 mt-4 ${
+                        className={`w-full max-w-[90vw] md:max-w-6xl rounded-lg shadow-md p-3 md:p-6 mt-4 ${
                             darkMode ? 'bg-gray-800' : 'bg-white'
                         }`}
                     >
@@ -706,106 +858,45 @@ export default function CodeBusters() {
                             <ShareButton 
                                 onShare={() => setShareModalOpen(true)} 
                                 onReset={handleReset}
-                                onPrint={handlePrintConfig}
                                 isOffline={isOffline} 
                                 darkMode={darkMode}
                             />
                         )}
                         
-                        <div data-questions-container>
-                            {!isLoading && !error && hasAttemptedLoad && quotes.length > 0 && quotes.map((item, index) => (
-                                <QuestionCard
-                                    key={index}
-                                    item={item}
-                                    index={index}
-                                    darkMode={darkMode}
-                                    isTestSubmitted={isTestSubmitted}
-                                    quotes={quotes}
-                                    activeHints={activeHints}
-                                    getHintContent={getHintContent}
-                                    handleHintClick={handleHintClick}
-                                    setSelectedCipherType={setSelectedCipherType}
-                                    setInfoModalOpen={setInfoModalOpen}
-                                    handleSolutionChange={handleSolutionChange}
-                                    handleBaconianSolutionChange={handleBaconianSolutionChange}
-
-                                    handleHillSolutionChange={handleHillSolutionChange}
-                                    handleNihilistSolutionChange={handleNihilistSolutionChange}
-                                    handleCheckerboardSolutionChange={handleCheckerboardSolutionChange}
-                                    handleCryptarithmSolutionChange={handleCryptarithmSolutionChange}
-                                    handleKeywordSolutionChange={handleKeywordSolutionChange}
-                                    hintedLetters={hintedLetters}
-                                    _hintCounts={hintCounts}
-                                    questionPoints={questionPoints}
-                                    resetTrigger={resetTrigger}
-
-                                />
-                            ))}
-                        </div>
+                        {!isLoading && !error && hasAttemptedLoad && quotes.length > 0 && quotes.map((item, index) => (
+                            <QuestionCard
+                                key={index}
+                                item={item}
+                                index={index}
+                                darkMode={darkMode}
+                                isTestSubmitted={isTestSubmitted}
+                                quotes={quotes}
+                                activeHints={activeHints}
+                                getHintContent={getHintContent}
+                                handleHintClick={handleHintClick}
+                                setSelectedCipherType={setSelectedCipherType}
+                                setInfoModalOpen={setInfoModalOpen}
+                                handleSolutionChange={handleSolutionChange}
+                                handleBaconianSolutionChange={handleBaconianSolutionChange}
+                                handleHillSolutionChange={handleHillSolutionChange}
+                                handleNihilistSolutionChange={handleNihilistSolutionChange}
+                                handleCheckerboardSolutionChange={handleCheckerboardSolutionChange}
+                                handleCryptarithmSolutionChange={handleCryptarithmSolutionChange}
+                                handleKeywordSolutionChange={handleKeywordSolutionChange}
+                                hintedLetters={hintedLetters}
+                                _hintCounts={hintCounts}
+                            />
+                        ))}
                         
                         {/* Submit Button */}
                         {!isLoading && !error && quotes.length > 0 && hasAttemptedLoad && !isResetting && (
-                            isPreview ? (
-                                <div className="mt-6 flex items-center gap-3">
-                                  <button
-                                    onClick={handleGoToPractice}
-                                    className={`w-1/5 px-4 py-2 font-semibold rounded-lg border-2 transition-colors flex items-center justify-center text-center ${
-                                      darkMode
-                                        ? 'bg-transparent text-yellow-300 border-yellow-400 hover:text-yellow-200 hover:border-yellow-300'
-                                        : 'bg-transparent text-yellow-600 border-yellow-500 hover:text-yellow-500 hover:border-yellow-400'
-                                    }`}
-                                  >
-                                    Back
-                                  </button>
-                                  <button
-                                    onClick={async ()=>{
-                                      try {
-                                        const selectionStr = localStorage.getItem('teamsSelection');
-                                        const sel = selectionStr ? JSON.parse(selectionStr) : null;
-                                        const school = sel?.school;
-                                        const divisionSel = sel?.division;
-                                        if (!school || !divisionSel) { alert('Missing team selection'); return; }
-                                        const params = JSON.parse(localStorage.getItem('testParams')||'{}');
-                                        const assignees = previewScope === 'all' ? [{ name: 'ALL' }] : [{ name: previewScope }];
-                                        const res = await fetch('/api/assignments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ school, division: divisionSel, teamId: previewTeam, eventName: 'Codebusters', assignees, params, questions: quotes }) });
-                                        if (res.ok) {
-                                          const json = await res.json();
-                                          const assignmentId = json?.data?.id;
-                                          try {
-                                            const mres = await fetch(`/api/teams/units?school=${encodeURIComponent(school)}&division=${divisionSel}&teamId=${previewTeam}&members=1`);
-                                            const mj = mres.ok ? await mres.json() : null;
-                                            const members = Array.isArray(mj?.data) ? mj.data : [];
-                                            const targets = previewScope === 'all' ? members : members.filter((m:any)=>{
-                                              const full = [m.firstName, m.lastName].filter(Boolean).join(' ').trim();
-                                              const label = full || m.displayName || m.username || '';
-                                              return label === previewScope;
-                                            });
-                                            await Promise.all(targets.filter((m:any)=>m.userId).map((m:any)=>
-                                              fetch('/api/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action:'create', userId: m.userId, type: 'assignment', title: `New Codebusters test assigned`, data: { assignmentId, eventName: 'Codebusters', url: `/assign/${assignmentId}` } }) })
-                                            ));
-                                          } catch {}
-                                          window.location.href = '/teams/results';
-                                        }
-                                      } catch {}
-                                    }}
-                                    className={`w-4/5 px-4 py-2 font-semibold rounded-lg border-2 flex items-center justify-center text-center ${
-                                      darkMode
-                                        ? 'bg-transparent text-blue-300 border-blue-300 hover:text-blue-200 hover:border-blue-200'
-                                        : 'bg-transparent text-blue-700 border-blue-700 hover:text-blue-600 hover:border-blue-600'
-                                    }`}
-                                  >
-                                    Send Test
-                                  </button>
-                                </div>
-                            ) : (
-                                <SubmitButton 
-                                    isTestSubmitted={isTestSubmitted}
-                                    darkMode={darkMode}
-                                    onSubmit={handleSubmitTest}
-                                    onReset={handleTestReset}
-                                    onGoBack={handleGoToPractice}
-                                />
-                            )
+                            <SubmitButton 
+                                isTestSubmitted={isTestSubmitted}
+                                darkMode={darkMode}
+                                onSubmit={handleSubmitTest}
+                                onReset={handleTestReset}
+                                onGoBack={handleGoToPractice}
+                            />
                         )}
                     </main>
 
@@ -840,19 +931,6 @@ export default function CodeBusters() {
                         isOpen={infoModalOpen}
                         onClose={() => setInfoModalOpen(false)}
                         cipherType={selectedCipherType}
-                        darkMode={darkMode}
-                    />
-
-                    {/* Print Configuration Modal */}
-                    <PrintConfigModal
-                        isOpen={printModalOpen}
-                        onClose={() => setPrintModalOpen(false)}
-                        onPrint={handleActualPrint}
-                        quotes={quotes}
-                        tournamentName={tournamentName}
-                        setTournamentName={setTournamentName}
-                        questionPoints={questionPoints}
-                        setQuestionPoints={setQuestionPoints}
                         darkMode={darkMode}
                     />
                     

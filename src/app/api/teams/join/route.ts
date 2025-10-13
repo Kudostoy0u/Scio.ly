@@ -1,35 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
-import { loadTeamData } from '@/lib/db/teams';
+import { cockroachDBTeamsService } from '@/lib/services/cockroachdb-teams';
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.id) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-
-    const { code } = await req.json();
-    if (!code || typeof code !== 'string') return NextResponse.json({ success: false, error: 'Missing code' }, { status: 400 });
-
-    const parts = code.split('::');
-    if (parts.length !== 3) return NextResponse.json({ success: false, error: 'Invalid code format' }, { status: 400 });
-    const [school, division, teamId] = parts as [string, string, string];
-    if (!school || (division !== 'B' && division !== 'C') || !teamId) {
-      return NextResponse.json({ success: false, error: 'Invalid code parts' }, { status: 400 });
+    // Check if CockroachDB is properly configured
+    if (!process.env.DATABASE_URL) {
+      return NextResponse.json({ 
+        error: 'Database configuration error',
+        details: 'DATABASE_URL environment variable is missing'
+      }, { status: 500 });
     }
 
-    const data = await loadTeamData(school, division as 'B'|'C');
-    if (!data) return NextResponse.json({ success: false, error: 'Team not found' }, { status: 404 });
-    const teamExists = data.teams.some((t: any) => (t.id || '').toString() === teamId);
-    if (!teamExists) return NextResponse.json({ success: false, error: 'Team not found' }, { status: 404 });
+    // Get user from Supabase auth
+    const { getServerUser } = await import('@/lib/supabaseServer');
+    const user = await getServerUser();
+    
+    if (!user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    const userId = user.id;
 
-    const teamCode = `${school}::${division}::${teamId}`;
-    await (supabase as any).from('users').update({ team_code: teamCode }).eq('id', user.id);
+    const body = await request.json();
+    const { code } = body;
 
-    return NextResponse.json({ success: true, data: { school, division, teamId, teams: data.teams } });
-  } catch {
-    return NextResponse.json({ success: false, error: 'Server error' }, { status: 500 });
+    if (!code) {
+      return NextResponse.json({ error: 'Team code is required' }, { status: 400 });
+    }
+
+    try {
+      const team = await cockroachDBTeamsService.joinTeamByCode(userId, code);
+      
+      if (!team) {
+        return NextResponse.json({ error: 'Invalid team code' }, { status: 400 });
+      }
+
+      return NextResponse.json({
+        id: team.id,
+        name: team.name,
+        slug: team.slug,
+        school: team.school,
+        division: team.division,
+        description: team.description,
+        captain_code: team.captain_code,
+        user_code: team.user_code,
+        user_role: team.user_role,
+        members: team.members
+      });
+
+    } catch (joinError: any) {
+      return NextResponse.json({ error: joinError.message }, { status: 400 });
+    }
+
+  } catch (error) {
+    console.error('Error in join team API:', error);
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
-
-

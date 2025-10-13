@@ -8,32 +8,62 @@ import {
   logApiResponse
 } from '@/lib/api/utils';
 
+/**
+ * Health check API endpoint for Scio.ly platform
+ * Provides comprehensive system health monitoring including database and AI service status
+ */
 
+/**
+ * Health data interface for system status reporting
+ */
 interface HealthData {
+  /** Overall system health status */
   status: 'healthy' | 'unhealthy' | 'error';
+  /** Timestamp of health check */
   timestamp: string;
+  /** Service status information */
   services: {
+    /** Database service status */
     database: {
+      /** Database connection status */
       status: 'connected' | 'disconnected';
+      /** Database provider name */
       provider: string;
     };
+    /** AI service status */
     ai: {
+      /** AI service availability status */
       status: 'available' | 'unavailable';
+      /** AI service provider name */
       provider: string;
     };
   };
+  /** Application version */
   version: string;
+  /** Environment name */
   environment: string;
 }
 
 
+/**
+ * Performs comprehensive health check of all system services
+ * Tests database connectivity and AI service availability
+ * 
+ * @returns {Promise<HealthData>} Health status data for all services
+ * @throws {Error} When health check fails
+ * @example
+ * ```typescript
+ * const healthData = await performHealthCheck();
+ * console.log(healthData.status); // 'healthy' | 'unhealthy' | 'error'
+ * ```
+ */
 const performHealthCheck = async (): Promise<HealthData> => {
   console.log('💚 [HEALTH] Health check requested');
 
-
+  // Test database connectivity
   const dbHealthy = await testConnection();
   
-
+  // Check AI service availability
   const aiHealthy = geminiService.isAvailable();
 
   const healthData: HealthData = {
@@ -63,6 +93,19 @@ const performHealthCheck = async (): Promise<HealthData> => {
 };
 
 
+/**
+ * GET /api/health - Health check endpoint
+ * Returns comprehensive system health status including database and AI service availability
+ * 
+ * @returns {Promise<Response>} Health status response with 200 (healthy) or 503 (unhealthy)
+ * @throws {Error} When health check fails completely
+ * @example
+ * ```typescript
+ * const response = await fetch('/api/health');
+ * const healthData = await response.json();
+ * console.log(healthData.status); // System health status
+ * ```
+ */
 export async function GET() {
   const startTime = Date.now();
   logApiRequest('GET', '/api/health');

@@ -3,32 +3,112 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useAuth } from '@/app/contexts/AuthContext';
 
-type NotificationItem = { id: string; type: string; title: string; body?: string; data?: any };
+/**
+ * Notification item type definition
+ * Represents a single notification with metadata
+ */
+type NotificationItem = { 
+  /** Unique notification identifier */
+  id: string; 
+  /** Notification type/category */
+  type: string; 
+  /** Notification title */
+  title: string; 
+  /** Optional notification body text */
+  body?: string; 
+  /** Optional notification data payload */
+  data?: any; 
+};
 
+/**
+ * Notifications context value interface
+ * Provides notification state and management functionality
+ */
 interface NotificationsContextValue {
+  /** Array of notification items */
   notifications: NotificationItem[];
+  /** Count of unread notifications */
   unreadCount: number;
+  /** Function to refresh notifications */
   refresh: (forceRefresh?: boolean) => Promise<void>;
+  /** Function to mark all notifications as read */
   markAllRead: () => Promise<void>;
+  /** Function to mark a specific notification as read by ID */
   markReadById: (id: string) => Promise<void>;
 }
 
+/**
+ * Notifications context for managing application notifications
+ * Provides notification state management with caching and real-time updates
+ */
 const NotificationsContext = createContext<NotificationsContextValue | undefined>(undefined);
 
+/**
+ * Hook to access notifications context
+ * Provides notification state and management functionality
+ * 
+ * @returns {NotificationsContextValue} Notifications context with state and handlers
+ * @throws {Error} When used outside of NotificationsProvider
+ * @example
+ * ```tsx
+ * function NotificationBell() {
+ *   const { notifications, unreadCount, markReadById } = useNotifications();
+ * 
+ *   return (
+ *     <div>
+ *       <span>Notifications ({unreadCount})</span>
+ *       {notifications.map(notification => (
+ *         <div key={notification.id} onClick={() => markReadById(notification.id)}>
+ *           {notification.title}
+ *         </div>
+ *       ))}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
 export function useNotifications(): NotificationsContextValue {
   const ctx = useContext(NotificationsContext);
   if (!ctx) throw new Error('useNotifications must be used within NotificationsProvider');
   return ctx;
 }
 
-export function NotificationsProvider({ children }: { children: React.ReactNode }) {
+/**
+ * NotificationsProvider Component
+ * 
+ * Provides notifications context to the application
+ * Manages notification state with caching, real-time updates, and session management
+ * Handles notification fetching, marking as read, and cache invalidation
+ * 
+ * @param {Object} props - Component props
+ * @param {React.ReactNode} props.children - Child components
+ * @returns {JSX.Element} Notifications provider component
+ * @example
+ * ```tsx
+ * <NotificationsProvider>
+ *   <App />
+ * </NotificationsProvider>
+ * ```
+ */
+export function NotificationsProvider({ 
+  children, 
+  initialNotifications = [], 
+  initialUnreadCount = 0 
+}: { 
+  children: React.ReactNode;
+  initialNotifications?: any[];
+  initialUnreadCount?: number;
+}) {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState<number>(0);
+  
+  const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
+  const [unreadCount, setUnreadCount] = useState<number>(initialUnreadCount);
   const isFetchingRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const hasFetchedThisLoadRef = useRef(false);
   const lastFetchTimeRef = useRef<number>(0);
+  const hasInitializedWithServerDataRef = useRef(false);
+  const initialNotificationsLengthRef = useRef(initialNotifications.length);
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
   // Detect page refresh to reset session flag and clear cache on page close
@@ -111,6 +191,9 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     if (!user?.id) return;
     if (isFetchingRef.current) return;
     
+    // Note: We fetch notifications regardless of team membership
+    // because users can have roster link invitations even if they're not team members yet
+    
     // Check cache first unless force refresh
     if (!forceRefresh) {
       const cached = getCachedNotifications(user.id);
@@ -149,14 +232,27 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     }
   }, [user?.id, getCachedNotifications, setCachedNotifications]);
 
+  // Initialize with server data only once
+  useEffect(() => {
+    if (!hasInitializedWithServerDataRef.current && initialNotifications.length > 0) {
+      setNotifications(initialNotifications);
+      setUnreadCount(initialUnreadCount);
+      hasInitializedWithServerDataRef.current = true;
+    }
+  }, [initialNotifications, initialUnreadCount]);
+
   useEffect(() => {
     // Reset state when user changes; do not auto-fetch
-    setNotifications([]);
-    setUnreadCount(0);
     abortRef.current?.abort();
     isFetchingRef.current = false;
     hasFetchedThisLoadRef.current = false;
     lastFetchTimeRef.current = 0;
+    hasInitializedWithServerDataRef.current = false;
+    
+    // If we have initial data from server, skip all client-side fetching
+    if (initialNotificationsLengthRef.current > 0) {
+      return;
+    }
     
     // Load from cache immediately if available
     if (user?.id) {
@@ -166,7 +262,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         setUnreadCount(cached.length);
       }
       
-      // Fetch fresh data once per session (when user first loads the page)
+      // Only fetch fresh data if we don't have server data
       // This ensures users see new notifications like team invites or assignments
       if (!hasFetchedThisLoadRef.current) {
         hasFetchedThisLoadRef.current = true;
@@ -188,25 +284,22 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   }, [fetchOnce]);
 
   const markAllRead = useCallback(async () => {
-    if (notifications.length === 0) return;
+    if (!user?.id) return;
     try {
-      await Promise.all(
-        notifications.map((n) =>
-          fetch('/api/notifications', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'markRead', id: n.id })
-          }).catch(() => null)
-        )
-      );
-    } catch {}
-    setNotifications([]);
-    setUnreadCount(0);
-    // Update cache
-    if (user?.id) {
-      setCachedNotifications(user.id, []);
+      const res = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'markAllRead' })
+      });
+      if (res.ok) {
+        setNotifications([]);
+        setUnreadCount(0);
+        setCachedNotifications(user.id, []);
+      }
+    } catch {
+      // ignore
     }
-  }, [notifications, user?.id, setCachedNotifications]);
+  }, [user?.id, setCachedNotifications]);
 
   const markReadById = useCallback(async (id: string) => {
     try {

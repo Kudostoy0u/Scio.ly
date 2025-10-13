@@ -68,9 +68,8 @@ export async function getQuotesByLanguage(language: string, limit?: number, char
     }
     
     return allRows.slice(0, maxLimit);
-  } catch (err) {
-    console.log('Error fetching quotes', err);
-
+  } catch {
+    // Fallback to simpler query if optimized query fails
     let fallbackCondition = eq(quotes.language, language);
     
     if (charLengthRange && charLengthRange.min <= 100) {

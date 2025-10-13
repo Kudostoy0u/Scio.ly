@@ -28,7 +28,7 @@ export const PlagiarismModal = memo(({ isOpen, onClose, summary }: ModalProps) =
   const hasMatches = totalMatchesCount > 0;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
       <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <h2 className="text-xl font-semibold text-slate-800">Question {summary.questionIndex + 1} - Plagiarism Details</h2>

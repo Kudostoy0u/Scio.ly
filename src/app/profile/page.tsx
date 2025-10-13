@@ -10,7 +10,6 @@ import { useTheme } from '@/app/contexts/ThemeContext';
 import { Save, User as UserIcon } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Header from '@/app/components/Header';
-import Image from 'next/image';
 
 export default function ProfilePage() {
   const { darkMode } = useTheme();
@@ -189,11 +188,9 @@ export default function ProfilePage() {
             {/* Profile Picture */}
             <div className="flex items-center mb-6">
               {photoUrl ? (
-                <Image
+                <img
                   src={photoUrl}
                   alt="Profile"
-                  width={64}
-                  height={64}
                   className="w-16 h-16 rounded-full"
                 />
               ) : (

@@ -4,7 +4,6 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { useEffect } from 'react';
-import { NotificationsProvider } from '@/app/contexts/NotificationsContext';
 
 // (notifications fetch monkeypatch removed)
 
@@ -40,9 +39,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <NotificationsProvider>
-        {children}
-      </NotificationsProvider>
+      {children}
       <ToastContainer
         position="top-right"
         autoClose={3000}

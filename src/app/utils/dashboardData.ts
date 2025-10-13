@@ -1,31 +1,57 @@
 'use client';
 import logger from '@/lib/utils/logger';
-
+import { withAuthRetryData } from '@/lib/utils/supabaseRetry';
 
 import { supabase } from '@/lib/supabase';
 import type { DailyMetrics } from './metrics';
 
+/**
+ * Dashboard data management utilities for Science Olympiad platform
+ * Provides comprehensive dashboard data synchronization, metrics tracking, and user statistics
+ */
 
+/**
+ * Historical record interface for dashboard data
+ */
 export interface HistoryRecord {
+  /** Number of questions attempted */
   questionsAttempted: number;
+  /** Number of correct answers */
   correctAnswers: number;
+  /** List of events practiced */
   eventsPracticed: string[];
 }
 
+/**
+ * Dashboard data interface
+ */
 export interface DashboardData {
+  /** Daily metrics for current day */
   metrics: DailyMetrics;
+  /** Historical data records */
   historyData: Record<string, HistoryRecord>;
+  /** User's greeting name */
   greetingName: string;
 }
 
 
+/** LocalStorage key prefix for metrics data */
 const METRICS_PREFIX = 'metrics_';
+/** LocalStorage key for greeting name */
 const GREETING_NAME_KEY = 'scio_display_name';
 
-
+/**
+ * Gets today's date as a string key
+ * 
+ * @returns {string} Today's date in YYYY-MM-DD format
+ */
 const getTodayKey = (): string => new Date().toISOString().split('T')[0];
 
-
+/**
+ * Retrieves greeting name from localStorage
+ * 
+ * @returns {string} User's greeting name or empty string
+ */
 const getLocalGreetingName = (): string => {
   try {
     return localStorage.getItem(GREETING_NAME_KEY) || '';
@@ -34,6 +60,11 @@ const getLocalGreetingName = (): string => {
   }
 };
 
+/**
+ * Sets greeting name in localStorage
+ * 
+ * @param {string} name - Greeting name to store
+ */
 const setLocalGreetingName = (name: string): void => {
   try {
     localStorage.setItem(GREETING_NAME_KEY, name);
@@ -91,85 +122,53 @@ const getLocalHistory = (): Record<string, HistoryRecord> => {
 
 
 const fetchUserStatsSince = async (userId: string, fromDate: string): Promise<any[]> => {
-  const exec = async () => (supabase as any)
-    .from('user_stats')
-    .select('*')
-    .eq('user_id', userId)
-    .gte('date', fromDate);
+  const result = await withAuthRetryData(
+    async () => {
+      const query = supabase
+        .from('user_stats')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('date', fromDate);
+      return await query;
+    },
+    'fetchUserStatsSince'
+  );
 
-  let { data, error } = await exec();
-  if (error && (error as any).status && [401, 403].includes((error as any).status)) {
-    try { 
-      await supabase.auth.refreshSession(); 
-    } catch {
-
-      if (typeof window !== 'undefined') {
-        const supabaseCookieNames = [
-          'sb-access-token', 'sb-refresh-token', 'supabase-auth-token',
-          'supabase-auth-refresh-token', 'supabase-auth-token-expires',
-          'supabase-auth-refresh-token-expires', 'supabase-auth-token-type',
-          'supabase-auth-token-user-id', 'supabase-auth-token-session-id',
-          'supabase-auth-token-provider-token', 'supabase-auth-token-provider-refresh-token'
-        ];
-        
-        supabaseCookieNames.forEach(cookieName => {
-          document.cookie = cookieName + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-          document.cookie = cookieName + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + window.location.hostname + ';';
-          document.cookie = cookieName + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.' + window.location.hostname + ';';
-        });
-      }
-    }
-    const retry = await exec();
-    data = retry.data; error = retry.error;
-  }
-  if (error) {
-    logger.error('Error fetching user_stats since date:', error);
-    return [];
-  }
-  return data || [];
+  return result || [];
 };
 
 const fetchDailyUserStatsRow = async (userId: string, date: string): Promise<any | null> => {
-  const exec = async () => (supabase as any)
-    .from('user_stats')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('date', date)
-    .maybeSingle();
+  const result = await withAuthRetryData(
+    async () => {
+      const query = supabase
+        .from('user_stats')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('date', date)
+        .maybeSingle();
+      return await query;
+    },
+    'fetchDailyUserStatsRow'
+  );
 
-  let { data, error } = await exec();
-  if (error && (error as any).status && [401, 403].includes((error as any).status)) {
-    try { 
-      await supabase.auth.refreshSession(); 
-    } catch {
-
-      if (typeof window !== 'undefined') {
-        const supabaseCookieNames = [
-          'sb-access-token', 'sb-refresh-token', 'supabase-auth-token',
-          'supabase-auth-refresh-token', 'supabase-auth-token-expires',
-          'supabase-auth-refresh-token-expires', 'supabase-auth-token-type',
-          'supabase-auth-token-user-id', 'supabase-auth-token-session-id',
-          'supabase-auth-token-provider-token', 'supabase-auth-token-provider-refresh-token'
-        ];
-        
-        supabaseCookieNames.forEach(cookieName => {
-          document.cookie = cookieName + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-          document.cookie = cookieName + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + window.location.hostname + ';';
-          document.cookie = cookieName + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.' + window.location.hostname + ';';
-        });
-      }
-    }
-    const retry = await exec();
-    data = retry.data; error = retry.error;
-  }
-  if (error && (error as any).code !== 'PGRST116') {
-    logger.error('Error fetching daily user_stats row:', error);
-    return null;
-  }
-  return data || null;
+  return result;
 };
 
 
+/**
+ * Synchronizes dashboard data between Supabase and localStorage
+ * Fetches user statistics from database and syncs with local storage
+ * 
+ * @param {string | null} userId - User ID to sync data for, null for guest users
+ * @returns {Promise<DashboardData>} Synchronized dashboard data
+ * @throws {Error} When database sync fails
+ * @example
+ * ```typescript
+ * const dashboardData = await syncDashboardData('user-123');
+ * console.log(dashboardData.metrics); // Daily metrics
+ * console.log(dashboardData.historyData); // Historical data
+ * ```
+ */
 export const syncDashboardData = async (userId: string | null): Promise<DashboardData> => {
   if (!userId) {
 
@@ -273,6 +272,21 @@ export const syncDashboardData = async (userId: string | null): Promise<Dashboar
 
 // Coalesce multiple concurrent sync requests per user into a single in-flight Promise
 const userIdToInFlightSync: Record<string, Promise<DashboardData> | undefined> = {};
+
+/**
+ * Coalesces multiple concurrent sync requests per user into a single in-flight Promise
+ * Prevents duplicate API calls when multiple components request sync simultaneously
+ * 
+ * @param {string | null} userId - User ID to sync data for
+ * @returns {Promise<DashboardData>} Synchronized dashboard data
+ * @example
+ * ```typescript
+ * // Multiple calls to this function with same userId will share the same Promise
+ * const data1 = coalescedSyncDashboardData('user-123');
+ * const data2 = coalescedSyncDashboardData('user-123');
+ * // Both will resolve to the same result
+ * ```
+ */
 export const coalescedSyncDashboardData = async (userId: string | null): Promise<DashboardData> => {
   if (!userId) return syncDashboardData(userId);
   if (userIdToInFlightSync[userId]) return userIdToInFlightSync[userId] as Promise<DashboardData>;
@@ -284,6 +298,17 @@ export const coalescedSyncDashboardData = async (userId: string | null): Promise
 };
 
 
+/**
+ * Gets initial dashboard data from localStorage
+ * Returns cached data without making API calls
+ * 
+ * @returns {DashboardData} Initial dashboard data from localStorage
+ * @example
+ * ```typescript
+ * const initialData = getInitialDashboardData();
+ * console.log(initialData.metrics); // Cached daily metrics
+ * ```
+ */
 export const getInitialDashboardData = (): DashboardData => {
   const metrics = getLocalDailyMetrics();
   const historyData = getLocalHistory();
@@ -297,6 +322,25 @@ export const getInitialDashboardData = (): DashboardData => {
 };
 
 
+/**
+ * Updates dashboard metrics for a user
+ * Updates both local storage and database with new metrics
+ * 
+ * @param {string | null} userId - User ID to update metrics for
+ * @param {Object} updates - Metrics updates to apply
+ * @param {number} [updates.questionsAttempted] - Number of questions attempted
+ * @param {number} [updates.correctAnswers] - Number of correct answers
+ * @param {string} [updates.eventName] - Event name for tracking
+ * @returns {Promise<DailyMetrics | null>} Updated daily metrics or null if update fails
+ * @example
+ * ```typescript
+ * const updatedMetrics = await updateDashboardMetrics('user-123', {
+ *   questionsAttempted: 5,
+ *   correctAnswers: 4,
+ *   eventName: 'Anatomy & Physiology'
+ * });
+ * ```
+ */
 export const updateDashboardMetrics = async (
   userId: string | null,
   updates: {
@@ -411,6 +455,16 @@ export const updateDashboardMetrics = async (
 };
 
 
+/**
+ * Resets all localStorage data except theme settings
+ * Clears all user data while preserving theme preferences
+ * 
+ * @example
+ * ```typescript
+ * resetAllLocalStorageExceptTheme();
+ * // All user data cleared, theme preserved
+ * ```
+ */
 export function resetAllLocalStorageExceptTheme(): void {
   try {
     const preservedTheme = localStorage.getItem('theme');

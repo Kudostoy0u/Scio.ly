@@ -171,7 +171,7 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
   const slugify = (text: string) => slugifyText(text);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} onClick={onClose}>
       <div 
         className={`relative w-11/12 h-5/6 max-w-4xl rounded-lg shadow-2xl flex flex-col ${
           darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'

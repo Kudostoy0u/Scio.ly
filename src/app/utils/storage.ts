@@ -3,11 +3,36 @@ import logger from '@/lib/utils/logger';
 
 import { db } from './db';
 
+/**
+ * Storage utilities for Science Olympiad platform
+ * Provides client-side storage management and event name processing
+ */
+
+/**
+ * Convert event name to URL-friendly slug
+ * Transforms event names into lowercase, hyphenated slugs for URLs
+ * 
+ * @param {string} name - Event name to slugify
+ * @returns {string} URL-friendly slug
+ * @example
+ * ```typescript
+ * const slug = slugifyEventName('Anatomy & Physiology');
+ * console.log(slug); // "anatomy-physiology"
+ * ```
+ */
 export function slugifyEventName(name: string): string {
   return String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-');
 }
 
+/** Cached downloads broadcast channel */
 let downloadsChannel: BroadcastChannel | null = null;
+
+/**
+ * Get or create the downloads broadcast channel
+ * Creates a broadcast channel for cross-tab communication about downloads
+ * 
+ * @returns {BroadcastChannel | null} Downloads broadcast channel or null if unavailable
+ */
 function getDownloadsChannel(): BroadcastChannel | null {
   try {
     if (typeof window === 'undefined') return null;
@@ -20,6 +45,20 @@ function getDownloadsChannel(): BroadcastChannel | null {
   }
 }
 
+/**
+ * Subscribe to download updates across browser tabs
+ * Sets up cross-tab communication for download status updates
+ * 
+ * @param {() => void} onUpdate - Callback function to call when downloads update
+ * @returns {() => void} Unsubscribe function to remove listeners
+ * @example
+ * ```typescript
+ * const unsubscribe = subscribeToDownloads(() => {
+ *   console.log('Downloads updated');
+ * });
+ * // Later: unsubscribe();
+ * ```
+ */
 export function subscribeToDownloads(onUpdate: () => void): () => void {
   try {
     const ch = getDownloadsChannel();

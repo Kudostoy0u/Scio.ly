@@ -35,7 +35,7 @@ export const PDFModal: React.FC<PDFModalProps> = ({
 
   if (isMobile || iframeError) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75" onClick={onClose}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} onClick={onClose}>
         <div 
           className={`relative w-11/12 max-w-md p-6 rounded-lg shadow-2xl ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}
           onClick={(e) => e.stopPropagation()}
@@ -67,7 +67,7 @@ export const PDFModal: React.FC<PDFModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} onClick={onClose}>
       <div 
         className="relative w-11/12 h-5/6 max-w-5xl bg-white rounded-lg shadow-2xl flex flex-col" 
         onClick={(e) => e.stopPropagation()}

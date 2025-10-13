@@ -8,7 +8,6 @@ import { } from 'lucide-react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 // Image and Link are used within UserDropdown/AuthModal
 import { useAuth } from '@/app/contexts/AuthContext';
-import { useNotifications } from '@/app/contexts/NotificationsContext';
 import AuthModal from './auth/AuthModal';
 import UserDropdown from './auth/UserDropdown';
 import { preloadImage } from '@/lib/utils/preloadImage';
@@ -41,7 +40,6 @@ export default function AuthButton() {
   const subtleLinkClass = darkMode
     ? 'text-blue-300 hover:text-blue-200'
     : 'text-blue-500 hover:text-blue-600';
-  const { notifications: notifs, unreadCount: unread, markAllRead, markReadById, refresh } = useNotifications();
   const [username, setUsername] = useState<string | null>(null);
   const [clearingAll, setClearingAll] = useState(false);
 
@@ -60,7 +58,8 @@ export default function AuthButton() {
       } catch {}
     }
   }, [ctxUser?.id]);
-  // Notifications are now handled globally via NotificationsProvider
+  // Notifications are now handled efficiently via useEfficientNotifications hook
+  // This reduces API calls by using intelligent caching and team membership checks
 
 
   useEffect(() => {
@@ -400,11 +399,6 @@ export default function AuthButton() {
         photoUrl={photoUrl}
         displayName={displayName}
         username={username}
-        unread={unread}
-        notifs={notifs as any}
-        refresh={async (force?: boolean) => { try { await refresh(!!force); } catch {} }}
-        markAllRead={markAllRead}
-        markReadById={markReadById}
         handleSignOut={handleSignOut}
         clearingAll={clearingAll}
         setClearingAll={setClearingAll}

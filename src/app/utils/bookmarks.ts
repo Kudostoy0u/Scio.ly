@@ -1,20 +1,55 @@
 import { supabase } from '@/lib/supabase';
+
+/**
+ * Bookmark management utilities for Science Olympiad questions
+ * Provides CRUD operations for user bookmarks with Supabase integration
+ */
+
+/**
+ * Question interface for bookmark operations
+ */
 interface Question {
+  /** Optional question ID */
   id?: string;
+  /** Question text content */
   question: string;
+  /** Optional answer options */
   options?: string[];
+  /** Correct answers */
   answers: (string | number)[];
+  /** Question difficulty level */
   difficulty: number;
+  /** Optional image URL */
   imageUrl?: string;
 }
 
+/**
+ * Bookmarked question interface
+ */
 interface BookmarkedQuestion {
+  /** The bookmarked question */
   question: Question;
+  /** Science Olympiad event name */
   eventName: string;
+  /** Source of the question */
   source: string;
+  /** Bookmark creation timestamp */
   timestamp: number;
 }
 
+/**
+ * Loads user bookmarks from Supabase database
+ * Retrieves all bookmarks for a specific user, ordered by creation date
+ * 
+ * @param {string} userId - The user ID to load bookmarks for
+ * @returns {Promise<BookmarkedQuestion[]>} Array of bookmarked questions
+ * @throws {Error} When database operation fails
+ * @example
+ * ```typescript
+ * const bookmarks = await loadBookmarksFromSupabase('user-123');
+ * console.log(bookmarks); // [{ question: {...}, eventName: 'Anatomy & Physiology', ... }]
+ * ```
+ */
 export const loadBookmarksFromSupabase = async (userId: string): Promise<BookmarkedQuestion[]> => {
   if (!userId) return [];
   
@@ -42,8 +77,27 @@ export const loadBookmarksFromSupabase = async (userId: string): Promise<Bookmar
   }
 };
 
+/**
+ * Alias for loadBookmarksFromSupabase for backward compatibility
+ * @deprecated Use loadBookmarksFromSupabase instead
+ */
 export const loadBookmarksFromFirebase = loadBookmarksFromSupabase;
 
+/**
+ * Adds a bookmark to the user's bookmark collection
+ * Checks for existing bookmarks to prevent duplicates
+ * 
+ * @param {string | null} userId - The user ID to add bookmark for
+ * @param {Question} question - The question to bookmark
+ * @param {string} eventName - The Science Olympiad event name
+ * @param {string} source - The source of the question
+ * @returns {Promise<void>} Promise that resolves when bookmark is added
+ * @throws {Error} When database operation fails
+ * @example
+ * ```typescript
+ * await addBookmark('user-123', question, 'Anatomy & Physiology', 'practice');
+ * ```
+ */
 export const addBookmark = async (
   userId: string | null,
   question: Question,
@@ -103,6 +157,20 @@ export const addBookmark = async (
   }
 };
 
+/**
+ * Removes a bookmark from the user's bookmark collection
+ * Deletes the bookmark based on question ID or question text
+ * 
+ * @param {string | null} userId - The user ID to remove bookmark for
+ * @param {Question} question - The question to remove bookmark for
+ * @param {string} source - The source of the question
+ * @returns {Promise<void>} Promise that resolves when bookmark is removed
+ * @throws {Error} When database operation fails
+ * @example
+ * ```typescript
+ * await removeBookmark('user-123', question, 'practice');
+ * ```
+ */
 export const removeBookmark = async (
   userId: string | null,
   question: Question,

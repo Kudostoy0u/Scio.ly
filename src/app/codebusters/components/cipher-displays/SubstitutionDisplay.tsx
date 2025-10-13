@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { QuoteData } from '../../types';
 import { ReplacementTable } from './ReplacementTable';
+import { toast } from 'react-toastify';
 
 
 const generateKeywordAlphabet = (keyword: string): string => {
@@ -64,6 +65,23 @@ export const SubstitutionDisplay = ({
 }: SubstitutionDisplayProps) => {
     const { darkMode } = useTheme();
     const [focusedCipherLetter, setFocusedCipherLetter] = useState<string | null>(null);
+
+    // Handle solution change with duplicate letter validation
+    const handleSolutionChangeWithValidation = (cipherLetter: string, newPlainLetter: string) => {
+        if (isTestSubmitted) return;
+        
+        // Check for duplicate letters in the current solution
+        const existingPlainLetters = Object.values(solution || {}).filter(letter => letter !== '');
+        
+        // If the new letter already exists and it's not the same as the current value for this cipher letter
+        if (existingPlainLetters.includes(newPlainLetter) && newPlainLetter !== solution?.[cipherLetter]) {
+            toast.warning(`Letter "${newPlainLetter}" is already used in the replacement table. Each letter can only be used once.`);
+            return;
+        }
+        
+        // Proceed with the solution change
+        onSolutionChange(quoteIndex, cipherLetter, newPlainLetter);
+    };
 
     const getCipherInfo = () => {
         switch (cipherType) {
@@ -219,6 +237,18 @@ export const SubstitutionDisplay = ({
                 const cipherLetter = String.fromCharCode(((i + shift) % 26) + 65);
                 correctMapping[cipherLetter] = plainLetter;
             }
+        } else if (cipherType === 'Caesar' && quote.caesarShift === undefined) {
+            // For Caesar cipher without known shift, we need to determine the correct mapping
+            // by comparing the user's solution with the original quote
+            const ciphertext = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
+            const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+            
+            // Build the correct mapping by finding which cipher letters map to which plain letters
+            for (let i = 0; i < Math.min(ciphertext.length, expectedPlaintext.length); i++) {
+                const cipherLetter = ciphertext[i];
+                const plainLetter = expectedPlaintext[i];
+                correctMapping[cipherLetter] = plainLetter;
+            }
         } else if (cipherType === 'Atbash') {
             const atbashMap = 'ZYXWVUTSRQPONMLKJIHGFEDCBA';
             for (let i = 0; i < 26; i++) {
@@ -342,8 +372,7 @@ export const SubstitutionDisplay = ({
                                         maxLength={1}
                                         value={value}
                                         disabled={isTestSubmitted}
-                                        onChange={(e) => onSolutionChange(
-                                            quoteIndex,
+                                        onChange={(e) => handleSolutionChangeWithValidation(
                                             char,
                                             e.target.value.toUpperCase()
                                         )}
@@ -390,7 +419,7 @@ export const SubstitutionDisplay = ({
                     isTestSubmitted={isTestSubmitted}
                     cipherType={cipherType}
                     correctMapping={correctMapping}
-                    onSolutionChange={onSolutionChange}
+                    onSolutionChange={handleSolutionChangeWithValidation}
                     focusedCipherLetter={focusedCipherLetter}
                     onCipherLetterFocus={setFocusedCipherLetter}
                     onCipherLetterBlur={() => setFocusedCipherLetter(null)}

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { renderWithProviders, screen, fireEvent, waitFor } from '@/test-utils';
 import TeamShareModal from './TeamShareModal';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -28,7 +28,7 @@ describe('TeamShareModal', () => {
       return new Response('{}', { status: 200 });
     });
 
-    render(
+    renderWithProviders(
       <TeamShareModal
         isOpen
         onClose={onClose}
@@ -53,7 +53,7 @@ describe('TeamShareModal', () => {
       return new Response('{}', { status: 200 });
     });
 
-    render(
+    renderWithProviders(
       <TeamShareModal
         isOpen
         onClose={onClose}

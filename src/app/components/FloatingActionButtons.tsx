@@ -3,14 +3,41 @@
 import React from 'react';
 import { FileText } from 'lucide-react';
 
+/**
+ * FloatingActionButtons component props interface
+ * Defines all props required for floating action button functionality
+ */
 interface FloatingActionButtonsProps {
+  /** Whether dark mode is enabled */
   darkMode: boolean;
+  /** Whether to show the reference button */
   showReferenceButton?: boolean;
+  /** Callback function when reference button is clicked */
   onShowReference?: () => void;
+  /** Science Olympiad event name for conditional display */
   eventName?: string;
+  /** Whether the buttons should be hidden */
   hidden?: boolean;
 }
 
+/**
+ * FloatingActionButtons component
+ * Provides floating action buttons for quick access to common features
+ * Displays reference button for Codebusters event with responsive design
+ * 
+ * @param {FloatingActionButtonsProps} props - Component props
+ * @returns {JSX.Element | null} Floating action buttons component or null if hidden
+ * @example
+ * ```tsx
+ * <FloatingActionButtons
+ *   darkMode={false}
+ *   showReferenceButton={true}
+ *   onShowReference={handleShowReference}
+ *   eventName="Codebusters"
+ *   hidden={false}
+ * />
+ * ```
+ */
 export const FloatingActionButtons: React.FC<FloatingActionButtonsProps> = ({
   darkMode,
   showReferenceButton = false,

@@ -38,6 +38,28 @@ import { removeQuestionAtIndex } from './utils/questionMaintenance';
 import { fetchReplacementQuestion } from './utils/replacement';
 import { resolveRouterParams } from './utils/ssr';
 
+/**
+ * Test state management hook for Science Olympiad practice tests
+ * Provides comprehensive state management for test sessions including questions, answers, timing, and grading
+ * 
+ * @param {Object} params - Hook parameters
+ * @param {any[]} [params.initialData] - Initial question data for SSR
+ * @param {any} [params.initialRouterData] - Initial router parameters for SSR
+ * @returns {Object} Test state and control functions
+ * @example
+ * ```typescript
+ * const {
+ *   data: questions,
+ *   userAnswers,
+ *   isSubmitted,
+ *   submitTest,
+ *   updateAnswer
+ * } = useTestState({
+ *   initialData: serverQuestions,
+ *   initialRouterData: routerParams
+ * });
+ * ```
+ */
 export function useTestState({ initialData, initialRouterData }: { initialData?: any[]; initialRouterData?: any } = {}) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
@@ -80,6 +102,63 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
 
 
   useEffect(() => {
+    // Handle assignment loading
+    if (stableRouterData.assignmentId && !fetchCompletedRef.current) {
+      const loadAssignment = async () => {
+        try {
+          console.log('=== CLIENT SIDE ASSIGNMENT LOADING ===');
+          console.log('Loading assignment ID:', stableRouterData.assignmentId);
+          
+          const response = await fetch(`/api/assignments/${stableRouterData.assignmentId}`);
+          if (response.ok) {
+            const data = await response.json();
+            console.log('Raw response from API:', JSON.stringify(data, null, 2));
+            
+            const assignment = data.assignment;
+            console.log('Assignment object:', JSON.stringify(assignment, null, 2));
+            
+            // Set assignment data as questions (already formatted by API)
+            const questions = assignment.questions;
+            console.log('Questions from assignment:', JSON.stringify(questions, null, 2));
+            console.log('Number of questions:', questions.length);
+            
+            if (questions.length > 0) {
+              console.log('First question before normalization:', JSON.stringify(questions[0], null, 2));
+            }
+            
+            const normalized = normalizeQuestionsFull(questions);
+            console.log('Questions after normalization:', JSON.stringify(normalized, null, 2));
+            
+            if (normalized.length > 0) {
+              console.log('First question after normalization:', JSON.stringify(normalized[0], null, 2));
+            }
+            
+            setData(normalized);
+            setRouterData({
+              ...stableRouterData,
+              eventName: assignment.title,
+              timeLimit: '60', // Default time limit for assignments
+              assignmentMode: true
+            });
+            setIsLoading(false);
+            fetchCompletedRef.current = true;
+            logger.log('loaded assignment questions', { count: normalized.length });
+            console.log('=== END CLIENT SIDE ASSIGNMENT LOADING ===\n');
+            return;
+          }
+        } catch (error) {
+          console.error('Failed to load assignment:', error);
+          setFetchError('Failed to load assignment');
+          setIsLoading(false);
+          fetchCompletedRef.current = true;
+          return;
+        }
+      };
+      
+      loadAssignment();
+      return;
+    }
+
     // Prefer locally stored questions over SSR on reload to resume tests
     if (!ssrAppliedRef.current) {
       try {
@@ -319,39 +398,83 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
       });
     }
 
-    try {
-      const assignmentIdStr = localStorage.getItem('currentAssignmentId');
-      if (assignmentIdStr) {
-        const assignmentId = Number(assignmentIdStr);
-        if (!assignmentId || Number.isNaN(assignmentId)) {
-          try { (await import('react-toastify')).toast.error('Could not submit results (invalid assignment).'); } catch {}
-          return;
-        }
-        const name = (user?.user_metadata?.name || user?.email || '').toString();
-        const res = await fetch('/api/assignments/submit', {
+    // Handle assignment submission for enhanced assignments
+    if (routerData.assignmentId) {
+      try {
+        // Format answers for submission
+        const formattedAnswers: Record<string, any> = {};
+        data.forEach((question, index) => {
+          const answer = userAnswers[index];
+          if (answer !== null && answer !== undefined && question.id) {
+            formattedAnswers[question.id] = answer;
+          }
+        });
+
+        const res = await fetch(`/api/assignments/${routerData.assignmentId}/submit`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          // Use string form to preserve INT8 precision server-side
-          body: JSON.stringify({ assignmentId: String(assignmentIdStr), userId: user?.id || null, name, eventName: routerData.eventName, score: mcqScore, detail: { total: mcqTotal } })
+          body: JSON.stringify({
+            answers: formattedAnswers,
+            score: mcqScore,
+            totalPoints: mcqTotal,
+            timeSpent: routerData.timeLimit ? (parseInt(routerData.timeLimit) * 60) - (timeLeft || 0) : 0,
+            submittedAt: new Date().toISOString()
+          })
         });
+
         if (res.ok) {
           try {
-            const selStr = localStorage.getItem('teamsSelection') || '';
-            const sel = selStr ? JSON.parse(selStr) : null;
-            const teamName = sel?.school ? `${sel.school} ${sel.division || ''}`.trim() : null;
-            if (teamName) { (await import('react-toastify')).toast.success(`Sent results to ${teamName}!`); }
+            (await import('react-toastify')).toast.success('Assignment submitted successfully!');
           } catch {}
         } else {
           try {
-            const j = await res.json().catch(()=>null);
-            const msg = j?.error || 'Failed to submit results';
+            const j = await res.json().catch(() => null);
+            const msg = j?.error || 'Failed to submit assignment';
             (await import('react-toastify')).toast.error(msg);
           } catch {}
         }
-        localStorage.removeItem('currentAssignmentId');
+      } catch (error) {
+        console.error('Assignment submission error:', error);
+        try {
+          (await import('react-toastify')).toast.error('Failed to submit assignment');
+        } catch {}
       }
-    } catch {}
-  }, [data, userAnswers, gradingResults, routerData]);
+    } else {
+      // Handle legacy assignment submission
+      try {
+        const assignmentIdStr = localStorage.getItem('currentAssignmentId');
+        if (assignmentIdStr) {
+          const assignmentId = Number(assignmentIdStr);
+          if (!assignmentId || Number.isNaN(assignmentId)) {
+            try { (await import('react-toastify')).toast.error('Could not submit results (invalid assignment).'); } catch {}
+            return;
+          }
+          const name = (user?.user_metadata?.name || user?.email || '').toString();
+          const res = await fetch('/api/assignments/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            // Use string form to preserve INT8 precision server-side
+            body: JSON.stringify({ assignmentId: String(assignmentIdStr), userId: user?.id || null, name, eventName: routerData.eventName, score: mcqScore, detail: { total: mcqTotal } })
+          });
+          if (res.ok) {
+            try {
+              const selStr = localStorage.getItem('teamsSelection') || '';
+              const sel = selStr ? JSON.parse(selStr) : null;
+              const teamName = sel?.school ? `${sel.school} ${sel.division || ''}`.trim() : null;
+              if (teamName) { (await import('react-toastify')).toast.success(`Sent results to ${teamName}!`); }
+            } catch {}
+          } else {
+            try {
+              const j = await res.json().catch(()=>null);
+              const msg = j?.error || 'Failed to submit results';
+              (await import('react-toastify')).toast.error(msg);
+            } catch {}
+          }
+          localStorage.removeItem('currentAssignmentId');
+        }
+      } catch {}
+    }
+  }, [data, userAnswers, gradingResults, routerData, timeLeft]);
 
   const reloadQuestions = async () => {
     setIsResetting(true);
@@ -381,6 +504,8 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     setUserAnswers({});
     setGradingResults({});
     setExplanations({});
+    setSubmittedReports({});
+    setSubmittedEdits({});
     
     localStorage.removeItem('testQuestions');
     localStorage.removeItem('testUserAnswers');

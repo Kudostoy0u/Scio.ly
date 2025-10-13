@@ -268,8 +268,8 @@ export default function Header() {
           pointerEvents: isTestPage && computedOpacity <= 0.01 ? 'none' : 'auto'
         }}
       >
-        <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center h-16 px-4 sm:px-6">
+        <div className="w-full">
+          <div className="container mx-auto flex justify-between items-center h-16 px-4">
             <div className="flex items-center space-x-2">
               <Link href={isDashboard ? '/' : '/dashboard'} className="flex items-center">
                 <Image
@@ -516,7 +516,7 @@ export default function Header() {
 
       {/* Install / PWA Instructions Modal */}
       {showInstallModal && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4" onClick={() => setShowInstallModal(false)}>
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} onClick={() => setShowInstallModal(false)}>
           <div className={`${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} rounded-xl shadow-xl w-full max-w-md overflow-hidden`} onClick={(e) => e.stopPropagation()}>
             <div className={`px-5 py-4 flex items-center justify-between ${darkMode ? 'border-b border-gray-700' : 'border-b border-gray-200'}`}>
               <div className="flex items-center gap-2">

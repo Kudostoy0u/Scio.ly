@@ -1,61 +1,47 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { ApiResponse, GeminiImproveReasonRequest } from '@/lib/types/api';
+import { NextRequest } from 'next/server';
+import { ApiResponse } from '@/lib/types/api';
 import { geminiService } from '@/lib/services/gemini';
+import { validateFields, ApiErrors, successResponse, handleApiError } from '@/lib/api/utils';
+import logger from '@/lib/utils/logger';
 
 export const maxDuration = 60;
 
+interface ImproveReasonRequest extends Record<string, unknown> {
+  reason: string;
+  question: Record<string, unknown>;
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const body: GeminiImproveReasonRequest = await request.json();
+    const body = await request.json();
+    const validation = validateFields<ImproveReasonRequest>(body, ['reason', 'question']);
 
-    if (!body.reason || !body.question) {
-      const response: ApiResponse = {
-        success: false,
-        error: 'Missing required fields: reason, question',
-      };
-      return NextResponse.json(response, { status: 400 });
-    }
+    if (!validation.valid) return validation.error;
 
-    console.log('Request received');
-    console.log(`Original reason: ${body.reason}`);
+    const { reason, question } = validation.data;
+
+    logger.info('Gemini improve-reason request received');
+    logger.debug('Original reason', { reason });
 
     if (!geminiService.isAvailable()) {
-      console.log('Gemini AI not available');
-      const response: ApiResponse = {
-        success: false,
-        error: 'Gemini AI not available',
-      };
-      return NextResponse.json(response, { status: 503 });
+      logger.warn('Gemini AI not available');
+      return ApiErrors.serverError('Gemini AI not available');
     }
 
-    console.log('Sending request to Gemini AI');
+    logger.info('Sending improve-reason request to Gemini AI');
 
     try {
-      const result = await geminiService.improveReason(body.reason, body.question);
+      const result = await geminiService.improveReason(reason, question);
 
-      console.log('Gemini AI response received:', result);
+      logger.info('Gemini AI improve-reason response received');
 
-      const response: ApiResponse = {
-        success: true,
-        data: result,
-      };
-
-      return NextResponse.json(response);
+      return successResponse<ApiResponse['data']>(result);
     } catch (error) {
-      console.log('Gemini AI error:', error);
-      const response: ApiResponse = {
-        success: false,
-        error: 'Failed to improve reasoning',
-      };
-      return NextResponse.json(response, { status: 500 });
+      logger.error('Gemini AI improve-reason error:', error);
+      return ApiErrors.serverError('Failed to improve reasoning');
     }
   } catch (error) {
-    console.error('POST /api/gemini/improve-reason error:', error);
-    const response: ApiResponse = {
-      success: false,
-      error: 'Invalid request body',
-    };
-    return NextResponse.json(response, { status: 400 });
+    logger.error('POST /api/gemini/improve-reason error:', error);
+    return handleApiError(error);
   }
 }

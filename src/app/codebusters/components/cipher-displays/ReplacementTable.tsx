@@ -10,7 +10,7 @@ interface ReplacementTableProps {
     isTestSubmitted: boolean;
     cipherType: string;
     correctMapping?: { [key: string]: string };
-    onSolutionChange: (quoteIndex: number, cipherLetter: string, plainLetter: string) => void;
+    onSolutionChange: (cipherLetter: string, plainLetter: string) => void;
     focusedCipherLetter?: string | null;
     onCipherLetterFocus?: (cipherLetter: string) => void;
     onCipherLetterBlur?: () => void;
@@ -41,16 +41,8 @@ export const ReplacementTable = ({
     const handleReplacementTableChange = (cipherLetter: string, newPlainLetter: string) => {
         if (isTestSubmitted) return;
         
-
-        const existingPlainLetters = Object.values(solution || {}).filter(letter => letter !== '');
-        
-
-        if (existingPlainLetters.includes(newPlainLetter) && newPlainLetter !== solution?.[cipherLetter]) {
-            return;
-        }
-        
-
-        onSolutionChange(quoteIndex, cipherLetter, newPlainLetter);
+        // Use the passed onSolutionChange function which already includes validation
+        onSolutionChange(cipherLetter, newPlainLetter);
     };
 
 

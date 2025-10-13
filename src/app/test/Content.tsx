@@ -284,7 +284,7 @@ export default function TestContent({ initialData, initialRouterData }: { initia
         )}
 
           <main
-          className={`w-full max-w-3xl min-w-[50vw] rounded-lg shadow-md p-6 mt-4 ${
+          className={`w-full max-w-[90vw] md:max-w-3xl min-w-[50vw] rounded-lg shadow-md p-3 md:p-6 mt-4 ${
               darkMode ? 'bg-gray-800' : 'bg-white'
             }`}
           >

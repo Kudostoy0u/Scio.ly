@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { shareLinks } from '@/lib/db/schema';
 import { eq, gt, and, lte } from 'drizzle-orm';
 import { ShareCodeData } from '@/lib/types/api';
+import logger from '@/lib/utils/logger';
 
 interface TestParamsRaw {
   questionIds?: string[];
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(response, { status: 400 });
     }
 
-    console.log(`🔍 [SHARE/GET] Looking up share code: ${code}`);
+    logger.info(`Looking up share code: ${code}`);
 
 
     const result = await db
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
       .where(and(eq(shareLinks.code, code), gt(shareLinks.expiresAt, new Date())));
 
     if (result.length === 0) {
-      console.log(`❌ [SHARE/GET] Share code not found or expired: ${code}`);
+      logger.warn(`Share code not found or expired: ${code}`);
       const response: ShareCodeData = {
         success: false,
         error: 'Share code not found or expired',
@@ -51,17 +52,17 @@ export async function GET(request: NextRequest) {
     try {
       // testparamsraw is already a json object (jsonb column)
       const testParamsRaw = shareData.testParamsRaw as TestParamsRaw;
-      
+
       if (!testParamsRaw) {
-        console.log(`❌ [SHARE/GET] No data found for code: ${code}`);
+        logger.error(`No data found for share code: ${code}`);
         const response: ShareCodeData = {
           success: false,
           error: 'Invalid share data format',
         };
         return NextResponse.json(response, { status: 500 });
       }
-      
-      console.log(`✅ [SHARE/GET] Found share code: ${code}, expires: ${shareData.expiresAt}`);
+
+      logger.info(`Found share code: ${code}`, { expiresAt: shareData.expiresAt });
       
       const response: ShareCodeData = {
         success: true,
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json(response);
     } catch (parseError) {
-      console.error(`❌ [SHARE/GET] Failed to parse test_params_raw for code: ${code}`, parseError);
+      logger.error(`Failed to parse test_params_raw for share code: ${code}`, parseError);
       const response: ShareCodeData = {
         success: false,
         error: 'Invalid share data format',
@@ -84,7 +85,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(response, { status: 500 });
     }
   } catch (error) {
-    console.error('❌ [SHARE/GET] Database error:', error);
+    logger.error('Share code lookup database error:', error);
     const response: ShareCodeData = {
       success: false,
       error: 'Failed to retrieve share data',
@@ -96,19 +97,18 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE() {
   try {
-    console.log('🧹 [SHARE/CLEANUP] Starting cleanup of expired share codes');
+    logger.info('Starting cleanup of expired share codes');
 
     await db.delete(shareLinks).where(lte(shareLinks.expiresAt, new Date()));
 
-
-    console.log('🧹 [SHARE/CLEANUP] Cleanup completed');
+    logger.info('Share codes cleanup completed');
 
     return NextResponse.json({
       success: true,
       message: 'Expired share codes cleaned up',
     });
   } catch (error) {
-    console.error('❌ [SHARE/CLEANUP] Error:', error);
+    logger.error('Share codes cleanup error:', error);
     return NextResponse.json({
       success: false,
       error: 'Failed to cleanup expired share codes',

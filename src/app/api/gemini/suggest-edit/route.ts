@@ -1,78 +1,56 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { ApiResponse, GeminiSuggestEditRequest } from '@/lib/types/api';
+import { NextRequest } from 'next/server';
+import { ApiResponse } from '@/lib/types/api';
 import { geminiService } from '@/lib/services/gemini';
+import { validateFields, ApiErrors, successResponse, handleApiError } from '@/lib/api/utils';
+import logger from '@/lib/utils/logger';
 
 export const maxDuration = 60;
+
+interface SuggestEditRequest extends Record<string, unknown> {
+  question: Record<string, unknown>;
+  userReason?: string;
+}
 
 // post /api/gemini/suggest-edit for ai suggestions for improving a question
 export async function POST(request: NextRequest) {
   try {
-    const body: GeminiSuggestEditRequest = await request.json();
+    const body = await request.json();
+    const validation = validateFields<SuggestEditRequest>(body, ['question']);
 
-    if (!body.question) {
-      const response: ApiResponse = {
-        success: false,
-        error: 'Missing required field: question',
-      };
-      return NextResponse.json(response, { status: 400 });
-    }
+    if (!validation.valid) return validation.error;
 
-    console.log('Request received');
-    if (body.userReason) {
-      console.log(`User reason: ${body.userReason}`);
+    const { question, userReason } = validation.data;
+
+    logger.info('Gemini suggest-edit request received');
+    if (userReason) {
+      logger.info(`User reason: ${userReason}`);
     }
 
     if (!geminiService.isAvailable()) {
-      console.log('Gemini AI not available');
-      const response: ApiResponse = {
-        success: false,
-        error: 'Gemini AI not available',
-      };
-      return NextResponse.json(response, { status: 503 });
+      logger.warn('Gemini AI not available');
+      return ApiErrors.serverError('Gemini AI not available');
     }
 
-    console.log('Question:', body.question);
-    console.log('Sending request to Gemini AI');
+    logger.info('Sending suggest-edit request to Gemini AI');
 
     try {
-      const result = await geminiService.suggestEdit(body.question, body.userReason);
+      const result = await geminiService.suggestEdit(question, userReason);
 
-      console.log('Gemini AI response received:', result);
+      logger.info('Gemini AI suggest-edit response received');
+      logger.debug('AI Suggestions', {
+        suggestedQuestion: result.suggestedQuestion,
+        suggestedOptions: result.suggestedOptions,
+        suggestedAnswers: result.suggestedAnswers,
+        suggestedDifficulty: (result as any).suggestedDifficulty,
+      });
 
-      console.log('AI Suggestions:');
-      if (result.suggestedQuestion) {
-        console.log(`   - Suggested Question: ${result.suggestedQuestion}`);
-      }
-      if (result.suggestedOptions) {
-        console.log(`   - Suggested Options: ${JSON.stringify(result.suggestedOptions)}`);
-      }
-      if (result.suggestedAnswers) {
-        console.log(`   - Suggested Answers: ${JSON.stringify(result.suggestedAnswers)}`);
-      }
-      if ((result as any).suggestedDifficulty !== undefined) {
-        console.log(`   - Suggested Difficulty: ${(result as any).suggestedDifficulty}`);
-      }
-
-      const response: ApiResponse = {
-        success: true,
-        data: result,
-      };
-
-      return NextResponse.json(response);
+      return successResponse<ApiResponse['data']>(result);
     } catch (error) {
-      console.log('Gemini AI error:', error);
-      const response: ApiResponse = {
-        success: false,
-        error: 'Failed to generate edit suggestions',
-      };
-      return NextResponse.json(response, { status: 500 });
+      logger.error('Gemini AI suggest-edit error:', error);
+      return ApiErrors.serverError('Failed to generate edit suggestions');
     }
   } catch (error) {
-    console.error('POST /api/gemini/suggest-edit error:', error);
-    const response: ApiResponse = {
-      success: false,
-      error: 'Invalid request body',
-    };
-    return NextResponse.json(response, { status: 400 });
+    logger.error('POST /api/gemini/suggest-edit error:', error);
+    return handleApiError(error);
   }
 }

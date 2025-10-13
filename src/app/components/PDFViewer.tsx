@@ -50,7 +50,7 @@ const PDFViewer = React.forwardRef<HTMLButtonElement, PDFViewerProps>(({
     if (!mounted) return null;
     
     return createPortal(
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={closePDF}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} onClick={closePDF}>
         <div 
           className="relative w-11/12 h-5/6 max-w-5xl bg-white rounded-lg shadow-2xl flex flex-col" 
           onClick={(e) => e.stopPropagation()}

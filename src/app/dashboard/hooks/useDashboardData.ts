@@ -14,18 +14,31 @@ import {
 } from '@/app/utils/dashboardData';
 import type { DailyMetrics } from '@/app/utils/metrics';
 
-export interface UseDashboardDataReturn {
+/**
+ * Dashboard data management hook for Science Olympiad platform
+ * Provides comprehensive dashboard data management including metrics, history, and user progress
+ */
 
+/**
+ * Return interface for useDashboardData hook
+ * Contains all dashboard data and control functions
+ */
+export interface UseDashboardDataReturn {
+  /** Daily metrics and statistics */
   metrics: DailyMetrics;
+  /** Historical data records */
   historyData: Record<string, HistoryRecord>;
+  /** User's greeting name */
   greetingName: string;
   
-
+  /** Loading state indicator */
   isLoading: boolean;
+  /** Error message if data loading fails */
   error: string | null;
   
-
+  /** Function to refresh all dashboard data */
   refreshData: () => Promise<void>;
+  /** Function to update user metrics */
   updateMetrics: (updates: {
     questionsAttempted?: number;
     correctAnswers?: number;
@@ -33,6 +46,23 @@ export interface UseDashboardDataReturn {
   }) => Promise<void>;
 }
 
+/**
+ * Dashboard data management hook
+ * Manages user dashboard data including metrics, history, and progress tracking
+ * 
+ * @param {User | null} user - Current authenticated user
+ * @returns {UseDashboardDataReturn} Dashboard data and control functions
+ * @example
+ * ```typescript
+ * const {
+ *   metrics,
+ *   historyData,
+ *   isLoading,
+ *   refreshData,
+ *   updateMetrics
+ * } = useDashboardData(user);
+ * ```
+ */
 export function useDashboardData(user: User | null): UseDashboardDataReturn {
   const [data, setData] = useState<DashboardData>(() => getInitialDashboardData());
   const [isLoading, setIsLoading] = useState(false);

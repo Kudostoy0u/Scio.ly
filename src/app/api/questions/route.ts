@@ -6,11 +6,12 @@ import { Question } from '@/lib/types/api';
 import { v4 as uuidv4 } from 'uuid';
 import { eq, and, or, gte, lte, lt, sql, SQL } from 'drizzle-orm';
 import { z } from 'zod';
-import { 
-  handleApiError, 
+import {
+  handleApiError,
   parseRequestBody,
   ApiError
 } from '@/lib/api/utils';
+import logger from '@/lib/utils/logger';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -151,6 +152,7 @@ class QueryBuilder {
 }
 
 
+
 function encodeBase52Local(index: number): string {
   const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
   const BASE = ALPHABET.length;
@@ -192,6 +194,7 @@ const transformDatabaseResult = (result: DatabaseQuestion): Question => {
     base52: base52Code,
   };
 };
+
 
 const CACHE_TTL_MS = 60000;
 const questionsCache = new Map<string, { expiresAt: number; data: Question[] }>();
@@ -300,7 +303,7 @@ const fetchQuestions = async (filters: ValidatedQuestionFilters): Promise<Questi
 
       return rows.map((row) => transformDatabaseResult(row as any));
     } catch (err) {
-      console.log('Error fetching questions (single scan)', err);
+      logger.warn('Error fetching questions (single scan), falling back to RANDOM()', err);
 
       const rows = await db
         .select({
@@ -328,7 +331,7 @@ const fetchQuestions = async (filters: ValidatedQuestionFilters): Promise<Questi
 
   // Two-phase indexed random seek for truly random selection
   try {
-    console.log('Two-phase indexed random seek');
+    logger.debug('Using two-phase indexed random seek');
     const whereFirst = whereCondition ? and(whereCondition, gte(questions.randomF, r)) : gte(questions.randomF, r);
 
     const firstRows = await db
@@ -382,7 +385,7 @@ const fetchQuestions = async (filters: ValidatedQuestionFilters): Promise<Questi
 
     return rows.map((row) => transformDatabaseResult(row as any));
   } catch (err) {
-    console.log('Error fetching questions (two-phase)', err);
+    logger.warn('Error fetching questions (two-phase), falling back to RANDOM()', err);
 
     const rows = await db
       .select({

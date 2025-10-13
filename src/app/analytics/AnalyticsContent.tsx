@@ -4,10 +4,10 @@ import logger from '@/lib/utils/logger';
 
 import { useState, useEffect } from 'react';
 import Header from '@/app/components/Header';
-import EloViewer from '../teams/components/EloViewer';
-import type { EloData } from '../teams/types/elo';
+import EloViewer from './components/EloViewer';
+import type { EloData } from './types/elo';
 import { useTheme } from '@/app/contexts/ThemeContext';
-import { loadEloData } from '../teams/utils/dataLoader';
+import { loadEloData } from './utils/dataLoader';
 
 export default function AnalyticsContent() {
   const [eloData, setEloData] = useState<EloData | null>(null);

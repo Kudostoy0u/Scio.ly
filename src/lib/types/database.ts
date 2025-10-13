@@ -123,6 +123,47 @@ export interface Database {
           created_at?: string
         }
       }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          notification_type: string
+          title: string
+          message: string
+          data: any
+          is_read: boolean
+          created_at: string
+          read_at: string | null
+          team_id: string | null
+          team_name: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          notification_type: string
+          title: string
+          message: string
+          data?: any
+          is_read?: boolean
+          created_at?: string
+          read_at?: string | null
+          team_id?: string | null
+          team_name?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          notification_type?: string
+          title?: string
+          message?: string
+          data?: any
+          is_read?: boolean
+          created_at?: string
+          read_at?: string | null
+          team_id?: string | null
+          team_name?: string | null
+        }
+      }
     }
     Views: {
       [_ in never]: never

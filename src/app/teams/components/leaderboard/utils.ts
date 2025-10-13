@@ -1,7 +1,19 @@
-import type { EloData } from '../../types/elo';
-import { getLeaderboard } from '../../utils/eloDataProcessor';
+import type { EloData } from '../../../analytics/types/elo';
+import { getLeaderboard } from '../../../analytics/utils/eloDataProcessor';
 import logger from '@/lib/utils/logger';
 
+/**
+ * Collect all available seasons from ELO data
+ * Extracts unique season identifiers from the ELO data structure
+ * 
+ * @param {EloData} eloData - ELO rating data structure
+ * @returns {string[]} Array of unique season identifiers, sorted alphabetically
+ * @example
+ * ```typescript
+ * const seasons = collectSeasons(eloData);
+ * console.log(seasons); // ['2023-2024', '2024-2025']
+ * ```
+ */
 export function collectSeasons(eloData: EloData): string[] {
   const seasons = new Set<string>();
   for (const stateCode in eloData) {
@@ -13,10 +25,37 @@ export function collectSeasons(eloData: EloData): string[] {
   return Array.from(seasons).sort();
 }
 
+/**
+ * Collect all available states from ELO data
+ * Extracts unique state codes from the ELO data structure
+ * 
+ * @param {EloData} eloData - ELO rating data structure
+ * @returns {string[]} Array of unique state codes, sorted alphabetically
+ * @example
+ * ```typescript
+ * const states = collectStates(eloData);
+ * console.log(states); // ['CA', 'IL', 'NY', 'TX']
+ * ```
+ */
 export function collectStates(eloData: EloData): string[] {
   return Object.keys(eloData).sort();
 }
 
+/**
+ * Get available events for a specific season and division
+ * Filters events based on the whitelist and available data
+ * 
+ * @param {EloData} eloData - ELO rating data structure
+ * @param {string} selectedSeason - The season to filter by
+ * @param {'b' | 'c'} division - Division to filter by (B or C)
+ * @param {Record<string, Record<string, string[]>>} whitelist - Allowed events by season and division
+ * @returns {string[]} Array of available event names, sorted alphabetically
+ * @example
+ * ```typescript
+ * const events = eventsForSeason(eloData, '2023-2024', 'c', whitelist);
+ * console.log(events); // ['Anatomy & Physiology', 'Codebusters', 'Forensics']
+ * ```
+ */
 export function eventsForSeason(
   eloData: EloData,
   selectedSeason: string,
@@ -39,8 +78,34 @@ export function eventsForSeason(
   return Array.from(events).sort();
 }
 
-export type TournamentDate = { date: string; tournament: string; allTournaments: string[]; season: string };
+/**
+ * Tournament date information interface
+ * Contains tournament date and metadata
+ */
+export type TournamentDate = { 
+  /** Tournament date string */
+  date: string; 
+  /** Tournament name */
+  tournament: string; 
+  /** All available tournaments */
+  allTournaments: string[]; 
+  /** Season identifier */
+  season: string; 
+};
 
+/**
+ * Build tournament dates from metadata for a specific season
+ * Processes tournament timeline metadata to create date information
+ * 
+ * @param {any} metadata - Tournament metadata object
+ * @param {string} season - Season identifier
+ * @returns {TournamentDate[]} Array of tournament date information
+ * @example
+ * ```typescript
+ * const dates = buildTournamentDates(metadata, '2023-2024');
+ * console.log(dates[0].tournament); // Tournament name
+ * ```
+ */
 export function buildTournamentDates(metadata: any, season: string): TournamentDate[] {
   try {
     if (!metadata?.tournamentTimeline?.[season]) return [];

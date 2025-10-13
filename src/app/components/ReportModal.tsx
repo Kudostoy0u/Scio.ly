@@ -183,7 +183,8 @@ const ReportModal = ({ isOpen, onClose, onSubmit, darkMode, question, event }: R
   return (
     <>
       <div 
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        className="fixed inset-0 flex items-center justify-center z-50"
+        style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
         onClick={(e) => {
           if (e.target === e.currentTarget) handleClose();
         }}

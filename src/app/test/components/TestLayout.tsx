@@ -19,7 +19,7 @@ export default function TestLayout({ children, darkMode }: TestLayoutProps) {
       {/* Global scrollbar theme is centralized in globals.css */}
 
       {/* Page Content */}
-      <div className="relative flex flex-col items-center p-6">
+      <div className="relative flex flex-col items-center p-3 md:p-6">
         {children}
       </div>
     </div>

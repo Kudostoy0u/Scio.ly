@@ -8,31 +8,79 @@ import { toast } from 'react-toastify';
 import { supabase } from '@/lib/supabase';
 import { addBookmark, removeBookmark } from '@/app/utils/bookmarks';
 
+/**
+ * Question interface for bookmark operations
+ * Represents a Science Olympiad question with all necessary metadata
+ */
 export interface Question {
+  /** Question text content */
   question: string;
+  /** Optional answer choices for multiple choice questions */
   options?: string[];
+  /** Correct answers (indices for multiple choice, text for free response) */
   answers: (number | string)[];
+  /** Question difficulty level (0-1) */
   difficulty: number;
+  /** Tournament name */
   tournament?: string;
+  /** Division (B or C) */
   division?: string;
+  /** Subject/event name */
   subject?: string;
+  /** Subtopic within the event */
   subtopic?: string;
+  /** Optional question ID */
   id?: string;
+  /** Optional image URL */
   imageUrl?: string;
+  /** Optional base64 image data */
   imageData?: string;
 }
 
+/**
+ * BookmarkManager component props interface
+ * Defines all props required for bookmark management functionality
+ */
 interface BookmarkManagerProps {
+  /** Question object to bookmark/unbookmark */
   question: Question;
+  /** Whether the question is currently bookmarked */
   isBookmarked: boolean;
+  /** Science Olympiad event name */
   eventName: string;
+  /** Source context for the question */
   source: 'test' | 'unlimited' | 'practice';
+  /** Callback function when bookmark status changes */
   onBookmarkChange: (questionText: string, isBookmarked: boolean) => void;
+  /** Whether dark mode is enabled */
   darkMode?: boolean;
+  /** Size of the bookmark button */
   size?: 'sm' | 'md' | 'lg';
+  /** Whether to show the bookmark label */
   showLabel?: boolean;
 }
 
+/**
+ * BookmarkManager component
+ * Provides bookmark functionality for Science Olympiad questions
+ * Handles adding/removing bookmarks with user authentication and visual feedback
+ * 
+ * @param {BookmarkManagerProps} props - Component props
+ * @returns {JSX.Element} Bookmark manager component
+ * @example
+ * ```tsx
+ * <BookmarkManager
+ *   question={question}
+ *   isBookmarked={false}
+ *   eventName="Anatomy & Physiology"
+ *   source="test"
+ *   onBookmarkChange={handleBookmarkChange}
+ *   darkMode={false}
+ *   size="md"
+ *   showLabel={true}
+ * />
+ * ```
+ */
 const BookmarkManager: React.FC<BookmarkManagerProps> = ({
   question,
   isBookmarked,

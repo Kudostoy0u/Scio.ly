@@ -135,7 +135,7 @@ export const PortaDisplay = ({
             <div className="flex flex-wrap gap-y-8 text-sm sm:text-base break-words whitespace-pre-wrap mb-6">
                 {text.split('').map((char, i) => {
                     const isLetter = /[A-Z]/.test(char);
-                    const value = solution?.[char] || '';
+                    const value = solution?.[`${char}-${i}`] || '';
                     const correctLetter = correctMapping[i];
                     const isCorrect = isLetter && value.toUpperCase() === correctLetter;
                     
@@ -167,7 +167,7 @@ export const PortaDisplay = ({
                                         value={value}
                                         onChange={(e) => onSolutionChange(
                                             quoteIndex,
-                                            char,
+                                            `${char}-${i}`,
                                             e.target.value.toUpperCase()
                                         )}
                                         autoComplete="off"

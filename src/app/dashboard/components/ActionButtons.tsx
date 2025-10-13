@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { FaFileAlt, FaBookmark, FaDiscord, FaBook, FaUsers } from 'react-icons/fa';
-import { ChartPie, Trophy } from 'lucide-react';
+import { ChartPie, GraduationCap, ArrowRight } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { handleShareCodeRedirect } from '@/app/utils/shareCodeUtils';
 
@@ -19,8 +19,8 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
   const [testCodeDigits, setTestCodeDigits] = useState(['', '', '', '', '', '']);
   
   const cardStyle = darkMode
-    ? 'bg-gray-800 border border-gray-700 text-white'
-    : 'bg-white border border-gray-200 text-gray-900';
+    ? 'bg-gray-800 border border-gray-700 text-white relative overflow-hidden group'
+    : 'bg-white border border-gray-200 text-gray-900 relative overflow-hidden group';
 
   const handleLoadTest = async (code: string) => {
     try {
@@ -95,7 +95,7 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
       {/* Row 1: Load Test with Code and Bookmarks */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Load Test with Code */}
-        <div className={`rounded-lg cursor-pointer ${cardStyle} hover:border-gray-600`}>
+        <div className={`rounded-lg cursor-pointer ${cardStyle}`}>
           <div className={`w-full h-full p-4 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'}`}>
             <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
               <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -136,9 +136,9 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
         {/* Bookmarks Button */}
         <motion.div 
           onClick={() => router.push('/bookmarks')}
-          className={`rounded-lg cursor-pointer ${cardStyle} hover:border-gray-600`}
+          className={`rounded-lg cursor-pointer ${cardStyle}`}
         >
-          <div className={`w-full h-full p-4 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'}`}>
+          <div className={`w-full h-full p-4 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'} transition-transform duration-300 group-hover:translate-x-4`}>
             <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
               <FaBookmark className="text-2xl text-green-500" />
             </div>
@@ -149,6 +149,10 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
               </p>
             </div>
           </div>
+          {/* Arrow animation */}
+          <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-full group-hover:translate-x-2 transition-transform duration-300">
+            <ArrowRight className="w-5 h-5 text-green-500" />
+          </div>
         </motion.div>
       </div>
 
@@ -157,9 +161,9 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
         {/* Teams Button */}
         <motion.div 
           onClick={() => router.push('/teams')}
-          className={`rounded-lg cursor-pointer ${cardStyle} hover:border-gray-600`}
+          className={`rounded-lg cursor-pointer ${cardStyle}`}
         >
-          <div className={`w-full h-full p-6 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'}`}>
+          <div className={`w-full h-full p-6 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'} transition-transform duration-300 group-hover:translate-x-2`}>
             <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
               <FaUsers className="text-2xl text-blue-500" />
             </div>
@@ -170,53 +174,43 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
               </p>
             </div>
           </div>
+          {/* Arrow animation */}
+          <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-full group-hover:translate-x-2 transition-transform duration-300">
+            <ArrowRight className="w-5 h-5 text-blue-500" />
+          </div>
         </motion.div>
 
-        {/* Leaderboard Button */}
+        {/* SciConnect Button */}
         <motion.div 
           onClick={() => router.push('/leaderboard')}
-          className={`rounded-lg cursor-pointer ${cardStyle} hover:border-gray-600`}
+          className={`rounded-lg cursor-pointer ${cardStyle}`}
         >
-          <div className={`w-full h-full p-6 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'}`}>
+          <div className={`w-full h-full p-6 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'} transition-transform duration-300 group-hover:translate-x-2`}>
             <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-              <Trophy className="w-6 h-6 text-yellow-500" />
+              <GraduationCap className="w-6 h-6 text-purple-500" />
             </div>
             <div className="flex-1">
-              <h3 className="text-xl font-bold mb-1">Leaderboard</h3>
+              <h3 className="text-xl font-bold mb-1">SciConnect</h3>
               <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                View rankings and compete with other users
+                Introductory Science Olympiad courses
               </p>
             </div>
+          </div>
+          {/* Arrow animation */}
+          <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-full group-hover:translate-x-2 transition-transform duration-300">
+            <ArrowRight className="w-5 h-5 text-purple-500" />
           </div>
         </motion.div>
       </div>
       
-      {/* Row 3: Recent Reports and Analytics */}
+      {/* Row 3: Analytics and SciConnect */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {/* Recent Reports Button */}
-        <motion.div 
-          onClick={() => router.push('/reports')}
-          className={`rounded-lg cursor-pointer ${cardStyle} hover:border-gray-600`}
-        >
-          <div className={`w-full h-full p-6 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'}`}>
-            <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-              <FaFileAlt className="text-2xl text-blue-500" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-xl font-bold mb-1">Recent Reports</h3>
-              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                Check out how the community has been fixing up the question base
-              </p>
-            </div>
-          </div>
-        </motion.div>
-        
         {/* Analytics Button */}
         <motion.div 
           onClick={() => router.push('/analytics')}
-          className={`rounded-lg cursor-pointer ${cardStyle} hover:border-gray-600`}
+          className={`rounded-lg cursor-pointer ${cardStyle}`}
         >
-          <div className={`w-full h-full p-6 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'}`}>
+          <div className={`w-full h-full p-6 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'} transition-transform duration-300 group-hover:translate-x-2`}>
             <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
               <ChartPie className="w-6 h-6 text-blue-500" />
             </div>
@@ -227,6 +221,32 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
               </p>
             </div>
           </div>
+          {/* Arrow animation */}
+          <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-full group-hover:translate-x-2 transition-transform duration-300">
+            <ArrowRight className="w-5 h-5 text-blue-500" />
+          </div>
+        </motion.div>
+        
+        {/* Recent Reports Button */}
+        <motion.div 
+          onClick={() => router.push('/reports')}
+          className={`rounded-lg cursor-pointer ${cardStyle}`}
+        >
+          <div className={`w-full h-full p-6 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'} transition-transform duration-300 group-hover:translate-x-2`}>
+            <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+              <FaFileAlt className="text-2xl text-blue-500" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold mb-1">Recent Reports</h3>
+              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                Check out how the community has been fixing up the question base
+              </p>
+            </div>
+          </div>
+          {/* Arrow animation */}
+          <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-full group-hover:translate-x-2 transition-transform duration-300">
+            <ArrowRight className="w-5 h-5 text-blue-500" />
+          </div>
         </motion.div>
       </div>
       
@@ -235,9 +255,9 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
         {/* Discord Bot Button */}
         <motion.div 
           onClick={() => window.open('https://discord.com/oauth2/authorize?client_id=1400979720614711327&permissions=8&integration_type=0&scope=bot+applications.commands', '_blank')}
-          className={`rounded-lg cursor-pointer ${cardStyle} hover:border-gray-600`}
+          className={`rounded-lg cursor-pointer ${cardStyle}`}
         >
-          <div className={`w-full h-full p-6 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'}`}>
+          <div className={`w-full h-full p-6 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'} transition-transform duration-300 group-hover:translate-x-2`}>
             <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
               <FaDiscord className="text-2xl text-purple-500" />
             </div>
@@ -248,14 +268,18 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
               </p>
             </div>
           </div>
+          {/* Arrow animation */}
+          <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-full group-hover:translate-x-2 transition-transform duration-300">
+            <ArrowRight className="w-5 h-5 text-purple-500" />
+          </div>
         </motion.div>
         
         {/* Scio.ly Docs Button */}
         <motion.div 
           onClick={() => router.push('/docs')}
-          className={`rounded-lg cursor-pointer ${cardStyle} hover:border-gray-600`}
+          className={`rounded-lg cursor-pointer ${cardStyle}`}
         >
-          <div className={`w-full h-full p-6 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'}`}>
+          <div className={`w-full h-full p-6 flex items-center gap-4 ${darkMode ? 'text-white' : 'text-black'} transition-transform duration-300 group-hover:translate-x-2`}>
             <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
               <FaBook className="text-2xl text-orange-500" />
             </div>
@@ -265,6 +289,10 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
                 Science Olympiad event documentation and resources
               </p>
             </div>
+          </div>
+          {/* Arrow animation */}
+          <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-full group-hover:translate-x-2 transition-transform duration-300">
+            <ArrowRight className="w-5 h-5 text-orange-500" />
           </div>
         </motion.div>
       </div>

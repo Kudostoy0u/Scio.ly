@@ -212,6 +212,18 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
           const shift = quote.caesarShift;
           const expectedPlainLetter = String.fromCharCode(((cipherLetter.charCodeAt(0) - 65 - shift + 26) % 26) + 65);
           isCorrect = userAnswer === expectedPlainLetter;
+        } else if (quote.cipherType === 'Caesar' && quote.caesarShift === undefined) {
+          // For Caesar cipher without known shift, we need to check if the user's solution
+          // correctly deciphers the ciphertext to match the original quote
+          const ciphertext = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
+          const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+          
+          // Find the position of this cipher letter in the ciphertext
+          const cipherIndex = ciphertext.indexOf(cipherLetter);
+          if (cipherIndex !== -1 && cipherIndex < expectedPlaintext.length) {
+            const expectedPlainLetter = expectedPlaintext[cipherIndex];
+            isCorrect = userAnswer === expectedPlainLetter;
+          }
         } else if (quote.cipherType === 'Atbash') {
           const atbashMap = 'ZYXWVUTSRQPONMLKJIHGFEDCBA';
           const expectedPlainLetter = atbashMap[cipherLetter.charCodeAt(0) - 65];
@@ -478,16 +490,19 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
   else if (quote.cipherType === 'Porta') {
     if (quote.solution && Object.keys(quote.solution).length > 0) {
 
-      const uniqueLetters = new Set(quote.encrypted.replace(/[^A-Z]/g, ''));
-      totalInputs = uniqueLetters.size;
+      // Count all input fields (including duplicates of the same letter)
+      const inputKeys = Object.keys(quote.solution).filter(key => key.includes('-'));
+      totalInputs = inputKeys.length;
       
 
-      for (const cipherLetter of uniqueLetters) {
-        const plainLetter = quote.solution[cipherLetter];
+      for (const solutionKey of inputKeys) {
+        const plainLetter = quote.solution[solutionKey];
         if (plainLetter && plainLetter.trim().length > 0) {
           filledInputs++;
 
-
+          // Extract cipher letter and position from key format "char-position"
+          const [cipherLetter] = solutionKey.split('-');
+          
           let isCorrect = false;
           
 

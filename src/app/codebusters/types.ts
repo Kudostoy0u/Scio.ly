@@ -1,28 +1,63 @@
+/**
+ * Codebusters type definitions for Science Olympiad platform
+ * Comprehensive type definitions for the Codebusters cipher system
+ */
+
+/**
+ * Quote data interface for Codebusters ciphers
+ * Contains all necessary data for encrypted quotes and their solutions
+ */
 export interface QuoteData {
+    /** Unique identifier for the quote */
+    id?: string;
+    /** Author of the original quote */
     author: string;
+    /** Original plaintext quote */
     quote: string;
+    /** Encrypted version of the quote */
     encrypted: string;
+    /** Type of cipher used for encryption */
     cipherType: 'Random Aristocrat' | 'K1 Aristocrat' | 'K2 Aristocrat' | 'K3 Aristocrat' | 'Random Patristocrat' | 'K1 Patristocrat' | 'K2 Patristocrat' | 'K3 Patristocrat' | 'Caesar' | 'Atbash' | 'Affine' | 'Hill 2x2' | 'Hill 3x3' | 'Baconian' | 'Porta' | 'Nihilist' | 'Fractionated Morse' | 'Complete Columnar' | 'Random Xenocrypt' | 'K1 Xenocrypt' | 'K2 Xenocrypt' | 'K3 Xenocrypt' | 'Checkerboard' | 'Cryptarithm';
+    /** Optional cipher key */
     key?: string;
+    /** Optional K-shift value for K-ciphers */
     kShift?: number;
+    /** Optional matrix for Hill ciphers */
     matrix?: number[][];
+    /** Optional decryption matrix for Hill ciphers */
     decryptionMatrix?: number[][];
+    /** Optional Porta cipher keyword */
     portaKeyword?: string;
+    /** Optional Nihilist Polybius key */
     nihilistPolybiusKey?: string;
+    /** Optional Nihilist cipher key */
     nihilistCipherKey?: string;
 
+    /** Optional Checkerboard row key */
     checkerboardRowKey?: string;
+    /** Optional Checkerboard column key */
     checkerboardColKey?: string;
+    /** Optional Checkerboard Polybius key */
     checkerboardPolybiusKey?: string;
+    /** Whether Checkerboard uses I/J combination */
     checkerboardUsesIJ?: boolean;
+    /** Optional Columnar cipher key */
     columnarKey?: string;
+    /** Optional Fractionated Morse key */
     fractionatedKey?: string;
+    /** Optional fractionation table for Fractionated Morse */
     fractionationTable?: { [key: string]: string };
+    /** Optional Xenocrypt key */
     xenocryptKey?: string;
+    /** Optional Caesar cipher shift value */
     caesarShift?: number;
+    /** Optional Affine cipher A coefficient */
     affineA?: number;
+    /** Optional Affine cipher B coefficient */
     affineB?: number;
+    /** Optional Baconian binary type */
     baconianBinaryType?: string;
+    /** Optional block size for block ciphers */
     blockSize?: number;
 
     cryptarithmData?: {
@@ -53,6 +88,12 @@ export interface QuoteData {
     keywordSolution?: string;
     plainAlphabet?: string;
     cipherAlphabet?: string;
+    /** Division (B or C) */
+    division?: string;
+    /** Character length of the quote */
+    charLength?: number;
+    /** Hint for the cipher */
+    hint?: string;
 }
 
 export interface CipherResult {

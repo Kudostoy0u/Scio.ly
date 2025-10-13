@@ -22,7 +22,7 @@ function NonCompactSummary({ items, subtopics, darkMode }: {
   darkMode: boolean; 
 }) {
   return (
-    <div className="sticky top-4 z-10 w-full max-w-3xl min-w-[50vw] mb-6">
+    <div className="sticky top-4 z-10 w-full max-w-[90vw] md:max-w-3xl min-w-[50vw] mb-6">
       <div className={`rounded-lg shadow-lg p-4 md:p-5 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
         <h2 className={`text-lg md:text-xl font-bold mb-3 md:mb-4 text-center ${darkMode ? 'text-white' : 'text-gray-900'}`}>
           Test Summary

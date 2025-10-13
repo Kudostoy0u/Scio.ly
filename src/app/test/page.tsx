@@ -10,13 +10,18 @@ export const dynamic = 'force-dynamic';
 
 import { cookies } from 'next/headers';
 
-export default async function Page() {
+export default async function Page({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const cookieStore = await cookies();
   const raw = cookieStore.get('scio_test_params')?.value;
   let parsed: any | undefined;
   try { parsed = raw ? JSON.parse(decodeURIComponent(raw)) : undefined; } catch {
     // ignore malformed cookie
   }
+  
+  // Check for assignment parameter in URL
+  const resolvedSearchParams = await searchParams;
+  const assignmentId = resolvedSearchParams.assignment as string | undefined;
+  
   const eventName = parsed?.eventName as string | undefined;
   const questionCount = parsed?.questionCount?.toString() as string | undefined;
   const timeLimit = parsed?.timeLimit?.toString() as string | undefined;
@@ -41,6 +46,7 @@ export default async function Page() {
         difficulties?: string[];
         idPercentage?: number;
         pureIdOnly?: boolean;
+        assignmentId?: string;
       }
     | undefined = undefined;
 
@@ -55,6 +61,7 @@ const baseRouterData = {
   difficulties,
   idPercentage,
   pureIdOnly,
+  assignmentId,
 };
 
 

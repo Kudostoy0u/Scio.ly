@@ -42,6 +42,24 @@ export const useAnswerChecking = (quotes: QuoteData[]) => {
       return true;
     }
 
+    // Caesar cipher without known shift - check if solution matches original quote
+    if (quote.cipherType === 'Caesar' && quote.caesarShift === undefined) {
+      // Get the ciphertext (encrypted text)
+      const ciphertext = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
+      // Get the original quote (expected plaintext)
+      const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+      
+      // Check if the user's solution correctly deciphers the ciphertext
+      let decipheredText = '';
+      for (const cipherLetter of ciphertext) {
+        const userPlainLetter = quote.solution[cipherLetter] || '';
+        decipheredText += userPlainLetter;
+      }
+      
+      // Compare deciphered text with expected plaintext
+      return decipheredText === expectedPlaintext;
+    }
+
 
     if (quote.cipherType === 'Atbash') {
       const atbashMap = 'ZYXWVUTSRQPONMLKJIHGFEDCBA';
@@ -224,12 +242,33 @@ export const useAnswerChecking = (quotes: QuoteData[]) => {
     return true;
   }, [quotes]);
 
+  const checkNihilistAnswer = useCallback((quoteIndex: number): boolean => {
+    const quote = quotes[quoteIndex];
+    if (!quote || !quote.solution) return false;
+    
+    // Add nihilist answer checking logic here
+    return true;
+  }, [quotes]);
+
+  const checkAnswers = useCallback(() => {
+    // Add overall answer checking logic here
+    return true;
+  }, []);
+
+  const getCorrectAnswers = useCallback(() => {
+    // Add correct answers logic here
+    return 0;
+  }, []);
+
   return {
     checkSubstitutionAnswer,
     checkHillAnswer,
     checkPortaAnswer,
     checkBaconianAnswer,
     checkCheckerboardAnswer,
-    checkCryptarithmAnswer
+    checkCryptarithmAnswer,
+    checkNihilistAnswer,
+    checkAnswers,
+    getCorrectAnswers
   };
 };

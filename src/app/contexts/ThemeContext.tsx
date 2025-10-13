@@ -2,13 +2,41 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 
+/**
+ * Theme context type definition
+ * Provides theme state and management functionality
+ */
 interface ThemeContextType {
+  /** Current dark mode state */
   darkMode: boolean;
+  /** Function to set dark mode state */
   setDarkMode: (value: boolean) => void;
 }
 
+/**
+ * Theme context for managing application theme
+ * Provides dark/light mode functionality with persistence
+ */
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+/**
+ * ThemeProvider Component
+ * 
+ * Provides theme context to the application
+ * Manages dark/light mode state with localStorage and cookie persistence
+ * Handles SSR/CSR hydration to prevent mismatches
+ * 
+ * @param {Object} props - Component props
+ * @param {React.ReactNode} props.children - Child components
+ * @param {boolean} [props.initialDarkMode] - Initial dark mode state from SSR
+ * @returns {JSX.Element} Theme provider component
+ * @example
+ * ```tsx
+ * <ThemeProvider initialDarkMode={false}>
+ *   <App />
+ * </ThemeProvider>
+ * ```
+ */
 export function ThemeProvider({ children, initialDarkMode }: { children: React.ReactNode; initialDarkMode?: boolean }) {
 
   // initialdarkmode (from cookie) to guarantee ssr/csr match and avoid hydration errors.
@@ -70,6 +98,25 @@ export function ThemeProvider({ children, initialDarkMode }: { children: React.R
   );
 }
 
+/**
+ * Hook to access theme context
+ * Provides theme state and management functionality
+ * 
+ * @returns {ThemeContextType} Theme context with dark mode state and setter
+ * @throws {Error} When used outside of ThemeProvider
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const { darkMode, setDarkMode } = useTheme();
+ * 
+ *   return (
+ *     <button onClick={() => setDarkMode(!darkMode)}>
+ *       {darkMode ? 'Light Mode' : 'Dark Mode'}
+ *     </button>
+ *   );
+ * }
+ * ```
+ */
 export function useTheme() {
   const context = useContext(ThemeContext);
   if (context === undefined || context == null) {

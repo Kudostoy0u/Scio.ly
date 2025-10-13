@@ -1,34 +1,73 @@
 
 import api from '../api';
 
+/**
+ * Gemini service utilities for Science Olympiad platform
+ * Provides AI-powered question analysis and improvement suggestions
+ */
+
+/**
+ * Question interface for Gemini service operations
+ * Represents a Science Olympiad question with all metadata
+ */
 export interface Question {
+  /** Optional question identifier */
   id?: string;
+  /** Question text content */
   question: string;
+  /** Optional answer choices for multiple choice questions */
   options?: string[];
+  /** Correct answers (indices for MCQ, text for FRQ) */
   answers: (number | string)[];
+  /** Question difficulty level (0-1) */
   difficulty: number;
+  /** Tournament name */
   tournament?: string;
+  /** Division (B or C) */
   division?: string;
+  /** Subject/category */
   subject?: string;
+  /** Single subtopic */
   subtopic?: string;
+  /** Array of subtopics */
   subtopics?: string[];
+  /** Science Olympiad event name */
   event?: string;
-  imageUrl?: string; // optional cloudinary url for id questions (legacy)
-  imageData?: string; // optional cdn url for id questions (new)
+  /** Optional Cloudinary URL for ID questions (legacy) */
+  imageUrl?: string;
+  /** Optional CDN URL for ID questions (new) */
+  imageData?: string;
 }
 
+/**
+ * Edit suggestion interface
+ * Contains AI-generated suggestions for improving a question
+ */
 export interface EditSuggestion {
+  /** Suggested improved question text */
   suggestedQuestion: string;
+  /** Optional suggested answer choices */
   suggestedOptions?: string[];
+  /** Suggested correct answers */
   suggestedAnswers: (number | string)[];
+  /** Optional suggested difficulty level */
   suggestedDifficulty?: number;
 }
 
+/**
+ * Report analysis interface
+ * Contains AI analysis of a reported question
+ */
 export interface ReportAnalysis {
+  /** Category of the issue */
   category: 'accuracy' | 'clarity' | 'formatting' | 'duplicate' | 'inappropriate' | 'other';
+  /** Severity level of the issue */
   severity: 'low' | 'medium' | 'high';
+  /** Array of specific issues found */
   issues: string[];
+  /** Recommended action */
   suggestedAction: 'edit' | 'remove';
+  /** AI reasoning for the analysis */
   reasoning: string;
 }
 
@@ -47,12 +86,13 @@ class GeminiService {
 
   async suggestQuestionEdit(question: Question, userReason?: string): Promise<EditSuggestion> {
     try {
-
-      const requestBody: any = { 
-        question, 
-        userReason 
+      const requestBody: {
+        question: Question;
+        userReason?: string;
+      } = {
+        question,
+        userReason
       };
-
 
       if (question.imageData || question.imageUrl) {
         requestBody.question = {

@@ -1,35 +1,62 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server';
+import { applyRateLimit, RateLimitPresets } from '@/lib/api/rateLimit';
+import { validateFields, successResponse, ApiErrors, handleApiError } from '@/lib/api/utils';
 
-const REQUESTS: Record<string, { count: number; resetAt: number }> = {}
-const WINDOW_MS = 60_000
-const MAX_PER_WINDOW = 10
+/**
+ * Contact form API endpoint for Scio.ly platform
+ * Handles contact form submissions with rate limiting and Discord webhook integration
+ */
 
-function rateLimited(ip: string): boolean {
-  const now = Date.now()
-  const entry = REQUESTS[ip]
-  if (!entry || entry.resetAt < now) {
-    REQUESTS[ip] = { count: 1, resetAt: now + WINDOW_MS }
-    return false
-  }
-  entry.count += 1
-  return entry.count > MAX_PER_WINDOW
+/**
+ * Contact request interface for form validation
+ */
+interface ContactRequest extends Record<string, unknown> {
+  /** Contact person's name */
+  name: string;
+  /** Contact person's email address */
+  email: string;
+  /** Optional topic/category for the message */
+  topic?: string;
+  /** Contact message content */
+  message: string;
 }
 
+/**
+ * POST /api/contact - Contact form submission endpoint
+ * Processes contact form submissions with rate limiting and Discord webhook integration
+ * 
+ * @param {NextRequest} req - The incoming request with contact form data
+ * @returns {Promise<Response>} Success response with confirmation or error response
+ * @throws {Error} When form processing fails
+ * @example
+ * ```typescript
+ * const response = await fetch('/api/contact', {
+ *   method: 'POST',
+ *   body: JSON.stringify({
+ *     name: 'John Doe',
+ *     email: 'john@example.com',
+ *     topic: 'Support',
+ *     message: 'I need help with...'
+ *   })
+ * });
+ * ```
+ */
 export async function POST(req: NextRequest) {
   try {
-    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
-    if (rateLimited(String(ip))) {
-      return NextResponse.json({ success: false, message: 'Too many requests' }, { status: 429 })
-    }
+    // Apply rate limiting to prevent spam
+    const rateLimitError = applyRateLimit(req, RateLimitPresets.standard);
+    if (rateLimitError) return rateLimitError;
 
-    const { name, email, topic, message } = await req.json()
-    if (!name || !email || !message) {
-      return NextResponse.json({ success: false, message: 'Missing required fields' }, { status: 400 })
-    }
+    // Validate request body for required fields
+    const body = await req.json();
+    const validation = validateFields<ContactRequest>(body, ['name', 'email', 'message']);
+    if (!validation.valid) return validation.error;
 
-    const webhookUrl = process.env.DISCORD_CONTACT_WEBHOOK
+    const { name, email, topic, message } = validation.data;
+
+    const webhookUrl = process.env.DISCORD_CONTACT_WEBHOOK;
     if (!webhookUrl) {
-      return NextResponse.json({ success: false, message: 'Contact webhook not configured' }, { status: 500 })
+      return ApiErrors.serverError('Contact webhook not configured');
     }
 
     const embed = {
@@ -42,21 +69,21 @@ export async function POST(req: NextRequest) {
         { name: 'Message', value: String(message), inline: false },
       ],
       timestamp: new Date().toISOString(),
-    }
+    };
 
     const resp = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ embeds: [embed] }),
-    })
+    });
 
     if (!resp.ok) {
-      return NextResponse.json({ success: false, message: 'Failed to send message' }, { status: 502 })
+      return ApiErrors.serverError('Failed to send message');
     }
 
-    return NextResponse.json({ success: true, message: 'Message sent successfully!' })
-  } catch {
-    return NextResponse.json({ success: false, message: 'Unexpected error' }, { status: 500 })
+    return successResponse({ sent: true }, 'Message sent successfully!');
+  } catch (error) {
+    return handleApiError(error);
   }
 }
 

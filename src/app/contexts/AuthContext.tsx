@@ -1,19 +1,41 @@
 'use client';
 import logger from '@/lib/utils/logger';
 
-
 import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
+/**
+ * Authentication context type definition
+ * Provides user authentication state and Supabase client
+ */
 type AuthContextType = {
+  /** Current authenticated user or null if not logged in */
   user: User | null;
+  /** Loading state for authentication operations */
   loading: boolean;
+  /** Supabase client for database operations */
   client: SupabaseClient<any, 'public', any>;
 };
 
+/** Authentication context for managing user state */
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * Authentication provider component
+ * Manages user authentication state and profile synchronization
+ * 
+ * @param {Object} props - Component props
+ * @param {ReactNode} props.children - Child components
+ * @param {User | null} [props.initialUser] - Initial user state from server
+ * @returns {JSX.Element} Authentication provider component
+ * @example
+ * ```tsx
+ * <AuthProvider initialUser={serverUser}>
+ *   <App />
+ * </AuthProvider>
+ * ```
+ */
 export function AuthProvider({ children, initialUser }: { children: ReactNode; initialUser?: User | null }) {
   const [user, setUser] = useState<User | null>(initialUser ?? null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -141,7 +163,7 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
           }
         }
 
-        const email = user.email || (existing?.email ?? '');
+        const email = user.email || existing?.email;
         const username = existing?.username || (email ? email.split('@')[0] : 'user_' + user.id.slice(0, 8));
         const displayName = existing?.display_name || full || given || null;
         const photoUrl = existing?.photo_url || meta.avatar_url || meta.picture || null;
@@ -152,6 +174,12 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
 
         if (!user.id || !email || !username) {
           logger.warn('Missing required user fields for upsert:', { id: user.id, email, username });
+          return;
+        }
+
+        // Additional safety check to ensure email is not null/undefined/empty
+        if (!email || email.trim() === '') {
+          logger.warn('Email is null, undefined, or empty - skipping upsert:', { id: user.id, email });
           return;
         }
 
@@ -230,6 +258,24 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+/**
+ * Hook to access authentication context
+ * Provides user state and Supabase client
+ * 
+ * @returns {AuthContextType} Authentication context with user, loading, and client
+ * @throws {Error} When used outside of AuthProvider
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const { user, loading, client } = useAuth();
+ *   
+ *   if (loading) return <div>Loading...</div>;
+ *   if (!user) return <div>Please log in</div>;
+ *   
+ *   return <div>Welcome, {user.email}!</div>;
+ * }
+ * ```
+ */
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within an AuthProvider');

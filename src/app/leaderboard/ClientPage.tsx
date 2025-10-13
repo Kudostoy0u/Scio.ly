@@ -430,12 +430,21 @@ export default function LeaderboardClientPage() {
                                   width={24}
                                   height={24}
                                   className="w-6 h-6 rounded-full"
+                                  unoptimized
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    const fallback = target.nextElementSibling as HTMLElement;
+                                    if (fallback) fallback.style.display = 'flex';
+                                  }}
                                 />
-                              ) : (
-                                <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs">
-                                  {(member.display_name || member.email || 'U')[0].toUpperCase()}
-                                </div>
-                              )}
+                              ) : null}
+                              <div 
+                                className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs" 
+                                style={{ display: member.photo_url ? 'none' : 'flex' }}
+                              >
+                                {(member.display_name || member.email || 'U')[0].toUpperCase()}
+                              </div>
                               <span>
                                 {member.display_name || member.email.split('@')[0]}
                                 {member.user_id === user?.id && ' (You)'}
@@ -472,7 +481,7 @@ export default function LeaderboardClientPage() {
 
         {/* Join Modal */}
         {showJoinModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowJoinModal(false)}>
+          <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} onClick={() => setShowJoinModal(false)}>
             <div className={`rounded-lg p-6 max-w-md w-full ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
               <h3 className="text-xl font-semibold mb-4">Join Private Leaderboard</h3>
               <input
@@ -512,7 +521,7 @@ export default function LeaderboardClientPage() {
         
         {/* Display Name Modal */}
         {showDisplayNameModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => {
+          <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} onClick={() => {
             setShowDisplayNameModal(false);
             setPendingLeaderboardAction(null);
           }}>
@@ -590,7 +599,7 @@ function CreateLeaderboardModal({ onClose, onCreated }: { onClose: () => void; o
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} onClick={onClose}>
       <div className={`rounded-lg p-6 max-w-md w-full ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
         <h3 className="text-xl font-semibold mb-4">Create Private Leaderboard</h3>
         

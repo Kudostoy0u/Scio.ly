@@ -1,106 +1,99 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { shareLinks, questions, idEvents } from '@/lib/db/schema';
 import { eq, inArray } from 'drizzle-orm';
 import { ShareCodeRequest, ShareCodeResponse } from '@/lib/types/api';
-
+import { validateFields, successResponse, ApiErrors, handleApiError } from '@/lib/api/utils';
+import logger from '@/lib/utils/logger';
 
 export async function POST(request: NextRequest) {
   try {
-    const body: ShareCodeRequest = await request.json();
+    const body = await request.json();
+    const validation = validateFields<ShareCodeRequest>(body, ['questionIds', 'testParamsRaw']);
 
-    if (!body.questionIds || body.questionIds.length === 0 || !body.testParamsRaw) {
-      const response: ShareCodeResponse = {
-        success: false,
-        error: 'Invalid question IDs',
-      };
-      return NextResponse.json(response, { status: 400 });
+    if (!validation.valid) return validation.error;
+
+    const { questionIds, testParamsRaw, code, idQuestionIds, timeRemainingSeconds } = validation.data;
+
+    if (questionIds.length === 0) {
+      return ApiErrors.badRequest('Question IDs array cannot be empty');
     }
 
 
+    // Validate question IDs exist in database
     const validQuestions = await db
       .select({ id: questions.id })
       .from(questions)
-      .where(inArray(questions.id, body.questionIds));
+      .where(inArray(questions.id, questionIds));
 
     const validIdQuestions = await db
       .select({ id: idEvents.id })
       .from(idEvents)
-      .where(inArray(idEvents.id, body.questionIds));
+      .where(inArray(idEvents.id, questionIds));
 
     const totalValidQuestions = validQuestions.length + validIdQuestions.length;
 
-    if (totalValidQuestions !== body.questionIds.length) {
-      const response: ShareCodeResponse = {
-        success: false,
-        error: 'Some question IDs are invalid',
-      };
-      return NextResponse.json(response, { status: 400 });
+    if (totalValidQuestions !== questionIds.length) {
+      return ApiErrors.badRequest('Some question IDs are invalid');
     }
 
-
-    let shareCode = body.code;
+    // Generate or validate share code
+    let shareCode = code;
     if (!shareCode) {
-      const charset = "0123456789abcdefghijklmnopqrstuvwxyz";
-      let randomString = '';
-      for (let i = 0; i < 6; i++) {
-        randomString += charset[Math.floor(Math.random() * charset.length)];
-      }
-      shareCode = randomString.toUpperCase();
+      shareCode = generateShareCode();
     }
 
-
+    // Check if code already exists
     const existingResult = await db
       .select({ id: shareLinks.id })
       .from(shareLinks)
       .where(eq(shareLinks.code, shareCode));
 
     if (existingResult.length > 0) {
-      const response: ShareCodeResponse = {
-        success: false,
-        error: 'Code already exists',
-      };
-      return NextResponse.json(response, { status: 400 });
+      return ApiErrors.badRequest('Code already exists');
     }
 
-
+    // Prepare data for storage
     const dataToStore = {
-      questionIds: body.questionIds,
-      idQuestionIds: body.idQuestionIds || [],
-      testParamsRaw: body.testParamsRaw,
-      timeRemainingSeconds: body.timeRemainingSeconds || null,
+      questionIds,
+      idQuestionIds: idQuestionIds || [],
+      testParamsRaw,
+      timeRemainingSeconds: timeRemainingSeconds || null,
       createdAtMs: Date.now(),
     };
 
-
+    // Set expiration to 7 days from now
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-
+    // Insert share link
     await db.insert(shareLinks).values({
       code: shareCode,
       indices: [],
       testParamsRaw: dataToStore,
-      expiresAt: expiresAt,
+      expiresAt,
     });
 
+    logger.info(`Generated share code: ${shareCode}, expires: ${expiresAt.toISOString()}`);
 
-    const response: ShareCodeResponse = {
-      success: true,
-      data: {
-        shareCode,
-        expiresAt: expiresAt.toISOString(),
-      },
-    };
-
-    console.log(`✅ [SHARE/GENERATE] Generated share code: ${shareCode}, expires: ${expiresAt.toISOString()}`);
-    return NextResponse.json(response);
+    return successResponse<ShareCodeResponse['data']>({
+      shareCode,
+      expiresAt: expiresAt.toISOString(),
+    });
   } catch (error) {
-    console.error('❌ [SHARE/GENERATE] Error:', error);
-    const response: ShareCodeResponse = {
-      success: false,
-      error: 'Failed to generate share code',
-    };
-    return NextResponse.json(response, { status: 500 });
+    logger.error('Failed to generate share code:', error);
+    return handleApiError(error);
   }
+}
+
+/**
+ * Generate a random 6-character share code
+ */
+function generateShareCode(): string {
+  const charset = '0123456789abcdefghijklmnopqrstuvwxyz';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += charset[Math.floor(Math.random() * charset.length)];
+  }
+  return code.toUpperCase();
 }

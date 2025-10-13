@@ -300,8 +300,8 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
 
   return (
     <div
-      style={{ display: isOpen ? 'flex' : 'none' }}
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]"
+      className="fixed inset-0 flex items-center justify-center z-[60]"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', display: isOpen ? 'flex' : 'none' }}
       onClick={onClose}
     >
       <div

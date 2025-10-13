@@ -14,7 +14,7 @@ export const PDFModal: React.FC<PDFModalProps> = ({
   if (!showPDFViewer) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} onClick={onClose}>
       <div 
         className="relative w-11/12 h-5/6 max-w-5xl bg-white rounded-lg shadow-2xl flex flex-col" 
         onClick={(e) => e.stopPropagation()}

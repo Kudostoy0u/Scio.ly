@@ -1,52 +1,110 @@
 
+/**
+ * API type definitions for Science Olympiad platform
+ * Comprehensive type definitions for API requests and responses
+ */
 
+/**
+ * Question interface for API operations
+ * Represents a Science Olympiad question with all metadata
+ */
 export interface Question {
+  /** Unique question identifier */
   id: string;
+  /** Question text content */
   question: string;
+  /** Tournament name */
   tournament: string;
+  /** Division (B or C) */
   division: string;
+  /** Answer choices for multiple choice questions */
   options: string[];
+  /** Correct answers (indices for MCQ, text for FRQ) */
   answers: (string | number)[];
+  /** Array of subtopics */
   subtopics: string[];
+  /** Difficulty level (0-1) */
   difficulty: number;
+  /** Science Olympiad event name */
   event: string;
+  /** Optional base64 image data */
   imageData?: string;
+  /** Creation timestamp */
   created_at?: string;
+  /** Last update timestamp */
   updated_at?: string;
-  base52?: string; // 5-character code: cxyzd where d is s (standard) or p (picture)
+  /** Base52 encoded identifier (5-character code: cxyzd where d is s (standard) or p (picture)) */
+  base52?: string;
 }
 
+/**
+ * Create question request interface
+ * Defines the structure for creating new questions
+ */
 export interface CreateQuestionRequest {
+  /** Question text content */
   question: string;
+  /** Tournament name */
   tournament: string;
+  /** Division (B or C) */
   division: string;
+  /** Science Olympiad event name */
   event: string;
+  /** Optional answer choices for multiple choice questions */
   options?: string[];
+  /** Optional correct answers */
   answers?: (string | number)[];
+  /** Optional array of subtopics */
   subtopics?: string[];
+  /** Optional difficulty level (0-1) */
   difficulty?: number;
 }
 
+/**
+ * Update question request interface
+ * Defines the structure for updating existing questions
+ */
 export interface UpdateQuestionRequest {
+  /** Optional question text content */
   question?: string;
+  /** Optional tournament name */
   tournament?: string;
+  /** Optional division (B or C) */
   division?: string;
+  /** Optional Science Olympiad event name */
   event?: string;
+  /** Optional answer choices for multiple choice questions */
   options?: string[];
+  /** Optional correct answers */
   answers?: (string | number)[];
+  /** Optional array of subtopics */
   subtopics?: string[];
+  /** Optional difficulty level (0-1) */
   difficulty?: number;
 }
 
+/**
+ * Question filters interface
+ * Defines filtering options for question queries
+ */
 export interface QuestionFilters {
+  /** Optional event name filter */
   event?: string;
+  /** Optional division filter (B or C) */
   division?: string;
+  /** Optional tournament name filter */
   tournament?: string;
+  /** Optional single subtopic filter */
   subtopic?: string;
+  /** Optional multiple subtopics filter (comma-separated) */
   subtopics?: string;
+  /** Optional minimum difficulty filter */
   difficulty_min?: string;
+  /** Optional maximum difficulty filter */
   difficulty_max?: string;
+  /** Optional question type filter */
   question_type?: 'mcq' | 'frq';
+  /** Optional limit for number of results */
   limit?: string;
 }
 
@@ -69,7 +127,7 @@ export interface PaginatedResponse<T = unknown> {
 }
 
 
-export interface ShareCodeRequest {
+export interface ShareCodeRequest extends Record<string, unknown> {
   questionIds: string[];
   idQuestionIds?: string[];
   testParamsRaw: Record<string, unknown>;

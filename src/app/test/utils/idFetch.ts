@@ -30,16 +30,22 @@ export const fetchIdQuestionsForParams = async (routerParams: any, idCount: numb
     const resp = await fetch(`${api.idQuestions}?${params.toString()}`);
     const json = await resp.json();
     source = Array.isArray(json?.data) ? json.data : [];
-  } catch {}
-  const idQs: Question[] = source.map((row: any) => ({
-    id: row.id,
-    question: row.question,
-    options: row.options || [],
-    answers: row.answers || [],
-    difficulty: row.difficulty ?? 0.5,
-    event: row.event,
-    subtopics: row.subtopics || [],
-    imageData: buildAbsoluteUrl(Array.isArray(row.images) && row.images.length ? row.images[Math.floor(Math.random()*row.images.length)] : undefined),
-  }));
+  } catch {
+    // Silently fail - offline or network error
+  }
+  const idQs: Question[] = source.map((row: unknown) => {
+    const rowData = row as Record<string, unknown>;
+    const images = Array.isArray(rowData.images) ? rowData.images : [];
+    return {
+      id: rowData.id as string | undefined,
+      question: String(rowData.question || ''),
+      options: Array.isArray(rowData.options) ? rowData.options : [],
+      answers: Array.isArray(rowData.answers) ? rowData.answers : [],
+      difficulty: typeof rowData.difficulty === 'number' ? rowData.difficulty : 0.5,
+      event: String(rowData.event || ''),
+      subtopics: Array.isArray(rowData.subtopics) ? rowData.subtopics : [],
+      imageData: buildAbsoluteUrl(images.length ? images[Math.floor(Math.random() * images.length)] : undefined),
+    };
+  });
   return normalizeQuestionMedia(idQs).slice(0, idCount);
 };

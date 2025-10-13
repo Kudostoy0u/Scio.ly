@@ -6,33 +6,64 @@ import { toast } from 'react-toastify';
 import api from '../api';
 import { Question } from './geminiService';
 
-
+/**
+ * Router parameters interface for question filtering
+ * Contains all possible parameters for filtering and configuring questions
+ */
 export interface RouterParams {
+  /** Name of the Science Olympiad event */
   eventName?: string;
+  /** Number of questions to request */
   questionCount?: string;
+  /** Single difficulty level */
   difficulty?: string;
+  /** Multiple difficulty levels */
   difficulties?: string[];
+  /** Type of questions (multiple-choice, free-response) */
   types?: string;
+  /** Time limit for the test */
   timeLimit?: string;
+  /** Division (B or C) */
   division?: string;
+  /** Tournament name */
   tournament?: string;
+  /** Single subtopic */
   subtopic?: string;
+  /** Multiple subtopics */
   subtopics?: string[];
+  /** Assignment ID for assignment mode */
+  assignmentId?: string;
 }
 
+/**
+ * Grading results mapping
+ * Maps question indices to their scores (0 = incorrect, 0.5 = partial, 1 = correct)
+ */
 export interface GradingResults {
   [key: string]: number;
 }
 
+/**
+ * Explanations mapping
+ * Maps question indices to their explanation text
+ */
 export interface Explanations {
   [key: number]: string;
 }
 
+/**
+ * Loading state for explanations
+ * Maps question indices to their loading state
+ */
 export interface LoadingExplanation {
   [key: number]: boolean;
 }
 
 
+/**
+ * Difficulty ranges for question filtering
+ * Maps difficulty names to their numerical ranges (0.0 to 1.0)
+ */
 export const difficultyRanges: Record<string, { min: number; max: number }> = {
   'very-easy': { min: 0, max: 0.19 },
   'easy': { min: 0.20, max: 0.39 },
@@ -42,6 +73,19 @@ export const difficultyRanges: Record<string, { min: number; max: number }> = {
 };
 
 
+/**
+ * Determine if a question is a multi-select question
+ * Checks for multi-select keywords in the question text and validates answer format
+ * 
+ * @param {string} question - The question text to analyze
+ * @param {number | string[]} [answers] - Optional array of correct answers
+ * @returns {boolean} True if the question is multi-select, false otherwise
+ * @example
+ * ```typescript
+ * const isMulti = isMultiSelectQuestion("Choose all that apply: Which are mammals?");
+ * console.log(isMulti); // true
+ * ```
+ */
 export const isMultiSelectQuestion = (question: string, answers?: (number | string)[]): boolean => {
   const multiSelectKeywords = [
     'choose all',
@@ -66,6 +110,28 @@ export const isMultiSelectQuestion = (question: string, answers?: (number | stri
 };
 
 
+/**
+ * Grade free response questions using AI
+ * Sends free response questions to the AI grading service
+ * 
+ * @param {Object[]} freeResponses - Array of free response questions to grade
+ * @param {string} freeResponses[].question - The question text
+ * @param {string | number[]} freeResponses[].correctAnswers - Array of correct answers
+ * @param {string} freeResponses[].studentAnswer - The student's answer
+ * @returns {Promise<number[]>} Array of scores (0-1) for each response
+ * @throws {Error} When API request fails
+ * @example
+ * ```typescript
+ * const scores = await gradeFreeResponses([
+ *   {
+ *     question: "What is the capital of France?",
+ *     correctAnswers: ["Paris"],
+ *     studentAnswer: "Paris"
+ *   }
+ * ]);
+ * console.log(scores[0]); // 1 (correct)
+ * ```
+ */
 export const gradeFreeResponses = async (
   freeResponses: { question: string; correctAnswers: (string | number)[]; studentAnswer: string }[]
 ): Promise<number[]> => {
@@ -96,6 +162,21 @@ export const gradeFreeResponses = async (
 };
 
 
+/**
+ * Grade a single free response question using AI
+ * Sends a single question to the AI grading service
+ * 
+ * @param {string} userAnswer - The student's answer to grade
+ * @param {string | number[]} correctAnswers - Array of correct answers
+ * @param {string} question - The question text
+ * @returns {Promise<number>} Score (0-1) for the response
+ * @throws {Error} When API request fails
+ * @example
+ * ```typescript
+ * const score = await gradeWithGemini("Paris", ["Paris"], "What is the capital of France?");
+ * console.log(score); // 1 (correct)
+ * ```
+ */
 export const gradeWithGemini = async (
   userAnswer: string,
   correctAnswers: (string | number)[],
@@ -134,6 +215,23 @@ export const gradeWithGemini = async (
 };
 
 
+/**
+ * Build API parameters string from router parameters
+ * Converts router parameters into a query string for API requests
+ * 
+ * @param {RouterParams} routerParams - Router parameters to convert
+ * @param {number} requestCount - Number of questions to request
+ * @returns {string} URL-encoded query string
+ * @example
+ * ```typescript
+ * const params = buildApiParams({
+ *   eventName: "Anatomy & Physiology",
+ *   difficulties: ["easy", "medium"],
+ *   division: "C"
+ * }, 10);
+ * console.log(params); // "event=Anatomy%20%26%20Physiology&difficulty_min=0.20&difficulty_max=0.59&limit=10"
+ * ```
+ */
 export const buildApiParams = (routerParams: RouterParams, requestCount: number): string => {
   const { eventName, difficulties, division, tournament, subtopics, types } = routerParams;
   
@@ -178,6 +276,19 @@ export const buildApiParams = (routerParams: RouterParams, requestCount: number)
 };
 
 
+/**
+ * Filter questions by type (multiple-choice or free-response)
+ * Returns questions that match the specified type
+ * 
+ * @param {Question[]} questions - Array of questions to filter
+ * @param {string} types - Type to filter by ("multiple-choice" or "free-response")
+ * @returns {Question[]} Filtered array of questions
+ * @example
+ * ```typescript
+ * const mcQuestions = filterQuestionsByType(questions, "multiple-choice");
+ * const frQuestions = filterQuestionsByType(questions, "free-response");
+ * ```
+ */
 export const filterQuestionsByType = (questions: Question[], types: string): Question[] => {
   if (types === 'multiple-choice') {
     return questions.filter((q) => q.options && q.options.length > 0);
@@ -188,6 +299,18 @@ export const filterQuestionsByType = (questions: Question[], types: string): Que
 };
 
 
+/**
+ * Shuffle an array using Fisher-Yates algorithm
+ * Returns a new array with elements in random order
+ * 
+ * @param {T[]} array - Array to shuffle
+ * @returns {T[]} New array with shuffled elements
+ * @example
+ * ```typescript
+ * const shuffled = shuffleArray([1, 2, 3, 4, 5]);
+ * console.log(shuffled); // [3, 1, 5, 2, 4] (random order)
+ * ```
+ */
 export const shuffleArray = <T>(array: T[]): T[] => {
   const newArray = [...array];
   for (let i = newArray.length - 1; i > 0; i--) {
@@ -229,14 +352,28 @@ export const getExplanation = async (
     const isMCQ = question.options && question.options.length > 0;
 
     logger.log('🚀 Making request to:', api.geminiExplain);
+    
+    // Prepare the request body with image URLs if they exist
+    const requestBody: any = {
+      question: question,
+      userAnswer: userAnswer,
+      event: routerData.eventName || 'Science Olympiad'
+    };
+
+    // Add image URLs to the request if they exist
+    if (question.imageUrl || question.imageData) {
+      const imageUrls: string[] = [];
+      if (question.imageUrl) imageUrls.push(question.imageUrl);
+      if (question.imageData) imageUrls.push(question.imageData);
+      
+      requestBody.imageUrls = imageUrls;
+      requestBody.imageNote = "The above URLs contain relevant images for this question. The URLs themselves may or may not contain useful information for the explanation.";
+    }
+
     const response = await fetch(api.geminiExplain, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        question: question,
-        userAnswer: userAnswer,
-        event: routerData.eventName || 'Science Olympiad'
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
@@ -455,6 +592,19 @@ export const getExplanation = async (
 };
 
 
+/**
+ * Calculate score for multiple choice questions
+ * Handles both single-select and multi-select questions
+ * 
+ * @param {Question} question - The question object
+ * @param {string | null[]} userAnswers - Array of user's selected answers
+ * @returns {number} Score (0, 0.5, or 1) for the question
+ * @example
+ * ```typescript
+ * const score = calculateMCQScore(question, ["A", "B"]);
+ * console.log(score); // 1 if correct, 0.5 if partial, 0 if incorrect
+ * ```
+ */
 export const calculateMCQScore = (
   question: Question,
   userAnswers: (string | null)[]
@@ -485,6 +635,18 @@ export const calculateMCQScore = (
 };
 
 
+/**
+ * Format seconds into MM:SS time format
+ * Converts seconds to a readable time string
+ * 
+ * @param {number} seconds - Number of seconds to format
+ * @returns {string} Formatted time string (MM:SS)
+ * @example
+ * ```typescript
+ * const timeStr = formatTime(125);
+ * console.log(timeStr); // "2:05"
+ * ```
+ */
 export const formatTime = (seconds: number): string => {
   const minutes = Math.floor(seconds / 60);
   const secs = seconds % 60;

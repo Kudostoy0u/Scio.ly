@@ -1,29 +1,72 @@
+/**
+ * Time management utilities for Science Olympiad platform
+ * Provides comprehensive test timing and session management
+ */
+
+/**
+ * Time state interface for test timing
+ * Contains all timing-related state for a test session
+ */
 export interface TimeState {
+  /** Remaining time in seconds */
   timeLeft: number;
+  /** Whether time is synchronized across tabs */
   isTimeSynchronized: boolean;
+  /** Timestamp when time was last synchronized */
   syncTimestamp: number | null;
+  /** Original time remaining when synchronized */
   originalTimeAtSync: number | null;
+  /** When the test was started */
   testStartTime: number | null;
+  /** When the test was last paused */
   lastPauseTime: number | null;
+  /** Total time spent paused */
   totalPausedTime: number;
+  /** Whether the test is currently paused */
   isPaused: boolean;
 }
 
+/**
+ * Test session interface
+ * Contains all data for a test session including timing and state
+ */
 export interface TestSession {
+  /** Unique test session identifier */
   testId: string;
+  /** Science Olympiad event name */
   eventName: string;
-  timeLimit: number; // in minutes
+  /** Time limit in minutes */
+  timeLimit: number;
+  /** Current time state */
   timeState: TimeState;
+  /** Last activity timestamp */
   lastActivity: number;
+  /** Whether the test has been submitted */
   isSubmitted: boolean;
 }
 
 
+/**
+ * Generate a unique test session ID
+ * Creates a unique identifier for test sessions
+ * 
+ * @returns {string} Unique test session ID
+ */
 const generateTestId = (): string => {
   return `test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
-
+/**
+ * Get the current test session from localStorage
+ * Retrieves the active test session if one exists
+ * 
+ * @returns {TestSession | null} Current test session or null
+ * @example
+ * ```typescript
+ * const session = getCurrentTestSession();
+ * if (session) console.log(session.eventName);
+ * ```
+ */
 export const getCurrentTestSession = (): TestSession | null => {
   try {
     const stored = localStorage.getItem('currentTestSession');
@@ -34,7 +77,23 @@ export const getCurrentTestSession = (): TestSession | null => {
   }
 };
 
-
+/**
+ * Save test session to localStorage
+ * Persists the current test session for later retrieval
+ * 
+ * @param {TestSession} session - Test session to save
+ * @example
+ * ```typescript
+ * saveTestSession({
+ *   testId: 'test_123',
+ *   eventName: 'Anatomy & Physiology',
+ *   timeLimit: 50,
+ *   timeState: timeState,
+ *   lastActivity: Date.now(),
+ *   isSubmitted: false
+ * });
+ * ```
+ */
 export const saveTestSession = (session: TestSession): void => {
   try {
     localStorage.setItem('currentTestSession', JSON.stringify(session));
