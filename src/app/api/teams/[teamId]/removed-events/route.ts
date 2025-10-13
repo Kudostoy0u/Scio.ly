@@ -163,7 +163,26 @@ export async function POST(
       return NextResponse.json({ error: 'Subteam not found' }, { status: 404 });
     }
 
-    // Insert removed event
+    // First, clean up all roster entries for this event
+    console.log('🧹 [REMOVED EVENTS] Cleaning up roster entries for event', { 
+      subteamId, 
+      eventName, 
+      conflictBlock 
+    });
+    
+    const rosterCleanupResult = await queryCockroachDB(
+      `DELETE FROM new_team_roster_data 
+       WHERE team_unit_id = $1 AND event_name = $2`,
+      [subteamId, eventName]
+    );
+    
+    console.log('✅ [REMOVED EVENTS] Cleaned up roster entries', { 
+      deletedCount: rosterCleanupResult.rowCount,
+      subteamId, 
+      eventName 
+    });
+
+    // Then insert removed event
     await queryCockroachDB(
       `INSERT INTO new_team_removed_events (team_unit_id, event_name, conflict_block, removed_by)
        VALUES ($1, $2, $3, $4)
@@ -172,7 +191,10 @@ export async function POST(
       [subteamId, eventName, conflictBlock, user.id]
     );
 
-    return NextResponse.json({ message: 'Event removed successfully' });
+    return NextResponse.json({ 
+      message: 'Event removed successfully',
+      deletedRosterEntries: rosterCleanupResult.rowCount || 0
+    });
 
   } catch (error) {
     console.error('Error removing event:', error);

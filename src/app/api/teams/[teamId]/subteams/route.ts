@@ -150,10 +150,10 @@ export async function POST(
       userId: user.id 
     });
 
-    if (!name || !description) {
+    if (!name) {
       console.log('❌ [SUBNTEAMS API] Missing required fields');
       return NextResponse.json({ 
-        error: 'Name and description are required' 
+        error: 'Name is required' 
       }, { status: 400 });
     }
 
@@ -196,15 +196,49 @@ export async function POST(
     // Create new subteam using Drizzle ORM
     console.log('🏢 [SUBNTEAMS API] Creating new subteam');
     
-    // Extract the team ID letter from the name (e.g., "Team A" -> "A")
-    const teamIdLetter = name.replace(/^Team\s+/i, '');
+    // Get existing subteams to determine the next available team ID
+    // Check ALL subteams regardless of status since the unique constraint applies to all
+    const existingSubteams = await dbPg
+      .select({ teamId: newTeamUnits.teamId })
+      .from(newTeamUnits)
+      .where(eq(newTeamUnits.groupId, groupId));
+    
+    const existingTeamIds = new Set(existingSubteams.map(s => s.teamId));
+    
+    console.log('🏢 [SUBNTEAMS API] All existing subteams in group', { 
+      groupId, 
+      allSubteams: existingSubteams,
+      existingTeamIds: Array.from(existingTeamIds)
+    });
+    
+    // Generate the next available team ID letter
+    let teamIdLetter = 'A';
+    while (existingTeamIds.has(teamIdLetter)) {
+      teamIdLetter = String.fromCharCode(teamIdLetter.charCodeAt(0) + 1);
+    }
+    
+    // If we've gone past Z, use a numeric suffix
+    if (teamIdLetter > 'Z') {
+      let counter = 1;
+      teamIdLetter = `T${counter}`;
+      while (existingTeamIds.has(teamIdLetter)) {
+        counter++;
+        teamIdLetter = `T${counter}`;
+      }
+    }
+    
+    console.log('🏢 [SUBNTEAMS API] Generated team ID', { 
+      teamIdLetter, 
+      existingTeamIds: Array.from(existingTeamIds),
+      requestedName: name 
+    });
     
     const [newSubteam] = await dbPg
       .insert(newTeamUnits)
       .values({
         groupId: groupId,
         teamId: teamIdLetter,
-        description: name, // Store the full name in description
+        description: description || name, // Use provided description or fallback to name
         captainCode: `CAP${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
         userCode: `USR${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
         createdBy: user.id
@@ -220,13 +254,11 @@ export async function POST(
     });
 
     return NextResponse.json({ 
-      subteam: {
-        id: newSubteam.id,
-        name: newSubteam.description || `Team ${newSubteam.teamId}`, // Use description as name, fallback to Team + letter
-        teamId: newSubteam.teamId,
-        description: newSubteam.description,
-        createdAt: newSubteam.createdAt
-      }
+      id: newSubteam.id,
+      name: newSubteam.description || `Team ${newSubteam.teamId}`, // Use description as name, fallback to Team + letter
+      team_id: newSubteam.teamId,
+      description: newSubteam.description,
+      created_at: newSubteam.createdAt
     });
   } catch (error) {
     const duration = Date.now() - startTime;

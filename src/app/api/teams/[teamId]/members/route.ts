@@ -194,15 +194,21 @@ export async function GET(
           : `User ${member.userId.substring(0, 8)}`);
       const email = userProfile?.email || `user-${member.userId.substring(0, 8)}@example.com`;
 
-      // If user is already in map (as creator), add subteam info
+      // If user is already in map (as creator), add subteam info and update role
       if (allMembers.has(member.userId)) {
         const existingMember = allMembers.get(member.userId);
+        
+        // Update the main role to reflect their subteam role (captain/co_captain takes precedence over creator)
+        if (['captain', 'co_captain'].includes(member.role)) {
+          existingMember.role = member.role;
+        }
+        
         if (!existingMember.subteams) {
           existingMember.subteams = [];
         }
         existingMember.subteams.push({
           id: member.teamUnitId,
-          name: member.teamId,
+          name: member.description || `Team ${member.teamId}`,
           description: member.description,
           role: member.role
         });
@@ -216,7 +222,7 @@ export async function GET(
           role: member.role,
           subteam: {
             id: member.teamUnitId,
-            name: member.teamId,
+            name: member.description || `Team ${member.teamId}`,
             description: member.description
           },
           joinedAt: member.joinedAt,
@@ -226,20 +232,102 @@ export async function GET(
       }
     });
 
-    // 3. Add unlinked roster members (people in roster but without linked accounts)
+    // 3. Fetch linked roster data to update member subteam and events info
+    console.log('🔍 [MEMBERS API] Fetching linked roster data');
+    let linkedRosterQuery = `
+      SELECT DISTINCT r.user_id, r.team_unit_id, tu.team_id as subteam_name, tu.description as subteam_description,
+             ARRAY_AGG(r.event_name) as events
+      FROM new_team_roster_data r
+      JOIN new_team_units tu ON r.team_unit_id = tu.id
+      WHERE tu.group_id = $1 AND r.user_id IS NOT NULL
+      GROUP BY r.user_id, r.team_unit_id, tu.team_id, tu.description
+    `;
+    const linkedRosterParams = [groupId];
+
+    // Add subteam filter if specified
+    if (subteamId) {
+      linkedRosterQuery += ` AND r.team_unit_id = $2`;
+      linkedRosterParams.push(subteamId);
+    }
+
+    const linkedRosterResult = await queryCockroachDB<{
+      user_id: string;
+      team_unit_id: string;
+      subteam_name: string;
+      subteam_description: string;
+      events: string[];
+    }>(linkedRosterQuery, linkedRosterParams);
+
+    console.log('✅ [MEMBERS API] Fetched linked roster data', { 
+      count: linkedRosterResult.rows.length,
+      members: linkedRosterResult.rows.map(r => ({ userId: r.user_id, subteam: r.subteam_name, events: r.events.length }))
+    });
+
+    // Update existing members with roster data
+    linkedRosterResult.rows.forEach(rosterData => {
+      const existingMember = allMembers.get(rosterData.user_id);
+      if (existingMember) {
+        // Initialize subteams array if it doesn't exist
+        if (!existingMember.subteams) {
+          existingMember.subteams = [];
+        }
+        
+        // Add this subteam to the subteams array
+        const subteamInfo = {
+          id: rosterData.team_unit_id,
+          name: rosterData.subteam_description || `Team ${rosterData.subteam_name}`,
+          description: rosterData.subteam_description,
+          events: rosterData.events
+        };
+        
+        // Check if this subteam is already in the array
+        const existingSubteamIndex = existingMember.subteams.findIndex(s => s.id === rosterData.team_unit_id);
+        if (existingSubteamIndex >= 0) {
+          // Update existing subteam with events
+          existingMember.subteams[existingSubteamIndex].events = rosterData.events;
+        } else {
+          // Add new subteam
+          existingMember.subteams.push(subteamInfo);
+        }
+        
+        // For backward compatibility, set the primary subteam (first one or most recent)
+        if (!existingMember.subteam || existingMember.subteams.length === 1) {
+          existingMember.subteam = {
+            id: subteamInfo.id,
+            name: subteamInfo.name,
+            description: subteamInfo.description
+          };
+        }
+        
+        // Combine all events from all subteams
+        const allEvents = existingMember.subteams.flatMap(s => s.events || []);
+        existingMember.events = [...new Set(allEvents)]; // Remove duplicates
+        
+        console.log('🔄 [MEMBERS API] Updated member with roster data', { 
+          userId: rosterData.user_id, 
+          name: existingMember.name,
+          subteam: subteamInfo.name,
+          events: rosterData.events.length,
+          totalSubteams: existingMember.subteams.length,
+          totalEvents: existingMember.events.length
+        });
+      }
+    });
+
+    // 4. Add unlinked roster members (people in roster but without linked accounts)
     console.log('🔍 [MEMBERS API] Fetching unlinked roster members');
-    let rosterQuery = `
+    let unlinkedRosterQuery = `
       SELECT DISTINCT r.student_name, r.team_unit_id, tu.team_id as subteam_name, tu.description as subteam_description
       FROM new_team_roster_data r
       JOIN new_team_units tu ON r.team_unit_id = tu.id
       WHERE tu.group_id = $1 AND r.student_name IS NOT NULL AND r.student_name != '' AND r.user_id IS NULL
     `;
-    const rosterParams = [groupId];
+    const unlinkedRosterParams = [groupId];
 
     // Add subteam filter if specified
     if (subteamId) {
-      rosterQuery += ` AND r.team_unit_id = $2`;
-      rosterParams.push(subteamId);
+      unlinkedRosterQuery += ` AND r.team_unit_id = $2`;
+      unlinkedRosterParams.push(subteamId);
     }
 
     const unlinkedRosterResult = await queryCockroachDB<{
@@ -247,7 +335,7 @@ export async function GET(
       team_unit_id: string;
       subteam_name: string;
       subteam_description: string;
-    }>(rosterQuery, rosterParams);
+    }>(unlinkedRosterQuery, unlinkedRosterParams);
 
     console.log('✅ [MEMBERS API] Fetched unlinked roster members', { 
       count: unlinkedRosterResult.rows.length,
@@ -273,7 +361,7 @@ export async function GET(
           role: 'unlinked', // Special role for unlinked members
           subteam: {
             id: rosterMember.team_unit_id,
-            name: rosterMember.subteam_name,
+            name: rosterMember.subteam_description || `Team ${rosterMember.subteam_name}`,
             description: rosterMember.subteam_description
           },
           joinedAt: null,
