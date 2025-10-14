@@ -105,6 +105,20 @@ export default function NamePromptModal({
         // Ignore localStorage errors
       }
 
+      // Also sync to CockroachDB so team views reflect the new name
+      try {
+        await fetch('/api/profile/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: user.id,
+            email: user.email || currentEmail,
+            displayName: displayName.trim(),
+            username: username.trim() || undefined,
+          })
+        });
+      } catch {}
+
       // Call onSave callback if provided
       if (onSave) {
         onSave();
