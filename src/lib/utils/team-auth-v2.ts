@@ -2,6 +2,7 @@ import { queryCockroachDB } from '@/lib/cockroachdb';
 import { dbPg } from '@/lib/db';
 import { newTeamMemberships, newTeamUnits, newTeamRosterData, users, newTeamGroups } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { generateDisplayName } from './displayNameUtils';
 
 /**
  * Clean Team Authentication System V2
@@ -160,12 +161,13 @@ export async function canAccessSubteam(userId: string, groupId: string, subteamI
 }
 
 /**
- * Get user's display information for team contexts
+ * Get user's display information for team contexts with comprehensive fallbacks
  */
 export async function getUserDisplayInfo(userId: string): Promise<{
   name: string;
   email: string;
   username?: string;
+  needsNamePrompt?: boolean;
 }> {
   try {
     const userResult = await dbPg
@@ -182,26 +184,29 @@ export async function getUserDisplayInfo(userId: string): Promise<{
 
     if (userResult.length === 0) {
       return {
-        name: `User ${userId.substring(0, 8)}`,
-        email: `user-${userId.substring(0, 8)}@example.com`
+        name: `@unknown`,
+        email: `user-${userId.substring(0, 8)}@example.com`,
+        needsNamePrompt: true
       };
     }
 
     const user = userResult[0];
-    const name = user.displayName || 
-                 (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : 
-                  user.firstName || user.lastName || `User ${userId.substring(0, 8)}`);
+    
+    // Use the centralized display name generation utility
+    const { name, needsNamePrompt } = generateDisplayName(user, userId);
 
     return {
       name,
       email: user.email || `user-${userId.substring(0, 8)}@example.com`,
-      username: user.username || undefined
+      username: user.username || undefined,
+      needsNamePrompt
     };
   } catch (error) {
     console.error('Error getting user display info:', error);
     return {
-      name: `User ${userId.substring(0, 8)}`,
-      email: `user-${userId.substring(0, 8)}@example.com`
+      name: `@unknown`,
+      email: `user-${userId.substring(0, 8)}@example.com`,
+      needsNamePrompt: true
     };
   }
 }

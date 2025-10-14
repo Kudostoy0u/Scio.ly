@@ -4,10 +4,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { toast } from 'react-toastify';
-import { UserPlus, Crown, Link2Off, Link, ArrowUpCircle, X, AlertTriangle } from 'lucide-react';
+import { UserPlus, Crown, Link2Off, Link, ArrowUpCircle, X, AlertTriangle, Edit3 } from 'lucide-react';
 import InlineInvite from './InlineInvite';
 import LinkInvite from './LinkInvite';
 import { useTeamStore } from '@/app/hooks/useTeamStore';
+import NamePromptModal from '@/app/components/NamePromptModal';
 
 // Division groups data
 const DIVISION_B_GROUPS = [
@@ -107,6 +108,21 @@ export default function PeopleTab({
   const [showEventModal, setShowEventModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [showSubteamDropdown, setShowSubteamDropdown] = useState<string | null>(null);
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
+
+  // Handle clicking on own name to edit it
+  const handleNameClick = useCallback((member: Member) => {
+    if (member.id === user?.id) {
+      setShowNamePrompt(true);
+    }
+  }, [user?.id]);
+
+  // Handle name update completion
+  const handleNameUpdate = useCallback(() => {
+    // Refresh the members list to show updated names
+    loadMembers(team.slug, selectedSubteam);
+    setShowNamePrompt(false);
+  }, [loadMembers, team.slug, selectedSubteam]);
 
   // Conflict detection function for member events
   const detectMemberConflicts = useCallback((_members: Member[]) => {
@@ -573,16 +589,27 @@ export default function PeopleTab({
                 {/* Name and Role */}
                 <div>
                   <div className="flex items-center justify-center space-x-2">
-                    <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {member.name}
+                    <div className="flex items-center space-x-1">
+                      <h3 
+                        className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} ${
+                          member.id === user?.id ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''
+                        }`}
+                        onClick={() => handleNameClick(member)}
+                        title={member.id === user?.id ? 'Click to edit your name' : undefined}
+                      >
+                        {member.name}
+                        {member.id === user?.id && (
+                          <span className={`ml-2 text-xs font-normal ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            (me)
+                          </span>
+                        )}
+                      </h3>
                       {member.id === user?.id && (
-                        <span className={`ml-2 text-xs font-normal ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          (me)
-                        </span>
+                        <Edit3 className="w-3 h-3 opacity-60" />
                       )}
-                    </h3>
+                    </div>
                     {member.role === 'captain' && (
-                      <Crown className="w-4 h-4 text-yellow-500" />
+                      <Crown className="w-4 h-4 text-yellow-500 ml-1" />
                     )}
                     {member.conflicts && member.conflicts.length > 0 && (
                       <div className="relative group">
@@ -1004,6 +1031,15 @@ export default function PeopleTab({
           </div>
         </div>
       )}
+
+      {/* Name Prompt Modal */}
+      <NamePromptModal
+        isOpen={showNamePrompt}
+        onClose={() => setShowNamePrompt(false)}
+        currentName={user ? (filteredMembers.find(m => m.id === user.id)?.name || '') : ''}
+        currentEmail={user?.email || ''}
+        onSave={handleNameUpdate}
+      />
     </div>
   );
 }

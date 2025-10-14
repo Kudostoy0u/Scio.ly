@@ -8,6 +8,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { getServerUser } from '@/lib/supabaseServer';
 import { cookies } from 'next/headers';
 import ThemeColorMeta from '@/app/components/ThemeColorMeta';
+import NamePromptProvider from '@/app/components/NamePromptProvider';
 // import { createsupabaseserverclient } from '@/lib/supabaseserver';
 
 export const metadata: Metadata = {
@@ -96,6 +97,7 @@ export default async function RootLayout({
             <Providers>
               <ThemeColorMeta />
               {children}
+              <NamePromptProvider />
             </Providers>
           </AuthProvider>
         </ThemeProvider>

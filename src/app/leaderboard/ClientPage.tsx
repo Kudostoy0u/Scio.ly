@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import Header from '@/app/components/Header';
 import { useAuth } from '@/app/contexts/AuthContext';
 import Image from 'next/image';
+import { getAvatarInitial } from '@/lib/utils/displayNameUtils';
 
 interface Leaderboard {
   id: string;
@@ -443,10 +444,13 @@ export default function LeaderboardClientPage() {
                                 className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs" 
                                 style={{ display: member.photo_url ? 'none' : 'flex' }}
                               >
-                                {(member.display_name || member.email || 'U')[0].toUpperCase()}
+                                {getAvatarInitial(member.display_name || '', member.email)}
                               </div>
                               <span>
-                                {member.display_name || member.email.split('@')[0]}
+                                {member.display_name || 
+                                 (member.email && member.email.includes('@') 
+                                   ? `@${member.email.split('@')[0]}` 
+                                   : '@unknown')}
                                 {member.user_id === user?.id && ' (You)'}
                               </span>
                             </div>

@@ -164,8 +164,42 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
         }
 
         const email = user.email || existing?.email;
-        const username = existing?.username || (email ? email.split('@')[0] : 'user_' + user.id.slice(0, 8));
-        const displayName = existing?.display_name || full || given || null;
+        
+        // Improved username generation with better fallbacks
+        let username: string;
+        if (existing?.username && existing.username.trim()) {
+          username = existing.username.trim();
+        } else if (email && email.includes('@')) {
+          const emailLocal = email.split('@')[0];
+          if (emailLocal && emailLocal.length > 2 && !emailLocal.match(/^[a-f0-9]{8}$/)) {
+            username = emailLocal;
+          } else {
+            username = 'user_' + user.id.slice(0, 8);
+          }
+        } else {
+          username = 'user_' + user.id.slice(0, 8);
+        }
+        
+        // Improved display name generation with better fallbacks
+        let displayName: string | null = null;
+        if (existing?.display_name && existing.display_name.trim()) {
+          displayName = existing.display_name.trim();
+        } else if (full && full.trim()) {
+          displayName = full.trim();
+        } else if (given && given.trim()) {
+          displayName = given.trim();
+        } else if (firstName && lastName) {
+          displayName = `${firstName.trim()} ${lastName.trim()}`;
+        } else if (firstName && firstName.trim()) {
+          displayName = firstName.trim();
+        } else if (lastName && lastName.trim()) {
+          displayName = lastName.trim();
+        } else if (email && email.includes('@')) {
+          const emailLocal = email.split('@')[0];
+          if (emailLocal && emailLocal.length > 2 && !emailLocal.match(/^[a-f0-9]{8}$/)) {
+            displayName = `@${emailLocal}`;
+          }
+        }
         const photoUrl = existing?.photo_url || meta.avatar_url || meta.picture || null;
 
 

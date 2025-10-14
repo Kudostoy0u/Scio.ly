@@ -10,6 +10,7 @@ import {
 } from '@/lib/db/schema';
 import { eq, and, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
 import { getTeamAccess, getUserDisplayInfo } from '@/lib/utils/team-auth-v2';
+import { generateDisplayName } from '@/lib/utils/displayNameUtils';
 
 // GET /api/teams/[teamId]/members - Get team members with clean Drizzle ORM implementation
 // Frontend Usage:
@@ -183,10 +184,10 @@ export async function GET(
     // Add subteam members to the map
     members.forEach(member => {
       const userProfile = userProfileMap.get(member.userId);
-      const name = userProfile?.displayName || 
-        (userProfile?.firstName && userProfile?.lastName 
-          ? `${userProfile.firstName} ${userProfile.lastName}` 
-          : `User ${member.userId.substring(0, 8)}`);
+      
+      // Use centralized display name generation utility
+      const { name } = generateDisplayName(userProfile || null, member.userId);
+      
       const email = userProfile?.email || `user-${member.userId.substring(0, 8)}@example.com`;
 
       // If user is already in map (as creator), add subteam info and update role
