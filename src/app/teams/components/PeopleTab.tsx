@@ -507,7 +507,7 @@ export default function PeopleTab({
             <p>No members found</p>
           </div>
         ) : (
-          filteredMembers.map((member, index) => (
+          filteredMembers.map((member, index) => ( 
             <div
               key={member.id || `member-${index}`}
               className={`p-4 rounded-lg border relative ${
