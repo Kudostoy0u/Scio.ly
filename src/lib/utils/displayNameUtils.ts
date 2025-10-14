@@ -118,7 +118,8 @@ export function needsNamePrompt(name: string): boolean {
     name === '@unknown' ||
     name.startsWith('User ') ||
     Boolean(name.match(/^[a-f0-9]{8}$/)) ||
-    name.startsWith('user_')
+    name.startsWith('user_') ||
+    /^@user-/.test(name)
   );
 }
 
