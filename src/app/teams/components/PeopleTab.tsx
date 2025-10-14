@@ -106,6 +106,8 @@ export default function PeopleTab({
   const [selectedSubteam, setSelectedSubteam] = useState<string>('all');
   const [showInlineInvite, setShowInlineInvite] = useState(false);
   const [linkInviteStates, setLinkInviteStates] = useState<Record<string, boolean>>({});
+  // Persist optimistic 'Link Pending' state across refetches until explicitly cancelled or linked
+  const [pendingLinkInvites, setPendingLinkInvites] = useState<Record<string, boolean>>({});
   const [showEventModal, setShowEventModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [showSubteamDropdown, setShowSubteamDropdown] = useState<string | null>(null);
@@ -216,9 +218,13 @@ export default function PeopleTab({
         }
       }
 
+      // If server hasn't reflected link-pending yet, honor our optimistic state
+      const hasPendingLinkInvite = (member as any).hasPendingLinkInvite || pendingLinkInvites[member.name] === true;
+
       return {
         ...member,
         name,
+        hasPendingLinkInvite,
         conflicts: conflicts[member.name] || []
       };
     });
@@ -231,7 +237,7 @@ export default function PeopleTab({
     });
 
     setFilteredMembers(filtered);
-  }, [team.slug, selectedSubteam, getMembers, team.division, detectMemberConflicts]);
+  }, [team.slug, selectedSubteam, getMembers, team.division, detectMemberConflicts, pendingLinkInvites]);
 
   // Auto-open name prompt if current user's name is '@unknown' or otherwise needs prompt
   useEffect(() => {
@@ -311,6 +317,10 @@ export default function PeopleTab({
 
       if (response.ok) {
         toast.success(`Link invitation sent to ${username}`);
+        // Optimistically mark as link pending in UI
+        setFilteredMembers(prev => prev.map(m => m.name === memberName ? { ...m, hasPendingLinkInvite: true } : m));
+        setPendingLinkInvites(prev => ({ ...prev, [memberName]: true }));
+        setLinkInviteStates(prev => ({ ...prev, [memberName]: false }));
         // Refresh members list
         invalidateCache(`members-${team.slug}-${selectedSubteam}`);
         loadMembers(team.slug, selectedSubteam);
@@ -352,6 +362,9 @@ export default function PeopleTab({
 
       if (response.ok) {
         toast.success('Link invitation cancelled');
+        // Optimistically clear link pending in UI
+        setFilteredMembers(prev => prev.map(m => m.name === memberName ? { ...m, hasPendingLinkInvite: false } : m));
+        setPendingLinkInvites(prev => ({ ...prev, [memberName]: false }));
         // Refresh members list
         invalidateCache(`members-${team.slug}-${selectedSubteam}`);
         loadMembers(team.slug, selectedSubteam);

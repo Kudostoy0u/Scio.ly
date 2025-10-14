@@ -429,9 +429,13 @@ export default function TestContent({ initialData, initialRouterData }: { initia
                               const label = full || m.displayName || m.username || '';
                               return label === previewScope;
                             });
+                            // ASSIGNMENT NOTIFICATIONS DISABLED - Users should use assignments tab instead
+                            // TODO: Re-enable if needed in the future
+                            /*
                             await Promise.all(targets.filter((m:any)=>m.userId).map((m:any)=>
                               fetch('/api/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action:'create', userId: m.userId, type: 'assignment', title: `New ${routerData.eventName} test assigned`, data: { assignmentId, eventName: routerData.eventName, url: `/assign/${assignmentId}` } }) })
                             ));
+                            */
                           } catch {}
                           const recipientsLabel = previewScope === 'all' ? 'all members' : previewScope;
                           toast.success(`Test sent to ${recipientsLabel}!`);

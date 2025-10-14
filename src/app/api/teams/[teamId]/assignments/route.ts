@@ -7,8 +7,8 @@ import {
   newTeamAssignments,
   newTeamAssignmentSubmissions,
   newTeamAssignmentRoster,
-  newTeamMemberships,
-  newTeamNotifications,
+  // newTeamMemberships, // DISABLED: Assignment notifications removed
+  // newTeamNotifications, // DISABLED: Assignment notifications removed
   users 
 } from '@/lib/db/schema';
 import { eq, and, inArray, sql, desc, asc } from 'drizzle-orm';
@@ -217,6 +217,9 @@ export async function POST(
       })
       .returning();
 
+    // ASSIGNMENT NOTIFICATIONS DISABLED - Users should use assignments tab instead
+    // TODO: Re-enable if needed in the future
+    /*
     // Create notifications for all team members in the group using Drizzle ORM
     const membersResult = await dbPg
       .select({ userId: newTeamMemberships.userId })
@@ -242,6 +245,7 @@ export async function POST(
           data: { assignment_id: assignment.id, due_date: due_date }
         });
     }
+    */
 
     return NextResponse.json({ assignment });
 

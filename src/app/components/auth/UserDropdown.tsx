@@ -119,16 +119,8 @@ export default function UserDropdown({
                   <div key={n.id} className={`rounded border ${darkMode ? 'border-gray-700' : 'border-gray-200'} p-2 text-xs`}>
                     <div className="font-medium">{n.title}</div>
                     {!!n.body && <div className={`${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{n.body}</div>}
-                    {n.type === 'assignment' ? (
-                      <div className="mt-2 flex items-center gap-2">
-                        <button onClick={async () => { await markAsRead(n.id); window.location.href = n.data?.url || '/test'; }} className={`px-2 py-1 rounded text-white bg-blue-600 hover:bg-blue-700`}>
-                          Start
-                        </button>
-                        <button onClick={async () => { await markAsRead(n.id); }} className={`px-2 py-1 rounded ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}>
-                          Decline
-                        </button>
-                      </div>
-                    ) : n.type === 'team_invite' ? (
+                    {/* ASSIGNMENT NOTIFICATIONS DISABLED - Users should use assignments tab instead */}
+                    {n.type === 'team_invite' ? (
                       <div className="mt-2 flex items-center gap-2">
                         <button onClick={async () => { 
                           try { 
@@ -172,7 +164,7 @@ export default function UserDropdown({
                           Dismiss
                         </button>
                       </div>
-                    ) : n.type === 'assignment_invitation' ? (
+                    ) : n.type === 'roster_link_invitation' ? (
                       <div className="mt-2 flex items-center gap-2">
                         <button onClick={async () => { 
                           try { 

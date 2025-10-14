@@ -89,6 +89,66 @@ export default function AssignmentsTab({
     }
   };
 
+  const handleStartAssignment = (assignmentId: string) => {
+    // Use the new assignment system that works with UUIDs
+    // This ensures fresh data is loaded from API and localStorage is properly cleared
+    window.location.href = `/assign-new/${assignmentId}`;
+  };
+
+  const handleViewAssignment = (assignmentId: string) => {
+    // Navigate to test page to view results
+    window.location.href = `/test?assignmentId=${assignmentId}&viewResults=true`;
+  };
+
+  const handleDeclineAssignment = async (assignmentId: string) => {
+    try {
+      // Call the decline API endpoint
+      const response = await fetch(`/api/teams/${teamId}/assignments/${assignmentId}/decline`, {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        // Clear any existing assignment data
+        clearAssignmentData(assignmentId);
+        
+        // Remove current assignment ID if it matches
+        const currentAssignmentId = localStorage.getItem('currentAssignmentId');
+        if (currentAssignmentId === assignmentId) {
+          localStorage.removeItem('currentAssignmentId');
+        }
+        
+        // Invalidate cache and reload assignments to get updated data from server
+        invalidateCache(`assignments-${teamId}`);
+        await loadAssignments(teamId);
+        
+        toast.success('Assignment declined');
+      } else {
+        const errorData = await response.json();
+        const errorMessage = errorData.error || 'Failed to decline assignment';
+        toast.error(errorMessage);
+      }
+      
+    } catch (error) {
+      console.error('Failed to decline assignment:', error);
+      toast.error('Failed to decline assignment');
+    }
+  };
+
+  const hasAssignmentProgress = (assignmentId: string): boolean => {
+    const assignmentKey = `assignment_${assignmentId}`;
+    const hasQuestions = localStorage.getItem(`${assignmentKey}_questions`);
+    const hasAnswers = localStorage.getItem(`${assignmentKey}_answers`);
+    return !!(hasQuestions || hasAnswers);
+  };
+
+  const clearAssignmentData = (assignmentId: string) => {
+    const assignmentKey = `assignment_${assignmentId}`;
+    localStorage.removeItem(`${assignmentKey}_questions`);
+    localStorage.removeItem(`${assignmentKey}_answers`);
+    localStorage.removeItem(`${assignmentKey}_grading`);
+    localStorage.removeItem(`${assignmentKey}_session`);
+  };
+
   const getAssignmentStatus = (assignment: Assignment) => {
     // For captains, show overall assignment status
     if (isCaptain) {
@@ -341,6 +401,47 @@ export default function AssignmentsTab({
                           <span className="ml-2 font-medium">
                             Grade: {assignment.user_submission.grade}%
                           </span>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Start/Continue Assignment Button for Students */}
+                    {!isCaptain && (
+                      <div className="mt-3 flex items-center gap-2">
+                        {assignment.user_submission ? (
+                          <button
+                            onClick={() => handleViewAssignment(assignment.id)}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                              darkMode 
+                                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                                : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
+                            }`}
+                          >
+                            View Results
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleStartAssignment(assignment.id)}
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                darkMode 
+                                  ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                  : 'bg-green-100 hover:bg-green-200 text-green-700'
+                              }`}
+                            >
+                              {hasAssignmentProgress(assignment.id) ? 'Continue Assignment' : 'Start Assignment'}
+                            </button>
+                            <button
+                              onClick={() => handleDeclineAssignment(assignment.id)}
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                darkMode 
+                                  ? 'bg-gray-600 hover:bg-gray-700 text-white' 
+                                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                              }`}
+                            >
+                              Decline
+                            </button>
+                          </>
                         )}
                       </div>
                     )}

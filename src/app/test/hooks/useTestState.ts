@@ -103,11 +103,103 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
 
   useEffect(() => {
     // Handle assignment loading
-    if (stableRouterData.assignmentId && !fetchCompletedRef.current) {
+    // Check if we're coming from /assign/[id] route (teamsAssign=1) or direct assignmentId
+    const isFromAssignRoute = stableRouterData.teamsAssign === '1' || stableRouterData.teamsAssign === 1;
+    const hasAssignmentId = stableRouterData.assignmentId;
+    
+    if ((hasAssignmentId || isFromAssignRoute) && !fetchCompletedRef.current) {
       const loadAssignment = async () => {
         try {
           console.log('=== CLIENT SIDE ASSIGNMENT LOADING ===');
           console.log('Loading assignment ID:', stableRouterData.assignmentId);
+          console.log('Is from assign route:', isFromAssignRoute);
+          
+          const assignmentId = stableRouterData.assignmentId;
+          const assignmentKey = `assignment_${assignmentId}`;
+          
+          // If coming from /assign/[id] route, the data should already be in localStorage in old format
+          if (isFromAssignRoute) {
+            console.log('Loading from /assign/[id] route - checking old localStorage format');
+            const storedQuestions = localStorage.getItem('testQuestions');
+            const storedAnswers = localStorage.getItem('testUserAnswers');
+            const storedGrading = localStorage.getItem('testGradingResults');
+            
+            if (storedQuestions) {
+              try {
+                const questions = JSON.parse(storedQuestions);
+                const answers = storedAnswers ? JSON.parse(storedAnswers) : {};
+                const grading = storedGrading ? JSON.parse(storedGrading) : {};
+                
+                console.log('Resuming assignment from /assign/[id] localStorage', { 
+                  questionCount: questions.length, 
+                  hasAnswers: Object.keys(answers).length > 0
+                });
+                
+                setData(normalizeQuestionsFull(questions));
+                setUserAnswers(answers);
+                setGradingResults(grading);
+                
+                setRouterData({
+                  ...stableRouterData,
+                  eventName: stableRouterData.eventName || 'Assignment',
+                  timeLimit: stableRouterData.timeLimit || '60',
+                  assignmentMode: true
+                });
+                
+                setIsLoading(false);
+                fetchCompletedRef.current = true;
+                return;
+              } catch (error) {
+                console.error('Failed to parse /assign/[id] localStorage data:', error);
+                // Continue to load from API
+              }
+            }
+          }
+          
+          // Check for existing assignment progress in new localStorage format (for direct assignmentId)
+          if (hasAssignmentId && !isFromAssignRoute) {
+            const storedQuestions = localStorage.getItem(`${assignmentKey}_questions`);
+            const storedAnswers = localStorage.getItem(`${assignmentKey}_answers`);
+            const storedSession = localStorage.getItem(`${assignmentKey}_session`);
+            
+            if (storedQuestions && storedAnswers) {
+              try {
+                const questions = JSON.parse(storedQuestions);
+                const answers = JSON.parse(storedAnswers);
+                const session = storedSession ? JSON.parse(storedSession) : null;
+                
+                console.log('Resuming assignment from new localStorage format', { 
+                  questionCount: questions.length, 
+                  hasAnswers: Object.keys(answers).length > 0,
+                  hasSession: !!session
+                });
+                
+                setData(normalizeQuestionsFull(questions));
+                setUserAnswers(answers);
+                
+                if (session) {
+                  setIsSubmitted(session.isSubmitted || false);
+                  if (session.timeLeft !== undefined) {
+                    setTimeLeft(session.timeLeft);
+                  }
+                }
+                
+                setRouterData({
+                  ...stableRouterData,
+                  eventName: session?.eventName || 'Assignment',
+                  timeLimit: session?.timeLimit || '60',
+                  assignmentMode: true
+                });
+                
+                setIsLoading(false);
+                fetchCompletedRef.current = true;
+                return;
+              } catch (error) {
+                console.error('Failed to parse stored assignment data:', error);
+                // Continue to load from API
+              }
+            }
+          }
           
           // Reset test state when loading assignment via notifications
           console.log('Resetting test state for assignment loading...');
@@ -125,7 +217,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           localStorage.removeItem('testGradingResults');
           localStorage.removeItem('currentTestSession');
           
-          const response = await fetch(`/api/assignments/${stableRouterData.assignmentId}`);
+          const response = await fetch(`/api/assignments/${assignmentId}`);
           if (response.ok) {
             const data = await response.json();
             console.log('Raw response from API:', JSON.stringify(data, null, 2));
@@ -156,6 +248,17 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
               timeLimit: '60', // Default time limit for assignments
               assignmentMode: true
             });
+            
+            // Store assignment data in localStorage with assignment-specific keys
+            localStorage.setItem(`${assignmentKey}_questions`, JSON.stringify(normalized));
+            localStorage.setItem(`${assignmentKey}_session`, JSON.stringify({
+              eventName: assignment.title,
+              timeLimit: '60',
+              assignmentMode: true,
+              isSubmitted: false,
+              timeLeft: 60 * 60 // 60 minutes in seconds
+            }));
+            
             setIsLoading(false);
             fetchCompletedRef.current = true;
             logger.log('loaded assignment questions', { count: normalized.length });
@@ -178,8 +281,30 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     // Prefer locally stored questions over SSR on reload to resume tests
     if (!ssrAppliedRef.current) {
       try {
+        // Check if we're switching from assignment to practice or vice versa
+        const currentAssignmentId = localStorage.getItem('currentAssignmentId');
+        const isAssignmentMode = !!stableRouterData.assignmentId;
+        const wasAssignmentMode = !!currentAssignmentId;
+        
+        // If switching modes, clear the other mode's data
+        if (isAssignmentMode && !wasAssignmentMode) {
+          // Switching to assignment mode - clear practice data
+          localStorage.removeItem('testQuestions');
+          localStorage.removeItem('testUserAnswers');
+          localStorage.removeItem('testGradingResults');
+          localStorage.removeItem('testParams');
+        } else if (!isAssignmentMode && wasAssignmentMode) {
+          // Switching to practice mode - clear assignment data
+          const assignmentKey = `assignment_${currentAssignmentId}`;
+          localStorage.removeItem(`${assignmentKey}_questions`);
+          localStorage.removeItem(`${assignmentKey}_answers`);
+          localStorage.removeItem(`${assignmentKey}_grading`);
+          localStorage.removeItem(`${assignmentKey}_session`);
+          localStorage.removeItem('currentAssignmentId');
+        }
+        
         const stored = localStorage.getItem('testQuestions');
-        if (stored) {
+        if (stored && !isAssignmentMode) {
           const parsed = JSON.parse(stored);
           const hasQs = Array.isArray(parsed) && parsed.length > 0;
           if (hasQs) {
@@ -349,15 +474,41 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
       }
       
       const updatedAnswers = { ...prev, [questionIndex]: newAnswers };
-      localStorage.setItem('testUserAnswers', JSON.stringify(updatedAnswers));
+      
+      // Use assignment-specific localStorage keys if in assignment mode
+      // Check if we're coming from /assign/[id] route (uses old format) or direct assignmentId (uses new format)
+      const isFromAssignRoute = (routerData as any).teamsAssign === '1' || (routerData as any).teamsAssign === 1;
+      
+      if (routerData.assignmentId && !isFromAssignRoute) {
+        // New format for direct assignmentId
+        const assignmentKey = `assignment_${routerData.assignmentId}`;
+        localStorage.setItem(`${assignmentKey}_answers`, JSON.stringify(updatedAnswers));
+      } else {
+        // Old format for /assign/[id] route or general practice
+        localStorage.setItem('testUserAnswers', JSON.stringify(updatedAnswers));
+      }
+      
       return updatedAnswers;
     });
   };
 
 
   useEffect(() => {
-    try { localStorage.setItem('testGradingResults', JSON.stringify(gradingResults)); } catch {}
-  }, [gradingResults]);
+    try { 
+      // Use assignment-specific localStorage keys if in assignment mode
+      // Check if we're coming from /assign/[id] route (uses old format) or direct assignmentId (uses new format)
+      const isFromAssignRoute = (routerData as any).teamsAssign === '1' || (routerData as any).teamsAssign === 1;
+      
+      if (routerData.assignmentId && !isFromAssignRoute) {
+        // New format for direct assignmentId
+        const assignmentKey = `assignment_${routerData.assignmentId}`;
+        localStorage.setItem(`${assignmentKey}_grading`, JSON.stringify(gradingResults));
+      } else {
+        // Old format for /assign/[id] route or general practice
+        localStorage.setItem('testGradingResults', JSON.stringify(gradingResults));
+      }
+    } catch {}
+  }, [gradingResults, routerData]);
 
   const handleSubmit = useCallback(async () => {
     setIsSubmitted(true);
@@ -399,7 +550,23 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
 
     try {
       markTestSubmitted();
-      localStorage.setItem('testGradingResults', JSON.stringify(gradingResults));
+      
+      // Use assignment-specific localStorage keys if in assignment mode
+      // Check if we're coming from /assign/[id] route (uses old format) or direct assignmentId (uses new format)
+      const isFromAssignRoute = (routerData as any).teamsAssign === '1' || (routerData as any).teamsAssign === 1;
+      
+      if (routerData.assignmentId && !isFromAssignRoute) {
+        // New format for direct assignmentId
+        const assignmentKey = `assignment_${routerData.assignmentId}`;
+        localStorage.setItem(`${assignmentKey}_grading`, JSON.stringify(gradingResults));
+        localStorage.setItem(`${assignmentKey}_session`, JSON.stringify({
+          ...JSON.parse(localStorage.getItem(`${assignmentKey}_session`) || '{}'),
+          isSubmitted: true
+        }));
+      } else {
+        // Old format for /assign/[id] route or general practice
+        localStorage.setItem('testGradingResults', JSON.stringify(gradingResults));
+      }
 
       // localstorage.setitem('testuseranswers', json.stringify(useranswers)); // answers are already persisted on change
       localStorage.removeItem('testFromBookmarks');

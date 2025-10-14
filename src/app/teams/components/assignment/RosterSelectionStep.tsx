@@ -101,11 +101,9 @@ export default function RosterSelectionStep({
                   </span>
                 </div>
               </div>
-              {member.username && (
+              {member.username && member.isLinked && member.username !== 'unknown' && (
                 <div className={`text-xs mt-1 ${
-                  !member.isLinked 
-                    ? 'text-gray-400' 
-                    : darkMode ? 'text-gray-400' : 'text-gray-500'
+                  darkMode ? 'text-gray-400' : 'text-gray-500'
                 }`}>
                   @{member.username}
                 </div>
