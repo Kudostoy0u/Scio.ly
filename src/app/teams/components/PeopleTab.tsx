@@ -125,6 +125,22 @@ export default function PeopleTab({
     setShowNamePrompt(false);
   }, [loadMembers, team.slug, selectedSubteam]);
 
+  // Listen for name updates from NamePromptModal and optimistically update UI
+  useEffect(() => {
+    const onDisplayNameUpdated = (e: Event) => {
+      const newName = (e as CustomEvent<string>).detail as string | undefined;
+      if (!newName || !user?.id) return;
+      // Optimistically update current user's name in list immediately
+      setFilteredMembers(prev => prev.map(m => m.id === user.id ? { ...m, name: newName } : m));
+      // Refresh members from server in background
+      loadMembers(team.slug, selectedSubteam);
+    };
+    window.addEventListener('scio-display-name-updated', onDisplayNameUpdated as EventListener);
+    return () => {
+      window.removeEventListener('scio-display-name-updated', onDisplayNameUpdated as EventListener);
+    };
+  }, [user?.id, loadMembers, team.slug, selectedSubteam]);
+
   // Conflict detection function for member events
   const detectMemberConflicts = useCallback((_members: Member[]) => {
     const conflicts: Record<string, Array<{
