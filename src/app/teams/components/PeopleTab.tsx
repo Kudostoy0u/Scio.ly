@@ -651,7 +651,15 @@ export default function PeopleTab({
                         )}
                       </h3>
                       {member.id === user?.id && (
-                        <Edit3 className="w-3 h-3 opacity-60" />
+                        <button
+                          type="button"
+                          onClick={() => handleNameClick(member)}
+                          title="Edit your name"
+                          className="p-0.5 rounded cursor-pointer hover:opacity-80"
+                          aria-label="Edit your name"
+                        >
+                          <Edit3 className="w-3 h-3 opacity-60" />
+                        </button>
                       )}
                     </div>
                     {member.role === 'captain' && (
