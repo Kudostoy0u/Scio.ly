@@ -213,7 +213,7 @@ export async function getTeamAccessCockroach(userId: string, groupId: string): P
   try {
     // 1. Check if user is the team creator
     const creatorResult = await queryCockroachDB<{ created_by: string }>(
-      `SELECT created_by FROM new_team_groups WHERE id = $1`,
+      `SELECT created_by FROM new_team_groups WHERE id = $1::uuid`,
       [groupId]
     );
     
@@ -228,7 +228,7 @@ export async function getTeamAccessCockroach(userId: string, groupId: string): P
       `SELECT tu.id as subteam_id, tu.team_id, tm.role
        FROM new_team_memberships tm
        JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tm.user_id = $1 AND tu.group_id = $2 AND tm.status = 'active'`,
+       WHERE tm.user_id = $1::uuid AND tu.group_id = $2::uuid AND tm.status = 'active'`,
       [userId, groupId]
     );
 
@@ -250,7 +250,7 @@ export async function getTeamAccessCockroach(userId: string, groupId: string): P
       `SELECT tu.id as subteam_id, tu.team_id, r.student_name
        FROM new_team_roster_data r
        JOIN new_team_units tu ON r.team_unit_id = tu.id
-       WHERE tu.group_id = $1 AND r.user_id = $2`,
+       WHERE tu.group_id = $1::uuid AND r.user_id = $2::uuid`,
       [groupId, userId]
     );
 

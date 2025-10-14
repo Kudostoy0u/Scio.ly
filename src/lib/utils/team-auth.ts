@@ -215,7 +215,7 @@ export async function checkTeamGroupAccessCockroach(
       `SELECT tm.role 
        FROM new_team_memberships tm
        JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tm.user_id = $1 AND tu.group_id = $2 AND tm.status = 'active'`,
+       WHERE tm.user_id = $1::uuid AND tu.group_id = $2::uuid AND tm.status = 'active'`,
       [userId, groupId]
     );
 
@@ -228,7 +228,7 @@ export async function checkTeamGroupAccessCockroach(
       `SELECT COUNT(*) as count
        FROM new_team_roster_data r
        JOIN new_team_units tu ON r.team_unit_id = tu.id
-       WHERE tu.group_id = $1 AND r.user_id = $2`,
+       WHERE tu.group_id = $1::uuid AND r.user_id = $2::uuid`,
       [groupId, userId]
     );
 
@@ -239,7 +239,7 @@ export async function checkTeamGroupAccessCockroach(
     if (!hasRosterEntry) {
       // Get user names from CockroachDB
       const userResult = await queryCockroachDB<{ display_name: string; first_name: string; last_name: string }>(
-        `SELECT display_name, first_name, last_name FROM users WHERE id = $1`,
+        `SELECT display_name, first_name, last_name FROM users WHERE id = $1::uuid`,
         [userId]
       );
       
@@ -250,7 +250,7 @@ export async function checkTeamGroupAccessCockroach(
       
       // Debug: Check what subteams exist in this group (CockroachDB)
       const subteamsInGroupCockroach = await queryCockroachDB<{ id: string; team_id: string; description: string }>(
-        `SELECT id, team_id, description FROM new_team_units WHERE group_id = $1`,
+        `SELECT id, team_id, description FROM new_team_units WHERE group_id = $1::uuid`,
         [groupId]
       );
       
@@ -273,7 +273,7 @@ export async function checkTeamGroupAccessCockroach(
             `SELECT COUNT(*) as count
              FROM new_team_roster_data r
              JOIN new_team_units tu ON r.team_unit_id = tu.id
-             WHERE tu.group_id = $1 AND r.student_name = $2`,
+             WHERE tu.group_id = $1::uuid AND r.student_name = $2`,
             [groupId, name]
           );
           
@@ -292,7 +292,7 @@ export async function checkTeamGroupAccessCockroach(
     if (!isAuthorized) {
       // Check if user is the creator of this team group (CockroachDB)
       const teamGroupResult = await queryCockroachDB<{ created_by: string }>(
-        `SELECT created_by FROM new_team_groups WHERE id = $1`,
+        `SELECT created_by FROM new_team_groups WHERE id = $1::uuid`,
         [groupId]
       );
       
@@ -336,7 +336,7 @@ export async function checkTeamGroupLeadershipCockroach(
       `SELECT tm.role 
        FROM new_team_memberships tm
        JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tm.user_id = $1 AND tu.group_id = $2 AND tm.status = 'active'`,
+       WHERE tm.user_id = $1::uuid AND tu.group_id = $2::uuid AND tm.status = 'active'`,
       [userId, groupId]
     );
 
@@ -348,7 +348,7 @@ export async function checkTeamGroupLeadershipCockroach(
 
     // If no active membership, check if user is the team creator
     const teamGroupResult = await queryCockroachDB<{ created_by: string }>(
-      `SELECT created_by FROM new_team_groups WHERE id = $1`,
+      `SELECT created_by FROM new_team_groups WHERE id = $1::uuid`,
       [groupId]
     );
     

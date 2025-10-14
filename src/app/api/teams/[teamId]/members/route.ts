@@ -5,13 +5,13 @@ import {
   newTeamMemberships, 
   newTeamUnits, 
   newTeamGroups,
+  newTeamRosterData,
   users 
 } from '@/lib/db/schema';
-import { eq, and, inArray } from 'drizzle-orm';
-import { getTeamAccessCockroach, getUserDisplayInfo } from '@/lib/utils/team-auth-v2';
-import { queryCockroachDB } from '@/lib/cockroachdb';
+import { eq, and, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
+import { getTeamAccess, getUserDisplayInfo } from '@/lib/utils/team-auth-v2';
 
-// GET /api/teams/[teamId]/members - Get team members with clean new system
+// GET /api/teams/[teamId]/members - Get team members with clean Drizzle ORM implementation
 // Frontend Usage:
 // - src/lib/stores/teamStore.ts (fetchMembers)
 // - src/app/teams/components/assignment/assignmentUtils.ts (getTeamMembersAndRoster)
@@ -41,7 +41,20 @@ export async function GET(
     const { teamId: paramTeamId } = await params;
     teamId = paramTeamId;
     const { searchParams } = new URL(request.url);
-    const subteamId = searchParams.get('subteamId');
+    const subteamIdParam = searchParams.get('subteamId');
+
+    // Validate subteamId format if provided
+    let subteamId: string | null = null;
+    if (subteamIdParam) {
+      // Check if it's a valid UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(subteamIdParam)) {
+        subteamId = subteamIdParam;
+      } else {
+        console.log('❌ [MEMBERS API] Invalid subteamId format', { subteamId: subteamIdParam });
+        return NextResponse.json({ error: 'Invalid subteam ID format' }, { status: 400 });
+      }
+    }
 
     console.log('📋 [MEMBERS API] Request params', { 
       teamId, 
@@ -64,9 +77,9 @@ export async function GET(
     const groupId = groupResult[0].id;
     console.log('✅ [MEMBERS API] Team group resolved', { teamId, groupId });
 
-    // Check if user has access to this team group using new clean auth system
+    // Check if user has access to this team group using clean auth system
     console.log('🔐 [MEMBERS API] Checking team access');
-    const teamAccess = await getTeamAccessCockroach(user.id, groupId);
+    const teamAccess = await getTeamAccess(user.id, groupId);
     console.log('🔐 [MEMBERS API] Team access result', { 
       userId: user.id, 
       groupId, 
@@ -86,7 +99,7 @@ export async function GET(
       return NextResponse.json({ error: 'Not authorized to access this team' }, { status: 403 });
     }
 
-    // Get all team members for this group using the new clean system
+    // Get all team members for this group using Drizzle ORM
     console.log('👥 [MEMBERS API] Building members list');
     const allMembers = new Map<string, any>();
 
@@ -113,7 +126,21 @@ export async function GET(
 
     // 2. Add all subteam members using Drizzle ORM
     console.log('🔍 [MEMBERS API] Fetching subteam memberships');
-    let membersQuery = dbPg
+    
+    // Build the where conditions
+    const whereConditions = [
+      eq(newTeamUnits.groupId, groupId),
+      eq(newTeamMemberships.status, 'active'),
+      eq(newTeamUnits.status, 'active')
+    ];
+    
+    // Add subteam filter if specified
+    if (subteamId) {
+      console.log('🔍 [MEMBERS API] Filtering by subteam', { subteamId });
+      whereConditions.push(eq(newTeamUnits.id, subteamId));
+    }
+
+    const members = await dbPg
       .select({
         userId: newTeamMemberships.userId,
         role: newTeamMemberships.role,
@@ -124,39 +151,7 @@ export async function GET(
       })
       .from(newTeamMemberships)
       .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
-      .where(
-        and(
-          eq(newTeamUnits.groupId, groupId),
-          eq(newTeamMemberships.status, 'active'),
-          eq(newTeamUnits.status, 'active')
-        )
-      );
-
-    // Add subteam filter if specified
-    if (subteamId) {
-      console.log('🔍 [MEMBERS API] Filtering by subteam', { subteamId });
-      membersQuery = dbPg
-        .select({
-          userId: newTeamMemberships.userId,
-          role: newTeamMemberships.role,
-          joinedAt: newTeamMemberships.joinedAt,
-          teamUnitId: newTeamUnits.id,
-          teamId: newTeamUnits.teamId,
-          description: newTeamUnits.description
-        })
-        .from(newTeamMemberships)
-        .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
-        .where(
-          and(
-            eq(newTeamUnits.groupId, groupId),
-            eq(newTeamMemberships.status, 'active'),
-            eq(newTeamUnits.status, 'active'),
-            eq(newTeamUnits.id, subteamId)
-          )
-        );
-    }
-
-    const members = await membersQuery;
+      .where(and(...whereConditions));
     console.log('✅ [MEMBERS API] Fetched subteam memberships', { 
       count: members.length,
       members: members.map(m => ({ userId: m.userId, role: m.role, teamId: m.teamId }))
@@ -232,137 +227,160 @@ export async function GET(
       }
     });
 
-    // 3. Fetch linked roster data to update member subteam and events info
+    // 3. Fetch linked roster data using Drizzle ORM
     console.log('🔍 [MEMBERS API] Fetching linked roster data');
-    let linkedRosterQuery = `
-      SELECT DISTINCT r.user_id, r.team_unit_id, tu.team_id as subteam_name, tu.description as subteam_description,
-             ARRAY_AGG(r.event_name) as events
-      FROM new_team_roster_data r
-      JOIN new_team_units tu ON r.team_unit_id = tu.id
-      WHERE tu.group_id = $1 AND r.user_id IS NOT NULL
-      GROUP BY r.user_id, r.team_unit_id, tu.team_id, tu.description
-    `;
-    const linkedRosterParams = [groupId];
-
+    
+    // Build the where conditions for linked roster
+    const linkedRosterConditions = [
+      eq(newTeamUnits.groupId, groupId),
+      isNotNull(newTeamRosterData.userId)
+    ];
+    
     // Add subteam filter if specified
     if (subteamId) {
-      linkedRosterQuery += ` AND r.team_unit_id = $2`;
-      linkedRosterParams.push(subteamId);
+      linkedRosterConditions.push(eq(newTeamRosterData.teamUnitId, subteamId));
     }
 
-    const linkedRosterResult = await queryCockroachDB<{
-      user_id: string;
-      team_unit_id: string;
-      subteam_name: string;
-      subteam_description: string;
-      events: string[];
-    }>(linkedRosterQuery, linkedRosterParams);
-
+    const linkedRosterResult = await dbPg
+      .select({
+        userId: newTeamRosterData.userId,
+        teamUnitId: newTeamRosterData.teamUnitId,
+        eventName: newTeamRosterData.eventName,
+        teamId: newTeamUnits.teamId,
+        description: newTeamUnits.description
+      })
+      .from(newTeamRosterData)
+      .innerJoin(newTeamUnits, eq(newTeamRosterData.teamUnitId, newTeamUnits.id))
+      .where(and(...linkedRosterConditions));
     console.log('✅ [MEMBERS API] Fetched linked roster data', { 
-      count: linkedRosterResult.rows.length,
-      members: linkedRosterResult.rows.map(r => ({ userId: r.user_id, subteam: r.subteam_name, events: r.events.length }))
+      count: linkedRosterResult.length,
+      members: linkedRosterResult.map(r => ({ userId: r.userId, subteam: r.teamId, event: r.eventName }))
+    });
+
+    // Group roster data by user and subteam
+    const rosterDataByUser = new Map<string, Map<string, string[]>>();
+    linkedRosterResult.forEach(rosterData => {
+      if (!rosterData.userId) return;
+      
+      if (!rosterDataByUser.has(rosterData.userId)) {
+        rosterDataByUser.set(rosterData.userId, new Map());
+      }
+      
+      const userRosterData = rosterDataByUser.get(rosterData.userId)!;
+      if (!userRosterData.has(rosterData.teamUnitId)) {
+        userRosterData.set(rosterData.teamUnitId, []);
+      }
+      
+      if (rosterData.eventName) {
+        userRosterData.get(rosterData.teamUnitId)!.push(rosterData.eventName);
+      }
     });
 
     // Update existing members with roster data
-    linkedRosterResult.rows.forEach(rosterData => {
-      const existingMember = allMembers.get(rosterData.user_id);
+    rosterDataByUser.forEach((userRosterData, userId) => {
+      const existingMember = allMembers.get(userId);
       if (existingMember) {
         // Initialize subteams array if it doesn't exist
         if (!existingMember.subteams) {
           existingMember.subteams = [];
         }
         
-        // Add this subteam to the subteams array
-        const subteamInfo = {
-          id: rosterData.team_unit_id,
-          name: rosterData.subteam_description || `Team ${rosterData.subteam_name}`,
-          description: rosterData.subteam_description,
-          events: rosterData.events
-        };
-        
-        // Check if this subteam is already in the array
-        const existingSubteamIndex = existingMember.subteams.findIndex(s => s.id === rosterData.team_unit_id);
-        if (existingSubteamIndex >= 0) {
-          // Update existing subteam with events
-          existingMember.subteams[existingSubteamIndex].events = rosterData.events;
-        } else {
-          // Add new subteam
-          existingMember.subteams.push(subteamInfo);
-        }
-        
-        // For backward compatibility, set the primary subteam (first one or most recent)
-        if (!existingMember.subteam || existingMember.subteams.length === 1) {
-          existingMember.subteam = {
-            id: subteamInfo.id,
-            name: subteamInfo.name,
-            description: subteamInfo.description
+        // Update or add subteam information with events
+        userRosterData.forEach((events, teamUnitId) => {
+          const subteamInfo = {
+            id: teamUnitId,
+            name: linkedRosterResult.find(r => r.teamUnitId === teamUnitId)?.description || `Team ${linkedRosterResult.find(r => r.teamUnitId === teamUnitId)?.teamId}`,
+            description: linkedRosterResult.find(r => r.teamUnitId === teamUnitId)?.description,
+            events: [...new Set(events)] // Remove duplicates
           };
-        }
+          
+          // Check if this subteam is already in the array
+          const existingSubteamIndex = existingMember.subteams.findIndex(s => s.id === teamUnitId);
+          if (existingSubteamIndex >= 0) {
+            // Update existing subteam with events
+            existingMember.subteams[existingSubteamIndex].events = subteamInfo.events;
+          } else {
+            // Add new subteam
+            existingMember.subteams.push(subteamInfo);
+          }
+          
+          // For backward compatibility, set the primary subteam (first one or most recent)
+          if (!existingMember.subteam || existingMember.subteams.length === 1) {
+            existingMember.subteam = {
+              id: subteamInfo.id,
+              name: subteamInfo.name,
+              description: subteamInfo.description
+            };
+          }
+        });
         
         // Combine all events from all subteams
         const allEvents = existingMember.subteams.flatMap(s => s.events || []);
         existingMember.events = [...new Set(allEvents)]; // Remove duplicates
         
         console.log('🔄 [MEMBERS API] Updated member with roster data', { 
-          userId: rosterData.user_id, 
+          userId, 
           name: existingMember.name,
-          subteam: subteamInfo.name,
-          events: rosterData.events.length,
           totalSubteams: existingMember.subteams.length,
           totalEvents: existingMember.events.length
         });
       }
     });
 
-    // 4. Add unlinked roster members (people in roster but without linked accounts)
+    // 4. Add unlinked roster members using Drizzle ORM
     console.log('🔍 [MEMBERS API] Fetching unlinked roster members');
-    let unlinkedRosterQuery = `
-      SELECT DISTINCT r.student_name, r.team_unit_id, tu.team_id as subteam_name, tu.description as subteam_description
-      FROM new_team_roster_data r
-      JOIN new_team_units tu ON r.team_unit_id = tu.id
-      WHERE tu.group_id = $1 AND r.student_name IS NOT NULL AND r.student_name != '' AND r.user_id IS NULL
-    `;
-    const unlinkedRosterParams = [groupId];
-
+    
+    // Build the where conditions for unlinked roster
+    const unlinkedRosterConditions = [
+      eq(newTeamUnits.groupId, groupId),
+      isNotNull(newTeamRosterData.studentName),
+      ne(newTeamRosterData.studentName, ''),
+      isNull(newTeamRosterData.userId)
+    ];
+    
     // Add subteam filter if specified
     if (subteamId) {
-      unlinkedRosterQuery += ` AND r.team_unit_id = $2`;
-      unlinkedRosterParams.push(subteamId);
+      unlinkedRosterConditions.push(eq(newTeamRosterData.teamUnitId, subteamId));
     }
 
-    const unlinkedRosterResult = await queryCockroachDB<{
-      student_name: string;
-      team_unit_id: string;
-      subteam_name: string;
-      subteam_description: string;
-    }>(unlinkedRosterQuery, unlinkedRosterParams);
-
+    const unlinkedRosterResult = await dbPg
+      .select({
+        studentName: newTeamRosterData.studentName,
+        teamUnitId: newTeamRosterData.teamUnitId,
+        teamId: newTeamUnits.teamId,
+        description: newTeamUnits.description
+      })
+      .from(newTeamRosterData)
+      .innerJoin(newTeamUnits, eq(newTeamRosterData.teamUnitId, newTeamUnits.id))
+      .where(and(...unlinkedRosterConditions));
     console.log('✅ [MEMBERS API] Fetched unlinked roster members', { 
-      count: unlinkedRosterResult.rows.length,
-      members: unlinkedRosterResult.rows.map(r => ({ name: r.student_name, subteam: r.subteam_name }))
+      count: unlinkedRosterResult.length,
+      members: unlinkedRosterResult.map(r => ({ name: r.studentName, subteam: r.teamId }))
     });
 
     // Add unlinked roster members to the map
-    unlinkedRosterResult.rows.forEach(rosterMember => {
-      const memberKey = `roster-${rosterMember.student_name}-${rosterMember.team_unit_id}`;
+    unlinkedRosterResult.forEach(rosterMember => {
+      if (!rosterMember.studentName) return;
+      
+      const memberKey = `roster-${rosterMember.studentName}-${rosterMember.teamUnitId}`;
       
       // Check if this person is already in the members list (shouldn't happen for unlinked, but just in case)
       const existingMember = Array.from(allMembers.values()).find(member => 
-        member.name === rosterMember.student_name && 
-        member.subteam?.id === rosterMember.team_unit_id
+        member.name === rosterMember.studentName && 
+        member.subteam?.id === rosterMember.teamUnitId
       );
       
       if (!existingMember) {
         allMembers.set(memberKey, {
           id: null, // No user ID for unlinked members
-          name: rosterMember.student_name,
+          name: rosterMember.studentName,
           email: null, // No email for unlinked members
           username: 'unknown', // Special username for unlinked members
           role: 'unlinked', // Special role for unlinked members
           subteam: {
-            id: rosterMember.team_unit_id,
-            name: rosterMember.subteam_description || `Team ${rosterMember.subteam_name}`,
-            description: rosterMember.subteam_description
+            id: rosterMember.teamUnitId,
+            name: rosterMember.description || `Team ${rosterMember.teamId}`,
+            description: rosterMember.description
           },
           joinedAt: null,
           events: [], // Events will be populated separately if needed
@@ -374,7 +392,7 @@ export async function GET(
 
     // 5. Update members without roster data to show "Unknown team"
     console.log('🔍 [MEMBERS API] Checking for members without roster data');
-    const membersWithRosterData = new Set(linkedRosterResult.rows.map(r => r.user_id));
+    const membersWithRosterData = new Set(rosterDataByUser.keys());
     
     allMembers.forEach((member, _memberId) => {
       // Skip unlinked roster members
