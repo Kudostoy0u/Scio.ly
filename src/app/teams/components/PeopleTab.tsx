@@ -8,6 +8,7 @@ import { UserPlus, Crown, Link2Off, Link, ArrowUpCircle, X, AlertTriangle, Edit3
 import InlineInvite from './InlineInvite';
 import LinkInvite from './LinkInvite';
 import { useTeamStore } from '@/app/hooks/useTeamStore';
+import { generateDisplayName } from '@/lib/utils/displayNameUtils';
 import NamePromptModal from '@/app/components/NamePromptModal';
 
 // Division groups data
@@ -1036,7 +1037,20 @@ export default function PeopleTab({
       <NamePromptModal
         isOpen={showNamePrompt}
         onClose={() => setShowNamePrompt(false)}
-        currentName={user ? (filteredMembers.find(m => m.id === user.id)?.name || '') : ''}
+        currentName={(() => {
+          if (!user) return '';
+          const member = filteredMembers.find(m => m.id === user.id);
+          if (member?.name && member.name.trim()) return member.name;
+          const emailLocal = user.email?.split('@')[0] || '';
+          const { name: robust } = generateDisplayName({
+            displayName: null,
+            firstName: null,
+            lastName: null,
+            username: (emailLocal && emailLocal.length > 2) ? emailLocal : null,
+            email: user.email || null
+          }, user.id);
+          return robust;
+        })()}
         currentEmail={user?.email || ''}
         onSave={handleNameUpdate}
       />

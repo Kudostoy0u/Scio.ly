@@ -30,19 +30,36 @@ export default function NamePromptModal({
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (isOpen && user) {
-      // Pre-fill with email local part if available
-      if (currentEmail && currentEmail.includes('@')) {
-        const emailLocal = currentEmail.split('@')[0];
-        if (emailLocal && emailLocal.length > 2 && !emailLocal.match(/^[a-f0-9]{8}$/)) {
-          setUsername(emailLocal);
-          if (currentName === '@unknown' || currentName.startsWith('User ')) {
-            setDisplayName(emailLocal);
-          }
-        }
+    if (!isOpen || !user) return;
+
+    // Prefill username from localStorage if available
+    try {
+      const cachedUsername = localStorage.getItem(`scio_username_${user.id}`);
+      if (cachedUsername && cachedUsername.trim()) {
+        setUsername(prev => prev || cachedUsername.trim());
       }
+    } catch {}
+
+    // Build a robust preferred display name (align with profile page fallbacks)
+    const meta: any = user.user_metadata || {};
+    const metaFull = (meta.name || meta.full_name || meta.fullName || '').toString().trim();
+    const emailLocal = (currentEmail && currentEmail.includes('@')) ? currentEmail.split('@')[0] : '';
+
+    // If currentName is already meaningful, use it; otherwise derive
+    const derived = (() => {
+      if (currentName && currentName !== '@unknown' && !currentName.startsWith('User ')) return currentName;
+      if (metaFull) return metaFull;
+      if (emailLocal && emailLocal.length > 2 && !emailLocal.match(/^[a-f0-9]{8}$/)) return emailLocal;
+      return '';
+    })();
+
+    if (derived) setDisplayName(prev => prev || derived);
+
+    // If username still empty, use email local-part as a sensible starting point
+    if (!username && emailLocal && emailLocal.length > 2 && !emailLocal.match(/^[a-f0-9]{8}$/)) {
+      setUsername(emailLocal);
     }
-  }, [isOpen, user, currentEmail, currentName]);
+  }, [isOpen, user, currentEmail, currentName, username]);
 
   const handleSave = async () => {
     if (!user) return;
@@ -119,10 +136,22 @@ export default function NamePromptModal({
         });
       } catch {}
 
-      // Call onSave callback if provided
-      if (onSave) {
-        onSave();
-      }
+      // Verify persisted name by reading back; then refresh caller
+      try {
+        const verify = await supabase
+          .from('users')
+          .select('display_name, username')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (!verify.error) {
+          const dn = (verify.data as any)?.display_name as string | undefined;
+          if (dn && dn.trim()) {
+            try { localStorage.setItem(`scio_display_name_${user.id}`, dn.trim()); } catch {}
+          }
+        }
+      } catch {}
+
+      if (onSave) onSave();
 
       // Close modal after a brief success message
       setTimeout(() => {

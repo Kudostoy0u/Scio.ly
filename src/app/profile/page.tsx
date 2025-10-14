@@ -10,6 +10,7 @@ import { useTheme } from '@/app/contexts/ThemeContext';
 import { Save, User as UserIcon } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Header from '@/app/components/Header';
+import { generateDisplayName } from '@/lib/utils/displayNameUtils';
 
 export default function ProfilePage() {
   const { darkMode } = useTheme();
@@ -38,8 +39,14 @@ export default function ProfilePage() {
           .select('display_name, first_name, last_name, username, photo_url')
           .eq('id', currentUser.id)
           .maybeSingle();
-        const defaultName = currentUser.user_metadata?.name || currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || '';
-        setDisplayName(data?.display_name || defaultName || '');
+        const { name: robustName } = generateDisplayName({
+          displayName: data?.display_name || null,
+          firstName: data?.first_name || null,
+          lastName: data?.last_name || null,
+          username: data?.username || null,
+          email: currentUser.email || null
+        }, currentUser.id);
+        setDisplayName(robustName || '');
         setFirstName(data?.first_name || '');
         setLastName(data?.last_name || '');
         setUsername(data?.username || (currentUser.email?.split('@')[0] || ''));
@@ -85,6 +92,18 @@ export default function ProfilePage() {
         }
       } else {
         toast.success('Profile updated successfully!');
+        try {
+          await fetch('/api/profile/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: user.id,
+              email: user.email || '',
+              displayName: displayName || undefined,
+              username: username || undefined,
+            })
+          });
+        } catch {}
         try {
           if (user?.id) {
             if (displayName) {
