@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cockroachDBTeamsService } from '@/lib/services/cockroachdb-teams';
+import { createSupabaseServerClient } from '@/lib/supabaseServer';
+import { upsertUserProfile } from '@/lib/db/teams/utils';
+import logger from '@/lib/utils/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,6 +32,53 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+      // Before joining team, ensure user has a meaningful display name
+      try {
+        const supabase = await createSupabaseServerClient();
+        const { data: existingProfile } = await supabase
+          .from('users')
+          .select('id, email, display_name, first_name, last_name, username')
+          .eq('id', userId)
+          .maybeSingle();
+
+        const email: string | undefined = (existingProfile as any)?.email || user.email || undefined;
+        const currentDisplay = (existingProfile as any)?.display_name as string | null | undefined;
+        const firstName = (existingProfile as any)?.first_name as string | null | undefined;
+        const lastName = (existingProfile as any)?.last_name as string | null | undefined;
+        const username = (existingProfile as any)?.username as string | null | undefined;
+
+        const emailLocal = email && email.includes('@') ? email.split('@')[0] : undefined;
+        const derivedDisplayName = (() => {
+          if (currentDisplay && currentDisplay.trim()) return undefined;
+          if (firstName && lastName) return `${firstName.trim()} ${lastName.trim()}`;
+          if (firstName && firstName.trim()) return firstName.trim();
+          if (lastName && lastName.trim()) return lastName.trim();
+          if (username && username.trim()) return username.trim();
+          if (emailLocal && emailLocal.trim()) return emailLocal.trim();
+          return undefined;
+        })();
+
+        if (derivedDisplayName && email) {
+          logger.dev.structured('info', 'Auto-filling display_name before team join', {
+            userId,
+            derivedDisplayName,
+          });
+          await supabase.from('users').upsert({
+            id: userId,
+            email,
+            display_name: derivedDisplayName,
+          } as any, { onConflict: 'id' });
+          await upsertUserProfile({
+            id: userId,
+            email,
+            displayName: derivedDisplayName,
+            username: username || emailLocal || undefined,
+          });
+        }
+      } catch (e) {
+        logger.warn('Failed to auto-fill display_name before team join', e);
+      }
+
       const team = await cockroachDBTeamsService.joinTeamByCode(userId, code);
       
       if (!team) {
