@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerUser } from '@/lib/supabaseServer';
 import { dbPg } from '@/lib/db';
+import { queryCockroachDB } from '@/lib/cockroachdb';
 import { 
   newTeamMemberships, 
   newTeamUnits, 
@@ -358,6 +359,35 @@ export async function GET(
       members: unlinkedRosterResult.map(r => ({ name: r.studentName, subteam: r.teamId }))
     });
 
+    // 5. Fetch pending roster link invitations
+    console.log('🔍 [MEMBERS API] Fetching pending roster link invitations');
+    
+    // Get pending invitations from the roster_link_invitations table
+    const pendingInvitationsQuery = `
+      SELECT rli.student_name, rli.team_id as team_unit_id, rli.status
+      FROM roster_link_invitations rli
+      JOIN new_team_units tu ON rli.team_id = tu.id
+      WHERE tu.group_id = $1 AND rli.status = 'pending'
+      ${subteamId ? 'AND tu.id = $2' : ''}
+    `;
+    
+    const pendingInvitationsParams = subteamId ? [groupId, subteamId] : [groupId];
+    const pendingInvitationsResult = await queryCockroachDB<{
+      student_name: string;
+      team_unit_id: string;
+      status: string;
+    }>(pendingInvitationsQuery, pendingInvitationsParams);
+    
+    console.log('✅ [MEMBERS API] Fetched pending roster link invitations', { 
+      count: pendingInvitationsResult.rows.length,
+      invitations: pendingInvitationsResult.rows.map(r => ({ studentName: r.student_name, status: r.status }))
+    });
+
+    // Create a set of student names with pending invitations for quick lookup
+    const pendingInvitationNames = new Set(
+      pendingInvitationsResult.rows.map(inv => inv.student_name)
+    );
+
     // Add unlinked roster members to the map
     unlinkedRosterResult.forEach(rosterMember => {
       if (!rosterMember.studentName) return;
@@ -385,12 +415,13 @@ export async function GET(
           joinedAt: null,
           events: [], // Events will be populated separately if needed
           isCreator: false,
-          isUnlinked: true // Flag to identify unlinked members
+          isUnlinked: true, // Flag to identify unlinked members
+          hasPendingLinkInvite: pendingInvitationNames.has(rosterMember.studentName) // Check if there's a pending invitation
         });
       }
     });
 
-    // 5. Update members without roster data to show "Unknown team"
+    // 6. Update members without roster data to show "Unknown team"
     console.log('🔍 [MEMBERS API] Checking for members without roster data');
     const membersWithRosterData = new Set(rosterDataByUser.keys());
     
