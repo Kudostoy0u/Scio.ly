@@ -8,7 +8,7 @@ import { UserPlus, Crown, Link2Off, Link, ArrowUpCircle, X, AlertTriangle, Edit3
 import InlineInvite from './InlineInvite';
 import LinkInvite from './LinkInvite';
 import { useTeamStore } from '@/app/hooks/useTeamStore';
-import { generateDisplayName } from '@/lib/utils/displayNameUtils';
+import { generateDisplayName, needsNamePrompt } from '@/lib/utils/displayNameUtils';
 import NamePromptModal from '@/app/components/NamePromptModal';
 
 // Division groups data
@@ -175,16 +175,37 @@ export default function PeopleTab({
     loadMembers(team.slug, selectedSubteam);
   }, [team.slug, selectedSubteam, loadMembers]);
 
-  // Filter and sort members
+  // Filter, enrich names, and sort members
   useEffect(() => {
     const membersData = getMembers(team.slug, selectedSubteam);
     // Detect conflicts based on member events
     const conflicts = detectMemberConflicts(membersData);
     
-    const filtered = membersData.map(member => ({
-      ...member,
-      conflicts: conflicts[member.name] || []
-    }));
+    const filtered = membersData.map(member => {
+      let name = member.name;
+      // If the name is weak ('@unknown'), derive a better display using same logic as NamePromptModal
+      if (needsNamePrompt(name)) {
+        const emailLocal = (member.email && member.email.includes('@')) ? member.email.split('@')[0] : '';
+        const { name: robust } = generateDisplayName({
+          displayName: null,
+          firstName: null,
+          lastName: null,
+          username: (member.username && member.username.trim())
+            ? member.username.trim()
+            : (emailLocal && emailLocal.length > 2 ? emailLocal : null),
+          email: member.email || null,
+        });
+        if (robust && robust.trim()) {
+          name = robust.trim();
+        }
+      }
+
+      return {
+        ...member,
+        name,
+        conflicts: conflicts[member.name] || []
+      };
+    });
 
     // Sort: captains first, then alphabetical
     filtered.sort((a, b) => {
@@ -195,6 +216,16 @@ export default function PeopleTab({
 
     setFilteredMembers(filtered);
   }, [team.slug, selectedSubteam, getMembers, team.division, detectMemberConflicts]);
+
+  // Auto-open name prompt if current user's name is '@unknown' or otherwise needs prompt
+  useEffect(() => {
+    if (!user?.id || !filteredMembers.length) return;
+    const me = filteredMembers.find(m => m.id === user.id);
+    if (!me) return;
+    if (me.name && needsNamePrompt(me.name)) {
+      setShowNamePrompt(true);
+    }
+  }, [filteredMembers, user?.id]);
 
   const handleInvitePerson = () => {
     setShowInlineInvite(true);
@@ -598,7 +629,21 @@ export default function PeopleTab({
                         onClick={() => handleNameClick(member)}
                         title={member.id === user?.id ? 'Click to edit your name' : undefined}
                       >
-                        {member.name}
+                        {(() => {
+                          // For the current user, if name is weak, show a better fallback immediately
+                          if (member.id === user?.id && needsNamePrompt(member.name)) {
+                            const emailLocal = user?.email?.split('@')[0] || '';
+                            const { name: robust } = generateDisplayName({
+                              displayName: null,
+                              firstName: null,
+                              lastName: null,
+                              username: (emailLocal && emailLocal.length > 2) ? emailLocal : null,
+                              email: user?.email || null
+                            }, user?.id);
+                            return robust || member.name;
+                          }
+                          return member.name;
+                        })()}
                         {member.id === user?.id && (
                           <span className={`ml-2 text-xs font-normal ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                             (me)
