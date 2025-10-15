@@ -6,7 +6,8 @@ import {
   newTeamUnits, 
   newTeamGroups,
   newTeamRosterData,
-  users 
+  users,
+  rosterLinkInvitations
 } from '@/lib/db/schema';
 import { eq, and, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
 import { getTeamAccess, getUserDisplayInfo } from '@/lib/utils/team-auth-v2';
@@ -386,12 +387,53 @@ export async function GET(
           joinedAt: null,
           events: [], // Events will be populated separately if needed
           isCreator: false,
-          isUnlinked: true // Flag to identify unlinked members
+          isUnlinked: true, // Flag to identify unlinked members
+          hasPendingLinkInvite: false // Will be updated below if there's a pending invitation
         });
       }
     });
 
-    // 5. Update members without roster data to show "Unknown team"
+    // 5. Check for pending roster link invitations and update member status
+    console.log('🔍 [MEMBERS API] Checking for pending roster link invitations');
+    
+    const pendingInviteConditions = [
+      eq(rosterLinkInvitations.status, 'pending')
+    ];
+    
+    // Add subteam filter if specified
+    if (subteamId) {
+      pendingInviteConditions.push(eq(rosterLinkInvitations.teamId, subteamId));
+    }
+
+    const pendingInvites = await dbPg
+      .select({
+        studentName: rosterLinkInvitations.studentName,
+        teamId: rosterLinkInvitations.teamId,
+        invitedBy: rosterLinkInvitations.invitedBy,
+        createdAt: rosterLinkInvitations.createdAt
+      })
+      .from(rosterLinkInvitations)
+      .where(and(...pendingInviteConditions));
+    
+    console.log('✅ [MEMBERS API] Fetched pending roster link invitations', { 
+      count: pendingInvites.length,
+      invites: pendingInvites.map(i => ({ studentName: i.studentName, teamId: i.teamId }))
+    });
+
+    // Update members with pending link invite status
+    pendingInvites.forEach(invite => {
+      const memberKey = `roster-${invite.studentName}-${invite.teamId}`;
+      const member = allMembers.get(memberKey);
+      if (member) {
+        member.hasPendingLinkInvite = true;
+        console.log('🔄 [MEMBERS API] Updated member with pending link invite', { 
+          studentName: invite.studentName,
+          teamId: invite.teamId
+        });
+      }
+    });
+
+    // 6. Update members without roster data to show "Unknown team"
     console.log('🔍 [MEMBERS API] Checking for members without roster data');
     const membersWithRosterData = new Set(rosterDataByUser.keys());
     

@@ -302,6 +302,7 @@ export const newTeamAssignmentQuestions = pgTable('new_team_assignment_questions
   points: integer('points').default(1),
   orderIndex: integer('order_index').notNull(),
   imageData: text('image_data'),
+  difficulty: numeric('difficulty').default('0.5'),
   createdAt: timestamp('created_at').defaultNow(),
 });
 

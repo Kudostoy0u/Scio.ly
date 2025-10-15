@@ -31,6 +31,9 @@ export default function QuestionGenerationStep({
     if (settings.questionCount < 1 || settings.questionCount > 50) {
       return 'Question count must be between 1 and 50';
     }
+    if (settings.difficulties.length === 0) {
+      return 'Please select at least one difficulty level';
+    }
     return null;
   };
 
@@ -89,6 +92,52 @@ export default function QuestionGenerationStep({
             </label>
           ))}
         </div>
+      </div>
+
+      <div>
+        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+          Difficulty Levels
+        </label>
+        <div className="flex gap-4">
+          {[
+            { value: 'any', label: 'Any' },
+            { value: 'easy', label: 'Easy' },
+            { value: 'medium', label: 'Medium' },
+            { value: 'hard', label: 'Hard' }
+          ].map(difficulty => (
+            <label key={difficulty.value} className="flex items-center">
+              <input
+                type="checkbox"
+                checked={settings.difficulties.includes(difficulty.value)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    if (difficulty.value === 'any') {
+                      // If "Any" is selected, clear all other selections
+                      onSettingsChange({ difficulties: ['any'] });
+                    } else {
+                      // If a specific difficulty is selected, remove "any" and add the difficulty
+                      const newDifficulties = settings.difficulties.filter(d => d !== 'any');
+                      onSettingsChange({ 
+                        difficulties: [...newDifficulties, difficulty.value] 
+                      });
+                    }
+                  } else {
+                    onSettingsChange({ 
+                      difficulties: settings.difficulties.filter(d => d !== difficulty.value) 
+                    });
+                  }
+                }}
+                className="mr-2"
+              />
+              <span className={darkMode ? 'text-white' : 'text-gray-900'}>{difficulty.label}</span>
+            </label>
+          ))}
+        </div>
+        {settings.difficulties.length === 0 && (
+          <p className={`text-sm mt-1 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
+            Please select at least one difficulty level
+          </p>
+        )}
       </div>
 
       <div>

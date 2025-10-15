@@ -33,6 +33,10 @@ export interface RouterParams {
   subtopics?: string[];
   /** Assignment ID for assignment mode */
   assignmentId?: string;
+  /** View results mode for assignments */
+  viewResults?: string;
+  /** Assignment mode flag */
+  assignmentMode?: boolean;
 }
 
 /**
@@ -609,28 +613,63 @@ export const calculateMCQScore = (
   question: Question,
   userAnswers: (string | null)[]
 ): number => {
-  if (!question.answers || question.answers.length === 0) return 0;
+  console.log('🔍 calculateMCQScore DEBUG:');
+  console.log('Question:', {
+    question: question.question,
+    hasAnswers: !!question.answers,
+    answers: question.answers,
+    hasOptions: !!question.options,
+    options: question.options
+  });
+  console.log('User answers:', userAnswers);
+  
+  if (!question.answers || question.answers.length === 0) {
+    console.log('❌ No question.answers found, returning 0');
+    return 0;
+  }
   
   const filteredUserAnswers = userAnswers.filter((a) => a !== null) as string[];
-
   const correctOptions = question.answers.map(ans => question.options![Number(ans)]);
-
+  
+  console.log('Filtered user answers:', filteredUserAnswers);
+  console.log('Correct options:', correctOptions);
 
   if (isMultiSelectQuestion(question.question, question.answers)) {
-    if (filteredUserAnswers.length === 0) return 0;
+    console.log('📝 Processing as multi-select question');
+    if (filteredUserAnswers.length === 0) {
+      console.log('❌ No user answers, returning 0');
+      return 0;
+    }
 
     const numCorrectSelected = filteredUserAnswers.filter((a) => correctOptions.includes(a)).length;
     const hasIncorrectAnswers = filteredUserAnswers.some(a => !correctOptions.includes(a));
 
+    console.log('Multi-select results:', {
+      numCorrectSelected,
+      hasIncorrectAnswers,
+      correctOptions,
+      userAnswers: filteredUserAnswers
+    });
+
     if (numCorrectSelected === correctOptions.length && !hasIncorrectAnswers) {
+      console.log('✅ Perfect multi-select, returning 1');
       return 1;
     } else if (numCorrectSelected > 0) {
+      console.log('⚠️ Partial multi-select, returning 0.5');
       return 0.5;
     }
+    console.log('❌ Wrong multi-select, returning 0');
     return 0;
   } else {
-
-    return filteredUserAnswers.length === 1 && filteredUserAnswers[0] === correctOptions[0] ? 1 : 0;
+    console.log('📝 Processing as single-select question');
+    const result = filteredUserAnswers.length === 1 && filteredUserAnswers[0] === correctOptions[0] ? 1 : 0;
+    console.log('Single-select result:', {
+      userAnswer: filteredUserAnswers[0],
+      correctOption: correctOptions[0],
+      match: filteredUserAnswers[0] === correctOptions[0],
+      result
+    });
+    return result;
   }
 };
 

@@ -88,6 +88,7 @@ export default function CodebustersAssignmentCreator({
     selectedSubtopics: [],
     idPercentage: 0,
     pureIdOnly: false,
+    difficulties: ['any'], // Default to any difficulty
     cipherTypes: ['all'], // Default to "all"
     division: 'any',
     charLengthMin: 50,

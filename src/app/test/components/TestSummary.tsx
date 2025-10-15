@@ -10,6 +10,7 @@ interface TestSummaryProps {
   userAnswers: Record<number, (string | null)[] | null>;
   gradingResults: { [key: string]: number };
   darkMode: boolean;
+  isAssignmentMode?: boolean;
 }
 
 
@@ -76,7 +77,7 @@ function MobileCompactSummary({ items, darkMode }: {
   );
 }
 
-export default function TestSummary({ data, userAnswers, gradingResults, darkMode }: TestSummaryProps) {
+export default function TestSummary({ data, userAnswers, gradingResults, darkMode, isAssignmentMode = false }: TestSummaryProps) {
   const [scrollY, setScrollY] = useState(0);
   
   useEffect(() => {
@@ -92,7 +93,10 @@ export default function TestSummary({ data, userAnswers, gradingResults, darkMod
 
   const answeredQuestions = Object.keys(userAnswers).length;
   const correctQuestions = Object.values(gradingResults).filter(score => score >= 1).length;
-  const accuracyPercentage = answeredQuestions > 0 ? Math.round((correctQuestions / answeredQuestions) * 100) : 0;
+  
+  // For assignment mode, use total questions instead of attempted questions
+  const totalQuestions = isAssignmentMode ? data.length : answeredQuestions;
+  const accuracyPercentage = totalQuestions > 0 ? Math.round((correctQuestions / totalQuestions) * 100) : 0;
 
   const grade = getLetterGradeFromPercentage(accuracyPercentage);
   
@@ -127,14 +131,14 @@ export default function TestSummary({ data, userAnswers, gradingResults, darkMod
 
   const items: SummaryItem[] = [
     { 
-      label: 'Correct', 
+      label: 'Correct',
       value: correctQuestions, 
       valueClassName: darkMode ? 'text-green-400' : 'text-green-600',
       icon: CheckCircle
     },
     { 
-      label: 'Attempted', 
-      value: answeredQuestions, 
+      label: isAssignmentMode ? 'Total Questions' : 'Attempted', 
+      value: isAssignmentMode ? data.length : answeredQuestions, 
       valueClassName: darkMode ? 'text-blue-400' : 'text-blue-600',
       icon: MessageCircle
     },

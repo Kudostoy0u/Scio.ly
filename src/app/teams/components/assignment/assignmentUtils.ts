@@ -105,7 +105,8 @@ export const generateQuestions = async (
   selectedSubtopics: string[],
   idPercentage: number,
   pureIdOnly: boolean,
-  teamId: string
+  teamId: string,
+  difficulties: string[] = ['any']
 ): Promise<Question[]> => {
   const capabilities = getEventCapabilitiesForEvent(eventName);
   
@@ -120,7 +121,8 @@ export const generateQuestions = async (
     id_percentage: idPercentageValue,
     pure_id_only: pureIdOnly,
     supports_picture_questions: capabilities.supportsPictureQuestions,
-    supports_identification_only: capabilities.supportsIdentificationOnly
+    supports_identification_only: capabilities.supportsIdentificationOnly,
+    difficulties: difficulties
   };
 
   const response = await fetch(`/api/teams/${teamId}/assignments/generate-questions`, {
@@ -190,10 +192,14 @@ export const fetchRosterMembers = async (teamId: string, subteamId?: string): Pr
     const memberName = member.name;
     if (rosterEntries.has(memberName)) {
       const entry = rosterEntries.get(memberName)!;
-      entry.isLinked = true;
-      entry.userId = member.id;
-      entry.userEmail = member.email;
-      entry.username = member.username; // Use the actual username from the API
+      // Only mark as linked if the member has a valid user ID and is not an unlinked roster member
+      // Unlinked roster members have username 'unknown' and should not be considered linked
+      if (member.id && member.username !== 'unknown' && !member.isUnlinked) {
+        entry.isLinked = true;
+        entry.userId = member.id;
+        entry.userEmail = member.email;
+        entry.username = member.username; // Use the actual username from the API
+      }
     }
   });
   

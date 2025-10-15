@@ -5,6 +5,7 @@ export interface Question {
   correct_answer?: string;
   order_index: number;
   imageData?: string;
+  difficulty?: number;
 }
 
 export interface RosterMember {
@@ -40,6 +41,8 @@ export interface QuestionGenerationSettings {
   selectedSubtopics: string[];
   idPercentage: number;
   pureIdOnly: boolean;
+  // Difficulty settings
+  difficulties: string[];
   // Codebusters-specific settings
   cipherTypes?: string[];
   division?: 'B' | 'C' | 'any';

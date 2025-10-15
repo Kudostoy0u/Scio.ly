@@ -60,12 +60,49 @@ import { resolveRouterParams } from './utils/ssr';
  * });
  * ```
  */
+// Validation function for assignment questions
+function validateAssignmentQuestions(questions: any[]): void {
+  questions.forEach((question, index) => {
+    if (!question.answers) {
+      throw new Error(`Assignment question ${index + 1} (${question.question}) missing required answers field`);
+    }
+    
+    if (question.answers === undefined) {
+      throw new Error(`Assignment question ${index + 1} (${question.question}) has undefined answers field`);
+    }
+    
+    if (question.answers === null) {
+      throw new Error(`Assignment question ${index + 1} (${question.question}) has null answers field`);
+    }
+    
+    if (Array.isArray(question.answers) && question.answers.length === 0) {
+      throw new Error(`Assignment question ${index + 1} (${question.question}) has empty answers array`);
+    }
+  });
+}
+
 export function useTestState({ initialData, initialRouterData }: { initialData?: any[]; initialRouterData?: any } = {}) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const fetchStartedRef = useRef(false);
   const fetchCompletedRef = useRef(false);
   const [data, setData] = useState<Question[]>(Array.isArray(initialData) ? initialData as Question[] : []);
+  
+  // Debug data state changes
+  useEffect(() => {
+    console.log('🔄 DATA STATE CHANGED:');
+    console.log('Data length:', data.length);
+    if (data.length > 0) {
+      console.log('First question answers field:', data[0]?.answers);
+      console.log('First question structure:', {
+        question: data[0]?.question,
+        hasAnswers: !!data[0]?.answers,
+        answers: data[0]?.answers,
+        hasOptions: !!data[0]?.options,
+        optionsLength: data[0]?.options?.length
+      });
+    }
+  }, [data]);
   const [routerData, setRouterData] = useState<RouterParams>(initialRouterData || {});
   const [userAnswers, setUserAnswers] = useState<Record<number, (string | null)[] | null>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -102,20 +139,260 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
 
 
   useEffect(() => {
+    // Handle view results mode - set submitted state if viewResults=true
+    if (stableRouterData.viewResults === 'true' && !isSubmitted) {
+      setIsSubmitted(true);
+      // Load stored answers and grading results for view results mode
+      const assignmentKey = `assignment_${stableRouterData.assignmentId}`;
+      const storedAnswers = localStorage.getItem(`${assignmentKey}_answers`);
+      const storedGrading = localStorage.getItem(`${assignmentKey}_grading`);
+      const storedQuestions = localStorage.getItem(`${assignmentKey}_questions`);
+      
+      if (storedQuestions) {
+        try {
+          const parsedQuestions = JSON.parse(storedQuestions);
+          console.log('📖 LOADING ASSIGNMENT QUESTIONS FROM LOCALSTORAGE:');
+          console.log('Assignment key:', assignmentKey);
+          console.log('Raw stored questions:', storedQuestions.substring(0, 500) + '...');
+          console.log('Parsed questions:', parsedQuestions);
+          console.log('First question answers field:', parsedQuestions[0]?.answers);
+          
+          if (Array.isArray(parsedQuestions) && parsedQuestions.length > 0) {
+            // Validate assignment questions have required answers field
+            validateAssignmentQuestions(parsedQuestions);
+            console.log('✅ VALIDATION PASSED - Setting data with questions that have answers field');
+            setData(parsedQuestions);
+            setIsLoading(false);
+            fetchCompletedRef.current = true;
+          }
+        } catch (error) {
+          console.error('Failed to parse stored questions:', error);
+          if (error instanceof Error && error.message.includes('Assignment question')) {
+            // Clear invalid questions from localStorage
+            localStorage.removeItem(`${assignmentKey}_questions`);
+            localStorage.removeItem(`${assignmentKey}_answers`);
+            localStorage.removeItem(`${assignmentKey}_grading`);
+            console.error('Cleared invalid assignment data from localStorage');
+          }
+        }
+      }
+      
+      if (storedAnswers) {
+        try {
+          const parsedAnswers = JSON.parse(storedAnswers);
+          setUserAnswers(parsedAnswers);
+        } catch (error) {
+          console.error('Failed to parse stored answers:', error);
+        }
+      }
+      
+      if (storedGrading) {
+        try {
+          const parsedGrading = JSON.parse(storedGrading);
+          setGradingResults(parsedGrading);
+        } catch (error) {
+          console.error('Failed to parse stored grading results:', error);
+        }
+      }
+    }
+    
     // Handle assignment loading
-    if (stableRouterData.assignmentId && !fetchCompletedRef.current) {
+    // Check if we're in assignment mode (has assignmentId or teamsAssign=1)
+    const isAssignmentMode = !!(stableRouterData.assignmentId || stableRouterData.teamsAssign === '1' || stableRouterData.teamsAssign === 1);
+    
+    if (isAssignmentMode && !fetchCompletedRef.current) {
       const loadAssignment = async () => {
         try {
           console.log('=== CLIENT SIDE ASSIGNMENT LOADING ===');
           console.log('Loading assignment ID:', stableRouterData.assignmentId);
+          console.log('Is assignment mode:', isAssignmentMode);
+          
+          const assignmentId = stableRouterData.assignmentId;
+          const assignmentKey = `assignment_${assignmentId}`;
+          
+          // If coming from /assign/[id] route, the data should already be in localStorage in old format
+          if (stableRouterData.teamsAssign === '1' || stableRouterData.teamsAssign === 1) {
+            console.log('Loading from /assign/[id] route - checking old localStorage format');
+            const storedQuestions = localStorage.getItem('testQuestions');
+            // Use assignment-specific keys if assignmentId is available, otherwise use generic keys
+            const answersKey = assignmentId ? `assignment_${assignmentId}_answers` : 'testUserAnswers';
+            const gradesKey = assignmentId ? `assignment_${assignmentId}_grading` : 'testGradingResults';
+            
+            console.log('DEBUG: Assignment loading - checking localStorage', {
+              assignmentId,
+              answersKey,
+              gradesKey,
+              hasAssignmentId: !!assignmentId
+            });
+            
+            const storedAnswers = localStorage.getItem(answersKey);
+            const storedGrading = localStorage.getItem(gradesKey);
+            
+            console.log('DEBUG: Assignment localStorage check', {
+              hasStoredAnswers: !!storedAnswers,
+              hasStoredGrading: !!storedGrading,
+              answersKey,
+              gradesKey
+            });
+            
+            if (storedQuestions) {
+              try {
+                const questions = JSON.parse(storedQuestions);
+                const answers = storedAnswers ? JSON.parse(storedAnswers) : {};
+                const grading = storedGrading ? JSON.parse(storedGrading) : {};
+                
+                console.log('DEBUG: Parsing assignment data', {
+                  questionCount: questions.length,
+                  answersObject: answers,
+                  answersKeys: Object.keys(answers),
+                  answersLength: Object.keys(answers).length,
+                  gradingObject: grading
+                });
+                
+                /**
+                 * CRITICAL VALIDATION: Check if cached questions have valid answers field
+                 */
+                const hasInvalidQuestions = questions.some((q: Question) =>
+                  !q.answers || !Array.isArray(q.answers) || q.answers.length === 0
+                );
+
+                if (hasInvalidQuestions) {
+                  console.warn(
+                    '⚠️ Old cached questions have invalid answers field - clearing cache and reloading from API',
+                    { questionCount: questions.length }
+                  );
+
+                  // Clear the invalid old cache - use the SAME keys we loaded from!
+                  localStorage.removeItem('testQuestions');
+                  localStorage.removeItem(answersKey); // Already defined at line 218
+                  localStorage.removeItem(gradesKey); // Already defined at line 219
+                  localStorage.removeItem('testSubmitted');
+                  localStorage.removeItem('testParams');
+                  localStorage.removeItem('currentTestSession');
+
+                  // Don't throw - just skip the cached data and fall through to API fetch below
+                  // The code will naturally continue to line 387+ where the API fetch happens
+                } else {
+                  // Questions are valid - use cached data
+                  console.log('Resuming assignment from /assign/[id] localStorage', {
+                    questionCount: questions.length,
+                    hasAnswers: Object.keys(answers).length > 0
+                  });
+
+                  setData(normalizeQuestionsFull(questions));
+                  console.log('DEBUG: About to set user answers', answers);
+                  setUserAnswers(answers);
+                  setGradingResults(grading);
+
+                  setRouterData({
+                    ...stableRouterData,
+                    eventName: stableRouterData.eventName || 'Assignment',
+                    timeLimit: stableRouterData.timeLimit || '60',
+                    assignmentMode: true
+                  });
+
+                  setIsLoading(false);
+                  fetchCompletedRef.current = true;
+                  return;
+                }
+              } catch (error) {
+                console.error('Failed to parse /assign/[id] localStorage data:', error);
+                // Continue to load from API
+              }
+            }
+          }
+          
+          // Check for existing assignment progress in new localStorage format (for direct assignmentId)
+          if (assignmentId) {
+            console.log('DEBUG: New assignment format loading', {
+              assignmentId,
+              assignmentKey,
+              teamsAssign: stableRouterData.teamsAssign
+            });
+            
+            const storedQuestions = localStorage.getItem(`${assignmentKey}_questions`);
+            const storedAnswers = localStorage.getItem(`${assignmentKey}_answers`);
+            const storedSession = localStorage.getItem(`${assignmentKey}_session`);
+            
+            console.log('DEBUG: New assignment localStorage check', {
+              hasStoredQuestions: !!storedQuestions,
+              hasStoredAnswers: !!storedAnswers,
+              hasStoredSession: !!storedSession,
+              assignmentKey
+            });
+            
+            if (storedQuestions && storedAnswers) {
+              try {
+                const questions = JSON.parse(storedQuestions);
+                const answers = JSON.parse(storedAnswers);
+                const session = storedSession ? JSON.parse(storedSession) : null;
+
+                /**
+                 * CRITICAL VALIDATION: Check if cached questions have valid answers field
+                 *
+                 * Old cached questions (before the fix) don't have answers field.
+                 * We MUST reject these and reload from API to get the correct data.
+                 */
+                const hasInvalidQuestions = questions.some((q: Question) =>
+                  !q.answers || !Array.isArray(q.answers) || q.answers.length === 0
+                );
+
+                if (hasInvalidQuestions) {
+                  console.warn(
+                    '⚠️ Cached questions have invalid answers field - clearing cache and reloading from API',
+                    { assignmentKey, questionCount: questions.length }
+                  );
+
+                  // Clear the invalid cache
+                  localStorage.removeItem(`${assignmentKey}_questions`);
+                  localStorage.removeItem(`${assignmentKey}_answers`);
+                  localStorage.removeItem(`${assignmentKey}_session`);
+                  localStorage.removeItem(`${assignmentKey}_grading`);
+
+                  // Don't throw - just skip the cached data and fall through to API fetch below
+                } else {
+                  // Questions are valid - use cached data
+                  console.log('Resuming assignment from new localStorage format', {
+                    questionCount: questions.length,
+                    hasAnswers: Object.keys(answers).length > 0,
+                    hasSession: !!session,
+                    teamsAssign: stableRouterData.teamsAssign
+                  });
+
+                  setData(normalizeQuestionsFull(questions));
+                  setUserAnswers(answers);
+
+                  if (session) {
+                    setIsSubmitted(session.isSubmitted || false);
+                    if (session.timeLeft !== undefined) {
+                      setTimeLeft(session.timeLeft);
+                    }
+                  }
+
+                  setRouterData({
+                    ...stableRouterData,
+                    eventName: session?.eventName || 'Assignment',
+                    timeLimit: session?.timeLimit || '60',
+                    assignmentMode: true
+                  });
+
+                  setIsLoading(false);
+                  fetchCompletedRef.current = true;
+                  return;
+                }
+              } catch (error) {
+                console.error('Failed to parse stored assignment data:', error);
+                // Continue to load from API
+              }
+            }
+          }
           
           // Reset test state when loading assignment via notifications
           console.log('Resetting test state for assignment loading...');
           setIsSubmitted(false);
           setUserAnswers({});
-          setData([]);
-          setRouterData({});
           setGradingResults({});
+          // Don't reset data and routerData here - let assignment loading set them
           
           // Clear localStorage test state
           localStorage.removeItem('testSubmitted');
@@ -125,7 +402,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           localStorage.removeItem('testGradingResults');
           localStorage.removeItem('currentTestSession');
           
-          const response = await fetch(`/api/assignments/${stableRouterData.assignmentId}`);
+          const response = await fetch(`/api/assignments/${assignmentId}`);
           if (response.ok) {
             const data = await response.json();
             console.log('Raw response from API:', JSON.stringify(data, null, 2));
@@ -156,6 +433,21 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
               timeLimit: '60', // Default time limit for assignments
               assignmentMode: true
             });
+            
+            // Store assignment data in localStorage with assignment-specific keys
+            console.log('💾 STORING ASSIGNMENT QUESTIONS TO LOCALSTORAGE:');
+            console.log('Assignment key:', assignmentKey);
+            console.log('Questions to store:', normalized);
+            console.log('First question answers field:', normalized[0]?.answers);
+            localStorage.setItem(`${assignmentKey}_questions`, JSON.stringify(normalized));
+            localStorage.setItem(`${assignmentKey}_session`, JSON.stringify({
+              eventName: assignment.title,
+              timeLimit: '60',
+              assignmentMode: true,
+              isSubmitted: false,
+              timeLeft: 60 * 60 // 60 minutes in seconds
+            }));
+            
             setIsLoading(false);
             fetchCompletedRef.current = true;
             logger.log('loaded assignment questions', { count: normalized.length });
@@ -167,6 +459,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           setFetchError('Failed to load assignment');
           setIsLoading(false);
           fetchCompletedRef.current = true;
+          // Don't clear data on error - keep any existing data
           return;
         }
       };
@@ -178,8 +471,33 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     // Prefer locally stored questions over SSR on reload to resume tests
     if (!ssrAppliedRef.current) {
       try {
+        // Only clear practice data when starting a new assignment (not when switching back to practice)
+        const currentAssignmentId = localStorage.getItem('currentAssignmentId');
+        const isAssignmentMode = !!stableRouterData.assignmentId;
+        const newAssignmentId = stableRouterData.assignmentId;
+        
+        if (isAssignmentMode && newAssignmentId && newAssignmentId !== currentAssignmentId) {
+          // Starting a new assignment - clear practice data and previous assignment data
+          localStorage.removeItem('testQuestions');
+          localStorage.removeItem('testUserAnswers');
+          localStorage.removeItem('testGradingResults');
+          localStorage.removeItem('testParams');
+          
+          // Clear previous assignment data if switching to a different assignment
+          if (currentAssignmentId) {
+            const oldAssignmentKey = `assignment_${currentAssignmentId}`;
+            localStorage.removeItem(`${oldAssignmentKey}_questions`);
+            localStorage.removeItem(`${oldAssignmentKey}_answers`);
+            localStorage.removeItem(`${oldAssignmentKey}_grading`);
+            localStorage.removeItem(`${oldAssignmentKey}_session`);
+          }
+          
+          // Update current assignment ID
+          localStorage.setItem('currentAssignmentId', newAssignmentId);
+        }
+        
         const stored = localStorage.getItem('testQuestions');
-        if (stored) {
+        if (stored && !isAssignmentMode) {
           const parsed = JSON.parse(stored);
           const hasQs = Array.isArray(parsed) && parsed.length > 0;
           if (hasQs) {
@@ -191,11 +509,35 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     if (session) {
       setIsSubmitted(session.isSubmitted);
               }
-              const storedAnswers = localStorage.getItem('testUserAnswers');
+              // Load answers using appropriate localStorage key based on assignment mode
+              const isAssignmentMode = !!(routerData.assignmentId || (routerData as any).teamsAssign === '1' || (routerData as any).teamsAssign === 1);
+              const answersKey = isAssignmentMode && routerData.assignmentId 
+                ? `assignment_${routerData.assignmentId}_answers` 
+                : 'testUserAnswers';
+              const gradesKey = isAssignmentMode && routerData.assignmentId 
+                ? `assignment_${routerData.assignmentId}_grading` 
+                : 'testGradingResults';
+              
+              console.log('DEBUG: Loading answers from localStorage', {
+                routerData,
+                isAssignmentMode,
+                assignmentId: routerData.assignmentId,
+                answersKey,
+                gradesKey
+              });
+              
+              const storedAnswers = localStorage.getItem(answersKey);
+              console.log('DEBUG: Found stored answers?', !!storedAnswers, answersKey);
               if (storedAnswers) {
-                try { setUserAnswers(JSON.parse(storedAnswers)); } catch {}
+                try { 
+                  const parsed = JSON.parse(storedAnswers);
+                  console.log('DEBUG: Parsed answers', Object.keys(parsed).length, 'questions');
+                  setUserAnswers(parsed); 
+                } catch (e) {
+                  console.error('DEBUG: Failed to parse answers', e);
+                }
               }
-              const storedGrades = localStorage.getItem('testGradingResults');
+              const storedGrades = localStorage.getItem(gradesKey);
               if (storedGrades) {
                 try { setGradingResults(JSON.parse(storedGrades)); } catch {}
               }
@@ -241,11 +583,18 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     }
     
     import('./utils/storageRestore').then(({ restoreStoredState }) => {
-      const restored = restoreStoredState();
-      if (restored.userAnswers) setUserAnswers(restored.userAnswers);
-      if (restored.gradingResults) setGradingResults(restored.gradingResults);
+      // Only restore from generic localStorage if we're not in assignment mode
+      const isAssignmentMode = !!(routerData.assignmentId || (routerData as any).teamsAssign === '1' || (routerData as any).teamsAssign === 1);
+      
+      if (!isAssignmentMode) {
+        const restored = restoreStoredState();
+        if (restored.userAnswers) setUserAnswers(restored.userAnswers);
+        if (restored.gradingResults) setGradingResults(restored.gradingResults);
+      } else {
+        console.log('DEBUG: Skipping restoreStoredState for assignment mode');
+      }
     }).catch(() => {});
-  }, [initialData, initialRouterData]);
+  }, [initialData, initialRouterData, routerData]);
 
   // If in preview mode, auto-fill answers with correct ones (all correct for multi-select) and mark submitted once data is loaded
   useEffect(() => {
@@ -276,6 +625,9 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
 
 
   useEffect(() => {
+    // Skip initLoad if we're in assignment mode - assignment loading is handled separately
+    if (stableRouterData.assignmentId) return;
+    
     if (fetchStartedRef.current || fetchCompletedRef.current || data.length > 0 || isLoading === false) return;
     fetchStartedRef.current = true;
     initLoad({ initialData, stableRouterData, setRouterData, setFetchError, setIsLoading, setData, setTimeLeft, fetchCompletedRef });
@@ -349,15 +701,41 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
       }
       
       const updatedAnswers = { ...prev, [questionIndex]: newAnswers };
-      localStorage.setItem('testUserAnswers', JSON.stringify(updatedAnswers));
+      
+      // Use assignment-specific localStorage keys if in assignment mode
+      // Check if we're in assignment mode (has assignmentId or teamsAssign=1)
+      const isAssignmentMode = !!(routerData.assignmentId || (routerData as any).teamsAssign === '1' || (routerData as any).teamsAssign === 1);
+      
+      if (isAssignmentMode && routerData.assignmentId) {
+        // Assignment mode with specific assignmentId
+        const assignmentKey = `assignment_${routerData.assignmentId}`;
+        localStorage.setItem(`${assignmentKey}_answers`, JSON.stringify(updatedAnswers));
+      } else {
+        // General practice mode
+        localStorage.setItem('testUserAnswers', JSON.stringify(updatedAnswers));
+      }
+      
       return updatedAnswers;
     });
   };
 
 
   useEffect(() => {
-    try { localStorage.setItem('testGradingResults', JSON.stringify(gradingResults)); } catch {}
-  }, [gradingResults]);
+    try { 
+      // Use assignment-specific localStorage keys if in assignment mode
+      // Check if we're in assignment mode (has assignmentId or teamsAssign=1)
+      const isAssignmentMode = !!(routerData.assignmentId || (routerData as any).teamsAssign === '1' || (routerData as any).teamsAssign === 1);
+      
+      if (isAssignmentMode && routerData.assignmentId) {
+        // Assignment mode with specific assignmentId
+        const assignmentKey = `assignment_${routerData.assignmentId}`;
+        localStorage.setItem(`${assignmentKey}_grading`, JSON.stringify(gradingResults));
+      } else {
+        // General practice mode
+        localStorage.setItem('testGradingResults', JSON.stringify(gradingResults));
+      }
+    } catch {}
+  }, [gradingResults, routerData]);
 
   const handleSubmit = useCallback(async () => {
     setIsSubmitted(true);
@@ -375,7 +753,7 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
     const { computeMcqTotals } = await import('./utils/submission');
-    const { mcqTotal, mcqScore, frqsToGrade, newGrading } = computeMcqTotals(data, userAnswers, gradingResults);
+    const { mcqTotal, mcqScore, frqsToGrade, newGrading } = computeMcqTotals(data, userAnswers, gradingResults, !!(routerData as any).assignmentMode);
     setGradingResults(newGrading);
     
     if (frqsToGrade.length > 0) {
@@ -399,7 +777,24 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
 
     try {
       markTestSubmitted();
-      localStorage.setItem('testGradingResults', JSON.stringify(gradingResults));
+      
+      // Use assignment-specific localStorage keys if in assignment mode
+      // Check if we're in assignment mode (has assignmentId OR has teamsAssign=1 AND currentAssignmentId in localStorage)
+      const hasCurrentAssignmentId = !!localStorage.getItem('currentAssignmentId');
+      const isAssignmentMode = !!(routerData.assignmentId || ((routerData as any).teamsAssign === '1' || (routerData as any).teamsAssign === 1) && hasCurrentAssignmentId);
+      
+      if (isAssignmentMode && routerData.assignmentId) {
+        // Assignment mode with specific assignmentId
+        const assignmentKey = `assignment_${routerData.assignmentId}`;
+        localStorage.setItem(`${assignmentKey}_grading`, JSON.stringify(gradingResults));
+        localStorage.setItem(`${assignmentKey}_session`, JSON.stringify({
+          ...JSON.parse(localStorage.getItem(`${assignmentKey}_session`) || '{}'),
+          isSubmitted: true
+        }));
+      } else {
+        // General practice mode
+        localStorage.setItem('testGradingResults', JSON.stringify(gradingResults));
+      }
 
       // localstorage.setitem('testuseranswers', json.stringify(useranswers)); // answers are already persisted on change
       localStorage.removeItem('testFromBookmarks');
@@ -461,13 +856,17 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
         } catch {}
       }
     } else {
-      // Handle legacy assignment submission
-      try {
-        const assignmentIdStr = localStorage.getItem('currentAssignmentId');
-        if (assignmentIdStr) {
+      // Handle legacy assignment submission - only if we're actually in assignment mode
+      const isLegacyAssignmentMode = (routerData as any).teamsAssign === '1' || (routerData as any).teamsAssign === 1;
+      if (isLegacyAssignmentMode) {
+        try {
+          const assignmentIdStr = localStorage.getItem('currentAssignmentId');
+          if (assignmentIdStr) {
           const assignmentId = Number(assignmentIdStr);
           if (!assignmentId || Number.isNaN(assignmentId)) {
-            try { (await import('react-toastify')).toast.error('Could not submit results (invalid assignment).'); } catch {}
+            // Clear invalid assignment ID and show a more helpful error message
+            localStorage.removeItem('currentAssignmentId');
+            try { (await import('react-toastify')).toast.error('Invalid assignment ID detected. Test submitted as practice mode.'); } catch {}
             return;
           }
           const name = (user?.user_metadata?.name || user?.email || '').toString();
@@ -493,7 +892,8 @@ export function useTestState({ initialData, initialRouterData }: { initialData?:
           }
           localStorage.removeItem('currentAssignmentId');
         }
-      } catch {}
+        } catch {}
+      }
     }
   }, [data, userAnswers, gradingResults, routerData, timeLeft]);
 

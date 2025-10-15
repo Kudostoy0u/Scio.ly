@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
-import { Plus, Calendar, CheckCircle, Clock, BarChart3, Trash2 } from 'lucide-react';
+import { useAuth } from '@/app/contexts/AuthContext';
+import { Plus, Calendar, CheckCircle, Clock, BarChart3, Trash2, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-toastify';
 import AssignmentViewerModal from './AssignmentViewerModal';
 import { useEnhancedTeamData } from '@/app/hooks/useEnhancedTeamData';
@@ -50,6 +51,7 @@ export default function AssignmentsTab({
   isCaptain, 
   onCreateAssignment 
 }: AssignmentsTabProps) {
+  const { user } = useAuth();
   const { darkMode } = useTheme();
   const { assignments, loading, error, loadAssignments, invalidateCache } = useEnhancedTeamData();
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
@@ -89,6 +91,76 @@ export default function AssignmentsTab({
     }
   };
 
+  const handleStartAssignment = (assignmentId: string) => {
+    // Use the new assignment system that works with UUIDs
+    // This ensures fresh data is loaded from API and localStorage is properly cleared
+    window.location.href = `/assign-new/${assignmentId}`;
+  };
+
+  const handleViewAssignment = (assignmentId: string) => {
+    // Navigate to test page to view results
+    window.location.href = `/test?assignmentId=${assignmentId}&viewResults=true`;
+  };
+
+  const handleDeclineAssignment = async (assignmentId: string) => {
+    try {
+      // Call the decline API endpoint
+      const response = await fetch(`/api/teams/${teamId}/assignments/${assignmentId}/decline`, {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        // Clear any existing assignment data
+        clearAssignmentData(assignmentId);
+        
+        // Remove current assignment ID if it matches
+        const currentAssignmentId = localStorage.getItem('currentAssignmentId');
+        if (currentAssignmentId === assignmentId) {
+          localStorage.removeItem('currentAssignmentId');
+        }
+        
+        // Invalidate cache and reload assignments to get updated data from server
+        invalidateCache(`assignments-${teamId}`);
+        await loadAssignments(teamId);
+        
+        toast.success('Assignment declined');
+      } else {
+        const errorData = await response.json();
+        const errorMessage = errorData.error || 'Failed to decline assignment';
+        toast.error(errorMessage);
+      }
+      
+    } catch (error) {
+      console.error('Failed to decline assignment:', error);
+      toast.error('Failed to decline assignment');
+    }
+  };
+
+  const hasAssignmentProgress = (assignmentId: string): boolean => {
+    const assignmentKey = `assignment_${assignmentId}`;
+    const hasQuestions = localStorage.getItem(`${assignmentKey}_questions`);
+    const hasAnswers = localStorage.getItem(`${assignmentKey}_answers`);
+    return !!(hasQuestions || hasAnswers);
+  };
+
+  const isUserAssignedToAssignment = (assignment: Assignment): boolean => {
+    if (!user?.id || !assignment.roster) return false;
+    return assignment.roster.some(rosterMember => rosterMember.user_id === user.id);
+  };
+
+  const hasEveryoneDeclined = (assignment: Assignment): boolean => {
+    // If there's no roster or the roster is empty, everyone has declined
+    return !assignment.roster || assignment.roster.length === 0;
+  };
+
+  const clearAssignmentData = (assignmentId: string) => {
+    const assignmentKey = `assignment_${assignmentId}`;
+    localStorage.removeItem(`${assignmentKey}_questions`);
+    localStorage.removeItem(`${assignmentKey}_answers`);
+    localStorage.removeItem(`${assignmentKey}_grading`);
+    localStorage.removeItem(`${assignmentKey}_session`);
+  };
+
   const getAssignmentStatus = (assignment: Assignment) => {
     // For captains, show overall assignment status
     if (isCaptain) {
@@ -96,7 +168,7 @@ export default function AssignmentsTab({
       const rosterCount = assignment.roster_count || 0;
       
       if (rosterCount > 0 && submittedCount === rosterCount) {
-        return 'completed';
+        return 'Completed!';
       }
       
       if (assignment.due_date) {
@@ -134,6 +206,7 @@ export default function AssignmentsTab({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
+      case 'Completed!':
       case 'graded':
         return <CheckCircle className="w-5 h-5 text-green-500" />;
       case 'overdue':
@@ -146,6 +219,7 @@ export default function AssignmentsTab({
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
+      case 'Completed!':
       case 'graded':
         return darkMode ? 'bg-green-900/20 text-green-300' : 'bg-green-100 text-green-800';
       case 'overdue':
@@ -220,6 +294,8 @@ export default function AssignmentsTab({
         ) : (
           assignments.map((assignment) => {
             const status = getAssignmentStatus(assignment);
+            const everyoneDeclined = hasEveryoneDeclined(assignment);
+            
             return (
               <div
                 key={assignment.id}
@@ -236,7 +312,13 @@ export default function AssignmentsTab({
                         {assignment.title}
                       </h3>
                       <div className="ml-4 flex items-center space-x-2">
-                        {getStatusIcon(status)}
+                        {everyoneDeclined ? (
+                          <div title="Everyone declined this assignment">
+                            <AlertTriangle className="w-5 h-5 text-orange-500" />
+                          </div>
+                        ) : (
+                          getStatusIcon(status)
+                        )}
                         {isCaptain && (
                           <>
                             <button
@@ -275,78 +357,129 @@ export default function AssignmentsTab({
                         )}
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
-                        {status}
-                      </span>
-                      <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
-                        {assignment.assignment_type}
-                      </span>
-                    </div>
-                    <p className={`mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {assignment.description}
-                    </p>
-                    {assignment.roster && assignment.roster.length > 0 && (
-                      <div className={`mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        <div className="text-sm font-medium mb-1">Assigned to:</div>
-                        <div className="flex flex-wrap gap-1">
-                          {assignment.roster.slice(0, 3).map((student, index) => (
-                            <span
-                              key={index}
-                              className={`px-2 py-1 rounded-full text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}
-                            >
-                              {student.display_name || student.student_name}
-                            </span>
-                          ))}
-                          {assignment.roster.length > 3 && (
-                            <span className={`px-2 py-1 rounded-full text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
-                              +{assignment.roster.length - 3} more
-                            </span>
+                    {everyoneDeclined ? (
+                      <div className="flex items-center gap-2 mb-3">
+                        <AlertTriangle className="w-4 h-4 text-orange-500" />
+                        <span className={`text-sm font-medium ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                          Everyone declined this assignment
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
+                            {status}
+                          </span>
+                          <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                            {assignment.assignment_type}
+                          </span>
+                        </div>
+                        <p className={`mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                          {assignment.description}
+                        </p>
+                      </>
+                    )}
+                    {!everyoneDeclined && (
+                      <>
+                        {assignment.roster && assignment.roster.length > 0 && (
+                          <div className={`mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            <div className="text-sm font-medium mb-1">Assigned to:</div>
+                            <div className="flex flex-wrap gap-1">
+                              {assignment.roster.slice(0, 3).map((student, index) => (
+                                <span
+                                  key={index}
+                                  className={`px-2 py-1 rounded-full text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}
+                                >
+                                  {student.display_name || student.student_name}
+                                </span>
+                              ))}
+                              {assignment.roster.length > 3 && (
+                                <span className={`px-2 py-1 rounded-full text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                                  +{assignment.roster.length - 3} more
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        <div className={`flex flex-wrap items-center gap-3 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {assignment.due_date && (
+                            <div className="flex items-center space-x-1">
+                              <Calendar className="w-4 h-4" />
+                              <span>Due: {formatDate(assignment.due_date)}</span>
+                            </div>
+                          )}
+                          {assignment.time_limit_minutes && (
+                            <div className="flex items-center space-x-1">
+                              <Clock className="w-4 h-4" />
+                              <span>{assignment.time_limit_minutes} min</span>
+                            </div>
+                          )}
+                          {assignment.questions_count && (
+                            <div className="flex items-center space-x-1">
+                              <span>{assignment.questions_count} questions</span>
+                            </div>
+                          )}
+                          {isCaptain && assignment.roster_count && (
+                            <div className="flex items-center space-x-1">
+                              <span>
+                                {assignment.submitted_count || 0}/{assignment.roster_count} {
+                                  (assignment.submitted_count || 0) === assignment.roster_count ? 'completed' : 'submitted'
+                                }
+                              </span>
+                            </div>
                           )}
                         </div>
-                      </div>
+                        {assignment.user_submission && (
+                          <div className={`mt-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                            Submitted: {formatDate(assignment.user_submission.submitted_at)}
+                          </div>
+                        )}
+                      </>
                     )}
-                    <div className={`flex flex-wrap items-center gap-3 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {assignment.due_date && (
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="w-4 h-4" />
-                          <span>Due: {formatDate(assignment.due_date)}</span>
-                        </div>
-                      )}
-                      {assignment.time_limit_minutes && (
-                        <div className="flex items-center space-x-1">
-                          <Clock className="w-4 h-4" />
-                          <span>{assignment.time_limit_minutes} min</span>
-                        </div>
-                      )}
-                      {assignment.questions_count && (
-                        <div className="flex items-center space-x-1">
-                          <span>{assignment.questions_count} questions</span>
-                        </div>
-                      )}
-                      {isCaptain && assignment.roster_count && (
-                        <div className="flex items-center space-x-1">
-                          <span>
-                            {assignment.submitted_count || 0}/{assignment.roster_count} {
-                              (assignment.submitted_count || 0) === assignment.roster_count ? 'completed' : 'submitted'
-                            }
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    {assignment.user_submission && (
-                      <div className={`mt-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        Submitted: {formatDate(assignment.user_submission.submitted_at)}
-                        {assignment.user_submission.grade !== null && (
-                          <span className="ml-2 font-medium">
-                            Grade: {assignment.user_submission.grade}%
-                          </span>
+                    
+                    {/* Start/Continue Assignment Button for Students */}
+                    {!everyoneDeclined && (!isCaptain || (isCaptain && isUserAssignedToAssignment(assignment))) && (
+                      <div className="mt-3 flex items-center gap-2">
+                        {assignment.user_submission ? (
+                          <button
+                            onClick={() => handleViewAssignment(assignment.id)}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                              darkMode 
+                                ? 'bg-purple-600 hover:bg-purple-700 text-white' 
+                                : 'bg-purple-100 hover:bg-purple-200 text-purple-700'
+                            }`}
+                          >
+                            My Results
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleStartAssignment(assignment.id)}
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                darkMode 
+                                  ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                  : 'bg-green-100 hover:bg-green-200 text-green-700'
+                              }`}
+                            >
+                              {hasAssignmentProgress(assignment.id) ? 'Continue Assignment' : 'Start Assignment'}
+                            </button>
+                            <button
+                              onClick={() => handleDeclineAssignment(assignment.id)}
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                darkMode 
+                                  ? 'bg-gray-600 hover:bg-gray-700 text-white' 
+                                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                              }`}
+                            >
+                              Decline
+                            </button>
+                          </>
                         )}
                       </div>
                     )}
                     
                     {/* Progress bar for captains */}
-                    {isCaptain && assignment.roster_count && assignment.roster_count > 0 && (
+                    {!everyoneDeclined && isCaptain && assignment.roster_count && assignment.roster_count > 0 && (
                       <div className="mt-3">
                         <div className="flex justify-between text-xs mb-1">
                           <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>

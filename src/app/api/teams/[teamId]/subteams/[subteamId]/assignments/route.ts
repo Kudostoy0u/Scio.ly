@@ -247,18 +247,86 @@ export async function POST(
         .values(rosterInserts);
     }
 
-    // Save assignment questions if provided
+    /**
+     * Save assignment questions to database
+     *
+     * Frontend sends: { answers: [0], question_text: "...", question_type: "multiple_choice", options: [...] }
+     * Database expects: { correct_answer: "A", question_text: "...", question_type: "multiple_choice", options: "[...]" }
+     *
+     * CRITICAL VALIDATION: All questions MUST have a valid answers array.
+     */
     if (questions && Array.isArray(questions) && questions.length > 0) {
-      const questionInserts = questions.map((question: any, index: number) => ({
-        assignmentId: assignment.id,
-        questionText: question.question_text,
-        questionType: question.question_type,
-        options: question.options ? JSON.stringify(question.options) : null,
-        correctAnswer: question.correct_answer,
-        points: question.points || 1,
-        orderIndex: question.order_index || index,
-        imageData: question.imageData || null
-      }));
+      const questionInserts = questions.map((question: any, index: number) => {
+        // Validate question has required fields
+        if (!question.question_text || question.question_text.trim() === '') {
+          throw new Error(`Question ${index + 1} is missing question_text`);
+        }
+
+        if (!question.question_type) {
+          throw new Error(`Question ${index + 1} is missing question_type`);
+        }
+
+        /**
+         * CRITICAL: Validate and convert answers field
+         *
+         * Frontend sends answers as array:
+         * - MCQ: [0], [1, 2] (numeric indices)
+         * - FRQ: ["answer text"]
+         *
+         * We convert to database format:
+         * - MCQ: "A", "B,C" (letters)
+         * - FRQ: "answer text"
+         */
+        if (!question.answers || !Array.isArray(question.answers) || question.answers.length === 0) {
+          console.error(`❌ INVALID QUESTION - Cannot save:`, {
+            questionNumber: index + 1,
+            questionText: question.question_text?.substring(0, 100),
+            hasAnswers: !!question.answers,
+            answersValue: question.answers,
+          });
+
+          throw new Error(
+            `Cannot create assignment: Question ${index + 1} has no valid answers. ` +
+            `Question: "${question.question_text?.substring(0, 50)}..."`
+          );
+        }
+
+        // Convert answers array to correct_answer string
+        let correctAnswer: string | null = null;
+
+        if (question.question_type === 'multiple_choice') {
+          // Convert numeric indices to letters
+          correctAnswer = question.answers
+            .map((ans: number) => {
+              if (typeof ans !== 'number' || ans < 0) {
+                throw new Error(`Invalid answer index ${ans} for question ${index + 1}`);
+              }
+              return String.fromCharCode(65 + ans); // 0→A, 1→B, etc.
+            })
+            .join(',');
+        } else {
+          // For FRQ, use answers as-is
+          correctAnswer = question.answers
+            .map((ans: any) => String(ans))
+            .join(',');
+        }
+
+        // Validate we got a valid correct_answer
+        if (!correctAnswer || correctAnswer.trim() === '') {
+          throw new Error(`Failed to convert answers for question ${index + 1}`);
+        }
+
+        return {
+          assignmentId: assignment.id,
+          questionText: question.question_text,
+          questionType: question.question_type,
+          options: question.options ? JSON.stringify(question.options) : null,
+          correctAnswer: correctAnswer, // GUARANTEED: Valid, non-empty string
+          points: question.points || 1,
+          orderIndex: question.order_index !== undefined ? question.order_index : index,
+          imageData: question.imageData || null
+        };
+      });
 
       await dbPg
         .insert(newTeamAssignmentQuestions)

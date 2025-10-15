@@ -273,6 +273,7 @@ export default function TestContent({ initialData, initialRouterData }: { initia
               userAnswers={userAnswers}
               gradingResults={gradingResults}
               darkMode={darkMode}
+              isAssignmentMode={!!(routerData as any).assignmentMode}
             />
           )
         ) : (
@@ -385,6 +386,7 @@ export default function TestContent({ initialData, initialRouterData }: { initia
                       onGetExplanation={handleGetExplanation}
                       isOffline={isOffline}
                       hideResultText={isPreview}
+                      isAssignmentMode={!!(routerData as any).assignmentMode}
                     />
                     );
                   })}
@@ -418,8 +420,11 @@ export default function TestContent({ initialData, initialRouterData }: { initia
                         const assignees = previewScope === 'all' ? [{ name: 'ALL' }] : [{ name: previewScope }];
                         const res = await fetch('/api/assignments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ school, division: divisionSel, teamId: previewTeam, eventName: routerData.eventName, assignees, params, questions: data }) });
                         if (res.ok) {
-                          const json = await res.json();
-                          const assignmentId = json?.data?.id;
+                          // const json = await res.json(); // DISABLED: Assignment notifications removed
+                          // const assignmentId = json?.data?.id; // DISABLED: Assignment notifications removed
+                          // ASSIGNMENT NOTIFICATIONS DISABLED - Users should use assignments tab instead
+                          // TODO: Re-enable if needed in the future
+                          /*
                           try {
                             const mres = await fetch(`/api/teams/units?school=${encodeURIComponent(school)}&division=${divisionSel}&teamId=${previewTeam}&members=1`);
                             const mj = mres.ok ? await mres.json() : null;
@@ -433,6 +438,7 @@ export default function TestContent({ initialData, initialRouterData }: { initia
                               fetch('/api/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action:'create', userId: m.userId, type: 'assignment', title: `New ${routerData.eventName} test assigned`, data: { assignmentId, eventName: routerData.eventName, url: `/assign/${assignmentId}` } }) })
                             ));
                           } catch {}
+                          */
                           const recipientsLabel = previewScope === 'all' ? 'all members' : previewScope;
                           toast.success(`Test sent to ${recipientsLabel}!`);
                           const qp = new URLSearchParams({ school, division: divisionSel });
@@ -457,6 +463,7 @@ export default function TestContent({ initialData, initialRouterData }: { initia
                   onReset={handleResetTest}
                   onBackToMain={handleBackToMain}
                   isAssignment={!!routerData.assignmentId}
+                  isViewResults={routerData.viewResults === 'true'}
                 />
               )
             )}

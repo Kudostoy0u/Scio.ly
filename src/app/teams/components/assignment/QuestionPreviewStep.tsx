@@ -40,9 +40,22 @@ export default function QuestionPreviewStep({
         {questions.map((question, index) => (
           <div key={index} className={`p-3 border rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
             <div className="flex justify-between items-start mb-2">
-              <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                Q{index + 1} ({question.question_type})
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Q{index + 1} ({question.question_type})
+                </span>
+                {(question as any).difficulty && (
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    (question as any).difficulty <= 0.4 
+                      ? darkMode ? 'bg-green-800/40 text-green-300' : 'bg-green-100 text-green-700'
+                      : (question as any).difficulty <= 0.7
+                      ? darkMode ? 'bg-yellow-800/40 text-yellow-300' : 'bg-yellow-100 text-yellow-700'
+                      : darkMode ? 'bg-red-800/40 text-red-300' : 'bg-red-100 text-red-700'
+                  }`}>
+                    {(question as any).difficulty <= 0.4 ? 'Easy' : (question as any).difficulty <= 0.7 ? 'Medium' : 'Hard'}
+                  </span>
+                )}
+              </div>
               <button
                 onClick={() => onReplaceQuestion(index)}
                 className="text-xs text-blue-600 hover:text-blue-800"
@@ -69,34 +82,54 @@ export default function QuestionPreviewStep({
               </div>
             )}
             
-            {showAnswers && question.correct_answer && (
-              <div className="mt-2">
-                <p className={`text-sm ${darkMode ? 'text-green-400' : 'text-green-700'}`}>
-                  {question.correct_answer}
-                </p>
+            {question.options && (
+              <div className="mt-2 space-y-1">
+                {question.options.map((option, optIndex) => {
+                  // Handle both old format (objects with isCorrect) and new format (strings with answers array)
+                  const isCorrect = showAnswers && (
+                    (typeof option === 'object' && option.isCorrect) ||
+                    (typeof option === 'string' && (question as any).answers && (question as any).answers.includes(optIndex))
+                  );
+                  const optionText = typeof option === 'object' ? option.text : option;
+                  
+                  return (
+                    <div key={optIndex} className={`text-xs p-2 rounded flex items-center ${
+                      isCorrect
+                        ? darkMode 
+                          ? 'bg-green-800/40 text-green-300' 
+                          : 'bg-green-100 text-green-700'
+                        : darkMode 
+                          ? 'bg-gray-600 text-gray-300' 
+                          : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      <span className="flex-grow">{optionText}</span>
+                      {isCorrect && (
+                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ml-2 ${darkMode ? 'text-green-400' : 'text-green-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
             
-            {question.options && (
-              <div className="mt-2 space-y-1">
-                {question.options.map((option, optIndex) => (
-                  <div key={optIndex} className={`text-xs p-2 rounded flex items-center ${
-                    showAnswers && option.isCorrect
-                      ? darkMode 
-                        ? 'bg-green-800/40 text-green-300' 
-                        : 'bg-green-100 text-green-700'
-                      : darkMode 
-                        ? 'bg-gray-600 text-gray-300' 
-                        : 'bg-gray-100 text-gray-700'
-                  }`}>
-                    <span className="flex-grow">{option.text}</span>
-                    {showAnswers && option.isCorrect && (
-                      <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ml-2 ${darkMode ? 'text-green-400' : 'text-green-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </div>
-                ))}
+            {question.question_type === 'free_response' && showAnswers && (question as any).answers && (question as any).answers.length > 0 && (
+              <div className={`mt-3 p-3 rounded-lg border ${
+                darkMode 
+                  ? 'bg-green-800/20 border-green-600/30' 
+                  : 'bg-green-50 border-green-200'
+              }`}>
+                <div className={`text-xs font-medium mb-1 ${
+                  darkMode ? 'text-green-300' : 'text-green-700'
+                }`}>
+                  Correct Answer:
+                </div>
+                <div className={`text-sm ${
+                  darkMode ? 'text-green-200' : 'text-green-800'
+                }`}>
+                  {Array.isArray((question as any).answers) ? (question as any).answers.join(', ') : (question as any).answers}
+                </div>
               </div>
             )}
           </div>
