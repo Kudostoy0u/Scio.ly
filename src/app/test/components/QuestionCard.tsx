@@ -28,6 +28,7 @@ interface QuestionCardProps {
   onGetExplanation: (index: number, question: Question, userAnswer: (string | null)[]) => void;
   isOffline?: boolean;
   hideResultText?: boolean; // when true, suppress Correct/Wrong/Skipped text (used for preview)
+  isAssignmentMode?: boolean;
 }
 
 export default function QuestionCard({
@@ -52,9 +53,12 @@ export default function QuestionCard({
   onQuestionRemoved,
   onGetExplanation,
   isOffline,
-  hideResultText = false
+  hideResultText = false,
+  isAssignmentMode = false
 }: QuestionCardProps) {
-  const isMultiSelect = isMultiSelectQuestion(question.question, question.answers);
+  // Use the same format as normal tests: answers as numeric indices
+  const answersForMultiSelect = question.answers || [];
+  const isMultiSelect = isMultiSelectQuestion(question.question, answersForMultiSelect);
   const currentAnswers = userAnswers || [];
 
   return (
@@ -84,6 +88,7 @@ export default function QuestionCard({
           _isSubmitted={isSubmitted}
           onEdit={() => onEdit(question)}
           onQuestionRemoved={onQuestionRemoved}
+          isAssignmentMode={isAssignmentMode}
         />
       </div>
       
@@ -96,7 +101,12 @@ export default function QuestionCard({
 
       {question.options && question.options.length > 0 ? (
         <div className="space-y-2">
-          {question.options.map((option, optionIndex) => (
+          {(() => {
+            // Handle both regular test questions (options as strings) and assignment questions (options as objects)
+            const options = question.options as any[];
+            const optionTexts = options.map(opt => typeof opt === 'string' ? opt : opt.text);
+            return optionTexts;
+          })().map((option, optionIndex) => (
             <label
               key={optionIndex}
               className={`block p-2 rounded-md ${
@@ -105,7 +115,8 @@ export default function QuestionCard({
                     return darkMode ? 'bg-gray-700' : 'bg-gray-200';
                   }
                   
-                  const correctAnswers = question.answers.map(ans => {
+                  // Use the same format as normal tests: answers as numeric indices
+                  const correctAnswers = question.answers ? question.answers.map(ans => {
                     if (typeof ans === 'string') {
                       if (ans === "") return undefined;
                       return ans;
@@ -115,10 +126,34 @@ export default function QuestionCard({
                         : undefined;
                     }
                     return undefined;
-                  }).filter((text): text is string => text !== undefined);
+                  }).filter((text): text is string => text !== undefined) : [];
+                  
+                  // DEBUG: Log visual highlighting for first option of each question
+                  if (optionIndex === 0) {
+                    console.log('🎨 QuestionCard Visual Highlighting DEBUG:');
+                    console.log('Question:', {
+                      question: question.question,
+                      hasAnswers: !!question.answers,
+                      answers: question.answers,
+                      hasOptions: !!question.options,
+                      options: question.options
+                    });
+                    console.log('Current answers:', currentAnswers);
+                    console.log('Correct answers (extracted):', correctAnswers);
+                  }
                   
                   const isCorrectAnswer = correctAnswers.includes(option);
                   const isUserSelected = currentAnswers.includes(option);
+                  
+                  if (optionIndex === 0) {
+                    console.log('Visual highlighting check:', {
+                      option,
+                      isCorrectAnswer,
+                      isUserSelected,
+                      correctAnswers,
+                      currentAnswers
+                    });
+                  }
                   
                   // Check if the question was answered correctly overall
                   const score = gradingResults[index] ?? 0;
@@ -194,9 +229,12 @@ export default function QuestionCard({
              
              let resultText = '';
              let resultColor = '';
+             
+             // Use the assignment mode prop
+             
              if (!currentAnswers[0]) {
-               resultText = 'Skipped';
-               resultColor = 'text-blue-500';
+               resultText = isAssignmentMode ? 'Wrong' : 'Skipped';
+               resultColor = isAssignmentMode ? 'text-red-600' : 'text-blue-500';
              } else if (score === 1 || score === 2 || score === 3) {
                resultText = 'Correct!';
                resultColor = 'text-green-600';
@@ -215,7 +253,15 @@ export default function QuestionCard({
                  {!question.options?.length && (
                    <p className="text-sm mt-1">
                      <strong>Correct Answer(s):</strong>{' '}
-                     {question.answers.join(', ')}
+                     {(() => {
+                       // Handle both regular test questions and assignment questions
+                       if (question.answers && Array.isArray(question.answers)) {
+                         return question.answers.join(', ');
+                       } else if ((question as any).correct_answer) {
+                         return (question as any).correct_answer;
+                       }
+                       return 'No answer available';
+                     })()}
                    </p>
                  )}
                </>

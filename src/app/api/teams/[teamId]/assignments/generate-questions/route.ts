@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabaseServer';
 import { getEventCapabilities, validateEventName } from '@/lib/utils/eventConfig';
 import { resolveTeamSlugToUnits, isUserCaptain } from '@/lib/utils/team-resolver';
+import { parseDifficulty, getDifficultyRange } from '@/lib/types/difficulty';
+import { QuestionGenerationRequestSchema, AssignmentQuestionSchema } from '@/lib/schemas/question';
+import { z } from 'zod';
 
 const shuffleArray = <T>(array: T[]): T[] => {
   const shuffled = [...array];
@@ -38,16 +41,29 @@ export async function POST(
     const { teamId } = await params;
     const body = await request.json();
     
+    // Strict validation of request body
+    const validatedRequest = QuestionGenerationRequestSchema.parse(body);
+    
     const {
       event_name,
-      question_count = 10,
-      question_types = ['multiple_choice'],
-      subtopics = [],
-      time_limit_minutes = 30,
-      division = 'both',
+      question_count,
+      question_types,
+      subtopics,
+      time_limit_minutes,
+      division,
       id_percentage: idPercentage,
-      pure_id_only: pureIdOnly
-    } = body;
+      pure_id_only: pureIdOnly,
+      difficulties
+    } = validatedRequest;
+    
+    // Debug logging for difficulty parameters
+    console.log('🎯 DIFFICULTY DEBUG - Request received:', {
+      difficulties,
+      event_name,
+      question_count,
+      question_types
+    });
+    
 
     // Event name mapping for special cases
     const eventNameMapping: Record<string, string> = {
@@ -76,19 +92,16 @@ export async function POST(
     if (eventName === 'Anatomy & Physiology') {
       targetEvents = anatomyEvents;
     }
+    
+    // Debug logging for event processing
+    console.log('🎯 DIFFICULTY DEBUG - Event processing:', {
+      originalEventName: event_name,
+      validatedEventName: eventName,
+      targetEvents,
+      eventNameMapping: eventNameMapping[eventName]
+    });
 
     const capabilities = getEventCapabilities(eventName);
-
-    // Debug logging
-    console.log('=== ASSIGNMENT QUESTION GENERATION DEBUG ===');
-    console.log('Event:', event_name);
-    console.log('Mapped event:', eventName);
-    console.log('Question count:', question_count);
-    console.log('Question types:', question_types);
-    console.log('ID percentage:', idPercentage);
-    console.log('Pure ID only:', pureIdOnly);
-    console.log('Supports picture questions:', capabilities.supportsPictureQuestions);
-    console.log('Supports identification only:', capabilities.supportsIdentificationOnly);
 
     // Resolve team slug to team units and verify user has access
     const teamInfo = await resolveTeamSlugToUnits(teamId);
@@ -119,7 +132,6 @@ export async function POST(
     };
 
     const eventDistribution = calculateEventDistribution(question_count, targetEvents.length);
-    console.log('Event distribution:', eventDistribution.map((count, index) => `${targetEvents[index]}: ${count}`).join(', '));
 
     for (let i = 0; i < targetEvents.length; i++) {
       const targetEvent = targetEvents[i];
@@ -130,12 +142,13 @@ export async function POST(
       queryParams.set('event', targetEvent);
       queryParams.set('limit', String(Math.min(currentEventLimit, capabilities.maxQuestions)));
       
-      // Handle question types
-      if (question_types.includes('multiple_choice')) {
+      // Handle question types - only set question_type if it's not "both"
+      if (question_types.includes('multiple_choice') && !question_types.includes('free_response')) {
         queryParams.set('question_type', 'mcq');
-      } else if (question_types.includes('free_response')) {
+      } else if (question_types.includes('free_response') && !question_types.includes('multiple_choice')) {
         queryParams.set('question_type', 'frq');
       }
+      // If both types are included, don't set question_type parameter to allow both types
       
       // Handle division - use 'both' or the only available division
       if (division !== 'both') {
@@ -147,16 +160,44 @@ export async function POST(
         queryParams.set('subtopics', subtopics.join(','));
       }
       
-      // Fetch questions from the main questions API
-      const questionsResponse = await fetch(`${origin}/api/questions?${queryParams.toString()}`, {
-        cache: 'no-store'
-      });
+      // Handle difficulties with strict validation
+      if (difficulties && difficulties.length > 0 && !difficulties.includes('any')) {
+        try {
+          const { min, max } = getDifficultyRange(difficulties);
+          queryParams.set('difficulty_min', min.toFixed(2));
+          queryParams.set('difficulty_max', max.toFixed(2));
+        } catch (error) {
+          console.error('🎯 DIFFICULTY ERROR - Invalid difficulty range:', error);
+          throw new Error(`Invalid difficulty configuration: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+      
+        // Fetch questions from the main questions API
+        const apiUrl = `${origin}/api/questions?${queryParams.toString()}`;
+        console.log(`🎯 DIFFICULTY DEBUG - Fetching from API: ${apiUrl}`);
+        console.log(`🎯 DIFFICULTY DEBUG - Query params:`, Object.fromEntries(queryParams.entries()));
+        
+        const questionsResponse = await fetch(apiUrl, {
+          cache: 'no-store'
+        });
 
       if (questionsResponse.ok) {
         const questionsData = await questionsResponse.json();
         const eventQuestions = Array.isArray(questionsData.data) 
           ? questionsData.data 
           : questionsData.data?.questions || [];
+        
+        // Debug logging for fetched questions
+        console.log(`🎯 DIFFICULTY DEBUG - Fetched ${eventQuestions.length} questions for ${targetEvent}:`, 
+          eventQuestions.slice(0, 3).map(q => ({
+            question: q.question?.substring(0, 50) + '...',
+            difficulty: q.difficulty,
+            difficultyType: typeof q.difficulty,
+            hasDifficulty: q.difficulty !== undefined,
+            rawQuestion: q // Include full question object for debugging
+          }))
+        );
+        
         allQuestions.push(...eventQuestions);
       }
     }
@@ -166,11 +207,9 @@ export async function POST(
     // Handle image support - fetch from id-questions API if needed
     if (pureIdOnly) {
       // Only fetch ID questions from all target events
-      console.log('=== PURE ID ONLY MODE ===');
       const idQuestions: any[] = [];
-      
+
       const pureIdDistribution = calculateEventDistribution(question_count, targetEvents.length);
-      console.log('Pure ID distribution:', pureIdDistribution.map((count, index) => `${targetEvents[index]}: ${count}`).join(', '));
       
       for (let i = 0; i < targetEvents.length; i++) {
         const targetEvent = targetEvents[i];
@@ -181,11 +220,12 @@ export async function POST(
         idQueryParams.set('limit', String(currentEventLimit));
         idQueryParams.set('pure_id_only', 'true');
         
-        if (question_types.includes('multiple_choice')) {
+        if (question_types.includes('multiple_choice') && !question_types.includes('free_response')) {
           idQueryParams.set('question_type', 'mcq');
-        } else if (question_types.includes('free_response')) {
+        } else if (question_types.includes('free_response') && !question_types.includes('multiple_choice')) {
           idQueryParams.set('question_type', 'frq');
         }
+        // If both types are included, don't set question_type parameter to allow both types
         
         if (subtopics && subtopics.length > 0) {
           idQueryParams.set('subtopics', subtopics.join(','));
@@ -194,9 +234,20 @@ export async function POST(
         if (division !== 'both') {
           idQueryParams.set('division', division);
         }
+        
+        // Handle difficulties for ID questions with strict validation
+        if (difficulties && difficulties.length > 0 && !difficulties.includes('any')) {
+          try {
+            const { min, max } = getDifficultyRange(difficulties);
+            idQueryParams.set('difficulty_min', min.toFixed(2));
+            idQueryParams.set('difficulty_max', max.toFixed(2));
+          } catch (error) {
+            console.error('🎯 DIFFICULTY ERROR - Invalid difficulty range for ID questions:', error);
+            throw new Error(`Invalid difficulty configuration for ID questions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          }
+        }
 
         const idQuestionsUrl = `${origin}/api/id-questions?${idQueryParams.toString()}`;
-        console.log('Fetching pure ID questions from:', idQuestionsUrl);
         const idQuestionsResponse = await fetch(idQuestionsUrl, {
           cache: 'no-store'
         });
@@ -211,11 +262,8 @@ export async function POST(
       questions = idQuestions;
     } else if (idPercentage !== undefined && idPercentage > 0) {
       // Fetch mixed questions from all target events
-      console.log('=== MIXED QUESTIONS MODE ===');
       const idQuestionsCount = Math.round((idPercentage / 100) * question_count);
       const regularQuestionsCount = question_count - idQuestionsCount;
-      console.log('ID questions count:', idQuestionsCount);
-      console.log('Regular questions count:', regularQuestionsCount);
       
       const regularQuestions: any[] = [];
       const idQuestions: any[] = [];
@@ -223,7 +271,6 @@ export async function POST(
       // Fetch regular questions from all target events
       if (regularQuestionsCount > 0) {
         const regularDistribution = calculateEventDistribution(regularQuestionsCount, targetEvents.length);
-        console.log('Regular questions distribution:', regularDistribution.map((count, index) => `${targetEvents[index]}: ${count}`).join(', '));
         
         for (let i = 0; i < targetEvents.length; i++) {
           const targetEvent = targetEvents[i];
@@ -233,11 +280,12 @@ export async function POST(
           regularQueryParams.set('event', targetEvent);
           regularQueryParams.set('limit', String(currentEventLimit));
           
-          if (question_types.includes('multiple_choice')) {
+          if (question_types.includes('multiple_choice') && !question_types.includes('free_response')) {
             regularQueryParams.set('question_type', 'mcq');
-          } else if (question_types.includes('free_response')) {
+          } else if (question_types.includes('free_response') && !question_types.includes('multiple_choice')) {
             regularQueryParams.set('question_type', 'frq');
           }
+          // If both types are included, don't set question_type parameter to allow both types
           
           if (division !== 'both') {
             regularQueryParams.set('division', division);
@@ -262,7 +310,6 @@ export async function POST(
       // Fetch ID questions from all target events
       if (idQuestionsCount > 0) {
         const idDistribution = calculateEventDistribution(idQuestionsCount, targetEvents.length);
-        console.log('ID questions distribution:', idDistribution.map((count, index) => `${targetEvents[index]}: ${count}`).join(', '));
         
         for (let i = 0; i < targetEvents.length; i++) {
           const targetEvent = targetEvents[i];
@@ -272,11 +319,12 @@ export async function POST(
           idQueryParams.set('event', targetEvent);
           idQueryParams.set('limit', String(currentEventLimit));
           
-          if (question_types.includes('multiple_choice')) {
+          if (question_types.includes('multiple_choice') && !question_types.includes('free_response')) {
             idQueryParams.set('question_type', 'mcq');
-          } else if (question_types.includes('free_response')) {
+          } else if (question_types.includes('free_response') && !question_types.includes('multiple_choice')) {
             idQueryParams.set('question_type', 'frq');
           }
+          // If both types are included, don't set question_type parameter to allow both types
           
           if (subtopics && subtopics.length > 0) {
             idQueryParams.set('subtopics', subtopics.join(','));
@@ -287,7 +335,6 @@ export async function POST(
           }
 
           const idQuestionsUrl = `${origin}/api/id-questions?${idQueryParams.toString()}`;
-          console.log('Fetching ID questions from:', idQuestionsUrl);
           const idQuestionsResponse = await fetch(idQuestionsUrl, {
             cache: 'no-store'
           });
@@ -305,27 +352,110 @@ export async function POST(
       questions = shuffleArray(allMixedQuestions).slice(0, question_count);
     }
 
-    // Filter and format questions
+    /**
+     * Format and validate questions for assignment
+     *
+     * CRITICAL: This function ensures EVERY question has a valid answers field.
+     * Questions without valid answers are REJECTED with a clear error message.
+     *
+     * @throws {Error} If any question is missing valid answers
+     */
     const validQuestions = questions
-      .filter((q: any) => q && (q.options?.length > 0 || q.answers?.length > 0))
+      .filter((q: any) => {
+        // Pre-filter: Must have either options (MCQ) or answers (any type)
+        const hasContent = q && (q.options?.length > 0 || q.answers?.length > 0);
+        if (!hasContent) {
+          console.warn(`Skipping question without content:`, q?.question || 'Unknown');
+        }
+        return hasContent;
+      })
       .slice(0, question_count)
       .map((q: any, index: number) => {
         const isMCQ = q.options && Array.isArray(q.options) && q.options.length > 0;
-        const correctAnswerIndices = Array.isArray(q.answers) ? q.answers.map(a => typeof a === 'number' ? a : parseInt(a)) : [0];
-        
-        return {
+
+        /**
+         * Extract correct answer indices from question data
+         *
+         * Supports multiple formats:
+         * 1. answers array with numeric indices: [0], [1, 2]
+         * 2. answers array with string indices: ["0"], ["1", "2"]
+         * 3. correct_answer as letter: "A", "B"
+         * 4. correct_answer as number: 0, 1
+         *
+         * @returns Array of numbers for MCQ, array of strings for FRQ
+         */
+        let answers: (number | string)[] = [];
+
+        // Try extracting from answers field first (preferred)
+        if (Array.isArray(q.answers) && q.answers.length > 0) {
+          if (isMCQ) {
+            // For MCQ, convert to numeric indices
+            answers = q.answers.map((a: any) => {
+              const num = typeof a === 'number' ? a : parseInt(String(a));
+              if (isNaN(num) || num < 0 || num >= q.options.length) {
+                throw new Error(`Invalid answer index ${a} for question: ${q.question || q.question_text}`);
+              }
+              return num;
+            });
+          } else {
+            // For FRQ, keep as strings
+            answers = q.answers.map((a: any) => String(a));
+          }
+        }
+        // Fallback: try extracting from correct_answer field
+        else if (q.correct_answer !== null && q.correct_answer !== undefined && q.correct_answer !== '') {
+          if (isMCQ) {
+            const answerStr = String(q.correct_answer).trim();
+
+            // Handle comma-separated answers (e.g., "A,B" or "0,1")
+            const parts = answerStr.split(',').map(s => s.trim()).filter(s => s);
+
+            answers = parts.map(part => {
+              // Try parsing as letter (A, B, C, etc.)
+              if (part.match(/^[A-Z]$/i)) {
+                const index = part.toUpperCase().charCodeAt(0) - 65;
+                if (index < 0 || index >= q.options.length) {
+                  throw new Error(`Invalid answer letter "${part}" for question with ${q.options.length} options: ${q.question || q.question_text}`);
+                }
+                return index;
+              }
+              // Try parsing as number
+              const num = parseInt(part);
+              if (isNaN(num) || num < 0 || num >= q.options.length) {
+                throw new Error(`Invalid answer "${part}" for question: ${q.question || q.question_text}`);
+              }
+              return num;
+            });
+          } else {
+            // For FRQ, use the answer directly
+            answers = [String(q.correct_answer)];
+          }
+        }
+
+        // CRITICAL VALIDATION: Reject questions without valid answers
+        if (!answers || answers.length === 0) {
+          const errorMessage = [
+            `❌ INVALID QUESTION - No valid answers found`,
+            `Question: "${q.question || q.question_text}"`,
+            `Type: ${q.question_type || (isMCQ ? 'MCQ' : 'FRQ')}`,
+            `Has answers field: ${!!q.answers}`,
+            `Has correct_answer field: ${!!q.correct_answer}`,
+            `Answers value: ${JSON.stringify(q.answers)}`,
+            `Correct answer value: ${JSON.stringify(q.correct_answer)}`,
+          ].join('\n  ');
+
+          console.error(errorMessage);
+          throw new Error(`Question "${q.question || q.question_text}" has no valid answers. Cannot generate assignment with invalid questions.`);
+        }
+
+        const formattedQuestion = {
           question_text: q.question || q.question_text,
           question_type: isMCQ ? 'multiple_choice' : 'free_response',
-          options: isMCQ ? q.options.map((option: string, idx: number) => ({
-            id: String.fromCharCode(65 + idx), // A, B, C, D
-            text: option,
-            isCorrect: correctAnswerIndices.includes(idx)
-          })) : undefined,
-          correct_answer: isMCQ ? 
-            correctAnswerIndices.map(idx => String.fromCharCode(65 + idx)).join(', ') : 
-            (Array.isArray(q.answers) ? q.answers.join(', ') : q.correct_answer),
+          options: isMCQ ? q.options : undefined,
+          answers: answers, // GUARANTEED: Always present, always valid, always non-empty array
           points: 1,
           order_index: index,
+          difficulty: parseDifficulty(q.difficulty), // Strict validation - throws error if invalid
           imageData: (() => {
             let candidate = q.imageData;
             if (!candidate && Array.isArray(q.images) && q.images.length > 0) {
@@ -334,6 +464,36 @@ export async function POST(
             return buildAbsoluteUrl(candidate, origin);
           })()
         };
+        
+        // Debug logging for formatted question difficulty
+        if (index < 3) { // Log first 3 questions
+          console.log(`🎯 DIFFICULTY DEBUG - Formatted question ${index + 1}:`, {
+            question: formattedQuestion.question_text?.substring(0, 50) + '...',
+            originalDifficulty: q.difficulty,
+            formattedDifficulty: formattedQuestion.difficulty,
+            hasOriginalDifficulty: q.difficulty !== undefined,
+            difficultyType: typeof formattedQuestion.difficulty
+          });
+        }
+        
+        // Validate the formatted question with strict schema
+        try {
+          return AssignmentQuestionSchema.parse(formattedQuestion);
+        } catch (error) {
+          console.error(`🎯 DIFFICULTY ERROR - Question ${index + 1} validation failed:`, error);
+          if (error instanceof z.ZodError) {
+            const errorMessages = error.issues?.map(err => `${err.path.join('.')}: ${err.message}`) || ['Unknown validation error'];
+            throw new Error(`Question ${index + 1} validation failed:\n${errorMessages.join('\n')}`);
+          }
+          throw new Error(`Question ${index + 1} validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+
+        // Double-check the formatted question (belt and suspenders)
+        if (!formattedQuestion.answers || formattedQuestion.answers.length === 0) {
+          throw new Error(`INTERNAL ERROR: Formatted question has invalid answers: ${formattedQuestion.question_text}`);
+        }
+
+        return formattedQuestion;
       });
 
     if (validQuestions.length === 0) {
@@ -346,6 +506,9 @@ export async function POST(
         ]
       }, { status: 400 });
     }
+
+    // Log summary
+    console.log(`✅ Generated ${validQuestions.length} questions for ${eventName}`);
 
     return NextResponse.json({ 
       questions: validQuestions,

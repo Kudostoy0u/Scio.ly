@@ -5,7 +5,7 @@ import {
   newTeamAssignments,
   newTeamAssignmentRoster,
   newTeamAssignmentSubmissions,
-  newTeamNotifications
+  // newTeamNotifications // DISABLED: Assignment notifications removed
 } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { resolveTeamSlugToUnits, getUserTeamMemberships } from '@/lib/utils/team-resolver';

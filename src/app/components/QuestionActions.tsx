@@ -26,6 +26,7 @@ interface QuestionActionsProps {
   onEdit?: () => void;
   onQuestionRemoved?: (questionIndex: number) => void;
   isRemovalFailed?: boolean;
+  isAssignmentMode?: boolean;
 }
 
 const QuestionActions: React.FC<QuestionActionsProps> = ({
@@ -43,7 +44,8 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
   _isSubmitted = false,
   onEdit,
   onQuestionRemoved,
-  isRemovalFailed = false
+  isRemovalFailed = false,
+  isAssignmentMode = false
 }) => {
   const [isProcessingDirectReport, setIsProcessingDirectReport] = useState(false);
   const [hasRemovalFailed, setHasRemovalFailed] = useState(false);
@@ -134,6 +136,8 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
 
   const isIdQuestion = !!(question as any).imageData;
   const shouldDisableActions = isOffline;
+  
+  // Use the assignment mode prop
 
   if (compact) {
     return (
@@ -147,6 +151,68 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
           darkMode={darkMode}
           size="sm"
         />
+        {!isAssignmentMode && (
+          <>
+            <div className="relative group">
+              <button
+                onClick={onEdit}
+                disabled={isSubmittedEdit || shouldDisableActions}
+                className={`${buttonClass} ${(isSubmittedEdit || shouldDisableActions) ? disabledClass : 'hover:text-blue-500'}`}
+              >
+                <FaEdit className="w-4 h-4" />
+              </button>
+              {/* Custom tooltip */}
+              <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${
+                darkMode ? 'bg-gray-800 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-200 shadow-lg'
+              }`}>
+                {isSubmittedEdit ? 'Edit already submitted' : shouldDisableActions ? 'Unavailable offline' : 'Edit this question?'}
+                <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent ${
+                  darkMode ? 'border-t-gray-800' : 'border-t-white'
+                }`}></div>
+              </div>
+            </div>
+            {!isIdQuestion && (
+              <div className="relative group">
+                <button
+                  onClick={handleDirectReport}
+                  disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions}
+                  className={`${buttonClass} ${(isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions) ? disabledClass : 'hover:text-red-500'}`}
+                >
+                  {isProcessingDirectReport ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
+                  ) : (
+                    <FaTrash className="w-4 h-4" />
+                  )}
+                </button>
+                {/* Custom tooltip */}
+                <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${
+                  darkMode ? 'bg-gray-800 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-200 shadow-lg'
+                }`}>
+                  {isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : shouldDisableActions ? 'Unavailable offline' : 'Delete this question from our database?'}
+                  <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent ${
+                    darkMode ? 'border-t-gray-800' : 'border-t-white'
+                  }`}></div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center space-x-2">
+      <BookmarkManager
+        question={question}
+        isBookmarked={isBookmarked}
+        eventName={eventName}
+        source={source}
+        onBookmarkChange={onBookmarkChange}
+        darkMode={darkMode}
+        showLabel={true}
+      />
+      {!isAssignmentMode && (
         <>
           <div className="relative group">
             <button
@@ -154,7 +220,12 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
               disabled={isSubmittedEdit || shouldDisableActions}
               className={`${buttonClass} ${(isSubmittedEdit || shouldDisableActions) ? disabledClass : 'hover:text-blue-500'}`}
             >
-              <FaEdit className="w-4 h-4" />
+              <div className="flex items-center space-x-1">
+                <FaEdit className="w-4 h-4" />
+                <span className="text-sm">
+                  {isSubmittedEdit ? 'Edit Submitted' : 'Edit'}
+                </span>
+              </div>
             </button>
             {/* Custom tooltip */}
             <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${
@@ -171,13 +242,18 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
               <button
                 onClick={handleDirectReport}
                 disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions}
-                className={`${buttonClass} ${(isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions) ? disabledClass : 'hover:text-red-500'}`}
+                className={`${buttonClass} ${(isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions) ? disabledClass : 'hover:text-red-600'}`}
               >
-                {isProcessingDirectReport ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
-                ) : (
-                  <FaTrash className="w-4 h-4" />
-                )}
+                <div className="flex items-center space-x-1">
+                  {isProcessingDirectReport ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
+                  ) : (
+                    <FaTrash className="w-4 h-4" />
+                  )}
+                  <span className="text-sm">
+                    {isProcessingDirectReport ? 'Removing...' : hasRemovalFailed || isRemovalFailed ? 'Failed' : 'Remove'}
+                  </span>
+                </div>
               </button>
               {/* Custom tooltip */}
               <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${
@@ -191,75 +267,7 @@ const QuestionActions: React.FC<QuestionActionsProps> = ({
             </div>
           )}
         </>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center space-x-2">
-      <BookmarkManager
-        question={question}
-        isBookmarked={isBookmarked}
-        eventName={eventName}
-        source={source}
-        onBookmarkChange={onBookmarkChange}
-        darkMode={darkMode}
-        showLabel={true}
-      />
-      <>
-        <div className="relative group">
-          <button
-            onClick={onEdit}
-            disabled={isSubmittedEdit || shouldDisableActions}
-            className={`${buttonClass} ${(isSubmittedEdit || shouldDisableActions) ? disabledClass : 'hover:text-blue-500'}`}
-          >
-            <div className="flex items-center space-x-1">
-              <FaEdit className="w-4 h-4" />
-              <span className="text-sm">
-                {isSubmittedEdit ? 'Edit Submitted' : 'Edit'}
-              </span>
-            </div>
-          </button>
-          {/* Custom tooltip */}
-          <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${
-            darkMode ? 'bg-gray-800 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-200 shadow-lg'
-          }`}>
-            {isSubmittedEdit ? 'Edit already submitted' : shouldDisableActions ? 'Unavailable offline' : 'Edit this question?'}
-            <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent ${
-              darkMode ? 'border-t-gray-800' : 'border-t-white'
-            }`}></div>
-          </div>
-        </div>
-        {!isIdQuestion && (
-          <div className="relative group">
-            <button
-              onClick={handleDirectReport}
-              disabled={isProcessingDirectReport || isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions}
-              className={`${buttonClass} ${(isSubmittedReport || hasRemovalFailed || isRemovalFailed || shouldDisableActions) ? disabledClass : 'hover:text-red-600'}`}
-            >
-              <div className="flex items-center space-x-1">
-                {isProcessingDirectReport ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
-                ) : (
-                  <FaTrash className="w-4 h-4" />
-                )}
-                <span className="text-sm">
-                  {isProcessingDirectReport ? 'Removing...' : hasRemovalFailed || isRemovalFailed ? 'Failed' : 'Remove'}
-                </span>
-              </div>
-            </button>
-            {/* Custom tooltip */}
-            <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${
-              darkMode ? 'bg-gray-800 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-200 shadow-lg'
-            }`}>
-              {isSubmittedReport ? 'Already reported' : hasRemovalFailed || isRemovalFailed ? 'Removal failed' : shouldDisableActions ? 'Unavailable offline' : 'Delete this question from our database?'}
-              <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent ${
-                darkMode ? 'border-t-gray-800' : 'border-t-white'
-              }`}></div>
-            </div>
-          </div>
-        )}
-      </>
+      )}
     </div>
   );
 };

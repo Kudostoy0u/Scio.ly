@@ -9,7 +9,7 @@ import {
   newTeamAssignmentRoster,
   users
 } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 // GET /api/assignments-new/[id] - Get assignment by UUID (returns old format)
 export async function GET(
@@ -58,7 +58,8 @@ export async function GET(
         options: newTeamAssignmentQuestions.options,
         correctAnswer: newTeamAssignmentQuestions.correctAnswer,
         points: newTeamAssignmentQuestions.points,
-        orderIndex: newTeamAssignmentQuestions.orderIndex
+        orderIndex: newTeamAssignmentQuestions.orderIndex,
+        imageData: newTeamAssignmentQuestions.imageData
       })
       .from(newTeamAssignmentQuestions)
       .where(eq(newTeamAssignmentQuestions.assignmentId, id))
@@ -95,7 +96,8 @@ export async function GET(
         options: options,
         correct_answer: q.correctAnswer,
         points: q.points,
-        order_index: q.orderIndex
+        order_index: q.orderIndex,
+        imageData: q.imageData // Include image data
       };
     });
 

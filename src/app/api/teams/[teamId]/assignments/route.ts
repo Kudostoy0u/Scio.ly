@@ -7,11 +7,15 @@ import {
   newTeamAssignments,
   newTeamAssignmentSubmissions,
   newTeamAssignmentRoster,
+  newTeamAssignmentQuestions,
   // newTeamMemberships, // DISABLED: Assignment notifications removed
   // newTeamNotifications, // DISABLED: Assignment notifications removed
   users 
 } from '@/lib/db/schema';
 import { eq, and, inArray, sql, desc, asc } from 'drizzle-orm';
+import { parseDifficulty } from '@/lib/types/difficulty';
+import { AssignmentQuestionSchema } from '@/lib/schemas/question';
+import { z } from 'zod';
 
 // GET /api/teams/[teamId]/assignments - Get team assignments
 // Frontend Usage:
@@ -122,6 +126,9 @@ export async function GET(
             )
           );
 
+        const rosterCount = rosterResult.length;
+        const submittedCount = parseInt(String(submissionCountResult[0]?.submittedCount || 0), 10);
+        
         return {
           id: assignment.id,
           title: assignment.title,
@@ -143,8 +150,8 @@ export async function GET(
             attempt_number: submissionResult[0].attemptNumber
           } : null,
           roster: rosterResult,
-          roster_count: rosterResult.length,
-          submitted_count: submissionCountResult[0]?.submittedCount || 0
+          roster_count: rosterCount,
+          submitted_count: submittedCount
         };
       })
     );
@@ -182,7 +189,7 @@ export async function POST(
 
     const { teamId } = await params;
     const body = await request.json();
-    const { title, description, assignment_type = 'homework', due_date, is_required = true, max_attempts } = body;
+    const { title, description, assignment_type = 'homework', due_date, is_required = true, max_attempts, questions } = body;
 
     if (!title) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
@@ -216,6 +223,152 @@ export async function POST(
         maxAttempts: max_attempts
       })
       .returning();
+
+    /**
+     * Save assignment questions to database
+     *
+     * Frontend to Backend Conversion:
+     * - Frontend sends: { answers: [0], question_text: "...", question_type: "multiple_choice", options: [...] }
+     * - Backend stores: { correct_answer: "A", question_text: "...", question_type: "multiple_choice", options: "[...]" }
+     *
+     * CRITICAL VALIDATION: All questions MUST have a valid answers array before being saved.
+     * Questions without valid answers are REJECTED with a detailed error.
+     */
+    if (questions && Array.isArray(questions) && questions.length > 0) {
+      // Strict validation of all questions before processing
+      try {
+        const validatedQuestions = questions.map((q, index) => {
+          try {
+            return AssignmentQuestionSchema.parse(q);
+          } catch (error) {
+            if (error instanceof z.ZodError) {
+              const errorMessages = error.issues?.map(err => `${err.path.join('.')}: ${err.message}`) || ['Unknown validation error'];
+              throw new Error(`Question ${index + 1} validation failed:\n${errorMessages.join('\n')}`);
+            }
+            throw error;
+          }
+        });
+        console.log('🎯 DIFFICULTY DEBUG - All questions validated successfully:', validatedQuestions.length);
+      } catch (error) {
+        console.error('🎯 DIFFICULTY ERROR - Question validation failed:', error);
+        return NextResponse.json({ 
+          error: 'Invalid questions provided', 
+          details: error instanceof Error ? error.message : 'Unknown validation error' 
+        }, { status: 400 });
+      }
+      
+      // Debug logging for received questions
+      console.log('🎯 DIFFICULTY DEBUG - Assignment creation received questions:', 
+        questions.slice(0, 3).map((q: any, idx: number) => ({
+          index: idx + 1,
+          question: q.question_text?.substring(0, 50) + '...',
+          difficulty: q.difficulty,
+          hasDifficulty: q.difficulty !== undefined,
+          difficultyType: typeof q.difficulty
+        }))
+      );
+      const questionInserts = questions.map((question: any, index: number) => {
+        /**
+         * Validate question has required fields
+         */
+        if (!question.question_text || question.question_text.trim() === '') {
+          throw new Error(`Question ${index + 1} is missing question_text`);
+        }
+
+        if (!question.question_type) {
+          throw new Error(`Question ${index + 1} is missing question_type`);
+        }
+
+        /**
+         * CRITICAL: Validate answers field
+         *
+         * Every question MUST have a valid, non-empty answers array.
+         * This is the source of truth for grading.
+         */
+        if (!question.answers || !Array.isArray(question.answers) || question.answers.length === 0) {
+          const errorDetails = {
+            questionNumber: index + 1,
+            questionText: question.question_text?.substring(0, 100),
+            questionType: question.question_type,
+            hasAnswers: !!question.answers,
+            answersType: typeof question.answers,
+            answersValue: question.answers,
+            hasCorrectAnswer: !!question.correct_answer,
+            correctAnswerValue: question.correct_answer
+          };
+
+          console.error(`❌ INVALID QUESTION - Cannot save question without valid answers:`, errorDetails);
+
+          throw new Error(
+            `Cannot create assignment: Question ${index + 1} has no valid answers. ` +
+            `Question: "${question.question_text?.substring(0, 50)}..." ` +
+            `All questions must have a valid answers array before being saved.`
+          );
+        }
+
+        /**
+         * Convert frontend answers format to database format
+         *
+         * Frontend: answers = [0] (numeric indices for MCQ)
+         * Database: correct_answer = "A" (letter for MCQ)
+         *
+         * Frontend: answers = ["Paris"] (strings for FRQ)
+         * Database: correct_answer = "Paris" (string for FRQ)
+         */
+        let correctAnswer: string | null = null;
+
+        if (question.question_type === 'multiple_choice') {
+          // Convert numeric indices back to letters for database storage
+          correctAnswer = question.answers
+            .map((ans: number) => {
+              if (typeof ans !== 'number' || ans < 0) {
+                throw new Error(`Invalid answer index ${ans} for question ${index + 1}`);
+              }
+              return String.fromCharCode(65 + ans);
+            })
+            .join(',');
+        } else {
+          // For FRQ/Codebusters, store answers as-is
+          correctAnswer = question.answers
+            .map((ans: any) => String(ans))
+            .join(',');
+        }
+
+        // Double-check we have a valid correct_answer
+        if (!correctAnswer || correctAnswer.trim() === '') {
+          throw new Error(`Failed to convert answers to correct_answer for question ${index + 1}`);
+        }
+
+        const questionInsert = {
+          assignmentId: assignment.id,
+          questionText: question.question_text,
+          questionType: question.question_type,
+          options: question.options ? JSON.stringify(question.options) : null,
+          correctAnswer: correctAnswer, // GUARANTEED: Valid, non-empty string
+          points: question.points || 1,
+          orderIndex: question.order_index !== undefined ? question.order_index : index,
+          imageData: question.imageData || null,
+          difficulty: parseDifficulty(question.difficulty).toString() // Strict validation - convert to string for database
+        };
+        
+        // Debug logging for database insert
+        if (index < 3) { // Log first 3 questions
+          console.log(`🎯 DIFFICULTY DEBUG - Database insert for question ${index + 1}:`, {
+            question: questionInsert.questionText?.substring(0, 50) + '...',
+            difficulty: questionInsert.difficulty,
+            originalDifficulty: question.difficulty,
+            hasOriginalDifficulty: question.difficulty !== undefined,
+            difficultyType: typeof questionInsert.difficulty
+          });
+        }
+        
+        return questionInsert;
+      });
+
+      await dbPg
+        .insert(newTeamAssignmentQuestions)
+        .values(questionInserts);
+    }
 
     // ASSIGNMENT NOTIFICATIONS DISABLED - Users should use assignments tab instead
     // TODO: Re-enable if needed in the future

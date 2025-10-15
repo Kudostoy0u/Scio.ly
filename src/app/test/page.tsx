@@ -20,7 +20,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ [
   
   // Check for assignment parameter in URL
   const resolvedSearchParams = await searchParams;
-  const assignmentId = resolvedSearchParams.assignment as string | undefined;
+  const assignmentId = resolvedSearchParams.assignmentId as string | undefined;
+  const viewResults = resolvedSearchParams.viewResults as string | undefined;
+  
+  // Extract query parameters from URL
+  const teamsAssign = resolvedSearchParams.teamsAssign as string | undefined;
   
   const eventName = parsed?.eventName as string | undefined;
   const questionCount = parsed?.questionCount?.toString() as string | undefined;
@@ -47,6 +51,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ [
         idPercentage?: number;
         pureIdOnly?: boolean;
         assignmentId?: string;
+        teamsAssign?: string;
+        viewResults?: string;
       }
     | undefined = undefined;
 
@@ -62,6 +68,8 @@ const baseRouterData = {
   idPercentage,
   pureIdOnly,
   assignmentId,
+  teamsAssign,
+  viewResults,
 };
 
 

@@ -8,6 +8,7 @@ interface TestFooterProps {
   onReset: () => void;
   onBackToMain: () => void;
   isAssignment?: boolean;
+  isViewResults?: boolean;
 }
 
 export default function TestFooter({ 
@@ -16,7 +17,8 @@ export default function TestFooter({
   onSubmit, 
   onReset, 
   onBackToMain,
-  isAssignment = false
+  isAssignment = false,
+  isViewResults = false
 }: TestFooterProps) {
   return (
     <div className="mt-6 flex items-center gap-3">
@@ -55,7 +57,7 @@ export default function TestFooter({
         </button>
       ) : (
         <div className="w-4/5 px-4 py-2 text-center text-gray-500">
-          Assignment Submitted
+          {isViewResults ? 'Viewing Results' : 'Assignment Submitted'}
         </div>
       )}
     </div>

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryCockroachDB } from '@/lib/cockroachdb';
 import { getServerUser } from '@/lib/supabaseServer';
+import { parseDifficulty } from '@/lib/types/difficulty';
+import { FrontendQuestionSchema } from '@/lib/schemas/question';
+import { z } from 'zod';
 
 // GET /api/assignments/[assignmentId] - Get assignment details and questions
 export async function GET(
@@ -61,12 +64,20 @@ export async function GET(
       return NextResponse.json({ error: 'Not assigned to this assignment' }, { status: 403 });
     }
 
-    // Get assignment questions
-    console.log('=== ASSIGNMENT LOADING DEBUG ===');
-    console.log('Loading assignment ID:', assignmentId);
-    
+    /**
+     * Load assignment questions from database
+     *
+     * Database schema:
+     * - question_text: The question text
+     * - question_type: 'multiple_choice', 'free_response', or 'codebusters'
+     * - options: JSONB array of strings for MCQ (e.g., ["Option A", "Option B"])
+     * - correct_answer: String stored as "A" or "0" for MCQ, text for FRQ
+     * - points: Integer score value
+     * - order_index: Display order
+     * - image_data: Optional image URL
+     */
     const questionsResult = await queryCockroachDB<any>(
-      `SELECT 
+      `SELECT
          id,
          question_text,
          question_type,
@@ -74,43 +85,54 @@ export async function GET(
          correct_answer,
          points,
          order_index,
-         image_data
+         image_data,
+         difficulty
        FROM new_team_assignment_questions
        WHERE assignment_id = $1
        ORDER BY order_index ASC`,
       [assignmentId]
     );
     
-    console.log('Raw database results:', JSON.stringify(questionsResult.rows, null, 2));
-    console.log('Number of questions from DB:', questionsResult.rows.length);
+    // Debug logging for retrieved questions
+    console.log('🎯 DIFFICULTY DEBUG - Retrieved questions from database:', 
+      questionsResult.rows.slice(0, 3).map((q: any, idx: number) => ({
+        index: idx + 1,
+        question: q.question_text?.substring(0, 50) + '...',
+        difficulty: q.difficulty,
+        hasDifficulty: q.difficulty !== undefined,
+        difficultyType: typeof q.difficulty
+      }))
+    );
 
-    // Format questions for the test system
+    /**
+     * Format questions for the frontend test system
+     *
+     * Frontend Contract:
+     * - question: Question text (normalized)
+     * - type: 'mcq' | 'frq' | 'codebusters'
+     * - options: Array of strings (for MCQ only)
+     * - answers: CRITICAL - Array of numbers for MCQ (0-based indices), strings for FRQ
+     * - points: Score value
+     * - order: Display order
+     * - imageData: Optional image URL
+     *
+     * GUARANTEE: Every question returned from this endpoint has a valid, non-empty answers array.
+     * Questions with missing/invalid answers are REJECTED with a detailed error.
+     */
     const questions = questionsResult.rows.map((q: any, index: number) => {
-      console.log(`\n--- Processing Question ${index + 1} from DB ---`);
-      console.log('Raw DB question:', JSON.stringify(q, null, 2));
-      console.log('Question text from DB:', q.question_text);
-      console.log('Question type from DB:', q.question_type);
-      console.log('Options from DB (raw):', q.options);
-      console.log('Options type:', typeof q.options);
-      console.log('Correct answer from DB:', q.correct_answer);
-      
       // Special handling for Codebusters questions
       if (q.question_type === 'codebusters') {
-        console.log('Processing Codebusters question...');
         let codebustersData: any = null;
         if (q.options) {
           try {
             codebustersData = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
-            console.log('Parsed Codebusters data:', codebustersData);
           } catch (parseError) {
-            console.log('Failed to parse Codebusters options:', parseError);
+            console.error(`Failed to parse Codebusters options for question ${index + 1}:`, parseError);
           }
         }
-        
+
         // Check if this is a parameters record (for dynamic generation)
         if (codebustersData?.type === 'parameters') {
-          console.log('Found Codebusters parameters, will generate questions dynamically');
-          // Return the parameters for dynamic generation
           return {
             id: q.id,
             question_text: 'Dynamic Codebusters Generation',
@@ -121,126 +143,172 @@ export async function GET(
             image_data: null
           };
         }
-        
+
         // Regular Codebusters question
-        const formattedQuestion = {
+        const codebustersQuestion = {
           id: q.id,
+          question: q.question_text,
           question_text: q.question_text,
+          type: 'codebusters' as const,
           question_type: 'codebusters',
           author: codebustersData?.author || 'Unknown',
-          quote: q.question_text, // The original quote
+          quote: q.question_text,
           cipherType: codebustersData?.cipherType || 'Random Aristocrat',
-          difficulty: codebustersData?.difficulty || 'Medium',
+          difficulty: parseDifficulty(q.difficulty), // Strict validation - throws error if invalid
           division: codebustersData?.division || 'C',
           charLength: codebustersData?.charLength || 100,
           encrypted: codebustersData?.encrypted || '',
           key: codebustersData?.key || '',
           hint: codebustersData?.hint || '',
           solution: codebustersData?.solution || q.correct_answer,
+          answers: [codebustersData?.solution || q.correct_answer], // FRQ format
           correct_answer: codebustersData?.solution || q.correct_answer,
           points: q.points,
+          order: q.order_index,
           order_index: q.order_index,
+          imageData: q.image_data || null,
           image_data: q.image_data || null
         };
         
-        console.log('Formatted Codebusters question:', JSON.stringify(formattedQuestion, null, 2));
-        console.log(`--- End Codebusters Question ${index + 1} Processing ---\n`);
-        
-        return formattedQuestion;
-      }
-      
-      // Convert object-based options to string array for test system
-      let options: string[] | undefined = undefined;
-      if (q.options) {
-        console.log('Processing options...');
-        // Handle both JSON string and already parsed object/array
-        let parsedOptions = q.options;
-        if (typeof q.options === 'string') {
-          console.log('Options is string, attempting to parse...');
-          try {
-            parsedOptions = JSON.parse(q.options);
-            console.log('Parsed options:', parsedOptions);
-          } catch {
-            console.log('Failed to parse options as JSON, treating as single string');
-            // If parsing fails, treat as single string option
-            parsedOptions = [q.options];
+        // Validate the question with strict schema
+        try {
+          return FrontendQuestionSchema.parse(codebustersQuestion);
+        } catch (error) {
+          console.error(`🎯 DIFFICULTY ERROR - Codebusters question validation failed:`, error);
+          if (error instanceof z.ZodError) {
+            const errorMessages = error.issues?.map(err => `${err.path.join('.')}: ${err.message}`) || ['Unknown validation error'];
+            throw new Error(`Codebusters question validation failed:\n${errorMessages.join('\n')}`);
           }
-        } else {
-          console.log('Options is not string, using as-is:', parsedOptions);
+          throw error;
         }
-        
-        if (Array.isArray(parsedOptions)) {
-          console.log('Options is array, mapping to strings...');
-          options = parsedOptions.map((opt: any, optIndex: number) => {
-            console.log(`  Option ${optIndex}:`, opt, 'Type:', typeof opt);
-            if (typeof opt === 'string') {
-              console.log(`    -> Using as string: "${opt}"`);
-              return opt;
-            } else if (typeof opt === 'object' && opt.text) {
-              console.log(`    -> Extracting text from object: "${opt.text}"`);
-              return opt.text;
-            }
-            console.log(`    -> Converting to string: "${String(opt)}"`);
-            return String(opt);
-          });
-          console.log('Final options array:', options);
-        } else {
-          console.log('Options is not array, setting to undefined');
-        }
-      } else {
-        console.log('No options found');
       }
 
-      // Convert answer to the format expected by the test system
-      let answers: (string | number)[] = [];
-      if (q.correct_answer) {
-        if (q.question_type === 'multiple_choice') {
-          // For MCQ, convert letter answers (A, B, C) to indices (0, 1, 2)
-          const answerStr = String(q.correct_answer).toUpperCase();
-          if (answerStr.match(/^[A-Z]$/)) {
-            answers = [answerStr.charCodeAt(0) - 65]; // A=0, B=1, C=2, etc.
-          } else {
-            // If it's already a number, use it directly
-            const numAnswer = parseInt(answerStr);
-            if (!isNaN(numAnswer)) {
-              answers = [numAnswer];
-            }
+      // Parse options from JSONB
+      let options: string[] | undefined = undefined;
+      if (q.options) {
+        let parsedOptions = q.options;
+        if (typeof q.options === 'string') {
+          try {
+            parsedOptions = JSON.parse(q.options);
+          } catch {
+            parsedOptions = [q.options];
           }
+        }
+
+        if (Array.isArray(parsedOptions)) {
+          options = parsedOptions.map((opt: any) => {
+            if (typeof opt === 'string') return opt;
+            if (typeof opt === 'object' && opt.text) return opt.text;
+            return String(opt);
+          });
+        }
+      }
+
+      /**
+       * Convert database answer format to frontend format
+       *
+       * Database Format:
+       * - MCQ: correct_answer = "A" or "0" or "A,B" (letters or indices)
+       * - FRQ: correct_answer = "answer text"
+       *
+       * Frontend Format:
+       * - MCQ: answers = [0] or [1, 2] (numeric indices)
+       * - FRQ: answers = ["answer text"]
+       *
+       * CRITICAL: This conversion MUST produce a valid, non-empty answers array.
+       * If the database has invalid data, we REJECT the question with an error.
+       */
+      let answers: (string | number)[] = [];
+
+      if (q.correct_answer !== null && q.correct_answer !== undefined && q.correct_answer !== '') {
+        if (q.question_type === 'multiple_choice') {
+          // For MCQ, convert letter/text answers to numeric indices
+          const answerStr = String(q.correct_answer).trim();
+
+          // Handle comma-separated multiple answers (e.g., "A,B" or "0,1")
+          const answerParts = answerStr.split(',').map(s => s.trim()).filter(s => s);
+
+          if (answerParts.length === 0) {
+            throw new Error(`Invalid correct_answer format for MCQ question ${index + 1}: "${q.correct_answer}"`);
+          }
+
+          answers = answerParts.map(part => {
+            // Check if it's a letter (A, B, C, etc.)
+            if (part.match(/^[A-Z]$/i)) {
+              const idx = part.toUpperCase().charCodeAt(0) - 65; // A=0, B=1, C=2, etc.
+              if (idx < 0 || idx >= (options?.length || 0)) {
+                throw new Error(`Answer letter "${part}" out of range for question ${index + 1} with ${options?.length || 0} options`);
+              }
+              return idx;
+            }
+            // Otherwise try to parse as number
+            const num = parseInt(part);
+            if (isNaN(num) || num < 0 || num >= (options?.length || 0)) {
+              throw new Error(`Answer index "${part}" out of range for question ${index + 1} with ${options?.length || 0} options`);
+            }
+            return num;
+          });
         } else {
-          // For FRQ, use the answer as-is
+          // For FRQ/Codebusters, use the answer as-is
           answers = [q.correct_answer];
         }
       }
 
-      const formattedQuestion = {
+      // CRITICAL VALIDATION: Reject questions with invalid/missing answers
+      if (!answers || answers.length === 0) {
+        const errorDetails = {
+          assignmentId,
+          questionId: q.id,
+          questionNumber: index + 1,
+          questionText: q.question_text?.substring(0, 100),
+          questionType: q.question_type,
+          correctAnswer: q.correct_answer,
+          hasOptions: !!options,
+          optionsCount: options?.length || 0
+        };
+
+        console.error(`❌ INVALID ASSIGNMENT QUESTION - No valid answers:`, errorDetails);
+
+        throw new Error(
+          `Assignment question ${index + 1} has no valid answers. ` +
+          `This assignment cannot be loaded until all questions have valid answers. ` +
+          `Question: "${q.question_text?.substring(0, 50)}..." ` +
+          `Please contact an administrator to fix this assignment.`
+        );
+      }
+
+      const question = {
         id: q.id,
         question: q.question_text,
-        type: q.question_type === 'multiple_choice' ? 'mcq' : 'frq',
+        type: q.question_type === 'multiple_choice' ? 'mcq' as const : 'frq' as const,
         options: options,
-        answers: answers,
+        answers: answers, // CRITICAL: Always present, always an array
         points: q.points,
         order: q.order_index,
-        imageData: q.image_data || null
+        imageData: q.image_data || null,
+        difficulty: parseDifficulty(q.difficulty) // Strict validation - throws error if invalid
       };
       
-      console.log('Formatted question for test system:', JSON.stringify(formattedQuestion, null, 2));
-      console.log(`--- End Question ${index + 1} Processing ---\n`);
-      
-      return formattedQuestion;
+      // Validate the question with strict schema
+      try {
+        return FrontendQuestionSchema.parse(question);
+      } catch (error) {
+        console.error(`🎯 DIFFICULTY ERROR - Question validation failed:`, error);
+        if (error instanceof z.ZodError) {
+          const errorMessages = error.issues?.map(err => `${err.path.join('.')}: ${err.message}`) || ['Unknown validation error'];
+          throw new Error(`Question validation failed:\n${errorMessages.join('\n')}`);
+        }
+        throw error;
+      }
     });
 
-    const response = {
+    return NextResponse.json({
       assignment: {
         ...assignment,
         questions,
         questions_count: questions.length
       }
-    };
-    
-    console.log('Final response being sent to client:', JSON.stringify(response, null, 2));
-    console.log('=== END ASSIGNMENT LOADING DEBUG ===\n');
-    
-    return NextResponse.json(response);
+    });
 
   } catch (error) {
     console.error('Error fetching assignment:', error);

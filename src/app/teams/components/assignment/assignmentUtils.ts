@@ -105,7 +105,8 @@ export const generateQuestions = async (
   selectedSubtopics: string[],
   idPercentage: number,
   pureIdOnly: boolean,
-  teamId: string
+  teamId: string,
+  difficulties: string[] = ['any']
 ): Promise<Question[]> => {
   const capabilities = getEventCapabilitiesForEvent(eventName);
   
@@ -120,7 +121,8 @@ export const generateQuestions = async (
     id_percentage: idPercentageValue,
     pure_id_only: pureIdOnly,
     supports_picture_questions: capabilities.supportsPictureQuestions,
-    supports_identification_only: capabilities.supportsIdentificationOnly
+    supports_identification_only: capabilities.supportsIdentificationOnly,
+    difficulties: difficulties
   };
 
   const response = await fetch(`/api/teams/${teamId}/assignments/generate-questions`, {

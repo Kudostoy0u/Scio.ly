@@ -69,6 +69,7 @@ export default function Page() {
         const sp = new URLSearchParams();
         // Assignee should take a normal test (no preview)
         sp.set('teamsAssign', '1');
+        sp.set('assignmentId', idStr); // Include the assignment ID
         if (assignment.team_id) sp.set('team', assignment.team_id);
         if (assignment.school) sp.set('school', assignment.school);
         if (assignment.division) sp.set('division', assignment.division);

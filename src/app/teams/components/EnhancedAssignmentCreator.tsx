@@ -43,10 +43,11 @@ export default function EnhancedAssignmentCreator({
   // Question generation settings
   const [settings, setSettings] = useState<QuestionGenerationSettings>({
     questionCount: 10,
-    questionType: 'both',
+    questionType: 'mcq',
     selectedSubtopics: [],
     idPercentage: 0,
-    pureIdOnly: false
+    pureIdOnly: false,
+    difficulties: ['any'] // Default to any difficulty
   });
 
   // Generated questions and roster
@@ -135,7 +136,8 @@ export default function EnhancedAssignmentCreator({
         settings.selectedSubtopics,
         settings.idPercentage,
         settings.pureIdOnly,
-        teamId
+        teamId,
+        settings.difficulties
       );
       
       setGeneratedQuestions(questions);

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Clear Old Assignment Cache - Scio.ly</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .container {
+      background: #f5f5f5;
+      border-radius: 8px;
+      padding: 30px;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    button.danger {
+      background: #dc3545;
+    }
+    button.danger:hover {
+      background: #c82333;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 6px;
+      background: white;
+      border-left: 4px solid #28a745;
+    }
+    .result.error {
+      border-left-color: #dc3545;
+    }
+    .item-list {
+      max-height: 400px;
+      overflow-y: auto;
+      background: white;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+    }
+    .item {
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    code {
+      background: #e9ecef;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧹 Clear Old Assignment Cache</h1>
+
+    <p>
+      This tool clears old cached assignment data from your browser that may have invalid question formats.
+      This is necessary after the recent assignment system update.
+    </p>
+
+    <h2>What will be cleared?</h2>
+    <ul>
+      <li>Old assignment questions (from before 2025-10-15)</li>
+      <li>Cached question data without valid <code>answers</code> field</li>
+      <li>Legacy test localStorage data</li>
+    </ul>
+
+    <div>
+      <button onclick="scanCache()">1. Scan for Old Cache</button>
+      <button onclick="clearOldAssignments()" class="danger">2. Clear Old Assignments</button>
+      <button onclick="clearAllTestData()" class="danger">3. Clear ALL Test Data (Fresh Start)</button>
+    </div>
+
+    <div id="result"></div>
+  </div>
+
+  <script>
+    function scanCache() {
+      const result = document.getElementById('result');
+      const items = [];
+      const invalidItems = [];
+
+      // Scan all localStorage keys
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key) continue;
+
+        // Check for assignment keys
+        if (key.startsWith('assignment_') || key.includes('_questions') || key.includes('_answers')) {
+          items.push(key);
+
+          // Try to parse and validate questions
+          if (key.includes('_questions')) {
+            try {
+              const data = JSON.parse(localStorage.getItem(key) || '[]');
+              if (Array.isArray(data)) {
+                const hasInvalid = data.some(q =>
+                  !q.answers || !Array.isArray(q.answers) || q.answers.length === 0
+                );
+                if (hasInvalid) {
+                  invalidItems.push(key);
+                }
+              }
+            } catch (e) {
+              invalidItems.push(key);
+            }
+          }
+        }
+      }
+
+      result.innerHTML = `
+        <div class="result">
+          <h3>Scan Results</h3>
+          <p><strong>Total assignment cache items:</strong> ${items.length}</p>
+          <p><strong>Invalid items (need clearing):</strong> ${invalidItems.length}</p>
+
+          ${items.length > 0 ? `
+            <h4>All Assignment Cache Keys:</h4>
+            <div class="item-list">
+              ${items.map(item => `
+                <div class="item ${invalidItems.includes(item) ? 'style="color: red; font-weight: bold;"' : ''}">
+                  ${item} ${invalidItems.includes(item) ? '❌ INVALID' : '✓'}
+                </div>
+              `).join('')}
+            </div>
+          ` : '<p>No assignment cache found.</p>'}
+        </div>
+      `;
+    }
+
+    function clearOldAssignments() {
+      if (!confirm('This will clear all assignment cache. Your in-progress assignments may be reset. Continue?')) {
+        return;
+      }
+
+      const cleared = [];
+      const keys = Object.keys(localStorage);
+
+      for (const key of keys) {
+        if (key.startsWith('assignment_') || key.includes('_questions') || key.includes('_answers') || key.includes('_session') || key.includes('_grading')) {
+          localStorage.removeItem(key);
+          cleared.push(key);
+        }
+      }
+
+      document.getElementById('result').innerHTML = `
+        <div class="result">
+          <h3>✅ Cleared ${cleared.length} items</h3>
+          <p>Old assignment cache has been cleared. Refresh any open assignment pages to reload from the server.</p>
+          ${cleared.length > 0 ? `
+            <h4>Cleared Keys:</h4>
+            <div class="item-list">
+              ${cleared.map(item => `<div class="item">${item}</div>`).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    function clearAllTestData() {
+      if (!confirm('⚠️ WARNING: This will clear ALL test data including bookmarks and progress. This cannot be undone. Continue?')) {
+        return;
+      }
+
+      const testKeys = [
+        'testQuestions',
+        'testParams',
+        'testSubmitted',
+        'testUserAnswers',
+        'testGradingResults',
+        'currentTestSession',
+        'testStartTime',
+        'testTimeLeft'
+      ];
+
+      const cleared = [];
+
+      // Clear all test-related keys
+      const allKeys = Object.keys(localStorage);
+      for (const key of allKeys) {
+        if (
+          testKeys.includes(key) ||
+          key.startsWith('assignment_') ||
+          key.startsWith('test_') ||
+          key.includes('_questions') ||
+          key.includes('_answers') ||
+          key.includes('_session')
+        ) {
+          localStorage.removeItem(key);
+          cleared.push(key);
+        }
+      }
+
+      document.getElementById('result').innerHTML = `
+        <div class="result">
+          <h3>✅ Fresh Start Complete</h3>
+          <p>Cleared ${cleared.length} items. All test and assignment data has been removed.</p>
+          <p><strong>Next steps:</strong></p>
+          <ol>
+            <li>Close this page</li>
+            <li>Reload any open Scio.ly pages</li>
+            <li>Start a new test or assignment</li>
+          </ol>
+          ${cleared.length > 0 ? `
+            <details>
+              <summary>Show cleared keys (${cleared.length})</summary>
+              <div class="item-list">
+                ${cleared.map(item => `<div class="item">${item}</div>`).join('')}
+              </div>
+            </details>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    // Auto-scan on page load
+    window.addEventListener('load', scanCache);
+  </script>
+</body>
+</html>
