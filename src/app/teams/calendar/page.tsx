@@ -82,7 +82,7 @@ export default function CalendarPage() {
   return (
     <TeamLayout
       activeTab="upcoming"
-      onTabChange={handleTabChange}
+      onTabChangeAction={handleTabChange}
       userTeams={userTeams}
       onTeamSelect={handleTeamSelect}
       onNavigateToMainDashboard={handleNavigateToMainDashboard}

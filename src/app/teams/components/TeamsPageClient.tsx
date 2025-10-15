@@ -8,6 +8,7 @@ import TeamsLanding from './TeamsLanding';
 import CreateTeamModal from './CreateTeamModal';
 import JoinTeamModal from './JoinTeamModal';
 import { useTeamStore } from '@/app/hooks/useTeamStore';
+import { trpc } from '@/lib/trpc/client';
 
 interface TeamsPageClientProps {
   initialLinkedSelection?: { school: string; division: 'B'|'C'; team_id: string; member_name?: string } | null;
@@ -27,34 +28,39 @@ export default function TeamsPageClient({ initialLinkedSelection: _initialLinked
 
   // User teams are now loaded by the enhanced hook automatically
   
-  // Load member counts for each team
+  // Use tRPC to batch load member counts for all teams at once
+  const utils = trpc.useUtils();
+  
   useEffect(() => {
     const loadMemberCounts = async () => {
       const counts: Record<string, { total: number; captains: number }> = {};
       
-      for (const userTeam of userTeams) {
+      // Batch load members for all teams using Promise.all
+      const memberPromises = userTeams.map(async (userTeam) => {
         try {
-          // Load members for this team (all subteams)
-          await loadMembers(userTeam.slug, 'all');
-          const members = getMembers(userTeam.slug, 'all');
+          const result = await utils.teams.getMembers.fetch({ 
+            teamSlug: userTeam.slug, 
+            subteamId: 'all' 
+          });
           
           counts[userTeam.slug] = {
-            total: members.length,
-            captains: members.filter(m => m.role === 'captain').length
+            total: result.members.length,
+            captains: result.members.filter(m => m.role === 'captain').length
           };
         } catch (error) {
           console.error(`Failed to load members for team ${userTeam.slug}:`, error);
           counts[userTeam.slug] = { total: 0, captains: 0 };
         }
-      }
+      });
       
+      await Promise.all(memberPromises);
       setTeamMemberCounts(counts);
     };
 
     if (userTeams.length > 0) {
       loadMemberCounts();
     }
-  }, [userTeams, loadMembers, getMembers]);
+  }, [userTeams, utils]);
   
   // Convert UserTeam to Team format for TeamsLanding
   const teamsForLanding = userTeams.map(userTeam => ({

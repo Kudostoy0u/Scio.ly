@@ -76,7 +76,7 @@ export default function TeamsLanding({ onCreateTeam, onJoinTeam, userTeams, onTe
   return (
     <TeamLayout
       activeTab={activeTab}
-      onTabChange={handleTabChange}
+      onTabChangeAction={handleTabChange}
       userTeams={sidebarTeams}
       onTeamSelect={handleSidebarTeamSelect}
       onNavigateToMainDashboard={handleNavigateToMainDashboard}

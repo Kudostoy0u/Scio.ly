@@ -91,7 +91,7 @@ export default function ArchivedTeamsClient() {
     return (
       <TeamLayout
         activeTab="home"
-        onTabChange={handleTabChange}
+        onTabChangeAction={handleTabChange}
         onNavigateToMainDashboard={handleNavigateToMainDashboard}
       >
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
@@ -107,7 +107,7 @@ export default function ArchivedTeamsClient() {
   return (
     <TeamLayout
       activeTab="home"
-      onTabChange={handleTabChange}
+      onTabChangeAction={handleTabChange}
       onNavigateToMainDashboard={handleNavigateToMainDashboard}
     >
       {/* Main Content */}

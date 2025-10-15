@@ -5,6 +5,7 @@ import "./globals.css";
 import { ThemeProvider } from '@/app/contexts/ThemeContext';
 import { Providers } from './providers';
 import { AuthProvider } from './contexts/AuthContext';
+import { TRPCProvider } from '@/lib/trpc/Provider';
 import { getServerUser } from '@/lib/supabaseServer';
 import { cookies } from 'next/headers';
 import ThemeColorMeta from '@/app/components/ThemeColorMeta';
@@ -94,11 +95,13 @@ export default async function RootLayout({
         {/* AuthProvider centralizes session; no extra seeding here */}
         <ThemeProvider initialDarkMode={initialDarkMode}>
           <AuthProvider initialUser={user}>
-            <Providers>
-              <ThemeColorMeta />
-              {children}
-              <NamePromptProvider />
-            </Providers>
+            <TRPCProvider>
+              <Providers>
+                <ThemeColorMeta />
+                {children}
+                <NamePromptProvider />
+              </Providers>
+            </TRPCProvider>
           </AuthProvider>
         </ThemeProvider>
         <GoogleAnalytics gaId="G-P9SVV3TY4G" />

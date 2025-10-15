@@ -9,6 +9,7 @@ import TeamLayout from './TeamLayout';
 import TabNavigation from './TabNavigation';
 import BannerInvite from './BannerInvite';
 import { useTeamStore } from '@/app/hooks/useTeamStore';
+import { trpc } from '@/lib/trpc/client';
 
 // Lazy load heavy components
 const RosterTab = lazy(() => import('./RosterTab'));
@@ -76,6 +77,15 @@ export default function TeamDashboard({
     deleteSubteam,
     invalidateCache
   } = useTeamStore();
+
+  // Use tRPC for data fetching with automatic batching
+  const { data: subteamsData } = trpc.teams.getSubteams.useQuery(
+    { teamSlug: team.slug },
+    { 
+      enabled: !!team.slug,
+      staleTime: 10 * 60 * 1000,
+    }
+  );
 
   // Mock data for demonstration
   // const [_posts] = useState([
@@ -436,7 +446,7 @@ export default function TeamDashboard({
     <>
       <TeamLayout
         activeTab={sidebarTab}
-        onTabChange={handleTabChange}
+        onTabChangeAction={handleTabChange}
         userTeams={userTeams}
         currentTeamSlug={team.slug}
         onTeamSelect={handleTeamSelect}
