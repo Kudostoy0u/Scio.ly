@@ -15,7 +15,7 @@ export default function Loading() {
   return (
     <div className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <Image
-        src="/site-logo.png"
+        src="https://res.cloudinary.com/djilwi4nh/image/upload/v1760504427/site-logo_lzc8t0.png"
         alt="Scio.ly"
         width={96}
         height={96}

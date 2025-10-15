@@ -411,7 +411,7 @@ export default function HomeClient() {
             <div>
               <Link href="/" className="flex items-center">
                 <Image
-                  src="/site-logo.png"
+                  src="https://res.cloudinary.com/djilwi4nh/image/upload/v1760504427/site-logo_lzc8t0.png"
                   alt="Scio.ly Logo"
                   width={32}
                   height={32}

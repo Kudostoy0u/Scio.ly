@@ -2,7 +2,7 @@ const CACHE_NAME = 'scio-shell-v3';
 const SHELL_ASSETS = [
   '/',
   '/manifest.webmanifest',
-  '/site-logo.png',
+  'https://res.cloudinary.com/djilwi4nh/image/upload/v1760504427/site-logo_lzc8t0.png',
   '/offline/'
 ];
 
@@ -91,7 +91,7 @@ self.addEventListener('fetch', (event) => {
       } catch {
 
         if (request.destination === 'image' || url.pathname.startsWith('/_next/image')) {
-          const fallback = await caches.match('/site-logo.png');
+          const fallback = await caches.match('https://res.cloudinary.com/djilwi4nh/image/upload/v1760504427/site-logo_lzc8t0.png');
           if (fallback) return fallback;
           return new Response('', { status: 200, headers: { 'content-type': 'image/png' } });
         }

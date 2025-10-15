@@ -273,7 +273,7 @@ export default function Header() {
             <div className="flex items-center space-x-2">
               <Link href={isDashboard ? '/' : '/dashboard'} className="flex items-center">
                 <Image
-                  src="/site-logo.png"
+                  src="https://res.cloudinary.com/djilwi4nh/image/upload/v1760504427/site-logo_lzc8t0.png"
                   alt="Scio.ly Logo"
                   width={32}
                   height={32}

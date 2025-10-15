@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   description: "Scio.ly provides a comprehensive test-taking platform carefully designed and crafted for Science Olympiad students – available to everyone, for free.",
 
   icons: {
-    icon: "/site-logo.png",
+    icon: "https://res.cloudinary.com/djilwi4nh/image/upload/v1760504427/site-logo_lzc8t0.png",
     apple: [
       { url: "/AppIcons/Assets.xcassets/AppIcon.appiconset/120.png", sizes: "120x120", type: "image/png" },
       { url: "/AppIcons/Assets.xcassets/AppIcon.appiconset/152.png", sizes: "152x152", type: "image/png" },
@@ -79,7 +79,7 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
-        <link rel="icon" href="/site-logo.png" sizes="any" />
+        <link rel="icon" href="https://res.cloudinary.com/djilwi4nh/image/upload/v1760504427/site-logo_lzc8t0.png" sizes="any" />
         <link rel="manifest" href="/manifest.webmanifest" />
         <meta name="theme-color" content="${initialDarkMode ? '#020617' : '#ffffff'}" />
         {initialDisplayFirstName ? (

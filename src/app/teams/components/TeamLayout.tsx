@@ -20,7 +20,7 @@ interface Team {
 interface TeamLayoutProps {
   children: React.ReactNode;
   activeTab: 'home' | 'upcoming' | 'settings';
-  onTabChange: (tab: 'home' | 'upcoming' | 'settings') => void;
+  onTabChangeAction: (tab: 'home' | 'upcoming' | 'settings') => void;
   userTeams?: Team[];
   currentTeamSlug?: string;
   onTeamSelect?: (team: Team) => void;
@@ -31,7 +31,7 @@ interface TeamLayoutProps {
 export default function TeamLayout({
   children,
   activeTab,
-  onTabChange,
+  onTabChangeAction,
   userTeams = [],
   currentTeamSlug,
   onTeamSelect,
@@ -52,7 +52,7 @@ export default function TeamLayout({
               <div className="flex items-center space-x-3">
                 <Link href="/" className="flex items-center">
                   <Image
-                    src="/site-logo.png"
+                    src="https://res.cloudinary.com/djilwi4nh/image/upload/v1760504427/site-logo_lzc8t0.png"
                     alt="Scio.ly Logo"
                     width={32}
                     height={32}
@@ -117,7 +117,7 @@ export default function TeamLayout({
                   <Sidebar
                     activeTab={activeTab}
                     onTabChange={(tab) => {
-                      onTabChange(tab);
+                      onTabChangeAction(tab);
                       setIsMobileMenuOpen(false);
                     }}
                     userTeams={userTeams}
@@ -135,7 +135,7 @@ export default function TeamLayout({
         <div className="hidden md:block fixed left-0 top-16 bottom-0 z-30 w-60">
           <Sidebar
             activeTab={activeTab}
-            onTabChange={onTabChange}
+            onTabChange={onTabChangeAction}
             userTeams={userTeams}
             currentTeamSlug={currentTeamSlug}
             onTeamSelect={onTeamSelect}
