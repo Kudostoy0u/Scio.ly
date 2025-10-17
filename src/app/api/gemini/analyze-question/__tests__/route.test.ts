@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST } from '../route';
-import { geminiService } from '../../../../../lib/services/gemini';
+import { geminiService } from '@/lib/services/gemini';
 
 // Mock dependencies
-vi.mock('../../../../../lib/services/gemini', () => ({
+vi.mock('@/lib/services/gemini', () => ({
   geminiService: {
     isAvailable: vi.fn(),
     analyzeQuestion: vi.fn(),
@@ -111,7 +111,7 @@ describe('/api/gemini/analyze-question', () => {
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
       expect(data.data).toEqual(mockAnalysisResult);
-      expect(geminiService.analyzeQuestion).toHaveBeenCalledWith(mockQuestion, '', 'Chemistry Lab');
+      expect(geminiService.analyzeQuestion).toHaveBeenCalledWith(mockQuestion);
     });
 
     it('should handle analysis that recommends removal', async () => {

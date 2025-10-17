@@ -79,7 +79,7 @@ export default function TeamDashboard({
   } = useTeamStore();
 
   // Use tRPC for data fetching with automatic batching
-  trpc.teams.getSubteams.useQuery(
+  const { data: subteamsData } = trpc.teams.getSubteams.useQuery(
     { teamSlug: team.slug },
     { 
       enabled: !!team.slug,

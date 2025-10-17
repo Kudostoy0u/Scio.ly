@@ -21,7 +21,7 @@ export default function TeamsPageClient({ initialLinkedSelection: _initialLinked
   const { user } = useAuth();
   const router = useRouter();
   // Use team store instead of separate state management
-  const { userTeams, isUserTeamsLoading: isLoading, invalidateCache } = useTeamStore();
+  const { userTeams, isUserTeamsLoading: isLoading, invalidateCache, getMembers, loadMembers } = useTeamStore();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [teamMemberCounts, setTeamMemberCounts] = useState<Record<string, { total: number; captains: number }>>({});
