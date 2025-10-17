@@ -4,12 +4,11 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
-import { UserPlus, LogOut, Archive } from 'lucide-react';
+import { UserPlus, LogOut, Archive, RefreshCw } from 'lucide-react';
 import TeamLayout from './TeamLayout';
 import TabNavigation from './TabNavigation';
 import BannerInvite from './BannerInvite';
-import { useTeamStore } from '@/app/hooks/useTeamStore';
-import { trpc } from '@/lib/trpc/client';
+import { useStreamlinedTeamData, useUserTeams } from '@/app/hooks/useStreamlinedTeamData';
 
 // Lazy load heavy components
 const RosterTab = lazy(() => import('./RosterTab'));
@@ -27,7 +26,7 @@ interface Team {
   division: 'B' | 'C';
 }
 
-interface TeamDashboardProps {
+interface StreamlinedTeamDashboardProps {
   team: {
     id: string;
     school: string;
@@ -39,86 +38,180 @@ interface TeamDashboardProps {
   activeTab?: 'roster' | 'stream' | 'assignments' | 'people';
 }
 
-export default function TeamDashboard({ 
+export default function StreamlinedTeamDashboard({ 
   team, 
   isCaptain, 
   onBack: _onBack,
   activeTab: initialActiveTab = 'roster'
-}: TeamDashboardProps) {
+}: StreamlinedTeamDashboardProps) {
   const { darkMode } = useTheme();
-  // User teams are now loaded by the enhanced hook
   const router = useRouter();
   
-  // Subteam state
+  // State
   const [activeSubteamId, setActiveSubteamId] = useState<string | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [loadingSubteams, setLoadingSubteams] = useState(true);
   const [showBannerInvite, setShowBannerInvite] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
-  
-  // Sidebar state
   const [sidebarTab, setSidebarTab] = useState<'home' | 'upcoming' | 'settings'>('home');
-  
-  // Home tab state
   const [activeTab] = useState<'roster' | 'stream' | 'assignments' | 'people'>(initialActiveTab);
-  
-  // Modal states
   const [showAssignmentCreator, setShowAssignmentCreator] = useState(false);
   const [showDeleteSubteamModal, setShowDeleteSubteamModal] = useState(false);
   const [subteamToDelete, setSubteamToDelete] = useState<{ id: string; name: string } | null>(null);
 
-  // Use team store
+  // Use streamlined team data hook
   const { 
-    userTeams, 
-    getSubteams, 
-    loadSubteams,
-    updateSubteam,
-    deleteSubteam,
-    invalidateCache
-  } = useTeamStore();
+    data: teamData, 
+    loading, 
+    error, 
+    refetch, 
+    updateData 
+  } = useStreamlinedTeamData({
+    teamSlug: team.slug,
+    includeSubteams: true,
+    includeMembers: true,
+    includeRoster: activeTab === 'roster',
+    includeStream: activeTab === 'stream',
+    includeAssignments: activeTab === 'assignments',
+    subteamId: activeSubteamId || undefined,
+    autoRefresh: true,
+    refreshInterval: 2 * 60 * 1000 // 2 minutes
+  });
 
-  // Use tRPC for data fetching with automatic batching
-  trpc.teams.getSubteams.useQuery(
-    { teamSlug: team.slug },
-    { 
-      enabled: !!team.slug,
-      staleTime: 10 * 60 * 1000,
+  // Use user teams hook
+  const { teams: userTeams } = useUserTeams();
+
+  // Set active subteam when subteams are loaded
+  useEffect(() => {
+    if (teamData?.subteams && teamData.subteams.length > 0 && !activeSubteamId) {
+      setActiveSubteamId(teamData.subteams[0].id);
     }
-  );
+  }, [teamData?.subteams, activeSubteamId]);
 
-  // Mock data for demonstration
-  // const [_posts] = useState([
-  //   {
-  //     id: '1',
-  //     author: 'Team Captain',
-  //     content: 'Welcome to the team! Let\'s work hard and have fun this season.',
-  //     timestamp: '2 hours ago',
-  //     type: 'announcement' as const,
-  //   },
-  // ]);
-
-  // User teams are now loaded by the enhanced hook
-
-  const handleInvitePerson = () => {
-    setShowBannerInvite(true);
+  // Handle subteam creation
+  const handleCreateSubteam = async (name: string) => {
+    try {
+      let subteamName = name;
+      if (!name.trim()) {
+        const subteamsData = teamData?.subteams || [];
+        const nextLetter = String.fromCharCode(65 + subteamsData.length);
+        subteamName = `Team ${nextLetter}`;
+      }
+      
+      const response = await fetch(`/api/teams/${team.slug}/subteams`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: subteamName })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(`Subteam "${subteamName}" created successfully!`);
+        
+        // Optimistically update the data
+        updateData(prevData => ({
+          ...prevData,
+          subteams: [
+            ...(prevData?.subteams || []),
+            {
+              id: data.id,
+              groupId: prevData?.team.id || '',
+              teamId: data.team_id,
+              description: data.description,
+              captainCode: '',
+              userCode: '',
+              createdBy: '',
+              createdAt: new Date(data.created_at),
+              updatedAt: new Date(data.created_at),
+              settings: {},
+              status: 'active' as const
+            }
+          ]
+        }));
+        
+        setActiveSubteamId(data.id);
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Failed to create subteam');
+      }
+    } catch (error) {
+      console.error('Failed to create subteam:', error);
+      toast.error('Failed to create subteam. Please try again.');
+    }
   };
 
-  const handleCreateAssignment = () => {
-    setShowAssignmentCreator(true);
+  // Handle subteam editing
+  const handleEditSubteam = async (subteamId: string, newName: string) => {
+    try {
+      // Optimistically update the UI
+      updateData(prevData => ({
+        ...prevData,
+        subteams: (prevData?.subteams || []).map(subteam => 
+          subteam.id === subteamId 
+            ? { ...subteam, description: newName }
+            : subteam
+        )
+      }));
+      
+      const response = await fetch(`/api/teams/${team.slug}/subteams/${subteamId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName })
+      });
+      
+      if (response.ok) {
+        toast.success(`Subteam renamed to "${newName}" successfully!`);
+        await refetch(); // Refresh data from server
+      } else {
+        // Revert optimistic update on error
+        await refetch();
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Failed to update subteam name');
+      }
+    } catch (error) {
+      console.error('Failed to edit subteam:', error);
+      await refetch(); // Revert optimistic update
+      toast.error('Failed to update subteam name. Please try again.');
+    }
   };
 
-  const handleAssignmentCreated = (assignment: any) => {
-    setShowAssignmentCreator(false);
-    // You could add a toast notification here
-    console.log('Assignment created:', assignment);
+  // Handle subteam deletion
+  const handleDeleteSubteam = async (subteamId: string) => {
+    try {
+      const response = await fetch(`/api/teams/${team.slug}/subteams/${subteamId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (response.ok) {
+        // Optimistically remove the subteam
+        updateData(prevData => ({
+          ...prevData,
+          subteams: (prevData?.subteams || []).filter(subteam => subteam.id !== subteamId)
+        }));
+        
+        // If the deleted subteam was active, switch to the first remaining subteam
+        if (activeSubteamId === subteamId) {
+          const remainingSubteams = teamData?.subteams?.filter(s => s.id !== subteamId) || [];
+          if (remainingSubteams.length > 0) {
+            setActiveSubteamId(remainingSubteams[0].id);
+          } else {
+            setActiveSubteamId(null);
+          }
+        }
+        
+        toast.success('Subteam deleted successfully!');
+        await refetch(); // Refresh data from server
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Failed to delete subteam');
+      }
+    } catch (error) {
+      console.error('Failed to delete subteam:', error);
+      toast.error('Failed to delete subteam. Please try again.');
+    }
   };
 
-  const handleCancelAssignment = () => {
-    setShowAssignmentCreator(false);
-  };
-
-
+  // Handle team exit
   const handleExitTeam = () => {
     setShowExitModal(true);
   };
@@ -132,7 +225,6 @@ export default function TeamDashboard({
       
       if (response.ok) {
         toast.success('Successfully exited team');
-        // Redirect to teams page after successful exit
         window.location.href = '/teams';
       } else {
         const error = await response.json();
@@ -146,10 +238,7 @@ export default function TeamDashboard({
     }
   };
 
-  const cancelExitTeam = () => {
-    setShowExitModal(false);
-  };
-
+  // Handle team archiving
   const handleArchiveTeam = () => {
     setShowArchiveModal(true);
   };
@@ -163,7 +252,6 @@ export default function TeamDashboard({
       
       if (response.ok) {
         toast.success('Team archived successfully');
-        // Redirect to teams page after successful archive
         window.location.href = '/teams';
       } else {
         const error = await response.json();
@@ -177,163 +265,7 @@ export default function TeamDashboard({
     }
   };
 
-  const cancelArchiveTeam = () => {
-    setShowArchiveModal(false);
-  };
-
-
-  // Load subteams using team store
-  useEffect(() => {
-    const loadSubteamsData = async () => {
-      try {
-        setLoadingSubteams(true);
-        // Load subteams immediately to avoid delays
-        await loadSubteams(team.slug);
-      } catch (error) {
-        console.error('Failed to load subteams:', error);
-      } finally {
-        setLoadingSubteams(false);
-      }
-    };
-
-    loadSubteamsData();
-  }, [team.slug, loadSubteams]);
-
-  // Set active subteam when subteams are loaded
-  useEffect(() => {
-    const subteamsData = getSubteams(team.slug);
-    if (subteamsData && subteamsData.length > 0 && !activeSubteamId) {
-      setActiveSubteamId(subteamsData[0].id);
-    }
-  }, [team.slug, getSubteams, activeSubteamId]);
-
-  const handleCreateSubteam = async (name: string) => {
-    try {
-      // Generate default name if none provided
-      let subteamName = name;
-      if (!name.trim()) {
-        const subteamsData = getSubteams(team.slug);
-        const nextLetter = String.fromCharCode(65 + subteamsData.length); // A, B, C, etc.
-        subteamName = `Team ${nextLetter}`;
-      }
-      
-      const response = await fetch(`/api/teams/${team.slug}/subteams`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: subteamName })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Show success toast
-        toast.success(`Subteam "${subteamName}" created successfully!`);
-        
-        // Clear subteams cache to ensure fresh data
-        invalidateCache(`subteams-${team.slug}`);
-        
-        // Reload subteams to get the latest data from server
-        await loadSubteams(team.slug);
-        
-        // Set the new subteam as active after reload
-        setActiveSubteamId(data.id);
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to create subteam');
-      }
-    } catch (error) {
-      console.error('Failed to create subteam:', error);
-      toast.error('Failed to create subteam. Please try again.');
-    }
-  };
-
-  const handleEditSubteam = async (subteamId: string, newName: string) => {
-    try {
-      // Optimistically update the UI immediately
-      updateSubteam(team.slug, subteamId, { name: newName });
-      
-      const response = await fetch(`/api/teams/${team.slug}/subteams/${subteamId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName })
-      });
-      
-      if (response.ok) {
-        // Show success toast
-        toast.success(`Subteam renamed to "${newName}" successfully!`);
-        
-        // Reload subteams to ensure we have the latest data from server
-        await loadSubteams(team.slug);
-      } else {
-        // Revert optimistic update on error
-        await loadSubteams(team.slug);
-        
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to update subteam name');
-      }
-    } catch (error) {
-      console.error('Failed to edit subteam:', error);
-      
-      // Revert optimistic update on error
-      await loadSubteams(team.slug);
-      toast.error('Failed to update subteam name. Please try again.');
-    }
-  };
-
-  const handleDeleteSubteam = async (subteamId: string) => {
-    try {
-      const response = await fetch(`/api/teams/${team.slug}/subteams/${subteamId}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      if (response.ok) {
-        // Optimistically remove the subteam from the store
-        deleteSubteam(team.slug, subteamId);
-        
-        // If the deleted subteam was active, switch to the first remaining subteam
-        if (activeSubteamId === subteamId) {
-          const remainingSubteams = getSubteams(team.slug);
-          if (remainingSubteams.length > 0) {
-            setActiveSubteamId(remainingSubteams[0].id);
-          } else {
-            setActiveSubteamId(null);
-          }
-        }
-        
-        // Show success toast
-        toast.success('Subteam deleted successfully!');
-        
-        // Reload subteams to ensure we have the latest data from server
-        await loadSubteams(team.slug);
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to delete subteam');
-      }
-    } catch (error) {
-      console.error('Failed to delete subteam:', error);
-      toast.error('Failed to delete subteam. Please try again.');
-    }
-  };
-
-  const confirmDeleteSubteam = () => {
-    if (subteamToDelete) {
-      handleDeleteSubteam(subteamToDelete.id);
-      setShowDeleteSubteamModal(false);
-      setSubteamToDelete(null);
-    }
-  };
-
-  const cancelDeleteSubteam = () => {
-    setShowDeleteSubteamModal(false);
-    setSubteamToDelete(null);
-  };
-
-  const handleDeleteSubteamClick = (subteamId: string, subteamName: string) => {
-    setSubteamToDelete({ id: subteamId, name: subteamName });
-    setShowDeleteSubteamModal(true);
-  };
-
+  // Handle tab changes
   const handleTabChange = (tab: 'home' | 'upcoming' | 'settings') => {
     if (tab === 'upcoming') {
       router.push('/teams/calendar');
@@ -342,17 +274,23 @@ export default function TeamDashboard({
     }
   };
 
-  const handleNavigateToMainDashboard = () => {
-    // Navigate to the teams overview page with a parameter to bypass auto-redirect
-    router.push('/teams?view=all');
-  };
-
+  // Handle team selection
   const handleTeamSelect = (selectedTeam: Team) => {
-    // Navigate to team without any query parameters
     router.push(`/teams/${selectedTeam.slug}`);
   };
 
+  // Handle navigation to main dashboard
+  const handleNavigateToMainDashboard = () => {
+    router.push('/teams?view=all');
+  };
 
+  // Handle refresh
+  const handleRefresh = async () => {
+    await refetch();
+    toast.success('Team data refreshed');
+  };
+
+  // Render sidebar content
   const renderSidebarContent = () => {
     switch (sidebarTab) {
       case 'upcoming':
@@ -379,6 +317,7 @@ export default function TeamDashboard({
     }
   };
 
+  // Render home content
   const renderHomeContent = () => {
     const LoadingFallback = () => (
       <div className="flex items-center justify-center p-8">
@@ -387,6 +326,26 @@ export default function TeamDashboard({
       </div>
     );
 
+    if (loading) {
+      return <LoadingFallback />;
+    }
+
+    if (error) {
+      return (
+        <div className="flex items-center justify-center p-8">
+          <div className="text-center">
+            <p className="text-red-600 mb-4">{error}</p>
+            <button
+              onClick={refetch}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case 'roster':
         return (
@@ -394,13 +353,16 @@ export default function TeamDashboard({
             <RosterTab
               team={team}
               isCaptain={isCaptain}
-              onInvitePerson={handleInvitePerson}
+              onInvitePerson={() => setShowBannerInvite(true)}
               activeSubteamId={activeSubteamId}
-              subteams={getSubteams(team.slug)}
+              subteams={teamData?.subteams || []}
               onSubteamChange={setActiveSubteamId}
               onCreateSubteam={handleCreateSubteam}
               onEditSubteam={handleEditSubteam}
-              onDeleteSubteam={handleDeleteSubteamClick}
+              onDeleteSubteam={(id, name) => {
+                setSubteamToDelete({ id, name });
+                setShowDeleteSubteamModal(true);
+              }}
             />
           </Suspense>
         );
@@ -420,7 +382,7 @@ export default function TeamDashboard({
             <AssignmentsTab
               teamId={team.slug}
               isCaptain={isCaptain}
-              onCreateAssignment={handleCreateAssignment}
+              onCreateAssignment={() => setShowAssignmentCreator(true)}
             />
           </Suspense>
         );
@@ -430,9 +392,9 @@ export default function TeamDashboard({
             <PeopleTab
               team={team}
               isCaptain={isCaptain}
-              onInvitePerson={handleInvitePerson}
+              onInvitePerson={() => setShowBannerInvite(true)}
               activeSubteamId={activeSubteamId}
-              subteams={getSubteams(team.slug)}
+              subteams={teamData?.subteams || []}
               onSubteamChange={setActiveSubteamId}
             />
           </Suspense>
@@ -452,69 +414,80 @@ export default function TeamDashboard({
         onTeamSelect={handleTeamSelect}
         onNavigateToMainDashboard={handleNavigateToMainDashboard}
       >
-          {/* Team Header Banner - Scrollable */}
-          <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
-            <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-3xl font-bold">{team.school}</h1>
-                  <p className="text-purple-100 mt-2">Division {team.division}</p>
-                </div>
-                <div className="flex items-center space-x-4">
-                  {isCaptain && (
-                    <button
-                      onClick={handleInvitePerson}
-                      className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 group shadow-lg ${
-                        darkMode 
-                          ? 'bg-gray-700 bg-opacity-90 hover:bg-opacity-100' 
-                          : 'bg-white bg-opacity-90 hover:bg-opacity-100'
-                      }`}
-                      title="Invite Person"
-                    >
-                      <UserPlus className="w-6 h-6 text-purple-600 group-hover:scale-110 transition-transform" />
-                    </button>
-                  )}
+        {/* Team Header Banner */}
+        <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+          <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold">{team.school}</h1>
+                <p className="text-purple-100 mt-2">Division {team.division}</p>
+              </div>
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={handleRefresh}
+                  className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 group shadow-lg ${
+                    darkMode 
+                      ? 'bg-gray-700 bg-opacity-90 hover:bg-opacity-100' 
+                      : 'bg-white bg-opacity-90 hover:bg-opacity-100'
+                  }`}
+                  title="Refresh Data"
+                >
+                  <RefreshCw className="w-6 h-6 text-blue-600 group-hover:scale-110 transition-transform" />
+                </button>
+                {isCaptain && (
                   <button
-                    onClick={handleExitTeam}
+                    onClick={() => setShowBannerInvite(true)}
                     className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 group shadow-lg ${
                       darkMode 
                         ? 'bg-gray-700 bg-opacity-90 hover:bg-opacity-100' 
                         : 'bg-white bg-opacity-90 hover:bg-opacity-100'
                     }`}
-                    title="Exit Team"
+                    title="Invite Person"
                   >
-                    <LogOut className="w-6 h-6 text-red-600 group-hover:scale-110 transition-transform" />
+                    <UserPlus className="w-6 h-6 text-purple-600 group-hover:scale-110 transition-transform" />
                   </button>
-                  {isCaptain && (
-                    <button
-                      onClick={handleArchiveTeam}
-                      className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 group shadow-lg ${
-                        darkMode 
-                          ? 'bg-gray-700 bg-opacity-90 hover:bg-opacity-100' 
-                          : 'bg-white bg-opacity-90 hover:bg-opacity-100'
-                      }`}
-                      title="Archive Team"
-                    >
-                      <Archive className="w-6 h-6 text-orange-600 group-hover:scale-110 transition-transform" />
-                    </button>
-                  )}
-                </div>
+                )}
+                <button
+                  onClick={handleExitTeam}
+                  className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 group shadow-lg ${
+                    darkMode 
+                      ? 'bg-gray-700 bg-opacity-90 hover:bg-opacity-100' 
+                      : 'bg-white bg-opacity-90 hover:bg-opacity-100'
+                  }`}
+                  title="Exit Team"
+                >
+                  <LogOut className="w-6 h-6 text-red-600 group-hover:scale-110 transition-transform" />
+                </button>
+                {isCaptain && (
+                  <button
+                    onClick={handleArchiveTeam}
+                    className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 group shadow-lg ${
+                      darkMode 
+                        ? 'bg-gray-700 bg-opacity-90 hover:bg-opacity-100' 
+                        : 'bg-white bg-opacity-90 hover:bg-opacity-100'
+                    }`}
+                    title="Archive Team"
+                  >
+                    <Archive className="w-6 h-6 text-orange-600 group-hover:scale-110 transition-transform" />
+                  </button>
+                )}
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Tab Content */}
-          {sidebarTab === 'home' && (
-            <>
-              <TabNavigation teamSlug={team.slug} />
-              {renderHomeContent()}
-            </>
-          )}
-          
-          {sidebarTab !== 'home' && renderSidebarContent()}
+        {/* Tab Content */}
+        {sidebarTab === 'home' && (
+          <>
+            <TabNavigation teamSlug={team.slug} />
+            {renderHomeContent()}
+          </>
+        )}
+        
+        {sidebarTab !== 'home' && renderSidebarContent()}
       </TeamLayout>
 
-      {/* Banner Invite */}
+      {/* Modals */}
       <BannerInvite
         isOpen={showBannerInvite}
         onClose={() => setShowBannerInvite(false)}
@@ -535,7 +508,7 @@ export default function TeamDashboard({
             }`}>Are you sure you want to exit this team?</p>
             <div className="flex justify-end space-x-3">
               <button
-                onClick={cancelExitTeam}
+                onClick={() => setShowExitModal(false)}
                 className={`px-4 py-2 border rounded-lg transition-colors ${
                   darkMode 
                     ? 'text-gray-300 border-gray-600 hover:bg-gray-700' 
@@ -569,7 +542,7 @@ export default function TeamDashboard({
             }`}>Are you sure you want to archive this team? This action will move the team to the archived section and can be undone later.</p>
             <div className="flex justify-end space-x-3">
               <button
-                onClick={cancelArchiveTeam}
+                onClick={() => setShowArchiveModal(false)}
                 className={`px-4 py-2 border rounded-lg transition-colors ${
                   darkMode 
                     ? 'text-gray-300 border-gray-600 hover:bg-gray-700' 
@@ -602,8 +575,8 @@ export default function TeamDashboard({
           <AssignmentCreator
             teamId={team.slug}
             subteamId={activeSubteamId || undefined}
-            onAssignmentCreated={handleAssignmentCreated}
-            onCancel={handleCancelAssignment}
+            onAssignmentCreated={() => setShowAssignmentCreator(false)}
+            onCancel={() => setShowAssignmentCreator(false)}
             darkMode={darkMode}
           />
         </Suspense>
@@ -625,7 +598,7 @@ export default function TeamDashboard({
             </p>
             <div className="flex justify-end space-x-3">
               <button
-                onClick={cancelDeleteSubteam}
+                onClick={() => setShowDeleteSubteamModal(false)}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   darkMode 
                     ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
@@ -635,7 +608,11 @@ export default function TeamDashboard({
                 Cancel
               </button>
               <button
-                onClick={confirmDeleteSubteam}
+                onClick={() => {
+                  handleDeleteSubteam(subteamToDelete.id);
+                  setShowDeleteSubteamModal(false);
+                  setSubteamToDelete(null);
+                }}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 Delete
