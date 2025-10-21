@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import TeamDashboard from '../../components/TeamDashboard';
-import TeamDataPreloader from '../../components/TeamDataPreloader';
 
 interface TeamPeopleClientProps {
   teamSlug: string;
@@ -39,14 +38,11 @@ export default function TeamPeopleClient({
   }
 
   return (
-    <>
-      <TeamDataPreloader teamSlug={teamSlug} />
-      <TeamDashboard
-        team={{ id: teamSlug, school, division, slug: teamSlug }}
-        isCaptain={isCaptain}
-        onBack={handleBack}
-        activeTab="people"
-      />
-    </>
+    <TeamDashboard
+      team={{ id: teamSlug, school, division, slug: teamSlug }}
+      isCaptain={isCaptain}
+      onBack={handleBack}
+      activeTab="people"
+    />
   );
 }

@@ -97,10 +97,9 @@ export default function PeopleTab({
 }: PeopleTabProps) {
   const { darkMode } = useTheme();
   const { user } = useAuth();
-  const { 
-    getMembers, 
-    loadMembers, 
-    invalidateCache 
+  const {
+    getMembers,
+    invalidateCache
   } = useTeamStore();
   const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
   const [selectedSubteam, setSelectedSubteam] = useState<string>('all');
@@ -122,10 +121,10 @@ export default function PeopleTab({
 
   // Handle name update completion
   const handleNameUpdate = useCallback(() => {
-    // Refresh the members list to show updated names
-    loadMembers(team.slug, selectedSubteam);
+    // Invalidate cache to refresh on next render
+    invalidateCache(`members-${team.slug}-${selectedSubteam}`);
     setShowNamePrompt(false);
-  }, [loadMembers, team.slug, selectedSubteam]);
+  }, [invalidateCache, team.slug, selectedSubteam]);
 
   // Listen for name updates from NamePromptModal and optimistically update UI
   useEffect(() => {
@@ -134,14 +133,14 @@ export default function PeopleTab({
       if (!newName || !user?.id) return;
       // Optimistically update current user's name in list immediately
       setFilteredMembers(prev => prev.map(m => m.id === user.id ? { ...m, name: newName } : m));
-      // Refresh members from server in background
-      loadMembers(team.slug, selectedSubteam);
+      // Invalidate cache to force refresh
+      invalidateCache(`members-${team.slug}-${selectedSubteam}`);
     };
     window.addEventListener('scio-display-name-updated', onDisplayNameUpdated as EventListener);
     return () => {
       window.removeEventListener('scio-display-name-updated', onDisplayNameUpdated as EventListener);
     };
-  }, [user?.id, loadMembers, team.slug, selectedSubteam]);
+  }, [user?.id, invalidateCache, team.slug, selectedSubteam]);
 
   // Conflict detection function for member events
   const detectMemberConflicts = useCallback((_members: Member[]) => {
@@ -188,10 +187,7 @@ export default function PeopleTab({
     return conflicts;
   }, [team.division, getMembers, selectedSubteam, team.slug]);
 
-  // Load members data using centralized store
-  useEffect(() => {
-    loadMembers(team.slug, selectedSubteam);
-  }, [team.slug, selectedSubteam, loadMembers]);
+  // Members are loaded by TeamDataLoader, just read from cache
 
   // Filter, enrich names, and sort members
   useEffect(() => {
@@ -266,9 +262,8 @@ export default function PeopleTab({
 
       if (response.ok) {
         toast.success(`Invitation sent to ${username}`);
-        // Refresh members list
+        // Invalidate cache to refresh on next render
         invalidateCache(`members-${team.slug}-${selectedSubteam}`);
-        loadMembers(team.slug, selectedSubteam);
       } else {
         const error = await response.json();
         toast.error(error.error || 'Failed to send invitation');
@@ -321,9 +316,8 @@ export default function PeopleTab({
         setFilteredMembers(prev => prev.map(m => m.name === memberName ? { ...m, hasPendingLinkInvite: true } : m));
         setPendingLinkInvites(prev => ({ ...prev, [memberName]: true }));
         setLinkInviteStates(prev => ({ ...prev, [memberName]: false }));
-        // Refresh members list
+        // Invalidate cache to refresh on next render
         invalidateCache(`members-${team.slug}-${selectedSubteam}`);
-        loadMembers(team.slug, selectedSubteam);
       } else {
         const error = await response.json();
         toast.error(error.error || 'Failed to send link invitation');
@@ -365,9 +359,8 @@ export default function PeopleTab({
         // Optimistically clear link pending in UI
         setFilteredMembers(prev => prev.map(m => m.name === memberName ? { ...m, hasPendingLinkInvite: false } : m));
         setPendingLinkInvites(prev => ({ ...prev, [memberName]: false }));
-        // Refresh members list
+        // Invalidate cache to refresh on next render
         invalidateCache(`members-${team.slug}-${selectedSubteam}`);
-        loadMembers(team.slug, selectedSubteam);
       } else {
         const error = await response.json();
         toast.error(error.error || 'Failed to cancel link invitation');
@@ -395,9 +388,8 @@ export default function PeopleTab({
 
       if (response.ok) {
         toast.success(`Invitation cancelled for ${member.name}`);
-        // Refresh members list
+        // Invalidate cache to refresh on next render
         invalidateCache(`members-${team.slug}-${selectedSubteam}`);
-        loadMembers(team.slug, selectedSubteam);
       } else {
         const error = await response.json();
         toast.error(error.error || 'Failed to cancel invitation');
@@ -446,9 +438,6 @@ export default function PeopleTab({
           subteams.forEach(subteam => {
             invalidateCache(`roster-${team.slug}-${subteam.id}`);
           });
-          
-          // Refresh members list
-          loadMembers(team.slug, selectedSubteam);
         } else {
           const error = await response.json();
           toast.error(error.error || 'Failed to remove roster entry');
@@ -467,11 +456,7 @@ export default function PeopleTab({
           toast.success(`${member.name} has been removed from the team`);
           // Refresh members list
           const subteamParam = selectedSubteam === 'all' ? '' : `?subteamId=${selectedSubteam}`;
-          const response = await fetch(`/api/teams/${team.slug}/members${subteamParam}`);
-          if (response.ok) {
-            invalidateCache(`members-${team.slug}-${selectedSubteam}`);
-            loadMembers(team.slug, selectedSubteam);
-          }
+          invalidateCache(`members-${team.slug}-${selectedSubteam}`);
         } else {
           const error = await response.json();
           toast.error(error.error || 'Failed to remove member');
@@ -510,9 +495,8 @@ export default function PeopleTab({
 
       if (response.ok) {
         toast.success(`${member.name} has been promoted to captain`);
-        // Refresh members list
+        // Invalidate cache to refresh on next render
         invalidateCache(`members-${team.slug}-${selectedSubteam}`);
-        loadMembers(team.slug, selectedSubteam);
       } else {
         const error = await response.json();
         toast.error(error.error || 'Failed to promote member');
@@ -762,7 +746,6 @@ export default function PeopleTab({
                               subteams.forEach(subteam => {
                                 invalidateCache(`roster-${team.slug}-${subteam.id}`);
                               });
-                              loadMembers(team.slug, selectedSubteam);
                             } else {
                               const err = await response.json();
                               toast.error(err.error || 'Failed to remove subteam badge');
@@ -853,7 +836,6 @@ export default function PeopleTab({
                                     subteams.forEach(subteam => {
                                       invalidateCache(`roster-${team.slug}-${subteam.id}`);
                                     });
-                                    loadMembers(team.slug, selectedSubteam);
                                   } else {
                                     const err = await response.json();
                                     toast.error(err.error || 'Failed to remove event badge');
@@ -925,9 +907,6 @@ export default function PeopleTab({
                                   subteams.forEach(s => {
                                     invalidateCache(`roster-${team.slug}-${s.id}`);
                                   });
-                                  
-                                  // Reload members to show updated data
-                                  loadMembers(team.slug, selectedSubteam);
                                   
                                   setShowSubteamDropdown(null);
                                   setSelectedMember(null);
@@ -1079,9 +1058,6 @@ export default function PeopleTab({
                           subteams.forEach(s => {
                             invalidateCache(`roster-${team.slug}-${s.id}`);
                           });
-                          
-                          // Reload members to show updated data
-                          loadMembers(team.slug, selectedSubteam);
                           
                           setShowEventModal(false);
                           setSelectedMember(null);

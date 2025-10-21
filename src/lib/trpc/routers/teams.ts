@@ -64,6 +64,72 @@ export const teamsRouter = router({
       return { subteams };
     }),
 
+  // Get people/members for a subteam (alias for getMembers)
+  getPeople: protectedProcedure
+    .input(z.object({ 
+      teamSlug: z.string(), 
+      subteamId: z.string().optional() 
+    }))
+    .query(async ({ ctx, input }) => {
+      const groupResult = await dbPg
+        .select({ id: newTeamGroups.id })
+        .from(newTeamGroups)
+        .where(eq(newTeamGroups.slug, input.teamSlug));
+
+      if (groupResult.length === 0) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Team group not found' });
+      }
+
+      const groupId = groupResult[0].id;
+      const teamAccess = await getTeamAccess(ctx.user.id, groupId);
+
+      if (!teamAccess.hasAccess) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to access this team' });
+      }
+
+      // Build query based on subteamId filter
+      const whereConditions: any[] = [
+        eq(newTeamUnits.groupId, groupId),
+        eq(newTeamUnits.status, 'active')
+      ];
+
+      if (input.subteamId && input.subteamId !== 'all') {
+        whereConditions.push(eq(newTeamMemberships.teamId, input.subteamId));
+      }
+
+      const results = await dbPg
+        .select({
+          userId: newTeamMemberships.userId,
+          role: newTeamMemberships.role,
+          joinedAt: newTeamMemberships.joinedAt,
+          subteamId: newTeamMemberships.teamId,
+          email: users.email,
+        })
+        .from(newTeamMemberships)
+        .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+        .leftJoin(users, eq(newTeamMemberships.userId, users.id))
+        .where(and(...whereConditions));
+
+      const members = await Promise.all(
+        results.map(async (result) => {
+          const displayInfo = await getUserDisplayInfo(result.userId);
+          return {
+            userId: result.userId,
+            role: result.role,
+            joinedAt: result.joinedAt,
+            subteamId: result.subteamId,
+            email: result.email || null,
+            displayFirstName: displayInfo.name,
+            displayLastName: '',
+            hasRosterEntry: false,
+            hasPendingInvite: false,
+          };
+        })
+      );
+
+      return { members };
+    }),
+
   // Get members for a subteam
   getMembers: protectedProcedure
     .input(z.object({ 

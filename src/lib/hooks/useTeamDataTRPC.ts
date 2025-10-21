@@ -53,6 +53,17 @@ export function useMembers(teamSlug: string, subteamId?: string) {
   );
 }
 
+export function usePeople(teamSlug: string, subteamId?: string) {
+  return trpc.teams.getPeople.useQuery(
+    { teamSlug, subteamId },
+    {
+      enabled: !!teamSlug,
+      staleTime: 2 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    }
+  );
+}
+
 export function useRoster(teamSlug: string, subteamId: string) {
   return trpc.teams.getRoster.useQuery(
     { teamSlug, subteamId },

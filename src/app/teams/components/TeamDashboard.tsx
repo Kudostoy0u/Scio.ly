@@ -9,7 +9,7 @@ import TeamLayout from './TeamLayout';
 import TabNavigation from './TabNavigation';
 import BannerInvite from './BannerInvite';
 import { useTeamStore } from '@/app/hooks/useTeamStore';
-import { trpc } from '@/lib/trpc/client';
+import TeamDataLoader from './TeamDataLoader';
 
 // Lazy load heavy components
 const RosterTab = lazy(() => import('./RosterTab'));
@@ -69,23 +69,13 @@ export default function TeamDashboard({
   const [subteamToDelete, setSubteamToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Use team store
-  const { 
-    userTeams, 
-    getSubteams, 
-    loadSubteams,
+  const {
+    userTeams,
+    getSubteams,
     updateSubteam,
     deleteSubteam,
     invalidateCache
   } = useTeamStore();
-
-  // Use tRPC for data fetching with automatic batching
-  const { data: subteamsData } = trpc.teams.getSubteams.useQuery(
-    { teamSlug: team.slug },
-    { 
-      enabled: !!team.slug,
-      staleTime: 10 * 60 * 1000,
-    }
-  );
 
   // Mock data for demonstration
   // const [_posts] = useState([
@@ -182,28 +172,12 @@ export default function TeamDashboard({
   };
 
 
-  // Load subteams using team store
-  useEffect(() => {
-    const loadSubteamsData = async () => {
-      try {
-        setLoadingSubteams(true);
-        // Load subteams immediately to avoid delays
-        await loadSubteams(team.slug);
-      } catch (error) {
-        console.error('Failed to load subteams:', error);
-      } finally {
-        setLoadingSubteams(false);
-      }
-    };
-
-    loadSubteamsData();
-  }, [team.slug, loadSubteams]);
-
-  // Set active subteam when subteams are loaded
+  // Set active subteam when subteams are available
   useEffect(() => {
     const subteamsData = getSubteams(team.slug);
     if (subteamsData && subteamsData.length > 0 && !activeSubteamId) {
       setActiveSubteamId(subteamsData[0].id);
+      setLoadingSubteams(false);
     }
   }, [team.slug, getSubteams, activeSubteamId]);
 
@@ -232,9 +206,6 @@ export default function TeamDashboard({
         // Clear subteams cache to ensure fresh data
         invalidateCache(`subteams-${team.slug}`);
         
-        // Reload subteams to get the latest data from server
-        await loadSubteams(team.slug);
-        
         // Set the new subteam as active after reload
         setActiveSubteamId(data.id);
       } else {
@@ -261,21 +232,18 @@ export default function TeamDashboard({
       if (response.ok) {
         // Show success toast
         toast.success(`Subteam renamed to "${newName}" successfully!`);
-        
-        // Reload subteams to ensure we have the latest data from server
-        await loadSubteams(team.slug);
       } else {
         // Revert optimistic update on error
-        await loadSubteams(team.slug);
-        
+        invalidateCache(`subteams-${team.slug}`);
+
         const errorData = await response.json();
         toast.error(errorData.error || 'Failed to update subteam name');
       }
     } catch (error) {
       console.error('Failed to edit subteam:', error);
-      
+
       // Revert optimistic update on error
-      await loadSubteams(team.slug);
+      invalidateCache(`subteams-${team.slug}`);
       toast.error('Failed to update subteam name. Please try again.');
     }
   };
@@ -300,12 +268,9 @@ export default function TeamDashboard({
             setActiveSubteamId(null);
           }
         }
-        
+
         // Show success toast
         toast.success('Subteam deleted successfully!');
-        
-        // Reload subteams to ensure we have the latest data from server
-        await loadSubteams(team.slug);
       } else {
         const errorData = await response.json();
         toast.error(errorData.error || 'Failed to delete subteam');
@@ -443,7 +408,7 @@ export default function TeamDashboard({
   };
 
   return (
-    <>
+    <TeamDataLoader teamSlug={team.slug}>
       <TeamLayout
         activeTab={sidebarTab}
         onTabChangeAction={handleTabChange}
@@ -644,6 +609,6 @@ export default function TeamDashboard({
           </div>
         </div>
       )}
-    </>
+    </TeamDataLoader>
   );
 }

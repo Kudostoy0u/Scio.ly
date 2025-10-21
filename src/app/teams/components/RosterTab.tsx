@@ -43,10 +43,9 @@ export default function RosterTab({
   onDeleteSubteam
 }: RosterTabProps) {
   const { darkMode } = useTheme();
-  const { 
-    getRoster, 
-    loadRoster, 
-    invalidateCache 
+  const {
+    getRoster,
+    invalidateCache
   } = useTeamStore();
   const [roster, setRoster] = useState<Record<string, string[]>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -112,14 +111,12 @@ export default function RosterTab({
     setRemovedEvents(cachedRemovedEvents);
   }, [activeSubteamId, team.slug, loadRemovedEventsFromCache]);
 
-  // Load roster data using centralized store
+  // Load removed events from cache
   useEffect(() => {
     if (activeSubteamId) {
-      // Load roster immediately to avoid delays
-      loadRoster(team.slug, activeSubteamId);
       loadRemovedEvents();
     }
-  }, [team.slug, activeSubteamId, loadRoster, loadRemovedEvents]);
+  }, [activeSubteamId, loadRemovedEvents]);
 
   // Update local roster when global roster changes
   useEffect(() => {
@@ -320,9 +317,9 @@ export default function RosterTab({
         setRemovedEvents(newRemovedEvents);
         // Update cache
         saveRemovedEventsToCache(team.slug, activeSubteamId, newRemovedEvents);
-        // Reload roster data to get any existing data for restored events
+        // Invalidate roster cache to force refresh on next render
         if (activeSubteamId) {
-          loadRoster(team.slug, activeSubteamId);
+          invalidateCache(`roster-${team.slug}-${activeSubteamId}`);
         }
         toast.success(`${data.restoredCount} events restored in ${conflictBlock}`);
       } else {

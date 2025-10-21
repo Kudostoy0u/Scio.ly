@@ -8,7 +8,6 @@ import TeamsLanding from './TeamsLanding';
 import CreateTeamModal from './CreateTeamModal';
 import JoinTeamModal from './JoinTeamModal';
 import { useTeamStore } from '@/app/hooks/useTeamStore';
-import { trpc } from '@/lib/trpc/client';
 
 interface TeamsPageClientProps {
   initialLinkedSelection?: { school: string; division: 'B'|'C'; team_id: string; member_name?: string } | null;
@@ -21,46 +20,34 @@ export default function TeamsPageClient({ initialLinkedSelection: _initialLinked
   const { user } = useAuth();
   const router = useRouter();
   // Use team store instead of separate state management
-  const { userTeams, isUserTeamsLoading: isLoading, invalidateCache, getMembers, loadMembers } = useTeamStore();
+  const { userTeams, isUserTeamsLoading: isLoading, invalidateCache, getMembers } = useTeamStore();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [teamMemberCounts, setTeamMemberCounts] = useState<Record<string, { total: number; captains: number }>>({});
 
   // User teams are now loaded by the enhanced hook automatically
-  
-  // Use tRPC to batch load member counts for all teams at once
-  const utils = trpc.useUtils();
-  
+
+  // Load member counts from cache
   useEffect(() => {
-    const loadMemberCounts = async () => {
+    const loadMemberCounts = () => {
       const counts: Record<string, { total: number; captains: number }> = {};
-      
-      // Batch load members for all teams using Promise.all
-      const memberPromises = userTeams.map(async (userTeam) => {
-        try {
-          const result = await utils.teams.getMembers.fetch({ 
-            teamSlug: userTeam.slug, 
-            subteamId: 'all' 
-          });
-          
-          counts[userTeam.slug] = {
-            total: result.members.length,
-            captains: result.members.filter(m => m.role === 'captain').length
-          };
-        } catch (error) {
-          console.error(`Failed to load members for team ${userTeam.slug}:`, error);
-          counts[userTeam.slug] = { total: 0, captains: 0 };
-        }
+
+      // Get member counts from cache for each team
+      userTeams.forEach((userTeam) => {
+        const members = getMembers(userTeam.slug, 'all');
+        counts[userTeam.slug] = {
+          total: members.length,
+          captains: members.filter(m => m.role === 'captain').length
+        };
       });
-      
-      await Promise.all(memberPromises);
+
       setTeamMemberCounts(counts);
     };
 
     if (userTeams.length > 0) {
       loadMemberCounts();
     }
-  }, [userTeams, utils]);
+  }, [userTeams, getMembers]);
   
   // Convert UserTeam to Team format for TeamsLanding
   const teamsForLanding = userTeams.map(userTeam => ({
