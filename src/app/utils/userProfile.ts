@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 /**
  * User profile utilities for Science Olympiad platform
@@ -32,7 +33,7 @@ const defaultProfile: UserProfile = {};
  * @returns {UserProfile} Local profile data
  */
 const getLocalProfile = (): UserProfile => {
-  const localProfile = localStorage.getItem('userProfile');
+  const localProfile = SyncLocalStorage.getItem('userProfile');
   if (localProfile) {
     try {
       return { ...defaultProfile, ...JSON.parse(localProfile) };
@@ -51,7 +52,7 @@ const getLocalProfile = (): UserProfile => {
  * @param {UserProfile} profile - Profile data to save
  */
 const saveLocalProfile = (profile: UserProfile) => {
-  localStorage.setItem('userProfile', JSON.stringify(profile));
+  SyncLocalStorage.setItem('userProfile', JSON.stringify(profile));
 };
 
 // --- supabase functions for logged-in users ---

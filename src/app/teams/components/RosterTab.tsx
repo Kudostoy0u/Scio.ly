@@ -5,6 +5,8 @@ import { useTheme } from '@/app/contexts/ThemeContext';
 import { toast } from 'react-toastify';
 import AssignmentCreator from './EnhancedAssignmentCreator';
 import { useTeamStore } from '@/app/hooks/useTeamStore';
+import { trpc } from '@/lib/trpc/client';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 // Import roster components
 import RosterHeader from './roster/RosterHeader';
@@ -44,9 +46,15 @@ export default function RosterTab({
 }: RosterTabProps) {
   const { darkMode } = useTheme();
   const {
-    getRoster,
     invalidateCache
   } = useTeamStore();
+
+  // tRPC queries and mutations
+  const { data: rosterData } = trpc.teams.getRoster.useQuery(
+    { teamSlug: team.slug, subteamId: activeSubteamId || '' },
+    { enabled: !!activeSubteamId && !!team.slug }
+  );
+  const updateRosterBulkMutation = trpc.teams.updateRosterBulk.useMutation();
   const [roster, setRoster] = useState<Record<string, string[]>>({});
   const [isSaving, setIsSaving] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -67,13 +75,15 @@ export default function RosterTab({
 
   const groups = team.division === 'B' ? DIVISION_B_GROUPS : DIVISION_C_GROUPS;
 
+  // Removed duplicate useEffect - the second one handles roster loading
+
   // localStorage utilities for removed events
   const getRemovedEventsCacheKey = useCallback((teamSlug: string, subteamId: string) => 
     `removed_events_${teamSlug}_${subteamId}`, []);
 
   const loadRemovedEventsFromCache = useCallback((teamSlug: string, subteamId: string): Set<string> => {
     try {
-      const cached = localStorage.getItem(getRemovedEventsCacheKey(teamSlug, subteamId));
+      const cached = SyncLocalStorage.getItem(getRemovedEventsCacheKey(teamSlug, subteamId));
       return cached ? new Set<string>(JSON.parse(cached)) : new Set<string>();
     } catch (error) {
       console.error('Error loading removed events from cache:', error);
@@ -83,7 +93,7 @@ export default function RosterTab({
 
   const saveRemovedEventsToCache = useCallback((teamSlug: string, subteamId: string, events: Set<string>) => {
     try {
-      localStorage.setItem(getRemovedEventsCacheKey(teamSlug, subteamId), JSON.stringify(Array.from(events)));
+      SyncLocalStorage.setItem(getRemovedEventsCacheKey(teamSlug, subteamId), JSON.stringify(Array.from(events)));
     } catch (error) {
       console.error('Error saving removed events to cache:', error);
     }
@@ -118,30 +128,35 @@ export default function RosterTab({
     }
   }, [activeSubteamId, loadRemovedEvents]);
 
-  // Update local roster when global roster changes
+  // Update local roster when tRPC data changes
   useEffect(() => {
-    if (activeSubteamId) {
-      const rosterData = getRoster(team.slug, activeSubteamId);
+    if (rosterData) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📊 [ROSTER TAB] Received roster data from tRPC:', {
+          roster: rosterData.roster,
+          removedEvents: rosterData.removedEvents,
+          keys: Object.keys(rosterData.roster),
+          isEmpty: Object.keys(rosterData.roster).length === 0
+        });
+      }
+      
       setRoster(rosterData.roster);
+      
       // Check for conflicts when roster is loaded
       if (Object.keys(rosterData.roster).length > 0) {
         const detectedConflicts = detectConflicts(rosterData.roster, groups);
         setConflicts(detectedConflicts);
       }
     }
-  }, [activeSubteamId, team.slug, getRoster, groups]);
+  }, [rosterData, groups]);
 
-  // Update removed events when global removed events change
+  // Update removed events when tRPC data changes
   useEffect(() => {
-    if (activeSubteamId) {
-      const rosterData = getRoster(team.slug, activeSubteamId);
-      if (rosterData.removedEvents.length > 0) {
-        setRemovedEvents(new Set(rosterData.removedEvents));
-        // Update cache with fresh data
-        saveRemovedEventsToCache(team.slug, activeSubteamId, new Set(rosterData.removedEvents));
-      }
+    if (rosterData && rosterData.removedEvents.length > 0) {
+      setRemovedEvents(new Set(rosterData.removedEvents));
+      saveRemovedEventsToCache(team.slug, activeSubteamId || '', new Set(rosterData.removedEvents));
     }
-  }, [activeSubteamId, team.slug, getRoster, saveRemovedEventsToCache]);
+  }, [rosterData, team.slug, activeSubteamId, saveRemovedEventsToCache]);
 
   // Update rosterRef when roster changes
   useEffect(() => {
@@ -157,33 +172,49 @@ export default function RosterTab({
     };
   }, [activeSubteamId]);
 
-  // Save roster data
+  // Save roster data - OPTIMIZED BULK VERSION
   const saveRoster = async () => {
     if (!activeSubteamId) return;
     
     try {
-      // Save each event's roster data using the current ref value
+      // Prepare all roster entries for bulk update
+      const rosterEntries: Array<{
+        eventName: string;
+        slotIndex: number;
+        studentName: string;
+      }> = [];
+
+      // Collect all roster entries from the current ref value
       for (const [eventName, students] of Object.entries(rosterRef.current)) {
         for (let slotIndex = 0; slotIndex < students.length; slotIndex++) {
           const studentName = students[slotIndex] || '';
-          await fetch(`/api/teams/${team.slug}/roster`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              subteamId: activeSubteamId,
+          if (studentName.trim()) { // Only include non-empty entries
+            rosterEntries.push({
               eventName,
               slotIndex,
               studentName
-            })
-          });
+            });
+          }
         }
+      }
+
+      // Single bulk API call instead of multiple individual calls
+      if (rosterEntries.length > 0) {
+        await updateRosterBulkMutation.mutateAsync({
+          teamSlug: team.slug,
+          subteamId: activeSubteamId,
+          rosterEntries
+        });
       }
       
       // Invalidate members cache so PeopleTab shows new unlinked members
-      console.log('Invalidating cache after roster save:', {
-        allMembers: `members-${team.slug}-all`,
-        subteamMembers: `members-${team.slug}-${activeSubteamId}`
-      });
+      // Only log in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Invalidating cache after roster save:', {
+          allMembers: `members-${team.slug}-all`,
+          subteamMembers: `members-${team.slug}-${activeSubteamId}`
+        });
+      }
       invalidateCache(`members-${team.slug}-all`);
       invalidateCache(`members-${team.slug}-${activeSubteamId}`);
       
@@ -368,6 +399,8 @@ export default function RosterTab({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {groups.map((group, index) => {
           const isLastGroup = index === groups.length - 1;
+          
+          // Removed debug logging
           
           return (
             <ConflictBlock

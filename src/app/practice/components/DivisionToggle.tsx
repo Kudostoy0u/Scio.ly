@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { Event, Settings } from '../types';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 export default function DivisionToggle({
   darkMode,
@@ -35,7 +36,7 @@ export default function DivisionToggle({
                   if (!canShowB) return;
                   onSettingsChange({ ...settings, division: 'B' });
                   if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
-                    localStorage.setItem('defaultDivision', 'B');
+                    SyncLocalStorage.setItem('defaultDivision', 'B');
                   }
                 }}
                 disabled={!canShowB}
@@ -57,7 +58,7 @@ export default function DivisionToggle({
                   if (!(canShowB && canShowC)) return;
                   onSettingsChange({ ...settings, division: 'any' });
                   if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
-                    localStorage.setItem('defaultDivision', 'any');
+                    SyncLocalStorage.setItem('defaultDivision', 'any');
                   }
                 }}
                 disabled={!(canShowB && canShowC)}
@@ -79,7 +80,7 @@ export default function DivisionToggle({
                   if (!canShowC) return;
                   onSettingsChange({ ...settings, division: 'C' });
                   if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
-                    localStorage.setItem('defaultDivision', 'C');
+                    SyncLocalStorage.setItem('defaultDivision', 'C');
                   }
                 }}
                 disabled={!canShowC}

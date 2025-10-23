@@ -6,6 +6,7 @@ import { FaBook, FaPen, FaDiscord, FaInstagram, FaGithub, FaFlask, FaBrain, FaUs
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from 'next/navigation';
 import { FiArrowRight } from "react-icons/fi";
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 import Header from '../../components/Header';
 import Image from 'next/image';
@@ -56,7 +57,7 @@ export default function HomeClient() {
   // Sync banner visibility with localStorage and events (same as dashboard/header)
   useEffect(() => {
     const checkBannerVisibility = () => {
-      const bannerClosed = localStorage.getItem('hylas-banner-closed') === 'true';
+      const bannerClosed = SyncLocalStorage.getItem('hylas-banner-closed') === 'true';
       setBannerVisible(!bannerClosed);
     };
     checkBannerVisibility();
@@ -88,7 +89,7 @@ export default function HomeClient() {
       {bannerVisible && (
         <HylasBanner onClose={() => {
           try {
-            localStorage.setItem('hylas-banner-closed', 'true');
+            SyncLocalStorage.setItem('hylas-banner-closed', 'true');
             window.dispatchEvent(new CustomEvent('banner-closed'));
           } catch {}
           setBannerVisible(false);

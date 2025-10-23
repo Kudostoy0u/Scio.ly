@@ -1,7 +1,7 @@
 // Dynamic environment detection for better testability
 const getIsDev = () => process.env.NODE_ENV === 'development';
 const getIsTest = () => process.env.NODE_ENV === 'test';
-const getIsDeveloperMode = () => process.env.DEVELOPER_MODE === 'true' || getIsDev();
+const getIsDeveloperMode = () => getIsDev();
 
 /**
  * Centralized logger utility with enhanced developer mode support

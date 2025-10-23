@@ -1,5 +1,6 @@
 'use client';
 import logger from '@/lib/utils/logger';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 
 import { useRouter } from 'next/navigation';
@@ -88,7 +89,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
       return;
     }
 
-    const storedParams = localStorage.getItem('testParams');
+    const storedParams = SyncLocalStorage.getItem('testParams');
     const routerParams = initialRouterData || (storedParams ? JSON.parse(storedParams) : {});
     if (!routerParams || Object.keys(routerParams).length === 0) {
       router.push('/');
@@ -97,7 +98,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     setRouterData(routerParams);
 
 
-    const storedQuestions = localStorage.getItem('unlimitedQuestions');
+    const storedQuestions = SyncLocalStorage.getItem('unlimitedQuestions');
     if (storedQuestions) {
       const parsedQuestions = JSON.parse(storedQuestions);
       setData(parsedQuestions);
@@ -141,7 +142,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
         setCurrentQuestionIndex(0);
         setAnsweredInBatch(0);
         const serialized = JSON.stringify(questions, (key, value) => key === 'imageData' ? undefined : value);
-        localStorage.setItem('unlimitedQuestions', serialized);
+        SyncLocalStorage.setItem('unlimitedQuestions', serialized);
         setIsLoading(false);
       } catch {
         setFetchError('Failed to load questions. Please try again later.');
@@ -193,9 +194,9 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
 
     return () => {
       if (window.location.pathname !== '/unlimited') {
-        localStorage.removeItem('unlimitedQuestions');
-        localStorage.removeItem('testParams');
-        localStorage.removeItem('contestedUnlimitedQuestions');
+        SyncLocalStorage.removeItem('unlimitedQuestions');
+        SyncLocalStorage.removeItem('testParams');
+        SyncLocalStorage.removeItem('contestedUnlimitedQuestions');
       }
     };
   }, []);
@@ -283,13 +284,13 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
         if (batchReloadingRef.current) return;
         batchReloadingRef.current = true;
         // Clear stored batch so next mount won't restore old
-        try { localStorage.removeItem('unlimitedQuestions'); } catch {}
+        try { SyncLocalStorage.removeItem('unlimitedQuestions'); } catch {}
         // Trigger fresh load by re-running initial effect logic minimally
         (async () => {
           setIsLoading(true);
           setFetchError(null);
           try {
-            const paramsStr = localStorage.getItem('testParams');
+            const paramsStr = SyncLocalStorage.getItem('testParams');
             const routerParams = initialRouterData || (paramsStr ? JSON.parse(paramsStr) : {});
             let questions = await fetchQuestionsForParams(routerParams, BATCH_SIZE);
             const seed = Date.now();
@@ -317,7 +318,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
             setCurrentQuestionIndex(0);
             setAnsweredInBatch(0);
             const serialized = JSON.stringify(questions, (key, value) => key === 'imageData' ? undefined : value);
-            localStorage.setItem('unlimitedQuestions', serialized);
+            SyncLocalStorage.setItem('unlimitedQuestions', serialized);
           } catch {
             setFetchError('Failed to load questions. Please try again later.');
           } finally {
@@ -421,7 +422,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
           const updatedData = data.map((q, idx) => 
             idx === questionIndex ? editedQuestion : q
           );
-          localStorage.setItem('unlimitedQuestions', JSON.stringify(updatedData));
+          SyncLocalStorage.setItem('unlimitedQuestions', JSON.stringify(updatedData));
           
           handleEditSubmitted(questionIndex);
         }
@@ -474,9 +475,9 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     setExplanations({});
     
 
-    localStorage.removeItem('unlimitedQuestions');
-    localStorage.removeItem('testParams');
-    localStorage.removeItem('contestedUnlimitedQuestions');
+    SyncLocalStorage.removeItem('unlimitedQuestions');
+    SyncLocalStorage.removeItem('testParams');
+    SyncLocalStorage.removeItem('contestedUnlimitedQuestions');
     
     router.push('/practice');
   };

@@ -422,8 +422,12 @@ export class CockroachDBTeamsService {
     status: string;
     invitedBy?: string;
   }): Promise<TeamMembership> {
+    console.log('=== CREATE TEAM MEMBERSHIP DEBUG START ===');
+    console.log('Membership data:', data);
+    
     try {
       // First, check if a membership already exists for this user and team
+      console.log('Checking for existing membership...');
       const existingMembership = await dbPg
         .select()
         .from(newTeamMemberships)
@@ -433,9 +437,12 @@ export class CockroachDBTeamsService {
         ))
         .limit(1);
 
+      console.log('Existing membership check result:', existingMembership.length);
+
       if (existingMembership.length > 0) {
         console.log(`Membership already exists for user ${data.userId} in team ${data.teamId}, updating status to ${data.status}`);
         // Update the existing membership with new status and role
+        console.log('Updating existing membership...');
         const [updatedMembership] = await dbPg
           .update(newTeamMemberships)
           .set({
@@ -449,7 +456,13 @@ export class CockroachDBTeamsService {
           ))
           .returning();
 
-        return {
+        console.log('Updated membership:', updatedMembership);
+
+        // Also update the corresponding new_team_people entry if it exists
+        console.log('Syncing team people entry for existing membership...');
+        await this.syncTeamPeopleEntry(data.userId, data.teamId, data.role);
+
+        const result = {
           id: updatedMembership.id,
           user_id: updatedMembership.userId,
           team_id: updatedMembership.teamId,
@@ -459,9 +472,14 @@ export class CockroachDBTeamsService {
           status: updatedMembership.status as 'active' | 'inactive' | 'pending' | 'banned',
           permissions: updatedMembership.permissions as Record<string, any> | undefined
         };
+        
+        console.log('Returning updated membership result:', result);
+        console.log('=== CREATE TEAM MEMBERSHIP DEBUG END (UPDATE) ===');
+        return result;
       }
 
       // If no existing membership, create a new one
+      console.log('Creating new membership...');
       const [result] = await dbPg
         .insert(newTeamMemberships)
         .values({
@@ -473,7 +491,13 @@ export class CockroachDBTeamsService {
         })
         .returning();
 
-      return {
+      console.log('Created new membership:', result);
+
+      // Also create a corresponding new_team_people entry
+      console.log('Syncing team people entry for new membership...');
+      await this.syncTeamPeopleEntry(data.userId, data.teamId, data.role);
+
+      const finalResult = {
         id: result.id,
         user_id: result.userId,
         team_id: result.teamId,
@@ -483,15 +507,94 @@ export class CockroachDBTeamsService {
         status: result.status as 'active' | 'inactive' | 'pending' | 'banned',
         permissions: result.permissions as Record<string, any> | undefined
       };
+      
+      console.log('Returning new membership result:', finalResult);
+      console.log('=== CREATE TEAM MEMBERSHIP DEBUG END (CREATE) ===');
+      return finalResult;
     } catch (error) {
       console.error('Error creating team membership in CockroachDB:', error);
+      console.log('=== CREATE TEAM MEMBERSHIP DEBUG END (ERROR) ===');
       throw error;
     }
   }
 
+  /**
+   * Sync team people entry when team membership is created or updated
+   */
+  private async syncTeamPeopleEntry(userId: string, teamId: string, role: string): Promise<void> {
+    console.log('=== SYNC TEAM PEOPLE ENTRY DEBUG START ===');
+    console.log('User ID:', userId, 'Team ID:', teamId, 'Role:', role);
+    
+    try {
+      // Get user's display name
+      console.log('Fetching user info for team people sync...');
+      const userResult = await queryCockroachDB<{ display_name: string, username: string, email: string }>(
+        `SELECT display_name, username, email FROM users WHERE id = $1`,
+        [userId]
+      );
+
+      console.log('User query result:', userResult.rows);
+
+      if (userResult.rows.length === 0) {
+        console.warn(`User ${userId} not found for team people sync`);
+        console.log('=== SYNC TEAM PEOPLE ENTRY DEBUG END (USER NOT FOUND) ===');
+        return;
+      }
+
+      const userInfo = userResult.rows[0];
+      const displayName = userInfo.display_name || userInfo.username || userInfo.email?.split('@')[0] || 'Unknown User';
+      const isAdmin = role === 'captain' || role === 'co_captain';
+      
+      console.log('User info:', userInfo);
+      console.log('Display name:', displayName);
+      console.log('Is admin:', isAdmin);
+
+      // Check if entry already exists
+      console.log('Checking for existing team people entry...');
+      const existingEntry = await queryCockroachDB<{ id: string }>(
+        `SELECT id FROM new_team_people WHERE user_id = $1 AND team_unit_id = $2`,
+        [userId, teamId]
+      );
+
+      console.log('Existing entry check result:', existingEntry.rows.length);
+
+      if (existingEntry.rows.length > 0) {
+        // Update existing entry
+        console.log('Updating existing team people entry...');
+        await queryCockroachDB(
+          `UPDATE new_team_people 
+           SET name = $1, is_admin = $2, updated_at = NOW()
+           WHERE user_id = $3 AND team_unit_id = $4`,
+          [displayName, isAdmin ? 'true' : 'false', userId, teamId]
+        );
+        console.log(`Updated team people entry for user ${userId} in team ${teamId}`);
+      } else {
+        // Create new entry
+        console.log('Creating new team people entry...');
+        await queryCockroachDB(
+          `INSERT INTO new_team_people (team_unit_id, name, user_id, is_admin, events, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, '[]', NOW(), NOW())`,
+          [teamId, displayName, userId, isAdmin ? 'true' : 'false']
+        );
+        console.log(`Created team people entry for user ${userId} in team ${teamId}`);
+      }
+      
+      console.log('=== SYNC TEAM PEOPLE ENTRY DEBUG END (SUCCESS) ===');
+    } catch (error) {
+      console.error('Error syncing team people entry:', error);
+      console.log('=== SYNC TEAM PEOPLE ENTRY DEBUG END (ERROR) ===');
+      // Don't throw error to avoid breaking the main flow
+    }
+  }
+
   async joinTeamByCode(userId: string, code: string): Promise<TeamWithDetails | null> {
+    console.log('=== JOIN TEAM BY CODE DEBUG START ===');
+    console.log('User ID:', userId);
+    console.log('Join code:', code);
+    
     try {
       // Find team by captain_code or user_code using Drizzle ORM
+      console.log('Searching for team with code:', code);
       const teams = await dbPg
         .select({
           id: newTeamUnits.id,
@@ -512,13 +615,19 @@ export class CockroachDBTeamsService {
           )
         );
 
+      console.log('Teams found:', teams.length);
+      console.log('Teams data:', teams);
+
       if (teams.length === 0) {
+        console.log('No teams found with code:', code);
         return null;
       }
 
       const team = teams[0];
+      console.log('Found team:', team);
 
       // Check if user is already a member using Drizzle ORM
+      console.log('Checking existing memberships for user:', userId, 'team:', team.id);
       const existingMemberships = await dbPg
         .select()
         .from(newTeamMemberships)
@@ -529,9 +638,14 @@ export class CockroachDBTeamsService {
           )
         );
 
+      console.log('Existing memberships found:', existingMemberships.length);
+      console.log('Existing memberships data:', existingMemberships);
+
       if (existingMemberships.length > 0) {
+        console.log('User is already a member, returning team details');
         // User is already a member, return team details
         const members = await this.getTeamMembers(team.id);
+        console.log('Team members:', members.length);
         return {
           id: team.id,
           name: team.teamId, // Use teamId as name since name column was removed
@@ -561,19 +675,24 @@ export class CockroachDBTeamsService {
       // Determine role based on code type
       const isCaptain = team.captainCode === code;
       const role = isCaptain ? 'captain' : 'member';
+      console.log('Determined role:', role, 'isCaptain:', isCaptain);
 
       // Add user to team
+      console.log('Creating team membership for user:', userId, 'team:', team.id, 'role:', role);
       const membership = await this.createTeamMembership({
         userId,
         teamId: team.id,
         role,
         status: 'active'
       });
+      console.log('Created membership:', membership);
 
       // Get team members
+      console.log('Fetching team members for team:', team.id);
       const members = await this.getTeamMembers(team.id);
+      console.log('Team members count:', members.length);
 
-      return {
+      const result = {
         id: team.id,
         name: team.teamId, // Use teamId as name since name column was removed
         slug: team.slug,
@@ -597,8 +716,13 @@ export class CockroachDBTeamsService {
           };
         }))
       };
+      
+      console.log('Returning team details:', result);
+      console.log('=== JOIN TEAM BY CODE DEBUG END ===');
+      return result;
     } catch (error) {
       console.error('Error joining team by code in CockroachDB:', error);
+      console.log('=== JOIN TEAM BY CODE DEBUG END (ERROR) ===');
       throw error;
     }
   }

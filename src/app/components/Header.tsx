@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import AuthButton from '@/app/components/AuthButton';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 import { usePathname } from 'next/navigation';
 import { Upload, SquarePlus, Chrome as ChromeIcon, Smartphone, MonitorSmartphone, CheckCircle2, AlertTriangle, X as CloseIcon, Compass, Download, ChevronDown } from 'lucide-react';
@@ -41,7 +42,7 @@ export default function Header() {
   useEffect(() => {
     if (isDashboard || isHomePage) {
       const checkBannerVisibility = () => {
-        const bannerClosed = localStorage.getItem('hylas-banner-closed') === 'true';
+        const bannerClosed = SyncLocalStorage.getItem('hylas-banner-closed') === 'true';
         setBannerVisible(!bannerClosed);
       };
       

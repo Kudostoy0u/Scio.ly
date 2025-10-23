@@ -1,6 +1,7 @@
 // Utility functions for Stream components
 
 import { TimeRemaining } from './streamTypes';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 // Calculate time remaining for a tournament
 export const calculateTimeRemaining = (startTime: string): TimeRemaining => {
@@ -117,7 +118,7 @@ export const getEventsCacheKey = (teamSlug: string, subteamId: string) =>
 
 export const loadFromCache = <T>(key: string): T[] => {
   try {
-    const cached = localStorage.getItem(key);
+    const cached = SyncLocalStorage.getItem(key);
     return cached ? JSON.parse(cached) : [];
   } catch (error) {
     console.error('Error loading from cache:', error);
@@ -127,7 +128,7 @@ export const loadFromCache = <T>(key: string): T[] => {
 
 export const saveToCache = <T>(key: string, data: T[]) => {
   try {
-    localStorage.setItem(key, JSON.stringify(data));
+    SyncLocalStorage.setItem(key, JSON.stringify(data));
   } catch (error) {
     console.error('Error saving to cache:', error);
   }

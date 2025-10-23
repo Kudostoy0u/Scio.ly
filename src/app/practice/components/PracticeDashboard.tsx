@@ -1,5 +1,6 @@
 'use client';
 import logger from '@/lib/utils/logger';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 
 import { useState, useEffect } from 'react';
@@ -49,14 +50,14 @@ export default function PracticeDashboard() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedQuestionCount = localStorage.getItem('defaultQuestionCount');
-      const storedTimeLimit = localStorage.getItem('defaultTimeLimit');
-      const storedDivision = localStorage.getItem('defaultDivision') || 'any';
-      const storedQuestionTypes = localStorage.getItem('defaultQuestionTypes') || 'multiple-choice';
-      const storedIdPercentage = localStorage.getItem('defaultIdPercentage');
-      const storedPureIdOnly = localStorage.getItem('defaultPureIdOnly');
-      const storedCharLengthMin = localStorage.getItem('codebustersCharLengthMin');
-      const storedCharLengthMax = localStorage.getItem('codebustersCharLengthMax');
+      const storedQuestionCount = SyncLocalStorage.getItem('defaultQuestionCount');
+      const storedTimeLimit = SyncLocalStorage.getItem('defaultTimeLimit');
+      const storedDivision = SyncLocalStorage.getItem('defaultDivision') || 'any';
+      const storedQuestionTypes = SyncLocalStorage.getItem('defaultQuestionTypes') || 'multiple-choice';
+      const storedIdPercentage = SyncLocalStorage.getItem('defaultIdPercentage');
+      const storedPureIdOnly = SyncLocalStorage.getItem('defaultPureIdOnly');
+      const storedCharLengthMin = SyncLocalStorage.getItem('codebustersCharLengthMin');
+      const storedCharLengthMax = SyncLocalStorage.getItem('codebustersCharLengthMax');
       
       const questionCount = storedQuestionCount ? parseInt(storedQuestionCount) : NORMAL_DEFAULTS.questionCount;
       const timeLimit = storedTimeLimit ? parseInt(storedTimeLimit) : NORMAL_DEFAULTS.timeLimit;
@@ -225,22 +226,22 @@ export default function PracticeDashboard() {
       if (selectedEventObj.name === 'Codebusters') {
 
         if (typeof window !== 'undefined') {
-          const codebustersQuestionCount = localStorage.getItem('codebustersQuestionCount');
-          const codebustersTimeLimit = localStorage.getItem('codebustersTimeLimit');
+          const codebustersQuestionCount = SyncLocalStorage.getItem('codebustersQuestionCount');
+          const codebustersTimeLimit = SyncLocalStorage.getItem('codebustersTimeLimit');
           
           const questionCount = codebustersQuestionCount ? parseInt(codebustersQuestionCount) : 3;
           const timeLimit = codebustersTimeLimit ? parseInt(codebustersTimeLimit) : 15;
           
 
           if (!codebustersQuestionCount) {
-            localStorage.setItem('codebustersQuestionCount', '3');
+            SyncLocalStorage.setItem('codebustersQuestionCount', '3');
           }
           if (!codebustersTimeLimit) {
-            localStorage.setItem('codebustersTimeLimit', '15');
+            SyncLocalStorage.setItem('codebustersTimeLimit', '15');
           }
 
           const savedDivision = (() => {
-            const stored = localStorage.getItem('defaultDivision');
+            const stored = SyncLocalStorage.getItem('defaultDivision');
             return stored === 'B' || stored === 'C' || stored === 'any' ? stored : 'any';
           })();
           const availableDivisions = selectedEventObj.divisions || ['B', 'C'];
@@ -284,24 +285,24 @@ export default function PracticeDashboard() {
 
         const defaultQuestionCount = (() => {
           if (typeof window === 'undefined') return NORMAL_DEFAULTS.questionCount;
-          const stored = localStorage.getItem('defaultQuestionCount');
+          const stored = SyncLocalStorage.getItem('defaultQuestionCount');
           const parsed = stored ? parseInt(stored) : NORMAL_DEFAULTS.questionCount;
           return isNaN(parsed) ? NORMAL_DEFAULTS.questionCount : parsed;
         })();
         const defaultTimeLimit = (() => {
           if (typeof window === 'undefined') return NORMAL_DEFAULTS.timeLimit;
-          const stored = localStorage.getItem('defaultTimeLimit');
+          const stored = SyncLocalStorage.getItem('defaultTimeLimit');
           const parsed = stored ? parseInt(stored) : NORMAL_DEFAULTS.timeLimit;
           return isNaN(parsed) ? NORMAL_DEFAULTS.timeLimit : parsed;
         })();
         const savedDivision = (() => {
           if (typeof window === 'undefined') return 'any';
-          const stored = localStorage.getItem('defaultDivision');
+          const stored = SyncLocalStorage.getItem('defaultDivision');
           return stored === 'B' || stored === 'C' || stored === 'any' ? stored : 'any';
         })();
         const savedTypes = (() => {
           if (typeof window === 'undefined') return 'multiple-choice';
-          const stored = localStorage.getItem('defaultQuestionTypes');
+          const stored = SyncLocalStorage.getItem('defaultQuestionTypes');
           return stored === 'multiple-choice' || stored === 'both' || stored === 'free-response' ? stored : 'multiple-choice';
         })();
         // Check if this event supports picture questions
@@ -347,7 +348,7 @@ export default function PracticeDashboard() {
         
         const savedIdPercentage = (() => {
           if (typeof window === 'undefined') return 0;
-          const stored = localStorage.getItem('defaultIdPercentage');
+          const stored = SyncLocalStorage.getItem('defaultIdPercentage');
           const parsed = stored ? parseInt(stored) : 0;
           // Only use the cached value if this event supports picture questions
           return supportsPictureQuestions && !isNaN(parsed) ? parsed : 0;
@@ -355,7 +356,7 @@ export default function PracticeDashboard() {
         
         const savedPureIdOnly = (() => {
           if (typeof window === 'undefined') return false;
-          const stored = localStorage.getItem('defaultPureIdOnly');
+          const stored = SyncLocalStorage.getItem('defaultPureIdOnly');
           // Only use the cached value if this event supports pure ID
           return supportsIdentificationOnly && stored === 'true';
         })();

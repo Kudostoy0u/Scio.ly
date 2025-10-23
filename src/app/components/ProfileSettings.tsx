@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User as UserIcon, Save } from 'lucide-react';
 import { useTheme } from '@/app/contexts/ThemeContext';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 export default function ProfileSettings({ onClose }: { onClose: () => void }) {
   const { darkMode } = useTheme();
@@ -63,7 +64,7 @@ export default function ProfileSettings({ onClose }: { onClose: () => void }) {
         const display = (displayName || '').trim();
         const chosen = first || (display ? display.split(' ')[0] : '');
         if (chosen) {
-          localStorage.setItem('scio_display_name', chosen);
+          SyncLocalStorage.setItem('scio_display_name', chosen);
           try { window.dispatchEvent(new CustomEvent('scio-display-name-updated', { detail: chosen })); } catch {}
         }
       } catch {}

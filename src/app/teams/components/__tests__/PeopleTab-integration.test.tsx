@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { trpc } from '@/lib/trpc/client';
-import { httpBatchLink } from '@trpc/client';
+// import { trpc } from '@/lib/trpc/client';
+// import { httpBatchLink } from '@trpc/client';
 import { useState } from 'react';
 
 // Mock the team store
@@ -39,7 +39,7 @@ vi.mock('react-toastify', () => ({
 
 // Test component that simulates the PeopleTab functionality
 function TestPeopleTab({ teamSlug, subteamId }: { teamSlug: string; subteamId: string }) {
-  const [members, setMembers] = useState([
+  const [members] = useState([
     {
       id: 'user-123',
       name: 'John Doe',
@@ -206,7 +206,7 @@ describe('PeopleTab Integration Tests', () => {
 
       // Create a member with an event containing "and"
       const TestComponentWithAndEvent = () => {
-        const [members, setMembers] = useState([
+        const [members] = useState([
           {
             id: 'user-123',
             name: 'John Doe',
@@ -337,7 +337,7 @@ describe('PeopleTab Integration Tests', () => {
 
       // Test component that adds an event with "and"
       const TestComponentWithAndEvent = () => {
-        const [members, setMembers] = useState([
+        const [members] = useState([
           {
             id: 'user-123',
             name: 'John Doe',

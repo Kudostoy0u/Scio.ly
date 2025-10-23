@@ -11,6 +11,28 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
+import type { AppRouter } from '@/lib/trpc/routers/_app';
+import superjson from 'superjson';
+
+// Create a vanilla tRPC client for use in Zustand store
+const trpcClient = createTRPCProxyClient<AppRouter>({
+  links: [
+    httpBatchLink({
+      url: '/api/trpc',
+      transformer: superjson,
+      headers: () => ({
+        'Content-Type': 'application/json',
+      }),
+      fetch: (url, options) => {
+        return fetch(url, {
+          ...options,
+          credentials: 'include',
+        });
+      },
+    }),
+  ],
+});
 
 // Types
 export interface UserTeam {
@@ -32,7 +54,7 @@ export interface Subteam {
 
 export interface TeamMember {
   id: string | null; // null for unlinked roster members
-  name: string;
+  name: string | null; // Can be null for unlinked roster members
   email: string | null; // null for unlinked roster members
   role: string;
   events: string[];
@@ -51,7 +73,7 @@ export interface TeamMember {
 
 export interface RosterData {
   roster: Record<string, string[]>;
-  removedEvents: string[];
+  removed_events: string[];
 }
 
 export interface StreamComment {
@@ -175,6 +197,8 @@ interface TeamStoreActions {
   // Data updates
   updateRoster: (teamSlug: string, subteamId: string, roster: RosterData) => void;
   updateMembers: (teamSlug: string, subteamId: string, members: TeamMember[]) => void;
+  updateSubteams: (teamSlug: string, subteams: Subteam[]) => void;
+  updateAssignments: (teamSlug: string, assignments: Assignment[]) => void;
   
   // Cache management
   clearCache: (type: string, ...params: string[]) => void;
@@ -193,6 +217,14 @@ interface TeamStoreActions {
   // Utility
   getCacheKey: (type: string, ...params: string[]) => string;
   isDataFresh: (key: string, maxAge?: number) => boolean;
+  
+  // Optimistic roster updates
+  addRosterEntry: (teamSlug: string, subteamId: string, eventName: string, slotIndex: number, studentName: string) => void;
+  removeRosterEntry: (teamSlug: string, subteamId: string, eventName: string, slotIndex: number) => void;
+  
+  // Optimistic member updates
+  addMemberEvent: (teamSlug: string, subteamId: string, memberId: string | null, memberName: string, eventName: string) => void;
+  removeMemberEvent: (teamSlug: string, subteamId: string, memberId: string | null, memberName: string, eventName: string) => void;
 }
 
 // Cache configuration
@@ -310,10 +342,16 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
       
       try {
         const teams = await fetchWithDeduplication(key, async () => {
-          const response = await fetch('/api/teams/user-teams');
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const result = await response.json();
-          return result.teams || [];
+          const result = await trpcClient.teams.getUserTeams.query();
+          // Map the result to match the expected UserTeam interface
+          return (result.teams || []).map((team: any) => ({
+            id: team.id,
+            slug: team.slug,
+            school: team.school,
+            division: team.division as 'B' | 'C',
+            user_role: team.user_role || team.role || 'member',
+            name: team.name
+          }));
         });
         
         set(state => ({
@@ -355,14 +393,15 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
       
       try {
         const subteams = await fetchWithDeduplication(key, async () => {
-          const response = await fetch(`/api/teams/${teamSlug}/subteams`);
-          if (response.status === 403) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'You are not a member of this team');
-          }
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const result = await response.json();
-          return result.subteams || [];
+          const result = await trpcClient.teams.getSubteams.query({ teamSlug });
+          // Map the result to match the expected Subteam interface
+          return (result.subteams || []).map((subteam: any) => ({
+            id: subteam.id,
+            name: subteam.name,
+            team_id: subteam.team_id,
+            description: subteam.description || '',
+            created_at: subteam.created_at
+          }));
         });
         
         set(state => ({
@@ -394,9 +433,25 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
     fetchRoster: async (teamSlug: string, subteamId: string) => {
       const key = get().getCacheKey('roster', teamSlug, subteamId);
       
-      // Check if data is fresh
-      if (get().isDataFresh(key, CACHE_DURATIONS.roster) && get().roster[key]) {
-        return get().roster[key];
+      // Check if data is fresh and not empty
+      const cachedRoster = get().roster[key];
+      const isFresh = get().isDataFresh(key, CACHE_DURATIONS.roster);
+      const hasData = cachedRoster && Object.keys(cachedRoster.roster || {}).length > 0;
+      
+      // Debug logging
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 [STORE FETCH ROSTER] Cache check:', {
+          key,
+          isFresh,
+          hasCachedData: !!cachedRoster,
+          hasRosterData: hasData,
+          cachedRoster: cachedRoster?.roster,
+          rosterKeys: Object.keys(cachedRoster?.roster || {})
+        });
+      }
+      
+      if (isFresh && hasData) {
+        return cachedRoster;
       }
       
       // Set loading state
@@ -412,17 +467,28 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
       }));
       
       try {
+        // Debug logging
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔍 [STORE FETCH ROSTER] Making tRPC call:', { teamSlug, subteamId, key });
+        }
+        
         const rosterData = await fetchWithDeduplication(key, async () => {
-          const response = await fetch(`/api/teams/${teamSlug}/roster?subteamId=${subteamId}`);
-          if (response.status === 403) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'You are not a member of this team');
+          const result = await trpcClient.teams.getRoster.query({ teamSlug, subteamId });
+          
+          // Debug logging
+          if (process.env.NODE_ENV === 'development') {
+            console.log('🔍 [STORE FETCH ROSTER] tRPC result:', {
+              teamSlug,
+              subteamId,
+              result,
+              rosterKeys: Object.keys(result.roster || {}),
+              hasRosterData: Object.keys(result.roster || {}).length > 0
+            });
           }
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const result = await response.json();
+          
           return {
             roster: result.roster || {},
-            removedEvents: result.removedEvents || []
+            removed_events: result.removedEvents || []
           };
         });
         
@@ -474,14 +540,10 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
       
       try {
         const members = await fetchWithDeduplication(key, async () => {
-          const subteamParam = subteamId && subteamId !== 'all' ? `?subteamId=${subteamId}` : '';
-          const response = await fetch(`/api/teams/${teamSlug}/members${subteamParam}`);
-          if (response.status === 403) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'You are not a member of this team');
-          }
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const result = await response.json();
+          const result = await trpcClient.teams.getMembers.query({ 
+            teamSlug, 
+            subteamId: subteamId && subteamId !== 'all' ? subteamId : undefined 
+          });
           return result.members || [];
         });
         
@@ -587,10 +649,21 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
       
       try {
         const assignments = await fetchWithDeduplication(key, async () => {
-          const response = await fetch(`/api/teams/${teamSlug}/assignments`);
+          // Use tRPC instead of REST API
+          const response = await fetch('/api/trpc/teams.getAssignments', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              json: { teamSlug },
+              meta: { values: { teamSlug: [undefined] } }
+            })
+          });
+          
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           const result = await response.json();
-          return result.assignments || [];
+          return result.result?.data?.assignments || [];
         });
         
         set(state => ({
@@ -846,6 +919,22 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
       }));
     },
     
+    updateSubteams: (teamSlug: string, subteams: Subteam[]) => {
+      const key = get().getCacheKey('subteams', teamSlug);
+      set(state => ({
+        subteams: { ...state.subteams, [key]: subteams },
+        cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() }
+      }));
+    },
+    
+    updateAssignments: (teamSlug: string, assignments: Assignment[]) => {
+      const key = get().getCacheKey('assignments', teamSlug);
+      set(state => ({
+        assignments: { ...state.assignments, [key]: assignments },
+        cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() }
+      }));
+    },
+    
     addStreamPost: (teamSlug: string, subteamId: string, post: StreamPost) => {
       const key = get().getCacheKey('stream', teamSlug, subteamId);
       set(state => ({
@@ -967,6 +1056,89 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
       
       // Wait for all critical data to load
       await Promise.allSettled(promises);
+    },
+    
+    // Optimistic roster updates
+    addRosterEntry: (teamSlug: string, subteamId: string, eventName: string, slotIndex: number, studentName: string) => {
+      const key = get().getCacheKey('roster', teamSlug, subteamId);
+      const currentRoster = get().roster[key];
+      
+      if (currentRoster) {
+        const updatedRoster = { ...currentRoster };
+        if (!updatedRoster[eventName]) {
+          updatedRoster[eventName] = [];
+        }
+        updatedRoster[eventName][slotIndex] = studentName;
+        
+        set(state => ({
+          roster: { ...state.roster, [key]: updatedRoster }
+        }));
+      }
+    },
+    
+    removeRosterEntry: (teamSlug: string, subteamId: string, eventName: string, slotIndex: number) => {
+      const key = get().getCacheKey('roster', teamSlug, subteamId);
+      const currentRoster = get().roster[key];
+      
+      if (currentRoster && currentRoster[eventName]) {
+        const updatedRoster = { ...currentRoster };
+        const updatedEvent = [...updatedRoster[eventName]];
+        updatedEvent[slotIndex] = '';
+        updatedRoster[eventName] = updatedEvent;
+        
+        set(state => ({
+          roster: { ...state.roster, [key]: updatedRoster }
+        }));
+      }
+    },
+    
+    // Optimistic member updates
+    addMemberEvent: (teamSlug: string, subteamId: string, memberId: string | null, memberName: string, eventName: string) => {
+      const key = get().getCacheKey('members', teamSlug, subteamId || 'all');
+      const currentMembers = get().members[key];
+      
+      if (currentMembers) {
+        const updatedMembers = currentMembers.map(member => {
+          // Match by ID if available, otherwise by name
+          const isMatch = memberId ? member.id === memberId : member.name === memberName;
+          
+          if (isMatch) {
+            return {
+              ...member,
+              events: [...(member.events || []), eventName]
+            };
+          }
+          return member;
+        });
+        
+        set(state => ({
+          members: { ...state.members, [key]: updatedMembers }
+        }));
+      }
+    },
+    
+    removeMemberEvent: (teamSlug: string, subteamId: string, memberId: string | null, memberName: string, eventName: string) => {
+      const key = get().getCacheKey('members', teamSlug, subteamId || 'all');
+      const currentMembers = get().members[key];
+      
+      if (currentMembers) {
+        const updatedMembers = currentMembers.map(member => {
+          // Match by ID if available, otherwise by name
+          const isMatch = memberId ? member.id === memberId : member.name === memberName;
+          
+          if (isMatch) {
+            return {
+              ...member,
+              events: (member.events || []).filter(event => event !== eventName)
+            };
+          }
+          return member;
+        });
+        
+        set(state => ({
+          members: { ...state.members, [key]: updatedMembers }
+        }));
+      }
     },
   }))
 );

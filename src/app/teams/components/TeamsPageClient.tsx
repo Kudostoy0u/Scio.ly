@@ -4,10 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { toast } from 'react-toastify';
+import { trpc } from '@/lib/trpc/client';
 import TeamsLanding from './TeamsLanding';
 import CreateTeamModal from './CreateTeamModal';
 import JoinTeamModal from './JoinTeamModal';
 import { useTeamStore } from '@/app/hooks/useTeamStore';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 interface TeamsPageClientProps {
   initialLinkedSelection?: { school: string; division: 'B'|'C'; team_id: string; member_name?: string } | null;
@@ -20,25 +22,25 @@ export default function TeamsPageClient({ initialLinkedSelection: _initialLinked
   const { user } = useAuth();
   const router = useRouter();
   // Use team store instead of separate state management
-  const { userTeams, isUserTeamsLoading: isLoading, invalidateCache, getMembers } = useTeamStore();
+  const { userTeams, isUserTeamsLoading: isLoading, invalidateCache } = useTeamStore();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+  
+  // tRPC mutations at component level
+  const createTeamMutation = trpc.teams.createTeam.useMutation();
+  const joinTeamMutation = trpc.teams.joinTeam.useMutation();
   const [teamMemberCounts, setTeamMemberCounts] = useState<Record<string, { total: number; captains: number }>>({});
 
   // User teams are now loaded by the enhanced hook automatically
 
-  // Load member counts from cache
+  // Load member counts - simplified for now
   useEffect(() => {
     const loadMemberCounts = () => {
       const counts: Record<string, { total: number; captains: number }> = {};
 
-      // Get member counts from cache for each team
+      // Set default counts for now
       userTeams.forEach((userTeam) => {
-        const members = getMembers(userTeam.slug, 'all');
-        counts[userTeam.slug] = {
-          total: members.length,
-          captains: members.filter(m => m.role === 'captain').length
-        };
+        counts[userTeam.slug] = { total: 0, captains: 0 };
       });
 
       setTeamMemberCounts(counts);
@@ -47,7 +49,7 @@ export default function TeamsPageClient({ initialLinkedSelection: _initialLinked
     if (userTeams.length > 0) {
       loadMemberCounts();
     }
-  }, [userTeams, getMembers]);
+  }, [userTeams]);
   
   // Convert UserTeam to Team format for TeamsLanding
   const teamsForLanding = userTeams.map(userTeam => ({
@@ -68,43 +70,31 @@ export default function TeamsPageClient({ initialLinkedSelection: _initialLinked
 
   const handleCreateTeam = async (teamData: any) => {
     try {
-      const response = await fetch('/api/teams/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(teamData),
-      });
-
-      if (response.ok) {
-        const newTeam = await response.json();
-        // Invalidate cache to refresh teams list
-        if (user?.id) {
-          invalidateCache(`user-teams-${user.id}`);
-        }
-        
-        // If team was reactivated, clear subteams cache to ensure fresh data
-        if (newTeam.wasReactivated && newTeam.slug) {
-          console.log('Team was reactivated, clearing subteams cache');
-          // Clear subteams cache for this team
-          if (typeof window !== 'undefined') {
-            // Clear localStorage cache
-            localStorage.removeItem(`subteams-${newTeam.slug}`);
-            // Clear any other relevant caches
-            localStorage.removeItem(`roster-${newTeam.slug}`);
-            localStorage.removeItem(`members-${newTeam.slug}`);
-          }
-        }
-        
-        // Redirect to the team dashboard URL
-        if (newTeam && newTeam.slug) {
-          router.push(`/teams/${newTeam.slug}`);
-        }
-        toast.success('Team created successfully!');
-      } else {
-        const error = await response.json();
-        toast.error(error.error || 'Failed to create team');
+      const newTeam = await createTeamMutation.mutateAsync(teamData);
+      
+      // Invalidate cache to refresh teams list
+      if (user?.id) {
+        invalidateCache(`user-teams-${user.id}`);
       }
+      
+      // If team was reactivated, clear subteams cache to ensure fresh data
+      if (newTeam.wasReactivated && newTeam.slug) {
+        console.log('Team was reactivated, clearing subteams cache');
+        // Clear subteams cache for this team
+        if (typeof window !== 'undefined') {
+          // Clear localStorage cache
+          SyncLocalStorage.removeItem(`subteams-${newTeam.slug}`);
+          // Clear any other relevant caches
+          SyncLocalStorage.removeItem(`roster-${newTeam.slug}`);
+          SyncLocalStorage.removeItem(`members-${newTeam.slug}`);
+        }
+      }
+      
+      // Redirect to the team dashboard URL
+      if (newTeam && newTeam.slug) {
+        router.push(`/teams/${newTeam.slug}`);
+      }
+      toast.success('Team created successfully!');
     } catch (error) {
       console.error('Error creating team:', error);
       toast.error('Failed to create team');
@@ -113,30 +103,18 @@ export default function TeamsPageClient({ initialLinkedSelection: _initialLinked
 
   const handleJoinTeam = async (joinData: any) => {
     try {
-      const response = await fetch('/api/teams/join', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(joinData),
-      });
-
-      if (response.ok) {
-        const joinedTeam = await response.json();
-        // Invalidate cache to refresh teams list
-        if (user?.id) {
-          invalidateCache(`user-teams-${user.id}`);
-        }
-        
-        // Redirect to the team dashboard URL
-        if (joinedTeam && joinedTeam.slug) {
-          router.push(`/teams/${joinedTeam.slug}`);
-        }
-        toast.success('Successfully joined team!');
-      } else {
-        const error = await response.json();
-        toast.error(error.error || 'Failed to join team');
+      const joinedTeam = await joinTeamMutation.mutateAsync(joinData);
+      
+      // Invalidate cache to refresh teams list
+      if (user?.id) {
+        invalidateCache(`user-teams-${user.id}`);
       }
+      
+      // Redirect to the team dashboard URL
+      if (joinedTeam && joinedTeam.slug) {
+        router.push(`/teams/${joinedTeam.slug}`);
+      }
+      toast.success('Successfully joined team!');
     } catch (error) {
       console.error('Error joining team:', error);
       toast.error('Failed to join team');

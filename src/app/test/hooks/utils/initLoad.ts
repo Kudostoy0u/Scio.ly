@@ -11,6 +11,7 @@ import {
   migrateFromLegacyStorage,
 } from '@/app/utils/timeManagement';
 import { fetchQuestionsForParams } from './fetchQuestions';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 type SetState<T> = (value: T) => void;
 
@@ -33,11 +34,11 @@ export async function initLoad({
   setTimeLeft: SetState<number | null>;
   fetchCompletedRef: { current: boolean };
 }): Promise<void> {
-  localStorage.removeItem('testFromBookmarks');
+  SyncLocalStorage.removeItem('testFromBookmarks');
 
   if (fetchCompletedRef.current) return;
 
-  const storedParams = localStorage.getItem('testParams');
+  const storedParams = SyncLocalStorage.getItem('testParams');
   const hasInitial = stableRouterData && Object.keys(stableRouterData).length > 0;
   const routerParams = hasInitial ? stableRouterData : (storedParams ? JSON.parse(storedParams) : {});
   logger.log('init routerParams', { hasInitial, routerParams, hasStoredParams: !!storedParams });
@@ -64,9 +65,9 @@ export async function initLoad({
       // Reset and adopt new session
       const newSession = resetTestSession(eventName, timeLimit);
       try { setTimeLeft(newSession.timeState.timeLeft); } catch {}
-      localStorage.removeItem('testQuestions');
-      localStorage.removeItem('testUserAnswers');
-      localStorage.removeItem('testGradingResults');
+      SyncLocalStorage.removeItem('testQuestions');
+      SyncLocalStorage.removeItem('testUserAnswers');
+      SyncLocalStorage.removeItem('testGradingResults');
     }
   } catch {}
 
@@ -84,11 +85,11 @@ export async function initLoad({
   try { if (session) setTimeLeft(session.timeState.timeLeft); } catch {}
 
   if (session?.isSubmitted) {
-    const storedGrading = localStorage.getItem('testGradingResults');
+    const storedGrading = SyncLocalStorage.getItem('testGradingResults');
     if (storedGrading) {
       try { /* touch parse to validate */ JSON.parse(storedGrading); } catch {}
     }
-    const storedQuestions = localStorage.getItem('testQuestions');
+    const storedQuestions = SyncLocalStorage.getItem('testQuestions');
     if (storedQuestions) {
       try {
         const parsedQuestions = JSON.parse(storedQuestions);
@@ -103,8 +104,8 @@ export async function initLoad({
     }
   }
 
-  const storedQuestions = localStorage.getItem('testQuestions');
-  const isFromBookmarks = localStorage.getItem('testFromBookmarks') === 'true';
+  const storedQuestions = SyncLocalStorage.getItem('testQuestions');
+  const isFromBookmarks = SyncLocalStorage.getItem('testFromBookmarks') === 'true';
   if (storedQuestions) {
     try {
       const parsedQuestions = JSON.parse(storedQuestions);
@@ -117,7 +118,7 @@ export async function initLoad({
         return;
       } else {
         logger.warn('ignoring empty testQuestions cache');
-        localStorage.removeItem('testQuestions');
+        SyncLocalStorage.removeItem('testQuestions');
       }
     } catch {}
   }
@@ -139,7 +140,7 @@ export async function initLoad({
         if (eventBookmarks.length > 0) {
           const questions = eventBookmarks.map(b => b.question);
           setData(questions);
-          localStorage.setItem('testQuestions', JSON.stringify(questions));
+          SyncLocalStorage.setItem('testQuestions', JSON.stringify(questions));
         } else {
           setFetchError('No bookmarked questions found for this event.');
         }
@@ -162,7 +163,7 @@ export async function initLoad({
   try {
     const total = parseInt(routerParams.questionCount || '10');
     const questions = await fetchQuestionsForParams(routerParams, total);
-    localStorage.setItem('testQuestions', JSON.stringify(questions));
+    SyncLocalStorage.setItem('testQuestions', JSON.stringify(questions));
     setData(questions);
   } catch (error) {
     logger.error('Failed to load questions:', error);

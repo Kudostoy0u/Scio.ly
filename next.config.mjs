@@ -18,6 +18,9 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Caching configuration removed - can be re-enabled later
+  // async headers() { ... },
+  // experimental: { ... },
 };
 
 export default nextConfig;

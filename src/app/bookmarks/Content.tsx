@@ -1,5 +1,6 @@
 'use client';
 import logger from '@/lib/utils/logger';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 
 import { useRouter } from 'next/navigation';
@@ -173,24 +174,24 @@ export default function Content() {
     try {
 
       clearTestSession();
-      localStorage.removeItem('testUserAnswers');
-      localStorage.removeItem('testSubmitted');
-      localStorage.removeItem('contestedQuestions');
-      localStorage.removeItem('testFromBookmarks');
+      SyncLocalStorage.removeItem('testUserAnswers');
+      SyncLocalStorage.removeItem('testSubmitted');
+      SyncLocalStorage.removeItem('contestedQuestions');
+      SyncLocalStorage.removeItem('testFromBookmarks');
 
 
       const questionCount = Math.max(1, questions.length);
       const timeLimitMinutes = Math.max(5, questionCount * 5);
 
 
-      localStorage.setItem('testQuestions', JSON.stringify(questions.map(q => q.question)));
-      localStorage.setItem('testParams', JSON.stringify({
+      SyncLocalStorage.setItem('testQuestions', JSON.stringify(questions.map(q => q.question)));
+      SyncLocalStorage.setItem('testParams', JSON.stringify({
         eventName: eventName,
         questionCount: questionCount.toString(),
         timeLimit: String(timeLimitMinutes),
         types: 'multiple-choice'
       }));
-      localStorage.setItem('testFromBookmarks', 'true');
+      SyncLocalStorage.setItem('testFromBookmarks', 'true');
       
 
       const testParams = {

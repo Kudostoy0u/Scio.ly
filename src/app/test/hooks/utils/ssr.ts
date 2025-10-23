@@ -1,5 +1,6 @@
 import { Question } from '@/app/utils/geminiService';
 import { normalizeQuestionMedia } from '../../utils/questionMedia';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 export function resolveRouterParams(initialRouterData: any, storedParamsStr: string | null) {
   const parsed = storedParamsStr ? JSON.parse(storedParamsStr) : {};
@@ -23,7 +24,7 @@ export function applySsrInitialData(
   setIsLoading(false);
   fetchCompletedRef.current = true;
   if (!useId) {
-    try { localStorage.setItem('testQuestions', JSON.stringify(baseQs)); } catch {}
+    try { SyncLocalStorage.setItem('testQuestions', JSON.stringify(baseQs)); } catch {}
   }
 }
 

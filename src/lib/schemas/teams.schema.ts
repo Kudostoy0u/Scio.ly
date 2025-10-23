@@ -13,8 +13,12 @@ import { z } from 'zod';
 
 export const teamIdSchema = z.string().min(1, 'Team ID is required');
 export const slugSchema = z.string().min(1, 'Slug is required').regex(/^[a-z0-9-]+$/, 'Slug must contain only lowercase letters, numbers, and hyphens');
-export const divisionSchema = z.enum(['B', 'C'], { errorMap: () => ({ message: 'Division must be B or C' }) });
-export const roleSchema = z.enum(['captain', 'member'], { errorMap: () => ({ message: 'Role must be captain or member' }) });
+export const divisionSchema = z.enum(['B', 'C']).refine(val => ['B', 'C'].includes(val), {
+  message: 'Division must be B or C'
+});
+export const roleSchema = z.enum(['captain', 'member']).refine(val => ['captain', 'member'].includes(val), {
+  message: 'Role must be captain or member'
+});
 
 // ============================================================================
 // Team Schemas

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Settings, Trophy, Bell } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import { useNotifications } from '@/app/hooks/useNotifications';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 export default function UserDropdown({
   darkMode,
@@ -124,38 +125,74 @@ export default function UserDropdown({
                       <div className="mt-2 flex items-center gap-2">
                         <button onClick={async () => { 
                           try { 
+                            console.log('=== FRONTEND NOTIFICATION ACCEPTANCE DEBUG START ===');
                             console.log('UserDropdown: Accepting team invite:', n.id);
+                            console.log('Notification data:', n);
+                            console.log('User ID:', user?.id);
+                            
                             // For team invites, we still need to use the API since it involves complex team logic
+                            const requestBody = { 
+                              id: n.id, 
+                              type: n.type,
+                              school: n.data?.school, 
+                              division: n.data?.division, 
+                              teamId: n.data?.teamId, 
+                              memberName: n.data?.memberName 
+                            };
+                            console.log('Request body:', requestBody);
+                            
                             const res = await fetch('/api/notifications/accept', { 
                               method: 'POST', 
                               headers: { 'Content-Type': 'application/json' }, 
-                              body: JSON.stringify({ 
-                                id: n.id, 
-                                type: n.type,
-                                school: n.data?.school, 
-                                division: n.data?.division, 
-                                teamId: n.data?.teamId, 
-                                memberName: n.data?.memberName 
-                              }) 
+                              body: JSON.stringify(requestBody) 
                             }); 
+                            
+                            console.log('Response status:', res.status);
+                            console.log('Response ok:', res.ok);
+                            
                             const j = await res.json(); 
+                            console.log('Response JSON:', j);
+                            
                             if (res.ok && j?.success) { 
-                              await markAsRead(n.id); 
+                              console.log('Notification acceptance successful, marking as read...');
+                              console.log('Response details:', j);
+                              
+                              try {
+                                await markAsRead(n.id); 
+                                console.log('Notification marked as read');
+                              } catch (markError) {
+                                console.error('Failed to mark notification as read:', markError);
+                                // Don't fail the whole process for this
+                              }
+                              
                               // Invalidate teams cache to ensure the new team shows up
                               if (typeof window !== 'undefined' && user?.id) {
+                                console.log('Clearing team cache and redirecting...');
                                 // Clear any cached team data
-                                localStorage.removeItem(`user-teams-${user.id}`);
-                                localStorage.removeItem('user-teams-cache');
-                                // Force a page reload to refresh teams list
-                                if (j?.slug) {
-                                  window.location.href = `/teams/${j.slug}`;
-                                } else {
-                                  window.location.href = '/teams';
-                                }
+                                SyncLocalStorage.removeItem(`user-teams-${user.id}`);
+                                SyncLocalStorage.removeItem('user-teams-cache');
+                                
+                                // Add a small delay to ensure backend processing is complete
+                                setTimeout(() => {
+                                  // Force a page reload to refresh teams list
+                                  if (j?.slug) {
+                                    console.log('Redirecting to team page:', j.slug);
+                                    window.location.href = `/teams/${j.slug}`;
+                                  } else {
+                                    console.log('Redirecting to teams page');
+                                    window.location.href = '/teams';
+                                  }
+                                }, 1000);
                               }
-                            } 
+                            } else {
+                              console.error('Notification acceptance failed:', j);
+                              // Show user-friendly error message
+                              alert(`Failed to accept invitation: ${j?.error || 'Unknown error'}`);
+                            }
+                            console.log('=== FRONTEND NOTIFICATION ACCEPTANCE DEBUG END ===');
                           } catch (error) {
                             console.error('Error accepting team invite:', error);
+                            console.log('=== FRONTEND NOTIFICATION ACCEPTANCE DEBUG END (ERROR) ===');
                           }
                         }} className={`px-2 py-1 rounded text-white bg-blue-600 hover:bg-blue-700`}>
                           Accept
@@ -175,7 +212,7 @@ export default function UserDropdown({
                               headers: { 'Content-Type': 'application/json' }, 
                               body: JSON.stringify({ 
                                 id: n.id, 
-                                type: 'assignment_invitation',
+                                type: 'roster_link_invitation',
                                 assignmentId: n.data?.assignment_id
                               })
                             });
@@ -206,7 +243,7 @@ export default function UserDropdown({
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ 
                                 id: n.id, 
-                                type: 'assignment_invitation',
+                                type: 'roster_link_invitation',
                                 assignmentId: n.data?.assignment_id
                               })
                             });
@@ -249,8 +286,8 @@ export default function UserDropdown({
                               // Invalidate teams cache to ensure the new team shows up
                               if (typeof window !== 'undefined' && user?.id) {
                                 // Clear any cached team data
-                                localStorage.removeItem(`user-teams-${user.id}`);
-                                localStorage.removeItem('user-teams-cache');
+                                SyncLocalStorage.removeItem(`user-teams-${user.id}`);
+                                SyncLocalStorage.removeItem('user-teams-cache');
                                 // Redirect to teams page to see the newly joined team
                                 window.location.href = '/teams';
                               }

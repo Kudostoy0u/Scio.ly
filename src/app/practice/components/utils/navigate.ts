@@ -1,6 +1,7 @@
 import { clearTestSession } from '@/app/utils/timeManagement';
 import { buildTestParams, saveTestParams } from '@/app/utils/testParams';
 import { Settings } from '../../types';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 export function proceedWithTest(selectedEventName: string, settings: Settings, push: (url: string) => void) {
   clearTestSession();
@@ -9,18 +10,18 @@ export function proceedWithTest(selectedEventName: string, settings: Settings, p
   saveTestParams(testParams);
   if (selectedEventName === 'Codebusters') {
     try {
-      localStorage.removeItem('codebustersQuotes');
-      localStorage.removeItem('codebustersIsTestSubmitted');
-      localStorage.removeItem('codebustersTestScore');
-      localStorage.removeItem('codebustersTimeLeft');
-      localStorage.removeItem('codebustersQuotesLoadedFromStorage');
-      localStorage.removeItem('shareCode');
+      SyncLocalStorage.removeItem('codebustersQuotes');
+      SyncLocalStorage.removeItem('codebustersIsTestSubmitted');
+      SyncLocalStorage.removeItem('codebustersTestScore');
+      SyncLocalStorage.removeItem('codebustersTimeLeft');
+      SyncLocalStorage.removeItem('codebustersQuotesLoadedFromStorage');
+      SyncLocalStorage.removeItem('shareCode');
     } catch {}
     push('/codebusters');
   } else {
     try {
-      localStorage.removeItem('testGradingResults');
-      localStorage.removeItem('testSubmitted');
+      SyncLocalStorage.removeItem('testGradingResults');
+      SyncLocalStorage.removeItem('testSubmitted');
     } catch {}
     push('/test');
   }
@@ -43,12 +44,12 @@ export function proceedWithUnlimited(selectedEventName: string, settings: Settin
     const cbParams = buildTestParams(selectedEventName, { ...settings, questionCount: 1 });
     saveTestParams(cbParams);
     try {
-      localStorage.removeItem('codebustersQuotes');
-      localStorage.removeItem('codebustersIsTestSubmitted');
-      localStorage.removeItem('codebustersTestScore');
-      localStorage.removeItem('codebustersTimeLeft');
-      localStorage.removeItem('codebustersQuotesLoadedFromStorage');
-      localStorage.removeItem('shareCode');
+      SyncLocalStorage.removeItem('codebustersQuotes');
+      SyncLocalStorage.removeItem('codebustersIsTestSubmitted');
+      SyncLocalStorage.removeItem('codebustersTestScore');
+      SyncLocalStorage.removeItem('codebustersTimeLeft');
+      SyncLocalStorage.removeItem('codebustersQuotesLoadedFromStorage');
+      SyncLocalStorage.removeItem('shareCode');
     } catch {}
     push('/codebusters');
     return;

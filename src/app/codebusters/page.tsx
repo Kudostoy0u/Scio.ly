@@ -3,6 +3,7 @@ import React, { useEffect, useCallback, useState } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { toast } from 'react-toastify';
 import { useRouter, useSearchParams } from 'next/navigation';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 import MainHeader from '@/app/components/Header';
 
@@ -603,26 +604,26 @@ export default function CodeBusters() {
     // Handle reset functionality
     const handleReset = useCallback(() => {
         // Get test params before clearing localStorage
-        const testParams = JSON.parse(localStorage.getItem('testParams') || '{}');
+        const testParams = JSON.parse(SyncLocalStorage.getItem('testParams') || '{}');
         const eventName = testParams.eventName || 'Codebusters';
         const preferences = loadPreferences(eventName);
         const timeLimit = parseInt(testParams.timeLimit) || preferences.timeLimit;
         
         // Clear all codebusters-related localStorage items
-        localStorage.removeItem('codebustersQuotes');
-        localStorage.removeItem('codebustersQuoteIndices'); // Legacy
-        localStorage.removeItem('codebustersQuoteUUIDs'); // Legacy
-        localStorage.removeItem('codebustersShareData');
-        localStorage.removeItem('codebustersIsTestSubmitted');
-        localStorage.removeItem('codebustersTestScore');
-        localStorage.removeItem('codebustersTimeLeft');
-        localStorage.removeItem('codebustersRevealedLetters');
-        localStorage.removeItem('codebustersHintedLetters');
-        localStorage.removeItem('codebustersHintCounts');
-        localStorage.removeItem('shareCode');
+        SyncLocalStorage.removeItem('codebustersQuotes');
+        SyncLocalStorage.removeItem('codebustersQuoteIndices'); // Legacy
+        SyncLocalStorage.removeItem('codebustersQuoteUUIDs'); // Legacy
+        SyncLocalStorage.removeItem('codebustersShareData');
+        SyncLocalStorage.removeItem('codebustersIsTestSubmitted');
+        SyncLocalStorage.removeItem('codebustersTestScore');
+        SyncLocalStorage.removeItem('codebustersTimeLeft');
+        SyncLocalStorage.removeItem('codebustersRevealedLetters');
+        SyncLocalStorage.removeItem('codebustersHintedLetters');
+        SyncLocalStorage.removeItem('codebustersHintCounts');
+        SyncLocalStorage.removeItem('shareCode');
         
         // Set force refresh flag to get new random quotes
-        localStorage.setItem('codebustersForceRefresh', 'true');
+        SyncLocalStorage.setItem('codebustersForceRefresh', 'true');
         
         // Clear time management session completely
         clearTestSession();
@@ -674,7 +675,7 @@ export default function CodeBusters() {
             // Ensure timer is paused when exiting
             pauseTestSession();
             // Only clear unrelated unlimited cache; keep Codebusters keys and testParams so Practice can detect progress
-            localStorage.removeItem('unlimitedQuestions');
+            SyncLocalStorage.removeItem('unlimitedQuestions');
         } catch {}
         router.push('/practice');
     }, [router]);
@@ -699,26 +700,26 @@ export default function CodeBusters() {
         }, 200);
         
         // Get test params before clearing localStorage
-        const testParams = JSON.parse(localStorage.getItem('testParams') || '{}');
+        const testParams = JSON.parse(SyncLocalStorage.getItem('testParams') || '{}');
         const eventName = testParams.eventName || 'Codebusters';
         const preferences = loadPreferences(eventName);
         const timeLimit = parseInt(testParams.timeLimit) || preferences.timeLimit;
         
         // Clear all codebusters-related localStorage items
-        localStorage.removeItem('codebustersQuotes');
-        localStorage.removeItem('codebustersQuoteIndices'); // Legacy
-        localStorage.removeItem('codebustersQuoteUUIDs'); // Legacy
-        localStorage.removeItem('codebustersShareData');
-        localStorage.removeItem('codebustersIsTestSubmitted');
-        localStorage.removeItem('codebustersTestScore');
-        localStorage.removeItem('codebustersTimeLeft');
-        localStorage.removeItem('codebustersRevealedLetters');
-        localStorage.removeItem('codebustersHintedLetters');
-        localStorage.removeItem('codebustersHintCounts');
-        localStorage.removeItem('shareCode');
+        SyncLocalStorage.removeItem('codebustersQuotes');
+        SyncLocalStorage.removeItem('codebustersQuoteIndices'); // Legacy
+        SyncLocalStorage.removeItem('codebustersQuoteUUIDs'); // Legacy
+        SyncLocalStorage.removeItem('codebustersShareData');
+        SyncLocalStorage.removeItem('codebustersIsTestSubmitted');
+        SyncLocalStorage.removeItem('codebustersTestScore');
+        SyncLocalStorage.removeItem('codebustersTimeLeft');
+        SyncLocalStorage.removeItem('codebustersRevealedLetters');
+        SyncLocalStorage.removeItem('codebustersHintedLetters');
+        SyncLocalStorage.removeItem('codebustersHintCounts');
+        SyncLocalStorage.removeItem('shareCode');
         
         // Set force refresh flag to get new random quotes
-        localStorage.setItem('codebustersForceRefresh', 'true');
+        SyncLocalStorage.setItem('codebustersForceRefresh', 'true');
         
         // Clear time management session completely
         clearTestSession();

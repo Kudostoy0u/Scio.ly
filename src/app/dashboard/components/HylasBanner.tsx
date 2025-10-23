@@ -3,6 +3,7 @@
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { ExternalLink, X } from 'lucide-react';
 import { useEffect } from 'react';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 interface HylasBannerProps {
   onClose: () => void;
@@ -22,7 +23,7 @@ export default function HylasBanner({ onClose }: HylasBannerProps) {
     : 'rgb(229, 231, 235)';
 
   const handleClose = () => {
-    localStorage.setItem('hylas-banner-closed', 'true');
+    SyncLocalStorage.setItem('hylas-banner-closed', 'true');
 
     window.dispatchEvent(new CustomEvent('banner-closed'));
     onClose();

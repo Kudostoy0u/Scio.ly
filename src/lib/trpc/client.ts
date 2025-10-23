@@ -1,8 +1,10 @@
 import { createTRPCReact, httpBatchLink } from '@trpc/react-query';
-import { type AppRouter } from './routers/_app';
+import type { AppRouter } from './routers/_app';
 import superjson from 'superjson';
 
 export const trpc = createTRPCReact<AppRouter>();
+export const api = trpc;
+export type TRPCUtils = ReturnType<typeof trpc.useUtils>;
 
 export function getTRPCClient() {
   return trpc.createClient({
@@ -18,6 +20,13 @@ export function getTRPCClient() {
           return {
             'Content-Type': 'application/json',
           };
+        },
+        // Include credentials for authentication
+        fetch: (url, options) => {
+          return fetch(url, {
+            ...options,
+            credentials: 'include', // This ensures cookies are sent with the request
+          });
         },
       }),
     ],

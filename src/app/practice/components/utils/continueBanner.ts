@@ -1,14 +1,15 @@
 import logger from '@/lib/utils/logger';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 export type ContinueInfo = { eventName: string; route: '/test' | '/codebusters'; label: string } | null;
 
 export function computeContinueInfo(): ContinueInfo {
   if (typeof window === 'undefined') return null;
   try {
-    const sessionStr = localStorage.getItem('currentTestSession');
+    const sessionStr = SyncLocalStorage.getItem('currentTestSession');
     // Read submission flags up front for both test types
-    const testSubmitted = localStorage.getItem('testSubmitted') === 'true';
-    const cbSubmitted = localStorage.getItem('codebustersIsTestSubmitted') === 'true';
+    const testSubmitted = SyncLocalStorage.getItem('testSubmitted') === 'true';
+    const cbSubmitted = SyncLocalStorage.getItem('codebustersIsTestSubmitted') === 'true';
     const session = sessionStr ? (JSON.parse(sessionStr) as { eventName?: string; isSubmitted?: boolean }) : null;
     if (session && session.eventName) {
       const route: '/test' | '/codebusters' = session.eventName === 'Codebusters' ? '/codebusters' : '/test';
@@ -17,10 +18,10 @@ export function computeContinueInfo(): ContinueInfo {
       const label = (session.isSubmitted || eventSubmitted) ? `View results for ${session.eventName}?` : `Continue test for ${session.eventName}?`;
       return { eventName: session.eventName, route, label };
     }
-    const testAnswersStr = localStorage.getItem('testUserAnswers');
+    const testAnswersStr = SyncLocalStorage.getItem('testUserAnswers');
     const testAnswers = testAnswersStr ? (JSON.parse(testAnswersStr) as Record<string, (string | null)[]>) : null;
     const hasGeneralProgress = !testSubmitted && !!testAnswers && Object.values(testAnswers).some((arr) => (Array.isArray(arr) ? arr.some((v) => v && String(v).length > 0) : !!testAnswersStr));
-    const cbQuotesStr = localStorage.getItem('codebustersQuotes');
+    const cbQuotesStr = SyncLocalStorage.getItem('codebustersQuotes');
     let hasCodebustersProgress = false;
     if (!cbSubmitted && cbQuotesStr) {
       try {
@@ -38,7 +39,7 @@ export function computeContinueInfo(): ContinueInfo {
       } catch {}
     }
     if (hasGeneralProgress || testSubmitted) {
-      const params = localStorage.getItem('testParams');
+      const params = SyncLocalStorage.getItem('testParams');
       const eventName = (() => {
         try {
           const p = params ? JSON.parse(params) : undefined;

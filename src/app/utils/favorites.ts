@@ -1,6 +1,7 @@
 'use client';
 
 import type { Settings } from '@/app/practice/types';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 /**
  * Favorites management utilities for Science Olympiad test configurations
@@ -94,7 +95,7 @@ function configsEqual(a: FavoriteConfig, b: FavoriteConfig): boolean {
  */
 export function getFavoriteConfigs(): FavoriteConfig[] {
   try {
-    const raw = typeof window !== 'undefined' ? localStorage.getItem(FAVORITES_KEY) : null;
+    const raw = typeof window !== 'undefined' ? SyncLocalStorage.getItem(FAVORITES_KEY) : null;
     if (!raw) return [];
     const parsed = JSON.parse(raw) as FavoriteConfig[];
     if (!Array.isArray(parsed)) return [];
@@ -117,7 +118,7 @@ export function getFavoriteConfigs(): FavoriteConfig[] {
 function saveFavoriteConfigs(favorites: FavoriteConfig[]) {
   try {
     const capped = favorites.slice(0, MAX_FAVORITES);
-    localStorage.setItem(FAVORITES_KEY, JSON.stringify(capped));
+    SyncLocalStorage.setItem(FAVORITES_KEY, JSON.stringify(capped));
   } catch {}
 }
 

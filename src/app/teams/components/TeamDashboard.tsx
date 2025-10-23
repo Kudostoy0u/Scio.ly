@@ -10,6 +10,7 @@ import TabNavigation from './TabNavigation';
 import BannerInvite from './BannerInvite';
 import { useTeamStore } from '@/app/hooks/useTeamStore';
 import TeamDataLoader from './TeamDataLoader';
+import { trpc } from '@/lib/trpc/client';
 
 // Lazy load heavy components
 const RosterTab = lazy(() => import('./RosterTab'));
@@ -72,10 +73,21 @@ export default function TeamDashboard({
   const {
     userTeams,
     getSubteams,
+    loadSubteams,
     updateSubteam,
     deleteSubteam,
     invalidateCache
   } = useTeamStore();
+
+  // Use tRPC for data fetching with automatic batching
+  // Note: We're using the team store for subteams data instead of direct tRPC
+  // trpc.teams.getSubteams.useQuery(
+  //   { teamSlug: team.slug },
+  //   { 
+  //     enabled: !!team.slug,
+  //     staleTime: 10 * 60 * 1000,
+  //   }
+  // );
 
   // Mock data for demonstration
   // const [_posts] = useState([
@@ -115,19 +127,13 @@ export default function TeamDashboard({
 
   const confirmExitTeam = async () => {
     try {
-      const response = await fetch(`/api/teams/${team.slug}/exit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+      await exitTeamMutation.mutateAsync({
+        teamSlug: team.slug
       });
       
-      if (response.ok) {
-        toast.success('Successfully exited team');
-        // Redirect to teams page after successful exit
-        window.location.href = '/teams';
-      } else {
-        const error = await response.json();
-        toast.error(error.error || 'Failed to exit team');
-      }
+      toast.success('Successfully exited team');
+      // Redirect to teams page after successful exit
+      window.location.href = '/teams';
     } catch (error) {
       console.error('Failed to exit team:', error);
       toast.error('Failed to exit team');
@@ -146,19 +152,13 @@ export default function TeamDashboard({
 
   const confirmArchiveTeam = async () => {
     try {
-      const response = await fetch(`/api/teams/${team.slug}/archive`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+      await archiveTeamMutation.mutateAsync({
+        teamSlug: team.slug
       });
       
-      if (response.ok) {
-        toast.success('Team archived successfully');
-        // Redirect to teams page after successful archive
-        window.location.href = '/teams';
-      } else {
-        const error = await response.json();
-        toast.error(error.error || 'Failed to archive team');
-      }
+      toast.success('Team archived successfully');
+      // Redirect to teams page after successful archive
+      window.location.href = '/teams';
     } catch (error) {
       console.error('Failed to archive team:', error);
       toast.error('Failed to archive team');
@@ -181,6 +181,13 @@ export default function TeamDashboard({
     }
   }, [team.slug, getSubteams, activeSubteamId]);
 
+  // tRPC mutations
+  const createSubteamMutation = trpc.teams.createSubteam.useMutation();
+  const updateSubteamMutation = trpc.teams.updateSubteam.useMutation();
+  const deleteSubteamMutation = trpc.teams.deleteSubteam.useMutation();
+  const exitTeamMutation = trpc.teams.exitTeam.useMutation();
+  const archiveTeamMutation = trpc.teams.archiveTeam.useMutation();
+
   const handleCreateSubteam = async (name: string) => {
     try {
       // Generate default name if none provided
@@ -191,27 +198,25 @@ export default function TeamDashboard({
         subteamName = `Team ${nextLetter}`;
       }
       
-      const response = await fetch(`/api/teams/${team.slug}/subteams`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: subteamName })
+      const result = await createSubteamMutation.mutateAsync({
+        teamSlug: team.slug,
+        name: subteamName
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Show success toast
-        toast.success(`Subteam "${subteamName}" created successfully!`);
-        
-        // Clear subteams cache to ensure fresh data
-        invalidateCache(`subteams-${team.slug}`);
-        
-        // Set the new subteam as active after reload
-        setActiveSubteamId(data.id);
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to create subteam');
-      }
+      // Show success toast
+      toast.success(`Subteam "${subteamName}" created successfully!`);
+      
+      // Clear subteams cache to ensure fresh data
+      invalidateCache(`subteams-${team.slug}`);
+      
+      // Also invalidate members cache to refresh People tab
+      invalidateCache(`members-${team.slug}-all`);
+      
+      // Reload subteams data to get the new subteam
+      await loadSubteams(team.slug);
+      
+      // Set the new subteam as active after reload
+      setActiveSubteamId(result.id);
     } catch (error) {
       console.error('Failed to create subteam:', error);
       toast.error('Failed to create subteam. Please try again.');
@@ -223,22 +228,24 @@ export default function TeamDashboard({
       // Optimistically update the UI immediately
       updateSubteam(team.slug, subteamId, { name: newName });
       
-      const response = await fetch(`/api/teams/${team.slug}/subteams/${subteamId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName })
+      await updateSubteamMutation.mutateAsync({
+        teamSlug: team.slug,
+        subteamId,
+        name: newName
       });
       
-      if (response.ok) {
-        // Show success toast
-        toast.success(`Subteam renamed to "${newName}" successfully!`);
-      } else {
-        // Revert optimistic update on error
-        invalidateCache(`subteams-${team.slug}`);
-
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to update subteam name');
-      }
+      // Show success toast
+      toast.success(`Subteam renamed to "${newName}" successfully!`);
+      
+      // Invalidate members cache to refresh People tab
+      invalidateCache(`members-${team.slug}-all`);
+      invalidateCache(`members-${team.slug}-${subteamId}`);
+      
+      // Invalidate subteams cache to ensure PeopleTab gets updated subteam names
+      invalidateCache(`subteams-${team.slug}`);
+      
+      // Reload subteams data to get updated data
+      await loadSubteams(team.slug);
     } catch (error) {
       console.error('Failed to edit subteam:', error);
 
@@ -250,31 +257,35 @@ export default function TeamDashboard({
 
   const handleDeleteSubteam = async (subteamId: string) => {
     try {
-      const response = await fetch(`/api/teams/${team.slug}/subteams/${subteamId}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
+      await deleteSubteamMutation.mutateAsync({
+        teamSlug: team.slug,
+        subteamId
       });
       
-      if (response.ok) {
-        // Optimistically remove the subteam from the store
-        deleteSubteam(team.slug, subteamId);
-        
-        // If the deleted subteam was active, switch to the first remaining subteam
-        if (activeSubteamId === subteamId) {
-          const remainingSubteams = getSubteams(team.slug);
-          if (remainingSubteams.length > 0) {
-            setActiveSubteamId(remainingSubteams[0].id);
-          } else {
-            setActiveSubteamId(null);
-          }
+      // Optimistically remove the subteam from the store
+      deleteSubteam(team.slug, subteamId);
+      
+      // If the deleted subteam was active, switch to the first remaining subteam
+      if (activeSubteamId === subteamId) {
+        const remainingSubteams = getSubteams(team.slug);
+        if (remainingSubteams.length > 0) {
+          setActiveSubteamId(remainingSubteams[0].id);
+        } else {
+          setActiveSubteamId(null);
         }
-
-        // Show success toast
-        toast.success('Subteam deleted successfully!');
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to delete subteam');
       }
+
+      // Show success toast
+      toast.success('Subteam deleted successfully!');
+      
+      // Invalidate members cache to refresh People tab
+      invalidateCache(`members-${team.slug}-all`);
+      
+      // Invalidate subteams cache to ensure PeopleTab gets updated subteam data
+      invalidateCache(`subteams-${team.slug}`);
+      
+      // Reload subteams data to get updated data
+      await loadSubteams(team.slug);
     } catch (error) {
       console.error('Failed to delete subteam:', error);
       toast.error('Failed to delete subteam. Please try again.');

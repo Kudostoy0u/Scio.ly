@@ -3,6 +3,7 @@ import { getEventOfflineQuestions } from '@/app/utils/storage';
 import { cleanQuote } from '../utils/quoteCleaner';
 import { filterEnabledCiphers } from '../config';
 import logger from '@/lib/utils/logger';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 import {
   k1Aristo as encryptK1Aristocrat,
   k2Aristo as encryptK2Aristocrat,
@@ -47,14 +48,14 @@ export const loadQuestionsFromDatabase = async (
   logger.log('loadQuestionsFromDatabase called');
   
 
-  const testAlreadySubmitted = localStorage.getItem('codebustersIsTestSubmitted') === 'true';
-  const existingQuotes = localStorage.getItem('codebustersQuotes');
+  const testAlreadySubmitted = SyncLocalStorage.getItem('codebustersIsTestSubmitted') === 'true';
+  const existingQuotes = SyncLocalStorage.getItem('codebustersQuotes');
   if (testAlreadySubmitted && existingQuotes) {
     try {
       const restored = JSON.parse(existingQuotes);
       setIsTestSubmitted(true);
-      const savedTestScore = localStorage.getItem('codebustersTestScore');
-      const savedTimeLeft = localStorage.getItem('codebustersTimeLeft');
+      const savedTestScore = SyncLocalStorage.getItem('codebustersTestScore');
+      const savedTimeLeft = SyncLocalStorage.getItem('codebustersTimeLeft');
       setTestScore(savedTestScore ? parseFloat(savedTestScore) : 0);
       setTimeLeft(savedTimeLeft ? parseInt(savedTimeLeft) : 0);
       setQuotes(restored);
@@ -80,15 +81,15 @@ export const loadQuestionsFromDatabase = async (
   } catch {}
   
 
-  const testParamsStr = localStorage.getItem('testParams');
+  const testParamsStr = SyncLocalStorage.getItem('testParams');
   const testParams = testParamsStr ? JSON.parse(testParamsStr) : {};
   const eventName = testParams.eventName || 'Codebusters';
   const preferences = loadPreferences(eventName);
   
 
-  const wasTestSubmitted = localStorage.getItem('codebustersIsTestSubmitted') === 'true';
-  const savedTestScore = localStorage.getItem('codebustersTestScore');
-  const savedTimeLeft = localStorage.getItem('codebustersTimeLeft');
+  const wasTestSubmitted = SyncLocalStorage.getItem('codebustersIsTestSubmitted') === 'true';
+  const savedTestScore = SyncLocalStorage.getItem('codebustersTestScore');
+  const savedTimeLeft = SyncLocalStorage.getItem('codebustersTimeLeft');
   
   if (wasTestSubmitted) {
 
@@ -100,14 +101,14 @@ export const loadQuestionsFromDatabase = async (
     setTimeLeft(preferences.timeLimit * 60);
     setIsTestSubmitted(false);
     setTestScore(null);
-    localStorage.removeItem('codebustersTimeLeft');
-    localStorage.removeItem('codebustersIsTestSubmitted');
-    localStorage.removeItem('codebustersTestScore');
+    SyncLocalStorage.removeItem('codebustersTimeLeft');
+    SyncLocalStorage.removeItem('codebustersIsTestSubmitted');
+    SyncLocalStorage.removeItem('codebustersTestScore');
   }
 
   try {
 
-    const testParamsStr = localStorage.getItem('testParams');
+    const testParamsStr = SyncLocalStorage.getItem('testParams');
     if (!testParamsStr) {
       setError('No test parameters found. Please configure a test from the practice page.');
       setIsLoading(false);
@@ -612,8 +613,8 @@ export const loadQuestionsFromDatabase = async (
         difficulty: quote.difficulty
       }))
     };
-    localStorage.setItem('codebustersShareData', JSON.stringify(shareData));
-    localStorage.setItem('codebustersQuotes', JSON.stringify(processedQuotes));
+    SyncLocalStorage.setItem('codebustersShareData', JSON.stringify(shareData));
+    SyncLocalStorage.setItem('codebustersQuotes', JSON.stringify(processedQuotes));
 
     setQuotes(processedQuotes);
     setIsLoading(false);

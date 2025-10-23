@@ -188,17 +188,20 @@ export async function DELETE(
         [subteamId]
       );
       
-      // 3. Delete stream posts
-      console.log('🗑️ [SUBNTEAM DELETE] Deleting stream posts');
+      // 3. Delete stream comments first (through posts relationship)
+      console.log('🗑️ [SUBNTEAM DELETE] Deleting stream comments');
       await queryCockroachDB(
-        `DELETE FROM new_team_stream_posts WHERE team_unit_id = $1`,
+        `DELETE FROM new_team_stream_comments 
+         WHERE post_id IN (
+           SELECT id FROM new_team_stream_posts WHERE team_unit_id = $1
+         )`,
         [subteamId]
       );
       
-      // 4. Delete stream comments
-      console.log('🗑️ [SUBNTEAM DELETE] Deleting stream comments');
+      // 4. Delete stream posts
+      console.log('🗑️ [SUBNTEAM DELETE] Deleting stream posts');
       await queryCockroachDB(
-        `DELETE FROM new_team_stream_comments WHERE team_unit_id = $1`,
+        `DELETE FROM new_team_stream_posts WHERE team_unit_id = $1`,
         [subteamId]
       );
       

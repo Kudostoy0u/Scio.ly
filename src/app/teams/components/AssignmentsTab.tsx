@@ -7,6 +7,7 @@ import { Plus, Calendar, CheckCircle, Clock, BarChart3, Trash2, AlertTriangle } 
 import { toast } from 'react-toastify';
 import AssignmentViewerModal from './AssignmentViewerModal';
 import { useEnhancedTeamData } from '@/app/hooks/useEnhancedTeamData';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 interface Assignment {
   id: string;
@@ -114,9 +115,9 @@ export default function AssignmentsTab({
         clearAssignmentData(assignmentId);
         
         // Remove current assignment ID if it matches
-        const currentAssignmentId = localStorage.getItem('currentAssignmentId');
+        const currentAssignmentId = SyncLocalStorage.getItem('currentAssignmentId');
         if (currentAssignmentId === assignmentId) {
-          localStorage.removeItem('currentAssignmentId');
+          SyncLocalStorage.removeItem('currentAssignmentId');
         }
         
         // Invalidate cache and reload assignments to get updated data from server
@@ -138,8 +139,8 @@ export default function AssignmentsTab({
 
   const hasAssignmentProgress = (assignmentId: string): boolean => {
     const assignmentKey = `assignment_${assignmentId}`;
-    const hasQuestions = localStorage.getItem(`${assignmentKey}_questions`);
-    const hasAnswers = localStorage.getItem(`${assignmentKey}_answers`);
+    const hasQuestions = SyncLocalStorage.getItem(`${assignmentKey}_questions`);
+    const hasAnswers = SyncLocalStorage.getItem(`${assignmentKey}_answers`);
     return !!(hasQuestions || hasAnswers);
   };
 
@@ -155,10 +156,10 @@ export default function AssignmentsTab({
 
   const clearAssignmentData = (assignmentId: string) => {
     const assignmentKey = `assignment_${assignmentId}`;
-    localStorage.removeItem(`${assignmentKey}_questions`);
-    localStorage.removeItem(`${assignmentKey}_answers`);
-    localStorage.removeItem(`${assignmentKey}_grading`);
-    localStorage.removeItem(`${assignmentKey}_session`);
+    SyncLocalStorage.removeItem(`${assignmentKey}_questions`);
+    SyncLocalStorage.removeItem(`${assignmentKey}_answers`);
+    SyncLocalStorage.removeItem(`${assignmentKey}_grading`);
+    SyncLocalStorage.removeItem(`${assignmentKey}_session`);
   };
 
   const getAssignmentStatus = (assignment: Assignment) => {

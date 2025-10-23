@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 export default function AssignPage() {
   const params = useSearchParams();
@@ -13,7 +14,7 @@ export default function AssignPage() {
   const [types, setTypes] = useState<'multiple-choice'|'free-response'|'both'>('multiple-choice');
   const [division, setDivision] = useState<'B'|'C'|'any'>(() => {
     try {
-      const selStr = localStorage.getItem('teamsSelection');
+      const selStr = SyncLocalStorage.getItem('teamsSelection');
       if (selStr) {
         const sel = JSON.parse(selStr);
         if (sel?.division === 'B' || sel?.division === 'C') return sel.division;
@@ -75,7 +76,7 @@ export default function AssignPage() {
   const sendAssignment = async () => {
     setSending(true);
     try {
-      const selectionStr = localStorage.getItem('teamsSelection');
+      const selectionStr = SyncLocalStorage.getItem('teamsSelection');
       const sel = selectionStr ? JSON.parse(selectionStr) : null;
       const school = sel?.school;
       const divisionSel = sel?.division;
@@ -87,7 +88,7 @@ export default function AssignPage() {
         const json = await res.json();
         const assignmentId = json?.data?.id;
         if (assignmentId) {
-          localStorage.setItem('currentAssignmentId', String(assignmentId));
+          SyncLocalStorage.setItem('currentAssignmentId', String(assignmentId));
         }
         // Launch the test page with configured params
         const sp = new URLSearchParams();

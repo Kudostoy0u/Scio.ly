@@ -1,3 +1,4 @@
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 /**
  * Enhanced team data caching system with localStorage persistence
  * Provides efficient caching, background updates, and request deduplication
@@ -83,7 +84,7 @@ class TeamCache {
   private loadFromStorage<T>(key: string): T | null {
     try {
       const storageKey = this.getStorageKey(key);
-      const cached = localStorage.getItem(storageKey);
+      const cached = SyncLocalStorage.getItem(storageKey);
       if (!cached) return null;
       
       const parsed = JSON.parse(cached);
@@ -96,7 +97,7 @@ class TeamCache {
       }
       
       // Cache expired, remove it
-      localStorage.removeItem(storageKey);
+      SyncLocalStorage.removeItem(storageKey);
       return null;
     } catch (error) {
       console.error('Error loading from localStorage:', error);
@@ -114,7 +115,7 @@ class TeamCache {
         data,
         timestamp: Date.now()
       };
-      localStorage.setItem(storageKey, JSON.stringify(cacheEntry));
+      SyncLocalStorage.setItem(storageKey, JSON.stringify(cacheEntry));
     } catch (error) {
       console.error('Error saving to localStorage:', error);
     }
@@ -267,7 +268,7 @@ class TeamCache {
   invalidate(key?: string): void {
     if (key) {
       this.memoryCache.delete(key);
-      localStorage.removeItem(this.getStorageKey(key));
+      SyncLocalStorage.removeItem(this.getStorageKey(key));
       this.stopBackgroundRefresh(key);
     } else {
       // Clear all caches
@@ -281,12 +282,12 @@ class TeamCache {
           const keys = Object.keys(localStorage);
           keys.forEach(storageKey => {
             if (storageKey.startsWith(this.STORAGE_PREFIX)) {
-              localStorage.removeItem(storageKey);
+              SyncLocalStorage.removeItem(storageKey);
             }
           });
         } catch {
           // If we can't iterate over keys, just clear all
-          localStorage.clear();
+          SyncLocalStorage.clear();
         }
       }
     }

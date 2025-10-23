@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { getDailyMetrics, DailyMetrics } from './metrics';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 /**
  * Game points management utilities for Science Olympiad platform
@@ -13,7 +14,7 @@ import { getDailyMetrics, DailyMetrics } from './metrics';
  */
 const saveLocalMetrics = (metrics: DailyMetrics) => {
   const today = new Date().toISOString().split('T')[0];
-  localStorage.setItem(`metrics_${today}`, JSON.stringify(metrics));
+  SyncLocalStorage.setItem(`metrics_${today}`, JSON.stringify(metrics));
 };
 
 /**

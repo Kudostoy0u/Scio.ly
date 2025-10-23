@@ -1,3 +1,4 @@
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 /**
  * Time management utilities for Science Olympiad platform
  * Provides comprehensive test timing and session management
@@ -69,7 +70,7 @@ const generateTestId = (): string => {
  */
 export const getCurrentTestSession = (): TestSession | null => {
   try {
-    const stored = localStorage.getItem('currentTestSession');
+    const stored = SyncLocalStorage.getItem('currentTestSession');
     return stored ? JSON.parse(stored) : null;
   } catch (error) {
     console.error('Error parsing current test session:', error);
@@ -96,7 +97,7 @@ export const getCurrentTestSession = (): TestSession | null => {
  */
 export const saveTestSession = (session: TestSession): void => {
   try {
-    localStorage.setItem('currentTestSession', JSON.stringify(session));
+    SyncLocalStorage.setItem('currentTestSession', JSON.stringify(session));
   } catch (error) {
     console.error('Error saving test session:', error);
   }
@@ -104,15 +105,15 @@ export const saveTestSession = (session: TestSession): void => {
 
 
 export const clearTestSession = (): void => {
-  localStorage.removeItem('currentTestSession');
+  SyncLocalStorage.removeItem('currentTestSession');
 
-  localStorage.removeItem('testTimeLeft');
-  localStorage.removeItem('isTimeSynchronized');
-  localStorage.removeItem('originalSyncTime');
-  localStorage.removeItem('syncTimestamp');
-  localStorage.removeItem('loadedFromShareCode');
-  localStorage.removeItem('codebustersTimeLeft');
-  localStorage.removeItem('shareCode');
+  SyncLocalStorage.removeItem('testTimeLeft');
+  SyncLocalStorage.removeItem('isTimeSynchronized');
+  SyncLocalStorage.removeItem('originalSyncTime');
+  SyncLocalStorage.removeItem('syncTimestamp');
+  SyncLocalStorage.removeItem('loadedFromShareCode');
+  SyncLocalStorage.removeItem('codebustersTimeLeft');
+  SyncLocalStorage.removeItem('shareCode');
 };
 
 
@@ -309,12 +310,12 @@ export const setupVisibilityHandling = (): (() => void) => {
 
 
 export const getLegacyTimeLeft = (): number | null => {
-  const stored = localStorage.getItem('testTimeLeft');
+  const stored = SyncLocalStorage.getItem('testTimeLeft');
   return stored ? parseInt(stored) : null;
 };
 
 export const getLegacyCodebustersTimeLeft = (): number | null => {
-  const stored = localStorage.getItem('codebustersTimeLeft');
+  const stored = SyncLocalStorage.getItem('codebustersTimeLeft');
   return stored ? parseInt(stored) : null;
 };
 
@@ -326,9 +327,9 @@ export const migrateFromLegacyStorage = (eventName: string, timeLimit: number): 
 
   const legacyTimeLeft = getLegacyTimeLeft();
   const legacyCodebustersTimeLeft = getLegacyCodebustersTimeLeft();
-  const isTimeSynchronized = localStorage.getItem('isTimeSynchronized') === 'true';
-  const originalSyncTime = localStorage.getItem('originalSyncTime');
-  const syncTimestamp = localStorage.getItem('syncTimestamp');
+  const isTimeSynchronized = SyncLocalStorage.getItem('isTimeSynchronized') === 'true';
+  const originalSyncTime = SyncLocalStorage.getItem('originalSyncTime');
+  const syncTimestamp = SyncLocalStorage.getItem('syncTimestamp');
   
   if (legacyTimeLeft || legacyCodebustersTimeLeft) {
 
@@ -369,19 +370,19 @@ export const migrateFromLegacyStorage = (eventName: string, timeLimit: number): 
       timeLimit,
       timeState,
       lastActivity: now,
-      isSubmitted: localStorage.getItem('testSubmitted') === 'true' || 
-                   localStorage.getItem('codebustersIsTestSubmitted') === 'true'
+      isSubmitted: SyncLocalStorage.getItem('testSubmitted') === 'true' || 
+                   SyncLocalStorage.getItem('codebustersIsTestSubmitted') === 'true'
     };
     
     saveTestSession(session);
     
 
-    localStorage.removeItem('testTimeLeft');
-    localStorage.removeItem('codebustersTimeLeft');
-    localStorage.removeItem('isTimeSynchronized');
-    localStorage.removeItem('originalSyncTime');
-    localStorage.removeItem('syncTimestamp');
-    localStorage.removeItem('loadedFromShareCode');
+    SyncLocalStorage.removeItem('testTimeLeft');
+    SyncLocalStorage.removeItem('codebustersTimeLeft');
+    SyncLocalStorage.removeItem('isTimeSynchronized');
+    SyncLocalStorage.removeItem('originalSyncTime');
+    SyncLocalStorage.removeItem('syncTimestamp');
+    SyncLocalStorage.removeItem('loadedFromShareCode');
     
     return session;
   }

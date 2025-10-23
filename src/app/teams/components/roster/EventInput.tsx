@@ -38,6 +38,8 @@ export default function EventInput({
   const base = roster[eventName] || [];
   const slots = [...base, ...new Array(Math.max(0, max - base.length)).fill('')].slice(0, max);
   
+  // Removed verbose logging - not needed for business logic
+  
   const shouldShowAssign = shouldShowAssignOption(isCaptain, colorKey, eventName, isRemoved);
 
   return (

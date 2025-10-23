@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useAuth } from '@/app/contexts/AuthContext';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 /**
  * Notification item type definition
@@ -131,8 +132,8 @@ export function NotificationsProvider({
     const handleBeforeUnload = () => {
       if (user?.id) {
         try {
-          localStorage.removeItem(`scio_notifications_${user.id}`);
-          localStorage.removeItem(`scio_notifications_time_${user.id}`);
+          SyncLocalStorage.removeItem(`scio_notifications_${user.id}`);
+          SyncLocalStorage.removeItem(`scio_notifications_time_${user.id}`);
         } catch {
           // ignore cache errors
         }
@@ -153,8 +154,8 @@ export function NotificationsProvider({
 
   const getCachedNotifications = useCallback((userId: string) => {
     try {
-      const cached = localStorage.getItem(`scio_notifications_${userId}`);
-      const cachedTime = localStorage.getItem(`scio_notifications_time_${userId}`);
+      const cached = SyncLocalStorage.getItem(`scio_notifications_${userId}`);
+      const cachedTime = SyncLocalStorage.getItem(`scio_notifications_time_${userId}`);
       if (cached && cachedTime) {
         const timeDiff = Date.now() - parseInt(cachedTime);
         if (timeDiff < CACHE_DURATION) {
@@ -170,8 +171,8 @@ export function NotificationsProvider({
 
   const setCachedNotifications = useCallback((userId: string, data: NotificationItem[]) => {
     try {
-      localStorage.setItem(`scio_notifications_${userId}`, JSON.stringify(data));
-      localStorage.setItem(`scio_notifications_time_${userId}`, Date.now().toString());
+      SyncLocalStorage.setItem(`scio_notifications_${userId}`, JSON.stringify(data));
+      SyncLocalStorage.setItem(`scio_notifications_time_${userId}`, Date.now().toString());
     } catch {
       // ignore cache errors
     }
@@ -180,8 +181,8 @@ export function NotificationsProvider({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const clearNotificationCache = useCallback((userId: string) => {
     try {
-      localStorage.removeItem(`scio_notifications_${userId}`);
-      localStorage.removeItem(`scio_notifications_time_${userId}`);
+      SyncLocalStorage.removeItem(`scio_notifications_${userId}`);
+      SyncLocalStorage.removeItem(`scio_notifications_time_${userId}`);
     } catch {
       // ignore cache errors
     }

@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { WelcomeMessageProps } from '../types';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 export default function WelcomeMessage({ darkMode, currentUser: _currentUser, setDarkMode, greetingName: greetingNameProp, isLoading: _isLoading }: WelcomeMessageProps) {
   const [greetingName, setGreetingName] = useState<string>('');
@@ -11,7 +12,7 @@ export default function WelcomeMessage({ darkMode, currentUser: _currentUser, se
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        const cached = localStorage.getItem('scio_display_name');
+        const cached = SyncLocalStorage.getItem('scio_display_name');
         if (cached && cached.trim()) {
           setGreetingName(cached.trim());
         }
@@ -23,7 +24,7 @@ export default function WelcomeMessage({ darkMode, currentUser: _currentUser, se
   useEffect(() => {
     if (greetingNameProp && greetingNameProp.trim()) {
       setGreetingName(prev => prev || greetingNameProp.trim());
-      try { localStorage.setItem('scio_display_name', greetingNameProp.trim()); } catch {}
+      try { SyncLocalStorage.setItem('scio_display_name', greetingNameProp.trim()); } catch {}
     }
   }, [greetingNameProp]);
 
@@ -32,7 +33,7 @@ export default function WelcomeMessage({ darkMode, currentUser: _currentUser, se
     const onNameUpdated = (e: Event) => {
       const ce = e as CustomEvent<string>;
       const next = (typeof ce.detail === 'string' ? ce.detail : null) || (() => {
-        try { return localStorage.getItem('scio_display_name'); } catch { return null; }
+        try { return SyncLocalStorage.getItem('scio_display_name'); } catch { return null; }
       })();
       if (next && next.trim()) setGreetingName(next.trim());
     };
@@ -46,7 +47,7 @@ export default function WelcomeMessage({ darkMode, currentUser: _currentUser, se
 
   useEffect(() => {
     if (greetingName) {
-      try { localStorage.setItem('scio_display_name', greetingName); } catch {}
+      try { SyncLocalStorage.setItem('scio_display_name', greetingName); } catch {}
     }
   }, [greetingName]);
 

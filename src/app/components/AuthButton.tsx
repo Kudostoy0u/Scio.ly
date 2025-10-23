@@ -1,5 +1,6 @@
 'use client';
 import logger from '@/lib/utils/logger';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -51,9 +52,9 @@ export default function AuthButton() {
   useEffect(() => {
     if (ctxUser?.id) {
       try {
-        const cachedName = localStorage.getItem(`scio_display_name_${ctxUser.id}`);
+        const cachedName = SyncLocalStorage.getItem(`scio_display_name_${ctxUser.id}`);
         if (cachedName) setDisplayName(cachedName);
-        const cachedUsername = localStorage.getItem(`scio_username_${ctxUser.id}`);
+        const cachedUsername = SyncLocalStorage.getItem(`scio_username_${ctxUser.id}`);
         if (cachedUsername) setUsername(cachedUsername);
       } catch {}
     }
@@ -66,13 +67,13 @@ export default function AuthButton() {
     if (ctxUser?.id) {
 
       try {
-        const cachedPhotoUrl = localStorage.getItem(`scio_profile_photo_${ctxUser.id}`);
+        const cachedPhotoUrl = SyncLocalStorage.getItem(`scio_profile_photo_${ctxUser.id}`);
         if (cachedPhotoUrl) {
           setPhotoUrl(cachedPhotoUrl);
 
           preloadImage(cachedPhotoUrl).catch(() => {
 
-            localStorage.removeItem(`scio_profile_photo_${ctxUser.id}`);
+            SyncLocalStorage.removeItem(`scio_profile_photo_${ctxUser.id}`);
             setPhotoUrl(null);
           });
         }
@@ -88,14 +89,14 @@ export default function AuthButton() {
 
   const clearUserFromLocalStorage = () => {
     try {
-      localStorage.removeItem('scio_user_data');
-      localStorage.setItem('scio_is_logged_in', '0');
-      localStorage.removeItem('scio_display_name');
+      SyncLocalStorage.removeItem('scio_user_data');
+      SyncLocalStorage.setItem('scio_is_logged_in', '0');
+      SyncLocalStorage.removeItem('scio_display_name');
 
       if (user?.id) {
-        localStorage.removeItem(`scio_profile_photo_${user.id}`);
-        localStorage.removeItem(`scio_display_name_${user.id}`);
-        localStorage.removeItem(`scio_username_${user.id}`);
+        SyncLocalStorage.removeItem(`scio_profile_photo_${user.id}`);
+        SyncLocalStorage.removeItem(`scio_display_name_${user.id}`);
+        SyncLocalStorage.removeItem(`scio_username_${user.id}`);
       }
     } catch {}
   };
@@ -137,18 +138,18 @@ export default function AuthButton() {
         const dn = (profile as any)?.display_name as string | undefined;
         if (dn) {
           setDisplayName(dn);
-          try { localStorage.setItem(`scio_display_name_${ctxUser.id}`, dn); } catch {}
+          try { SyncLocalStorage.setItem(`scio_display_name_${ctxUser.id}`, dn); } catch {}
         }
         const un = (profile as any)?.username as string | undefined;
         if (un) {
           setUsername(un);
-          try { localStorage.setItem(`scio_username_${ctxUser.id}`, un); } catch {}
+          try { SyncLocalStorage.setItem(`scio_username_${ctxUser.id}`, un); } catch {}
         }
         const photo = (profile as any)?.photo_url as string | undefined;
         if (photo) {
           try {
 
-            localStorage.setItem(`scio_profile_photo_${ctxUser.id}`, photo);
+            SyncLocalStorage.setItem(`scio_profile_photo_${ctxUser.id}`, photo);
             
 
             await preloadImage(photo);
@@ -157,7 +158,7 @@ export default function AuthButton() {
             }
           } catch {
 
-            localStorage.removeItem(`scio_profile_photo_${ctxUser.id}`);
+            SyncLocalStorage.removeItem(`scio_profile_photo_${ctxUser.id}`);
           }
         }
       } catch {}

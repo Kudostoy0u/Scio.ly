@@ -35,6 +35,8 @@ export default function ConflictBlock({
   onRemoveEvent,
   onRestoreEvents
 }: ConflictBlockProps) {
+  // Removed verbose logging - not needed for business logic
+  
   const colors = getGroupColors(darkMode, group.colorKey);
   const isCollapsed = collapsedGroups.has(group.label);
 

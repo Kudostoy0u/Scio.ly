@@ -5,6 +5,7 @@ import { X, User, Mail, Edit3 } from 'lucide-react';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/app/contexts/ThemeContext';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 interface NamePromptModalProps {
   isOpen: boolean;
@@ -34,7 +35,7 @@ export default function NamePromptModal({
 
     // Prefill username from localStorage if available
     try {
-      const cachedUsername = localStorage.getItem(`scio_username_${user.id}`);
+      const cachedUsername = SyncLocalStorage.getItem(`scio_username_${user.id}`);
       if (cachedUsername && cachedUsername.trim()) {
         setUsername(prev => prev || cachedUsername.trim());
       }
@@ -109,14 +110,14 @@ export default function NamePromptModal({
       // Update localStorage
       try {
         if (displayName.trim()) {
-          localStorage.setItem(`scio_display_name_${user.id}`, displayName.trim());
-          localStorage.setItem('scio_display_name', displayName.trim());
+          SyncLocalStorage.setItem(`scio_display_name_${user.id}`, displayName.trim());
+          SyncLocalStorage.setItem('scio_display_name', displayName.trim());
           window.dispatchEvent(new CustomEvent('scio-display-name-updated', { 
             detail: displayName.trim() 
           }));
         }
         if (username.trim()) {
-          localStorage.setItem(`scio_username_${user.id}`, username.trim());
+          SyncLocalStorage.setItem(`scio_username_${user.id}`, username.trim());
         }
       } catch {
         // Ignore localStorage errors
@@ -146,7 +147,7 @@ export default function NamePromptModal({
         if (!verify.error) {
           const dn = (verify.data as any)?.display_name as string | undefined;
           if (dn && dn.trim()) {
-            try { localStorage.setItem(`scio_display_name_${user.id}`, dn.trim()); } catch {}
+            try { SyncLocalStorage.setItem(`scio_display_name_${user.id}`, dn.trim()); } catch {}
           }
         }
       } catch {}

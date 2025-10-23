@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import type { HistoryRecord } from '@/app/utils/dashboardData';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false }) as any;
 
@@ -16,7 +17,7 @@ export default function QuestionsThisWeekChart({
 }) {
   const [chartType, setChartType] = useState<'line' | 'heatmap'>(() => {
     try {
-      const saved = typeof window !== 'undefined' ? localStorage.getItem('scio_chart_type') : null;
+      const saved = typeof window !== 'undefined' ? SyncLocalStorage.getItem('scio_chart_type') : null;
       return (saved === 'line' || saved === 'heatmap') ? saved : 'heatmap';
     } catch {
       return 'heatmap';
@@ -40,7 +41,7 @@ export default function QuestionsThisWeekChart({
   }, []);
 
   useEffect(() => {
-    try { localStorage.setItem('scio_chart_type', chartType); } catch {}
+    try { SyncLocalStorage.setItem('scio_chart_type', chartType); } catch {}
   }, [chartType]);
 
 

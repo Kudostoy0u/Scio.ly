@@ -113,7 +113,12 @@ export function generateUsername(profile: UserProfile | null, userId?: string): 
  * @param name Display name to check
  * @returns True if user needs a name prompt
  */
-export function needsNamePrompt(name: string): boolean {
+export function needsNamePrompt(name: string | null | undefined): boolean {
+  // Handle null/undefined cases
+  if (!name || typeof name !== 'string') {
+    return true; // Prompt for name if no name provided
+  }
+  
   return (
     name === '@unknown' ||
     name.startsWith('User ') ||

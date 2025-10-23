@@ -349,6 +349,7 @@ export async function GET(
       .select({
         studentName: newTeamRosterData.studentName,
         teamUnitId: newTeamRosterData.teamUnitId,
+        eventName: newTeamRosterData.eventName,
         teamId: newTeamUnits.teamId,
         description: newTeamUnits.description
       })
@@ -360,37 +361,55 @@ export async function GET(
       members: unlinkedRosterResult.map(r => ({ name: r.studentName, subteam: r.teamId }))
     });
 
-    // Add unlinked roster members to the map
+    // Group unlinked roster data by student name and subteam
+    const unlinkedRosterByStudent = new Map<string, Map<string, string[]>>();
     unlinkedRosterResult.forEach(rosterMember => {
       if (!rosterMember.studentName) return;
       
-      const memberKey = `roster-${rosterMember.studentName}-${rosterMember.teamUnitId}`;
-      
-      // Check if this person is already in the members list (shouldn't happen for unlinked, but just in case)
-      const existingMember = Array.from(allMembers.values()).find(member => 
-        member.name === rosterMember.studentName && 
-        member.subteam?.id === rosterMember.teamUnitId
-      );
-      
-      if (!existingMember) {
-        allMembers.set(memberKey, {
-          id: null, // No user ID for unlinked members
-          name: rosterMember.studentName,
-          email: null, // No email for unlinked members
-          username: 'unknown', // Special username for unlinked members
-          role: 'unlinked', // Special role for unlinked members
-          subteam: {
-            id: rosterMember.teamUnitId,
-            name: rosterMember.description || `Team ${rosterMember.teamId}`,
-            description: rosterMember.description
-          },
-          joinedAt: null,
-          events: [], // Events will be populated separately if needed
-          isCreator: false,
-          isUnlinked: true, // Flag to identify unlinked members
-          hasPendingLinkInvite: false // Will be updated below if there's a pending invitation
-        });
+      if (!unlinkedRosterByStudent.has(rosterMember.studentName)) {
+        unlinkedRosterByStudent.set(rosterMember.studentName, new Map());
       }
+      
+      const studentRosterData = unlinkedRosterByStudent.get(rosterMember.studentName)!;
+      if (!studentRosterData.has(rosterMember.teamUnitId)) {
+        studentRosterData.set(rosterMember.teamUnitId, []);
+      }
+      
+      if (rosterMember.eventName) {
+        studentRosterData.get(rosterMember.teamUnitId)!.push(rosterMember.eventName);
+      }
+    });
+
+    // Add unlinked roster members to the map with their events
+    unlinkedRosterByStudent.forEach((studentRosterData, studentName) => {
+      studentRosterData.forEach((events, teamUnitId) => {
+        const memberKey = `roster-${studentName}-${teamUnitId}`;
+        
+        // Get the subteam info from the first roster entry for this student/subteam
+        const firstEntry = unlinkedRosterResult.find(r => 
+          r.studentName === studentName && r.teamUnitId === teamUnitId
+        );
+        
+        if (firstEntry) {
+          allMembers.set(memberKey, {
+            id: null, // No user ID for unlinked members
+            name: studentName,
+            email: null, // No email for unlinked members
+            username: 'unknown', // Special username for unlinked members
+            role: 'unlinked', // Special role for unlinked members
+            subteam: {
+              id: teamUnitId,
+              name: firstEntry.description || `Team ${firstEntry.teamId}`,
+              description: firstEntry.description
+            },
+            joinedAt: null,
+            events: [...new Set(events)], // Remove duplicates
+            isCreator: false,
+            isUnlinked: true, // Flag to identify unlinked members
+            hasPendingLinkInvite: false // Will be updated below if there's a pending invitation
+          });
+        }
+      });
     });
 
     // 5. Check for pending roster link invitations and update member status
@@ -415,10 +434,10 @@ export async function GET(
       .from(rosterLinkInvitations)
       .where(and(...pendingInviteConditions));
     
-    console.log('✅ [MEMBERS API] Fetched pending roster link invitations', { 
-      count: pendingInvites.length,
-      invites: pendingInvites.map(i => ({ studentName: i.studentName, teamId: i.teamId }))
-    });
+    // console.log('✅ [MEMBERS API] Fetched pending roster link invitations', { 
+    //   count: pendingInvites.length,
+    //   invites: pendingInvites.map(i => ({ studentName: i.studentName, teamId: i.teamId }))
+    // });
 
     // Update members with pending link invite status
     pendingInvites.forEach(invite => {

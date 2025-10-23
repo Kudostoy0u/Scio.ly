@@ -1,6 +1,7 @@
 'use client';
 import logger from '@/lib/utils/logger';
 import { withAuthRetryData } from '@/lib/utils/supabaseRetry';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 import { supabase } from '@/lib/supabase';
 import type { DailyMetrics } from './metrics';
@@ -54,7 +55,7 @@ const getTodayKey = (): string => new Date().toISOString().split('T')[0];
  */
 const getLocalGreetingName = (): string => {
   try {
-    return localStorage.getItem(GREETING_NAME_KEY) || '';
+    return SyncLocalStorage.getItem(GREETING_NAME_KEY) || '';
   } catch {
     return '';
   }
@@ -67,7 +68,7 @@ const getLocalGreetingName = (): string => {
  */
 const setLocalGreetingName = (name: string): void => {
   try {
-    localStorage.setItem(GREETING_NAME_KEY, name);
+    SyncLocalStorage.setItem(GREETING_NAME_KEY, name);
   } catch {}
 };
 
@@ -81,7 +82,7 @@ const getLocalDailyMetrics = (): DailyMetrics => {
     gamePoints: 0,
   };
   try {
-    const raw = localStorage.getItem(`${METRICS_PREFIX}${today}`);
+    const raw = SyncLocalStorage.getItem(`${METRICS_PREFIX}${today}`);
     return raw ? { ...defaultMetrics, ...JSON.parse(raw) } : defaultMetrics;
   } catch {
     return defaultMetrics;
@@ -91,19 +92,19 @@ const getLocalDailyMetrics = (): DailyMetrics => {
 const setLocalDailyMetrics = (metrics: DailyMetrics): void => {
   const today = getTodayKey();
   try {
-    localStorage.setItem(`${METRICS_PREFIX}${today}`, JSON.stringify(metrics));
+    SyncLocalStorage.setItem(`${METRICS_PREFIX}${today}`, JSON.stringify(metrics));
   } catch {}
 };
 
 const getLocalHistory = (): Record<string, HistoryRecord> => {
   const historyData: Record<string, HistoryRecord> = {};
   try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i) || '';
+    for (let i = 0; i < SyncLocalStorage.getLength(); i++) {
+      const key = SyncLocalStorage.key(i) || '';
       if (!key.startsWith(METRICS_PREFIX)) continue;
       
       const date = key.replace(METRICS_PREFIX, '');
-      const raw = localStorage.getItem(key);
+      const raw = SyncLocalStorage.getItem(key);
       if (!raw) continue;
       
       try {
@@ -197,7 +198,7 @@ export const syncDashboardData = async (userId: string | null): Promise<Dashboar
             eventQuestions: row.event_questions || {},
             gamePoints: row.game_points || 0,
           };
-          localStorage.setItem(key, JSON.stringify(payload));
+          SyncLocalStorage.setItem(key, JSON.stringify(payload));
         } catch {}
       });
     }
@@ -467,14 +468,14 @@ export const updateDashboardMetrics = async (
  */
 export function resetAllLocalStorageExceptTheme(): void {
   try {
-    const preservedTheme = localStorage.getItem('theme');
-    localStorage.clear();
+    const preservedTheme = SyncLocalStorage.getItem('theme');
+    SyncLocalStorage.clear();
     if (preservedTheme !== null) {
-      localStorage.setItem('theme', preservedTheme);
+      SyncLocalStorage.setItem('theme', preservedTheme);
     }
 
-    try { localStorage.removeItem(GREETING_NAME_KEY); } catch {}
-    try { localStorage.removeItem('scio_chart_type'); } catch {}
+    try { SyncLocalStorage.removeItem(GREETING_NAME_KEY); } catch {}
+    try { SyncLocalStorage.removeItem('scio_chart_type'); } catch {}
 
     try { window.dispatchEvent(new CustomEvent('scio-display-name-updated', { detail: '' })); } catch {}
   } catch {}

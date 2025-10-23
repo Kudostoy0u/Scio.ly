@@ -7,6 +7,7 @@
  */
 
 import { globalApiCache } from '@/lib/utils/globalApiCache';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 export interface NotificationItem {
   id: string;
@@ -201,7 +202,7 @@ export class NotificationService {
   async hasTeamMemberships(userId: string): Promise<boolean> {
     try {
       // Check if user has any team-related data in localStorage
-      const teamData = localStorage.getItem(`scio_user_teams_${userId}`);
+      const teamData = SyncLocalStorage.getItem(`scio_user_teams_${userId}`);
       if (teamData) {
         const teams = JSON.parse(teamData);
         return Array.isArray(teams) && teams.length > 0;

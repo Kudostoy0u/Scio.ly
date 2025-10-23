@@ -1,5 +1,6 @@
 'use client';
 import logger from '@/lib/utils/logger';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 
 import { useEffect, useState } from 'react';
@@ -44,12 +45,12 @@ function DashboardContent({ initialUser }: { initialUser?: User | null }) {
 
   const [correctView, setCorrectView] = useState<'daily' | 'weekly' | 'allTime'>(() => {
     if (typeof window === 'undefined') return 'daily';
-    const stored = localStorage.getItem('dashboard.correctView');
+    const stored = SyncLocalStorage.getItem('dashboard.correctView');
     return stored === 'daily' || stored === 'weekly' || stored === 'allTime' ? (stored as 'daily' | 'weekly' | 'allTime') : 'daily';
   });
   const [accuracyView, setAccuracyView] = useState<'daily' | 'weekly' | 'allTime'>(() => {
     if (typeof window === 'undefined') return 'daily';
-    const stored = localStorage.getItem('dashboard.accuracyView');
+    const stored = SyncLocalStorage.getItem('dashboard.accuracyView');
     return stored === 'daily' || stored === 'weekly' || stored === 'allTime' ? (stored as 'daily' | 'weekly' | 'allTime') : 'daily';
   });
 
@@ -63,8 +64,8 @@ function DashboardContent({ initialUser }: { initialUser?: User | null }) {
   useEffect(() => {
     try {
       if (typeof window !== 'undefined') {
-        localStorage.setItem('dashboard.correctView', correctView);
-        localStorage.setItem('dashboard.accuracyView', accuracyView);
+        SyncLocalStorage.setItem('dashboard.correctView', correctView);
+        SyncLocalStorage.setItem('dashboard.accuracyView', accuracyView);
       }
     } catch (error) {
       logger.error('Error saving dashboard view preferences to localStorage:', error);

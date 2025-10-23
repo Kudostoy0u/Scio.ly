@@ -1,3 +1,4 @@
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 // localstorage keys for different event types
 export const NORMAL_EVENT_PREFERENCES = 'scio_normal_event_preferences';
 export const CODEBUSTERS_PREFERENCES = 'scio_codebusters_preferences';
@@ -18,7 +19,7 @@ export const savePreferences = (eventName: string, questionCount: number, timeLi
   const isCodebusters = eventName === 'Codebusters';
   const key = isCodebusters ? CODEBUSTERS_PREFERENCES : NORMAL_EVENT_PREFERENCES;
   const preferences = { questionCount, timeLimit };
-  localStorage.setItem(key, JSON.stringify(preferences));
+  SyncLocalStorage.setItem(key, JSON.stringify(preferences));
 };
 
 export const loadPreferences = (eventName: string) => {
@@ -27,7 +28,7 @@ export const loadPreferences = (eventName: string) => {
   const defaults = isCodebusters ? CODEBUSTERS_DEFAULTS : NORMAL_DEFAULTS;
   
   try {
-    const saved = localStorage.getItem(key);
+    const saved = SyncLocalStorage.getItem(key);
     if (saved) {
       const preferences = JSON.parse(saved);
       return {

@@ -12,6 +12,7 @@ import DifficultyDropdown from './DifficultyDropdown';
 import SubtopicDropdown from './SubtopicDropdown';
 import DivisionToggle from './DivisionToggle';
 import TestActions from './TestActions';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 interface TestConfigurationProps {
   selectedEvent: Event | null;
@@ -55,9 +56,9 @@ export default function TestConfiguration({
         onSettingsChange({ ...settings, questionCount: 1 });
 
         if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
-          localStorage.setItem('defaultQuestionCount', '1');
+          SyncLocalStorage.setItem('defaultQuestionCount', '1');
         } else if (selectedEvent && selectedEvent.name === 'Codebusters') {
-          localStorage.setItem('codebustersQuestionCount', '1');
+          SyncLocalStorage.setItem('codebustersQuestionCount', '1');
         }
         return;
       }
@@ -65,9 +66,9 @@ export default function TestConfiguration({
       
 
       if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
-        localStorage.setItem('defaultQuestionCount', questionCount.toString());
+        SyncLocalStorage.setItem('defaultQuestionCount', questionCount.toString());
       } else if (selectedEvent && selectedEvent.name === 'Codebusters') {
-        localStorage.setItem('codebustersQuestionCount', questionCount.toString());
+        SyncLocalStorage.setItem('codebustersQuestionCount', questionCount.toString());
       }
     } else if (id === 'timeLimit') {
       const timeLimit = parseInt(value);
@@ -75,25 +76,25 @@ export default function TestConfiguration({
         onSettingsChange({ ...settings, timeLimit: 1 });
 
         if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
-          localStorage.setItem('defaultTimeLimit', '1');
+          SyncLocalStorage.setItem('defaultTimeLimit', '1');
         } else if (selectedEvent && selectedEvent.name === 'Codebusters') {
-          localStorage.setItem('codebustersTimeLimit', '1');
+          SyncLocalStorage.setItem('codebustersTimeLimit', '1');
         }
       } else if (timeLimit > 120) {
         onSettingsChange({ ...settings, timeLimit: 120 });
 
         if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
-          localStorage.setItem('defaultTimeLimit', '120');
+          SyncLocalStorage.setItem('defaultTimeLimit', '120');
         } else if (selectedEvent && selectedEvent.name === 'Codebusters') {
-          localStorage.setItem('codebustersTimeLimit', '120');
+          SyncLocalStorage.setItem('codebustersTimeLimit', '120');
         }
       } else {
         onSettingsChange({ ...settings, timeLimit });
 
         if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
-          localStorage.setItem('defaultTimeLimit', timeLimit.toString());
+          SyncLocalStorage.setItem('defaultTimeLimit', timeLimit.toString());
         } else if (selectedEvent && selectedEvent.name === 'Codebusters') {
-          localStorage.setItem('codebustersTimeLimit', timeLimit.toString());
+          SyncLocalStorage.setItem('codebustersTimeLimit', timeLimit.toString());
         }
       }
     } else {
@@ -149,13 +150,13 @@ export default function TestConfiguration({
             ? 'B'
             : settings.division;
 
-      localStorage.setItem('defaultDivision', normalizedDivision);
+      SyncLocalStorage.setItem('defaultDivision', normalizedDivision);
 
 
       const normalizedTypes = ['multiple-choice', 'both', 'free-response'].includes(settings.types)
         ? settings.types
         : 'multiple-choice';
-      localStorage.setItem('defaultQuestionTypes', normalizedTypes);
+      SyncLocalStorage.setItem('defaultQuestionTypes', normalizedTypes);
     }
   }, [settings.division, settings.types, selectedEvent]);
 
@@ -308,7 +309,7 @@ export default function TestConfiguration({
                     onSettingsChange({ ...settings, types: 'multiple-choice' });
 
                     if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
-                      localStorage.setItem('defaultQuestionTypes', 'multiple-choice');
+                      SyncLocalStorage.setItem('defaultQuestionTypes', 'multiple-choice');
                     }
                   }}
                 disabled={isCodebusters}
@@ -332,7 +333,7 @@ export default function TestConfiguration({
                     onSettingsChange({ ...settings, types: 'both' });
 
                     if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
-                      localStorage.setItem('defaultQuestionTypes', 'both');
+                      SyncLocalStorage.setItem('defaultQuestionTypes', 'both');
                     }
                   }}
                 disabled={isCodebusters}
@@ -356,7 +357,7 @@ export default function TestConfiguration({
                     onSettingsChange({ ...settings, types: 'free-response' });
 
                     if (!selectedEvent || selectedEvent.name !== 'Codebusters') {
-                      localStorage.setItem('defaultQuestionTypes', 'free-response');
+                      SyncLocalStorage.setItem('defaultQuestionTypes', 'free-response');
                     }
                   }}
                 disabled={isCodebusters}
@@ -406,7 +407,7 @@ export default function TestConfiguration({
                     
 
                     if (typeof window !== 'undefined') {
-                      localStorage.setItem('defaultIdPercentage', percentage.toString());
+                      SyncLocalStorage.setItem('defaultIdPercentage', percentage.toString());
                     }
                   }}
                   className={`flex-1 h-2 rounded-lg appearance-none cursor-pointer ${
@@ -450,7 +451,7 @@ export default function TestConfiguration({
                     onChange={(e) => {
                       onSettingsChange({ ...settings, pureIdOnly: e.target.checked });
                       if (typeof window !== 'undefined') {
-                        localStorage.setItem('defaultPureIdOnly', e.target.checked ? 'true' : 'false');
+                        SyncLocalStorage.setItem('defaultPureIdOnly', e.target.checked ? 'true' : 'false');
                       }
                     }}
                     className={`w-4 h-4 rounded border ${
@@ -489,8 +490,8 @@ export default function TestConfiguration({
                   
 
                   if (typeof window !== 'undefined') {
-                    localStorage.setItem('codebustersCharLengthMin', min.toString());
-                    localStorage.setItem('codebustersCharLengthMax', max.toString());
+                    SyncLocalStorage.setItem('codebustersCharLengthMin', min.toString());
+                    SyncLocalStorage.setItem('codebustersCharLengthMax', max.toString());
                   }
                 }}
               />

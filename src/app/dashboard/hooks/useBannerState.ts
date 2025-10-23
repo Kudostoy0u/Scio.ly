@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 export function useBannerState() {
   const [bannerVisible, setBannerVisible] = useState<boolean | null>(null);
 
   useEffect(() => {
     const checkBannerVisibility = () => {
-      const bannerClosed = localStorage.getItem('hylas-banner-closed') === 'true';
+      const bannerClosed = SyncLocalStorage.getItem('hylas-banner-closed') === 'true';
       setBannerVisible(!bannerClosed);
     };
     
@@ -17,7 +18,7 @@ export function useBannerState() {
   }, []);
 
   const closeBanner = () => {
-    localStorage.setItem('hylas-banner-closed', 'true');
+    SyncLocalStorage.setItem('hylas-banner-closed', 'true');
     setBannerVisible(false);
   };
 

@@ -26,10 +26,13 @@ export async function GET(
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   // const startTime = Date.now();
-  console.log('📚 [ASSIGNMENTS API] GET request started', { 
-    timestamp: new Date().toISOString(),
-    url: request.url 
-  });
+  // Only log in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('📚 [ASSIGNMENTS API] GET request started', { 
+      timestamp: new Date().toISOString(),
+      url: request.url 
+    });
+  }
 
   try {
     if (!process.env.DATABASE_URL) {

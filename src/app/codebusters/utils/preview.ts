@@ -1,3 +1,4 @@
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 export function clearPreviewLocalStorage(): void {
   const keys = [
     'codebustersQuotes',
@@ -14,9 +15,9 @@ export function clearPreviewLocalStorage(): void {
   ];
   try {
     for (const key of keys) {
-      localStorage.removeItem(key);
+      SyncLocalStorage.removeItem(key);
     }
-    localStorage.setItem('codebustersForceRefresh', 'true');
+    SyncLocalStorage.setItem('codebustersForceRefresh', 'true');
   } catch {}
 }
 

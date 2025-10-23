@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { clearPreviewLocalStorage } from './preview';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 describe('clearPreviewLocalStorage', () => {
   it('removes preview-related keys and sets force refresh', () => {
@@ -17,10 +18,10 @@ describe('clearPreviewLocalStorage', () => {
       'codebustersQuotesLoadedFromStorage',
     ];
 
-    for (const k of keys) localStorage.setItem(k, 'x');
+    for (const k of keys) SyncLocalStorage.setItem(k, 'x');
     clearPreviewLocalStorage();
-    for (const k of keys) expect(localStorage.getItem(k)).toBeNull();
-    expect(localStorage.getItem('codebustersForceRefresh')).toBe('true');
+    for (const k of keys) expect(SyncLocalStorage.getItem(k)).toBeNull();
+    expect(SyncLocalStorage.getItem('codebustersForceRefresh')).toBe('true');
   });
 });
 

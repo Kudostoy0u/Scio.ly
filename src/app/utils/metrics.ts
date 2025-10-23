@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { updateLeaderboardStats } from './leaderboardUtils';
 import { withAuthRetry } from '@/lib/utils/supabaseRetry';
 import logger from '@/lib/utils/logger';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 /**
  * Metrics management utilities for Science Olympiad platform
@@ -31,7 +32,7 @@ export interface DailyMetrics {
  */
 const getLocalMetrics = (): DailyMetrics => {
   const today = new Date().toISOString().split('T')[0];
-  const localStats = typeof window !== 'undefined' ? localStorage.getItem(`metrics_${today}`) : null;
+  const localStats = typeof window !== 'undefined' ? SyncLocalStorage.getItem(`metrics_${today}`) : null;
   const defaultMetrics = {
     questionsAttempted: 0,
     correctAnswers: 0,
@@ -50,7 +51,7 @@ const getLocalMetrics = (): DailyMetrics => {
 const saveLocalMetrics = (metrics: DailyMetrics) => {
   const today = new Date().toISOString().split('T')[0];
   if (typeof window !== 'undefined') {
-    localStorage.setItem(`metrics_${today}`, JSON.stringify(metrics));
+    SyncLocalStorage.setItem(`metrics_${today}`, JSON.stringify(metrics));
   }
 };
 

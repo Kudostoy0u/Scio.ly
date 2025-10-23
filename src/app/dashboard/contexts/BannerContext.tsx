@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 interface BannerContextType {
   bannerVisible: boolean | null;
@@ -14,7 +15,7 @@ export function BannerProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const checkBannerVisibility = () => {
-      const bannerClosed = localStorage.getItem('hylas-banner-closed') === 'true';
+      const bannerClosed = SyncLocalStorage.getItem('hylas-banner-closed') === 'true';
       setBannerVisible(!bannerClosed);
     };
     
@@ -26,7 +27,7 @@ export function BannerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const closeBanner = () => {
-    localStorage.setItem('hylas-banner-closed', 'true');
+    SyncLocalStorage.setItem('hylas-banner-closed', 'true');
     setBannerVisible(false);
   };
 

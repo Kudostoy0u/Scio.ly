@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import TestConfiguration from './TestConfiguration';
 import { Event, Settings } from '../types';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 // Mock dependencies
 vi.mock('@/app/contexts/ThemeContext', () => ({
@@ -42,7 +43,7 @@ describe('TestConfiguration', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
+    SyncLocalStorage.clear();
   });
 
   it('renders all configuration inputs', () => {
@@ -167,7 +168,7 @@ describe('TestConfiguration', () => {
     const questionInput = screen.getByLabelText(/number of questions/i);
     fireEvent.change(questionInput, { target: { value: '40' } });
 
-    expect(localStorage.getItem('defaultQuestionCount')).toBe('40');
+    expect(SyncLocalStorage.getItem('defaultQuestionCount')).toBe('40');
   });
 
   it('uses different localStorage key for Codebusters', () => {
@@ -190,7 +191,7 @@ describe('TestConfiguration', () => {
     const questionInput = screen.getByLabelText(/number of questions/i);
     fireEvent.change(questionInput, { target: { value: '15' } });
 
-    expect(localStorage.getItem('codebustersQuestionCount')).toBe('15');
+    expect(SyncLocalStorage.getItem('codebustersQuestionCount')).toBe('15');
   });
 
   it('calls onGenerateTest when generate button is clicked', () => {

@@ -39,6 +39,8 @@ export function useTeamStore() {
     fetchStreamData,
     updateRoster,
     updateMembers,
+    updateSubteams,
+    updateAssignments,
     addStreamPost,
     addAssignment,
     updateTimer,
@@ -47,6 +49,10 @@ export function useTeamStore() {
     deleteSubteam,
     invalidateCache,
     preloadData,
+    addRosterEntry,
+    removeRosterEntry,
+    addMemberEvent,
+    removeMemberEvent,
     getCacheKey,
   } = useTeamStoreBase();
 
@@ -303,6 +309,8 @@ export function useTeamStore() {
     // Update functions
     updateRoster,
     updateMembers,
+    updateSubteams,
+    updateAssignments,
     addStreamPost,
     addAssignment,
     updateTimer,
@@ -312,5 +320,13 @@ export function useTeamStore() {
     
     // Cache management
     invalidateCache,
+    
+    // Optimistic roster updates
+    addRosterEntry,
+    removeRosterEntry,
+    
+    // Optimistic member updates
+    addMemberEvent,
+    removeMemberEvent,
   };
 }

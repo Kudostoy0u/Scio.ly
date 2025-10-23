@@ -1,5 +1,6 @@
 'use client';
 import logger from '@/lib/utils/logger';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FaRegClipboard } from 'react-icons/fa';
@@ -95,7 +96,7 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
       
       if (currentIsCodebusters) {
 
-        const timeSession = JSON.parse(localStorage.getItem('currentTestSession') || '{}');
+        const timeSession = JSON.parse(SyncLocalStorage.getItem('currentTestSession') || '{}');
         if (timeSession && timeSession.timeState) {
           currentTimeLeft = timeSession.timeState.timeLeft;
           // no-op: captured via void above
@@ -103,7 +104,7 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
       } else {
 
         try {
-          const timeSession = JSON.parse(localStorage.getItem('currentTestSession') || '{}');
+          const timeSession = JSON.parse(SyncLocalStorage.getItem('currentTestSession') || '{}');
           if (timeSession && timeSession.timeState && typeof timeSession.timeState.timeLeft === 'number') {
             currentTimeLeft = timeSession.timeState.timeLeft;
           } else {
@@ -122,8 +123,8 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
           return;
         }
 
-        const testParams = JSON.parse(localStorage.getItem('testParams') || '{}');
-        const shareData = JSON.parse(localStorage.getItem('codebustersShareData') || '{}');
+        const testParams = JSON.parse(SyncLocalStorage.getItem('testParams') || '{}');
+        const shareData = JSON.parse(SyncLocalStorage.getItem('codebustersShareData') || '{}');
 
         const response = await fetch(api.codebustersShareGenerate, {
           method: 'POST',
@@ -158,12 +159,12 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
         }
       } else {
 
-        const testQuestionsRaw = localStorage.getItem('testQuestions');
+        const testQuestionsRaw = SyncLocalStorage.getItem('testQuestions');
         if (!testQuestionsRaw) {
           toast.error('No test questions found to share.');
           return;
         }
-        const testParamsRaw = localStorage.getItem('testParams');
+        const testParamsRaw = SyncLocalStorage.getItem('testParams');
         if (!testParamsRaw) {
           toast.error('No test parameters found.');
           return;
@@ -271,13 +272,13 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(({
       return;
     }
     
-    const shareCode = localStorage.getItem("shareCode");
+    const shareCode = SyncLocalStorage.getItem("shareCode");
     if (shareCode) {
 
       hasHandledRedirectRef.current = true;
 
       handleSharedTestRedirect(shareCode);
-      localStorage.removeItem("shareCode");
+      SyncLocalStorage.removeItem("shareCode");
     }
   }, []);
 

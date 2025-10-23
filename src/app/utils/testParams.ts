@@ -1,6 +1,7 @@
 'use client';
 
 import type { Settings } from '@/app/practice/types';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 /**
  * Test parameters interface for practice tests
@@ -104,9 +105,9 @@ export function buildTestParams(eventName: string, settings: Settings): TestPara
 
 export function saveTestParams(params: TestParams) {
   try {
-    localStorage.setItem('testParams', JSON.stringify(params));
-    localStorage.removeItem('testQuestions');
-    localStorage.removeItem('testUserAnswers');
+    SyncLocalStorage.setItem('testParams', JSON.stringify(params));
+    SyncLocalStorage.removeItem('testQuestions');
+    SyncLocalStorage.removeItem('testUserAnswers');
   } catch {}
   try {
     const cookiePayload = encodeURIComponent(JSON.stringify(params));

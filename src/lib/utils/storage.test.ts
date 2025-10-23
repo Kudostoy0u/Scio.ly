@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { StorageService, StorageKeys } from './storage';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 describe('StorageService', () => {
   beforeEach(() => {
-    localStorage.clear();
+    SyncLocalStorage.clear();
   });
 
   describe('get/set', () => {
@@ -88,7 +89,7 @@ describe('StorageService', () => {
 
   describe('error handling', () => {
     it('handles JSON parse errors gracefully', () => {
-      localStorage.setItem('invalidJSON', 'not valid json {');
+      SyncLocalStorage.setItem('invalidJSON', 'not valid json {');
       const result = StorageService.get('invalidJSON');
       expect(result).toBeNull();
     });

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaShareAlt } from "react-icons/fa";
 import { RefreshCcw } from 'lucide-react';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 import { useTheme } from '@/app/contexts/ThemeContext';
 import EditQuestionModal from '@/app/components/EditQuestionModal';
@@ -240,7 +241,7 @@ export default function TestContent({ initialData, initialRouterData }: { initia
     return null;
   }
 
-  const isFromBookmarks = localStorage.getItem('testFromBookmarks') === 'true';
+  const isFromBookmarks = SyncLocalStorage.getItem('testFromBookmarks') === 'true';
     
   return (
     <>
@@ -410,13 +411,13 @@ export default function TestContent({ initialData, initialRouterData }: { initia
                   <button
                     onClick={async ()=>{
                       try {
-                        const selectionStr = localStorage.getItem('teamsSelection');
+                        const selectionStr = SyncLocalStorage.getItem('teamsSelection');
                         const sel = selectionStr ? JSON.parse(selectionStr) : null;
                         const school = previewSchool || sel?.school;
                         const divisionSel = (previewDivision as any) || sel?.division;
                         if (!school || !divisionSel) { toast.error('Missing team selection'); return; }
                         toast.info('Sending test...');
-                        const params = JSON.parse(localStorage.getItem('testParams')||'{}');
+                        const params = JSON.parse(SyncLocalStorage.getItem('testParams')||'{}');
                         const assignees = previewScope === 'all' ? [{ name: 'ALL' }] : [{ name: previewScope }];
                         const res = await fetch('/api/assignments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ school, division: divisionSel, teamId: previewTeam, eventName: routerData.eventName, assignees, params, questions: data }) });
                         if (res.ok) {

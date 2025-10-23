@@ -1,5 +1,6 @@
 'use client';
 import logger from '@/lib/utils/logger';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 
 import { useState, useEffect } from 'react';
@@ -107,12 +108,12 @@ export default function ProfilePage() {
         try {
           if (user?.id) {
             if (displayName) {
-              localStorage.setItem(`scio_display_name_${user.id}`, displayName);
+              SyncLocalStorage.setItem(`scio_display_name_${user.id}`, displayName);
             } else {
-              localStorage.removeItem(`scio_display_name_${user.id}`);
+              SyncLocalStorage.removeItem(`scio_display_name_${user.id}`);
             }
             if (username) {
-              localStorage.setItem(`scio_username_${user.id}`, username);
+              SyncLocalStorage.setItem(`scio_username_${user.id}`, username);
             }
           }
         } catch {}

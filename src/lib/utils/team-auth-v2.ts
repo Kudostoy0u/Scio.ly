@@ -44,6 +44,7 @@ export interface TeamAccessResult {
  * This is the single source of truth for team authorization
  */
 export async function getTeamAccess(userId: string, groupId: string): Promise<TeamAccessResult> {
+  
   try {
     // 1. Check if user is the team creator
     const creatorResult = await dbPg

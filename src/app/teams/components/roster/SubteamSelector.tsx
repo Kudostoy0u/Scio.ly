@@ -35,11 +35,11 @@ export default function SubteamSelector({
 
   return (
     <div className={`mb-6 p-4 rounded-lg ${darkMode ? 'bg-gray-800/50' : 'bg-gray-100/50'}`}>
-      <div className="flex space-x-3 overflow-x-auto pb-2">
+      <div className="flex space-x-2 overflow-x-auto pb-2">
         {subteams.map((subteam) => (
           <div
             key={subteam.id}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-2 min-w-fit cursor-pointer transition-all ${
+            className={`flex items-center space-x-1 px-4 py-3 rounded-lg border-2 min-w-fit cursor-pointer transition-all ${
               activeSubteamId === subteam.id
                 ? (darkMode 
                     ? 'bg-blue-900/30 border-blue-500 text-blue-300' 
@@ -51,7 +51,7 @@ export default function SubteamSelector({
             onClick={() => onSubteamChange?.(subteam.id)}
           >
             {editingSubteamId === subteam.id ? (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1">
                 <input
                   type="text"
                   value={editingSubteamName}
@@ -62,7 +62,7 @@ export default function SubteamSelector({
                       setEditingSubteamName('');
                     }
                   }}
-                  className={`bg-transparent border-none outline-none font-medium ${
+                  className={`bg-transparent border-none outline-none font-medium w-20 ${
                     activeSubteamId === subteam.id
                       ? (darkMode ? 'text-blue-300' : 'text-blue-700')
                       : (darkMode ? 'text-gray-300' : 'text-gray-700')
@@ -152,7 +152,7 @@ export default function SubteamSelector({
         {/* Add Subteam Button */}
         {isCaptain && (
           <div
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-2 min-w-fit cursor-pointer transition-all ${
+            className={`flex items-center space-x-1 px-2 py-2 rounded-lg border-2 min-w-fit cursor-pointer transition-all ${
               showSubteamSelector
                 ? (darkMode 
                     ? 'bg-green-900/30 border-green-500 text-green-300' 
@@ -164,7 +164,7 @@ export default function SubteamSelector({
             onClick={() => setShowSubteamSelector(!showSubteamSelector)}
           >
             {showSubteamSelector ? (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1">
                 <input
                   type="text"
                   value={newSubteamName}
@@ -176,7 +176,7 @@ export default function SubteamSelector({
                     }
                   }}
                   placeholder="Enter subteam name"
-                  className={`bg-transparent border-none outline-none font-medium ${
+                  className={`bg-transparent border-none outline-none font-medium w-24 ${
                     darkMode ? 'text-green-300 placeholder-green-400' : 'text-green-700 placeholder-green-500'
                   }`}
                   autoFocus

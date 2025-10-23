@@ -20,7 +20,7 @@ describe('RosterNotificationService', () => {
       const userId = 'user-123';
       const data = {
         studentName: 'John Doe',
-        eventName: 'Anatomy and Physiology',
+        eventName: 'Anatomy & Physiology',
         action: 'added' as const,
         teamSlug: 'team-slug',
         subteamId: 'subteam-123'

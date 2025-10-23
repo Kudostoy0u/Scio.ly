@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect } from 'react';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 /**
  * Theme context type definition
@@ -58,14 +59,14 @@ export function ThemeProvider({ children, initialDarkMode }: { children: React.R
       document.cookie = `theme=${value ? 'dark' : 'light'}; path=/; max-age=31536000; samesite=lax`;
     }
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('theme', value ? 'dark' : 'light');
+      SyncLocalStorage.setItem('theme', value ? 'dark' : 'light');
     }
   };
 
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const storedTheme = localStorage.getItem('theme');
+    const storedTheme = SyncLocalStorage.getItem('theme');
     if (storedTheme === 'dark' || storedTheme === 'light') {
       const prefersDark = storedTheme === 'dark';
       if (prefersDark !== darkMode) {

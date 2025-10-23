@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 interface NamePromptState {
   needsPrompt: boolean;
@@ -90,7 +91,7 @@ export function useNamePrompt(): NamePromptState {
 
         // Check if user has already dismissed this prompt recently
         const dismissedKey = `name_prompt_dismissed_${user.id}`;
-        const dismissed = localStorage.getItem(dismissedKey);
+        const dismissed = SyncLocalStorage.getItem(dismissedKey);
         if (dismissed) {
           const dismissedTime = parseInt(dismissed, 10);
           const now = Date.now();
@@ -126,5 +127,5 @@ export function useNamePrompt(): NamePromptState {
 
 export function dismissNamePrompt(userId: string) {
   const dismissedKey = `name_prompt_dismissed_${userId}`;
-  localStorage.setItem(dismissedKey, Date.now().toString());
+  SyncLocalStorage.setItem(dismissedKey, Date.now().toString());
 }

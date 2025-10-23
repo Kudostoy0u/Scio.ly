@@ -1,6 +1,7 @@
 import { toast } from 'react-toastify';
 import api from '../api';
 import logger from '@/lib/utils/logger';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 import {
   initializeTestSession,
   clearTestSession
@@ -59,7 +60,7 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
       if (data.success && data.data && data.data.quotes && data.data.testParams) {
         logger.log('🔍 Successfully got encrypted quotes from codebusters endpoint:', data.data.quotes.length, 'quotes');
 
-        localStorage.setItem('testParams', JSON.stringify(data.data.testParams));
+        SyncLocalStorage.setItem('testParams', JSON.stringify(data.data.testParams));
         
 
         
@@ -87,7 +88,7 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
         logger.log('🔍 Processing regular test with eventName:', testParams.eventName);
         
 
-        localStorage.setItem('testParams', JSON.stringify(testParams));
+        SyncLocalStorage.setItem('testParams', JSON.stringify(testParams));
         
 
         
@@ -150,14 +151,14 @@ export const loadSharedTestCode = async (code: string): Promise<ShareCodeResult>
 export const handleShareCodeRedirect = async (code: string): Promise<boolean> => {
   // 1. clear all relevant local storage to ensure a clean slate
   clearTestSession();
-  localStorage.removeItem('testQuestions');
-  localStorage.removeItem('testUserAnswers');
-  localStorage.removeItem('contestedQuestions');
-  localStorage.removeItem('testParams');
-  localStorage.removeItem('shareCode');
-  localStorage.removeItem('codebustersQuotes');
-  localStorage.removeItem('testSubmitted');
-  localStorage.removeItem('loaded');
+  SyncLocalStorage.removeItem('testQuestions');
+  SyncLocalStorage.removeItem('testUserAnswers');
+  SyncLocalStorage.removeItem('contestedQuestions');
+  SyncLocalStorage.removeItem('testParams');
+  SyncLocalStorage.removeItem('shareCode');
+  SyncLocalStorage.removeItem('codebustersQuotes');
+  SyncLocalStorage.removeItem('testSubmitted');
+  SyncLocalStorage.removeItem('loaded');
 
   // 2. fetch the shared test data
   const result = await loadSharedTestCode(code);
@@ -177,7 +178,7 @@ export const handleShareCodeRedirect = async (code: string): Promise<boolean> =>
   }
 
   // 4. set up local storage based on the test type
-  localStorage.setItem('testParams', JSON.stringify(result.testParams));
+  SyncLocalStorage.setItem('testParams', JSON.stringify(result.testParams));
   try {
     const cookiePayload = encodeURIComponent(JSON.stringify(result.testParams));
     document.cookie = `scio_test_params=${cookiePayload}; Path=/; Max-Age=600; SameSite=Lax`;
@@ -209,7 +210,7 @@ export const handleShareCodeRedirect = async (code: string): Promise<boolean> =>
   // 6. redirect to the correct page
   if (result.eventName === 'Codebusters') {
     if (result.encryptedQuotes) {
-      localStorage.setItem('codebustersQuotes', JSON.stringify(result.encryptedQuotes));
+      SyncLocalStorage.setItem('codebustersQuotes', JSON.stringify(result.encryptedQuotes));
     }
 
     window.location.href = '/codebusters';
@@ -217,9 +218,9 @@ export const handleShareCodeRedirect = async (code: string): Promise<boolean> =>
 
     if (result.questions && Array.isArray(result.questions)) {
       const questionsWithIndex = result.questions.map((q: Record<string, unknown>, idx: number) => ({ ...q, originalIndex: idx }));
-      localStorage.setItem('testQuestions', JSON.stringify(questionsWithIndex));
+      SyncLocalStorage.setItem('testQuestions', JSON.stringify(questionsWithIndex));
     }
-    localStorage.setItem('loaded', '1');
+    SyncLocalStorage.setItem('loaded', '1');
     window.location.href = '/test';
   }
   

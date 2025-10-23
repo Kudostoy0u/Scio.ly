@@ -1,5 +1,6 @@
 "use client";
 import logger from '@/lib/utils/logger';
+import SyncLocalStorage from '@/lib/database/localStorage-replacement';
 
 import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -23,33 +24,33 @@ export default function Page() {
         const paramsObj = row?.params || {};
         const questions = Array.isArray(row?.questions) ? row.questions : [];
         try {
-          localStorage.setItem('currentAssignmentId', String(idStr));
-          localStorage.setItem('testParams', JSON.stringify({ ...paramsObj, eventName }));
+          SyncLocalStorage.setItem('currentAssignmentId', String(idStr));
+          SyncLocalStorage.setItem('testParams', JSON.stringify({ ...paramsObj, eventName }));
           document.cookie = `scio_test_params=${encodeURIComponent(JSON.stringify({ ...paramsObj, eventName }))}; Path=/; Max-Age=600; SameSite=Lax`;
           // Ensure /teams/results can resolve team context without query
           try {
             const sel = { school: row.school, division: row.division, captain: false };
-            localStorage.setItem('teamsSelection', JSON.stringify(sel));
+            SyncLocalStorage.setItem('teamsSelection', JSON.stringify(sel));
             logger.log('[assign] set teamsSelection', sel);
           } catch {}
           // Seed exact questions for the assignee
           if (eventName === 'Codebusters') {
             logger.log('[assign] seeding codebusters quotes', { count: questions.length });
             try {
-              localStorage.setItem('codebustersQuotes', JSON.stringify(questions));
-              localStorage.setItem('codebustersQuotesLoadedFromStorage', 'true');
-              localStorage.removeItem('codebustersIsTestSubmitted');
-              localStorage.removeItem('codebustersTestScore');
-              localStorage.removeItem('codebustersTimeLeft');
+              SyncLocalStorage.setItem('codebustersQuotes', JSON.stringify(questions));
+              SyncLocalStorage.setItem('codebustersQuotesLoadedFromStorage', 'true');
+              SyncLocalStorage.removeItem('codebustersIsTestSubmitted');
+              SyncLocalStorage.removeItem('codebustersTestScore');
+              SyncLocalStorage.removeItem('codebustersTimeLeft');
             } catch {}
           } else {
             logger.log('[assign] seeding test questions', { count: questions.length });
             try {
               // strip any originalIndex and reindex freshly
               const seeded = questions.map((q: any, idx: number) => ({ ...q, originalIndex: idx }));
-              localStorage.setItem('testQuestions', JSON.stringify(seeded));
-              localStorage.removeItem('testUserAnswers');
-              localStorage.removeItem('testGradingResults');
+              SyncLocalStorage.setItem('testQuestions', JSON.stringify(seeded));
+              SyncLocalStorage.removeItem('testUserAnswers');
+              SyncLocalStorage.removeItem('testGradingResults');
             } catch {}
           }
         } catch {}
