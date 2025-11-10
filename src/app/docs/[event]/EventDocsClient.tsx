@@ -167,7 +167,7 @@ export function EventDocsClient({ evt, md, meta, toc }: EventDocsClientProps) {
                     toast.info(
                       <div>
                         A notesheet is not available for this event (yet). If you have notesheets for this season, please help us out and send it through{' '}
-                        <a href="https://discord.gg/wF4k27vt" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Discord</a> or{' '}
+                        <a href="https://discord.gg/hXSkrD33gu" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Discord</a> or{' '}
                         <a href="mailto:team.scio.ly@gmail.com" className="text-blue-500 hover:underline">Email</a>!
                       </div>,
                       {
