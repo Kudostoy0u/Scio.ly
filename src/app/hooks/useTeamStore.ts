@@ -8,7 +8,7 @@
  * - Optimistic updates
  */
 
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useTeamStore as useTeamStoreBase } from '@/lib/stores/teamStore';
 import { toast } from 'react-toastify';
@@ -28,7 +28,6 @@ export function useTeamStore() {
     timers,
     loading,
     errors,
-    fetchUserTeams,
     fetchSubteams,
     fetchRoster,
     fetchMembers,
@@ -56,14 +55,16 @@ export function useTeamStore() {
     getCacheKey,
   } = useTeamStoreBase();
 
-  // Auto-load user teams when user changes
-  useEffect(() => {
-    if (user?.id) {
-      fetchUserTeams(user.id).catch(error => {
-        console.error('Failed to load user teams:', error);
-      });
-    }
-  }, [user?.id, fetchUserTeams]);
+  // REMOVED: Auto-load user teams when user changes
+  // Now using multiplexed endpoint in TeamDataLoader which loads user teams
+  // along with all other team data in a single request
+  // useEffect(() => {
+  //   if (user?.id) {
+  //     fetchUserTeams(user.id).catch(error => {
+  //       console.error('Failed to load user teams:', error);
+  //     });
+  //   }
+  // }, [user?.id, fetchUserTeams]);
 
   // Helper functions for components
   const loadSubteams = useCallback(async (teamSlug: string) => {
@@ -151,8 +152,17 @@ export function useTeamStore() {
 
   // Get data for specific keys
   const getSubteams = useCallback((teamSlug: string) => {
-    return subteams[teamSlug] || [];
-  }, [subteams]);
+    const key = getCacheKey('subteams', teamSlug);
+    const result = subteams[key] || [];
+    console.log('🔍 [useTeamStore] getSubteams called:', {
+      teamSlug,
+      key,
+      result,
+      resultLength: result.length,
+      allSubteams: subteams
+    });
+    return result;
+  }, [subteams, getCacheKey]);
 
   const getRoster = useCallback((teamSlug: string, subteamId: string) => {
     const key = getCacheKey('roster', teamSlug, subteamId);

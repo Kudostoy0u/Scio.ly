@@ -2,39 +2,13 @@
  * Utility functions for team operations
  */
 
-import { dbPg, pool } from '@/lib/db';
+import { dbPg } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import logger from '@/lib/utils/logger';
 
-/**
- * Generate a random code
- * @param {number} length - Length of the code to generate
- * @returns {string} Random code
- */
-function generateCode(length: number = 8): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
+// Removed unused function: generateCode
 
-/**
- * Exported helper for generating permanent captain/user codes
- * @param {number} length - Length of the code to generate
- * @returns {string} Random code
- */
-export function generateRandomCode(length: number = 12): string {
-  return generateCode(length);
-}
-
-/**
- * Close the database connection pool
- */
-export async function closePool() {
-  await pool.end();
-}
+// Removed unused exports: generateRandomCode, closePool
 
 /**
  * Ensure a Cockroach `users` row exists for a Supabase user

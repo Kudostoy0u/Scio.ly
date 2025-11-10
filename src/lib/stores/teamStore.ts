@@ -342,7 +342,7 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
       
       try {
         const teams = await fetchWithDeduplication(key, async () => {
-          const result = await trpcClient.teams.getUserTeams.query();
+          const result = await (trpcClient.teams as any).getUserTeams.query();
           // Map the result to match the expected UserTeam interface
           return (result.teams || []).map((team: any) => ({
             id: team.id,
@@ -393,7 +393,7 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
       
       try {
         const subteams = await fetchWithDeduplication(key, async () => {
-          const result = await trpcClient.teams.getSubteams.query({ teamSlug });
+          const result = await (trpcClient.teams as any).getSubteams.query({ teamSlug });
           // Map the result to match the expected Subteam interface
           return (result.subteams || []).map((subteam: any) => ({
             id: subteam.id,
@@ -471,10 +471,10 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
         if (process.env.NODE_ENV === 'development') {
           console.log('🔍 [STORE FETCH ROSTER] Making tRPC call:', { teamSlug, subteamId, key });
         }
-        
+
         const rosterData = await fetchWithDeduplication(key, async () => {
-          const result = await trpcClient.teams.getRoster.query({ teamSlug, subteamId });
-          
+          const result = await (trpcClient.teams as any).getRoster.query({ teamSlug, subteamId });
+
           // Debug logging
           if (process.env.NODE_ENV === 'development') {
             console.log('🔍 [STORE FETCH ROSTER] tRPC result:', {
@@ -540,9 +540,9 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
       
       try {
         const members = await fetchWithDeduplication(key, async () => {
-          const result = await trpcClient.teams.getMembers.query({ 
-            teamSlug, 
-            subteamId: subteamId && subteamId !== 'all' ? subteamId : undefined 
+          const result = await (trpcClient.teams as any).getMembers.query({
+            teamSlug,
+            subteamId: subteamId && subteamId !== 'all' ? subteamId : undefined
           });
           return result.members || [];
         });
@@ -921,10 +921,17 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
     
     updateSubteams: (teamSlug: string, subteams: Subteam[]) => {
       const key = get().getCacheKey('subteams', teamSlug);
+      console.log('🔍 [TeamStore] updateSubteams called:', {
+        teamSlug,
+        key,
+        subteams,
+        subteamsLength: subteams.length
+      });
       set(state => ({
         subteams: { ...state.subteams, [key]: subteams },
         cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() }
       }));
+      console.log('🔍 [TeamStore] updateSubteams completed, new state:', get().subteams[key]);
     },
     
     updateAssignments: (teamSlug: string, assignments: Assignment[]) => {

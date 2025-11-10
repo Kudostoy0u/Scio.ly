@@ -130,7 +130,7 @@ export async function requireAdmin(request: NextRequest): Promise<AuthResult> {
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
 /**
- * Simple rate limiting middleware
+ * Simple rate limiting utility function
  */
 export function rateLimit(
   identifier: string,

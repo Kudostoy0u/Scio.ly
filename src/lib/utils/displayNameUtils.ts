@@ -87,26 +87,7 @@ export function generateDisplayName(profile: UserProfile | null, userId?: string
   };
 }
 
-/**
- * Generate a username with better fallbacks
- * @param profile User profile data
- * @param userId User ID for fallback generation
- * @returns Username string
- */
-export function generateUsername(profile: UserProfile | null, userId?: string): string {
-  if (profile?.username && profile.username.trim() && !profile.username.startsWith('user_')) {
-    return profile.username.trim();
-  }
-
-  if (profile?.email && profile.email.includes('@')) {
-    const emailLocal = profile.email.split('@')[0];
-    if (emailLocal && emailLocal.length > 2 && !emailLocal.match(/^[a-f0-9]{8}$/)) {
-      return emailLocal;
-    }
-  }
-
-  return userId ? `user_${userId.slice(0, 8)}` : 'user_unknown';
-}
+// Removed unused export: generateUsername
 
 /**
  * Check if a display name indicates the user needs a name prompt

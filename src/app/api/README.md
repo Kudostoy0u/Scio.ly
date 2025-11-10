@@ -352,7 +352,7 @@ The `src/app/api/` directory contains all Next.js API routes for the Scio.ly pla
 
 ### API Design Patterns
 - **Route Handlers**: Next.js App Router API routes
-- **Middleware**: Authentication and validation middleware
+- **Authentication**: Authentication and validation utilities
 - **Error Handling**: Centralized error handling
 - **Response Formatting**: Consistent response formats
 

@@ -13,6 +13,7 @@ import NamePromptModal from '@/app/components/NamePromptModal';
 import { useTeamStore } from '@/app/hooks/useTeamStore';
 import { invalidateCache } from '@/lib/cache/teamCacheManager';
 import { trpc } from '@/lib/trpc/client';
+import logger from '@/lib/utils/logger';
 
 // Division groups data
 const DIVISION_B_GROUPS = [
@@ -127,8 +128,9 @@ export default function PeopleTab({
   } = useTeamStore();
 
   // tRPC mutations
-  const updateRosterMutation = trpc.teams.updateRoster.useMutation();
-  const removeRosterEntryMutation = trpc.teams.removeRosterEntry.useMutation();
+  const updateRosterMutation = (trpc.teams as any).updateRoster.useMutation();
+  const removeRosterEntryMutation = (trpc.teams as any).removeRosterEntry.useMutation();
+  const exitSubteamMutation = trpc.teams.exitSubteam.useMutation();
 
   // Load members data when component mounts or subteam changes
   useEffect(() => {
@@ -798,7 +800,14 @@ export default function PeopleTab({
                 {!member.isPendingInvitation && (
                   <div className="flex flex-wrap gap-1 gap-y-2 justify-center">
                     {/* Subteam badges */}
-                    {(member.subteams && member.subteams.length > 0 ? member.subteams : [member.subteam]).filter(Boolean).map((subteam, index) => (
+                    {(() => {
+                      // Always show at least one badge - if no subteam, show "Unknown"
+                      const subteamsToShow = member.subteams && member.subteams.length > 0 
+                        ? member.subteams 
+                        : member.subteam 
+                          ? [member.subteam]
+                          : [{ id: null, name: 'Unknown', description: '' }];
+                      return subteamsToShow.filter(s => s !== null && s !== undefined).map((subteam, index) => (
                       <div key={subteam?.id || index} className="relative group">
                         <div className={`px-2 py-1 rounded-full text-xs font-medium border ${
                           darkMode 
@@ -818,46 +827,75 @@ export default function PeopleTab({
                             </span>
                           )}
                         </div>
-                        {isCaptain && subteam?.id && (
+                        {subteam?.id && (isCaptain || member.id === user?.id) && (
                           <button
                             onClick={async () => {
                               try {
-                                // Remove all roster entries for this user from specific subteam (badge removal)
-                                const response = await fetch(`/api/teams/${team.slug}/roster/remove`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ 
-                                userId: member.id,
-                                subteamId: subteam?.id 
-                              })
-                            });
-                            if (response.ok) {
-                              toast.success(`Removed ${member.name} from subteam`);
-                              
-                              // Small delay to ensure API has processed the change, then reload
-                              setTimeout(() => {
-                                invalidateCache('members', team.slug, selectedSubteam === 'all' ? 'all' : selectedSubteam);
-                                loadMembers(team.slug, selectedSubteam === 'all' ? undefined : selectedSubteam);
-                              }, 100);
-                            } else {
-                              const err = await response.json();
-                              toast.error(err.error || 'Failed to remove subteam badge');
-                            }
-                          } catch (e) {
-                            console.error(e);
-                            toast.error('Failed to remove subteam badge');
-                          }
+                                // If user is removing themselves, use exitSubteam mutation
+                                if (member.id === user?.id) {
+                                  await exitSubteamMutation.mutateAsync({
+                                    teamSlug: team.slug,
+                                    subteamId: subteam.id
+                                  });
+                                  toast.success(`Removed yourself from ${subteam.name}`);
+                                  
+                                  // Invalidate all member caches to ensure UI refreshes properly
+                                  invalidateCache('members', team.slug, 'all');
+                                  if (selectedSubteam !== 'all') {
+                                    invalidateCache('members', team.slug, selectedSubteam);
+                                  }
+                                  invalidateCache('members', team.slug, subteam.id);
+                                  
+                                  // Reload members data immediately
+                                  await loadMembers(team.slug, selectedSubteam === 'all' ? undefined : selectedSubteam);
+                                  // Also reload 'all' to ensure the member list is updated everywhere
+                                  await loadMembers(team.slug, undefined);
+                                } else {
+                                  // Captains removing others use the existing API route
+                                  const response = await fetch(`/api/teams/${team.slug}/roster/remove`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ 
+                                      userId: member.id,
+                                      subteamId: subteam.id 
+                                    })
+                                  });
+                                  if (response.ok) {
+                                    toast.success(`Removed ${member.name} from subteam`);
+                                    
+                                    // Invalidate all member caches
+                                    invalidateCache('members', team.slug, 'all');
+                                    if (selectedSubteam !== 'all') {
+                                      invalidateCache('members', team.slug, selectedSubteam);
+                                    }
+                                    invalidateCache('members', team.slug, subteam.id);
+                                    
+                                    // Reload members data
+                                    await loadMembers(team.slug, selectedSubteam === 'all' ? undefined : selectedSubteam);
+                                    await loadMembers(team.slug, undefined);
+                                  } else {
+                                    const err = await response.json();
+                                    toast.error(err.error || 'Failed to remove subteam badge');
+                                    return;
+                                  }
+                                }
+                              } catch (e: any) {
+                                logger.error('Failed to remove from subteam:', e);
+                                const errorMessage = e?.message || 'Failed to remove from subteam';
+                                toast.error(errorMessage);
+                              }
                             }}
                             className={`absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity px-1 py-0.5 rounded ${
                               darkMode ? 'bg-red-600 text-white' : 'bg-red-600 text-white'
                             }`}
-                            title="Remove subteam badge"
+                            title={member.id === user?.id ? "Remove yourself from this subteam" : "Remove subteam badge"}
                           >
                             <X className="w-3 h-3" />
                           </button>
                         )}
                       </div>
-                    ))}
+                    ));
+                    })()}
 
                     {/* Event badges */}
                     {member.events.length > 0 && (() => {

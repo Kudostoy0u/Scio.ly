@@ -29,7 +29,15 @@ export default function SubteamSelector({
   const [editingSubteamId, setEditingSubteamId] = useState<string | null>(null);
   const [editingSubteamName, setEditingSubteamName] = useState('');
 
+  console.log('🔍 [SubteamSelector] Component state:', {
+    subteams,
+    subteamsLength: subteams.length,
+    activeSubteamId,
+    isCaptain
+  });
+
   if (subteams.length === 0) {
+    console.log('🔍 [SubteamSelector] No subteams found, returning null');
     return null;
   }
 

@@ -48,11 +48,12 @@ IMPORTANT: This question includes an image that contains visual information esse
     prompt += `
 
 EXPLANATION REQUIREMENTS:
-1. Explain the scientific concepts involved
-2. Walk through the reasoning to reach the correct answer
-3. Address any misconceptions in the user's answer
-4. Provide additional context and learning opportunities
-5. Make the explanation clear and educational
+- Provide exactly 3 paragraphs of explanation (do not label them as 1, 2, 3)
+- Use **bold formatting** for key phrases and important terms only
+- Do NOT use LaTeX formatting - use plain text only
+- First paragraph: Explain the scientific concepts involved
+- Second paragraph: Walk through the reasoning to reach the correct answer
+- Third paragraph: Address any misconceptions in the user's answer and provide additional context
 
 Focus on helping the user understand the underlying science and improve their knowledge.`;
 
@@ -64,7 +65,7 @@ Focus on helping the user understand the underlying science and improve their kn
       propertyOrdering: ["explanation"],
     };
 
-    return await this.generateStructuredContent(prompt, schema);
+    return await this.generateStructuredContent(prompt, schema, hasImage ? question.imageData as string : undefined);
   }
 
   /**
@@ -94,12 +95,30 @@ Focus on helping the user understand the underlying science and improve their kn
    * Generates structured content using Gemini
    * @param {string} prompt - Prompt text
    * @param {object} schema - Response schema
+   * @param {string} imageData - Optional image data URL
    * @returns {Promise<T>} Structured response
    */
-  private async generateStructuredContent<T>(prompt: string, schema: object): Promise<T> {
+  private async generateStructuredContent<T>(prompt: string, schema: object, imageData?: string): Promise<T> {
+    const contents: any[] = [
+      {
+        role: "user",
+        parts: [{ text: prompt }]
+      }
+    ];
+
+    // Add image if provided
+    if (imageData) {
+      contents[0].parts.push({
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: imageData.split(',')[1] // Remove data URL prefix
+        }
+      });
+    }
+
     const response = await this.client.models.generateContent({
       model: "gemini-flash-lite-latest",
-      contents: prompt,
+      contents,
       config: {
         responseMimeType: "application/json",
         responseSchema: schema,

@@ -97,67 +97,6 @@ export class LocalStorageCache {
   }
 }
 
-/**
- * Hook for managing cached data with background refresh
- */
-export function useCachedData<T>(
-  key: string,
-  fetchFn: () => Promise<T>,
-  options: {
-    expiresIn?: number;
-    onUpdate?: (data: T) => void;
-    enabled?: boolean;
-  } = {}
-) {
-  const { expiresIn = 5 * 60 * 1000, onUpdate, enabled = true } = options;
-  
-  const [data, setData] = React.useState<T | null>(() => {
-    if (!enabled) return null;
-    return LocalStorageCache.get<T>(key);
-  });
-  
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<Error | null>(null);
+// Removed unused export: useCachedData
 
-  const refresh = React.useCallback(async () => {
-    if (!enabled) return;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const freshData = await fetchFn();
-      LocalStorageCache.set(key, freshData, expiresIn);
-      setData(freshData);
-      onUpdate?.(freshData);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch data'));
-    } finally {
-      setLoading(false);
-    }
-  }, [key, fetchFn, expiresIn, onUpdate, enabled]);
-
-  // Load cached data on mount, then refresh in background
-  React.useEffect(() => {
-    if (!enabled) return;
-    
-    const cachedData = LocalStorageCache.get<T>(key);
-    if (cachedData) {
-      setData(cachedData);
-    }
-    
-    // Always refresh in background to get latest data
-    refresh();
-  }, [key, refresh, enabled]);
-
-  return {
-    data,
-    loading,
-    error,
-    refresh,
-    isStale: data ? Date.now() - (LocalStorageCache.get<CacheItem<T>>(key)?.timestamp || 0) > expiresIn : true
-  };
-}
-
-// Import React for the hook
-import React from 'react';
+// Removed unused import: React

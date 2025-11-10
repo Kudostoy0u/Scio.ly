@@ -21,15 +21,7 @@ This document outlines the comprehensive caching strategy implemented for the ma
   - CDN-specific cache controls
   - Stale-while-revalidate for 7 days
 
-### 3. Middleware Caching
-- **File**: `src/middleware.ts`
-- **Features**:
-  - Edge-level cache headers
-  - ETag generation for better cache validation
-  - Vary headers for proper cache handling
-  - Last-Modified headers
-
-### 4. Route Handler Fallback
+### 3. Route Handler Fallback
 - **File**: `src/app/route.ts`
 - **Purpose**: Additional caching layer for edge cases
 

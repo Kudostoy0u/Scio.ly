@@ -121,7 +121,7 @@ export function rateLimitResponse(request: NextRequest, config?: RateLimitConfig
 }
 
 /**
- * Middleware to apply rate limiting
+ * Utility function to apply rate limiting
  * Returns null if not rate limited, otherwise returns error response
  */
 export function applyRateLimit(

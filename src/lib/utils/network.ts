@@ -32,29 +32,6 @@ export async function fetchOnce(input: string, init?: RequestInit): Promise<Resp
   return p;
 }
 
-/**
- * Fetches and parses JSON data once, deduplicating concurrent requests
- * Returns null on any error
- * 
- * @template T - Type of the expected JSON response
- * @param {string} input - URL to fetch
- * @param {RequestInit} [init] - Fetch options
- * @returns {Promise<T | null>} Promise that resolves to parsed JSON or null
- * @example
- * ```typescript
- * interface User { id: string; name: string; }
- * const user = await getJsonOnce<User>('/api/user/123');
- * if (user) console.log(user.name);
- * ```
- */
-export async function getJsonOnce<T = any>(input: string, init?: RequestInit): Promise<T | null> {
-  try {
-    const res = await fetchOnce(input, init);
-    if (!res.ok) return null;
-    return (await res.json()) as T;
-  } catch {
-    return null;
-  }
-}
+// Removed unused export: getJsonOnce
 
 

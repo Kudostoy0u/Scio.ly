@@ -66,7 +66,7 @@ Provide a comprehensive analysis that helps the user understand both the questio
       propertyOrdering: ["analysis", "correctness", "suggestions"],
     };
 
-    return await this.generateStructuredContent(prompt, schema);
+    return await this.generateStructuredContent(prompt, schema, hasImage ? question.imageData as string : undefined);
   }
 
   /**
@@ -150,7 +150,7 @@ Respond with your analysis and removal recommendation.`;
       propertyOrdering: ["shouldRemove", "reason", "issues", "confidence"],
     };
 
-    return await this.generateStructuredContent(prompt, schema);
+    return await this.generateStructuredContent(prompt, schema, hasImage ? question.imageData as string : undefined);
   }
 
   /**
@@ -180,12 +180,30 @@ Respond with your analysis and removal recommendation.`;
    * Generates structured content using Gemini
    * @param {string} prompt - Prompt text
    * @param {object} schema - Response schema
+   * @param {string} imageData - Optional image data URL
    * @returns {Promise<T>} Structured response
    */
-  private async generateStructuredContent<T>(prompt: string, schema: object): Promise<T> {
+  private async generateStructuredContent<T>(prompt: string, schema: object, imageData?: string): Promise<T> {
+    const contents: any[] = [
+      {
+        role: "user",
+        parts: [{ text: prompt }]
+      }
+    ];
+
+    // Add image if provided
+    if (imageData) {
+      contents[0].parts.push({
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: imageData.split(',')[1] // Remove data URL prefix
+        }
+      });
+    }
+
     const response = await this.client.models.generateContent({
       model: "gemini-flash-lite-latest",
-      contents: prompt,
+      contents,
       config: {
         responseMimeType: "application/json",
         responseSchema: schema,

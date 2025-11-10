@@ -15,7 +15,7 @@ import {
   newTeamPeople
 } from '@/lib/db/schema/teams';
 import { newTeamAssignments } from '@/lib/db/schema/assignments';
-import { eq, and, sql, inArray } from 'drizzle-orm';
+import { eq, and, sql, inArray, count } from 'drizzle-orm';
 import { getTeamAccess } from '@/lib/utils/team-auth-v2';
 import { queryCockroachDB } from '@/lib/cockroachdb';
 import { checkTeamGroupAccessCockroach, checkTeamGroupLeadershipCockroach } from '@/lib/utils/team-auth';
@@ -387,13 +387,37 @@ export const teamsRouter = router({
         // Build optimized single query with all necessary joins
       const whereConditions: any[] = [
         eq(newTeamUnits.groupId, groupId),
-        eq(newTeamUnits.status, 'active')
+        eq(newTeamUnits.status, 'active'),
+        eq(newTeamMemberships.status, 'active') // Only get active memberships
       ];
 
       if (input.subteamId && input.subteamId !== 'all') {
         whereConditions.push(eq(newTeamMemberships.teamId, input.subteamId));
       }
 
+        // First, get all users who have roster entries in this team (to include members without subteam membership)
+        const usersWithRosterEntries = await dbPg
+          .select({
+            userId: newTeamRosterData.userId,
+          })
+          .from(newTeamRosterData)
+          .innerJoin(newTeamUnits, eq(newTeamRosterData.teamUnitId, newTeamUnits.id))
+          .where(
+            and(
+              eq(newTeamUnits.groupId, groupId),
+              eq(newTeamUnits.status, 'active'),
+              sql`${newTeamRosterData.userId} IS NOT NULL`
+            )
+          )
+          .groupBy(newTeamRosterData.userId);
+
+        const userIdsWithRoster = new Set(
+          usersWithRosterEntries
+            .map(r => r.userId)
+            .filter((id): id is string => id !== null)
+        );
+
+        // Get members with subteam memberships
         const results = await dbPg
           .select({
             userId: newTeamMemberships.userId,
@@ -412,6 +436,45 @@ export const teamsRouter = router({
           .leftJoin(users, eq(newTeamMemberships.userId, users.id))
           .where(and(...whereConditions))
           .orderBy(newTeamMemberships.joinedAt);
+
+        // Get users who have roster entries but no subteam membership (they should show as "Unknown")
+        const membershipsUserIds = new Set(results.map(r => r.userId));
+        const userIdsWithoutSubteam = Array.from(userIdsWithRoster).filter(id => !membershipsUserIds.has(id));
+        
+        const usersWithoutSubteam = userIdsWithoutSubteam.length > 0
+          ? await dbPg
+              .select({
+                id: users.id,
+                email: users.email,
+                displayName: users.displayName,
+                firstName: users.firstName,
+                lastName: users.lastName,
+                username: users.username,
+              })
+              .from(users)
+              .where(inArray(users.id, userIdsWithoutSubteam))
+          : [];
+
+        // Add members without subteam membership to results
+        const membersWithoutSubteam = usersWithoutSubteam.map(user => {
+          const displayName = user.displayName || 
+            (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : 
+             user.firstName || user.lastName || user.username || 
+             `User ${user.id.substring(0, 8)}`);
+          
+          return {
+            userId: user.id,
+            role: 'member',
+            joinedAt: null,
+            subteamId: null,
+            subteamName: null,
+            email: user.email || null,
+            displayName: displayName,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            username: user.username,
+          };
+        });
 
         // Only log important business logic
         if (process.env.NODE_ENV === 'development') {
@@ -537,6 +600,24 @@ export const teamsRouter = router({
           };
         });
 
+        // Process members without subteam membership
+        const membersWithoutSubteamProcessed = membersWithoutSubteam.map(result => {
+          return {
+            userId: result.userId,
+            role: result.role,
+            joinedAt: result.joinedAt,
+            subteamId: null,
+            subteamName: null, // Will show as "Unknown"
+            email: result.email || null,
+            displayFirstName: result.displayName,
+            displayLastName: '',
+            hasRosterEntry: memberEvents[result.userId]?.length > 0 || false,
+            hasPendingInvite: false,
+            events: memberEvents[result.userId] || [],
+            isLinked: true
+          };
+        });
+
         // Process roster entries (unlinked people)
         const rosterMembers = allRosterEntries.map(entry => {
           const events = Array.isArray(entry.events) ? entry.events : [];
@@ -591,7 +672,7 @@ export const teamsRouter = router({
           return linkedMember;
         });
         
-        const members = [...membersWithRosterData, ...uniqueRosterMembers];
+        const members = [...membersWithRosterData, ...membersWithoutSubteamProcessed, ...uniqueRosterMembers];
 
         // Only log important business logic
         if (process.env.NODE_ENV === 'development') {
@@ -1403,9 +1484,220 @@ export const teamsRouter = router({
         };
       } catch (error) {
         logger.error('Failed to get team dashboard:', error);
-        throw new TRPCError({ 
-          code: 'INTERNAL_SERVER_ERROR', 
-          message: 'Failed to get team dashboard' 
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to get team dashboard'
+        });
+      }
+    }),
+
+  // ============================================================================
+  // MULTIPLEXED TEAM PAGE INITIALIZATION - ULTIMATE OPTIMIZATION
+  // ============================================================================
+  // This endpoint combines ALL initial page load requests into ONE:
+  // - getUserTeams (for sidebar)
+  // - getSubteams (for subteam selector)
+  // - getTeamDashboard (for main content)
+  // - getRoster (for first subteam)
+  // Reduces 3 separate HTTP requests to 1, with single auth check
+
+  getTeamPageData: protectedProcedure
+    .input(z.object({
+      teamSlug: z.string().min(1, "Team slug is required"),
+      includeRoster: z.boolean().optional().default(true)
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        // Resolve team slug to group ID ONCE
+        const groupResult = await dbPg
+          .select({
+            id: newTeamGroups.id,
+            school: newTeamGroups.school,
+            division: newTeamGroups.division,
+            slug: newTeamGroups.slug
+          })
+          .from(newTeamGroups)
+          .where(eq(newTeamGroups.slug, input.teamSlug));
+
+        if (groupResult.length === 0) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team group not found' });
+        }
+
+        const group = groupResult[0];
+        const groupId = group.id;
+
+        // Parallel execution: get user teams AND check team access at the same time
+        const [userTeamsResult, authResult] = await Promise.all([
+          // Get all user's teams for sidebar
+          cockroachDBTeamsService.getUserTeams(ctx.user.id),
+          // Check team access for this specific team
+          checkTeamGroupAccessCockroach(ctx.user.id, groupId)
+        ]);
+
+        if (!authResult.isAuthorized) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Not authorized to access this team'
+          });
+        }
+
+        // Get all subteams for this group
+        const subteams = await dbPg
+          .select({
+            id: newTeamUnits.id,
+            teamId: newTeamUnits.teamId,
+            description: newTeamUnits.description,
+            createdAt: newTeamUnits.createdAt
+          })
+          .from(newTeamUnits)
+          .where(
+            and(
+              eq(newTeamUnits.groupId, groupId),
+              eq(newTeamUnits.status, 'active')
+            )
+          )
+          .orderBy(newTeamUnits.createdAt);
+
+        const subteamIds = subteams.map(s => s.id);
+        const firstSubteamId = subteams[0]?.id;
+
+        // Get ALL remaining data in parallel
+        const [
+          assignments,
+          allMembers,
+          rosterData
+        ] = await Promise.all([
+          // Get assignments for all subteams
+          subteamIds.length > 0 ? dbPg
+            .select({
+              id: newTeamAssignments.id,
+              title: newTeamAssignments.title,
+              description: newTeamAssignments.description,
+              assignmentType: newTeamAssignments.assignmentType,
+              dueDate: newTeamAssignments.dueDate,
+              points: newTeamAssignments.points,
+              isRequired: newTeamAssignments.isRequired,
+              maxAttempts: newTeamAssignments.maxAttempts,
+              timeLimitMinutes: newTeamAssignments.timeLimitMinutes,
+              createdAt: newTeamAssignments.createdAt,
+              updatedAt: newTeamAssignments.updatedAt,
+              createdBy: newTeamAssignments.createdBy,
+              teamId: newTeamAssignments.teamId
+            })
+            .from(newTeamAssignments)
+            .where(inArray(newTeamAssignments.teamId, subteamIds))
+            .orderBy(sql`${newTeamAssignments.dueDate} ASC NULLS LAST`, sql`${newTeamAssignments.createdAt} DESC`) : [],
+
+          // Get all team members across all subteams
+          dbPg
+            .select({
+              userId: users.id,
+              displayName: users.displayName,
+              firstName: users.firstName,
+              lastName: users.lastName,
+              email: users.email,
+              role: newTeamMemberships.role,
+              joinedAt: newTeamMemberships.joinedAt,
+              subteamId: newTeamUnits.id,
+              subteamName: newTeamUnits.teamId
+            })
+            .from(users)
+            .innerJoin(newTeamMemberships, eq(users.id, newTeamMemberships.userId))
+            .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+            .where(
+              and(
+                eq(newTeamUnits.groupId, groupId),
+                eq(newTeamMemberships.status, 'active'),
+                eq(newTeamUnits.status, 'active')
+              )
+            ),
+
+          // Get roster data for first subteam (if enabled and exists)
+          (input.includeRoster && firstSubteamId) ? dbPg
+            .select({
+              eventName: newTeamRosterData.eventName,
+              studentName: newTeamRosterData.studentName,
+              slotIndex: newTeamRosterData.slotIndex,
+              userId: newTeamRosterData.userId,
+              teamUnitId: newTeamRosterData.teamUnitId
+            })
+            .from(newTeamRosterData)
+            .where(eq(newTeamRosterData.teamUnitId, firstSubteamId))
+            .orderBy(newTeamRosterData.eventName, newTeamRosterData.slotIndex) : []
+        ]);
+
+        // Process roster data into the expected format
+        const processedRoster: Record<string, string[]> = {};
+        for (const entry of rosterData) {
+          // Convert "and" back to "&" for UI display
+          const displayEventName = entry.eventName.replace(/and/g, '&');
+          if (!processedRoster[displayEventName]) {
+            processedRoster[displayEventName] = [];
+          }
+          // Ensure array is large enough
+          while (processedRoster[displayEventName].length <= entry.slotIndex) {
+            processedRoster[displayEventName].push('');
+          }
+          processedRoster[displayEventName][entry.slotIndex] = entry.studentName || '';
+        }
+
+        // Process members data with subteam information
+        const processedMembers = allMembers.map(member => ({
+          userId: member.userId,
+          displayFirstName: member.displayName || `${member.firstName || ''} ${member.lastName || ''}`.trim(),
+          email: member.email,
+          role: member.role,
+          subteamId: member.subteamId,
+          subteamName: member.subteamName,
+          joinedAt: member.joinedAt,
+          isLinked: true
+        }));
+
+        return {
+          // User's all teams (for sidebar navigation)
+          userTeams: userTeamsResult,
+
+          // Current team info
+          currentTeam: {
+            id: groupId,
+            school: group.school,
+            division: group.division as 'B' | 'C',
+            slug: group.slug
+          },
+
+          // Subteams for this team
+          subteams: subteams.map(s => ({
+            id: s.id,
+            name: s.teamId,
+            team_id: groupId,
+            description: s.description || '',
+            created_at: s.createdAt?.toISOString() || new Date().toISOString()
+          })),
+
+          // Assignments for all subteams
+          assignments,
+
+          // Members across all subteams
+          members: processedMembers,
+
+          // Roster for first subteam (if requested)
+          roster: processedRoster,
+          rosterSubteamId: firstSubteamId || null,
+
+          // Authorization info
+          auth: {
+            isAuthorized: authResult.isAuthorized,
+            hasMembership: authResult.hasMembership,
+            hasRosterEntry: authResult.hasRosterEntry,
+            role: authResult.role
+          }
+        };
+      } catch (error) {
+        logger.error('Failed to get team page data:', error);
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to get team page data'
         });
       }
     }),
@@ -1681,6 +1973,116 @@ export const teamsRouter = router({
   // TEAM MANAGEMENT
   // ============================================================================
 
+  exitSubteam: protectedProcedure
+    .input(z.object({ 
+      teamSlug: z.string(),
+      subteamId: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Resolve team slug to group ID
+        const groupResult = await dbPg
+          .select({ id: newTeamGroups.id })
+          .from(newTeamGroups)
+          .where(eq(newTeamGroups.slug, input.teamSlug));
+
+        if (groupResult.length === 0) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
+        }
+
+        const groupId = groupResult[0].id;
+
+        // Verify the subteam belongs to this group
+        const subteamResult = await dbPg
+          .select({ id: newTeamUnits.id, status: newTeamUnits.status })
+          .from(newTeamUnits)
+          .where(
+            and(
+              eq(newTeamUnits.id, input.subteamId),
+              eq(newTeamUnits.groupId, groupId)
+            )
+          );
+
+        if (subteamResult.length === 0) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Subteam not found' });
+        }
+
+        // Check if user is a member of this subteam using Drizzle ORM
+        const membershipResult = await dbPg
+          .select({
+            id: newTeamMemberships.id,
+            role: newTeamMemberships.role
+          })
+          .from(newTeamMemberships)
+          .where(
+            and(
+              eq(newTeamMemberships.userId, ctx.user.id),
+              eq(newTeamMemberships.teamId, input.subteamId),
+              eq(newTeamMemberships.status, 'active')
+            )
+          )
+          .limit(1);
+
+        // If not a member, return success (idempotent operation - already removed)
+        if (membershipResult.length === 0) {
+          return { message: 'Successfully exited subteam' };
+        }
+
+        // Remove user from this specific subteam using Drizzle ORM
+        // Note: We allow zero-person subteams, so we don't check if user is the last captain
+        const updateResult = await dbPg
+          .update(newTeamMemberships)
+          .set({ status: 'inactive' })
+          .where(
+            and(
+              eq(newTeamMemberships.userId, ctx.user.id),
+              eq(newTeamMemberships.teamId, input.subteamId),
+              eq(newTeamMemberships.status, 'active') // Only update active memberships
+            )
+          )
+          .returning({ id: newTeamMemberships.id });
+
+        // Also remove roster entries for this user from this subteam
+        const deleteResult = await dbPg
+          .delete(newTeamRosterData)
+          .where(
+            and(
+              eq(newTeamRosterData.userId, ctx.user.id),
+              eq(newTeamRosterData.teamUnitId, input.subteamId)
+            )
+          )
+          .returning({ id: newTeamRosterData.id });
+
+        // Log for debugging
+        if (process.env.NODE_ENV === 'development') {
+          logger.info('exitSubteam completed', {
+            membershipUpdated: updateResult.length,
+            rosterEntriesDeleted: deleteResult.length,
+            subteamId: input.subteamId,
+            userId: ctx.user.id
+          });
+        }
+
+        const result = { message: 'Successfully exited subteam' };
+        
+        // Validate output
+        const validatedResult = z.object({
+          message: z.string()
+        }).parse(result);
+        
+        return validatedResult;
+      } catch (error) {
+        logger.error('Failed to exit subteam:', error);
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        throw new TRPCError({ 
+          code: 'INTERNAL_SERVER_ERROR', 
+          message: 'Failed to exit subteam' 
+        });
+      }
+    }),
+
   exitTeam: protectedProcedure
     .input(z.object({ teamSlug: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -1703,44 +2105,64 @@ export const teamsRouter = router({
           throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to access this team' });
         }
 
-        // Get all team units for this group
-        const unitsResult = await queryCockroachDB<{ id: string }>(
-          `SELECT id FROM new_team_units WHERE group_id = $1`,
-          [groupId]
-        );
+        // Get all team units for this group (only active ones) using Drizzle ORM
+        const unitsResult = await dbPg
+          .select({ id: newTeamUnits.id })
+          .from(newTeamUnits)
+          .where(
+            and(
+              eq(newTeamUnits.groupId, groupId),
+              eq(newTeamUnits.status, 'active')
+            )
+          );
 
-        if (unitsResult.rows.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'No team units found for this group' });
+        if (unitsResult.length === 0) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'No active team units found for this group' });
         }
 
-        const teamUnitIds = unitsResult.rows.map(row => row.id);
+        const teamUnitIds = unitsResult.map(row => row.id);
 
-        // Check if user is a member of any team unit in this group
-        const membershipResult = await queryCockroachDB<{ id: string, role: string, team_id: string }>(
-          `SELECT id, role, team_id FROM new_team_memberships 
-           WHERE user_id = $1 AND team_id = ANY($2) AND status = 'active'`,
-          [ctx.user.id, teamUnitIds]
-        );
+        // Check if user is a member of any team unit in this group using Drizzle ORM
+        const membershipResult = await dbPg
+          .select({
+            id: newTeamMemberships.id,
+            role: newTeamMemberships.role,
+            teamId: newTeamMemberships.teamId
+          })
+          .from(newTeamMemberships)
+          .where(
+            and(
+              eq(newTeamMemberships.userId, ctx.user.id),
+              inArray(newTeamMemberships.teamId, teamUnitIds),
+              eq(newTeamMemberships.status, 'active')
+            )
+          );
 
-        if (membershipResult.rows.length === 0) {
+        if (membershipResult.length === 0) {
           throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a team member' });
         }
 
-        const memberships = membershipResult.rows;
+        const memberships = membershipResult;
 
         // Check if user is a captain in any team unit
         const captainMemberships = memberships.filter(m => m.role === 'captain');
         
         if (captainMemberships.length > 0) {
-          // Check if there are other captains in the same team units
+          // Check if there are other captains in the same team units using Drizzle ORM
           for (const membership of captainMemberships) {
-            const captainCountResult = await queryCockroachDB<{ count: string }>(
-              `SELECT COUNT(*) as count FROM new_team_memberships 
-               WHERE team_id = $1 AND role = 'captain' AND status = 'active'`,
-              [membership.team_id]
-            );
+            const captainCountResult = await dbPg
+              .select({ count: count() })
+              .from(newTeamMemberships)
+              .where(
+                and(
+                  eq(newTeamMemberships.teamId, membership.teamId),
+                  eq(newTeamMemberships.role, 'captain'),
+                  eq(newTeamMemberships.status, 'active')
+                )
+              );
 
-            if (parseInt(captainCountResult.rows[0].count) <= 1) {
+            const captainCount = captainCountResult[0]?.count || 0;
+            if (captainCount <= 1) {
               throw new TRPCError({ 
                 code: 'BAD_REQUEST', 
                 message: 'Cannot exit team as the only captain. Promote another member to captain first.' 
@@ -1749,12 +2171,26 @@ export const teamsRouter = router({
           }
         }
 
-        // Remove user from all team units in this group
-        await queryCockroachDB(
-          `UPDATE new_team_memberships SET status = 'inactive' 
-           WHERE user_id = $1 AND team_id = ANY($2)`,
-          [ctx.user.id, teamUnitIds]
-        );
+        // Remove user from all team units in this group using Drizzle ORM
+        await dbPg
+          .update(newTeamMemberships)
+          .set({ status: 'inactive' })
+          .where(
+            and(
+              eq(newTeamMemberships.userId, ctx.user.id),
+              inArray(newTeamMemberships.teamId, teamUnitIds)
+            )
+          );
+
+        // Also remove all roster entries for this user across all subteams using Drizzle ORM
+        await dbPg
+          .delete(newTeamRosterData)
+          .where(
+            and(
+              eq(newTeamRosterData.userId, ctx.user.id),
+              inArray(newTeamRosterData.teamUnitId, teamUnitIds)
+            )
+          );
 
         const result = { message: 'Successfully exited team' };
         

@@ -25,19 +25,4 @@ export function TestProviders({
   );
 }
 
-// Mock providers for components that don't need full context
-export function MockThemeProvider({ children }: { children: React.ReactNode }) {
-  return (
-    <div data-testid="mock-theme-provider">
-      {children}
-    </div>
-  );
-}
-
-export function MockAuthProvider({ children }: { children: React.ReactNode }) {
-  return (
-    <div data-testid="mock-auth-provider">
-      {children}
-    </div>
-  );
-}
+// Removed unused exports: MockThemeProvider, MockAuthProvider

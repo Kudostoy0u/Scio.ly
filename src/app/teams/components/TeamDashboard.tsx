@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
+import { useAuth } from '@/app/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { UserPlus, LogOut, Archive } from 'lucide-react';
@@ -47,12 +48,12 @@ export default function TeamDashboard({
   activeTab: initialActiveTab = 'roster'
 }: TeamDashboardProps) {
   const { darkMode } = useTheme();
+  const { user } = useAuth();
   // User teams are now loaded by the enhanced hook
   const router = useRouter();
   
   // Subteam state
   const [activeSubteamId, setActiveSubteamId] = useState<string | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loadingSubteams, setLoadingSubteams] = useState(true);
   const [showBannerInvite, setShowBannerInvite] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
@@ -78,6 +79,70 @@ export default function TeamDashboard({
     deleteSubteam,
     invalidateCache
   } = useTeamStore();
+
+  // Debug authentication state
+  console.log('🔍 [TeamDashboard] Authentication state:', {
+    hasUser: !!user,
+    userId: user?.id,
+    userEmail: user?.email,
+    teamSlug: team.slug,
+    isCaptain
+  });
+
+  // Set active subteam when subteams are available
+  useEffect(() => {
+    const subteamsData = getSubteams(team.slug);
+    console.log('🔍 [TeamDashboard] Subteams data:', {
+      teamSlug: team.slug,
+      subteamsData,
+      subteamsLength: subteamsData?.length,
+      activeSubteamId,
+      loadingSubteams
+    });
+    
+    if (subteamsData && subteamsData.length > 0) {
+      if (!activeSubteamId) {
+        console.log('🔍 [TeamDashboard] Setting active subteam to:', subteamsData[0].id);
+        setActiveSubteamId(subteamsData[0].id);
+      }
+      setLoadingSubteams(false);
+    } else if (subteamsData && subteamsData.length === 0) {
+      console.log('🔍 [TeamDashboard] No subteams found, setting loading to false');
+      setLoadingSubteams(false);
+    }
+  }, [team.slug, getSubteams, activeSubteamId, loadingSubteams]);
+
+  // REMOVED: Additional effect to ensure subteams are loaded
+  // Now using multiplexed endpoint in TeamDataLoader which loads subteams
+  // along with all other team data in a single request
+  // useEffect(() => {
+  //   if (!user?.id) {
+  //     console.log('🔍 [TeamDashboard] User not authenticated, skipping subteam load');
+  //     return;
+  //   }
+  //
+  //   const loadSubteamsData = async () => {
+  //     try {
+  //       console.log('🔍 [TeamDashboard] Loading subteams for authenticated user');
+  //       await loadSubteams(team.slug);
+  //     } catch (error) {
+  //       console.error('Failed to load subteams:', error);
+  //     }
+  //   };
+  //
+  //   loadSubteamsData();
+  // }, [team.slug, loadSubteams, user?.id]);
+
+  // Show loading state if user is not authenticated
+  if (!user?.id) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg text-gray-600">
+          Loading authentication...
+        </div>
+      </div>
+    );
+  }
 
   // Use tRPC for data fetching with automatic batching
   // Note: We're using the team store for subteams data instead of direct tRPC
@@ -170,16 +235,6 @@ export default function TeamDashboard({
   const cancelArchiveTeam = () => {
     setShowArchiveModal(false);
   };
-
-
-  // Set active subteam when subteams are available
-  useEffect(() => {
-    const subteamsData = getSubteams(team.slug);
-    if (subteamsData && subteamsData.length > 0 && !activeSubteamId) {
-      setActiveSubteamId(subteamsData[0].id);
-      setLoadingSubteams(false);
-    }
-  }, [team.slug, getSubteams, activeSubteamId]);
 
   // tRPC mutations
   const createSubteamMutation = trpc.teams.createSubteam.useMutation();

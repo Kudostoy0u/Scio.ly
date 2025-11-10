@@ -54,7 +54,7 @@ The `src/lib/` directory contains the core business logic, utilities, and shared
 ### API Layer (`/api/`)
 
 #### `auth.ts`
-- **Purpose**: Authentication utilities and middleware
+- **Purpose**: Authentication utilities
 - **Features**: 
   - User authentication
   - Session management
@@ -69,7 +69,7 @@ The `src/lib/` directory contains the core business logic, utilities, and shared
 #### `rateLimit.ts`
 - **Purpose**: API rate limiting
 - **Features**: Request throttling, abuse prevention
-- **Dependencies**: Rate limiting middleware
+- **Dependencies**: Rate limiting utilities
 
 #### `utils.ts`
 - **Purpose**: API utility functions

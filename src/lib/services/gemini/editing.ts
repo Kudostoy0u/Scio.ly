@@ -75,6 +75,11 @@ ANSWER FORMAT REQUIREMENTS:
   suggestedOptions: [] (empty or omitted)
   suggestedAnswers: [ 'mitochondria', 'powerhouse of the cell' ]
 
+IMPORTANT FORMATTING REQUIREMENTS:
+- Do NOT use LaTeX formatting in your suggestions
+- Use plain text only for all question text, options, and answers
+- Avoid mathematical notation that requires LaTeX rendering
+
 Think very lightly, only as much as needed to turn it into a good question with an accurate answer.
 Also include suggestedDifficulty (0.0-1.0) when you recommend an updated difficulty.`;
 
@@ -90,7 +95,7 @@ Also include suggestedDifficulty (0.0-1.0) when you recommend an updated difficu
       propertyOrdering: ["suggestedQuestion", "suggestedOptions", "suggestedAnswers", "suggestedDifficulty", "reasoning"],
     };
 
-    return await this.generateStructuredContent(prompt, schema);
+    return await this.generateStructuredContent(prompt, schema, hasImage ? question.imageData as string : undefined);
   }
 
   /**
@@ -120,12 +125,30 @@ Also include suggestedDifficulty (0.0-1.0) when you recommend an updated difficu
    * Generates structured content using Gemini
    * @param {string} prompt - Prompt text
    * @param {object} schema - Response schema
+   * @param {string} imageData - Optional image data URL
    * @returns {Promise<T>} Structured response
    */
-  private async generateStructuredContent<T>(prompt: string, schema: object): Promise<T> {
+  private async generateStructuredContent<T>(prompt: string, schema: object, imageData?: string): Promise<T> {
+    const contents: any[] = [
+      {
+        role: "user",
+        parts: [{ text: prompt }]
+      }
+    ];
+
+    // Add image if provided
+    if (imageData) {
+      contents[0].parts.push({
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: imageData.split(',')[1] // Remove data URL prefix
+        }
+      });
+    }
+
     const response = await this.client.models.generateContent({
       model: "gemini-flash-lite-latest",
-      contents: prompt,
+      contents,
       config: {
         responseMimeType: "application/json",
         responseSchema: schema,

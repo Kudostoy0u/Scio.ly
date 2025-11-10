@@ -195,5 +195,3 @@ export function finalizeQuestions(questions: Question[]): Question[] {
   });
   return finalized;
 }
-
-

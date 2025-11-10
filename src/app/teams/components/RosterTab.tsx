@@ -365,7 +365,30 @@ export default function RosterTab({
 
   // Loading state is now handled by the store
 
+  // Debug logging for subteam selection
+  console.log('🔍 [RosterTab] Component state:', {
+    activeSubteamId,
+    subteams,
+    subteamsLength: subteams?.length,
+    teamSlug: team.slug
+  });
+
   if (!activeSubteamId) {
+    console.log('🔍 [RosterTab] No active subteam selected, showing message');
+    
+    // If there are no subteams at all, show a different message
+    if (subteams.length === 0) {
+      return (
+        <div className="p-6">
+          <div className="flex items-center justify-center h-64">
+            <div className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              No subteams found. Please create a subteam to view the roster.
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
