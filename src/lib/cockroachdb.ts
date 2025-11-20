@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { Pool } from "pg";
 
 /** Global CockroachDB connection pool instance */
 let pool: Pool | null = null;
@@ -6,7 +6,7 @@ let pool: Pool | null = null;
 /**
  * Get or create the CockroachDB connection pool
  * Creates a new pool if one doesn't exist, otherwise returns the existing pool
- * 
+ *
  * @returns {Pool} PostgreSQL connection pool for CockroachDB
  * @throws {Error} When DATABASE_URL environment variable is not set
  * @example
@@ -18,15 +18,15 @@ let pool: Pool | null = null;
 export function getCockroachDBPool(): Pool {
   if (!pool) {
     const connectionString = process.env.DATABASE_URL;
-    
+
     if (!connectionString) {
-      throw new Error('DATABASE_URL environment variable is required');
+      throw new Error("DATABASE_URL environment variable is required");
     }
 
     pool = new Pool({
       connectionString,
       ssl: {
-        rejectUnauthorized: false
+        rejectUnauthorized: false,
       },
       max: 20,
       idleTimeoutMillis: 30000,
@@ -40,7 +40,7 @@ export function getCockroachDBPool(): Pool {
 /**
  * Execute a query on the CockroachDB database
  * Provides a convenient wrapper around the connection pool for database queries
- * 
+ *
  * @template T - Type of the returned rows
  * @param {string} text - SQL query string
  * @param {any[]} [params] - Query parameters
@@ -53,17 +53,17 @@ export function getCockroachDBPool(): Pool {
  * ```
  */
 export async function queryCockroachDB<T = any>(
-  text: string, 
+  text: string,
   params?: any[]
 ): Promise<{ rows: T[]; rowCount: number }> {
   const pool = getCockroachDBPool();
   const client = await pool.connect();
-  
+
   try {
     const result = await client.query(text, params);
     return {
       rows: result.rows,
-      rowCount: result.rowCount || 0
+      rowCount: result.rowCount || 0,
     };
   } finally {
     client.release();
@@ -73,7 +73,7 @@ export async function queryCockroachDB<T = any>(
 /**
  * Close the CockroachDB connection pool
  * Properly closes all connections and cleans up resources
- * 
+ *
  * @returns {Promise<void>} Promise that resolves when pool is closed
  * @example
  * ```typescript

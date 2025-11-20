@@ -2,14 +2,16 @@
  * Question analysis methods for Gemini service
  */
 
-import { GoogleGenAI, Type } from "@google/genai";
-import type { QuestionAnalysisResult, QuestionRemovalAnalysis } from './types';
+import { Type } from "@google/genai";
+import logger from "@/lib/utils/logger";
+import type { ClientWithKey } from "./client";
+import type { QuestionAnalysisResult, QuestionRemovalAnalysis } from "./types";
 
 /**
  * Question analysis service
  */
 export class GeminiAnalysisService {
-  constructor(private client: GoogleGenAI) {}
+  constructor(private clientWithKey: ClientWithKey) {}
 
   /**
    * Analyzes a question and user's answer
@@ -23,12 +25,15 @@ export class GeminiAnalysisService {
     userAnswer: string,
     event: string
   ): Promise<QuestionAnalysisResult> {
-    const questionText = question.question || '';
+    const questionText = question.question || "";
     const options = question.options || [];
     const answers = question.answers || [];
-    const answersText = this.resolveAnswersToText(Array.isArray(options) ? options : [], Array.isArray(answers) ? answers : []);
+    const answersText = this.resolveAnswersToText(
+      Array.isArray(options) ? options : [],
+      Array.isArray(answers) ? answers : []
+    );
     const difficulty = question.difficulty || 0.5;
-    const hasImage = question.imageData && typeof question.imageData === 'string';
+    const hasImage = question.imageData && typeof question.imageData === "string";
 
     let prompt = `You are a Science Olympiad question analyzer. Analyze this question and the user's answer.
 
@@ -66,7 +71,11 @@ Provide a comprehensive analysis that helps the user understand both the questio
       propertyOrdering: ["analysis", "correctness", "suggestions"],
     };
 
-    return await this.generateStructuredContent(prompt, schema, hasImage ? question.imageData as string : undefined);
+    return await this.generateStructuredContent(
+      prompt,
+      schema,
+      hasImage ? (question.imageData as string) : undefined
+    );
   }
 
   /**
@@ -79,14 +88,17 @@ Provide a comprehensive analysis that helps the user understand both the questio
     question: Record<string, unknown>,
     event: string
   ): Promise<QuestionRemovalAnalysis> {
-    const questionText = question.question || '';
+    const questionText = question.question || "";
     const options = question.options || [];
     const answers = question.answers || [];
-    const answersText = this.resolveAnswersToText(Array.isArray(options) ? options : [], Array.isArray(answers) ? answers : []);
+    const answersText = this.resolveAnswersToText(
+      Array.isArray(options) ? options : [],
+      Array.isArray(answers) ? answers : []
+    );
     const difficulty = question.difficulty || 0.5;
-    const hasImage = question.imageData && typeof question.imageData === 'string';
-    const tournament = question.tournament || '';
-    const division = question.division || '';
+    const hasImage = question.imageData && typeof question.imageData === "string";
+    const tournament = question.tournament || "";
+    const division = question.division || "";
 
     let prompt = `You are a Science Olympiad question quality analyzer. Your task is to determine if a question should be REMOVED from the database due to quality issues.
 
@@ -127,30 +139,34 @@ Respond with your analysis and removal recommendation.`;
     const schema = {
       type: Type.OBJECT,
       properties: {
-        shouldRemove: { 
+        shouldRemove: {
           type: Type.BOOLEAN,
-          description: "Whether the question should be removed from the database"
+          description: "Whether the question should be removed from the database",
         },
-        reason: { 
+        reason: {
           type: Type.STRING,
-          description: "Detailed explanation of why the question should or should not be removed"
+          description: "Detailed explanation of why the question should or should not be removed",
         },
         issues: {
           type: Type.ARRAY,
           items: { type: Type.STRING },
-          description: "List of specific issues found (if any)"
+          description: "List of specific issues found (if any)",
         },
         confidence: {
           type: Type.NUMBER,
           minimum: 0,
           maximum: 1,
-          description: "Confidence level in the removal decision (0-1)"
-        }
+          description: "Confidence level in the removal decision (0-1)",
+        },
       },
       propertyOrdering: ["shouldRemove", "reason", "issues", "confidence"],
     };
 
-    return await this.generateStructuredContent(prompt, schema, hasImage ? question.imageData as string : undefined);
+    return await this.generateStructuredContent(
+      prompt,
+      schema,
+      hasImage ? (question.imageData as string) : undefined
+    );
   }
 
   /**
@@ -164,13 +180,13 @@ Respond with your analysis and removal recommendation.`;
       return [];
     }
 
-    return answers.map(answer => {
-      if (typeof answer === 'string') {
+    return answers.map((answer) => {
+      if (typeof answer === "string") {
         return answer;
       }
-      if (typeof answer === 'number' && Array.isArray(options)) {
+      if (typeof answer === "number" && Array.isArray(options)) {
         const option = options[answer];
-        return typeof option === 'string' ? option : String(answer);
+        return typeof option === "string" ? option : String(answer);
       }
       return String(answer);
     });
@@ -183,12 +199,16 @@ Respond with your analysis and removal recommendation.`;
    * @param {string} imageData - Optional image data URL
    * @returns {Promise<T>} Structured response
    */
-  private async generateStructuredContent<T>(prompt: string, schema: object, imageData?: string): Promise<T> {
+  private async generateStructuredContent<T>(
+    prompt: string,
+    schema: object,
+    imageData?: string
+  ): Promise<T> {
     const contents: any[] = [
       {
         role: "user",
-        parts: [{ text: prompt }]
-      }
+        parts: [{ text: prompt }],
+      },
     ];
 
     // Add image if provided
@@ -196,33 +216,56 @@ Respond with your analysis and removal recommendation.`;
       contents[0].parts.push({
         inlineData: {
           mimeType: "image/jpeg",
-          data: imageData.split(',')[1] // Remove data URL prefix
-        }
+          data: imageData.split(",")[1], // Remove data URL prefix
+        },
       });
     }
 
-    const response = await this.client.models.generateContent({
-      model: "gemini-flash-lite-latest",
-      contents,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: schema,
-        thinkingConfig: {
-          thinkingBudget: 1000,
-        },
-        temperature: 0.1,
-        topP: 0.8,
-        topK: 40,
-      },
-    });
-
-    const text = response.text || '{}';
-    
     try {
-      return JSON.parse(text) as T;
+      const response = await this.clientWithKey.client.models.generateContent({
+        model: "gemini-flash-lite-latest",
+        contents,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: schema,
+          thinkingConfig: {
+            thinkingBudget: 1000,
+          },
+          temperature: 0.1,
+          topP: 0.8,
+          topK: 40,
+        },
+      });
+
+      const text = response.text || "{}";
+
+      try {
+        return JSON.parse(text) as T;
+      } catch (error) {
+        const maskedKey =
+          this.clientWithKey.apiKey.length > 12
+            ? `${this.clientWithKey.apiKey.substring(0, 8)}...${this.clientWithKey.apiKey.substring(this.clientWithKey.apiKey.length - 4)}`
+            : "***";
+        logger.error("Failed to parse Gemini response", error as Error, {
+          apiKeyIndex: this.clientWithKey.keyIndex,
+          apiKey: maskedKey,
+        });
+        throw new Error(
+          `Invalid response format from Gemini (API key index: ${this.clientWithKey.keyIndex})`
+        );
+      }
     } catch (error) {
-      console.error('Failed to parse Gemini response:', error);
-      throw new Error('Invalid response format from Gemini');
+      const maskedKey =
+        this.clientWithKey.apiKey.length > 12
+          ? `${this.clientWithKey.apiKey.substring(0, 8)}...${this.clientWithKey.apiKey.substring(this.clientWithKey.apiKey.length - 4)}`
+          : "***";
+      logger.error("Gemini API error", error as Error, {
+        apiKeyIndex: this.clientWithKey.keyIndex,
+        apiKey: maskedKey,
+      });
+      throw new Error(
+        `Gemini API error (API key index: ${this.clientWithKey.keyIndex}, key: ${maskedKey}): ${(error as Error).message}`
+      );
     }
   }
 }

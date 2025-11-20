@@ -1,172 +1,278 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { queryCockroachDB } from '@/lib/cockroachdb';
-import { getServerUser } from '@/lib/supabaseServer';
+import { dbPg } from "@/lib/db";
+import { newTeamGroups, newTeamUnits } from "@/lib/db/schema/teams";
+import { newTeamNotifications as notificationsSchema } from "@/lib/db/schema/notifications";
+import {
+  UUIDSchema,
+  validateRequest,
+} from "@/lib/schemas/teams-validation";
+import {
+  handleError,
+  handleUnauthorizedError,
+  handleValidationError,
+  validateEnvironment,
+} from "@/lib/utils/error-handler";
+import logger from "@/lib/utils/logger";
+import { getServerUser } from "@/lib/supabaseServer";
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 // GET /api/teams/notifications - Get user notifications
 export async function GET(request: NextRequest) {
   try {
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
-    }
+    const envError = validateEnvironment();
+    if (envError) return envError;
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return handleUnauthorizedError();
     }
 
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const offset = parseInt(searchParams.get('offset') || '0');
-    const unread_only = searchParams.get('unread_only') === 'true';
+    const limitParam = searchParams.get("limit");
+    const offsetParam = searchParams.get("offset");
+    const unreadOnly = searchParams.get("unread_only") === "true";
 
-    let query = `
-      SELECT 
-        n.id,
-        n.type,
-        n.title,
-        n.message,
-        n.data,
-        n.is_read,
-        n.created_at,
-        n.read_at,
-        tg.school,
-        tg.division,
-        tu.name as team_name
-      FROM new_team_notifications n
-      LEFT JOIN new_team_units tu ON n.team_id = tu.id
-      LEFT JOIN new_team_groups tg ON tu.group_id = tg.id
-      WHERE n.user_id = $1
-    `;
+    // Validate query parameters
+    const limit = limitParam ? Number.parseInt(limitParam, 10) : 20;
+    const offset = offsetParam ? Number.parseInt(offsetParam, 10) : 0;
 
-    const params: any[] = [user.id];
-
-    if (unread_only) {
-      query += ' AND n.is_read = false';
+    if (isNaN(limit) || limit < 1 || limit > 100) {
+      return handleValidationError(
+        new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            message: "Limit must be between 1 and 100",
+            path: ["limit"],
+          },
+        ])
+      );
     }
 
-    query += ' ORDER BY n.created_at DESC LIMIT $2 OFFSET $3';
+    if (isNaN(offset) || offset < 0) {
+      return handleValidationError(
+        new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            message: "Offset must be >= 0",
+            path: ["offset"],
+          },
+        ])
+      );
+    }
 
-    params.push(limit, offset);
+    // Build where conditions
+    const whereConditions = [eq(notificationsSchema.userId, user.id)];
+    if (unreadOnly) {
+      whereConditions.push(eq(notificationsSchema.isRead, false));
+    }
 
-    const notificationsResult = await queryCockroachDB<any>(query, params);
+    // Get notifications with team information using Drizzle ORM
+    const notificationsResult = await dbPg
+      .select({
+        id: notificationsSchema.id,
+        type: notificationsSchema.notificationType,
+        title: notificationsSchema.title,
+        message: notificationsSchema.message,
+        data: notificationsSchema.data,
+        is_read: notificationsSchema.isRead,
+        created_at: notificationsSchema.createdAt,
+        read_at: notificationsSchema.readAt,
+        school: newTeamGroups.school,
+        division: newTeamGroups.division,
+        team_name: sql<string>`COALESCE(${newTeamUnits.description}, ${newTeamUnits.teamId}::text)`,
+      })
+      .from(notificationsSchema)
+      .leftJoin(newTeamUnits, eq(notificationsSchema.teamId, newTeamUnits.id))
+      .leftJoin(newTeamGroups, eq(newTeamUnits.groupId, newTeamGroups.id))
+      .where(and(...whereConditions))
+      .orderBy(desc(notificationsSchema.createdAt))
+      .limit(limit)
+      .offset(offset);
 
-    // Get unread count
-    const unreadCountResult = await queryCockroachDB<{ count: string }>(
-      `SELECT COUNT(*) as count FROM new_team_notifications 
-       WHERE user_id = $1 AND is_read = false`,
-      [user.id]
-    );
+    // Get unread count using Drizzle ORM
+    const [unreadCountResult] = await dbPg
+      .select({ count: count() })
+      .from(notificationsSchema)
+      .where(
+        and(
+          eq(notificationsSchema.userId, user.id),
+          eq(notificationsSchema.isRead, false)
+        )
+      );
 
     return NextResponse.json({
-      notifications: notificationsResult.rows,
-      unread_count: parseInt(unreadCountResult.rows[0].count)
+      notifications: notificationsResult,
+      unread_count: unreadCountResult?.count ?? 0,
     });
-
   } catch (error) {
-    console.error('Error fetching notifications:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return handleError(error, "GET /api/teams/notifications");
   }
 }
 
 // PUT /api/teams/notifications - Mark notifications as read
 export async function PUT(request: NextRequest) {
   try {
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
-    }
+    const envError = validateEnvironment();
+    if (envError) return envError;
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return handleUnauthorizedError();
     }
 
-    const body = await request.json();
-    const { notification_ids, mark_all_read = false } = body;
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch (error) {
+      return handleValidationError(
+        new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            message: "Invalid JSON in request body",
+            path: [],
+          },
+        ])
+      );
+    }
+
+    // Validate request body
+    const MarkNotificationsReadSchema = z.object({
+      notification_ids: z.array(UUIDSchema).optional(),
+      mark_all_read: z.boolean().default(false).optional(),
+    });
+
+    let validatedBody: z.infer<typeof MarkNotificationsReadSchema>;
+    try {
+      validatedBody = validateRequest(MarkNotificationsReadSchema, body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return handleValidationError(error);
+      }
+      return handleError(error, "PUT /api/teams/notifications - validation");
+    }
+
+    const { notification_ids, mark_all_read = false } = validatedBody;
 
     if (mark_all_read) {
-      // Mark all notifications as read
-      await queryCockroachDB(
-        `UPDATE new_team_notifications 
-         SET is_read = true, read_at = NOW() 
-         WHERE user_id = $1 AND is_read = false`,
-        [user.id]
-      );
-    } else if (notification_ids && Array.isArray(notification_ids)) {
-      // Mark specific notifications as read
-      const placeholders = notification_ids.map((_, index) => `$${index + 2}`).join(',');
-      await queryCockroachDB(
-        `UPDATE new_team_notifications 
-         SET is_read = true, read_at = NOW() 
-         WHERE user_id = $1 AND id IN (${placeholders})`,
-        [user.id, ...notification_ids]
-      );
+      // Mark all notifications as read using Drizzle ORM
+      await dbPg
+        .update(notificationsSchema)
+        .set({
+          isRead: true,
+          readAt: new Date(),
+        })
+        .where(
+          and(
+            eq(notificationsSchema.userId, user.id),
+            eq(notificationsSchema.isRead, false)
+          )
+        );
+    } else if (notification_ids && notification_ids.length > 0) {
+      // Mark specific notifications as read using Drizzle ORM
+      await dbPg
+        .update(notificationsSchema)
+        .set({
+          isRead: true,
+          readAt: new Date(),
+        })
+        .where(
+          and(
+            eq(notificationsSchema.userId, user.id),
+            inArray(notificationsSchema.id, notification_ids)
+          )
+        );
     } else {
-      return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+      return handleValidationError(
+        new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            message: "Either mark_all_read must be true or notification_ids must be provided",
+            path: [],
+          },
+        ])
+      );
     }
 
     return NextResponse.json({ success: true });
-
   } catch (error) {
-    console.error('Error updating notifications:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return handleError(error, "PUT /api/teams/notifications");
   }
 }
 
 // DELETE /api/teams/notifications - Delete notifications
 export async function DELETE(request: NextRequest) {
   try {
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
-    }
+    const envError = validateEnvironment();
+    if (envError) return envError;
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return handleUnauthorizedError();
     }
 
-    const body = await request.json();
-    const { notification_ids, delete_all = false } = body;
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch (error) {
+      return handleValidationError(
+        new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            message: "Invalid JSON in request body",
+            path: [],
+          },
+        ])
+      );
+    }
+
+    // Validate request body
+    const DeleteNotificationsSchema = z.object({
+      notification_ids: z.array(UUIDSchema).optional(),
+      delete_all: z.boolean().default(false).optional(),
+    });
+
+    let validatedBody: z.infer<typeof DeleteNotificationsSchema>;
+    try {
+      validatedBody = validateRequest(DeleteNotificationsSchema, body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return handleValidationError(error);
+      }
+      return handleError(error, "DELETE /api/teams/notifications - validation");
+    }
+
+    const { notification_ids, delete_all = false } = validatedBody;
 
     if (delete_all) {
-      // Delete all notifications
-      await queryCockroachDB(
-        `DELETE FROM new_team_notifications WHERE user_id = $1`,
-        [user.id]
-      );
-    } else if (notification_ids && Array.isArray(notification_ids)) {
-      // Delete specific notifications
-      const placeholders = notification_ids.map((_, index) => `$${index + 2}`).join(',');
-      await queryCockroachDB(
-        `DELETE FROM new_team_notifications 
-         WHERE user_id = $1 AND id IN (${placeholders})`,
-        [user.id, ...notification_ids]
-      );
+      // Delete all notifications using Drizzle ORM
+      await dbPg
+        .delete(notificationsSchema)
+        .where(eq(notificationsSchema.userId, user.id));
+    } else if (notification_ids && notification_ids.length > 0) {
+      // Delete specific notifications using Drizzle ORM
+      await dbPg
+        .delete(notificationsSchema)
+        .where(
+          and(
+            eq(notificationsSchema.userId, user.id),
+            inArray(notificationsSchema.id, notification_ids)
+          )
+        );
     } else {
-      return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+      return handleValidationError(
+        new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            message: "Either delete_all must be true or notification_ids must be provided",
+            path: [],
+          },
+        ])
+      );
     }
 
     return NextResponse.json({ success: true });
-
   } catch (error) {
-    console.error('Error deleting notifications:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return handleError(error, "DELETE /api/teams/notifications");
   }
 }

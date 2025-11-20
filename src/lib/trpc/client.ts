@@ -1,6 +1,6 @@
-import { createTRPCReact, httpBatchLink } from '@trpc/react-query';
-import type { AppRouter } from './routers/_app';
-import superjson from 'superjson';
+import { createTRPCReact, httpBatchLink } from "@trpc/react-query";
+import superjson from "superjson";
+import type { AppRouter } from "./routers/_app";
 
 export const trpc = createTRPCReact<AppRouter>();
 export const api = trpc;
@@ -10,7 +10,7 @@ export function getTRPCClient() {
   return trpc.createClient({
     links: [
       httpBatchLink({
-        url: '/api/trpc',
+        url: "/api/trpc",
         transformer: superjson,
         // Enable batching with a small delay to collect multiple requests
         maxURLLength: 2083,
@@ -18,18 +18,17 @@ export function getTRPCClient() {
         // This allows React to render multiple components and batch their data fetches
         headers: () => {
           return {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           };
         },
         // Include credentials for authentication
         fetch: (url, options) => {
           return fetch(url, {
             ...options,
-            credentials: 'include', // This ensures cookies are sent with the request
+            credentials: "include", // This ensures cookies are sent with the request
           });
         },
       }),
     ],
   });
 }
-

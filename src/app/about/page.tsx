@@ -1,7 +1,5 @@
-import AboutClientPage from './ClientPage';
+import AboutClientPage from "./ClientPage";
 
 export default async function AboutPage() {
   return <AboutClientPage />;
 }
-
-

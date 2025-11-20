@@ -221,7 +221,7 @@ The `src/app/teams/__tests__/` directory contains the comprehensive test suite f
 ### Testing Dependencies
 - **Vitest**: Testing framework
 - **React Testing Library**: React testing utilities
-- **Jest**: JavaScript testing framework
+- **Vitest**: JavaScript testing framework
 - **Testing Utilities**: Testing utility libraries
 
 ### Test Dependencies

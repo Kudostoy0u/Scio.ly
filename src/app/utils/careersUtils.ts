@@ -27,7 +27,7 @@ interface CareersFormData {
 /**
  * Handle careers form submission
  * Submits career application data to the API
- * 
+ *
  * @param {CareersFormData} data - Career application form data
  * @returns {Promise<{ success: boolean; message: string }>} Submission result
  * @example
@@ -43,11 +43,13 @@ interface CareersFormData {
  * });
  * ```
  */
-export const handleCareersSubmission = async (data: CareersFormData): Promise<{ success: boolean; message: string }> => {
+export const handleCareersSubmission = async (
+  data: CareersFormData
+): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await fetch('/api/join', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await fetch("/api/join", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
@@ -55,9 +57,11 @@ export const handleCareersSubmission = async (data: CareersFormData): Promise<{ 
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return { success: true, message: 'Application submitted successfully! We\'ll get back to you soon.' };
-  } catch (error) {
-    console.error('Error sending careers form:', error);
-    return { success: false, message: 'Failed to submit application. Please try again.' };
+    return {
+      success: true,
+      message: "Application submitted successfully! We'll get back to you soon.",
+    };
+  } catch (_error) {
+    return { success: false, message: "Failed to submit application. Please try again." };
   }
 };

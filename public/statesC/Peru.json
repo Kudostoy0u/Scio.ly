@@ -1,1 +1,290 @@
-{"Colegio de Peru Varsity":{"seasons":{"2020":{"events":{"__OVERALL__":{"rating":1435.3858071359816,"history":[{"d":"2020-02-23","t":341,"p":53,"e":1435.39,"l":"https://www.duosmium.org/results/2020-02-22_golden_gate_invitational_c"}]},"Boomilever":{"rating":1422.1446971728456,"history":[{"d":"2020-02-23","t":341,"p":49,"e":1422.14,"l":"https://www.duosmium.org/results/2020-02-22_golden_gate_invitational_c"}]},"Codebusters":{"rating":1488.1026278340892,"history":[{"d":"2020-02-23","t":341,"p":35,"e":1488.1,"l":"https://www.duosmium.org/results/2020-02-22_golden_gate_invitational_c"}]},"Designer Genes":{"rating":1446.122810138765,"history":[{"d":"2020-02-23","t":341,"p":46,"e":1446.12,"l":"https://www.duosmium.org/results/2020-02-22_golden_gate_invitational_c"}]},"Forensics":{"rating":1518.5026372812529,"history":[{"d":"2020-02-23","t":341,"p":29,"e":1518.5,"l":"https://www.duosmium.org/results/2020-02-22_golden_gate_invitational_c"}]}}}},"meta":{"games":255,"events":4}},"Colegio de Peru JV":{"seasons":{"2020":{"events":{"__OVERALL__":{"rating":1431.9840140383526,"history":[{"d":"2020-02-23","t":341,"p":54,"e":1431.98,"l":"https://www.duosmium.org/results/2020-02-22_golden_gate_invitational_c"}]},"Boomilever":{"rating":1439.7769078070578,"history":[{"d":"2020-02-23","t":341,"p":44,"e":1439.78,"l":"https://www.duosmium.org/results/2020-02-22_golden_gate_invitational_c"}]},"Gravity Vehicle":{"rating":1427.375371840226,"history":[{"d":"2020-02-23","t":341,"p":43,"e":1427.38,"l":"https://www.duosmium.org/results/2020-02-22_golden_gate_invitational_c"}]}}}},"meta":{"games":147,"events":2}},"Peru Varsity":{"seasons":{"2023":{"events":{"__OVERALL__":{"rating":1463.5395604791347,"history":[{"d":"2023-02-12","t":341,"p":49,"e":1463.54,"l":"https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"}]},"Bridge":{"rating":1483.024349284067,"history":[{"d":"2023-02-12","t":341,"p":33,"e":1483.02,"l":"https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"}]},"Disease Detectives":{"rating":1453.4923219829561,"history":[{"d":"2023-02-12","t":341,"p":47,"e":1453.49,"l":"https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"}]},"Flight":{"rating":1485.6488685255642,"history":[{"d":"2023-02-12","t":341,"p":29,"e":1485.65,"l":"https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"}]},"Forensics":{"rating":1518.4859921939462,"history":[{"d":"2023-02-12","t":341,"p":33,"e":1518.49,"l":"https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"}]},"Green Generation":{"rating":1441.7310114499394,"history":[{"d":"2023-02-12","t":341,"p":48,"e":1441.73,"l":"https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"}]},"Rocks and Minerals":{"rating":1477.4901903189646,"history":[{"d":"2023-02-12","t":341,"p":39,"e":1477.49,"l":"https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"}]},"Scrambler":{"rating":1464.767863903258,"history":[{"d":"2023-02-12","t":341,"p":28,"e":1464.77,"l":"https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"}]},"Write It Do It":{"rating":1437.725726126075,"history":[{"d":"2023-02-12","t":341,"p":47,"e":1437.73,"l":"https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"}]}}}},"meta":{"games":412,"events":8}},"Peru JV":{"seasons":{"2023":{"events":{"__OVERALL__":{"rating":1459.2994005737266,"history":[{"d":"2023-02-12","t":341,"p":50,"e":1459.3,"l":"https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"}]},"Bridge":{"rating":1478.6855204609662,"history":[{"d":"2023-02-12","t":341,"p":34,"e":1478.69,"l":"https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"}]},"Detector Building":{"rating":1519.273420567533,"history":[{"d":"2023-02-12","t":341,"p":28,"e":1519.27,"l":"https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"}]},"Trajectory":{"rating":1541.8997972971529,"history":[{"d":"2023-02-12","t":341,"p":17,"e":1541.9,"l":"https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"}]}}}},"meta":{"games":180,"events":3}}}
+{
+  "Colegio de Peru Varsity": {
+    "seasons": {
+      "2020": {
+        "events": {
+          "__OVERALL__": {
+            "rating": 1435.3858071359816,
+            "history": [
+              {
+                "d": "2020-02-23",
+                "t": 341,
+                "p": 53,
+                "e": 1435.39,
+                "l": "https://www.duosmium.org/results/2020-02-22_golden_gate_invitational_c"
+              }
+            ]
+          },
+          "Boomilever": {
+            "rating": 1422.1446971728456,
+            "history": [
+              {
+                "d": "2020-02-23",
+                "t": 341,
+                "p": 49,
+                "e": 1422.14,
+                "l": "https://www.duosmium.org/results/2020-02-22_golden_gate_invitational_c"
+              }
+            ]
+          },
+          "Codebusters": {
+            "rating": 1488.1026278340892,
+            "history": [
+              {
+                "d": "2020-02-23",
+                "t": 341,
+                "p": 35,
+                "e": 1488.1,
+                "l": "https://www.duosmium.org/results/2020-02-22_golden_gate_invitational_c"
+              }
+            ]
+          },
+          "Designer Genes": {
+            "rating": 1446.122810138765,
+            "history": [
+              {
+                "d": "2020-02-23",
+                "t": 341,
+                "p": 46,
+                "e": 1446.12,
+                "l": "https://www.duosmium.org/results/2020-02-22_golden_gate_invitational_c"
+              }
+            ]
+          },
+          "Forensics": {
+            "rating": 1518.5026372812529,
+            "history": [
+              {
+                "d": "2020-02-23",
+                "t": 341,
+                "p": 29,
+                "e": 1518.5,
+                "l": "https://www.duosmium.org/results/2020-02-22_golden_gate_invitational_c"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "meta": { "games": 255, "events": 4 }
+  },
+  "Colegio de Peru JV": {
+    "seasons": {
+      "2020": {
+        "events": {
+          "__OVERALL__": {
+            "rating": 1431.9840140383526,
+            "history": [
+              {
+                "d": "2020-02-23",
+                "t": 341,
+                "p": 54,
+                "e": 1431.98,
+                "l": "https://www.duosmium.org/results/2020-02-22_golden_gate_invitational_c"
+              }
+            ]
+          },
+          "Boomilever": {
+            "rating": 1439.7769078070578,
+            "history": [
+              {
+                "d": "2020-02-23",
+                "t": 341,
+                "p": 44,
+                "e": 1439.78,
+                "l": "https://www.duosmium.org/results/2020-02-22_golden_gate_invitational_c"
+              }
+            ]
+          },
+          "Gravity Vehicle": {
+            "rating": 1427.375371840226,
+            "history": [
+              {
+                "d": "2020-02-23",
+                "t": 341,
+                "p": 43,
+                "e": 1427.38,
+                "l": "https://www.duosmium.org/results/2020-02-22_golden_gate_invitational_c"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "meta": { "games": 147, "events": 2 }
+  },
+  "Peru Varsity": {
+    "seasons": {
+      "2023": {
+        "events": {
+          "__OVERALL__": {
+            "rating": 1463.5395604791347,
+            "history": [
+              {
+                "d": "2023-02-12",
+                "t": 341,
+                "p": 49,
+                "e": 1463.54,
+                "l": "https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"
+              }
+            ]
+          },
+          "Bridge": {
+            "rating": 1483.024349284067,
+            "history": [
+              {
+                "d": "2023-02-12",
+                "t": 341,
+                "p": 33,
+                "e": 1483.02,
+                "l": "https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"
+              }
+            ]
+          },
+          "Disease Detectives": {
+            "rating": 1453.4923219829561,
+            "history": [
+              {
+                "d": "2023-02-12",
+                "t": 341,
+                "p": 47,
+                "e": 1453.49,
+                "l": "https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"
+              }
+            ]
+          },
+          "Flight": {
+            "rating": 1485.6488685255642,
+            "history": [
+              {
+                "d": "2023-02-12",
+                "t": 341,
+                "p": 29,
+                "e": 1485.65,
+                "l": "https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"
+              }
+            ]
+          },
+          "Forensics": {
+            "rating": 1518.4859921939462,
+            "history": [
+              {
+                "d": "2023-02-12",
+                "t": 341,
+                "p": 33,
+                "e": 1518.49,
+                "l": "https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"
+              }
+            ]
+          },
+          "Green Generation": {
+            "rating": 1441.7310114499394,
+            "history": [
+              {
+                "d": "2023-02-12",
+                "t": 341,
+                "p": 48,
+                "e": 1441.73,
+                "l": "https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"
+              }
+            ]
+          },
+          "Rocks and Minerals": {
+            "rating": 1477.4901903189646,
+            "history": [
+              {
+                "d": "2023-02-12",
+                "t": 341,
+                "p": 39,
+                "e": 1477.49,
+                "l": "https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"
+              }
+            ]
+          },
+          "Scrambler": {
+            "rating": 1464.767863903258,
+            "history": [
+              {
+                "d": "2023-02-12",
+                "t": 341,
+                "p": 28,
+                "e": 1464.77,
+                "l": "https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"
+              }
+            ]
+          },
+          "Write It Do It": {
+            "rating": 1437.725726126075,
+            "history": [
+              {
+                "d": "2023-02-12",
+                "t": 341,
+                "p": 47,
+                "e": 1437.73,
+                "l": "https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "meta": { "games": 412, "events": 8 }
+  },
+  "Peru JV": {
+    "seasons": {
+      "2023": {
+        "events": {
+          "__OVERALL__": {
+            "rating": 1459.2994005737266,
+            "history": [
+              {
+                "d": "2023-02-12",
+                "t": 341,
+                "p": 50,
+                "e": 1459.3,
+                "l": "https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"
+              }
+            ]
+          },
+          "Bridge": {
+            "rating": 1478.6855204609662,
+            "history": [
+              {
+                "d": "2023-02-12",
+                "t": 341,
+                "p": 34,
+                "e": 1478.69,
+                "l": "https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"
+              }
+            ]
+          },
+          "Detector Building": {
+            "rating": 1519.273420567533,
+            "history": [
+              {
+                "d": "2023-02-12",
+                "t": 341,
+                "p": 28,
+                "e": 1519.27,
+                "l": "https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"
+              }
+            ]
+          },
+          "Trajectory": {
+            "rating": 1541.8997972971529,
+            "history": [
+              {
+                "d": "2023-02-12",
+                "t": 341,
+                "p": 17,
+                "e": 1541.9,
+                "l": "https://www.duosmium.org/results/2023-02-11_golden_gate_invitational_c"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "meta": { "games": 180, "events": 3 }
+  }
+}

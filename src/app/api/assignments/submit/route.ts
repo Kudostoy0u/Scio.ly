@@ -1,15 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { initExtrasDatabase } from '@/lib/db/teamExtras';
-import { pool } from '@/lib/db/pool';
+import { pool } from "@/lib/db/pool";
+import { initExtrasDatabase } from "@/lib/db/teamExtras";
+import { type NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { assignmentId, userId, name, eventName, score, detail } = body || {};
 
-    if (!assignmentId || (!userId && !name)) {
+    if (!(assignmentId && (userId || name))) {
       return NextResponse.json(
-        { success: false, error: 'Missing required parameters: assignmentId and either userId or name' },
+        {
+          success: false,
+          error: "Missing required parameters: assignmentId and either userId or name",
+        },
         { status: 400 }
       );
     }
@@ -25,8 +28,8 @@ export async function POST(req: NextRequest) {
           userId || null,
           name || null,
           eventName || null,
-          typeof score === 'number' ? score : null,
-          detail ? JSON.stringify(detail) : null
+          typeof score === "number" ? score : null,
+          detail ? JSON.stringify(detail) : null,
         ]
       );
       return NextResponse.json({ success: true, data: res.rows[0] });
@@ -34,12 +37,10 @@ export async function POST(req: NextRequest) {
       client.release();
     }
   } catch (e) {
-    const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+    const errorMessage = e instanceof Error ? e.message : "Unknown error";
     return NextResponse.json(
-      { success: false, error: 'Failed to submit assignment', details: errorMessage },
+      { success: false, error: "Failed to submit assignment", details: errorMessage },
       { status: 500 }
     );
   }
 }
-
-

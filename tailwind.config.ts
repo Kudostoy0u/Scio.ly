@@ -4,22 +4,22 @@ export default {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
-  darkMode: 'class',
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
         regalblue: {
-          100: "#021524"
+          100: "#021524",
         },
         regalred: {
-          100: "#452942"
-        }
+          100: "#452942",
+        },
       },
       fontFamily: {
-        'Poppins': 'var(--font-custom)'
-      }
+        poppins: "var(--font-custom)",
+      },
     },
   },
   plugins: [],

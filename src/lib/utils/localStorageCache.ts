@@ -9,7 +9,7 @@ export interface CacheItem<T> {
 }
 
 export class LocalStorageCache {
-  private static readonly PREFIX = 'scioly_cache_';
+  private static readonly PREFIX = "scioly_cache_";
   private static readonly DEFAULT_EXPIRY = 5 * 60 * 1000; // 5 minutes
   public static readonly INFINITE_TTL = 0; // Never expires
 
@@ -17,27 +17,30 @@ export class LocalStorageCache {
    * Get cached data if it exists and hasn't expired
    */
   static get<T>(key: string): T | null {
-    if (typeof window === 'undefined') return null;
-    
+    if (typeof window === "undefined") {
+      return null;
+    }
+
     try {
-      const cached = localStorage.getItem(this.PREFIX + key);
-      if (!cached) return null;
+      const cached = localStorage.getItem(LocalStorageCache.PREFIX + key);
+      if (!cached) {
+        return null;
+      }
 
       const item: CacheItem<T> = JSON.parse(cached);
-      
+
       // If expiresIn is 0 or negative, it never expires
       if (item.expiresIn > 0) {
         const now = Date.now();
         if (now - item.timestamp > item.expiresIn) {
-          this.remove(key);
+          LocalStorageCache.remove(key);
           return null;
         }
       }
 
       return item.data;
-    } catch (error) {
-      console.warn('Failed to parse cached data:', error);
-      this.remove(key);
+    } catch (_error) {
+      LocalStorageCache.remove(key);
       return null;
     }
   }
@@ -45,38 +48,42 @@ export class LocalStorageCache {
   /**
    * Set cached data with optional expiration
    */
-  static set<T>(key: string, data: T, expiresIn: number = this.DEFAULT_EXPIRY): void {
-    if (typeof window === 'undefined') return;
+  static set<T>(key: string, data: T, expiresIn: number = LocalStorageCache.DEFAULT_EXPIRY): void {
+    if (typeof window === "undefined") {
+      return;
+    }
 
     try {
       const item: CacheItem<T> = {
         data,
         timestamp: Date.now(),
-        expiresIn
+        expiresIn,
       };
-      localStorage.setItem(this.PREFIX + key, JSON.stringify(item));
-    } catch (error) {
-      console.warn('Failed to cache data:', error);
-    }
+      localStorage.setItem(LocalStorageCache.PREFIX + key, JSON.stringify(item));
+    } catch (_error) {}
   }
 
   /**
    * Remove cached data
    */
   static remove(key: string): void {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem(this.PREFIX + key);
+    if (typeof window === "undefined") {
+      return;
+    }
+    localStorage.removeItem(LocalStorageCache.PREFIX + key);
   }
 
   /**
    * Clear all cached data
    */
   static clear(): void {
-    if (typeof window === 'undefined') return;
-    
+    if (typeof window === "undefined") {
+      return;
+    }
+
     const keys = Object.keys(localStorage);
-    keys.forEach(key => {
-      if (key.startsWith(this.PREFIX)) {
+    keys.forEach((key) => {
+      if (key.startsWith(LocalStorageCache.PREFIX)) {
         localStorage.removeItem(key);
       }
     });

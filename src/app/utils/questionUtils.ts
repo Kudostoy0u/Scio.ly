@@ -1,10 +1,9 @@
-'use client';
-import logger from '@/lib/utils/logger';
+"use client";
+import logger from "@/lib/utils/logger";
 
-
-import { toast } from 'react-toastify';
-import api from '../api';
-import { Question } from './geminiService';
+import { toast } from "react-toastify";
+import api from "@/app/api";
+import type { Question } from "./geminiService";
 
 /**
  * Router parameters interface for question filtering
@@ -37,6 +36,8 @@ export interface RouterParams {
   viewResults?: string;
   /** Assignment mode flag */
   assignmentMode?: boolean;
+  /** Teams assignment flag (legacy: "1" or 1) */
+  teamsAssign?: string | number;
 }
 
 /**
@@ -63,24 +64,22 @@ export interface LoadingExplanation {
   [key: number]: boolean;
 }
 
-
 /**
  * Difficulty ranges for question filtering
  * Maps difficulty names to their numerical ranges (0.0 to 1.0)
  */
 export const difficultyRanges: Record<string, { min: number; max: number }> = {
-  'very-easy': { min: 0, max: 0.19 },
-  'easy': { min: 0.20, max: 0.39 },
-  'medium': { min: 0.40, max: 0.59 },
-  'hard': { min: 0.60, max: 0.79 },
-  'very-hard': { min: 0.80, max: 1.0 }
+  "very-easy": { min: 0, max: 0.19 },
+  easy: { min: 0.2, max: 0.39 },
+  medium: { min: 0.4, max: 0.59 },
+  hard: { min: 0.6, max: 0.79 },
+  "very-hard": { min: 0.8, max: 1.0 },
 };
-
 
 /**
  * Determine if a question is a multi-select question
  * Checks for multi-select keywords in the question text and validates answer format
- * 
+ *
  * @param {string} question - The question text to analyze
  * @param {number | string[]} [answers] - Optional array of correct answers
  * @returns {boolean} True if the question is multi-select, false otherwise
@@ -92,32 +91,35 @@ export const difficultyRanges: Record<string, { min: number; max: number }> = {
  */
 export const isMultiSelectQuestion = (question: string, answers?: (number | string)[]): boolean => {
   const multiSelectKeywords = [
-    'choose all',
-    'select all',
-    'all that apply',
-    'multi select',
-    'multiple select',
-    'multiple answers',
-    'check all',
-    'mark all'
+    "choose all",
+    "select all",
+    "all that apply",
+    "multi select",
+    "multiple select",
+    "multiple answers",
+    "check all",
+    "mark all",
   ];
-  
-  const hasKeywords = multiSelectKeywords.some(keyword => 
+
+  const hasKeywords = multiSelectKeywords.some((keyword) =>
     question.toLowerCase().includes(keyword.toLowerCase())
   );
-  
-  if (hasKeywords) return true;
-  
-  if (answers && answers.length > 1) return true;
-  
+
+  if (hasKeywords) {
+    return true;
+  }
+
+  if (answers && answers.length > 1) {
+    return true;
+  }
+
   return false;
 };
-
 
 /**
  * Grade free response questions using AI
  * Sends free response questions to the AI grading service
- * 
+ *
  * @param {Object[]} freeResponses - Array of free response questions to grade
  * @param {string} freeResponses[].question - The question text
  * @param {string | number[]} freeResponses[].correctAnswers - Array of correct answers
@@ -139,37 +141,37 @@ export const isMultiSelectQuestion = (question: string, answers?: (number | stri
 export const gradeFreeResponses = async (
   freeResponses: { question: string; correctAnswers: (string | number)[]; studentAnswer: string }[]
 ): Promise<number[]> => {
-  if (!freeResponses.length) return [];
-  
+  if (freeResponses.length === 0) {
+    return [];
+  }
+
   try {
     const response = await fetch(api.geminiGradeFreeResponses, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ responses: freeResponses })
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ responses: freeResponses }),
     });
-    
+
     if (!response.ok) {
-      logger.error('API error:', await response.text());
+      logger.error("API error:", await response.text());
       return freeResponses.map(() => 0);
     }
-    
+
     const data = await response.json();
     if (data.success && data.data.scores) {
       return data.data.scores;
-    } else {
-      return freeResponses.map(() => 0);
     }
+    return freeResponses.map(() => 0);
   } catch (error) {
     logger.error("Error grading with API:", error);
     return freeResponses.map(() => 0);
   }
 };
 
-
 /**
  * Grade a single free response question using AI
  * Sends a single question to the AI grading service
- * 
+ *
  * @param {string} userAnswer - The student's answer to grade
  * @param {string | number[]} correctAnswers - Array of correct answers
  * @param {string} question - The question text
@@ -186,24 +188,27 @@ export const gradeWithGemini = async (
   correctAnswers: (string | number)[],
   question: string
 ): Promise<number> => {
-  if (!userAnswer) return 0;
+  if (!userAnswer) {
+    return 0;
+  }
 
   try {
-
     const response = await fetch(api.geminiGradeFreeResponses, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        responses: [{
-          question: question,
-          correctAnswers: correctAnswers,
-          studentAnswer: userAnswer
-        }]
-      })
+        responses: [
+          {
+            question: question,
+            correctAnswers: correctAnswers,
+            studentAnswer: userAnswer,
+          },
+        ],
+      }),
     });
 
     if (!response.ok) {
-      logger.error('API error:', await response.text());
+      logger.error("API error:", await response.text());
       return 0;
     }
 
@@ -213,16 +218,15 @@ export const gradeWithGemini = async (
     }
     return 0;
   } catch (error) {
-    logger.error('Error grading with API:', error);
+    logger.error("Error grading with API:", error);
     return 0;
   }
 };
 
-
 /**
  * Build API parameters string from router parameters
  * Converts router parameters into a query string for API requests
- * 
+ *
  * @param {RouterParams} routerParams - Router parameters to convert
  * @param {number} requestCount - Number of questions to request
  * @returns {string} URL-encoded query string
@@ -238,52 +242,54 @@ export const gradeWithGemini = async (
  */
 export const buildApiParams = (routerParams: RouterParams, requestCount: number): string => {
   const { eventName, difficulties, division, tournament, subtopics, types } = routerParams;
-  
+
   const params: string[] = [];
-  
 
   let apiEventName = eventName;
   if (eventName === "Dynamic Planet") {
     apiEventName = "Dynamic Planet - Oceanography";
   }
-  
-  if (apiEventName) params.push(`event=${encodeURIComponent(apiEventName)}`);
-  if (division && division !== 'any') params.push(`division=${encodeURIComponent(division)}`);
-  if (tournament && tournament !== 'any') params.push(`tournament=${encodeURIComponent(tournament)}`);
-  if (subtopics && subtopics.length > 0) {
-    params.push(`subtopics=${encodeURIComponent(subtopics.join(','))}`);
+
+  if (apiEventName) {
+    params.push(`event=${encodeURIComponent(apiEventName)}`);
   }
-  
+  if (division && division !== "any") {
+    params.push(`division=${encodeURIComponent(division)}`);
+  }
+  if (tournament && tournament !== "any") {
+    params.push(`tournament=${encodeURIComponent(tournament)}`);
+  }
+  if (subtopics && subtopics.length > 0) {
+    params.push(`subtopics=${encodeURIComponent(subtopics.join(","))}`);
+  }
 
   if (types) {
-    if (types === 'multiple-choice') {
-      params.push(`question_type=mcq`);
-    } else if (types === 'free-response') {
-      params.push(`question_type=frq`);
+    if (types === "multiple-choice") {
+      params.push("question_type=mcq");
+    } else if (types === "free-response") {
+      params.push("question_type=frq");
     }
   }
-  
 
   if (difficulties && difficulties.length > 0) {
-    const allRanges = difficulties.map(d => difficultyRanges[d]).filter(Boolean);
+    const allRanges = difficulties.map((d) => difficultyRanges[d]).filter((r): r is { min: number; max: number } => Boolean(r));
     if (allRanges.length > 0) {
-      const minValue = Math.min(...allRanges.map(r => r.min));
-      const maxValue = Math.max(...allRanges.map(r => r.max));
+      const minValue = Math.min(...allRanges.map((r) => r.min));
+      const maxValue = Math.max(...allRanges.map((r) => r.max));
       params.push(`difficulty_min=${minValue.toFixed(2)}`);
       params.push(`difficulty_max=${maxValue.toFixed(2)}`);
     }
   }
 
   params.push(`limit=${requestCount}`);
-  
-  return params.join('&');
-};
 
+  return params.join("&");
+};
 
 /**
  * Filter questions by type (multiple-choice or free-response)
  * Returns questions that match the specified type
- * 
+ *
  * @param {Question[]} questions - Array of questions to filter
  * @param {string} types - Type to filter by ("multiple-choice" or "free-response")
  * @returns {Question[]} Filtered array of questions
@@ -294,19 +300,19 @@ export const buildApiParams = (routerParams: RouterParams, requestCount: number)
  * ```
  */
 export const filterQuestionsByType = (questions: Question[], types: string): Question[] => {
-  if (types === 'multiple-choice') {
+  if (types === "multiple-choice") {
     return questions.filter((q) => q.options && q.options.length > 0);
-  } else if (types === 'free-response') {
+  }
+  if (types === "free-response") {
     return questions.filter((q) => !q.options || q.options.length === 0);
   }
   return questions;
 };
 
-
 /**
  * Shuffle an array using Fisher-Yates algorithm
  * Returns a new array with elements in random order
- * 
+ *
  * @param {T[]} array - Array to shuffle
  * @returns {T[]} New array with shuffled elements
  * @example
@@ -319,11 +325,15 @@ export const shuffleArray = <T>(array: T[]): T[] => {
   const newArray = [...array];
   for (let i = newArray.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    const temp = newArray[i];
+    const temp2 = newArray[j];
+    if (temp !== undefined && temp2 !== undefined) {
+      newArray[i] = temp2;
+      newArray[j] = temp;
+    }
   }
   return newArray;
 };
-
 
 export const getExplanation = async (
   index: number,
@@ -339,13 +349,15 @@ export const getExplanation = async (
   gradingResults: GradingResults,
   setGradingResults: React.Dispatch<React.SetStateAction<GradingResults>>,
   userAnswers?: Record<number, (string | null)[] | null>,
-  RATE_LIMIT_DELAY: number = 2000
+  rateLimitDelay = 2000
 ) => {
-  if (explanations[index]) return;
+  if (explanations[index]) {
+    return;
+  }
 
   const now = Date.now();
-  if (now - lastCallTime < RATE_LIMIT_DELAY) {
-    toast.error('Please wait a moment before requesting another explanation');
+  if (now - lastCallTime < rateLimitDelay) {
+    toast.error("Please wait a moment before requesting another explanation");
     return;
   }
   setLastCallTime(now);
@@ -353,95 +365,99 @@ export const getExplanation = async (
   setLoadingExplanation((prev) => ({ ...prev, [index]: true }));
 
   try {
-    const isMCQ = question.options && question.options.length > 0;
+    const isMcq = question.options && question.options.length > 0;
 
-    logger.log('🚀 Making request to:', api.geminiExplain);
-    
+    logger.log("🚀 Making request to:", api.geminiExplain);
+
     // Prepare the request body with image URLs if they exist
     const requestBody: any = {
       question: question,
       userAnswer: userAnswer,
-      event: routerData.eventName || 'Science Olympiad'
+      event: routerData.eventName || "Science Olympiad",
     };
 
     // Add image URLs to the request if they exist
     if (question.imageUrl || question.imageData) {
       const imageUrls: string[] = [];
-      if (question.imageUrl) imageUrls.push(question.imageUrl);
-      if (question.imageData) imageUrls.push(question.imageData);
-      
+      if (question.imageUrl) {
+        imageUrls.push(question.imageUrl);
+      }
+      if (question.imageData) {
+        imageUrls.push(question.imageData);
+      }
+
       requestBody.imageUrls = imageUrls;
-      requestBody.imageNote = "The above URLs contain relevant images for this question. The URLs themselves may or may not contain useful information for the explanation.";
+      requestBody.imageNote =
+        "The above URLs contain relevant images for this question. The URLs themselves may or may not contain useful information for the explanation.";
     }
 
     const response = await fetch(api.geminiExplain, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody)
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      logger.error('API Response error:', errorText);
+      logger.error("API Response error:", errorText);
       throw new Error(`Failed to fetch explanation: ${response.status} ${response.statusText}`);
     }
 
-    logger.log('✅ Received response, status:', response.status);
+    logger.log("✅ Received response, status:", response.status);
     const data = await response.json();
-    logger.log('📦 Received data:', data);
-    if (!data.success || !data.data) {
-      throw new Error('Invalid response format from API');
+    logger.log("📦 Received data:", data);
+    if (!(data.success && data.data)) {
+      throw new Error("Invalid response format from API");
     }
-    
+
     const { explanation, correctIndices, correctedAnswers } = data.data;
     let explanationText = explanation;
 
-
-    if (isMCQ && correctIndices && correctIndices.length > 0) {
-      logger.log('🔍 Found correct indices in explanation');
+    if (isMcq && correctIndices && correctIndices.length > 0) {
+      logger.log("🔍 Found correct indices in explanation");
       try {
-        const suggestedIndices = correctIndices.filter(n => !isNaN(n));
+        const suggestedIndices = correctIndices.filter((n: number) => !Number.isNaN(n));
         if (suggestedIndices.length > 0) {
           const correctedAnswers = suggestedIndices;
           const currentAnswers = question.answers || [];
-          
-          const normalizedCurrentAnswers = currentAnswers.map(ans => 
-            typeof ans === 'string' ? parseInt(ans) : ans
-          ).filter(n => typeof n === 'number' && !isNaN(n));
-          
+
+          const normalizedCurrentAnswers = currentAnswers
+            .map((ans) => (typeof ans === "string" ? Number.parseInt(ans) : ans))
+            .filter((n) => typeof n === "number" && !Number.isNaN(n));
+
           const normalizedNewAnswers = correctedAnswers;
-          
-          logger.log('🔍 Answer Comparison Debug:');
-          logger.log('  Original question.answers:', currentAnswers);
-          logger.log('  Normalized current answers:', normalizedCurrentAnswers);
-          logger.log('  Explanation suggested answers:', normalizedNewAnswers);
-          
+
+          logger.log("🔍 Answer Comparison Debug:");
+          logger.log("  Original question.answers:", currentAnswers);
+          logger.log("  Normalized current answers:", normalizedCurrentAnswers);
+          logger.log("  Explanation suggested answers:", normalizedNewAnswers);
+
           const answersChanged = !(
             normalizedNewAnswers.length === normalizedCurrentAnswers.length &&
-            normalizedNewAnswers.every(val => normalizedCurrentAnswers.includes(val)) &&
-            normalizedCurrentAnswers.every(val => normalizedNewAnswers.includes(val))
+            normalizedNewAnswers.every((val: number) => normalizedCurrentAnswers.includes(val)) &&
+            normalizedCurrentAnswers.every((val: number) => normalizedNewAnswers.includes(val))
           );
-          
-          logger.log('  Answers changed?', answersChanged);
+
+          logger.log("  Answers changed?", answersChanged);
 
           if (answersChanged) {
             logger.log("✅ Explanation suggested different answers, submitting edit request.");
             const newQ = { ...question, answers: correctedAnswers };
-            
-            toast.info('Answer has been updated based on explanation');
-            
+
+            toast.info("Answer has been updated based on explanation");
+
             try {
               await fetch(api.reportEdit, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   question: question.question,
                   answer: question.answers,
                   originalQuestion: question,
                   editedQuestion: newQ,
-                  event: routerData.eventName || 'Unknown Event',
+                  event: routerData.eventName || "Unknown Event",
                   reason: "Explanation corrected answers",
-                  bypass: true
+                  bypass: true,
                 }),
               });
             } catch (editError) {
@@ -451,44 +467,56 @@ export const getExplanation = async (
             logger.log("✅ Explanation confirmed existing answers are correct - no edit needed.");
           }
 
-
-          setData(prevData => {
+          setData((prevData) => {
             const newData = [...prevData];
-            newData[index] = { ...newData[index], answers: correctedAnswers };
+            const currentQuestion = newData[index];
+            if (!currentQuestion) {
+              return newData;
+            }
+            newData[index] = { ...currentQuestion, answers: correctedAnswers } as Question;
 
             if (userAnswers) {
               const currentUserAnswers = userAnswers[index] || [];
               const correctAnswers = correctedAnswers;
-              const isMulti = isMultiSelectQuestion(newData[index].question, correctAnswers);
+              const updatedQuestion = newData[index];
+              if (!updatedQuestion) {
+                return newData;
+              }
+              const isMulti = isMultiSelectQuestion(updatedQuestion.question, correctAnswers);
 
               const userNumericAnswers = currentUserAnswers
-                .map(ans => {
-                  const idx = newData[index].options?.indexOf(ans ?? "");
+                .map((ans) => {
+                  const idx = updatedQuestion.options?.indexOf(ans ?? "");
                   return idx !== undefined && idx >= 0 ? idx : -1;
                 })
-                .filter(idx => idx >= 0);
+                .filter((idx) => idx >= 0);
 
               let isNowCorrect = false;
               if (isMulti) {
-                isNowCorrect = correctAnswers.every(correctAns => userNumericAnswers.includes(correctAns)) &&
-                               userNumericAnswers.length === correctAnswers.length;
+                isNowCorrect =
+                  correctAnswers.every((correctAns: number | string) => userNumericAnswers.includes(correctAns as number)) &&
+                  userNumericAnswers.length === correctAnswers.length;
               } else {
                 isNowCorrect = correctAnswers.includes(userNumericAnswers[0]);
               }
 
               logger.log(`🔍 MCQ Grading Debug for question ${index + 1}:`);
               logger.log(`  User's numeric answers:`, userNumericAnswers);
-              logger.log(`  Corrected answers:`, correctAnswers);
-              logger.log(`  Is multi-select:`, isMulti);
-              logger.log(`  Is now correct:`, isNowCorrect);
-              logger.log(`  Current grading result:`, gradingResults[index]);
+              logger.log("  Corrected answers:", correctAnswers);
+              logger.log("  Is multi-select:", isMulti);
+              logger.log("  Is now correct:", isNowCorrect);
+              logger.log("  Current grading result:", gradingResults[index]);
 
               if (isNowCorrect && (gradingResults[index] ?? 0) !== 1) {
-                logger.log(`✅ Updating grading result for question ${index + 1} to Correct based on explanation.`);
-                setGradingResults(prev => ({ ...prev, [index]: 1 }));
+                logger.log(
+                  `✅ Updating grading result for question ${index + 1} to Correct based on explanation.`
+                );
+                setGradingResults((prev) => ({ ...prev, [index]: 1 }));
               } else if (!isNowCorrect && gradingResults[index] === 1) {
-                logger.log(`❌ Updating grading result for question ${index + 1} to Incorrect based on explanation.`);
-                setGradingResults(prev => ({ ...prev, [index]: 0 }));
+                logger.log(
+                  `❌ Updating grading result for question ${index + 1} to Incorrect based on explanation.`
+                );
+                setGradingResults((prev) => ({ ...prev, [index]: 0 }));
               } else {
                 logger.log(`ℹ️ No grading change needed for question ${index + 1}`);
               }
@@ -502,73 +530,85 @@ export const getExplanation = async (
         explanationText = explanation;
       }
     }
-    
 
-    if (!isMCQ && correctedAnswers && correctedAnswers.length > 0) {
-      logger.log('🔍 Found corrected answers for FRQ in explanation');
+    if (!isMcq && correctedAnswers && correctedAnswers.length > 0) {
+      logger.log("🔍 Found corrected answers for FRQ in explanation");
       try {
         const currentAnswers = question.answers || [];
-        
+
         const answersChanged = !(
           correctedAnswers.length === currentAnswers.length &&
-          correctedAnswers.every((ans: any, idx: number) => 
-            String(ans).toLowerCase().trim() === String(currentAnswers[idx]).toLowerCase().trim()
+          correctedAnswers.every(
+            (ans: any, idx: number) =>
+              String(ans).toLowerCase().trim() === String(currentAnswers[idx]).toLowerCase().trim()
           )
         );
-        
-        logger.log('🔍 FRQ Answer Comparison Debug:');
-        logger.log('  Original question.answers:', currentAnswers);
-        logger.log('  Explanation suggested answers:', correctedAnswers);
-        logger.log('  Answers changed?', answersChanged);
-        
+
+        logger.log("🔍 FRQ Answer Comparison Debug:");
+        logger.log("  Original question.answers:", currentAnswers);
+        logger.log("  Explanation suggested answers:", correctedAnswers);
+        logger.log("  Answers changed?", answersChanged);
+
         if (answersChanged) {
-          logger.log("✅ Explanation suggested different answers for FRQ, submitting edit request.");
+          logger.log(
+            "✅ Explanation suggested different answers for FRQ, submitting edit request."
+          );
           const newQ = { ...question, answers: correctedAnswers };
-          
-          toast.info('Answer has been updated based on explanation');
-          
+
+          toast.info("Answer has been updated based on explanation");
+
           try {
             await fetch(api.reportEdit, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 question: question.question,
                 answer: question.answers,
                 originalQuestion: question,
                 editedQuestion: newQ,
-                event: routerData.eventName || 'Unknown Event',
+                event: routerData.eventName || "Unknown Event",
                 reason: "Explanation corrected answers",
-                bypass: true
+                bypass: true,
               }),
             });
           } catch (editError) {
             logger.error("Failed to submit auto-edit request:", editError);
           }
-          
-          setData(prevData => {
+
+          setData((prevData) => {
             const newData = [...prevData];
-            newData[index] = { ...newData[index], answers: correctedAnswers };
-            
+            const currentQuestion = newData[index];
+            if (!currentQuestion) {
+              return newData;
+            }
+            newData[index] = { ...currentQuestion, answers: correctedAnswers } as Question;
+
             if (userAnswers) {
               const currentUserAnswers = userAnswers[index] || [];
-              const userAnswerText = currentUserAnswers[0] || '';
-              
+              const userAnswerText = currentUserAnswers[0] || "";
+
               let isNowCorrect = false;
               if (userAnswerText.trim()) {
-                isNowCorrect = correctedAnswers.some(correctAnswer => 
-                  String(correctAnswer).toLowerCase().trim() === userAnswerText.toLowerCase().trim()
+                isNowCorrect = correctedAnswers.some(
+                  (correctAnswer: number | string) =>
+                    String(correctAnswer).toLowerCase().trim() ===
+                    userAnswerText.toLowerCase().trim()
                 );
               }
-              
+
               if (isNowCorrect && (gradingResults[index] ?? 0) !== 1) {
-                logger.log(`Updating grading result for question ${index + 1} to Correct based on explanation.`);
-                setGradingResults(prev => ({ ...prev, [index]: 1 }));
+                logger.log(
+                  `Updating grading result for question ${index + 1} to Correct based on explanation.`
+                );
+                setGradingResults((prev) => ({ ...prev, [index]: 1 }));
               } else if (!isNowCorrect && gradingResults[index] === 1) {
-                logger.log(`Updating grading result for question ${index + 1} to Incorrect based on explanation.`);
-                setGradingResults(prev => ({ ...prev, [index]: 0 }));
+                logger.log(
+                  `Updating grading result for question ${index + 1} to Incorrect based on explanation.`
+                );
+                setGradingResults((prev) => ({ ...prev, [index]: 0 }));
               }
             }
-            
+
             return newData;
           });
         } else {
@@ -579,11 +619,10 @@ export const getExplanation = async (
       }
     }
 
-    logger.log('🎯 Setting explanation text:', explanationText);
+    logger.log("🎯 Setting explanation text:", explanationText);
     setExplanations((prev) => ({ ...prev, [index]: explanationText }));
-
   } catch (error) {
-    logger.error('Error in getExplanation:', error);
+    logger.error("Error in getExplanation:", error);
     const errorMsg = `Failed to load explanation: ${(error as Error).message}`;
     setExplanations((prev) => ({
       ...prev,
@@ -595,11 +634,10 @@ export const getExplanation = async (
   }
 };
 
-
 /**
  * Calculate score for multiple choice questions
  * Handles both single-select and multi-select questions
- * 
+ *
  * @param {Question} question - The question object
  * @param {string | null[]} userAnswers - Array of user's selected answers
  * @returns {number} Score (0, 0.5, or 1) for the question
@@ -609,75 +647,39 @@ export const getExplanation = async (
  * console.log(score); // 1 if correct, 0.5 if partial, 0 if incorrect
  * ```
  */
-export const calculateMCQScore = (
-  question: Question,
-  userAnswers: (string | null)[]
-): number => {
-  console.log('🔍 calculateMCQScore DEBUG:');
-  console.log('Question:', {
-    question: question.question,
-    hasAnswers: !!question.answers,
-    answers: question.answers,
-    hasOptions: !!question.options,
-    options: question.options
-  });
-  console.log('User answers:', userAnswers);
-  
+export const calculateMCQScore = (question: Question, userAnswers: (string | null)[]): number => {
   if (!question.answers || question.answers.length === 0) {
-    console.log('❌ No question.answers found, returning 0');
     return 0;
   }
-  
+
   const filteredUserAnswers = userAnswers.filter((a) => a !== null) as string[];
-  const correctOptions = question.answers.map(ans => question.options![Number(ans)]);
-  
-  console.log('Filtered user answers:', filteredUserAnswers);
-  console.log('Correct options:', correctOptions);
+  const correctOptions = question.answers.map((ans) => question.options?.[Number(ans)]);
 
   if (isMultiSelectQuestion(question.question, question.answers)) {
-    console.log('📝 Processing as multi-select question');
     if (filteredUserAnswers.length === 0) {
-      console.log('❌ No user answers, returning 0');
       return 0;
     }
 
     const numCorrectSelected = filteredUserAnswers.filter((a) => correctOptions.includes(a)).length;
-    const hasIncorrectAnswers = filteredUserAnswers.some(a => !correctOptions.includes(a));
-
-    console.log('Multi-select results:', {
-      numCorrectSelected,
-      hasIncorrectAnswers,
-      correctOptions,
-      userAnswers: filteredUserAnswers
-    });
+    const hasIncorrectAnswers = filteredUserAnswers.some((a) => !correctOptions.includes(a));
 
     if (numCorrectSelected === correctOptions.length && !hasIncorrectAnswers) {
-      console.log('✅ Perfect multi-select, returning 1');
       return 1;
-    } else if (numCorrectSelected > 0) {
-      console.log('⚠️ Partial multi-select, returning 0.5');
+    }
+    if (numCorrectSelected > 0) {
       return 0.5;
     }
-    console.log('❌ Wrong multi-select, returning 0');
     return 0;
-  } else {
-    console.log('📝 Processing as single-select question');
-    const result = filteredUserAnswers.length === 1 && filteredUserAnswers[0] === correctOptions[0] ? 1 : 0;
-    console.log('Single-select result:', {
-      userAnswer: filteredUserAnswers[0],
-      correctOption: correctOptions[0],
-      match: filteredUserAnswers[0] === correctOptions[0],
-      result
-    });
-    return result;
   }
+  const result =
+    filteredUserAnswers.length === 1 && filteredUserAnswers[0] === correctOptions[0] ? 1 : 0;
+  return result;
 };
-
 
 /**
  * Format seconds into MM:SS time format
  * Converts seconds to a readable time string
- * 
+ *
  * @param {number} seconds - Number of seconds to format
  * @returns {string} Formatted time string (MM:SS)
  * @example
@@ -689,5 +691,5 @@ export const calculateMCQScore = (
 export const formatTime = (seconds: number): string => {
   const minutes = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+  return `${minutes}:${secs < 10 ? "0" : ""}${secs}`;
 };

@@ -1,26 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { queryCockroachDB } from '@/lib/cockroachdb';
-import { getServerUser } from '@/lib/supabaseServer';
-import { parseDifficulty } from '@/lib/types/difficulty';
-import { FrontendQuestionSchema } from '@/lib/schemas/question';
-import { z } from 'zod';
+import { queryCockroachDB } from "@/lib/cockroachdb";
+import { FrontendQuestionSchema } from "@/lib/schemas/question";
+import { getServerUser } from "@/lib/supabaseServer";
+import { parseDifficulty } from "@/lib/types/difficulty";
+import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 // GET /api/assignments/[assignmentId] - Get assignment details and questions
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ assignmentId: string }> }
 ) {
   try {
     if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: "Database configuration error",
+          details: "DATABASE_URL environment variable is missing",
+        },
+        { status: 500 }
+      );
     }
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { assignmentId } = await params;
@@ -47,7 +50,7 @@ export async function GET(
     );
 
     if (assignmentResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Assignment not found' }, { status: 404 });
+      return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
     }
 
     const assignment = assignmentResult.rows[0];
@@ -61,7 +64,7 @@ export async function GET(
     );
 
     if (rosterResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Not assigned to this assignment' }, { status: 403 });
+      return NextResponse.json({ error: "Not assigned to this assignment" }, { status: 403 });
     }
 
     /**
@@ -92,17 +95,6 @@ export async function GET(
        ORDER BY order_index ASC`,
       [assignmentId]
     );
-    
-    // Debug logging for retrieved questions
-    console.log('🎯 DIFFICULTY DEBUG - Retrieved questions from database:', 
-      questionsResult.rows.slice(0, 3).map((q: any, idx: number) => ({
-        index: idx + 1,
-        question: q.question_text?.substring(0, 50) + '...',
-        difficulty: q.difficulty,
-        hasDifficulty: q.difficulty !== undefined,
-        difficultyType: typeof q.difficulty
-      }))
-    );
 
     /**
      * Format questions for the frontend test system
@@ -121,26 +113,24 @@ export async function GET(
      */
     const questions = questionsResult.rows.map((q: any, index: number) => {
       // Special handling for Codebusters questions
-      if (q.question_type === 'codebusters') {
+      if (q.question_type === "codebusters") {
         let codebustersData: any = null;
         if (q.options) {
           try {
-            codebustersData = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
-          } catch (parseError) {
-            console.error(`Failed to parse Codebusters options for question ${index + 1}:`, parseError);
-          }
+            codebustersData = typeof q.options === "string" ? JSON.parse(q.options) : q.options;
+          } catch (_parseError) {}
         }
 
         // Check if this is a parameters record (for dynamic generation)
-        if (codebustersData?.type === 'parameters') {
+        if (codebustersData?.type === "parameters") {
           return {
             id: q.id,
-            question_text: 'Dynamic Codebusters Generation',
-            question_type: 'codebusters_params',
+            question_text: "Dynamic Codebusters Generation",
+            question_type: "codebusters_params",
             parameters: codebustersData,
             points: 0,
             order_index: 0,
-            image_data: null
+            image_data: null,
           };
         }
 
@@ -149,17 +139,17 @@ export async function GET(
           id: q.id,
           question: q.question_text,
           question_text: q.question_text,
-          type: 'codebusters' as const,
-          question_type: 'codebusters',
-          author: codebustersData?.author || 'Unknown',
+          type: "codebusters" as const,
+          question_type: "codebusters",
+          author: codebustersData?.author || "Unknown",
           quote: q.question_text,
-          cipherType: codebustersData?.cipherType || 'Random Aristocrat',
+          cipherType: codebustersData?.cipherType || "Random Aristocrat",
           difficulty: parseDifficulty(q.difficulty), // Strict validation - throws error if invalid
-          division: codebustersData?.division || 'C',
+          division: codebustersData?.division || "C",
           charLength: codebustersData?.charLength || 100,
-          encrypted: codebustersData?.encrypted || '',
-          key: codebustersData?.key || '',
-          hint: codebustersData?.hint || '',
+          encrypted: codebustersData?.encrypted || "",
+          key: codebustersData?.key || "",
+          hint: codebustersData?.hint || "",
           solution: codebustersData?.solution || q.correct_answer,
           answers: [codebustersData?.solution || q.correct_answer], // FRQ format
           correct_answer: codebustersData?.solution || q.correct_answer,
@@ -167,27 +157,28 @@ export async function GET(
           order: q.order_index,
           order_index: q.order_index,
           imageData: q.image_data || null,
-          image_data: q.image_data || null
+          image_data: q.image_data || null,
         };
-        
+
         // Validate the question with strict schema
         try {
           return FrontendQuestionSchema.parse(codebustersQuestion);
         } catch (error) {
-          console.error(`🎯 DIFFICULTY ERROR - Codebusters question validation failed:`, error);
           if (error instanceof z.ZodError) {
-            const errorMessages = error.issues?.map(err => `${err.path.join('.')}: ${err.message}`) || ['Unknown validation error'];
-            throw new Error(`Codebusters question validation failed:\n${errorMessages.join('\n')}`);
+            const errorMessages = error.issues?.map(
+              (err) => `${err.path.join(".")}: ${err.message}`
+            ) || ["Unknown validation error"];
+            throw new Error(`Codebusters question validation failed:\n${errorMessages.join("\n")}`);
           }
           throw error;
         }
       }
 
       // Parse options from JSONB
-      let options: string[] | undefined = undefined;
+      let options: string[] | undefined;
       if (q.options) {
         let parsedOptions = q.options;
-        if (typeof q.options === 'string') {
+        if (typeof q.options === "string") {
           try {
             parsedOptions = JSON.parse(q.options);
           } catch {
@@ -197,8 +188,12 @@ export async function GET(
 
         if (Array.isArray(parsedOptions)) {
           options = parsedOptions.map((opt: any) => {
-            if (typeof opt === 'string') return opt;
-            if (typeof opt === 'object' && opt.text) return opt.text;
+            if (typeof opt === "string") {
+              return opt;
+            }
+            if (typeof opt === "object" && opt.text) {
+              return opt.text;
+            }
             return String(opt);
           });
         }
@@ -220,31 +215,40 @@ export async function GET(
        */
       let answers: (string | number)[] = [];
 
-      if (q.correct_answer !== null && q.correct_answer !== undefined && q.correct_answer !== '') {
-        if (q.question_type === 'multiple_choice') {
+      if (q.correct_answer !== null && q.correct_answer !== undefined && q.correct_answer !== "") {
+        if (q.question_type === "multiple_choice") {
           // For MCQ, convert letter/text answers to numeric indices
           const answerStr = String(q.correct_answer).trim();
 
           // Handle comma-separated multiple answers (e.g., "A,B" or "0,1")
-          const answerParts = answerStr.split(',').map(s => s.trim()).filter(s => s);
+          const answerParts = answerStr
+            .split(",")
+            .map((s) => s.trim())
+            .filter((s) => s);
 
           if (answerParts.length === 0) {
-            throw new Error(`Invalid correct_answer format for MCQ question ${index + 1}: "${q.correct_answer}"`);
+            throw new Error(
+              `Invalid correct_answer format for MCQ question ${index + 1}: "${q.correct_answer}"`
+            );
           }
 
-          answers = answerParts.map(part => {
+          answers = answerParts.map((part) => {
             // Check if it's a letter (A, B, C, etc.)
             if (part.match(/^[A-Z]$/i)) {
               const idx = part.toUpperCase().charCodeAt(0) - 65; // A=0, B=1, C=2, etc.
               if (idx < 0 || idx >= (options?.length || 0)) {
-                throw new Error(`Answer letter "${part}" out of range for question ${index + 1} with ${options?.length || 0} options`);
+                throw new Error(
+                  `Answer letter "${part}" out of range for question ${index + 1} with ${options?.length || 0} options`
+                );
               }
               return idx;
             }
             // Otherwise try to parse as number
-            const num = parseInt(part);
-            if (isNaN(num) || num < 0 || num >= (options?.length || 0)) {
-              throw new Error(`Answer index "${part}" out of range for question ${index + 1} with ${options?.length || 0} options`);
+            const num = Number.parseInt(part);
+            if (Number.isNaN(num) || num < 0 || num >= (options?.length || 0)) {
+              throw new Error(
+                `Answer index "${part}" out of range for question ${index + 1} with ${options?.length || 0} options`
+              );
             }
             return num;
           });
@@ -256,47 +260,32 @@ export async function GET(
 
       // CRITICAL VALIDATION: Reject questions with invalid/missing answers
       if (!answers || answers.length === 0) {
-        const errorDetails = {
-          assignmentId,
-          questionId: q.id,
-          questionNumber: index + 1,
-          questionText: q.question_text?.substring(0, 100),
-          questionType: q.question_type,
-          correctAnswer: q.correct_answer,
-          hasOptions: !!options,
-          optionsCount: options?.length || 0
-        };
-
-        console.error(`❌ INVALID ASSIGNMENT QUESTION - No valid answers:`, errorDetails);
-
         throw new Error(
-          `Assignment question ${index + 1} has no valid answers. ` +
-          `This assignment cannot be loaded until all questions have valid answers. ` +
-          `Question: "${q.question_text?.substring(0, 50)}..." ` +
-          `Please contact an administrator to fix this assignment.`
+          `Assignment question ${index + 1} has no valid answers. This assignment cannot be loaded until all questions have valid answers. Question: "${q.question_text?.substring(0, 50)}..." Please contact an administrator to fix this assignment.`
         );
       }
 
       const question = {
         id: q.id,
         question: q.question_text,
-        type: q.question_type === 'multiple_choice' ? 'mcq' as const : 'frq' as const,
+        type: q.question_type === "multiple_choice" ? ("mcq" as const) : ("frq" as const),
         options: options,
         answers: answers, // CRITICAL: Always present, always an array
         points: q.points,
         order: q.order_index,
         imageData: q.image_data || null,
-        difficulty: parseDifficulty(q.difficulty) // Strict validation - throws error if invalid
+        difficulty: parseDifficulty(q.difficulty), // Strict validation - throws error if invalid
       };
-      
+
       // Validate the question with strict schema
       try {
         return FrontendQuestionSchema.parse(question);
       } catch (error) {
-        console.error(`🎯 DIFFICULTY ERROR - Question validation failed:`, error);
         if (error instanceof z.ZodError) {
-          const errorMessages = error.issues?.map(err => `${err.path.join('.')}: ${err.message}`) || ['Unknown validation error'];
-          throw new Error(`Question validation failed:\n${errorMessages.join('\n')}`);
+          const errorMessages = error.issues?.map(
+            (err) => `${err.path.join(".")}: ${err.message}`
+          ) || ["Unknown validation error"];
+          throw new Error(`Question validation failed:\n${errorMessages.join("\n")}`);
         }
         throw error;
       }
@@ -306,15 +295,16 @@ export async function GET(
       assignment: {
         ...assignment,
         questions,
-        questions_count: questions.length
-      }
+        questions_count: questions.length,
+      },
     });
-
   } catch (error) {
-    console.error('Error fetching assignment:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
   }
 }

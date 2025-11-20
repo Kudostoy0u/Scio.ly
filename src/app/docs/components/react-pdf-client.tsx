@@ -1,4 +1,2 @@
 "use client";
-export { PDFViewer } from '@react-pdf/renderer';
-
-
+export { PDFViewer } from "@react-pdf/renderer";

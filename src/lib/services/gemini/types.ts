@@ -3,7 +3,7 @@
  */
 
 export interface GeminiStreamChunk {
-  type: 'text' | 'final';
+  type: "text" | "final";
   chunk?: string;
   data?: Record<string, unknown>;
 }

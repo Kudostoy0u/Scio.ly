@@ -1,1 +1,3558 @@
-{"Walpole Elementary School Varsity":{"seasons":{"2018":{"events":{"__OVERALL__":{"rating":1564.054661330167,"history":[{"d":"2018-02-18","t":15,"p":11,"e":1524.34,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":1,"e":1764.05,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"},{"d":"2018-05-20","t":51,"p":51,"e":1564.05,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Anatomy and Physiology":{"rating":1492.8982264121494,"history":[{"d":"2018-02-18","t":15,"p":10,"e":1532.2,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":2,"e":1677.93,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"},{"d":"2018-05-20","t":51,"p":41,"e":1492.9,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Battery Buggy":{"rating":1739.4217463891646,"history":[{"d":"2018-02-18","t":15,"p":11,"e":1497.53,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-05-20","t":51,"p":21,"e":1739.42,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Crime Busters":{"rating":1696.817806811132,"history":[{"d":"2018-02-18","t":15,"p":8,"e":1544.78,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":1,"e":1775.84,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"},{"d":"2018-05-20","t":51,"p":25,"e":1696.82,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Disease Detectives":{"rating":1464.3854734532474,"history":[{"d":"2018-02-18","t":15,"p":11,"e":1525.75,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":2,"e":1664.39,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"},{"d":"2018-05-20","t":51,"p":46,"e":1464.39,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Duct Tape Challenge":{"rating":1540.8103448275863,"history":[{"d":"2018-02-18","t":15,"p":7,"e":1540.81,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"}]},"Dynamic Planet":{"rating":1459.7467735831501,"history":[{"d":"2018-02-18","t":15,"p":8,"e":1543.24,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":2,"e":1649.71,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"},{"d":"2018-05-20","t":51,"p":43,"e":1459.75,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Ecology":{"rating":1301.613611224767,"history":[{"d":"2018-02-18","t":15,"p":13,"e":1501.61,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-05-20","t":51,"p":55,"e":1301.61,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Experimental Design":{"rating":1656.8569771831912,"history":[{"d":"2018-02-18","t":15,"p":12,"e":1509.36,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-05-20","t":51,"p":31,"e":1656.86,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Fast Facts":{"rating":1560.6898671221982,"history":[{"d":"2018-02-18","t":15,"p":7,"e":1541.45,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":1,"e":1760.69,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"},{"d":"2018-05-20","t":51,"p":48,"e":1560.69,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Herpetology":{"rating":1552.1664556558499,"history":[{"d":"2018-02-18","t":15,"p":13,"e":1501.74,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":1,"e":1752.17,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"},{"d":"2018-05-20","t":51,"p":47,"e":1552.17,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Hovercraft":{"rating":1365.4387285960008,"history":[{"d":"2018-02-18","t":15,"p":15,"e":1474.07,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":4,"e":1448.47,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"},{"d":"2018-05-20","t":51,"p":48,"e":1365.44,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Meteorology":{"rating":1346.9518617809213,"history":[{"d":"2018-02-18","t":15,"p":7,"e":1546.95,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-05-20","t":51,"p":52,"e":1346.95,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Microbe Mission":{"rating":1339.5062513636726,"history":[{"d":"2018-02-18","t":15,"p":19,"e":1455.36,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":3,"e":1539.51,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"},{"d":"2018-05-20","t":51,"p":57,"e":1339.51,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Mystery Architecture":{"rating":1371.236966934508,"history":[{"d":"2018-02-18","t":15,"p":4,"e":1571.24,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-05-20","t":51,"p":56,"e":1371.24,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Optics":{"rating":1345.6361837343047,"history":[{"d":"2018-02-18","t":15,"p":17,"e":1464.78,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-05-20","t":51,"p":50,"e":1345.64,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Potions and Poisons":{"rating":1566.7102895362066,"history":[{"d":"2018-02-18","t":15,"p":11,"e":1513.07,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":1,"e":1766.71,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"},{"d":"2018-05-20","t":51,"p":55,"e":1566.71,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Road Scholar":{"rating":1523.1504954385955,"history":[{"d":"2018-02-18","t":15,"p":4,"e":1572.17,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-05-20","t":51,"p":39,"e":1523.15,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Rocks and Minerals":{"rating":1467.993459652528,"history":[{"d":"2018-02-18","t":15,"p":17,"e":1465.39,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":2,"e":1656.88,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"},{"d":"2018-05-20","t":51,"p":43,"e":1467.99,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Science Quiz Bowl":{"rating":1560.9033388822033,"history":[{"d":"2018-02-18","t":15,"p":5,"e":1560.9,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"}]},"Solar System":{"rating":1548.045961874602,"history":[{"d":"2018-02-18","t":15,"p":9,"e":1536.06,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":1,"e":1748.05,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"},{"d":"2018-05-20","t":51,"p":41,"e":1548.05,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Thermodynamics":{"rating":1319.2152796372297,"history":[{"d":"2018-02-18","t":15,"p":17,"e":1465.25,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-05-20","t":51,"p":52,"e":1319.22,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Towers":{"rating":1343.3895070231617,"history":[{"d":"2018-02-18","t":15,"p":18,"e":1448.47,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":3,"e":1543.39,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"},{"d":"2018-05-20","t":51,"p":58,"e":1343.39,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Wright Stuff":{"rating":1741.5119227686678,"history":[{"d":"2018-02-18","t":15,"p":19,"e":1438.53,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-05-20","t":51,"p":22,"e":1741.51,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Write It Do It":{"rating":1600.353060938303,"history":[{"d":"2018-02-18","t":15,"p":6,"e":1551.74,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-05-20","t":51,"p":31,"e":1600.35,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]},"Roller Coaster":{"rating":1300,"history":[{"d":"2018-05-20","t":51,"p":39,"e":1300,"l":"https://www.duosmium.org/results/2018-05-19_nationals_b"}]}}},"2019":{"events":{"__OVERALL__":{"rating":1575.2058239302423,"history":[{"d":"2019-02-17","t":15,"p":27,"e":1543.86,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":1,"e":1775.21,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"},{"d":"2019-06-02","t":51,"p":52,"e":1575.21,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Anatomy and Physiology":{"rating":1797.0336037328755,"history":[{"d":"2019-02-17","t":15,"p":28,"e":1468.45,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":2,"e":1595.91,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"},{"d":"2019-06-02","t":51,"p":26,"e":1797.03,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Battery Buggy":{"rating":1790.304057535265,"history":[{"d":"2019-02-17","t":15,"p":14,"e":1725.19,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-06-02","t":51,"p":26,"e":1790.3,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Boomilever":{"rating":1318.2292685860023,"history":[{"d":"2019-02-17","t":15,"p":22,"e":1490.26,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":3,"e":1479.34,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"},{"d":"2019-06-02","t":51,"p":51,"e":1318.23,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Circuit Lab":{"rating":1459.7320788290422,"history":[{"d":"2019-02-17","t":15,"p":27,"e":1467.27,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":2,"e":1635.55,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"},{"d":"2019-06-02","t":51,"p":43,"e":1459.73,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Crime Busters":{"rating":1864.9797833629696,"history":[{"d":"2019-02-17","t":15,"p":13,"e":1716.22,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":1,"e":1902,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"},{"d":"2019-06-02","t":51,"p":21,"e":1864.98,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Density Lab":{"rating":1332.4231418045026,"history":[{"d":"2019-02-17","t":15,"p":31,"e":1451.01,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-06-02","t":51,"p":51,"e":1332.42,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Disease Detectives":{"rating":1360.6105511506175,"history":[{"d":"2019-02-17","t":15,"p":28,"e":1437.84,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":3,"e":1491.68,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"},{"d":"2019-06-02","t":51,"p":54,"e":1360.61,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Dynamic Planet":{"rating":1461.3089839771878,"history":[{"d":"2019-02-17","t":15,"p":30,"e":1435.96,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":2,"e":1637.28,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"},{"d":"2019-06-02","t":51,"p":48,"e":1461.31,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Elastic Launched Glider":{"rating":1308.6850564192457,"history":[{"d":"2019-02-17","t":15,"p":18,"e":1508.69,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-06-02","t":51,"p":59,"e":1308.69,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Experimental Design":{"rating":1837.1560434066712,"history":[{"d":"2019-02-17","t":15,"p":16,"e":1660.85,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":1,"e":1824.2,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"},{"d":"2019-06-02","t":51,"p":24,"e":1837.16,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Fossils":{"rating":1526.1654800818853,"history":[{"d":"2019-02-17","t":15,"p":31,"e":1448.71,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":1,"e":1726.17,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"},{"d":"2019-06-02","t":51,"p":58,"e":1526.17,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Game On":{"rating":1220.4336442239887,"history":[{"d":"2019-02-17","t":15,"p":36,"e":1420.43,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-06-02","t":51,"p":59,"e":1220.43,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Heredity":{"rating":1293.1972966785504,"history":[{"d":"2019-02-17","t":15,"p":28,"e":1464.29,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-06-02","t":51,"p":53,"e":1293.2,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Herpetology":{"rating":1578.5854036087635,"history":[{"d":"2019-02-17","t":15,"p":27,"e":1519.59,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":1,"e":1778.59,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"},{"d":"2019-06-02","t":51,"p":48,"e":1578.59,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Meteorology":{"rating":1539.158660932332,"history":[{"d":"2019-02-17","t":15,"p":28,"e":1351.78,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":3,"e":1378.17,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"},{"d":"2019-06-02","t":51,"p":38,"e":1539.16,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Mystery Architecture":{"rating":1238.49567292038,"history":[{"d":"2019-02-17","t":15,"p":27,"e":1381.93,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-06-02","t":51,"p":54,"e":1238.5,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Potions and Poisons":{"rating":1577.3100439798968,"history":[{"d":"2019-02-17","t":15,"p":14,"e":1614.82,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":1,"e":1777.31,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"},{"d":"2019-06-02","t":51,"p":56,"e":1577.31,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Road Scholar":{"rating":1498.6941165147298,"history":[{"d":"2019-02-17","t":15,"p":31,"e":1471.33,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-06-02","t":51,"p":44,"e":1498.69,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Roller Coaster":{"rating":1500.2021211097049,"history":[{"d":"2019-02-17","t":15,"p":32,"e":1279.94,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":1,"e":1655.21,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"},{"d":"2019-06-02","t":51,"p":40,"e":1500.2,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Solar System":{"rating":1365.7179920429096,"history":[{"d":"2019-02-17","t":15,"p":32,"e":1487.29,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-06-02","t":51,"p":53,"e":1365.72,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Thermodynamics":{"rating":1539.175266620183,"history":[{"d":"2019-02-17","t":15,"p":25,"e":1342.33,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":1,"e":1685.69,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"},{"d":"2019-06-02","t":51,"p":44,"e":1539.18,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Water Quality":{"rating":1551.7716934302323,"history":[{"d":"2019-02-17","t":15,"p":23,"e":1475.09,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":1,"e":1751.77,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"},{"d":"2019-06-02","t":51,"p":57,"e":1551.77,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]},"Write It Do It":{"rating":1565.3913188903134,"history":[{"d":"2019-02-17","t":15,"p":23,"e":1576.44,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":1,"e":1765.39,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"},{"d":"2019-06-02","t":51,"p":42,"e":1565.39,"l":"https://www.duosmium.org/results/2019-06-01_nationals_b"}]}}},"2020":{"events":{"__OVERALL__":{"rating":1560.3064956657443,"history":[{"d":"2020-02-03","t":87,"p":19,"e":1560.31,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Anatomy and Physiology":{"rating":1703.8657726921365,"history":[{"d":"2020-02-03","t":87,"p":22,"e":1703.87,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Boomilever":{"rating":1350.5080676945088,"history":[{"d":"2020-02-03","t":87,"p":17,"e":1350.51,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Circuit Lab":{"rating":1420.2428232962295,"history":[{"d":"2020-02-03","t":87,"p":22,"e":1420.24,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Crime Busters":{"rating":1874.8763272609242,"history":[{"d":"2020-02-03","t":87,"p":6,"e":1874.88,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Disease Detectives":{"rating":1390.8055943867603,"history":[{"d":"2020-02-03","t":87,"p":18,"e":1390.81,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Dynamic Planet":{"rating":1463.347208310923,"history":[{"d":"2020-02-03","t":87,"p":17,"e":1463.35,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Elastic Launched Glider":{"rating":1320.5287558514979,"history":[{"d":"2020-02-03","t":87,"p":20,"e":1320.53,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Experimental Design":{"rating":1759.7625549125607,"history":[{"d":"2020-02-03","t":87,"p":19,"e":1759.76,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Food Science":{"rating":1521.2522743952318,"history":[{"d":"2020-02-03","t":87,"p":12,"e":1521.25,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Fossils":{"rating":1462.7767326224157,"history":[{"d":"2020-02-03","t":87,"p":24,"e":1462.78,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Game On":{"rating":1238.829214652258,"history":[{"d":"2020-02-03","t":87,"p":23,"e":1238.83,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Heredity":{"rating":1344.5301359490886,"history":[{"d":"2020-02-03","t":87,"p":16,"e":1344.53,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Machines":{"rating":1462.0940619168991,"history":[{"d":"2020-02-03","t":87,"p":19,"e":1462.09,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Meteorology":{"rating":1478.5616017550933,"history":[{"d":"2020-02-03","t":87,"p":24,"e":1478.56,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Mission Possible":{"rating":1472.2479897493208,"history":[{"d":"2020-02-03","t":87,"p":13,"e":1472.25,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Mousetrap Vehicle":{"rating":1513.401901573614,"history":[{"d":"2020-02-03","t":87,"p":13,"e":1513.4,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Ornithology":{"rating":1525.0841256539866,"history":[{"d":"2020-02-03","t":87,"p":12,"e":1525.08,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Picture This":{"rating":1480.1462370197726,"history":[{"d":"2020-02-03","t":87,"p":15,"e":1480.15,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Ping Pong Parachute":{"rating":1461.3228533754211,"history":[{"d":"2020-02-03","t":87,"p":17,"e":1461.32,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Reach for the Stars":{"rating":1499.0399203678498,"history":[{"d":"2020-02-03","t":87,"p":15,"e":1499.04,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Road Scholar":{"rating":1449.367391650709,"history":[{"d":"2020-02-03","t":87,"p":24,"e":1449.37,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]},"Write It Do It":{"rating":1554.5728753803487,"history":[{"d":"2020-02-03","t":87,"p":16,"e":1554.57,"l":"https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"}]}}}},"meta":{"games":4921,"events":22}},"Walpole Elementary School JV":{"seasons":{"2018":{"events":{"__OVERALL__":{"rating":1658.4276350627551,"history":[{"d":"2018-02-18","t":15,"p":20,"e":1454.85,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":2,"e":1658.43,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Anatomy and Physiology":{"rating":1753.4409994785503,"history":[{"d":"2018-02-18","t":15,"p":18,"e":1469.66,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":1,"e":1753.44,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Crime Busters":{"rating":1676.8231096838185,"history":[{"d":"2018-02-18","t":15,"p":13,"e":1505.27,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":2,"e":1676.82,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Disease Detectives":{"rating":1558.4672782025966,"history":[{"d":"2018-02-18","t":15,"p":19,"e":1463.23,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":3,"e":1558.47,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Duct Tape Challenge":{"rating":1514.4130434782608,"history":[{"d":"2018-02-18","t":15,"p":10,"e":1514.41,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"}]},"Dynamic Planet":{"rating":1229.9867576287227,"history":[{"d":"2018-02-18","t":15,"p":26,"e":1412.06,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":6,"e":1229.99,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Experimental Design":{"rating":1517.5738437670095,"history":[{"d":"2018-02-18","t":15,"p":11,"e":1517.57,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"}]},"Fast Facts":{"rating":1455.320925120394,"history":[{"d":"2018-02-18","t":15,"p":14,"e":1479.8,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":4,"e":1455.32,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Hovercraft":{"rating":1742.9677826116617,"history":[{"d":"2018-02-18","t":15,"p":13,"e":1491.52,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":1,"e":1742.97,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Meteorology":{"rating":1451.9519950108265,"history":[{"d":"2018-02-18","t":15,"p":18,"e":1451.95,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"}]},"Microbe Mission":{"rating":1434.3915015342354,"history":[{"d":"2018-02-18","t":15,"p":16,"e":1478.1,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":4,"e":1434.39,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Mystery Architecture":{"rating":1521.760069869554,"history":[{"d":"2018-02-18","t":15,"p":11,"e":1521.76,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"}]},"Optics":{"rating":1420.1965119262072,"history":[{"d":"2018-02-18","t":15,"p":23,"e":1420.2,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"}]},"Potions and Poisons":{"rating":1678.670184835908,"history":[{"d":"2018-02-18","t":15,"p":10,"e":1521.47,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":2,"e":1678.67,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Road Scholar":{"rating":1427.5253861568588,"history":[{"d":"2018-02-18","t":15,"p":23,"e":1427.53,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"}]},"Rocks and Minerals":{"rating":1747.7866470493095,"history":[{"d":"2018-02-18","t":15,"p":16,"e":1473.35,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":1,"e":1747.79,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Science Quiz Bowl":{"rating":1489.1351241018779,"history":[{"d":"2018-02-18","t":15,"p":13,"e":1489.14,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"}]},"Solar System":{"rating":1331.9601176682816,"history":[{"d":"2018-02-18","t":15,"p":25,"e":1413.89,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"},{"d":"2018-03-25","t":28,"p":5,"e":1331.96,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Wright Stuff":{"rating":1471.9520119888643,"history":[{"d":"2018-02-18","t":15,"p":15,"e":1471.95,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"}]},"Write It Do It":{"rating":1468.2077371102291,"history":[{"d":"2018-02-18","t":15,"p":17,"e":1468.21,"l":"https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"}]},"Herpetology":{"rating":1586.0920780479516,"history":[{"d":"2018-03-25","t":28,"p":3,"e":1586.09,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Towers":{"rating":1300,"history":[{"d":"2018-03-25","t":28,"p":5,"e":1300,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]}}},"2019":{"events":{"__OVERALL__":{"rating":1532.5179122355669,"history":[{"d":"2019-02-17","t":15,"p":31,"e":1595.96,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":3,"e":1532.52,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Anatomy and Physiology":{"rating":1468.396124044511,"history":[{"d":"2019-02-17","t":15,"p":29,"e":1668.4,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":3,"e":1468.4,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Battery Buggy":{"rating":1468.6877796249844,"history":[{"d":"2019-02-17","t":15,"p":26,"e":1468.69,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"}]},"Boomilever":{"rating":1345.6855226028129,"history":[{"d":"2019-02-17","t":15,"p":32,"e":1437.87,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":4,"e":1345.69,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Circuit Lab":{"rating":1745.1530191436414,"history":[{"d":"2019-02-17","t":15,"p":29,"e":1457.14,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":1,"e":1745.15,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Crime Busters":{"rating":1728.2702370576947,"history":[{"d":"2019-02-17","t":15,"p":23,"e":1641.23,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":2,"e":1728.27,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Density Lab":{"rating":1487.5373339416283,"history":[{"d":"2019-02-17","t":15,"p":24,"e":1487.54,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"}]},"Disease Detectives":{"rating":1374.9004648870298,"history":[{"d":"2019-02-17","t":15,"p":27,"e":1517.78,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":4,"e":1374.9,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Dynamic Planet":{"rating":1707.7598311116499,"history":[{"d":"2019-02-17","t":15,"p":18,"e":1309.55,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":1,"e":1707.76,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Experimental Design":{"rating":1676.692577877919,"history":[{"d":"2019-02-17","t":15,"p":22,"e":1517.63,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":2,"e":1676.69,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Fossils":{"rating":1403.3862032842433,"history":[{"d":"2019-02-17","t":15,"p":30,"e":1453.76,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":3,"e":1403.39,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Game On":{"rating":1444.7239072522516,"history":[{"d":"2019-02-17","t":15,"p":31,"e":1444.72,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"}]},"Heredity":{"rating":1425.585175017418,"history":[{"d":"2019-02-17","t":15,"p":36,"e":1425.59,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"}]},"Herpetology":{"rating":1304.6375603800484,"history":[{"d":"2019-02-17","t":15,"p":35,"e":1504.64,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":5,"e":1304.64,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Meteorology":{"rating":1562.9299884423183,"history":[{"d":"2019-02-17","t":15,"p":12,"e":1524.66,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":2,"e":1562.93,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Mystery Architecture":{"rating":1470.1694874924901,"history":[{"d":"2019-02-17","t":15,"p":32,"e":1470.17,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"}]},"Potions and Poisons":{"rating":1432.3257299283955,"history":[{"d":"2019-02-17","t":15,"p":37,"e":1581.12,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":3,"e":1432.33,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Road Scholar":{"rating":1450.6279979763272,"history":[{"d":"2019-02-17","t":15,"p":22,"e":1450.63,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"}]},"Roller Coaster":{"rating":1367.5982296326558,"history":[{"d":"2019-02-17","t":15,"p":34,"e":1431.08,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":3,"e":1367.6,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Solar System":{"rating":1337.1049681093962,"history":[{"d":"2019-02-17","t":15,"p":28,"e":1337.1,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"}]},"Thermodynamics":{"rating":1381.722143026669,"history":[{"d":"2019-02-17","t":15,"p":32,"e":1444.43,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":3,"e":1381.72,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Water Quality":{"rating":1600.654479913448,"history":[{"d":"2019-02-17","t":15,"p":24,"e":1469.22,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":2,"e":1600.65,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Write It Do It":{"rating":1371.3482232836704,"history":[{"d":"2019-02-17","t":15,"p":30,"e":1437.84,"l":"https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"},{"d":"2019-03-24","t":28,"p":4,"e":1371.35,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]}}}},"meta":{"games":1390,"events":22}},"Academy for Science and Design Varsity":{"seasons":{"2018":{"events":{"__OVERALL__":{"rating":1590.8883244506083,"history":[{"d":"2018-03-25","t":28,"p":3,"e":1590.89,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Anatomy and Physiology":{"rating":1449.315467051611,"history":[{"d":"2018-03-25","t":28,"p":4,"e":1449.32,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Crime Busters":{"rating":1602.0019966328616,"history":[{"d":"2018-03-25","t":28,"p":3,"e":1602,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Disease Detectives":{"rating":1828.1884549115248,"history":[{"d":"2018-03-25","t":28,"p":1,"e":1828.19,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Dynamic Planet":{"rating":1808.450723671639,"history":[{"d":"2018-03-25","t":28,"p":1,"e":1808.45,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Fast Facts":{"rating":1314.375102553942,"history":[{"d":"2018-03-25","t":28,"p":5,"e":1314.38,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Herpetology":{"rating":1711.4635361719427,"history":[{"d":"2018-03-25","t":28,"p":2,"e":1711.46,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Hovercraft":{"rating":1300,"history":[{"d":"2018-03-25","t":28,"p":6,"e":1300,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Microbe Mission":{"rating":1687.6436808266706,"history":[{"d":"2018-03-25","t":28,"p":2,"e":1687.64,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Potions and Poisons":{"rating":1328.0197450344936,"history":[{"d":"2018-03-25","t":28,"p":5,"e":1328.02,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Rocks and Minerals":{"rating":1439.6238223501243,"history":[{"d":"2018-03-25","t":28,"p":4,"e":1439.62,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Solar System":{"rating":1569.875048742125,"history":[{"d":"2018-03-25","t":28,"p":3,"e":1569.88,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Towers":{"rating":1300,"history":[{"d":"2018-03-25","t":28,"p":6,"e":1300,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]}}},"2019":{"events":{"__OVERALL__":{"rating":1689.6892736447642,"history":[{"d":"2019-03-24","t":28,"p":2,"e":1689.69,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Anatomy and Physiology":{"rating":1847.2200725821044,"history":[{"d":"2019-03-24","t":28,"p":1,"e":1847.22,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Boomilever":{"rating":1796.9733122747389,"history":[{"d":"2019-03-24","t":28,"p":1,"e":1796.97,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Circuit Lab":{"rating":1506.3496875517144,"history":[{"d":"2019-03-24","t":28,"p":3,"e":1506.35,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Crime Busters":{"rating":1515.8787888315796,"history":[{"d":"2019-03-24","t":28,"p":3,"e":1515.88,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Disease Detectives":{"rating":1899.7802833101653,"history":[{"d":"2019-03-24","t":28,"p":1,"e":1899.78,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Dynamic Planet":{"rating":1608.450723671639,"history":[{"d":"2019-03-24","t":28,"p":3,"e":1608.45,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Experimental Design":{"rating":1563.356062522915,"history":[{"d":"2019-03-24","t":28,"p":3,"e":1563.36,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Fossils":{"rating":1602.3123050428349,"history":[{"d":"2019-03-24","t":28,"p":2,"e":1602.31,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Herpetology":{"rating":1526.7504215766758,"history":[{"d":"2019-03-24","t":28,"p":3,"e":1526.75,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Meteorology":{"rating":1787.0766532360271,"history":[{"d":"2019-03-24","t":28,"p":1,"e":1787.08,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Potions and Poisons":{"rating":1632.0969852412763,"history":[{"d":"2019-03-24","t":28,"p":2,"e":1632.1,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Roller Coaster":{"rating":1556.5295778746406,"history":[{"d":"2019-03-24","t":28,"p":2,"e":1556.53,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Thermodynamics":{"rating":1573.706098874676,"history":[{"d":"2019-03-24","t":28,"p":2,"e":1573.71,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Water Quality":{"rating":1396.8938671045594,"history":[{"d":"2019-03-24","t":28,"p":3,"e":1396.89,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Write It Do It":{"rating":1678.186317012607,"history":[{"d":"2019-03-24","t":28,"p":2,"e":1678.19,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]}}}},"meta":{"games":121,"events":15}},"Academy for Science and Design JV":{"seasons":{"2018":{"events":{"__OVERALL__":{"rating":1445.6522208465171,"history":[{"d":"2018-03-25","t":28,"p":4,"e":1445.65,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Anatomy and Physiology":{"rating":1594.66207833806,"history":[{"d":"2018-03-25","t":28,"p":3,"e":1594.66,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Crime Busters":{"rating":1300,"history":[{"d":"2018-03-25","t":28,"p":6,"e":1300,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Disease Detectives":{"rating":1436.477604665246,"history":[{"d":"2018-03-25","t":28,"p":4,"e":1436.48,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Dynamic Planet":{"rating":1300,"history":[{"d":"2018-03-25","t":28,"p":5,"e":1300,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Fast Facts":{"rating":1711.3866726084286,"history":[{"d":"2018-03-25","t":28,"p":2,"e":1711.39,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Herpetology":{"rating":1315.656086525075,"history":[{"d":"2018-03-25","t":28,"p":5,"e":1315.66,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Hovercraft":{"rating":1307.214271606537,"history":[{"d":"2018-03-25","t":28,"p":5,"e":1307.21,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Microbe Mission":{"rating":1808.220203255138,"history":[{"d":"2018-03-25","t":28,"p":1,"e":1808.22,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Potions and Poisons":{"rating":1599.608977161257,"history":[{"d":"2018-03-25","t":28,"p":3,"e":1599.61,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Rocks and Minerals":{"rating":1315.1105300560803,"history":[{"d":"2018-03-25","t":28,"p":5,"e":1315.11,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Solar System":{"rating":1696.4220399696235,"history":[{"d":"2018-03-25","t":28,"p":2,"e":1696.42,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Towers":{"rating":1422.3720049638657,"history":[{"d":"2018-03-25","t":28,"p":4,"e":1422.37,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]}}}},"meta":{"games":65,"events":12}},"Somersworth Middle School Varsity":{"seasons":{"2018":{"events":{"__OVERALL__":{"rating":1320.3456886790643,"history":[{"d":"2018-03-25","t":28,"p":5,"e":1320.35,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Anatomy and Physiology":{"rating":1300,"history":[{"d":"2018-03-25","t":28,"p":6,"e":1300,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Crime Busters":{"rating":1329.891468959744,"history":[{"d":"2018-03-25","t":28,"p":5,"e":1329.89,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Disease Detectives":{"rating":1300,"history":[{"d":"2018-03-25","t":28,"p":6,"e":1300,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Dynamic Planet":{"rating":1561.0168832946872,"history":[{"d":"2018-03-25","t":28,"p":3,"e":1561.02,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Fast Facts":{"rating":1585.9215115397221,"history":[{"d":"2018-03-25","t":28,"p":3,"e":1585.92,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Herpetology":{"rating":1300,"history":[{"d":"2018-03-25","t":28,"p":6,"e":1300,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Hovercraft":{"rating":1577.012805331552,"history":[{"d":"2018-03-25","t":28,"p":3,"e":1577.01,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Microbe Mission":{"rating":1300,"history":[{"d":"2018-03-25","t":28,"p":5,"e":1300,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Potions and Poisons":{"rating":1454.3037407677364,"history":[{"d":"2018-03-25","t":28,"p":4,"e":1454.3,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Rocks and Minerals":{"rating":1584.4036398613382,"history":[{"d":"2018-03-25","t":28,"p":3,"e":1584.4,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Solar System":{"rating":1300,"history":[{"d":"2018-03-25","t":28,"p":6,"e":1300,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Towers":{"rating":1813.984835396833,"history":[{"d":"2018-03-25","t":28,"p":1,"e":1813.98,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]}}}},"meta":{"games":65,"events":12}},"Merrimack Middle School Varsity":{"seasons":{"2018":{"events":{"__OVERALL__":{"rating":1300,"history":[{"d":"2018-03-25","t":28,"p":6,"e":1300,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Anatomy and Physiology":{"rating":1323.5929483844632,"history":[{"d":"2018-03-25","t":28,"p":5,"e":1323.59,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Crime Busters":{"rating":1456.598853631327,"history":[{"d":"2018-03-25","t":28,"p":4,"e":1456.6,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Disease Detectives":{"rating":1311.0139989886156,"history":[{"d":"2018-03-25","t":28,"p":5,"e":1311.01,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Dynamic Planet":{"rating":1415.6534403441524,"history":[{"d":"2018-03-25","t":28,"p":4,"e":1415.65,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Fast Facts":{"rating":1300,"history":[{"d":"2018-03-25","t":28,"p":6,"e":1300,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Herpetology":{"rating":1441.0817325834178,"history":[{"d":"2018-03-25","t":28,"p":4,"e":1441.08,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Hovercraft":{"rating":1702.9593187718287,"history":[{"d":"2018-03-25","t":28,"p":2,"e":1702.96,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Microbe Mission":{"rating":1300,"history":[{"d":"2018-03-25","t":28,"p":6,"e":1300,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Potions and Poisons":{"rating":1300,"history":[{"d":"2018-03-25","t":28,"p":6,"e":1300,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Rocks and Minerals":{"rating":1300,"history":[{"d":"2018-03-25","t":28,"p":6,"e":1300,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Solar System":{"rating":1424.6185975603119,"history":[{"d":"2018-03-25","t":28,"p":4,"e":1424.62,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]},"Towers":{"rating":1693.4615250016116,"history":[{"d":"2018-03-25","t":28,"p":2,"e":1693.46,"l":"https://www.duosmium.org/results/2018-03-24_NH_states_b"}]}}},"2019":{"events":{"__OVERALL__":{"rating":1181.3631549369898,"history":[{"d":"2019-03-24","t":28,"p":5,"e":1181.36,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Boomilever":{"rating":1300,"history":[{"d":"2019-03-24","t":28,"p":5,"e":1300,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Circuit Lab":{"rating":1343.9252636372557,"history":[{"d":"2019-03-24","t":28,"p":4,"e":1343.93,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Disease Detectives":{"rating":1655.8947997628907,"history":[{"d":"2019-03-24","t":28,"p":2,"e":1655.89,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Dynamic Planet":{"rating":1215.6534403441524,"history":[{"d":"2019-03-24","t":28,"p":5,"e":1215.65,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Experimental Design":{"rating":1300,"history":[{"d":"2019-03-24","t":28,"p":5,"e":1300,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Herpetology":{"rating":1373.5130961437696,"history":[{"d":"2019-03-24","t":28,"p":4,"e":1373.51,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Write It Do It":{"rating":1510.636637595426,"history":[{"d":"2019-03-24","t":28,"p":3,"e":1510.64,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]}}},"2021":{"events":{"__OVERALL__":{"rating":1127.9276781854458,"history":[{"d":"2021-05-23","t":51,"p":60,"e":1127.93,"l":"https://www.duosmium.org/results/2021-05-22_nationals_b"}]},"Anatomy and Physiology":{"rating":1184.1498794640543,"history":[{"d":"2021-05-23","t":51,"p":60,"e":1184.15,"l":"https://www.duosmium.org/results/2021-05-22_nationals_b"}]},"Circuit Lab":{"rating":1197.252823430394,"history":[{"d":"2021-05-23","t":51,"p":59,"e":1197.25,"l":"https://www.duosmium.org/results/2021-05-22_nationals_b"}]},"Crime Busters":{"rating":1256.598853631327,"history":[{"d":"2021-05-23","t":51,"p":59,"e":1256.6,"l":"https://www.duosmium.org/results/2021-05-22_nationals_b"}]},"Density Lab":{"rating":1306.486430959007,"history":[{"d":"2021-05-23","t":51,"p":56,"e":1306.49,"l":"https://www.duosmium.org/results/2021-05-22_nationals_b"}]},"Disease Detectives":{"rating":1455.8947997628907,"history":[{"d":"2021-05-23","t":51,"p":60,"e":1455.89,"l":"https://www.duosmium.org/results/2021-05-22_nationals_b"}]},"Dynamic Planet":{"rating":1170.4168864906023,"history":[{"d":"2021-05-23","t":51,"p":58,"e":1170.42,"l":"https://www.duosmium.org/results/2021-05-22_nationals_b"}]},"Experimental Design":{"rating":1287.928425971696,"history":[{"d":"2021-05-23","t":51,"p":54,"e":1287.93,"l":"https://www.duosmium.org/results/2021-05-22_nationals_b"}]},"Food Science":{"rating":1300,"history":[{"d":"2021-05-23","t":51,"p":56,"e":1300,"l":"https://www.duosmium.org/results/2021-05-22_nationals_b"}]},"Fossils":{"rating":1300,"history":[{"d":"2021-05-23","t":51,"p":56,"e":1300,"l":"https://www.duosmium.org/results/2021-05-22_nationals_b"}]},"Game On":{"rating":1300,"history":[{"d":"2021-05-23","t":51,"p":57,"e":1300,"l":"https://www.duosmium.org/results/2021-05-22_nationals_b"}]},"Heredity":{"rating":1300,"history":[{"d":"2021-05-23","t":51,"p":60,"e":1300,"l":"https://www.duosmium.org/results/2021-05-22_nationals_b"}]},"Machines":{"rating":1300,"history":[{"d":"2021-05-23","t":51,"p":54,"e":1300,"l":"https://www.duosmium.org/results/2021-05-22_nationals_b"}]},"Meteorology":{"rating":1300,"history":[{"d":"2021-05-23","t":51,"p":60,"e":1300,"l":"https://www.duosmium.org/results/2021-05-22_nationals_b"}]},"Ornithology":{"rating":1300,"history":[{"d":"2021-05-23","t":51,"p":59,"e":1300,"l":"https://www.duosmium.org/results/2021-05-22_nationals_b"}]},"Reach for the Stars":{"rating":1300,"history":[{"d":"2021-05-23","t":51,"p":59,"e":1300,"l":"https://www.duosmium.org/results/2021-05-22_nationals_b"}]},"Road Scholar":{"rating":1300,"history":[{"d":"2021-05-23","t":51,"p":59,"e":1300,"l":"https://www.duosmium.org/results/2021-05-22_nationals_b"}]},"Water Quality":{"rating":1300,"history":[{"d":"2021-05-23","t":51,"p":59,"e":1300,"l":"https://www.duosmium.org/results/2021-05-22_nationals_b"}]},"Write It Do It":{"rating":1315.795673424497,"history":[{"d":"2021-05-23","t":51,"p":45,"e":1315.8,"l":"https://www.duosmium.org/results/2021-05-22_nationals_b"}]}}}},"meta":{"games":1211,"events":18}},"Wilton-Lyndeborough Cooperative Middle High School Varsity":{"seasons":{"2019":{"events":{"__OVERALL__":{"rating":1351.9386782546694,"history":[{"d":"2019-03-24","t":28,"p":4,"e":1351.94,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Anatomy and Physiology":{"rating":1300,"history":[{"d":"2019-03-24","t":28,"p":4,"e":1300,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Boomilever":{"rating":1645.5921815785334,"history":[{"d":"2019-03-24","t":28,"p":2,"e":1645.59,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Circuit Lab":{"rating":1300,"history":[{"d":"2019-03-24","t":28,"p":5,"e":1300,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Crime Busters":{"rating":1313.30339228961,"history":[{"d":"2019-03-24","t":28,"p":4,"e":1313.3,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Disease Detectives":{"rating":1300,"history":[{"d":"2019-03-24","t":28,"p":5,"e":1300,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Dynamic Planet":{"rating":1351.2664432195402,"history":[{"d":"2019-03-24","t":28,"p":4,"e":1351.27,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Experimental Design":{"rating":1384.643151270562,"history":[{"d":"2019-03-24","t":28,"p":4,"e":1384.64,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Fossils":{"rating":1300,"history":[{"d":"2019-03-24","t":28,"p":4,"e":1300,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Herpetology":{"rating":1710.8761628563336,"history":[{"d":"2019-03-24","t":28,"p":2,"e":1710.88,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Meteorology":{"rating":1300,"history":[{"d":"2019-03-24","t":28,"p":4,"e":1300,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Potions and Poisons":{"rating":1300,"history":[{"d":"2019-03-24","t":28,"p":4,"e":1300,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Roller Coaster":{"rating":1300,"history":[{"d":"2019-03-24","t":28,"p":4,"e":1300,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Thermodynamics":{"rating":1300,"history":[{"d":"2019-03-24","t":28,"p":4,"e":1300,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Water Quality":{"rating":1300,"history":[{"d":"2019-03-24","t":28,"p":4,"e":1300,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]},"Write It Do It":{"rating":1300,"history":[{"d":"2019-03-24","t":28,"p":5,"e":1300,"l":"https://www.duosmium.org/results/2019-03-23_NH_states_b"}]}}}},"meta":{"games":56,"events":15}}}
+{
+  "Walpole Elementary School Varsity": {
+    "seasons": {
+      "2018": {
+        "events": {
+          "__OVERALL__": {
+            "rating": 1564.054661330167,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 11,
+                "e": 1524.34,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 1,
+                "e": 1764.05,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 51,
+                "e": 1564.05,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Anatomy and Physiology": {
+            "rating": 1492.8982264121494,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 10,
+                "e": 1532.2,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 2,
+                "e": 1677.93,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 41,
+                "e": 1492.9,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Battery Buggy": {
+            "rating": 1739.4217463891646,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 11,
+                "e": 1497.53,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 21,
+                "e": 1739.42,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Crime Busters": {
+            "rating": 1696.817806811132,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 8,
+                "e": 1544.78,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 1,
+                "e": 1775.84,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 25,
+                "e": 1696.82,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Disease Detectives": {
+            "rating": 1464.3854734532474,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 11,
+                "e": 1525.75,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 2,
+                "e": 1664.39,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 46,
+                "e": 1464.39,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Duct Tape Challenge": {
+            "rating": 1540.8103448275863,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 7,
+                "e": 1540.81,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              }
+            ]
+          },
+          "Dynamic Planet": {
+            "rating": 1459.7467735831501,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 8,
+                "e": 1543.24,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 2,
+                "e": 1649.71,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 43,
+                "e": 1459.75,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Ecology": {
+            "rating": 1301.613611224767,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 13,
+                "e": 1501.61,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 55,
+                "e": 1301.61,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Experimental Design": {
+            "rating": 1656.8569771831912,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 12,
+                "e": 1509.36,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 31,
+                "e": 1656.86,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Fast Facts": {
+            "rating": 1560.6898671221982,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 7,
+                "e": 1541.45,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 1,
+                "e": 1760.69,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 48,
+                "e": 1560.69,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Herpetology": {
+            "rating": 1552.1664556558499,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 13,
+                "e": 1501.74,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 1,
+                "e": 1752.17,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 47,
+                "e": 1552.17,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Hovercraft": {
+            "rating": 1365.4387285960008,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 15,
+                "e": 1474.07,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 4,
+                "e": 1448.47,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 48,
+                "e": 1365.44,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Meteorology": {
+            "rating": 1346.9518617809213,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 7,
+                "e": 1546.95,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 52,
+                "e": 1346.95,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Microbe Mission": {
+            "rating": 1339.5062513636726,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 19,
+                "e": 1455.36,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 3,
+                "e": 1539.51,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 57,
+                "e": 1339.51,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Mystery Architecture": {
+            "rating": 1371.236966934508,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 4,
+                "e": 1571.24,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 56,
+                "e": 1371.24,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Optics": {
+            "rating": 1345.6361837343047,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 17,
+                "e": 1464.78,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 50,
+                "e": 1345.64,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Potions and Poisons": {
+            "rating": 1566.7102895362066,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 11,
+                "e": 1513.07,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 1,
+                "e": 1766.71,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 55,
+                "e": 1566.71,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Road Scholar": {
+            "rating": 1523.1504954385955,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 4,
+                "e": 1572.17,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 39,
+                "e": 1523.15,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Rocks and Minerals": {
+            "rating": 1467.993459652528,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 17,
+                "e": 1465.39,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 2,
+                "e": 1656.88,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 43,
+                "e": 1467.99,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Science Quiz Bowl": {
+            "rating": 1560.9033388822033,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 5,
+                "e": 1560.9,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              }
+            ]
+          },
+          "Solar System": {
+            "rating": 1548.045961874602,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 9,
+                "e": 1536.06,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 1,
+                "e": 1748.05,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 41,
+                "e": 1548.05,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Thermodynamics": {
+            "rating": 1319.2152796372297,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 17,
+                "e": 1465.25,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 52,
+                "e": 1319.22,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Towers": {
+            "rating": 1343.3895070231617,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 18,
+                "e": 1448.47,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 3,
+                "e": 1543.39,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 58,
+                "e": 1343.39,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Wright Stuff": {
+            "rating": 1741.5119227686678,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 19,
+                "e": 1438.53,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 22,
+                "e": 1741.51,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Write It Do It": {
+            "rating": 1600.353060938303,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 6,
+                "e": 1551.74,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 31,
+                "e": 1600.35,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          },
+          "Roller Coaster": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2018-05-20",
+                "t": 51,
+                "p": 39,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2018-05-19_nationals_b"
+              }
+            ]
+          }
+        }
+      },
+      "2019": {
+        "events": {
+          "__OVERALL__": {
+            "rating": 1575.2058239302423,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 27,
+                "e": 1543.86,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 1,
+                "e": 1775.21,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 52,
+                "e": 1575.21,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Anatomy and Physiology": {
+            "rating": 1797.0336037328755,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 28,
+                "e": 1468.45,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 2,
+                "e": 1595.91,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 26,
+                "e": 1797.03,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Battery Buggy": {
+            "rating": 1790.304057535265,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 14,
+                "e": 1725.19,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 26,
+                "e": 1790.3,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Boomilever": {
+            "rating": 1318.2292685860023,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 22,
+                "e": 1490.26,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 3,
+                "e": 1479.34,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 51,
+                "e": 1318.23,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Circuit Lab": {
+            "rating": 1459.7320788290422,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 27,
+                "e": 1467.27,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 2,
+                "e": 1635.55,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 43,
+                "e": 1459.73,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Crime Busters": {
+            "rating": 1864.9797833629696,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 13,
+                "e": 1716.22,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 1,
+                "e": 1902,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 21,
+                "e": 1864.98,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Density Lab": {
+            "rating": 1332.4231418045026,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 31,
+                "e": 1451.01,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 51,
+                "e": 1332.42,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Disease Detectives": {
+            "rating": 1360.6105511506175,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 28,
+                "e": 1437.84,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 3,
+                "e": 1491.68,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 54,
+                "e": 1360.61,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Dynamic Planet": {
+            "rating": 1461.3089839771878,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 30,
+                "e": 1435.96,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 2,
+                "e": 1637.28,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 48,
+                "e": 1461.31,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Elastic Launched Glider": {
+            "rating": 1308.6850564192457,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 18,
+                "e": 1508.69,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 59,
+                "e": 1308.69,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Experimental Design": {
+            "rating": 1837.1560434066712,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 16,
+                "e": 1660.85,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 1,
+                "e": 1824.2,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 24,
+                "e": 1837.16,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Fossils": {
+            "rating": 1526.1654800818853,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 31,
+                "e": 1448.71,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 1,
+                "e": 1726.17,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 58,
+                "e": 1526.17,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Game On": {
+            "rating": 1220.4336442239887,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 36,
+                "e": 1420.43,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 59,
+                "e": 1220.43,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Heredity": {
+            "rating": 1293.1972966785504,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 28,
+                "e": 1464.29,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 53,
+                "e": 1293.2,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Herpetology": {
+            "rating": 1578.5854036087635,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 27,
+                "e": 1519.59,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 1,
+                "e": 1778.59,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 48,
+                "e": 1578.59,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Meteorology": {
+            "rating": 1539.158660932332,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 28,
+                "e": 1351.78,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 3,
+                "e": 1378.17,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 38,
+                "e": 1539.16,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Mystery Architecture": {
+            "rating": 1238.49567292038,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 27,
+                "e": 1381.93,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 54,
+                "e": 1238.5,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Potions and Poisons": {
+            "rating": 1577.3100439798968,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 14,
+                "e": 1614.82,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 1,
+                "e": 1777.31,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 56,
+                "e": 1577.31,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Road Scholar": {
+            "rating": 1498.6941165147298,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 31,
+                "e": 1471.33,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 44,
+                "e": 1498.69,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Roller Coaster": {
+            "rating": 1500.2021211097049,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 32,
+                "e": 1279.94,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 1,
+                "e": 1655.21,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 40,
+                "e": 1500.2,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Solar System": {
+            "rating": 1365.7179920429096,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 32,
+                "e": 1487.29,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 53,
+                "e": 1365.72,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Thermodynamics": {
+            "rating": 1539.175266620183,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 25,
+                "e": 1342.33,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 1,
+                "e": 1685.69,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 44,
+                "e": 1539.18,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Water Quality": {
+            "rating": 1551.7716934302323,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 23,
+                "e": 1475.09,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 1,
+                "e": 1751.77,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 57,
+                "e": 1551.77,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          },
+          "Write It Do It": {
+            "rating": 1565.3913188903134,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 23,
+                "e": 1576.44,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 1,
+                "e": 1765.39,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              },
+              {
+                "d": "2019-06-02",
+                "t": 51,
+                "p": 42,
+                "e": 1565.39,
+                "l": "https://www.duosmium.org/results/2019-06-01_nationals_b"
+              }
+            ]
+          }
+        }
+      },
+      "2020": {
+        "events": {
+          "__OVERALL__": {
+            "rating": 1560.3064956657443,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 19,
+                "e": 1560.31,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Anatomy and Physiology": {
+            "rating": 1703.8657726921365,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 22,
+                "e": 1703.87,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Boomilever": {
+            "rating": 1350.5080676945088,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 17,
+                "e": 1350.51,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Circuit Lab": {
+            "rating": 1420.2428232962295,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 22,
+                "e": 1420.24,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Crime Busters": {
+            "rating": 1874.8763272609242,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 6,
+                "e": 1874.88,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Disease Detectives": {
+            "rating": 1390.8055943867603,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 18,
+                "e": 1390.81,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Dynamic Planet": {
+            "rating": 1463.347208310923,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 17,
+                "e": 1463.35,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Elastic Launched Glider": {
+            "rating": 1320.5287558514979,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 20,
+                "e": 1320.53,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Experimental Design": {
+            "rating": 1759.7625549125607,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 19,
+                "e": 1759.76,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Food Science": {
+            "rating": 1521.2522743952318,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 12,
+                "e": 1521.25,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Fossils": {
+            "rating": 1462.7767326224157,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 24,
+                "e": 1462.78,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Game On": {
+            "rating": 1238.829214652258,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 23,
+                "e": 1238.83,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Heredity": {
+            "rating": 1344.5301359490886,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 16,
+                "e": 1344.53,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Machines": {
+            "rating": 1462.0940619168991,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 19,
+                "e": 1462.09,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Meteorology": {
+            "rating": 1478.5616017550933,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 24,
+                "e": 1478.56,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Mission Possible": {
+            "rating": 1472.2479897493208,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 13,
+                "e": 1472.25,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Mousetrap Vehicle": {
+            "rating": 1513.401901573614,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 13,
+                "e": 1513.4,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Ornithology": {
+            "rating": 1525.0841256539866,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 12,
+                "e": 1525.08,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Picture This": {
+            "rating": 1480.1462370197726,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 15,
+                "e": 1480.15,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Ping Pong Parachute": {
+            "rating": 1461.3228533754211,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 17,
+                "e": 1461.32,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Reach for the Stars": {
+            "rating": 1499.0399203678498,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 15,
+                "e": 1499.04,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Road Scholar": {
+            "rating": 1449.367391650709,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 24,
+                "e": 1449.37,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          },
+          "Write It Do It": {
+            "rating": 1554.5728753803487,
+            "history": [
+              {
+                "d": "2020-02-03",
+                "t": 87,
+                "p": 16,
+                "e": 1554.57,
+                "l": "https://www.duosmium.org/results/2020-02-02_harvard_invitational_b"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "meta": { "games": 4921, "events": 22 }
+  },
+  "Walpole Elementary School JV": {
+    "seasons": {
+      "2018": {
+        "events": {
+          "__OVERALL__": {
+            "rating": 1658.4276350627551,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 20,
+                "e": 1454.85,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 2,
+                "e": 1658.43,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Anatomy and Physiology": {
+            "rating": 1753.4409994785503,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 18,
+                "e": 1469.66,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 1,
+                "e": 1753.44,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Crime Busters": {
+            "rating": 1676.8231096838185,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 13,
+                "e": 1505.27,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 2,
+                "e": 1676.82,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Disease Detectives": {
+            "rating": 1558.4672782025966,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 19,
+                "e": 1463.23,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 3,
+                "e": 1558.47,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Duct Tape Challenge": {
+            "rating": 1514.4130434782608,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 10,
+                "e": 1514.41,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              }
+            ]
+          },
+          "Dynamic Planet": {
+            "rating": 1229.9867576287227,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 26,
+                "e": 1412.06,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 6,
+                "e": 1229.99,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Experimental Design": {
+            "rating": 1517.5738437670095,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 11,
+                "e": 1517.57,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              }
+            ]
+          },
+          "Fast Facts": {
+            "rating": 1455.320925120394,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 14,
+                "e": 1479.8,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 4,
+                "e": 1455.32,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Hovercraft": {
+            "rating": 1742.9677826116617,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 13,
+                "e": 1491.52,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 1,
+                "e": 1742.97,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Meteorology": {
+            "rating": 1451.9519950108265,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 18,
+                "e": 1451.95,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              }
+            ]
+          },
+          "Microbe Mission": {
+            "rating": 1434.3915015342354,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 16,
+                "e": 1478.1,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 4,
+                "e": 1434.39,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Mystery Architecture": {
+            "rating": 1521.760069869554,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 11,
+                "e": 1521.76,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              }
+            ]
+          },
+          "Optics": {
+            "rating": 1420.1965119262072,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 23,
+                "e": 1420.2,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              }
+            ]
+          },
+          "Potions and Poisons": {
+            "rating": 1678.670184835908,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 10,
+                "e": 1521.47,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 2,
+                "e": 1678.67,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Road Scholar": {
+            "rating": 1427.5253861568588,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 23,
+                "e": 1427.53,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              }
+            ]
+          },
+          "Rocks and Minerals": {
+            "rating": 1747.7866470493095,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 16,
+                "e": 1473.35,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 1,
+                "e": 1747.79,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Science Quiz Bowl": {
+            "rating": 1489.1351241018779,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 13,
+                "e": 1489.14,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              }
+            ]
+          },
+          "Solar System": {
+            "rating": 1331.9601176682816,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 25,
+                "e": 1413.89,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              },
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 5,
+                "e": 1331.96,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Wright Stuff": {
+            "rating": 1471.9520119888643,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 15,
+                "e": 1471.95,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              }
+            ]
+          },
+          "Write It Do It": {
+            "rating": 1468.2077371102291,
+            "history": [
+              {
+                "d": "2018-02-18",
+                "t": 15,
+                "p": 17,
+                "e": 1468.21,
+                "l": "https://www.duosmium.org/results/2018-02-17_cornell_invitational_b"
+              }
+            ]
+          },
+          "Herpetology": {
+            "rating": 1586.0920780479516,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 3,
+                "e": 1586.09,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Towers": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 5,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          }
+        }
+      },
+      "2019": {
+        "events": {
+          "__OVERALL__": {
+            "rating": 1532.5179122355669,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 31,
+                "e": 1595.96,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 3,
+                "e": 1532.52,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Anatomy and Physiology": {
+            "rating": 1468.396124044511,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 29,
+                "e": 1668.4,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 3,
+                "e": 1468.4,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Battery Buggy": {
+            "rating": 1468.6877796249844,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 26,
+                "e": 1468.69,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              }
+            ]
+          },
+          "Boomilever": {
+            "rating": 1345.6855226028129,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 32,
+                "e": 1437.87,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 4,
+                "e": 1345.69,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Circuit Lab": {
+            "rating": 1745.1530191436414,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 29,
+                "e": 1457.14,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 1,
+                "e": 1745.15,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Crime Busters": {
+            "rating": 1728.2702370576947,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 23,
+                "e": 1641.23,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 2,
+                "e": 1728.27,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Density Lab": {
+            "rating": 1487.5373339416283,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 24,
+                "e": 1487.54,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              }
+            ]
+          },
+          "Disease Detectives": {
+            "rating": 1374.9004648870298,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 27,
+                "e": 1517.78,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 4,
+                "e": 1374.9,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Dynamic Planet": {
+            "rating": 1707.7598311116499,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 18,
+                "e": 1309.55,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 1,
+                "e": 1707.76,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Experimental Design": {
+            "rating": 1676.692577877919,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 22,
+                "e": 1517.63,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 2,
+                "e": 1676.69,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Fossils": {
+            "rating": 1403.3862032842433,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 30,
+                "e": 1453.76,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 3,
+                "e": 1403.39,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Game On": {
+            "rating": 1444.7239072522516,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 31,
+                "e": 1444.72,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              }
+            ]
+          },
+          "Heredity": {
+            "rating": 1425.585175017418,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 36,
+                "e": 1425.59,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              }
+            ]
+          },
+          "Herpetology": {
+            "rating": 1304.6375603800484,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 35,
+                "e": 1504.64,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 5,
+                "e": 1304.64,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Meteorology": {
+            "rating": 1562.9299884423183,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 12,
+                "e": 1524.66,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 2,
+                "e": 1562.93,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Mystery Architecture": {
+            "rating": 1470.1694874924901,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 32,
+                "e": 1470.17,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              }
+            ]
+          },
+          "Potions and Poisons": {
+            "rating": 1432.3257299283955,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 37,
+                "e": 1581.12,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 3,
+                "e": 1432.33,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Road Scholar": {
+            "rating": 1450.6279979763272,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 22,
+                "e": 1450.63,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              }
+            ]
+          },
+          "Roller Coaster": {
+            "rating": 1367.5982296326558,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 34,
+                "e": 1431.08,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 3,
+                "e": 1367.6,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Solar System": {
+            "rating": 1337.1049681093962,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 28,
+                "e": 1337.1,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              }
+            ]
+          },
+          "Thermodynamics": {
+            "rating": 1381.722143026669,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 32,
+                "e": 1444.43,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 3,
+                "e": 1381.72,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Water Quality": {
+            "rating": 1600.654479913448,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 24,
+                "e": 1469.22,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 2,
+                "e": 1600.65,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Write It Do It": {
+            "rating": 1371.3482232836704,
+            "history": [
+              {
+                "d": "2019-02-17",
+                "t": 15,
+                "p": 30,
+                "e": 1437.84,
+                "l": "https://www.duosmium.org/results/2019-02-16_cornell_invitational_b"
+              },
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 4,
+                "e": 1371.35,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "meta": { "games": 1390, "events": 22 }
+  },
+  "Academy for Science and Design Varsity": {
+    "seasons": {
+      "2018": {
+        "events": {
+          "__OVERALL__": {
+            "rating": 1590.8883244506083,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 3,
+                "e": 1590.89,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Anatomy and Physiology": {
+            "rating": 1449.315467051611,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 4,
+                "e": 1449.32,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Crime Busters": {
+            "rating": 1602.0019966328616,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 3,
+                "e": 1602,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Disease Detectives": {
+            "rating": 1828.1884549115248,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 1,
+                "e": 1828.19,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Dynamic Planet": {
+            "rating": 1808.450723671639,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 1,
+                "e": 1808.45,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Fast Facts": {
+            "rating": 1314.375102553942,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 5,
+                "e": 1314.38,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Herpetology": {
+            "rating": 1711.4635361719427,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 2,
+                "e": 1711.46,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Hovercraft": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 6,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Microbe Mission": {
+            "rating": 1687.6436808266706,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 2,
+                "e": 1687.64,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Potions and Poisons": {
+            "rating": 1328.0197450344936,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 5,
+                "e": 1328.02,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Rocks and Minerals": {
+            "rating": 1439.6238223501243,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 4,
+                "e": 1439.62,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Solar System": {
+            "rating": 1569.875048742125,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 3,
+                "e": 1569.88,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Towers": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 6,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          }
+        }
+      },
+      "2019": {
+        "events": {
+          "__OVERALL__": {
+            "rating": 1689.6892736447642,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 2,
+                "e": 1689.69,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Anatomy and Physiology": {
+            "rating": 1847.2200725821044,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 1,
+                "e": 1847.22,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Boomilever": {
+            "rating": 1796.9733122747389,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 1,
+                "e": 1796.97,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Circuit Lab": {
+            "rating": 1506.3496875517144,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 3,
+                "e": 1506.35,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Crime Busters": {
+            "rating": 1515.8787888315796,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 3,
+                "e": 1515.88,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Disease Detectives": {
+            "rating": 1899.7802833101653,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 1,
+                "e": 1899.78,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Dynamic Planet": {
+            "rating": 1608.450723671639,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 3,
+                "e": 1608.45,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Experimental Design": {
+            "rating": 1563.356062522915,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 3,
+                "e": 1563.36,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Fossils": {
+            "rating": 1602.3123050428349,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 2,
+                "e": 1602.31,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Herpetology": {
+            "rating": 1526.7504215766758,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 3,
+                "e": 1526.75,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Meteorology": {
+            "rating": 1787.0766532360271,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 1,
+                "e": 1787.08,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Potions and Poisons": {
+            "rating": 1632.0969852412763,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 2,
+                "e": 1632.1,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Roller Coaster": {
+            "rating": 1556.5295778746406,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 2,
+                "e": 1556.53,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Thermodynamics": {
+            "rating": 1573.706098874676,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 2,
+                "e": 1573.71,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Water Quality": {
+            "rating": 1396.8938671045594,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 3,
+                "e": 1396.89,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Write It Do It": {
+            "rating": 1678.186317012607,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 2,
+                "e": 1678.19,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "meta": { "games": 121, "events": 15 }
+  },
+  "Academy for Science and Design JV": {
+    "seasons": {
+      "2018": {
+        "events": {
+          "__OVERALL__": {
+            "rating": 1445.6522208465171,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 4,
+                "e": 1445.65,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Anatomy and Physiology": {
+            "rating": 1594.66207833806,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 3,
+                "e": 1594.66,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Crime Busters": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 6,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Disease Detectives": {
+            "rating": 1436.477604665246,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 4,
+                "e": 1436.48,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Dynamic Planet": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 5,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Fast Facts": {
+            "rating": 1711.3866726084286,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 2,
+                "e": 1711.39,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Herpetology": {
+            "rating": 1315.656086525075,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 5,
+                "e": 1315.66,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Hovercraft": {
+            "rating": 1307.214271606537,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 5,
+                "e": 1307.21,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Microbe Mission": {
+            "rating": 1808.220203255138,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 1,
+                "e": 1808.22,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Potions and Poisons": {
+            "rating": 1599.608977161257,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 3,
+                "e": 1599.61,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Rocks and Minerals": {
+            "rating": 1315.1105300560803,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 5,
+                "e": 1315.11,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Solar System": {
+            "rating": 1696.4220399696235,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 2,
+                "e": 1696.42,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Towers": {
+            "rating": 1422.3720049638657,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 4,
+                "e": 1422.37,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "meta": { "games": 65, "events": 12 }
+  },
+  "Somersworth Middle School Varsity": {
+    "seasons": {
+      "2018": {
+        "events": {
+          "__OVERALL__": {
+            "rating": 1320.3456886790643,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 5,
+                "e": 1320.35,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Anatomy and Physiology": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 6,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Crime Busters": {
+            "rating": 1329.891468959744,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 5,
+                "e": 1329.89,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Disease Detectives": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 6,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Dynamic Planet": {
+            "rating": 1561.0168832946872,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 3,
+                "e": 1561.02,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Fast Facts": {
+            "rating": 1585.9215115397221,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 3,
+                "e": 1585.92,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Herpetology": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 6,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Hovercraft": {
+            "rating": 1577.012805331552,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 3,
+                "e": 1577.01,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Microbe Mission": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 5,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Potions and Poisons": {
+            "rating": 1454.3037407677364,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 4,
+                "e": 1454.3,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Rocks and Minerals": {
+            "rating": 1584.4036398613382,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 3,
+                "e": 1584.4,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Solar System": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 6,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Towers": {
+            "rating": 1813.984835396833,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 1,
+                "e": 1813.98,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "meta": { "games": 65, "events": 12 }
+  },
+  "Merrimack Middle School Varsity": {
+    "seasons": {
+      "2018": {
+        "events": {
+          "__OVERALL__": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 6,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Anatomy and Physiology": {
+            "rating": 1323.5929483844632,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 5,
+                "e": 1323.59,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Crime Busters": {
+            "rating": 1456.598853631327,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 4,
+                "e": 1456.6,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Disease Detectives": {
+            "rating": 1311.0139989886156,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 5,
+                "e": 1311.01,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Dynamic Planet": {
+            "rating": 1415.6534403441524,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 4,
+                "e": 1415.65,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Fast Facts": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 6,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Herpetology": {
+            "rating": 1441.0817325834178,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 4,
+                "e": 1441.08,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Hovercraft": {
+            "rating": 1702.9593187718287,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 2,
+                "e": 1702.96,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Microbe Mission": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 6,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Potions and Poisons": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 6,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Rocks and Minerals": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 6,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Solar System": {
+            "rating": 1424.6185975603119,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 4,
+                "e": 1424.62,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          },
+          "Towers": {
+            "rating": 1693.4615250016116,
+            "history": [
+              {
+                "d": "2018-03-25",
+                "t": 28,
+                "p": 2,
+                "e": 1693.46,
+                "l": "https://www.duosmium.org/results/2018-03-24_NH_states_b"
+              }
+            ]
+          }
+        }
+      },
+      "2019": {
+        "events": {
+          "__OVERALL__": {
+            "rating": 1181.3631549369898,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 5,
+                "e": 1181.36,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Boomilever": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 5,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Circuit Lab": {
+            "rating": 1343.9252636372557,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 4,
+                "e": 1343.93,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Disease Detectives": {
+            "rating": 1655.8947997628907,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 2,
+                "e": 1655.89,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Dynamic Planet": {
+            "rating": 1215.6534403441524,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 5,
+                "e": 1215.65,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Experimental Design": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 5,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Herpetology": {
+            "rating": 1373.5130961437696,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 4,
+                "e": 1373.51,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Write It Do It": {
+            "rating": 1510.636637595426,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 3,
+                "e": 1510.64,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          }
+        }
+      },
+      "2021": {
+        "events": {
+          "__OVERALL__": {
+            "rating": 1127.9276781854458,
+            "history": [
+              {
+                "d": "2021-05-23",
+                "t": 51,
+                "p": 60,
+                "e": 1127.93,
+                "l": "https://www.duosmium.org/results/2021-05-22_nationals_b"
+              }
+            ]
+          },
+          "Anatomy and Physiology": {
+            "rating": 1184.1498794640543,
+            "history": [
+              {
+                "d": "2021-05-23",
+                "t": 51,
+                "p": 60,
+                "e": 1184.15,
+                "l": "https://www.duosmium.org/results/2021-05-22_nationals_b"
+              }
+            ]
+          },
+          "Circuit Lab": {
+            "rating": 1197.252823430394,
+            "history": [
+              {
+                "d": "2021-05-23",
+                "t": 51,
+                "p": 59,
+                "e": 1197.25,
+                "l": "https://www.duosmium.org/results/2021-05-22_nationals_b"
+              }
+            ]
+          },
+          "Crime Busters": {
+            "rating": 1256.598853631327,
+            "history": [
+              {
+                "d": "2021-05-23",
+                "t": 51,
+                "p": 59,
+                "e": 1256.6,
+                "l": "https://www.duosmium.org/results/2021-05-22_nationals_b"
+              }
+            ]
+          },
+          "Density Lab": {
+            "rating": 1306.486430959007,
+            "history": [
+              {
+                "d": "2021-05-23",
+                "t": 51,
+                "p": 56,
+                "e": 1306.49,
+                "l": "https://www.duosmium.org/results/2021-05-22_nationals_b"
+              }
+            ]
+          },
+          "Disease Detectives": {
+            "rating": 1455.8947997628907,
+            "history": [
+              {
+                "d": "2021-05-23",
+                "t": 51,
+                "p": 60,
+                "e": 1455.89,
+                "l": "https://www.duosmium.org/results/2021-05-22_nationals_b"
+              }
+            ]
+          },
+          "Dynamic Planet": {
+            "rating": 1170.4168864906023,
+            "history": [
+              {
+                "d": "2021-05-23",
+                "t": 51,
+                "p": 58,
+                "e": 1170.42,
+                "l": "https://www.duosmium.org/results/2021-05-22_nationals_b"
+              }
+            ]
+          },
+          "Experimental Design": {
+            "rating": 1287.928425971696,
+            "history": [
+              {
+                "d": "2021-05-23",
+                "t": 51,
+                "p": 54,
+                "e": 1287.93,
+                "l": "https://www.duosmium.org/results/2021-05-22_nationals_b"
+              }
+            ]
+          },
+          "Food Science": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2021-05-23",
+                "t": 51,
+                "p": 56,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2021-05-22_nationals_b"
+              }
+            ]
+          },
+          "Fossils": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2021-05-23",
+                "t": 51,
+                "p": 56,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2021-05-22_nationals_b"
+              }
+            ]
+          },
+          "Game On": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2021-05-23",
+                "t": 51,
+                "p": 57,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2021-05-22_nationals_b"
+              }
+            ]
+          },
+          "Heredity": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2021-05-23",
+                "t": 51,
+                "p": 60,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2021-05-22_nationals_b"
+              }
+            ]
+          },
+          "Machines": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2021-05-23",
+                "t": 51,
+                "p": 54,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2021-05-22_nationals_b"
+              }
+            ]
+          },
+          "Meteorology": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2021-05-23",
+                "t": 51,
+                "p": 60,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2021-05-22_nationals_b"
+              }
+            ]
+          },
+          "Ornithology": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2021-05-23",
+                "t": 51,
+                "p": 59,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2021-05-22_nationals_b"
+              }
+            ]
+          },
+          "Reach for the Stars": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2021-05-23",
+                "t": 51,
+                "p": 59,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2021-05-22_nationals_b"
+              }
+            ]
+          },
+          "Road Scholar": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2021-05-23",
+                "t": 51,
+                "p": 59,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2021-05-22_nationals_b"
+              }
+            ]
+          },
+          "Water Quality": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2021-05-23",
+                "t": 51,
+                "p": 59,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2021-05-22_nationals_b"
+              }
+            ]
+          },
+          "Write It Do It": {
+            "rating": 1315.795673424497,
+            "history": [
+              {
+                "d": "2021-05-23",
+                "t": 51,
+                "p": 45,
+                "e": 1315.8,
+                "l": "https://www.duosmium.org/results/2021-05-22_nationals_b"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "meta": { "games": 1211, "events": 18 }
+  },
+  "Wilton-Lyndeborough Cooperative Middle High School Varsity": {
+    "seasons": {
+      "2019": {
+        "events": {
+          "__OVERALL__": {
+            "rating": 1351.9386782546694,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 4,
+                "e": 1351.94,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Anatomy and Physiology": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 4,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Boomilever": {
+            "rating": 1645.5921815785334,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 2,
+                "e": 1645.59,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Circuit Lab": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 5,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Crime Busters": {
+            "rating": 1313.30339228961,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 4,
+                "e": 1313.3,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Disease Detectives": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 5,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Dynamic Planet": {
+            "rating": 1351.2664432195402,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 4,
+                "e": 1351.27,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Experimental Design": {
+            "rating": 1384.643151270562,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 4,
+                "e": 1384.64,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Fossils": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 4,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Herpetology": {
+            "rating": 1710.8761628563336,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 2,
+                "e": 1710.88,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Meteorology": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 4,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Potions and Poisons": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 4,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Roller Coaster": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 4,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Thermodynamics": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 4,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Water Quality": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 4,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          },
+          "Write It Do It": {
+            "rating": 1300,
+            "history": [
+              {
+                "d": "2019-03-24",
+                "t": 28,
+                "p": 5,
+                "e": 1300,
+                "l": "https://www.duosmium.org/results/2019-03-23_NH_states_b"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "meta": { "games": 56, "events": 15 }
+  }
+}

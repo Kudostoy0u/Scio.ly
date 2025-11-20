@@ -1,54 +1,64 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { useTheme } from '@/app/contexts/ThemeContext';
-import { useRouter } from 'next/navigation';
-import { Home, Calendar, Archive, Settings, Users, ChevronRight } from 'lucide-react';
+import { useTheme } from "@/app/contexts/ThemeContext";
+import { Archive, Calendar, ChevronRight, Home, Settings, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface Team {
   id: string;
   name: string;
   slug: string;
   school: string;
-  division: 'B' | 'C';
+  division: "B" | "C";
 }
 
 interface SidebarProps {
-  activeTab: 'home' | 'upcoming' | 'settings';
-  onTabChange: (tab: 'home' | 'upcoming' | 'settings') => void;
+  activeTab: "home" | "upcoming" | "settings";
+  onTabChange: (tab: "home" | "upcoming" | "settings") => void;
   userTeams?: Team[];
   currentTeamSlug?: string;
   onTeamSelect?: (team: Team) => void;
   onNavigateToMainDashboard?: () => void;
 }
 
-export default function Sidebar({ 
-  activeTab, 
-  onTabChange, 
-  userTeams = [], 
-  currentTeamSlug, 
-  onTeamSelect, 
-  onNavigateToMainDashboard 
+export default function Sidebar({
+  activeTab,
+  onTabChange,
+  userTeams = [],
+  currentTeamSlug,
+  onTeamSelect,
+  onNavigateToMainDashboard,
 }: SidebarProps) {
   const { darkMode } = useTheme();
   const router = useRouter();
 
   const sidebarItems = [
-    { icon: Calendar, label: 'Upcoming', active: activeTab === 'upcoming', tab: 'upcoming' as const },
-    { icon: Settings, label: 'Settings', active: activeTab === 'settings', tab: 'settings' as const },
+    {
+      icon: Calendar,
+      label: "Upcoming",
+      active: activeTab === "upcoming",
+      tab: "upcoming" as const,
+    },
+    {
+      icon: Settings,
+      label: "Settings",
+      active: activeTab === "settings",
+      tab: "settings" as const,
+    },
   ];
 
   const handleArchivedClick = () => {
-    router.push('/teams/archived');
+    router.push("/teams/archived");
   };
 
   return (
-    <div className={`w-full h-full flex flex-col ${
-      darkMode 
-        ? 'bg-gray-900 md:border-r border-gray-800' 
-        : 'bg-white md:border-r border-gray-200'
-    }`}>
-
+    <div
+      className={`w-full h-full flex flex-col ${
+        darkMode
+          ? "bg-gray-900 md:border-r border-gray-800"
+          : "bg-white md:border-r border-gray-200"
+      }`}
+    >
       {/* Main Navigation */}
       <div className="flex-1 p-4">
         <nav className="space-y-2">
@@ -58,13 +68,13 @@ export default function Sidebar({
               if (onNavigateToMainDashboard) {
                 onNavigateToMainDashboard();
               } else {
-                window.location.href = '/teams?view=all';
+                window.location.href = "/teams?view=all";
               }
             }}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group ${
               darkMode
-                ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                ? "text-gray-300 hover:bg-gray-800 hover:text-white"
+                : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
             }`}
           >
             <div className="flex items-center space-x-3">
@@ -82,11 +92,11 @@ export default function Sidebar({
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group ${
                 item.active
                   ? darkMode
-                    ? 'bg-blue-900/20 text-blue-300 border border-blue-800'
-                    : 'bg-blue-50 text-blue-700 border border-blue-200'
+                    ? "bg-blue-900/20 text-blue-300 border border-blue-800"
+                    : "bg-blue-50 text-blue-700 border border-blue-200"
                   : darkMode
-                  ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                    ? "text-gray-300 hover:bg-gray-800 hover:text-white"
+                    : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
               }`}
             >
               <div className="flex items-center space-x-3">
@@ -102,8 +112,8 @@ export default function Sidebar({
             onClick={handleArchivedClick}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group ${
               darkMode
-                ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                ? "text-gray-300 hover:bg-gray-800 hover:text-white"
+                : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
             }`}
           >
             <div className="flex items-center space-x-3">
@@ -117,9 +127,11 @@ export default function Sidebar({
           {userTeams.length > 0 && (
             <div className="mt-6">
               <div className="mb-3">
-                <h3 className={`text-xs font-semibold uppercase tracking-wider ${
-                  darkMode ? 'text-gray-400' : 'text-gray-500'
-                }`}>
+                <h3
+                  className={`text-xs font-semibold uppercase tracking-wider ${
+                    darkMode ? "text-gray-400" : "text-gray-500"
+                  }`}
+                >
                   Your Teams
                 </h3>
               </div>
@@ -131,30 +143,34 @@ export default function Sidebar({
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group ${
                       currentTeamSlug === team.slug
                         ? darkMode
-                          ? 'bg-blue-900/20 text-blue-300 border border-blue-800'
-                          : 'bg-blue-50 text-blue-700 border border-blue-200'
+                          ? "bg-blue-900/20 text-blue-300 border border-blue-800"
+                          : "bg-blue-50 text-blue-700 border border-blue-200"
                         : darkMode
-                        ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                          ? "text-gray-300 hover:bg-gray-800 hover:text-white"
+                          : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                     }`}
                   >
                     <div className="flex items-center space-x-3 min-w-0 flex-1">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        darkMode ? 'bg-gray-800' : 'bg-gray-100'
-                      }`}>
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          darkMode ? "bg-gray-800" : "bg-gray-100"
+                        }`}
+                      >
                         <Users className="w-4 h-4" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="font-medium truncate">{team.school}</div>
-                        <div className={`text-xs truncate ${
-                          currentTeamSlug === team.slug 
-                            ? darkMode
-                              ? 'text-blue-400'
-                              : 'text-blue-600'
-                            : darkMode 
-                            ? 'text-gray-400' 
-                            : 'text-gray-500'
-                        }`}>
+                        <div
+                          className={`text-xs truncate ${
+                            currentTeamSlug === team.slug
+                              ? darkMode
+                                ? "text-blue-400"
+                                : "text-blue-600"
+                              : darkMode
+                                ? "text-gray-400"
+                                : "text-gray-500"
+                          }`}
+                        >
                           Division {team.division}
                         </div>
                       </div>

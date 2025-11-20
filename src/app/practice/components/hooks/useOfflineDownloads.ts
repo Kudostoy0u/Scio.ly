@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { listDownloadedEventSlugs, subscribeToDownloads } from '@/app/utils/storage';
+import { listDownloadedEventSlugs, subscribeToDownloads } from "@/app/utils/storage";
+import { useEffect, useState } from "react";
 
 export function useOfflineDownloads(): { isOffline: boolean; downloadedSet: Set<string> } {
   const [isOffline, setIsOffline] = useState<boolean>(false);
@@ -8,8 +8,8 @@ export function useOfflineDownloads(): { isOffline: boolean; downloadedSet: Set<
   useEffect(() => {
     const updateOnline = () => setIsOffline(!navigator.onLine);
     updateOnline();
-    window.addEventListener('online', updateOnline);
-    window.addEventListener('offline', updateOnline);
+    window.addEventListener("online", updateOnline);
+    window.addEventListener("offline", updateOnline);
 
     const loadDownloadedSlugs = async () => {
       try {
@@ -21,13 +21,13 @@ export function useOfflineDownloads(): { isOffline: boolean; downloadedSet: Set<
     const unsubscribe = subscribeToDownloads(loadDownloadedSlugs);
 
     return () => {
-      window.removeEventListener('online', updateOnline);
-      window.removeEventListener('offline', updateOnline);
-      try { unsubscribe(); } catch {}
+      window.removeEventListener("online", updateOnline);
+      window.removeEventListener("offline", updateOnline);
+      try {
+        unsubscribe();
+      } catch {}
     };
   }, []);
 
   return { isOffline, downloadedSet };
 }
-
-

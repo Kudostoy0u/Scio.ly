@@ -1,99 +1,134 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { queryCockroachDB } from '@/lib/cockroachdb';
-import { getServerUser } from '@/lib/supabaseServer';
+import { dbPg } from "@/lib/db";
+import {
+  newTeamGroups,
+  newTeamMemberships,
+  newTeamUnits,
+} from "@/lib/db/schema/teams";
+import {
+  UUIDSchema,
+  validateRequest,
+} from "@/lib/schemas/teams-validation";
+import {
+  handleError,
+  handleForbiddenError,
+  handleNotFoundError,
+  handleUnauthorizedError,
+  handleValidationError,
+  validateEnvironment,
+} from "@/lib/utils/error-handler";
+import logger from "@/lib/utils/logger";
+import { getServerUser } from "@/lib/supabaseServer";
+import { and, count, eq, inArray } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 // POST /api/teams/[teamId]/exit - Exit team
 export async function POST(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
-    }
+    const envError = validateEnvironment();
+    if (envError) return envError;
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return handleUnauthorizedError();
     }
 
     const { teamId } = await params;
 
-    // First, we need to resolve the slug to actual team unit IDs
-    // The teamId parameter is actually a slug, so we need to find the team units for this group
-    const groupResult = await queryCockroachDB<{ id: string }>(
-      `SELECT id FROM new_team_groups WHERE slug = $1`,
-      [teamId]
-    );
+    // Resolve the slug to actual team unit IDs using Drizzle ORM
+    const [groupResult] = await dbPg
+      .select({ id: newTeamGroups.id })
+      .from(newTeamGroups)
+      .where(eq(newTeamGroups.slug, teamId))
+      .limit(1);
 
-    if (groupResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Team group not found' }, { status: 404 });
+    if (!groupResult) {
+      return handleNotFoundError("Team group");
     }
 
-    const groupId = groupResult.rows[0].id;
+    const groupId = groupResult.id;
 
-    // Get all team units for this group
-    const unitsResult = await queryCockroachDB<{ id: string }>(
-      `SELECT id FROM new_team_units WHERE group_id = $1`,
-      [groupId]
-    );
+    // Get all team units for this group using Drizzle ORM
+    const unitsResult = await dbPg
+      .select({ id: newTeamUnits.id })
+      .from(newTeamUnits)
+      .where(eq(newTeamUnits.groupId, groupId));
 
-    if (unitsResult.rows.length === 0) {
-      return NextResponse.json({ error: 'No team units found for this group' }, { status: 404 });
+    if (unitsResult.length === 0) {
+      return handleNotFoundError("No team units found for this group");
     }
 
-    const teamUnitIds = unitsResult.rows.map(row => row.id);
+    const teamUnitIds = unitsResult.map((row) => row.id);
 
-    // Check if user is a member of any team unit in this group
-    const membershipResult = await queryCockroachDB<{ id: string, role: string, team_id: string }>(
-      `SELECT id, role, team_id FROM new_team_memberships 
-       WHERE user_id = $1 AND team_id = ANY($2) AND status = 'active'`,
-      [user.id, teamUnitIds]
-    );
+    // Check if user is a member of any team unit in this group using Drizzle ORM
+    const membershipResult = await dbPg
+      .select({
+        id: newTeamMemberships.id,
+        role: newTeamMemberships.role,
+        teamId: newTeamMemberships.teamId,
+      })
+      .from(newTeamMemberships)
+      .where(
+        and(
+          eq(newTeamMemberships.userId, user.id),
+          inArray(newTeamMemberships.teamId, teamUnitIds),
+          eq(newTeamMemberships.status, "active")
+        )
+      );
 
-    if (membershipResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
+    if (membershipResult.length === 0) {
+      return handleForbiddenError("Not a team member");
     }
-
-    const memberships = membershipResult.rows;
 
     // Check if user is a captain in any team unit
-    const captainMemberships = memberships.filter(m => m.role === 'captain');
-    
-    if (captainMemberships.length > 0) {
-      // Check if there are other captains in the same team units
-      for (const membership of captainMemberships) {
-        const captainCountResult = await queryCockroachDB<{ count: string }>(
-          `SELECT COUNT(*) as count FROM new_team_memberships 
-           WHERE team_id = $1 AND role = 'captain' AND status = 'active'`,
-          [membership.team_id]
-        );
+    const captainMemberships = membershipResult.filter((m) => m.role === "captain");
 
-        if (parseInt(captainCountResult.rows[0].count) <= 1) {
-          return NextResponse.json({ 
-            error: 'Cannot exit team as the only captain. Promote another member to captain first.' 
-          }, { status: 400 });
+    if (captainMemberships.length > 0) {
+      // Check if there are other captains in the same team units using Drizzle ORM
+      for (const membership of captainMemberships) {
+        const [captainCountResult] = await dbPg
+          .select({ count: count() })
+          .from(newTeamMemberships)
+          .where(
+            and(
+              eq(newTeamMemberships.teamId, membership.teamId),
+              eq(newTeamMemberships.role, "captain"),
+              eq(newTeamMemberships.status, "active")
+            )
+          );
+
+        const captainCount = captainCountResult?.count ?? 0;
+        if (captainCount <= 1) {
+          return handleValidationError(
+            new z.ZodError([
+              {
+                code: z.ZodIssueCode.custom,
+                message:
+                  "Cannot exit team as the only captain. Promote another member to captain first.",
+                path: [],
+              },
+            ])
+          );
         }
       }
     }
 
-    // Remove user from all team units in this group
-    await queryCockroachDB(
-      `UPDATE new_team_memberships SET status = 'inactive' 
-       WHERE user_id = $1 AND team_id = ANY($2)`,
-      [user.id, teamUnitIds]
-    );
+    // Remove user from all team units in this group using Drizzle ORM
+    await dbPg
+      .update(newTeamMemberships)
+      .set({ status: "inactive" })
+      .where(
+        and(
+          eq(newTeamMemberships.userId, user.id),
+          inArray(newTeamMemberships.teamId, teamUnitIds)
+        )
+      );
 
-    return NextResponse.json({ message: 'Successfully exited team' });
-
+    return NextResponse.json({ message: "Successfully exited team" });
   } catch (error) {
-    console.error('Error exiting team:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return handleError(error, "POST /api/teams/[teamId]/exit");
   }
 }

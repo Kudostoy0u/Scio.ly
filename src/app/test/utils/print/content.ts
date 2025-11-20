@@ -1,4 +1,4 @@
-import type { TestPrintConfig } from '../printUtils';
+import type { TestPrintConfig } from "@/app/test/utils/printUtils";
 
 export const createTestPrintContent = (_config: TestPrintConfig, _printStyles: string) => `
 <!DOCTYPE html>
@@ -21,5 +21,3 @@ export const createTestPrintContent = (_config: TestPrintConfig, _printStyles: s
   </body>
   </html>
 `;
-
-

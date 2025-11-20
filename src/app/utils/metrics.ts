@@ -1,8 +1,8 @@
-import { supabase } from '@/lib/supabase';
-import { updateLeaderboardStats } from './leaderboardUtils';
-import { withAuthRetry } from '@/lib/utils/supabaseRetry';
-import logger from '@/lib/utils/logger';
-import SyncLocalStorage from '@/lib/database/localStorage-replacement';
+import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import { supabase } from "@/lib/supabase";
+import logger from "@/lib/utils/logger";
+import { withAuthRetry } from "@/lib/utils/supabaseRetry";
+import { updateLeaderboardStats } from "./leaderboardUtils";
 
 /**
  * Metrics management utilities for Science Olympiad platform
@@ -27,30 +27,31 @@ export interface DailyMetrics {
 
 /**
  * Retrieves local metrics from localStorage
- * 
+ *
  * @returns {DailyMetrics} Local metrics or default metrics
  */
 const getLocalMetrics = (): DailyMetrics => {
-  const today = new Date().toISOString().split('T')[0];
-  const localStats = typeof window !== 'undefined' ? SyncLocalStorage.getItem(`metrics_${today}`) : null;
+  const today = new Date().toISOString().split("T")[0];
+  const localStats =
+    typeof window !== "undefined" ? SyncLocalStorage.getItem(`metrics_${today}`) : null;
   const defaultMetrics = {
     questionsAttempted: 0,
     correctAnswers: 0,
     eventsPracticed: [],
     eventQuestions: {},
-    gamePoints: 0
+    gamePoints: 0,
   };
   return localStats ? { ...defaultMetrics, ...JSON.parse(localStats) } : defaultMetrics;
 };
 
 /**
  * Saves metrics to localStorage
- * 
+ *
  * @param {DailyMetrics} metrics - Metrics to save
  */
 const saveLocalMetrics = (metrics: DailyMetrics) => {
-  const today = new Date().toISOString().split('T')[0];
-  if (typeof window !== 'undefined') {
+  const today = new Date().toISOString().split("T")[0];
+  if (typeof window !== "undefined") {
     SyncLocalStorage.setItem(`metrics_${today}`, JSON.stringify(metrics));
   }
 };
@@ -58,7 +59,7 @@ const saveLocalMetrics = (metrics: DailyMetrics) => {
 /**
  * Gets daily metrics for a user
  * Retrieves metrics from database or localStorage for anonymous users
- * 
+ *
  * @param {string | null} userId - User ID or null for anonymous users
  * @returns {Promise<DailyMetrics | null>} Daily metrics or null if error
  * @throws {Error} When database operation fails
@@ -74,14 +75,18 @@ export const getDailyMetrics = async (userId: string | null): Promise<DailyMetri
     correctAnswers: 0,
     eventsPracticed: [],
     eventQuestions: {},
-    gamePoints: 0
+    gamePoints: 0,
   };
 
   if (!userId) {
     return getLocalMetrics();
   }
-  
-  const today = new Date().toISOString().split('T')[0];
+
+  const todayParts = new Date().toISOString().split("T");
+  const today = todayParts[0];
+  if (!today) {
+    throw new Error("Failed to get today's date");
+  }
 
   try {
     const row = await fetchDailyUserStatsRow(userId, today);
@@ -99,7 +104,7 @@ export const getDailyMetrics = async (userId: string | null): Promise<DailyMetri
     saveLocalMetrics(defaultMetrics);
     return defaultMetrics;
   } catch (error) {
-    logger.error('Error getting metrics:', error);
+    logger.error("Error getting metrics:", error);
     return defaultMetrics;
   }
 };
@@ -107,7 +112,7 @@ export const getDailyMetrics = async (userId: string | null): Promise<DailyMetri
 /**
  * Gets weekly metrics for a user
  * Aggregates daily metrics over the past 7 days
- * 
+ *
  * @param {string | null} userId - User ID or null for anonymous users
  * @returns {Promise<DailyMetrics | null>} Weekly aggregated metrics or null if error
  * @throws {Error} When database operation fails
@@ -118,35 +123,44 @@ export const getDailyMetrics = async (userId: string | null): Promise<DailyMetri
  * ```
  */
 export const getWeeklyMetrics = async (userId: string | null): Promise<DailyMetrics | null> => {
-  if (!userId) return null;
+  if (!userId) {
+    return null;
+  }
 
   const today = new Date();
   const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const weekAgoString = weekAgo.toISOString().split('T')[0];
+  const weekAgoParts = weekAgo.toISOString().split("T");
+  const weekAgoString = weekAgoParts[0];
+  if (!weekAgoString) {
+    throw new Error("Failed to get week ago date");
+  }
 
   try {
     const data = await fetchUserStatsSince(userId, weekAgoString);
 
-    const aggregated = data.reduce((acc: DailyMetrics, day) => ({
-      questionsAttempted: acc.questionsAttempted + day.questions_attempted,
-      correctAnswers: acc.correctAnswers + day.correct_answers,
-      eventsPracticed: [...new Set([...acc.eventsPracticed, ...(day.events_practiced || [])])],
-      eventQuestions: Object.keys(day.event_questions || {}).reduce((eventAcc, event) => {
-        eventAcc[event] = (eventAcc[event] || 0) + (day.event_questions[event] || 0);
-        return eventAcc;
-      }, acc.eventQuestions),
-      gamePoints: acc.gamePoints + day.game_points
-    }), {
-      questionsAttempted: 0,
-      correctAnswers: 0,
-      eventsPracticed: [] as string[],
-      eventQuestions: {} as Record<string, number>,
-      gamePoints: 0
-    });
+    const aggregated = data.reduce(
+      (acc: DailyMetrics, day) => ({
+        questionsAttempted: acc.questionsAttempted + day.questions_attempted,
+        correctAnswers: acc.correctAnswers + day.correct_answers,
+        eventsPracticed: [...new Set([...acc.eventsPracticed, ...(day.events_practiced || [])])],
+        eventQuestions: Object.keys(day.event_questions || {}).reduce((eventAcc, event) => {
+          eventAcc[event] = (eventAcc[event] || 0) + (day.event_questions[event] || 0);
+          return eventAcc;
+        }, acc.eventQuestions),
+        gamePoints: acc.gamePoints + day.game_points,
+      }),
+      {
+        questionsAttempted: 0,
+        correctAnswers: 0,
+        eventsPracticed: [] as string[],
+        eventQuestions: {} as Record<string, number>,
+        gamePoints: 0,
+      }
+    );
 
     return aggregated;
   } catch (error) {
-    logger.error('Error getting weekly metrics:', error);
+    logger.error("Error getting weekly metrics:", error);
     return null;
   }
 };
@@ -154,7 +168,7 @@ export const getWeeklyMetrics = async (userId: string | null): Promise<DailyMetr
 /**
  * Gets monthly metrics for a user
  * Aggregates daily metrics over the past 30 days
- * 
+ *
  * @param {string | null} userId - User ID or null for anonymous users
  * @returns {Promise<DailyMetrics | null>} Monthly aggregated metrics or null if error
  * @throws {Error} When database operation fails
@@ -165,35 +179,44 @@ export const getWeeklyMetrics = async (userId: string | null): Promise<DailyMetr
  * ```
  */
 export const getMonthlyMetrics = async (userId: string | null): Promise<DailyMetrics | null> => {
-  if (!userId) return null;
+  if (!userId) {
+    return null;
+  }
 
   const today = new Date();
   const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const monthAgoString = monthAgo.toISOString().split('T')[0];
+  const monthAgoParts = monthAgo.toISOString().split("T");
+  const monthAgoString = monthAgoParts[0];
+  if (!monthAgoString) {
+    throw new Error("Failed to get month ago date");
+  }
 
   try {
     const data = await fetchUserStatsSince(userId, monthAgoString);
 
-    const aggregated = data.reduce((acc: DailyMetrics, day) => ({
-      questionsAttempted: acc.questionsAttempted + day.questions_attempted,
-      correctAnswers: acc.correctAnswers + day.correct_answers,
-      eventsPracticed: [...new Set([...acc.eventsPracticed, ...(day.events_practiced || [])])],
-      eventQuestions: Object.keys(day.event_questions || {}).reduce((eventAcc, event) => {
-        eventAcc[event] = (eventAcc[event] || 0) + (day.event_questions[event] || 0);
-        return eventAcc;
-      }, acc.eventQuestions),
-      gamePoints: acc.gamePoints + day.game_points
-    }), {
-      questionsAttempted: 0,
-      correctAnswers: 0,
-      eventsPracticed: [] as string[],
-      eventQuestions: {} as Record<string, number>,
-      gamePoints: 0
-    });
+    const aggregated = data.reduce(
+      (acc: DailyMetrics, day) => ({
+        questionsAttempted: acc.questionsAttempted + day.questions_attempted,
+        correctAnswers: acc.correctAnswers + day.correct_answers,
+        eventsPracticed: [...new Set([...acc.eventsPracticed, ...(day.events_practiced || [])])],
+        eventQuestions: Object.keys(day.event_questions || {}).reduce((eventAcc, event) => {
+          eventAcc[event] = (eventAcc[event] || 0) + (day.event_questions[event] || 0);
+          return eventAcc;
+        }, acc.eventQuestions),
+        gamePoints: acc.gamePoints + day.game_points,
+      }),
+      {
+        questionsAttempted: 0,
+        correctAnswers: 0,
+        eventsPracticed: [] as string[],
+        eventQuestions: {} as Record<string, number>,
+        gamePoints: 0,
+      }
+    );
 
     return aggregated;
   } catch (error) {
-    logger.error('Error getting monthly metrics:', error);
+    logger.error("Error getting monthly metrics:", error);
     return null;
   }
 };
@@ -201,7 +224,7 @@ export const getMonthlyMetrics = async (userId: string | null): Promise<DailyMet
 /**
  * Updates user metrics
  * Updates both database and localStorage with new metrics
- * 
+ *
  * @param {string | null} userId - User ID or null for anonymous users
  * @param {Object} updates - Metrics updates to apply
  * @param {number} [updates.questionsAttempted] - Number of questions attempted
@@ -226,7 +249,6 @@ export const updateMetrics = async (
     eventName?: string;
   }
 ): Promise<DailyMetrics | null> => {
-
   const attemptedDelta = Math.round(updates.questionsAttempted || 0);
   const correctDelta = Math.round(updates.correctAnswers || 0);
   if (!userId) {
@@ -236,24 +258,31 @@ export const updateMetrics = async (
       questionsAttempted: currentStats.questionsAttempted + attemptedDelta,
 
       correctAnswers: currentStats.correctAnswers + (updates.correctAnswers || 0),
-      eventsPracticed: updates.eventName && !currentStats.eventsPracticed.includes(updates.eventName)
-        ? [...currentStats.eventsPracticed, updates.eventName]
-        : currentStats.eventsPracticed,
+      eventsPracticed:
+        updates.eventName && !currentStats.eventsPracticed.includes(updates.eventName)
+          ? [...currentStats.eventsPracticed, updates.eventName]
+          : currentStats.eventsPracticed,
       eventQuestions: {
         ...currentStats.eventQuestions,
-        ...(updates.eventName && attemptedDelta ? {
-          [updates.eventName]: (currentStats.eventQuestions?.[updates.eventName] || 0) + attemptedDelta
-        } : {})
-      }
+        ...(updates.eventName && attemptedDelta
+          ? {
+              [updates.eventName]:
+                (currentStats.eventQuestions?.[updates.eventName] || 0) + attemptedDelta,
+            }
+          : {}),
+      },
     };
     saveLocalMetrics(updatedStats);
     return updatedStats;
   }
-  
-  const today = new Date().toISOString().split('T')[0];
-  
-  try {
 
+  const todayParts = new Date().toISOString().split("T");
+  const today = todayParts[0];
+  if (!today) {
+    throw new Error("Failed to get today's date");
+  }
+
+  try {
     const currentData = await fetchDailyUserStatsRow(userId, today);
 
     let currentStats: {
@@ -267,22 +296,26 @@ export const updateMetrics = async (
       correct_answers: 0,
       events_practiced: [],
       event_questions: {},
-      game_points: 0
+      game_points: 0,
     };
 
     if (currentData) {
       currentStats = currentData;
     }
 
-    const updatedEventsPracticed = updates.eventName && !currentStats.events_practiced.includes(updates.eventName)
-      ? [...currentStats.events_practiced, updates.eventName]
-      : currentStats.events_practiced;
+    const updatedEventsPracticed =
+      updates.eventName && !currentStats.events_practiced.includes(updates.eventName)
+        ? [...currentStats.events_practiced, updates.eventName]
+        : currentStats.events_practiced;
 
     const updatedEventQuestions = {
       ...currentStats.event_questions,
-      ...(updates.eventName && attemptedDelta ? {
-        [updates.eventName]: (currentStats.event_questions?.[updates.eventName] || 0) + attemptedDelta
-      } : {})
+      ...(updates.eventName && attemptedDelta
+        ? {
+            [updates.eventName]:
+              (currentStats.event_questions?.[updates.eventName] || 0) + attemptedDelta,
+          }
+        : {}),
     };
 
     const updatedStats = {
@@ -292,20 +325,17 @@ export const updateMetrics = async (
       correct_answers: currentStats.correct_answers + correctDelta,
       events_practiced: updatedEventsPracticed,
       event_questions: updatedEventQuestions,
-      game_points: currentStats.game_points
+      game_points: currentStats.game_points,
     };
 
-    const { data, error } = await withAuthRetry(
-      async () => {
-        const query = supabase
-          .from('user_stats')
-          .upsert(updatedStats as any, { onConflict: 'user_id,date' })
-          .select()
-          .single();
-        return await query;
-      },
-      'updateMetrics'
-    );
+    const { data, error } = await withAuthRetry(async () => {
+      const query = supabase
+        .from("user_stats")
+        .upsert(updatedStats, { onConflict: "user_id,date" })
+        .select()
+        .single();
+      return await query;
+    }, "updateMetrics");
 
     if (error || !data) {
       return null;
@@ -320,24 +350,23 @@ export const updateMetrics = async (
       gamePoints: updatedStats.game_points,
     });
 
-
     if (attemptedDelta || correctDelta) {
       try {
         await updateLeaderboardStats(attemptedDelta, correctDelta);
       } catch (leaderboardError) {
-        logger.error('Error updating leaderboard stats:', leaderboardError);
+        logger.error("Error updating leaderboard stats:", leaderboardError);
       }
     }
 
     return {
-      questionsAttempted: (data as any).questions_attempted,
-      correctAnswers: (data as any).correct_answers,
-      eventsPracticed: (data as any).events_practiced || [],
-      eventQuestions: (data as any).event_questions || {},
-      gamePoints: (data as any).game_points
+      questionsAttempted: data.questions_attempted,
+      correctAnswers: data.correct_answers,
+      eventsPracticed: data.events_practiced || [],
+      eventQuestions: data.event_questions || {},
+      gamePoints: data.game_points,
     };
   } catch (error) {
-    logger.error('Error updating metrics:', error);
+    logger.error("Error updating metrics:", error);
     return null;
   }
 };
@@ -354,35 +383,35 @@ type UserStatsRow = {
   game_points: number;
 };
 
-export async function fetchDailyUserStatsRow(userId: string, date: string): Promise<UserStatsRow | null> {
-  const { data } = await withAuthRetry(
-    async () => {
-      const query = supabase
-        .from('user_stats')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('date', date)
-        .maybeSingle();
-      return await query;
-    },
-    'fetchDailyUserStatsRow'
-  );
+export async function fetchDailyUserStatsRow(
+  userId: string,
+  date: string
+): Promise<UserStatsRow | null> {
+  const { data } = await withAuthRetry(async () => {
+    const query = supabase
+      .from("user_stats")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("date", date)
+      .maybeSingle();
+    return await query;
+  }, "fetchDailyUserStatsRow");
 
   return data || null;
 }
 
-export async function fetchUserStatsSince(userId: string, fromDate: string): Promise<UserStatsRow[]> {
-  const { data } = await withAuthRetry(
-    async () => {
-      const query = supabase
-        .from('user_stats')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('date', fromDate);
-      return await query;
-    },
-    'fetchUserStatsSince'
-  );
+export async function fetchUserStatsSince(
+  userId: string,
+  fromDate: string
+): Promise<UserStatsRow[]> {
+  const { data } = await withAuthRetry(async () => {
+    const query = supabase
+      .from("user_stats")
+      .select("*")
+      .eq("user_id", userId)
+      .gte("date", fromDate);
+    return await query;
+  }, "fetchUserStatsSince");
 
   return data || [];
 }

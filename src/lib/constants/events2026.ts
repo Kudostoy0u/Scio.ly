@@ -11,114 +11,114 @@ export interface Event2026 {
 }
 
 export const EVENTS_2026: Event2026[] = [
-  { 
-    name: "Anatomy - Nervous", 
+  {
+    name: "Anatomy - Nervous",
     subject: "Life & Social Science",
-    divisions: ["B", "C"]
+    divisions: ["B", "C"],
   },
-  { 
-    name: "Anatomy - Endocrine", 
+  {
+    name: "Anatomy - Endocrine",
     subject: "Life & Social Science",
-    divisions: ["B", "C"]
+    divisions: ["B", "C"],
   },
-  { 
-    name: "Anatomy - Sense Organs", 
+  {
+    name: "Anatomy - Sense Organs",
     subject: "Life & Social Science",
-    divisions: ["B", "C"]
+    divisions: ["B", "C"],
   },
-  { 
-    name: "Astronomy", 
+  {
+    name: "Astronomy",
     subject: "Earth and Space Science",
-    divisions: ["C"]
+    divisions: ["C"],
   },
-  { 
-    name: "Chemistry Lab", 
+  {
+    name: "Chemistry Lab",
     subject: "Physical Science & Chemistry",
-    divisions: ["C"]
+    divisions: ["C"],
   },
-  { 
-    name: "Circuit Lab", 
+  {
+    name: "Circuit Lab",
     subject: "Physical Science & Chemistry",
-    divisions: ["B", "C"]
+    divisions: ["B", "C"],
   },
-  { 
-    name: "Codebusters", 
+  {
+    name: "Codebusters",
     subject: "Inquiry & Nature of Science",
-    divisions: ["B", "C"]
+    divisions: ["B", "C"],
   },
-  { 
-    name: "Designer Genes", 
+  {
+    name: "Designer Genes",
     subject: "Life & Social Science",
-    divisions: ["C"]
+    divisions: ["C"],
   },
-  { 
-    name: "Disease Detectives", 
+  {
+    name: "Disease Detectives",
     subject: "Life & Social Science",
-    divisions: ["B", "C"]
+    divisions: ["B", "C"],
   },
-  { 
-    name: "Dynamic Planet - Oceanography", 
+  {
+    name: "Dynamic Planet - Oceanography",
     subject: "Earth and Space Science",
-    divisions: ["B", "C"]
+    divisions: ["B", "C"],
   },
-  { 
-    name: "Entomology", 
+  {
+    name: "Entomology",
     subject: "Life & Social Science",
-    divisions: ["B", "C"]
+    divisions: ["B", "C"],
   },
-  { 
-    name: "Forensics", 
+  {
+    name: "Forensics",
     subject: "Physical Science & Chemistry",
-    divisions: ["C"]
+    divisions: ["C"],
   },
-  { 
-    name: "Heredity", 
+  {
+    name: "Heredity",
     subject: "Life & Social Science",
-    divisions: ["B"]
+    divisions: ["B"],
   },
-  { 
-    name: "Machines", 
+  {
+    name: "Machines",
     subject: "Inquiry & Nature of Science",
-    divisions: ["B", "C"]
+    divisions: ["B", "C"],
   },
-  { 
-    name: "Materials Science - Nanomaterials", 
+  {
+    name: "Materials Science - Nanomaterials",
     subject: "Physical Science & Chemistry",
-    divisions: ["C"]
+    divisions: ["C"],
   },
-  { 
-    name: "Meteorology", 
+  {
+    name: "Meteorology",
     subject: "Earth and Space Science",
-    divisions: ["B"]
+    divisions: ["B"],
   },
-  { 
-    name: "Metric Mastery", 
+  {
+    name: "Metric Mastery",
     subject: "Inquiry & Nature of Science",
-    divisions: ["B"]
+    divisions: ["B"],
   },
-  { 
-    name: "Potions and Poisons", 
+  {
+    name: "Potions and Poisons",
     subject: "Physical Science & Chemistry",
-    divisions: ["B"]
+    divisions: ["B"],
   },
-  { 
-    name: "Remote Sensing", 
+  {
+    name: "Remote Sensing",
     subject: "Earth and Space Science",
-    divisions: ["B", "C"]
+    divisions: ["B", "C"],
   },
-  { 
-    name: "Rocks and Minerals", 
+  {
+    name: "Rocks and Minerals",
     subject: "Earth and Space Science",
-    divisions: ["B", "C"]
+    divisions: ["B", "C"],
   },
-  { 
-    name: "Solar System", 
+  {
+    name: "Solar System",
     subject: "Earth and Space Science",
-    divisions: ["B"]
+    divisions: ["B"],
   },
-  { 
-    name: "Water Quality - Freshwater", 
+  {
+    name: "Water Quality - Freshwater",
     subject: "Life & Social Science",
-    divisions: ["B", "C"]
-  }
+    divisions: ["B", "C"],
+  },
 ];

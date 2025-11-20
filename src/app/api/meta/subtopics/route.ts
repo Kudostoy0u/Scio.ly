@@ -1,12 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { ApiResponse } from '@/lib/types/api';
-import { client } from '@/lib/db';
-
+import { client } from "@/lib/db";
+import type { ApiResponse } from "@/lib/types/api";
+import { type NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const event = searchParams.get('event');
+    const event = searchParams.get("event");
 
     let query = `
       SELECT DISTINCT jsonb_array_elements_text(subtopics) as subtopic 
@@ -21,8 +20,11 @@ export async function GET(request: NextRequest) {
 
     query += " ORDER BY subtopic";
 
-    const result = await client.unsafe<Array<{ subtopic: string }>>(query, params as (string | number | boolean | null)[]);
-    const subtopics = result.map(row => row.subtopic);
+    const result = await client.unsafe<Array<{ subtopic: string }>>(
+      query,
+      params as (string | number | boolean | null)[]
+    );
+    const subtopics = result.map((row) => row.subtopic);
 
     const response: ApiResponse<string[]> = {
       success: true,
@@ -30,11 +32,10 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json(response);
-  } catch (error) {
-    console.error('GET /api/meta/subtopics error:', error);
+  } catch (_error) {
     const response: ApiResponse = {
       success: false,
-      error: 'Failed to fetch subtopics',
+      error: "Failed to fetch subtopics",
     };
     return NextResponse.json(response, { status: 500 });
   }

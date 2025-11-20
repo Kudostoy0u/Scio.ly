@@ -1,6 +1,6 @@
-import { initTRPC, TRPCError } from '@trpc/server';
-import { type Context } from './context';
-import superjson from 'superjson';
+import { TRPCError, initTRPC } from "@trpc/server";
+import superjson from "superjson";
+import type { Context } from "./context";
 
 const t = initTRPC.context<Context>().create({
   transformer: superjson,
@@ -15,9 +15,9 @@ export const publicProcedure = t.procedure;
 // Protected procedure that requires authentication
 export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   if (!ctx.user?.id) {
-    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Not authenticated" });
   }
-  
+
   return next({
     ctx: {
       ...ctx,

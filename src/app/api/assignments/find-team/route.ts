@@ -1,21 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerUser } from '@/lib/supabaseServer';
-import { dbPg } from '@/lib/db';
-import { newTeamAssignments, newTeamUnits, newTeamGroups } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { dbPg } from "@/lib/db";
+import { newTeamAssignments, newTeamGroups, newTeamUnits } from "@/lib/db/schema";
+import { getServerUser } from "@/lib/supabaseServer";
+import { eq } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
-    const assignmentId = searchParams.get('assignmentId');
+    const assignmentId = searchParams.get("assignmentId");
 
     if (!assignmentId) {
-      return NextResponse.json({ error: 'Assignment ID is required' }, { status: 400 });
+      return NextResponse.json({ error: "Assignment ID is required" }, { status: 400 });
     }
 
     // Find the assignment and get the team group slug
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const result = await dbPg
       .select({
         teamId: newTeamAssignments.teamId,
-        groupSlug: newTeamGroups.slug
+        groupSlug: newTeamGroups.slug,
       })
       .from(newTeamAssignments)
       .innerJoin(newTeamUnits, eq(newTeamAssignments.teamId, newTeamUnits.id))
@@ -32,18 +32,23 @@ export async function GET(request: NextRequest) {
       .limit(1);
 
     if (result.length === 0) {
-      return NextResponse.json({ error: 'Assignment not found' }, { status: 404 });
+      return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
     }
 
-    const { groupSlug } = result[0];
+    const firstResult = result[0];
+    if (!firstResult) {
+      return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
+    }
+    const { groupSlug } = firstResult;
 
     return NextResponse.json({ teamId: groupSlug });
-
   } catch (error) {
-    console.error('Error finding team for assignment:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
   }
 }

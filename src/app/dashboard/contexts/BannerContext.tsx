@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import SyncLocalStorage from '@/lib/database/localStorage-replacement';
+import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import { type ReactNode, createContext, useContext, useEffect, useState } from "react";
 
 interface BannerContextType {
   bannerVisible: boolean | null;
@@ -15,19 +15,18 @@ export function BannerProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const checkBannerVisibility = () => {
-      const bannerClosed = SyncLocalStorage.getItem('hylas-banner-closed') === 'true';
+      const bannerClosed = SyncLocalStorage.getItem("hylas-banner-closed") === "true";
       setBannerVisible(!bannerClosed);
     };
-    
-    checkBannerVisibility();
-    
 
-    window.addEventListener('storage', checkBannerVisibility);
-    return () => window.removeEventListener('storage', checkBannerVisibility);
+    checkBannerVisibility();
+
+    window.addEventListener("storage", checkBannerVisibility);
+    return () => window.removeEventListener("storage", checkBannerVisibility);
   }, []);
 
   const closeBanner = () => {
-    SyncLocalStorage.setItem('hylas-banner-closed', 'true');
+    SyncLocalStorage.setItem("hylas-banner-closed", "true");
     setBannerVisible(false);
   };
 
@@ -41,7 +40,7 @@ export function BannerProvider({ children }: { children: ReactNode }) {
 export function useBannerContext() {
   const context = useContext(BannerContext);
   if (context === undefined) {
-    throw new Error('useBannerContext must be used within a BannerProvider');
+    throw new Error("useBannerContext must be used within a BannerProvider");
   }
   return context;
 }

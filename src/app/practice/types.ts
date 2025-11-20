@@ -49,7 +49,6 @@ export interface Settings {
   pureIdOnly?: boolean;
 }
 
-
 /**
  * Global window interface extension
  * Adds platform-specific properties to the global window object
@@ -59,4 +58,4 @@ declare global {
     /** Optional mapping of events to their subtopics */
     eventSubtopicsMapping?: Record<string, string[]>;
   }
-} 
+}

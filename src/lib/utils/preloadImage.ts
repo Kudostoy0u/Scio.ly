@@ -6,7 +6,7 @@
 /**
  * Preloads an image by creating a new Image object
  * Returns a promise that resolves when the image is loaded
- * 
+ *
  * @param {string} url - URL of the image to preload
  * @returns {Promise<void>} Promise that resolves when image is loaded
  * @throws {Error} When image fails to load
@@ -25,12 +25,10 @@ export function preloadImage(url: string): Promise<void> {
     try {
       const img = new Image();
       img.onload = () => resolve();
-      img.onerror = () => reject(new Error('Image failed to load'));
+      img.onerror = () => reject(new Error("Image failed to load"));
       img.src = url;
     } catch (e) {
       reject(e as Error);
     }
   });
 }
-
-

@@ -1,4 +1,4 @@
-import GithubSlugger from 'github-slugger';
+import GithubSlugger from "github-slugger";
 
 /**
  * Markdown processing utilities for Science Olympiad content
@@ -8,7 +8,7 @@ import GithubSlugger from 'github-slugger';
 /**
  * Normalizes LaTeX math expressions in markdown content
  * Converts LaTeX block and inline math to standard markdown format
- * 
+ *
  * @param {string} input - Markdown content with LaTeX math
  * @returns {string} Normalized markdown with standard math syntax
  * @example
@@ -27,7 +27,7 @@ export function normalizeMath(input: string): string {
 /**
  * Converts text to URL-friendly slug format
  * Removes special characters and converts to lowercase with hyphens
- * 
+ *
  * @param {string} text - Text to convert to slug
  * @returns {string} URL-friendly slug
  * @example
@@ -39,27 +39,27 @@ export function normalizeMath(input: string): string {
 export function slugifyText(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[^a-z0-9\s-]/g, "")
     .trim()
-    .replace(/\s+/g, '-');
+    .replace(/\s+/g, "-");
 }
 
 /**
  * Table of contents item interface
  */
-export type TocItem = { 
+export type TocItem = {
   /** Heading level (1-6) */
-  level: number; 
+  level: number;
   /** Heading text content */
-  text: string; 
+  text: string;
   /** Unique identifier for the heading */
-  id: string; 
+  id: string;
 };
 
 /**
  * Extracts table of contents from markdown content
  * Parses headings and generates navigation structure
- * 
+ *
  * @param {string | null} content - Markdown content to parse
  * @returns {TocItem[]} Array of table of contents items
  * @example
@@ -74,21 +74,21 @@ export type TocItem = {
  * ```
  */
 export function extractToc(content: string | null): TocItem[] {
-  if (!content) return [];
+  if (!content) {
+    return [];
+  }
   const normalized = normalizeMath(content);
-  const lines = normalized.split('\n');
+  const lines = normalized.split("\n");
   const items: TocItem[] = [];
   const slugger = new GithubSlugger();
   for (const line of lines) {
     const match = /^(#{1,6})\s+(.+)$/.exec(line.trim());
-    if (match) {
+    if (match && match[1] && match[2]) {
       const level = match[1].length;
-      const text = match[2].replace(/[#*`_]/g, '').trim();
+      const text = match[2].replace(/[#*`_]/g, "").trim();
       const id = slugger.slug(text);
       items.push({ level, text, id });
     }
   }
   return items;
 }
-
-

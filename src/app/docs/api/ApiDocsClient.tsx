@@ -1,45 +1,51 @@
-'use client';
+"use client";
 
-
-import { useState } from 'react';
-import { ExternalLink, Code, Database, Zap, Shield, Users, MessageSquare, FileText, Pencil } from 'lucide-react';
-import { useTheme } from '@/app/contexts/ThemeContext';
-import TableOfContents from './components/TableOfContents';
-import Hero from './components/Hero';
-import RecentUpdates from './components/RecentUpdates';
-import OverviewSection from './components/OverviewSection';
-import AuthenticationSection from './components/AuthenticationSection';
-import QuestionRetrievalSection from './components/QuestionRetrievalSection';
+import { useTheme } from "@/app/contexts/ThemeContext";
+import {
+  Code,
+  Database,
+  ExternalLink,
+  FileText,
+  MessageSquare,
+  Pencil,
+  Shield,
+  Users,
+  Zap,
+} from "lucide-react";
+import { useState } from "react";
+import AuthenticationSection from "./components/AuthenticationSection";
+import DocsFooter from "./components/DocsFooter";
+import EditingSection from "./components/EditingSection";
+import ExplanationsGuide from "./components/ExplanationsGuide";
+import Hero from "./components/Hero";
 // import CollapsibleExample from './components/CollapsibleExample';
-import { InfoBox } from './components/InfoBox';
-import MetadataSection from './components/MetadataSection';
-import SharingSection from './components/SharingSection';
-import QuotesSection from './components/QuotesSection';
-import SystemSection from './components/SystemSection';
-import EditingSection from './components/EditingSection';
-import AISection from './components/AISection';
-import ExplanationsGuide from './components/ExplanationsGuide';
-import QuestionManagementGuide from './components/QuestionManagementGuide';
-import AIFeaturesIntegration from './components/AIFeaturesIntegration';
-import DocsFooter from './components/DocsFooter';
-
+import { InfoBox } from "./components/InfoBox";
+import MetadataSection from "./components/MetadataSection";
+import OverviewSection from "./components/OverviewSection";
+import QuestionManagementGuide from "./components/QuestionManagementGuide";
+import QuestionRetrievalSection from "./components/QuestionRetrievalSection";
+import QuotesSection from "./components/QuotesSection";
+import RecentUpdates from "./components/RecentUpdates";
+import SharingSection from "./components/SharingSection";
+import SystemSection from "./components/SystemSection";
+import TableOfContents from "./components/TableOfContents";
 
 // SectionHeader moved to components/SectionHeader
 
 export default function ApiDocsClient() {
   const { darkMode } = useTheme();
-  const [activeSection, setActiveSection] = useState<string>('overview');
+  const [activeSection, setActiveSection] = useState<string>("overview");
 
   const sections = [
-    { id: 'overview', title: 'Overview', icon: <Database className="w-6 h-6" /> },
-    { id: 'authentication', title: 'Authentication', icon: <Shield className="w-6 h-6" /> },
-    { id: 'questions', title: 'Question Retrieval', icon: <FileText className="w-6 h-6" /> },
-    { id: 'metadata', title: 'Metadata & Statistics', icon: <Code className="w-6 h-6" /> },
-    { id: 'sharing', title: 'Sharing & Codes', icon: <Users className="w-6 h-6" /> },
-    { id: 'quotes', title: 'Quotes Management', icon: <MessageSquare className="w-6 h-6" /> },
-    { id: 'ai', title: 'AI-Powered Features', icon: <Zap className="w-6 h-6" /> },
-    { id: 'editing', title: 'Content Editing', icon: <Pencil className="w-6 h-6" /> },
-    { id: 'system', title: 'System Endpoints', icon: <ExternalLink className="w-6 h-6" /> },
+    { id: "overview", title: "Overview", icon: <Database className="w-6 h-6" /> },
+    { id: "authentication", title: "Authentication", icon: <Shield className="w-6 h-6" /> },
+    { id: "questions", title: "Question Retrieval", icon: <FileText className="w-6 h-6" /> },
+    { id: "metadata", title: "Metadata & Statistics", icon: <Code className="w-6 h-6" /> },
+    { id: "sharing", title: "Sharing & Codes", icon: <Users className="w-6 h-6" /> },
+    { id: "quotes", title: "Quotes Management", icon: <MessageSquare className="w-6 h-6" /> },
+    { id: "ai", title: "AI-Powered Features", icon: <Zap className="w-6 h-6" /> },
+    { id: "editing", title: "Content Editing", icon: <Pencil className="w-6 h-6" /> },
+    { id: "system", title: "System Endpoints", icon: <ExternalLink className="w-6 h-6" /> },
   ];
 
   return (
@@ -52,13 +58,20 @@ export default function ApiDocsClient() {
         <InfoBox>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <strong>Base URL:</strong> <code className={`${darkMode ? 'bg-blue-800' : 'bg-blue-100'} px-2 py-1 rounded`}>https://scio.ly</code><br />
-              <strong>API Version:</strong> 1.0.0<br />
+              <strong>Base URL:</strong>{" "}
+              <code className={`${darkMode ? "bg-blue-800" : "bg-blue-100"} px-2 py-1 rounded`}>
+                https://scio.ly
+              </code>
+              <br />
+              <strong>API Version:</strong> 1.0.0
+              <br />
               <strong>Content-Type:</strong> application/json
             </div>
             <div>
-              <strong>Authentication:</strong> API key required for most endpoints<br />
-              <strong>Rate Limiting:</strong> AI endpoints have rate limiting<br />
+              <strong>Authentication:</strong> API key required for most endpoints
+              <br />
+              <strong>Rate Limiting:</strong> AI endpoints have rate limiting
+              <br />
               <strong>CORS:</strong> Enabled for cross-origin requests
             </div>
           </div>
@@ -73,7 +86,7 @@ export default function ApiDocsClient() {
           activeSection={activeSection}
           onSelect={(id) => {
             setActiveSection(id);
-            document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+            document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
           }}
         />
 
@@ -101,11 +114,11 @@ export default function ApiDocsClient() {
           <EditingSection />
 
           {/* AI Features Section */}
-          <AISection />
+          <aiSection />
           <ExplanationsGuide />
-            {/* Question Management Integration */}
+          {/* Question Management Integration */}
           <QuestionManagementGuide />
-          <AIFeaturesIntegration />
+          <aiFeaturesIntegration />
 
           {/* System Endpoints Section */}
           <SystemSection />
@@ -113,7 +126,7 @@ export default function ApiDocsClient() {
 
         {/* Footer */}
         <DocsFooter />
-        </div>
       </div>
+    </div>
   );
 }

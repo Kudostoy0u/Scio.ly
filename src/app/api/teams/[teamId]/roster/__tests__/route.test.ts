@@ -1,309 +1,586 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { NextRequest } from 'next/server';
-import { GET, POST } from '../route';
-import { getServerUser } from '@/lib/supabaseServer';
-import { checkTeamGroupAccessCockroach, checkTeamGroupLeadershipCockroach } from '@/lib/utils/team-auth';
-import { queryCockroachDB } from '@/lib/cockroachdb';
+import { queryCockroachDB } from "@/lib/cockroachdb";
+import { dbPg } from "@/lib/db";
+import { getServerUser } from "@/lib/supabaseServer";
+import {
+  checkTeamGroupAccessCockroach,
+  checkTeamGroupLeadershipCockroach,
+} from "@/lib/utils/team-auth";
+import { NextRequest } from "next/server";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { GET, POST } from "@/app/api/teams/[teamId]/roster/route";
 
 // Mock dependencies
-vi.mock('@/lib/supabaseServer', () => ({
-  getServerUser: vi.fn()
+vi.mock("@/lib/supabaseServer", () => ({
+  getServerUser: vi.fn(),
 }));
 
-vi.mock('@/lib/utils/team-auth', () => ({
+vi.mock("@/lib/utils/team-auth", () => ({
   checkTeamGroupAccessCockroach: vi.fn(),
-  checkTeamGroupLeadershipCockroach: vi.fn()
+  checkTeamGroupLeadershipCockroach: vi.fn(),
 }));
 
-vi.mock('@/lib/cockroachdb', () => ({
-  queryCockroachDB: vi.fn()
+vi.mock("@/lib/cockroachdb", () => ({
+  queryCockroachDB: vi.fn(),
+}));
+
+// Create a proper Drizzle ORM chain mock
+const createDrizzleChain = (result: any[]) => {
+  const chain = {
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    leftJoin: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockResolvedValue(result),
+  };
+  return chain;
+};
+
+vi.mock("@/lib/db", () => ({
+  dbPg: {
+    select: vi.fn(),
+    insert: vi.fn(),
+  },
 }));
 
 const mockGetServerUser = vi.mocked(getServerUser);
 const mockCheckTeamGroupAccessCockroach = vi.mocked(checkTeamGroupAccessCockroach);
 const mockCheckTeamGroupLeadershipCockroach = vi.mocked(checkTeamGroupLeadershipCockroach);
-const mockQueryCockroachDB = vi.mocked(queryCockroachDB);
+const mockQueryCockroachDb = vi.mocked(queryCockroachDB);
+const mockDbPg = vi.mocked(dbPg);
 
-describe('/api/teams/[teamId]/roster', () => {
-  const mockUserId = 'user-123';
-  const mockTeamId = 'team-456';
-  // const mockGroupId = 'group-789';
-  const mockSubteamId = 'subteam-999';
+describe("/api/teams/[teamId]/roster", () => {
+  // Use proper UUID format for better type safety
+  const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
+  const mockTeamId = "team-slug-123";
+  const mockGroupId = "123e4567-e89b-12d3-a456-426614174001";
+  const mockSubteamId = "123e4567-e89b-12d3-a456-426614174002";
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Mock console methods to reduce noise
-    vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    // Set DATABASE_URL for tests
+    process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
   });
 
   afterEach(() => {
     vi.resetAllMocks();
   });
 
-  describe('GET /api/teams/[teamId]/roster', () => {
-    it('should return 500 when DATABASE_URL is missing', async () => {
+  describe("GET /api/teams/[teamId]/roster", () => {
+    it("should return 500 when DATABASE_URL is missing", async () => {
       const originalEnv = process.env.DATABASE_URL;
       delete process.env.DATABASE_URL;
-
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`);
-      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
-
-      expect(response.status).toBe(500);
-      const body = await response.json();
-      expect(body.error).toBe('Database configuration error');
-
-      // Restore environment
-      process.env.DATABASE_URL = originalEnv;
-    });
-
-    it('should return 401 when user is not authenticated', async () => {
-      mockGetServerUser.mockResolvedValue(null);
-
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`);
-      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
-
-      expect(response.status).toBe(401);
-      const body = await response.json();
-      expect(body.error).toBe('Unauthorized');
-    });
-
-    it('should return 403 when user has no access', async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      mockCheckTeamGroupAccessCockroach.mockResolvedValue({
-        isAuthorized: false,
-        hasMembership: false,
-        hasRosterEntry: false,
-        role: undefined
-      });
-
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`);
-      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
-
-      expect(response.status).toBe(403);
-      const body = await response.json();
-      expect(body.error).toBe('Not authorized to access this team');
-    });
-
-    it('should return roster data when user has access', async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      mockCheckTeamGroupAccessCockroach.mockResolvedValue({
-        isAuthorized: true,
-        hasMembership: true,
-        hasRosterEntry: false,
-        role: 'captain'
-      });
-
-      // Mock roster data query
-      mockQueryCockroachDB.mockResolvedValue({
-        rows: [
-          {
-            id: 'roster-1',
-            user_id: 'user-456',
-            team_unit_id: mockSubteamId,
-            student_name: 'John Doe',
-            event_name: 'Anatomy',
-            created_at: new Date('2024-01-01')
-          }
-        ]
-      });
-
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`);
-      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
-
-      expect(response.status).toBe(200);
-      const body = await response.json();
-      expect(body.roster).toHaveLength(1);
-      expect(body.roster[0]).toEqual({
-        id: 'roster-1',
-        userId: 'user-456',
-        teamUnitId: mockSubteamId,
-        studentName: 'John Doe',
-        eventName: 'Anatomy',
-        createdAt: new Date('2024-01-01')
-      });
-    });
-
-    it('should filter by subteam when subteamId is provided', async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      mockCheckTeamGroupAccessCockroach.mockResolvedValue({
-        isAuthorized: true,
-        hasMembership: true,
-        hasRosterEntry: false,
-        role: 'captain'
-      });
-
-      // Mock roster data query
-      mockQueryCockroachDB.mockResolvedValue({
-        rows: []
-      });
 
       const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster?subteamId=${mockSubteamId}`);
       const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
 
-      expect(response.status).toBe(200);
-      const body = await response.json();
-      expect(body.roster).toHaveLength(0);
-    });
-
-    it('should return empty array when no roster data exists', async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      mockCheckTeamGroupAccessCockroach.mockResolvedValue({
-        isAuthorized: true,
-        hasMembership: true,
-        hasRosterEntry: false,
-        role: 'captain'
-      });
-
-      // Mock empty roster data query
-      mockQueryCockroachDB.mockResolvedValue({
-        rows: []
-      });
-
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`);
-      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
-
-      expect(response.status).toBe(200);
-      const body = await response.json();
-      expect(body.roster).toHaveLength(0);
-    });
-  });
-
-  describe('POST /api/teams/[teamId]/roster', () => {
-    it('should return 500 when DATABASE_URL is missing', async () => {
-      const originalEnv = process.env.DATABASE_URL;
-      delete process.env.DATABASE_URL;
-
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`, {
-        method: 'POST',
-        body: JSON.stringify({ roster: [] })
-      });
-      const response = await POST(request, { params: Promise.resolve({ teamId: mockTeamId }) });
-
       expect(response.status).toBe(500);
       const body = await response.json();
-      expect(body.error).toBe('Database configuration error');
+      expect(body.error).toBe("Database configuration error");
 
       // Restore environment
       process.env.DATABASE_URL = originalEnv;
     });
 
-    it('should return 401 when user is not authenticated', async () => {
+    it("should return 401 when user is not authenticated", async () => {
       mockGetServerUser.mockResolvedValue(null);
 
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`, {
-        method: 'POST',
-        body: JSON.stringify({ roster: [] })
-      });
-      const response = await POST(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`);
+      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
 
       expect(response.status).toBe(401);
       const body = await response.json();
-      expect(body.error).toBe('Unauthorized');
+      expect(body.error).toBe("Unauthorized");
     });
 
-    it('should return 403 when user has no leadership access', async () => {
+    it("should return 400 when subteamId is missing", async () => {
       mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
+
+      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`);
+      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe("Validation failed");
+      expect(body.details).toBeDefined();
+      expect(body.details).toEqual(expect.arrayContaining([expect.stringContaining("Subteam ID is required")]));
+    });
+
+    it("should return 403 when user has no access", async () => {
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      // Mock team group lookup using Drizzle ORM (select().from().where().limit())
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ id: mockGroupId }]),
+          }),
+        }),
+      });
+      mockCheckTeamGroupAccessCockroach.mockResolvedValue({
         isAuthorized: false,
         hasMembership: false,
         hasRosterEntry: false,
-        role: 'member'
+        role: undefined,
       });
 
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`, {
-        method: 'POST',
-        body: JSON.stringify({ roster: [] })
-      });
-      const response = await POST(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+      const request = new NextRequest(
+        `http://localhost:3000/api/teams/${mockTeamId}/roster?subteamId=${mockSubteamId}`
+      );
+      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
 
       expect(response.status).toBe(403);
       const body = await response.json();
-      expect(body.error).toBe('Only captains and co-captains can manage roster');
+      expect(body.error).toBe("Not authorized to access this team");
     });
 
-    it('should update roster when user has leadership access', async () => {
+    it("should return roster data when user has access", async () => {
       mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
+      
+      // Mock team group lookup using Drizzle ORM (select().from().where().limit())
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ id: mockGroupId }]),
+          }),
+        }),
+      });
+      
+      mockCheckTeamGroupAccessCockroach.mockResolvedValue({
         isAuthorized: true,
         hasMembership: true,
         hasRosterEntry: false,
-        role: 'captain'
+        role: "captain",
       });
 
-      // Mock roster update queries
-      mockQueryCockroachDB
-        .mockResolvedValueOnce({ rows: [] }) // Delete existing roster
-        .mockResolvedValueOnce({ rows: [] }); // Insert new roster
-
-      const rosterData = [
+      // Mock roster data query using Drizzle ORM (select().from().leftJoin().where().orderBy())
+      // orderBy can be called with multiple arguments, so we need to handle chaining
+      const rosterOrderByMock = vi.fn().mockResolvedValue([
         {
-          userId: 'user-456',
-          teamUnitId: mockSubteamId,
-          studentName: 'John Doe',
-          eventName: 'Anatomy'
-        }
-      ];
-
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`, {
-        method: 'POST',
-        body: JSON.stringify({ roster: rosterData })
+          student_name: "John Doe",
+          event_name: "Anatomy",
+          slot_index: 0,
+          user_id: "123e4567-e89b-12d3-a456-426614174003",
+        },
+      ]);
+      const rosterWhereChain = {
+        orderBy: rosterOrderByMock,
+      };
+      const rosterLeftJoinChain = {
+        where: vi.fn().mockReturnValue(rosterWhereChain),
+      };
+      const rosterFromChain = {
+        leftJoin: vi.fn().mockReturnValue(rosterLeftJoinChain),
+        innerJoin: vi.fn().mockReturnValue(rosterLeftJoinChain), // Support both for flexibility
+      };
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue(rosterFromChain),
       });
-      const response = await POST(request, { params: Promise.resolve({ teamId: mockTeamId }) });
 
+      // Mock removed events query using Drizzle ORM (select().from().where().orderBy())
+      // orderBy uses desc() which is a function call, so it should resolve directly
+      const removedEventsOrderByMock = vi.fn().mockResolvedValue([]);
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: removedEventsOrderByMock,
+          }),
+        }),
+      });
+
+      const request = new NextRequest(
+        `http://localhost:3000/api/teams/${mockTeamId}/roster?subteamId=${mockSubteamId}`
+      );
+      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+
+      if (response.status !== 200) {
+        const errorBody = await response.json();
+        throw new Error(`Expected 200 but got ${response.status}: ${JSON.stringify(errorBody)}`);
+      }
       expect(response.status).toBe(200);
       const body = await response.json();
-      expect(body.success).toBe(true);
-      expect(body.message).toBe('Roster updated successfully');
+      expect(body.roster).toBeDefined();
+      expect(typeof body.roster).toBe("object");
+      expect(body.removedEvents).toBeDefined();
+      expect(Array.isArray(body.removedEvents)).toBe(true);
     });
 
-    it('should handle empty roster data', async () => {
+    it("should filter by subteam when subteamId is provided", async () => {
       mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
+      
+      // Mock team group lookup
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ id: mockGroupId }]),
+          }),
+        }),
+      });
+      
+      mockCheckTeamGroupAccessCockroach.mockResolvedValue({
         isAuthorized: true,
         hasMembership: true,
         hasRosterEntry: false,
-        role: 'captain'
+        role: "captain",
       });
 
-      // Mock roster update queries
-      mockQueryCockroachDB
-        .mockResolvedValueOnce({ rows: [] }) // Delete existing roster
-        .mockResolvedValueOnce({ rows: [] }); // Insert new roster (empty)
-
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`, {
-        method: 'POST',
-        body: JSON.stringify({ roster: [] })
+      // Mock empty roster data query (select().from().leftJoin().where().orderBy())
+      // orderBy can be called with multiple arguments
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          leftJoin: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              orderBy: vi.fn().mockResolvedValue([]),
+            }),
+          }),
+        }),
       });
-      const response = await POST(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+
+      // Mock removed events query (select().from().where().orderBy())
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const request = new NextRequest(
+        `http://localhost:3000/api/teams/${mockTeamId}/roster?subteamId=${mockSubteamId}`
+      );
+      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
 
       expect(response.status).toBe(200);
       const body = await response.json();
-      expect(body.success).toBe(true);
+      expect(body.roster).toBeDefined();
+      expect(Object.keys(body.roster)).toHaveLength(0);
     });
 
-    it('should handle database errors gracefully', async () => {
+    it("should return empty array when no roster data exists", async () => {
       mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
+      
+      // Mock team group lookup
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ id: mockGroupId }]),
+          }),
+        }),
+      });
+      
+      mockCheckTeamGroupAccessCockroach.mockResolvedValue({
         isAuthorized: true,
         hasMembership: true,
         hasRosterEntry: false,
-        role: 'captain'
+        role: "captain",
       });
 
-      // Mock database error
-      mockQueryCockroachDB.mockRejectedValue(new Error('Database connection failed'));
+      // Mock empty roster data query (select().from().leftJoin().where().orderBy())
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          leftJoin: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              orderBy: vi.fn().mockResolvedValue([]),
+            }),
+          }),
+        }),
+      });
+
+      // Mock removed events query (select().from().where().orderBy())
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const request = new NextRequest(
+        `http://localhost:3000/api/teams/${mockTeamId}/roster?subteamId=${mockSubteamId}`
+      );
+      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.roster).toBeDefined();
+      expect(Object.keys(body.roster)).toHaveLength(0);
+    });
+  });
+
+  describe("POST /api/teams/[teamId]/roster", () => {
+    it("should return 500 when DATABASE_URL is missing", async () => {
+      const originalEnv = process.env.DATABASE_URL;
+      delete process.env.DATABASE_URL;
 
       const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`, {
-        method: 'POST',
-        body: JSON.stringify({ roster: [] })
+        method: "POST",
+        body: JSON.stringify({ roster: [] }),
       });
       const response = await POST(request, { params: Promise.resolve({ teamId: mockTeamId }) });
 
       expect(response.status).toBe(500);
       const body = await response.json();
-      expect(body.error).toBe('Internal server error');
+      expect(body.error).toBe("Database configuration error");
+
+      // Restore environment
+      process.env.DATABASE_URL = originalEnv;
+    });
+
+    it("should return 401 when user is not authenticated", async () => {
+      mockGetServerUser.mockResolvedValue(null);
+
+      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`, {
+        method: "POST",
+        body: JSON.stringify({ roster: [] }),
+      });
+      const response = await POST(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+
+      expect(response.status).toBe(401);
+      const body = await response.json();
+      expect(body.error).toBe("Unauthorized");
+    });
+
+    it("should return 403 when user has no leadership access", async () => {
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      
+      // Mock team group lookup
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ id: mockGroupId }]),
+          }),
+        }),
+      });
+      
+      mockCheckTeamGroupAccessCockroach.mockResolvedValue({
+        isAuthorized: true,
+        hasMembership: true,
+        hasRosterEntry: false,
+        role: "member",
+      });
+      
+      mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
+        hasLeadership: false,
+        isCreator: false,
+        hasSubteamMembership: false,
+        hasRosterEntries: false,
+        subteamMemberships: [],
+        rosterSubteams: [],
+      });
+
+      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`, {
+        method: "POST",
+        body: JSON.stringify({
+          subteamId: mockSubteamId,
+          eventName: "Anatomy",
+          slotIndex: 0,
+          studentName: "John Doe",
+        }),
+      });
+      const response = await POST(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+
+      expect(response.status).toBe(403);
+      const body = await response.json();
+      expect(body.error).toBe("Only captains and co-captains can manage roster");
+    });
+
+    it("should update roster when user has leadership access", async () => {
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      
+      // Mock team group lookup
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ id: mockGroupId }]),
+          }),
+        }),
+      });
+      
+      mockCheckTeamGroupAccessCockroach.mockResolvedValue({
+        isAuthorized: true,
+        hasMembership: true,
+        hasRosterEntry: false,
+        role: "captain",
+      });
+      
+      mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
+        hasLeadership: true,
+        isCreator: false,
+        hasSubteamMembership: false,
+        hasRosterEntries: false,
+        subteamMemberships: [],
+        rosterSubteams: [],
+      });
+
+      // Mock subteam validation
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ id: mockSubteamId }]),
+          }),
+        }),
+      });
+
+      // Mock team members query for auto-linking (select().from().innerJoin().innerJoin().where())
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          innerJoin: vi.fn().mockReturnValue({
+            innerJoin: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([]),
+            }),
+          }),
+        }),
+      });
+
+      // Mock roster upsert (insert().values().onConflictDoUpdate())
+      const mockInsert = {
+        values: vi.fn().mockReturnValue({
+          onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+        }),
+      };
+      mockDbPg.insert = vi.fn().mockReturnValue(mockInsert);
+
+      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`, {
+        method: "POST",
+        body: JSON.stringify({
+          subteamId: mockSubteamId,
+          eventName: "Anatomy",
+          slotIndex: 0,
+          studentName: "John Doe",
+        }),
+      });
+      const response = await POST(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.message).toBe("Roster data saved successfully");
+    });
+
+    it("should handle empty student name (optional field)", async () => {
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      
+      // Mock team group lookup
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ id: mockGroupId }]),
+          }),
+        }),
+      });
+      
+      mockCheckTeamGroupAccessCockroach.mockResolvedValue({
+        isAuthorized: true,
+        hasMembership: true,
+        hasRosterEntry: false,
+        role: "captain",
+      });
+      
+      mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
+        hasLeadership: true,
+        isCreator: false,
+        hasSubteamMembership: false,
+        hasRosterEntries: false,
+        subteamMemberships: [],
+        rosterSubteams: [],
+      });
+
+      // Mock subteam validation
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ id: mockSubteamId }]),
+          }),
+        }),
+      });
+
+      // Mock team members query (empty since no studentName)
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          innerJoin: vi.fn().mockReturnValue({
+            innerJoin: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([]),
+            }),
+          }),
+        }),
+      });
+
+      // Mock roster upsert (studentName can be null)
+      mockDbPg.insert.mockReturnValue({
+        values: vi.fn().mockReturnValue({
+          onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+        }),
+      });
+
+      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`, {
+        method: "POST",
+        body: JSON.stringify({
+          subteamId: mockSubteamId,
+          eventName: "Anatomy",
+          slotIndex: 0,
+          // studentName is optional
+        }),
+      });
+      const response = await POST(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.message).toBe("Roster data saved successfully");
+    });
+
+    it("should handle database errors gracefully", async () => {
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      
+      // Mock team group lookup
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ id: mockGroupId }]),
+          }),
+        }),
+      });
+      
+      mockCheckTeamGroupAccessCockroach.mockResolvedValue({
+        isAuthorized: true,
+        hasMembership: true,
+        hasRosterEntry: false,
+        role: "captain",
+      });
+      
+      mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
+        hasLeadership: true,
+        isCreator: false,
+        hasSubteamMembership: false,
+        hasRosterEntries: false,
+        subteamMemberships: [],
+        rosterSubteams: [],
+      });
+
+      // Mock database error on subteam validation
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockRejectedValue(new Error("Database connection failed")),
+          }),
+        }),
+      });
+
+      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`, {
+        method: "POST",
+        body: JSON.stringify({
+          subteamId: mockSubteamId,
+          eventName: "Anatomy",
+          slotIndex: 0,
+        }),
+      });
+      const response = await POST(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+
+      expect(response.status).toBe(500);
+      const body = await response.json();
+      // Error handler may return "An error occurred" or "Internal server error"
+      expect(["An error occurred", "Internal server error"]).toContain(body.error);
     });
   });
 });

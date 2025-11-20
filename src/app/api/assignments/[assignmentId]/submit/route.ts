@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { queryCockroachDB } from '@/lib/cockroachdb';
-import { getServerUser } from '@/lib/supabaseServer';
+import { queryCockroachDB } from "@/lib/cockroachdb";
+import { getServerUser } from "@/lib/supabaseServer";
+import { type NextRequest, NextResponse } from "next/server";
 
 // POST /api/assignments/[assignmentId]/submit - Submit assignment results
 export async function POST(
@@ -9,27 +9,23 @@ export async function POST(
 ) {
   try {
     if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: "Database configuration error",
+          details: "DATABASE_URL environment variable is missing",
+        },
+        { status: 500 }
+      );
     }
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { assignmentId } = await params;
     const body = await request.json();
-    const { 
-      answers, 
-      score, 
-      totalPoints, 
-      timeSpent, 
-      submittedAt,
-      isDynamicCodebusters
-    } = body;
+    const { answers, score, totalPoints, timeSpent, submittedAt, isDynamicCodebusters } = body;
 
     // Verify assignment exists and user is assigned
     const assignmentResult = await queryCockroachDB<any>(
@@ -41,7 +37,7 @@ export async function POST(
     );
 
     if (assignmentResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Assignment not found or not assigned' }, { status: 404 });
+      return NextResponse.json({ error: "Assignment not found or not assigned" }, { status: 404 });
     }
 
     const assignment = assignmentResult.rows[0];
@@ -57,15 +53,18 @@ export async function POST(
     );
 
     const existingSubmission = existingSubmissionResult.rows[0];
-    
+
     // Prevent multiple submissions to the same assignment
     if (existingSubmission) {
-      return NextResponse.json({ 
-        error: 'Assignment already submitted',
-        details: 'You have already submitted this assignment and cannot submit again'
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: "Assignment already submitted",
+          details: "You have already submitted this assignment and cannot submit again",
+        },
+        { status: 400 }
+      );
     }
-    
+
     const attemptNumber = 1;
 
     // Create submission record
@@ -77,17 +76,17 @@ export async function POST(
       [
         assignmentId,
         user.id,
-        'submitted',
+        "submitted",
         score,
         attemptNumber,
-        submittedAt || new Date().toISOString()
+        submittedAt || new Date().toISOString(),
       ]
     );
 
     const submission = submissionResult.rows[0];
 
     // Store individual question responses (skip for dynamic Codebusters assignments)
-    if (answers && typeof answers === 'object' && !isDynamicCodebusters) {
+    if (answers && typeof answers === "object" && !isDynamicCodebusters) {
       for (const [questionId, answer] of Object.entries(answers)) {
         if (answer !== null && answer !== undefined) {
           // For regular assignments, get question details from database
@@ -114,9 +113,9 @@ export async function POST(
               [
                 submission.id,
                 questionId,
-                typeof answer === 'string' ? answer : JSON.stringify(answer),
+                typeof answer === "string" ? answer : JSON.stringify(answer),
                 isCorrect,
-                pointsEarned
+                pointsEarned,
               ]
             );
           }
@@ -128,11 +127,11 @@ export async function POST(
     let calculatedTotalPoints = 0;
     let calculatedEarnedPoints = 0;
     let calculatedCorrectAnswers = 0;
-    
+
     if (isDynamicCodebusters && answers) {
       // For dynamic Codebusters assignments, use the exact same values as the test summary
       const { codebustersPoints } = body;
-      
+
       if (codebustersPoints) {
         // Use the exact same values calculated by the test summary
         calculatedTotalPoints = codebustersPoints.totalPointsAttempted || 0;
@@ -148,7 +147,10 @@ export async function POST(
       // For regular assignments, use the existing calculation
       calculatedTotalPoints = totalPoints || assignment.points || 0;
       calculatedEarnedPoints = score || 0;
-      calculatedCorrectAnswers = Math.round((score / Math.max(1, calculatedTotalPoints)) * Object.keys(answers || {}).length) || 0;
+      calculatedCorrectAnswers =
+        Math.round(
+          (score / Math.max(1, calculatedTotalPoints)) * Object.keys(answers || {}).length
+        ) || 0;
     }
 
     // Create analytics record (delete existing first, then insert)
@@ -157,7 +159,7 @@ export async function POST(
        WHERE assignment_id = $1 AND user_id = $2`,
       [assignmentId, user.id]
     );
-    
+
     await queryCockroachDB(
       `INSERT INTO new_team_assignment_analytics
        (assignment_id, student_name, user_id, total_questions, correct_answers, 
@@ -172,7 +174,7 @@ export async function POST(
         calculatedTotalPoints,
         calculatedEarnedPoints,
         timeSpent || 0,
-        submittedAt || new Date().toISOString()
+        submittedAt || new Date().toISOString(),
       ]
     );
 
@@ -183,15 +185,16 @@ export async function POST(
         score,
         total_points: totalPoints || assignment.max_points,
         attempt_number: attemptNumber,
-        submitted_at: submission.submitted_at
-      }
+        submitted_at: submission.submitted_at,
+      },
     });
-
   } catch (error) {
-    console.error('Error submitting assignment:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
   }
 }

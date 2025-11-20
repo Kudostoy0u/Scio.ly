@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { NumberAnimationProps } from '../types';
+import { useEffect, useRef, useState } from "react";
+import type { NumberAnimationProps } from "@/app/dashboard/types";
 
 export default function NumberAnimation({ value, className }: NumberAnimationProps) {
   const [isMounted, setIsMounted] = useState(false);
@@ -14,17 +14,17 @@ export default function NumberAnimation({ value, className }: NumberAnimationPro
   }, []);
 
   useEffect(() => {
-    if (!isMounted) return;
+    if (!isMounted) {
+      return;
+    }
 
     const prev = prevValueRef.current;
     prevValueRef.current = value;
-
 
     if (prev === null) {
       setDisplayValue(value);
       return;
     }
-
 
     if (rafRef.current !== null) {
       cancelAnimationFrame(rafRef.current);
@@ -33,12 +33,14 @@ export default function NumberAnimation({ value, className }: NumberAnimationPro
 
     const startValue = prev;
     const endValue = value;
-    if (startValue === endValue) return;
+    if (startValue === endValue) {
+      return;
+    }
 
     const duration = 600; // ms
     const startTime = performance.now();
 
-    const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+    const easeOut = (t: number) => 1 - (1 - t) ** 3;
 
     const tick = (now: number) => {
       const elapsed = now - startTime;
@@ -56,12 +58,13 @@ export default function NumberAnimation({ value, className }: NumberAnimationPro
     rafRef.current = requestAnimationFrame(tick);
 
     return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+      }
     };
   }, [value, isMounted]);
 
   if (!isMounted) {
-
     return <span className={className}>{value}</span>;
   }
 

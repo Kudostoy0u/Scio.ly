@@ -2,14 +2,16 @@
  * Grading methods for Gemini service
  */
 
-import { GoogleGenAI, Type } from "@google/genai";
-import type { GradingResult } from './types';
+import { Type } from "@google/genai";
+import logger from "@/lib/utils/logger";
+import type { ClientWithKey } from "./client";
+import type { GradingResult } from "./types";
 
 /**
  * Grading service for free response questions
  */
 export class GeminiGradingService {
-  constructor(private client: GoogleGenAI) {}
+  constructor(private clientWithKey: ClientWithKey) {}
 
   /**
    * Grades multiple free response answers
@@ -49,7 +51,8 @@ QUESTIONS TO GRADE:`;
       prompt += `\nStudent Answer: ${response.studentAnswer}`;
     });
 
-    prompt += `\n\nReturn ONLY an array of scores (0, 0.5, or 1) in the same order as the questions.`;
+    prompt +=
+      "\n\nReturn ONLY an array of scores (0, 0.5, or 1) in the same order as the questions.";
 
     const schema = {
       type: Type.OBJECT,
@@ -59,10 +62,10 @@ QUESTIONS TO GRADE:`;
           items: {
             type: Type.NUMBER,
             minimum: 0,
-            maximum: 1
+            maximum: 1,
           },
-          description: "Array of scores (0, 0.5, or 1) for each response in order"
-        }
+          description: "Array of scores (0, 0.5, or 1) for each response in order",
+        },
       },
       propertyOrdering: ["scores"],
     };
@@ -77,21 +80,51 @@ QUESTIONS TO GRADE:`;
    * @returns {Promise<T>} Structured response
    */
   private async generateStructuredContent<T>(prompt: string, schema: object): Promise<T> {
-    const response = await this.client.models.generateContent({
-      model: "gemini-flash-lite-latest",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: schema,
-        thinkingConfig: {
-          thinkingBudget: 3000,
+    try {
+      const response = await this.clientWithKey.client.models.generateContent({
+        model: "gemini-flash-lite-latest",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: schema,
+          thinkingConfig: {
+            thinkingBudget: 3000,
+          },
+          temperature: 0.1,
+          topP: 0.8,
+          topK: 40,
         },
-        temperature: 0.1,
-        topP: 0.8,
-        topK: 40,
-      },
-    });
+      });
 
-    return JSON.parse(response.text || '{}');
+      const text = response.text || "{}";
+
+      try {
+        return JSON.parse(text) as T;
+      } catch (error) {
+        const maskedKey =
+          this.clientWithKey.apiKey.length > 12
+            ? `${this.clientWithKey.apiKey.substring(0, 8)}...${this.clientWithKey.apiKey.substring(this.clientWithKey.apiKey.length - 4)}`
+            : "***";
+        logger.error("Failed to parse Gemini response", error as Error, {
+          apiKeyIndex: this.clientWithKey.keyIndex,
+          apiKey: maskedKey,
+        });
+        throw new Error(
+          `Invalid response format from Gemini (API key index: ${this.clientWithKey.keyIndex})`
+        );
+      }
+    } catch (error) {
+      const maskedKey =
+        this.clientWithKey.apiKey.length > 12
+          ? `${this.clientWithKey.apiKey.substring(0, 8)}...${this.clientWithKey.apiKey.substring(this.clientWithKey.apiKey.length - 4)}`
+          : "***";
+      logger.error("Gemini API error", error as Error, {
+        apiKeyIndex: this.clientWithKey.keyIndex,
+        apiKey: maskedKey,
+      });
+      throw new Error(
+        `Gemini API error (API key index: ${this.clientWithKey.keyIndex}, key: ${maskedKey}): ${(error as Error).message}`
+      );
+    }
   }
 }

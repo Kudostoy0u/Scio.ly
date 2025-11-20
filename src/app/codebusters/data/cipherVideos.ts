@@ -9,188 +9,188 @@ export interface CipherVideoData {
 }
 
 export const cipherVideos: CipherVideoData = {
-  'Random Aristocrat': [
+  "Random Aristocrat": [
     {
-      title: 'Random Aristocrat Basics',
-      url: 'https://www.youtube.com/watch?v=example1',
-      description: 'Introduction to Random Aristocrat ciphers'
+      title: "Random Aristocrat Basics",
+      url: "https://www.youtube.com/watch?v=example1",
+      description: "Introduction to Random Aristocrat ciphers",
     },
     {
-      title: 'Random Aristocrat Advanced',
-      url: 'https://www.youtube.com/watch?v=example2',
-      description: 'Advanced solving techniques for Random Aristocrat'
-    }
+      title: "Random Aristocrat Advanced",
+      url: "https://www.youtube.com/watch?v=example2",
+      description: "Advanced solving techniques for Random Aristocrat",
+    },
   ],
-  'K1 Aristocrat': [
+  "K1 Aristocrat": [
     {
-      title: 'K1 Aristocrat Basics',
-      url: 'https://www.youtube.com/watch?v=KLDnnigj1Xs',
-      description: 'Introduction to K1 Aristocrat ciphers'
+      title: "K1 Aristocrat Basics",
+      url: "https://www.youtube.com/watch?v=KLDnnigj1Xs",
+      description: "Introduction to K1 Aristocrat ciphers",
     },
     {
-      title: 'K1 Aristocrat Intermediate',
-      url: 'https://www.youtube.com/watch?v=1LVBCOOsYAA',
-      description: 'Intermediate solving techniques'
+      title: "K1 Aristocrat Intermediate",
+      url: "https://www.youtube.com/watch?v=1LVBCOOsYAA",
+      description: "Intermediate solving techniques",
     },
     {
-      title: 'K1 Aristocrat Advanced',
-      url: 'https://www.youtube.com/watch?v=4Ur_sGJJjzE',
-      description: 'Advanced solving strategies'
-    }
+      title: "K1 Aristocrat Advanced",
+      url: "https://www.youtube.com/watch?v=4Ur_sGJJjzE",
+      description: "Advanced solving strategies",
+    },
   ],
-  'K2 Aristocrat': [
+  "K2 Aristocrat": [
     {
-      title: 'K2 Aristocrat Basics',
-      url: 'https://www.youtube.com/watch?v=KLDnnigj1Xs',
-      description: 'Introduction to K2 Aristocrat ciphers'
+      title: "K2 Aristocrat Basics",
+      url: "https://www.youtube.com/watch?v=KLDnnigj1Xs",
+      description: "Introduction to K2 Aristocrat ciphers",
     },
     {
-      title: 'K2 Aristocrat Intermediate',
-      url: 'https://www.youtube.com/watch?v=3iNsLoijl60',
-      description: 'Intermediate solving techniques'
+      title: "K2 Aristocrat Intermediate",
+      url: "https://www.youtube.com/watch?v=3iNsLoijl60",
+      description: "Intermediate solving techniques",
     },
     {
-      title: 'K2 Aristocrat Advanced',
-      url: 'https://www.youtube.com/watch?v=GtwgZqNdRvA',
-      description: 'Advanced solving strategies'
-    }
+      title: "K2 Aristocrat Advanced",
+      url: "https://www.youtube.com/watch?v=GtwgZqNdRvA",
+      description: "Advanced solving strategies",
+    },
   ],
-  'K3 Aristocrat': [
+  "K3 Aristocrat": [
     {
-      title: 'K3 Aristocrat Basics',
-      url: 'https://www.youtube.com/watch?v=KLDnnigj1Xs',
-      description: 'Introduction to K3 Aristocrat ciphers'
+      title: "K3 Aristocrat Basics",
+      url: "https://www.youtube.com/watch?v=KLDnnigj1Xs",
+      description: "Introduction to K3 Aristocrat ciphers",
     },
     {
-      title: 'K3 Aristocrat Advanced',
-      url: 'https://www.youtube.com/watch?v=BMMns0PHz70',
-      description: 'Advanced solving techniques for K3 Aristocrat'
-    }
+      title: "K3 Aristocrat Advanced",
+      url: "https://www.youtube.com/watch?v=BMMns0PHz70",
+      description: "Advanced solving techniques for K3 Aristocrat",
+    },
   ],
-  'Hill 2x2': [
+  "Hill 2x2": [
     {
-      title: 'Hill 2x2 Cipher',
-      url: 'https://www.youtube.com/watch?v=AyiVMC-rJd8',
-      description: 'Complete guide to Hill 2x2 cipher'
-    }
+      title: "Hill 2x2 Cipher",
+      url: "https://www.youtube.com/watch?v=AyiVMC-rJd8",
+      description: "Complete guide to Hill 2x2 cipher",
+    },
   ],
-  'Hill 3x3': [
+  "Hill 3x3": [
     {
-      title: 'Hill 3x3 Cipher',
-      url: 'https://www.youtube.com/watch?v=JK3ur6W4rvw',
-      description: 'Complete guide to Hill 3x3 cipher'
-    }
+      title: "Hill 3x3 Cipher",
+      url: "https://www.youtube.com/watch?v=JK3ur6W4rvw",
+      description: "Complete guide to Hill 3x3 cipher",
+    },
   ],
-  'K1 Patristocrat': [
+  "K1 Patristocrat": [
     {
-      title: 'K1 Patristocrat Cipher',
-      url: 'https://www.youtube.com/watch?v=WRhiaHFBZLw',
-      description: 'Complete guide to K1 Patristocrat cipher'
-    }
+      title: "K1 Patristocrat Cipher",
+      url: "https://www.youtube.com/watch?v=WRhiaHFBZLw",
+      description: "Complete guide to K1 Patristocrat cipher",
+    },
   ],
-  'K2 Patristocrat': [
+  "K2 Patristocrat": [
     {
-      title: 'K2 Patristocrat Cipher',
-      url: 'https://www.youtube.com/watch?v=bdFbWE0vO74',
-      description: 'Complete guide to K2 Patristocrat cipher'
-    }
+      title: "K2 Patristocrat Cipher",
+      url: "https://www.youtube.com/watch?v=bdFbWE0vO74",
+      description: "Complete guide to K2 Patristocrat cipher",
+    },
   ],
-  'K3 Patristocrat': [
+  "K3 Patristocrat": [
     {
-      title: 'K3 Patristocrat Cipher',
-      url: 'https://www.youtube.com/watch?v=WRhiaHFBZLw',
-      description: 'Complete guide to K3 Patristocrat cipher'
-    }
+      title: "K3 Patristocrat Cipher",
+      url: "https://www.youtube.com/watch?v=WRhiaHFBZLw",
+      description: "Complete guide to K3 Patristocrat cipher",
+    },
   ],
-  'Random Patristocrat': [
+  "Random Patristocrat": [
     {
-      title: 'Random Patristocrat Cipher',
-      url: 'https://www.youtube.com/watch?v=WRhiaHFBZLw',
-      description: 'Complete guide to Random Patristocrat cipher'
-    }
+      title: "Random Patristocrat Cipher",
+      url: "https://www.youtube.com/watch?v=WRhiaHFBZLw",
+      description: "Complete guide to Random Patristocrat cipher",
+    },
   ],
-  'Baconian': [
+  Baconian: [
     {
-      title: 'Baconian Cipher Basics',
-      url: 'https://www.youtube.com/watch?v=wIDJ-OVFwv0',
-      description: 'Introduction to Baconian cipher'
+      title: "Baconian Cipher Basics",
+      url: "https://www.youtube.com/watch?v=wIDJ-OVFwv0",
+      description: "Introduction to Baconian cipher",
     },
     {
-      title: 'Baconian Cipher Advanced',
-      url: 'https://www.youtube.com/watch?v=vv17Jbf2zb8',
-      description: 'Advanced Baconian cipher techniques'
-    }
+      title: "Baconian Cipher Advanced",
+      url: "https://www.youtube.com/watch?v=vv17Jbf2zb8",
+      description: "Advanced Baconian cipher techniques",
+    },
   ],
-  'Xenocrypt': [
+  Xenocrypt: [
     {
-      title: 'Xenocrypt Cipher',
-      url: 'https://www.youtube.com/watch?v=ldB6VFT-PzI',
-      description: 'Complete guide to Xenocrypt cipher'
-    }
+      title: "Xenocrypt Cipher",
+      url: "https://www.youtube.com/watch?v=ldB6VFT-PzI",
+      description: "Complete guide to Xenocrypt cipher",
+    },
   ],
-  'Fractionated Morse': [
+  "Fractionated Morse": [
     {
-      title: 'Fractionated Morse Cipher',
-      url: 'https://www.youtube.com/watch?v=qFyVq02M7xA',
-      description: 'Complete guide to Fractionated Morse cipher'
-    }
+      title: "Fractionated Morse Cipher",
+      url: "https://www.youtube.com/watch?v=qFyVq02M7xA",
+      description: "Complete guide to Fractionated Morse cipher",
+    },
   ],
-  'Porta': [
+  Porta: [
     {
-      title: 'Porta Cipher',
-      url: 'https://www.youtube.com/watch?v=J045Xg5-QPI',
-      description: 'Complete guide to Porta cipher'
-    }
+      title: "Porta Cipher",
+      url: "https://www.youtube.com/watch?v=J045Xg5-QPI",
+      description: "Complete guide to Porta cipher",
+    },
   ],
-  'Nihilist': [
+  Nihilist: [
     {
-      title: 'Nihilist Cipher',
-      url: 'https://www.youtube.com/watch?v=T-ooq2J_a5I',
-      description: 'Complete guide to Nihilist cipher'
-    }
+      title: "Nihilist Cipher",
+      url: "https://www.youtube.com/watch?v=T-ooq2J_a5I",
+      description: "Complete guide to Nihilist cipher",
+    },
   ],
-  'Checkerboard': [
+  Checkerboard: [
     {
-      title: 'Checkerboard Cipher',
-      url: 'https://www.youtube.com/watch?v=1ORq7Pb0-q8',
-      description: 'Complete guide to Checkerboard cipher'
-    }
+      title: "Checkerboard Cipher",
+      url: "https://www.youtube.com/watch?v=1ORq7Pb0-q8",
+      description: "Complete guide to Checkerboard cipher",
+    },
   ],
-  'Complete Columnar': [
+  "Complete Columnar": [
     {
-      title: 'Complete Columnar Cipher',
-      url: 'https://www.youtube.com/watch?v=I1uDv3mBp2U',
-      description: 'Complete guide to Complete Columnar cipher'
-    }
+      title: "Complete Columnar Cipher",
+      url: "https://www.youtube.com/watch?v=I1uDv3mBp2U",
+      description: "Complete guide to Complete Columnar cipher",
+    },
   ],
-  'Atbash': [
+  Atbash: [
     {
-      title: 'Atbash Cipher',
-      url: 'https://www.youtube.com/watch?v=dr5Y5uaacps',
-      description: 'Complete guide to Atbash cipher'
-    }
+      title: "Atbash Cipher",
+      url: "https://www.youtube.com/watch?v=dr5Y5uaacps",
+      description: "Complete guide to Atbash cipher",
+    },
   ],
-  'Affine': [
+  Affine: [
     {
-      title: 'Affine Cipher',
-      url: 'https://www.youtube.com/watch?v=S5QZ1AywBCY',
-      description: 'Complete guide to Affine cipher'
-    }
+      title: "Affine Cipher",
+      url: "https://www.youtube.com/watch?v=S5QZ1AywBCY",
+      description: "Complete guide to Affine cipher",
+    },
   ],
-  'Caesar': [
+  Caesar: [
     {
-      title: 'Caesar Cipher',
-      url: 'https://www.youtube.com/watch?v=UMvP7URrXiU',
-      description: 'Complete guide to Caesar cipher'
-    }
+      title: "Caesar Cipher",
+      url: "https://www.youtube.com/watch?v=UMvP7URrXiU",
+      description: "Complete guide to Caesar cipher",
+    },
   ],
-  'Cryptarithm': [
+  Cryptarithm: [
     {
-      title: 'Cryptarithm Tutorial',
-      url: 'https://www.youtube.com/watch?v=qwikGHbIbwM',
-      description: 'Complete guide to solving cryptarithm puzzles'
-    }
-  ]
+      title: "Cryptarithm Tutorial",
+      url: "https://www.youtube.com/watch?v=qwikGHbIbwM",
+      description: "Complete guide to solving cryptarithm puzzles",
+    },
+  ],
 };
 
 export const getVideosForCipher = (cipherType: string): CipherVideo[] => {

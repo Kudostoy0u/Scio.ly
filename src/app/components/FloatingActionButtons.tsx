@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { FileText } from 'lucide-react';
+import { FileText } from "lucide-react";
+import type React from "react";
 
 /**
  * FloatingActionButtons component props interface
@@ -24,7 +24,7 @@ interface FloatingActionButtonsProps {
  * FloatingActionButtons component
  * Provides floating action buttons for quick access to common features
  * Displays reference button for Codebusters event with responsive design
- * 
+ *
  * @param {FloatingActionButtonsProps} props - Component props
  * @returns {JSX.Element | null} Floating action buttons component or null if hidden
  * @example
@@ -43,12 +43,12 @@ export const FloatingActionButtons: React.FC<FloatingActionButtonsProps> = ({
   showReferenceButton = false,
   onShowReference,
   eventName,
-  hidden = false
+  hidden = false,
 }) => {
   const buttonBaseClasses = `p-3 rounded-full shadow-lg transition-all duration-300 hover:scale-110 ${
     darkMode
-      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
-      : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+      ? "bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white"
+      : "bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-800"
   }`;
 
   if (hidden) {
@@ -58,7 +58,7 @@ export const FloatingActionButtons: React.FC<FloatingActionButtonsProps> = ({
   return (
     <>
       {/* Mobile Reference Button - Only for Codebusters */}
-      {showReferenceButton && onShowReference && eventName === 'Codebusters' && (
+      {showReferenceButton && onShowReference && eventName === "Codebusters" && (
         <div className="md:hidden fixed bottom-8 right-4 z-50 flex flex-col gap-4">
           <button
             onClick={onShowReference}
@@ -76,8 +76,8 @@ export const FloatingActionButtons: React.FC<FloatingActionButtonsProps> = ({
         <button
           onClick={onShowReference}
           className={`hidden md:block fixed bottom-8 right-8 z-50 ${buttonBaseClasses}`}
-          title={`${eventName || 'Codebusters'} Reference`}
-          aria-label={`Open ${eventName || 'Codebusters'} Reference`}
+          title={`${eventName || "Codebusters"} Reference`}
+          aria-label={`Open ${eventName || "Codebusters"} Reference`}
         >
           <FileText className="h-5 w-5" />
         </button>

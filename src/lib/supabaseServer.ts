@@ -1,14 +1,14 @@
-import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
-import type { Database } from './types/database';
-import type { CookieOptions } from '@supabase/ssr';
+import { createServerClient } from "@supabase/ssr";
+import type { CookieOptions } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import type { Database } from "./types/database";
 
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable');
+  throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL environment variable");
 }
 
 if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable');
+  throw new Error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable");
 }
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -31,7 +31,7 @@ export async function createSupabaseServerClient() {
       },
       remove(name: string, options: CookieOptions) {
         try {
-          cookieStore.set({ name, value: '', ...options, maxAge: 0 });
+          cookieStore.set({ name, value: "", ...options, maxAge: 0 });
         } catch {
           // Ignore errors in read-only contexts
         }
@@ -45,4 +45,3 @@ export async function getServerUser() {
   const { data } = await supabase.auth.getUser();
   return data.user ?? null;
 }
-

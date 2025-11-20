@@ -1,5 +1,5 @@
-import JoinClientPage from './ClientPage';
-import { Metadata } from 'next';
+import type { Metadata } from "next";
+import JoinClientPage from "./ClientPage";
 
 export const metadata: Metadata = {
   title: "Scio.ly | Join Our Team",

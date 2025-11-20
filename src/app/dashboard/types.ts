@@ -1,4 +1,4 @@
-import { User } from '@supabase/supabase-js';
+import type { User } from "@supabase/supabase-js";
 
 /**
  * Dashboard type definitions for Science Olympiad platform
@@ -109,4 +109,4 @@ export interface AnimatedAccuracyProps {
   darkMode: boolean;
   /** Optional CSS class name */
   className?: string;
-} 
+}

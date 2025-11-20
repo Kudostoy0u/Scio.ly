@@ -1,30 +1,32 @@
 export const setupTestPrintWindow = (printContent: string): Promise<Window> => {
   return new Promise((resolve, reject) => {
     try {
-      const printWindow = window.open('', '_blank');
+      const printWindow = window.open("", "_blank");
       if (!printWindow) {
-        reject(new Error('Please allow popups to print the test'));
+        reject(new Error("Please allow popups to print the test"));
         return;
       }
 
       printWindow.onerror = () => {
-        reject(new Error('Failed to load print window'));
+        reject(new Error("Failed to load print window"));
       };
 
       const timeout = setTimeout(() => {
-        reject(new Error('Print window failed to load within 10 seconds'));
+        reject(new Error("Print window failed to load within 10 seconds"));
       }, 10000);
 
       printWindow.document.write(printContent);
       printWindow.document.close();
-      
+
       printWindow.onload = () => {
         setTimeout(() => {
-          try { 
-            printWindow.focus(); 
-            printWindow.print(); 
-          } catch (e) { 
-            import('@/lib/utils/logger').then(m => m.default.warn('Immediate auto-print failed', e)).catch(()=>{}); 
+          try {
+            printWindow.focus();
+            printWindow.print();
+          } catch (e) {
+            import("@/lib/utils/logger")
+              .then((m) => m.default.warn("Immediate auto-print failed", e))
+              .catch(() => {});
           }
         }, 200);
 
@@ -32,7 +34,7 @@ export const setupTestPrintWindow = (printContent: string): Promise<Window> => {
           printWindow.PagedPolyfill.preview();
         } else {
           setTimeout(() => {
-            const fallbackInstructions = printWindow.document.createElement('div');
+            const fallbackInstructions = printWindow.document.createElement("div");
             fallbackInstructions.innerHTML = `
               <div style="position: fixed; top: 0; left: 0; right: 0; background: #dc3545; color: white; padding: 15px; text-align: center; z-index: 9999; font-family: Arial, sans-serif;">
                 <h3 style="margin: 0 0 10px 0;">Paged.js Failed to Load</h3>
@@ -46,17 +48,22 @@ export const setupTestPrintWindow = (printContent: string): Promise<Window> => {
               </div>
             `;
             printWindow.document.body.appendChild(fallbackInstructions);
-            const printBtn = printWindow.document.getElementById('__print_btn__');
-            const closeBtn = printWindow.document.getElementById('__close_btn__');
-            if (printBtn) printBtn.addEventListener('click', () => printWindow.print());
-            if (closeBtn) closeBtn.addEventListener('click', () => printWindow.close());
+            const printBtn = printWindow.document.getElementById("__print_btn__");
+            const closeBtn = printWindow.document.getElementById("__close_btn__");
+            if (printBtn) {
+              printBtn.addEventListener("click", () => printWindow.print());
+            }
+            if (closeBtn) {
+              closeBtn.addEventListener("click", () => printWindow.close());
+            }
           }, 500);
         }
 
         try {
-          const banner = printWindow.document.createElement('div');
-          banner.setAttribute('id', '__paged_banner__');
-          banner.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; background: #007bff; color: white; padding: 12px; text-align: center; z-index: 99999; font-family: Arial, sans-serif;';
+          const banner = printWindow.document.createElement("div");
+          banner.setAttribute("id", "__paged_banner__");
+          banner.style.cssText =
+            "position: fixed; top: 0; left: 0; right: 0; background: #007bff; color: white; padding: 12px; text-align: center; z-index: 99999; font-family: Arial, sans-serif;";
           banner.innerHTML = `
             <div style="display:flex; justify-content:center; align-items:center; gap:12px;">
               <div style="font-weight:600;">Ready to print — click Print or press Ctrl/Cmd+P</div>
@@ -65,26 +72,37 @@ export const setupTestPrintWindow = (printContent: string): Promise<Window> => {
             </div>
           `;
           printWindow.document.body.prepend(banner);
-          const pbtn = printWindow.document.getElementById('__paged_print_btn__');
-          const cbtn = printWindow.document.getElementById('__paged_close_btn__');
-          if (pbtn) pbtn.addEventListener('click', () => {
-            try { printWindow.focus(); } catch {}
-            printWindow.print();
-          });
-          if (cbtn) cbtn.addEventListener('click', () => printWindow.close());
+          const pbtn = printWindow.document.getElementById("__paged_print_btn__");
+          const cbtn = printWindow.document.getElementById("__paged_close_btn__");
+          if (pbtn) {
+            pbtn.addEventListener("click", () => {
+              try {
+                printWindow.focus();
+              } catch {}
+              printWindow.print();
+            });
+          }
+          if (cbtn) {
+            cbtn.addEventListener("click", () => printWindow.close());
+          }
         } catch (e) {
-          import('@/lib/utils/logger').then(m => m.default.error('Failed to inject banner into print window', e)).catch(()=>{});
+          import("@/lib/utils/logger")
+            .then((m) => m.default.error("Failed to inject banner into print window", e))
+            .catch(() => {});
         }
 
-        try { printWindow.focus(); } catch {}
+        try {
+          printWindow.focus();
+        } catch {}
         clearTimeout(timeout);
         resolve(printWindow);
       };
-
     } catch (error) {
-      reject(new Error(`Failed to create print window: ${error instanceof Error ? error.message : 'Unknown error'}`));
+      reject(
+        new Error(
+          `Failed to create print window: ${error instanceof Error ? error.message : "Unknown error"}`
+        )
+      );
     }
   });
 };
-
-

@@ -1,10 +1,10 @@
-'use client';
-import logger from '@/lib/utils/logger';
-import { withAuthRetryData } from '@/lib/utils/supabaseRetry';
-import SyncLocalStorage from '@/lib/database/localStorage-replacement';
+"use client";
+import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import logger from "@/lib/utils/logger";
+import { withAuthRetryData } from "@/lib/utils/supabaseRetry";
 
-import { supabase } from '@/lib/supabase';
-import type { DailyMetrics } from './metrics';
+import { supabase } from "@/lib/supabase";
+import type { DailyMetrics } from "./metrics";
 
 /**
  * Dashboard data management utilities for Science Olympiad platform
@@ -35,35 +35,34 @@ export interface DashboardData {
   greetingName: string;
 }
 
-
 /** LocalStorage key prefix for metrics data */
-const METRICS_PREFIX = 'metrics_';
+const METRICS_PREFIX = "metrics_";
 /** LocalStorage key for greeting name */
-const GREETING_NAME_KEY = 'scio_display_name';
+const GREETING_NAME_KEY = "scio_display_name";
 
 /**
  * Gets today's date as a string key
- * 
+ *
  * @returns {string} Today's date in YYYY-MM-DD format
  */
-const getTodayKey = (): string => new Date().toISOString().split('T')[0];
+const getTodayKey = (): string => new Date().toISOString().split("T")[0];
 
 /**
  * Retrieves greeting name from localStorage
- * 
+ *
  * @returns {string} User's greeting name or empty string
  */
 const getLocalGreetingName = (): string => {
   try {
-    return SyncLocalStorage.getItem(GREETING_NAME_KEY) || '';
+    return SyncLocalStorage.getItem(GREETING_NAME_KEY) || "";
   } catch {
-    return '';
+    return "";
   }
 };
 
 /**
  * Sets greeting name in localStorage
- * 
+ *
  * @param {string} name - Greeting name to store
  */
 const setLocalGreetingName = (name: string): void => {
@@ -100,13 +99,17 @@ const getLocalHistory = (): Record<string, HistoryRecord> => {
   const historyData: Record<string, HistoryRecord> = {};
   try {
     for (let i = 0; i < SyncLocalStorage.getLength(); i++) {
-      const key = SyncLocalStorage.key(i) || '';
-      if (!key.startsWith(METRICS_PREFIX)) continue;
-      
-      const date = key.replace(METRICS_PREFIX, '');
+      const key = SyncLocalStorage.key(i) || "";
+      if (!key.startsWith(METRICS_PREFIX)) {
+        continue;
+      }
+
+      const date = key.replace(METRICS_PREFIX, "");
       const raw = SyncLocalStorage.getItem(key);
-      if (!raw) continue;
-      
+      if (!raw) {
+        continue;
+      }
+
       try {
         const parsed = JSON.parse(raw) as DailyMetrics;
         historyData[date] = {
@@ -117,49 +120,41 @@ const getLocalHistory = (): Record<string, HistoryRecord> => {
       } catch {}
     }
   } catch {}
-  
+
   return historyData;
 };
 
-
 const fetchUserStatsSince = async (userId: string, fromDate: string): Promise<any[]> => {
-  const result = await withAuthRetryData(
-    async () => {
-      const query = supabase
-        .from('user_stats')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('date', fromDate);
-      return await query;
-    },
-    'fetchUserStatsSince'
-  );
+  const result = await withAuthRetryData(async () => {
+    const query = supabase
+      .from("user_stats")
+      .select("*")
+      .eq("user_id", userId)
+      .gte("date", fromDate);
+    return await query;
+  }, "fetchUserStatsSince");
 
   return result || [];
 };
 
 const fetchDailyUserStatsRow = async (userId: string, date: string): Promise<any | null> => {
-  const result = await withAuthRetryData(
-    async () => {
-      const query = supabase
-        .from('user_stats')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('date', date)
-        .maybeSingle();
-      return await query;
-    },
-    'fetchDailyUserStatsRow'
-  );
+  const result = await withAuthRetryData(async () => {
+    const query = supabase
+      .from("user_stats")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("date", date)
+      .maybeSingle();
+    return await query;
+  }, "fetchDailyUserStatsRow");
 
   return result;
 };
 
-
 /**
  * Synchronizes dashboard data between Supabase and localStorage
  * Fetches user statistics from database and syncs with local storage
- * 
+ *
  * @param {string | null} userId - User ID to sync data for, null for guest users
  * @returns {Promise<DashboardData>} Synchronized dashboard data
  * @throws {Error} When database sync fails
@@ -172,11 +167,10 @@ const fetchDailyUserStatsRow = async (userId: string, date: string): Promise<any
  */
 export const syncDashboardData = async (userId: string | null): Promise<DashboardData> => {
   if (!userId) {
-
     const metrics = getLocalDailyMetrics();
     const historyData = getLocalHistory();
     const greetingName = getLocalGreetingName();
-    
+
     return {
       metrics,
       historyData,
@@ -186,7 +180,7 @@ export const syncDashboardData = async (userId: string | null): Promise<Dashboar
 
   try {
     // 1. sync all historical data from supabase to localstorage
-    const allRows = await fetchUserStatsSince(userId, '1970-01-01');
+    const allRows = await fetchUserStatsSince(userId, "1970-01-01");
     if (Array.isArray(allRows)) {
       allRows.forEach((row: any) => {
         try {
@@ -220,25 +214,25 @@ export const syncDashboardData = async (userId: string | null): Promise<Dashboar
     // 3. sync greeting name
     try {
       if (!userId) {
-        logger.warn('No userId provided for greeting name sync');
-      } else if (typeof userId !== 'string' || userId.trim() === '') {
-        logger.warn('Invalid userId for greeting name sync:', userId);
+        logger.warn("No userId provided for greeting name sync");
+      } else if (typeof userId !== "string" || userId.trim() === "") {
+        logger.warn("Invalid userId for greeting name sync:", userId);
       } else {
-        logger.log('Fetching user profile for greeting name, userId:', userId);
+        logger.log("Fetching user profile for greeting name, userId:", userId);
         const { data: profile } = await supabase
-          .from('users')
-          .select('first_name, display_name')
-          .eq('id', userId.trim())
+          .from("users")
+          .select("first_name, display_name")
+          .eq("id", userId.trim())
           .maybeSingle();
-        
-        const firstName = (profile as any)?.first_name as string | undefined;
-        const displayName = (profile as any)?.display_name as string | undefined;
-        const chosen = (firstName && firstName.trim())
+
+        const firstName = profile?.first_name;
+        const displayName = profile?.display_name;
+        const chosen = firstName?.trim()
           ? firstName.trim()
-          : (displayName && displayName.trim())
-            ? displayName.trim().split(' ')[0]
-            : '';
-        
+          : displayName?.trim()
+            ? displayName.trim().split(" ")[0]
+            : "";
+
         if (chosen) {
           setLocalGreetingName(chosen);
         }
@@ -256,13 +250,12 @@ export const syncDashboardData = async (userId: string | null): Promise<Dashboar
       greetingName,
     };
   } catch (error) {
-    logger.error('Error syncing dashboard data:', error);
-    
+    logger.error("Error syncing dashboard data:", error);
 
     const metrics = getLocalDailyMetrics();
     const historyData = getLocalHistory();
     const greetingName = getLocalGreetingName();
-    
+
     return {
       metrics,
       historyData,
@@ -277,7 +270,7 @@ const userIdToInFlightSync: Record<string, Promise<DashboardData> | undefined> =
 /**
  * Coalesces multiple concurrent sync requests per user into a single in-flight Promise
  * Prevents duplicate API calls when multiple components request sync simultaneously
- * 
+ *
  * @param {string | null} userId - User ID to sync data for
  * @returns {Promise<DashboardData>} Synchronized dashboard data
  * @example
@@ -289,20 +282,27 @@ const userIdToInFlightSync: Record<string, Promise<DashboardData> | undefined> =
  * ```
  */
 export const coalescedSyncDashboardData = async (userId: string | null): Promise<DashboardData> => {
-  if (!userId) return syncDashboardData(userId);
-  if (userIdToInFlightSync[userId]) return userIdToInFlightSync[userId] as Promise<DashboardData>;
+  if (!userId) {
+    return syncDashboardData(userId);
+  }
+  if (userIdToInFlightSync[userId]) {
+    return userIdToInFlightSync[userId] as Promise<DashboardData>;
+  }
   const p = syncDashboardData(userId)
-    .catch((e) => { throw e; })
-    .finally(() => { userIdToInFlightSync[userId] = undefined; });
+    .catch((e) => {
+      throw e;
+    })
+    .finally(() => {
+      userIdToInFlightSync[userId] = undefined;
+    });
   userIdToInFlightSync[userId] = p;
   return p;
 };
 
-
 /**
  * Gets initial dashboard data from localStorage
  * Returns cached data without making API calls
- * 
+ *
  * @returns {DashboardData} Initial dashboard data from localStorage
  * @example
  * ```typescript
@@ -314,7 +314,7 @@ export const getInitialDashboardData = (): DashboardData => {
   const metrics = getLocalDailyMetrics();
   const historyData = getLocalHistory();
   const greetingName = getLocalGreetingName();
-  
+
   return {
     metrics,
     historyData,
@@ -322,11 +322,10 @@ export const getInitialDashboardData = (): DashboardData => {
   };
 };
 
-
 /**
  * Updates dashboard metrics for a user
  * Updates both local storage and database with new metrics
- * 
+ *
  * @param {string | null} userId - User ID to update metrics for
  * @param {Object} updates - Metrics updates to apply
  * @param {number} [updates.questionsAttempted] - Number of questions attempted
@@ -351,93 +350,100 @@ export const updateDashboardMetrics = async (
   }
 ): Promise<DailyMetrics | null> => {
   const attemptedDelta = Math.round(updates.questionsAttempted || 0);
-  
-  if (!userId) {
 
+  if (!userId) {
     const currentStats = getLocalDailyMetrics();
     const updatedStats: DailyMetrics = {
       ...currentStats,
       questionsAttempted: currentStats.questionsAttempted + attemptedDelta,
       correctAnswers: currentStats.correctAnswers + (updates.correctAnswers || 0),
-      eventsPracticed: updates.eventName && !currentStats.eventsPracticed.includes(updates.eventName)
-        ? [...currentStats.eventsPracticed, updates.eventName]
-        : currentStats.eventsPracticed,
+      eventsPracticed:
+        updates.eventName && !currentStats.eventsPracticed.includes(updates.eventName)
+          ? [...currentStats.eventsPracticed, updates.eventName]
+          : currentStats.eventsPracticed,
       eventQuestions: {
         ...currentStats.eventQuestions,
-        ...(updates.eventName && attemptedDelta ? {
-          [updates.eventName]: (currentStats.eventQuestions?.[updates.eventName] || 0) + attemptedDelta
-        } : {})
-      }
+        ...(updates.eventName && attemptedDelta
+          ? {
+              [updates.eventName]:
+                (currentStats.eventQuestions?.[updates.eventName] || 0) + attemptedDelta,
+            }
+          : {}),
+      },
     };
     setLocalDailyMetrics(updatedStats);
     return updatedStats;
   }
-  
 
   const today = getTodayKey();
-  
+
   try {
-
     const currentData = await fetchDailyUserStatsRow(userId, today);
-    const currentStats = currentData ? {
-      questionsAttempted: currentData.questions_attempted || 0,
-      correctAnswers: currentData.correct_answers || 0,
-      eventsPracticed: currentData.events_practiced || [],
-      eventQuestions: currentData.event_questions || {},
-      gamePoints: currentData.game_points || 0,
-    } : {
-      questionsAttempted: 0,
-      correctAnswers: 0,
-      eventsPracticed: [],
-      eventQuestions: {},
-      gamePoints: 0,
-    };
-
+    const currentStats = currentData
+      ? {
+          questionsAttempted: currentData.questions_attempted || 0,
+          correctAnswers: currentData.correct_answers || 0,
+          eventsPracticed: currentData.events_practiced || [],
+          eventQuestions: currentData.event_questions || {},
+          gamePoints: currentData.game_points || 0,
+        }
+      : {
+          questionsAttempted: 0,
+          correctAnswers: 0,
+          eventsPracticed: [],
+          eventQuestions: {},
+          gamePoints: 0,
+        };
 
     const updatedStats = {
       user_id: userId,
       date: today,
       questions_attempted: currentStats.questionsAttempted + attemptedDelta,
       correct_answers: currentStats.correctAnswers + (updates.correctAnswers || 0),
-      events_practiced: updates.eventName && !currentStats.eventsPracticed.includes(updates.eventName)
-        ? [...currentStats.eventsPracticed, updates.eventName]
-        : currentStats.eventsPracticed,
+      events_practiced:
+        updates.eventName && !currentStats.eventsPracticed.includes(updates.eventName)
+          ? [...currentStats.eventsPracticed, updates.eventName]
+          : currentStats.eventsPracticed,
       event_questions: {
         ...currentStats.eventQuestions,
-        ...(updates.eventName && attemptedDelta ? {
-          [updates.eventName]: (currentStats.eventQuestions?.[updates.eventName] || 0) + attemptedDelta
-        } : {})
+        ...(updates.eventName && attemptedDelta
+          ? {
+              [updates.eventName]:
+                (currentStats.eventQuestions?.[updates.eventName] || 0) + attemptedDelta,
+            }
+          : {}),
       },
-      game_points: currentStats.gamePoints
+      game_points: currentStats.gamePoints,
     };
 
-
-    let { data, error } = await (supabase as any)
-      .from('user_stats')
-      .upsert(updatedStats as any, { onConflict: 'user_id,date' })
+    let { data, error } = await supabase
+      .from("user_stats")
+      .upsert(updatedStats, { onConflict: "user_id,date" })
       .select()
       .single();
 
     if (error) {
-      if ((error as any).status && [401, 403].includes((error as any).status)) {
-        try { await supabase.auth.refreshSession(); } catch {}
-        const retry = await (supabase as any)
-          .from('user_stats')
-          .upsert(updatedStats as any, { onConflict: 'user_id,date' })
+      if (error && typeof error === "object" && "status" in error && 
+          typeof error.status === "number" && [401, 403].includes(error.status)) {
+        try {
+          await supabase.auth.refreshSession();
+        } catch {}
+        const retry = await supabase
+          .from("user_stats")
+          .upsert(updatedStats, { onConflict: "user_id,date" })
           .select()
           .single();
         if (retry.error) {
-          logger.error('Error updating metrics after refresh:', retry.error);
+          logger.error("Error updating metrics after refresh:", retry.error);
           return null;
         }
         data = retry.data;
         error = retry.error;
       } else {
-        logger.error('Error updating metrics:', error);
+        logger.error("Error updating metrics:", error);
         return null;
       }
     }
-
 
     const localMetrics: DailyMetrics = {
       questionsAttempted: data.questions_attempted,
@@ -450,16 +456,15 @@ export const updateDashboardMetrics = async (
 
     return localMetrics;
   } catch (error) {
-    logger.error('Error updating metrics:', error);
+    logger.error("Error updating metrics:", error);
     return null;
   }
 };
 
-
 /**
  * Resets all localStorage data except theme settings
  * Clears all user data while preserving theme preferences
- * 
+ *
  * @example
  * ```typescript
  * resetAllLocalStorageExceptTheme();
@@ -468,15 +473,21 @@ export const updateDashboardMetrics = async (
  */
 export function resetAllLocalStorageExceptTheme(): void {
   try {
-    const preservedTheme = SyncLocalStorage.getItem('theme');
+    const preservedTheme = SyncLocalStorage.getItem("theme");
     SyncLocalStorage.clear();
     if (preservedTheme !== null) {
-      SyncLocalStorage.setItem('theme', preservedTheme);
+      SyncLocalStorage.setItem("theme", preservedTheme);
     }
 
-    try { SyncLocalStorage.removeItem(GREETING_NAME_KEY); } catch {}
-    try { SyncLocalStorage.removeItem('scio_chart_type'); } catch {}
+    try {
+      SyncLocalStorage.removeItem(GREETING_NAME_KEY);
+    } catch {}
+    try {
+      SyncLocalStorage.removeItem("scio_chart_type");
+    } catch {}
 
-    try { window.dispatchEvent(new CustomEvent('scio-display-name-updated', { detail: '' })); } catch {}
+    try {
+      window.dispatchEvent(new CustomEvent("scio-display-name-updated", { detail: "" }));
+    } catch {}
   } catch {}
 }

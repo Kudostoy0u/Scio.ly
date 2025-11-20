@@ -16,25 +16,26 @@ export interface EventCapabilities {
  * Check if an event supports picture/ID questions
  */
 export function supportsPictureQuestions(eventName: string): boolean {
-  const base = eventName.split(' - ')[0];
+  const base = eventName.split(" - ")[0];
   const candidates = [
-    'Rocks and Minerals',
-    'Entomology',
-    'Anatomy - Nervous',
-    'Anatomy - Endocrine',
-    'Anatomy - Sense Organs',
-    'Anatomy & Physiology',
-    'Dynamic Planet',
-    'Dynamic Planet - Oceanography',
-    'Water Quality',
-    'Water Quality - Freshwater',
-    'Remote Sensing',
-    'Circuit Lab',
-    'Astronomy',
-    'Designer Genes',
-    'Forensics',
-    'Meteorology'
+    "Rocks and Minerals",
+    "Entomology",
+    "Anatomy - Nervous",
+    "Anatomy - Endocrine",
+    "Anatomy - Sense Organs",
+    "Anatomy & Physiology",
+    "Dynamic Planet",
+    "Dynamic Planet - Oceanography",
+    "Water Quality",
+    "Water Quality - Freshwater",
+    "Remote Sensing",
+    "Circuit Lab",
+    "Astronomy",
+    "Designer Genes",
+    "Forensics",
+    "Meteorology",
   ];
+  if (!eventName) return false;
   return candidates.includes(eventName) || candidates.includes(base);
 }
 
@@ -43,10 +44,10 @@ export function supportsPictureQuestions(eventName: string): boolean {
  */
 export function supportsIdentificationOnly(eventName: string): boolean {
   const candidates = [
-    'Rocks and Minerals',
-    'Entomology',
-    'Water Quality - Freshwater',
-    'Astronomy'
+    "Rocks and Minerals",
+    "Entomology",
+    "Water Quality - Freshwater",
+    "Astronomy",
   ];
   return candidates.includes(eventName);
 }
@@ -55,7 +56,7 @@ export function supportsIdentificationOnly(eventName: string): boolean {
  * Check if an event is Codebusters (has special handling)
  */
 export function isCodebustersEvent(eventName: string): boolean {
-  return eventName === 'Codebusters';
+  return eventName === "Codebusters";
 }
 
 /**
@@ -63,14 +64,14 @@ export function isCodebustersEvent(eventName: string): boolean {
  */
 export function getEventCapabilities(eventName: string): EventCapabilities {
   const isCodebusters = isCodebustersEvent(eventName);
-  
+
   return {
     supportsPictureQuestions: supportsPictureQuestions(eventName),
     supportsIdentificationOnly: supportsIdentificationOnly(eventName),
-    availableDivisions: ['B', 'C'], // Most events support both divisions
+    availableDivisions: ["B", "C"], // Most events support both divisions
     maxQuestions: isCodebusters ? 10 : 50, // Codebusters typically has fewer questions
     defaultTimeLimit: isCodebusters ? 15 : 30, // Codebusters has shorter time limits
-    isCodebusters
+    isCodebusters,
   };
 }
 
@@ -78,15 +79,15 @@ export function getEventCapabilities(eventName: string): EventCapabilities {
  * Validate event name and return normalized version
  */
 export function validateEventName(eventName: string): string {
-  if (!eventName || typeof eventName !== 'string') {
-    throw new Error('Event name is required');
+  if (!eventName || typeof eventName !== "string") {
+    throw new Error("Event name is required");
   }
-  
+
   const trimmed = eventName.trim();
   if (trimmed.length === 0) {
-    throw new Error('Event name cannot be empty');
+    throw new Error("Event name cannot be empty");
   }
-  
+
   return trimmed;
 }
 
@@ -95,18 +96,18 @@ export function validateEventName(eventName: string): string {
  */
 export function getDefaultEventSettings(eventName: string) {
   const capabilities = getEventCapabilities(eventName);
-  
+
   return {
     questionCount: 10,
     timeLimit: capabilities.defaultTimeLimit,
-    difficulties: ['easy', 'medium', 'hard'],
-    types: 'multiple-choice' as const,
-    division: 'any' as const,
-    tournament: 'any',
+    difficulties: ["easy", "medium", "hard"],
+    types: "multiple-choice" as const,
+    division: "any" as const,
+    tournament: "any",
     subtopics: [] as string[],
     idPercentage: capabilities.supportsPictureQuestions ? 0 : undefined,
     charLengthMin: undefined,
     charLengthMax: undefined,
-    pureIdOnly: capabilities.supportsIdentificationOnly ? false : undefined
+    pureIdOnly: capabilities.supportsIdentificationOnly ? false : undefined,
   };
 }

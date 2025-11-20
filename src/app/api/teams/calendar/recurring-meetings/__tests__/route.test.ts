@@ -1,173 +1,260 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NextRequest } from 'next/server';
-import { POST } from '../route';
+import { NextRequest } from "next/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { POST } from "@/app/api/teams/calendar/recurring-meetings/route";
 
 // Mock the dependencies
-vi.mock('@/lib/supabaseServer', () => ({
-  getServerUser: vi.fn()
+vi.mock("@/lib/supabaseServer", () => ({
+  getServerUser: vi.fn(),
 }));
 
-vi.mock('@/lib/cockroachdb', () => ({
-  queryCockroachDB: vi.fn()
+vi.mock("@/lib/db", () => ({
+  dbPg: {
+    select: vi.fn(),
+    from: vi.fn(),
+    where: vi.fn(),
+    insert: vi.fn(),
+    values: vi.fn(),
+    limit: vi.fn(),
+  },
 }));
 
-import { getServerUser } from '@/lib/supabaseServer';
-import { queryCockroachDB } from '@/lib/cockroachdb';
+import { dbPg } from "@/lib/db";
+import { getServerUser } from "@/lib/supabaseServer";
 
 const mockGetServerUser = vi.mocked(getServerUser);
-const mockQueryCockroachDB = vi.mocked(queryCockroachDB);
+const mockDbPg = vi.mocked(dbPg);
 
-describe('/api/teams/calendar/recurring-meetings', () => {
+describe("/api/teams/calendar/recurring-meetings", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('POST', () => {
-    it('should create recurring meeting successfully', async () => {
-      const mockUser = { id: 'user-123' };
-      const mockGroupId = 'group-123';
-      const mockTeamUnitId = 'unit-123';
-      const mockMeetingId = 'meeting-123';
+  describe("POST", () => {
+    it("should create recurring meeting successfully", async () => {
+      const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
+      const mockUser = { id: mockUserId };
+      const mockGroupId = "group-123";
+      const mockTeamUnitId = "unit-123";
+      const mockMeetingId = "meeting-123";
 
       mockGetServerUser.mockResolvedValue(mockUser);
-      mockQueryCockroachDB
-        .mockResolvedValueOnce({ rows: [{ id: mockGroupId }] }) // group lookup
-        .mockResolvedValueOnce({ rows: [{ id: mockTeamUnitId }] }) // team units
-        .mockResolvedValueOnce({ rows: [{ role: 'captain', team_id: mockTeamUnitId }] }) // membership check
-        .mockResolvedValueOnce({ rows: [{ id: mockMeetingId }] }); // insert meeting
-
-      const request = new NextRequest('http://localhost:3000/api/teams/calendar/recurring-meetings', {
-        method: 'POST',
-        body: JSON.stringify({
-          team_slug: 'test-team',
-          title: 'Weekly Practice',
-          days_of_week: [1, 3], // Monday, Wednesday
-          start_time: '15:00',
-          end_time: '17:00',
-          start_date: '2024-01-01',
-          end_date: '2024-12-31',
-          created_by: 'user-123'
+      
+      // Mock team group lookup (select().from().where().limit())
+      // Note: Route destructures first result: const [groupResult] = await dbPg...
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ id: mockGroupId }]),
+          }),
         }),
-        headers: { 'Content-Type': 'application/json' }
       });
+      
+      // Mock team units lookup (select().from().where())
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ id: mockTeamUnitId }]),
+        }),
+      });
+      
+      // Mock membership check (select().from().where())
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ role: "captain", teamId: mockTeamUnitId }]),
+        }),
+      });
+      
+      // Mock insert meeting (insert().values().returning())
+      mockDbPg.insert.mockReturnValue({
+        values: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([{ id: mockMeetingId }]),
+        }),
+      });
+
+      const request = new NextRequest(
+        "http://localhost:3000/api/teams/calendar/recurring-meetings",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            team_slug: "test-team",
+            title: "Weekly Practice",
+            days_of_week: [1, 3], // Monday, Wednesday
+            start_time: "15:00",
+            end_time: "17:00",
+            start_date: "2024-01-01T00:00:00Z",
+            end_date: "2024-12-31T00:00:00Z",
+            created_by: "123e4567-e89b-12d3-a456-426614174000",
+          }),
+          headers: { "Content-Type": "application/json" },
+        }
+      );
 
       const response = await POST(request);
       const data = await response.json();
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      expect(data.meetingId).toBe(mockMeetingId);
+      expect(data.meetingIds).toContain(mockMeetingId);
+      expect(data.count).toBeGreaterThan(0);
     });
 
-    it('should return 401 when user is not authenticated', async () => {
+    it("should return 401 when user is not authenticated", async () => {
       mockGetServerUser.mockResolvedValue(null);
 
-      const request = new NextRequest('http://localhost:3000/api/teams/calendar/recurring-meetings', {
-        method: 'POST',
-        body: JSON.stringify({
-          team_slug: 'test-team',
-          title: 'Weekly Practice',
-          days_of_week: [1, 3],
-          start_time: '15:00',
-          end_time: '17:00',
-          start_date: '2024-01-01'
-        }),
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const request = new NextRequest(
+        "http://localhost:3000/api/teams/calendar/recurring-meetings",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            team_slug: "test-team",
+            title: "Weekly Practice",
+            days_of_week: [1, 3],
+            start_time: "15:00",
+            end_time: "17:00",
+            start_date: "2024-01-01T00:00:00Z",
+          }),
+          headers: { "Content-Type": "application/json" },
+        }
+      );
 
       const response = await POST(request);
       const data = await response.json();
 
       expect(response.status).toBe(401);
-      expect(data.error).toBe('Unauthorized');
+      expect(data.error).toBe("Unauthorized");
     });
 
-    it('should return 400 when required fields are missing', async () => {
-      const mockUser = { id: 'user-123' };
+    it("should return 400 when required fields are missing", async () => {
+      const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
+      const mockUser = { id: mockUserId };
 
       mockGetServerUser.mockResolvedValue(mockUser);
 
-      const request = new NextRequest('http://localhost:3000/api/teams/calendar/recurring-meetings', {
-        method: 'POST',
-        body: JSON.stringify({
-          team_slug: 'test-team',
-          // Missing required fields
-        }),
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const request = new NextRequest(
+        "http://localhost:3000/api/teams/calendar/recurring-meetings",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            team_slug: "test-team",
+            // Missing required fields
+          }),
+          headers: { "Content-Type": "application/json" },
+        }
+      );
 
       const response = await POST(request);
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.error).toContain('required');
+      expect(data.error).toBe("Validation failed");
+      expect(data.details).toBeDefined();
+      expect(Array.isArray(data.details)).toBe(true);
+      expect(data.details.some((detail: string) => /required/i.test(detail))).toBe(true);
     });
 
-    it('should return 404 when team is not found', async () => {
-      const mockUser = { id: 'user-123' };
+    it("should return 404 when team is not found", async () => {
+      const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
+      const mockUser = { id: mockUserId };
 
       mockGetServerUser.mockResolvedValue(mockUser);
-      mockQueryCockroachDB.mockResolvedValueOnce({ rows: [] }); // No group found
-
-      const request = new NextRequest('http://localhost:3000/api/teams/calendar/recurring-meetings', {
-        method: 'POST',
-        body: JSON.stringify({
-          team_slug: 'invalid-team',
-          title: 'Weekly Practice',
-          days_of_week: [1, 3],
-          start_time: '15:00',
-          end_time: '17:00',
-          start_date: '2024-01-01',
-          end_date: '2024-12-31',
-          created_by: 'user-123'
+      // Mock team group lookup - no group found
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
         }),
-        headers: { 'Content-Type': 'application/json' }
       });
+
+      const request = new NextRequest(
+        "http://localhost:3000/api/teams/calendar/recurring-meetings",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            team_slug: "invalid-team",
+            title: "Weekly Practice",
+            days_of_week: [1, 3],
+            start_time: "15:00",
+            end_time: "17:00",
+            start_date: "2024-01-01T00:00:00Z",
+            end_date: "2024-12-31T00:00:00Z",
+            created_by: "123e4567-e89b-12d3-a456-426614174000",
+          }),
+          headers: { "Content-Type": "application/json" },
+        }
+      );
 
       const response = await POST(request);
       const data = await response.json();
 
       expect(response.status).toBe(404);
-      expect(data.error).toBe('Team not found');
+      expect(data.error).toBe("Team not found");
     });
 
-    it('should create personal recurring meeting for non-captain members', async () => {
-      const mockUser = { id: 'user-123' };
-      const mockGroupId = 'group-123';
-      const mockTeamUnitId = 'unit-123';
-      const mockMeetingId = 'meeting-123';
-      const mockEventId = 'event-123';
+    it("should create personal recurring meeting for non-captain members", async () => {
+      const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
+      const mockUser = { id: mockUserId };
+      const mockGroupId = "group-123";
+      const mockTeamUnitId = "unit-123";
+      const mockMeetingId = "meeting-123";
 
       mockGetServerUser.mockResolvedValue(mockUser);
-      mockQueryCockroachDB
-        .mockResolvedValueOnce({ rows: [{ id: mockGroupId }] }) // group lookup
-        .mockResolvedValueOnce({ rows: [{ id: mockTeamUnitId }] }) // team units
-        .mockResolvedValueOnce({ rows: [{ role: 'member', team_id: mockTeamUnitId }] }) // membership check - member
-        .mockResolvedValueOnce({ rows: [{ id: mockMeetingId }] }) // insert meeting
-        .mockResolvedValueOnce({ rows: [{ id: mockEventId }] }) // insert personal event
-        .mockResolvedValueOnce({ rows: [] }); // insert attendee
-
-      const request = new NextRequest('http://localhost:3000/api/teams/calendar/recurring-meetings', {
-        method: 'POST',
-        body: JSON.stringify({
-          team_slug: 'test-team',
-          title: 'Weekly Practice',
-          days_of_week: [1, 3],
-          start_time: '15:00',
-          end_time: '17:00',
-          start_date: '2024-01-01',
-          end_date: '2024-12-31',
-          created_by: 'user-123'
+      
+      // Mock team group lookup
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ id: mockGroupId }]),
+          }),
         }),
-        headers: { 'Content-Type': 'application/json' }
       });
+      
+      // Mock team units lookup
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ id: mockTeamUnitId }]),
+        }),
+      });
+      
+      // Mock membership check - member role
+      mockDbPg.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ role: "member", teamId: mockTeamUnitId }]),
+        }),
+      });
+      
+      // Mock insert meeting
+      mockDbPg.insert.mockReturnValue({
+        values: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([{ id: mockMeetingId }]),
+        }),
+      });
+
+      const request = new NextRequest(
+        "http://localhost:3000/api/teams/calendar/recurring-meetings",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            team_slug: "test-team",
+            title: "Weekly Practice",
+            days_of_week: [1, 3],
+            start_time: "15:00",
+            end_time: "17:00",
+            start_date: "2024-01-01T00:00:00Z",
+            end_date: "2024-12-31T00:00:00Z",
+            created_by: "123e4567-e89b-12d3-a456-426614174000",
+            meeting_type: "personal", // Personal meeting allows members
+          }),
+          headers: { "Content-Type": "application/json" },
+        }
+      );
 
       const response = await POST(request);
       const data = await response.json();
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      expect(data.meetingId).toBe(mockMeetingId);
+      expect(data.meetingIds).toContain(mockMeetingId);
+      expect(data.count).toBe(1);
     });
   });
 });

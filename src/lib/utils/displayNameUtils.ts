@@ -16,74 +16,77 @@ export interface UserProfile {
  * @param userId User ID for fallback generation
  * @returns Object with name and whether user needs a name prompt
  */
-export function generateDisplayName(profile: UserProfile | null, userId?: string): {
+export function generateDisplayName(
+  profile: UserProfile | null,
+  userId?: string
+): {
   name: string;
   needsNamePrompt: boolean;
 } {
   if (!profile) {
     return {
-      name: userId ? `@unknown` : '@unknown',
-      needsNamePrompt: true
+      name: userId ? "@unknown" : "@unknown",
+      needsNamePrompt: true,
     };
   }
 
   // Comprehensive fallback chain for display names
-  if (profile.displayName && profile.displayName.trim()) {
+  if (profile.displayName?.trim()) {
     return {
       name: profile.displayName.trim(),
-      needsNamePrompt: false
+      needsNamePrompt: false,
     };
   }
 
   if (profile.firstName && profile.lastName) {
     return {
       name: `${profile.firstName.trim()} ${profile.lastName.trim()}`,
-      needsNamePrompt: false
+      needsNamePrompt: false,
     };
   }
 
-  if (profile.firstName && profile.firstName.trim()) {
+  if (profile.firstName?.trim()) {
     return {
       name: profile.firstName.trim(),
-      needsNamePrompt: false
+      needsNamePrompt: false,
     };
   }
 
-  if (profile.lastName && profile.lastName.trim()) {
+  if (profile.lastName?.trim()) {
     return {
       name: profile.lastName.trim(),
-      needsNamePrompt: false
+      needsNamePrompt: false,
     };
   }
 
-  if (profile.username && profile.username.trim() && !profile.username.startsWith('user_')) {
+  if (profile.username?.trim() && !profile.username.startsWith("user_")) {
     return {
       name: `@${profile.username.trim()}`,
-      needsNamePrompt: false
+      needsNamePrompt: false,
     };
   }
 
-  if (profile.email && profile.email.includes('@')) {
-    const emailLocal = profile.email.split('@')[0];
+  if (profile.email?.includes("@")) {
+    const emailLocal = profile.email.split("@")[0];
     if (emailLocal && emailLocal.length > 2 && !emailLocal.match(/^[a-f0-9]{8}$/)) {
       return {
         name: `@${emailLocal}`,
-        needsNamePrompt: false
+        needsNamePrompt: false,
       };
     }
   }
 
   // Check for auto-generated names that should prompt for better names
-  if (profile.username && profile.username.startsWith('user_')) {
+  if (profile.username?.startsWith("user_")) {
     return {
-      name: `@unknown`,
-      needsNamePrompt: true
+      name: "@unknown",
+      needsNamePrompt: true,
     };
   }
 
   return {
-    name: `@unknown`,
-    needsNamePrompt: true
+    name: "@unknown",
+    needsNamePrompt: true,
   };
 }
 
@@ -96,15 +99,15 @@ export function generateDisplayName(profile: UserProfile | null, userId?: string
  */
 export function needsNamePrompt(name: string | null | undefined): boolean {
   // Handle null/undefined cases
-  if (!name || typeof name !== 'string') {
+  if (!name || typeof name !== "string") {
     return true; // Prompt for name if no name provided
   }
-  
+
   return (
-    name === '@unknown' ||
-    name.startsWith('User ') ||
+    name === "@unknown" ||
+    name.startsWith("User ") ||
     Boolean(name.match(/^[a-f0-9]{8}$/)) ||
-    name.startsWith('user_') ||
+    name.startsWith("user_") ||
     /^@user-/.test(name)
   );
 }
@@ -116,18 +119,20 @@ export function needsNamePrompt(name: string | null | undefined): boolean {
  * @returns Single character for avatar
  */
 export function getAvatarInitial(name: string, email?: string): string {
-  if (name && name !== '@unknown') {
+  if (name && name !== "@unknown") {
     // Remove @ prefix for initials
-    const cleanName = name.startsWith('@') ? name.slice(1) : name;
-    return cleanName[0].toUpperCase();
+    const cleanName = name.startsWith("@") ? name.slice(1) : name;
+    if (cleanName && cleanName.length > 0 && cleanName[0]) {
+      return cleanName[0].toUpperCase();
+    }
   }
-  
-  if (email && email.includes('@')) {
-    const emailLocal = email.split('@')[0];
-    if (emailLocal && emailLocal.length > 0) {
+
+  if (email?.includes("@")) {
+    const emailLocal = email.split("@")[0];
+    if (emailLocal && emailLocal.length > 0 && emailLocal[0]) {
       return emailLocal[0].toUpperCase();
     }
   }
-  
-  return 'U';
+
+  return "U";
 }

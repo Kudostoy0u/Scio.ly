@@ -1,8 +1,9 @@
 export interface Question {
   question_text: string;
-  question_type: 'multiple_choice' | 'free_response' | 'codebusters';
+  question_type: "multiple_choice" | "free_response" | "codebusters";
   options?: Array<{ id: string; text: string; isCorrect: boolean }>;
   correct_answer?: string;
+  answers?: (string | number)[] | string;
   order_index: number;
   imageData?: string;
   difficulty?: number;
@@ -29,7 +30,7 @@ export interface AssignmentCreatorProps {
 export interface AssignmentDetails {
   title: string;
   description: string;
-  assignmentType: 'homework' | 'project' | 'study' | 'other';
+  assignmentType: "homework" | "project" | "study" | "other";
   dueDate: string;
   timeLimitMinutes: number;
   eventName: string;
@@ -37,7 +38,7 @@ export interface AssignmentDetails {
 
 export interface QuestionGenerationSettings {
   questionCount: number;
-  questionType: 'mcq' | 'both' | 'frq';
+  questionType: "mcq" | "both" | "frq";
   selectedSubtopics: string[];
   idPercentage: number;
   pureIdOnly: boolean;
@@ -45,7 +46,7 @@ export interface QuestionGenerationSettings {
   difficulties: string[];
   // Codebusters-specific settings
   cipherTypes?: string[];
-  division?: 'B' | 'C' | 'any';
+  division?: "B" | "C" | "any";
   charLengthMin?: number;
   charLengthMax?: number;
 }

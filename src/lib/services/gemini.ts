@@ -3,13 +3,14 @@
  * Provides functionality for question analysis, explanation generation, and content processing
  */
 
+import logger from "@/lib/utils/logger";
+import { GeminiAnalysisService } from "./gemini/analysis";
 // import { GoogleGenAI, Type } from "@google/genai";
-import { GeminiClientManager } from './gemini/client';
-import { GeminiAnalysisService } from './gemini/analysis';
-import { GeminiExplanationService } from './gemini/explanation';
-import { GeminiEditingService } from './gemini/editing';
-import { GeminiValidationService } from './gemini/validation';
-import { GeminiGradingService } from './gemini/grading';
+import { GeminiClientManager } from "./gemini/client";
+import { GeminiEditingService } from "./gemini/editing";
+import { GeminiExplanationService } from "./gemini/explanation";
+import { GeminiGradingService } from "./gemini/grading";
+import { GeminiValidationService } from "./gemini/validation";
 // import type { GeminiStreamChunk } from './gemini/types';
 
 /**
@@ -18,28 +19,88 @@ import { GeminiGradingService } from './gemini/grading';
  */
 export class GeminiService {
   private clientManager: GeminiClientManager;
-  private analysisService: GeminiAnalysisService;
-  private explanationService: GeminiExplanationService;
-  private editingService: GeminiEditingService;
-  private validationService: GeminiValidationService;
-  private gradingService: GeminiGradingService;
 
   /**
    * Initializes the Gemini service with available API keys
    */
   constructor() {
     this.clientManager = new GeminiClientManager();
-    
+
     if (!this.clientManager.hasClients()) {
-      throw new Error('No Gemini API clients available');
+      throw new Error("No Gemini API clients available");
+    }
+  }
+
+  /**
+   * Retries a Gemini operation with different API keys on failure
+   * Tries up to 3 times (initial + 2 retries) with different keys
+   * @param {Function} operation - Function that takes a ClientWithKey and returns a Promise
+   * @returns {Promise<T>} Result of the operation
+   */
+  private async retryWithDifferentKeys<T>(
+    operation: (clientWithKey: import("./gemini/client").ClientWithKey) => Promise<T>
+  ): Promise<T> {
+    const maxAttempts = 3;
+    const usedIndices = new Set<number>();
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      let clientWithKey: import("./gemini/client").ClientWithKey;
+
+      if (attempt === 0) {
+        // First attempt: use random client
+        clientWithKey = this.clientManager.getRandomClient();
+      } else {
+        // Retry attempts: use a different key
+        const availableIndices = Array.from({ length: this.clientManager.getClientCount() }, (_, i) => i).filter(
+          (i) => !usedIndices.has(i)
+        );
+
+        if (availableIndices.length === 0) {
+          // All keys exhausted, reuse one
+          const randomIndex = Math.floor(Math.random() * this.clientManager.getClientCount());
+          clientWithKey = this.clientManager.getClientByIndex(randomIndex);
+        } else {
+          const randomIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+          clientWithKey = this.clientManager.getClientByIndex(randomIndex);
+        }
+      }
+
+      usedIndices.add(clientWithKey.keyIndex);
+
+      try {
+        return await operation(clientWithKey);
+      } catch (error) {
+        lastError = error as Error;
+        const errorMessage = (error as Error).message || String(error);
+
+        // Don't retry on parsing errors (these are not API key related)
+        if (errorMessage.includes("Invalid response format from Gemini")) {
+          throw error;
+        }
+
+        // Log the attempt
+        const maskedKey =
+          clientWithKey.apiKey.length > 12
+            ? `${clientWithKey.apiKey.substring(0, 8)}...${clientWithKey.apiKey.substring(clientWithKey.apiKey.length - 4)}`
+            : "***";
+        logger.warn(`Gemini API attempt ${attempt + 1} failed with key index ${clientWithKey.keyIndex}`, {
+          attempt: attempt + 1,
+          maxAttempts,
+          keyIndex: clientWithKey.keyIndex,
+          apiKey: maskedKey,
+          error: errorMessage,
+        });
+
+        // If this was the last attempt, throw the error
+        if (attempt === maxAttempts - 1) {
+          throw error;
+        }
+      }
     }
 
-    const client = this.clientManager.getCurrentClient();
-    this.analysisService = new GeminiAnalysisService(client);
-    this.explanationService = new GeminiExplanationService(client);
-    this.editingService = new GeminiEditingService(client);
-    this.validationService = new GeminiValidationService(client);
-    this.gradingService = new GeminiGradingService(client);
+    // This should never be reached, but TypeScript needs it
+    throw lastError || new Error("All retry attempts failed");
   }
 
   /**
@@ -50,38 +111,40 @@ export class GeminiService {
     userAnswer: string,
     event: string
   ) {
-    return await this.analysisService.analyzeQuestion(question, userAnswer, event);
+    return await this.retryWithDifferentKeys(async (clientWithKey) => {
+      const analysisService = new GeminiAnalysisService(clientWithKey);
+      return await analysisService.analyzeQuestion(question, userAnswer, event);
+    });
   }
 
   /**
    * Analyzes a question to determine if it should be removed
    */
-  public async analyzeQuestionForRemoval(
-    question: Record<string, unknown>,
-    event: string
-  ) {
-    return await this.analysisService.analyzeQuestionForRemoval(question, event);
+  public async analyzeQuestionForRemoval(question: Record<string, unknown>, event: string) {
+    return await this.retryWithDifferentKeys(async (clientWithKey) => {
+      const analysisService = new GeminiAnalysisService(clientWithKey);
+      return await analysisService.analyzeQuestionForRemoval(question, event);
+    });
   }
 
   /**
    * Generates an explanation for a question
    */
-  public async explain(
-    question: Record<string, unknown>,
-    userAnswer: string,
-    event: string
-  ) {
-    return await this.explanationService.explain(question, userAnswer, event);
+  public async explain(question: Record<string, unknown>, userAnswer: string, event: string) {
+    return await this.retryWithDifferentKeys(async (clientWithKey) => {
+      const explanationService = new GeminiExplanationService(clientWithKey);
+      return await explanationService.explain(question, userAnswer, event);
+    });
   }
 
   /**
    * Suggests improvements for a question
    */
-  public async suggestEdit(
-    question: Record<string, unknown>,
-    userReason?: string
-  ) {
-    return await this.editingService.suggestEdit(question, userReason);
+  public async suggestEdit(question: Record<string, unknown>, userReason?: string) {
+    return await this.retryWithDifferentKeys(async (clientWithKey) => {
+      const editingService = new GeminiEditingService(clientWithKey);
+      return await editingService.suggestEdit(question, userReason);
+    });
   }
 
   /**
@@ -93,17 +156,20 @@ export class GeminiService {
     event: string,
     reason: string
   ) {
-    return await this.validationService.validateEdit(originalQuestion, editedQuestion, event, reason);
+    return await this.retryWithDifferentKeys(async (clientWithKey) => {
+      const validationService = new GeminiValidationService(clientWithKey);
+      return await validationService.validateEdit(originalQuestion, editedQuestion, event, reason);
+    });
   }
 
   /**
    * Improves a report edit reason
    */
-  public async improveReportEditReason(
-    originalReason: string,
-    event: string
-  ) {
-    return await this.validationService.improveReportEditReason(originalReason, event);
+  public async improveReportEditReason(originalReason: string, event: string) {
+    return await this.retryWithDifferentKeys(async (clientWithKey) => {
+      const validationService = new GeminiValidationService(clientWithKey);
+      return await validationService.improveReportEditReason(originalReason, event);
+    });
   }
 
   /**
@@ -129,36 +195,59 @@ export class GeminiService {
    * Extracts questions from text
    */
   public async extractQuestions(text: string): Promise<Record<string, unknown>> {
-    const client = this.clientManager.getCurrentClient();
-    const response = await client.models.generateContent({
-      model: "gemini-flash-lite-latest",
-      contents: `Extract Science Olympiad questions from this text: ${text}`,
-      config: {
-        responseMimeType: "application/json",
-        temperature: 0.1,
-        topP: 0.8,
-        topK: 40,
-      },
+    return await this.retryWithDifferentKeys(async (clientWithKey) => {
+      try {
+        const response = await clientWithKey.client.models.generateContent({
+          model: "gemini-flash-lite-latest",
+          contents: `Extract Science Olympiad questions from this text: ${text}`,
+          config: {
+            responseMimeType: "application/json",
+            temperature: 0.1,
+            topP: 0.8,
+            topK: 40,
+          },
+        });
+        return JSON.parse(response.text || "{}");
+      } catch (error) {
+        const maskedKey =
+          clientWithKey.apiKey.length > 12
+            ? `${clientWithKey.apiKey.substring(0, 8)}...${clientWithKey.apiKey.substring(clientWithKey.apiKey.length - 4)}`
+            : "***";
+        logger.error("Gemini API error in extractQuestions", error as Error, {
+          apiKeyIndex: clientWithKey.keyIndex,
+          apiKey: maskedKey,
+        });
+        throw new Error(
+          `Gemini API error (API key index: ${clientWithKey.keyIndex}, key: ${maskedKey}): ${(error as Error).message}`
+        );
+      }
     });
-    return JSON.parse(response.text || '{}');
   }
 
   /**
    * Grades free response answers
    */
-  public async gradeFreeResponses(responses: Array<{
-    question: string;
-    correctAnswers: (string | number)[];
-    studentAnswer: string;
-  }>): Promise<{ scores: number[] }> {
-    return await this.gradingService.gradeFreeResponses(responses);
+  public async gradeFreeResponses(
+    responses: Array<{
+      question: string;
+      correctAnswers: (string | number)[];
+      studentAnswer: string;
+    }>
+  ): Promise<{ scores: number[] }> {
+    return await this.retryWithDifferentKeys(async (clientWithKey) => {
+      const gradingService = new GeminiGradingService(clientWithKey);
+      return await gradingService.gradeFreeResponses(responses);
+    });
   }
 
   /**
    * Improves a reason
    */
-  public async improveReason(reason: string, question: Record<string, unknown>): Promise<Record<string, unknown>> {
-    const result = await this.improveReportEditReason(reason, question.event as string || '');
+  public async improveReason(
+    reason: string,
+    question: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    const result = await this.improveReportEditReason(reason, (question.event as string) || "");
     return { improvedReason: result.improvedReason };
   }
 }

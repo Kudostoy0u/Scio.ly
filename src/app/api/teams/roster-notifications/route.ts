@@ -1,31 +1,32 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerUser } from '@/lib/supabaseServer';
-import { RosterNotificationService } from '@/lib/services/roster-notifications';
+import { RosterNotificationService } from "@/lib/services/roster-notifications";
+import { getServerUser } from "@/lib/supabaseServer";
+import { type NextRequest, NextResponse } from "next/server";
 
 // GET /api/teams/roster-notifications - Get roster notifications for user
 export async function GET(request: NextRequest) {
   try {
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const limit = Number.parseInt(searchParams.get("limit") || "50");
 
     const notifications = await RosterNotificationService.getRosterNotifications(user.id, limit);
 
-    return NextResponse.json({ 
-      notifications,
-      count: notifications.length
-    });
-
-  } catch (error) {
-    console.error('Error fetching roster notifications:', error);
     return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+      notifications,
+      count: notifications.length,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -34,26 +35,27 @@ export async function PUT(request: NextRequest) {
   try {
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
     const { notificationIds } = body;
 
     if (!Array.isArray(notificationIds)) {
-      return NextResponse.json({ error: 'notificationIds must be an array' }, { status: 400 });
+      return NextResponse.json({ error: "notificationIds must be an array" }, { status: 400 });
     }
 
     await RosterNotificationService.markRosterNotificationsAsRead(user.id, notificationIds);
 
-    return NextResponse.json({ message: 'Notifications marked as read' });
-
+    return NextResponse.json({ message: "Notifications marked as read" });
   } catch (error) {
-    console.error('Error marking roster notifications as read:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -62,18 +64,19 @@ export async function DELETE(_request: NextRequest) {
   try {
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await RosterNotificationService.clearRosterNotifications(user.id);
 
-    return NextResponse.json({ message: 'All roster notifications cleared' });
-
+    return NextResponse.json({ message: "All roster notifications cleared" });
   } catch (error) {
-    console.error('Error clearing roster notifications:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
   }
 }

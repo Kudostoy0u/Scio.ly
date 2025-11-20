@@ -1,37 +1,62 @@
-import { useEffect } from 'react';
-import { setupVisibilityHandling, pauseTestSession, resumeFromPause, getCurrentTestSession, updateTimeLeft } from '@/app/utils/timeManagement';
+import {
+  getCurrentTestSession,
+  pauseTestSession,
+  resumeFromPause,
+  setupVisibilityHandling,
+  updateTimeLeft,
+} from "@/app/utils/timeManagement";
+import { useEffect } from "react";
 
 export function usePauseOnUnmount(): void {
   useEffect(() => {
     return () => {
-      try { pauseTestSession(); } catch {}
+      try {
+        pauseTestSession();
+      } catch {}
     };
   }, []);
 }
 
 export function useResumeOnMount(): void {
   useEffect(() => {
-    try { resumeFromPause(); } catch {}
+    try {
+      resumeFromPause();
+    } catch {}
   }, []);
 }
 
 export function useSetupVisibility(): void {
   useEffect(() => {
-    try { setupVisibilityHandling(); } catch {}
+    try {
+      setupVisibilityHandling();
+    } catch {}
   }, []);
 }
 
-export function useCountdown(timeLeft: number | null, isSubmitted: boolean, setTimeLeft: (n: number) => void, onTimeout: () => void): void {
+export function useCountdown(
+  timeLeft: number | null,
+  isSubmitted: boolean,
+  setTimeLeft: (n: number) => void,
+  onTimeout: () => void
+): void {
   useEffect(() => {
-    if (timeLeft === null || isSubmitted) return;
+    if (timeLeft === null || isSubmitted) {
+      return;
+    }
     if (timeLeft === 0) {
       onTimeout();
       return;
     }
     const timer = setInterval(() => {
       const session = getCurrentTestSession();
-      if (!session) return;
-      if (session.timeState.isTimeSynchronized && session.timeState.syncTimestamp && session.timeState.originalTimeAtSync) {
+      if (!session) {
+        return;
+      }
+      if (
+        session.timeState.isTimeSynchronized &&
+        session.timeState.syncTimestamp &&
+        session.timeState.originalTimeAtSync
+      ) {
         const now = Date.now();
         const elapsedMs = now - session.timeState.syncTimestamp;
         const elapsedSeconds = Math.floor(elapsedMs / 1000);
@@ -47,5 +72,3 @@ export function useCountdown(timeLeft: number | null, isSubmitted: boolean, setT
     return () => clearInterval(timer);
   }, [timeLeft, isSubmitted, setTimeLeft, onTimeout]);
 }
-
-

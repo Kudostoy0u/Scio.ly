@@ -1,10 +1,10 @@
-import React from 'react';
-import { render, RenderOptions } from '@testing-library/react';
-import { vi } from 'vitest';
-import { TestProviders } from './test-providers';
+import { type RenderOptions, render } from "@testing-library/react";
+import type React from "react";
+import { vi } from "vitest";
+import { TestProviders } from "./test-providers";
 
 // Mock Supabase Server
-vi.mock('@/lib/supabaseServer', () => ({
+vi.mock("@/lib/supabaseServer", () => ({
   createSupabaseServerClient: vi.fn(() => ({
     auth: {
       getUser: vi.fn(() => Promise.resolve({ data: { user: null } })),
@@ -32,7 +32,7 @@ vi.mock('@/lib/supabaseServer', () => ({
 }));
 
 // Mock Supabase Client
-vi.mock('@/lib/supabase', () => ({
+vi.mock("@/lib/supabase", () => ({
   supabase: {
     auth: {
       getUser: vi.fn(() => Promise.resolve({ data: { user: null } })),
@@ -61,7 +61,7 @@ vi.mock('@/lib/supabase', () => ({
 }));
 
 // Mock database pool
-vi.mock('@/lib/db/pool', () => ({
+vi.mock("@/lib/db/pool", () => ({
   pool: {
     query: vi.fn(() => Promise.resolve({ rows: [], rowCount: 0 })),
     connect: vi.fn(() => Promise.resolve({ release: vi.fn() })),
@@ -70,74 +70,80 @@ vi.mock('@/lib/db/pool', () => ({
 }));
 
 // Mock postgres connection
-vi.mock('postgres', () => {
+vi.mock("postgres", () => {
   return vi.fn(() => ({
     end: vi.fn(() => Promise.resolve()),
   }));
 });
 
 // Mock Drizzle database
-vi.mock('@/lib/db/index', () => ({
+vi.mock("@/lib/db/index", () => ({
   db: {
     select: vi.fn(() => ({
       from: vi.fn(() => ({
         where: vi.fn(() => ({
           orderBy: vi.fn(() => ({
-            limit: vi.fn(() => Promise.resolve([
-              {
-                id: 'test-id-1',
-                question: 'Test question 1',
-                tournament: 'Test Tournament',
-                division: 'C',
-                event: 'Test Event',
-                difficulty: '0.5',
-                options: ['Option A', 'Option B', 'Option C', 'Option D'],
-                answers: ['A'],
-                subtopics: ['Test Topic'],
-                createdAt: new Date('2024-01-01'),
-                updatedAt: new Date('2024-01-01'),
-                randomF: 0.5
-              }
-            ])),
+            limit: vi.fn(() =>
+              Promise.resolve([
+                {
+                  id: "test-id-1",
+                  question: "Test question 1",
+                  tournament: "Test Tournament",
+                  division: "C",
+                  event: "Test Event",
+                  difficulty: "0.5",
+                  options: ["Option A", "Option B", "Option C", "Option D"],
+                  answers: ["A"],
+                  subtopics: ["Test Topic"],
+                  createdAt: new Date("2024-01-01"),
+                  updatedAt: new Date("2024-01-01"),
+                  randomF: 0.5,
+                },
+              ])
+            ),
           })),
         })),
         orderBy: vi.fn(() => ({
-          limit: vi.fn(() => Promise.resolve([
-            {
-              id: 'test-id-1',
-              question: 'Test question 1',
-              tournament: 'Test Tournament',
-              division: 'C',
-              event: 'Test Event',
-              difficulty: '0.5',
-              options: ['Option A', 'Option B', 'Option C', 'Option D'],
-              answers: ['A'],
-              subtopics: ['Test Topic'],
-              createdAt: new Date('2024-01-01'),
-              updatedAt: new Date('2024-01-01'),
-              randomF: 0.5
-            }
-          ])),
+          limit: vi.fn(() =>
+            Promise.resolve([
+              {
+                id: "test-id-1",
+                question: "Test question 1",
+                tournament: "Test Tournament",
+                division: "C",
+                event: "Test Event",
+                difficulty: "0.5",
+                options: ["Option A", "Option B", "Option C", "Option D"],
+                answers: ["A"],
+                subtopics: ["Test Topic"],
+                createdAt: new Date("2024-01-01"),
+                updatedAt: new Date("2024-01-01"),
+                randomF: 0.5,
+              },
+            ])
+          ),
         })),
-        limit: vi.fn(() => Promise.resolve([
-          {
-            id: 'test-id-1',
-            question: 'Test question 1',
-            tournament: 'Test Tournament',
-            division: 'C',
-            event: 'Test Event',
-            difficulty: '0.5',
-            options: ['Option A', 'Option B', 'Option C', 'Option D'],
-            answers: ['A'],
-            subtopics: ['Test Topic'],
-            createdAt: new Date('2024-01-01'),
-            updatedAt: new Date('2024-01-01'),
-            randomF: 0.5
-          }
-        ])),
+        limit: vi.fn(() =>
+          Promise.resolve([
+            {
+              id: "test-id-1",
+              question: "Test question 1",
+              tournament: "Test Tournament",
+              division: "C",
+              event: "Test Event",
+              difficulty: "0.5",
+              options: ["Option A", "Option B", "Option C", "Option D"],
+              answers: ["A"],
+              subtopics: ["Test Topic"],
+              createdAt: new Date("2024-01-01"),
+              updatedAt: new Date("2024-01-01"),
+              randomF: 0.5,
+            },
+          ])
+        ),
       })),
     })),
-    insert: vi.fn(() => Promise.resolve({ insertId: 'mock-id' })),
+    insert: vi.fn(() => Promise.resolve({ insertId: "mock-id" })),
     update: vi.fn(() => Promise.resolve({ affectedRows: 1 })),
     delete: vi.fn(() => Promise.resolve({ affectedRows: 1 })),
   },
@@ -146,49 +152,48 @@ vi.mock('@/lib/db/index', () => ({
 }));
 
 // Mock Gemini service
-vi.mock('@/lib/services/gemini', () => ({
+vi.mock("@/lib/services/gemini", () => ({
   GeminiService: {
     getInstance: vi.fn(() => ({
-      explainQuestion: vi.fn(() => Promise.resolve('Mock explanation')),
-      gradeFreeResponse: vi.fn(() => Promise.resolve({ score: 5, feedback: 'Mock feedback' })),
-      analyzeQuestion: vi.fn(() => Promise.resolve({ difficulty: 'medium', topics: ['biology'] })),
-      suggestEdit: vi.fn(() => Promise.resolve('Mock edit suggestion')),
+      explainQuestion: vi.fn(() => Promise.resolve("Mock explanation")),
+      gradeFreeResponse: vi.fn(() => Promise.resolve({ score: 5, feedback: "Mock feedback" })),
+      analyzeQuestion: vi.fn(() => Promise.resolve({ difficulty: "medium", topics: ["biology"] })),
+      suggestEdit: vi.fn(() => Promise.resolve("Mock edit suggestion")),
     })),
   },
 }));
 
 // Mock teams service
-vi.mock('@/lib/services/teams', () => ({
+vi.mock("@/lib/services/teams", () => ({
   teamsService: {
     getTeamMembers: vi.fn(() => Promise.resolve([])),
-    createTeam: vi.fn(() => Promise.resolve({ id: 'mock-team-id' })),
+    createTeam: vi.fn(() => Promise.resolve({ id: "mock-team-id" })),
     joinTeam: vi.fn(() => Promise.resolve({ success: true })),
     getUserTeams: vi.fn(() => Promise.resolve([])),
   },
 }));
 
 // Mock team data service
-vi.mock('@/lib/services/team-data', () => ({
+vi.mock("@/lib/services/team-data", () => ({
   getTeamData: vi.fn(() => Promise.resolve({ team: null, members: [] })),
   updateTeamData: vi.fn(() => Promise.resolve({ success: true })),
 }));
 
 // Custom render function with providers
+import type { User } from "@supabase/supabase-js";
+
 export function renderWithProviders(
   ui: React.ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'> & {
+  options?: Omit<RenderOptions, "wrapper"> & {
     initialDarkMode?: boolean;
-    initialUser?: any;
+    initialUser?: User | null;
   }
 ) {
   const { initialDarkMode, initialUser, ...renderOptions } = options || {};
-  
+
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
-      <TestProviders 
-        initialDarkMode={initialDarkMode} 
-        initialUser={initialUser}
-      >
+      <TestProviders initialDarkMode={initialDarkMode} initialUser={initialUser}>
         {children}
       </TestProviders>
     );
@@ -210,7 +215,7 @@ export const mockRouter = {
 // Mock Next.js navigation
 export const mockNavigation = {
   useRouter: () => mockRouter,
-  usePathname: () => '/',
+  usePathname: () => "/",
   useSearchParams: () => new URLSearchParams(),
 };
 
@@ -219,11 +224,11 @@ export const mockFetch = vi.fn(() =>
   Promise.resolve({
     ok: true,
     status: 200,
-    statusText: 'OK',
+    statusText: "OK",
     headers: new Headers(),
     redirected: false,
-    type: 'basic' as ResponseType,
-    url: '',
+    type: "basic" as ResponseType,
+    url: "",
     clone: vi.fn(),
     body: null,
     bodyUsed: false,
@@ -231,7 +236,7 @@ export const mockFetch = vi.fn(() =>
     blob: vi.fn(() => Promise.resolve(new Blob())),
     formData: vi.fn(() => Promise.resolve(new FormData())),
     json: () => Promise.resolve({}),
-    text: () => Promise.resolve(''),
+    text: () => Promise.resolve(""),
     bytes: vi.fn(() => Promise.resolve(new Uint8Array())),
   } as unknown as Response)
 );
@@ -276,23 +281,23 @@ export const mockSessionStorage = new MockStorage();
 export function setupTestEnvironment() {
   // Mock global fetch
   global.fetch = mockFetch;
-  
+
   // Mock localStorage
-  Object.defineProperty(global, 'localStorage', {
+  Object.defineProperty(global, "localStorage", {
     value: mockLocalStorage,
     writable: true,
   });
-  
+
   // Mock sessionStorage
-  Object.defineProperty(global, 'sessionStorage', {
+  Object.defineProperty(global, "sessionStorage", {
     value: mockSessionStorage,
     writable: true,
   });
-  
+
   // Mock window.matchMedia
-  Object.defineProperty(window, 'matchMedia', {
+  Object.defineProperty(window, "matchMedia", {
     writable: true,
-    value: vi.fn().mockImplementation(query => ({
+    value: vi.fn().mockImplementation((query) => ({
       matches: false,
       media: query,
       onchange: null,
@@ -303,54 +308,54 @@ export function setupTestEnvironment() {
       dispatchEvent: vi.fn(),
     })),
   });
-  
+
   // Mock IntersectionObserver
   global.IntersectionObserver = vi.fn().mockImplementation(() => ({
     observe: vi.fn(),
     unobserve: vi.fn(),
     disconnect: vi.fn(),
   }));
-  
+
   // Mock ResizeObserver
   global.ResizeObserver = vi.fn().mockImplementation(() => ({
     observe: vi.fn(),
     unobserve: vi.fn(),
     disconnect: vi.fn(),
   }));
-  
+
   // Mock scrollTo
   global.scrollTo = vi.fn();
-  
+
   // Mock URL.createObjectURL
-  global.URL.createObjectURL = vi.fn(() => 'mock-url');
+  global.URL.createObjectURL = vi.fn(() => "mock-url");
   global.URL.revokeObjectURL = vi.fn();
-  
+
   // Mock crypto.randomUUID
-  Object.defineProperty(global.crypto, 'randomUUID', {
-    value: vi.fn(() => 'mock-uuid'),
+  Object.defineProperty(global.crypto, "randomUUID", {
+    value: vi.fn(() => "mock-uuid"),
   });
-  
+
   // Mock performance.now
-  Object.defineProperty(global.performance, 'now', {
+  Object.defineProperty(global.performance, "now", {
     value: vi.fn(() => Date.now()),
   });
-  
+
   // Mock requestAnimationFrame
-  global.requestAnimationFrame = vi.fn(cb => setTimeout(cb, 0) as any);
+  global.requestAnimationFrame = vi.fn((cb) => Number(setTimeout(cb, 0)));
   global.cancelAnimationFrame = vi.fn();
 }
 
 // Cleanup function for tests
 export function cleanupTestEnvironment() {
   vi.clearAllMocks();
-  if (mockLocalStorage && typeof mockLocalStorage.clear === 'function') {
+  if (mockLocalStorage && typeof mockLocalStorage.clear === "function") {
     mockLocalStorage.clear();
   }
-  if (mockSessionStorage && typeof mockSessionStorage.clear === 'function') {
+  if (mockSessionStorage && typeof mockSessionStorage.clear === "function") {
     mockSessionStorage.clear();
   }
 }
 
 // Re-export everything from testing library
-export * from '@testing-library/react';
-export { vi } from 'vitest';
+export * from "@testing-library/react";
+export { vi } from "vitest";

@@ -1,12 +1,11 @@
-'use client';
-import logger from '@/lib/utils/logger';
+"use client";
+import logger from "@/lib/utils/logger";
 
-
-import React from 'react';
-import { FaBookmark, FaRegBookmark } from 'react-icons/fa';
-import { toast } from 'react-toastify';
-import { supabase } from '@/lib/supabase';
-import { addBookmark, removeBookmark } from '@/app/utils/bookmarks';
+import { addBookmark, removeBookmark } from "@/app/utils/bookmarks";
+import { supabase } from "@/lib/supabase";
+import React from "react";
+import { FaBookmark, FaRegBookmark } from "react-icons/fa";
+import { toast } from "react-toastify";
 
 /**
  * Question interface for bookmark operations
@@ -49,13 +48,13 @@ interface BookmarkManagerProps {
   /** Science Olympiad event name */
   eventName: string;
   /** Source context for the question */
-  source: 'test' | 'unlimited' | 'practice';
+  source: "test" | "unlimited" | "practice";
   /** Callback function when bookmark status changes */
   onBookmarkChange: (questionText: string, isBookmarked: boolean) => void;
   /** Whether dark mode is enabled */
   darkMode?: boolean;
   /** Size of the bookmark button */
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   /** Whether to show the bookmark label */
   showLabel?: boolean;
 }
@@ -64,7 +63,7 @@ interface BookmarkManagerProps {
  * BookmarkManager component
  * Provides bookmark functionality for Science Olympiad questions
  * Handles adding/removing bookmarks with user authentication and visual feedback
- * 
+ *
  * @param {BookmarkManagerProps} props - Component props
  * @returns {JSX.Element} Bookmark manager component
  * @example
@@ -88,26 +87,30 @@ const BookmarkManager: React.FC<BookmarkManagerProps> = ({
   source,
   onBookmarkChange,
   darkMode = false,
-  size = 'md',
-  showLabel = false
+  size = "md",
+  showLabel = false,
 }) => {
   const [isProcessing, setIsProcessing] = React.useState(false);
 
   const sizeClasses = {
-    sm: 'w-4 h-4',
-    md: 'w-5 h-5',
-    lg: 'w-6 h-6'
+    sm: "w-4 h-4",
+    md: "w-5 h-5",
+    lg: "w-6 h-6",
   };
 
   const handleBookmark = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) {
-      toast.info('Please sign in to bookmark questions');
+      toast.info("Please sign in to bookmark questions");
       return;
     }
 
-    if (isProcessing) return;
+    if (isProcessing) {
+      return;
+    }
 
     setIsProcessing(true);
 
@@ -116,15 +119,15 @@ const BookmarkManager: React.FC<BookmarkManagerProps> = ({
       if (isBookmarked) {
         await removeBookmark(user.id, question, source);
         onBookmarkChange(key, false);
-        toast.success('Bookmark removed!');
+        toast.success("Bookmark removed!");
       } else {
         await addBookmark(user.id, question, eventName, source);
         onBookmarkChange(key, true);
-        toast.success('Question bookmarked!');
+        toast.success("Question bookmarked!");
       }
     } catch (error) {
-      logger.error('Error managing bookmark:', error);
-      toast.error(isBookmarked ? 'Failed to remove bookmark' : 'Failed to bookmark question');
+      logger.error("Error managing bookmark:", error);
+      toast.error(isBookmarked ? "Failed to remove bookmark" : "Failed to bookmark question");
     } finally {
       setIsProcessing(false);
     }
@@ -136,34 +139,38 @@ const BookmarkManager: React.FC<BookmarkManagerProps> = ({
         onClick={handleBookmark}
         disabled={isProcessing}
         className={`flex items-center space-x-1 p-2 rounded-md transition-all duration-200 ${
-          isProcessing 
-            ? 'opacity-50 cursor-not-allowed' 
+          isProcessing
+            ? "opacity-50 cursor-not-allowed"
             : darkMode
-              ? 'hover:bg-gray-700 text-gray-300 hover:text-yellow-400'
-              : 'hover:bg-gray-100 text-gray-600 hover:text-yellow-600'
+              ? "hover:bg-gray-700 text-gray-300 hover:text-yellow-400"
+              : "hover:bg-gray-100 text-gray-600 hover:text-yellow-600"
         }`}
       >
-      {isProcessing ? (
-        <div className={`animate-spin rounded-full border-2 border-current border-t-transparent ${sizeClasses[size]}`} />
-      ) : isBookmarked ? (
-        <FaBookmark className={`${sizeClasses[size]} text-yellow-500`} />
-      ) : (
-        <FaRegBookmark className={sizeClasses[size]} />
-      )}
-      {showLabel && (
-        <span className="text-sm">
-          {isBookmarked ? 'Bookmarked' : 'Bookmark'}
-        </span>
-      )}
+        {isProcessing ? (
+          <div
+            className={`animate-spin rounded-full border-2 border-current border-t-transparent ${sizeClasses[size]}`}
+          />
+        ) : isBookmarked ? (
+          <FaBookmark className={`${sizeClasses[size]} text-yellow-500`} />
+        ) : (
+          <FaRegBookmark className={sizeClasses[size]} />
+        )}
+        {showLabel && <span className="text-sm">{isBookmarked ? "Bookmarked" : "Bookmark"}</span>}
       </button>
       {/* Custom tooltip */}
-      <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${
-        darkMode ? 'bg-gray-800 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-200 shadow-lg'
-      }`}>
-        {isBookmarked ? 'Remove bookmark' : 'Bookmark this question?'}
-        <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent ${
-          darkMode ? 'border-t-gray-800' : 'border-t-white'
-        }`}></div>
+      <div
+        className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${
+          darkMode
+            ? "bg-gray-800 text-white border border-gray-700"
+            : "bg-white text-gray-900 border border-gray-200 shadow-lg"
+        }`}
+      >
+        {isBookmarked ? "Remove bookmark" : "Bookmark this question?"}
+        <div
+          className={`absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent ${
+            darkMode ? "border-t-gray-800" : "border-t-white"
+          }`}
+        />
       </div>
     </div>
   );

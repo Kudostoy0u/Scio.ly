@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Plagiarism detection type definitions for Science Olympiad platform
@@ -15,7 +15,7 @@ export interface ExtractedQuestion {
   /** Optional answer choices for multiple choice questions */
   options: string[] | null;
   /** Question type (multiple choice or free response) */
-  type: 'mcq' | 'frq';
+  type: "mcq" | "frq";
 }
 
 /**
@@ -64,7 +64,7 @@ export interface PlagiarismMatch {
   /** Similarity score (0-1) */
   similarity: number;
   /** Type of match (question text or options) */
-  matchType: 'question' | 'options';
+  matchType: "question" | "options";
 }
 
 /**
@@ -102,5 +102,3 @@ export interface ModalProps {
   /** Plagiarism summary to display */
   summary: QuestionPlagiarismSummary | null;
 }
-
-

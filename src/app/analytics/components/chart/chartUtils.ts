@@ -1,18 +1,23 @@
-import type { Chart } from 'chart.js';
+import type { Chart } from "chart.js";
 
 let currentResultsBox: HTMLElement | null = null;
 
-export const showResultsBox = (point: any, chart: Chart) => {
+export const showResultsBox = (
+  point: { x: number; y: number; tournament?: string },
+  chart: Chart
+) => {
   const isMobile = window.innerWidth < 768;
-  if (!isMobile) return;
+  if (!isMobile) {
+    return;
+  }
 
   if (currentResultsBox) {
     currentResultsBox.remove();
     currentResultsBox = null;
   }
 
-  const resultsBox = document.createElement('div');
-  resultsBox.id = 'chart-results-box';
+  const resultsBox = document.createElement("div");
+  resultsBox.id = "chart-results-box";
   resultsBox.style.cssText = `
     position: absolute;
     background: white;
@@ -26,9 +31,9 @@ export const showResultsBox = (point: any, chart: Chart) => {
     pointer-events: none;
   `;
 
-  const tournament = point.tournament || 'Unknown Tournament';
+  const tournament = point.tournament || "Unknown Tournament";
   const score = point.y || 0;
-  
+
   resultsBox.innerHTML = `
     <div style="font-weight: bold; margin-bottom: 4px;">${tournament}</div>
     <div>Score: ${score}</div>

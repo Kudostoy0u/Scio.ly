@@ -1,6 +1,6 @@
-import { Question } from '@/app/utils/geminiService';
-import { normalizeQuestionText, normalizeTestText } from '../../utils/normalizeTestText';
-import { normalizeQuestionMedia } from '../../utils/questionMedia';
+import type { Question } from "@/app/utils/geminiService";
+import { normalizeQuestionText, normalizeTestText } from "@/app/test/utils/normalizeTestText";
+import { normalizeQuestionMedia } from "@/app/test/utils/questionMedia";
 
 /**
  * Normalizes questions while preserving the answers field
@@ -15,24 +15,16 @@ import { normalizeQuestionMedia } from '../../utils/questionMedia';
  */
 export function normalizeQuestionsFull(questions: Question[]): Question[] {
   if (!Array.isArray(questions)) {
-    console.error('❌ normalizeQuestionsFull received non-array:', questions);
     return [];
   }
 
   const mediaNormalized = normalizeQuestionMedia(questions);
 
-  return mediaNormalized.map((q, index) => {
+  return mediaNormalized.map((q, _index) => {
     const out: any = { ...q };
 
     // Validate that answers field exists and is valid
-    if (!out.answers || !Array.isArray(out.answers) || out.answers.length === 0) {
-      console.error(`❌ Question ${index + 1} missing valid answers field:`, {
-        question: out.question || out.question_text,
-        answers: out.answers,
-        hasAnswers: !!out.answers,
-        isArray: Array.isArray(out.answers),
-        length: out.answers?.length
-      });
+    if (!(out.answers && Array.isArray(out.answers)) || out.answers.length === 0) {
       // Don't throw, but log prominently - this question won't be gradable
     }
 
@@ -44,7 +36,7 @@ export function normalizeQuestionsFull(questions: Question[]): Question[] {
     // Normalize options (for MCQ)
     if (Array.isArray(out.options) && out.options.length > 0) {
       out.options = out.options.map((opt: any) =>
-        typeof opt === 'string' ? normalizeTestText(opt) : opt
+        typeof opt === "string" ? normalizeTestText(opt) : opt
       );
     }
 
@@ -62,5 +54,3 @@ export function normalizeQuestionsFull(questions: Question[]): Question[] {
     return out as Question;
   });
 }
-
-

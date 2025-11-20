@@ -1,3 +1,3 @@
-import PracticeDashboard from './components/PracticeDashboard';
+import PracticeDashboard from "./components/PracticeDashboard";
 
 export default PracticeDashboard;

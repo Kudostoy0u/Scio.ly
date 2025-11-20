@@ -1,6 +1,6 @@
 export const SCIENCE_OLYMPIAD_EVENTS = [
   "Anatomy - Skeletal",
-  "Anatomy - Muscular", 
+  "Anatomy - Muscular",
   "Anatomy - Integumentary",
   "Anatomy - Cardiovascular",
   "Anatomy - Lymphatic",
@@ -64,7 +64,5 @@ export const SCIENCE_OLYMPIAD_EVENTS = [
   "Wind Power",
   "Potions and Poisons",
   "Crave the Wave",
-  "Food Science"
+  "Food Science",
 ];
-
-

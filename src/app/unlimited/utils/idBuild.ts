@@ -1,31 +1,46 @@
-import { Question } from '@/app/utils/geminiService';
-import { shuffleArray } from '@/app/utils/questionUtils';
+import type { Question } from "@/app/utils/geminiService";
+import { shuffleArray } from "@/app/utils/questionUtils";
 
-export function buildIdQuestionFromApiRow(row: any, params: { eventName?: string; types?: string; namePool: string[] }): Question {
+export function buildIdQuestionFromApiRow(
+  row: any,
+  params: { eventName?: string; types?: string; namePool: string[] }
+): Question {
   const imgs: string[] = Array.isArray(row.images) ? row.images : [];
-  const chosenImg = imgs.length ? imgs[Math.floor(Math.random() * imgs.length)] : undefined;
+  const chosenImg = imgs.length > 0 ? imgs[Math.floor(Math.random() * imgs.length)] : undefined;
 
-  const types = params.types || 'multiple-choice';
+  const types = params.types || "multiple-choice";
 
-  const isMcqMode = types === 'multiple-choice' || (types === 'both' && Math.random() >= 0.5);
+  const isMcqMode = types === "multiple-choice" || (types === "both" && Math.random() >= 0.5);
 
-  let frqPrompt = 'Identify the specimen shown in the image.';
-  if (params.eventName?.startsWith('Anatomy')) frqPrompt = 'Identify the anatomical structure shown in the image.';
+  let frqPrompt = "Identify the specimen shown in the image.";
+  if (params.eventName?.startsWith("Anatomy")) {
+    frqPrompt = "Identify the anatomical structure shown in the image.";
+  }
 
   const isPlausibleName = (s: string): boolean => {
-    if (!s) return false;
+    if (!s) {
+      return false;
+    }
     const t = s.trim();
-    if (t.length < 2 || t.length > 60) return false;
-    if (t.includes('->')) return false;
+    if (t.length < 2 || t.length > 60) {
+      return false;
+    }
+    if (t.includes("->")) {
+      return false;
+    }
     // Disallow long numeric/figure references
     const digitCount = (t.match(/\d/g) || []).length;
-    if (digitCount > 4) return false;
+    if (digitCount > 4) {
+      return false;
+    }
     // Allow letters, spaces, hyphens, apostrophes, parentheses
     return /^[A-Za-z][A-Za-z\s\-()']+[A-Za-z)]$/.test(t);
   };
 
   const toCleanString = (val: unknown): string | null => {
-    if (typeof val !== 'string') return null;
+    if (typeof val !== "string") {
+      return null;
+    }
     const s = val.trim();
     return s.length > 0 && isPlausibleName(s) ? s : null;
   };
@@ -34,35 +49,44 @@ export function buildIdQuestionFromApiRow(row: any, params: { eventName?: string
     // Prefer explicit names list
     if (Array.isArray(row?.names) && row.names.length > 0) {
       const label = toCleanString(row.names[0]);
-      if (label) return label;
+      if (label) {
+        return label;
+      }
     }
     // If answers reference options by index
     if (Array.isArray(row?.answers) && Array.isArray(row?.options) && row.answers.length > 0) {
       const first = row.answers[0];
-      if (typeof first === 'number' && first >= 0 && first < row.options.length) {
+      if (typeof first === "number" && first >= 0 && first < row.options.length) {
         const label = toCleanString(row.options[first]);
-        if (label) return label;
+        if (label) {
+          return label;
+        }
       }
     }
     // If answers include direct strings
     if (Array.isArray(row?.answers) && row.answers.length > 0) {
       const label = toCleanString(row.answers[0]);
-      if (label) return label;
+      if (label) {
+        return label;
+      }
     }
     return null;
   };
 
   if (!isMcqMode) {
     const label = extractCorrectLabel();
-    const answers = Array.isArray(row?.names) && row.names.length > 0
-      ? row.names.map(toCleanString).filter((x: string | null): x is string => !!x)
-      : (Array.isArray(row?.answers) ? row.answers.map(toCleanString).filter((x: string | null): x is string => !!x) : []);
-    const finalAnswers = answers.length > 0 ? answers : (label ? [label] : []);
+    const answers =
+      Array.isArray(row?.names) && row.names.length > 0
+        ? row.names.map(toCleanString).filter((x: string | null): x is string => !!x)
+        : Array.isArray(row?.answers)
+          ? row.answers.map(toCleanString).filter((x: string | null): x is string => !!x)
+          : [];
+    const finalAnswers = answers.length > 0 ? answers : label ? [label] : [];
     return {
       question: frqPrompt,
       answers: finalAnswers,
       difficulty: row.difficulty ?? 0.5,
-      event: params.eventName || 'Unknown Event',
+      event: params.eventName || "Unknown Event",
       imageData: chosenImg,
     } as Question;
   }
@@ -74,7 +98,7 @@ export function buildIdQuestionFromApiRow(row: any, params: { eventName?: string
       question: frqPrompt,
       answers: [],
       difficulty: row.difficulty ?? 0.5,
-      event: params.eventName || 'Unknown Event',
+      event: params.eventName || "Unknown Event",
       imageData: chosenImg,
     } as Question;
   }
@@ -82,7 +106,9 @@ export function buildIdQuestionFromApiRow(row: any, params: { eventName?: string
   const poolSet = new Set<string>();
   for (const n of params.namePool || []) {
     const c = toCleanString(n);
-    if (c) poolSet.add(c);
+    if (c) {
+      poolSet.add(c);
+    }
   }
   // Exclude correct label from distractor pool
   poolSet.delete(correctLabel);
@@ -90,7 +116,9 @@ export function buildIdQuestionFromApiRow(row: any, params: { eventName?: string
   if (Array.isArray(row?.names)) {
     for (const n of row.names) {
       const c = toCleanString(n);
-      if (c && c !== correctLabel) poolSet.add(c);
+      if (c && c !== correctLabel) {
+        poolSet.add(c);
+      }
     }
   }
 
@@ -102,7 +130,7 @@ export function buildIdQuestionFromApiRow(row: any, params: { eventName?: string
       question: frqPrompt,
       answers: [correctLabel],
       difficulty: row.difficulty ?? 0.5,
-      event: params.eventName || 'Unknown Event',
+      event: params.eventName || "Unknown Event",
       imageData: chosenImg,
     } as Question;
   }
@@ -114,9 +142,7 @@ export function buildIdQuestionFromApiRow(row: any, params: { eventName?: string
     options,
     answers: [correctIndex],
     difficulty: row.difficulty ?? 0.5,
-    event: params.eventName || 'Unknown Event',
+    event: params.eventName || "Unknown Event",
     imageData: chosenImg,
   } as Question;
 }
-
-

@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { create } from 'zustand';
-import { subscribeWithSelector } from 'zustand/middleware';
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { create } from "zustand";
+import { subscribeWithSelector } from "zustand/middleware";
 
 // Mock the team store
 const createMockTeamStore = () => {
@@ -20,50 +20,61 @@ const createMockTeamStore = () => {
       errors: {},
 
       // Mock functions
-      getCacheKey: (type: string, ...params: string[]) => `${type}-${params.join('-')}`,
-      
+      getCacheKey: (type: string, ...params: string[]) => `${type}-${params.join("-")}`,
+
       // Optimistic roster updates
-      addRosterEntry: (teamSlug: string, subteamId: string, eventName: string, slotIndex: number, studentName: string) => {
-        const key = get().getCacheKey('roster', teamSlug, subteamId);
+      addRosterEntry: (
+        teamSlug: string,
+        subteamId: string,
+        eventName: string,
+        slotIndex: number,
+        studentName: string
+      ) => {
+        const key = get().getCacheKey("roster", teamSlug, subteamId);
         const currentRoster = get().roster[key];
-        
+
         if (currentRoster) {
           const updatedRoster = { ...currentRoster.roster };
           if (!updatedRoster[eventName]) {
             updatedRoster[eventName] = [];
           }
           updatedRoster[eventName][slotIndex] = studentName;
-          
-          set(state => ({
+
+          set((state) => ({
             roster: {
               ...state.roster,
               [key]: {
                 ...currentRoster,
-                roster: updatedRoster
-              }
-            }
+                roster: updatedRoster,
+              },
+            },
           }));
         }
       },
-      
-      removeRosterEntry: (teamSlug: string, subteamId: string, eventName: string, slotIndex: number) => {
-        const key = get().getCacheKey('roster', teamSlug, subteamId);
+
+      removeRosterEntry: (
+        teamSlug: string,
+        subteamId: string,
+        eventName: string,
+        slotIndex: number
+      ) => {
+        const key = get().getCacheKey("roster", teamSlug, subteamId);
         const currentRoster = get().roster[key];
-        
+
         if (currentRoster) {
           const updatedRoster = { ...currentRoster.roster };
           if (updatedRoster[eventName]) {
-            updatedRoster[eventName][slotIndex] = '';
+            updatedRoster[eventName][slotIndex] = "";
           }
-          
-          set(state => ({
+
+          set((state) => ({
             roster: {
               ...state.roster,
               [key]: {
                 ...currentRoster,
-                roster: updatedRoster
-              }
-            }
+                roster: updatedRoster,
+              },
+            },
           }));
         }
       },
@@ -95,7 +106,7 @@ const createMockTeamStore = () => {
   );
 };
 
-describe('Team Store Optimistic Updates', () => {
+describe("Team Store Optimistic Updates", () => {
   let store: ReturnType<typeof createMockTeamStore>;
 
   beforeEach(() => {
@@ -116,23 +127,23 @@ describe('Team Store Optimistic Updates', () => {
     });
   });
 
-  describe('addRosterEntry', () => {
-    it('should add a roster entry to existing cache', () => {
-      const teamSlug = 'test-team';
-      const subteamId = 'test-subteam';
-      const eventName = 'Astronomy';
+  describe("addRosterEntry", () => {
+    it("should add a roster entry to existing cache", () => {
+      const teamSlug = "test-team";
+      const subteamId = "test-subteam";
+      const eventName = "Astronomy";
       const slotIndex = 0;
-      const studentName = 'John Doe';
+      const studentName = "John Doe";
 
       // Set up initial roster cache
-      const cacheKey = store.getState().getCacheKey('roster', teamSlug, subteamId);
+      const cacheKey = store.getState().getCacheKey("roster", teamSlug, subteamId);
       store.setState({
         roster: {
           [cacheKey]: {
-            roster: { 'Chemistry': ['Jane Doe'] },
-            timestamp: Date.now()
-          }
-        }
+            roster: { Chemistry: ["Jane Doe"] },
+            timestamp: Date.now(),
+          },
+        },
       });
 
       // Add roster entry
@@ -142,15 +153,15 @@ describe('Team Store Optimistic Updates', () => {
       const updatedRoster = store.getState().roster[cacheKey];
       expect(updatedRoster.roster[eventName]).toBeDefined();
       expect(updatedRoster.roster[eventName][slotIndex]).toBe(studentName);
-      expect(updatedRoster.roster['Chemistry']).toEqual(['Jane Doe']); // Existing data preserved
+      expect(updatedRoster.roster.Chemistry).toEqual(["Jane Doe"]); // Existing data preserved
     });
 
-    it('should create new roster cache if none exists', () => {
-      const teamSlug = 'test-team';
-      const subteamId = 'test-subteam';
-      const eventName = 'Astronomy';
+    it("should create new roster cache if none exists", () => {
+      const teamSlug = "test-team";
+      const subteamId = "test-subteam";
+      const eventName = "Astronomy";
       const slotIndex = 0;
-      const studentName = 'John Doe';
+      const studentName = "John Doe";
 
       // No initial cache
       expect(store.getState().roster).toEqual({});
@@ -162,22 +173,22 @@ describe('Team Store Optimistic Updates', () => {
       expect(store.getState().roster).toEqual({});
     });
 
-    it('should handle multiple entries for the same event', () => {
-      const teamSlug = 'test-team';
-      const subteamId = 'test-subteam';
-      const eventName = 'Astronomy';
-      const studentName1 = 'John Doe';
-      const studentName2 = 'Jane Doe';
+    it("should handle multiple entries for the same event", () => {
+      const teamSlug = "test-team";
+      const subteamId = "test-subteam";
+      const eventName = "Astronomy";
+      const studentName1 = "John Doe";
+      const studentName2 = "Jane Doe";
 
       // Set up initial roster cache
-      const cacheKey = store.getState().getCacheKey('roster', teamSlug, subteamId);
+      const cacheKey = store.getState().getCacheKey("roster", teamSlug, subteamId);
       store.setState({
         roster: {
           [cacheKey]: {
             roster: {},
-            timestamp: Date.now()
-          }
-        }
+            timestamp: Date.now(),
+          },
+        },
       });
 
       // Add first entry
@@ -192,25 +203,25 @@ describe('Team Store Optimistic Updates', () => {
     });
   });
 
-  describe('removeRosterEntry', () => {
-    it('should remove a roster entry from existing cache', () => {
-      const teamSlug = 'test-team';
-      const subteamId = 'test-subteam';
-      const eventName = 'Astronomy';
+  describe("removeRosterEntry", () => {
+    it("should remove a roster entry from existing cache", () => {
+      const teamSlug = "test-team";
+      const subteamId = "test-subteam";
+      const eventName = "Astronomy";
       const slotIndex = 0;
 
       // Set up initial roster cache
-      const cacheKey = store.getState().getCacheKey('roster', teamSlug, subteamId);
+      const cacheKey = store.getState().getCacheKey("roster", teamSlug, subteamId);
       store.setState({
         roster: {
           [cacheKey]: {
-            roster: { 
-              'Astronomy': ['John Doe', 'Jane Doe'],
-              'Chemistry': ['Bob Smith']
+            roster: {
+              Astronomy: ["John Doe", "Jane Doe"],
+              Chemistry: ["Bob Smith"],
             },
-            timestamp: Date.now()
-          }
-        }
+            timestamp: Date.now(),
+          },
+        },
       });
 
       // Remove roster entry
@@ -218,15 +229,15 @@ describe('Team Store Optimistic Updates', () => {
 
       // Verify the entry was removed
       const updatedRoster = store.getState().roster[cacheKey];
-      expect(updatedRoster.roster[eventName][slotIndex]).toBe('');
-      expect(updatedRoster.roster[eventName][1]).toBe('Jane Doe'); // Other entries preserved
-      expect(updatedRoster.roster['Chemistry']).toEqual(['Bob Smith']); // Other events preserved
+      expect(updatedRoster.roster[eventName][slotIndex]).toBe("");
+      expect(updatedRoster.roster[eventName][1]).toBe("Jane Doe"); // Other entries preserved
+      expect(updatedRoster.roster.Chemistry).toEqual(["Bob Smith"]); // Other events preserved
     });
 
-    it('should handle removal from non-existent cache', () => {
-      const teamSlug = 'test-team';
-      const subteamId = 'test-subteam';
-      const eventName = 'Astronomy';
+    it("should handle removal from non-existent cache", () => {
+      const teamSlug = "test-team";
+      const subteamId = "test-subteam";
+      const eventName = "Astronomy";
       const slotIndex = 0;
 
       // No initial cache
@@ -239,21 +250,21 @@ describe('Team Store Optimistic Updates', () => {
       expect(store.getState().roster).toEqual({});
     });
 
-    it('should handle removal from non-existent event', () => {
-      const teamSlug = 'test-team';
-      const subteamId = 'test-subteam';
-      const eventName = 'NonExistentEvent';
+    it("should handle removal from non-existent event", () => {
+      const teamSlug = "test-team";
+      const subteamId = "test-subteam";
+      const eventName = "NonExistentEvent";
       const slotIndex = 0;
 
       // Set up initial roster cache
-      const cacheKey = store.getState().getCacheKey('roster', teamSlug, subteamId);
+      const cacheKey = store.getState().getCacheKey("roster", teamSlug, subteamId);
       store.setState({
         roster: {
           [cacheKey]: {
-            roster: { 'Astronomy': ['John Doe'] },
-            timestamp: Date.now()
-          }
-        }
+            roster: { Astronomy: ["John Doe"] },
+            timestamp: Date.now(),
+          },
+        },
       });
 
       // Remove roster entry
@@ -261,27 +272,27 @@ describe('Team Store Optimistic Updates', () => {
 
       // Should not change anything if event doesn't exist
       const updatedRoster = store.getState().roster[cacheKey];
-      expect(updatedRoster.roster['Astronomy']).toEqual(['John Doe']);
+      expect(updatedRoster.roster.Astronomy).toEqual(["John Doe"]);
     });
   });
 
-  describe('Event Name Normalization', () => {
+  describe("Event Name Normalization", () => {
     it('should handle event names with "and" correctly', () => {
-      const teamSlug = 'test-team';
-      const subteamId = 'test-subteam';
-      const eventName = 'Anatomy and Physiology';
+      const teamSlug = "test-team";
+      const subteamId = "test-subteam";
+      const eventName = "Anatomy and Physiology";
       const slotIndex = 0;
-      const studentName = 'John Doe';
+      const studentName = "John Doe";
 
       // Set up initial roster cache
-      const cacheKey = store.getState().getCacheKey('roster', teamSlug, subteamId);
+      const cacheKey = store.getState().getCacheKey("roster", teamSlug, subteamId);
       store.setState({
         roster: {
           [cacheKey]: {
             roster: {},
-            timestamp: Date.now()
-          }
-        }
+            timestamp: Date.now(),
+          },
+        },
       });
 
       // Add roster entry
@@ -294,21 +305,21 @@ describe('Team Store Optimistic Updates', () => {
     });
 
     it('should handle event names without "and" correctly', () => {
-      const teamSlug = 'test-team';
-      const subteamId = 'test-subteam';
-      const eventName = 'Astronomy';
+      const teamSlug = "test-team";
+      const subteamId = "test-subteam";
+      const eventName = "Astronomy";
       const slotIndex = 0;
-      const studentName = 'John Doe';
+      const studentName = "John Doe";
 
       // Set up initial roster cache
-      const cacheKey = store.getState().getCacheKey('roster', teamSlug, subteamId);
+      const cacheKey = store.getState().getCacheKey("roster", teamSlug, subteamId);
       store.setState({
         roster: {
           [cacheKey]: {
             roster: {},
-            timestamp: Date.now()
-          }
-        }
+            timestamp: Date.now(),
+          },
+        },
       });
 
       // Add roster entry
@@ -321,86 +332,86 @@ describe('Team Store Optimistic Updates', () => {
     });
   });
 
-  describe('Cache Key Generation', () => {
-    it('should generate consistent cache keys', () => {
-      const teamSlug = 'test-team';
-      const subteamId = 'test-subteam';
-      
-      const key1 = store.getState().getCacheKey('roster', teamSlug, subteamId);
-      const key2 = store.getState().getCacheKey('roster', teamSlug, subteamId);
-      
+  describe("Cache Key Generation", () => {
+    it("should generate consistent cache keys", () => {
+      const teamSlug = "test-team";
+      const subteamId = "test-subteam";
+
+      const key1 = store.getState().getCacheKey("roster", teamSlug, subteamId);
+      const key2 = store.getState().getCacheKey("roster", teamSlug, subteamId);
+
       expect(key1).toBe(key2);
-      expect(key1).toBe('roster-test-team-test-subteam');
+      expect(key1).toBe("roster-test-team-test-subteam");
     });
 
-    it('should generate different cache keys for different subteams', () => {
-      const teamSlug = 'test-team';
-      const subteamId1 = 'subteam-1';
-      const subteamId2 = 'subteam-2';
-      
-      const key1 = store.getState().getCacheKey('roster', teamSlug, subteamId1);
-      const key2 = store.getState().getCacheKey('roster', teamSlug, subteamId2);
-      
+    it("should generate different cache keys for different subteams", () => {
+      const teamSlug = "test-team";
+      const subteamId1 = "subteam-1";
+      const subteamId2 = "subteam-2";
+
+      const key1 = store.getState().getCacheKey("roster", teamSlug, subteamId1);
+      const key2 = store.getState().getCacheKey("roster", teamSlug, subteamId2);
+
       expect(key1).not.toBe(key2);
     });
   });
 
-  describe('State Immutability', () => {
-    it('should not mutate original state when adding entries', () => {
-      const teamSlug = 'test-team';
-      const subteamId = 'test-subteam';
-      const eventName = 'Astronomy';
+  describe("State Immutability", () => {
+    it("should not mutate original state when adding entries", () => {
+      const teamSlug = "test-team";
+      const subteamId = "test-subteam";
+      const eventName = "Astronomy";
       const slotIndex = 0;
-      const studentName = 'John Doe';
+      const studentName = "John Doe";
 
       // Set up initial roster cache
-      const cacheKey = store.getState().getCacheKey('roster', teamSlug, subteamId);
+      const cacheKey = store.getState().getCacheKey("roster", teamSlug, subteamId);
       const originalRoster = {
-        roster: { 'Chemistry': ['Jane Doe'] },
-        timestamp: Date.now()
+        roster: { Chemistry: ["Jane Doe"] },
+        timestamp: Date.now(),
       };
-      
+
       store.setState({
         roster: {
-          [cacheKey]: originalRoster
-        }
+          [cacheKey]: originalRoster,
+        },
       });
 
       // Add roster entry
       store.getState().addRosterEntry(teamSlug, subteamId, eventName, slotIndex, studentName);
 
       // Verify original state was not mutated
-      expect(originalRoster.roster).toEqual({ 'Chemistry': ['Jane Doe'] });
+      expect(originalRoster.roster).toEqual({ Chemistry: ["Jane Doe"] });
       expect(originalRoster.roster[eventName]).toBeUndefined();
     });
 
-    it('should not mutate original state when removing entries', () => {
-      const teamSlug = 'test-team';
-      const subteamId = 'test-subteam';
-      const eventName = 'Astronomy';
+    it("should not mutate original state when removing entries", () => {
+      const teamSlug = "test-team";
+      const subteamId = "test-subteam";
+      const eventName = "Astronomy";
       const slotIndex = 0;
 
       // Set up initial roster cache with a deep copy
-      const cacheKey = store.getState().getCacheKey('roster', teamSlug, subteamId);
+      const cacheKey = store.getState().getCacheKey("roster", teamSlug, subteamId);
       const originalRoster = {
-        roster: { 'Astronomy': ['John Doe', 'Jane Doe'] },
-        timestamp: Date.now()
+        roster: { Astronomy: ["John Doe", "Jane Doe"] },
+        timestamp: Date.now(),
       };
-      
+
       // Create a deep copy to preserve original state
       const originalRosterCopy = JSON.parse(JSON.stringify(originalRoster));
-      
+
       store.setState({
         roster: {
-          [cacheKey]: originalRoster
-        }
+          [cacheKey]: originalRoster,
+        },
       });
 
       // Remove roster entry
       store.getState().removeRosterEntry(teamSlug, subteamId, eventName, slotIndex);
 
       // Verify original state was not mutated by checking the copy
-      expect(originalRosterCopy.roster['Astronomy']).toEqual(['John Doe', 'Jane Doe']);
+      expect(originalRosterCopy.roster.Astronomy).toEqual(["John Doe", "Jane Doe"]);
     });
   });
 });

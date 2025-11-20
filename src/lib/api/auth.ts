@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
-import type { User } from '@supabase/supabase-js';
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import type { User } from "@supabase/supabase-js";
+import { type NextRequest, NextResponse } from "next/server";
 
 /**
  * Authentication result for API routes
@@ -14,15 +14,20 @@ export interface AuthResult {
  * Validates authentication for API routes
  * Returns user if authenticated, or error response if not
  */
-export async function validateAuth(_request: NextRequest): Promise<{ success: boolean; user?: any; error?: any }> {
+export async function validateAuth(
+  _request: NextRequest
+): Promise<{ success: boolean; user?: any; error?: any }> {
   try {
     const supabase = await createSupabaseServerClient();
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
 
     if (error || !user) {
       return {
         success: false,
-        error: 'Unauthorized - Please sign in'
+        error: "Unauthorized - Please sign in",
       };
     }
 
@@ -30,7 +35,7 @@ export async function validateAuth(_request: NextRequest): Promise<{ success: bo
   } catch {
     return {
       success: false,
-      error: 'Authentication failed'
+      error: "Authentication failed",
     };
   }
 }
@@ -42,13 +47,16 @@ export async function validateAuth(_request: NextRequest): Promise<{ success: bo
 export async function requireAuth(_request: NextRequest): Promise<AuthResult> {
   try {
     const supabase = await createSupabaseServerClient();
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
 
     if (error || !user) {
       return {
         user: null,
         error: NextResponse.json(
-          { success: false, error: 'Unauthorized - Please sign in' },
+          { success: false, error: "Unauthorized - Please sign in" },
           { status: 401 }
         ),
       };
@@ -58,10 +66,7 @@ export async function requireAuth(_request: NextRequest): Promise<AuthResult> {
   } catch {
     return {
       user: null,
-      error: NextResponse.json(
-        { success: false, error: 'Authentication failed' },
-        { status: 500 }
-      ),
+      error: NextResponse.json({ success: false, error: "Authentication failed" }, { status: 500 }),
     };
   }
 }
@@ -72,7 +77,9 @@ export async function requireAuth(_request: NextRequest): Promise<AuthResult> {
 export async function getCurrentUser(_request: NextRequest): Promise<User | null> {
   try {
     const supabase = await createSupabaseServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     return user;
   } catch {
     return null;
@@ -85,7 +92,9 @@ export async function getCurrentUser(_request: NextRequest): Promise<User | null
 export async function optionalAuth(_request: NextRequest): Promise<User | null> {
   try {
     const supabase = await createSupabaseServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     return user;
   } catch {
     return null;
@@ -98,23 +107,19 @@ export async function optionalAuth(_request: NextRequest): Promise<User | null> 
 export async function requireAdmin(request: NextRequest): Promise<AuthResult> {
   const { user, error } = await requireAuth(request);
 
-  if (error) {
-    return { user: null, error };
+  if (error || !user) {
+    return { user: null, error: error || new Error("User not found") };
   }
 
   // Check if user has admin role
   const supabase = await createSupabaseServerClient();
-  const { data: profile } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user!.id)
-    .single();
+  const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
 
-  if ((profile as { role?: string } | null)?.role !== 'admin') {
+  if ((profile as { role?: string } | null)?.role !== "admin") {
     return {
       user: null,
       error: NextResponse.json(
-        { success: false, error: 'Forbidden - Admin access required' },
+        { success: false, error: "Forbidden - Admin access required" },
         { status: 403 }
       ),
     };
@@ -132,11 +137,7 @@ const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 /**
  * Simple rate limiting utility function
  */
-export function rateLimit(
-  identifier: string,
-  limit: number = 100,
-  windowMs: number = 60000
-): NextResponse | null {
+export function rateLimit(identifier: string, limit = 100, windowMs = 60000): NextResponse | null {
   const now = Date.now();
   const userLimit = rateLimitMap.get(identifier);
 
@@ -152,13 +153,13 @@ export function rateLimit(
     return NextResponse.json(
       {
         success: false,
-        error: 'Too many requests - Please try again later',
+        error: "Too many requests - Please try again later",
         retryAfter: Math.ceil((userLimit.resetTime - now) / 1000),
       },
       {
         status: 429,
         headers: {
-          'Retry-After': String(Math.ceil((userLimit.resetTime - now) / 1000)),
+          "Retry-After": String(Math.ceil((userLimit.resetTime - now) / 1000)),
         },
       }
     );
@@ -175,13 +176,10 @@ export function validateRequestBody<T>(
   body: unknown,
   requiredFields: (keyof T)[]
 ): { valid: boolean; error?: NextResponse } {
-  if (!body || typeof body !== 'object') {
+  if (!body || typeof body !== "object") {
     return {
       valid: false,
-      error: NextResponse.json(
-        { success: false, error: 'Invalid request body' },
-        { status: 400 }
-      ),
+      error: NextResponse.json({ success: false, error: "Invalid request body" }, { status: 400 }),
     };
   }
 
@@ -195,7 +193,7 @@ export function validateRequestBody<T>(
       error: NextResponse.json(
         {
           success: false,
-          error: `Missing required fields: ${missingFields.join(', ')}`,
+          error: `Missing required fields: ${missingFields.join(", ")}`,
         },
         { status: 400 }
       ),
@@ -210,11 +208,11 @@ export function validateRequestBody<T>(
  */
 export function sanitizeInput(input: string): string {
   return input
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;')
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;")
+    .replace(/\//g, "&#x2F;")
     .trim();
 }
 

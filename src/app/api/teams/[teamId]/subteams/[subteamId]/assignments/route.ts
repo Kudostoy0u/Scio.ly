@@ -1,51 +1,54 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerUser } from '@/lib/supabaseServer';
-import { resolveTeamSlugToUnits, getUserTeamMemberships } from '@/lib/utils/team-resolver';
-import { dbPg } from '@/lib/db';
-import { 
-  newTeamAssignments,
-  newTeamAssignmentRoster,
+import { dbPg } from "@/lib/db";
+import {
   newTeamAssignmentQuestions,
-  newTeamMemberships,
-  newTeamNotifications,
-  users 
-} from '@/lib/db/schema';
-import { eq, and, inArray, sql, desc } from 'drizzle-orm';
-import { NotificationSyncService } from '@/lib/services/notification-sync';
+  newTeamAssignmentRoster,
+  newTeamAssignments,
+} from "@/lib/db/schema/assignments";
+import { newTeamMemberships } from "@/lib/db/schema/teams";
+import { newTeamNotifications } from "@/lib/db/schema/notifications";
+import { users } from "@/lib/db/schema/core";
+import { NotificationSyncService } from "@/lib/services/notification-sync";
+import { getServerUser } from "@/lib/supabaseServer";
+import { getUserTeamMemberships, resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
+import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
 
 // GET /api/teams/[teamId]/subteams/[subteamId]/assignments - Get subteam assignments
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ teamId: string; subteamId: string }> }
 ) {
   try {
     if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: "Database configuration error",
+          details: "DATABASE_URL environment variable is missing",
+        },
+        { status: 500 }
+      );
     }
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { teamId, subteamId } = await params;
 
     // Resolve team slug to team units
     const teamInfo = await resolveTeamSlugToUnits(teamId);
-    
+
     // Check if user is member of any team unit in this group
     const memberships = await getUserTeamMemberships(user.id, teamInfo.teamUnitIds);
 
     if (memberships.length === 0) {
-      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
+      return NextResponse.json({ error: "Not a team member" }, { status: 403 });
     }
 
     // Verify the subteamId is valid and belongs to this team group
     if (!teamInfo.teamUnitIds.includes(subteamId)) {
-      return NextResponse.json({ error: 'Subteam not found' }, { status: 404 });
+      return NextResponse.json({ error: "Subteam not found" }, { status: 404 });
     }
 
     // Get assignments for this specific subteam with creator information using Drizzle ORM
@@ -62,7 +65,7 @@ export async function GET(
         createdAt: newTeamAssignments.createdAt,
         createdBy: newTeamAssignments.createdBy,
         creatorName: users.displayName,
-        creatorEmail: users.email
+        creatorEmail: users.email,
       })
       .from(newTeamAssignments)
       .leftJoin(users, eq(newTeamAssignments.createdBy, users.id))
@@ -70,37 +73,41 @@ export async function GET(
       .orderBy(desc(newTeamAssignments.createdAt));
 
     // Get roster assignments for each assignment with user information
-    const assignmentIds = assignmentsResult.map(a => a.id);
-    const rosterResult = assignmentIds.length > 0 ? await dbPg
-      .select({
-        assignmentId: newTeamAssignmentRoster.assignmentId,
-        studentName: newTeamAssignmentRoster.studentName,
-        userId: newTeamAssignmentRoster.userId,
-        email: users.email,
-        username: users.username,
-        displayName: sql<string>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}))`
-      })
-      .from(newTeamAssignmentRoster)
-      .leftJoin(users, eq(newTeamAssignmentRoster.userId, users.id))
-      .where(inArray(newTeamAssignmentRoster.assignmentId, assignmentIds)) : [];
+    const assignmentIds = assignmentsResult.map((a) => a.id);
+    const rosterResult =
+      assignmentIds.length > 0
+        ? await dbPg
+            .select({
+              assignmentId: newTeamAssignmentRoster.assignmentId,
+              studentName: newTeamAssignmentRoster.studentName,
+              userId: newTeamAssignmentRoster.userId,
+              email: users.email,
+              username: users.username,
+              displayName: sql<string>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}))`,
+            })
+            .from(newTeamAssignmentRoster)
+            .leftJoin(users, eq(newTeamAssignmentRoster.userId, users.id))
+            .where(inArray(newTeamAssignmentRoster.assignmentId, assignmentIds))
+        : [];
 
     // Group roster by assignment ID
     const rosterByAssignment: Record<string, any[]> = {};
-    rosterResult.forEach(roster => {
+    rosterResult.forEach((roster) => {
+      if (!roster.assignmentId) return;
       if (!rosterByAssignment[roster.assignmentId]) {
         rosterByAssignment[roster.assignmentId] = [];
       }
-      rosterByAssignment[roster.assignmentId].push({
+      rosterByAssignment[roster.assignmentId]!.push({
         student_name: roster.studentName,
         user_id: roster.userId,
         email: roster.email,
         username: roster.username,
-        display_name: roster.displayName
+        display_name: roster.displayName,
       });
     });
 
     // Format assignments with roster information
-    const assignments = assignmentsResult.map(assignment => ({
+    const assignments = assignmentsResult.map((assignment) => ({
       id: assignment.id,
       title: assignment.title,
       description: assignment.description,
@@ -112,20 +119,21 @@ export async function GET(
       created_at: assignment.createdAt?.toISOString() || null,
       created_by: {
         id: assignment.createdBy,
-        name: assignment.creatorName || 'Unknown',
-        email: assignment.creatorEmail || 'unknown@example.com'
+        name: assignment.creatorName || "Unknown",
+        email: assignment.creatorEmail || "unknown@example.com",
       },
-      roster: rosterByAssignment[assignment.id] || []
+      roster: rosterByAssignment[assignment.id] || [],
     }));
 
     return NextResponse.json({ assignments });
-
   } catch (error) {
-    console.error('Error fetching subteam assignments:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -136,53 +144,56 @@ export async function POST(
 ) {
   try {
     if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: "Database configuration error",
+          details: "DATABASE_URL environment variable is missing",
+        },
+        { status: 500 }
+      );
     }
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { teamId, subteamId } = await params;
     const body = await request.json();
-    const { 
-      title, 
-      description, 
-      assignment_type = 'homework', 
-      due_date, 
-      points, 
-      is_required = true, 
+    const {
+      title,
+      description,
+      assignment_type = "homework",
+      due_date,
+      points,
+      is_required = true,
       max_attempts,
       roster_members,
-      questions
+      questions,
     } = body;
 
     if (!title) {
-      return NextResponse.json({ error: 'Title is required' }, { status: 400 });
+      return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
 
     // Resolve team slug to team units
     const teamInfo = await resolveTeamSlugToUnits(teamId);
-    
+
     // Check if user is captain or co-captain of any team unit in this group
     const memberships = await getUserTeamMemberships(user.id, teamInfo.teamUnitIds);
 
     if (memberships.length === 0) {
-      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
+      return NextResponse.json({ error: "Not a team member" }, { status: 403 });
     }
 
-    const isCaptain = memberships.some(m => ['captain', 'co_captain'].includes(m.role));
+    const isCaptain = memberships.some((m) => ["captain", "co_captain"].includes(m.role));
     if (!isCaptain) {
-      return NextResponse.json({ error: 'Only captains can create assignments' }, { status: 403 });
+      return NextResponse.json({ error: "Only captains can create assignments" }, { status: 403 });
     }
 
     // Verify the subteamId is valid and belongs to this team group
     if (!teamInfo.teamUnitIds.includes(subteamId)) {
-      return NextResponse.json({ error: 'Subteam not found' }, { status: 404 });
+      return NextResponse.json({ error: "Subteam not found" }, { status: 404 });
     }
 
     // Create assignment using Drizzle ORM
@@ -197,7 +208,7 @@ export async function POST(
         dueDate: due_date ? new Date(due_date) : null,
         points,
         isRequired: is_required,
-        maxAttempts: max_attempts
+        maxAttempts: max_attempts,
       })
       .returning();
 
@@ -209,24 +220,20 @@ export async function POST(
           userId: newTeamMemberships.userId,
           displayName: users.displayName,
           firstName: users.firstName,
-          lastName: users.lastName
+          lastName: users.lastName,
         })
         .from(newTeamMemberships)
         .leftJoin(users, eq(newTeamMemberships.userId, users.id))
         .where(
-          and(
-            eq(newTeamMemberships.teamId, subteamId),
-            eq(newTeamMemberships.status, 'active')
-          )
+          and(eq(newTeamMemberships.teamId, subteamId), eq(newTeamMemberships.status, "active"))
         );
 
       // Create a map of names to user IDs
       const nameToUserId = new Map<string, string>();
-      teamMembersResult.forEach(member => {
-        const displayName = member.displayName || 
-          (member.firstName && member.lastName 
-            ? `${member.firstName} ${member.lastName}` 
-            : null);
+      teamMembersResult.forEach((member) => {
+        const displayName =
+          member.displayName ||
+          (member.firstName && member.lastName ? `${member.firstName} ${member.lastName}` : null);
         if (displayName) {
           nameToUserId.set(displayName.toLowerCase().trim(), member.userId);
         }
@@ -235,16 +242,14 @@ export async function POST(
       const rosterInserts = roster_members.map((studentName: string) => {
         const userId = nameToUserId.get(studentName.toLowerCase().trim()) || null;
         return {
-          assignmentId: assignment.id,
+          assignmentId: assignment?.id ?? "",
           studentName,
           userId,
-          subteamId: subteamId
+          subteamId: subteamId,
         };
       });
 
-      await dbPg
-        .insert(newTeamAssignmentRoster)
-        .values(rosterInserts);
+      await dbPg.insert(newTeamAssignmentRoster).values(rosterInserts);
     }
 
     /**
@@ -258,7 +263,7 @@ export async function POST(
     if (questions && Array.isArray(questions) && questions.length > 0) {
       const questionInserts = questions.map((question: any, index: number) => {
         // Validate question has required fields
-        if (!question.question_text || question.question_text.trim() === '') {
+        if (!question.question_text || question.question_text.trim() === "") {
           throw new Error(`Question ${index + 1} is missing question_text`);
         }
 
@@ -277,60 +282,52 @@ export async function POST(
          * - MCQ: "A", "B,C" (letters)
          * - FRQ: "answer text"
          */
-        if (!question.answers || !Array.isArray(question.answers) || question.answers.length === 0) {
-          console.error(`❌ INVALID QUESTION - Cannot save:`, {
-            questionNumber: index + 1,
-            questionText: question.question_text?.substring(0, 100),
-            hasAnswers: !!question.answers,
-            answersValue: question.answers,
-          });
-
+        if (
+          !(question.answers && Array.isArray(question.answers)) ||
+          question.answers.length === 0
+        ) {
           throw new Error(
             `Cannot create assignment: Question ${index + 1} has no valid answers. ` +
-            `Question: "${question.question_text?.substring(0, 50)}..."`
+              `Question: "${question.question_text?.substring(0, 50)}..."`
           );
         }
 
         // Convert answers array to correct_answer string
         let correctAnswer: string | null = null;
 
-        if (question.question_type === 'multiple_choice') {
+        if (question.question_type === "multiple_choice") {
           // Convert numeric indices to letters
           correctAnswer = question.answers
             .map((ans: number) => {
-              if (typeof ans !== 'number' || ans < 0) {
+              if (typeof ans !== "number" || ans < 0) {
                 throw new Error(`Invalid answer index ${ans} for question ${index + 1}`);
               }
               return String.fromCharCode(65 + ans); // 0→A, 1→B, etc.
             })
-            .join(',');
+            .join(",");
         } else {
           // For FRQ, use answers as-is
-          correctAnswer = question.answers
-            .map((ans: any) => String(ans))
-            .join(',');
+          correctAnswer = question.answers.map((ans: any) => String(ans)).join(",");
         }
 
         // Validate we got a valid correct_answer
-        if (!correctAnswer || correctAnswer.trim() === '') {
+        if (!correctAnswer || correctAnswer.trim() === "") {
           throw new Error(`Failed to convert answers for question ${index + 1}`);
         }
 
         return {
-          assignmentId: assignment.id,
+          assignmentId: assignment?.id ?? "",
           questionText: question.question_text,
           questionType: question.question_type,
-          options: question.options ? JSON.stringify(question.options) : null,
+          options: question.options || null,
           correctAnswer: correctAnswer, // GUARANTEED: Valid, non-empty string
           points: question.points || 1,
           orderIndex: question.order_index !== undefined ? question.order_index : index,
-          imageData: question.imageData || null
+          imageData: question.imageData || null,
         };
       });
 
-      await dbPg
-        .insert(newTeamAssignmentQuestions)
-        .values(questionInserts);
+      await dbPg.insert(newTeamAssignmentQuestions).values(questionInserts);
     }
 
     // Create notifications for all team members in this subteam
@@ -342,7 +339,7 @@ export async function POST(
         .select({
           displayName: users.displayName,
           firstName: users.firstName,
-          lastName: users.lastName
+          lastName: users.lastName,
         })
         .from(users)
         .where(eq(users.id, user.id))
@@ -350,30 +347,32 @@ export async function POST(
 
       if (creatorResult.length > 0) {
         const creator = creatorResult[0];
-        const creatorDisplayName = creator.displayName ||
-          (creator.firstName && creator.lastName ? `${creator.firstName} ${creator.lastName}` : null);
-        
+        if (!creator) {
+          return NextResponse.json({ error: "Creator not found" }, { status: 404 });
+        }
+        const creatorDisplayName =
+          creator.displayName ||
+          (creator.firstName && creator.lastName
+            ? `${creator.firstName} ${creator.lastName}`
+            : null);
+
         if (creatorDisplayName) {
-          creatorInRoster = roster_members.some((memberName: string) => 
-            memberName.toLowerCase().trim() === creatorDisplayName.toLowerCase().trim()
+          creatorInRoster = roster_members.some(
+            (memberName: string) =>
+              memberName.toLowerCase().trim() === creatorDisplayName.toLowerCase().trim()
           );
         }
       }
     }
 
-    console.log('=== NOTIFICATION CREATION DEBUG ===');
-    console.log('Creator user ID:', user.id);
-    console.log('Selected roster members:', roster_members);
-    console.log('Creator in roster:', creatorInRoster);
-
     // Build the where condition - exclude creator only if they're not in the roster
     const whereConditions = [
       eq(newTeamMemberships.teamId, subteamId),
-      eq(newTeamMemberships.status, 'active')
+      eq(newTeamMemberships.status, "active"),
     ];
 
     if (!creatorInRoster) {
-      whereConditions.push(sql`${newTeamMemberships.userId} != ${user.id}`);
+      whereConditions.push(ne(newTeamMemberships.userId, user.id));
     }
 
     const membersResult = await dbPg
@@ -381,49 +380,43 @@ export async function POST(
       .from(newTeamMemberships)
       .where(and(...whereConditions));
 
-    console.log('Found team members for notifications:', membersResult.length);
-    console.log('Members:', membersResult.map(m => m.userId));
-
     // Create notifications for each member using Drizzle ORM
     for (const member of membersResult) {
-      console.log('Creating notification for user:', member.userId);
       const notificationResult = await dbPg
         .insert(newTeamNotifications)
         .values({
           userId: member.userId,
           teamId: subteamId, // Use the subteam ID, not the group ID
-          notificationType: 'assignment_invitation',
+          notificationType: "assignment_invitation",
           title: `New assignment: ${title}`,
-          message: description || 'You have been assigned to complete this assignment',
-          data: { 
-            assignment_id: assignment.id, 
+          message: description || "You have been assigned to complete this assignment",
+          data: {
+            assignment_id: assignment?.id ?? "",
             due_date: due_date,
             assignment_type: assignment_type,
-            points: points
-          }
+            points: points,
+          },
         })
         .returning({ id: newTeamNotifications.id });
 
       // Sync notification to Supabase for client-side access
-      if (notificationResult.length > 0) {
+      if (notificationResult.length > 0 && notificationResult[0]) {
         try {
-          console.log('Syncing notification to Supabase for user:', member.userId, 'notification ID:', notificationResult[0].id);
           await NotificationSyncService.syncNotificationToSupabase(notificationResult[0].id);
-          console.log('Successfully synced notification for user:', member.userId);
-        } catch (syncError) {
-          console.error('Failed to sync assignment notification to Supabase for user:', member.userId, 'Error:', syncError);
+        } catch (_syncError) {
           // Don't fail the entire request if sync fails
         }
       }
     }
 
     return NextResponse.json({ assignment });
-
   } catch (error) {
-    console.error('Error creating subteam assignment:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
   }
 }

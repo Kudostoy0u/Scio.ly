@@ -15,9 +15,11 @@ export const mod26 = (n: number): number => ((n % 26) + 26) % 26;
  * @returns {number} Numeric position of the letter
  */
 export const letterToNumber = (letter: string): number => {
-    const upperLetter = letter.toUpperCase();
-    if (upperLetter === 'Ñ') return 26; // ñ is position 26 (after z)
-    return upperLetter.charCodeAt(0) - 65;
+  const upperLetter = letter.toUpperCase();
+  if (upperLetter === "Ñ") {
+    return 26; // ñ is position 26 (after z)
+  }
+  return upperLetter.charCodeAt(0) - 65;
 };
 
 /**
@@ -26,8 +28,10 @@ export const letterToNumber = (letter: string): number => {
  * @returns {string} Letter corresponding to the position
  */
 export const numberToLetter = (num: number): string => {
-    if (num === 26) return 'Ñ'; // ñ is position 26
-    return String.fromCharCode(mod26(num) + 65);
+  if (num === 26) {
+    return "Ñ"; // ñ is position 26
+  }
+  return String.fromCharCode(mod26(num) + 65);
 };
 
 /**
@@ -36,9 +40,9 @@ export const numberToLetter = (num: number): string => {
  * @returns {string} Formatted time string (e.g., "5:03")
  */
 export const formatTime = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+  const minutes = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${minutes}:${secs < 10 ? "0" : ""}${secs}`;
 };
 
 /**
@@ -47,40 +51,48 @@ export const formatTime = (seconds: number): string => {
  * @returns {string[][]} 5x5 Polybius square
  */
 export const createPolybiusSquare = (key: string): string[][] => {
-    // Build 25-letter square with I/J combined
-    const mapIJ = (ch: string) => ch === 'J' ? 'I' : ch;
-    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const used = new Set<string>();
-    const seq: string[] = [];
-    const k = key.toUpperCase().replace(/[^A-Z]/g, '');
-    
-    for (const c0 of k) {
-        const c = mapIJ(c0);
-        if (c !== 'J' && !used.has(c)) { 
-            used.add(c); 
-            seq.push(c); 
-        }
-        if (seq.length >= 25) break;
+  // Build 25-letter square with I/J combined
+  const mapIj = (ch: string) => (ch === "J" ? "I" : ch);
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const used = new Set<string>();
+  const seq: string[] = [];
+  const k = key.toUpperCase().replace(/[^A-Z]/g, "");
+
+  for (const c0 of k) {
+    const c = mapIj(c0);
+    if (c !== "J" && !used.has(c)) {
+      used.add(c);
+      seq.push(c);
     }
-    
-    for (const c0 of alphabet) {
-        const c = mapIJ(c0);
-        if (c === 'J') continue;
-        if (!used.has(c)) { 
-            used.add(c); 
-            seq.push(c); 
-        }
-        if (seq.length >= 25) break;
+    if (seq.length >= 25) {
+      break;
     }
-    
-    const square: string[][] = Array.from({ length: 5 }, () => Array.from({ length: 5 }, () => ''));
-    let kIdx = 0;
-    for (let i = 0; i < 5; i++) {
-        for (let j = 0; j < 5; j++) {
-            square[i][j] = seq[kIdx++] || '';
-        }
+  }
+
+  for (const c0 of alphabet) {
+    const c = mapIj(c0);
+    if (c === "J") {
+      continue;
     }
-    return square;
+    if (!used.has(c)) {
+      used.add(c);
+      seq.push(c);
+    }
+    if (seq.length >= 25) {
+      break;
+    }
+  }
+
+  const square: string[][] = Array.from({ length: 5 }, () => Array.from({ length: 5 }, () => ""));
+  let kIdx = 0;
+  for (let i = 0; i < 5; i++) {
+    for (let j = 0; j < 5; j++) {
+      const seqVal = seq[kIdx];
+      square[i]![j] = seqVal !== undefined ? seqVal : "";
+      kIdx++;
+    }
+  }
+  return square;
 };
 
 /**
@@ -90,15 +102,17 @@ export const createPolybiusSquare = (key: string): string[][] => {
  * @returns {string} Coordinates as string (e.g., "12")
  */
 export const letterToCoordinates = (letter: string, square: string[][]): string => {
-    const L = letter === 'J' ? 'I' : letter;
-    for (let i = 0; i < 5; i++) {
-        for (let j = 0; j < 5; j++) {
-            if (square[i][j] === L) {
-                return `${i + 1}${j + 1}`;
-            }
-        }
+  const L = letter === "J" ? "I" : letter;
+  for (let i = 0; i < 5; i++) {
+    const row = square[i];
+    if (!row) continue;
+    for (let j = 0; j < 5; j++) {
+      if (row[j] === L) {
+        return `${i + 1}${j + 1}`;
+      }
     }
-    return '00';
+  }
+  return "00";
 };
 
 /**
@@ -106,11 +120,16 @@ export const letterToCoordinates = (letter: string, square: string[][]): string 
  * @param {T[]} arr - Array to shuffle
  * @returns {T[]} Shuffled array
  */
-export const shuffleArray = <T,>(arr: T[]): T[] => {
-    const a = [...arr];
-    for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
+export const shuffleArray = <T>(arr: T[]): T[] => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = a[i];
+    const swapVal = a[j];
+    if (temp !== undefined && swapVal !== undefined) {
+      a[i] = swapVal;
+      a[j] = temp;
     }
-    return a;
+  }
+  return a;
 };

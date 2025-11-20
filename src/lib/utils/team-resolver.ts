@@ -1,6 +1,6 @@
-import { dbPg } from '@/lib/db';
-import { newTeamGroups, newTeamUnits, newTeamMemberships } from '@/lib/db/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { dbPg } from "@/lib/db";
+import { newTeamGroups, newTeamMemberships, newTeamUnits } from "@/lib/db/schema";
+import { and, eq, inArray } from "drizzle-orm";
 
 /**
  * Team group information interface
@@ -16,7 +16,7 @@ export interface TeamGroupInfo {
 /**
  * Resolves a team slug to team group and unit IDs
  * Looks up a team group by its slug and returns all associated team units
- * 
+ *
  * @param {string} slug - The team group slug (e.g., 'neuqua-valley-high-school-c')
  * @returns {Promise<TeamGroupInfo>} Team group and unit IDs
  * @throws {Error} When team group is not found or has no units
@@ -35,10 +35,13 @@ export async function resolveTeamSlugToUnits(slug: string): Promise<TeamGroupInf
     .where(eq(newTeamGroups.slug, slug));
 
   if (groupResult.length === 0) {
-    throw new Error('Team group not found');
+    throw new Error("Team group not found");
   }
 
-  const groupId = groupResult[0].id;
+  const groupId = groupResult[0]?.id;
+  if (!groupId) {
+    throw new Error("Team group ID not found");
+  }
 
   // Get team units for this group using Drizzle ORM
   const unitsResult = await dbPg
@@ -47,21 +50,21 @@ export async function resolveTeamSlugToUnits(slug: string): Promise<TeamGroupInf
     .where(eq(newTeamUnits.groupId, groupId));
 
   if (unitsResult.length === 0) {
-    throw new Error('No team units found for this group');
+    throw new Error("No team units found for this group");
   }
 
-  const teamUnitIds = unitsResult.map(row => row.id);
+  const teamUnitIds = unitsResult.map((row) => row.id);
 
   return {
     groupId,
-    teamUnitIds
+    teamUnitIds,
   };
 }
 
 /**
  * Checks if a user is a member of any team unit in a group
  * Queries the database to find all team units where the user is a member
- * 
+ *
  * @param {string} userId - The user ID to check memberships for
  * @param {string[]} teamUnitIds - Array of team unit IDs to check
  * @returns {Promise<any[]>} Array of team memberships for the user
@@ -78,14 +81,14 @@ export async function getUserTeamMemberships(userId: string, teamUnitIds: string
     .select({
       id: newTeamMemberships.id,
       role: newTeamMemberships.role,
-      team_id: newTeamMemberships.teamId
+      team_id: newTeamMemberships.teamId,
     })
     .from(newTeamMemberships)
     .where(
       and(
         eq(newTeamMemberships.userId, userId),
         inArray(newTeamMemberships.teamId, teamUnitIds),
-        eq(newTeamMemberships.status, 'active')
+        eq(newTeamMemberships.status, "active")
       )
     );
 
@@ -100,5 +103,5 @@ export async function getUserTeamMemberships(userId: string, teamUnitIds: string
  */
 export async function isUserCaptain(userId: string, teamUnitIds: string[]): Promise<boolean> {
   const memberships = await getUserTeamMemberships(userId, teamUnitIds);
-  return memberships.some(m => ['captain', 'co_captain'].includes(m.role));
+  return memberships.some((m) => ["captain", "co_captain"].includes(m.role));
 }

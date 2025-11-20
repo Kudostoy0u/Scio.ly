@@ -1,4 +1,4 @@
-import LeaderboardClientPage from './ClientPage';
+import LeaderboardClientPage from "./ClientPage";
 
 export default function LeaderboardPage() {
   return <LeaderboardClientPage />;

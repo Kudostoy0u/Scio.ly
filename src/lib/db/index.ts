@@ -1,8 +1,8 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
-import postgres from 'postgres';
-import { Pool } from 'pg';
-import * as schema from './schema';
+import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { Pool } from "pg";
+import postgres from "postgres";
+import * as schema from "./schema";
 
 const connectionString = process.env.DATABASE_URL!;
 
@@ -14,38 +14,42 @@ declare global {
 }
 
 // Original postgres-js client (for questions, quotes, etc.)
-const client = globalThis.__pgClient__ ?? postgres(connectionString, {
-  // Keep footprint small in serverless and avoid connection churn
-  max: 2,
-  idle_timeout: 300,
-  connect_timeout: 40,
+const client =
+  globalThis.__pgClient__ ??
+  postgres(connectionString, {
+    // Keep footprint small in serverless and avoid connection churn
+    max: 2,
+    idle_timeout: 300,
+    connect_timeout: 40,
 
-  ssl: (() => {
-    const b64 = process.env.PGSSLROOTCERT;
-    if (!b64) {
-      throw new Error('PGSSLROOTCERT (base64-encoded CA) is required');
-    }
-    const ca = Buffer.from(b64, 'base64').toString('utf8');
+    ssl: (() => {
+      const b64 = process.env.PGSSLROOTCERT;
+      if (!b64) {
+        throw new Error("PGSSLROOTCERT (base64-encoded CA) is required");
+      }
+      const ca = Buffer.from(b64, "base64").toString("utf8");
 
-    return { rejectUnauthorized: true, ca } as const;
-  })(),
+      return { rejectUnauthorized: true, ca } as const;
+    })(),
 
-  prepare: true,
-  max_lifetime: 60 * 30,
-});
+    prepare: true,
+    max_lifetime: 60 * 30,
+  });
 
 if (!globalThis.__pgClient__) {
   globalThis.__pgClient__ = client;
 }
 
 // CockroachDB-compatible pg pool (for teams and other features)
-const pool = globalThis.__pgPool__ ?? new Pool({
-  connectionString,
-  ssl: { rejectUnauthorized: false },
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
+const pool =
+  globalThis.__pgPool__ ??
+  new Pool({
+    connectionString,
+    ssl: { rejectUnauthorized: false },
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  });
 
 if (!globalThis.__pgPool__) {
   globalThis.__pgPool__ = pool;
@@ -65,21 +69,20 @@ if (!globalThis.__drizzleDbPg__) {
 
 export { client, pool };
 
-
 export async function testConnection(): Promise<boolean> {
   try {
     await client`SELECT 1`;
     return true;
   } catch (error) {
-    throw new Error(`Database connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Database connection failed: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
   }
 }
-
 
 export async function closeConnection(): Promise<void> {
   await client.end();
 }
 
-
-export * from './schema';
-export * from './utils';
+export * from "./schema";
+export * from "./utils";

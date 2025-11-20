@@ -1,8 +1,8 @@
-import { NextRequest } from 'next/server';
-import { ApiResponse } from '@/lib/types/api';
-import { geminiService } from '@/lib/services/gemini';
-import { validateFields, ApiErrors, successResponse, handleApiError } from '@/lib/api/utils';
-import logger from '@/lib/utils/logger';
+import { ApiErrors, handleApiError, successResponse, validateFields } from "@/lib/api/utils";
+import { geminiService } from "@/lib/services/gemini";
+import type { ApiResponse } from "@/lib/types/api";
+import logger from "@/lib/utils/logger";
+import type { NextRequest } from "next/server";
 
 export const maxDuration = 60;
 
@@ -15,42 +15,44 @@ interface SuggestEditRequest extends Record<string, unknown> {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const validation = validateFields<SuggestEditRequest>(body, ['question']);
+    const validation = validateFields<SuggestEditRequest>(body, ["question"]);
 
-    if (!validation.valid) return validation.error;
+    if (!validation.valid) {
+      return validation.error;
+    }
 
     const { question, userReason } = validation.data;
 
-    logger.info('Gemini suggest-edit request received');
+    logger.info("Gemini suggest-edit request received");
     if (userReason) {
       logger.info(`User reason: ${userReason}`);
     }
 
     if (!geminiService.isAvailable()) {
-      logger.warn('Gemini AI not available');
-      return ApiErrors.serverError('Gemini AI not available');
+      logger.warn("Gemini AI not available");
+      return ApiErrors.serverError("Gemini AI not available");
     }
 
-    logger.info('Sending suggest-edit request to Gemini AI');
+    logger.info("Sending suggest-edit request to Gemini AI");
 
     try {
       const result = await geminiService.suggestEdit(question, userReason);
 
-      logger.info('Gemini AI suggest-edit response received');
-      logger.debug('AI Suggestions', {
+      logger.info("Gemini AI suggest-edit response received");
+      logger.debug("AI Suggestions", {
         suggestedQuestion: result.suggestedQuestion,
         suggestedOptions: result.suggestedOptions,
         suggestedAnswers: result.suggestedAnswers,
-        suggestedDifficulty: (result as any).suggestedDifficulty,
+        suggestedDifficulty: result.suggestedDifficulty,
       });
 
-      return successResponse<ApiResponse['data']>(result);
+      return successResponse<ApiResponse["data"]>(result);
     } catch (error) {
-      logger.error('Gemini AI suggest-edit error:', error);
-      return ApiErrors.serverError('Failed to generate edit suggestions');
+      logger.error("Gemini AI suggest-edit error:", error);
+      return ApiErrors.serverError("Failed to generate edit suggestions");
     }
   } catch (error) {
-    logger.error('POST /api/gemini/suggest-edit error:', error);
+    logger.error("POST /api/gemini/suggest-edit error:", error);
     return handleApiError(error);
   }
 }

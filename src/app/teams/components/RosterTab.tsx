@@ -1,25 +1,25 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useTheme } from '@/app/contexts/ThemeContext';
-import { toast } from 'react-toastify';
-import AssignmentCreator from './EnhancedAssignmentCreator';
-import { useTeamStore } from '@/app/hooks/useTeamStore';
-import { trpc } from '@/lib/trpc/client';
-import SyncLocalStorage from '@/lib/database/localStorage-replacement';
+import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTeamStore } from "@/app/hooks/useTeamStore";
+import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import { trpc } from "@/lib/trpc/client";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "react-toastify";
+import AssignmentCreator from "./EnhancedAssignmentCreator";
 
+import ConflictBlock from "./roster/ConflictBlock";
 // Import roster components
-import RosterHeader from './roster/RosterHeader';
-import SubteamSelector from './roster/SubteamSelector';
-import ConflictBlock from './roster/ConflictBlock';
+import RosterHeader from "./roster/RosterHeader";
+import SubteamSelector from "./roster/SubteamSelector";
 import {
+  type Conflict,
   DIVISION_B_GROUPS,
   DIVISION_C_GROUPS,
-  Team,
-  Subteam,
-  Conflict,
-  detectConflicts
-} from './roster/rosterUtils';
+  type Subteam,
+  type Team,
+  detectConflicts,
+} from "./roster/rosterUtils";
 
 interface RosterTabProps {
   team: Team;
@@ -33,25 +33,23 @@ interface RosterTabProps {
   onDeleteSubteam?: (subteamId: string, subteamName: string) => void;
 }
 
-export default function RosterTab({ 
-  team, 
-  isCaptain, 
-  onInvitePerson: _onInvitePerson, 
-  activeSubteamId, 
-  subteams = [], 
-  onSubteamChange, 
-  onCreateSubteam, 
+export default function RosterTab({
+  team,
+  isCaptain,
+  onInvitePerson: _onInvitePerson,
+  activeSubteamId,
+  subteams = [],
+  onSubteamChange,
+  onCreateSubteam,
   onEditSubteam,
-  onDeleteSubteam
+  onDeleteSubteam,
 }: RosterTabProps) {
   const { darkMode } = useTheme();
-  const {
-    invalidateCache
-  } = useTeamStore();
+  const { invalidateCache } = useTeamStore();
 
   // tRPC queries and mutations
   const { data: rosterData } = trpc.teams.getRoster.useQuery(
-    { teamSlug: team.slug, subteamId: activeSubteamId || '' },
+    { teamSlug: team.slug, subteamId: activeSubteamId || "" },
     { enabled: !!activeSubteamId && !!team.slug }
   );
   const updateRosterBulkMutation = trpc.teams.updateRosterBulk.useMutation();
@@ -59,49 +57,57 @@ export default function RosterTab({
   const [isSaving, setIsSaving] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const rosterRef = useRef<Record<string, string[]>>({});
-  
+
   // Assignment creator state
   const [showAssignmentCreator, setShowAssignmentCreator] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
-  
+
   // Mobile collapsible groups state
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  
+
   // Removed events state
   const [removedEvents, setRemovedEvents] = useState<Set<string>>(new Set());
-  
+
   // Conflict detection state
   const [conflicts, setConflicts] = useState<Conflict[]>([]);
 
-  const groups = team.division === 'B' ? DIVISION_B_GROUPS : DIVISION_C_GROUPS;
+  const groups = team.division === "B" ? DIVISION_B_GROUPS : DIVISION_C_GROUPS;
 
   // Removed duplicate useEffect - the second one handles roster loading
 
   // localStorage utilities for removed events
-  const getRemovedEventsCacheKey = useCallback((teamSlug: string, subteamId: string) => 
-    `removed_events_${teamSlug}_${subteamId}`, []);
+  const getRemovedEventsCacheKey = useCallback(
+    (teamSlug: string, subteamId: string) => `removed_events_${teamSlug}_${subteamId}`,
+    []
+  );
 
-  const loadRemovedEventsFromCache = useCallback((teamSlug: string, subteamId: string): Set<string> => {
-    try {
-      const cached = SyncLocalStorage.getItem(getRemovedEventsCacheKey(teamSlug, subteamId));
-      return cached ? new Set<string>(JSON.parse(cached)) : new Set<string>();
-    } catch (error) {
-      console.error('Error loading removed events from cache:', error);
-      return new Set<string>();
-    }
-  }, [getRemovedEventsCacheKey]);
+  const loadRemovedEventsFromCache = useCallback(
+    (teamSlug: string, subteamId: string): Set<string> => {
+      try {
+        const cached = SyncLocalStorage.getItem(getRemovedEventsCacheKey(teamSlug, subteamId));
+        return cached ? new Set<string>(JSON.parse(cached)) : new Set<string>();
+      } catch (_error) {
+        return new Set<string>();
+      }
+    },
+    [getRemovedEventsCacheKey]
+  );
 
-  const saveRemovedEventsToCache = useCallback((teamSlug: string, subteamId: string, events: Set<string>) => {
-    try {
-      SyncLocalStorage.setItem(getRemovedEventsCacheKey(teamSlug, subteamId), JSON.stringify(Array.from(events)));
-    } catch (error) {
-      console.error('Error saving removed events to cache:', error);
-    }
-  }, [getRemovedEventsCacheKey]);
+  const saveRemovedEventsToCache = useCallback(
+    (teamSlug: string, subteamId: string, events: Set<string>) => {
+      try {
+        SyncLocalStorage.setItem(
+          getRemovedEventsCacheKey(teamSlug, subteamId),
+          JSON.stringify(Array.from(events))
+        );
+      } catch (_error) {}
+    },
+    [getRemovedEventsCacheKey]
+  );
 
   // Toggle group collapse
   const toggleGroupCollapse = (groupLabel: string) => {
-    setCollapsedGroups(prev => {
+    setCollapsedGroups((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(groupLabel)) {
         newSet.delete(groupLabel);
@@ -114,8 +120,10 @@ export default function RosterTab({
 
   // Load removed events from cache (roster data now includes removed events)
   const loadRemovedEvents = useCallback(() => {
-    if (!activeSubteamId) return;
-    
+    if (!activeSubteamId) {
+      return;
+    }
+
     // Load from cache for immediate UI update
     const cachedRemovedEvents = loadRemovedEventsFromCache(team.slug, activeSubteamId);
     setRemovedEvents(cachedRemovedEvents);
@@ -131,17 +139,11 @@ export default function RosterTab({
   // Update local roster when tRPC data changes
   useEffect(() => {
     if (rosterData) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('📊 [ROSTER TAB] Received roster data from tRPC:', {
-          roster: rosterData.roster,
-          removedEvents: rosterData.removedEvents,
-          keys: Object.keys(rosterData.roster),
-          isEmpty: Object.keys(rosterData.roster).length === 0
-        });
+      if (process.env.NODE_ENV === "development") {
       }
-      
+
       setRoster(rosterData.roster);
-      
+
       // Check for conflicts when roster is loaded
       if (Object.keys(rosterData.roster).length > 0) {
         const detectedConflicts = detectConflicts(rosterData.roster, groups);
@@ -154,7 +156,7 @@ export default function RosterTab({
   useEffect(() => {
     if (rosterData && rosterData.removedEvents.length > 0) {
       setRemovedEvents(new Set(rosterData.removedEvents));
-      saveRemovedEventsToCache(team.slug, activeSubteamId || '', new Set(rosterData.removedEvents));
+      saveRemovedEventsToCache(team.slug, activeSubteamId || "", new Set(rosterData.removedEvents));
     }
   }, [rosterData, team.slug, activeSubteamId, saveRemovedEventsToCache]);
 
@@ -174,8 +176,10 @@ export default function RosterTab({
 
   // Save roster data - OPTIMIZED BULK VERSION
   const saveRoster = async () => {
-    if (!activeSubteamId) return;
-    
+    if (!activeSubteamId) {
+      return;
+    }
+
     try {
       // Prepare all roster entries for bulk update
       const rosterEntries: Array<{
@@ -187,12 +191,13 @@ export default function RosterTab({
       // Collect all roster entries from the current ref value
       for (const [eventName, students] of Object.entries(rosterRef.current)) {
         for (let slotIndex = 0; slotIndex < students.length; slotIndex++) {
-          const studentName = students[slotIndex] || '';
-          if (studentName.trim()) { // Only include non-empty entries
+          const studentName = students[slotIndex] || "";
+          if (studentName.trim()) {
+            // Only include non-empty entries
             rosterEntries.push({
               eventName,
               slotIndex,
-              studentName
+              studentName,
             });
           }
         }
@@ -203,30 +208,24 @@ export default function RosterTab({
         await updateRosterBulkMutation.mutateAsync({
           teamSlug: team.slug,
           subteamId: activeSubteamId,
-          rosterEntries
+          rosterEntries,
         });
       }
-      
+
       // Invalidate members cache so PeopleTab shows new unlinked members
       // Only log in development
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Invalidating cache after roster save:', {
-          allMembers: `members-${team.slug}-all`,
-          subteamMembers: `members-${team.slug}-${activeSubteamId}`
-        });
+      if (process.env.NODE_ENV === "development") {
       }
       invalidateCache(`members-${team.slug}-all`);
       invalidateCache(`members-${team.slug}-${activeSubteamId}`);
-      
+
       // Also invalidate roster cache to ensure consistency
       invalidateCache(`roster-${team.slug}-${activeSubteamId}`);
-      
+
       // Check for conflicts after save is completed
       const detectedConflicts = detectConflicts(rosterRef.current, groups);
       setConflicts(detectedConflicts);
-      
-    } catch (error) {
-      console.error('Failed to save roster:', error);
+    } catch (_error) {
     } finally {
       setIsSaving(false);
     }
@@ -238,22 +237,22 @@ export default function RosterTab({
     if (!newRoster[eventName]) {
       newRoster[eventName] = [];
     }
-    
+
     // Ensure array is long enough
     while (newRoster[eventName].length <= index) {
-      newRoster[eventName].push('');
+      newRoster[eventName].push("");
     }
-    
+
     newRoster[eventName][index] = value;
     setRoster(newRoster);
     rosterRef.current = newRoster; // Update the ref with the latest state
     setIsSaving(true);
-    
+
     // Clear existing timeout
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
-    
+
     // Set new timeout to save after 500ms of inactivity
     saveTimeoutRef.current = setTimeout(() => {
       saveRoster();
@@ -266,11 +265,9 @@ export default function RosterTab({
     setShowAssignmentCreator(true);
   };
 
-  const handleAssignmentCreated = (assignment: any) => {
+  const handleAssignmentCreated = (_assignment: any) => {
     setShowAssignmentCreator(false);
     setSelectedEvent(null);
-    // You could add a toast notification here
-    console.log('Assignment created:', assignment);
   };
 
   const handleCancelAssignment = () => {
@@ -280,17 +277,19 @@ export default function RosterTab({
 
   // Remove an event
   const handleRemoveEvent = async (eventName: string, conflictBlock: string) => {
-    if (!activeSubteamId) return;
-    
+    if (!activeSubteamId) {
+      return;
+    }
+
     try {
       const response = await fetch(`/api/teams/${team.slug}/removed-events`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subteamId: activeSubteamId,
           eventName,
-          conflictBlock
-        })
+          conflictBlock,
+        }),
       });
 
       if (response.ok) {
@@ -300,40 +299,43 @@ export default function RosterTab({
         // Update cache
         saveRemovedEventsToCache(team.slug, activeSubteamId, newRemovedEvents);
         // Clear roster data for the removed event
-        setRoster(prev => {
+        setRoster((prev) => {
           const newRoster = { ...prev };
           delete newRoster[eventName];
           return newRoster;
         });
-        
+
         const deletedCount = result.deletedRosterEntries || 0;
         if (deletedCount > 0) {
-          toast.success(`${eventName} removed from ${conflictBlock} (cleared ${deletedCount} roster entries)`);
+          toast.success(
+            `${eventName} removed from ${conflictBlock} (cleared ${deletedCount} roster entries)`
+          );
         } else {
           toast.success(`${eventName} removed from ${conflictBlock}`);
         }
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Failed to remove event');
+        toast.error(error.error || "Failed to remove event");
       }
-    } catch (error) {
-      console.error('Error removing event:', error);
-      toast.error('Failed to remove event');
+    } catch (_error) {
+      toast.error("Failed to remove event");
     }
   };
 
   // Restore events in a conflict block
   const handleRestoreEvents = async (conflictBlock: string) => {
-    if (!activeSubteamId) return;
-    
+    if (!activeSubteamId) {
+      return;
+    }
+
     try {
       const response = await fetch(`/api/teams/${team.slug}/removed-events`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subteamId: activeSubteamId,
-          conflictBlock
-        })
+          conflictBlock,
+        }),
       });
 
       if (response.ok) {
@@ -341,9 +343,9 @@ export default function RosterTab({
         // Remove restored events from the removed set
         const newRemovedEvents = new Set(removedEvents);
         // We need to get the events for this conflict block to remove them from the set
-        const group = groups.find(g => g.label === conflictBlock);
+        const group = groups.find((g) => g.label === conflictBlock);
         if (group) {
-          group.events.forEach(event => newRemovedEvents.delete(event));
+          group.events.forEach((event) => newRemovedEvents.delete(event));
         }
         setRemovedEvents(newRemovedEvents);
         // Update cache
@@ -355,44 +357,31 @@ export default function RosterTab({
         toast.success(`${data.restoredCount} events restored in ${conflictBlock}`);
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Failed to restore events');
+        toast.error(error.error || "Failed to restore events");
       }
-    } catch (error) {
-      console.error('Error restoring events:', error);
-      toast.error('Failed to restore events');
+    } catch (_error) {
+      toast.error("Failed to restore events");
     }
   };
 
-  // Loading state is now handled by the store
-
-  // Debug logging for subteam selection
-  console.log('🔍 [RosterTab] Component state:', {
-    activeSubteamId,
-    subteams,
-    subteamsLength: subteams?.length,
-    teamSlug: team.slug
-  });
-
   if (!activeSubteamId) {
-    console.log('🔍 [RosterTab] No active subteam selected, showing message');
-    
     // If there are no subteams at all, show a different message
     if (subteams.length === 0) {
       return (
         <div className="p-6">
           <div className="flex items-center justify-center h-64">
-            <div className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <div className={`text-lg ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
               No subteams found. Please create a subteam to view the roster.
             </div>
           </div>
         </div>
       );
     }
-    
+
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
-          <div className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <div className={`text-lg ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
             Please select a subteam to view the roster
           </div>
         </div>
@@ -402,11 +391,7 @@ export default function RosterTab({
 
   return (
     <div className="p-6">
-      <RosterHeader 
-        darkMode={darkMode}
-        conflicts={conflicts}
-        isSaving={isSaving}
-      />
+      <RosterHeader darkMode={darkMode} conflicts={conflicts} isSaving={isSaving} />
 
       <SubteamSelector
         darkMode={darkMode}
@@ -422,9 +407,9 @@ export default function RosterTab({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {groups.map((group, index) => {
           const isLastGroup = index === groups.length - 1;
-          
+
           // Removed debug logging
-          
+
           return (
             <ConflictBlock
               key={group.label}
@@ -453,7 +438,7 @@ export default function RosterTab({
           onAssignmentCreated={handleAssignmentCreated}
           onCancel={handleCancelAssignment}
           darkMode={darkMode}
-          prefillEventName={selectedEvent || ''}
+          prefillEventName={selectedEvent || ""}
         />
       )}
     </div>

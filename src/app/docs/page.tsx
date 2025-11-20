@@ -1,9 +1,10 @@
-import { EventCatalogue } from '@/app/docs/components/EventCatalogue';
-import { DocsHomeClient } from './components/DocsHomeClient';
+import { EventCatalogue } from "@/app/docs/components/EventCatalogue";
+import { DocsHomeClient } from "./components/DocsHomeClient";
 
 export const metadata = {
-  title: 'Scio.ly Docs – 2026 Events',
-  description: 'Comprehensive Science Olympiad 2026 event hub with study guides and sample notesheets.',
+  title: "Scio.ly Docs – 2026 Events",
+  description:
+    "Comprehensive Science Olympiad 2026 event hub with study guides and sample notesheets.",
 };
 
 export default function DocsHome() {
@@ -14,5 +15,3 @@ export default function DocsHome() {
     </div>
   );
 }
-
-

@@ -1,7 +1,7 @@
-import React from 'react';
-import { QuoteData } from '../types';
-import { resolveQuestionPoints } from '../utils/gradingUtils';
-import { PrintConfigModal as SharedPrintConfigModal } from '@/app/components/PrintConfigModal';
+import { PrintConfigModal as SharedPrintConfigModal } from "@/app/components/PrintConfigModal";
+import type React from "react";
+import type { QuoteData } from "@/app/codebusters/types";
+import { resolveQuestionPoints } from "@/app/codebusters/utils/gradingUtils";
 
 interface PrintConfigModalProps {
   isOpen: boolean;
@@ -10,13 +10,13 @@ interface PrintConfigModalProps {
   quotes: QuoteData[];
   tournamentName: string;
   setTournamentName: (name: string) => void;
-  questionPoints: {[key: number]: number};
-  setQuestionPoints: (points: {[key: number]: number}) => void;
+  questionPoints: { [key: number]: number };
+  setQuestionPoints: (points: { [key: number]: number }) => void;
   darkMode: boolean;
 }
 
 const getCharCount = (quote: QuoteData) => {
-  return quote.encrypted.replace(/[^A-Z]/g, '').length;
+  return quote.encrypted.replace(/[^A-Z]/g, "").length;
 };
 
 export const PrintConfigModal: React.FC<PrintConfigModalProps> = (props) => {
@@ -33,10 +33,14 @@ export const PrintConfigModal: React.FC<PrintConfigModalProps> = (props) => {
           metadata: (
             <>
               <div>
-                <span className={`${props.darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Characters: </span>
-                <span className={`font-medium ${props.darkMode ? 'text-white' : 'text-gray-900'}`}>{charCount}</span>
+                <span className={`${props.darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                  Characters:{" "}
+                </span>
+                <span className={`font-medium ${props.darkMode ? "text-white" : "text-gray-900"}`}>
+                  {charCount}
+                </span>
               </div>
-              <div></div>
+              <div />
             </>
           ),
         };

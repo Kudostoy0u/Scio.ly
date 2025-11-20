@@ -6,7 +6,7 @@
 /**
  * Removes trailing parenthetical content from a string
  * Strips text in parentheses at the end of the string
- * 
+ *
  * @param {string} input - The input string to process
  * @returns {string} String with trailing parenthetical content removed
  * @example
@@ -17,8 +17,8 @@
  * ```
  */
 export function stripTrailingParenthetical(input: string): string {
-  if (typeof input !== 'string') return input as unknown as string;
-  return input.replace(/\s*\([^)]*\)\s*$/, '').trimEnd();
+  if (typeof input !== "string") {
+    return input as unknown as string;
+  }
+  return input.replace(/\s*\([^)]*\)\s*$/, "").trimEnd();
 }
-
-

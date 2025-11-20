@@ -20,7 +20,7 @@ interface ContactFormData {
 /**
  * Handles contact form submission
  * Submits contact form data to the API endpoint
- * 
+ *
  * @param {ContactFormData} data - Contact form data to submit
  * @returns {Promise<{ success: boolean; message: string }>} Submission result with success status and message
  * @throws {Error} When API request fails
@@ -35,11 +35,13 @@ interface ContactFormData {
  * console.log(result.success); // true or false
  * ```
  */
-export const handleContactSubmission = async (data: ContactFormData): Promise<{ success: boolean; message: string }> => {
+export const handleContactSubmission = async (
+  data: ContactFormData
+): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await fetch('/api/contact', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await fetch("/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
@@ -47,9 +49,8 @@ export const handleContactSubmission = async (data: ContactFormData): Promise<{ 
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return { success: true, message: 'Message sent successfully!' };
-  } catch (error) {
-    console.error('Error sending contact form:', error);
-    return { success: false, message: 'Failed to send message. Please try again.' };
+    return { success: true, message: "Message sent successfully!" };
+  } catch (_error) {
+    return { success: false, message: "Failed to send message. Please try again." };
   }
-}; 
+};

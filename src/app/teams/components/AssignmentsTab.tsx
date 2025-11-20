@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useTheme } from '@/app/contexts/ThemeContext';
-import { useAuth } from '@/app/contexts/AuthContext';
-import { Plus, Calendar, CheckCircle, Clock, BarChart3, Trash2, AlertTriangle } from 'lucide-react';
-import { toast } from 'react-toastify';
-import AssignmentViewerModal from './AssignmentViewerModal';
-import { useEnhancedTeamData } from '@/app/hooks/useEnhancedTeamData';
-import SyncLocalStorage from '@/lib/database/localStorage-replacement';
+import { useAuth } from "@/app/contexts/AuthContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
+import { useEnhancedTeamData } from "@/app/hooks/useEnhancedTeamData";
+import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import { AlertTriangle, BarChart3, Calendar, CheckCircle, Clock, Plus, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
+import AssignmentViewerModal from "./AssignmentViewerModal";
 
 interface Assignment {
   id: string;
@@ -47,10 +47,10 @@ interface AssignmentsTabProps {
   onCreateAssignment: () => void;
 }
 
-export default function AssignmentsTab({ 
+export default function AssignmentsTab({
   teamId,
-  isCaptain, 
-  onCreateAssignment 
+  isCaptain,
+  onCreateAssignment,
 }: AssignmentsTabProps) {
   const { user } = useAuth();
   const { darkMode } = useTheme();
@@ -70,7 +70,7 @@ export default function AssignmentsTab({
     try {
       setDeletingAssignmentId(assignmentId);
       const response = await fetch(`/api/teams/${teamId}/assignments/${assignmentId}`, {
-        method: 'DELETE'
+        method: "DELETE",
       });
 
       if (response.ok) {
@@ -78,14 +78,14 @@ export default function AssignmentsTab({
         invalidateCache(`assignments-${teamId}`);
         await loadAssignments(teamId);
         setShowDeleteConfirm(null);
-        toast.success('Assignment deleted successfully');
+        toast.success("Assignment deleted successfully");
       } else {
         const errorData = await response.json();
-        const errorMessage = errorData.error || 'Failed to delete assignment';
+        const errorMessage = errorData.error || "Failed to delete assignment";
         toast.error(errorMessage);
       }
     } catch {
-      const errorMessage = 'Failed to delete assignment';
+      const errorMessage = "Failed to delete assignment";
       toast.error(errorMessage);
     } finally {
       setDeletingAssignmentId(null);
@@ -107,33 +107,31 @@ export default function AssignmentsTab({
     try {
       // Call the decline API endpoint
       const response = await fetch(`/api/teams/${teamId}/assignments/${assignmentId}/decline`, {
-        method: 'POST'
+        method: "POST",
       });
 
       if (response.ok) {
         // Clear any existing assignment data
         clearAssignmentData(assignmentId);
-        
+
         // Remove current assignment ID if it matches
-        const currentAssignmentId = SyncLocalStorage.getItem('currentAssignmentId');
+        const currentAssignmentId = SyncLocalStorage.getItem("currentAssignmentId");
         if (currentAssignmentId === assignmentId) {
-          SyncLocalStorage.removeItem('currentAssignmentId');
+          SyncLocalStorage.removeItem("currentAssignmentId");
         }
-        
+
         // Invalidate cache and reload assignments to get updated data from server
         invalidateCache(`assignments-${teamId}`);
         await loadAssignments(teamId);
-        
-        toast.success('Assignment declined');
+
+        toast.success("Assignment declined");
       } else {
         const errorData = await response.json();
-        const errorMessage = errorData.error || 'Failed to decline assignment';
+        const errorMessage = errorData.error || "Failed to decline assignment";
         toast.error(errorMessage);
       }
-      
-    } catch (error) {
-      console.error('Failed to decline assignment:', error);
-      toast.error('Failed to decline assignment');
+    } catch (_error) {
+      toast.error("Failed to decline assignment");
     }
   };
 
@@ -145,8 +143,10 @@ export default function AssignmentsTab({
   };
 
   const isUserAssignedToAssignment = (assignment: Assignment): boolean => {
-    if (!user?.id || !assignment.roster) return false;
-    return assignment.roster.some(rosterMember => rosterMember.user_id === user.id);
+    if (!(user?.id && assignment.roster)) {
+      return false;
+    }
+    return assignment.roster.some((rosterMember) => rosterMember.user_id === user.id);
   };
 
   const hasEveryoneDeclined = (assignment: Assignment): boolean => {
@@ -167,50 +167,50 @@ export default function AssignmentsTab({
     if (isCaptain) {
       const submittedCount = assignment.submitted_count || 0;
       const rosterCount = assignment.roster_count || 0;
-      
+
       if (rosterCount > 0 && submittedCount === rosterCount) {
-        return 'Completed!';
+        return "Completed!";
       }
-      
+
       if (assignment.due_date) {
         const dueDate = new Date(assignment.due_date);
         const now = new Date();
         if (now > dueDate && submittedCount < rosterCount) {
-          return 'overdue';
+          return "overdue";
         }
       }
-      
-      return 'pending';
+
+      return "pending";
     }
-    
+
     // For students, show their individual status
     if (assignment.user_submission) {
-      if (assignment.user_submission.status === 'submitted') {
-        return 'completed';
+      if (assignment.user_submission.status === "submitted") {
+        return "completed";
       }
-      if (assignment.user_submission.status === 'graded') {
-        return 'graded';
+      if (assignment.user_submission.status === "graded") {
+        return "graded";
       }
     }
-    
+
     if (assignment.due_date) {
       const dueDate = new Date(assignment.due_date);
       const now = new Date();
       if (now > dueDate) {
-        return 'overdue';
+        return "overdue";
       }
     }
-    
-    return 'pending';
+
+    return "pending";
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed':
-      case 'Completed!':
-      case 'graded':
+      case "completed":
+      case "Completed!":
+      case "graded":
         return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'overdue':
+      case "overdue":
         return <Clock className="w-5 h-5 text-red-500" />;
       default:
         return <Clock className="w-5 h-5 text-yellow-500" />;
@@ -219,24 +219,24 @@ export default function AssignmentsTab({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
-      case 'Completed!':
-      case 'graded':
-        return darkMode ? 'bg-green-900/20 text-green-300' : 'bg-green-100 text-green-800';
-      case 'overdue':
-        return darkMode ? 'bg-red-900/20 text-red-300' : 'bg-red-100 text-red-800';
+      case "completed":
+      case "Completed!":
+      case "graded":
+        return darkMode ? "bg-green-900/20 text-green-300" : "bg-green-100 text-green-800";
+      case "overdue":
+        return darkMode ? "bg-red-900/20 text-red-300" : "bg-red-100 text-red-800";
       default:
-        return darkMode ? 'bg-yellow-900/20 text-yellow-300' : 'bg-yellow-100 text-yellow-800';
+        return darkMode ? "bg-yellow-900/20 text-yellow-300" : "bg-yellow-100 text-yellow-800";
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -244,7 +244,7 @@ export default function AssignmentsTab({
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
-          <div className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <div className={`text-lg ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
             Loading assignments...
           </div>
         </div>
@@ -256,13 +256,11 @@ export default function AssignmentsTab({
     return (
       <div className="p-6">
         <div className="text-center py-12">
-          <div className={`text-red-500 mb-4`}>⚠️</div>
-          <h3 className={`text-lg font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          <div className={"text-red-500 mb-4"}>⚠️</div>
+          <h3 className={`text-lg font-medium mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}>
             Error loading assignments
           </h3>
-          <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            {error}
-          </p>
+          <p className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>{error}</p>
         </div>
       </div>
     );
@@ -271,7 +269,9 @@ export default function AssignmentsTab({
   return (
     <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className={`text-xl md:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Assignments</h2>
+        <h2 className={`text-xl md:text-2xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
+          Assignments
+        </h2>
         {isCaptain && (
           <button
             onClick={onCreateAssignment}
@@ -286,30 +286,34 @@ export default function AssignmentsTab({
       <div className="space-y-4">
         {assignments.length === 0 ? (
           <div className="text-center py-12">
-            <div className={`text-6xl mb-4 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>📋</div>
-            <h3 className={`text-lg font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>No assignments yet</h3>
-            <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              {isCaptain ? 'Create your first assignment to get started.' : 'No assignments have been created yet.'}
+            <div className={`text-6xl mb-4 ${darkMode ? "text-gray-500" : "text-gray-400"}`}>📋</div>
+            <h3 className={`text-lg font-medium mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}>
+              No assignments yet
+            </h3>
+            <p className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+              {isCaptain
+                ? "Create your first assignment to get started."
+                : "No assignments have been created yet."}
             </p>
           </div>
         ) : (
           assignments.map((assignment) => {
             const status = getAssignmentStatus(assignment);
             const everyoneDeclined = hasEveryoneDeclined(assignment);
-            
+
             return (
               <div
                 key={assignment.id}
                 className={`p-3 md:p-4 rounded-lg border ${
                   darkMode
-                    ? 'bg-gray-800 border-gray-700 hover:bg-gray-750'
-                    : 'bg-white border-gray-200 hover:bg-gray-50'
+                    ? "bg-gray-800 border-gray-700 hover:bg-gray-750"
+                    : "bg-white border-gray-200 hover:bg-gray-50"
                 } transition-colors`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-2">
-                      <h3 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      <h3 className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}>
                         {assignment.title}
                       </h3>
                       <div className="ml-4 flex items-center space-x-2">
@@ -324,7 +328,7 @@ export default function AssignmentsTab({
                           <>
                             <button
                               onClick={() => setSelectedAssignmentId(assignment.id)}
-                              className={`p-2 rounded-lg ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                              className={`p-2 rounded-lg ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
                               title="View Assignment Analytics"
                             >
                               <BarChart3 className="w-4 h-4" />
@@ -336,7 +340,9 @@ export default function AssignmentsTab({
                                   disabled={deletingAssignmentId === assignment.id}
                                   className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
                                 >
-                                  {deletingAssignmentId === assignment.id ? 'Deleting...' : 'Confirm'}
+                                  {deletingAssignmentId === assignment.id
+                                    ? "Deleting..."
+                                    : "Confirm"}
                                 </button>
                                 <button
                                   onClick={() => setShowDeleteConfirm(null)}
@@ -348,7 +354,7 @@ export default function AssignmentsTab({
                             ) : (
                               <button
                                 onClick={() => setShowDeleteConfirm(assignment.id)}
-                                className={`p-2 rounded-lg ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} hover:bg-red-100`}
+                                className={`p-2 rounded-lg ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} hover:bg-red-100`}
                                 title="Delete Assignment"
                               >
                                 <Trash2 className="w-4 h-4 text-red-500" />
@@ -361,21 +367,27 @@ export default function AssignmentsTab({
                     {everyoneDeclined ? (
                       <div className="flex items-center gap-2 mb-3">
                         <AlertTriangle className="w-4 h-4 text-orange-500" />
-                        <span className={`text-sm font-medium ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                        <span
+                          className={`text-sm font-medium ${darkMode ? "text-orange-400" : "text-orange-600"}`}
+                        >
                           Everyone declined this assignment
                         </span>
                       </div>
                     ) : (
                       <>
                         <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}
+                          >
                             {status}
                           </span>
-                          <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                          <span
+                            className={`text-xs px-2 py-1 rounded ${darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"}`}
+                          >
                             {assignment.assignment_type}
                           </span>
                         </div>
-                        <p className={`mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        <p className={`mb-3 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
                           {assignment.description}
                         </p>
                       </>
@@ -383,26 +395,35 @@ export default function AssignmentsTab({
                     {!everyoneDeclined && (
                       <>
                         {assignment.roster && assignment.roster.length > 0 && (
-                          <div className={`mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          <div className={`mb-3 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                             <div className="text-sm font-medium mb-1">Assigned to:</div>
                             <div className="flex flex-wrap gap-1">
-                              {assignment.roster.slice(0, 3).map((student, index) => (
-                                <span
-                                  key={index}
-                                  className={`px-2 py-1 rounded-full text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}
-                                >
-                                  {student.display_name || student.student_name}
-                                </span>
-                              ))}
+                              {assignment.roster.slice(0, 3).map((student: any, index: number) => {
+                                const studentName = typeof student === "string" 
+                                  ? student 
+                                  : (student?.display_name || student?.student_name || "Unknown");
+                                return (
+                                  <span
+                                    key={index}
+                                    className={`px-2 py-1 rounded-full text-xs ${darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"}`}
+                                  >
+                                    {studentName}
+                                  </span>
+                                );
+                              })}
                               {assignment.roster.length > 3 && (
-                                <span className={`px-2 py-1 rounded-full text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs ${darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"}`}
+                                >
                                   +{assignment.roster.length - 3} more
                                 </span>
                               )}
                             </div>
                           </div>
                         )}
-                        <div className={`flex flex-wrap items-center gap-3 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        <div
+                          className={`flex flex-wrap items-center gap-3 text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+                        >
                           {assignment.due_date && (
                             <div className="flex items-center space-x-1">
                               <Calendar className="w-4 h-4" />
@@ -423,97 +444,110 @@ export default function AssignmentsTab({
                           {isCaptain && assignment.roster_count && (
                             <div className="flex items-center space-x-1">
                               <span>
-                                {assignment.submitted_count || 0}/{assignment.roster_count} {
-                                  (assignment.submitted_count || 0) === assignment.roster_count ? 'completed' : 'submitted'
-                                }
+                                {assignment.submitted_count || 0}/{assignment.roster_count}{" "}
+                                {(assignment.submitted_count || 0) === assignment.roster_count
+                                  ? "completed"
+                                  : "submitted"}
                               </span>
                             </div>
                           )}
                         </div>
                         {assignment.user_submission && (
-                          <div className={`mt-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                          <div
+                            className={`mt-2 text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+                          >
                             Submitted: {formatDate(assignment.user_submission.submitted_at)}
                           </div>
                         )}
                       </>
                     )}
-                    
+
                     {/* Start/Continue Assignment Button for Students */}
-                    {!everyoneDeclined && (!isCaptain || (isCaptain && isUserAssignedToAssignment(assignment))) && (
-                      <div className="mt-3 flex items-center gap-2">
-                        {assignment.user_submission ? (
-                          <button
-                            onClick={() => handleViewAssignment(assignment.id)}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                              darkMode 
-                                ? 'bg-purple-600 hover:bg-purple-700 text-white' 
-                                : 'bg-purple-100 hover:bg-purple-200 text-purple-700'
-                            }`}
-                          >
-                            My Results
-                          </button>
-                        ) : (
-                          <>
+                    {!everyoneDeclined &&
+                      (!isCaptain || (isCaptain && isUserAssignedToAssignment(assignment))) && (
+                        <div className="mt-3 flex items-center gap-2">
+                          {assignment.user_submission ? (
                             <button
-                              onClick={() => handleStartAssignment(assignment.id)}
+                              onClick={() => handleViewAssignment(assignment.id)}
                               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                darkMode 
-                                  ? 'bg-green-600 hover:bg-green-700 text-white' 
-                                  : 'bg-green-100 hover:bg-green-200 text-green-700'
+                                darkMode
+                                  ? "bg-purple-600 hover:bg-purple-700 text-white"
+                                  : "bg-purple-100 hover:bg-purple-200 text-purple-700"
                               }`}
                             >
-                              {hasAssignmentProgress(assignment.id) ? 'Continue Assignment' : 'Start Assignment'}
+                              My Results
                             </button>
-                            <button
-                              onClick={() => handleDeclineAssignment(assignment.id)}
-                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                darkMode 
-                                  ? 'bg-gray-600 hover:bg-gray-700 text-white' 
-                                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                              }`}
-                            >
-                              Decline
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    )}
-                    
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleStartAssignment(assignment.id)}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                  darkMode
+                                    ? "bg-green-600 hover:bg-green-700 text-white"
+                                    : "bg-green-100 hover:bg-green-200 text-green-700"
+                                }`}
+                              >
+                                {hasAssignmentProgress(assignment.id)
+                                  ? "Continue Assignment"
+                                  : "Start Assignment"}
+                              </button>
+                              <button
+                                onClick={() => handleDeclineAssignment(assignment.id)}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                  darkMode
+                                    ? "bg-gray-600 hover:bg-gray-700 text-white"
+                                    : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                                }`}
+                              >
+                                Decline
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+
                     {/* Progress bar for captains */}
-                    {!everyoneDeclined && isCaptain && assignment.roster_count && assignment.roster_count > 0 && (
-                      <div className="mt-3">
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
-                            {(assignment.submitted_count || 0) === assignment.roster_count ? 'Completed' : 'Submissions'}
-                          </span>
-                          <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
-                            {assignment.submitted_count || 0}/{assignment.roster_count}
-                          </span>
-                        </div>
-                        <div className={`w-full rounded-full h-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                    {!everyoneDeclined &&
+                      isCaptain &&
+                      assignment.roster_count &&
+                      assignment.roster_count > 0 && (
+                        <div className="mt-3">
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className={darkMode ? "text-gray-400" : "text-gray-500"}>
+                              {(assignment.submitted_count || 0) === assignment.roster_count
+                                ? "Completed"
+                                : "Submissions"}
+                            </span>
+                            <span className={darkMode ? "text-gray-400" : "text-gray-500"}>
+                              {assignment.submitted_count || 0}/{assignment.roster_count}
+                            </span>
+                          </div>
                           <div
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                            style={{
-                              width: `${((assignment.submitted_count || 0) / assignment.roster_count) * 100}%`
-                            }}
-                          />
-                        </div>
-                        
-                        {/* See results button */}
-                        {(assignment.submitted_count || 0) > 0 && (
-                          <button
-                            onClick={() => setSelectedAssignmentId(assignment.id)}
-                            className={`mt-2 text-xs px-3 py-1 rounded-lg transition-colors ${
-                              darkMode 
-                                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                                : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
-                            }`}
+                            className={`w-full rounded-full h-2 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
                           >
-                            See Results
-                          </button>
-                        )}
-                      </div>
-                    )}
+                            <div
+                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                              style={{
+                                width: `${((assignment.submitted_count || 0) / assignment.roster_count) * 100}%`,
+                              }}
+                            />
+                          </div>
+
+                          {/* See results button */}
+                          {(assignment.submitted_count || 0) > 0 && (
+                            <button
+                              onClick={() => setSelectedAssignmentId(assignment.id)}
+                              className={`mt-2 text-xs px-3 py-1 rounded-lg transition-colors ${
+                                darkMode
+                                  ? "bg-blue-600 hover:bg-blue-700 text-white"
+                                  : "bg-blue-100 hover:bg-blue-200 text-blue-700"
+                              }`}
+                            >
+                              See Results
+                            </button>
+                          )}
+                        </div>
+                      )}
                   </div>
                 </div>
               </div>

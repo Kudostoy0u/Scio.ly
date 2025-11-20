@@ -1,24 +1,30 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { useTheme } from '@/app/contexts/ThemeContext';
-import CollapsibleExample from '../components/CollapsibleExample';
+import { useTheme } from "@/app/contexts/ThemeContext";
+import CollapsibleExample from "@/app/docs/api/components/CollapsibleExample";
 
 export default function ExplanationsGuide() {
   const { darkMode } = useTheme();
   return (
-    <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm border ${darkMode ? 'border-gray-700' : 'border-gray-200'} p-6 mb-6`}>
-      <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>🧠 Using the Explanations API</h3>
-      
+    <div
+      className={`${darkMode ? "bg-gray-800" : "bg-white"} rounded-lg shadow-sm border ${darkMode ? "border-gray-700" : "border-gray-200"} p-6 mb-6`}
+    >
+      <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+        🧠 Using the Explanations API
+      </h3>
+
       <div className="space-y-6">
         <div>
-          <h4 className={`text-lg font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Basic Usage</h4>
-          <p className={`text-sm mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-            The explanations API is designed for simple integration. Here&apos;s how to use it in your frontend application:
+          <h4 className={`text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+            Basic Usage
+          </h4>
+          <p className={`text-sm mb-4 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+            The explanations API is designed for simple integration. Here&apos;s how to use it in
+            your frontend application:
           </p>
-          
+
           <CollapsibleExample title="JavaScript/TypeScript Example" variant="request">
-{`// Function to get explanation for a question
+            {`// Function to get explanation for a question
 async function getExplanation(question, userAnswer, event) {
   try {
     const response = await fetch('/api/gemini/explain', {
@@ -75,13 +81,15 @@ try {
         </div>
 
         <div>
-          <h4 className={`text-lg font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>React Hook Example</h4>
-          <p className={`text-sm mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+          <h4 className={`text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+            React Hook Example
+          </h4>
+          <p className={`text-sm mb-4 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
             Here&apos;s how to create a custom React hook for managing explanations:
           </p>
-          
+
           <CollapsibleExample title="Custom React Hook" variant="request">
-{`import { useState, useCallback } from 'react';
+            {`import { useState, useCallback } from 'react';
 
 export function useExplanation() {
   const [explanation, setExplanation] = useState('');
@@ -168,13 +176,15 @@ function QuestionComponent({ question, userAnswer, event }) {
         </div>
 
         <div>
-          <h4 className={`text-lg font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Error Handling</h4>
-          <p className={`text-sm mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+          <h4 className={`text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+            Error Handling
+          </h4>
+          <p className={`text-sm mb-4 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
             The API returns structured error responses that you should handle appropriately:
           </p>
-          
+
           <CollapsibleExample title="Error Response Examples" variant="response">
-{`// Rate limit exceeded
+            {`// Rate limit exceeded
 {
   "success": false,
   "error": "Please wait a moment before requesting another explanation"
@@ -201,25 +211,47 @@ function QuestionComponent({ question, userAnswer, event }) {
         </div>
 
         <div>
-          <h4 className={`text-lg font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Best Practices</h4>
-          <ul className={`text-sm space-y-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-            <li>• <strong>Rate Limiting:</strong> Implement client-side rate limiting to respect the 2-second delay between requests</li>
-            <li>• <strong>Loading States:</strong> Show loading indicators while waiting for explanations</li>
-            <li>• <strong>Error Handling:</strong> Display user-friendly error messages for different error types</li>
-            <li>• <strong>Caching:</strong> Consider caching explanations to avoid repeated requests for the same question</li>
-            <li>• <strong>Progressive Enhancement:</strong> Ensure your app works without explanations if the API is unavailable</li>
-            <li>• <strong>Accessibility:</strong> Provide alternative text for users who can&apos;t access explanations</li>
+          <h4 className={`text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+            Best Practices
+          </h4>
+          <ul className={`text-sm space-y-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+            <li>
+              • <strong>Rate Limiting:</strong> Implement client-side rate limiting to respect the
+              2-second delay between requests
+            </li>
+            <li>
+              • <strong>Loading States:</strong> Show loading indicators while waiting for
+              explanations
+            </li>
+            <li>
+              • <strong>Error Handling:</strong> Display user-friendly error messages for different
+              error types
+            </li>
+            <li>
+              • <strong>Caching:</strong> Consider caching explanations to avoid repeated requests
+              for the same question
+            </li>
+            <li>
+              • <strong>Progressive Enhancement:</strong> Ensure your app works without explanations
+              if the API is unavailable
+            </li>
+            <li>
+              • <strong>Accessibility:</strong> Provide alternative text for users who can&apos;t
+              access explanations
+            </li>
           </ul>
         </div>
 
         <div>
-          <h4 className={`text-lg font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Rate Limiting Implementation</h4>
-          <p className={`text-sm mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+          <h4 className={`text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+            Rate Limiting Implementation
+          </h4>
+          <p className={`text-sm mb-4 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
             Here&apos;s how to implement client-side rate limiting:
           </p>
-          
+
           <CollapsibleExample title="Rate Limiting Hook" variant="request">
-{`import { useState, useRef, useCallback } from 'react';
+            {`import { useState, useRef, useCallback } from 'react';
 
 export function useRateLimitedExplanation(delayMs = 2000) {
   const [loading, setLoading] = useState(false);
@@ -270,5 +302,3 @@ export function useRateLimitedExplanation(delayMs = 2000) {
     </div>
   );
 }
-
-

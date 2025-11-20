@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import TeamDashboard from '../../components/TeamDashboard';
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import TeamDashboard from "@/app/teams/components/TeamDashboard";
 
 interface TeamPeopleClientProps {
   teamSlug: string;
   school: string;
-  division: 'B' | 'C';
+  division: "B" | "C";
   isCaptain: boolean;
 }
 
-export default function TeamPeopleClient({ 
-  teamSlug, 
-  school, 
-  division, 
-  isCaptain 
+export default function TeamPeopleClient({
+  teamSlug,
+  school,
+  division,
+  isCaptain,
 }: TeamPeopleClientProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -26,7 +26,7 @@ export default function TeamPeopleClient({
   }, []);
 
   const handleBack = () => {
-    router.push('/teams');
+    router.push("/teams");
   };
 
   if (loading) {

@@ -1,9 +1,9 @@
-'use client';
-import logger from '@/lib/utils/logger';
+"use client";
+import logger from "@/lib/utils/logger";
 
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
-import type { SupabaseClient, User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { supabase } from "@/lib/supabase";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { type ReactNode, createContext, useContext, useEffect, useRef, useState } from "react";
 
 /**
  * Authentication context type definition
@@ -15,7 +15,7 @@ type AuthContextType = {
   /** Loading state for authentication operations */
   loading: boolean;
   /** Supabase client for database operations */
-  client: SupabaseClient<any, 'public', any>;
+  client: SupabaseClient<any, "public", any>;
 };
 
 /** Authentication context for managing user state */
@@ -24,7 +24,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 /**
  * Authentication provider component
  * Manages user authentication state and profile synchronization
- * 
+ *
  * @param {Object} props - Component props
  * @param {ReactNode} props.children - Child components
  * @param {User | null} [props.initialUser] - Initial user state from server
@@ -36,7 +36,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
  * </AuthProvider>
  * ```
  */
-export function AuthProvider({ children, initialUser }: { children: ReactNode; initialUser?: User | null }) {
+export function AuthProvider({
+  children,
+  initialUser,
+}: { children: ReactNode; initialUser?: User | null }) {
   const [user, setUser] = useState<User | null>(initialUser ?? null);
   const [loading, setLoading] = useState<boolean>(true);
   const hasSyncedRef = useRef<string | null>(null);
@@ -47,45 +50,57 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
     const init = async () => {
       try {
         const { data } = await supabase.auth.getSession();
-        if (!isMounted) return;
+        if (!isMounted) {
+          return;
+        }
         const incoming = data.session?.user ?? null;
         setUser((prev) => {
           const prevId = prev?.id ?? null;
           const nextId = incoming?.id ?? null;
-          if (prevId === nextId) return prev;
+          if (prevId === nextId) {
+            return prev;
+          }
           return incoming;
         });
       } catch {
         // ignore
       } finally {
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
-
 
     init();
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!isMounted) return;
+      if (!isMounted) {
+        return;
+      }
       const incoming = session?.user ?? null;
       setUser((prev) => {
         const prevId = prev?.id ?? null;
         const nextId = incoming?.id ?? null;
-        if (prevId === nextId) return prev;
+        if (prevId === nextId) {
+          return prev;
+        }
         return incoming;
       });
     });
 
-
     const resync = async () => {
       try {
         const { data } = await supabase.auth.getSession();
-        if (!isMounted) return;
+        if (!isMounted) {
+          return;
+        }
         const incoming = data.session?.user ?? null;
         setUser((prev) => {
           const prevId = prev?.id ?? null;
           const nextId = incoming?.id ?? null;
-          if (prevId === nextId) return prev;
+          if (prevId === nextId) {
+            return prev;
+          }
           return incoming;
         });
       } catch {
@@ -94,19 +109,20 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
     };
     const onFocus = () => void resync();
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') void resync();
+      if (document.visibilityState === "visible") {
+        void resync();
+      }
     };
-    window.addEventListener('focus', onFocus);
-    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
       isMounted = false;
       listener.subscription.unsubscribe();
-      window.removeEventListener('focus', onFocus);
-      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [initialUser]);
-
 
   // Run profile sync; guarded so it no-ops if already synced for this user
   useEffect(() => {
@@ -118,33 +134,31 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
         return;
       }
 
-
-      if (!user.id || typeof user.id !== 'string' || user.id.trim() === '') {
-        logger.warn('Invalid user ID for profile sync:', user.id);
+      if (!user.id || typeof user.id !== "string" || user.id.trim() === "") {
+        logger.warn("Invalid user ID for profile sync:", user.id);
         return;
       }
 
       try {
-        const isGoogle = (user as any)?.app_metadata?.provider === 'google'
-          || (Array.isArray((user as any)?.identities) && (user as any).identities.some((i: any) => i.provider === 'google'));
+        const isGoogle =
+          user?.app_metadata?.provider === "google" ||
+          (Array.isArray(user?.identities) &&
+            user.identities.some((i) => i.provider === "google"));
 
-
-        const { data: existing, error: readError } = await (supabase as any)
-          .from('users')
-          .select('id, email, first_name, last_name, display_name, username, photo_url')
-          .eq('id', user.id)
+        const { data: existing, error: readError } = await supabase
+          .from("users")
+          .select("id, email, first_name, last_name, display_name, username, photo_url")
+          .eq("id", user.id)
           .maybeSingle();
 
         if (readError) {
-          logger.warn('Error reading existing profile:', readError);
-
+          logger.warn("Error reading existing profile:", readError);
         }
 
-
         const meta: any = user.user_metadata || {};
-        const given = (meta.given_name || meta.givenName || '').toString().trim();
-        const family = (meta.family_name || meta.familyName || '').toString().trim();
-        const full = (meta.name || meta.full_name || meta.fullName || '').toString().trim();
+        const given = (meta.given_name || meta.givenName || "").toString().trim();
+        const family = (meta.family_name || meta.familyName || "").toString().trim();
+        const full = (meta.name || meta.full_name || meta.fullName || "").toString().trim();
 
         let firstName: string | null = null;
         let lastName: string | null = null;
@@ -156,74 +170,84 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
           const parts = full.split(/\s+/).filter(Boolean);
           if (parts.length >= 2) {
             firstName = parts[0];
-            lastName = parts.slice(1).join(' ');
+            lastName = parts.slice(1).join(" ");
           } else if (parts.length === 1) {
             firstName = parts[0];
             lastName = null;
           }
         }
 
-        const email = user.email || existing?.email;
-        
+        const email = user.email || (existing as { email?: string } | null)?.email;
+
         // Improved username generation with better fallbacks
         let username: string;
-        if (existing?.username && existing.username.trim()) {
-          username = existing.username.trim();
-        } else if (email && email.includes('@')) {
-          const emailLocal = email.split('@')[0];
+        const existingTyped = existing as { username?: string; email?: string; display_name?: string; first_name?: string; last_name?: string; photo_url?: string } | null;
+        if (existingTyped?.username?.trim()) {
+          username = existingTyped.username.trim();
+        } else if (email?.includes("@")) {
+          const emailLocal = email.split("@")[0];
           if (emailLocal && emailLocal.length > 2 && !emailLocal.match(/^[a-f0-9]{8}$/)) {
             username = emailLocal;
           } else {
-            username = 'user_' + user.id.slice(0, 8);
+            username = `user_${user.id.slice(0, 8)}`;
           }
         } else {
-          username = 'user_' + user.id.slice(0, 8);
+          username = `user_${user.id.slice(0, 8)}`;
         }
-        
+
         // Improved display name generation with better fallbacks
         let displayName: string | null = null;
-        if (existing?.display_name && existing.display_name.trim()) {
-          displayName = existing.display_name.trim();
-        } else if (full && full.trim()) {
+        if (existingTyped?.display_name?.trim()) {
+          displayName = existingTyped.display_name.trim();
+        } else if (full?.trim()) {
           displayName = full.trim();
-        } else if (given && given.trim()) {
+        } else if (given?.trim()) {
           displayName = given.trim();
         } else if (firstName && lastName) {
           displayName = `${firstName.trim()} ${lastName.trim()}`;
-        } else if (firstName && firstName.trim()) {
+        } else if (firstName?.trim()) {
           displayName = firstName.trim();
-        } else if (lastName && lastName.trim()) {
+        } else if (lastName?.trim()) {
           displayName = lastName.trim();
-        } else if (email && email.includes('@')) {
-          const emailLocal = email.split('@')[0];
+        } else if (email?.includes("@")) {
+          const emailLocal = email.split("@")[0];
           if (emailLocal && emailLocal.length > 2 && !emailLocal.match(/^[a-f0-9]{8}$/)) {
             displayName = `@${emailLocal}`;
           }
         }
-        const photoUrl = existing?.photo_url || meta.avatar_url || meta.picture || null;
-
-
+        const photoUrl = existingTyped?.photo_url || meta.avatar_url || meta.picture || null;
 
         const shouldForceUpdateNames = Boolean(isGoogle) && (firstName || lastName);
 
-        if (!user.id || !email || !username) {
-          logger.warn('Missing required user fields for upsert:', { id: user.id, email, username });
+        if (!(user.id && email && username)) {
+          logger.warn("Missing required user fields for upsert:", { id: user.id, email, username });
           return;
         }
 
         // Additional safety check to ensure email is not null/undefined/empty
-        if (!email || email.trim() === '') {
-          logger.warn('Email is null, undefined, or empty - skipping upsert:', { id: user.id, email });
+        if (!email || email.trim() === "") {
+          logger.warn("Email is null, undefined, or empty - skipping upsert:", {
+            id: user.id,
+            email,
+          });
           return;
         }
 
-        if (typeof user.id !== 'string' || user.id.trim() === '' || 
-            typeof email !== 'string' || email.trim() === '' ||
-            typeof username !== 'string' || username.trim() === '') {
-          logger.warn('Invalid field types or empty values for upsert:', { 
-            id: user.id, idType: typeof user.id, 
-            email, emailType: typeof email, 
-            username, usernameType: typeof username 
+        if (
+          typeof user.id !== "string" ||
+          user.id.trim() === "" ||
+          typeof email !== "string" ||
+          email.trim() === "" ||
+          typeof username !== "string" ||
+          username.trim() === ""
+        ) {
+          logger.warn("Invalid field types or empty values for upsert:", {
+            id: user.id,
+            idType: typeof user.id,
+            email,
+            emailType: typeof email,
+            username,
+            usernameType: typeof username,
           });
           return;
         }
@@ -236,41 +260,64 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
         };
 
         const changes: Record<string, any> = {};
-        if (!existing) {
+        if (existingTyped) {
+          if (!existingTyped.username && upsertPayload.username) {
+            changes.username = upsertPayload.username;
+          }
+          if (existingTyped.email !== upsertPayload.email) {
+            changes.email = upsertPayload.email; // rare
+          }
+        } else {
           changes.email = upsertPayload.email;
           changes.username = upsertPayload.username;
-        } else {
-          if (!existing.username && upsertPayload.username) changes.username = upsertPayload.username;
-          if (existing.email !== upsertPayload.email) changes.email = upsertPayload.email; // rare
         }
 
-        const shouldWriteFirst = shouldForceUpdateNames || (!existing?.first_name && firstName !== null && firstName !== undefined);
-        if (shouldWriteFirst && firstName !== null && firstName !== undefined && existing?.first_name !== firstName) {
+        const shouldWriteFirst =
+          shouldForceUpdateNames ||
+          (!existingTyped?.first_name && firstName !== null && firstName !== undefined);
+        if (
+          shouldWriteFirst &&
+          firstName !== null &&
+          firstName !== undefined &&
+          existingTyped?.first_name !== firstName
+        ) {
           changes.first_name = firstName;
         }
-        const shouldWriteLast = shouldForceUpdateNames || (!existing?.last_name && lastName !== null && lastName !== undefined);
-        if (shouldWriteLast && lastName !== null && lastName !== undefined && existing?.last_name !== lastName) {
+        const shouldWriteLast =
+          shouldForceUpdateNames ||
+          (!existingTyped?.last_name && lastName !== null && lastName !== undefined);
+        if (
+          shouldWriteLast &&
+          lastName !== null &&
+          lastName !== undefined &&
+          existingTyped?.last_name !== lastName
+        ) {
           changes.last_name = lastName;
         }
-        if (!existing?.display_name && displayName !== null && displayName !== undefined && existing?.display_name !== displayName) {
+        if (
+          !existingTyped?.display_name &&
+          displayName !== null &&
+          displayName !== undefined &&
+          existingTyped?.display_name !== displayName
+        ) {
           changes.display_name = displayName;
         }
-        if (!existing?.photo_url && photoUrl && existing?.photo_url !== photoUrl) {
+        if (!existingTyped?.photo_url && photoUrl && existingTyped?.photo_url !== photoUrl) {
           changes.photo_url = photoUrl;
         }
 
-        const hasMeaningfulChanges = !existing || Object.keys(changes).length > 0;
+        const hasMeaningfulChanges = !existingTyped || Object.keys(changes).length > 0;
         if (hasMeaningfulChanges) {
           try {
             const payload = { id: upsertPayload.id, ...changes };
-            const { error: upsertError } = await (supabase as any)
-              .from('users')
-              .upsert(payload as any, { onConflict: 'id' });
+            const { error: upsertError } = await supabase
+              .from("users")
+              .upsert(payload as any, { onConflict: "id" });
             if (upsertError) {
-              logger.warn('Failed to upsert user profile:', upsertError);
+              logger.warn("Failed to upsert user profile:", upsertError);
             }
           } catch (error) {
-            logger.warn('Error upserting user profile:', error);
+            logger.warn("Error upserting user profile:", error);
           }
         }
 
@@ -286,7 +333,7 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
   const value: AuthContextType = {
     user,
     loading,
-    client: supabase as unknown as SupabaseClient<any, 'public', any>,
+    client: supabase as unknown as SupabaseClient<any, "public", any>,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -295,23 +342,25 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
 /**
  * Hook to access authentication context
  * Provides user state and Supabase client
- * 
+ *
  * @returns {AuthContextType} Authentication context with user, loading, and client
  * @throws {Error} When used outside of AuthProvider
  * @example
  * ```tsx
  * function MyComponent() {
  *   const { user, loading, client } = useAuth();
- *   
+ *
  *   if (loading) return <div>Loading...</div>;
  *   if (!user) return <div>Please log in</div>;
- *   
+ *
  *   return <div>Welcome, {user.email}!</div>;
  * }
  * ```
  */
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
+  if (!ctx) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
   return ctx;
 }

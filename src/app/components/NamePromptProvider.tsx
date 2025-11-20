@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useNamePrompt, dismissNamePrompt } from '@/app/hooks/useNamePrompt';
-import { useAuth } from '@/app/contexts/AuthContext';
-import NamePromptModal from './NamePromptModal';
+import { useAuth } from "@/app/contexts/AuthContext";
+import { dismissNamePrompt, useNamePrompt } from "@/app/hooks/useNamePrompt";
+import { useEffect, useState } from "react";
+import NamePromptModal from "./NamePromptModal";
 
 export default function NamePromptProvider() {
   const { user } = useAuth();
@@ -22,6 +22,7 @@ export default function NamePromptProvider() {
 
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [user, needsPrompt, isLoading, hasShownPrompt]);
 
   const handleClose = () => {

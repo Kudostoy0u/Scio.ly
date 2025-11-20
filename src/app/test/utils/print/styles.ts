@@ -21,5 +21,3 @@ export const createTestPrintStyles = (_getStylesheets: () => string) => `
     .page-break { page-break-before: always; }
   </style>
 `;
-
-

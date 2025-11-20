@@ -1,5 +1,4 @@
-
-import api from '../api';
+import api from "@/app/api";
 
 /**
  * Gemini service utilities for Science Olympiad platform
@@ -60,13 +59,13 @@ export interface EditSuggestion {
  */
 export interface ReportAnalysis {
   /** Category of the issue */
-  category: 'accuracy' | 'clarity' | 'formatting' | 'duplicate' | 'inappropriate' | 'other';
+  category: "accuracy" | "clarity" | "formatting" | "duplicate" | "inappropriate" | "other";
   /** Severity level of the issue */
-  severity: 'low' | 'medium' | 'high';
+  severity: "low" | "medium" | "high";
   /** Array of specific issues found */
   issues: string[];
   /** Recommended action */
-  suggestedAction: 'edit' | 'remove';
+  suggestedAction: "edit" | "remove";
   /** AI reasoning for the analysis */
   reasoning: string;
 }
@@ -78,10 +77,7 @@ class GeminiService {
   }
 
   private async callGemini(_prompt: string): Promise<string> {
-
-
-    console.warn('Direct Gemini calls are deprecated. Use Express API endpoints instead.');
-    throw new Error('Direct Gemini calls have been migrated to Express API endpoints');
+    throw new Error("Direct Gemini calls have been migrated to Express API endpoints");
   }
 
   async suggestQuestionEdit(question: Question, userReason?: string): Promise<EditSuggestion> {
@@ -91,20 +87,20 @@ class GeminiService {
         userReason?: string;
       } = {
         question,
-        userReason
+        userReason,
       };
 
       if (question.imageData || question.imageUrl) {
         requestBody.question = {
           ...question,
-          imageData: question.imageData || question.imageUrl
+          imageData: question.imageData || question.imageUrl,
         };
       }
 
       const response = await fetch(api.geminiSuggestEdit, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -114,16 +110,14 @@ class GeminiService {
       const data = await response.json();
       if (data.success && data.data) {
         return data.data;
-      } else {
-        throw new Error('Invalid API response');
       }
-    } catch (error) {
-      console.error('Failed to get edit suggestions:', error);
+      throw new Error("Invalid API response");
+    } catch (_error) {
       return {
         suggestedQuestion: question.question,
         suggestedOptions: question.options,
         suggestedAnswers: question.answers,
-        suggestedDifficulty: question.difficulty
+        suggestedDifficulty: question.difficulty,
       };
     }
   }
@@ -131,9 +125,9 @@ class GeminiService {
   async analyzeQuestionForReport(question: Question): Promise<ReportAnalysis> {
     try {
       const response = await fetch(api.geminiAnalyzeQuestion, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question })
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
       });
 
       if (!response.ok) {
@@ -143,17 +137,15 @@ class GeminiService {
       const data = await response.json();
       if (data.success && data.data) {
         return data.data;
-      } else {
-        throw new Error('Invalid API response');
       }
-    } catch (error) {
-      console.error('Failed to analyze question:', error);
+      throw new Error("Invalid API response");
+    } catch (_error) {
       return {
-        category: 'other',
-        severity: 'low',
-        issues: ['Unable to analyze question at this time'],
-        suggestedAction: 'edit',
-        reasoning: 'Analysis failed. Please manually review the question.'
+        category: "other",
+        severity: "low",
+        issues: ["Unable to analyze question at this time"],
+        suggestedAction: "edit",
+        reasoning: "Analysis failed. Please manually review the question.",
       };
     }
   }
@@ -161,9 +153,9 @@ class GeminiService {
   async improveReportReason(originalReason: string, analysis: ReportAnalysis): Promise<string> {
     try {
       const response = await fetch(api.geminiImproveReason, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ originalReason, analysis })
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ originalReason, analysis }),
       });
 
       if (!response.ok) {
@@ -173,21 +165,22 @@ class GeminiService {
       const data = await response.json();
       if (data.success && data.data && data.data.improvedReason) {
         return data.data.improvedReason;
-      } else {
-        throw new Error('Invalid API response');
       }
-    } catch (error) {
-      console.error('Failed to improve report reason:', error);
+      throw new Error("Invalid API response");
+    } catch (_error) {
       return originalReason;
     }
   }
 
-  async validateQuestionEdit(original: Question, edited: Question): Promise<{ isValid: boolean; issues: string[]; suggestions: string[] }> {
+  async validateQuestionEdit(
+    original: Question,
+    edited: Question
+  ): Promise<{ isValid: boolean; issues: string[]; suggestions: string[] }> {
     try {
       const response = await fetch(api.geminiValidateEdit, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ original, edited })
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ original, edited }),
       });
 
       if (!response.ok) {
@@ -197,15 +190,13 @@ class GeminiService {
       const data = await response.json();
       if (data.success && data.data) {
         return data.data;
-      } else {
-        throw new Error('Invalid API response');
       }
-    } catch (error) {
-      console.error('Failed to validate edit:', error);
+      throw new Error("Invalid API response");
+    } catch (_error) {
       return {
         isValid: true,
-        issues: ['Unable to validate edit at this time'],
-        suggestions: ['Please manually review the changes']
+        issues: ["Unable to validate edit at this time"],
+        suggestions: ["Please manually review the changes"],
       };
     }
   }

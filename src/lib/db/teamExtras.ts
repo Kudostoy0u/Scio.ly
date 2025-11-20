@@ -1,4 +1,4 @@
-import { pool } from './pool';
+import { pool } from "./pool";
 
 export async function initExtrasDatabase() {
   const client = await pool.connect();
@@ -60,13 +60,31 @@ export async function initExtrasDatabase() {
 
 // Purged legacy notifications/linking helpers
 
-export async function createAssignment(data: { school: string; division: 'B'|'C'; teamId: string; eventName: string; assignees: Array<{ name: string; userId?: string }>; params: any; questions: any; createdBy: string; }) {
+export async function createAssignment(data: {
+  school: string;
+  division: "B" | "C";
+  teamId: string;
+  eventName: string;
+  assignees: Array<{ name: string; userId?: string }>;
+  params: any;
+  questions: any;
+  createdBy: string;
+}) {
   const client = await pool.connect();
   try {
     await initExtrasDatabase();
     const res = await client.query(
-      `INSERT INTO assignments (school, division, team_id, event_name, assignees, params, questions, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [data.school, data.division, data.teamId, data.eventName, JSON.stringify(data.assignees), JSON.stringify(data.params), JSON.stringify(data.questions), data.createdBy]
+      "INSERT INTO assignments (school, division, team_id, event_name, assignees, params, questions, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *",
+      [
+        data.school,
+        data.division,
+        data.teamId,
+        data.eventName,
+        JSON.stringify(data.assignees),
+        JSON.stringify(data.params),
+        JSON.stringify(data.questions),
+        data.createdBy,
+      ]
     );
     const assignment = res.rows[0];
 
@@ -78,12 +96,12 @@ export async function createAssignment(data: { school: string; division: 'B'|'C'
   }
 }
 
-export async function listRecentAssignments(school: string, division: 'B'|'C') {
+export async function listRecentAssignments(school: string, division: "B" | "C") {
   const client = await pool.connect();
   try {
     await initExtrasDatabase();
     const res = await client.query(
-      `SELECT id, event_name, created_at, assignees FROM assignments WHERE school = $1 AND division = $2 ORDER BY created_at DESC LIMIT 50`,
+      "SELECT id, event_name, created_at, assignees FROM assignments WHERE school = $1 AND division = $2 ORDER BY created_at DESC LIMIT 50",
       [school, division]
     );
     return res.rows;
@@ -92,12 +110,12 @@ export async function listRecentAssignments(school: string, division: 'B'|'C') {
   }
 }
 
-export async function listRecentResults(school: string, division: 'B'|'C') {
+export async function listRecentResults(school: string, division: "B" | "C") {
   const client = await pool.connect();
   try {
     await initExtrasDatabase();
     const res = await client.query(
-      `SELECT ar.*, a.event_name FROM assignment_results ar JOIN assignments a ON a.id = ar.assignment_id WHERE a.school = $1 AND a.division = $2 ORDER BY ar.submitted_at DESC LIMIT 100`,
+      "SELECT ar.*, a.event_name FROM assignment_results ar JOIN assignments a ON a.id = ar.assignment_id WHERE a.school = $1 AND a.division = $2 ORDER BY ar.submitted_at DESC LIMIT 100",
       [school, division]
     );
     return res.rows;
@@ -110,7 +128,7 @@ export async function deleteAssignmentResult(id: number | string) {
   const client = await pool.connect();
   try {
     await initExtrasDatabase();
-    await client.query(`DELETE FROM assignment_results WHERE id=$1::INT8`, [id]);
+    await client.query("DELETE FROM assignment_results WHERE id=$1::INT8", [id]);
     return true;
   } finally {
     client.release();
@@ -121,7 +139,7 @@ export async function deleteAssignment(id: number | string) {
   const client = await pool.connect();
   try {
     await initExtrasDatabase();
-    await client.query(`DELETE FROM assignments WHERE id=$1::INT8`, [id]);
+    await client.query("DELETE FROM assignments WHERE id=$1::INT8", [id]);
     return true;
   } finally {
     client.release();
@@ -132,7 +150,7 @@ export async function getAssignmentById(id: number | string) {
   const client = await pool.connect();
   try {
     await initExtrasDatabase();
-    const res = await client.query(`SELECT * FROM assignments WHERE id=$1::INT8`, [id]);
+    const res = await client.query("SELECT * FROM assignments WHERE id=$1::INT8", [id]);
     return res.rows[0] || null;
   } finally {
     client.release();
@@ -140,14 +158,28 @@ export async function getAssignmentById(id: number | string) {
 }
 
 // Invites v2 helpers
-export async function createInvite(inviterUserId: string, inviteeUsername: string, school: string, division: 'B'|'C', teamId: string) {
+export async function createInvite(
+  inviterUserId: string,
+  inviteeUsername: string,
+  school: string,
+  division: "B" | "C",
+  teamId: string
+) {
   const client = await pool.connect();
   try {
     await initExtrasDatabase();
     // If a pending exists, return it; else insert
-    const existing = await client.query(`SELECT * FROM invites_v2 WHERE invitee_username=$1 AND school=$2 AND division=$3 AND team_id=$4 AND status='pending' LIMIT 1`, [inviteeUsername, school, division, teamId]);
-    if (existing.rows.length > 0) return existing.rows[0];
-    const res = await client.query(`INSERT INTO invites_v2 (inviter_user_id, invitee_username, school, division, team_id) VALUES ($1,$2,$3,$4,$5) RETURNING *`, [inviterUserId, inviteeUsername, school, division, teamId]);
+    const existing = await client.query(
+      `SELECT * FROM invites_v2 WHERE invitee_username=$1 AND school=$2 AND division=$3 AND team_id=$4 AND status='pending' LIMIT 1`,
+      [inviteeUsername, school, division, teamId]
+    );
+    if (existing.rows.length > 0) {
+      return existing.rows[0];
+    }
+    const res = await client.query(
+      "INSERT INTO invites_v2 (inviter_user_id, invitee_username, school, division, team_id) VALUES ($1,$2,$3,$4,$5) RETURNING *",
+      [inviterUserId, inviteeUsername, school, division, teamId]
+    );
     return res.rows[0];
   } finally {
     client.release();
@@ -158,7 +190,10 @@ export async function listInvitesByUsername(inviteeUsername: string) {
   const client = await pool.connect();
   try {
     await initExtrasDatabase();
-    const res = await client.query(`SELECT * FROM invites_v2 WHERE invitee_username=$1 AND status='pending' ORDER BY created_at DESC`, [inviteeUsername]);
+    const res = await client.query(
+      `SELECT * FROM invites_v2 WHERE invitee_username=$1 AND status='pending' ORDER BY created_at DESC`,
+      [inviteeUsername]
+    );
     return res.rows;
   } finally {
     client.release();
@@ -169,18 +204,29 @@ export async function acceptInvite(inviteId: number) {
   const client = await pool.connect();
   try {
     await initExtrasDatabase();
-    await client.query('BEGIN');
-    const res = await client.query(`SELECT * FROM invites_v2 WHERE id=$1 FOR UPDATE`, [inviteId]);
-    if (res.rows.length === 0) { await client.query('ROLLBACK'); return null; }
+    await client.query("BEGIN");
+    const res = await client.query("SELECT * FROM invites_v2 WHERE id=$1 FOR UPDATE", [inviteId]);
+    if (res.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return null;
+    }
     const inv = res.rows[0];
-    if (inv.status !== 'pending') { await client.query('ROLLBACK'); return null; }
+    if (inv.status !== "pending") {
+      await client.query("ROLLBACK");
+      return null;
+    }
     await client.query(`UPDATE invites_v2 SET status='accepted' WHERE id=$1`, [inviteId]);
     // decline duplicates for same user+team
-    await client.query(`UPDATE invites_v2 SET status='declined' WHERE invitee_username=$1 AND school=$2 AND division=$3 AND team_id=$4 AND status='pending' AND id<>$5`, [inv.invitee_username, inv.school, inv.division, inv.team_id, inviteId]);
-    await client.query('COMMIT');
+    await client.query(
+      `UPDATE invites_v2 SET status='declined' WHERE invitee_username=$1 AND school=$2 AND division=$3 AND team_id=$4 AND status='pending' AND id<>$5`,
+      [inv.invitee_username, inv.school, inv.division, inv.team_id, inviteId]
+    );
+    await client.query("COMMIT");
     return inv;
   } catch (e) {
-    try { await client.query('ROLLBACK'); } catch {}
+    try {
+      await client.query("ROLLBACK");
+    } catch {}
     throw e;
   } finally {
     client.release();
@@ -191,10 +237,10 @@ export async function declineInvite(inviteId: number) {
   const client = await pool.connect();
   try {
     await initExtrasDatabase();
-    await client.query(`UPDATE invites_v2 SET status='declined' WHERE id=$1 AND status='pending'`, [inviteId]);
+    await client.query(`UPDATE invites_v2 SET status='declined' WHERE id=$1 AND status='pending'`, [
+      inviteId,
+    ]);
   } finally {
     client.release();
   }
 }
-
-

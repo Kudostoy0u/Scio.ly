@@ -2,14 +2,16 @@
  * Question editing and improvement methods for Gemini service
  */
 
-import { GoogleGenAI, Type } from "@google/genai";
-import type { EditSuggestionResult } from './types';
+import { Type } from "@google/genai";
+import logger from "@/lib/utils/logger";
+import type { ClientWithKey } from "./client";
+import type { EditSuggestionResult } from "./types";
 
 /**
  * Question editing service
  */
 export class GeminiEditingService {
-  constructor(private client: GoogleGenAI) {}
+  constructor(private clientWithKey: ClientWithKey) {}
 
   /**
    * Suggests improvements for a question
@@ -18,16 +20,19 @@ export class GeminiEditingService {
    * @returns {Promise<EditSuggestionResult>} Edit suggestion result
    */
   public async suggestEdit(
-    question: Record<string, unknown>, 
+    question: Record<string, unknown>,
     userReason?: string
   ): Promise<EditSuggestionResult> {
-    const questionText = question.question || '';
+    const questionText = question.question || "";
     const options = question.options || [];
     const answers = question.answers || [];
-    const answersText = this.resolveAnswersToText(Array.isArray(options) ? options : [], Array.isArray(answers) ? answers : []);
-    const event = question.event || '';
+    const answersText = this.resolveAnswersToText(
+      Array.isArray(options) ? options : [],
+      Array.isArray(answers) ? answers : []
+    );
+    const event = question.event || "";
     const difficulty = question.difficulty || 0.5;
-    const hasImage = question.imageData && typeof question.imageData === 'string';
+    const hasImage = question.imageData && typeof question.imageData === "string";
 
     let prompt = `You are a Science Olympiad question editor. Your job is to improve this question by correcting errors, clarifying wording, and enhancing educational value.
 
@@ -36,7 +41,7 @@ OPTIONS: ${JSON.stringify(options)}
 ANSWERS: ${JSON.stringify(answersText)}
 EVENT: ${event}
 DIFFICULTY: ${difficulty}
-${userReason ? `USER REASON: ${userReason}` : ''}`;
+${userReason ? `USER REASON: ${userReason}` : ""}`;
 
     if (hasImage) {
       prompt += `
@@ -57,8 +62,12 @@ IMPROVEMENT CRITERIA:
 2. Clarity and readability - improve unclear wording
 3. Educational value - ensure question tests important concepts
 4. Technical formatting - fix formatting issues
-5. Difficulty appropriateness - adjust to match event level${hasImage ? `
-6. Image-text alignment - ensure question text properly references the image` : ``}
+5. Difficulty appropriateness - adjust to match event level${
+      hasImage
+        ? `
+6. Image-text alignment - ensure question text properly references the image`
+        : ""
+    }
 
 Lastly, questions must be self-contained. if the question I gave to you references something not in the question itself, you must tweak it to be answerable only given the question. 
 Provide improved versions of the question components. Make minimal changes if the question is already good.
@@ -92,10 +101,20 @@ Also include suggestedDifficulty (0.0-1.0) when you recommend an updated difficu
         suggestedDifficulty: { type: Type.NUMBER },
         reasoning: { type: Type.STRING },
       },
-      propertyOrdering: ["suggestedQuestion", "suggestedOptions", "suggestedAnswers", "suggestedDifficulty", "reasoning"],
+      propertyOrdering: [
+        "suggestedQuestion",
+        "suggestedOptions",
+        "suggestedAnswers",
+        "suggestedDifficulty",
+        "reasoning",
+      ],
     };
 
-    return await this.generateStructuredContent(prompt, schema, hasImage ? question.imageData as string : undefined);
+    return await this.generateStructuredContent(
+      prompt,
+      schema,
+      hasImage ? (question.imageData as string) : undefined
+    );
   }
 
   /**
@@ -109,13 +128,13 @@ Also include suggestedDifficulty (0.0-1.0) when you recommend an updated difficu
       return [];
     }
 
-    return answers.map(answer => {
-      if (typeof answer === 'string') {
+    return answers.map((answer) => {
+      if (typeof answer === "string") {
         return answer;
       }
-      if (typeof answer === 'number' && Array.isArray(options)) {
+      if (typeof answer === "number" && Array.isArray(options)) {
         const option = options[answer];
-        return typeof option === 'string' ? option : String(answer);
+        return typeof option === "string" ? option : String(answer);
       }
       return String(answer);
     });
@@ -128,12 +147,16 @@ Also include suggestedDifficulty (0.0-1.0) when you recommend an updated difficu
    * @param {string} imageData - Optional image data URL
    * @returns {Promise<T>} Structured response
    */
-  private async generateStructuredContent<T>(prompt: string, schema: object, imageData?: string): Promise<T> {
+  private async generateStructuredContent<T>(
+    prompt: string,
+    schema: object,
+    imageData?: string
+  ): Promise<T> {
     const contents: any[] = [
       {
         role: "user",
-        parts: [{ text: prompt }]
-      }
+        parts: [{ text: prompt }],
+      },
     ];
 
     // Add image if provided
@@ -141,33 +164,56 @@ Also include suggestedDifficulty (0.0-1.0) when you recommend an updated difficu
       contents[0].parts.push({
         inlineData: {
           mimeType: "image/jpeg",
-          data: imageData.split(',')[1] // Remove data URL prefix
-        }
+          data: imageData.split(",")[1], // Remove data URL prefix
+        },
       });
     }
 
-    const response = await this.client.models.generateContent({
-      model: "gemini-flash-lite-latest",
-      contents,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: schema,
-        thinkingConfig: {
-          thinkingBudget: 1000,
-        },
-        temperature: 0.1,
-        topP: 0.8,
-        topK: 40,
-      },
-    });
-
-    const text = response.text || '{}';
-    
     try {
-      return JSON.parse(text) as T;
+      const response = await this.clientWithKey.client.models.generateContent({
+        model: "gemini-flash-lite-latest",
+        contents,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: schema,
+          thinkingConfig: {
+            thinkingBudget: 1000,
+          },
+          temperature: 0.1,
+          topP: 0.8,
+          topK: 40,
+        },
+      });
+
+      const text = response.text || "{}";
+
+      try {
+        return JSON.parse(text) as T;
+      } catch (error) {
+        const maskedKey =
+          this.clientWithKey.apiKey.length > 12
+            ? `${this.clientWithKey.apiKey.substring(0, 8)}...${this.clientWithKey.apiKey.substring(this.clientWithKey.apiKey.length - 4)}`
+            : "***";
+        logger.error("Failed to parse Gemini response", error as Error, {
+          apiKeyIndex: this.clientWithKey.keyIndex,
+          apiKey: maskedKey,
+        });
+        throw new Error(
+          `Invalid response format from Gemini (API key index: ${this.clientWithKey.keyIndex})`
+        );
+      }
     } catch (error) {
-      console.error('Failed to parse Gemini response:', error);
-      throw new Error('Invalid response format from Gemini');
+      const maskedKey =
+        this.clientWithKey.apiKey.length > 12
+          ? `${this.clientWithKey.apiKey.substring(0, 8)}...${this.clientWithKey.apiKey.substring(this.clientWithKey.apiKey.length - 4)}`
+          : "***";
+      logger.error("Gemini API error", error as Error, {
+        apiKeyIndex: this.clientWithKey.keyIndex,
+        apiKey: maskedKey,
+      });
+      throw new Error(
+        `Gemini API error (API key index: ${this.clientWithKey.keyIndex}, key: ${maskedKey}): ${(error as Error).message}`
+      );
     }
   }
 }

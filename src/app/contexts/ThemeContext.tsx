@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useState, useEffect } from 'react';
-import SyncLocalStorage from '@/lib/database/localStorage-replacement';
+import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import { createContext, useContext, useEffect, useState } from "react";
 
 /**
  * Theme context type definition
@@ -22,11 +22,11 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 /**
  * ThemeProvider Component
- * 
+ *
  * Provides theme context to the application
  * Manages dark/light mode state with localStorage and cookie persistence
  * Handles SSR/CSR hydration to prevent mismatches
- * 
+ *
  * @param {Object} props - Component props
  * @param {React.ReactNode} props.children - Child components
  * @param {boolean} [props.initialDarkMode] - Initial dark mode state from SSR
@@ -38,78 +38,76 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
  * </ThemeProvider>
  * ```
  */
-export function ThemeProvider({ children, initialDarkMode }: { children: React.ReactNode; initialDarkMode?: boolean }) {
-
+export function ThemeProvider({
+  children,
+  initialDarkMode,
+}: { children: React.ReactNode; initialDarkMode?: boolean }) {
   // initialdarkmode (from cookie) to guarantee ssr/csr match and avoid hydration errors.
   const getInitialDarkMode = (): boolean => {
-
     // to guarantee markup parity and avoid hydration mismatches.
 
     return initialDarkMode ?? false;
   };
 
-
   const [darkMode, setDarkModeState] = useState<boolean>(getInitialDarkMode);
-
 
   const setDarkMode = (value: boolean) => {
     setDarkModeState(value);
-    if (typeof document !== 'undefined') {
-
-      document.cookie = `theme=${value ? 'dark' : 'light'}; path=/; max-age=31536000; samesite=lax`;
+    if (typeof document !== "undefined") {
+      document.cookie = `theme=${value ? "dark" : "light"}; path=/; max-age=31536000; samesite=lax`;
     }
-    if (typeof localStorage !== 'undefined') {
-      SyncLocalStorage.setItem('theme', value ? 'dark' : 'light');
+    if (typeof localStorage !== "undefined") {
+      SyncLocalStorage.setItem("theme", value ? "dark" : "light");
     }
   };
 
-
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const storedTheme = SyncLocalStorage.getItem('theme');
-    if (storedTheme === 'dark' || storedTheme === 'light') {
-      const prefersDark = storedTheme === 'dark';
+    if (typeof window === "undefined") {
+      return;
+    }
+    const storedTheme = SyncLocalStorage.getItem("theme");
+    if (storedTheme === "dark" || storedTheme === "light") {
+      const prefersDark = storedTheme === "dark";
       if (prefersDark !== darkMode) {
         setDarkModeState(prefersDark);
 
-        document.cookie = `theme=${prefersDark ? 'dark' : 'light'}; path=/; max-age=31536000; samesite=lax`;
+        document.cookie = `theme=${prefersDark ? "dark" : "light"}; path=/; max-age=31536000; samesite=lax`;
       }
       return;
     }
 
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
     const listener = (e: MediaQueryListEvent) => setDarkModeState(e.matches);
-    media.addEventListener?.('change', listener);
-    return () => media.removeEventListener?.('change', listener);
+    media.addEventListener?.("change", listener);
+    return () => media.removeEventListener?.("change", listener);
   }, [darkMode]);
 
-
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (typeof document === "undefined") {
+      return;
+    }
     const root = document.documentElement;
-    root.classList.toggle('dark', darkMode);
-    root.classList.toggle('dark-scrollbar', darkMode);
-    root.classList.toggle('light-scrollbar', !darkMode);
+    root.classList.toggle("dark", darkMode);
+    root.classList.toggle("dark-scrollbar", darkMode);
+    root.classList.toggle("light-scrollbar", !darkMode);
   }, [darkMode]);
 
   return (
-    <ThemeContext.Provider value={{ darkMode, setDarkMode }}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={{ darkMode, setDarkMode }}>{children}</ThemeContext.Provider>
   );
 }
 
 /**
  * Hook to access theme context
  * Provides theme state and management functionality
- * 
+ *
  * @returns {ThemeContextType} Theme context with dark mode state and setter
  * @throws {Error} When used outside of ThemeProvider
  * @example
  * ```tsx
  * function MyComponent() {
  *   const { darkMode, setDarkMode } = useTheme();
- * 
+ *
  *   return (
  *     <button onClick={() => setDarkMode(!darkMode)}>
  *       {darkMode ? 'Light Mode' : 'Dark Mode'}
@@ -121,7 +119,7 @@ export function ThemeProvider({ children, initialDarkMode }: { children: React.R
 export function useTheme() {
   const context = useContext(ThemeContext);
   if (context === undefined || context == null) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    throw new Error("useTheme must be used within a ThemeProvider");
   }
   return context;
 }

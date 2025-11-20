@@ -19,7 +19,7 @@ The root-level files in the Scio.ly project contain configuration files, build s
   - `dev`: Development server with Turbopack
   - `build`: Production build with environment variables
   - `start`: Production server
-  - `lint`: ESLint code quality checks
+  - `lint`: Biome code quality checks and TypeScript validation
   - `test`: Vitest test runner
   - `test:ui`: Vitest UI interface
   - `typecheck`: TypeScript type checking
@@ -40,7 +40,7 @@ The root-level files in the Scio.ly project contain configuration files, build s
 - **Purpose**: Next.js configuration
 - **Features**:
   - **Image Optimization**: Remote image patterns for Google and Supabase
-  - **ESLint Configuration**: Build-time ESLint settings
+  - **Code Quality**: Biome linting and formatting
   - **Performance**: Build optimization settings
 - **Remote Patterns**:
   - Google user images (lh3.googleusercontent.com)
@@ -97,9 +97,9 @@ The root-level files in the Scio.ly project contain configuration files, build s
 
 ### Linting and Code Quality
 
-#### `eslint.config.mjs`
-- **Purpose**: ESLint configuration for code quality
-- **Features**: Code style enforcement, error detection
+#### `biome.json`
+- **Purpose**: Biome configuration for code quality, formatting, and linting
+- **Features**: Code style enforcement, error detection, import organization
 
 #### `postcss.config.mjs`
 - **Purpose**: PostCSS configuration for CSS processing
@@ -326,8 +326,7 @@ The root-level files in the Scio.ly project contain configuration files, build s
 - **Mock System**: Complete mocking infrastructure
 
 ### 4. Development Tools
-- **ESLint**: Code quality enforcement
-- **Prettier**: Code formatting
+- **Biome**: Code quality enforcement, formatting, and linting
 - **TypeScript**: Type checking
 - **File Analysis**: Long file detection and analysis
 
@@ -341,7 +340,7 @@ The root-level files in the Scio.ly project contain configuration files, build s
 
 ### Development Dependencies
 - **Vitest**: Testing framework
-- **ESLint**: Code linting
+- **Biome**: Code linting and formatting
 - **Drizzle Kit**: Database toolkit
 - **PostCSS**: CSS processing
 

@@ -1,4 +1,3 @@
-
 /**
  * API type definitions for Science Olympiad platform
  * Comprehensive type definitions for API requests and responses
@@ -103,7 +102,7 @@ export interface QuestionFilters {
   /** Optional maximum difficulty filter */
   difficulty_max?: string;
   /** Optional question type filter */
-  question_type?: 'mcq' | 'frq';
+  question_type?: "mcq" | "frq";
   /** Optional limit for number of results */
   limit?: string;
 }
@@ -125,7 +124,6 @@ export interface PaginatedResponse<T = unknown> {
     pages: number;
   };
 }
-
 
 export interface ShareCodeRequest extends Record<string, unknown> {
   questionIds: string[];
@@ -156,13 +154,11 @@ export interface ShareCodeData {
   error?: string;
 }
 
-
 export interface BlacklistRequest {
   event: string;
   questionData: Record<string, unknown>;
   reason?: string;
 }
-
 
 export interface EditRequest {
   event: string;
@@ -188,7 +184,6 @@ export interface EditResponse {
   blacklist?: Record<string, unknown>[];
 }
 
-
 export interface ReportEditRequest {
   originalQuestion: Record<string, unknown>;
   editedQuestion: Record<string, unknown>;
@@ -208,7 +203,6 @@ export interface ReportRemoveRequest {
   originalQuestion?: Record<string, unknown>;
   event: string;
 }
-
 
 export interface GeminiSuggestEditRequest {
   question: Record<string, unknown>;
@@ -249,7 +243,6 @@ export interface GeminiImproveReasonRequest {
   question: Record<string, unknown>;
 }
 
-
 export interface EventStat {
   event: string;
   count: string;
@@ -266,17 +259,16 @@ export interface StatsResponse {
   byDivision: DivisionStat[];
 }
 
-
 export interface Base52GenerateRequest {
   questionIds: string[];
-  table?: 'questions' | 'idEvents';
+  table?: "questions" | "idEvents";
 }
 
 export interface Base52GenerateResponse {
   success: boolean;
   data?: {
     codes: Record<string, string>;
-    table: 'questions' | 'idEvents';
+    table: "questions" | "idEvents";
   };
   error?: string;
 }
@@ -285,7 +277,7 @@ export interface Base52LookupResponse {
   success: boolean;
   data?: {
     question: Record<string, unknown>;
-    table: 'questions' | 'idEvents';
+    table: "questions" | "idEvents";
   };
   error?: string;
 }

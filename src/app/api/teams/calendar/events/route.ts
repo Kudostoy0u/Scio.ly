@@ -1,201 +1,283 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerUser } from '@/lib/supabaseServer';
-import { queryCockroachDB } from '@/lib/cockroachdb';
-import { resolveTeamSlugToUnits } from '@/lib/utils/team-resolver';
+import { dbPg } from "@/lib/db";
+import { users } from "@/lib/db/schema/core";
+import {
+  newTeamEventAttendees,
+  newTeamEvents,
+  newTeamMemberships,
+  newTeamUnits,
+} from "@/lib/db/schema/teams";
+import {
+  PostCalendarEventRequestSchema,
+  PutCalendarEventRequestSchema,
+  UUIDSchema,
+  validateRequest,
+} from "@/lib/schemas/teams-validation";
+import {
+  handleError,
+  handleForbiddenError,
+  handleNotFoundError,
+  handleUnauthorizedError,
+  handleValidationError,
+  validateEnvironment,
+} from "@/lib/utils/error-handler";
+import logger from "@/lib/utils/logger";
+import { getServerUser } from "@/lib/supabaseServer";
+import { resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
+import { and, asc, eq, gte, inArray, lte, or, sql } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 // POST /api/teams/calendar/events - Create team event
 // Frontend Usage:
 // - src/app/teams/components/TeamCalendar.tsx (createEvent)
 export async function POST(request: NextRequest) {
   try {
+    const envError = validateEnvironment();
+    if (envError) return envError;
+
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return handleUnauthorizedError();
     }
 
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch (error) {
+      return handleValidationError(
+        new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            message: "Invalid JSON in request body",
+            path: [],
+          },
+        ])
+      );
+    }
+
+    // Validate request body - Note: PostCalendarEventRequestSchema expects different field names
+    // Map from API format to schema format
+    const CalendarEventCreateSchema = z.object({
+      title: z.string().min(1, "Title is required").max(200),
+      description: z.string().max(5000).nullable().optional(),
+      start_time: z.string().datetime(),
+      end_time: z.string().datetime().nullable().optional(),
+      location: z.string().max(200).nullable().optional(),
+      event_type: z.enum(["practice", "tournament", "meeting", "deadline", "other"]).default("practice").optional(),
+      is_all_day: z.boolean().default(false).optional(),
+      is_recurring: z.boolean().default(false).optional(),
+      recurrence_pattern: z.record(z.string(), z.any()).nullable().optional(),
+      team_id: z.string().nullable().optional(),
+      created_by: UUIDSchema.optional(),
+    });
+
+    let validatedBody: z.infer<typeof CalendarEventCreateSchema>;
+    try {
+      validatedBody = validateRequest(CalendarEventCreateSchema, body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return handleValidationError(error);
+      }
+      return handleError(error, "POST /api/teams/calendar/events - validation");
+    }
+
     const {
       title,
       description,
       start_time,
       end_time,
       location,
-      event_type,
-      is_all_day,
-      is_recurring,
+      event_type = "practice",
+      is_all_day = false,
+      is_recurring = false,
       recurrence_pattern,
       team_id,
-      created_by
-    } = body;
-
-    if (!title) {
-      return NextResponse.json({ error: 'Title is required' }, { status: 400 });
-    }
+      created_by,
+    } = validatedBody;
 
     // Resolve team_id if it's a slug
-    let resolvedTeamId = team_id;
-    
+    let resolvedTeamId: string | null = null;
+
     // Handle personal events (team_id is "personal" or null)
-    if (!team_id || team_id === 'personal') {
+    if (!team_id || team_id === "personal") {
       resolvedTeamId = null;
-    } else if (!team_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+    } else {
+      // Check if it's a UUID
       try {
-        const teamInfo = await resolveTeamSlugToUnits(team_id);
-        if (teamInfo.teamUnitIds.length > 0) {
-          // Use the first team unit ID for the event
-          resolvedTeamId = teamInfo.teamUnitIds[0];
-        } else {
-          return NextResponse.json({ error: 'No team units found' }, { status: 404 });
+        UUIDSchema.parse(team_id);
+        resolvedTeamId = team_id;
+      } catch {
+        // It's a slug, resolve it
+        try {
+          const teamInfo = await resolveTeamSlugToUnits(team_id);
+          if (teamInfo.teamUnitIds.length > 0) {
+            resolvedTeamId = teamInfo.teamUnitIds[0] ?? null;
+          } else {
+            return handleNotFoundError("No team units found");
+          }
+        } catch {
+          return handleNotFoundError("Team");
         }
-      } catch (error) {
-        console.error('Error resolving team slug:', error);
-        return NextResponse.json({ error: 'Team not found' }, { status: 404 });
       }
     }
 
-    // Insert the event
-    const result = await queryCockroachDB<{ id: string }>(
-      `INSERT INTO new_team_events (
-        team_id, created_by, title, description, event_type, 
-        start_time, end_time, location, is_all_day, is_recurring, recurrence_pattern
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-      RETURNING id`,
-      [
-        resolvedTeamId, // This can now be null for personal events
-        created_by || user.id,
+    // Validate start_time is required
+    if (!start_time) {
+      return handleValidationError(
+        new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            message: "start_time is required",
+            path: ["start_time"],
+          },
+        ])
+      );
+    }
+
+    // Insert the event using Drizzle ORM
+    const [result] = await dbPg
+      .insert(newTeamEvents)
+      .values({
+        teamId: resolvedTeamId,
+        createdBy: created_by || user.id,
         title,
-        description || null,
-        event_type || 'practice',
-        start_time || null,
-        end_time || null,
-        location || null,
-        is_all_day || false,
-        is_recurring || false,
-        recurrence_pattern ? JSON.stringify(recurrence_pattern) : null
-      ]
-    );
+        description: description || null,
+        eventType: event_type,
+        startTime: new Date(start_time),
+        endTime: end_time ? new Date(end_time) : null,
+        location: location || null,
+        isAllDay: is_all_day,
+        isRecurring: is_recurring,
+        recurrencePattern: recurrence_pattern || null,
+      })
+      .returning({ id: newTeamEvents.id });
 
-    return NextResponse.json({ 
-      success: true, 
-      eventId: result.rows[0]?.id 
+    if (!result) {
+      return handleError(new Error("Failed to create event"), "POST /api/teams/calendar/events - insert");
+    }
+
+    return NextResponse.json({
+      success: true,
+      eventId: result.id,
     });
-
   } catch (error) {
-    console.error('Error creating calendar event:', error);
-    return NextResponse.json({ error: 'Failed to create event' }, { status: 500 });
+    return handleError(error, "POST /api/teams/calendar/events");
   }
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
+    const envError = validateEnvironment();
+    if (envError) return envError;
+
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return handleUnauthorizedError();
     }
 
-    const { searchParams } = new URL(_request.url);
-    const teamId = searchParams.get('teamId');
-    const userId = searchParams.get('userId');
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
+    const { searchParams } = new URL(request.url);
+    const teamId = searchParams.get("teamId");
+    const userId = searchParams.get("userId");
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
 
-    let query = `
-      SELECT 
-        e.id, e.title, e.description, e.start_time, e.end_time, 
-        e.location, e.event_type, e.is_all_day, e.is_recurring, 
-        e.recurrence_pattern, e.created_by, e.team_id,
-        u.email as creator_email,
-        COALESCE(u.display_name, CONCAT(u.first_name, ' ', u.last_name), u.email) as creator_name
-      FROM new_team_events e
-      LEFT JOIN public.users u ON e.created_by = u.id
-      WHERE 1=1
-    `;
-    
-    const params: any[] = [];
-    let paramCount = 1;
+    // Build where conditions
+    const whereConditions: ReturnType<typeof and>[] = [];
 
     if (teamId) {
       // Resolve team slug to team unit IDs
       try {
         const teamInfo = await resolveTeamSlugToUnits(teamId);
         if (teamInfo.teamUnitIds.length > 0) {
-          const placeholders = teamInfo.teamUnitIds.map((_, index) => `$${paramCount + index}`).join(',');
-          query += ` AND e.team_id IN (${placeholders})`;
-          params.push(...teamInfo.teamUnitIds);
-          paramCount += teamInfo.teamUnitIds.length;
+          whereConditions.push(inArray(newTeamEvents.teamId, teamInfo.teamUnitIds));
         } else {
           // No team units found, return empty result
-          return NextResponse.json({ 
-            success: true, 
-            events: [] 
+          return NextResponse.json({
+            success: true,
+            events: [],
           });
         }
-      } catch (error) {
-        console.error('Error resolving team slug:', error);
-        return NextResponse.json({ error: 'Team not found' }, { status: 404 });
+      } catch {
+        return handleNotFoundError("Team");
       }
     }
 
     if (userId) {
-      query += ` AND e.created_by = $${paramCount}`;
-      params.push(userId);
-      paramCount++;
+      try {
+        UUIDSchema.parse(userId);
+        whereConditions.push(eq(newTeamEvents.createdBy, userId));
+      } catch {
+        return handleValidationError(
+          new z.ZodError([
+            {
+              code: z.ZodIssueCode.custom,
+              message: "Invalid user ID format",
+              path: ["userId"],
+            },
+          ])
+        );
+      }
     }
 
     if (startDate) {
-      query += ` AND e.start_time >= $${paramCount}`;
-      params.push(startDate);
-      paramCount++;
+      whereConditions.push(gte(newTeamEvents.startTime, new Date(startDate)));
     }
 
     if (endDate) {
-      query += ` AND e.start_time <= $${paramCount}`;
-      params.push(endDate);
-      paramCount++;
+      whereConditions.push(lte(newTeamEvents.startTime, new Date(endDate)));
     }
 
-    query += ` ORDER BY e.start_time ASC`;
+    // Get events with creator information using Drizzle ORM
+    const eventsResult = await dbPg
+      .select({
+        id: newTeamEvents.id,
+        title: newTeamEvents.title,
+        description: newTeamEvents.description,
+        start_time: newTeamEvents.startTime,
+        end_time: newTeamEvents.endTime,
+        location: newTeamEvents.location,
+        event_type: newTeamEvents.eventType,
+        is_all_day: newTeamEvents.isAllDay,
+        is_recurring: newTeamEvents.isRecurring,
+        recurrence_pattern: newTeamEvents.recurrencePattern,
+        created_by: newTeamEvents.createdBy,
+        team_id: newTeamEvents.teamId,
+        creator_email: users.email,
+        creator_name: sql<string>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}), ${users.email})`,
+      })
+      .from(newTeamEvents)
+      .leftJoin(users, eq(newTeamEvents.createdBy, users.id))
+      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+      .orderBy(asc(newTeamEvents.startTime));
 
-    const result = await queryCockroachDB(query, params);
-
-    // Get attendees for each event
+    // Get attendees for each event using Drizzle ORM
     const eventsWithAttendees = await Promise.all(
-      result.rows.map(async (event) => {
-        const attendeesResult = await queryCockroachDB(
-          `SELECT 
-            ea.user_id, ea.status, ea.responded_at, ea.notes,
-            u.email, COALESCE(u.display_name, CONCAT(u.first_name, ' ', u.last_name), u.email) as name
-           FROM new_team_event_attendees ea
-           LEFT JOIN public.users u ON ea.user_id = u.id
-           WHERE ea.event_id = $1`,
-          [event.id]
-        );
+      eventsResult.map(async (event) => {
+        const attendeesResult = await dbPg
+          .select({
+            user_id: newTeamEventAttendees.userId,
+            status: newTeamEventAttendees.status,
+            responded_at: newTeamEventAttendees.respondedAt,
+            notes: newTeamEventAttendees.notes,
+            email: users.email,
+            name: sql<string>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}), ${users.email})`,
+          })
+          .from(newTeamEventAttendees)
+          .leftJoin(users, eq(newTeamEventAttendees.userId, users.id))
+          .where(eq(newTeamEventAttendees.eventId, event.id));
 
         return {
           ...event,
-          attendees: attendeesResult.rows
+          attendees: attendeesResult,
         };
       })
     );
 
-    return NextResponse.json({ 
-      success: true, 
-      events: eventsWithAttendees 
+    return NextResponse.json({
+      success: true,
+      events: eventsWithAttendees,
     });
-
   } catch (error) {
-    console.error('Error fetching calendar events:', error);
-    
-    // Provide more specific error messages
-    if (error instanceof Error) {
-      if (error.message.includes('ambiguous')) {
-        return NextResponse.json({ error: 'Database query error - ambiguous column reference' }, { status: 500 });
-      }
-      if (error.message.includes('relation') && error.message.includes('does not exist')) {
-        return NextResponse.json({ error: 'Database table not found' }, { status: 500 });
-      }
-    }
-    
-    return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 });
+    return handleError(error, "GET /api/teams/calendar/events");
   }
 }

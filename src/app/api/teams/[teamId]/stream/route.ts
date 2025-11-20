@@ -1,7 +1,37 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { queryCockroachDB } from '@/lib/cockroachdb';
-import { getServerUser } from '@/lib/supabaseServer';
-import { checkTeamGroupAccessCockroach } from '@/lib/utils/team-auth';
+import { dbPg } from "@/lib/db";
+import { users } from "@/lib/db/schema/core";
+import {
+  newTeamEvents,
+  newTeamGroups,
+  newTeamMemberships,
+  newTeamStreamComments,
+  newTeamStreamPosts,
+  newTeamUnits,
+} from "@/lib/db/schema/teams";
+import {
+  PostStreamRequestSchema,
+  PutStreamRequestSchema,
+  StreamResponseSchema,
+  UUIDSchema,
+  validateRequest,
+  type PostStreamRequest,
+  type PutStreamRequest,
+  formatValidationError,
+} from "@/lib/schemas/teams-validation";
+import logger from "@/lib/utils/logger";
+import {
+  // handleError,
+  handleForbiddenError,
+  // handleNotFoundError,
+  handleUnauthorizedError,
+  handleValidationError,
+  validateEnvironment,
+} from "@/lib/utils/error-handler";
+import { getServerUser } from "@/lib/supabaseServer";
+import { checkTeamGroupAccessCockroach } from "@/lib/utils/team-auth";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 // GET /api/teams/[teamId]/stream - Get stream posts for a subteam
 // Frontend Usage:
@@ -12,127 +42,125 @@ export async function GET(
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
-    }
+    const envError = validateEnvironment();
+    if (envError) return envError;
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return handleUnauthorizedError();
     }
 
     const { teamId } = await params;
     const { searchParams } = new URL(request.url);
-    const subteamId = searchParams.get('subteamId');
+    const subteamId = searchParams.get("subteamId");
 
     if (!subteamId) {
-      return NextResponse.json({ error: 'Subteam ID is required' }, { status: 400 });
+      return NextResponse.json({ error: "Subteam ID is required" }, { status: 400 });
     }
 
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(subteamId)) {
-      return NextResponse.json({ 
-        error: 'Invalid subteam ID format. Must be a valid UUID.' 
-      }, { status: 400 });
+    // Validate UUID format using Zod
+    try {
+      UUIDSchema.parse(subteamId);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return handleValidationError(error);
+      }
+      return handleValidationError(
+        new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            message: "Invalid subteam ID format. Must be a valid UUID.",
+            path: ["subteamId"],
+          },
+        ])
+      );
     }
 
-    // First, resolve the slug to team group
-    const groupResult = await queryCockroachDB<{ id: string }>(
-      `SELECT id FROM new_team_groups WHERE slug = $1`,
-      [teamId]
-    );
+    // Resolve the slug to team group using Drizzle ORM
+    const groupResult = await dbPg
+      .select({ id: newTeamGroups.id })
+      .from(newTeamGroups)
+      .where(eq(newTeamGroups.slug, teamId))
+      .limit(1);
 
-    if (groupResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Team group not found' }, { status: 404 });
+    if (groupResult.length === 0) {
+      return NextResponse.json({ error: "Team group not found" }, { status: 404 });
     }
 
-    const groupId = groupResult.rows[0].id;
+    const groupId = groupResult[0]?.id;
+    if (!groupId) {
+      return NextResponse.json({ error: "Team group not found" }, { status: 404 });
+    }
 
     // Check if user has access to this team group (membership OR roster entry)
     const authResult = await checkTeamGroupAccessCockroach(user.id, groupId);
     if (!authResult.isAuthorized) {
-      return NextResponse.json({ error: 'Not authorized to access this team' }, { status: 403 });
+      return handleForbiddenError("Not authorized to access this team");
     }
 
-    // Get stream posts with author information and tournament details
-    const streamResult = await queryCockroachDB<{
-      id: string;
-      content: string;
-      show_tournament_timer: boolean;
-      tournament_id: string | null;
-      tournament_title: string | null;
-      tournament_start_time: string | null;
-      author_name: string;
-      author_email: string;
-      created_at: string;
-      attachment_url: string | null;
-      attachment_title: string | null;
-    }>(
-      `SELECT 
-         sp.id,
-         sp.content,
-         sp.show_tournament_timer,
-         sp.tournament_id,
-         te.title as tournament_title,
-         te.start_time as tournament_start_time,
-         CONCAT(u.first_name, ' ', u.last_name) as author_name,
-         u.email as author_email,
-         sp.created_at,
-         sp.attachment_url,
-         sp.attachment_title
-       FROM new_team_stream_posts sp
-       JOIN public.users u ON sp.author_id = u.id
-       LEFT JOIN new_team_events te ON sp.tournament_id = te.id
-       WHERE sp.team_unit_id = $1
-       ORDER BY sp.created_at DESC
-       LIMIT 50`,
-      [subteamId]
-    );
+    // Get stream posts with author information and tournament details using Drizzle ORM
+    const streamResult = await dbPg
+      .select({
+        id: newTeamStreamPosts.id,
+        content: newTeamStreamPosts.content,
+        show_tournament_timer: newTeamStreamPosts.showTournamentTimer,
+        tournament_id: newTeamStreamPosts.tournamentId,
+        tournament_title: newTeamEvents.title,
+        tournament_start_time: newTeamEvents.startTime,
+        author_name: sql<string>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}))`,
+        author_email: users.email,
+        created_at: newTeamStreamPosts.createdAt,
+        attachment_url: newTeamStreamPosts.attachmentUrl,
+        attachment_title: newTeamStreamPosts.attachmentTitle,
+      })
+      .from(newTeamStreamPosts)
+      .innerJoin(users, eq(newTeamStreamPosts.authorId, users.id))
+      .leftJoin(newTeamEvents, eq(newTeamStreamPosts.tournamentId, newTeamEvents.id))
+      .where(eq(newTeamStreamPosts.teamUnitId, subteamId))
+      .orderBy(desc(newTeamStreamPosts.createdAt))
+      .limit(50);
 
-    // Get comments for each post
+    // Get comments for each post using Drizzle ORM
     const postsWithComments = await Promise.all(
-      streamResult.rows.map(async (post) => {
-        const commentsResult = await queryCockroachDB<{
-          id: string;
-          content: string;
-          author_name: string;
-          author_email: string;
-          created_at: string;
-        }>(
-          `SELECT 
-            sc.id,
-            sc.content,
-            CONCAT(u.first_name, ' ', u.last_name) as author_name,
-            u.email as author_email,
-            sc.created_at
-          FROM new_team_stream_comments sc
-          JOIN public.users u ON sc.author_id = u.id
-          WHERE sc.post_id = $1
-          ORDER BY sc.created_at ASC`,
-          [post.id]
-        );
+      streamResult.map(async (post) => {
+        const commentsResult = await dbPg
+          .select({
+            id: newTeamStreamComments.id,
+            content: newTeamStreamComments.content,
+            author_name: sql<string>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}))`,
+            author_email: users.email,
+            created_at: newTeamStreamComments.createdAt,
+          })
+          .from(newTeamStreamComments)
+          .innerJoin(users, eq(newTeamStreamComments.authorId, users.id))
+          .where(eq(newTeamStreamComments.postId, post.id))
+          .orderBy(asc(newTeamStreamComments.createdAt));
 
         return {
           ...post,
-          comments: commentsResult.rows
+          comments: commentsResult,
         };
       })
     );
 
-    return NextResponse.json({ 
-      posts: postsWithComments 
-    });
+    // Validate response using Zod
+    const responseData = { posts: postsWithComments };
+    try {
+      StreamResponseSchema.parse(responseData);
+    } catch (error) {
+      logger.error("Response validation failed", error);
+      // Still return the data, but log the validation error
+    }
 
+    return NextResponse.json(responseData);
   } catch (error) {
-    console.error('Error fetching stream posts:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -145,108 +173,161 @@ export async function POST(
 ) {
   try {
     if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: "Database configuration error",
+          details: "DATABASE_URL environment variable is missing",
+        },
+        { status: 500 }
+      );
     }
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { teamId } = await params;
-    const body = await request.json();
-    const { subteamId, content, showTournamentTimer, tournamentId, attachmentUrl, attachmentTitle } = body;
-
-    if (!subteamId || !content) {
-      return NextResponse.json({ 
-        error: 'Subteam ID and content are required' 
-      }, { status: 400 });
-    }
-
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(subteamId)) {
-      return NextResponse.json({ 
-        error: 'Invalid subteam ID format. Must be a valid UUID.' 
-      }, { status: 400 });
-    }
-
-    // First, resolve the slug to team group
-    const groupResult = await queryCockroachDB<{ id: string }>(
-      `SELECT id FROM new_team_groups WHERE slug = $1`,
-      [teamId]
-    );
-
-    if (groupResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Team group not found' }, { status: 404 });
-    }
-
-    const groupId = groupResult.rows[0].id;
-
-    // Check if user is a captain/leader of this team group
-    const membershipResult = await queryCockroachDB<{ role: string }>(
-      `SELECT tm.role 
-       FROM new_team_memberships tm
-       JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tm.user_id = $1 AND tu.group_id = $2 AND tm.status = 'active'`,
-      [user.id, groupId]
-    );
-
-    if (membershipResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
-    }
-
-    const userRole = membershipResult.rows[0].role;
-    if (!['captain', 'co_captain'].includes(userRole)) {
-      return NextResponse.json({ error: 'Only captains and co-captains can post to the stream' }, { status: 403 });
-    }
-
-    // Check if the subteam belongs to this group
-    const subteamResult = await queryCockroachDB<{ id: string }>(
-      `SELECT id FROM new_team_units 
-       WHERE id = $1 AND group_id = $2 AND status = 'active'`,
-      [subteamId, groupId]
-    );
-
-    if (subteamResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Subteam not found' }, { status: 404 });
-    }
-
-    // If tournament timer is enabled, validate tournament
-    if (showTournamentTimer && tournamentId) {
-      const tournamentResult = await queryCockroachDB<{ id: string }>(
-        `SELECT id FROM new_team_events 
-         WHERE id = $1 AND team_id = $2 AND event_type = 'tournament'`,
-        [tournamentId, subteamId]
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch (error) {
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
       );
+    }
 
-      if (tournamentResult.rows.length === 0) {
-        return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
+    // Validate request body using Zod
+    let validatedBody: PostStreamRequest;
+    try {
+      validatedBody = validateRequest(PostStreamRequestSchema, body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(formatValidationError(error), { status: 400 });
+      }
+      return NextResponse.json(
+        { error: "Validation failed", details: error instanceof Error ? error.message : "Unknown error" },
+        { status: 400 }
+      );
+    }
+
+    const {
+      subteamId,
+      content,
+      showTournamentTimer,
+      tournamentId,
+      attachmentUrl,
+      attachmentTitle,
+    } = validatedBody;
+
+    // Resolve the slug to team group using Drizzle ORM
+    const groupResult = await dbPg
+      .select({ id: newTeamGroups.id })
+      .from(newTeamGroups)
+      .where(eq(newTeamGroups.slug, teamId))
+      .limit(1);
+
+    if (groupResult.length === 0) {
+      return NextResponse.json({ error: "Team group not found" }, { status: 404 });
+    }
+
+    const groupId = groupResult[0]?.id;
+    if (!groupId) {
+      return NextResponse.json({ error: "Team group not found" }, { status: 404 });
+    }
+
+    // Check if user is a captain/leader of this team group using Drizzle ORM
+    const membershipResult = await dbPg
+      .select({ role: newTeamMemberships.role })
+      .from(newTeamMemberships)
+      .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+      .where(
+        and(
+          eq(newTeamMemberships.userId, user.id),
+          eq(newTeamUnits.groupId, groupId),
+          eq(newTeamMemberships.status, "active")
+        )
+      )
+      .limit(1);
+
+    if (membershipResult.length === 0) {
+      return NextResponse.json({ error: "Not a team member" }, { status: 403 });
+    }
+
+    const userRole = membershipResult[0]?.role;
+    if (!userRole) {
+      return NextResponse.json({ error: "Not a team member" }, { status: 403 });
+    }
+    if (!["captain", "co_captain"].includes(userRole)) {
+      return NextResponse.json(
+        { error: "Only captains and co-captains can post to the stream" },
+        { status: 403 }
+      );
+    }
+
+    // Check if the subteam belongs to this group using Drizzle ORM
+    const subteamResult = await dbPg
+      .select({ id: newTeamUnits.id })
+      .from(newTeamUnits)
+      .where(
+        and(
+          eq(newTeamUnits.id, subteamId),
+          eq(newTeamUnits.groupId, groupId),
+          eq(newTeamUnits.status, "active")
+        )
+      )
+      .limit(1);
+
+    if (subteamResult.length === 0) {
+      return NextResponse.json({ error: "Subteam not found" }, { status: 404 });
+    }
+
+    // If tournament timer is enabled, validate tournament using Drizzle ORM
+    if (showTournamentTimer && tournamentId) {
+      const tournamentResult = await dbPg
+        .select({ id: newTeamEvents.id })
+        .from(newTeamEvents)
+        .where(
+          and(
+            eq(newTeamEvents.id, tournamentId),
+            eq(newTeamEvents.teamId, subteamId),
+            eq(newTeamEvents.eventType, "tournament")
+          )
+        )
+        .limit(1);
+
+      if (tournamentResult.length === 0) {
+        return NextResponse.json({ error: "Tournament not found" }, { status: 404 });
       }
     }
 
-    // Insert stream post
-    const postResult = await queryCockroachDB<{ id: string }>(
-      `INSERT INTO new_team_stream_posts (team_unit_id, author_id, content, show_tournament_timer, tournament_id, attachment_url, attachment_title)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id`,
-      [subteamId, user.id, content, showTournamentTimer || false, tournamentId || null, attachmentUrl || null, attachmentTitle || null]
-    );
+    // Insert stream post using Drizzle ORM
+    const [postResult] = await dbPg
+      .insert(newTeamStreamPosts)
+      .values({
+        teamUnitId: subteamId,
+        authorId: user.id,
+        content,
+        showTournamentTimer: showTournamentTimer || false,
+        tournamentId: tournamentId || null,
+        attachmentUrl: attachmentUrl || null,
+        attachmentTitle: attachmentTitle || null,
+      })
+      .returning({ id: newTeamStreamPosts.id });
 
-    return NextResponse.json({ 
-      message: 'Post created successfully',
-      postId: postResult.rows[0].id
-    });
-
-  } catch (error) {
-    console.error('Error creating stream post:', error);
     return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+      message: "Post created successfully",
+      postId: postResult?.id ?? "",
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -259,96 +340,126 @@ export async function PUT(
 ) {
   try {
     if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: "Database configuration error",
+          details: "DATABASE_URL environment variable is missing",
+        },
+        { status: 500 }
+      );
     }
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { teamId } = await params;
-    const body = await request.json();
-    const { postId, content, attachmentUrl, attachmentTitle } = body;
-
-    if (!postId || !content) {
-      return NextResponse.json({ 
-        error: 'Post ID and content are required' 
-      }, { status: 400 });
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch (error) {
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
+      );
     }
 
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(postId)) {
-      return NextResponse.json({ 
-        error: 'Invalid post ID format. Must be a valid UUID.' 
-      }, { status: 400 });
+    // Validate request body using Zod
+    let validatedBody: PutStreamRequest;
+    try {
+      validatedBody = validateRequest(PutStreamRequestSchema, body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(formatValidationError(error), { status: 400 });
+      }
+      return NextResponse.json(
+        { error: "Validation failed", details: error instanceof Error ? error.message : "Unknown error" },
+        { status: 400 }
+      );
     }
 
-    // First, resolve the slug to team group
-    const groupResult = await queryCockroachDB<{ id: string }>(
-      `SELECT id FROM new_team_groups WHERE slug = $1`,
-      [teamId]
-    );
+    const { postId, content, attachmentUrl, attachmentTitle } = validatedBody;
 
-    if (groupResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Team group not found' }, { status: 404 });
+    // Resolve the slug to team group using Drizzle ORM
+    const groupResult = await dbPg
+      .select({ id: newTeamGroups.id })
+      .from(newTeamGroups)
+      .where(eq(newTeamGroups.slug, teamId))
+      .limit(1);
+
+    if (groupResult.length === 0) {
+      return NextResponse.json({ error: "Team group not found" }, { status: 404 });
     }
 
-    const groupId = groupResult.rows[0].id;
-
-    // Check if user is a captain/leader of this team group
-    const membershipResult = await queryCockroachDB<{ role: string }>(
-      `SELECT tm.role 
-       FROM new_team_memberships tm
-       JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tm.user_id = $1 AND tu.group_id = $2 AND tm.status = 'active'`,
-      [user.id, groupId]
-    );
-
-    if (membershipResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
+    const groupId = groupResult[0]?.id;
+    if (!groupId) {
+      return NextResponse.json({ error: "Team group not found" }, { status: 404 });
     }
 
-    const userRole = membershipResult.rows[0].role;
-    if (!['captain', 'co_captain'].includes(userRole)) {
-      return NextResponse.json({ error: 'Only captains and co-captains can edit posts' }, { status: 403 });
+    // Check if user is a captain/leader of this team group using Drizzle ORM
+    const membershipResult = await dbPg
+      .select({ role: newTeamMemberships.role })
+      .from(newTeamMemberships)
+      .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+      .where(
+        and(
+          eq(newTeamMemberships.userId, user.id),
+          eq(newTeamUnits.groupId, groupId),
+          eq(newTeamMemberships.status, "active")
+        )
+      )
+      .limit(1);
+
+    if (membershipResult.length === 0) {
+      return NextResponse.json({ error: "Not a team member" }, { status: 403 });
     }
 
-    // Verify the post exists and belongs to this team
-    const postResult = await queryCockroachDB<{ id: string }>(
-      `SELECT sp.id 
-       FROM new_team_stream_posts sp
-       JOIN new_team_units tu ON sp.team_unit_id = tu.id
-       WHERE sp.id = $1 AND tu.group_id = $2`,
-      [postId, groupId]
-    );
-
-    if (postResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+    const userRole = membershipResult[0]?.role;
+    if (!userRole) {
+      return NextResponse.json({ error: "Not a team member" }, { status: 403 });
+    }
+    if (!["captain", "co_captain"].includes(userRole)) {
+      return NextResponse.json(
+        { error: "Only captains and co-captains can edit posts" },
+        { status: 403 }
+      );
     }
 
-    // Update the post
-    await queryCockroachDB(
-      `UPDATE new_team_stream_posts 
-       SET content = $1, attachment_url = $2, attachment_title = $3, updated_at = NOW()
-       WHERE id = $4`,
-      [content, attachmentUrl || null, attachmentTitle || null, postId]
-    );
+    // Verify the post exists and belongs to this team using Drizzle ORM
+    const postResult = await dbPg
+      .select({ id: newTeamStreamPosts.id })
+      .from(newTeamStreamPosts)
+      .innerJoin(newTeamUnits, eq(newTeamStreamPosts.teamUnitId, newTeamUnits.id))
+      .where(and(eq(newTeamStreamPosts.id, postId), eq(newTeamUnits.groupId, groupId)))
+      .limit(1);
 
-    return NextResponse.json({ 
-      message: 'Post updated successfully'
-    });
+    if (postResult.length === 0) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
 
-  } catch (error) {
-    console.error('Error updating stream post:', error);
+    // Update the post using Drizzle ORM
+    await dbPg
+      .update(newTeamStreamPosts)
+      .set({
+        content,
+        attachmentUrl: attachmentUrl || null,
+        attachmentTitle: attachmentTitle || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(newTeamStreamPosts.id, postId));
+
     return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+      message: "Post updated successfully",
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -361,93 +472,116 @@ export async function DELETE(
 ) {
   try {
     if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: "Database configuration error",
+          details: "DATABASE_URL environment variable is missing",
+        },
+        { status: 500 }
+      );
     }
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { teamId } = await params;
     const { searchParams } = new URL(request.url);
-    const postId = searchParams.get('postId');
+    const postId = searchParams.get("postId");
 
     if (!postId) {
-      return NextResponse.json({ 
-        error: 'Post ID is required' 
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: "Post ID is required",
+        },
+        { status: 400 }
+      );
     }
 
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(postId)) {
-      return NextResponse.json({ 
-        error: 'Invalid post ID format. Must be a valid UUID.' 
-      }, { status: 400 });
+    // Validate UUID format using Zod
+    try {
+      UUIDSchema.parse(postId);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(formatValidationError(error), { status: 400 });
+      }
+      return NextResponse.json(
+        { error: "Invalid post ID format. Must be a valid UUID." },
+        { status: 400 }
+      );
     }
 
-    // First, resolve the slug to team group
-    const groupResult = await queryCockroachDB<{ id: string }>(
-      `SELECT id FROM new_team_groups WHERE slug = $1`,
-      [teamId]
-    );
+    // Resolve the slug to team group using Drizzle ORM
+    const groupResult = await dbPg
+      .select({ id: newTeamGroups.id })
+      .from(newTeamGroups)
+      .where(eq(newTeamGroups.slug, teamId))
+      .limit(1);
 
-    if (groupResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Team group not found' }, { status: 404 });
+    if (groupResult.length === 0) {
+      return NextResponse.json({ error: "Team group not found" }, { status: 404 });
     }
 
-    const groupId = groupResult.rows[0].id;
-
-    // Check if user is a captain/leader of this team group
-    const membershipResult = await queryCockroachDB<{ role: string }>(
-      `SELECT tm.role 
-       FROM new_team_memberships tm
-       JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tm.user_id = $1 AND tu.group_id = $2 AND tm.status = 'active'`,
-      [user.id, groupId]
-    );
-
-    if (membershipResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
+    const groupId = groupResult[0]?.id;
+    if (!groupId) {
+      return NextResponse.json({ error: "Team group not found" }, { status: 404 });
     }
 
-    const userRole = membershipResult.rows[0].role;
-    if (!['captain', 'co_captain'].includes(userRole)) {
-      return NextResponse.json({ error: 'Only captains and co-captains can delete posts' }, { status: 403 });
+    // Check if user is a captain/leader of this team group using Drizzle ORM
+    const membershipResult = await dbPg
+      .select({ role: newTeamMemberships.role })
+      .from(newTeamMemberships)
+      .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+      .where(
+        and(
+          eq(newTeamMemberships.userId, user.id),
+          eq(newTeamUnits.groupId, groupId),
+          eq(newTeamMemberships.status, "active")
+        )
+      )
+      .limit(1);
+
+    if (membershipResult.length === 0) {
+      return NextResponse.json({ error: "Not a team member" }, { status: 403 });
     }
 
-    // Verify the post exists and belongs to this team
-    const postResult = await queryCockroachDB<{ id: string }>(
-      `SELECT sp.id 
-       FROM new_team_stream_posts sp
-       JOIN new_team_units tu ON sp.team_unit_id = tu.id
-       WHERE sp.id = $1 AND tu.group_id = $2`,
-      [postId, groupId]
-    );
-
-    if (postResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+    const userRole = membershipResult[0]?.role;
+    if (!userRole) {
+      return NextResponse.json({ error: "Not a team member" }, { status: 403 });
+    }
+    if (!["captain", "co_captain"].includes(userRole)) {
+      return NextResponse.json(
+        { error: "Only captains and co-captains can delete posts" },
+        { status: 403 }
+      );
     }
 
-    // Delete the post (this will cascade delete comments due to foreign key constraints)
-    await queryCockroachDB(
-      `DELETE FROM new_team_stream_posts WHERE id = $1`,
-      [postId]
-    );
+    // Verify the post exists and belongs to this team using Drizzle ORM
+    const postResult = await dbPg
+      .select({ id: newTeamStreamPosts.id })
+      .from(newTeamStreamPosts)
+      .innerJoin(newTeamUnits, eq(newTeamStreamPosts.teamUnitId, newTeamUnits.id))
+      .where(and(eq(newTeamStreamPosts.id, postId), eq(newTeamUnits.groupId, groupId)))
+      .limit(1);
 
-    return NextResponse.json({ 
-      message: 'Post deleted successfully'
-    });
+    if (postResult.length === 0) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
 
-  } catch (error) {
-    console.error('Error deleting stream post:', error);
+    // Delete the post using Drizzle ORM (this will cascade delete comments due to foreign key constraints)
+    await dbPg.delete(newTeamStreamPosts).where(eq(newTeamStreamPosts.id, postId));
+
     return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+      message: "Post deleted successfully",
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
   }
 }

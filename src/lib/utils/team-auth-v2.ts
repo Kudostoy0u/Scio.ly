@@ -1,12 +1,18 @@
-import { queryCockroachDB } from '@/lib/cockroachdb';
-import { dbPg } from '@/lib/db';
-import { newTeamMemberships, newTeamUnits, newTeamRosterData, users, newTeamGroups } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
-import { generateDisplayName } from './displayNameUtils';
+import { queryCockroachDB } from "@/lib/cockroachdb";
+import { dbPg } from "@/lib/db";
+import { users } from "@/lib/db/schema/core";
+import {
+  newTeamGroups,
+  newTeamMemberships,
+  newTeamRosterData,
+  newTeamUnits,
+} from "@/lib/db/schema/teams";
+import { and, eq } from "drizzle-orm";
+import { generateDisplayName } from "./displayNameUtils";
 
 /**
  * Clean Team Authentication System V2
- * 
+ *
  * This system provides a unified, clean approach to team authorization that:
  * 1. Clearly separates team group access from subteam membership
  * 2. Properly handles team creators
@@ -44,22 +50,21 @@ export interface TeamAccessResult {
  * This is the single source of truth for team authorization
  */
 export async function getTeamAccess(userId: string, groupId: string): Promise<TeamAccessResult> {
-  
   try {
     // 1. Check if user is the team creator
     const creatorResult = await dbPg
       .select({ createdBy: newTeamGroups.createdBy })
       .from(newTeamGroups)
       .where(eq(newTeamGroups.id, groupId));
-    
-    const isCreator = creatorResult.length > 0 && creatorResult[0].createdBy === userId;
+
+    const isCreator = creatorResult.length > 0 && creatorResult[0]?.createdBy === userId;
 
     // 2. Get all subteam memberships for this user
     const membershipResult = await dbPg
       .select({
         subteamId: newTeamUnits.id,
         teamId: newTeamUnits.teamId,
-        role: newTeamMemberships.role
+        role: newTeamMemberships.role,
       })
       .from(newTeamMemberships)
       .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
@@ -67,39 +72,34 @@ export async function getTeamAccess(userId: string, groupId: string): Promise<Te
         and(
           eq(newTeamMemberships.userId, userId),
           eq(newTeamUnits.groupId, groupId),
-          eq(newTeamMemberships.status, 'active')
+          eq(newTeamMemberships.status, "active")
         )
       );
 
-    const subteamMemberships = membershipResult.map(m => ({
+    const subteamMemberships = membershipResult.map((m) => ({
       subteamId: m.subteamId,
       teamId: m.teamId,
-      role: m.role
+      role: m.role,
     }));
 
     const hasSubteamMembership = subteamMemberships.length > 0;
-    const subteamRole = hasSubteamMembership ? subteamMemberships[0].role : undefined;
+    const subteamRole = hasSubteamMembership && subteamMemberships[0] ? subteamMemberships[0].role : undefined;
 
     // 3. Get all roster entries for this user
     const rosterResult = await dbPg
       .select({
         subteamId: newTeamUnits.id,
         teamId: newTeamUnits.teamId,
-        studentName: newTeamRosterData.studentName
+        studentName: newTeamRosterData.studentName,
       })
       .from(newTeamRosterData)
       .innerJoin(newTeamUnits, eq(newTeamRosterData.teamUnitId, newTeamUnits.id))
-      .where(
-        and(
-          eq(newTeamUnits.groupId, groupId),
-          eq(newTeamRosterData.userId, userId)
-        )
-      );
+      .where(and(eq(newTeamUnits.groupId, groupId), eq(newTeamRosterData.userId, userId)));
 
-    const rosterSubteams = rosterResult.map(r => ({
+    const rosterSubteams = rosterResult.map((r) => ({
       subteamId: r.subteamId,
       teamId: r.teamId,
-      studentName: r.studentName
+      studentName: r.studentName,
     }));
 
     const hasRosterEntries = rosterSubteams.length > 0;
@@ -107,7 +107,7 @@ export async function getTeamAccess(userId: string, groupId: string): Promise<Te
     // 4. Determine overall access
     // User has access if they are:
     // - Team creator, OR
-    // - Have subteam membership, OR  
+    // - Have subteam membership, OR
     // - Have roster entries
     const hasAccess = isCreator || hasSubteamMembership || hasRosterEntries;
 
@@ -118,17 +118,16 @@ export async function getTeamAccess(userId: string, groupId: string): Promise<Te
       hasRosterEntries,
       subteamRole,
       subteamMemberships,
-      rosterSubteams
+      rosterSubteams,
     };
-  } catch (error) {
-    console.error('Error getting team access:', error);
+  } catch (_error) {
     return {
       hasAccess: false,
       isCreator: false,
       hasSubteamMembership: false,
       hasRosterEntries: false,
       subteamMemberships: [],
-      rosterSubteams: []
+      rosterSubteams: [],
     };
   }
 }
@@ -138,27 +137,35 @@ export async function getTeamAccess(userId: string, groupId: string): Promise<Te
  */
 export async function hasLeadershipAccess(userId: string, groupId: string): Promise<boolean> {
   const access = await getTeamAccess(userId, groupId);
-  
+
   // User has leadership if they are:
   // - Team creator, OR
   // - Captain/co-captain in any subteam
-  return access.isCreator || 
-         access.subteamMemberships.some(m => ['captain', 'co_captain'].includes(m.role));
+  return (
+    access.isCreator ||
+    access.subteamMemberships.some((m) => ["captain", "co_captain"].includes(m.role))
+  );
 }
 
 /**
  * Check if user can access a specific subteam
  */
-export async function canAccessSubteam(userId: string, groupId: string, subteamId: string): Promise<boolean> {
+export async function canAccessSubteam(
+  userId: string,
+  groupId: string,
+  subteamId: string
+): Promise<boolean> {
   const access = await getTeamAccess(userId, groupId);
-  
+
   // User can access subteam if they are:
   // - Team creator, OR
   // - Member of that specific subteam, OR
   // - Have roster entries in that subteam
-  return access.isCreator ||
-         access.subteamMemberships.some(m => m.subteamId === subteamId) ||
-         access.rosterSubteams.some(r => r.subteamId === subteamId);
+  return (
+    access.isCreator ||
+    access.subteamMemberships.some((m) => m.subteamId === subteamId) ||
+    access.rosterSubteams.some((r) => r.subteamId === subteamId)
+  );
 }
 
 /**
@@ -177,7 +184,7 @@ export async function getUserDisplayInfo(userId: string): Promise<{
         firstName: users.firstName,
         lastName: users.lastName,
         email: users.email,
-        username: users.username
+        username: users.username,
       })
       .from(users)
       .where(eq(users.id, userId))
@@ -185,14 +192,22 @@ export async function getUserDisplayInfo(userId: string): Promise<{
 
     if (userResult.length === 0) {
       return {
-        name: `@unknown`,
+        name: "@unknown",
         email: `user-${userId.substring(0, 8)}@example.com`,
-        needsNamePrompt: true
+        needsNamePrompt: true,
       };
     }
 
     const user = userResult[0];
-    
+    if (!user) {
+      return {
+        name: "@unknown",
+        email: `user-${userId.substring(0, 8)}@example.com`,
+        username: undefined,
+        needsNamePrompt: true,
+      };
+    }
+
     // Use the centralized display name generation utility
     const { name, needsNamePrompt } = generateDisplayName(user, userId);
 
@@ -200,14 +215,13 @@ export async function getUserDisplayInfo(userId: string): Promise<{
       name,
       email: user.email || `user-${userId.substring(0, 8)}@example.com`,
       username: user.username || undefined,
-      needsNamePrompt
+      needsNamePrompt,
     };
-  } catch (error) {
-    console.error('Error getting user display info:', error);
+  } catch (_error) {
     return {
-      name: `@unknown`,
+      name: "@unknown",
       email: `user-${userId.substring(0, 8)}@example.com`,
-      needsNamePrompt: true
+      needsNamePrompt: true,
     };
   }
 }
@@ -215,21 +229,24 @@ export async function getUserDisplayInfo(userId: string): Promise<{
 /**
  * CockroachDB version of getTeamAccess for APIs that use CockroachDB
  */
-export async function getTeamAccessCockroach(userId: string, groupId: string): Promise<TeamAccessResult> {
+export async function getTeamAccessCockroach(
+  userId: string,
+  groupId: string
+): Promise<TeamAccessResult> {
   try {
     // 1. Check if user is the team creator
     const creatorResult = await queryCockroachDB<{ created_by: string }>(
-      `SELECT created_by FROM new_team_groups WHERE id = $1::uuid`,
+      "SELECT created_by FROM new_team_groups WHERE id = $1::uuid",
       [groupId]
     );
-    
-    const isCreator = creatorResult.rows.length > 0 && creatorResult.rows[0].created_by === userId;
+
+    const isCreator = creatorResult.rows.length > 0 && creatorResult.rows[0]?.created_by === userId;
 
     // 2. Get all subteam memberships for this user
-    const membershipResult = await queryCockroachDB<{ 
-      subteam_id: string; 
-      team_id: string; 
-      role: string; 
+    const membershipResult = await queryCockroachDB<{
+      subteam_id: string;
+      team_id: string;
+      role: string;
     }>(
       `SELECT tu.id as subteam_id, tu.team_id, tm.role
        FROM new_team_memberships tm
@@ -238,20 +255,20 @@ export async function getTeamAccessCockroach(userId: string, groupId: string): P
       [userId, groupId]
     );
 
-    const subteamMemberships = membershipResult.rows.map(m => ({
+    const subteamMemberships = membershipResult.rows.map((m) => ({
       subteamId: m.subteam_id,
       teamId: m.team_id,
-      role: m.role
+      role: m.role,
     }));
 
     const hasSubteamMembership = subteamMemberships.length > 0;
-    const subteamRole = hasSubteamMembership ? subteamMemberships[0].role : undefined;
+    const subteamRole = hasSubteamMembership && subteamMemberships[0] ? subteamMemberships[0].role : undefined;
 
     // 3. Get all roster entries for this user
-    const rosterResult = await queryCockroachDB<{ 
-      subteam_id: string; 
-      team_id: string; 
-      student_name: string; 
+    const rosterResult = await queryCockroachDB<{
+      subteam_id: string;
+      team_id: string;
+      student_name: string;
     }>(
       `SELECT tu.id as subteam_id, tu.team_id, r.student_name
        FROM new_team_roster_data r
@@ -260,10 +277,10 @@ export async function getTeamAccessCockroach(userId: string, groupId: string): P
       [groupId, userId]
     );
 
-    const rosterSubteams = rosterResult.rows.map(r => ({
+    const rosterSubteams = rosterResult.rows.map((r) => ({
       subteamId: r.subteam_id,
       teamId: r.team_id,
-      studentName: r.student_name
+      studentName: r.student_name,
     }));
 
     const hasRosterEntries = rosterSubteams.length > 0;
@@ -278,17 +295,16 @@ export async function getTeamAccessCockroach(userId: string, groupId: string): P
       hasRosterEntries,
       subteamRole,
       subteamMemberships,
-      rosterSubteams
+      rosterSubteams,
     };
-  } catch (error) {
-    console.error('Error getting team access (CockroachDB):', error);
+  } catch (_error) {
     return {
       hasAccess: false,
       isCreator: false,
       hasSubteamMembership: false,
       hasRosterEntries: false,
       subteamMemberships: [],
-      rosterSubteams: []
+      rosterSubteams: [],
     };
   }
 }
@@ -296,8 +312,13 @@ export async function getTeamAccessCockroach(userId: string, groupId: string): P
 /**
  * CockroachDB version of hasLeadershipAccess
  */
-export async function hasLeadershipAccessCockroach(userId: string, groupId: string): Promise<boolean> {
+export async function hasLeadershipAccessCockroach(
+  userId: string,
+  groupId: string
+): Promise<boolean> {
   const access = await getTeamAccessCockroach(userId, groupId);
-  return access.isCreator || 
-         access.subteamMemberships.some(m => ['captain', 'co_captain'].includes(m.role));
+  return (
+    access.isCreator ||
+    access.subteamMemberships.some((m) => ["captain", "co_captain"].includes(m.role))
+  );
 }

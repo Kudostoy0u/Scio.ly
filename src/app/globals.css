@@ -1,9 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=PT+Sans+Narrow:wght@400;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=PT+Sans+Narrow:wght@400;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
 
 @import "tailwindcss";
 body {
-  font-family: 'Poppins', sans-serif !important;
+  font-family: "Poppins", sans-serif !important;
 }
 /* Global smooth scrolling for in-page anchor navigation */
 html {
@@ -16,8 +16,12 @@ html {
   height: 8px;
 }
 /* Default track (light) on root scrollbars */
-html::-webkit-scrollbar-track { background: #ffffff; }
-body::-webkit-scrollbar-track { background: #ffffff; }
+html::-webkit-scrollbar-track {
+  background: #ffffff;
+}
+body::-webkit-scrollbar-track {
+  background: #ffffff;
+}
 ::-webkit-scrollbar-thumb {
   background: #9ca3af; /* gray-400 */
   border-radius: 8px;
@@ -43,22 +47,42 @@ html {
 /* Dark mode: track matches theme-color (force override) */
 /* Non-dynamic theme: use a consistent per-context color driven by data-scrollbar-context */
 /* Front page ("/"), match exact background */
-html[data-scrollbar-context="home"]::-webkit-scrollbar-track { background: #ffffff !important; }
-html.dark[data-scrollbar-context="home"]::-webkit-scrollbar-track { background: #020617 !important; }
-html.dark[data-scrollbar-context="nav"]::-webkit-scrollbar-track { background: #111827 !important; }
+html[data-scrollbar-context="home"]::-webkit-scrollbar-track {
+  background: #ffffff !important;
+}
+html.dark[data-scrollbar-context="home"]::-webkit-scrollbar-track {
+  background: #020617 !important;
+}
+html.dark[data-scrollbar-context="nav"]::-webkit-scrollbar-track {
+  background: #111827 !important;
+}
 
 /* Firefox per-context track on root */
-html[data-scrollbar-context="home"] { scrollbar-color: #9ca3af #ffffff !important; }
-html.dark[data-scrollbar-context="home"] { scrollbar-color: #6b7280 #020617 !important; }
-html.dark[data-scrollbar-context="nav"] { scrollbar-color: #6b7280 #111827 !important; }
+html[data-scrollbar-context="home"] {
+  scrollbar-color: #9ca3af #ffffff !important;
+}
+html.dark[data-scrollbar-context="home"] {
+  scrollbar-color: #6b7280 #020617 !important;
+}
+html.dark[data-scrollbar-context="nav"] {
+  scrollbar-color: #6b7280 #111827 !important;
+}
 
 /* Fallback: honor explicit scrollbar classes toggled by pages/components */
 html.dark-scrollbar::-webkit-scrollbar-track,
-body.dark-scrollbar::-webkit-scrollbar-track { background: #111827 !important; }
+body.dark-scrollbar::-webkit-scrollbar-track {
+  background: #111827 !important;
+}
 html.light-scrollbar::-webkit-scrollbar-track,
-body.light-scrollbar::-webkit-scrollbar-track { background: #ffffff !important; }
-html.dark-scrollbar { scrollbar-color: #6b7280 #111827 !important; }
-html.light-scrollbar { scrollbar-color: #9ca3af #ffffff !important; }
+body.light-scrollbar::-webkit-scrollbar-track {
+  background: #ffffff !important;
+}
+html.dark-scrollbar {
+  scrollbar-color: #6b7280 #111827 !important;
+}
+html.light-scrollbar {
+  scrollbar-color: #9ca3af #ffffff !important;
+}
 
 /* Auto-hide behavior (WebKit) */
 html {
@@ -95,7 +119,7 @@ body:focus::-webkit-scrollbar {
 
 /* Root Variables — follow app theme (html.dark), not system */
 :root {
-  --font-custom: 'Poppins', sans-serif !important;
+  --font-custom: "Poppins", sans-serif !important;
   --background: #ffffff;
   --foreground: #000000; /* Ensure true black in light mode */
 }
@@ -131,10 +155,10 @@ body {
   animation: random-waves 10s linear infinite;
   background-image: radial-gradient(
     circle,
-    rgba(135, 206, 250, 0.8), /* Light pastel blue */
-    rgba(100, 149, 237, 0.7), /* Cornflower blue */
-    rgba(72, 61, 139, 0.6),   /* Dark slate blue */
-    rgba(25, 25, 112, 0.8)    /* Midnight blue */
+    rgba(135, 206, 250, 0.8) /* Light pastel blue */,
+    rgba(100, 149, 237, 0.7) /* Cornflower blue */,
+    rgba(72, 61, 139, 0.6) /* Dark slate blue */,
+    rgba(25, 25, 112, 0.8) /* Midnight blue */
   );
   opacity: 0.9;
 }
@@ -179,9 +203,9 @@ body {
   height: 12px;
   background: radial-gradient(
     circle,
-    rgba(255, 255, 255, 0.9), /* Soft white core */
-    rgba(173, 216, 230, 0.7), /* Pastel sky blue */
-    rgba(100, 149, 237, 0.5)  /* Cornflower blue edge */
+    rgba(255, 255, 255, 0.9) /* Soft white core */,
+    rgba(173, 216, 230, 0.7) /* Pastel sky blue */,
+    rgba(100, 149, 237, 0.5) /* Cornflower blue edge */
   );
   border-radius: 50%;
   animation: bubbly-particles 6s ease-in-out infinite;
@@ -234,20 +258,24 @@ body {
 
 /* New Border Streak Animation */
 @keyframes border-streak {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .animated-border-streak::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: -2px; /* Controls border thickness */
   z-index: -1; /* Place behind the main content */
   background: conic-gradient(
     from 90deg,
-    #0ea5e9, /* sky-500 */
-    #3b82f6, /* blue-500 */
-    #6366f1, /* indigo-500 */
+    #0ea5e9 /* sky-500 */,
+    #3b82f6 /* blue-500 */,
+    #6366f1 /* indigo-500 */,
     transparent 30%,
     transparent 70%,
     #0ea5e9
@@ -255,29 +283,44 @@ body {
   border-radius: inherit; /* Match parent's border radius */
   animation: border-streak 4s linear infinite;
   /* Masking to create the border effect */
-  -webkit-mask: 
-     linear-gradient(#fff 0 0) content-box, 
-     linear-gradient(#fff 0 0);
-          mask: 
-     linear-gradient(#fff 0 0) content-box, 
-     linear-gradient(#fff 0 0);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
-          mask-composite: exclude;
+  mask-composite: exclude;
 }
 
 /* Markdown (prose) fallback styles – ensures readable headings even if the typography plugin isn't picked up yet */
-.prose h1, .prose h2, .prose h3, .prose h4 {
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
   font-weight: 700;
   line-height: 1.2;
   margin-top: 1.5em;
   margin-bottom: 0.5em;
 }
-.prose h1 { font-size: 2rem; }
-.prose h2 { font-size: 1.5rem; }
-.prose h3 { font-size: 1.25rem; }
-.prose p, .prose li { font-size: 1rem; line-height: 1.7; }
-.prose ul { list-style: disc; padding-left: 1.25rem; }
-.prose ol { list-style: decimal; padding-left: 1.25rem; }
+.prose h1 {
+  font-size: 2rem;
+}
+.prose h2 {
+  font-size: 1.5rem;
+}
+.prose h3 {
+  font-size: 1.25rem;
+}
+.prose p,
+.prose li {
+  font-size: 1rem;
+  line-height: 1.7;
+}
+.prose ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+.prose ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+}
 
 /* Safari-specific fixes */
 /* Remove increment/decrement arrows from number inputs on Safari */
@@ -312,11 +355,13 @@ select {
 
 /* Baconian Cipher Custom Emoji Font */
 .baconian-cipher {
-  font-family: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'Twemoji Mozilla', 'EmojiOne Mozilla', 'Android Emoji', 'EmojiSymbols', 'EmojiOne', 'Symbola', sans-serif !important;
+  font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", "Twemoji Mozilla",
+    "EmojiOne Mozilla", "Android Emoji", "EmojiSymbols", "EmojiOne", "Symbola", sans-serif !important;
 }
 
 .baconian-cipher .baconian-emoji {
-  font-family: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'Twemoji Mozilla', 'EmojiOne Mozilla', 'Android Emoji', 'EmojiSymbols', 'EmojiOne', 'Symbola', sans-serif !important;
+  font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", "Twemoji Mozilla",
+    "EmojiOne Mozilla", "Android Emoji", "EmojiSymbols", "EmojiOne", "Symbola", sans-serif !important;
   font-size: 1.2em;
   line-height: 1;
   vertical-align: middle;

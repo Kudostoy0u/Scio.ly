@@ -1,11 +1,18 @@
-import { NextRequest } from 'next/server';
-import { getServerUser } from '@/lib/supabaseServer';
-import { createAssignment, listRecentAssignments, listRecentResults, getAssignmentById, deleteAssignmentResult, deleteAssignment } from '@/lib/db/teamExtras';
-import { successResponse, ApiErrors, validateFields, handleApiError } from '@/lib/api/utils';
+import { ApiErrors, handleApiError, successResponse, validateFields } from "@/lib/api/utils";
+import {
+  createAssignment,
+  deleteAssignment,
+  deleteAssignmentResult,
+  getAssignmentById,
+  listRecentAssignments,
+  listRecentResults,
+} from "@/lib/db/teamExtras";
+import { getServerUser } from "@/lib/supabaseServer";
+import type { NextRequest } from "next/server";
 
 interface CreateAssignmentRequest extends Record<string, unknown> {
   school: string;
-  division: 'B' | 'C';
+  division: "B" | "C";
   teamId: string;
   eventName: string;
   assignees: Array<{ name: string; userId?: string }>;
@@ -16,25 +23,29 @@ interface CreateAssignmentRequest extends Record<string, unknown> {
 export async function POST(req: NextRequest) {
   try {
     const user = await getServerUser();
-    if (!user) return ApiErrors.unauthorized();
+    if (!user) {
+      return ApiErrors.unauthorized();
+    }
 
     const body = await req.json();
     const validation = validateFields<CreateAssignmentRequest>(body, [
-      'school',
-      'division',
-      'teamId',
-      'eventName',
-      'assignees',
-      'params',
-      'questions',
+      "school",
+      "division",
+      "teamId",
+      "eventName",
+      "assignees",
+      "params",
+      "questions",
     ]);
 
-    if (!validation.valid) return validation.error;
+    if (!validation.valid) {
+      return validation.error;
+    }
 
     const { school, division, teamId, eventName, assignees, params, questions } = validation.data;
 
     if (!Array.isArray(assignees)) {
-      return ApiErrors.badRequest('Assignees must be an array');
+      return ApiErrors.badRequest("Assignees must be an array");
     }
 
     const saved = await createAssignment({
@@ -57,7 +68,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const idStr = searchParams.get('id');
+    const idStr = searchParams.get("id");
 
     // Get by ID
     if (idStr) {
@@ -66,15 +77,15 @@ export async function GET(req: NextRequest) {
     }
 
     // List assignments or results
-    const school = searchParams.get('school');
-    const division = searchParams.get('division') as 'B' | 'C' | null;
-    const mode = searchParams.get('mode') || 'assignments';
+    const school = searchParams.get("school");
+    const division = searchParams.get("division") as "B" | "C" | null;
+    const mode = searchParams.get("mode") || "assignments";
 
-    if (!school || !division) {
-      return ApiErrors.missingFields(['school', 'division']);
+    if (!(school && division)) {
+      return ApiErrors.missingFields(["school", "division"]);
     }
 
-    if (mode === 'results') {
+    if (mode === "results") {
       const rows = await listRecentResults(school, division);
       return successResponse(rows);
     }
@@ -89,14 +100,14 @@ export async function GET(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const mode = searchParams.get('mode') || 'result';
-    const id = searchParams.get('id');
+    const mode = searchParams.get("mode") || "result";
+    const id = searchParams.get("id");
 
     if (!id) {
-      return ApiErrors.missingFields(['id']);
+      return ApiErrors.missingFields(["id"]);
     }
 
-    if (mode === 'assignment') {
+    if (mode === "assignment") {
       await deleteAssignment(id);
     } else {
       await deleteAssignmentResult(id);
@@ -107,5 +118,3 @@ export async function DELETE(req: NextRequest) {
     return handleApiError(error);
   }
 }
-
-

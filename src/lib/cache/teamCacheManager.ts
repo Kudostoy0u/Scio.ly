@@ -1,6 +1,6 @@
 /**
  * Centralized Team Cache Manager
- * 
+ *
  * This module provides a clean, API-driven cache management system that:
  * - Only updates cache when API returns new data
  * - Handles all cache operations in one place
@@ -8,7 +8,7 @@
  * - Eliminates race conditions and timing issues
  */
 
-import { useTeamStore } from '../stores/teamStore';
+import { useTeamStore } from "@/lib/stores/teamStore";
 
 export interface CacheUpdateResult {
   success: boolean;
@@ -17,7 +17,7 @@ export interface CacheUpdateResult {
 }
 
 export interface CacheOperation {
-  type: 'fetch' | 'invalidate' | 'update';
+  type: "fetch" | "invalidate" | "update";
   key: string;
   data?: any;
   timestamp?: number;
@@ -42,7 +42,7 @@ class TeamCacheManager {
    * Get cache key for any data type
    */
   getCacheKey(type: string, ...params: string[]): string {
-    return `${type}-${params.join('-')}`;
+    return `${type}-${params.join("-")}`;
   }
 
   /**
@@ -51,7 +51,9 @@ class TeamCacheManager {
   isDataFresh(key: string, maxAge: number = 2 * 60 * 1000): boolean {
     const store = useTeamStore.getState();
     const timestamp = store.cacheTimestamps[key];
-    if (!timestamp) return false;
+    if (!timestamp) {
+      return false;
+    }
     return Date.now() - timestamp < maxAge;
   }
 
@@ -75,13 +77,13 @@ class TeamCacheManager {
 
     while (this.cacheUpdateQueue.length > 0) {
       const operation = this.cacheUpdateQueue.shift();
-      if (!operation) continue;
+      if (!operation) {
+        continue;
+      }
 
       try {
         await this.executeOperation(operation);
-      } catch (error) {
-        console.error('Cache operation failed:', error);
-      }
+      } catch (_error) {}
     }
 
     this.isProcessingQueue = false;
@@ -94,18 +96,18 @@ class TeamCacheManager {
     // const store = useTeamStore.getState();
 
     switch (operation.type) {
-      case 'fetch':
+      case "fetch":
         // Only update if we have new data
         if (operation.data) {
           this.updateCacheData(operation.key, operation.data, operation.timestamp);
         }
         break;
 
-      case 'invalidate':
+      case "invalidate":
         this.invalidateCacheKey(operation.key);
         break;
 
-      case 'update':
+      case "update":
         if (operation.data) {
           this.updateCacheData(operation.key, operation.data, operation.timestamp);
         }
@@ -120,40 +122,41 @@ class TeamCacheManager {
     const updateTimestamp = timestamp || Date.now();
 
     // Determine data type from key
-    const [type] = key.split('-');
-    
+    const [type] = key.split("-");
+
     switch (type) {
-      case 'members':
+      case "members":
         // const teamSlug = this.extractTeamSlug(key);
         // const subteamId = this.extractSubteamId(key);
-        
+
         // Update the team store directly
-        useTeamStore.setState(state => ({
+        useTeamStore.setState((state) => ({
           members: { ...state.members, [key]: data },
-          cacheTimestamps: { ...state.cacheTimestamps, [key]: updateTimestamp }
+          cacheTimestamps: { ...state.cacheTimestamps, [key]: updateTimestamp },
         }));
         break;
-      case 'roster':
+      case "roster":
         // const rosterTeamSlug = this.extractTeamSlug(key);
         // const rosterSubteamId = this.extractSubteamId(key);
-        
-        useTeamStore.setState(state => ({
+
+        useTeamStore.setState((state) => ({
           roster: { ...state.roster, [key]: data },
-          cacheTimestamps: { ...state.cacheTimestamps, [key]: updateTimestamp }
+          cacheTimestamps: { ...state.cacheTimestamps, [key]: updateTimestamp },
         }));
         break;
-      case 'subteams':
+      case "subteams": {
         // Update subteams cache
         const subteamsTeamSlug = this.extractTeamSlug(key);
-        useTeamStore.setState(state => ({
+        useTeamStore.setState((state) => ({
           subteams: { ...state.subteams, [subteamsTeamSlug]: data },
-          cacheTimestamps: { ...state.cacheTimestamps, [key]: updateTimestamp }
+          cacheTimestamps: { ...state.cacheTimestamps, [key]: updateTimestamp },
         }));
         break;
+      }
       default:
         // Generic cache update
-        useTeamStore.setState(state => ({
-          cacheTimestamps: { ...state.cacheTimestamps, [key]: updateTimestamp }
+        useTeamStore.setState((state) => ({
+          cacheTimestamps: { ...state.cacheTimestamps, [key]: updateTimestamp },
         }));
     }
   }
@@ -162,7 +165,7 @@ class TeamCacheManager {
    * Invalidate a specific cache key
    */
   private invalidateCacheKey(key: string): void {
-    useTeamStore.setState(state => {
+    useTeamStore.setState((state) => {
       const newCacheTimestamps = { ...state.cacheTimestamps };
       delete newCacheTimestamps[key];
       return { cacheTimestamps: newCacheTimestamps };
@@ -173,28 +176,24 @@ class TeamCacheManager {
    * Extract team slug from cache key
    */
   private extractTeamSlug(key: string): string {
-    const parts = key.split('-');
-    return parts[1] || '';
+    const parts = key.split("-");
+    return parts[1] || "";
   }
 
   /**
    * Extract subteam ID from cache key
    */
   private extractSubteamId(key: string): string {
-    const parts = key.split('-');
-    return parts[2] || 'all';
+    const parts = key.split("-");
+    return parts[2] || "all";
   }
 
   /**
    * Fetch data with proper cache management
    */
-  async fetchData<T>(
-    type: string,
-    fetcher: () => Promise<T>,
-    ...params: string[]
-  ): Promise<T> {
+  async fetchData<T>(type: string, fetcher: () => Promise<T>, ...params: string[]): Promise<T> {
     const key = this.getCacheKey(type, ...params);
-    
+
     // Check if data is fresh
     if (this.isDataFresh(key) && this.hasCachedData(key)) {
       return this.getCachedData(key);
@@ -207,13 +206,13 @@ class TeamCacheManager {
 
     // Create new request
     const request = fetcher()
-      .then(data => {
+      .then((data) => {
         // Queue cache update with new data
         this.queueOperation({
-          type: 'fetch',
+          type: "fetch",
           key,
           data,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
         return data;
       })
@@ -230,16 +229,17 @@ class TeamCacheManager {
    */
   private hasCachedData(key: string): boolean {
     const store = useTeamStore.getState();
-    const [type] = key.split('-');
-    
+    const [type] = key.split("-");
+
     switch (type) {
-      case 'members':
+      case "members":
         return !!store.members[key];
-      case 'roster':
+      case "roster":
         return !!store.roster[key];
-      case 'subteams':
+      case "subteams": {
         const teamSlug = this.extractTeamSlug(key);
         return !!store.subteams[teamSlug];
+      }
       default:
         return false;
     }
@@ -250,16 +250,17 @@ class TeamCacheManager {
    */
   private getCachedData(key: string): any {
     const store = useTeamStore.getState();
-    const [type] = key.split('-');
-    
+    const [type] = key.split("-");
+
     switch (type) {
-      case 'members':
+      case "members":
         return store.members[key];
-      case 'roster':
+      case "roster":
         return store.roster[key];
-      case 'subteams':
+      case "subteams": {
         const teamSlug = this.extractTeamSlug(key);
         return store.subteams[teamSlug];
+      }
       default:
         return null;
     }
@@ -271,8 +272,8 @@ class TeamCacheManager {
   invalidateAfterOperation(type: string, ...params: string[]): void {
     const key = this.getCacheKey(type, ...params);
     this.queueOperation({
-      type: 'invalidate',
-      key
+      type: "invalidate",
+      key,
     });
   }
 
@@ -282,29 +283,25 @@ class TeamCacheManager {
   updateCache(type: string, data: any, ...params: string[]): void {
     const key = this.getCacheKey(type, ...params);
     this.queueOperation({
-      type: 'update',
+      type: "update",
       key,
       data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
   /**
    * Force refresh data by invalidating cache and fetching fresh data
    */
-  async forceRefresh<T>(
-    type: string,
-    fetcher: () => Promise<T>,
-    ...params: string[]
-  ): Promise<T> {
+  async forceRefresh<T>(type: string, fetcher: () => Promise<T>, ...params: string[]): Promise<T> {
     // const key = this.getCacheKey(type, ...params);
-    
+
     // Invalidate cache first
     this.invalidateAfterOperation(type, ...params);
-    
+
     // Wait a moment for invalidation to process
-    await new Promise(resolve => setTimeout(resolve, 50));
-    
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
     // Fetch fresh data
     return this.fetchData(type, fetcher, ...params);
   }
@@ -328,18 +325,18 @@ class TeamCacheManager {
     const store = useTeamStore.getState();
     const now = Date.now();
     const maxAge = 2 * 60 * 1000; // 2 minutes
-    
+
     const keys = Object.keys(store.cacheTimestamps);
-    const freshKeys = keys.filter(key => {
+    const freshKeys = keys.filter((key) => {
       const timestamp = store.cacheTimestamps[key];
-      return timestamp && (now - timestamp) < maxAge;
+      return timestamp && now - timestamp < maxAge;
     });
-    
+
     return {
       totalKeys: keys.length,
       freshKeys: freshKeys.length,
       staleKeys: keys.length - freshKeys.length,
-      pendingOperations: this.pendingOperations.size
+      pendingOperations: this.pendingOperations.size,
     };
   }
 }
@@ -348,14 +345,11 @@ class TeamCacheManager {
 export const teamCacheManager = TeamCacheManager.getInstance();
 
 // Export convenience functions
-export const getCacheKey = (type: string, ...params: string[]) => 
+export const getCacheKey = (type: string, ...params: string[]) =>
   teamCacheManager.getCacheKey(type, ...params);
 
-export const fetchWithCache = <T>(
-  type: string,
-  fetcher: () => Promise<T>,
-  ...params: string[]
-) => teamCacheManager.fetchData(type, fetcher, ...params);
+export const fetchWithCache = <T>(type: string, fetcher: () => Promise<T>, ...params: string[]) =>
+  teamCacheManager.fetchData(type, fetcher, ...params);
 
 export const invalidateCache = (type: string, ...params: string[]) =>
   teamCacheManager.invalidateAfterOperation(type, ...params);
@@ -363,11 +357,8 @@ export const invalidateCache = (type: string, ...params: string[]) =>
 export const updateCache = (type: string, data: any, ...params: string[]) =>
   teamCacheManager.updateCache(type, data, ...params);
 
-export const forceRefresh = <T>(
-  type: string,
-  fetcher: () => Promise<T>,
-  ...params: string[]
-) => teamCacheManager.forceRefresh(type, fetcher, ...params);
+export const forceRefresh = <T>(type: string, fetcher: () => Promise<T>, ...params: string[]) =>
+  teamCacheManager.forceRefresh(type, fetcher, ...params);
 
 export const clearAllCache = () => teamCacheManager.clearAllCache();
 

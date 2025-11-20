@@ -1,35 +1,35 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { fetchQuestionsForParams } from './fetchQuestions';
-import api from '../../../api';
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import api from "@/app/api";
+import { fetchQuestionsForParams } from "./fetchQuestions";
 
 type AnyFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<any>;
 
-describe('fetchQuestionsForParams', () => {
+describe("fetchQuestionsForParams", () => {
   const fakeBaseQuestions = Array.from({ length: 20 }).map((_, i) => ({
     id: `q${i}`,
     question: `Base Q ${i}`,
-    options: ['A', 'B', 'C', 'D'],
+    options: ["A", "B", "C", "D"],
     answers: [0],
     difficulty: 0.5,
-    event: 'Water Quality',
+    event: "Water Quality",
     subtopics: [],
   }));
 
   const fakeIdRows = Array.from({ length: 20 }).map((_, i) => ({
     id: `id${i}`,
     question: `Identify specimen ${i}`,
-    options: ['Alpha', 'Beta', 'Gamma', 'Delta'],
+    options: ["Alpha", "Beta", "Gamma", "Delta"],
     answers: [0],
     difficulty: 0.5,
-    event: 'Water Quality',
+    event: "Water Quality",
     subtopics: [],
-    images: ['/img/sample.png'],
+    images: ["/img/sample.png"],
   }));
 
   beforeEach(() => {
     vi.resetAllMocks();
     const fetchMock = vi.fn<Parameters<AnyFetch>, ReturnType<AnyFetch>>((input: any) => {
-      const url = typeof input === 'string' ? input : input?.toString?.() || '';
+      const url = typeof input === "string" ? input : input?.toString?.() || "";
       if (url.startsWith(api.idQuestions)) {
         return Promise.resolve({ ok: true, json: async () => ({ data: fakeIdRows }) });
       }
@@ -44,11 +44,11 @@ describe('fetchQuestionsForParams', () => {
     global.navigator = { onLine: true } as any;
   });
 
-  it('uses ID endpoint when idPercentage is 100', async () => {
+  it("uses ID endpoint when idPercentage is 100", async () => {
     const routerParams = {
-      eventName: 'Water Quality - Freshwater',
+      eventName: "Water Quality - Freshwater",
       idPercentage: 100,
-      types: 'multiple-choice',
+      types: "multiple-choice",
     } as any;
     const total = 10;
     const result = await fetchQuestionsForParams(routerParams, total);
@@ -58,11 +58,11 @@ describe('fetchQuestionsForParams', () => {
     expect(calls.some((u: string) => u.startsWith(api.questions))).toBe(false);
   });
 
-  it('uses base questions endpoint when idPercentage is 0', async () => {
+  it("uses base questions endpoint when idPercentage is 0", async () => {
     const routerParams = {
-      eventName: 'Water Quality - Freshwater',
+      eventName: "Water Quality - Freshwater",
       idPercentage: 0,
-      types: 'multiple-choice',
+      types: "multiple-choice",
     } as any;
     const total = 5;
     const result = await fetchQuestionsForParams(routerParams, total);
@@ -72,5 +72,3 @@ describe('fetchQuestionsForParams', () => {
     expect(calls.some((u: string) => u.startsWith(api.idQuestions))).toBe(false);
   });
 });
-
-

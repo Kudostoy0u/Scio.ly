@@ -1,7 +1,7 @@
-'use client';
-import React from 'react';
-import { QuestionPlagiarismSummary } from '../types';
-import { QuestionItem } from './QuestionItem';
+"use client";
+import type React from "react";
+import type { QuestionPlagiarismSummary } from "@/app/plagiarism/types";
+import { QuestionItem } from "./QuestionItem";
 
 export default function AnalysisList({
   extractedQuestions,
@@ -46,5 +46,3 @@ export default function AnalysisList({
     </div>
   );
 }
-
-

@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabase } from "@/lib/supabase";
 
 /**
  * Bookmark management utilities for Science Olympiad questions
@@ -40,7 +40,7 @@ interface BookmarkedQuestion {
 /**
  * Loads user bookmarks from Supabase database
  * Retrieves all bookmarks for a specific user, ordered by creation date
- * 
+ *
  * @param {string} userId - The user ID to load bookmarks for
  * @returns {Promise<BookmarkedQuestion[]>} Array of bookmarked questions
  * @throws {Error} When database operation fails
@@ -51,28 +51,28 @@ interface BookmarkedQuestion {
  * ```
  */
 export const loadBookmarksFromSupabase = async (userId: string): Promise<BookmarkedQuestion[]> => {
-  if (!userId) return [];
-  
+  if (!userId) {
+    return [];
+  }
+
   try {
-    const { data, error } = await (supabase as any)
-      .from('bookmarks')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from("bookmarks")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
 
     if (error) {
-      console.error('Error loading bookmarks:', error);
       return [];
     }
 
-    return data.map(bookmark => ({
+    return data.map((bookmark: any) => ({
       question: bookmark.question_data,
       eventName: bookmark.event_name,
       source: bookmark.source,
-      timestamp: new Date(bookmark.created_at).getTime()
+      timestamp: new Date(bookmark.created_at).getTime(),
     }));
-  } catch (error) {
-    console.error('Error loading bookmarks:', error);
+  } catch (_error) {
     return [];
   }
 };
@@ -86,7 +86,7 @@ export const loadBookmarksFromFirebase = loadBookmarksFromSupabase;
 /**
  * Adds a bookmark to the user's bookmark collection
  * Checks for existing bookmarks to prevent duplicates
- * 
+ *
  * @param {string | null} userId - The user ID to add bookmark for
  * @param {Question} question - The question to bookmark
  * @param {string} eventName - The Science Olympiad event name
@@ -104,63 +104,63 @@ export const addBookmark = async (
   eventName: string,
   source: string
 ) => {
-  if (!userId) return;
+  if (!userId) {
+    return;
+  }
 
   try {
     let exists = false;
 
     if (question.id) {
       const { data, error } = await supabase
-        .from('bookmarks')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('event_name', eventName)
-        .eq('source', source)
-        .eq('question_data->>id', question.id);
-      if (error) throw error;
+        .from("bookmarks")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("event_name", eventName)
+        .eq("source", source)
+        .eq("question_data->>id", question.id);
+      if (error) {
+        throw error;
+      }
       exists = !!(data && data.length > 0);
     } else {
-      let query = (supabase as any)
-        .from('bookmarks')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('event_name', eventName)
-        .eq('source', source)
-        .eq('question_data->>question', question.question);
+      let query = supabase
+        .from("bookmarks")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("event_name", eventName)
+        .eq("source", source)
+        .eq("question_data->>question", question.question);
       if (question.imageUrl) {
-        query = query.eq('question_data->>imageUrl', question.imageUrl);
+        query = query.eq("question_data->>imageUrl", question.imageUrl);
       }
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       exists = !!(data && data.length > 0);
     }
 
     if (exists) {
-      console.log('Bookmark already exists');
       return;
     }
 
-    const { error } = await (supabase as any)
-      .from('bookmarks')
-      .insert({
-        user_id: userId,
-        question_data: question,
-        event_name: eventName,
-        source: source
-      });
+    const { error } = await supabase.from("bookmarks").insert({
+      user_id: userId,
+      question_data: question,
+      event_name: eventName,
+      source: source,
+    });
 
     if (error) {
-      console.error('Error adding bookmark:', error);
     }
-  } catch (error) {
-    console.error('Error adding bookmark:', error);
-  }
+  } catch (_error) {}
 };
 
 /**
  * Removes a bookmark from the user's bookmark collection
  * Deletes the bookmark based on question ID or question text
- * 
+ *
  * @param {string | null} userId - The user ID to remove bookmark for
  * @param {Question} question - The question to remove bookmark for
  * @param {string} source - The source of the question
@@ -171,36 +171,36 @@ export const addBookmark = async (
  * await removeBookmark('user-123', question, 'practice');
  * ```
  */
-export const removeBookmark = async (
-  userId: string | null,
-  question: Question,
-  source: string
-) => {
-  if (!userId) return;
+export const removeBookmark = async (userId: string | null, question: Question, source: string) => {
+  if (!userId) {
+    return;
+  }
 
   try {
     if (question.id) {
       const { error } = await supabase
-        .from('bookmarks')
+        .from("bookmarks")
         .delete()
-        .eq('user_id', userId)
-        .eq('source', source)
-        .eq('question_data->>id', question.id);
-      if (error) throw error;
+        .eq("user_id", userId)
+        .eq("source", source)
+        .eq("question_data->>id", question.id);
+      if (error) {
+        throw error;
+      }
     } else {
-      let query = (supabase as any)
-        .from('bookmarks')
+      let query = supabase
+        .from("bookmarks")
         .delete()
-        .eq('user_id', userId)
-        .eq('source', source)
-        .eq('question_data->>question', question.question);
+        .eq("user_id", userId)
+        .eq("source", source)
+        .eq("question_data->>question", question.question);
       if (question.imageUrl) {
-        query = query.eq('question_data->>imageUrl', question.imageUrl);
+        query = query.eq("question_data->>imageUrl", question.imageUrl);
       }
       const { error } = await query;
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
     }
-  } catch (error) {
-    console.error('Error removing bookmark:', error);
-  }
+  } catch (_error) {}
 };

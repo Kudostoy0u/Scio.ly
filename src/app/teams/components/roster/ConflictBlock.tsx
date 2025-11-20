@@ -1,10 +1,9 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { ChevronDown, ChevronRight, RotateCcw } from 'lucide-react';
-import { ConflictBlock as ConflictBlockType } from './rosterUtils';
-import { getGroupColors } from './rosterUtils';
-import EventInput from './EventInput';
+import { ChevronDown, ChevronRight, RotateCcw } from "lucide-react";
+import EventInput from "./EventInput";
+import type { ConflictBlock as ConflictBlockType } from "./rosterUtils";
+import { getGroupColors } from "./rosterUtils";
 
 interface ConflictBlockProps {
   darkMode: boolean;
@@ -33,10 +32,10 @@ export default function ConflictBlock({
   onUpdateRoster,
   onCreateAssignment,
   onRemoveEvent,
-  onRestoreEvents
+  onRestoreEvents,
 }: ConflictBlockProps) {
   // Removed verbose logging - not needed for business logic
-  
+
   const colors = getGroupColors(darkMode, group.colorKey);
   const isCollapsed = collapsedGroups.has(group.label);
 
@@ -50,13 +49,13 @@ export default function ConflictBlock({
   if (isLastGroup) {
     return (
       <div className={`rounded-lg border-2 p-4 lg:col-span-2 ${colors.bg} ${colors.border}`}>
-        <div 
-          className={`flex items-center justify-between mb-4 cursor-pointer md:cursor-default`}
+        <div
+          className={"flex items-center justify-between mb-4 cursor-pointer md:cursor-default"}
           onClick={handleGroupClick}
         >
           <h3 className={`text-lg font-semibold ${colors.text}`}>{group.label}</h3>
           <div className="flex items-center gap-2">
-            {isCaptain && group.events.some(evt => removedEvents.has(evt)) && (
+            {isCaptain && group.events.some((evt) => removedEvents.has(evt)) && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -78,7 +77,7 @@ export default function ConflictBlock({
             </div>
           </div>
         </div>
-        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 ${isCollapsed ? 'hidden md:grid' : ''}`}>
+        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 ${isCollapsed ? "hidden md:grid" : ""}`}>
           <div className="space-y-3">
             {group.events.slice(0, Math.ceil(group.events.length / 2)).map((evt) => (
               <EventInput
@@ -122,13 +121,13 @@ export default function ConflictBlock({
 
   return (
     <div className={`rounded-lg border-2 p-4 ${colors.bg} ${colors.border}`}>
-      <div 
-        className={`flex items-center justify-between mb-4 cursor-pointer md:cursor-default`}
+      <div
+        className={"flex items-center justify-between mb-4 cursor-pointer md:cursor-default"}
         onClick={handleGroupClick}
       >
         <h3 className={`text-lg font-semibold ${colors.text}`}>{group.label}</h3>
         <div className="flex items-center gap-2">
-          {isCaptain && group.events.some(evt => removedEvents.has(evt)) && (
+          {isCaptain && group.events.some((evt) => removedEvents.has(evt)) && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -150,7 +149,7 @@ export default function ConflictBlock({
           </div>
         </div>
       </div>
-      <div className={`space-y-3 ${isCollapsed ? 'hidden md:block' : ''}`}>
+      <div className={`space-y-3 ${isCollapsed ? "hidden md:block" : ""}`}>
         {group.events.map((evt) => (
           <EventInput
             key={evt}

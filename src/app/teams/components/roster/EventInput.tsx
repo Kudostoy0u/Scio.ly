@@ -1,7 +1,5 @@
-'use client';
-
-import React from 'react';
-import { getEventMaxSlots, shouldShowAssignOption } from './rosterUtils';
+"use client";
+import { getEventMaxSlots, shouldShowAssignOption } from "./rosterUtils";
 
 interface EventInputProps {
   darkMode: boolean;
@@ -32,20 +30,20 @@ export default function EventInput({
   onUpdateRoster,
   onCreateAssignment,
   onRemoveEvent,
-  conflictBlock
+  conflictBlock,
 }: EventInputProps) {
   const max = getEventMaxSlots(eventName);
   const base = roster[eventName] || [];
-  const slots = [...base, ...new Array(Math.max(0, max - base.length)).fill('')].slice(0, max);
-  
+  const slots = [...base, ...new Array(Math.max(0, max - base.length)).fill("")].slice(0, max);
+
   // Removed verbose logging - not needed for business logic
-  
+
   const shouldShowAssign = shouldShowAssignOption(isCaptain, colorKey, eventName, isRemoved);
 
   return (
     <div className="space-y-2">
       <div className={`text-sm font-medium ${colors.text} flex items-center gap-2`}>
-        <span className={isRemoved ? 'line-through opacity-50' : ''}>{eventName}</span>
+        <span className={isRemoved ? "line-through opacity-50" : ""}>{eventName}</span>
         {shouldShowAssign && (
           <span
             onClick={() => onCreateAssignment(eventName)}
@@ -64,10 +62,10 @@ export default function EventInput({
         )}
       </div>
       <div className="grid grid-cols-3 gap-2">
-        {[...Array(max)].map((_, i) => (
+        {[...new Array(max)].map((_, i) => (
           <input
             key={i}
-            value={isRemoved ? '' : (slots[i] || '')}
+            value={isRemoved ? "" : slots[i] || ""}
             onChange={(e) => {
               if (isRemoved) {
                 return;
@@ -78,10 +76,20 @@ export default function EventInput({
             placeholder="Name"
             className={`w-full rounded px-2 py-1 text-sm ${
               isRemoved
-                ? (darkMode ? 'bg-gray-800 text-gray-500 border border-gray-600 cursor-not-allowed opacity-50' : 'bg-gray-100 text-gray-500 border border-gray-300 cursor-not-allowed opacity-50')
-                : !isCaptain 
-                  ? (darkMode ? 'bg-gray-800 text-gray-500 border border-gray-600 cursor-not-allowed' : 'bg-gray-100 text-gray-500 border border-gray-300 cursor-not-allowed')
-                  : (darkMode ? 'bg-gray-900 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-300')
+                ? darkMode
+                  ? "bg-gray-800 text-gray-500 border border-gray-600 cursor-not-allowed opacity-50"
+                  : "bg-gray-100 text-gray-500 border border-gray-300 cursor-not-allowed opacity-50"
+                : isCaptain
+                  ? (
+                      darkMode
+                        ? "bg-gray-900 text-white border border-gray-700"
+                        : "bg-white text-gray-900 border border-gray-300"
+                    )
+                  : (
+                      darkMode
+                        ? "bg-gray-800 text-gray-500 border border-gray-600 cursor-not-allowed"
+                        : "bg-gray-100 text-gray-500 border border-gray-300 cursor-not-allowed"
+                    )
             }`}
           />
         ))}

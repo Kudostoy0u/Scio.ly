@@ -3,8 +3,8 @@
  * Eliminates duplicate auth refresh logic across the codebase
  */
 
-import { supabase } from '@/lib/supabase';
-import logger from './logger';
+import { supabase } from "@/lib/supabase";
+import logger from "./logger";
 
 /**
  * Auth error status codes that trigger a session refresh
@@ -15,9 +15,11 @@ const AUTH_ERROR_CODES = [401, 403] as const;
  * Check if error is an auth error that should trigger retry
  */
 function isAuthError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false;
-  const status = (error as any).status;
-  return typeof status === 'number' && AUTH_ERROR_CODES.includes(status as any);
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  const status = "status" in error && typeof error.status === "number" ? error.status : undefined;
+  return status !== undefined && (AUTH_ERROR_CODES as readonly number[]).includes(status);
 }
 
 /**
@@ -25,36 +27,34 @@ function isAuthError(error: unknown): boolean {
  * Used when session refresh fails
  */
 function clearSupabaseCookies(): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") {
+    return;
+  }
 
   const cookieNames = [
-    'sb-access-token',
-    'sb-refresh-token',
-    'supabase-auth-token',
-    'supabase-auth-refresh-token',
-    'supabase-auth-token-expires',
-    'supabase-auth-refresh-token-expires',
-    'supabase-auth-token-type',
-    'supabase-auth-token-user-id',
-    'supabase-auth-token-session-id',
-    'supabase-auth-token-provider-token',
-    'supabase-auth-token-provider-refresh-token',
+    "sb-access-token",
+    "sb-refresh-token",
+    "supabase-auth-token",
+    "supabase-auth-refresh-token",
+    "supabase-auth-token-expires",
+    "supabase-auth-refresh-token-expires",
+    "supabase-auth-token-type",
+    "supabase-auth-token-user-id",
+    "supabase-auth-token-session-id",
+    "supabase-auth-token-provider-token",
+    "supabase-auth-token-provider-refresh-token",
   ];
 
-  const domains = [
-    '',
-    `domain=${window.location.hostname}`,
-    `domain=.${window.location.hostname}`,
-  ];
+  const domains = ["", `domain=${window.location.hostname}`, `domain=.${window.location.hostname}`];
 
   cookieNames.forEach((name) => {
     domains.forEach((domain) => {
-      const cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;${domain ? ` ${domain};` : ''}`;
+      const cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;${domain ? ` ${domain};` : ""}`;
       document.cookie = cookie;
     });
   });
 
-  logger.warn('Cleared Supabase cookies after session refresh failure');
+  logger.warn("Cleared Supabase cookies after session refresh failure");
 }
 
 /**
@@ -72,7 +72,7 @@ function clearSupabaseCookies(): void {
  */
 export async function withAuthRetry<T = any>(
   operation: () => Promise<{ data: T | null; error: any }>,
-  operationName: string = 'query'
+  operationName = "query"
 ): Promise<{ data: T | null; error: any }> {
   // First attempt
   let result = await operation();
@@ -118,7 +118,7 @@ export async function withAuthRetry<T = any>(
  */
 export async function withAuthRetryData<T = any>(
   operation: () => Promise<{ data: T | null; error: any }>,
-  operationName: string = 'query'
+  operationName = "query"
 ): Promise<T | null> {
   const { data, error } = await withAuthRetry(operation, operationName);
   return error ? null : data;

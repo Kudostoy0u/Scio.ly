@@ -1,27 +1,28 @@
-import { router, protectedProcedure } from '../server';
-import { z } from 'zod';
-import { TRPCError } from '@trpc/server';
-import { createInsertSchema } from 'drizzle-zod';
-import { dbPg } from '@/lib/db';
-import { cockroachDBTeamsService } from '@/lib/services/cockroachdb-teams';
-import { 
-  newTeamGroups, 
-  newTeamUnits, 
-  newTeamMemberships, 
-  users
-} from '@/lib/db/schema';
-import { 
+import { queryCockroachDB } from "@/lib/cockroachdb";
+import { dbPg } from "@/lib/db";
+import { newTeamAssignments } from "@/lib/db/schema/assignments";
+import { users } from "@/lib/db/schema/core";
+import {
+  newTeamGroups,
+  newTeamMemberships,
+  newTeamPeople,
   newTeamRosterData,
-  newTeamPeople
-} from '@/lib/db/schema/teams';
-import { newTeamAssignments } from '@/lib/db/schema/assignments';
-import { eq, and, sql, inArray, count } from 'drizzle-orm';
-import { getTeamAccess } from '@/lib/utils/team-auth-v2';
-import { queryCockroachDB } from '@/lib/cockroachdb';
-import { checkTeamGroupAccessCockroach, checkTeamGroupLeadershipCockroach } from '@/lib/utils/team-auth';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
-import { upsertUserProfile } from '@/lib/db/teams/utils';
-import logger from '@/lib/utils/logger';
+  newTeamUnits,
+} from "@/lib/db/schema/teams";
+import { upsertUserProfile } from "@/lib/db/teams/utils";
+import { cockroachDBTeamsService } from "@/lib/services/cockroachdb-teams";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import logger from "@/lib/utils/logger";
+import {
+  checkTeamGroupAccessCockroach,
+  checkTeamGroupLeadershipCockroach,
+} from "@/lib/utils/team-auth";
+import { getTeamAccess } from "@/lib/utils/team-auth-v2";
+import { TRPCError } from "@trpc/server";
+import { and, count, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+import { protectedProcedure, router } from "@/lib/trpc/server";
 
 // ============================================================================
 // COMPREHENSIVE TEAMS TRPC ROUTER
@@ -31,12 +32,12 @@ import logger from '@/lib/utils/logger';
 
 // Input/Output schemas
 const CreateTeamInputSchema = z.object({
-  school: z.string().min(1, 'School name is required'),
-  division: z.literal('B').or(z.literal('C'))
+  school: z.string().min(1, "School name is required"),
+  division: z.literal("B").or(z.literal("C")),
 });
 
 const JoinTeamInputSchema = z.object({
-  code: z.string().min(1, 'Team code is required')
+  code: z.string().min(1, "Team code is required"),
 });
 
 // Comprehensive validation schemas
@@ -45,7 +46,7 @@ const JoinTeamInputSchema = z.object({
 // Roster data validation schema
 const RosterDataSchema = z.object({
   roster: z.record(z.string(), z.array(z.string())),
-  removedEvents: z.array(z.string())
+  removedEvents: z.array(z.string()),
 });
 
 // Insert schemas for mutations
@@ -62,38 +63,53 @@ async function ensureUserDisplayName(userId: string, userEmail?: string) {
   try {
     const supabase = await createSupabaseServerClient();
     const { data: existingProfile } = await supabase
-      .from('users')
-      .select('id, email, display_name, first_name, last_name, username')
-      .eq('id', userId)
+      .from("users")
+      .select("id, email, display_name, first_name, last_name, username")
+      .eq("id", userId)
       .maybeSingle();
 
-    const email = (existingProfile as any)?.email || userEmail;
-    const currentDisplay = (existingProfile as any)?.display_name;
-    const firstName = (existingProfile as any)?.first_name;
-    const lastName = (existingProfile as any)?.last_name;
-    const username = (existingProfile as any)?.username;
+    const email = existingProfile?.email || userEmail;
+    const currentDisplay = existingProfile?.display_name;
+    const firstName = existingProfile?.first_name;
+    const lastName = existingProfile?.last_name;
+    const username = existingProfile?.username;
 
-    const emailLocal = email && email.includes('@') ? email.split('@')[0] : undefined;
+    const emailLocal = email?.includes("@") ? email.split("@")[0] : undefined;
     const derivedDisplayName = (() => {
-      if (currentDisplay && currentDisplay.trim()) return undefined;
-      if (firstName && lastName) return `${firstName.trim()} ${lastName.trim()}`;
-      if (firstName && firstName.trim()) return firstName.trim();
-      if (lastName && lastName.trim()) return lastName.trim();
-      if (username && username.trim()) return username.trim();
-      if (emailLocal && emailLocal.trim()) return emailLocal.trim();
+      if (currentDisplay?.trim()) {
+        return undefined;
+      }
+      if (firstName && lastName) {
+        return `${firstName.trim()} ${lastName.trim()}`;
+      }
+      if (firstName?.trim()) {
+        return firstName.trim();
+      }
+      if (lastName?.trim()) {
+        return lastName.trim();
+      }
+      if (username?.trim()) {
+        return username.trim();
+      }
+      if (emailLocal?.trim()) {
+        return emailLocal.trim();
+      }
       return undefined;
     })();
 
     if (derivedDisplayName && email) {
-      logger.dev.structured('info', 'Auto-filling display_name', {
+      logger.dev.structured("info", "Auto-filling display_name", {
         userId,
         derivedDisplayName,
       });
-      await supabase.from('users').upsert({
-        id: userId,
-        email,
-        display_name: derivedDisplayName,
-      } as any, { onConflict: 'id' });
+      await supabase.from("users").upsert(
+        {
+          id: userId,
+          email,
+          display_name: derivedDisplayName,
+        },
+        { onConflict: "id" }
+      );
       await upsertUserProfile({
         id: userId,
         email,
@@ -102,172 +118,169 @@ async function ensureUserDisplayName(userId: string, userEmail?: string) {
       });
     }
   } catch (error) {
-    logger.warn('Failed to auto-fill display_name', error);
+    logger.warn("Failed to auto-fill display_name", error);
   }
 }
 
-export const teamsRouter = router({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const teamsRouter: any = router({
   // ============================================================================
   // DEVELOPMENT & TESTING ENDPOINTS
   // ============================================================================
-  
+
   // Removed testAuth endpoint - no longer needed
 
   // ============================================================================
   // CORE TEAM OPERATIONS
   // ============================================================================
-  
+
   // Get user teams
-  getUserTeams: protectedProcedure
-    .query(async ({ ctx }) => {
-      try {
-        const teams = await cockroachDBTeamsService.getUserTeams(ctx.user.id);
-        return { teams };
-      } catch (error) {
-        console.error('Error getting user teams:', error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch user teams'
-        });
-      }
-    }),
+  getUserTeams: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const teams = await cockroachDBTeamsService.getUserTeams(ctx.user.id);
+      return { teams };
+    } catch (_error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to fetch user teams",
+      });
+    }
+  }),
 
   // Create a new team
-  createTeam: protectedProcedure
-    .input(CreateTeamInputSchema)
-    .mutation(async ({ ctx, input }) => {
-      try {
-        // Ensure user has proper display name
-        await ensureUserDisplayName(ctx.user.id, ctx.user.email);
+  createTeam: protectedProcedure.input(CreateTeamInputSchema).mutation(async ({ ctx, input }) => {
+    try {
+      // Ensure user has proper display name
+      await ensureUserDisplayName(ctx.user.id, ctx.user.email);
 
-        // Generate unique slug with timestamp to prevent collisions
-        const baseSlug = `${input.school.toLowerCase().replace(/\s+/g, '-')}-${input.division.toLowerCase()}`;
-        const timestamp = Date.now().toString(36);
-        const slug = `${baseSlug}-${timestamp}`;
+      // Generate unique slug with timestamp to prevent collisions
+      const baseSlug = `${input.school.toLowerCase().replace(/\s+/g, "-")}-${input.division.toLowerCase()}`;
+      const timestamp = Date.now().toString(36);
+      const slug = `${baseSlug}-${timestamp}`;
 
-        // Create team group using CockroachDB
-        const group = await cockroachDBTeamsService.createTeamGroup({
-          school: input.school,
-          division: input.division,
-          slug,
-          createdBy: ctx.user.id
-        });
+      // Create team group using CockroachDB
+      const group = await cockroachDBTeamsService.createTeamGroup({
+        school: input.school,
+        division: input.division,
+        slug,
+        createdBy: ctx.user.id,
+      });
 
-        // Create default team unit using CockroachDB
-        const team = await cockroachDBTeamsService.createTeamUnit({
-          groupId: group.id,
-          teamId: 'A',
-          captainCode: `CAP${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-          userCode: `USR${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-          description: 'Team A',
-          createdBy: ctx.user.id
-        });
+      // Create default team unit using CockroachDB
+      const team = await cockroachDBTeamsService.createTeamUnit({
+        groupId: group.id,
+        teamId: "A",
+        captainCode: `CAP${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+        userCode: `USR${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+        description: "Team A",
+        createdBy: ctx.user.id,
+      });
 
-        // Add creator as captain using CockroachDB
-        await cockroachDBTeamsService.createTeamMembership({
-          userId: ctx.user.id,
-          teamId: team.id,
-          role: 'captain',
-          status: 'active'
-        });
+      // Add creator as captain using CockroachDB
+      await cockroachDBTeamsService.createTeamMembership({
+        userId: ctx.user.id,
+        teamId: team.id,
+        role: "captain",
+        status: "active",
+      });
 
-        // Get team members for response
-        const members = await cockroachDBTeamsService.getTeamMembers(team.id);
+      // Get team members for response
+      const members = await cockroachDBTeamsService.getTeamMembers(team.id);
 
-        return {
-          id: team.id,
-          name: team.name,
-          slug: group.slug,
-          school: group.school,
-          division: group.division as 'B' | 'C',
-          description: team.description || null,
-          captainCode: team.captain_code,
-          userCode: team.user_code,
-          userRole: 'captain',
-          members: await Promise.all(members.map(async (m) => {
+      return {
+        id: team.id,
+        name: team.name,
+        slug: group.slug,
+        school: group.school,
+        division: group.division as "B" | "C",
+        description: team.description || null,
+        captainCode: team.captain_code,
+        userCode: team.user_code,
+        userRole: "captain",
+        members: await Promise.all(
+          members.map(async (m) => {
             // Get user profile from Supabase instead of CockroachDB service
             const supabase = await createSupabaseServerClient();
             const { data: userProfile } = await supabase
-              .from('users')
-              .select('display_name, first_name, last_name, email')
-              .eq('id', m.user_id)
+              .from("users")
+              .select("display_name, first_name, last_name, email")
+              .eq("id", m.user_id)
               .single();
-            
-            const profile = userProfile as any;
-      return {
+
+            return {
               id: m.user_id,
-              name: profile?.display_name || 
-                    (profile?.first_name && profile?.last_name 
-                      ? `${profile.first_name} ${profile.last_name}` 
-                      : `User ${m.user_id.substring(0, 8)}`),
-              email: profile?.email || `user-${m.user_id.substring(0, 8)}@example.com`,
-              role: m.role as 'captain' | 'co_captain' | 'member' | 'observer',
+              name:
+                userProfile?.display_name ||
+                (userProfile?.first_name && userProfile?.last_name
+                  ? `${userProfile.first_name} ${userProfile.last_name}`
+                  : `User ${m.user_id.substring(0, 8)}`),
+              email: userProfile?.email || `user-${m.user_id.substring(0, 8)}@example.com`,
+              role: m.role as "captain" | "co_captain" | "member" | "observer",
               joinedAt: m.joined_at,
               subteamId: team.id,
               subteamName: team.name,
               events: [],
-              isLinked: true
+              isLinked: true,
             };
-          })),
-          wasReactivated: team.created_at !== team.updated_at
-        };
-      } catch (error) {
-        console.error('Error creating team:', error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to create team'
-        });
-      }
-    }),
+          })
+        ),
+        wasReactivated: team.created_at !== team.updated_at,
+      };
+    } catch (_error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to create team",
+      });
+    }
+  }),
 
   // Join a team by code
-  joinTeam: protectedProcedure
-    .input(JoinTeamInputSchema)
-    .mutation(async ({ ctx, input }) => {
-      try {
-        // Ensure user has proper display name
-        await ensureUserDisplayName(ctx.user.id, ctx.user.email);
+  joinTeam: protectedProcedure.input(JoinTeamInputSchema).mutation(async ({ ctx, input }) => {
+    try {
+      // Ensure user has proper display name
+      await ensureUserDisplayName(ctx.user.id, ctx.user.email);
 
-        const team = await cockroachDBTeamsService.joinTeamByCode(ctx.user.id, input.code);
-        
-        if (!team) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Invalid team code'
-          });
-        }
+      const team = await cockroachDBTeamsService.joinTeamByCode(ctx.user.id, input.code);
 
-        return {
-          id: team.id,
-          name: team.name,
-          slug: team.slug,
-          school: team.school,
-          division: team.division as 'B' | 'C',
-          description: team.description || null,
-          captainCode: team.captain_code,
-          userCode: team.user_code,
-          userRole: team.user_role || null,
-          members: team.members.map(m => ({
-            id: m.id,
-            name: m.name,
-            email: m.email,
-            role: m.role as 'captain' | 'co_captain' | 'member' | 'observer',
-            joinedAt: m.joined_at,
-            subteamId: team.id,
-            subteamName: team.name,
-            events: [],
-            isLinked: true
-          }))
-        };
-      } catch (error) {
-        console.error('Error joining team:', error);
-        if (error instanceof TRPCError) throw error;
+      if (!team) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to join team'
+          code: "BAD_REQUEST",
+          message: "Invalid team code",
         });
       }
-    }), 
+
+      return {
+        id: team.id,
+        name: team.name,
+        slug: team.slug,
+        school: team.school,
+        division: team.division as "B" | "C",
+        description: team.description || null,
+        captainCode: team.captain_code,
+        userCode: team.user_code,
+        userRole: team.user_role || null,
+        members: team.members.map((m) => ({
+          id: m.id,
+          name: m.name,
+          email: m.email,
+          role: m.role as "captain" | "co_captain" | "member" | "observer",
+          joinedAt: m.joined_at,
+          subteamId: team.id,
+          subteamName: team.name,
+          events: [],
+          isLinked: true,
+        })),
+      };
+    } catch (error) {
+      if (error instanceof TRPCError) {
+        throw error;
+      }
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to join team",
+      });
+    }
+  }),
 
   // ============================================================================
   // TEAM DATA OPERATIONS (OPTIMIZED)
@@ -278,122 +291,111 @@ export const teamsRouter = router({
     .input(z.object({ teamSlug: z.string() }))
     .query(async ({ ctx, input }) => {
       try {
-      const groupResult = await dbPg
-        .select({ id: newTeamGroups.id })
-        .from(newTeamGroups)
-        .where(eq(newTeamGroups.slug, input.teamSlug));
+        const groupResult = await dbPg
+          .select({ id: newTeamGroups.id })
+          .from(newTeamGroups)
+          .where(eq(newTeamGroups.slug, input.teamSlug));
 
-      if (groupResult.length === 0) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Team group not found' });
-      }
+        if (groupResult.length === 0) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team group not found" });
+        }
 
-      const groupId = groupResult[0].id;
-        
-      const teamAccess = await getTeamAccess(ctx.user.id, groupId);
-      if (!teamAccess.hasAccess) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to access this team' });
-      }
+        const groupId = groupResult[0]?.id;
+        if (!groupId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team group not found" });
+        }
 
-      const subteamsResult = await dbPg
-        .select({
-          id: newTeamUnits.id,
-          teamId: newTeamUnits.teamId,
-          description: newTeamUnits.description,
-          createdAt: newTeamUnits.createdAt
-        })
-        .from(newTeamUnits)
-        .where(
-          and(
-            eq(newTeamUnits.groupId, groupId),
-            eq(newTeamUnits.status, 'active')
-          )
-        )
-        .orderBy(newTeamUnits.createdAt);
+        const teamAccess = await getTeamAccess(ctx.user.id, groupId);
+        if (!teamAccess.hasAccess) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to access this team" });
+        }
 
-      const subteams = subteamsResult.map(subteam => ({
-        id: subteam.id,
-        name: subteam.teamId, // Use teamId directly (already includes "Team" prefix)
-        team_id: groupId,
-        description: subteam.description || '',
-        created_at: subteam.createdAt?.toISOString() || new Date().toISOString()
-      }));
+        const subteamsResult = await dbPg
+          .select({
+            id: newTeamUnits.id,
+            teamId: newTeamUnits.teamId,
+            description: newTeamUnits.description,
+            createdAt: newTeamUnits.createdAt,
+          })
+          .from(newTeamUnits)
+          .where(and(eq(newTeamUnits.groupId, groupId), eq(newTeamUnits.status, "active")))
+          .orderBy(newTeamUnits.createdAt);
 
-      return { subteams };
+        const subteams = subteamsResult.map((subteam) => ({
+          id: subteam.id,
+          name: subteam.teamId, // Use teamId directly (already includes "Team" prefix)
+          team_id: groupId,
+          description: subteam.description || "",
+          created_at: subteam.createdAt?.toISOString() || new Date().toISOString(),
+        }));
+
+        return { subteams };
       } catch (error) {
-        console.error('Error getting subteams:', error);
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError) {
+          throw error;
+        }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch subteams'
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch subteams",
         });
       }
     }),
 
   // Get people/members for a subteam (optimized single query)
   getPeople: protectedProcedure
-    .input(z.object({ 
-      teamSlug: z.string(), 
-      subteamId: z.string().optional() 
-    }))
+    .input(
+      z.object({
+        teamSlug: z.string(),
+        subteamId: z.string().optional(),
+      })
+    )
     .query(async ({ ctx, input }) => {
       try {
         // Log only important business logic in development
-        if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 [TRPC GET PEOPLE] Request started:', {
-          teamSlug: input.teamSlug,
-          subteamId: input.subteamId,
-          userId: ctx.user.id
-        });
+        if (process.env.NODE_ENV === "development") {
         }
-        
+
         const groupResult = await dbPg
           .select({ id: newTeamGroups.id })
           .from(newTeamGroups)
           .where(eq(newTeamGroups.slug, input.teamSlug));
 
         // Only log important business logic
-        if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 [TRPC GET PEOPLE] Group lookup result:', {
-          teamSlug: input.teamSlug,
-          found: groupResult.length > 0,
-          groupId: groupResult[0]?.id
-        });
+        if (process.env.NODE_ENV === "development") {
         }
 
         if (groupResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team group not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team group not found" });
         }
 
-        const groupId = groupResult[0].id;
-      
+        const groupId = groupResult[0]?.id;
+        if (!groupId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team group not found" });
+        }
+
         const teamAccess = await getTeamAccess(ctx.user.id, groupId);
         if (!teamAccess.hasAccess) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to access this team' });
-      }
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to access this team" });
+        }
 
         // Get all team unit IDs for this group
         const teamUnits = await dbPg
           .select({ id: newTeamUnits.id })
           .from(newTeamUnits)
-          .where(
-            and(
-              eq(newTeamUnits.groupId, groupId),
-              eq(newTeamUnits.status, 'active')
-            )
-          );
-        
-        const teamUnitIds = teamUnits.map(unit => unit.id);
+          .where(and(eq(newTeamUnits.groupId, groupId), eq(newTeamUnits.status, "active")));
+
+        const teamUnitIds = teamUnits.map((unit) => unit.id);
 
         // Build optimized single query with all necessary joins
-      const whereConditions: any[] = [
-        eq(newTeamUnits.groupId, groupId),
-        eq(newTeamUnits.status, 'active'),
-        eq(newTeamMemberships.status, 'active') // Only get active memberships
-      ];
+        const whereConditions: any[] = [
+          eq(newTeamUnits.groupId, groupId),
+          eq(newTeamUnits.status, "active"),
+          eq(newTeamMemberships.status, "active"), // Only get active memberships
+        ];
 
-      if (input.subteamId && input.subteamId !== 'all') {
-        whereConditions.push(eq(newTeamMemberships.teamId, input.subteamId));
-      }
+        if (input.subteamId && input.subteamId !== "all") {
+          whereConditions.push(eq(newTeamMemberships.teamId, input.subteamId));
+        }
 
         // First, get all users who have roster entries in this team (to include members without subteam membership)
         const usersWithRosterEntries = await dbPg
@@ -405,16 +407,14 @@ export const teamsRouter = router({
           .where(
             and(
               eq(newTeamUnits.groupId, groupId),
-              eq(newTeamUnits.status, 'active'),
-              sql`${newTeamRosterData.userId} IS NOT NULL`
+              eq(newTeamUnits.status, "active"),
+              isNotNull(newTeamRosterData.userId)
             )
           )
           .groupBy(newTeamRosterData.userId);
 
         const userIdsWithRoster = new Set(
-          usersWithRosterEntries
-            .map(r => r.userId)
-            .filter((id): id is string => id !== null)
+          usersWithRosterEntries.map((r) => r.userId).filter((id): id is string => id !== null)
         );
 
         // Get members with subteam memberships
@@ -438,33 +438,40 @@ export const teamsRouter = router({
           .orderBy(newTeamMemberships.joinedAt);
 
         // Get users who have roster entries but no subteam membership (they should show as "Unknown")
-        const membershipsUserIds = new Set(results.map(r => r.userId));
-        const userIdsWithoutSubteam = Array.from(userIdsWithRoster).filter(id => !membershipsUserIds.has(id));
-        
-        const usersWithoutSubteam = userIdsWithoutSubteam.length > 0
-          ? await dbPg
-              .select({
-                id: users.id,
-                email: users.email,
-                displayName: users.displayName,
-                firstName: users.firstName,
-                lastName: users.lastName,
-                username: users.username,
-              })
-              .from(users)
-              .where(inArray(users.id, userIdsWithoutSubteam))
-          : [];
+        const membershipsUserIds = new Set(results.map((r) => r.userId));
+        const userIdsWithoutSubteam = Array.from(userIdsWithRoster).filter(
+          (id) => !membershipsUserIds.has(id)
+        );
+
+        const usersWithoutSubteam =
+          userIdsWithoutSubteam.length > 0
+            ? await dbPg
+                .select({
+                  id: users.id,
+                  email: users.email,
+                  displayName: users.displayName,
+                  firstName: users.firstName,
+                  lastName: users.lastName,
+                  username: users.username,
+                })
+                .from(users)
+                .where(inArray(users.id, userIdsWithoutSubteam))
+            : [];
 
         // Add members without subteam membership to results
-        const membersWithoutSubteam = usersWithoutSubteam.map(user => {
-          const displayName = user.displayName || 
-            (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : 
-             user.firstName || user.lastName || user.username || 
-             `User ${user.id.substring(0, 8)}`);
-          
+        const membersWithoutSubteam = usersWithoutSubteam.map((user) => {
+          const displayName =
+            user.displayName ||
+            (user.firstName && user.lastName
+              ? `${user.firstName} ${user.lastName}`
+              : user.firstName ||
+                user.lastName ||
+                user.username ||
+                `User ${user.id.substring(0, 8)}`);
+
           return {
             userId: user.id,
-            role: 'member',
+            role: "member",
             joinedAt: null,
             subteamId: null,
             subteamName: null,
@@ -477,16 +484,7 @@ export const teamsRouter = router({
         });
 
         // Only log important business logic
-        if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 [TRPC GET PEOPLE] Query results:', {
-          resultCount: results.length,
-          results: results.map(r => ({
-            userId: r.userId,
-            role: r.role,
-            displayName: r.displayName,
-            subteamId: r.subteamId
-          }))
-        });
+        if (process.env.NODE_ENV === "development") {
         }
 
         // Get roster data in a single optimized query to find events for each member
@@ -495,11 +493,11 @@ export const teamsRouter = router({
             eventName: newTeamRosterData.eventName,
             studentName: newTeamRosterData.studentName,
             userId: newTeamRosterData.userId,
-            teamUnitId: newTeamRosterData.teamUnitId
+            teamUnitId: newTeamRosterData.teamUnitId,
           })
           .from(newTeamRosterData)
           .where(
-            input.subteamId 
+            input.subteamId
               ? eq(newTeamRosterData.teamUnitId, input.subteamId)
               : inArray(newTeamRosterData.teamUnitId, teamUnitIds)
           );
@@ -511,12 +509,12 @@ export const teamsRouter = router({
             userId: newTeamPeople.userId,
             events: newTeamPeople.events,
             teamUnitId: newTeamPeople.teamUnitId,
-            subteamName: newTeamUnits.teamId // Get the subteam name (already includes "Team" prefix)
+            subteamName: newTeamUnits.teamId, // Get the subteam name (already includes "Team" prefix)
           })
           .from(newTeamPeople)
           .leftJoin(newTeamUnits, eq(newTeamPeople.teamUnitId, newTeamUnits.id))
           .where(
-            input.subteamId 
+            input.subteamId
               ? eq(newTeamPeople.teamUnitId, input.subteamId)
               : inArray(newTeamPeople.teamUnitId, teamUnitIds)
           );
@@ -525,214 +523,221 @@ export const teamsRouter = router({
         const subteamNames = await dbPg
           .select({
             id: newTeamUnits.id,
-            teamId: newTeamUnits.teamId
+            teamId: newTeamUnits.teamId,
           })
           .from(newTeamUnits)
           .where(
-            input.subteamId 
+            input.subteamId
               ? eq(newTeamUnits.id, input.subteamId)
               : inArray(newTeamUnits.id, teamUnitIds)
           );
 
-        const subteamNameMap = new Map(subteamNames.map(s => [s.id, s.teamId]));
+        const subteamNameMap = new Map(subteamNames.map((s) => [s.id, s.teamId]));
 
         // Extract unlinked people from roster data (those without userId)
         const unlinkedRosterPeople = rosterData
-          .filter(rd => !rd.userId && rd.studentName)
-          .map(rd => ({
+          .filter((rd) => !rd.userId && rd.studentName)
+          .map((rd) => ({
             name: rd.studentName,
             userId: null,
             events: [rd.eventName],
             teamUnitId: rd.teamUnitId,
-            subteamName: subteamNameMap.get(rd.teamUnitId) || 'Unknown'
+            subteamName: subteamNameMap.get(rd.teamUnitId) || "Unknown",
           }));
 
         // Combine roster entries from newTeamPeople and unlinked people from roster data
         const allRosterEntries = [...rosterEntries, ...unlinkedRosterPeople];
 
         // Debug logging for roster entries
-        if (process.env.NODE_ENV === 'development') {
-          console.log('🔍 [TRPC GET PEOPLE] Roster entries:', {
-            count: allRosterEntries.length,
-            entries: allRosterEntries.map(entry => ({
-              name: entry.name,
-              userId: entry.userId,
-              teamUnitId: entry.teamUnitId,
-              subteamName: entry.subteamName
-            }))
-          });
+        if (process.env.NODE_ENV === "development") {
         }
 
         // Build member events lookup for linked users
         const memberEvents: Record<string, string[]> = {};
-        rosterData.forEach(rd => {
-          if (rd.userId) {
-            if (!memberEvents[rd.userId]) {
-              memberEvents[rd.userId] = [];
+        rosterData.forEach((rd) => {
+          if (rd.userId && rd.eventName) {
+            const userId = rd.userId;
+            const eventName = rd.eventName;
+            if (!memberEvents[userId]) {
+              memberEvents[userId] = [];
             }
-            if (!memberEvents[rd.userId].includes(rd.eventName)) {
-              memberEvents[rd.userId].push(rd.eventName);
+            if (!memberEvents[userId]?.includes(eventName)) {
+              memberEvents[userId]?.push(eventName);
             }
           }
         });
 
         // Process linked members (from team memberships)
-        const linkedMembers = results.map(result => {
+        const linkedMembers = results.map((result) => {
           // Use optimized display name generation
-          const displayName = result.displayName || 
-            (result.firstName && result.lastName ? `${result.firstName} ${result.lastName}` : 
-             result.firstName || result.lastName || result.username || 
-             `User ${result.userId.substring(0, 8)}`);
+          const displayName =
+            result.displayName ||
+            (result.firstName && result.lastName
+              ? `${result.firstName} ${result.lastName}`
+              : result.firstName ||
+                result.lastName ||
+                result.username ||
+                `User ${result.userId.substring(0, 8)}`);
 
           return {
             userId: result.userId,
             role: result.role,
-            joinedAt: result.joinedAt,
-            subteamId: result.subteamId,
-            subteamName: result.subteamName,
+            joinedAt: result.joinedAt || null,
+            subteamId: result.subteamId || null,
+            subteamName: result.subteamName || null,
             email: result.email || null,
             displayFirstName: displayName,
-            displayLastName: '',
-            hasRosterEntry: memberEvents[result.userId]?.length > 0 || false,
+            displayLastName: "",
+            hasRosterEntry: result.userId ? (memberEvents[result.userId]?.length ?? 0) > 0 : false,
             hasPendingInvite: false,
             events: memberEvents[result.userId] || [],
-            isLinked: true
+            isLinked: true,
           };
         });
 
         // Process members without subteam membership
-        const membersWithoutSubteamProcessed = membersWithoutSubteam.map(result => {
+        const membersWithoutSubteamProcessed = membersWithoutSubteam.map((result) => {
           return {
             userId: result.userId,
             role: result.role,
-            joinedAt: result.joinedAt,
+            joinedAt: result.joinedAt || null,
             subteamId: null,
             subteamName: null, // Will show as "Unknown"
             email: result.email || null,
-            displayFirstName: result.displayName,
-            displayLastName: '',
-            hasRosterEntry: memberEvents[result.userId]?.length > 0 || false,
+            displayFirstName: result.displayName || null,
+            displayLastName: "",
+            hasRosterEntry: result.userId ? (memberEvents[result.userId]?.length ?? 0) > 0 : false,
             hasPendingInvite: false,
             events: memberEvents[result.userId] || [],
-            isLinked: true
+            isLinked: true,
           };
         });
 
         // Process roster entries (unlinked people)
-        const rosterMembers = allRosterEntries.map(entry => {
+        const rosterMembers = allRosterEntries.map((entry) => {
           const events = Array.isArray(entry.events) ? entry.events : [];
           return {
             userId: entry.userId, // null for unlinked
-            role: 'member',
+            role: "member",
             joinedAt: null,
             subteamId: entry.teamUnitId,
-            subteamName: entry.subteamName || 'Unknown',
+            subteamName: entry.subteamName || "Unknown",
             email: null,
             displayFirstName: entry.name,
-            displayLastName: '',
+            displayLastName: "",
             hasRosterEntry: events.length > 0,
             hasPendingInvite: false,
             events: events,
-            isLinked: !!entry.userId
+            isLinked: !!entry.userId,
           };
         });
 
         // Combine linked members and roster entries, avoiding duplicates
-        const linkedUserIds = new Set(linkedMembers.map(m => m.userId));
-        const uniqueRosterMembers = rosterMembers.filter(entry => !entry.userId || !linkedUserIds.has(entry.userId));
-        
+        const linkedUserIds = new Set(linkedMembers.map((m) => m.userId));
+        const uniqueRosterMembers = rosterMembers.filter(
+          (entry) => !(entry.userId && linkedUserIds.has(entry.userId))
+        );
+
         // Debug logging for roster members filtering
-        if (process.env.NODE_ENV === 'development') {
-          console.log('🔍 [TRPC GET PEOPLE] Roster members filtering:', {
-            totalRosterMembers: rosterMembers.length,
-            linkedUserIds: Array.from(linkedUserIds),
-            uniqueRosterMembers: uniqueRosterMembers.length,
-            filteredOut: rosterMembers.filter(entry => entry.userId && linkedUserIds.has(entry.userId)).length
-          });
+        if (process.env.NODE_ENV === "development") {
         }
-        
+
         // Merge roster data into linked members if they have roster entries
-        const membersWithRosterData = linkedMembers.map(linkedMember => {
-          const rosterEntry = rosterMembers.find(entry => entry.userId === linkedMember.userId);
+        const membersWithRosterData = linkedMembers.map((linkedMember) => {
+          const rosterEntry = rosterMembers.find((entry) => entry.userId === linkedMember.userId);
           if (rosterEntry) {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('🔍 [TRPC GET PEOPLE] Merging roster data for linked member:', {
-                userId: linkedMember.userId,
-                displayFirstName: linkedMember.displayFirstName,
-                rosterEntry: rosterEntry,
-                mergedEvents: [...(linkedMember.events || []), ...(rosterEntry.events || [])]
-              });
+            if (process.env.NODE_ENV === "development") {
             }
             return {
               ...linkedMember,
               events: [...(linkedMember.events || []), ...(rosterEntry.events || [])],
-              hasRosterEntry: true
+              hasRosterEntry: true,
             };
           }
           return linkedMember;
         });
-        
-        const members = [...membersWithRosterData, ...membersWithoutSubteamProcessed, ...uniqueRosterMembers];
+
+        const members = [
+          ...membersWithRosterData,
+          ...membersWithoutSubteamProcessed,
+          ...uniqueRosterMembers,
+        ];
 
         // Only log important business logic
-        if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 [TRPC GET PEOPLE] Final response:', {
-          memberCount: members.length,
-          linkedMembers: linkedMembers.length,
-          rosterMembers: uniqueRosterMembers.length,
-          members: members.map(m => ({
-            userId: m.userId,
-            displayFirstName: m.displayFirstName,
-            role: m.role,
-            subteamId: m.subteamId,
-            isLinked: m.isLinked
-          }))
-        });
+        if (process.env.NODE_ENV === "development") {
         }
 
         return { members };
       } catch (error) {
-        console.error('Error getting people:', error);
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError) {
+          throw error;
+        }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch team members'
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch team members",
         });
       }
     }),
 
   // Get members for a subteam (alias for getPeople with same optimization)
   getMembers: protectedProcedure
-    .input(z.object({ 
-      teamSlug: z.string(), 
-      subteamId: z.string().optional() 
-    }))
-    .query(async ({ ctx, input }) => {
+    .input(
+      z.object({
+        teamSlug: z.string(),
+        subteamId: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }): Promise<{ members: Array<{
+      id: string | null;
+      name: string | null;
+      email: string | null;
+      role: string;
+      events: string[];
+      isPendingInvitation: boolean;
+      subteamId: string | null;
+      isUnlinked: boolean;
+      username: string | null;
+      subteam?: { id: string; name: string; description: string };
+      joinedAt: Date | null;
+      isCreator: boolean;
+    }> }> => {
       // Delegate to getPeople for consistency and optimization
-      const peopleResult = await teamsRouter
-        .createCaller({ user: ctx.user })
-        .getPeople(input);
-      
+      // Use type assertion to avoid circular reference issue
+      const peopleResult = await (teamsRouter as any).createCaller({ user: ctx.user }).getPeople(input);
+
       // Map the getPeople result to match TeamMemberSchema
-      const validatedMembers = peopleResult.members.map(member => ({
+      const validatedMembers = peopleResult.members.map((member: {
+        userId: string | null;
+        displayFirstName: string | null;
+        email: string | null;
+        role: string;
+        events: string[];
+        hasPendingInvite: boolean;
+        subteamId: string | null;
+        isLinked: boolean;
+        subteamName?: string | null;
+        joinedAt?: Date | null;
+      }) => ({
         id: member.userId || null,
         name: member.displayFirstName || null,
         email: member.email || null,
-        role: member.role || 'member',
+        role: member.role || "member",
         events: member.events || [],
-        isPendingInvitation: member.hasPendingInvite || false,
+        isPendingInvitation: member.hasPendingInvite,
         subteamId: member.subteamId,
         isUnlinked: !member.isLinked,
         username: null, // Not available in getPeople result
-        subteam: member.subteamName ? {
-          id: member.subteamId || '',
-          name: member.subteamName,
-          description: member.subteamName
-        } : undefined,
+        subteam: member.subteamName
+          ? {
+              id: member.subteamId || "",
+              name: member.subteamName,
+              description: member.subteamName,
+            }
+          : undefined,
         joinedAt: member.joinedAt || null,
-        isCreator: false // Not available in getPeople result
+        isCreator: false, // Not available in getPeople result
       }));
-      
+
       return { members: validatedMembers };
     }),
 
@@ -742,85 +747,85 @@ export const teamsRouter = router({
 
   // Get roster for a subteam (optimized single query)
   getRoster: protectedProcedure
-    .input(z.object({ 
-      teamSlug: z.string(), 
-      subteamId: z.string() 
-    }))
+    .input(
+      z.object({
+        teamSlug: z.string(),
+        subteamId: z.string(),
+      })
+    )
     .query(async ({ ctx, input }) => {
       try {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(input.subteamId)) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid subteam ID format' });
-      }
+        const uuidRegex =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(input.subteamId)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid subteam ID format" });
+        }
 
-      const groupResult = await dbPg
-        .select({ id: newTeamGroups.id })
-        .from(newTeamGroups)
-        .where(eq(newTeamGroups.slug, input.teamSlug))
-        .limit(1);
+        const groupResult = await dbPg
+          .select({ id: newTeamGroups.id })
+          .from(newTeamGroups)
+          .where(eq(newTeamGroups.slug, input.teamSlug))
+          .limit(1);
 
-      if (groupResult.length === 0) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Team group not found' });
-      }
+        if (groupResult.length === 0) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team group not found" });
+        }
 
-      const groupId = groupResult[0].id;
-        
-      const authResult = await checkTeamGroupAccessCockroach(ctx.user.id, groupId);
-      if (!authResult.isAuthorized) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to access this team' });
-      }
+        const groupId = groupResult[0]?.id;
+        if (!groupId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team group not found" });
+        }
+
+        const authResult = await checkTeamGroupAccessCockroach(ctx.user.id, groupId);
+        if (!authResult.isAuthorized) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to access this team" });
+        }
 
         // Single optimized query for roster data using Drizzle
-      const rosterResult = await dbPg
-        .select({
-          eventName: newTeamRosterData.eventName,
-          slotIndex: newTeamRosterData.slotIndex,
-          studentName: newTeamRosterData.studentName,
-          userId: newTeamRosterData.userId
-        })
-        .from(newTeamRosterData)
-        .where(eq(newTeamRosterData.teamUnitId, input.subteamId))
-        .orderBy(newTeamRosterData.eventName, newTeamRosterData.slotIndex);
+        const rosterResult = await dbPg
+          .select({
+            eventName: newTeamRosterData.eventName,
+            slotIndex: newTeamRosterData.slotIndex,
+            studentName: newTeamRosterData.studentName,
+            userId: newTeamRosterData.userId,
+          })
+          .from(newTeamRosterData)
+          .where(eq(newTeamRosterData.teamUnitId, input.subteamId))
+          .orderBy(newTeamRosterData.eventName, newTeamRosterData.slotIndex);
 
         // Removed events functionality not available in current schema
         // TODO: Add removed events table if needed
 
         // Build roster object efficiently
-      const roster: Record<string, string[]> = {};
-      rosterResult.forEach(row => {
-        // Convert "and" back to "&" for UI display
-        const displayEventName = row.eventName.replace(/and/g, '&');
-        if (!roster[displayEventName]) {
-          roster[displayEventName] = [];
-        }
-        roster[displayEventName][row.slotIndex] = row.studentName || '';
-      });
-
-      const removedEvents: string[] = []; // Empty for now since table doesn't exist
-
-      // Debug logging
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 [TRPC GET ROSTER] Database query results:', {
-          subteamId: input.subteamId,
-          rosterRows: rosterResult.length,
-          removedEventsRows: removedEvents.length,
-          builtRoster: roster,
-          removedEvents
+        const roster: Record<string, string[]> = {};
+        rosterResult.forEach((row) => {
+          // Convert "and" back to "&" for UI display
+          const displayEventName = row.eventName.replace(/and/g, "&");
+          if (!roster[displayEventName]) {
+            roster[displayEventName] = [];
+          }
+          roster[displayEventName][row.slotIndex] = row.studentName || "";
         });
-      }
 
-      const result = { roster, removedEvents };
-      
-      // Validate output with Zod
-      const validatedResult = RosterDataSchema.parse(result);
-      
-      return validatedResult;
+        const removedEvents: string[] = []; // Empty for now since table doesn't exist
+
+        // Debug logging
+        if (process.env.NODE_ENV === "development") {
+        }
+
+        const result = { roster, removedEvents };
+
+        // Validate output with Zod
+        const validatedResult = RosterDataSchema.parse(result);
+
+        return validatedResult;
       } catch (error) {
-        console.error('Error getting roster:', error);
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError) {
+          throw error;
+        }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch roster data'
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch roster data",
         });
       }
     }),
@@ -831,47 +836,48 @@ export const teamsRouter = router({
 
   // Batch load all team data for hydration (single optimized call)
   batchLoadTeamData: protectedProcedure
-    .input(z.object({ 
-      teamSlug: z.string(),
-      subteamId: z.string().optional(),
-      includeRoster: z.boolean().optional()
-    }))
+    .input(
+      z.object({
+        teamSlug: z.string(),
+        subteamId: z.string().optional(),
+        includeRoster: z.boolean().optional(),
+      })
+    )
     .query(async ({ ctx, input }) => {
       try {
         // Use the optimized individual procedures for consistency
-      const [subteamsRes, membersRes, rosterRes] = await Promise.allSettled([
-        // Fetch subteams
+        const [subteamsRes, membersRes, rosterRes] = await Promise.allSettled([
+          // Fetch subteams
           teamsRouter
             .createCaller({ user: ctx.user })
             .getSubteams({ teamSlug: input.teamSlug })
-            .then(result => result.subteams),
+            .then((result: { subteams: unknown[] }) => result.subteams),
 
           // Fetch members if subteamId provided
-          input.subteamId ? 
-            teamsRouter
-              .createCaller({ user: ctx.user })
-              .getPeople({ teamSlug: input.teamSlug, subteamId: input.subteamId })
-              .then(result => result.members) : 
-            Promise.resolve(null),
+          input.subteamId
+            ? teamsRouter
+                .createCaller({ user: ctx.user })
+                .getPeople({ teamSlug: input.teamSlug, subteamId: input.subteamId })
+                .then((result: { members: unknown[] }) => result.members)
+            : Promise.resolve(null),
 
-        // Fetch roster if requested
-          (input.includeRoster && input.subteamId && input.subteamId !== 'all') ? 
-            teamsRouter
-              .createCaller({ user: ctx.user })
-              .getRoster({ teamSlug: input.teamSlug, subteamId: input.subteamId }) : 
-            Promise.resolve(null)
-      ]);
+          // Fetch roster if requested
+          input.includeRoster && input.subteamId && input.subteamId !== "all"
+            ? teamsRouter
+                .createCaller({ user: ctx.user })
+                .getRoster({ teamSlug: input.teamSlug, subteamId: input.subteamId })
+            : Promise.resolve(null),
+        ]);
 
-      return {
-        subteams: subteamsRes.status === 'fulfilled' ? subteamsRes.value : null,
-        members: membersRes.status === 'fulfilled' ? membersRes.value : null,
-        roster: rosterRes.status === 'fulfilled' ? rosterRes.value : null,
-      };
-      } catch (error) {
-        console.error('Error in batch load team data:', error);
+        return {
+          subteams: subteamsRes.status === "fulfilled" ? subteamsRes.value : null,
+          members: membersRes.status === "fulfilled" ? membersRes.value : null,
+          roster: rosterRes.status === "fulfilled" ? rosterRes.value : null,
+        };
+      } catch (_error) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to batch load team data'
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to batch load team data",
         });
       }
     }),
@@ -881,10 +887,12 @@ export const teamsRouter = router({
   // ============================================================================
 
   createSubteam: protectedProcedure
-    .input(z.object({ 
-      teamSlug: z.string(),
-      name: z.string().min(1, 'Subteam name is required')
-    }))
+    .input(
+      z.object({
+        teamSlug: z.string(),
+        name: z.string().min(1, "Subteam name is required"),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       try {
         // Resolve team slug to group ID
@@ -894,25 +902,29 @@ export const teamsRouter = router({
           .where(eq(newTeamGroups.slug, input.teamSlug));
 
         if (groupResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
         }
 
-        const groupId = groupResult[0].id;
+        const groupId = groupResult[0]?.id;
+        if (!groupId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
+        }
 
         // Check team access
         const teamAccess = await getTeamAccess(ctx.user.id, groupId);
         if (!teamAccess.hasAccess) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to access this team' });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to access this team" });
         }
 
         // Check if user has leadership access
-        const hasLeadership = teamAccess.isCreator || 
-          teamAccess.subteamMemberships.some(m => ['captain', 'co_captain'].includes(m.role));
+        const hasLeadership =
+          teamAccess.isCreator ||
+          teamAccess.subteamMemberships.some((m) => ["captain", "co_captain"].includes(m.role));
 
         if (!hasLeadership) {
-          throw new TRPCError({ 
-            code: 'FORBIDDEN', 
-            message: 'Only captains and co-captains can create subteams' 
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only captains and co-captains can create subteams",
           });
         }
 
@@ -920,20 +932,15 @@ export const teamsRouter = router({
         const existingSubteam = await dbPg
           .select({ teamId: newTeamUnits.teamId })
           .from(newTeamUnits)
-          .where(
-            and(
-              eq(newTeamUnits.groupId, groupId),
-              eq(newTeamUnits.teamId, input.name)
-            )
-          );
-        
+          .where(and(eq(newTeamUnits.groupId, groupId), eq(newTeamUnits.teamId, input.name)));
+
         if (existingSubteam.length > 0) {
-          throw new TRPCError({ 
-            code: 'CONFLICT', 
-            message: 'A subteam with this name already exists' 
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "A subteam with this name already exists",
           });
         }
-        
+
         // Create new subteam using Drizzle ORM
         const [newSubteam] = await dbPg
           .insert(newTeamUnits)
@@ -943,32 +950,41 @@ export const teamsRouter = router({
             description: input.name,
             captainCode: `CAP${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
             userCode: `USR${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
-            createdBy: ctx.user.id
+            createdBy: ctx.user.id,
           })
           .returning();
+
+        if (!newSubteam) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to create subteam",
+          });
+        }
 
         return {
           id: newSubteam.id,
           name: newSubteam.teamId,
           team_id: groupId,
-          description: newSubteam.description || '',
-          created_at: newSubteam.createdAt
+          description: newSubteam.description || "",
+          created_at: newSubteam.createdAt,
         };
       } catch (error) {
-        logger.error('Failed to create subteam:', error);
-        throw new TRPCError({ 
-          code: 'INTERNAL_SERVER_ERROR', 
-          message: 'Failed to create subteam' 
+        logger.error("Failed to create subteam:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create subteam",
         });
       }
     }),
 
   updateSubteam: protectedProcedure
-    .input(z.object({ 
-      teamSlug: z.string(),
-      subteamId: z.string(),
-      name: z.string().min(1, 'Subteam name is required')
-    }))
+    .input(
+      z.object({
+        teamSlug: z.string(),
+        subteamId: z.string(),
+        name: z.string().min(1, "Subteam name is required"),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       try {
         // Resolve team slug to group ID
@@ -978,25 +994,29 @@ export const teamsRouter = router({
           .where(eq(newTeamGroups.slug, input.teamSlug));
 
         if (groupResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
         }
 
-        const groupId = groupResult[0].id;
+        const groupId = groupResult[0]?.id;
+        if (!groupId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
+        }
 
         // Check team access
         const teamAccess = await getTeamAccess(ctx.user.id, groupId);
         if (!teamAccess.hasAccess) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to access this team' });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to access this team" });
         }
 
         // Check if user has leadership access
-        const hasLeadership = teamAccess.isCreator || 
-          teamAccess.subteamMemberships.some(m => ['captain', 'co_captain'].includes(m.role));
+        const hasLeadership =
+          teamAccess.isCreator ||
+          teamAccess.subteamMemberships.some((m) => ["captain", "co_captain"].includes(m.role));
 
         if (!hasLeadership) {
-          throw new TRPCError({ 
-            code: 'FORBIDDEN', 
-            message: 'Only captains and co-captains can update subteams' 
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only captains and co-captains can update subteams",
           });
         }
 
@@ -1005,20 +1025,15 @@ export const teamsRouter = router({
           .update(newTeamUnits)
           .set({
             teamId: input.name,
-            updatedAt: new Date()
+            updatedAt: new Date(),
           })
-          .where(
-            and(
-              eq(newTeamUnits.id, input.subteamId),
-              eq(newTeamUnits.groupId, groupId)
-            )
-          )
+          .where(and(eq(newTeamUnits.id, input.subteamId), eq(newTeamUnits.groupId, groupId)))
           .returning();
 
         if (!updatedSubteam) {
-          throw new TRPCError({ 
-            code: 'NOT_FOUND', 
-            message: 'Subteam not found' 
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Subteam not found",
           });
         }
 
@@ -1026,23 +1041,25 @@ export const teamsRouter = router({
           id: updatedSubteam.id,
           name: updatedSubteam.description || `Team ${updatedSubteam.teamId}`,
           team_id: groupId,
-          description: updatedSubteam.description || '',
-          created_at: updatedSubteam.createdAt
+          description: updatedSubteam.description || "",
+          created_at: updatedSubteam.createdAt,
         };
       } catch (error) {
-        logger.error('Failed to update subteam:', error);
-        throw new TRPCError({ 
-          code: 'INTERNAL_SERVER_ERROR', 
-          message: 'Failed to update subteam' 
+        logger.error("Failed to update subteam:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update subteam",
         });
       }
     }),
 
   deleteSubteam: protectedProcedure
-    .input(z.object({ 
-      teamSlug: z.string(),
-      subteamId: z.string()
-    }))
+    .input(
+      z.object({
+        teamSlug: z.string(),
+        subteamId: z.string(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       try {
         // Resolve team slug to group ID
@@ -1052,25 +1069,29 @@ export const teamsRouter = router({
           .where(eq(newTeamGroups.slug, input.teamSlug));
 
         if (groupResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
         }
 
-        const groupId = groupResult[0].id;
+        const groupId = groupResult[0]?.id;
+        if (!groupId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
+        }
 
         // Check team access
         const teamAccess = await getTeamAccess(ctx.user.id, groupId);
         if (!teamAccess.hasAccess) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to access this team' });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to access this team" });
         }
 
         // Check if user has leadership access
-        const hasLeadership = teamAccess.isCreator || 
-          teamAccess.subteamMemberships.some(m => ['captain', 'co_captain'].includes(m.role));
+        const hasLeadership =
+          teamAccess.isCreator ||
+          teamAccess.subteamMemberships.some((m) => ["captain", "co_captain"].includes(m.role));
 
         if (!hasLeadership) {
-          throw new TRPCError({ 
-            code: 'FORBIDDEN', 
-            message: 'Only captains and co-captains can delete subteams' 
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only captains and co-captains can delete subteams",
           });
         }
 
@@ -1078,30 +1099,25 @@ export const teamsRouter = router({
         const [deletedSubteam] = await dbPg
           .update(newTeamUnits)
           .set({
-            status: 'deleted',
-            updatedAt: new Date()
+            status: "deleted",
+            updatedAt: new Date(),
           })
-          .where(
-            and(
-              eq(newTeamUnits.id, input.subteamId),
-              eq(newTeamUnits.groupId, groupId)
-            )
-          )
+          .where(and(eq(newTeamUnits.id, input.subteamId), eq(newTeamUnits.groupId, groupId)))
           .returning();
 
         if (!deletedSubteam) {
-          throw new TRPCError({ 
-            code: 'NOT_FOUND', 
-            message: 'Subteam not found' 
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Subteam not found",
           });
         }
 
         return { success: true };
       } catch (error) {
-        logger.error('Failed to delete subteam:', error);
-        throw new TRPCError({ 
-          code: 'INTERNAL_SERVER_ERROR', 
-          message: 'Failed to delete subteam' 
+        logger.error("Failed to delete subteam:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to delete subteam",
         });
       }
     }),
@@ -1111,14 +1127,16 @@ export const teamsRouter = router({
   // ============================================================================
 
   updateRoster: protectedProcedure
-    .input(z.object({ 
-      teamSlug: z.string().min(1, "Team slug is required"),
-      subteamId: z.string().uuid("Invalid subteam ID format"),
-      eventName: z.string().min(1, "Event name is required"),
-      slotIndex: z.number().int().min(0, "Slot index must be non-negative"),
-      studentName: z.string().min(1, "Student name is required"),
-      userId: z.string().uuid("Invalid user ID format").optional()
-    }))
+    .input(
+      z.object({
+        teamSlug: z.string().min(1, "Team slug is required"),
+        subteamId: z.string().uuid("Invalid subteam ID format"),
+        eventName: z.string().min(1, "Event name is required"),
+        slotIndex: z.number().int().min(0, "Slot index must be non-negative"),
+        studentName: z.string().min(1, "Student name is required"),
+        userId: z.string().uuid("Invalid user ID format").optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       try {
         // Resolve team slug to group ID
@@ -1128,18 +1146,21 @@ export const teamsRouter = router({
           .where(eq(newTeamGroups.slug, input.teamSlug));
 
         if (groupResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
         }
 
-        const groupId = groupResult[0].id;
+        const groupId = groupResult[0]?.id;
+        if (!groupId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
+        }
 
         // Check team access
         // Check if user has access to this team group
         const authResult = await checkTeamGroupAccessCockroach(ctx.user.id, groupId);
         if (!authResult.isAuthorized) {
-          throw new TRPCError({ 
-            code: 'FORBIDDEN', 
-            message: 'Not authorized to access this team' 
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Not authorized to access this team",
           });
         }
 
@@ -1151,34 +1172,34 @@ export const teamsRouter = router({
             and(
               eq(newTeamUnits.id, input.subteamId),
               eq(newTeamUnits.groupId, groupId),
-              eq(newTeamUnits.status, 'active')
+              eq(newTeamUnits.status, "active")
             )
           );
 
         if (subteamResult.length === 0) {
-          throw new TRPCError({ 
-            code: 'NOT_FOUND', 
-            message: 'Subteam not found' 
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Subteam not found",
           });
         }
 
         // Convert "&" back to "and" in event names for database storage
-        const normalizedEventName = input.eventName.replace(/&/g, 'and');
+        const normalizedEventName = input.eventName.replace(/&/g, "and");
 
         // Determine user ID to link - use provided userId if available, otherwise auto-link by name
         let userIdToLink: string | null = null;
-        
+
         if (input.userId) {
           // Use the explicitly provided userId
           userIdToLink = input.userId;
-        } else if (input.studentName && input.studentName.trim()) {
+        } else if (input.studentName?.trim()) {
           // Auto-link by matching student name to team members
           const teamMembersResult = await dbPg
             .select({
               userId: users.id,
               displayName: users.displayName,
               firstName: users.firstName,
-              lastName: users.lastName
+              lastName: users.lastName,
             })
             .from(users)
             .innerJoin(newTeamMemberships, eq(users.id, newTeamMemberships.userId))
@@ -1186,22 +1207,21 @@ export const teamsRouter = router({
             .where(
               and(
                 eq(newTeamUnits.groupId, groupId),
-                eq(newTeamMemberships.status, 'active'),
-                eq(newTeamUnits.status, 'active')
+                eq(newTeamMemberships.status, "active"),
+                eq(newTeamUnits.status, "active")
               )
             );
 
           // Try to find a matching team member
           const studentNameLower = input.studentName.toLowerCase().trim();
           for (const member of teamMembersResult) {
-            const displayName = member.displayName || 
-              (member.firstName && member.lastName 
-                ? `${member.firstName} ${member.lastName}` 
-                : '');
-            
+            const displayName =
+              member.displayName ||
+              (member.firstName && member.lastName ? `${member.firstName} ${member.lastName}` : "");
+
             if (displayName) {
               const memberNameLower = displayName.toLowerCase().trim();
-              
+
               // Exact case-insensitive match only
               if (memberNameLower === studentNameLower) {
                 userIdToLink = member.userId;
@@ -1218,7 +1238,7 @@ export const teamsRouter = router({
           slotIndex: input.slotIndex,
           studentName: input.studentName || null,
           userId: userIdToLink,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         });
 
         // Upsert roster data with user_id if we found a match
@@ -1226,27 +1246,33 @@ export const teamsRouter = router({
           .insert(newTeamRosterData)
           .values(rosterDataToInsert)
           .onConflictDoUpdate({
-            target: [newTeamRosterData.teamUnitId, newTeamRosterData.eventName, newTeamRosterData.slotIndex],
+            target: [
+              newTeamRosterData.teamUnitId,
+              newTeamRosterData.eventName,
+              newTeamRosterData.slotIndex,
+            ],
             set: {
               studentName: input.studentName || null,
               userId: userIdToLink,
-              updatedAt: new Date()
-            }
+              updatedAt: new Date(),
+            },
           });
 
-        const result = { message: 'Roster data saved successfully' };
-        
+        const result = { message: "Roster data saved successfully" };
+
         // Validate output
-        const validatedResult = z.object({
-          message: z.string()
-        }).parse(result);
-        
+        const validatedResult = z
+          .object({
+            message: z.string(),
+          })
+          .parse(result);
+
         return validatedResult;
       } catch (error) {
-        logger.error('Failed to update roster:', error);
-        throw new TRPCError({ 
-          code: 'INTERNAL_SERVER_ERROR', 
-          message: 'Failed to update roster' 
+        logger.error("Failed to update roster:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update roster",
         });
       }
     }),
@@ -1256,9 +1282,11 @@ export const teamsRouter = router({
   // ============================================================================
 
   getAssignments: protectedProcedure
-    .input(z.object({ 
-      teamSlug: z.string().min(1, "Team slug is required")
-    }))
+    .input(
+      z.object({
+        teamSlug: z.string().min(1, "Team slug is required"),
+      })
+    )
     .query(async ({ ctx, input }) => {
       try {
         // Resolve team slug to group ID
@@ -1268,17 +1296,20 @@ export const teamsRouter = router({
           .where(eq(newTeamGroups.slug, input.teamSlug));
 
         if (groupResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
         }
 
-        const groupId = groupResult[0].id;
+        const groupId = groupResult[0]?.id;
+        if (!groupId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
+        }
 
         // Check team access ONCE
         const authResult = await checkTeamGroupAccessCockroach(ctx.user.id, groupId);
         if (!authResult.isAuthorized) {
-          throw new TRPCError({ 
-            code: 'FORBIDDEN', 
-            message: 'Not authorized to access this team' 
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Not authorized to access this team",
           });
         }
 
@@ -1286,14 +1317,9 @@ export const teamsRouter = router({
         const subteams = await dbPg
           .select({ id: newTeamUnits.id })
           .from(newTeamUnits)
-          .where(
-            and(
-              eq(newTeamUnits.groupId, groupId),
-              eq(newTeamUnits.status, 'active')
-            )
-          );
+          .where(and(eq(newTeamUnits.groupId, groupId), eq(newTeamUnits.status, "active")));
 
-        const subteamIds = subteams.map(s => s.id);
+        const subteamIds = subteams.map((s) => s.id);
 
         if (subteamIds.length === 0) {
           return { assignments: [] };
@@ -1314,18 +1340,21 @@ export const teamsRouter = router({
             createdAt: newTeamAssignments.createdAt,
             updatedAt: newTeamAssignments.updatedAt,
             createdBy: newTeamAssignments.createdBy,
-            teamId: newTeamAssignments.teamId
+            teamId: newTeamAssignments.teamId,
           })
           .from(newTeamAssignments)
           .where(inArray(newTeamAssignments.teamId, subteamIds))
-          .orderBy(sql`${newTeamAssignments.dueDate} ASC NULLS LAST`, sql`${newTeamAssignments.createdAt} DESC`);
+          .orderBy(
+            sql`${newTeamAssignments.dueDate} ASC NULLS LAST`,
+            sql`${newTeamAssignments.createdAt} DESC`
+          );
 
         return { assignments };
       } catch (error) {
-        logger.error('Failed to get assignments:', error);
-        throw new TRPCError({ 
-          code: 'INTERNAL_SERVER_ERROR', 
-          message: 'Failed to get assignments' 
+        logger.error("Failed to get assignments:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to get assignments",
         });
       }
     }),
@@ -1335,10 +1364,12 @@ export const teamsRouter = router({
   // ============================================================================
 
   getTeamDashboard: protectedProcedure
-    .input(z.object({ 
-      teamSlug: z.string().min(1, "Team slug is required"),
-      subteamId: z.string().uuid().optional()
-    }))
+    .input(
+      z.object({
+        teamSlug: z.string().min(1, "Team slug is required"),
+        subteamId: z.string().uuid().optional(),
+      })
+    )
     .query(async ({ ctx, input }) => {
       try {
         // Resolve team slug to group ID ONCE
@@ -1348,64 +1379,63 @@ export const teamsRouter = router({
           .where(eq(newTeamGroups.slug, input.teamSlug));
 
         if (groupResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
         }
 
-        const groupId = groupResult[0].id;
+        const groupId = groupResult[0]?.id;
+        if (!groupId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
+        }
 
         // Check team access ONCE for everything
         const authResult = await checkTeamGroupAccessCockroach(ctx.user.id, groupId);
         if (!authResult.isAuthorized) {
-          throw new TRPCError({ 
-            code: 'FORBIDDEN', 
-            message: 'Not authorized to access this team' 
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Not authorized to access this team",
           });
         }
 
         // Get all subteams for this group
         const subteams = await dbPg
-          .select({ 
+          .select({
             id: newTeamUnits.id,
             teamId: newTeamUnits.teamId,
             description: newTeamUnits.description,
-            createdAt: newTeamUnits.createdAt
+            createdAt: newTeamUnits.createdAt,
           })
           .from(newTeamUnits)
-          .where(
-            and(
-              eq(newTeamUnits.groupId, groupId),
-              eq(newTeamUnits.status, 'active')
-            )
-          );
+          .where(and(eq(newTeamUnits.groupId, groupId), eq(newTeamUnits.status, "active")));
 
-        const subteamIds = subteams.map(s => s.id);
+        const subteamIds = subteams.map((s) => s.id);
 
         // Get all data in parallel using Promise.all
-        const [
-          assignments,
-          allMembers,
-          rosterData
-        ] = await Promise.all([
+        const [assignments, allMembers, rosterData] = await Promise.all([
           // Get assignments for all subteams
-          subteamIds.length > 0 ? dbPg
-            .select({
-              id: newTeamAssignments.id,
-              title: newTeamAssignments.title,
-              description: newTeamAssignments.description,
-              assignmentType: newTeamAssignments.assignmentType,
-              dueDate: newTeamAssignments.dueDate,
-              points: newTeamAssignments.points,
-              isRequired: newTeamAssignments.isRequired,
-              maxAttempts: newTeamAssignments.maxAttempts,
-              timeLimitMinutes: newTeamAssignments.timeLimitMinutes,
-              createdAt: newTeamAssignments.createdAt,
-              updatedAt: newTeamAssignments.updatedAt,
-              createdBy: newTeamAssignments.createdBy,
-              teamId: newTeamAssignments.teamId
-            })
-            .from(newTeamAssignments)
-            .where(inArray(newTeamAssignments.teamId, subteamIds))
-            .orderBy(sql`${newTeamAssignments.dueDate} ASC NULLS LAST`, sql`${newTeamAssignments.createdAt} DESC`) : [],
+          subteamIds.length > 0
+            ? dbPg
+                .select({
+                  id: newTeamAssignments.id,
+                  title: newTeamAssignments.title,
+                  description: newTeamAssignments.description,
+                  assignmentType: newTeamAssignments.assignmentType,
+                  dueDate: newTeamAssignments.dueDate,
+                  points: newTeamAssignments.points,
+                  isRequired: newTeamAssignments.isRequired,
+                  maxAttempts: newTeamAssignments.maxAttempts,
+                  timeLimitMinutes: newTeamAssignments.timeLimitMinutes,
+                  createdAt: newTeamAssignments.createdAt,
+                  updatedAt: newTeamAssignments.updatedAt,
+                  createdBy: newTeamAssignments.createdBy,
+                  teamId: newTeamAssignments.teamId,
+                })
+                .from(newTeamAssignments)
+                .where(inArray(newTeamAssignments.teamId, subteamIds))
+                .orderBy(
+                  sql`${newTeamAssignments.dueDate} ASC NULLS LAST`,
+                  sql`${newTeamAssignments.createdAt} DESC`
+                )
+            : [],
 
           // Get all team members
           dbPg
@@ -1417,7 +1447,7 @@ export const teamsRouter = router({
               email: users.email,
               role: newTeamMemberships.role,
               joinedAt: newTeamMemberships.joinedAt,
-              subteamId: newTeamUnits.id
+              subteamId: newTeamUnits.id,
             })
             .from(users)
             .innerJoin(newTeamMemberships, eq(users.id, newTeamMemberships.userId))
@@ -1425,52 +1455,62 @@ export const teamsRouter = router({
             .where(
               and(
                 eq(newTeamUnits.groupId, groupId),
-                eq(newTeamMemberships.status, 'active'),
-                eq(newTeamUnits.status, 'active')
+                eq(newTeamMemberships.status, "active"),
+                eq(newTeamUnits.status, "active")
               )
             ),
 
           // Get roster data for specific subteam or all subteams
-          input.subteamId ? dbPg
-            .select({
-              eventName: newTeamRosterData.eventName,
-              studentName: newTeamRosterData.studentName,
-              slotIndex: newTeamRosterData.slotIndex,
-              userId: newTeamRosterData.userId
-            })
-            .from(newTeamRosterData)
-            .where(eq(newTeamRosterData.teamUnitId, input.subteamId))
-            .orderBy(newTeamRosterData.eventName, newTeamRosterData.slotIndex) : []
+          input.subteamId
+            ? dbPg
+                .select({
+                  eventName: newTeamRosterData.eventName,
+                  studentName: newTeamRosterData.studentName,
+                  slotIndex: newTeamRosterData.slotIndex,
+                  userId: newTeamRosterData.userId,
+                })
+                .from(newTeamRosterData)
+                .where(eq(newTeamRosterData.teamUnitId, input.subteamId))
+                .orderBy(newTeamRosterData.eventName, newTeamRosterData.slotIndex)
+            : [],
         ]);
 
         // Process roster data into the expected format
         const processedRoster: Record<string, string[]> = {};
         for (const entry of rosterData) {
-          if (!processedRoster[entry.eventName]) {
-            processedRoster[entry.eventName] = [];
+          if (!entry.eventName || entry.slotIndex === undefined) {
+            continue;
+          }
+          const eventName = entry.eventName;
+          if (!processedRoster[eventName]) {
+            processedRoster[eventName] = [];
           }
           // Ensure array is large enough
-          while (processedRoster[entry.eventName].length <= entry.slotIndex) {
-            processedRoster[entry.eventName].push('');
+          const rosterArray = processedRoster[eventName];
+          if (rosterArray) {
+            while (rosterArray.length <= entry.slotIndex) {
+              rosterArray.push("");
+            }
+            rosterArray[entry.slotIndex] = entry.studentName || "";
           }
-          processedRoster[entry.eventName][entry.slotIndex] = entry.studentName || '';
         }
 
         // Process members data
-        const processedMembers = allMembers.map(member => ({
+        const processedMembers = allMembers.map((member) => ({
           userId: member.userId,
-          displayFirstName: member.displayName || `${member.firstName || ''} ${member.lastName || ''}`.trim(),
+          displayFirstName:
+            member.displayName || `${member.firstName || ""} ${member.lastName || ""}`.trim(),
           role: member.role,
           subteamId: member.subteamId,
-          isLinked: true
+          isLinked: true,
         }));
 
         return {
-          subteams: subteams.map(s => ({
+          subteams: subteams.map((s) => ({
             id: s.id,
             name: s.description || s.teamId,
             team_id: s.teamId,
-            created_at: s.createdAt
+            created_at: s.createdAt,
           })),
           assignments,
           members: processedMembers,
@@ -1479,14 +1519,14 @@ export const teamsRouter = router({
             isAuthorized: authResult.isAuthorized,
             hasMembership: authResult.hasMembership,
             hasRosterEntry: authResult.hasRosterEntry,
-            role: authResult.role
-          }
+            role: authResult.role,
+          },
         };
       } catch (error) {
-        logger.error('Failed to get team dashboard:', error);
+        logger.error("Failed to get team dashboard:", error);
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to get team dashboard'
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to get team dashboard",
         });
       }
     }),
@@ -1502,10 +1542,12 @@ export const teamsRouter = router({
   // Reduces 3 separate HTTP requests to 1, with single auth check
 
   getTeamPageData: protectedProcedure
-    .input(z.object({
-      teamSlug: z.string().min(1, "Team slug is required"),
-      includeRoster: z.boolean().optional().default(true)
-    }))
+    .input(
+      z.object({
+        teamSlug: z.string().min(1, "Team slug is required"),
+        includeRoster: z.boolean().optional().default(true),
+      })
+    )
     .query(async ({ ctx, input }) => {
       try {
         // Resolve team slug to group ID ONCE
@@ -1514,16 +1556,19 @@ export const teamsRouter = router({
             id: newTeamGroups.id,
             school: newTeamGroups.school,
             division: newTeamGroups.division,
-            slug: newTeamGroups.slug
+            slug: newTeamGroups.slug,
           })
           .from(newTeamGroups)
           .where(eq(newTeamGroups.slug, input.teamSlug));
 
         if (groupResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team group not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team group not found" });
         }
 
         const group = groupResult[0];
+        if (!group) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team group not found" });
+        }
         const groupId = group.id;
 
         // Parallel execution: get user teams AND check team access at the same time
@@ -1531,13 +1576,13 @@ export const teamsRouter = router({
           // Get all user's teams for sidebar
           cockroachDBTeamsService.getUserTeams(ctx.user.id),
           // Check team access for this specific team
-          checkTeamGroupAccessCockroach(ctx.user.id, groupId)
+          checkTeamGroupAccessCockroach(ctx.user.id, groupId),
         ]);
 
         if (!authResult.isAuthorized) {
           throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Not authorized to access this team'
+            code: "FORBIDDEN",
+            message: "Not authorized to access this team",
           });
         }
 
@@ -1547,46 +1592,42 @@ export const teamsRouter = router({
             id: newTeamUnits.id,
             teamId: newTeamUnits.teamId,
             description: newTeamUnits.description,
-            createdAt: newTeamUnits.createdAt
+            createdAt: newTeamUnits.createdAt,
           })
           .from(newTeamUnits)
-          .where(
-            and(
-              eq(newTeamUnits.groupId, groupId),
-              eq(newTeamUnits.status, 'active')
-            )
-          )
+          .where(and(eq(newTeamUnits.groupId, groupId), eq(newTeamUnits.status, "active")))
           .orderBy(newTeamUnits.createdAt);
 
-        const subteamIds = subteams.map(s => s.id);
+        const subteamIds = subteams.map((s) => s.id);
         const firstSubteamId = subteams[0]?.id;
 
         // Get ALL remaining data in parallel
-        const [
-          assignments,
-          allMembers,
-          rosterData
-        ] = await Promise.all([
+        const [assignments, allMembers, rosterData] = await Promise.all([
           // Get assignments for all subteams
-          subteamIds.length > 0 ? dbPg
-            .select({
-              id: newTeamAssignments.id,
-              title: newTeamAssignments.title,
-              description: newTeamAssignments.description,
-              assignmentType: newTeamAssignments.assignmentType,
-              dueDate: newTeamAssignments.dueDate,
-              points: newTeamAssignments.points,
-              isRequired: newTeamAssignments.isRequired,
-              maxAttempts: newTeamAssignments.maxAttempts,
-              timeLimitMinutes: newTeamAssignments.timeLimitMinutes,
-              createdAt: newTeamAssignments.createdAt,
-              updatedAt: newTeamAssignments.updatedAt,
-              createdBy: newTeamAssignments.createdBy,
-              teamId: newTeamAssignments.teamId
-            })
-            .from(newTeamAssignments)
-            .where(inArray(newTeamAssignments.teamId, subteamIds))
-            .orderBy(sql`${newTeamAssignments.dueDate} ASC NULLS LAST`, sql`${newTeamAssignments.createdAt} DESC`) : [],
+          subteamIds.length > 0
+            ? dbPg
+                .select({
+                  id: newTeamAssignments.id,
+                  title: newTeamAssignments.title,
+                  description: newTeamAssignments.description,
+                  assignmentType: newTeamAssignments.assignmentType,
+                  dueDate: newTeamAssignments.dueDate,
+                  points: newTeamAssignments.points,
+                  isRequired: newTeamAssignments.isRequired,
+                  maxAttempts: newTeamAssignments.maxAttempts,
+                  timeLimitMinutes: newTeamAssignments.timeLimitMinutes,
+                  createdAt: newTeamAssignments.createdAt,
+                  updatedAt: newTeamAssignments.updatedAt,
+                  createdBy: newTeamAssignments.createdBy,
+                  teamId: newTeamAssignments.teamId,
+                })
+                .from(newTeamAssignments)
+                .where(inArray(newTeamAssignments.teamId, subteamIds))
+                .orderBy(
+                  sql`${newTeamAssignments.dueDate} ASC NULLS LAST`,
+                  sql`${newTeamAssignments.createdAt} DESC`
+                )
+            : [],
 
           // Get all team members across all subteams
           dbPg
@@ -1599,7 +1640,7 @@ export const teamsRouter = router({
               role: newTeamMemberships.role,
               joinedAt: newTeamMemberships.joinedAt,
               subteamId: newTeamUnits.id,
-              subteamName: newTeamUnits.teamId
+              subteamName: newTeamUnits.teamId,
             })
             .from(users)
             .innerJoin(newTeamMemberships, eq(users.id, newTeamMemberships.userId))
@@ -1607,50 +1648,53 @@ export const teamsRouter = router({
             .where(
               and(
                 eq(newTeamUnits.groupId, groupId),
-                eq(newTeamMemberships.status, 'active'),
-                eq(newTeamUnits.status, 'active')
+                eq(newTeamMemberships.status, "active"),
+                eq(newTeamUnits.status, "active")
               )
             ),
 
           // Get roster data for first subteam (if enabled and exists)
-          (input.includeRoster && firstSubteamId) ? dbPg
-            .select({
-              eventName: newTeamRosterData.eventName,
-              studentName: newTeamRosterData.studentName,
-              slotIndex: newTeamRosterData.slotIndex,
-              userId: newTeamRosterData.userId,
-              teamUnitId: newTeamRosterData.teamUnitId
-            })
-            .from(newTeamRosterData)
-            .where(eq(newTeamRosterData.teamUnitId, firstSubteamId))
-            .orderBy(newTeamRosterData.eventName, newTeamRosterData.slotIndex) : []
+          input.includeRoster && firstSubteamId
+            ? dbPg
+                .select({
+                  eventName: newTeamRosterData.eventName,
+                  studentName: newTeamRosterData.studentName,
+                  slotIndex: newTeamRosterData.slotIndex,
+                  userId: newTeamRosterData.userId,
+                  teamUnitId: newTeamRosterData.teamUnitId,
+                })
+                .from(newTeamRosterData)
+                .where(eq(newTeamRosterData.teamUnitId, firstSubteamId))
+                .orderBy(newTeamRosterData.eventName, newTeamRosterData.slotIndex)
+            : [],
         ]);
 
         // Process roster data into the expected format
         const processedRoster: Record<string, string[]> = {};
         for (const entry of rosterData) {
           // Convert "and" back to "&" for UI display
-          const displayEventName = entry.eventName.replace(/and/g, '&');
+          const displayEventName = entry.eventName.replace(/and/g, "&");
           if (!processedRoster[displayEventName]) {
             processedRoster[displayEventName] = [];
           }
           // Ensure array is large enough
           while (processedRoster[displayEventName].length <= entry.slotIndex) {
-            processedRoster[displayEventName].push('');
+            processedRoster[displayEventName].push("");
           }
-          processedRoster[displayEventName][entry.slotIndex] = entry.studentName || '';
+          processedRoster[displayEventName][entry.slotIndex] = entry.studentName || "";
         }
 
         // Process members data with subteam information
-        const processedMembers = allMembers.map(member => ({
+        const processedMembers = allMembers.map((member) => ({
           userId: member.userId,
-          displayFirstName: member.displayName || `${member.firstName || ''} ${member.lastName || ''}`.trim(),
+          displayFirstName:
+            member.displayName || `${member.firstName || ""} ${member.lastName || ""}`.trim(),
           email: member.email,
           role: member.role,
           subteamId: member.subteamId,
           subteamName: member.subteamName,
           joinedAt: member.joinedAt,
-          isLinked: true
+          isLinked: true,
         }));
 
         return {
@@ -1661,17 +1705,17 @@ export const teamsRouter = router({
           currentTeam: {
             id: groupId,
             school: group.school,
-            division: group.division as 'B' | 'C',
-            slug: group.slug
+            division: group.division as "B" | "C",
+            slug: group.slug,
           },
 
           // Subteams for this team
-          subteams: subteams.map(s => ({
+          subteams: subteams.map((s) => ({
             id: s.id,
             name: s.teamId,
             team_id: groupId,
-            description: s.description || '',
-            created_at: s.createdAt?.toISOString() || new Date().toISOString()
+            description: s.description || "",
+            created_at: s.createdAt?.toISOString() || new Date().toISOString(),
           })),
 
           // Assignments for all subteams
@@ -1689,31 +1733,37 @@ export const teamsRouter = router({
             isAuthorized: authResult.isAuthorized,
             hasMembership: authResult.hasMembership,
             hasRosterEntry: authResult.hasRosterEntry,
-            role: authResult.role
-          }
+            role: authResult.role,
+          },
         };
       } catch (error) {
-        logger.error('Failed to get team page data:', error);
-        if (error instanceof TRPCError) throw error;
+        logger.error("Failed to get team page data:", error);
+        if (error instanceof TRPCError) {
+          throw error;
+        }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to get team page data'
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to get team page data",
         });
       }
     }),
 
   // NEW: Bulk roster update endpoint for better performance
   updateRosterBulk: protectedProcedure
-    .input(z.object({ 
-      teamSlug: z.string().min(1, "Team slug is required"),
-      subteamId: z.string().uuid("Invalid subteam ID format"),
-      rosterEntries: z.array(z.object({
-        eventName: z.string().min(1, "Event name is required"),
-        slotIndex: z.number().int().min(0, "Slot index must be non-negative"),
-        studentName: z.string().min(1, "Student name is required"),
-        userId: z.string().uuid("Invalid user ID format").optional()
-      }))
-    }))
+    .input(
+      z.object({
+        teamSlug: z.string().min(1, "Team slug is required"),
+        subteamId: z.string().uuid("Invalid subteam ID format"),
+        rosterEntries: z.array(
+          z.object({
+            eventName: z.string().min(1, "Event name is required"),
+            slotIndex: z.number().int().min(0, "Slot index must be non-negative"),
+            studentName: z.string().min(1, "Student name is required"),
+            userId: z.string().uuid("Invalid user ID format").optional(),
+          })
+        ),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       try {
         // Resolve team slug to group ID
@@ -1723,17 +1773,20 @@ export const teamsRouter = router({
           .where(eq(newTeamGroups.slug, input.teamSlug));
 
         if (groupResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
         }
 
-        const groupId = groupResult[0].id;
+        const groupId = groupResult[0]?.id;
+        if (!groupId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
+        }
 
         // Check team access ONCE for the entire batch
         const authResult = await checkTeamGroupAccessCockroach(ctx.user.id, groupId);
         if (!authResult.isAuthorized) {
-          throw new TRPCError({ 
-            code: 'FORBIDDEN', 
-            message: 'Not authorized to access this team' 
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Not authorized to access this team",
           });
         }
 
@@ -1745,14 +1798,14 @@ export const teamsRouter = router({
             and(
               eq(newTeamUnits.id, input.subteamId),
               eq(newTeamUnits.groupId, groupId),
-              eq(newTeamUnits.status, 'active')
+              eq(newTeamUnits.status, "active")
             )
           );
 
         if (subteamResult.length === 0) {
-          throw new TRPCError({ 
-            code: 'NOT_FOUND', 
-            message: 'Subteam not found' 
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Subteam not found",
           });
         }
 
@@ -1762,7 +1815,7 @@ export const teamsRouter = router({
             userId: users.id,
             displayName: users.displayName,
             firstName: users.firstName,
-            lastName: users.lastName
+            lastName: users.lastName,
           })
           .from(users)
           .innerJoin(newTeamMemberships, eq(users.id, newTeamMemberships.userId))
@@ -1770,33 +1823,32 @@ export const teamsRouter = router({
           .where(
             and(
               eq(newTeamUnits.groupId, groupId),
-              eq(newTeamMemberships.status, 'active'),
-              eq(newTeamUnits.status, 'active')
+              eq(newTeamMemberships.status, "active"),
+              eq(newTeamUnits.status, "active")
             )
           );
 
         // Create a lookup map for faster name matching
         const memberLookup = new Map<string, string>();
         for (const member of teamMembersResult) {
-          const displayName = member.displayName || 
-            (member.firstName && member.lastName 
-              ? `${member.firstName} ${member.lastName}` 
-              : '');
-          
+          const displayName =
+            member.displayName ||
+            (member.firstName && member.lastName ? `${member.firstName} ${member.lastName}` : "");
+
           if (displayName) {
             memberLookup.set(displayName.toLowerCase().trim(), member.userId);
           }
         }
 
         // Prepare all roster entries for bulk insert
-        const rosterEntriesToInsert = input.rosterEntries.map(entry => {
-          const normalizedEventName = entry.eventName.replace(/&/g, 'and');
-          
+        const rosterEntriesToInsert = input.rosterEntries.map((entry) => {
+          const normalizedEventName = entry.eventName.replace(/&/g, "and");
+
           // Fast lookup for user ID
           let userIdToLink: string | null = null;
           if (entry.userId) {
             userIdToLink = entry.userId;
-          } else if (entry.studentName && entry.studentName.trim()) {
+          } else if (entry.studentName?.trim()) {
             const studentNameLower = entry.studentName.toLowerCase().trim();
             userIdToLink = memberLookup.get(studentNameLower) || null;
           }
@@ -1807,7 +1859,7 @@ export const teamsRouter = router({
             slotIndex: entry.slotIndex,
             studentName: entry.studentName || null,
             userId: userIdToLink,
-            updatedAt: new Date()
+            updatedAt: new Date(),
           };
         });
 
@@ -1817,33 +1869,41 @@ export const teamsRouter = router({
             .insert(newTeamRosterData)
             .values(rosterEntriesToInsert)
             .onConflictDoUpdate({
-              target: [newTeamRosterData.teamUnitId, newTeamRosterData.eventName, newTeamRosterData.slotIndex],
+              target: [
+                newTeamRosterData.teamUnitId,
+                newTeamRosterData.eventName,
+                newTeamRosterData.slotIndex,
+              ],
               set: {
                 studentName: sql`excluded.student_name`,
                 userId: sql`excluded.user_id`,
-                updatedAt: new Date()
-              }
+                updatedAt: new Date(),
+              },
             });
         }
 
-        return { message: `Bulk roster update completed for ${rosterEntriesToInsert.length} entries` };
+        return {
+          message: `Bulk roster update completed for ${rosterEntriesToInsert.length} entries`,
+        };
       } catch (error) {
-        logger.error('Failed to update roster bulk:', error);
-        throw new TRPCError({ 
-          code: 'INTERNAL_SERVER_ERROR', 
-          message: 'Failed to update roster bulk' 
+        logger.error("Failed to update roster bulk:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update roster bulk",
         });
       }
     }),
 
   removeRosterEntry: protectedProcedure
-    .input(z.object({ 
-      teamSlug: z.string(),
-      subteamId: z.string(),
-      eventName: z.string(),
-      userId: z.string().optional(),
-      studentName: z.string().optional()
-    }))
+    .input(
+      z.object({
+        teamSlug: z.string(),
+        subteamId: z.string(),
+        eventName: z.string(),
+        userId: z.string().optional(),
+        studentName: z.string().optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       try {
         // Resolve team slug to group ID
@@ -1853,30 +1913,33 @@ export const teamsRouter = router({
           .where(eq(newTeamGroups.slug, input.teamSlug));
 
         if (groupResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
         }
 
-        const groupId = groupResult[0].id;
+        const groupId = groupResult[0]?.id;
+        if (!groupId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
+        }
 
         // Check team access
         const teamAccess = await getTeamAccess(ctx.user.id, groupId);
         if (!teamAccess.hasAccess) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to access this team' });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to access this team" });
         }
 
         // Ensure user has leadership privileges in this group
         const leadershipResult = await checkTeamGroupLeadershipCockroach(ctx.user.id, groupId);
         if (!leadershipResult.hasLeadership) {
-          throw new TRPCError({ 
-            code: 'FORBIDDEN', 
-            message: 'Only captains and co-captains can modify roster' 
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only captains and co-captains can modify roster",
           });
         }
 
         let removedEntries = 0;
 
         if (input.userId) {
-          if (input.eventName && input.eventName.trim()) {
+          if (input.eventName?.trim()) {
             // Remove specific event entries for this user
             const deleteByUserEvent = await dbPg
               .delete(newTeamRosterData)
@@ -1890,59 +1953,55 @@ export const teamsRouter = router({
                 )
               )
               .returning({ teamUnitId: newTeamRosterData.teamUnitId });
-            
+
             removedEntries = deleteByUserEvent.length;
-          } else {
-            if (input.subteamId) {
-              // Remove roster entries and team membership for this user from specific subteam only
-              const deleteByUserSubteam = await dbPg
-                .delete(newTeamRosterData)
-                .where(
-                  and(
-                    eq(newTeamRosterData.userId, input.userId),
-                    eq(newTeamRosterData.teamUnitId, input.subteamId)
-                  )
+          } else if (input.subteamId) {
+            // Remove roster entries and team membership for this user from specific subteam only
+            const deleteByUserSubteam = await dbPg
+              .delete(newTeamRosterData)
+              .where(
+                and(
+                  eq(newTeamRosterData.userId, input.userId),
+                  eq(newTeamRosterData.teamUnitId, input.subteamId)
                 )
-                .returning({ teamUnitId: newTeamRosterData.teamUnitId });
-              
-              removedEntries = deleteByUserSubteam.length;
-              
-              // Also remove team membership for this user from the specific subteam
-              await dbPg
-                .delete(newTeamMemberships)
-                .where(
-                  and(
-                    eq(newTeamMemberships.userId, input.userId),
-                    eq(newTeamMemberships.teamId, input.subteamId)
-                  )
-                );
-            } else {
-              // Remove all roster entries AND team memberships for this user across the group
-              const deleteByUser = await dbPg
-                .delete(newTeamRosterData)
-                .where(
-                  and(
-                    eq(newTeamRosterData.userId, input.userId),
-                    sql`${newTeamRosterData.teamUnitId} IN (
+              )
+              .returning({ teamUnitId: newTeamRosterData.teamUnitId });
+
+            removedEntries = deleteByUserSubteam.length;
+
+            // Also remove team membership for this user from the specific subteam
+            await dbPg
+              .delete(newTeamMemberships)
+              .where(
+                and(
+                  eq(newTeamMemberships.userId, input.userId),
+                  eq(newTeamMemberships.teamId, input.subteamId)
+                )
+              );
+          } else {
+            // Remove all roster entries AND team memberships for this user across the group
+            const deleteByUser = await dbPg
+              .delete(newTeamRosterData)
+              .where(
+                and(
+                  eq(newTeamRosterData.userId, input.userId),
+                  sql`${newTeamRosterData.teamUnitId} IN (
                       SELECT id FROM new_team_units WHERE group_id = ${groupId} AND status = 'active'
                     )`
-                  )
                 )
-                .returning({ teamUnitId: newTeamRosterData.teamUnitId });
-              
-              removedEntries = deleteByUser.length;
-              
-              // Also remove team memberships for this user within the group
-              await dbPg
-                .delete(newTeamMemberships)
-                .where(
-                  sql`${newTeamMemberships.teamId} IN (
+              )
+              .returning({ teamUnitId: newTeamRosterData.teamUnitId });
+
+            removedEntries = deleteByUser.length;
+
+            // Also remove team memberships for this user within the group
+            await dbPg.delete(newTeamMemberships).where(
+              sql`${newTeamMemberships.teamId} IN (
                     SELECT id FROM new_team_units WHERE group_id = ${groupId}
                   )`
-                );
-            }
+            );
           }
-        } else if (input.studentName && input.studentName.trim()) {
+        } else if (input.studentName?.trim()) {
           // Remove by student name
           const deleteByName = await dbPg
             .delete(newTeamRosterData)
@@ -1955,16 +2014,16 @@ export const teamsRouter = router({
               )
             )
             .returning({ teamUnitId: newTeamRosterData.teamUnitId });
-          
+
           removedEntries = deleteByName.length;
         }
 
         return { removedEntries };
       } catch (error) {
-        logger.error('Failed to remove roster entry:', error);
-        throw new TRPCError({ 
-          code: 'INTERNAL_SERVER_ERROR', 
-          message: 'Failed to remove roster entry' 
+        logger.error("Failed to remove roster entry:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to remove roster entry",
         });
       }
     }),
@@ -1974,10 +2033,12 @@ export const teamsRouter = router({
   // ============================================================================
 
   exitSubteam: protectedProcedure
-    .input(z.object({ 
-      teamSlug: z.string(),
-      subteamId: z.string()
-    }))
+    .input(
+      z.object({
+        teamSlug: z.string(),
+        subteamId: z.string(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       try {
         // Resolve team slug to group ID
@@ -1987,57 +2048,55 @@ export const teamsRouter = router({
           .where(eq(newTeamGroups.slug, input.teamSlug));
 
         if (groupResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
         }
 
-        const groupId = groupResult[0].id;
+        const groupId = groupResult[0]?.id;
+        if (!groupId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
+        }
 
         // Verify the subteam belongs to this group
         const subteamResult = await dbPg
           .select({ id: newTeamUnits.id, status: newTeamUnits.status })
           .from(newTeamUnits)
-          .where(
-            and(
-              eq(newTeamUnits.id, input.subteamId),
-              eq(newTeamUnits.groupId, groupId)
-            )
-          );
+          .where(and(eq(newTeamUnits.id, input.subteamId), eq(newTeamUnits.groupId, groupId)));
 
         if (subteamResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Subteam not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Subteam not found" });
         }
 
         // Check if user is a member of this subteam using Drizzle ORM
         const membershipResult = await dbPg
           .select({
             id: newTeamMemberships.id,
-            role: newTeamMemberships.role
+            role: newTeamMemberships.role,
           })
           .from(newTeamMemberships)
           .where(
             and(
               eq(newTeamMemberships.userId, ctx.user.id),
               eq(newTeamMemberships.teamId, input.subteamId),
-              eq(newTeamMemberships.status, 'active')
+              eq(newTeamMemberships.status, "active")
             )
           )
           .limit(1);
 
         // If not a member, return success (idempotent operation - already removed)
         if (membershipResult.length === 0) {
-          return { message: 'Successfully exited subteam' };
+          return { message: "Successfully exited subteam" };
         }
 
         // Remove user from this specific subteam using Drizzle ORM
         // Note: We allow zero-person subteams, so we don't check if user is the last captain
         const updateResult = await dbPg
           .update(newTeamMemberships)
-          .set({ status: 'inactive' })
+          .set({ status: "inactive" })
           .where(
             and(
               eq(newTeamMemberships.userId, ctx.user.id),
               eq(newTeamMemberships.teamId, input.subteamId),
-              eq(newTeamMemberships.status, 'active') // Only update active memberships
+              eq(newTeamMemberships.status, "active") // Only update active memberships
             )
           )
           .returning({ id: newTeamMemberships.id });
@@ -2054,31 +2113,33 @@ export const teamsRouter = router({
           .returning({ id: newTeamRosterData.id });
 
         // Log for debugging
-        if (process.env.NODE_ENV === 'development') {
-          logger.info('exitSubteam completed', {
+        if (process.env.NODE_ENV === "development") {
+          logger.info("exitSubteam completed", {
             membershipUpdated: updateResult.length,
             rosterEntriesDeleted: deleteResult.length,
             subteamId: input.subteamId,
-            userId: ctx.user.id
+            userId: ctx.user.id,
           });
         }
 
-        const result = { message: 'Successfully exited subteam' };
-        
+        const result = { message: "Successfully exited subteam" };
+
         // Validate output
-        const validatedResult = z.object({
-          message: z.string()
-        }).parse(result);
-        
+        const validatedResult = z
+          .object({
+            message: z.string(),
+          })
+          .parse(result);
+
         return validatedResult;
       } catch (error) {
-        logger.error('Failed to exit subteam:', error);
+        logger.error("Failed to exit subteam:", error);
         if (error instanceof TRPCError) {
           throw error;
         }
-        throw new TRPCError({ 
-          code: 'INTERNAL_SERVER_ERROR', 
-          message: 'Failed to exit subteam' 
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to exit subteam",
         });
       }
     }),
@@ -2094,59 +2155,60 @@ export const teamsRouter = router({
           .where(eq(newTeamGroups.slug, input.teamSlug));
 
         if (exitGroupResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
         }
 
-        const groupId = exitGroupResult[0].id;
+        const groupId = exitGroupResult[0]?.id;
+        if (!groupId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
+        }
 
         // Check team access
         const teamAccess = await getTeamAccess(ctx.user.id, groupId);
         if (!teamAccess.hasAccess) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to access this team' });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to access this team" });
         }
 
         // Get all team units for this group (only active ones) using Drizzle ORM
         const unitsResult = await dbPg
           .select({ id: newTeamUnits.id })
           .from(newTeamUnits)
-          .where(
-            and(
-              eq(newTeamUnits.groupId, groupId),
-              eq(newTeamUnits.status, 'active')
-            )
-          );
+          .where(and(eq(newTeamUnits.groupId, groupId), eq(newTeamUnits.status, "active")));
 
         if (unitsResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'No active team units found for this group' });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "No active team units found for this group",
+          });
         }
 
-        const teamUnitIds = unitsResult.map(row => row.id);
+        const teamUnitIds = unitsResult.map((row) => row.id);
 
         // Check if user is a member of any team unit in this group using Drizzle ORM
         const membershipResult = await dbPg
           .select({
             id: newTeamMemberships.id,
             role: newTeamMemberships.role,
-            teamId: newTeamMemberships.teamId
+            teamId: newTeamMemberships.teamId,
           })
           .from(newTeamMemberships)
           .where(
             and(
               eq(newTeamMemberships.userId, ctx.user.id),
               inArray(newTeamMemberships.teamId, teamUnitIds),
-              eq(newTeamMemberships.status, 'active')
+              eq(newTeamMemberships.status, "active")
             )
           );
 
         if (membershipResult.length === 0) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a team member' });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not a team member" });
         }
 
         const memberships = membershipResult;
 
         // Check if user is a captain in any team unit
-        const captainMemberships = memberships.filter(m => m.role === 'captain');
-        
+        const captainMemberships = memberships.filter((m) => m.role === "captain");
+
         if (captainMemberships.length > 0) {
           // Check if there are other captains in the same team units using Drizzle ORM
           for (const membership of captainMemberships) {
@@ -2156,16 +2218,17 @@ export const teamsRouter = router({
               .where(
                 and(
                   eq(newTeamMemberships.teamId, membership.teamId),
-                  eq(newTeamMemberships.role, 'captain'),
-                  eq(newTeamMemberships.status, 'active')
+                  eq(newTeamMemberships.role, "captain"),
+                  eq(newTeamMemberships.status, "active")
                 )
               );
 
             const captainCount = captainCountResult[0]?.count || 0;
             if (captainCount <= 1) {
-              throw new TRPCError({ 
-                code: 'BAD_REQUEST', 
-                message: 'Cannot exit team as the only captain. Promote another member to captain first.' 
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message:
+                  "Cannot exit team as the only captain. Promote another member to captain first.",
               });
             }
           }
@@ -2174,7 +2237,7 @@ export const teamsRouter = router({
         // Remove user from all team units in this group using Drizzle ORM
         await dbPg
           .update(newTeamMemberships)
-          .set({ status: 'inactive' })
+          .set({ status: "inactive" })
           .where(
             and(
               eq(newTeamMemberships.userId, ctx.user.id),
@@ -2192,19 +2255,21 @@ export const teamsRouter = router({
             )
           );
 
-        const result = { message: 'Successfully exited team' };
-        
+        const result = { message: "Successfully exited team" };
+
         // Validate output
-        const validatedResult = z.object({
-          message: z.string()
-        }).parse(result);
-        
+        const validatedResult = z
+          .object({
+            message: z.string(),
+          })
+          .parse(result);
+
         return validatedResult;
       } catch (error) {
-        logger.error('Failed to exit team:', error);
-        throw new TRPCError({ 
-          code: 'INTERNAL_SERVER_ERROR', 
-          message: 'Failed to exit team' 
+        logger.error("Failed to exit team:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to exit team",
         });
       }
     }),
@@ -2220,15 +2285,18 @@ export const teamsRouter = router({
           .where(eq(newTeamGroups.slug, input.teamSlug));
 
         if (groupResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
         }
 
-        const groupId = groupResult[0].id;
+        const groupId = groupResult[0]?.id;
+        if (!groupId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
+        }
 
         // Check team access
         const teamAccess = await getTeamAccess(ctx.user.id, groupId);
         if (!teamAccess.hasAccess) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to access this team' });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to access this team" });
         }
 
         // Get team units for this group using Drizzle
@@ -2238,10 +2306,10 @@ export const teamsRouter = router({
           .where(eq(newTeamUnits.groupId, groupId));
 
         if (teamUnits.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'No team units found for this group' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "No team units found for this group" });
         }
 
-        const teamUnitIds = teamUnits.map(unit => unit.id);
+        const teamUnitIds = teamUnits.map((unit) => unit.id);
 
         // Check if user is the creator of the team group using Drizzle
         const archiveGroupResult = await dbPg
@@ -2251,11 +2319,14 @@ export const teamsRouter = router({
           .limit(1);
 
         if (archiveGroupResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team group not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team group not found" });
         }
 
-        const groupCreator = archiveGroupResult[0].createdBy;
-        
+        const groupCreator = archiveGroupResult[0]?.createdBy;
+        if (!groupCreator) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team group not found" });
+        }
+
         // Allow team creator OR captains to archive the team
         if (groupCreator !== ctx.user.id) {
           // Check if user is a captain of any team unit in this group using Drizzle
@@ -2267,23 +2338,30 @@ export const teamsRouter = router({
               and(
                 eq(newTeamMemberships.userId, ctx.user.id),
                 eq(newTeamUnits.groupId, groupId),
-                eq(newTeamMemberships.status, 'active')
+                eq(newTeamMemberships.status, "active")
               )
             )
             .limit(1);
 
           if (captainCheck.length === 0) {
-            throw new TRPCError({ 
-              code: 'FORBIDDEN', 
-              message: 'Only the team creator or captains can archive the team' 
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "Only the team creator or captains can archive the team",
             });
           }
 
-          const userRole = captainCheck[0].role;
-          if (!['captain', 'co_captain'].includes(userRole)) {
-            throw new TRPCError({ 
-              code: 'FORBIDDEN', 
-              message: 'Only the team creator or captains can archive the team' 
+          const captainCheckResult = captainCheck[0];
+          if (!captainCheckResult) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "Only the team creator or captains can archive the team",
+            });
+          }
+          const userRole = captainCheckResult.role;
+          if (!["captain", "co_captain"].includes(userRole)) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "Only the team creator or captains can archive the team",
             });
           }
         }
@@ -2291,40 +2369,42 @@ export const teamsRouter = router({
         // Archive the team group using Drizzle
         await dbPg
           .update(newTeamGroups)
-          .set({ 
-            status: 'archived',
-            updatedAt: new Date()
+          .set({
+            status: "archived",
+            updatedAt: new Date(),
           })
           .where(eq(newTeamGroups.id, groupId));
 
         // Archive all team units using Drizzle
         await dbPg
           .update(newTeamUnits)
-          .set({ 
-            status: 'archived',
-            updatedAt: new Date()
+          .set({
+            status: "archived",
+            updatedAt: new Date(),
           })
           .where(eq(newTeamUnits.groupId, groupId));
 
         // Archive all memberships using Drizzle
         await dbPg
           .update(newTeamMemberships)
-          .set({ status: 'archived' })
+          .set({ status: "archived" })
           .where(inArray(newTeamMemberships.teamId, teamUnitIds));
 
-        const result = { message: 'Team successfully archived' };
-        
+        const result = { message: "Team successfully archived" };
+
         // Validate output
-        const validatedResult = z.object({
-          message: z.string()
-        }).parse(result);
-        
+        const validatedResult = z
+          .object({
+            message: z.string(),
+          })
+          .parse(result);
+
         return validatedResult;
       } catch (error) {
-        logger.error('Failed to archive team:', error);
-        throw new TRPCError({ 
-          code: 'INTERNAL_SERVER_ERROR', 
-          message: 'Failed to archive team' 
+        logger.error("Failed to archive team:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to archive team",
         });
       }
     }),
@@ -2334,11 +2414,13 @@ export const teamsRouter = router({
   // ============================================================================
 
   inviteMember: protectedProcedure
-    .input(z.object({ 
-      teamSlug: z.string(),
-      email: z.string().email(),
-      role: z.enum(['captain', 'co_captain', 'member', 'observer']).default('member')
-    }))
+    .input(
+      z.object({
+        teamSlug: z.string(),
+        email: z.string().email(),
+        role: z.enum(["captain", "co_captain", "member", "observer"]).default("member"),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       try {
         // Resolve team slug to group ID
@@ -2348,60 +2430,71 @@ export const teamsRouter = router({
           .where(eq(newTeamGroups.slug, input.teamSlug));
 
         if (groupResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
         }
 
-        const groupId = groupResult[0].id;
+        const groupId = groupResult[0]?.id;
+        if (!groupId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
+        }
 
         // Check team access
         const teamAccess = await getTeamAccess(ctx.user.id, groupId);
         if (!teamAccess.hasAccess) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to access this team' });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to access this team" });
         }
 
         // Get all team units for this group
         const unitsResult = await queryCockroachDB<{ id: string }>(
-          `SELECT id FROM new_team_units WHERE group_id = $1`,
+          "SELECT id FROM new_team_units WHERE group_id = $1",
           [groupId]
         );
 
         if (unitsResult.rows.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'No team units found for this group' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "No team units found for this group" });
         }
 
-        const teamUnitIds = unitsResult.rows.map(row => row.id);
+        const teamUnitIds = unitsResult.rows.map((row) => row.id);
 
         // Check if user is captain or co-captain in any team unit
-        const membershipResult = await queryCockroachDB<{ id: string, role: string, team_id: string }>(
+        const membershipResult = await queryCockroachDB<{
+          id: string;
+          role: string;
+          team_id: string;
+        }>(
           `SELECT id, role, team_id FROM new_team_memberships 
            WHERE user_id = $1 AND team_id = ANY($2) AND status = 'active'`,
           [ctx.user.id, teamUnitIds]
         );
 
         if (membershipResult.rows.length === 0) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a team member' });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not a team member" });
         }
 
         // Check if user has captain/co-captain role
-        const hasPermission = membershipResult.rows.some(membership => 
-          ['captain', 'co_captain'].includes(membership.role)
+        const hasPermission = membershipResult.rows.some((membership) =>
+          ["captain", "co_captain"].includes(membership.role)
         );
 
         if (!hasPermission) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only captains can invite members' });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Only captains can invite members" });
         }
 
         // Find the user to invite by email
-        const userResult = await queryCockroachDB<{ id: string, email: string, display_name: string }>(
-          `SELECT id, email, display_name FROM users WHERE email = $1`,
-          [input.email]
-        );
+        const userResult = await queryCockroachDB<{
+          id: string;
+          email: string;
+          display_name: string;
+        }>("SELECT id, email, display_name FROM users WHERE email = $1", [input.email]);
 
         if (userResult.rows.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
         }
 
         const invitedUser = userResult.rows[0];
+        if (!invitedUser) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+        }
 
         // Check if user is already a member
         const existingMembership = await queryCockroachDB<{ id: string }>(
@@ -2411,7 +2504,7 @@ export const teamsRouter = router({
         );
 
         if (existingMembership.rows.length > 0) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'User is already a team member' });
+          throw new TRPCError({ code: "BAD_REQUEST", message: "User is already a team member" });
         }
 
         // Check for existing pending invitation
@@ -2422,16 +2515,19 @@ export const teamsRouter = router({
         );
 
         if (existingInvitation.rows.length > 0) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invitation already sent' });
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Invitation already sent" });
         }
 
         // Create invitation for the first team unit where user has permission
-        const targetTeamUnitId = membershipResult.rows.find(membership => 
-          ['captain', 'co_captain'].includes(membership.role)
+        const targetTeamUnitId = membershipResult.rows.find((membership) =>
+          ["captain", "co_captain"].includes(membership.role)
         )?.team_id;
 
         if (!targetTeamUnitId) {
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'No valid team unit found' });
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "No valid team unit found",
+          });
         }
 
         // Generate invitation code
@@ -2446,34 +2542,38 @@ export const teamsRouter = router({
           [targetTeamUnitId, ctx.user.id, input.email, input.role, invitationCode, expiresAt]
         );
 
-        const result = { 
-          message: 'Invitation sent successfully',
+        const result = {
+          message: "Invitation sent successfully",
           invitationCode,
-          expiresAt: expiresAt.toISOString()
+          expiresAt: expiresAt.toISOString(),
         };
-        
+
         // Validate output
-        const validatedResult = z.object({
-          message: z.string(),
-          invitationCode: z.string(),
-          expiresAt: z.string()
-        }).parse(result);
-        
+        const validatedResult = z
+          .object({
+            message: z.string(),
+            invitationCode: z.string(),
+            expiresAt: z.string(),
+          })
+          .parse(result);
+
         return validatedResult;
       } catch (error) {
-        logger.error('Failed to invite member:', error);
-        throw new TRPCError({ 
-          code: 'INTERNAL_SERVER_ERROR', 
-          message: 'Failed to invite member' 
+        logger.error("Failed to invite member:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to invite member",
         });
       }
     }),
 
   cancelInvitation: protectedProcedure
-    .input(z.object({ 
-      teamSlug: z.string(),
-      invitationCode: z.string()
-    }))
+    .input(
+      z.object({
+        teamSlug: z.string(),
+        invitationCode: z.string(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       try {
         // Resolve team slug to group ID
@@ -2483,58 +2583,71 @@ export const teamsRouter = router({
           .where(eq(newTeamGroups.slug, input.teamSlug));
 
         if (groupResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
         }
 
-        const groupId = groupResult[0].id;
+        const groupId = groupResult[0]?.id;
+        if (!groupId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
+        }
 
         // Check team access
         const teamAccess = await getTeamAccess(ctx.user.id, groupId);
         if (!teamAccess.hasAccess) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to access this team' });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to access this team" });
         }
 
         // Get all team units for this group
         const unitsResult = await queryCockroachDB<{ id: string }>(
-          `SELECT id FROM new_team_units WHERE group_id = $1`,
+          "SELECT id FROM new_team_units WHERE group_id = $1",
           [groupId]
         );
 
         if (unitsResult.rows.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'No team units found for this group' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "No team units found for this group" });
         }
 
-        const teamUnitIds = unitsResult.rows.map(row => row.id);
+        const teamUnitIds = unitsResult.rows.map((row) => row.id);
 
         // Check if user is captain or co-captain in any team unit
-        const membershipResult = await queryCockroachDB<{ id: string, role: string, team_id: string }>(
+        const membershipResult = await queryCockroachDB<{
+          id: string;
+          role: string;
+          team_id: string;
+        }>(
           `SELECT id, role, team_id FROM new_team_memberships 
            WHERE user_id = $1 AND team_id = ANY($2) AND status = 'active'`,
           [ctx.user.id, teamUnitIds]
         );
 
         if (membershipResult.rows.length === 0) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a team member' });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not a team member" });
         }
 
         // Check if user has captain/co-captain role
-        const hasPermission = membershipResult.rows.some(membership => 
-          ['captain', 'co_captain'].includes(membership.role)
+        const hasPermission = membershipResult.rows.some((membership) =>
+          ["captain", "co_captain"].includes(membership.role)
         );
 
         if (!hasPermission) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only captains can cancel invitations' });
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only captains can cancel invitations",
+          });
         }
 
         // Find and cancel the invitation
-        const invitationResult = await queryCockroachDB<{ id: string, email: string }>(
+        const invitationResult = await queryCockroachDB<{ id: string; email: string }>(
           `SELECT id, email FROM new_team_invitations 
            WHERE invitation_code = $1 AND team_id = ANY($2) AND status = 'pending'`,
           [input.invitationCode, teamUnitIds]
         );
 
         if (invitationResult.rows.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Invitation not found or already processed' });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Invitation not found or already processed",
+          });
         }
 
         // Cancel the invitation
@@ -2544,19 +2657,21 @@ export const teamsRouter = router({
           [input.invitationCode]
         );
 
-        const result = { message: 'Invitation cancelled successfully' };
-        
+        const result = { message: "Invitation cancelled successfully" };
+
         // Validate output
-        const validatedResult = z.object({
-          message: z.string()
-        }).parse(result);
-        
+        const validatedResult = z
+          .object({
+            message: z.string(),
+          })
+          .parse(result);
+
         return validatedResult;
       } catch (error) {
-        logger.error('Failed to cancel invitation:', error);
-        throw new TRPCError({ 
-          code: 'INTERNAL_SERVER_ERROR', 
-          message: 'Failed to cancel invitation' 
+        logger.error("Failed to cancel invitation:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to cancel invitation",
         });
       }
     }),
@@ -2566,11 +2681,13 @@ export const teamsRouter = router({
   // ============================================================================
 
   removeMember: protectedProcedure
-    .input(z.object({ 
-      teamSlug: z.string(),
-      userId: z.string(),
-      subteamId: z.string().optional()
-    }))
+    .input(
+      z.object({
+        teamSlug: z.string(),
+        userId: z.string(),
+        subteamId: z.string().optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       try {
         // Resolve team slug to group ID
@@ -2580,74 +2697,95 @@ export const teamsRouter = router({
           .where(eq(newTeamGroups.slug, input.teamSlug));
 
         if (groupResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
         }
 
-        const groupId = groupResult[0].id;
+        const groupId = groupResult[0]?.id;
+        if (!groupId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
+        }
 
         // Check team access
         const teamAccess = await getTeamAccess(ctx.user.id, groupId);
         if (!teamAccess.hasAccess) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to access this team' });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to access this team" });
         }
 
         // Get all team units for this group
         const unitsResult = await queryCockroachDB<{ id: string }>(
-          `SELECT id FROM new_team_units WHERE group_id = $1`,
+          "SELECT id FROM new_team_units WHERE group_id = $1",
           [groupId]
         );
 
         if (unitsResult.rows.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'No team units found for this group' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "No team units found for this group" });
         }
 
-        const teamUnitIds = unitsResult.rows.map(row => row.id);
+        const teamUnitIds = unitsResult.rows.map((row) => row.id);
 
         // Check if user is captain or co-captain in any team unit
-        const membershipResult = await queryCockroachDB<{ id: string, role: string, team_id: string }>(
+        const membershipResult = await queryCockroachDB<{
+          id: string;
+          role: string;
+          team_id: string;
+        }>(
           `SELECT id, role, team_id FROM new_team_memberships 
            WHERE user_id = $1 AND team_id = ANY($2) AND status = 'active'`,
           [ctx.user.id, teamUnitIds]
         );
 
         if (membershipResult.rows.length === 0) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a team member' });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not a team member" });
         }
 
         // Check if user has captain/co-captain role
-        const hasPermission = membershipResult.rows.some(membership => 
-          ['captain', 'co_captain'].includes(membership.role)
+        const hasPermission = membershipResult.rows.some((membership) =>
+          ["captain", "co_captain"].includes(membership.role)
         );
 
         if (!hasPermission) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only captains can remove members' });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Only captains can remove members" });
         }
 
         // Find the member to remove
-        const memberToRemove = await queryCockroachDB<{ id: string, role: string, team_id: string }>(
+        const memberToRemove = await queryCockroachDB<{
+          id: string;
+          role: string;
+          team_id: string;
+        }>(
           `SELECT id, role, team_id FROM new_team_memberships 
            WHERE user_id = $1 AND team_id = ANY($2) AND status = 'active'`,
           [input.userId, teamUnitIds]
         );
 
         if (memberToRemove.rows.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Member not found in this team' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Member not found in this team" });
         }
 
         const memberMembership = memberToRemove.rows[0];
+        if (!memberMembership) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Member not found in this team" });
+        }
 
         // Prevent removing the last captain
-        if (memberMembership.role === 'captain') {
+        if (memberMembership.role === "captain") {
           const captainCountResult = await queryCockroachDB<{ count: string }>(
             `SELECT COUNT(*) as count FROM new_team_memberships 
              WHERE team_id = $1 AND role = 'captain' AND status = 'active'`,
             [memberMembership.team_id]
           );
 
-          if (parseInt(captainCountResult.rows[0].count) <= 1) {
-            throw new TRPCError({ 
-              code: 'BAD_REQUEST', 
-              message: 'Cannot remove the last captain. Promote another member to captain first.' 
+          const countRow = captainCountResult.rows[0];
+          if (!countRow) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Failed to get captain count",
+            });
+          }
+          if (Number.parseInt(countRow.count) <= 1) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Cannot remove the last captain. Promote another member to captain first.",
             });
           }
         }
@@ -2659,29 +2797,33 @@ export const teamsRouter = router({
           [input.userId, memberMembership.team_id]
         );
 
-        const result = { message: 'Member removed successfully' };
-        
+        const result = { message: "Member removed successfully" };
+
         // Validate output
-        const validatedResult = z.object({
-          message: z.string()
-        }).parse(result);
-        
+        const validatedResult = z
+          .object({
+            message: z.string(),
+          })
+          .parse(result);
+
         return validatedResult;
       } catch (error) {
-        logger.error('Failed to remove member:', error);
-        throw new TRPCError({ 
-          code: 'INTERNAL_SERVER_ERROR', 
-          message: 'Failed to remove member' 
+        logger.error("Failed to remove member:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to remove member",
         });
       }
     }),
 
   promoteMember: protectedProcedure
-    .input(z.object({ 
-      teamSlug: z.string(),
-      userId: z.string(),
-      role: z.enum(['captain', 'co_captain', 'member', 'observer'])
-    }))
+    .input(
+      z.object({
+        teamSlug: z.string(),
+        userId: z.string(),
+        role: z.enum(["captain", "co_captain", "member", "observer"]),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       try {
         // Resolve team slug to group ID
@@ -2691,65 +2833,79 @@ export const teamsRouter = router({
           .where(eq(newTeamGroups.slug, input.teamSlug));
 
         if (groupResult.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
         }
 
-        const groupId = groupResult[0].id;
+        const groupId = groupResult[0]?.id;
+        if (!groupId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
+        }
 
         // Check team access
         const teamAccess = await getTeamAccess(ctx.user.id, groupId);
         if (!teamAccess.hasAccess) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to access this team' });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to access this team" });
         }
 
         // Get all team units for this group
         const unitsResult = await queryCockroachDB<{ id: string }>(
-          `SELECT id FROM new_team_units WHERE group_id = $1`,
+          "SELECT id FROM new_team_units WHERE group_id = $1",
           [groupId]
         );
 
         if (unitsResult.rows.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'No team units found for this group' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "No team units found for this group" });
         }
 
-        const teamUnitIds = unitsResult.rows.map(row => row.id);
+        const teamUnitIds = unitsResult.rows.map((row) => row.id);
 
         // Check if user is captain or co-captain in any team unit
-        const membershipResult = await queryCockroachDB<{ id: string, role: string, team_id: string }>(
+        const membershipResult = await queryCockroachDB<{
+          id: string;
+          role: string;
+          team_id: string;
+        }>(
           `SELECT id, role, team_id FROM new_team_memberships 
            WHERE user_id = $1 AND team_id = ANY($2) AND status = 'active'`,
           [ctx.user.id, teamUnitIds]
         );
 
         if (membershipResult.rows.length === 0) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a team member' });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not a team member" });
         }
 
         // Check if user has captain/co-captain role
-        const hasPermission = membershipResult.rows.some(membership => 
-          ['captain', 'co_captain'].includes(membership.role)
+        const hasPermission = membershipResult.rows.some((membership) =>
+          ["captain", "co_captain"].includes(membership.role)
         );
 
         if (!hasPermission) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only captains can promote members' });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Only captains can promote members" });
         }
 
         // Find the member to promote
-        const memberToPromote = await queryCockroachDB<{ id: string, role: string, team_id: string }>(
+        const memberToPromote = await queryCockroachDB<{
+          id: string;
+          role: string;
+          team_id: string;
+        }>(
           `SELECT id, role, team_id FROM new_team_memberships 
            WHERE user_id = $1 AND team_id = ANY($2) AND status = 'active'`,
           [input.userId, teamUnitIds]
         );
 
         if (memberToPromote.rows.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Member not found in this team' });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Member not found in this team" });
         }
 
         const memberMembership = memberToPromote.rows[0];
+        if (!memberMembership) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Member not found in this team" });
+        }
 
         // Validate the new role
-        if (!['captain', 'co_captain', 'member', 'observer'].includes(input.role)) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid role specified' });
+        if (!["captain", "co_captain", "member", "observer"].includes(input.role)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid role specified" });
         }
 
         // Update the member's role
@@ -2759,21 +2915,22 @@ export const teamsRouter = router({
           [input.role, input.userId, memberMembership.team_id]
         );
 
-        const result = { message: 'Member promoted successfully' };
-        
+        const result = { message: "Member promoted successfully" };
+
         // Validate output
-        const validatedResult = z.object({
-          message: z.string()
-        }).parse(result);
-        
+        const validatedResult = z
+          .object({
+            message: z.string(),
+          })
+          .parse(result);
+
         return validatedResult;
       } catch (error) {
-        logger.error('Failed to promote member:', error);
-        throw new TRPCError({ 
-          code: 'INTERNAL_SERVER_ERROR', 
-          message: 'Failed to promote member' 
+        logger.error("Failed to promote member:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to promote member",
         });
       }
     }),
 });
-

@@ -2,14 +2,16 @@
  * Validation and utility methods for Gemini service
  */
 
-import { GoogleGenAI, Type } from "@google/genai";
-import type { EditValidationResult, ReportEditResult } from './types';
+import { Type } from "@google/genai";
+import logger from "@/lib/utils/logger";
+import type { ClientWithKey } from "./client";
+import type { EditValidationResult, ReportEditResult } from "./types";
 
 /**
  * Validation and utility service
  */
 export class GeminiValidationService {
-  constructor(private client: GoogleGenAI) {}
+  constructor(private clientWithKey: ClientWithKey) {}
 
   /**
    * Validates an edit to a question
@@ -96,28 +98,51 @@ Provide an improved version of the reason that will help the question editor mak
    * @returns {Promise<T>} Structured response
    */
   private async generateStructuredContent<T>(prompt: string, schema: object): Promise<T> {
-    const response = await this.client.models.generateContent({
-      model: "gemini-flash-lite-latest",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: schema,
-        thinkingConfig: {
-          thinkingBudget: 1000,
-        },
-        temperature: 0.1,
-        topP: 0.8,
-        topK: 40,
-      },
-    });
-
-    const text = response.text || '{}';
-    
     try {
-      return JSON.parse(text) as T;
+      const response = await this.clientWithKey.client.models.generateContent({
+        model: "gemini-flash-lite-latest",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: schema,
+          thinkingConfig: {
+            thinkingBudget: 1000,
+          },
+          temperature: 0.1,
+          topP: 0.8,
+          topK: 40,
+        },
+      });
+
+      const text = response.text || "{}";
+
+      try {
+        return JSON.parse(text) as T;
+      } catch (error) {
+        const maskedKey =
+          this.clientWithKey.apiKey.length > 12
+            ? `${this.clientWithKey.apiKey.substring(0, 8)}...${this.clientWithKey.apiKey.substring(this.clientWithKey.apiKey.length - 4)}`
+            : "***";
+        logger.error("Failed to parse Gemini response", error as Error, {
+          apiKeyIndex: this.clientWithKey.keyIndex,
+          apiKey: maskedKey,
+        });
+        throw new Error(
+          `Invalid response format from Gemini (API key index: ${this.clientWithKey.keyIndex})`
+        );
+      }
     } catch (error) {
-      console.error('Failed to parse Gemini response:', error);
-      throw new Error('Invalid response format from Gemini');
+      const maskedKey =
+        this.clientWithKey.apiKey.length > 12
+          ? `${this.clientWithKey.apiKey.substring(0, 8)}...${this.clientWithKey.apiKey.substring(this.clientWithKey.apiKey.length - 4)}`
+          : "***";
+      logger.error("Gemini API error", error as Error, {
+        apiKeyIndex: this.clientWithKey.keyIndex,
+        apiKey: maskedKey,
+      });
+      throw new Error(
+        `Gemini API error (API key index: ${this.clientWithKey.keyIndex}, key: ${maskedKey}): ${(error as Error).message}`
+      );
     }
   }
 }

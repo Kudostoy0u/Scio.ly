@@ -1,9 +1,8 @@
-import { NextResponse } from 'next/server';
-import { ApiResponse } from '@/lib/types/api';
-import { db } from '@/lib/db';
-import { edits as editsTable, blacklists as blacklistsTable } from '@/lib/db/schema';
-import { sql } from 'drizzle-orm';
-
+import { db } from "@/lib/db";
+import { blacklists as blacklistsTable, edits as editsTable } from "@/lib/db/schema/core";
+import type { ApiResponse } from "@/lib/types/api";
+import { sql } from "drizzle-orm";
+import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
@@ -20,10 +19,14 @@ export async function GET() {
     ]);
 
     const editsByEvent: Record<string, number> = {};
-    for (const row of editCounts) editsByEvent[row.event] = Number(row.count || 0);
+    for (const row of editCounts) {
+      editsByEvent[row.event] = Number(row.count || 0);
+    }
 
     const removedByEvent: Record<string, number> = {};
-    for (const row of blacklistCounts) removedByEvent[row.event] = Number(row.count || 0);
+    for (const row of blacklistCounts) {
+      removedByEvent[row.event] = Number(row.count || 0);
+    }
 
     const response: ApiResponse = {
       success: true,
@@ -33,14 +36,11 @@ export async function GET() {
       },
     };
     return NextResponse.json(response);
-  } catch (error) {
-    console.error('GET /api/report/meta error:', error);
+  } catch (_error) {
     const response: ApiResponse = {
       success: false,
-      error: 'Failed to fetch report metadata',
+      error: "Failed to fetch report metadata",
     };
     return NextResponse.json(response, { status: 500 });
   }
 }
-
-

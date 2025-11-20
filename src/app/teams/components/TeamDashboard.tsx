@@ -1,113 +1,92 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { useTheme } from '@/app/contexts/ThemeContext';
-import { useAuth } from '@/app/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import { toast } from 'react-toastify';
-import { UserPlus, LogOut, Archive } from 'lucide-react';
-import TeamLayout from './TeamLayout';
-import TabNavigation from './TabNavigation';
-import BannerInvite from './BannerInvite';
-import { useTeamStore } from '@/app/hooks/useTeamStore';
-import TeamDataLoader from './TeamDataLoader';
-import { trpc } from '@/lib/trpc/client';
+import { useAuth } from "@/app/contexts/AuthContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTeamStore } from "@/app/hooks/useTeamStore";
+import { trpc } from "@/lib/trpc/client";
+import { Archive, LogOut, UserPlus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Suspense, lazy, useEffect, useState } from "react";
+import { toast } from "react-toastify";
+import BannerInvite from "./BannerInvite";
+import TabNavigation from "./TabNavigation";
+import TeamDataLoader from "./TeamDataLoader";
+import TeamLayout from "./TeamLayout";
 
 // Lazy load heavy components
-const RosterTab = lazy(() => import('./RosterTab'));
-const StreamTab = lazy(() => import('./StreamTab'));
-const AssignmentsTab = lazy(() => import('./AssignmentsTab'));
-const PeopleTab = lazy(() => import('./PeopleTab'));
-const TeamCalendar = lazy(() => import('./TeamCalendar'));
-const AssignmentCreator = lazy(() => import('./EnhancedAssignmentCreator'));
+const RosterTab = lazy(() => import("./RosterTab"));
+const StreamTab = lazy(() => import("./StreamTab"));
+const AssignmentsTab = lazy(() => import("./AssignmentsTab"));
+const PeopleTab = lazy(() => import("./PeopleTab"));
+const TeamCalendar = lazy(() => import("./TeamCalendar"));
+const AssignmentCreator = lazy(() => import("./EnhancedAssignmentCreator"));
 
 interface Team {
   id: string;
   name: string;
   slug: string;
   school: string;
-  division: 'B' | 'C';
+  division: "B" | "C";
 }
 
 interface TeamDashboardProps {
   team: {
     id: string;
     school: string;
-    division: 'B' | 'C';
+    division: "B" | "C";
     slug: string;
   };
   isCaptain: boolean;
   onBack: () => void;
-  activeTab?: 'roster' | 'stream' | 'assignments' | 'people';
+  activeTab?: "roster" | "stream" | "assignments" | "people";
 }
 
-export default function TeamDashboard({ 
-  team, 
-  isCaptain, 
+export default function TeamDashboard({
+  team,
+  isCaptain,
   onBack: _onBack,
-  activeTab: initialActiveTab = 'roster'
+  activeTab: initialActiveTab = "roster",
 }: TeamDashboardProps) {
   const { darkMode } = useTheme();
   const { user } = useAuth();
   // User teams are now loaded by the enhanced hook
   const router = useRouter();
-  
+
   // Subteam state
   const [activeSubteamId, setActiveSubteamId] = useState<string | null>(null);
   const [loadingSubteams, setLoadingSubteams] = useState(true);
   const [showBannerInvite, setShowBannerInvite] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
-  
+
   // Sidebar state
-  const [sidebarTab, setSidebarTab] = useState<'home' | 'upcoming' | 'settings'>('home');
-  
+  const [sidebarTab, setSidebarTab] = useState<"home" | "upcoming" | "settings">("home");
+
   // Home tab state
-  const [activeTab] = useState<'roster' | 'stream' | 'assignments' | 'people'>(initialActiveTab);
-  
+  const [activeTab] = useState<"roster" | "stream" | "assignments" | "people">(initialActiveTab);
+
   // Modal states
   const [showAssignmentCreator, setShowAssignmentCreator] = useState(false);
   const [showDeleteSubteamModal, setShowDeleteSubteamModal] = useState(false);
   const [subteamToDelete, setSubteamToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Use team store
-  const {
-    userTeams,
-    getSubteams,
-    loadSubteams,
-    updateSubteam,
-    deleteSubteam,
-    invalidateCache
-  } = useTeamStore();
-
-  // Debug authentication state
-  console.log('🔍 [TeamDashboard] Authentication state:', {
-    hasUser: !!user,
-    userId: user?.id,
-    userEmail: user?.email,
-    teamSlug: team.slug,
-    isCaptain
-  });
+  const { userTeams, getSubteams, loadSubteams, updateSubteam, deleteSubteam, invalidateCache } =
+    useTeamStore();
 
   // Set active subteam when subteams are available
   useEffect(() => {
     const subteamsData = getSubteams(team.slug);
-    console.log('🔍 [TeamDashboard] Subteams data:', {
-      teamSlug: team.slug,
-      subteamsData,
-      subteamsLength: subteamsData?.length,
-      activeSubteamId,
-      loadingSubteams
-    });
-    
+
     if (subteamsData && subteamsData.length > 0) {
       if (!activeSubteamId) {
-        console.log('🔍 [TeamDashboard] Setting active subteam to:', subteamsData[0].id);
-        setActiveSubteamId(subteamsData[0].id);
+        const firstSubteam = subteamsData[0];
+        if (firstSubteam) {
+          setActiveSubteamId(firstSubteam.id);
+        }
       }
       setLoadingSubteams(false);
     } else if (subteamsData && subteamsData.length === 0) {
-      console.log('🔍 [TeamDashboard] No subteams found, setting loading to false');
       setLoadingSubteams(false);
     }
   }, [team.slug, getSubteams, activeSubteamId, loadingSubteams]);
@@ -137,9 +116,7 @@ export default function TeamDashboard({
   if (!user?.id) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-lg text-gray-600">
-          Loading authentication...
-        </div>
+        <div className="text-lg text-gray-600">Loading authentication...</div>
       </div>
     );
   }
@@ -148,7 +125,7 @@ export default function TeamDashboard({
   // Note: We're using the team store for subteams data instead of direct tRPC
   // trpc.teams.getSubteams.useQuery(
   //   { teamSlug: team.slug },
-  //   { 
+  //   {
   //     enabled: !!team.slug,
   //     staleTime: 10 * 60 * 1000,
   //   }
@@ -175,16 +152,13 @@ export default function TeamDashboard({
     setShowAssignmentCreator(true);
   };
 
-  const handleAssignmentCreated = (assignment: any) => {
+  const handleAssignmentCreated = (_assignment: any) => {
     setShowAssignmentCreator(false);
-    // You could add a toast notification here
-    console.log('Assignment created:', assignment);
   };
 
   const handleCancelAssignment = () => {
     setShowAssignmentCreator(false);
   };
-
 
   const handleExitTeam = () => {
     setShowExitModal(true);
@@ -193,15 +167,14 @@ export default function TeamDashboard({
   const confirmExitTeam = async () => {
     try {
       await exitTeamMutation.mutateAsync({
-        teamSlug: team.slug
+        teamSlug: team.slug,
       });
-      
-      toast.success('Successfully exited team');
+
+      toast.success("Successfully exited team");
       // Redirect to teams page after successful exit
-      window.location.href = '/teams';
-    } catch (error) {
-      console.error('Failed to exit team:', error);
-      toast.error('Failed to exit team');
+      window.location.href = "/teams";
+    } catch (_error) {
+      toast.error("Failed to exit team");
     } finally {
       setShowExitModal(false);
     }
@@ -218,15 +191,14 @@ export default function TeamDashboard({
   const confirmArchiveTeam = async () => {
     try {
       await archiveTeamMutation.mutateAsync({
-        teamSlug: team.slug
+        teamSlug: team.slug,
       });
-      
-      toast.success('Team archived successfully');
+
+      toast.success("Team archived successfully");
       // Redirect to teams page after successful archive
-      window.location.href = '/teams';
-    } catch (error) {
-      console.error('Failed to archive team:', error);
-      toast.error('Failed to archive team');
+      window.location.href = "/teams";
+    } catch (_error) {
+      toast.error("Failed to archive team");
     } finally {
       setShowArchiveModal(false);
     }
@@ -252,29 +224,28 @@ export default function TeamDashboard({
         const nextLetter = String.fromCharCode(65 + subteamsData.length); // A, B, C, etc.
         subteamName = `Team ${nextLetter}`;
       }
-      
+
       const result = await createSubteamMutation.mutateAsync({
         teamSlug: team.slug,
-        name: subteamName
+        name: subteamName,
       });
-      
+
       // Show success toast
       toast.success(`Subteam "${subteamName}" created successfully!`);
-      
+
       // Clear subteams cache to ensure fresh data
       invalidateCache(`subteams-${team.slug}`);
-      
+
       // Also invalidate members cache to refresh People tab
       invalidateCache(`members-${team.slug}-all`);
-      
+
       // Reload subteams data to get the new subteam
       await loadSubteams(team.slug);
-      
+
       // Set the new subteam as active after reload
       setActiveSubteamId(result.id);
-    } catch (error) {
-      console.error('Failed to create subteam:', error);
-      toast.error('Failed to create subteam. Please try again.');
+    } catch (_error) {
+      toast.error("Failed to create subteam. Please try again.");
     }
   };
 
@@ -282,31 +253,29 @@ export default function TeamDashboard({
     try {
       // Optimistically update the UI immediately
       updateSubteam(team.slug, subteamId, { name: newName });
-      
+
       await updateSubteamMutation.mutateAsync({
         teamSlug: team.slug,
         subteamId,
-        name: newName
+        name: newName,
       });
-      
+
       // Show success toast
       toast.success(`Subteam renamed to "${newName}" successfully!`);
-      
+
       // Invalidate members cache to refresh People tab
       invalidateCache(`members-${team.slug}-all`);
       invalidateCache(`members-${team.slug}-${subteamId}`);
-      
+
       // Invalidate subteams cache to ensure PeopleTab gets updated subteam names
       invalidateCache(`subteams-${team.slug}`);
-      
+
       // Reload subteams data to get updated data
       await loadSubteams(team.slug);
-    } catch (error) {
-      console.error('Failed to edit subteam:', error);
-
+    } catch (_error) {
       // Revert optimistic update on error
       invalidateCache(`subteams-${team.slug}`);
-      toast.error('Failed to update subteam name. Please try again.');
+      toast.error("Failed to update subteam name. Please try again.");
     }
   };
 
@@ -314,36 +283,38 @@ export default function TeamDashboard({
     try {
       await deleteSubteamMutation.mutateAsync({
         teamSlug: team.slug,
-        subteamId
+        subteamId,
       });
-      
+
       // Optimistically remove the subteam from the store
       deleteSubteam(team.slug, subteamId);
-      
+
       // If the deleted subteam was active, switch to the first remaining subteam
       if (activeSubteamId === subteamId) {
         const remainingSubteams = getSubteams(team.slug);
         if (remainingSubteams.length > 0) {
-          setActiveSubteamId(remainingSubteams[0].id);
+          const firstRemaining = remainingSubteams[0];
+          if (firstRemaining) {
+            setActiveSubteamId(firstRemaining.id);
+          }
         } else {
           setActiveSubteamId(null);
         }
       }
 
       // Show success toast
-      toast.success('Subteam deleted successfully!');
-      
+      toast.success("Subteam deleted successfully!");
+
       // Invalidate members cache to refresh People tab
       invalidateCache(`members-${team.slug}-all`);
-      
+
       // Invalidate subteams cache to ensure PeopleTab gets updated subteam data
       invalidateCache(`subteams-${team.slug}`);
-      
+
       // Reload subteams data to get updated data
       await loadSubteams(team.slug);
-    } catch (error) {
-      console.error('Failed to delete subteam:', error);
-      toast.error('Failed to delete subteam. Please try again.');
+    } catch (_error) {
+      toast.error("Failed to delete subteam. Please try again.");
     }
   };
 
@@ -365,9 +336,9 @@ export default function TeamDashboard({
     setShowDeleteSubteamModal(true);
   };
 
-  const handleTabChange = (tab: 'home' | 'upcoming' | 'settings') => {
-    if (tab === 'upcoming') {
-      router.push('/teams/calendar');
+  const handleTabChange = (tab: "home" | "upcoming" | "settings") => {
+    if (tab === "upcoming") {
+      router.push("/teams/calendar");
     } else {
       setSidebarTab(tab);
     }
@@ -375,7 +346,7 @@ export default function TeamDashboard({
 
   const handleNavigateToMainDashboard = () => {
     // Navigate to the teams overview page with a parameter to bypass auto-redirect
-    router.push('/teams?view=all');
+    router.push("/teams?view=all");
   };
 
   const handleTeamSelect = (selectedTeam: Team) => {
@@ -383,24 +354,17 @@ export default function TeamDashboard({
     router.push(`/teams/${selectedTeam.slug}`);
   };
 
-
   const renderSidebarContent = () => {
     switch (sidebarTab) {
-      case 'upcoming':
-        return (
-          <TeamCalendar 
-            teamId={team.id}
-            isCaptain={isCaptain}
-            teamSlug={team.slug}
-          />
-        );
-      case 'settings':
+      case "upcoming":
+        return <TeamCalendar teamId={team.id} isCaptain={isCaptain} teamSlug={team.slug} />;
+      case "settings":
         return (
           <div className="p-6">
-            <h2 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h2 className={`text-2xl font-bold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}>
               Team Settings
             </h2>
-            <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            <p className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
               Team settings will be available here.
             </p>
           </div>
@@ -413,13 +377,13 @@ export default function TeamDashboard({
   const renderHomeContent = () => {
     const LoadingFallback = () => (
       <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
         <span className="ml-2 text-gray-600">Loading...</span>
       </div>
     );
 
     switch (activeTab) {
-      case 'roster':
+      case "roster":
         return (
           <Suspense fallback={<LoadingFallback />}>
             <RosterTab
@@ -435,17 +399,13 @@ export default function TeamDashboard({
             />
           </Suspense>
         );
-      case 'stream':
+      case "stream":
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <StreamTab 
-              team={team} 
-              isCaptain={isCaptain} 
-              activeSubteamId={activeSubteamId} 
-            />
+            <StreamTab team={team} isCaptain={isCaptain} activeSubteamId={activeSubteamId} />
           </Suspense>
         );
-      case 'assignments':
+      case "assignments":
         return (
           <Suspense fallback={<LoadingFallback />}>
             <AssignmentsTab
@@ -455,7 +415,7 @@ export default function TeamDashboard({
             />
           </Suspense>
         );
-      case 'people':
+      case "people":
         return (
           <Suspense fallback={<LoadingFallback />}>
             <PeopleTab
@@ -483,66 +443,66 @@ export default function TeamDashboard({
         onTeamSelect={handleTeamSelect}
         onNavigateToMainDashboard={handleNavigateToMainDashboard}
       >
-          {/* Team Header Banner - Scrollable */}
-          <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
-            <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-3xl font-bold">{team.school}</h1>
-                  <p className="text-purple-100 mt-2">Division {team.division}</p>
-                </div>
-                <div className="flex items-center space-x-4">
-                  {isCaptain && (
-                    <button
-                      onClick={handleInvitePerson}
-                      className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 group shadow-lg ${
-                        darkMode 
-                          ? 'bg-gray-700 bg-opacity-90 hover:bg-opacity-100' 
-                          : 'bg-white bg-opacity-90 hover:bg-opacity-100'
-                      }`}
-                      title="Invite Person"
-                    >
-                      <UserPlus className="w-6 h-6 text-purple-600 group-hover:scale-110 transition-transform" />
-                    </button>
-                  )}
+        {/* Team Header Banner - Scrollable */}
+        <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+          <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold">{team.school}</h1>
+                <p className="text-purple-100 mt-2">Division {team.division}</p>
+              </div>
+              <div className="flex items-center space-x-4">
+                {isCaptain && (
                   <button
-                    onClick={handleExitTeam}
+                    onClick={handleInvitePerson}
                     className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 group shadow-lg ${
-                      darkMode 
-                        ? 'bg-gray-700 bg-opacity-90 hover:bg-opacity-100' 
-                        : 'bg-white bg-opacity-90 hover:bg-opacity-100'
+                      darkMode
+                        ? "bg-gray-700 bg-opacity-90 hover:bg-opacity-100"
+                        : "bg-white bg-opacity-90 hover:bg-opacity-100"
                     }`}
-                    title="Exit Team"
+                    title="Invite Person"
                   >
-                    <LogOut className="w-6 h-6 text-red-600 group-hover:scale-110 transition-transform" />
+                    <UserPlus className="w-6 h-6 text-purple-600 group-hover:scale-110 transition-transform" />
                   </button>
-                  {isCaptain && (
-                    <button
-                      onClick={handleArchiveTeam}
-                      className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 group shadow-lg ${
-                        darkMode 
-                          ? 'bg-gray-700 bg-opacity-90 hover:bg-opacity-100' 
-                          : 'bg-white bg-opacity-90 hover:bg-opacity-100'
-                      }`}
-                      title="Archive Team"
-                    >
-                      <Archive className="w-6 h-6 text-orange-600 group-hover:scale-110 transition-transform" />
-                    </button>
-                  )}
-                </div>
+                )}
+                <button
+                  onClick={handleExitTeam}
+                  className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 group shadow-lg ${
+                    darkMode
+                      ? "bg-gray-700 bg-opacity-90 hover:bg-opacity-100"
+                      : "bg-white bg-opacity-90 hover:bg-opacity-100"
+                  }`}
+                  title="Exit Team"
+                >
+                  <LogOut className="w-6 h-6 text-red-600 group-hover:scale-110 transition-transform" />
+                </button>
+                {isCaptain && (
+                  <button
+                    onClick={handleArchiveTeam}
+                    className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 group shadow-lg ${
+                      darkMode
+                        ? "bg-gray-700 bg-opacity-90 hover:bg-opacity-100"
+                        : "bg-white bg-opacity-90 hover:bg-opacity-100"
+                    }`}
+                    title="Archive Team"
+                  >
+                    <Archive className="w-6 h-6 text-orange-600 group-hover:scale-110 transition-transform" />
+                  </button>
+                )}
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Tab Content */}
-          {sidebarTab === 'home' && (
-            <>
-              <TabNavigation teamSlug={team.slug} />
-              {renderHomeContent()}
-            </>
-          )}
-          
-          {sidebarTab !== 'home' && renderSidebarContent()}
+        {/* Tab Content */}
+        {sidebarTab === "home" && (
+          <>
+            <TabNavigation teamSlug={team.slug} />
+            {renderHomeContent()}
+          </>
+        )}
+
+        {sidebarTab !== "home" && renderSidebarContent()}
       </TeamLayout>
 
       {/* Banner Invite */}
@@ -554,23 +514,26 @@ export default function TeamDashboard({
 
       {/* Exit Team Modal */}
       {showExitModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-          <div className={`rounded-lg p-6 max-w-md w-full mx-4 ${
-            darkMode ? 'bg-gray-800' : 'bg-white'
-          }`}>
-            <h3 className={`text-lg font-semibold mb-4 ${
-              darkMode ? 'text-white' : 'text-gray-900'
-            }`}>Exit Team</h3>
-            <p className={`mb-6 ${
-              darkMode ? 'text-gray-300' : 'text-gray-600'
-            }`}>Are you sure you want to exit this team?</p>
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+        >
+          <div
+            className={`rounded-lg p-6 max-w-md w-full mx-4 ${darkMode ? "bg-gray-800" : "bg-white"}`}
+          >
+            <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}>
+              Exit Team
+            </h3>
+            <p className={`mb-6 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+              Are you sure you want to exit this team?
+            </p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={cancelExitTeam}
                 className={`px-4 py-2 border rounded-lg transition-colors ${
-                  darkMode 
-                    ? 'text-gray-300 border-gray-600 hover:bg-gray-700' 
-                    : 'text-gray-600 border-gray-300 hover:bg-gray-50'
+                  darkMode
+                    ? "text-gray-300 border-gray-600 hover:bg-gray-700"
+                    : "text-gray-600 border-gray-300 hover:bg-gray-50"
                 }`}
               >
                 Cancel
@@ -588,23 +551,27 @@ export default function TeamDashboard({
 
       {/* Archive Team Modal */}
       {showArchiveModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-          <div className={`rounded-lg p-6 max-w-md w-full mx-4 ${
-            darkMode ? 'bg-gray-800' : 'bg-white'
-          }`}>
-            <h3 className={`text-lg font-semibold mb-4 ${
-              darkMode ? 'text-white' : 'text-gray-900'
-            }`}>Archive Team</h3>
-            <p className={`mb-6 ${
-              darkMode ? 'text-gray-300' : 'text-gray-600'
-            }`}>Are you sure you want to archive this team? This action will move the team to the archived section and can be undone later.</p>
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+        >
+          <div
+            className={`rounded-lg p-6 max-w-md w-full mx-4 ${darkMode ? "bg-gray-800" : "bg-white"}`}
+          >
+            <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}>
+              Archive Team
+            </h3>
+            <p className={`mb-6 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+              Are you sure you want to archive this team? This action will move the team to the
+              archived section and can be undone later.
+            </p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={cancelArchiveTeam}
                 className={`px-4 py-2 border rounded-lg transition-colors ${
-                  darkMode 
-                    ? 'text-gray-300 border-gray-600 hover:bg-gray-700' 
-                    : 'text-gray-600 border-gray-300 hover:bg-gray-50'
+                  darkMode
+                    ? "text-gray-300 border-gray-600 hover:bg-gray-700"
+                    : "text-gray-600 border-gray-300 hover:bg-gray-50"
                 }`}
               >
                 Cancel
@@ -622,14 +589,16 @@ export default function TeamDashboard({
 
       {/* Assignment Creator Modal */}
       {showAssignmentCreator && (
-        <Suspense fallback={
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-lg">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-2 text-gray-600 dark:text-gray-300">Loading assignment creator...</p>
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-gray-800 p-8 rounded-lg">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto" />
+                <p className="mt-2 text-gray-600 dark:text-gray-300">Loading assignment creator...</p>
+              </div>
             </div>
-          </div>
-        }>
+          }
+        >
           <AssignmentCreator
             teamId={team.slug}
             subteamId={activeSubteamId || undefined}
@@ -642,25 +611,27 @@ export default function TeamDashboard({
 
       {/* Delete Subteam Confirmation Modal */}
       {showDeleteSubteamModal && subteamToDelete && (
-        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-          <div className={`rounded-lg p-6 max-w-md w-full mx-4 ${
-            darkMode ? 'bg-gray-800' : 'bg-white'
-          }`}>
-            <h3 className={`text-lg font-semibold mb-4 ${
-              darkMode ? 'text-white' : 'text-gray-900'
-            }`}>Delete Subteam</h3>
-            <p className={`mb-6 ${
-              darkMode ? 'text-gray-300' : 'text-gray-600'
-            }`}>
-              Are you sure you want to delete the subteam &ldquo;{subteamToDelete.name}&rdquo;? This action cannot be undone.
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+        >
+          <div
+            className={`rounded-lg p-6 max-w-md w-full mx-4 ${darkMode ? "bg-gray-800" : "bg-white"}`}
+          >
+            <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}>
+              Delete Subteam
+            </h3>
+            <p className={`mb-6 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+              Are you sure you want to delete the subteam &ldquo;{subteamToDelete.name}&rdquo;? This
+              action cannot be undone.
             </p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={cancelDeleteSubteam}
                 className={`px-4 py-2 rounded-lg transition-colors ${
-                  darkMode 
-                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  darkMode
+                    ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                 }`}
               >
                 Cancel

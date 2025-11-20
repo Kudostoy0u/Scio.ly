@@ -1,8 +1,35 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { queryCockroachDB } from '@/lib/cockroachdb';
-import { getServerUser } from '@/lib/supabaseServer';
-import { resolveTeamSlugToUnits } from '@/lib/utils/team-resolver';
-import { checkTeamGroupAccessCockroach, checkTeamGroupLeadershipCockroach } from '@/lib/utils/team-auth';
+import { dbPg } from "@/lib/db";
+import {
+  newTeamActiveTimers,
+  newTeamEvents,
+  newTeamGroups,
+  newTeamRecurringMeetings,
+  newTeamUnits,
+} from "@/lib/db/schema/teams";
+import {
+  PostTimerRequestSchema,
+  TimerResponseSchema,
+  UUIDSchema,
+  validateRequest,
+} from "@/lib/schemas/teams-validation";
+import {
+  handleError,
+  handleForbiddenError,
+  handleNotFoundError,
+  handleUnauthorizedError,
+  handleValidationError,
+  validateEnvironment,
+} from "@/lib/utils/error-handler";
+import logger from "@/lib/utils/logger";
+import { getServerUser } from "@/lib/supabaseServer";
+import {
+  checkTeamGroupAccessCockroach,
+  checkTeamGroupLeadershipCockroach,
+} from "@/lib/utils/team-auth";
+import { resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
+import { and, asc, eq, inArray, like, or, sql } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 // GET /api/teams/[teamId]/timers - Get active timers for a team
 // Frontend Usage:
@@ -13,96 +40,93 @@ export async function GET(
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
-    }
+    const envError = validateEnvironment();
+    if (envError) return envError;
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return handleUnauthorizedError();
     }
 
     const { teamId } = await params;
     const { searchParams } = new URL(request.url);
-    const subteamId = searchParams.get('subteamId');
+    const subteamId = searchParams.get("subteamId");
 
     if (!subteamId) {
-      return NextResponse.json({ 
-        error: 'Subteam ID is required' 
-      }, { status: 400 });
+      return handleValidationError(
+        new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            message: "Subteam ID is required",
+            path: ["subteamId"],
+          },
+        ])
+      );
     }
 
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(subteamId)) {
-      return NextResponse.json({ 
-        error: 'Invalid subteam ID format. Must be a valid UUID.' 
-      }, { status: 400 });
+    // Validate UUID format using Zod
+    try {
+      UUIDSchema.parse(subteamId);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return handleValidationError(error);
+      }
     }
 
     // Resolve team slug to get team info
     const teamInfo = await resolveTeamSlugToUnits(teamId);
     if (!teamInfo) {
-      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
+      return handleNotFoundError("Team");
     }
 
     // Validate that requested subteam belongs to this team group
     const subteamBelongsToGroup = teamInfo.teamUnitIds.includes(subteamId);
     if (!subteamBelongsToGroup) {
-      return NextResponse.json({ error: 'Subteam not found' }, { status: 404 });
+      return handleNotFoundError("Subteam");
     }
 
     // Check if user has access to this team group (membership OR roster entry)
     const authResult = await checkTeamGroupAccessCockroach(user.id, teamInfo.groupId);
     if (!authResult.isAuthorized) {
-      return NextResponse.json({ error: 'Not authorized to view this team' }, { status: 403 });
+      return handleForbiddenError("Not authorized to view this team");
     }
 
-    // Get active timers with event details (including recurring events)
-    const timersResult = await queryCockroachDB<{
-      id: string;
-      title: string;
-      start_time: string;
-      location: string | null;
-      event_type: string;
-      added_at: string;
-    }>(
-      `SELECT 
-         at.event_id as id,
-         COALESCE(te.title, rm.title) as title,
-         COALESCE(te.start_time, 
-           CASE 
-             WHEN rm.start_time IS NOT NULL THEN 
-               CONCAT(SUBSTRING(at.event_id::text FROM 'recurring-[^-]+-(.+)'), 'T', rm.start_time)::timestamptz
-             ELSE 
-               CONCAT(SUBSTRING(at.event_id::text FROM 'recurring-[^-]+-(.+)'), 'T00:00:00')::timestamptz
-           END
-         ) as start_time,
-         COALESCE(te.location, rm.location) as location,
-         COALESCE(te.event_type, 'meeting') as event_type,
-         at.added_at
-       FROM new_team_active_timers at
-       LEFT JOIN new_team_events te ON at.event_id = te.id
-       LEFT JOIN new_team_recurring_meetings rm ON 
-         at.event_id::text LIKE 'recurring-' || rm.id::text || '-%'
-       WHERE at.team_unit_id = $1
-       ORDER BY at.added_at ASC`,
-      [subteamId]
-    );
+    // Get active timers with event details (including recurring events) using Drizzle ORM
+    // Note: Complex COALESCE and string manipulation requires sql template for now
+    const timersResult = await dbPg
+      .select({
+        id: sql<string>`${newTeamActiveTimers.eventId}`,
+        title: sql<string>`COALESCE(${newTeamEvents.title}, ${newTeamRecurringMeetings.title})`,
+        start_time: sql<string>`COALESCE(
+          ${newTeamEvents.startTime}::text,
+          CASE 
+            WHEN ${newTeamRecurringMeetings.startTime} IS NOT NULL THEN 
+              CONCAT(SUBSTRING(${newTeamActiveTimers.eventId}::text FROM 'recurring-[^-]+-(.+)'), 'T', ${newTeamRecurringMeetings.startTime})::timestamptz::text
+            ELSE 
+              CONCAT(SUBSTRING(${newTeamActiveTimers.eventId}::text FROM 'recurring-[^-]+-(.+)'), 'T00:00:00')::timestamptz::text
+          END
+        )`,
+        location: sql<string | null>`COALESCE(${newTeamEvents.location}, ${newTeamRecurringMeetings.location})`,
+        event_type: sql<string>`COALESCE(${newTeamEvents.eventType}, 'meeting')`,
+        added_at: sql<string>`${newTeamActiveTimers.addedAt}::text`,
+      })
+      .from(newTeamActiveTimers)
+      .leftJoin(
+        newTeamEvents,
+        sql`${newTeamActiveTimers.eventId}::text = ${newTeamEvents.id}::text`
+      )
+      .leftJoin(
+        newTeamRecurringMeetings,
+        sql`${newTeamActiveTimers.eventId}::text LIKE CONCAT('recurring-', ${newTeamRecurringMeetings.id}::text, '-%')`
+      )
+      .where(eq(newTeamActiveTimers.teamUnitId, subteamId))
+      .orderBy(asc(newTeamActiveTimers.addedAt));
 
-    return NextResponse.json({ 
-      timers: timersResult.rows 
-    });
-
-  } catch (error) {
-    console.error('Error fetching active timers:', error);
     return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+      timers: timersResult,
+    });
+  } catch (error) {
+    return handleError(error, "GET /api/teams/[teamId]/timers");
   }
 }
 
@@ -114,115 +138,164 @@ export async function POST(
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
-    }
+    const envError = validateEnvironment();
+    if (envError) return envError;
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return handleUnauthorizedError();
     }
 
     const { teamId } = await params;
-    const body = await request.json();
-    const { subteamId, eventId } = body;
-
-    if (!subteamId || !eventId) {
-      return NextResponse.json({ 
-        error: 'Subteam ID and event ID are required' 
-      }, { status: 400 });
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch (error) {
+      return handleValidationError(
+        new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            message: "Invalid JSON in request body",
+            path: [],
+          },
+        ])
+      );
     }
 
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(subteamId) || !uuidRegex.test(eventId)) {
-      return NextResponse.json({ 
-        error: 'Invalid ID format. Must be a valid UUID.' 
-      }, { status: 400 });
+    // Validate request body - Note: PostTimerRequestSchema expects subteamId, eventName, targetTime
+    // But this endpoint uses subteamId and eventId, so we'll create a custom validation
+    const TimerCreateSchema = z.object({
+      subteamId: UUIDSchema,
+      eventId: z.string().min(1, "Event ID is required"), // Can be UUID or recurring event ID
+    });
+
+    let validatedBody: z.infer<typeof TimerCreateSchema>;
+    try {
+      validatedBody = validateRequest(TimerCreateSchema, body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return handleValidationError(error);
+      }
+      return handleError(error, "POST /api/teams/[teamId]/timers - validation");
     }
+
+    const { subteamId, eventId } = validatedBody;
 
     // Resolve team slug to get team info
     const teamInfo = await resolveTeamSlugToUnits(teamId);
     if (!teamInfo) {
-      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
+      return handleNotFoundError("Team");
     }
 
     // Validate subteam belongs to this team group
     const subteamBelongsToGroup = teamInfo.teamUnitIds.includes(subteamId);
     if (!subteamBelongsToGroup) {
-      return NextResponse.json({ error: 'Subteam not found' }, { status: 404 });
+      return handleNotFoundError("Subteam");
     }
 
     // Check if the user has leadership privileges in the team group
     const leadershipResult = await checkTeamGroupLeadershipCockroach(user.id, teamInfo.groupId);
     if (!leadershipResult.hasLeadership) {
-      return NextResponse.json({ error: 'Only captains and co-captains can manage timers' }, { status: 403 });
+      return handleForbiddenError("Only captains and co-captains can manage timers");
     }
 
-    // Verify the event belongs to the team (handle both regular and recurring events)
+    // Get subteam's group ID for event verification
+    const [subteam] = await dbPg
+      .select({ groupId: newTeamUnits.groupId })
+      .from(newTeamUnits)
+      .where(eq(newTeamUnits.id, subteamId))
+      .limit(1);
+
+    if (!subteam) {
+      return handleNotFoundError("Subteam");
+    }
+
+    // Get all team unit IDs in this group
+    const groupTeamUnits = await dbPg
+      .select({ id: newTeamUnits.id })
+      .from(newTeamUnits)
+      .where(eq(newTeamUnits.groupId, subteam.groupId));
+
+    const groupTeamUnitIds = groupTeamUnits.map((u) => u.id);
+
+    // Verify the event belongs to the team (handle both regular and recurring events) using Drizzle ORM
     let eventExists = false;
-    
-    if (eventId.startsWith('recurring-')) {
+
+    if (eventId.startsWith("recurring-")) {
       // For recurring events, extract the meeting ID and verify it belongs to the team
-      const meetingId = eventId.split('-')[1];
-      const recurringEventResult = await queryCockroachDB<{ id: string }>(
-        `SELECT id FROM new_team_recurring_meetings 
-         WHERE id = $1 AND team_id IN (
-           SELECT id FROM new_team_units WHERE group_id = (
-             SELECT group_id FROM new_team_units WHERE id = $2
-           )
-         )`,
-        [meetingId, subteamId]
-      );
-      eventExists = recurringEventResult.rows.length > 0;
+      const meetingId = eventId.split("-")[1];
+      if (!meetingId) {
+        return handleNotFoundError("Invalid recurring event ID format");
+      }
+      const recurringEventResult = await dbPg
+        .select({ id: newTeamRecurringMeetings.id })
+        .from(newTeamRecurringMeetings)
+        .where(
+          and(
+            eq(newTeamRecurringMeetings.id, meetingId),
+            inArray(newTeamRecurringMeetings.teamId, groupTeamUnitIds)
+          )
+        )
+        .limit(1);
+      eventExists = recurringEventResult.length > 0;
     } else {
       // For regular events
-      const eventResult = await queryCockroachDB<{ id: string }>(
-        `SELECT id FROM new_team_events 
-         WHERE id = $1 AND team_id IN (
-           SELECT id FROM new_team_units WHERE group_id = (
-             SELECT group_id FROM new_team_units WHERE id = $2
-           )
-         )`,
-        [eventId, subteamId]
-      );
-      eventExists = eventResult.rows.length > 0;
+      const eventResult = await dbPg
+        .select({ id: newTeamEvents.id })
+        .from(newTeamEvents)
+        .where(
+          and(
+            eq(newTeamEvents.id, eventId),
+            inArray(newTeamEvents.teamId, groupTeamUnitIds)
+          )
+        )
+        .limit(1);
+      eventExists = eventResult.length > 0;
     }
 
     if (!eventExists) {
-      return NextResponse.json({ error: 'Event not found or not accessible to this team' }, { status: 404 });
+      return handleNotFoundError("Event not found or not accessible to this team");
     }
 
-    // Add the timer (using ON CONFLICT to handle duplicates gracefully)
-    const timerResult = await queryCockroachDB<{ id: string }>(
-      `INSERT INTO new_team_active_timers (team_unit_id, event_id, added_by)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (team_unit_id, event_id) DO NOTHING
-       RETURNING id`,
-      [subteamId, eventId, user.id]
-    );
+    // Check if timer already exists
+    const existingTimer = await dbPg
+      .select({ id: newTeamActiveTimers.id })
+      .from(newTeamActiveTimers)
+      .where(
+        and(
+          eq(newTeamActiveTimers.teamUnitId, subteamId),
+          eq(newTeamActiveTimers.eventId, eventId)
+        )
+      )
+      .limit(1);
 
-    if (timerResult.rows.length === 0) {
-      return NextResponse.json({ 
-        message: 'Timer already exists for this event',
-        timerId: null
+    if (existingTimer.length > 0) {
+      return NextResponse.json({
+        message: "Timer already exists for this event",
+        timerId: existingTimer[0]?.id || null,
       });
     }
 
-    return NextResponse.json({ 
-      message: 'Timer added successfully',
-      timerId: timerResult.rows[0].id
-    });
+    // Add the timer using Drizzle ORM
+    const [timerResult] = await dbPg
+      .insert(newTeamActiveTimers)
+      .values({
+        teamUnitId: subteamId,
+        eventId: eventId,
+        addedBy: user.id,
+      })
+      .returning({ id: newTeamActiveTimers.id });
 
-  } catch (error) {
-    console.error('Error adding timer:', error);
+    if (!timerResult) {
+      return handleError(new Error("Failed to create timer"), "POST /api/teams/[teamId]/timers - insert");
+    }
+
     return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+      message: "Timer added successfully",
+      timerId: timerResult.id,
+    });
+  } catch (error) {
+    return handleError(error, "POST /api/teams/[teamId]/timers");
   }
 }
 
@@ -234,75 +307,85 @@ export async function DELETE(
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
-    }
+    const envError = validateEnvironment();
+    if (envError) return envError;
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return handleUnauthorizedError();
     }
 
     const { teamId } = await params;
-    const body = await request.json();
-    const { subteamId, eventId } = body;
-
-    if (!subteamId || !eventId) {
-      return NextResponse.json({ 
-        error: 'Subteam ID and event ID are required' 
-      }, { status: 400 });
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch (error) {
+      return handleValidationError(
+        new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            message: "Invalid JSON in request body",
+            path: [],
+          },
+        ])
+      );
     }
 
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(subteamId) || !uuidRegex.test(eventId)) {
-      return NextResponse.json({ 
-        error: 'Invalid ID format. Must be a valid UUID.' 
-      }, { status: 400 });
+    // Validate request body
+    const TimerDeleteSchema = z.object({
+      subteamId: UUIDSchema,
+      eventId: z.string().min(1, "Event ID is required"),
+    });
+
+    let validatedBody: z.infer<typeof TimerDeleteSchema>;
+    try {
+      validatedBody = validateRequest(TimerDeleteSchema, body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return handleValidationError(error);
+      }
+      return handleError(error, "DELETE /api/teams/[teamId]/timers - validation");
     }
+
+    const { subteamId, eventId } = validatedBody;
 
     // Resolve team slug to get team info
     const teamInfo = await resolveTeamSlugToUnits(teamId);
     if (!teamInfo) {
-      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
+      return handleNotFoundError("Team");
     }
 
     // Validate subteam belongs to this team group
     const subteamBelongsToGroup = teamInfo.teamUnitIds.includes(subteamId);
     if (!subteamBelongsToGroup) {
-      return NextResponse.json({ error: 'Subteam not found' }, { status: 404 });
+      return handleNotFoundError("Subteam");
     }
 
     // Check if the user has leadership privileges in the team group
     const leadershipResult = await checkTeamGroupLeadershipCockroach(user.id, teamInfo.groupId);
     if (!leadershipResult.hasLeadership) {
-      return NextResponse.json({ error: 'Only captains and co-captains can manage timers' }, { status: 403 });
+      return handleForbiddenError("Only captains and co-captains can manage timers");
     }
 
-    // Remove the timer
-    const deleteResult = await queryCockroachDB<{ id: string }>(
-      `DELETE FROM new_team_active_timers 
-       WHERE team_unit_id = $1 AND event_id = $2
-       RETURNING id`,
-      [subteamId, eventId]
-    );
+    // Remove the timer using Drizzle ORM
+    const deleteResult = await dbPg
+      .delete(newTeamActiveTimers)
+      .where(
+        and(
+          eq(newTeamActiveTimers.teamUnitId, subteamId),
+          eq(newTeamActiveTimers.eventId, eventId)
+        )
+      )
+      .returning({ id: newTeamActiveTimers.id });
 
-    if (deleteResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Timer not found' }, { status: 404 });
+    if (deleteResult.length === 0) {
+      return handleNotFoundError("Timer");
     }
 
-    return NextResponse.json({ 
-      message: 'Timer removed successfully'
-    });
-
-  } catch (error) {
-    console.error('Error removing timer:', error);
     return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+      message: "Timer removed successfully",
+    });
+  } catch (error) {
+    return handleError(error, "DELETE /api/teams/[teamId]/timers");
   }
 }

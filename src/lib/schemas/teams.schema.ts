@@ -5,20 +5,25 @@
  * These schemas ensure type safety and data validation across the entire teams feature.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 // ============================================================================
 // Base Schemas
 // ============================================================================
 
-export const teamIdSchema = z.string().min(1, 'Team ID is required');
-export const slugSchema = z.string().min(1, 'Slug is required').regex(/^[a-z0-9-]+$/, 'Slug must contain only lowercase letters, numbers, and hyphens');
-export const divisionSchema = z.enum(['B', 'C']).refine(val => ['B', 'C'].includes(val), {
-  message: 'Division must be B or C'
+export const teamIdSchema = z.string().min(1, "Team ID is required");
+export const slugSchema = z
+  .string()
+  .min(1, "Slug is required")
+  .regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens");
+export const divisionSchema = z.enum(["B", "C"]).refine((val) => ["B", "C"].includes(val), {
+  message: "Division must be B or C",
 });
-export const roleSchema = z.enum(['captain', 'member']).refine(val => ['captain', 'member'].includes(val), {
-  message: 'Role must be captain or member'
-});
+export const roleSchema = z
+  .enum(["captain", "member"])
+  .refine((val) => ["captain", "member"].includes(val), {
+    message: "Role must be captain or member",
+  });
 
 // ============================================================================
 // Team Schemas
@@ -26,17 +31,23 @@ export const roleSchema = z.enum(['captain', 'member']).refine(val => ['captain'
 
 export const teamSchema = z.object({
   id: teamIdSchema,
-  name: z.string().min(1, 'Team name is required').max(100, 'Team name must be less than 100 characters'),
+  name: z
+    .string()
+    .min(1, "Team name is required")
+    .max(100, "Team name must be less than 100 characters"),
   slug: slugSchema,
-  school: z.string().min(1, 'School name is required').max(200, 'School name must be less than 200 characters'),
+  school: z
+    .string()
+    .min(1, "School name is required")
+    .max(200, "School name must be less than 200 characters"),
   division: divisionSchema,
   created_at: z.string().datetime().optional(),
   archived: z.boolean().optional().default(false),
 });
 
 export const createTeamSchema = z.object({
-  name: z.string().min(1, 'Team name is required').max(100),
-  school: z.string().min(1, 'School name is required').max(200),
+  name: z.string().min(1, "Team name is required").max(100),
+  school: z.string().min(1, "School name is required").max(200),
   division: divisionSchema,
 });
 
@@ -53,14 +64,21 @@ export const updateTeamSchema = z.object({
 
 export const subteamSchema = z.object({
   id: z.string().min(1),
-  name: z.string().min(1, 'Subteam name is required').max(100, 'Subteam name must be less than 100 characters'),
+  name: z
+    .string()
+    .min(1, "Subteam name is required")
+    .max(100, "Subteam name must be less than 100 characters"),
   team_id: teamIdSchema,
-  description: z.string().max(500, 'Description must be less than 500 characters').optional().nullable(),
+  description: z
+    .string()
+    .max(500, "Description must be less than 500 characters")
+    .optional()
+    .nullable(),
   created_at: z.string().datetime().optional(),
 });
 
 export const createSubteamSchema = z.object({
-  name: z.string().min(1, 'Subteam name is required').max(100),
+  name: z.string().min(1, "Subteam name is required").max(100),
   description: z.string().max(500).optional(),
 });
 
@@ -76,8 +94,8 @@ export const updateSubteamSchema = z.object({
 export const teamMemberSchema = z.object({
   id: z.string().nullable(),
   user_id: z.string().optional().nullable(),
-  name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Invalid email').optional().nullable(),
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email").optional().nullable(),
   username: z.string().optional().nullable(),
   role: roleSchema,
   joined_at: z.string().datetime().optional().nullable(),
@@ -89,8 +107,8 @@ export const teamMemberSchema = z.object({
 });
 
 export const inviteMemberSchema = z.object({
-  username: z.string().min(1, 'Username is required'),
-  role: roleSchema.optional().default('member'),
+  username: z.string().min(1, "Username is required"),
+  role: roleSchema.optional().default("member"),
   subteam_id: z.string().optional(),
 });
 
@@ -104,10 +122,10 @@ export const updateMemberSchema = z.object({
 // ============================================================================
 
 export const rosterEntrySchema = z.object({
-  subteam_id: z.string().min(1, 'Subteam ID is required'),
-  event_name: z.string().min(1, 'Event name is required').max(100),
-  slot_index: z.number().int().min(0).max(10, 'Slot index must be between 0 and 10'),
-  student_name: z.string().min(1, 'Student name is required').max(100),
+  subteam_id: z.string().min(1, "Subteam ID is required"),
+  event_name: z.string().min(1, "Event name is required").max(100),
+  slot_index: z.number().int().min(0).max(10, "Slot index must be between 0 and 10"),
+  student_name: z.string().min(1, "Student name is required").max(100),
   user_id: z.string().optional().nullable(),
 });
 
@@ -119,15 +137,16 @@ export const updateRosterEntrySchema = z.object({
   user_id: z.string().optional().nullable(),
 });
 
-export const removeRosterEntrySchema = z.object({
-  student_name: z.string().min(1).optional(),
-  user_id: z.string().optional(),
-  event_name: z.string().optional(),
-  subteam_id: z.string().optional(),
-}).refine(
-  (data) => data.student_name || data.user_id,
-  { message: 'Either student_name or user_id must be provided' }
-);
+export const removeRosterEntrySchema = z
+  .object({
+    student_name: z.string().min(1).optional(),
+    user_id: z.string().optional(),
+    event_name: z.string().optional(),
+    subteam_id: z.string().optional(),
+  })
+  .refine((data) => data.student_name || data.user_id, {
+    message: "Either student_name or user_id must be provided",
+  });
 
 export const rosterDataSchema = z.object({
   roster: z.record(z.string(), z.array(z.string())), // event_name -> array of student names
@@ -140,7 +159,10 @@ export const rosterDataSchema = z.object({
 
 export const streamPostSchema = z.object({
   id: z.string(),
-  content: z.string().min(1, 'Content is required').max(5000, 'Content must be less than 5000 characters'),
+  content: z
+    .string()
+    .min(1, "Content is required")
+    .max(5000, "Content must be less than 5000 characters"),
   author_name: z.string(),
   author_email: z.string().email(),
   team_id: teamIdSchema,
@@ -153,7 +175,7 @@ export const streamPostSchema = z.object({
 });
 
 export const createStreamPostSchema = z.object({
-  content: z.string().min(1, 'Content is required').max(5000),
+  content: z.string().min(1, "Content is required").max(5000),
   subteam_id: z.string().optional(),
   attachment_url: z.string().url().optional().nullable(),
   attachment_title: z.string().max(200).optional().nullable(),
@@ -167,7 +189,7 @@ export const createStreamPostSchema = z.object({
 
 export const assignmentSchema = z.object({
   id: z.string(),
-  title: z.string().min(1, 'Title is required').max(200),
+  title: z.string().min(1, "Title is required").max(200),
   description: z.string().max(5000).optional().nullable(),
   due_date: z.string().datetime(),
   team_id: teamIdSchema,
@@ -177,9 +199,9 @@ export const assignmentSchema = z.object({
 });
 
 export const createAssignmentSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200),
+  title: z.string().min(1, "Title is required").max(200),
   description: z.string().max(5000).optional(),
-  due_date: z.string().datetime('Invalid date format'),
+  due_date: z.string().datetime("Invalid date format"),
   assigned_to: z.array(z.string()).optional().default([]),
   subteam_id: z.string().optional(),
 });
@@ -237,7 +259,7 @@ export const memberQuerySchema = z.object({
 
 export const rosterQuerySchema = z.object({
   teamSlug: slugSchema,
-  subteamId: z.string().min(1, 'Subteam ID is required'),
+  subteamId: z.string().min(1, "Subteam ID is required"),
 });
 
 // ============================================================================
@@ -251,9 +273,11 @@ export const teamResponseSchema = z.object({
 });
 
 export const teamsListResponseSchema = z.object({
-  teams: z.array(teamSchema.extend({
-    user_role: roleSchema,
-  })),
+  teams: z.array(
+    teamSchema.extend({
+      user_role: roleSchema,
+    })
+  ),
 });
 
 export const subteamsResponseSchema = z.object({

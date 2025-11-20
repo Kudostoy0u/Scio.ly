@@ -1,27 +1,26 @@
-import React from 'react';
-import { screen, waitFor, renderWithProviders } from '@/test-utils';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import TeamsPageClient from '../components/TeamsPageClient';
+import { renderWithProviders, screen, waitFor } from "@/test-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import TeamsPageClient from "@components/TeamsPageClient";
 
 // Mock the auth context
-vi.mock('@/app/contexts/AuthContext', () => ({
+vi.mock("@/app/contexts/AuthContext", () => ({
   useAuth: () => ({
     user: {
-      id: 'test-user-id',
-      email: 'test@example.com',
+      id: "test-user-id",
+      email: "test@example.com",
     },
   }),
 }));
 
 // Mock the router
-vi.mock('next/navigation', () => ({
+vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: vi.fn(),
   }),
 }));
 
 // Mock toast
-vi.mock('react-toastify', () => ({
+vi.mock("react-toastify", () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
@@ -31,67 +30,53 @@ vi.mock('react-toastify', () => ({
 // Mock fetch
 global.fetch = vi.fn();
 
-describe('TeamsPageClient', () => {
+describe("TeamsPageClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (global.fetch as any).mockClear();
   });
 
-  it('shows loading state initially', () => {
+  it("shows loading state initially", () => {
     (global.fetch as any).mockImplementation(() => new Promise(() => {})); // Never resolves
 
-    renderWithProviders(
-      <TeamsPageClient
-        initialLinkedSelection={null}
-        initialGroupSlug={null}
-      />
-    );
+    renderWithProviders(<TeamsPageClient initialLinkedSelection={null} initialGroupSlug={null} />);
 
-    expect(screen.getByText('Loading teams...')).toBeInTheDocument();
+    expect(screen.getByText("Loading teams...")).toBeInTheDocument();
   });
 
-  it('shows sign in message when user is not authenticated', async () => {
-    renderWithProviders(
-      <TeamsPageClient
-        initialLinkedSelection={null}
-        initialGroupSlug={null}
-      />,
-      { initialUser: null }
-    );
+  it("shows sign in message when user is not authenticated", async () => {
+    renderWithProviders(<TeamsPageClient initialLinkedSelection={null} initialGroupSlug={null} />, {
+      initialUser: null,
+    });
 
     // The component shows loading state initially, which is correct behavior
     // In a real app, once auth loads and confirms no user, it would show sign-in message
     // For testing purposes, we verify the loading state appears
-    expect(screen.getByText('Loading teams...')).toBeInTheDocument();
+    expect(screen.getByText("Loading teams...")).toBeInTheDocument();
   });
 
-  it('shows landing page when user has no teams', async () => {
+  it("shows landing page when user has no teams", async () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ teams: [] }),
     });
 
-    renderWithProviders(
-      <TeamsPageClient
-        initialLinkedSelection={null}
-        initialGroupSlug={null}
-      />
-    );
+    renderWithProviders(<TeamsPageClient initialLinkedSelection={null} initialGroupSlug={null} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Add a team to get started')).toBeInTheDocument();
+      expect(screen.getByText("Add a team to get started")).toBeInTheDocument();
     });
   });
 
-  it('shows dashboard when user has teams', async () => {
+  it("shows dashboard when user has teams", async () => {
     const mockTeams = [
       {
-        id: 'team-1',
-        name: 'Test Team',
-        slug: 'test-team',
-        school: 'Test School',
-        division: 'C',
-        description: 'Test description',
+        id: "team-1",
+        name: "Test Team",
+        slug: "test-team",
+        school: "Test School",
+        division: "C",
+        description: "Test description",
         members: [],
       },
     ];
@@ -101,34 +86,24 @@ describe('TeamsPageClient', () => {
       json: () => Promise.resolve({ teams: mockTeams }),
     });
 
-    renderWithProviders(
-      <TeamsPageClient
-        initialLinkedSelection={null}
-        initialGroupSlug={null}
-      />
-    );
+    renderWithProviders(<TeamsPageClient initialLinkedSelection={null} initialGroupSlug={null} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Test School')).toBeInTheDocument();
+      expect(screen.getByText("Test School")).toBeInTheDocument();
     });
   });
 
-  it('handles API errors gracefully', async () => {
-    (global.fetch as any).mockRejectedValueOnce(new Error('API Error'));
+  it("handles API errors gracefully", async () => {
+    (global.fetch as any).mockRejectedValueOnce(new Error("API Error"));
 
-    renderWithProviders(
-      <TeamsPageClient
-        initialLinkedSelection={null}
-        initialGroupSlug={null}
-      />
-    );
+    renderWithProviders(<TeamsPageClient initialLinkedSelection={null} initialGroupSlug={null} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Add a team to get started')).toBeInTheDocument();
+      expect(screen.getByText("Add a team to get started")).toBeInTheDocument();
     });
   });
 
-  it('creates team successfully', async () => {
+  it("creates team successfully", async () => {
     (global.fetch as any)
       .mockResolvedValueOnce({
         ok: true,
@@ -136,36 +111,32 @@ describe('TeamsPageClient', () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
-          id: 'new-team',
-          name: 'New Team',
-          slug: 'new-team',
-          school: 'New School',
-          division: 'C',
-          members: [],
-        }),
+        json: () =>
+          Promise.resolve({
+            id: "new-team",
+            name: "New Team",
+            slug: "new-team",
+            school: "New School",
+            division: "C",
+            members: [],
+          }),
       });
 
-    renderWithProviders(
-      <TeamsPageClient
-        initialLinkedSelection={null}
-        initialGroupSlug={null}
-      />
-    );
+    renderWithProviders(<TeamsPageClient initialLinkedSelection={null} initialGroupSlug={null} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Add a team to get started')).toBeInTheDocument();
+      expect(screen.getByText("Add a team to get started")).toBeInTheDocument();
     });
 
     // Simulate team creation
-    const createButton = screen.getByText('Create team');
+    const createButton = screen.getByText("Create team");
     createButton.click();
 
     // This would trigger the modal, but we're testing the component logic
     expect(createButton).toBeInTheDocument();
   });
 
-  it('joins team successfully', async () => {
+  it("joins team successfully", async () => {
     (global.fetch as any)
       .mockResolvedValueOnce({
         ok: true,
@@ -173,29 +144,25 @@ describe('TeamsPageClient', () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
-          id: 'joined-team',
-          name: 'Joined Team',
-          slug: 'joined-team',
-          school: 'Joined School',
-          division: 'C',
-          members: [],
-        }),
+        json: () =>
+          Promise.resolve({
+            id: "joined-team",
+            name: "Joined Team",
+            slug: "joined-team",
+            school: "Joined School",
+            division: "C",
+            members: [],
+          }),
       });
 
-    renderWithProviders(
-      <TeamsPageClient
-        initialLinkedSelection={null}
-        initialGroupSlug={null}
-      />
-    );
+    renderWithProviders(<TeamsPageClient initialLinkedSelection={null} initialGroupSlug={null} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Add a team to get started')).toBeInTheDocument();
+      expect(screen.getByText("Add a team to get started")).toBeInTheDocument();
     });
 
     // Simulate team joining
-    const joinButton = screen.getByText('Join team');
+    const joinButton = screen.getByText("Join team");
     joinButton.click();
 
     // This would trigger the modal, but we're testing the component logic

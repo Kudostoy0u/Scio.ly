@@ -26,14 +26,14 @@ Scio.ly is a comprehensive Science Olympiad practice platform built with Next.js
 
 ### Development & Testing
 - **Testing**: Vitest 3.2.4 with React Testing Library
-- **Linting**: ESLint 9.36.0
+- **Linting**: Biome 1.9.4
 - **Database ORM**: Drizzle ORM 0.44.4
 - **Package Manager**: pnpm 9.15.4
 
 ## Project Structure
 
 ### Root Level
-- **Configuration Files**: Next.js, TypeScript, Tailwind, ESLint configurations
+- **Configuration Files**: Next.js, TypeScript, Tailwind, Biome configurations
 - **Database**: Drizzle migrations and schema files
 - **Scripts**: Database initialization and utility scripts
 - **Documentation**: Comprehensive markdown documentation
@@ -161,7 +161,7 @@ Shared testing utilities and providers.
 
 The project follows modern development practices with:
 - **TypeScript**: Full type safety
-- **ESLint**: Code quality enforcement
+- **Biome**: Code quality enforcement, formatting, and linting
 - **Testing**: Comprehensive test coverage
 - **Documentation**: TSDoc comments throughout
 - **Git Workflow**: Feature branches and pull requests

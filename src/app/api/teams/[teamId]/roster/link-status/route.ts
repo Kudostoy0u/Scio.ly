@@ -1,148 +1,218 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { queryCockroachDB } from '@/lib/cockroachdb';
-import { getServerUser } from '@/lib/supabaseServer';
+import { dbPg } from "@/lib/db";
+import { users } from "@/lib/db/schema/core";
+import {
+  newTeamGroups,
+  newTeamMemberships,
+  newTeamRosterData,
+  newTeamUnits,
+} from "@/lib/db/schema/teams";
+import {
+  UUIDSchema,
+  validateRequest,
+} from "@/lib/schemas/teams-validation";
+import {
+  handleError,
+  handleForbiddenError,
+  handleNotFoundError,
+  handleUnauthorizedError,
+  handleValidationError,
+  validateEnvironment,
+} from "@/lib/utils/error-handler";
+import logger from "@/lib/utils/logger";
+import { getServerUser } from "@/lib/supabaseServer";
+import { and, eq, inArray, sql } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
-    }
+    const envError = validateEnvironment();
+    if (envError) return envError;
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return handleUnauthorizedError();
     }
 
     const { teamId } = await params;
     const { searchParams } = new URL(request.url);
-    const subteamId = searchParams.get('subteamId');
+    const subteamId = searchParams.get("subteamId");
 
-    // First, resolve the slug to team group
-    const groupResult = await queryCockroachDB<{ id: string }>(
-      `SELECT id FROM new_team_groups WHERE slug = $1`,
-      [teamId]
-    );
-
-    if (groupResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Team group not found' }, { status: 404 });
-    }
-
-    const groupId = groupResult.rows[0].id;
-
-    // Check if user is a member of this team group
-    const membershipResult = await queryCockroachDB<{ role: string }>(
-      `SELECT tm.role FROM new_team_memberships tm
-       JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tu.group_id = $1 AND tm.user_id = $2 AND tm.status = 'active'`,
-      [groupId, user.id]
-    );
-
-    if (membershipResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    // Get team members from memberships table
-    let membersQuery = `
-      SELECT tm.user_id, tm.role, tm.joined_at, tu.id as team_unit_id, tu.team_id, tu.description
-      FROM new_team_memberships tm
-      JOIN new_team_units tu ON tm.team_id = tu.id
-      WHERE tu.group_id = $1 AND tm.status = 'active'
-    `;
-    const membersParams = [groupId];
-
+    // Validate subteamId if provided
     if (subteamId) {
-      membersQuery += ` AND tu.id = $2`;
-      membersParams.push(subteamId);
+      try {
+        UUIDSchema.parse(subteamId);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return handleValidationError(error);
+        }
+      }
     }
 
-    const membersResult = await queryCockroachDB<{ user_id: string; role: string; joined_at: string; team_unit_id: string; team_id: string; description: string | null }>(
-      membersQuery,
-      membersParams
-    );
+    // Resolve the slug to team group using Drizzle ORM
+    const [groupResult] = await dbPg
+      .select({ id: newTeamGroups.id })
+      .from(newTeamGroups)
+      .where(eq(newTeamGroups.slug, teamId))
+      .limit(1);
 
-    // Get roster data if it exists (for additional student names)
-    let rosterQuery = `
-      SELECT student_name, user_id, team_unit_id 
-      FROM new_team_roster_data 
-      WHERE team_unit_id IN (SELECT id FROM new_team_units WHERE group_id = $1)
-    `;
-    const rosterParams = [groupId];
+    if (!groupResult) {
+      return handleNotFoundError("Team group");
+    }
 
+    const groupId = groupResult.id;
+
+    // Check if user is a member of this team group using Drizzle ORM
+    const membershipResult = await dbPg
+      .select({ role: newTeamMemberships.role })
+      .from(newTeamMemberships)
+      .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+      .where(
+        and(
+          eq(newTeamUnits.groupId, groupId),
+          eq(newTeamMemberships.userId, user.id),
+          eq(newTeamMemberships.status, "active")
+        )
+      );
+
+    if (membershipResult.length === 0) {
+      return handleForbiddenError("Forbidden");
+    }
+
+    // Build where conditions for team units
+    const teamUnitsWhere = [eq(newTeamUnits.groupId, groupId)];
     if (subteamId) {
-      rosterQuery += ` AND team_unit_id = $2`;
-      rosterParams.push(subteamId);
+      teamUnitsWhere.push(eq(newTeamUnits.id, subteamId));
     }
 
-    const rosterResult = await queryCockroachDB<{ student_name: string; user_id: string | null; team_unit_id: string }>(
-      rosterQuery,
-      rosterParams
-    );
+    // Get team units using Drizzle ORM
+    const teamUnits = await dbPg
+      .select({ id: newTeamUnits.id })
+      .from(newTeamUnits)
+      .where(and(...teamUnitsWhere));
 
-    // Get real user data from CockroachDB
-    const userIds = membersResult.rows.map(member => member.user_id);
-    
-    // Fetch user profiles from CockroachDB
-    const userProfilesResult = await queryCockroachDB<{
-      id: string;
-      display_name: string;
-      email: string;
-      first_name: string;
-      last_name: string;
-      username: string;
-    }>(
-      `SELECT id, display_name, email, first_name, last_name, username 
-       FROM users 
-       WHERE id = ANY($1)`,
-      [userIds]
-    );
+    const teamUnitIds = teamUnits.map((u) => u.id);
+
+    if (teamUnitIds.length === 0) {
+      return NextResponse.json({ linkStatus: {} });
+    }
+
+    // Get team members from memberships table using Drizzle ORM
+    const membersWhere = [
+      inArray(newTeamMemberships.teamId, teamUnitIds),
+      eq(newTeamMemberships.status, "active"),
+    ];
+
+    const membersResult = await dbPg
+      .select({
+        user_id: newTeamMemberships.userId,
+        role: newTeamMemberships.role,
+        joined_at: newTeamMemberships.joinedAt,
+        team_unit_id: newTeamUnits.id,
+        team_id: newTeamUnits.teamId,
+        description: newTeamUnits.description,
+      })
+      .from(newTeamMemberships)
+      .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+      .where(and(...membersWhere));
+
+    // Get roster data if it exists (for additional student names) using Drizzle ORM
+    const rosterWhere = [inArray(newTeamRosterData.teamUnitId, teamUnitIds)];
+    if (subteamId) {
+      rosterWhere.push(eq(newTeamRosterData.teamUnitId, subteamId));
+    }
+
+    const rosterResult = await dbPg
+      .select({
+        student_name: newTeamRosterData.studentName,
+        user_id: newTeamRosterData.userId,
+        team_unit_id: newTeamRosterData.teamUnitId,
+      })
+      .from(newTeamRosterData)
+      .where(and(...rosterWhere));
+
+    // Get real user data using Drizzle ORM
+    const userIds = membersResult.map((member) => member.user_id);
+
+    if (userIds.length === 0) {
+      // No members, but might have roster entries
+      const linkStatus: Record<string, any> = {};
+      for (const rosterEntry of rosterResult) {
+        if (rosterEntry.student_name) {
+          linkStatus[rosterEntry.student_name] = {
+            userId: rosterEntry.user_id,
+            isLinked: !!rosterEntry.user_id,
+            userEmail: null,
+            username: null,
+            teamUnitId: rosterEntry.team_unit_id,
+          };
+        }
+      }
+      return NextResponse.json({ linkStatus });
+    }
+
+    // Fetch user profiles using Drizzle ORM
+    const userProfilesResult = await dbPg
+      .select({
+        id: users.id,
+        display_name: users.displayName,
+        email: users.email,
+        first_name: users.firstName,
+        last_name: users.lastName,
+        username: users.username,
+      })
+      .from(users)
+      .where(inArray(users.id, userIds));
 
     // Create a map of user profiles for quick lookup
-    const userProfileMap = new Map<string, any>();
-    userProfilesResult.rows.forEach((profile: any) => {
+    const userProfileMap = new Map<string, typeof userProfilesResult[0]>();
+    userProfilesResult.forEach((profile) => {
       userProfileMap.set(profile.id, profile);
     });
 
     // Build link status object
     const linkStatus: Record<string, any> = {};
-    
+
     // First, add all team members from memberships
-    for (const member of membersResult.rows) {
+    for (const member of membersResult) {
       // Get real user data
       const userProfile = userProfileMap.get(member.user_id);
-      const displayName = userProfile?.display_name || 
-        (userProfile?.first_name && userProfile?.last_name 
-          ? `${userProfile.first_name} ${userProfile.last_name}` 
+      const displayName =
+        userProfile?.display_name ||
+        (userProfile?.first_name && userProfile?.last_name
+          ? `${userProfile.first_name} ${userProfile.last_name}`
           : `User ${member.user_id.substring(0, 8)}`);
       const email = userProfile?.email || `user-${member.user_id.substring(0, 8)}@example.com`;
       const username = userProfile?.username;
-      
+
       linkStatus[displayName] = {
         userId: member.user_id,
         isLinked: true,
         userEmail: email,
         username: username,
         role: member.role,
-        teamUnitId: member.team_unit_id
+        teamUnitId: member.team_unit_id,
       };
     }
-    
+
     // Group roster entries by student name to handle multiple entries per student
-    const rosterByStudent: Record<string, { userId: string | null; teamUnitId: string; isLinked: boolean }> = {};
-    
-    for (const rosterEntry of rosterResult.rows) {
+    const rosterByStudent: Record<
+      string,
+      { userId: string | null; teamUnitId: string; isLinked: boolean }
+    > = {};
+
+    for (const rosterEntry of rosterResult) {
       if (rosterEntry.student_name) {
         const studentName = rosterEntry.student_name;
-        
+
         // If this student already exists, update the link status
         if (rosterByStudent[studentName]) {
           // Mark as linked if ANY entry for this student is linked
-          rosterByStudent[studentName].isLinked = rosterByStudent[studentName].isLinked || !!rosterEntry.user_id;
+          rosterByStudent[studentName].isLinked =
+            rosterByStudent[studentName].isLinked || !!rosterEntry.user_id;
           // Use the first non-null user_id we find
           if (!rosterByStudent[studentName].userId && rosterEntry.user_id) {
             rosterByStudent[studentName].userId = rosterEntry.user_id;
@@ -152,12 +222,12 @@ export async function GET(
           rosterByStudent[studentName] = {
             userId: rosterEntry.user_id,
             teamUnitId: rosterEntry.team_unit_id,
-            isLinked: !!rosterEntry.user_id
+            isLinked: !!rosterEntry.user_id,
           };
         }
       }
     }
-    
+
     // Then, add roster entries to linkStatus
     for (const [studentName, rosterData] of Object.entries(rosterByStudent)) {
       // Get user data if this roster entry is linked
@@ -168,19 +238,18 @@ export async function GET(
         userEmail = userProfile?.email || `user-${rosterData.userId.substring(0, 8)}@example.com`;
         username = userProfile?.username;
       }
-      
+
       linkStatus[studentName] = {
         userId: rosterData.userId,
         isLinked: rosterData.isLinked,
         userEmail: userEmail,
         username: username,
-        teamUnitId: rosterData.teamUnitId
+        teamUnitId: rosterData.teamUnitId,
       };
     }
 
     return NextResponse.json({ linkStatus });
   } catch (error) {
-    console.error('Error fetching roster link status:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleError(error, "GET /api/teams/[teamId]/roster/link-status");
   }
 }

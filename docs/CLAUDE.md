@@ -164,7 +164,7 @@ See `TEAM_SHARING.md` for detailed schema and features.
 
 8. **Random Ordering**: Database tables use `randomF` (random float) column for shuffling questions
 
-9. **ESLint**: Ignores `.next/`, allows `any` types, warns on unused vars (except `_` prefix)
+9. **Biome**: Code quality, formatting, and linting. Ignores `.next/`, allows `any` types, warns on exhaustive dependencies
 
 ## Common Workflows
 

@@ -1,5 +1,5 @@
-import React from 'react';
-import { LoadingState as SharedLoadingState } from '@/app/components/LoadingState';
+import { LoadingState as SharedLoadingState } from "@/app/components/LoadingState";
+import type React from "react";
 
 interface LoadingStateProps {
   isLoading: boolean;

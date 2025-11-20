@@ -1,7 +1,8 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from "framer-motion";
+import type React from "react";
+import { useState } from "react";
 
 interface ContactFormData {
   name: string;
@@ -19,16 +20,16 @@ interface ContactModalProps {
 
 const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: ContactModalProps) => {
   const [formData, setFormData] = useState<ContactFormData>({
-    name: '',
-    email: '',
-    topic: 'suggestion',
-    message: '',
+    name: "",
+    email: "",
+    topic: "suggestion",
+    message: "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
-    setFormData({ name: '', email: '', topic: 'suggestion', message: '' });
+    setFormData({ name: "", email: "", topic: "suggestion", message: "" });
   };
 
   return (
@@ -39,7 +40,7 @@ const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: ContactModalProps
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 flex items-center justify-center z-50 p-4"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
           onClick={onClose}
         >
           <motion.div
@@ -47,7 +48,7 @@ const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: ContactModalProps
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             className={`max-w-md w-full rounded-lg shadow-xl p-6 ${
-              darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
+              darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"
             }`}
             onClick={(e) => e.stopPropagation()}
           >
@@ -55,7 +56,12 @@ const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: ContactModalProps
               <h2 className="text-xl font-semibold">Contact Us</h2>
               <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -65,27 +71,31 @@ const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: ContactModalProps
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Name (will not be shown publicly)</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Name (will not be shown publicly)
+                  </label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className={`w-full p-2 rounded-md ${
-                      darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                      darkMode ? "bg-gray-700 border-gray-600" : "bg-white border-gray-300"
                     } border`}
-                    required
+                    required={true}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Email (will not be shown publicly)</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Email (will not be shown publicly)
+                  </label>
                   <input
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className={`w-full p-2 rounded-md ${
-                      darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                      darkMode ? "bg-gray-700 border-gray-600" : "bg-white border-gray-300"
                     } border`}
-                    required
+                    required={true}
                   />
                 </div>
                 <div>
@@ -94,7 +104,7 @@ const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: ContactModalProps
                     value={formData.topic}
                     onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
                     className={`w-full p-2 rounded-md ${
-                      darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                      darkMode ? "bg-gray-700 border-gray-600" : "bg-white border-gray-300"
                     } border`}
                   >
                     <option value="suggestion">Suggestion</option>
@@ -111,9 +121,9 @@ const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: ContactModalProps
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     rows={4}
                     className={`w-full p-2 rounded-md ${
-                      darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                      darkMode ? "bg-gray-700 border-gray-600" : "bg-white border-gray-300"
                     } border`}
-                    required
+                    required={true}
                   />
                 </div>
                 <div className="flex justify-end space-x-4">
@@ -121,7 +131,7 @@ const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: ContactModalProps
                     type="button"
                     onClick={onClose}
                     className={`px-4 py-2 rounded-md ${
-                      darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
+                      darkMode ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-200 hover:bg-gray-300"
                     }`}
                   >
                     Cancel
@@ -142,4 +152,4 @@ const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: ContactModalProps
   );
 };
 
-export default ContactModal; 
+export default ContactModal;

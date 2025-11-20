@@ -2,9 +2,9 @@
  * Utility functions for team operations
  */
 
-import { dbPg } from '@/lib/db';
-import * as schema from '@/lib/db/schema';
-import logger from '@/lib/utils/logger';
+import { dbPg } from "@/lib/db";
+import * as schema from "@/lib/db/schema";
+import logger from "@/lib/utils/logger";
 
 // Removed unused function: generateCode
 
@@ -29,21 +29,23 @@ export async function upsertUserProfile(params: {
 }): Promise<void> {
   const startedAt = Date.now();
   try {
-    const id = params.id || params.userId || '';
-    if (!id || typeof id !== 'string') {
-      throw new Error('upsertUserProfile: missing or invalid id');
+    const id = params.id || params.userId || "";
+    if (!id || typeof id !== "string") {
+      throw new Error("upsertUserProfile: missing or invalid id");
     }
-    if (!params.email || typeof params.email !== 'string') {
-      throw new Error('upsertUserProfile: missing or invalid email');
+    if (!params.email || typeof params.email !== "string") {
+      throw new Error("upsertUserProfile: missing or invalid email");
     }
 
     // Map legacy 'name' to display_name if displayName not provided
-    const resolvedDisplayName = (params.displayName ?? params.name);
+    const resolvedDisplayName = params.displayName ?? params.name;
 
     // Ensure username (non-nullable in Drizzle schema). Fallback from email local part.
     const fallbackUsername = ((): string => {
-      if (typeof params.username === 'string' && params.username.trim()) return params.username.trim();
-      const local = params.email.split('@')[0] || 'user';
+      if (typeof params.username === "string" && params.username.trim()) {
+        return params.username.trim();
+      }
+      const local = params.email.split("@")[0] || "user";
       return local;
     })();
 
@@ -64,35 +66,52 @@ export async function upsertUserProfile(params: {
       email: params.email,
       updatedAt: new Date(),
     };
-    if (params.username !== undefined && typeof params.username === 'string' && params.username.trim()) {
+    if (
+      params.username !== undefined &&
+      typeof params.username === "string" &&
+      params.username.trim()
+    ) {
       updateSet.username = params.username.trim();
     }
-    if (resolvedDisplayName !== undefined) updateSet.displayName = resolvedDisplayName;
-    if (params.firstName !== undefined) updateSet.firstName = params.firstName;
-    if (params.lastName !== undefined) updateSet.lastName = params.lastName;
-    if (params.photoUrl !== undefined) updateSet.photoUrl = params.photoUrl;
+    if (resolvedDisplayName !== undefined) {
+      updateSet.displayName = resolvedDisplayName;
+    }
+    if (params.firstName !== undefined) {
+      updateSet.firstName = params.firstName;
+    }
+    if (params.lastName !== undefined) {
+      updateSet.lastName = params.lastName;
+    }
+    if (params.photoUrl !== undefined) {
+      updateSet.photoUrl = params.photoUrl;
+    }
 
-    logger.dev.db('UPSERT', 'users (drizzle)', 'insert ... onConflictDoUpdate(id)', [
+    logger.dev.db("UPSERT", "users (drizzle)", "insert ... onConflictDoUpdate(id)", [
       { insertValues },
       { updateSet },
     ]);
 
-    await dbPg.insert(schema.users)
+    await dbPg
+      .insert(schema.users)
       .values(insertValues)
       .onConflictDoUpdate({
         target: schema.users.id,
         set: updateSet as any,
       });
 
-    logger.dev.timing('upsertUserProfile', startedAt, { id });
+    logger.dev.timing("upsertUserProfile", startedAt, { id });
   } catch (err: any) {
-    logger.error('upsertUserProfile failed', err);
-    logger.dev.error('upsertUserProfile failed', err instanceof Error ? err : new Error(String(err)), {
-      id: params.id || params.userId,
-      hasEmail: !!params.email,
-      hasUsername: !!params.username,
-      hasDisplayName: !!params.displayName,
-    });
+    logger.error("upsertUserProfile failed", err);
+    logger.dev.error(
+      "upsertUserProfile failed",
+      err instanceof Error ? err : new Error(String(err)),
+      {
+        id: params.id || params.userId,
+        hasEmail: !!params.email,
+        hasUsername: !!params.username,
+        hasDisplayName: !!params.displayName,
+      }
+    );
     throw err;
   }
 }

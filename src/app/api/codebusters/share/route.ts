@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { shareLinks } from '@/lib/db/schema';
-import { eq, gt, and } from 'drizzle-orm';
+import { db } from "@/lib/db";
+import { shareLinks } from "@/lib/db/schema/core";
+import { and, eq, gt } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
 
 interface TestParamsRaw {
   eventName?: string;
@@ -21,82 +21,89 @@ interface ShareDataResult {
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const code = searchParams.get('code');
+    const code = searchParams.get("code");
 
     if (!code) {
-      return NextResponse.json({
-        success: false,
-        error: 'Missing share code',
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Missing share code",
+        },
+        { status: 400 }
+      );
     }
-
-    console.log(`🔍 [CODEBUSTERS/SHARE/GET] Looking up code: ${code}`);
 
     const result = await db
       .select({
         testParamsRaw: shareLinks.testParamsRaw,
         indices: shareLinks.indices,
-        expiresAt: shareLinks.expiresAt
+        expiresAt: shareLinks.expiresAt,
       })
       .from(shareLinks)
       .where(and(eq(shareLinks.code, code), gt(shareLinks.expiresAt, new Date())));
 
     if (result.length === 0) {
-      console.log(`❌ [CODEBUSTERS/SHARE/GET] Code not found or expired: ${code}`);
-      return NextResponse.json({
-        success: false,
-        error: 'Share code not found or expired',
-      }, { status: 404 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Share code not found or expired",
+        },
+        { status: 404 }
+      );
     }
 
     const shareData = result[0] as ShareDataResult;
-    
+
     try {
       // testparamsraw is already a json object (jsonb column)
       const testParamsRaw = shareData.testParamsRaw;
-      
-      if (!testParamsRaw) {
-        console.log(`❌ [CODEBUSTERS/SHARE/GET] No data found for code: ${code}`);
-        return NextResponse.json({
-          success: false,
-          error: 'Invalid share data format',
-        }, { status: 500 });
-      }
-      
 
-      if (testParamsRaw.eventName !== 'Codebusters') {
-        console.log(`❌ [CODEBUSTERS/SHARE/GET] Code is not for Codebusters event: ${testParamsRaw.eventName}`);
-        return NextResponse.json({
-          success: false,
-          error: 'This share code is not for a Codebusters test',
-        }, { status: 400 });
+      if (!testParamsRaw) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Invalid share data format",
+          },
+          { status: 500 }
+        );
       }
-      
-      console.log(`✅ [CODEBUSTERS/SHARE/GET] Found code: ${code}`);
-      
+
+      if (testParamsRaw.eventName !== "Codebusters") {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "This share code is not for a Codebusters test",
+          },
+          { status: 400 }
+        );
+      }
 
       let shareDataComplete: Record<string, unknown> | null = null;
-      
 
-      if (shareData.indices && typeof shareData.indices === 'object' && shareData.indices !== null) {
-
+      if (
+        shareData.indices &&
+        typeof shareData.indices === "object" &&
+        shareData.indices !== null
+      ) {
         shareDataComplete = shareData.indices as Record<string, unknown>;
-        console.log(`🔍 [CODEBUSTERS/SHARE/GET] Found complete share data with ${(shareDataComplete.processedQuotes as unknown[])?.length || 0} quotes`);
       } else {
-
-        console.warn(`Legacy format detected for code ${code}, attempting migration`);
         shareDataComplete = null;
       }
-      
-      const testParams = testParamsRaw.testParams || {};
-      
-      if (!shareDataComplete || !shareDataComplete.processedQuotes || (shareDataComplete.processedQuotes as unknown[]).length === 0) {
-        return NextResponse.json({
-          success: false,
-          error: 'No complete share data found',
-        }, { status: 400 });
-      }
 
+      const testParams = testParamsRaw.testParams || {};
+
+      if (
+        !shareDataComplete?.processedQuotes ||
+        (shareDataComplete.processedQuotes as unknown[]).length === 0
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "No complete share data found",
+          },
+          { status: 400 }
+        );
+      }
 
       const processedQuotes = shareDataComplete.processedQuotes as Array<{
         author: string;
@@ -123,11 +130,8 @@ export async function GET(request: NextRequest) {
         cryptarithmData?: unknown;
         difficulty: number;
       }>;
-      
-      console.log(`✅ [CODEBUSTERS/SHARE/GET] Using stored processed quotes with encryption details`);
 
-
-      const finalProcessedQuotes = processedQuotes.map(quote => ({
+      const finalProcessedQuotes = processedQuotes.map((quote) => ({
         author: quote.author,
         quote: quote.quote,
         encrypted: quote.encrypted,
@@ -152,8 +156,6 @@ export async function GET(request: NextRequest) {
         cryptarithmData: quote.cryptarithmData,
         difficulty: quote.difficulty || Math.random() * 0.8 + 0.2,
       }));
-      
-      console.log(`✅ [CODEBUSTERS/SHARE/GET] Returning ${finalProcessedQuotes.length} quotes with preserved encryption details`);
 
       return NextResponse.json({
         success: true,
@@ -164,18 +166,22 @@ export async function GET(request: NextRequest) {
           createdAtMs: testParamsRaw.createdAtMs || Date.now(),
         },
       });
-    } catch (error) {
-      console.error('❌ [CODEBUSTERS/SHARE/GET] Error processing share data:', error);
-      return NextResponse.json({
-        success: false,
-        error: 'Failed to process share data',
-      }, { status: 500 });
+    } catch (_error) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Failed to process share data",
+        },
+        { status: 500 }
+      );
     }
-  } catch (error) {
-    console.error('❌ [CODEBUSTERS/SHARE/GET] Error:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to retrieve share code',
-    }, { status: 500 });
+  } catch (_error) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to retrieve share code",
+      },
+      { status: 500 }
+    );
   }
 }

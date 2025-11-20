@@ -1,290 +1,360 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { queryCockroachDB } from '@/lib/cockroachdb';
-import { getServerUser } from '@/lib/supabaseServer';
-import { resolveTeamSlugToUnits, getUserTeamMemberships } from '@/lib/utils/team-resolver';
+import { dbPg } from "@/lib/db";
+import {
+  newTeamAssignmentAnalytics,
+  newTeamAssignmentQuestions,
+  newTeamAssignmentQuestionResponses,
+  newTeamAssignmentRoster,
+  newTeamAssignmentSubmissions,
+  newTeamAssignments,
+} from "@/lib/db/schema/assignments";
+import { users } from "@/lib/db/schema/core";
+import {
+  UUIDSchema,
+  validateRequest,
+} from "@/lib/schemas/teams-validation";
+import {
+  handleError,
+  handleForbiddenError,
+  handleNotFoundError,
+  handleUnauthorizedError,
+  validateEnvironment,
+} from "@/lib/utils/error-handler";
+import logger from "@/lib/utils/logger";
+import { getServerUser } from "@/lib/supabaseServer";
+import { getUserTeamMemberships, resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
 
 // GET /api/teams/[teamId]/assignments/[assignmentId] - Get detailed assignment information
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ teamId: string; assignmentId: string }> }
 ) {
   try {
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
-    }
+    const envError = validateEnvironment();
+    if (envError) return envError;
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return handleUnauthorizedError();
     }
 
     const { teamId, assignmentId } = await params;
 
+    // Validate assignmentId
+    try {
+      UUIDSchema.parse(assignmentId);
+    } catch (error) {
+      return handleNotFoundError("Assignment");
+    }
+
     // Resolve team slug to team units
     const teamInfo = await resolveTeamSlugToUnits(teamId);
-    
+
     // Check if user is member of any team unit in this group
     const memberships = await getUserTeamMemberships(user.id, teamInfo.teamUnitIds);
 
     if (memberships.length === 0) {
-      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
+      return handleForbiddenError("Not a team member");
     }
 
-    // Get assignment details
-    const assignmentResult = await queryCockroachDB<any>(
-      `SELECT
-         a.id,
-         a.title,
-         a.description,
-         a.assignment_type,
-         a.event_name,
-         a.due_date,
-         a.points,
-         a.is_required,
-         a.max_attempts,
-         a.time_limit_minutes,
-         a.created_at,
-         a.updated_at,
-         u.email as creator_email,
-         COALESCE(u.display_name, CONCAT(u.first_name, ' ', u.last_name)) as creator_name
-       FROM new_team_assignments a
-       JOIN users u ON a.created_by = u.id
-       WHERE a.id = $1 AND a.team_id = ANY($2)`,
-      [assignmentId, teamInfo.teamUnitIds]
-    );
+    // Get assignment details using Drizzle ORM
+    const [assignmentResult] = await dbPg
+      .select({
+        id: newTeamAssignments.id,
+        title: newTeamAssignments.title,
+        description: newTeamAssignments.description,
+        assignment_type: newTeamAssignments.assignmentType,
+        event_name: newTeamAssignments.eventName,
+        due_date: newTeamAssignments.dueDate,
+        points: newTeamAssignments.points,
+        is_required: newTeamAssignments.isRequired,
+        max_attempts: newTeamAssignments.maxAttempts,
+        time_limit_minutes: newTeamAssignments.timeLimitMinutes,
+        created_at: newTeamAssignments.createdAt,
+        updated_at: newTeamAssignments.updatedAt,
+        creator_email: users.email,
+        creator_name: sql<string>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}))`,
+      })
+      .from(newTeamAssignments)
+      .innerJoin(users, eq(newTeamAssignments.createdBy, users.id))
+      .where(
+        and(
+          eq(newTeamAssignments.id, assignmentId),
+          inArray(newTeamAssignments.teamId, teamInfo.teamUnitIds)
+        )
+      )
+      .limit(1);
 
-    if (assignmentResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Assignment not found' }, { status: 404 });
+    if (!assignmentResult) {
+      return handleNotFoundError("Assignment");
     }
 
-    const assignment = assignmentResult.rows[0];
+    const assignment = assignmentResult;
 
-    // Get assignment questions
-    const questionsResult = await queryCockroachDB<any>(
-      `SELECT 
-         id,
-         question_text,
-         question_type,
-         options,
-         correct_answer,
-         points,
-         order_index
-       FROM new_team_assignment_questions
-       WHERE assignment_id = $1
-       ORDER BY order_index ASC`,
-      [assignmentId]
-    );
+    // Get assignment questions using Drizzle ORM
+    const questionsResult = await dbPg
+      .select({
+        id: newTeamAssignmentQuestions.id,
+        question_text: newTeamAssignmentQuestions.questionText,
+        question_type: newTeamAssignmentQuestions.questionType,
+        options: newTeamAssignmentQuestions.options,
+        correct_answer: newTeamAssignmentQuestions.correctAnswer,
+        points: newTeamAssignmentQuestions.points,
+        order_index: newTeamAssignmentQuestions.orderIndex,
+      })
+      .from(newTeamAssignmentQuestions)
+      .where(eq(newTeamAssignmentQuestions.assignmentId, assignmentId))
+      .orderBy(asc(newTeamAssignmentQuestions.orderIndex));
 
-    // Get roster assignments
-    const rosterResult = await queryCockroachDB<any>(
-      `SELECT 
-         r.id,
-         r.student_name,
-         r.user_id,
-         r.subteam_id,
-         r.assigned_at,
-         u.email,
-         COALESCE(u.display_name, CONCAT(u.first_name, ' ', u.last_name)) as display_name
-       FROM new_team_assignment_roster r
-       LEFT JOIN users u ON r.user_id = u.id
-       WHERE r.assignment_id = $1
-       ORDER BY r.student_name ASC`,
-      [assignmentId]
-    );
+    // Get roster assignments using Drizzle ORM
+    const rosterResult = await dbPg
+      .select({
+        id: newTeamAssignmentRoster.id,
+        student_name: newTeamAssignmentRoster.studentName,
+        user_id: newTeamAssignmentRoster.userId,
+        subteam_id: newTeamAssignmentRoster.subteamId,
+        assigned_at: newTeamAssignmentRoster.assignedAt,
+        email: users.email,
+        display_name: sql<string>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}))`,
+      })
+      .from(newTeamAssignmentRoster)
+      .leftJoin(users, eq(newTeamAssignmentRoster.userId, users.id))
+      .where(eq(newTeamAssignmentRoster.assignmentId, assignmentId))
+      .orderBy(asc(newTeamAssignmentRoster.studentName));
 
-    // Get submission status for each roster member
+    // Get submission status for each roster member using Drizzle ORM
     const rosterWithSubmissions = await Promise.all(
-      rosterResult.rows.map(async (rosterMember) => {
+      rosterResult.map(async (rosterMember) => {
         let submission = null;
         let analytics = null;
 
         if (rosterMember.user_id) {
-          // Get latest submission
-          const submissionResult = await queryCockroachDB<any>(
-            `SELECT 
-               id,
-               status,
-               grade,
-               attempt_number,
-               submitted_at
-             FROM new_team_assignment_submissions
-             WHERE assignment_id = $1 AND user_id = $2
-             ORDER BY submitted_at DESC
-             LIMIT 1`,
-            [assignmentId, rosterMember.user_id]
-          );
+          // Get latest submission using Drizzle ORM
+          const [submissionResult] = await dbPg
+            .select({
+              id: newTeamAssignmentSubmissions.id,
+              status: newTeamAssignmentSubmissions.status,
+              grade: newTeamAssignmentSubmissions.grade,
+              attempt_number: newTeamAssignmentSubmissions.attemptNumber,
+              submitted_at: newTeamAssignmentSubmissions.submittedAt,
+            })
+            .from(newTeamAssignmentSubmissions)
+            .where(
+              and(
+                eq(newTeamAssignmentSubmissions.assignmentId, assignmentId),
+                eq(newTeamAssignmentSubmissions.userId, rosterMember.user_id)
+              )
+            )
+            .orderBy(desc(newTeamAssignmentSubmissions.submittedAt))
+            .limit(1);
 
-          if (submissionResult.rows.length > 0) {
-            submission = submissionResult.rows[0];
+          if (submissionResult) {
+            submission = submissionResult;
 
-            // Get analytics for this submission
-            const analyticsResult = await queryCockroachDB<any>(
-              `SELECT 
-                 total_questions,
-                 correct_answers,
-                 total_points,
-                 earned_points,
-                 completion_time_seconds,
-                 submitted_at
-               FROM new_team_assignment_analytics
-               WHERE assignment_id = $1 AND user_id = $2
-               ORDER BY submitted_at DESC
-               LIMIT 1`,
-              [assignmentId, rosterMember.user_id]
-            );
+            // Get analytics for this submission using Drizzle ORM
+            const [analyticsResult] = await dbPg
+              .select({
+                total_questions: newTeamAssignmentAnalytics.totalQuestions,
+                correct_answers: newTeamAssignmentAnalytics.correctAnswers,
+                total_points: newTeamAssignmentAnalytics.totalPoints,
+                earned_points: newTeamAssignmentAnalytics.earnedPoints,
+                completion_time_seconds: newTeamAssignmentAnalytics.completionTimeSeconds,
+                submitted_at: newTeamAssignmentAnalytics.submittedAt,
+              })
+              .from(newTeamAssignmentAnalytics)
+              .where(
+                and(
+                  eq(newTeamAssignmentAnalytics.assignmentId, assignmentId),
+                  eq(newTeamAssignmentAnalytics.userId, rosterMember.user_id)
+                )
+              )
+              .orderBy(desc(newTeamAssignmentAnalytics.submittedAt))
+              .limit(1);
 
-            if (analyticsResult.rows.length > 0) {
-              analytics = analyticsResult.rows[0];
+            if (analyticsResult) {
+              analytics = analyticsResult;
             }
           }
         }
 
         return {
-          ...rosterMember,
+          id: rosterMember.id,
+          student_name: rosterMember.student_name,
+          user_id: rosterMember.user_id,
+          subteam_id: rosterMember.subteam_id,
+          assigned_at: rosterMember.assigned_at,
+          email: rosterMember.email,
+          display_name: rosterMember.display_name,
           submission,
-          analytics
+          analytics,
         };
       })
     );
 
-    // Get question responses for detailed analysis (if user is captain)
-    const isCaptain = memberships.some(m => ['captain', 'co_captain'].includes(m.role));
-    let questionResponses: any[] | null = null;
+    // Get question responses for detailed analysis (if user is captain) using Drizzle ORM
+    const isCaptain = memberships.some((m) => ["captain", "co_captain"].includes(m.role));
+    let questionResponses: Array<{
+      submission_id: string;
+      question_id: string;
+      response_text: string | null;
+      is_correct: boolean | null;
+      points_earned: number | null;
+      graded_at: Date | null;
+      question_text: string;
+      question_type: string;
+      question_points: number | null;
+      user_id: string;
+      email: string | null;
+      student_name: string;
+    }> | null = null;
 
     if (isCaptain) {
-      const responsesResult = await queryCockroachDB<any>(
-        `SELECT 
-           qr.submission_id,
-           qr.question_id,
-           qr.response_text,
-           qr.is_correct,
-           qr.points_earned,
-           qr.graded_at,
-           q.question_text,
-           q.question_type,
-           q.points as question_points,
-           s.user_id,
-           u.email,
-           COALESCE(u.display_name, CONCAT(u.first_name, ' ', u.last_name)) as student_name
-         FROM new_team_assignment_question_responses qr
-         JOIN new_team_assignment_questions q ON qr.question_id = q.id
-         JOIN new_team_assignment_submissions s ON qr.submission_id = s.id
-         LEFT JOIN users u ON s.user_id = u.id
-         WHERE q.assignment_id = $1
-         ORDER BY s.submitted_at DESC, q.order_index ASC`,
-        [assignmentId]
-      );
+      const responsesResult = await dbPg
+        .select({
+          submission_id: newTeamAssignmentQuestionResponses.submissionId,
+          question_id: newTeamAssignmentQuestionResponses.questionId,
+          response_text: newTeamAssignmentQuestionResponses.responseText,
+          is_correct: newTeamAssignmentQuestionResponses.isCorrect,
+          points_earned: newTeamAssignmentQuestionResponses.pointsEarned,
+          graded_at: newTeamAssignmentQuestionResponses.gradedAt,
+          question_text: newTeamAssignmentQuestions.questionText,
+          question_type: newTeamAssignmentQuestions.questionType,
+          question_points: newTeamAssignmentQuestions.points,
+          user_id: newTeamAssignmentSubmissions.userId,
+          email: users.email,
+          student_name: sql<string>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}))`,
+        })
+        .from(newTeamAssignmentQuestionResponses)
+        .innerJoin(
+          newTeamAssignmentQuestions,
+          eq(newTeamAssignmentQuestionResponses.questionId, newTeamAssignmentQuestions.id)
+        )
+        .innerJoin(
+          newTeamAssignmentSubmissions,
+          eq(newTeamAssignmentQuestionResponses.submissionId, newTeamAssignmentSubmissions.id)
+        )
+        .leftJoin(users, eq(newTeamAssignmentSubmissions.userId, users.id))
+        .where(eq(newTeamAssignmentQuestions.assignmentId, assignmentId))
+        .orderBy(desc(newTeamAssignmentSubmissions.submittedAt), asc(newTeamAssignmentQuestions.orderIndex));
 
-      questionResponses = responsesResult.rows;
+      questionResponses = responsesResult;
     }
 
     return NextResponse.json({
       assignment: {
         ...assignment,
-        questions: questionsResult.rows.map((q: any) => ({
+        questions: questionsResult.map((q) => ({
           id: q.id,
           question_text: q.question_text,
           question_type: q.question_type,
           options: q.options || null,
           correct_answer: q.correct_answer,
           points: q.points,
-          order_index: q.order_index
+          order_index: q.order_index,
         })),
         roster: rosterWithSubmissions,
         question_responses: questionResponses,
-        questions_count: questionsResult.rows.length,
-        roster_count: rosterResult.rows.length,
-        submitted_count: rosterWithSubmissions.filter(r => r.submission).length,
-        graded_count: rosterWithSubmissions.filter(r => r.submission?.status === 'graded').length
-      }
+        questions_count: questionsResult.length,
+        roster_count: rosterResult.length,
+        submitted_count: rosterWithSubmissions.filter((r) => r.submission).length,
+        graded_count: rosterWithSubmissions.filter((r) => r.submission?.status === "graded").length,
+      },
     });
-
   } catch (error) {
-    console.error('Error fetching assignment details:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return handleError(error, "GET /api/teams/[teamId]/assignments/[assignmentId]");
   }
 }
 
 // DELETE /api/teams/[teamId]/assignments/[assignmentId] - Delete assignment
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ teamId: string; assignmentId: string }> }
 ) {
   try {
     if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: "Database configuration error",
+          details: "DATABASE_URL environment variable is missing",
+        },
+        { status: 500 }
+      );
     }
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { teamId, assignmentId } = await params;
 
     // Resolve team slug to team units
     const teamInfo = await resolveTeamSlugToUnits(teamId);
-    
+
     // Check if user is captain or co-captain of any team unit in this group
     const memberships = await getUserTeamMemberships(user.id, teamInfo.teamUnitIds);
 
     if (memberships.length === 0) {
-      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
+      return NextResponse.json({ error: "Not a team member" }, { status: 403 });
     }
 
-    const isCaptain = memberships.some(m => ['captain', 'co_captain'].includes(m.role));
+    const isCaptain = memberships.some((m) => ["captain", "co_captain"].includes(m.role));
     if (!isCaptain) {
-      return NextResponse.json({ error: 'Only captains can delete assignments' }, { status: 403 });
+      return NextResponse.json({ error: "Only captains can delete assignments" }, { status: 403 });
     }
 
     // Verify assignment exists and user has permission to delete it
-    const assignmentResult = await queryCockroachDB<any>(
-      `SELECT id, created_by, title
-       FROM new_team_assignments
-       WHERE id = $1 AND team_id = ANY($2)`,
-      [assignmentId, teamInfo.teamUnitIds]
-    );
+    const assignmentResult = await dbPg
+      .select({
+        id: newTeamAssignments.id,
+        created_by: newTeamAssignments.createdBy,
+        title: newTeamAssignments.title,
+      })
+      .from(newTeamAssignments)
+      .where(
+        and(
+          eq(newTeamAssignments.id, assignmentId),
+          inArray(newTeamAssignments.teamId, teamInfo.teamUnitIds)
+        )
+      )
+      .limit(1);
 
-    if (assignmentResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Assignment not found' }, { status: 404 });
+    if (assignmentResult.length === 0) {
+      return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
     }
 
-    const assignment = assignmentResult.rows[0];
+    const assignment = assignmentResult[0];
+    if (!assignment) {
+      return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
+    }
 
     // Check if user created the assignment or is captain
     const isCreator = assignment.created_by === user.id;
-    if (!isCreator && !isCaptain) {
-      return NextResponse.json({ error: 'Only assignment creators or captains can delete assignments' }, { status: 403 });
+    if (!(isCreator || isCaptain)) {
+      return NextResponse.json(
+        { error: "Only assignment creators or captains can delete assignments" },
+        { status: 403 }
+      );
     }
 
     // Delete the assignment (cascade will handle related records)
-    await queryCockroachDB(
-      `DELETE FROM new_team_assignments WHERE id = $1`,
-      [assignmentId]
-    );
+    await dbPg.delete(newTeamAssignments).where(eq(newTeamAssignments.id, assignmentId));
 
-    return NextResponse.json({ 
-      message: 'Assignment deleted successfully',
+    return NextResponse.json({
+      message: "Assignment deleted successfully",
       assignment: {
         id: assignmentId,
-        title: assignment.title
-      }
+        title: assignment.title,
+      },
     });
-
   } catch (error) {
-    console.error('Error deleting assignment:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
   }
 }

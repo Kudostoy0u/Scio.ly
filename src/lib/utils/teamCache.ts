@@ -1,4 +1,4 @@
-import SyncLocalStorage from '@/lib/database/localStorage-replacement';
+import SyncLocalStorage from "@/lib/database/localStorage-replacement";
 /**
  * Enhanced team data caching system with localStorage persistence
  * Provides efficient caching, background updates, and request deduplication
@@ -21,44 +21,44 @@ const CACHE_CONFIGS: Record<string, CacheConfig> = {
   roster: {
     duration: 5 * 60 * 1000, // 5 minutes
     backgroundRefresh: true,
-    backgroundRefreshInterval: 2 * 60 * 1000 // 2 minutes
+    backgroundRefreshInterval: 2 * 60 * 1000, // 2 minutes
   },
   stream: {
     duration: 2 * 60 * 1000, // 2 minutes
     backgroundRefresh: true,
-    backgroundRefreshInterval: 1 * 60 * 1000 // 1 minute
+    backgroundRefreshInterval: 1 * 60 * 1000, // 1 minute
   },
   assignments: {
     duration: 3 * 60 * 1000, // 3 minutes
     backgroundRefresh: true,
-    backgroundRefreshInterval: 2 * 60 * 1000 // 2 minutes
+    backgroundRefreshInterval: 2 * 60 * 1000, // 2 minutes
   },
   members: {
     duration: 2 * 60 * 1000, // 2 minutes
     backgroundRefresh: true,
-    backgroundRefreshInterval: 1 * 60 * 1000 // 1 minute
+    backgroundRefreshInterval: 1 * 60 * 1000, // 1 minute
   },
   subteams: {
     duration: 10 * 60 * 1000, // 10 minutes
     backgroundRefresh: false,
-    backgroundRefreshInterval: 0
+    backgroundRefreshInterval: 0,
   },
   tournaments: {
     duration: 5 * 60 * 1000, // 5 minutes
     backgroundRefresh: true,
-    backgroundRefreshInterval: 2 * 60 * 1000 // 2 minutes
+    backgroundRefreshInterval: 2 * 60 * 1000, // 2 minutes
   },
   timers: {
     duration: 1 * 60 * 1000, // 1 minute
     backgroundRefresh: true,
-    backgroundRefreshInterval: 30 * 1000 // 30 seconds
-  }
+    backgroundRefreshInterval: 30 * 1000, // 30 seconds
+  },
 };
 
 class TeamCache {
   private memoryCache = new Map<string, CacheEntry<any>>();
   private backgroundRefreshTimers = new Map<string, NodeJS.Timeout>();
-  private readonly STORAGE_PREFIX = 'scioly_team_cache_';
+  private readonly STORAGE_PREFIX = "scioly_team_cache_";
 
   /**
    * Get cache key for localStorage
@@ -71,11 +71,13 @@ class TeamCache {
    * Get cache configuration for a data type
    */
   private getCacheConfig(dataType: string): CacheConfig {
-    return CACHE_CONFIGS[dataType] || {
-      duration: 2 * 60 * 1000,
-      backgroundRefresh: false,
-      backgroundRefreshInterval: 0
-    };
+    return (
+      CACHE_CONFIGS[dataType] || {
+        duration: 2 * 60 * 1000,
+        backgroundRefresh: false,
+        backgroundRefreshInterval: 0,
+      }
+    );
   }
 
   /**
@@ -85,22 +87,23 @@ class TeamCache {
     try {
       const storageKey = this.getStorageKey(key);
       const cached = SyncLocalStorage.getItem(storageKey);
-      if (!cached) return null;
-      
+      if (!cached) {
+        return null;
+      }
+
       const parsed = JSON.parse(cached);
       const now = Date.now();
       const config = this.getCacheConfig(this.getDataTypeFromKey(key));
-      
+
       // Check if cache is still valid
       if (now - parsed.timestamp < config.duration) {
         return parsed.data;
       }
-      
+
       // Cache expired, remove it
       SyncLocalStorage.removeItem(storageKey);
       return null;
-    } catch (error) {
-      console.error('Error loading from localStorage:', error);
+    } catch (_error) {
       return null;
     }
   }
@@ -113,26 +116,38 @@ class TeamCache {
       const storageKey = this.getStorageKey(key);
       const cacheEntry = {
         data,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
       SyncLocalStorage.setItem(storageKey, JSON.stringify(cacheEntry));
-    } catch (error) {
-      console.error('Error saving to localStorage:', error);
-    }
+    } catch (_error) {}
   }
 
   /**
    * Extract data type from cache key
    */
   private getDataTypeFromKey(key: string): string {
-    if (key.includes('roster')) return 'roster';
-    if (key.includes('stream')) return 'stream';
-    if (key.includes('assignments')) return 'assignments';
-    if (key.includes('members')) return 'members';
-    if (key.includes('subteams')) return 'subteams';
-    if (key.includes('tournaments')) return 'tournaments';
-    if (key.includes('timers')) return 'timers';
-    return 'default';
+    if (key.includes("roster")) {
+      return "roster";
+    }
+    if (key.includes("stream")) {
+      return "stream";
+    }
+    if (key.includes("assignments")) {
+      return "assignments";
+    }
+    if (key.includes("members")) {
+      return "members";
+    }
+    if (key.includes("subteams")) {
+      return "subteams";
+    }
+    if (key.includes("tournaments")) {
+      return "tournaments";
+    }
+    if (key.includes("timers")) {
+      return "timers";
+    }
+    return "default";
   }
 
   /**
@@ -142,12 +157,12 @@ class TeamCache {
     const now = Date.now();
     const cached = this.memoryCache.get(key);
     const config = this.getCacheConfig(this.getDataTypeFromKey(key));
-    
+
     // Return from memory cache if valid
-    if (cached && (now - cached.timestamp) < config.duration) {
+    if (cached && now - cached.timestamp < config.duration) {
       return cached.data;
     }
-    
+
     // Try localStorage as fallback
     const storageData = this.loadFromStorage<T>(key);
     if (storageData) {
@@ -155,7 +170,7 @@ class TeamCache {
       this.memoryCache.set(key, { data: storageData, timestamp: now });
       return storageData;
     }
-    
+
     return null;
   }
 
@@ -171,21 +186,17 @@ class TeamCache {
   /**
    * Fetch data with caching and request deduplication
    */
-  async fetchWithCache<T>(
-    key: string,
-    fetcher: () => Promise<T>,
-    dataType?: string
-  ): Promise<T> {
+  async fetchWithCache<T>(key: string, fetcher: () => Promise<T>, dataType?: string): Promise<T> {
     const now = Date.now();
     const type = dataType || this.getDataTypeFromKey(key);
     const config = this.getCacheConfig(type);
     const cached = this.memoryCache.get(key);
-    
+
     // Return cached data if still valid
-    if (cached && (now - cached.timestamp) < config.duration) {
+    if (cached && now - cached.timestamp < config.duration) {
       return cached.data;
     }
-    
+
     // Try localStorage as fallback
     const storageData = this.loadFromStorage<T>(key);
     if (storageData) {
@@ -193,61 +204,58 @@ class TeamCache {
       this.memoryCache.set(key, { data: storageData, timestamp: now });
       return storageData;
     }
-    
+
     // Return existing promise if already fetching
     if (cached?.promise) {
       return cached.promise;
     }
-    
+
     // Create new fetch promise
-    const promise = fetcher().then(result => {
-      this.set(key, result);
-      return result;
-    }).catch(err => {
-      this.memoryCache.delete(key);
-      throw err;
-    });
-    
+    const promise = fetcher()
+      .then((result) => {
+        this.set(key, result);
+        return result;
+      })
+      .catch((err) => {
+        this.memoryCache.delete(key);
+        throw err;
+      });
+
     // Store the promise to prevent duplicate requests
-    this.memoryCache.set(key, { 
-      data: cached?.data, 
-      timestamp: cached?.timestamp || 0, 
-      promise 
+    this.memoryCache.set(key, {
+      data: cached?.data,
+      timestamp: cached?.timestamp || 0,
+      promise,
     });
-    
+
     return promise;
   }
 
   /**
    * Start background refresh for a cache key
    */
-  startBackgroundRefresh<T>(
-    key: string,
-    fetcher: () => Promise<T>,
-    dataType?: string
-  ): void {
+  startBackgroundRefresh<T>(key: string, fetcher: () => Promise<T>, dataType?: string): void {
     const type = dataType || this.getDataTypeFromKey(key);
     const config = this.getCacheConfig(type);
-    
-    if (!config.backgroundRefresh) return;
-    
+
+    if (!config.backgroundRefresh) {
+      return;
+    }
+
     // Clear existing timer
     const existingTimer = this.backgroundRefreshTimers.get(key);
     if (existingTimer) {
       clearInterval(existingTimer);
     }
-    
+
     // Set up background refresh
     const timer = setInterval(async () => {
       try {
         const freshData = await fetcher();
         this.set(key, freshData);
-        console.log(`Background refresh completed for ${key}`);
-      } catch (error) {
-        console.error(`Background refresh failed for ${key}:`, error);
-      }
+      } catch (_error) {}
     }, config.backgroundRefreshInterval);
-    
+
     this.backgroundRefreshTimers.set(key, timer);
   }
 
@@ -273,14 +281,14 @@ class TeamCache {
     } else {
       // Clear all caches
       this.memoryCache.clear();
-      this.backgroundRefreshTimers.forEach(timer => clearInterval(timer));
+      this.backgroundRefreshTimers.forEach((timer) => clearInterval(timer));
       this.backgroundRefreshTimers.clear();
-      
+
       // Clear localStorage - in test environment, just call clear
-      if (typeof localStorage !== 'undefined') {
+      if (typeof localStorage !== "undefined") {
         try {
           const keys = Object.keys(localStorage);
-          keys.forEach(storageKey => {
+          keys.forEach((storageKey) => {
             if (storageKey.startsWith(this.STORAGE_PREFIX)) {
               SyncLocalStorage.removeItem(storageKey);
             }
@@ -299,7 +307,7 @@ class TeamCache {
   getStats(): { memoryEntries: number; backgroundTimers: number } {
     return {
       memoryEntries: this.memoryCache.size,
-      backgroundTimers: this.backgroundRefreshTimers.size
+      backgroundTimers: this.backgroundRefreshTimers.size,
     };
   }
 }

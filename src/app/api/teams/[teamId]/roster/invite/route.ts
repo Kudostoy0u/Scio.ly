@@ -1,7 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { queryCockroachDB } from '@/lib/cockroachdb';
-import { NotificationSyncService } from '@/lib/services/notification-sync';
-import { getServerUser } from '@/lib/supabaseServer';
+import { dbPg } from "@/lib/db";
+import { users } from "@/lib/db/schema/core";
+import {
+  newTeamGroups,
+  newTeamMemberships,
+  newTeamUnits,
+  rosterLinkInvitations,
+} from "@/lib/db/schema/teams";
+import { newTeamNotifications } from "@/lib/db/schema/notifications";
+import {
+  UUIDSchema,
+  validateRequest,
+} from "@/lib/schemas/teams-validation";
+import {
+  handleError,
+  handleForbiddenError,
+  handleNotFoundError,
+  handleUnauthorizedError,
+  handleValidationError,
+  validateEnvironment,
+} from "@/lib/utils/error-handler";
+import logger from "@/lib/utils/logger";
+import { NotificationSyncService } from "@/lib/services/notification-sync";
+import { getServerUser } from "@/lib/supabaseServer";
+import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 // GET /api/teams/[teamId]/roster/invite - Search users to invite for roster linking
 // Frontend Usage:
@@ -11,85 +34,87 @@ export async function GET(
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
-    }
+    const envError = validateEnvironment();
+    if (envError) return envError;
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return handleUnauthorizedError();
     }
 
     const { teamId } = await params;
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q');
+    const query = searchParams.get("q");
 
     if (!query || query.length < 2) {
       return NextResponse.json({ users: [] });
     }
 
-    // First, resolve the slug to team group
-    const groupResult = await queryCockroachDB<{ id: string }>(
-      `SELECT id FROM new_team_groups WHERE slug = $1`,
-      [teamId]
-    );
+    // Resolve the slug to team group using Drizzle ORM
+    const [groupResult] = await dbPg
+      .select({ id: newTeamGroups.id })
+      .from(newTeamGroups)
+      .where(eq(newTeamGroups.slug, teamId))
+      .limit(1);
 
-    if (groupResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Team group not found' }, { status: 404 });
+    if (!groupResult) {
+      return handleNotFoundError("Team group");
     }
 
-    const groupId = groupResult.rows[0].id;
+    const groupId = groupResult.id;
 
-    // Check if user is a member of this team group
-    const membershipResult = await queryCockroachDB<{ role: string }>(
-      `SELECT tm.role 
-       FROM new_team_memberships tm
-       JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tm.user_id = $1 AND tu.group_id = $2 AND tm.status = 'active'`,
-      [user.id, groupId]
-    );
+    // Check if user is a member of this team group using Drizzle ORM
+    const membershipResult = await dbPg
+      .select({ role: newTeamMemberships.role })
+      .from(newTeamMemberships)
+      .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+      .where(
+        and(
+          eq(newTeamMemberships.userId, user.id),
+          eq(newTeamUnits.groupId, groupId),
+          eq(newTeamMemberships.status, "active")
+        )
+      );
 
-    if (membershipResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
+    if (membershipResult.length === 0) {
+      return handleForbiddenError("Not a team member");
     }
 
     // Check if user has captain or co-captain role in any team unit
-    const hasCaptainRole = membershipResult.rows.some(membership => 
-      ['captain', 'co_captain'].includes(membership.role)
+    const hasCaptainRole = membershipResult.some((membership) =>
+      ["captain", "co_captain"].includes(membership.role)
     );
 
     if (!hasCaptainRole) {
-      return NextResponse.json({ error: 'Only captains can search users' }, { status: 403 });
+      return handleForbiddenError("Only captains can search users");
     }
 
-    // Search users by username or email
-    const usersResult = await queryCockroachDB<any>(
-      `SELECT 
-         id,
-         email,
-         display_name,
-         first_name,
-         last_name,
-         username,
-         photo_url
-       FROM users 
-       WHERE (username ILIKE $1 OR email ILIKE $1)
-       AND id != $2
-       LIMIT 10`,
-      [`%${query}%`, user.id]
-    );
+    // Search users by username or email using Drizzle ORM
+    const usersResult = await dbPg
+      .select({
+        id: users.id,
+        email: users.email,
+        display_name: users.displayName,
+        first_name: users.firstName,
+        last_name: users.lastName,
+        username: users.username,
+        photo_url: users.photoUrl,
+      })
+      .from(users)
+      .where(
+        and(
+          or(
+            sql`${users.username} ILIKE ${`%${query}%`}`,
+            sql`${users.email} ILIKE ${`%${query}%`}`
+          ),
+          ne(users.id, user.id)
+        )
+      )
+      .limit(10);
 
-    return NextResponse.json({ users: usersResult.rows });
-
+    return NextResponse.json({ users: usersResult });
   } catch (error) {
-    console.error('Error searching users for roster invite:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return handleError(error, "GET /api/teams/[teamId]/roster/invite");
   }
 }
 
@@ -102,205 +127,247 @@ export async function POST(
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
-    }
+    const envError = validateEnvironment();
+    if (envError) return envError;
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return handleUnauthorizedError();
     }
 
     const { teamId } = await params;
-    const body = await request.json();
-    const { subteamId, studentName, username, message } = body;
-
-    if (!subteamId || !studentName || !username) {
-      return NextResponse.json({ 
-        error: 'Subteam ID, student name, and username are required' 
-      }, { status: 400 });
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch (error) {
+      return handleValidationError(
+        new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            message: "Invalid JSON in request body",
+            path: [],
+          },
+        ])
+      );
     }
 
-    // Validate UUID format for subteamId
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(subteamId)) {
-      return NextResponse.json({ 
-        error: 'Invalid subteam ID format. Must be a valid UUID.' 
-      }, { status: 400 });
+    // Validate request body
+    const RosterInviteSchema = z.object({
+      subteamId: UUIDSchema,
+      studentName: z.string().min(1, "Student name is required"),
+      username: z.string().min(1, "Username is required"),
+      message: z.string().max(500).optional(),
+    });
+
+    let validatedBody: z.infer<typeof RosterInviteSchema>;
+    try {
+      validatedBody = validateRequest(RosterInviteSchema, body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return handleValidationError(error);
+      }
+      return handleError(error, "POST /api/teams/[teamId]/roster/invite - validation");
     }
 
-    // First, resolve the slug to team group
-    const groupResult = await queryCockroachDB<{ id: string }>(
-      `SELECT id FROM new_team_groups WHERE slug = $1`,
-      [teamId]
-    );
+    const { subteamId, studentName, username, message } = validatedBody;
 
-    if (groupResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Team group not found' }, { status: 404 });
+    // Resolve the slug to team group using Drizzle ORM
+    const [groupResult] = await dbPg
+      .select({ id: newTeamGroups.id })
+      .from(newTeamGroups)
+      .where(eq(newTeamGroups.slug, teamId))
+      .limit(1);
+
+    if (!groupResult) {
+      return handleNotFoundError("Team group");
     }
 
-    const groupId = groupResult.rows[0].id;
+    const groupId = groupResult.id;
 
-    // Check if user is a member of this team group
-    const membershipResult = await queryCockroachDB<{ role: string }>(
-      `SELECT tm.role 
-       FROM new_team_memberships tm
-       JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tm.user_id = $1 AND tu.group_id = $2 AND tm.status = 'active'`,
-      [user.id, groupId]
-    );
+    // Check if user is a member of this team group using Drizzle ORM
+    const membershipResult = await dbPg
+      .select({ role: newTeamMemberships.role })
+      .from(newTeamMemberships)
+      .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+      .where(
+        and(
+          eq(newTeamMemberships.userId, user.id),
+          eq(newTeamUnits.groupId, groupId),
+          eq(newTeamMemberships.status, "active")
+        )
+      );
 
-    if (membershipResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
+    if (membershipResult.length === 0) {
+      return handleForbiddenError("Not a team member");
     }
 
     // Check if user has captain or co-captain role in any team unit
-    const hasCaptainRole = membershipResult.rows.some(membership => 
-      ['captain', 'co_captain'].includes(membership.role)
+    const hasCaptainRole = membershipResult.some((membership) =>
+      ["captain", "co_captain"].includes(membership.role)
     );
 
     if (!hasCaptainRole) {
-      return NextResponse.json({ error: 'Only captains can send roster invitations' }, { status: 403 });
+      return handleForbiddenError("Only captains can send roster invitations");
     }
 
-    // Check if the subteam belongs to this group
-    const subteamResult = await queryCockroachDB<{ id: string }>(
-      `SELECT id FROM new_team_units 
-       WHERE id = $1 AND group_id = $2 AND status = 'active'`,
-      [subteamId, groupId]
-    );
+    // Check if the subteam belongs to this group using Drizzle ORM
+    const [subteamResult] = await dbPg
+      .select({ id: newTeamUnits.id })
+      .from(newTeamUnits)
+      .where(
+        and(
+          eq(newTeamUnits.id, subteamId),
+          eq(newTeamUnits.groupId, groupId),
+          eq(newTeamUnits.status, "active")
+        )
+      )
+      .limit(1);
 
-    if (subteamResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Subteam not found' }, { status: 404 });
+    if (!subteamResult) {
+      return handleNotFoundError("Subteam");
     }
 
-    // Find the user to invite
-    const userResult = await queryCockroachDB<any>(
-      `SELECT id, email, display_name, first_name, last_name, username
-       FROM users 
-       WHERE username = $1 OR email = $1`,
-      [username]
-    );
+    // Find the user to invite using Drizzle ORM
+    const [userResult] = await dbPg
+      .select({
+        id: users.id,
+        email: users.email,
+        display_name: users.displayName,
+        first_name: users.firstName,
+        last_name: users.lastName,
+        username: users.username,
+      })
+      .from(users)
+      .where(or(eq(users.username, username), eq(users.email, username)))
+      .limit(1);
 
-    if (userResult.rows.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (!userResult) {
+      return handleNotFoundError("User");
     }
 
-    const invitedUser = userResult.rows[0];
-    
+    const invitedUser = userResult;
+
     // Use the user's actual display name instead of the roster entry name
-    const userDisplayName = invitedUser.display_name || 
-                           (invitedUser.first_name && invitedUser.last_name ? 
-                            `${invitedUser.first_name} ${invitedUser.last_name}` : 
-                            invitedUser.username || invitedUser.email?.split('@')[0] || 'Unknown User');
-    
-    console.log('User lookup result:', {
-      username: invitedUser.username,
-      email: invitedUser.email,
-      display_name: invitedUser.display_name,
-      first_name: invitedUser.first_name,
-      last_name: invitedUser.last_name,
-      constructed_display_name: userDisplayName,
-      roster_entry_name: studentName
-    });
+    const userDisplayName =
+      invitedUser.display_name ||
+      (invitedUser.first_name && invitedUser.last_name
+        ? `${invitedUser.first_name} ${invitedUser.last_name}`
+        : invitedUser.username || invitedUser.email?.split("@")[0] || "Unknown User");
 
-    // Check for existing roster link invitation (pending or declined)
-    const existingInvitation = await queryCockroachDB<{ id: string, status: string }>(
-      `SELECT id, status FROM roster_link_invitations 
-       WHERE team_id = $1 AND student_name = $2 AND invited_user_id = $3`,
-      [subteamId, studentName, invitedUser.id]
-    );
+    // Check for existing roster link invitation (pending or declined) using Drizzle ORM
+    const [existingInvitation] = await dbPg
+      .select({ id: rosterLinkInvitations.id, status: rosterLinkInvitations.status })
+      .from(rosterLinkInvitations)
+      .where(
+        and(
+          eq(rosterLinkInvitations.teamId, subteamId),
+          eq(rosterLinkInvitations.studentName, studentName),
+          eq(rosterLinkInvitations.invitedUserId, invitedUser.id)
+        )
+      )
+      .limit(1);
 
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
 
-    let invitationResult;
+    let invitation;
 
-    if (existingInvitation.rows.length > 0) {
-      const existing = existingInvitation.rows[0];
-      
-      if (existing.status === 'pending') {
-        return NextResponse.json({ error: 'Roster link invitation already sent' }, { status: 400 });
+    if (existingInvitation) {
+      if (existingInvitation.status === "pending") {
+        return handleValidationError(
+          new z.ZodError([
+            {
+              code: z.ZodIssueCode.custom,
+              message: "Roster link invitation already sent",
+              path: [],
+            },
+          ])
+        );
       }
-      
-      // Update existing declined/expired invitation to pending
-      invitationResult = await queryCockroachDB<any>(
-        `UPDATE roster_link_invitations 
-         SET status = 'pending', invited_by = $1, message = $2, expires_at = $3, created_at = NOW()
-         WHERE id = $4
-         RETURNING *`,
-        [user.id, message || `You've been invited to link your account to the roster entry "${studentName}"`, expiresAt, existing.id]
-      );
+
+      // Update existing declined/expired invitation to pending using Drizzle ORM
+      const [updatedInvitation] = await dbPg
+        .update(rosterLinkInvitations)
+        .set({
+          status: "pending",
+          invitedBy: user.id,
+          message: message || `You've been invited to link your account to the roster entry "${studentName}"`,
+          expiresAt,
+          createdAt: new Date(),
+        })
+        .where(eq(rosterLinkInvitations.id, existingInvitation.id))
+        .returning();
+
+      invitation = updatedInvitation;
     } else {
-      // Create new roster link invitation
-      invitationResult = await queryCockroachDB<any>(
-        `INSERT INTO roster_link_invitations 
-         (team_id, student_name, invited_user_id, invited_by, message, status, created_at, expires_at)
-         VALUES ($1, $2, $3, $4, $5, 'pending', NOW(), $6)
-         RETURNING *`,
-        [subteamId, studentName, invitedUser.id, user.id, message || `You've been invited to link your account to the roster entry "${studentName}"`, expiresAt]
-      );
+      // Create new roster link invitation using Drizzle ORM
+      const [newInvitation] = await dbPg
+        .insert(rosterLinkInvitations)
+        .values({
+          teamId: subteamId,
+          studentName,
+          invitedUserId: invitedUser.id,
+          invitedBy: user.id,
+          message: message || `You've been invited to link your account to the roster entry "${studentName}"`,
+          status: "pending",
+          expiresAt,
+        })
+        .returning();
+
+      invitation = newInvitation;
     }
 
-    const invitation = invitationResult.rows[0];
+    if (!invitation) {
+      return handleError(new Error("Failed to create or update invitation"), "POST /api/teams/[teamId]/roster/invite - invitation");
+    }
 
-    // Get team information for the notification
-    const teamInfoResult = await queryCockroachDB<{ school: string, division: string }>(
-      `SELECT tg.school, tg.division 
-       FROM new_team_units tu 
-       JOIN new_team_groups tg ON tu.group_id = tg.id 
-       WHERE tu.id = $1`,
-      [subteamId]
-    );
+    // Get team information for the notification using Drizzle ORM
+    const [teamInfo] = await dbPg
+      .select({
+        school: newTeamGroups.school,
+        division: newTeamGroups.division,
+      })
+      .from(newTeamUnits)
+      .innerJoin(newTeamGroups, eq(newTeamUnits.groupId, newTeamGroups.id))
+      .where(eq(newTeamUnits.id, subteamId))
+      .limit(1);
 
-    const teamInfo = teamInfoResult.rows[0];
-    const teamName = teamInfo ? `${teamInfo.school} ${teamInfo.division}` : 'Unknown Team';
+    const teamName = teamInfo ? `${teamInfo.school} ${teamInfo.division}` : "Unknown Team";
 
-    // Create notification for invited user
-    const notificationResult = await queryCockroachDB(
-      `INSERT INTO new_team_notifications 
-       (user_id, team_id, notification_type, title, message, data)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id`,
-      [
-        invitedUser.id,
-        subteamId,
-        'roster_link_invitation',
-        `Roster Link Invitation - ${teamName}`,
-        `You've been invited to link your account to "${userDisplayName}" on ${teamName}`,
-        JSON.stringify({ 
-          invitation_id: invitation.id, 
-          student_name: userDisplayName, // Use actual display name instead of roster entry name
+    // Create notification for invited user using Drizzle ORM
+    const [notificationResult] = await dbPg
+      .insert(newTeamNotifications)
+      .values({
+        userId: invitedUser.id,
+        teamId: subteamId,
+        notificationType: "roster_link_invitation",
+        title: `Roster Link Invitation - ${teamName}`,
+        message: `You've been invited to link your account to "${userDisplayName}" on ${teamName}`,
+        data: {
+          invitation_id: invitation.id,
+          student_name: userDisplayName,
           inviter_name: user.email,
           team_slug: teamId,
-          team_name: teamName
-        })
-      ]
-    );
+          team_name: teamName,
+        },
+      })
+      .returning({ id: newTeamNotifications.id });
 
     // Sync notification to Supabase for client-side access
-    if (notificationResult.rows.length > 0) {
+    if (notificationResult) {
       try {
-        await NotificationSyncService.syncNotificationToSupabase(notificationResult.rows[0].id);
+        await NotificationSyncService.syncNotificationToSupabase(notificationResult.id);
       } catch (syncError) {
-        console.error('Failed to sync notification to Supabase:', syncError);
         // Don't fail the entire request if sync fails
+        logger.error("Failed to sync notification to Supabase", { error: syncError, notificationId: notificationResult.id });
       }
     }
 
-    return NextResponse.json({ 
-      invitation,
-      message: 'Roster link invitation sent successfully'
-    });
-
-  } catch (error) {
-    console.error('Error creating roster link invitation:', error);
     return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+      invitation,
+      message: "Roster link invitation sent successfully",
+    });
+  } catch (error) {
+    return handleError(error, "POST /api/teams/[teamId]/roster/invite");
   }
 }

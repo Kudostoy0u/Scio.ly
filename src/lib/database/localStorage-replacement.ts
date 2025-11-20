@@ -10,14 +10,13 @@ class SyncLocalStorage {
    * @returns The stored value or null if not found
    */
   static getItem(key: string): string | null {
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       return null;
     }
-    
+
     try {
       return localStorage.getItem(key);
-    } catch (error) {
-      console.warn('Failed to get item from localStorage:', error);
+    } catch (_error) {
       return null;
     }
   }
@@ -28,15 +27,13 @@ class SyncLocalStorage {
    * @param value - The value to store
    */
   static setItem(key: string, value: string): void {
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       return;
     }
-    
+
     try {
       localStorage.setItem(key, value);
-    } catch (error) {
-      console.warn('Failed to set item in localStorage:', error);
-    }
+    } catch (_error) {}
   }
 
   /**
@@ -44,30 +41,26 @@ class SyncLocalStorage {
    * @param key - The key to remove
    */
   static removeItem(key: string): void {
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       return;
     }
-    
+
     try {
       localStorage.removeItem(key);
-    } catch (error) {
-      console.warn('Failed to remove item from localStorage:', error);
-    }
+    } catch (_error) {}
   }
 
   /**
    * Clear all items from localStorage
    */
   static clear(): void {
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       return;
     }
-    
+
     try {
       localStorage.clear();
-    } catch (error) {
-      console.warn('Failed to clear localStorage:', error);
-    }
+    } catch (_error) {}
   }
 
   /**
@@ -75,14 +68,13 @@ class SyncLocalStorage {
    * @returns The number of items
    */
   static getLength(): number {
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       return 0;
     }
-    
+
     try {
       return localStorage.length;
-    } catch (error) {
-      console.warn('Failed to get localStorage length:', error);
+    } catch (_error) {
       return 0;
     }
   }
@@ -93,14 +85,13 @@ class SyncLocalStorage {
    * @returns The key or null if not found
    */
   static key(index: number): string | null {
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       return null;
     }
-    
+
     try {
       return localStorage.key(index);
-    } catch (error) {
-      console.warn('Failed to get key from localStorage:', error);
+    } catch (_error) {
       return null;
     }
   }

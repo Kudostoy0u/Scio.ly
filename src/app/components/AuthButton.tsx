@@ -1,18 +1,16 @@
-'use client';
-import logger from '@/lib/utils/logger';
-import SyncLocalStorage from '@/lib/database/localStorage-replacement';
+"use client";
+import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import logger from "@/lib/utils/logger";
 
-
-import React, { useState, useEffect, useRef } from 'react';
-import { User } from '@supabase/supabase-js';
-import { } from 'lucide-react';
-import { useTheme } from '@/app/contexts/ThemeContext';
 // Image and Link are used within UserDropdown/AuthModal
-import { useAuth } from '@/app/contexts/AuthContext';
-import AuthModal from './auth/AuthModal';
-import UserDropdown from './auth/UserDropdown';
-import { preloadImage } from '@/lib/utils/preloadImage';
-
+import { useAuth } from "@/app/contexts/AuthContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
+import { preloadImage } from "@/lib/utils/preloadImage";
+import type { User } from "@supabase/supabase-js";
+import {} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import AuthModal from "./auth/AuthModal";
+import UserDropdown from "./auth/UserDropdown";
 
 export default function AuthButton() {
   const { darkMode } = useTheme();
@@ -22,28 +20,27 @@ export default function AuthButton() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
-  const [authMode, setAuthMode] = useState<'signin' | 'signup' | 'reset'>('signin');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [authError, setAuthError] = useState('');
-  const [authSuccess, setAuthSuccess] = useState('');
+  const [authMode, setAuthMode] = useState<"signin" | "signup" | "reset">("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authSuccess, setAuthSuccess] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const subtleLinkClass = darkMode
-    ? 'text-blue-300 hover:text-blue-200'
-    : 'text-blue-500 hover:text-blue-600';
+    ? "text-blue-300 hover:text-blue-200"
+    : "text-blue-500 hover:text-blue-600";
   const [username, setUsername] = useState<string | null>(null);
   const [clearingAll, setClearingAll] = useState(false);
-
 
   useEffect(() => {
     setUser(ctxUser ?? null);
@@ -53,45 +50,40 @@ export default function AuthButton() {
     if (ctxUser?.id) {
       try {
         const cachedName = SyncLocalStorage.getItem(`scio_display_name_${ctxUser.id}`);
-        if (cachedName) setDisplayName(cachedName);
+        if (cachedName) {
+          setDisplayName(cachedName);
+        }
         const cachedUsername = SyncLocalStorage.getItem(`scio_username_${ctxUser.id}`);
-        if (cachedUsername) setUsername(cachedUsername);
+        if (cachedUsername) {
+          setUsername(cachedUsername);
+        }
       } catch {}
     }
   }, [ctxUser?.id]);
   // Notifications are now handled efficiently via useEfficientNotifications hook
   // This reduces API calls by using intelligent caching and team membership checks
 
-
   useEffect(() => {
     if (ctxUser?.id) {
-
       try {
         const cachedPhotoUrl = SyncLocalStorage.getItem(`scio_profile_photo_${ctxUser.id}`);
         if (cachedPhotoUrl) {
           setPhotoUrl(cachedPhotoUrl);
 
           preloadImage(cachedPhotoUrl).catch(() => {
-
             SyncLocalStorage.removeItem(`scio_profile_photo_${ctxUser.id}`);
             setPhotoUrl(null);
           });
         }
-              } catch {
-
-        }
+      } catch {}
     }
   }, [ctxUser?.id]);
 
-
-  
-
-
   const clearUserFromLocalStorage = () => {
     try {
-      SyncLocalStorage.removeItem('scio_user_data');
-      SyncLocalStorage.setItem('scio_is_logged_in', '0');
-      SyncLocalStorage.removeItem('scio_display_name');
+      SyncLocalStorage.removeItem("scio_user_data");
+      SyncLocalStorage.setItem("scio_is_logged_in", "0");
+      SyncLocalStorage.removeItem("scio_display_name");
 
       if (user?.id) {
         SyncLocalStorage.removeItem(`scio_profile_photo_${user.id}`);
@@ -101,21 +93,19 @@ export default function AuthButton() {
     } catch {}
   };
 
-
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
     setIsOffline(!window.navigator.onLine);
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
     };
   }, []);
-
 
   // moved to '@/lib/utils/preloadImage'
 
@@ -124,87 +114,91 @@ export default function AuthButton() {
     const supabase = client;
     (async () => {
       try {
-
-        if (!ctxUser?.id || typeof ctxUser.id !== 'string' || ctxUser.id.trim() === '') {
+        if (!ctxUser?.id || typeof ctxUser.id !== "string" || ctxUser.id.trim() === "") {
           return;
         }
-        
+
         const { data: profile } = await supabase
-          .from('users')
-          .select('display_name, first_name, photo_url, username')
-          .eq('id', ctxUser.id)
+          .from("users")
+          .select("display_name, first_name, photo_url, username")
+          .eq("id", ctxUser.id)
           .maybeSingle();
-        if (!active) return;
-        const dn = (profile as any)?.display_name as string | undefined;
+        if (!active) {
+          return;
+        }
+        const dn = profile?.display_name;
         if (dn) {
           setDisplayName(dn);
-          try { SyncLocalStorage.setItem(`scio_display_name_${ctxUser.id}`, dn); } catch {}
+          try {
+            SyncLocalStorage.setItem(`scio_display_name_${ctxUser.id}`, dn);
+          } catch {}
         }
-        const un = (profile as any)?.username as string | undefined;
+        const un = profile?.username;
         if (un) {
           setUsername(un);
-          try { SyncLocalStorage.setItem(`scio_username_${ctxUser.id}`, un); } catch {}
+          try {
+            SyncLocalStorage.setItem(`scio_username_${ctxUser.id}`, un);
+          } catch {}
         }
-        const photo = (profile as any)?.photo_url as string | undefined;
+        const photo = profile?.photo_url;
         if (photo) {
           try {
-
             SyncLocalStorage.setItem(`scio_profile_photo_${ctxUser.id}`, photo);
-            
 
             await preloadImage(photo);
             if (active) {
               setPhotoUrl(photo);
             }
           } catch {
-
             SyncLocalStorage.removeItem(`scio_profile_photo_${ctxUser.id}`);
           }
         }
       } catch {}
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [client, ctxUser?.id]);
 
   const handleEmailPasswordAuth = async () => {
-    if (!email || !password) {
-      setAuthError('Please fill in all fields');
+    if (!(email && password)) {
+      setAuthError("Please fill in all fields");
       return;
     }
 
     if (password.length < 6) {
-      setAuthError('Password must be at least 6 characters');
+      setAuthError("Password must be at least 6 characters");
       return;
     }
 
     setAuthLoading(true);
-    setAuthError('');
-    setAuthSuccess('');
+    setAuthError("");
+    setAuthSuccess("");
 
     try {
-      if (authMode === 'signup') {
-        if (!firstName || !lastName) {
-          setAuthError('Please enter your first and last name');
+      if (authMode === "signup") {
+        if (!(firstName && lastName)) {
+          setAuthError("Please enter your first and last name");
           return;
         }
         if (!confirmPassword) {
-          setAuthError('Please confirm your password');
+          setAuthError("Please confirm your password");
           return;
         }
         if (confirmPassword !== password) {
-          setAuthError('Passwords do not match');
+          setAuthError("Passwords do not match");
           return;
         }
         // Pre-check if email already exists in our public users table.
         // If this check is blocked by RLS or fails, we will still rely on the signUp error handling below.
         try {
-          const { data: existing, error: existsErr } = await (client as any)
-            .from('users')
-            .select('id')
-            .eq('email', email)
+          const { data: existing, error: existsErr } = await client
+            .from("users")
+            .select("id")
+            .eq("email", email)
             .maybeSingle();
           if (existing && !existsErr) {
-            setAuthError('Email is already in use.');
+            setAuthError("Email is already in use.");
             return;
           }
         } catch {
@@ -221,67 +215,69 @@ export default function AuthButton() {
               name: `${firstName} ${lastName}`.trim(),
               full_name: `${firstName} ${lastName}`.trim(),
             },
-          }
+          },
         });
-        
+
         if (error) {
           if (
-            error.message.includes('already registered') ||
-            error.message.includes('already exists') ||
-            error.message.includes('already been registered') ||
-            error.message.includes('User already registered')
+            error.message.includes("already registered") ||
+            error.message.includes("already exists") ||
+            error.message.includes("already been registered") ||
+            error.message.includes("User already registered")
           ) {
-            setAuthError('Email is already in use.');
+            setAuthError("Email is already in use.");
           } else {
             setAuthError(error.message);
           }
+        } else if (data.user?.email_confirmed_at) {
+          setAuthError("Email is already in use.");
         } else {
-          if (data.user && data.user.email_confirmed_at) {
-            setAuthError('Email is already in use.');
-          } else {
-            setAuthSuccess('Check your email for the confirmation link. Don\'t forget to check your spam folder.');
-            setEmail('');
-            setPassword('');
-            setConfirmPassword('');
-            setFirstName('');
-            setLastName('');
-          }
+          setAuthSuccess(
+            "Check your email for the confirmation link. Don't forget to check your spam folder."
+          );
+          setEmail("");
+          setPassword("");
+          setConfirmPassword("");
+          setFirstName("");
+          setLastName("");
         }
       } else {
         const { error } = await client.auth.signInWithPassword({
           email,
-          password
+          password,
         });
-        
+
         if (error) {
-          if (error.message.includes('Invalid login credentials')) {
+          if (error.message.includes("Invalid login credentials")) {
             try {
-              const { data: existing, error: readErr } = await (client as any)
-                .from('users')
-                .select('id')
-                .eq('email', email)
+              const { data: existing, error: readErr } = await client
+                .from("users")
+                .select("id")
+                .eq("email", email)
                 .maybeSingle();
               if (existing && !readErr) {
-                setAuthError('Incorrect password.');
-              } else if (!existing && !readErr) {
-                setAuthError('No account found with this email. Please sign up instead.');
+                setAuthError("Incorrect password.");
+              } else if (existing || readErr) {
+                setAuthError("Incorrect email or password.");
               } else {
-                setAuthError('Incorrect email or password.');
+                setAuthError("No account found with this email. Please sign up instead.");
               }
             } catch {
-              setAuthError('Incorrect email or password.');
+              setAuthError("Incorrect email or password.");
             }
           } else {
             setAuthError(error.message);
           }
         } else {
           setShowSignInModal(false);
-          setEmail('');
-          setPassword('');
+          setEmail("");
+          setPassword("");
         }
       }
     } catch (error) {
-      setAuthError(`An unexpected error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setAuthError(
+        `An unexpected error occurred: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     } finally {
       setAuthLoading(false);
     }
@@ -289,25 +285,27 @@ export default function AuthButton() {
 
   const handlePasswordReset = async () => {
     if (!email) {
-      setAuthError('Please enter your email address');
+      setAuthError("Please enter your email address");
       return;
     }
 
     setAuthLoading(true);
-    setAuthError('');
+    setAuthError("");
 
     try {
       const { error } = await client.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`
+        redirectTo: `${window.location.origin}/auth/reset-password`,
       });
-      
+
       if (error) {
         setAuthError(error.message);
       } else {
         setResetEmailSent(true);
       }
     } catch (error) {
-      setAuthError(`An unexpected error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setAuthError(
+        `An unexpected error occurred: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     } finally {
       setAuthLoading(false);
     }
@@ -316,31 +314,32 @@ export default function AuthButton() {
   const handleGoogleSignIn = async () => {
     try {
       setOauthLoading(true);
-      const redirectTo = typeof window !== 'undefined'
-        ? `${window.location.origin}${window.location.pathname}`
-        : undefined;
+      const redirectTo =
+        typeof window !== "undefined"
+          ? `${window.location.origin}${window.location.pathname}`
+          : undefined;
       const { error } = await client.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: { redirectTo },
       });
       if (error) {
         setAuthError(error.message);
       }
     } catch (err) {
-      setAuthError(`An unexpected error occurred: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setAuthError(
+        `An unexpected error occurred: ${err instanceof Error ? err.message : "Unknown error"}`
+      );
     } finally {
-
       setOauthLoading(false);
     }
   };
 
   const handleSignOut = async () => {
     try {
-
-      await client.auth.signOut({ scope: 'local' }).catch(() => undefined);
+      await client.auth.signOut({ scope: "local" }).catch(() => undefined);
 
       try {
-        const { resetAllLocalStorageExceptTheme } = await import('@/app/utils/dashboardData');
+        const { resetAllLocalStorageExceptTheme } = await import("@/app/utils/dashboardData");
         resetAllLocalStorageExceptTheme();
       } catch {
         clearUserFromLocalStorage();
@@ -348,30 +347,27 @@ export default function AuthButton() {
       setUser(null);
       setIsDropdownOpen(false);
 
-
-      client.auth.signOut({ scope: 'global' }).catch((err) => {
-        logger.warn('Non-fatal global sign-out issue:', err);
+      client.auth.signOut({ scope: "global" }).catch((err) => {
+        logger.warn("Non-fatal global sign-out issue:", err);
       });
-
 
       window.location.reload();
     } catch (error) {
-      logger.error('Error signing out:', error);
+      logger.error("Error signing out:", error);
     }
   };
 
   const resetForm = () => {
-    setEmail('');
-    setPassword('');
-    setAuthError('');
-    setAuthSuccess('');
+    setEmail("");
+    setPassword("");
+    setAuthError("");
+    setAuthSuccess("");
     setResetEmailSent(false);
-    setAuthMode('signin');
-    setFirstName('');
-    setLastName('');
-    setConfirmPassword('');
+    setAuthMode("signin");
+    setFirstName("");
+    setLastName("");
+    setConfirmPassword("");
   };
-
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -379,15 +375,14 @@ export default function AuthButton() {
         setIsDropdownOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
 
   if (loading) {
     return (
       <div className="flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
       </div>
     );
   }
@@ -416,9 +411,7 @@ export default function AuthButton() {
       <button
         onClick={() => setShowSignInModal(true)}
         className={`px-2 py-2 text-sm font-medium transition-colors duration-200 ${
-          darkMode 
-            ? 'text-blue-400 hover:text-blue-300' 
-            : 'text-blue-500 hover:text-blue-600'
+          darkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-500 hover:text-blue-600"
         }`}
       >
         Sign In
@@ -428,7 +421,12 @@ export default function AuthButton() {
         open={showSignInModal}
         darkMode={!!darkMode}
         authMode={authMode}
-        setAuthMode={(m)=>{ setAuthMode(m); if (m==='signin') setAuthError(''); }}
+        setAuthMode={(m) => {
+          setAuthMode(m);
+          if (m === "signin") {
+            setAuthError("");
+          }
+        }}
         email={email}
         setEmail={setEmail}
         password={password}
@@ -448,7 +446,10 @@ export default function AuthButton() {
         isOffline={isOffline}
         subtleLinkClass={subtleLinkClass}
         resetEmailSent={resetEmailSent}
-        onClose={()=>{ setShowSignInModal(false); resetForm(); }}
+        onClose={() => {
+          setShowSignInModal(false);
+          resetForm();
+        }}
         handlePasswordReset={handlePasswordReset}
         handleEmailPasswordAuth={handleEmailPasswordAuth}
         handleGoogleSignIn={handleGoogleSignIn}

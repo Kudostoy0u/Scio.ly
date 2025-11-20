@@ -1,22 +1,26 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { toast } from 'react-toastify';
-import { AssignmentCreatorProps, AssignmentDetails, QuestionGenerationSettings } from './assignment/assignmentTypes';
-import { 
-  getAvailableEvents, 
-  getEventSubtopics, 
-  getEventCapabilitiesForEvent,
-  generateQuestions,
+import { isCodebustersEvent } from "@/lib/utils/eventConfig";
+import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
+import AssignmentDetailsStep from "./assignment/AssignmentDetailsStep";
+import CodebustersAssignmentCreator from "./assignment/CodebustersAssignmentCreator";
+import QuestionGenerationStep from "./assignment/QuestionGenerationStep";
+import QuestionPreviewStep from "./assignment/QuestionPreviewStep";
+import RosterSelectionStep from "./assignment/RosterSelectionStep";
+import type {
+  AssignmentCreatorProps,
+  AssignmentDetails,
+  QuestionGenerationSettings,
+} from "./assignment/assignmentTypes";
+import {
+  createAssignment,
   fetchRosterMembers,
-  createAssignment
-} from './assignment/assignmentUtils';
-import { isCodebustersEvent } from '@/lib/utils/eventConfig';
-import AssignmentDetailsStep from './assignment/AssignmentDetailsStep';
-import QuestionGenerationStep from './assignment/QuestionGenerationStep';
-import QuestionPreviewStep from './assignment/QuestionPreviewStep';
-import RosterSelectionStep from './assignment/RosterSelectionStep';
-import CodebustersAssignmentCreator from './assignment/CodebustersAssignmentCreator';
+  generateQuestions,
+  getAvailableEvents,
+  getEventCapabilitiesForEvent,
+  getEventSubtopics,
+} from "./assignment/assignmentUtils";
 
 export default function EnhancedAssignmentCreator({
   teamId,
@@ -24,7 +28,7 @@ export default function EnhancedAssignmentCreator({
   onAssignmentCreated,
   onCancel,
   darkMode = false,
-  prefillEventName = ''
+  prefillEventName = "",
 }: AssignmentCreatorProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -32,22 +36,22 @@ export default function EnhancedAssignmentCreator({
 
   // Assignment details
   const [details, setDetails] = useState<AssignmentDetails>({
-    title: '',
-    description: '',
-    assignmentType: 'homework',
-    dueDate: '',
+    title: "",
+    description: "",
+    assignmentType: "homework",
+    dueDate: "",
     timeLimitMinutes: 30,
-    eventName: prefillEventName
+    eventName: prefillEventName,
   });
 
   // Question generation settings
   const [settings, setSettings] = useState<QuestionGenerationSettings>({
     questionCount: 10,
-    questionType: 'mcq',
+    questionType: "mcq",
     selectedSubtopics: [],
     idPercentage: 0,
     pureIdOnly: false,
-    difficulties: ['any'] // Default to any difficulty
+    difficulties: ["any"], // Default to any difficulty
   });
 
   // Generated questions and roster
@@ -63,31 +67,30 @@ export default function EnhancedAssignmentCreator({
   const [availableSubtopics, setAvailableSubtopics] = useState<string[]>([]);
   const [eventCapabilities, setEventCapabilities] = useState({
     supportsPictureQuestions: false,
-    supportsIdentificationOnly: false
+    supportsIdentificationOnly: false,
   });
 
   // Update event name when prefillEventName changes
   useEffect(() => {
     if (prefillEventName && prefillEventName !== details.eventName) {
-      setDetails(prev => ({ ...prev, eventName: prefillEventName }));
+      setDetails((prev) => ({ ...prev, eventName: prefillEventName }));
     }
   }, [prefillEventName, details.eventName]);
 
   // Load roster members when component mounts
   useEffect(() => {
     const loadRosterMembers = async () => {
-    setLoadingRoster(true);
-    try {
-      const members = await fetchRosterMembers(teamId, subteamId);
-      setRosterMembers(members);
-    } catch (error) {
-      console.error('Failed to load roster members:', error);
-      setError('Failed to load roster members');
-    } finally {
-      setLoadingRoster(false);
-    }
+      setLoadingRoster(true);
+      try {
+        const members = await fetchRosterMembers(teamId, subteamId);
+        setRosterMembers(members);
+      } catch (_error) {
+        setError("Failed to load roster members");
+      } finally {
+        setLoadingRoster(false);
+      }
     };
-    
+
     loadRosterMembers();
   }, [teamId, subteamId]);
 
@@ -100,13 +103,12 @@ export default function EnhancedAssignmentCreator({
           const capabilities = getEventCapabilitiesForEvent(details.eventName);
           setAvailableSubtopics(subtopics);
           setEventCapabilities(capabilities);
-        } catch (error) {
-          console.error('Error loading subtopics:', error);
+        } catch (_error) {
           setAvailableSubtopics([]);
         }
       }
     };
-    
+
     updateSubtopicsAndCapabilities();
   }, [details.eventName]);
 
@@ -127,7 +129,7 @@ export default function EnhancedAssignmentCreator({
   const handleGenerateQuestions = async () => {
     setGeneratingQuestions(true);
     setError(null);
-    
+
     try {
       const questions = await generateQuestions(
         details.eventName,
@@ -139,12 +141,11 @@ export default function EnhancedAssignmentCreator({
         teamId,
         settings.difficulties
       );
-      
+
       setGeneratedQuestions(questions);
       toast.success(`Generated ${questions.length} questions successfully!`);
-    } catch (error) {
-      console.error('Failed to generate questions:', error);
-      setError('Failed to generate questions. Please try again.');
+    } catch (_error) {
+      setError("Failed to generate questions. Please try again.");
     } finally {
       setGeneratingQuestions(false);
     }
@@ -161,16 +162,15 @@ export default function EnhancedAssignmentCreator({
         settings.pureIdOnly,
         teamId
       );
-      
+
       if (newQuestion.length > 0) {
         const updatedQuestions = [...generatedQuestions];
         updatedQuestions[index] = newQuestion[0];
         setGeneratedQuestions(updatedQuestions);
-        toast.success('Question replaced successfully!');
+        toast.success("Question replaced successfully!");
       }
-    } catch (error) {
-      console.error('Failed to replace question:', error);
-      setError('Failed to replace question. Please try again.');
+    } catch (_error) {
+      setError("Failed to replace question. Please try again.");
     }
   };
 
@@ -187,27 +187,26 @@ export default function EnhancedAssignmentCreator({
         time_limit_minutes: details.timeLimitMinutes,
         event_name: details.eventName,
         questions: generatedQuestions,
-        roster_members: selectedRoster
+        roster_members: selectedRoster,
       };
 
       const assignment = await createAssignment(teamId, subteamId, assignmentData);
-      
-      toast.success('Assignment created successfully!');
+
+      toast.success("Assignment created successfully!");
       onAssignmentCreated(assignment);
-    } catch (error) {
-      console.error('Failed to create assignment:', error);
-      setError('Failed to create assignment. Please try again.');
+    } catch (_error) {
+      setError("Failed to create assignment. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDetailsChange = (updates: Partial<AssignmentDetails>) => {
-    setDetails(prev => ({ ...prev, ...updates }));
+    setDetails((prev) => ({ ...prev, ...updates }));
   };
 
   const handleSettingsChange = (updates: Partial<QuestionGenerationSettings>) => {
-    setSettings(prev => ({ ...prev, ...updates }));
+    setSettings((prev) => ({ ...prev, ...updates }));
   };
 
   const handleError = (errorMessage: string) => {
@@ -216,14 +215,14 @@ export default function EnhancedAssignmentCreator({
 
   const handleNext = () => {
     setError(null);
-    setStep(prev => prev + 1);
+    setStep((prev) => prev + 1);
   };
 
   const handleQuestionGenerationNext = async () => {
     setError(null);
     try {
       await handleGenerateQuestions();
-      setStep(prev => prev + 1);
+      setStep((prev) => prev + 1);
     } catch {
       // Error is already handled in handleGenerateQuestions
       // Don't advance to next step if generation fails
@@ -232,25 +231,35 @@ export default function EnhancedAssignmentCreator({
 
   const handleBack = () => {
     setError(null);
-    setStep(prev => prev - 1);
+    setStep((prev) => prev - 1);
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-      <div className={`max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+    <div
+      className="fixed inset-0 flex items-center justify-center z-50"
+      style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+    >
+      <div
+        className={`max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto rounded-lg ${darkMode ? "bg-gray-800" : "bg-white"}`}
+      >
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h2 className={`text-2xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
               Create Assignment
             </h2>
             <button
               onClick={onCancel}
               className={`p-2 rounded-lg hover:bg-opacity-20 transition-colors ${
-                darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                darkMode ? "hover:bg-gray-600" : "hover:bg-gray-200"
               }`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -260,26 +269,32 @@ export default function EnhancedAssignmentCreator({
             <div className="flex items-center justify-between">
               {[1, 2, 3, 4].map((stepNumber) => (
                 <div key={stepNumber} className="flex items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    step >= stepNumber
-                      ? 'bg-blue-600 text-white'
-                      : darkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-200 text-gray-600'
-                  }`}>
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                      step >= stepNumber
+                        ? "bg-blue-600 text-white"
+                        : darkMode
+                          ? "bg-gray-600 text-gray-300"
+                          : "bg-gray-200 text-gray-600"
+                    }`}
+                  >
                     {stepNumber}
                   </div>
                   {stepNumber < 4 && (
-                    <div className={`w-12 h-1 mx-2 ${
-                      step > stepNumber ? 'bg-blue-600' : darkMode ? 'bg-gray-600' : 'bg-gray-200'
-                    }`} />
+                    <div
+                      className={`w-12 h-1 mx-2 ${
+                        step > stepNumber ? "bg-blue-600" : darkMode ? "bg-gray-600" : "bg-gray-200"
+                      }`}
+                    />
                   )}
                 </div>
               ))}
             </div>
             <div className="flex justify-between mt-2 text-xs">
-              <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Details</span>
-              <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Questions</span>
-              <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Preview</span>
-              <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Roster</span>
+              <span className={darkMode ? "text-gray-400" : "text-gray-500"}>Details</span>
+              <span className={darkMode ? "text-gray-400" : "text-gray-500"}>Questions</span>
+              <span className={darkMode ? "text-gray-400" : "text-gray-500"}>Preview</span>
+              <span className={darkMode ? "text-gray-400" : "text-gray-500"}>Roster</span>
             </div>
           </div>
 

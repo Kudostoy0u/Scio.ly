@@ -1,4 +1,4 @@
-import { trpc } from '@/lib/trpc/client';
+import { trpc } from "@/lib/trpc/client";
 
 /**
  * ULTIMATE OPTIMIZED HOOK - Single Request for Entire Team Page
@@ -23,16 +23,10 @@ export function useTeamPageData(
     enabled?: boolean;
   }
 ) {
-  const {
-    data,
-    isLoading,
-    error,
-    refetch,
-    isError
-  } = trpc.teams.getTeamPageData.useQuery(
+  const { data, isLoading, error, refetch, isError } = trpc.teams.getTeamPageData.useQuery(
     {
       teamSlug,
-      includeRoster: options?.includeRoster ?? true
+      includeRoster: options?.includeRoster ?? true,
     },
     {
       enabled: options?.enabled !== false && !!teamSlug,
@@ -46,17 +40,7 @@ export function useTeamPageData(
   );
 
   // Debug logging in development only
-  if (process.env.NODE_ENV === 'development' && data) {
-    console.log('🚀 [useTeamPageData] MULTIPLEXED data loaded:', {
-      teamSlug,
-      userTeamsCount: data.userTeams?.length,
-      subteamsCount: data.subteams?.length,
-      assignmentsCount: data.assignments?.length,
-      membersCount: data.members?.length,
-      hasRoster: !!data.roster && Object.keys(data.roster).length > 0,
-      rosterEventsCount: data.roster ? Object.keys(data.roster).length : 0,
-      auth: data.auth
-    });
+  if (process.env.NODE_ENV === "development" && data) {
   }
 
   return {
@@ -79,11 +63,11 @@ export function useTeamPageData(
     refetch,
 
     // Computed values
-    isCaptain: data?.auth?.role === 'captain',
-    hasAccess: data?.auth?.isAuthorized || false,
+    isCaptain: data?.auth?.role === "captain",
+    hasAccess: data?.auth?.isAuthorized,
     firstSubteam: data?.subteams?.[0] || null,
 
     // Raw data for advanced use cases
-    rawData: data
+    rawData: data,
   };
 }

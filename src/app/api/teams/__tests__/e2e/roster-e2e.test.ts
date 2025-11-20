@@ -1,0 +1,267 @@
+/**
+ * E2E Tests for Roster Management
+ * 
+ * Tests the complete roster management workflow including:
+ * - Creating roster entries
+ * - Updating roster entries
+ * - Linking users to roster entries
+ * - Fetching roster data
+ */
+
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { dbPg } from "@/lib/db";
+import { newTeamRosterData, newTeamUnits } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import {
+  createTestTeam,
+  createTestUser,
+  cleanupTestData,
+  createRosterEntry,
+  assertUserIsMember,
+  type TestUser,
+  type TestTeam,
+} from "../utils/test-helpers";
+
+describe("Roster Management E2E", () => {
+  let testUsers: TestUser[] = [];
+  let testTeams: TestTeam[] = [];
+
+  beforeAll(async () => {
+    // Create test users
+    testUsers.push(await createTestUser({ displayName: "John Doe" }));
+    testUsers.push(await createTestUser({ displayName: "Jane Smith" }));
+    
+    // Create test team
+    const team = await createTestTeam(testUsers[0].id);
+    testTeams.push(team);
+  });
+
+  afterAll(async () => {
+    // Cleanup
+    const userIds = testUsers.map((u) => u.id);
+    const teamGroupIds = testTeams.map((t) => t.groupId);
+    await cleanupTestData(userIds, teamGroupIds);
+  });
+
+  describe("Roster Entry Creation", () => {
+    it("should create a roster entry for an event", async () => {
+      const team = testTeams[0];
+      const eventName = "Astronomy";
+      const slotIndex = 0;
+      const studentName = "John Doe";
+
+      await createRosterEntry(team.subteamId, eventName, slotIndex, studentName, testUsers[0].id);
+
+      // Verify roster entry exists
+      const [rosterEntry] = await dbPg
+        .select()
+        .from(newTeamRosterData)
+        .where(
+          eq(newTeamRosterData.teamUnitId, team.subteamId)
+        );
+
+      expect(rosterEntry).toBeDefined();
+      expect(rosterEntry?.eventName).toBe(eventName);
+      expect(rosterEntry?.slotIndex).toBe(slotIndex);
+      expect(rosterEntry?.studentName).toBe(studentName);
+      expect(rosterEntry?.userId).toBe(testUsers[0].id);
+    });
+
+    it("should create multiple roster entries for different events", async () => {
+      const team = testTeams[0];
+      const events = [
+        { name: "Astronomy", slot: 0 },
+        { name: "Biology", slot: 1 },
+        { name: "Chemistry", slot: 2 },
+      ];
+
+      for (const event of events) {
+        await createRosterEntry(
+          team.subteamId,
+          event.name,
+          event.slot,
+          `Student ${event.slot}`,
+          testUsers[0].id
+        );
+      }
+
+      // Verify all entries exist
+      const rosterEntries = await dbPg
+        .select()
+        .from(newTeamRosterData)
+        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
+
+      expect(rosterEntries.length).toBeGreaterThanOrEqual(events.length);
+    });
+
+    it("should create unlinked roster entry (no userId)", async () => {
+      const team = testTeams[0];
+      const eventName = "Physics";
+      const slotIndex = 3;
+      const studentName = "Unlinked Student";
+
+      await createRosterEntry(team.subteamId, eventName, slotIndex, studentName);
+
+      // Verify roster entry exists without userId
+      const [rosterEntry] = await dbPg
+        .select()
+        .from(newTeamRosterData)
+        .where(
+          eq(newTeamRosterData.teamUnitId, team.subteamId)
+        );
+
+      expect(rosterEntry).toBeDefined();
+      expect(rosterEntry?.studentName).toBe(studentName);
+      expect(rosterEntry?.userId).toBeNull();
+    });
+  });
+
+  describe("Roster Entry Updates", () => {
+    it("should update roster entry student name", async () => {
+      const team = testTeams[0];
+      const eventName = "Test Event";
+      const slotIndex = 4;
+      const originalName = "Original Name";
+      const updatedName = "Updated Name";
+
+      // Create entry
+      await createRosterEntry(team.subteamId, eventName, slotIndex, originalName);
+
+      // Update entry
+      await dbPg
+        .update(newTeamRosterData)
+        .set({ studentName: updatedName })
+        .where(
+          eq(newTeamRosterData.teamUnitId, team.subteamId)
+        );
+
+      // Verify update
+      const [rosterEntry] = await dbPg
+        .select()
+        .from(newTeamRosterData)
+        .where(
+          eq(newTeamRosterData.teamUnitId, team.subteamId)
+        );
+
+      expect(rosterEntry?.studentName).toBe(updatedName);
+    });
+
+    it("should link user to roster entry", async () => {
+      const team = testTeams[0];
+      const eventName = "Link Test Event";
+      const slotIndex = 5;
+
+      // Create unlinked entry
+      await createRosterEntry(team.subteamId, eventName, slotIndex, "Unlinked");
+
+      // Link user
+      await dbPg
+        .update(newTeamRosterData)
+        .set({ userId: testUsers[1].id })
+        .where(
+          eq(newTeamRosterData.teamUnitId, team.subteamId)
+        );
+
+      // Verify link
+      const [rosterEntry] = await dbPg
+        .select()
+        .from(newTeamRosterData)
+        .where(
+          eq(newTeamRosterData.teamUnitId, team.subteamId)
+        );
+
+      expect(rosterEntry?.userId).toBe(testUsers[1].id);
+    });
+  });
+
+  describe("Roster Data Retrieval", () => {
+    it("should retrieve all roster entries for a subteam", async () => {
+      const team = testTeams[0];
+
+      // Create multiple entries
+      await createRosterEntry(team.subteamId, "Event1", 0, "Student1");
+      await createRosterEntry(team.subteamId, "Event1", 1, "Student2");
+      await createRosterEntry(team.subteamId, "Event2", 0, "Student3");
+
+      // Retrieve entries
+      const rosterEntries = await dbPg
+        .select()
+        .from(newTeamRosterData)
+        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
+
+      expect(rosterEntries.length).toBeGreaterThan(0);
+      
+      // Verify structure
+      rosterEntries.forEach((entry) => {
+        expect(entry.teamUnitId).toBe(team.subteamId);
+        expect(entry.eventName).toBeDefined();
+        expect(entry.slotIndex).toBeGreaterThanOrEqual(0);
+        expect(entry.slotIndex).toBeLessThanOrEqual(10);
+      });
+    });
+
+    it("should retrieve roster entries with user information", async () => {
+      const team = testTeams[0];
+      const eventName = "User Link Event";
+      const slotIndex = 6;
+
+      // Create linked entry
+      await createRosterEntry(team.subteamId, eventName, slotIndex, "Linked Student", testUsers[0].id);
+
+      // Retrieve with user join
+      const rosterWithUsers = await dbPg
+        .select({
+          eventName: newTeamRosterData.eventName,
+          slotIndex: newTeamRosterData.slotIndex,
+          studentName: newTeamRosterData.studentName,
+          userId: newTeamRosterData.userId,
+        })
+        .from(newTeamRosterData)
+        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
+
+      const linkedEntry = rosterWithUsers.find(
+        (e) => e.eventName === eventName && e.slotIndex === slotIndex
+      );
+
+      expect(linkedEntry).toBeDefined();
+      expect(linkedEntry?.userId).toBe(testUsers[0].id);
+    });
+  });
+
+  describe("Roster Validation", () => {
+    it("should enforce slot index range (0-10)", async () => {
+      const team = testTeams[0];
+      
+      // Valid slot indices
+      await createRosterEntry(team.subteamId, "Event", 0, "Student");
+      await createRosterEntry(team.subteamId, "Event", 10, "Student");
+
+      // Verify entries exist
+      const entries = await dbPg
+        .select()
+        .from(newTeamRosterData)
+        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
+
+      const slotIndices = entries.map((e) => e.slotIndex);
+      expect(slotIndices).toContain(0);
+      expect(slotIndices).toContain(10);
+    });
+
+    it("should handle event name normalization", async () => {
+      const team = testTeams[0];
+      const eventNameWithAnd = "Design & Build";
+      const normalizedName = eventNameWithAnd.replace(/&/g, "and");
+
+      await createRosterEntry(team.subteamId, normalizedName, 7, "Student");
+
+      // Verify entry uses normalized name
+      const [entry] = await dbPg
+        .select()
+        .from(newTeamRosterData)
+        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
+
+      expect(entry?.eventName).toBe(normalizedName);
+    });
+  });
+});
+

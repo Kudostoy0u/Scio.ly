@@ -39,6 +39,7 @@ export interface CryptarithmResult {
       digits: string;
       word: string;
     }>;
+    operation?: "+" | "-";
   };
 }
 

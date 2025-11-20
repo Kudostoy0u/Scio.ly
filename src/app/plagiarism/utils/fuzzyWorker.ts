@@ -96,8 +96,6 @@ export const createFuzzyMatchingWorker = (): Worker => {
     };
   `;
 
-  const blob = new Blob([workerCode], { type: 'application/javascript' });
+  const blob = new Blob([workerCode], { type: "application/javascript" });
   return new Worker(URL.createObjectURL(blob));
 };
-
-

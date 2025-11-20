@@ -2,7 +2,7 @@
  * Centralized rate limiting utility for API routes
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from "next/server";
 
 interface RateLimitEntry {
   count: number;
@@ -18,14 +18,17 @@ const rateLimitStore = new Map<string, RateLimitEntry>();
 /**
  * Cleanup old entries periodically (every 10 minutes)
  */
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitStore.entries()) {
-    if (entry.resetAt < now) {
-      rateLimitStore.delete(key);
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [key, entry] of rateLimitStore.entries()) {
+      if (entry.resetAt < now) {
+        rateLimitStore.delete(key);
+      }
     }
-  }
-}, 10 * 60 * 1000);
+  },
+  10 * 60 * 1000
+);
 
 /**
  * Rate limit configuration
@@ -57,11 +60,7 @@ export const RateLimitPresets = {
  * Get client identifier from request
  */
 export function getClientIdentifier(request: NextRequest): string {
-  return (
-    request.headers.get('x-forwarded-for') ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-  );
+  return request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
 }
 
 /**
@@ -102,22 +101,19 @@ export function rateLimitResponse(request: NextRequest, config?: RateLimitConfig
     return NextResponse.json(
       {
         success: false,
-        error: 'Too many requests - Please try again later',
+        error: "Too many requests - Please try again later",
         retryAfter,
       },
       {
         status: 429,
         headers: {
-          'Retry-After': String(retryAfter),
+          "Retry-After": String(retryAfter),
         },
       }
     );
   }
 
-  return NextResponse.json(
-    { success: false, error: 'Too many requests' },
-    { status: 429 }
-  );
+  return NextResponse.json({ success: false, error: "Too many requests" }, { status: 429 });
 }
 
 /**

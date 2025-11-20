@@ -10,7 +10,7 @@ const inflightRequests = new Map<string, Promise<Response>>();
  * Fetches a resource once, deduplicating concurrent requests
  * If the same URL is requested multiple times before the first completes,
  * all callers will receive the same promise
- * 
+ *
  * @param {string} input - URL to fetch
  * @param {RequestInit} [init] - Fetch options
  * @returns {Promise<Response>} Promise that resolves to the fetch response
@@ -24,7 +24,9 @@ const inflightRequests = new Map<string, Promise<Response>>();
 export async function fetchOnce(input: string, init?: RequestInit): Promise<Response> {
   const key = init ? `${input}::${JSON.stringify(init)}` : input;
   const existing = inflightRequests.get(key);
-  if (existing) return existing;
+  if (existing) {
+    return existing;
+  }
   const p = fetch(input, init).finally(() => {
     inflightRequests.delete(key);
   });
@@ -33,5 +35,3 @@ export async function fetchOnce(input: string, init?: RequestInit): Promise<Resp
 }
 
 // Removed unused export: getJsonOnce
-
-

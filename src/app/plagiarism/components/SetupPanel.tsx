@@ -1,7 +1,7 @@
-'use client';
-import React from 'react';
-import { SCIENCE_OLYMPIAD_EVENTS } from '../constants';
-import { ProcessedQuestions, QuestionPlagiarismSummary } from '../types';
+"use client";
+import type React from "react";
+import { SCIENCE_OLYMPIAD_EVENTS } from "@/app/plagiarism/constants";
+import type { ProcessedQuestions, QuestionPlagiarismSummary } from "@/app/plagiarism/types";
 
 export default function SetupPanel({
   selectedEvent,
@@ -32,7 +32,7 @@ export default function SetupPanel({
   isDataLoaded: boolean;
   isAnalyzing: boolean;
   hasAnalyzed: boolean;
-  loadingState: 'idle' | 'loading' | 'error' | 'loaded';
+  loadingState: "idle" | "loading" | "error" | "loaded";
   status: string;
   extractedQuestions: ProcessedQuestions | null;
   questionSummaries: QuestionPlagiarismSummary[];
@@ -49,13 +49,18 @@ export default function SetupPanel({
         <div className="absolute right-0 top-8 w-64 p-3 bg-white rounded-lg shadow-lg border border-slate-200 text-xs text-slate-600 hidden group-hover:block z-10">
           <h4 className="font-medium text-slate-800 mb-2">How to Use</h4>
           <ol className="list-decimal list-inside space-y-1">
-            <li>Select a Science Olympiad event from the dropdown (automatically loads questions)</li>
+            <li>
+              Select a Science Olympiad event from the dropdown (automatically loads questions)
+            </li>
             <li>Paste your text or upload a document (PDF/DOCX)</li>
             <li>Click &quot;Check&quot; to extract questions and analyze for plagiarism</li>
             <li>Questions will appear in real-time as they&apos;re analyzed</li>
             <li>Click the risk bubble on any question to see detailed matches</li>
           </ol>
-          <p className="mt-2 text-slate-500">The tool extracts questions using AI, then performs fast background analysis against official content.</p>
+          <p className="mt-2 text-slate-500">
+            The tool extracts questions using AI, then performs fast background analysis against
+            official content.
+          </p>
         </div>
       </div>
       <h2 className="text-lg font-semibold text-slate-800 mb-4">Setup</h2>
@@ -75,7 +80,7 @@ export default function SetupPanel({
             className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-700"
           >
             <option value="">Choose an event...</option>
-            {SCIENCE_OLYMPIAD_EVENTS.map((event) => (
+            {SCIENCE_OLYMPIAD_EVENTS.map((event: string) => (
               <option key={event} value={event}>
                 {event}
               </option>
@@ -115,55 +120,52 @@ export default function SetupPanel({
                 Upload Document
               </button>
               {selectedFile && (
-                <span className="text-sm text-slate-600 truncate">
-                  📄 {selectedFile.name}
-                </span>
+                <span className="text-sm text-slate-600 truncate">📄 {selectedFile.name}</span>
               )}
             </div>
           </div>
         </div>
 
-        <button 
+        <button
           onClick={onCheck}
           disabled={!isCheckEnabled}
           className={`w-full px-6 py-3 rounded-lg transition-all duration-200 font-medium text-lg ${
             isCheckEnabled
-              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:scale-[1.02]'
-              : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+              ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+              : "bg-slate-200 text-slate-400 cursor-not-allowed"
           }`}
         >
-          {isAnalyzing ? 'Analyzing...' : hasAnalyzed ? 'Already Analyzed' : 'Check'}
+          {isAnalyzing ? "Analyzing..." : hasAnalyzed ? "Already Analyzed" : "Check"}
         </button>
       </div>
 
       <div className="mt-6 flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-        <div className={`w-3 h-3 rounded-full ${
-          loadingState === 'idle' ? 'bg-slate-400' :
-          loadingState === 'loading' ? 'bg-yellow-500 animate-pulse' :
-          loadingState === 'error' ? 'bg-red-500' :
-          'bg-green-500'
-        }`} />
+        <div
+          className={`w-3 h-3 rounded-full ${
+            loadingState === "idle"
+              ? "bg-slate-400"
+              : loadingState === "loading"
+                ? "bg-yellow-500 animate-pulse"
+                : loadingState === "error"
+                  ? "bg-red-500"
+                  : "bg-green-500"
+          }`}
+        />
         <div className="flex-1">
           <p className="text-sm text-slate-600">{status}</p>
-          {loadingState === 'loading' && extractedQuestions && (
+          {loadingState === "loading" && extractedQuestions && (
             <div className="mt-2 w-full bg-slate-200 rounded-full h-2">
-              <div 
+              <div
                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ 
-                  width: `${Math.min(100, (questionSummaries.length / extractedQuestions.questions.length) * 100)}%` 
+                style={{
+                  width: `${Math.min(100, (questionSummaries.length / extractedQuestions.questions.length) * 100)}%`,
                 }}
               />
             </div>
           )}
-          {isWorkerActive && (
-            <p className="text-xs text-blue-600 mt-1">
-              ⚡ Using Web Worker
-            </p>
-          )}
+          {isWorkerActive && <p className="text-xs text-blue-600 mt-1">⚡ Using Web Worker</p>}
         </div>
       </div>
     </div>
   );
 }
-
-

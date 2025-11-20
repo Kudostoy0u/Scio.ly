@@ -1,41 +1,41 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import EventList from './EventList';
-import { Event } from '../types';
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Event } from "@/app/types";
+import EventList from "./EventList";
 
 // Mock the theme context
-vi.mock('@/app/contexts/ThemeContext', () => ({
-  useTheme: () => ({ darkMode: false })
+vi.mock("@/app/contexts/ThemeContext", () => ({
+  useTheme: () => ({ darkMode: false }),
 }));
 
 const mockEvents: Event[] = [
   {
     id: 1,
-    name: 'Anatomy & Physiology',
-    slug: 'anatomy-physiology',
-    subject: 'Life Science',
-    division: 'C',
-    currentYear: true
+    name: "Anatomy & Physiology",
+    slug: "anatomy-physiology",
+    subject: "Life Science",
+    division: "C",
+    currentYear: true,
   },
   {
     id: 2,
-    name: 'Astronomy',
-    slug: 'astronomy',
-    subject: 'Earth & Space',
-    division: 'C',
-    currentYear: true
+    name: "Astronomy",
+    slug: "astronomy",
+    subject: "Earth & Space",
+    division: "C",
+    currentYear: true,
   },
   {
     id: 3,
-    name: 'Chemistry Lab',
-    slug: 'chemistry-lab',
-    subject: 'Physical Science',
-    division: 'C',
-    currentYear: true
-  }
+    name: "Chemistry Lab",
+    slug: "chemistry-lab",
+    subject: "Physical Science",
+    division: "C",
+    currentYear: true,
+  },
 ];
 
-describe('EventList', () => {
+describe("EventList", () => {
   const mockOnEventSelect = vi.fn();
   const mockOnSortChange = vi.fn();
   const mockOnViewModeChange = vi.fn();
@@ -44,7 +44,7 @@ describe('EventList', () => {
     vi.clearAllMocks();
   });
 
-  it('renders all events', () => {
+  it("renders all events", () => {
     render(
       <EventList
         events={mockEvents}
@@ -59,12 +59,12 @@ describe('EventList', () => {
       />
     );
 
-    expect(screen.getByText('Anatomy & Physiology')).toBeInTheDocument();
-    expect(screen.getByText('Astronomy')).toBeInTheDocument();
-    expect(screen.getByText('Chemistry Lab')).toBeInTheDocument();
+    expect(screen.getByText("Anatomy & Physiology")).toBeInTheDocument();
+    expect(screen.getByText("Astronomy")).toBeInTheDocument();
+    expect(screen.getByText("Chemistry Lab")).toBeInTheDocument();
   });
 
-  it('displays loading state', () => {
+  it("displays loading state", () => {
     render(
       <EventList
         events={[]}
@@ -82,8 +82,8 @@ describe('EventList', () => {
     expect(screen.getByText(/loading/i)).toBeInTheDocument();
   });
 
-  it('displays error state', () => {
-    const errorMessage = 'Failed to load events';
+  it("displays error state", () => {
+    const errorMessage = "Failed to load events";
     render(
       <EventList
         events={[]}
@@ -101,7 +101,7 @@ describe('EventList', () => {
     expect(screen.getByText(errorMessage)).toBeInTheDocument();
   });
 
-  it('calls onEventSelect when an event is clicked', () => {
+  it("calls onEventSelect when an event is clicked", () => {
     render(
       <EventList
         events={mockEvents}
@@ -116,14 +116,14 @@ describe('EventList', () => {
       />
     );
 
-    const astronomyElement = screen.getByText('Astronomy').closest('li');
+    const astronomyElement = screen.getByText("Astronomy").closest("li");
     if (astronomyElement) {
       fireEvent.click(astronomyElement);
     }
     expect(mockOnEventSelect).toHaveBeenCalledWith(2);
   });
 
-  it('sorts events alphabetically', () => {
+  it("sorts events alphabetically", () => {
     const { container } = render(
       <EventList
         events={mockEvents}
@@ -138,16 +138,17 @@ describe('EventList', () => {
       />
     );
 
-    const eventNames = Array.from(container.querySelectorAll('[id^="event-"]'))
-      .map(el => el.textContent);
+    const eventNames = Array.from(container.querySelectorAll('[id^="event-"]')).map(
+      (el) => el.textContent
+    );
 
     // Should be in alphabetical order
-    expect(eventNames[0]).toContain('Anatomy');
-    expect(eventNames[1]).toContain('Astronomy');
-    expect(eventNames[2]).toContain('Chemistry');
+    expect(eventNames[0]).toContain("Anatomy");
+    expect(eventNames[1]).toContain("Astronomy");
+    expect(eventNames[2]).toContain("Chemistry");
   });
 
-  it('sorts events by subject', () => {
+  it("sorts events by subject", () => {
     render(
       <EventList
         events={mockEvents}
@@ -163,10 +164,10 @@ describe('EventList', () => {
     );
 
     const sortSelect = screen.getByLabelText(/sort/i);
-    expect(sortSelect).toHaveValue('subject');
+    expect(sortSelect).toHaveValue("subject");
   });
 
-  it('changes sort option when dropdown is changed', () => {
+  it("changes sort option when dropdown is changed", () => {
     render(
       <EventList
         events={mockEvents}
@@ -182,12 +183,12 @@ describe('EventList', () => {
     );
 
     const sortSelect = screen.getByLabelText(/sort/i);
-    fireEvent.change(sortSelect, { target: { value: 'subject' } });
+    fireEvent.change(sortSelect, { target: { value: "subject" } });
 
-    expect(mockOnSortChange).toHaveBeenCalledWith('subject');
+    expect(mockOnSortChange).toHaveBeenCalledWith("subject");
   });
 
-  it('highlights selected event', () => {
+  it("highlights selected event", () => {
     render(
       <EventList
         events={mockEvents}
@@ -202,11 +203,11 @@ describe('EventList', () => {
       />
     );
 
-    const astronomyItem = screen.getByText('Astronomy').closest('li');
-    expect(astronomyItem).toHaveClass('bg-blue-50', 'border-l-4', 'border-blue-500');
+    const astronomyItem = screen.getByText("Astronomy").closest("li");
+    expect(astronomyItem).toHaveClass("bg-blue-50", "border-l-4", "border-blue-500");
   });
 
-  it('toggles view mode between current and all', () => {
+  it("toggles view mode between current and all", () => {
     render(
       <EventList
         events={mockEvents}
@@ -224,10 +225,10 @@ describe('EventList', () => {
     const allButton = screen.getByTitle(/all/i);
     fireEvent.click(allButton);
 
-    expect(mockOnViewModeChange).toHaveBeenCalledWith('all');
+    expect(mockOnViewModeChange).toHaveBeenCalledWith("all");
   });
 
-  it('shows offline indicator when offline', () => {
+  it("shows offline indicator when offline", () => {
     render(
       <EventList
         events={mockEvents}
@@ -238,7 +239,7 @@ describe('EventList', () => {
         loading={false}
         error={null}
         isOffline={true}
-        downloadedSlugs={new Set(['astronomy'])}
+        downloadedSlugs={new Set(["astronomy"])}
         viewMode="current"
         onViewModeChange={mockOnViewModeChange}
       />

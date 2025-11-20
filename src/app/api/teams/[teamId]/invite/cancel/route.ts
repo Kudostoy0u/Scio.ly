@@ -1,7 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { queryCockroachDB } from '@/lib/cockroachdb';
-import { getServerUser } from '@/lib/supabaseServer';
-import { resolveTeamSlugToUnits } from '@/lib/utils/team-resolver';
+import { dbPg } from "@/lib/db";
+import {
+  newTeamInvitations,
+  newTeamMemberships,
+} from "@/lib/db/schema/teams";
+import {
+  UUIDSchema,
+  validateRequest,
+} from "@/lib/schemas/teams-validation";
+import {
+  handleError,
+  handleForbiddenError,
+  handleNotFoundError,
+  handleUnauthorizedError,
+  handleValidationError,
+  validateEnvironment,
+} from "@/lib/utils/error-handler";
+import logger from "@/lib/utils/logger";
+import { getServerUser } from "@/lib/supabaseServer";
+import { resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
+import { and, eq, inArray } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 // POST /api/teams/[teamId]/invite/cancel - Cancel team invitation
 export async function POST(
@@ -9,25 +28,46 @@ export async function POST(
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
-    }
+    const envError = validateEnvironment();
+    if (envError) return envError;
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return handleUnauthorizedError();
     }
 
     const { teamId } = await params;
-    const body = await request.json();
-    const { invitationCode } = body;
-
-    if (!invitationCode) {
-      return NextResponse.json({ error: 'Invitation code is required' }, { status: 400 });
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch (error) {
+      return handleValidationError(
+        new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            message: "Invalid JSON in request body",
+            path: [],
+          },
+        ])
+      );
     }
+
+    // Validate request body
+    const CancelInviteSchema = z.object({
+      invitationCode: z.string().min(1, "Invitation code is required"),
+    });
+
+    let validatedBody: z.infer<typeof CancelInviteSchema>;
+    try {
+      validatedBody = validateRequest(CancelInviteSchema, body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return handleValidationError(error);
+      }
+      return handleError(error, "POST /api/teams/[teamId]/invite/cancel - validation");
+    }
+
+    const { invitationCode } = validatedBody;
 
     // Resolve team slug to team unit IDs
     let teamUnitIds: string[];
@@ -35,60 +75,69 @@ export async function POST(
       const teamInfo = await resolveTeamSlugToUnits(teamId);
       teamUnitIds = teamInfo.teamUnitIds;
     } catch {
-      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
+      return handleNotFoundError("Team");
     }
 
-    // Check if user is captain or co-captain in any of the team units
-    const membershipResult = await queryCockroachDB<{ id: string, role: string, team_id: string }>(
-      `SELECT id, role, team_id FROM new_team_memberships 
-       WHERE user_id = $1 AND team_id = ANY($2) AND status = 'active'`,
-      [user.id, teamUnitIds]
-    );
+    // Check if user is captain or co-captain in any of the team units using Drizzle ORM
+    const membershipResult = await dbPg
+      .select({
+        id: newTeamMemberships.id,
+        role: newTeamMemberships.role,
+        teamId: newTeamMemberships.teamId,
+      })
+      .from(newTeamMemberships)
+      .where(
+        and(
+          eq(newTeamMemberships.userId, user.id),
+          inArray(newTeamMemberships.teamId, teamUnitIds),
+          eq(newTeamMemberships.status, "active")
+        )
+      );
 
-    if (membershipResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
+    if (membershipResult.length === 0) {
+      return handleForbiddenError("Not a team member");
     }
 
     // Check if user has captain or co-captain role in any team unit
-    const hasCaptainRole = membershipResult.rows.some(membership => 
-      ['captain', 'co_captain'].includes(membership.role)
+    const hasCaptainRole = membershipResult.some((membership) =>
+      ["captain", "co_captain"].includes(membership.role)
     );
 
     if (!hasCaptainRole) {
-      return NextResponse.json({ error: 'Only captains can cancel invitations' }, { status: 403 });
+      return handleForbiddenError("Only captains can cancel invitations");
     }
 
-    // Find and cancel the invitation
-    const invitationResult = await queryCockroachDB<{ id: string, email: string }>(
-      `SELECT id, email FROM new_team_invitations 
-       WHERE invitation_code = $1 AND team_id = ANY($2) AND status = 'pending'`,
-      [invitationCode, teamUnitIds]
-    );
+    // Find and cancel the invitation using Drizzle ORM
+    const [invitationResult] = await dbPg
+      .select({ id: newTeamInvitations.id, email: newTeamInvitations.email })
+      .from(newTeamInvitations)
+      .where(
+        and(
+          eq(newTeamInvitations.invitationCode, invitationCode),
+          inArray(newTeamInvitations.teamId, teamUnitIds),
+          eq(newTeamInvitations.status, "pending")
+        )
+      )
+      .limit(1);
 
-    if (invitationResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Invitation not found or already processed' }, { status: 404 });
+    if (!invitationResult) {
+      return handleNotFoundError("Invitation not found or already processed");
     }
 
-    const invitation = invitationResult.rows[0];
+    // Update invitation status to cancelled using Drizzle ORM
+    await dbPg
+      .update(newTeamInvitations)
+      .set({
+        status: "declined",
+        acceptedAt: new Date(),
+      })
+      .where(eq(newTeamInvitations.id, invitationResult.id));
 
-    // Update invitation status to cancelled
-    await queryCockroachDB(
-      `UPDATE new_team_invitations 
-       SET status = 'declined', accepted_at = NOW()
-       WHERE id = $1`,
-      [invitation.id]
-    );
-
-    return NextResponse.json({ 
-      message: 'Invitation cancelled successfully',
-      email: invitation.email
-    });
-
-  } catch (error) {
-    console.error('Error cancelling team invitation:', error);
     return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+      message: "Invitation cancelled successfully",
+      email: invitationResult.email ?? "",
+    });
+  } catch (error) {
+    return handleError(error, "POST /api/teams/[teamId]/invite/cancel");
   }
 }

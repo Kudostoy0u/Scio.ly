@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import Dexie, { Table } from 'dexie';
+import Dexie, { type Table } from "dexie";
 
 /**
  * Offline database utilities for Science Olympiad platform
@@ -33,16 +33,14 @@ export class ScioDatabase extends Dexie {
    * Sets up IndexedDB schema for question caching
    */
   constructor() {
-    super('scio-offline');
-    
+    super("scio-offline");
+
     // Define database schema
     this.version(1).stores({
-      questions: '&eventSlug, updatedAt'
+      questions: "&eventSlug, updatedAt",
     });
   }
 }
 
 /** Default database instance for offline storage */
 export const db = new ScioDatabase();
-
-

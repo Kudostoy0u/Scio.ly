@@ -1,5 +1,5 @@
-import React from 'react';
-import { EmptyState as SharedEmptyState } from '@/app/components/LoadingState';
+import { EmptyState as SharedEmptyState } from "@/app/components/LoadingState";
+import type React from "react";
 
 interface EmptyStateProps {
   darkMode: boolean;
@@ -9,13 +9,14 @@ interface EmptyStateProps {
   quotes: unknown[];
 }
 
-export const EmptyState: React.FC<EmptyStateProps> = ({ darkMode, hasAttemptedLoad, isLoading, error, quotes }) => {
+export const EmptyState: React.FC<EmptyStateProps> = ({
+  darkMode,
+  hasAttemptedLoad,
+  isLoading,
+  error,
+  quotes,
+}) => {
   const shouldShow = hasAttemptedLoad && !isLoading && !error && quotes.length === 0;
 
-  return (
-    <SharedEmptyState
-      darkMode={darkMode}
-      shouldShow={shouldShow}
-    />
-  );
+  return <SharedEmptyState darkMode={darkMode} shouldShow={shouldShow} />;
 };

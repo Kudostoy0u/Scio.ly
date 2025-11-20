@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useTheme } from '@/app/contexts/ThemeContext';
-import { X, Users, Key } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { useTheme } from "@/app/contexts/ThemeContext";
+import { motion } from "framer-motion";
+import { Key, Users, X } from "lucide-react";
+import type React from "react";
+import { useEffect, useState } from "react";
 
 interface JoinTeamModalProps {
   isOpen: boolean;
@@ -18,14 +19,14 @@ interface JoinTeamData {
 export default function JoinTeamModal({ isOpen, onClose, onJoinTeam }: JoinTeamModalProps) {
   const { darkMode } = useTheme();
   const [formData, setFormData] = useState<JoinTeamData>({
-    code: '',
+    code: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Reset form when modal is closed
   useEffect(() => {
     if (!isOpen) {
-      setFormData({ code: '' });
+      setFormData({ code: "" });
       setIsSubmitting(false);
     }
   }, [isOpen]);
@@ -33,19 +34,20 @@ export default function JoinTeamModal({ isOpen, onClose, onJoinTeam }: JoinTeamM
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     try {
       await onJoinTeam(formData);
       onClose();
-      setFormData({ code: '' });
-    } catch (error) {
-      console.error('Error joining team:', error);
+      setFormData({ code: "" });
+    } catch (_error) {
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -56,7 +58,7 @@ export default function JoinTeamModal({ isOpen, onClose, onJoinTeam }: JoinTeamM
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 transition-opacity z-40"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
           onClick={onClose}
         />
 
@@ -66,28 +68,22 @@ export default function JoinTeamModal({ isOpen, onClose, onJoinTeam }: JoinTeamM
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           className={`relative z-50 inline-block align-bottom rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full ${
-            darkMode ? 'bg-gray-800' : 'bg-white'
+            darkMode ? "bg-gray-800" : "bg-white"
           }`}
         >
-          <div className={`px-6 py-4 border-b ${
-            darkMode ? 'border-gray-700' : 'border-gray-200'
-          }`}>
+          <div className={`px-6 py-4 border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
             <div className="flex items-center justify-between">
-              <h3 className={`text-lg font-semibold ${
-                darkMode ? 'text-white' : 'text-gray-900'
-              }`}>
+              <h3 className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>
                 Join a team
               </h3>
               <button
                 onClick={onClose}
                 className={`p-2 rounded-full transition-colors ${
-                  darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                  darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
                 }`}
                 aria-label="Close"
               >
-                <X className={`w-5 h-5 ${
-                  darkMode ? 'text-gray-400' : 'text-gray-500'
-                }`} />
+                <X className={`w-5 h-5 ${darkMode ? "text-gray-400" : "text-gray-500"}`} />
               </button>
             </div>
           </div>
@@ -96,61 +92,59 @@ export default function JoinTeamModal({ isOpen, onClose, onJoinTeam }: JoinTeamM
             <div className="space-y-4">
               {/* Team Code */}
               <div>
-                <label htmlFor="team-code" className={`block text-sm font-medium mb-2 ${
-                  darkMode ? 'text-gray-300' : 'text-gray-700'
-                }`}>
+                <label
+                  htmlFor="team-code"
+                  className={`block text-sm font-medium mb-2 ${
+                    darkMode ? "text-gray-300" : "text-gray-700"
+                  }`}
+                >
                   Team Code *
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Key className={`h-5 w-5 ${
-                      darkMode ? 'text-gray-500' : 'text-gray-400'
-                    }`} />
+                    <Key className={`h-5 w-5 ${darkMode ? "text-gray-500" : "text-gray-400"}`} />
                   </div>
                   <input
                     id="team-code"
                     type="text"
-                    required
+                    required={true}
                     value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, code: e.target.value.toUpperCase() })
+                    }
                     className={`block w-full pl-10 pr-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      darkMode 
-                        ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                      darkMode
+                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
                     }`}
                     placeholder="Enter team code"
                     maxLength={10}
                   />
                 </div>
-                <p className={`mt-1 text-sm ${
-                  darkMode ? 'text-gray-400' : 'text-gray-500'
-                }`}>
+                <p className={`mt-1 text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                   Ask your team captain for the team code
                 </p>
               </div>
 
               {/* Info Box */}
-              <div className={`p-4 rounded-lg border ${
-                darkMode 
-                  ? 'bg-blue-900 border-blue-700' 
-                  : 'bg-blue-50 border-blue-200'
-              }`}>
+              <div
+                className={`p-4 rounded-lg border ${
+                  darkMode ? "bg-blue-900 border-blue-700" : "bg-blue-50 border-blue-200"
+                }`}
+              >
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0">
-                    <Users className={`h-5 w-5 ${
-                      darkMode ? 'text-blue-400' : 'text-blue-600'
-                    }`} />
+                    <Users className={`h-5 w-5 ${darkMode ? "text-blue-400" : "text-blue-600"}`} />
                   </div>
                   <div>
-                    <h4 className={`text-sm font-medium ${
-                      darkMode ? 'text-blue-300' : 'text-blue-800'
-                    }`}>
+                    <h4
+                      className={`text-sm font-medium ${darkMode ? "text-blue-300" : "text-blue-800"}`}
+                    >
                       How to get a team code
                     </h4>
-                    <p className={`mt-1 text-sm ${
-                      darkMode ? 'text-blue-400' : 'text-blue-700'
-                    }`}>
-                      Team codes are generated by team captains. Contact your team captain to get the code for your team.
+                    <p className={`mt-1 text-sm ${darkMode ? "text-blue-400" : "text-blue-700"}`}>
+                      Team codes are generated by team captains. Contact your team captain to get
+                      the code for your team.
                     </p>
                   </div>
                 </div>
@@ -163,9 +157,9 @@ export default function JoinTeamModal({ isOpen, onClose, onJoinTeam }: JoinTeamM
                 type="button"
                 onClick={onClose}
                 className={`px-4 py-2 border rounded-md font-medium transition-colors ${
-                  darkMode 
-                    ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
-                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                  darkMode
+                    ? "border-gray-600 text-gray-300 hover:bg-gray-700"
+                    : "border-gray-300 text-gray-700 hover:bg-gray-50"
                 }`}
               >
                 Cancel
@@ -175,7 +169,7 @@ export default function JoinTeamModal({ isOpen, onClose, onJoinTeam }: JoinTeamM
                 disabled={isSubmitting || !formData.code.trim()}
                 className="px-4 py-2 bg-blue-500 text-white rounded-md font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {isSubmitting ? 'Joining...' : 'Join Team'}
+                {isSubmitting ? "Joining..." : "Join Team"}
               </button>
             </div>
           </form>

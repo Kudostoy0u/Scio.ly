@@ -29,7 +29,7 @@ export interface EloData {
   };
 }
 
-export type ChartType = 'overall' | 'event';
+export type ChartType = "overall" | "event";
 
 export type OverallSeasonData = {
   [schoolName: string]: {
@@ -69,7 +69,11 @@ export type EventTournamentData = {
   };
 };
 
-export type ChartData = OverallSeasonData | OverallTournamentData | EventSeasonData | EventTournamentData;
+export type ChartData =
+  | OverallSeasonData
+  | OverallTournamentData
+  | EventSeasonData
+  | EventTournamentData;
 
 export interface LeaderboardEntry {
   school: string;

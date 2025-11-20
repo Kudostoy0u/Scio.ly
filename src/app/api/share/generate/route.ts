@@ -1,24 +1,27 @@
-import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
-import { shareLinks, questions, idEvents } from '@/lib/db/schema';
-import { eq, inArray } from 'drizzle-orm';
-import { ShareCodeRequest, ShareCodeResponse } from '@/lib/types/api';
-import { validateFields, successResponse, ApiErrors, handleApiError } from '@/lib/api/utils';
-import logger from '@/lib/utils/logger';
+import { ApiErrors, handleApiError, successResponse, validateFields } from "@/lib/api/utils";
+import { db } from "@/lib/db";
+import { shareLinks } from "@/lib/db/schema/core";
+import { idEvents, questions } from "@/lib/db/schema";
+import type { ShareCodeRequest, ShareCodeResponse } from "@/lib/types/api";
+import logger from "@/lib/utils/logger";
+import { eq, inArray } from "drizzle-orm";
+import type { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const validation = validateFields<ShareCodeRequest>(body, ['questionIds', 'testParamsRaw']);
+    const validation = validateFields<ShareCodeRequest>(body, ["questionIds", "testParamsRaw"]);
 
-    if (!validation.valid) return validation.error;
-
-    const { questionIds, testParamsRaw, code, idQuestionIds, timeRemainingSeconds } = validation.data;
-
-    if (questionIds.length === 0) {
-      return ApiErrors.badRequest('Question IDs array cannot be empty');
+    if (!validation.valid) {
+      return validation.error;
     }
 
+    const { questionIds, testParamsRaw, code, idQuestionIds, timeRemainingSeconds } =
+      validation.data;
+
+    if (questionIds.length === 0) {
+      return ApiErrors.badRequest("Question IDs array cannot be empty");
+    }
 
     // Validate question IDs exist in database
     const validQuestions = await db
@@ -34,7 +37,7 @@ export async function POST(request: NextRequest) {
     const totalValidQuestions = validQuestions.length + validIdQuestions.length;
 
     if (totalValidQuestions !== questionIds.length) {
-      return ApiErrors.badRequest('Some question IDs are invalid');
+      return ApiErrors.badRequest("Some question IDs are invalid");
     }
 
     // Generate or validate share code
@@ -50,7 +53,7 @@ export async function POST(request: NextRequest) {
       .where(eq(shareLinks.code, shareCode));
 
     if (existingResult.length > 0) {
-      return ApiErrors.badRequest('Code already exists');
+      return ApiErrors.badRequest("Code already exists");
     }
 
     // Prepare data for storage
@@ -76,12 +79,12 @@ export async function POST(request: NextRequest) {
 
     logger.info(`Generated share code: ${shareCode}, expires: ${expiresAt.toISOString()}`);
 
-    return successResponse<ShareCodeResponse['data']>({
+    return successResponse<ShareCodeResponse["data"]>({
       shareCode,
       expiresAt: expiresAt.toISOString(),
     });
   } catch (error) {
-    logger.error('Failed to generate share code:', error);
+    logger.error("Failed to generate share code:", error);
     return handleApiError(error);
   }
 }
@@ -90,8 +93,8 @@ export async function POST(request: NextRequest) {
  * Generate a random 6-character share code
  */
 function generateShareCode(): string {
-  const charset = '0123456789abcdefghijklmnopqrstuvwxyz';
-  let code = '';
+  const charset = "0123456789abcdefghijklmnopqrstuvwxyz";
+  let code = "";
   for (let i = 0; i < 6; i++) {
     code += charset[Math.floor(Math.random() * charset.length)];
   }

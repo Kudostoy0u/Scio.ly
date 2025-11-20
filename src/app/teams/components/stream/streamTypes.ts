@@ -5,7 +5,7 @@ export interface Event {
   title: string;
   start_time: string;
   location: string | null;
-  event_type: 'practice' | 'tournament' | 'meeting' | 'deadline' | 'personal' | 'other';
+  event_type: "practice" | "tournament" | "meeting" | "deadline" | "personal" | "other";
   has_timer?: boolean;
 }
 
@@ -45,7 +45,7 @@ export interface TimeRemaining {
 export interface Team {
   id: string;
   school: string;
-  division: 'B' | 'C';
+  division: "B" | "C";
   slug: string;
 }
 
@@ -56,10 +56,10 @@ export interface EventType {
 }
 
 export const EVENT_TYPES: EventType[] = [
-  { value: 'tournament', label: 'Tournament', color: 'bg-blue-100 text-blue-800' },
-  { value: 'practice', label: 'Practice', color: 'bg-green-100 text-green-800' },
-  { value: 'meeting', label: 'Meeting', color: 'bg-purple-100 text-purple-800' },
-  { value: 'deadline', label: 'Deadline', color: 'bg-red-100 text-red-800' },
-  { value: 'personal', label: 'Personal', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'other', label: 'Other', color: 'bg-gray-100 text-gray-800' }
+  { value: "tournament", label: "Tournament", color: "bg-blue-100 text-blue-800" },
+  { value: "practice", label: "Practice", color: "bg-green-100 text-green-800" },
+  { value: "meeting", label: "Meeting", color: "bg-purple-100 text-purple-800" },
+  { value: "deadline", label: "Deadline", color: "bg-red-100 text-red-800" },
+  { value: "personal", label: "Personal", color: "bg-yellow-100 text-yellow-800" },
+  { value: "other", label: "Other", color: "bg-gray-100 text-gray-800" },
 ];

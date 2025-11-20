@@ -1,31 +1,35 @@
-'use client';
+"use client";
 
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { useTheme } from '@/app/contexts/ThemeContext';
-import { useEffect } from 'react';
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { useTheme } from "@/app/contexts/ThemeContext";
+import { useEffect } from "react";
 
 // (notifications fetch monkeypatch removed)
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const { darkMode } = useTheme();
-  
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!('serviceWorker' in navigator)) return;
-    
+    if (typeof window === "undefined") {
+      return;
+    }
+    if (!("serviceWorker" in navigator)) {
+      return;
+    }
 
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                        (window.navigator as any).standalone === true;
-    const isOfflinePage = window.location.pathname === '/offline/';
-    
-    if (!isStandalone && !isOfflinePage) return;
-    
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      ("standalone" in window.navigator && (window.navigator as { standalone?: boolean }).standalone === true);
+    const isOfflinePage = window.location.pathname === "/offline/";
+
+    if (!(isStandalone || isOfflinePage)) {
+      return;
+    }
+
     const register = async () => {
       try {
-
-        await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        await navigator.serviceWorker.register("/sw.js", { scope: "/" });
       } catch {
         // ignore
       }
@@ -44,13 +48,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
         position="top-right"
         autoClose={3000}
         hideProgressBar={false}
-        newestOnTop
-        closeOnClick
+        newestOnTop={true}
+        closeOnClick={true}
         rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme={darkMode ? 'dark' : 'light'}
+        pauseOnFocusLoss={true}
+        draggable={true}
+        pauseOnHover={true}
+        theme={darkMode ? "dark" : "light"}
       />
     </>
   );

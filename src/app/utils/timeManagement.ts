@@ -1,4 +1,4 @@
-import SyncLocalStorage from '@/lib/database/localStorage-replacement';
+import SyncLocalStorage from "@/lib/database/localStorage-replacement";
 /**
  * Time management utilities for Science Olympiad platform
  * Provides comprehensive test timing and session management
@@ -46,11 +46,10 @@ export interface TestSession {
   isSubmitted: boolean;
 }
 
-
 /**
  * Generate a unique test session ID
  * Creates a unique identifier for test sessions
- * 
+ *
  * @returns {string} Unique test session ID
  */
 const generateTestId = (): string => {
@@ -60,7 +59,7 @@ const generateTestId = (): string => {
 /**
  * Get the current test session from localStorage
  * Retrieves the active test session if one exists
- * 
+ *
  * @returns {TestSession | null} Current test session or null
  * @example
  * ```typescript
@@ -70,10 +69,9 @@ const generateTestId = (): string => {
  */
 export const getCurrentTestSession = (): TestSession | null => {
   try {
-    const stored = SyncLocalStorage.getItem('currentTestSession');
+    const stored = SyncLocalStorage.getItem("currentTestSession");
     return stored ? JSON.parse(stored) : null;
-  } catch (error) {
-    console.error('Error parsing current test session:', error);
+  } catch (_error) {
     return null;
   }
 };
@@ -81,7 +79,7 @@ export const getCurrentTestSession = (): TestSession | null => {
 /**
  * Save test session to localStorage
  * Persists the current test session for later retrieval
- * 
+ *
  * @param {TestSession} session - Test session to save
  * @example
  * ```typescript
@@ -97,39 +95,34 @@ export const getCurrentTestSession = (): TestSession | null => {
  */
 export const saveTestSession = (session: TestSession): void => {
   try {
-    SyncLocalStorage.setItem('currentTestSession', JSON.stringify(session));
-  } catch (error) {
-    console.error('Error saving test session:', error);
-  }
+    SyncLocalStorage.setItem("currentTestSession", JSON.stringify(session));
+  } catch (_error) {}
 };
-
 
 export const clearTestSession = (): void => {
-  SyncLocalStorage.removeItem('currentTestSession');
+  SyncLocalStorage.removeItem("currentTestSession");
 
-  SyncLocalStorage.removeItem('testTimeLeft');
-  SyncLocalStorage.removeItem('isTimeSynchronized');
-  SyncLocalStorage.removeItem('originalSyncTime');
-  SyncLocalStorage.removeItem('syncTimestamp');
-  SyncLocalStorage.removeItem('loadedFromShareCode');
-  SyncLocalStorage.removeItem('codebustersTimeLeft');
-  SyncLocalStorage.removeItem('shareCode');
+  SyncLocalStorage.removeItem("testTimeLeft");
+  SyncLocalStorage.removeItem("isTimeSynchronized");
+  SyncLocalStorage.removeItem("originalSyncTime");
+  SyncLocalStorage.removeItem("syncTimestamp");
+  SyncLocalStorage.removeItem("loadedFromShareCode");
+  SyncLocalStorage.removeItem("codebustersTimeLeft");
+  SyncLocalStorage.removeItem("shareCode");
 };
-
 
 export const initializeTestSession = (
   eventName: string,
   timeLimit: number,
-  isSharedTest: boolean = false,
+  isSharedTest = false,
   sharedTimeRemaining?: number
 ): TestSession => {
   const now = Date.now();
   const timeLimitSeconds = timeLimit * 60;
-  
-  let timeState: TimeState;
-  
-  if (isSharedTest && sharedTimeRemaining !== undefined && sharedTimeRemaining !== null) {
 
+  let timeState: TimeState;
+
+  if (isSharedTest && sharedTimeRemaining !== undefined && sharedTimeRemaining !== null) {
     timeState = {
       timeLeft: sharedTimeRemaining,
       isTimeSynchronized: true,
@@ -138,10 +131,9 @@ export const initializeTestSession = (
       testStartTime: now,
       lastPauseTime: null,
       totalPausedTime: 0,
-      isPaused: false
+      isPaused: false,
     };
   } else {
-
     timeState = {
       timeLeft: timeLimitSeconds,
       isTimeSynchronized: false,
@@ -150,34 +142,33 @@ export const initializeTestSession = (
       testStartTime: now,
       lastPauseTime: null,
       totalPausedTime: 0,
-      isPaused: false
+      isPaused: false,
     };
   }
-  
+
   const session: TestSession = {
     testId: generateTestId(),
     eventName,
     timeLimit,
     timeState,
     lastActivity: now,
-    isSubmitted: false
+    isSubmitted: false,
   };
-  
+
   saveTestSession(session);
   return session;
 };
 
-
 export const resumeTestSession = (): TestSession | null => {
   const session = getCurrentTestSession();
-  if (!session) return null;
-  
+  if (!session) {
+    return null;
+  }
+
   const now = Date.now();
   const timeState = session.timeState;
-  
 
   session.lastActivity = now;
-
 
   if (!timeState.isTimeSynchronized && timeState.isPaused && timeState.lastPauseTime) {
     const pauseDuration = now - timeState.lastPauseTime;
@@ -186,29 +177,27 @@ export const resumeTestSession = (): TestSession | null => {
     timeState.lastPauseTime = null;
   }
 
-
   if (timeState.isTimeSynchronized && timeState.syncTimestamp && timeState.originalTimeAtSync) {
-
     const elapsedMs = now - timeState.syncTimestamp;
     const elapsedSeconds = Math.floor(elapsedMs / 1000);
     timeState.timeLeft = Math.max(0, timeState.originalTimeAtSync - elapsedSeconds);
   } else {
-
     // timeleft will continue decrementing only while the test page is mounted
   }
-  
+
   saveTestSession(session);
   return session;
 };
 
-
 export const pauseTestSession = (): void => {
   const session = getCurrentTestSession();
-  if (!session) return;
-  
+  if (!session) {
+    return;
+  }
+
   const now = Date.now();
   const timeState = session.timeState;
-  
+
   if (!timeState.isPaused) {
     timeState.isPaused = true;
     timeState.lastPauseTime = now;
@@ -217,14 +206,15 @@ export const pauseTestSession = (): void => {
   }
 };
 
-
 export const resumeFromPause = (): void => {
   const session = getCurrentTestSession();
-  if (!session) return;
-  
+  if (!session) {
+    return;
+  }
+
   const now = Date.now();
   const timeState = session.timeState;
-  
+
   if (timeState.isPaused && timeState.lastPauseTime) {
     const pauseDuration = now - timeState.lastPauseTime;
     timeState.totalPausedTime += pauseDuration;
@@ -235,123 +225,120 @@ export const resumeFromPause = (): void => {
   }
 };
 
-
 export const updateTimeLeft = (newTimeLeft: number): void => {
   const session = getCurrentTestSession();
-  if (!session) return;
-  
+  if (!session) {
+    return;
+  }
+
   session.timeState.timeLeft = Math.max(0, newTimeLeft);
   session.lastActivity = Date.now();
   saveTestSession(session);
 };
 
-
 export const markTestSubmitted = (): void => {
   const session = getCurrentTestSession();
-  if (!session) return;
-  
+  if (!session) {
+    return;
+  }
+
   session.isSubmitted = true;
   session.lastActivity = Date.now();
   saveTestSession(session);
 };
 
-
 export const isTestExpired = (): boolean => {
   const session = getCurrentTestSession();
-  if (!session) return true;
-  
+  if (!session) {
+    return true;
+  }
+
   return session.timeState.timeLeft <= 0;
 };
-
 
 export const formatTime = (seconds: number): string => {
   const minutes = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+  return `${minutes}:${secs < 10 ? "0" : ""}${secs}`;
 };
 
-
-export const isSessionStale = (maxInactiveMinutes: number = 30): boolean => {
+export const isSessionStale = (maxInactiveMinutes = 30): boolean => {
   const session = getCurrentTestSession();
-  if (!session) return true;
-  
+  if (!session) {
+    return true;
+  }
+
   const now = Date.now();
   const inactiveMs = now - session.lastActivity;
   const inactiveMinutes = inactiveMs / (1000 * 60);
-  
+
   return inactiveMinutes > maxInactiveMinutes;
 };
-
 
 export const resetTestSession = (eventName: string, timeLimit: number): TestSession => {
   clearTestSession();
   return initializeTestSession(eventName, timeLimit, false);
 };
 
-
 export const setupVisibilityHandling = (): (() => void) => {
   const handleVisibilityChange = () => {
     if (document.hidden) {
-
       pauseTestSession();
     } else {
-
       resumeFromPause();
     }
   };
-  
-  document.addEventListener('visibilitychange', handleVisibilityChange);
-  
+
+  document.addEventListener("visibilitychange", handleVisibilityChange);
 
   return () => {
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
   };
 };
 
-
 export const getLegacyTimeLeft = (): number | null => {
-  const stored = SyncLocalStorage.getItem('testTimeLeft');
-  return stored ? parseInt(stored) : null;
+  const stored = SyncLocalStorage.getItem("testTimeLeft");
+  return stored ? Number.parseInt(stored) : null;
 };
 
 export const getLegacyCodebustersTimeLeft = (): number | null => {
-  const stored = SyncLocalStorage.getItem('codebustersTimeLeft');
-  return stored ? parseInt(stored) : null;
+  const stored = SyncLocalStorage.getItem("codebustersTimeLeft");
+  return stored ? Number.parseInt(stored) : null;
 };
 
-
-export const migrateFromLegacyStorage = (eventName: string, timeLimit: number): TestSession | null => {
+export const migrateFromLegacyStorage = (
+  eventName: string,
+  timeLimit: number
+): TestSession | null => {
   const session = getCurrentTestSession();
-  if (session) return session;
-  
+  if (session) {
+    return session;
+  }
 
   const legacyTimeLeft = getLegacyTimeLeft();
   const legacyCodebustersTimeLeft = getLegacyCodebustersTimeLeft();
-  const isTimeSynchronized = SyncLocalStorage.getItem('isTimeSynchronized') === 'true';
-  const originalSyncTime = SyncLocalStorage.getItem('originalSyncTime');
-  const syncTimestamp = SyncLocalStorage.getItem('syncTimestamp');
-  
+  const isTimeSynchronized = SyncLocalStorage.getItem("isTimeSynchronized") === "true";
+  const originalSyncTime = SyncLocalStorage.getItem("originalSyncTime");
+  const syncTimestamp = SyncLocalStorage.getItem("syncTimestamp");
+
   if (legacyTimeLeft || legacyCodebustersTimeLeft) {
-
-    const timeLeft = legacyTimeLeft || legacyCodebustersTimeLeft || (timeLimit * 60);
+    const timeLeft = legacyTimeLeft || legacyCodebustersTimeLeft || timeLimit * 60;
     const now = Date.now();
-    
-    let timeState: TimeState;
-    
-    if (isTimeSynchronized && originalSyncTime && syncTimestamp) {
 
+    let timeState: TimeState;
+
+    if (isTimeSynchronized && originalSyncTime && syncTimestamp) {
       timeState = {
-        timeLeft: parseInt(originalSyncTime),
+        timeLeft: Number.parseInt(originalSyncTime),
         isTimeSynchronized: true,
-        syncTimestamp: parseInt(syncTimestamp),
-        originalTimeAtSync: parseInt(originalSyncTime),
+        syncTimestamp: Number.parseInt(syncTimestamp),
+        originalTimeAtSync: Number.parseInt(originalSyncTime),
         testStartTime: now,
         lastPauseTime: null,
         totalPausedTime: 0,
-        isPaused: false
+        isPaused: false,
       };
     } else {
-
       timeState = {
         timeLeft,
         isTimeSynchronized: false,
@@ -360,32 +347,32 @@ export const migrateFromLegacyStorage = (eventName: string, timeLimit: number): 
         testStartTime: now,
         lastPauseTime: null,
         totalPausedTime: 0,
-        isPaused: false
+        isPaused: false,
       };
     }
-    
+
     const session: TestSession = {
       testId: generateTestId(),
       eventName,
       timeLimit,
       timeState,
       lastActivity: now,
-      isSubmitted: SyncLocalStorage.getItem('testSubmitted') === 'true' || 
-                   SyncLocalStorage.getItem('codebustersIsTestSubmitted') === 'true'
+      isSubmitted:
+        SyncLocalStorage.getItem("testSubmitted") === "true" ||
+        SyncLocalStorage.getItem("codebustersIsTestSubmitted") === "true",
     };
-    
-    saveTestSession(session);
-    
 
-    SyncLocalStorage.removeItem('testTimeLeft');
-    SyncLocalStorage.removeItem('codebustersTimeLeft');
-    SyncLocalStorage.removeItem('isTimeSynchronized');
-    SyncLocalStorage.removeItem('originalSyncTime');
-    SyncLocalStorage.removeItem('syncTimestamp');
-    SyncLocalStorage.removeItem('loadedFromShareCode');
-    
+    saveTestSession(session);
+
+    SyncLocalStorage.removeItem("testTimeLeft");
+    SyncLocalStorage.removeItem("codebustersTimeLeft");
+    SyncLocalStorage.removeItem("isTimeSynchronized");
+    SyncLocalStorage.removeItem("originalSyncTime");
+    SyncLocalStorage.removeItem("syncTimestamp");
+    SyncLocalStorage.removeItem("loadedFromShareCode");
+
     return session;
   }
-  
+
   return null;
-}; 
+};

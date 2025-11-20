@@ -1,9 +1,9 @@
-import { db } from '@/lib/db';
-import { questions, idEvents, base52Codes } from '@/lib/db/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { db } from "@/lib/db";
+import { base52Codes, idEvents, questions } from "@/lib/db/schema";
+import { and, eq, inArray } from "drizzle-orm";
 
 /** Base52 alphabet containing uppercase and lowercase letters */
-const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 /** Base52 radix (52 characters) */
 const BASE = ALPHABET.length; // 52
 /** Core identifier length (4 characters) */
@@ -12,7 +12,7 @@ const CORE_LENGTH = 4; // 4 letters for the core identifier
 /**
  * Encodes a number to Base52 string
  * Converts numeric index to URL-safe string using 52-character alphabet
- * 
+ *
  * @param {number} index - Numeric index to encode
  * @returns {string} Base52 encoded string (4 characters)
  * @example
@@ -23,7 +23,7 @@ const CORE_LENGTH = 4; // 4 letters for the core identifier
  */
 export function encodeBase52(index: number): string {
   let n = index;
-  let out = '';
+  let out = "";
   for (let i = 0; i < CORE_LENGTH; i++) {
     out = ALPHABET[n % BASE] + out;
     n = Math.floor(n / BASE);
@@ -34,7 +34,7 @@ export function encodeBase52(index: number): string {
 /**
  * Decodes a Base52 string to number
  * Converts Base52 string back to numeric index
- * 
+ *
  * @param {string} core - Base52 encoded string (4 characters)
  * @returns {number} Decoded numeric index
  * @throws {Error} When core is not 4 characters or contains invalid characters
@@ -45,26 +45,28 @@ export function encodeBase52(index: number): string {
  * ```
  */
 export function decodeBase52(core: string): number {
-  if (typeof core !== 'string' || core.length !== CORE_LENGTH) {
-    throw new Error('Code core must be 4 characters');
+  if (typeof core !== "string" || core.length !== CORE_LENGTH) {
+    throw new Error("Code core must be 4 characters");
   }
   let value = 0;
   for (let i = 0; i < core.length; i++) {
     const c = core[i];
+    if (c === undefined) {
+      throw new Error("Invalid base52 character");
+    }
     const digit = ALPHABET.indexOf(c);
     if (digit === -1) {
-      throw new Error('Invalid base52 character');
+      throw new Error("Invalid base52 character");
     }
     value = value * BASE + digit;
   }
   return value;
 }
 
-
 /**
  * Generates a unique Base52 code for a question
  * Creates URL-safe identifiers for question sharing
- * 
+ *
  * @param {string} questionId - UUID of the question
  * @param {'questions' | 'idEvents'} [table='questions'] - Database table name
  * @returns {Promise<string>} Unique 5-character Base52 code (4 chars + type suffix)
@@ -75,51 +77,49 @@ export function decodeBase52(core: string): number {
  * console.log(code); // "ABCdS" (S for questions table)
  * ```
  */
-export async function generateQuestionCode(questionId: string, table: 'questions' | 'idEvents' = 'questions'): Promise<string> {
-  const baseTable = table === 'idEvents' ? idEvents : questions;
+export async function generateQuestionCode(
+  questionId: string,
+  table: "questions" | "idEvents" = "questions"
+): Promise<string> {
+  const baseTable = table === "idEvents" ? idEvents : questions;
 
   const result = await db
     .select({ id: baseTable.id })
     .from(baseTable)
     .where(eq(baseTable.id, questionId))
     .limit(1);
-  
+
   if (result.length === 0) {
     throw new Error(`Question not found: ${questionId}`);
   }
-  
 
   const existingCode = await db
     .select({ code: base52Codes.code })
     .from(base52Codes)
     .where(and(eq(base52Codes.questionId, questionId), eq(base52Codes.tableName, table)))
     .limit(1);
-  
-  if (existingCode.length > 0) {
+
+  if (existingCode.length > 0 && existingCode[0]) {
     return existingCode[0].code;
   }
-  
 
   let attempts = 0;
   const maxAttempts = 100;
-  
-  while (attempts < maxAttempts) {
 
+  while (attempts < maxAttempts) {
     const questionHash = calculateQuestionHash(questionId);
     const hashWithAttempt = (questionHash + attempts) % 1000000000;
     const base52Core = encodeBase52(hashWithAttempt);
-    const typeSuffix = table === 'idEvents' ? 'P' : 'S';
+    const typeSuffix = table === "idEvents" ? "P" : "S";
     const code = base52Core + typeSuffix;
-    
 
     const existingCodeCheck = await db
       .select({ id: base52Codes.id })
       .from(base52Codes)
       .where(eq(base52Codes.code, code))
       .limit(1);
-    
-    if (existingCodeCheck.length === 0) {
 
+    if (existingCodeCheck.length === 0) {
       try {
         await db.insert(base52Codes).values({
           code,
@@ -128,34 +128,33 @@ export async function generateQuestionCode(questionId: string, table: 'questions
         });
         return code;
       } catch {
-
         attempts++;
         continue;
       }
     }
-    
+
     attempts++;
   }
-  
-  throw new Error(`Failed to generate unique code for question ${questionId} after ${maxAttempts} attempts`);
-}
 
+  throw new Error(
+    `Failed to generate unique code for question ${questionId} after ${maxAttempts} attempts`
+  );
+}
 
 function calculateQuestionHash(questionId: string): number {
   let hash = 0;
   for (let i = 0; i < questionId.length; i++) {
     const char = questionId.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
+    hash = (hash << 5) - hash + char;
+    hash &= hash;
   }
   return Math.abs(hash) % 1000000000;
 }
 
-
 /**
  * Retrieves a question by its Base52 code
  * Looks up question from database using the code mapping
- * 
+ *
  * @param {string} code - 5-character Base52 code
  * @returns {Promise<{ question: any; table: 'questions' | 'idEvents' }>} Question data and table name
  * @throws {Error} When code is invalid or question not found
@@ -166,17 +165,19 @@ function calculateQuestionHash(questionId: string): number {
  * console.log(result.table); // 'questions' or 'idEvents'
  * ```
  */
-export async function getQuestionByCode(code: string): Promise<{ question: any; table: 'questions' | 'idEvents' }> {
+export async function getQuestionByCode(
+  code: string
+): Promise<{ question: any; table: "questions" | "idEvents" }> {
   if (code.length !== 5) {
-    throw new Error('Invalid code length. Expected 5 characters.');
+    throw new Error("Invalid code length. Expected 5 characters.");
   }
-  
+
   const typeSuffix = code.slice(4, 5);
-  
-  if (typeSuffix !== 'S' && typeSuffix !== 'P') {
-    throw new Error('Invalid type suffix. Expected S or P.');
+
+  if (typeSuffix !== "S" && typeSuffix !== "P") {
+    throw new Error("Invalid type suffix. Expected S or P.");
   }
-  
+
   // Step 1: Look up mapping to get question id and table name
   const mapping = await db
     .select({ questionId: base52Codes.questionId, tableName: base52Codes.tableName })
@@ -184,42 +185,34 @@ export async function getQuestionByCode(code: string): Promise<{ question: any; 
     .where(eq(base52Codes.code, code))
     .limit(1);
 
-  if (mapping.length === 0) {
+  if (mapping.length === 0 || !mapping[0]) {
     throw new Error(`Question not found for code: ${code}`);
   }
 
   const { questionId, tableName } = mapping[0];
 
   // Step 2: Fetch the row from the appropriate table by primary key
-  if (tableName === 'questions') {
-    const row = await db
-      .select()
-      .from(questions)
-      .where(eq(questions.id, questionId))
-      .limit(1);
+  if (tableName === "questions") {
+    const row = await db.select().from(questions).where(eq(questions.id, questionId)).limit(1);
 
     if (row.length === 0) {
       throw new Error(`Question not found for code: ${code}`);
     }
-    return { question: row[0], table: 'questions' };
+    return { question: row[0], table: "questions" };
   }
 
-  if (tableName === 'idEvents') {
-    const row = await db
-      .select()
-      .from(idEvents)
-      .where(eq(idEvents.id, questionId))
-      .limit(1);
+  if (tableName === "idEvents") {
+    const row = await db.select().from(idEvents).where(eq(idEvents.id, questionId)).limit(1);
 
     if (row.length === 0) {
       throw new Error(`Question not found for code: ${code}`);
     }
-    return { question: row[0], table: 'idEvents' };
+    return { question: row[0], table: "idEvents" };
   }
 
   // Fallback on suffix if an unexpected table name is stored
-  const fallbackTable: 'questions' | 'idEvents' = typeSuffix === 'P' ? 'idEvents' : 'questions';
-  const table = fallbackTable === 'questions' ? questions : idEvents;
+  const fallbackTable: "questions" | "idEvents" = typeSuffix === "P" ? "idEvents" : "questions";
+  const table = fallbackTable === "questions" ? questions : idEvents;
   const row = await db.select().from(table).where(eq(table.id, questionId)).limit(1);
   if (row.length === 0) {
     throw new Error(`Question not found for code: ${code}`);
@@ -227,32 +220,38 @@ export async function getQuestionByCode(code: string): Promise<{ question: any; 
   return { question: row[0], table: fallbackTable };
 }
 
+export async function generateQuestionCodes(
+  questionIds: string[],
+  table: "questions" | "idEvents" = "questions"
+): Promise<Map<string, string>> {
+  const baseTable = table === "idEvents" ? idEvents : questions;
 
-export async function generateQuestionCodes(questionIds: string[], table: 'questions' | 'idEvents' = 'questions'): Promise<Map<string, string>> {
-  const baseTable = table === 'idEvents' ? idEvents : questions;
-  
   const results = await db
     .select({ id: baseTable.id })
     .from(baseTable)
     .where(inArray(baseTable.id, questionIds));
-  
+
   const codeMap = new Map<string, string>();
-  
+
   for (const result of results) {
     const code = await generateQuestionCode(result.id, table);
     codeMap.set(result.id, code);
   }
-  
+
   return codeMap;
 }
 
-
-export async function computeQuestionRank(questionId: string, _createdAt: Date | null, _table: 'questions' | 'idEvents' = 'questions'): Promise<number> {
-
+export async function computeQuestionRank(
+  questionId: string,
+  _createdAt: Date | null,
+  _table: "questions" | "idEvents" = "questions"
+): Promise<number> {
   return calculateQuestionHash(questionId);
 }
 
-export async function getQuestionByRank(_targetRank: number, _table: 'questions' | 'idEvents' = 'questions') {
-
-  throw new Error('getQuestionByRank is deprecated. Use getQuestionByCode instead.');
+export async function getQuestionByRank(
+  _targetRank: number,
+  _table: "questions" | "idEvents" = "questions"
+) {
+  throw new Error("getQuestionByRank is deprecated. Use getQuestionByCode instead.");
 }

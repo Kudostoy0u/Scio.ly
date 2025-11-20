@@ -1,6 +1,6 @@
 /**
  * Unified Team Data Store
- * 
+ *
  * This is a centralized store that manages all team-related data with:
  * - Request deduplication at the network level
  * - Intelligent caching with background refresh
@@ -9,25 +9,25 @@
  * - Production-ready performance
  */
 
-import { create } from 'zustand';
-import { subscribeWithSelector } from 'zustand/middleware';
-import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
-import type { AppRouter } from '@/lib/trpc/routers/_app';
-import superjson from 'superjson';
+import type { AppRouter } from "@/lib/trpc/routers/_app";
+import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
+import superjson from "superjson";
+import { create } from "zustand";
+import { subscribeWithSelector } from "zustand/middleware";
 
 // Create a vanilla tRPC client for use in Zustand store
 const trpcClient = createTRPCProxyClient<AppRouter>({
   links: [
     httpBatchLink({
-      url: '/api/trpc',
+      url: "/api/trpc",
       transformer: superjson,
       headers: () => ({
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       }),
       fetch: (url, options) => {
         return fetch(url, {
           ...options,
-          credentials: 'include',
+          credentials: "include",
         });
       },
     }),
@@ -39,7 +39,7 @@ export interface UserTeam {
   id: string;
   slug: string;
   school: string;
-  division: 'B' | 'C';
+  division: "B" | "C";
   user_role: string;
   name: string;
 }
@@ -143,7 +143,7 @@ interface TeamStoreState {
   assignments: Record<string, Assignment[]>; // keyed by teamSlug
   tournaments: Record<string, Tournament[]>; // keyed by teamSlug-subteamId
   timers: Record<string, Timer[]>; // keyed by teamSlug-subteamId
-  
+
   // Loading states
   loading: {
     userTeams: boolean;
@@ -155,7 +155,7 @@ interface TeamStoreState {
     tournaments: Record<string, boolean>;
     timers: Record<string, boolean>;
   };
-  
+
   // Error states
   errors: {
     userTeams: string | null;
@@ -167,10 +167,10 @@ interface TeamStoreState {
     tournaments: Record<string, string | null>;
     timers: Record<string, string | null>;
   };
-  
+
   // Request tracking for deduplication
   inflightRequests: Set<string>;
-  
+
   // Cache timestamps
   cacheTimestamps: Record<string, number>;
 }
@@ -186,24 +186,27 @@ interface TeamStoreActions {
   fetchAssignments: (teamSlug: string) => Promise<Assignment[]>;
   fetchTournaments: (teamSlug: string, subteamId: string) => Promise<Tournament[]>;
   fetchTimers: (teamSlug: string, subteamId: string) => Promise<Timer[]>;
-  
+
   // Combined stream data fetching
-  fetchStreamData: (teamSlug: string, subteamId: string) => Promise<{
+  fetchStreamData: (
+    teamSlug: string,
+    subteamId: string
+  ) => Promise<{
     stream: StreamPost[];
     tournaments: Tournament[];
     timers: Timer[];
   }>;
-  
+
   // Data updates
   updateRoster: (teamSlug: string, subteamId: string, roster: RosterData) => void;
   updateMembers: (teamSlug: string, subteamId: string, members: TeamMember[]) => void;
   updateSubteams: (teamSlug: string, subteams: Subteam[]) => void;
   updateAssignments: (teamSlug: string, assignments: Assignment[]) => void;
-  
+
   // Cache management
   clearCache: (type: string, ...params: string[]) => void;
   clearAllCache: () => void;
-  
+
   // Data mutations
   addStreamPost: (teamSlug: string, subteamId: string, post: StreamPost) => void;
   addAssignment: (teamSlug: string, assignment: Assignment) => void;
@@ -213,18 +216,41 @@ interface TeamStoreActions {
   deleteSubteam: (teamSlug: string, subteamId: string) => void;
   invalidateCache: (key?: string) => void;
   preloadData: (userId: string, teamSlug?: string) => Promise<void>;
-  
+
   // Utility
   getCacheKey: (type: string, ...params: string[]) => string;
   isDataFresh: (key: string, maxAge?: number) => boolean;
-  
+
   // Optimistic roster updates
-  addRosterEntry: (teamSlug: string, subteamId: string, eventName: string, slotIndex: number, studentName: string) => void;
-  removeRosterEntry: (teamSlug: string, subteamId: string, eventName: string, slotIndex: number) => void;
-  
+  addRosterEntry: (
+    teamSlug: string,
+    subteamId: string,
+    eventName: string,
+    slotIndex: number,
+    studentName: string
+  ) => void;
+  removeRosterEntry: (
+    teamSlug: string,
+    subteamId: string,
+    eventName: string,
+    slotIndex: number
+  ) => void;
+
   // Optimistic member updates
-  addMemberEvent: (teamSlug: string, subteamId: string, memberId: string | null, memberName: string, eventName: string) => void;
-  removeMemberEvent: (teamSlug: string, subteamId: string, memberId: string | null, memberName: string, eventName: string) => void;
+  addMemberEvent: (
+    teamSlug: string,
+    subteamId: string,
+    memberId: string | null,
+    memberName: string,
+    eventName: string
+  ) => void;
+  removeMemberEvent: (
+    teamSlug: string,
+    subteamId: string,
+    memberId: string | null,
+    memberName: string,
+    eventName: string
+  ) => void;
 }
 
 // Cache configuration
@@ -243,37 +269,33 @@ const CACHE_DURATIONS = {
 const inflightRequests = new Map<string, Promise<any>>();
 
 // Helper function to make deduplicated requests
-async function fetchWithDeduplication<T>(
-  key: string,
-  fetcher: () => Promise<T>
-): Promise<T> {
+async function fetchWithDeduplication<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
   // If request is already in flight, return the existing promise
   if (inflightRequests.has(key)) {
     return inflightRequests.get(key)!;
   }
-  
+
   // Create new request
   const promise = fetcher().finally(() => {
     inflightRequests.delete(key);
   });
-  
+
   inflightRequests.set(key, promise);
   return promise;
 }
 
 // Helper function to handle API errors
-function handleApiError(error: any, context: string): string {
-  console.error(`API Error in ${context}:`, error);
+function handleApiError(error: any, _context: string): string {
   if (error.status === 403) {
-    return 'You are not authorized to access this resource';
+    return "You are not authorized to access this resource";
   }
   if (error.status === 404) {
-    return 'Resource not found';
+    return "Resource not found";
   }
   if (error.status >= 500) {
-    return 'Server error. Please try again later.';
+    return "Server error. Please try again later.";
   }
-  return error.message || 'An unexpected error occurred';
+  return error.message || "An unexpected error occurred";
 }
 
 // Create the store
@@ -288,7 +310,7 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
     assignments: {},
     tournaments: {},
     timers: {},
-    
+
     loading: {
       userTeams: false,
       subteams: {},
@@ -299,7 +321,7 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
       tournaments: {},
       timers: {},
     },
-    
+
     errors: {
       userTeams: null,
       subteams: {},
@@ -310,719 +332,714 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
       tournaments: {},
       timers: {},
     },
-    
+
     inflightRequests: new Set(),
     cacheTimestamps: {},
-    
+
     // Utility functions
     getCacheKey: (type: string, ...params: string[]) => {
-      return `${type}-${params.join('-')}`;
+      return `${type}-${params.join("-")}`;
     },
-    
+
     isDataFresh: (key: string, maxAge: number = 5 * 60 * 1000) => {
       const timestamp = get().cacheTimestamps[key];
-      if (!timestamp) return false;
+      if (!timestamp) {
+        return false;
+      }
       return Date.now() - timestamp < maxAge;
     },
-    
+
     // Data fetching functions
     fetchUserTeams: async (userId: string) => {
-      const key = get().getCacheKey('userTeams', userId);
-      
+      const key = get().getCacheKey("userTeams", userId);
+
       // Check if data is fresh
       if (get().isDataFresh(key, CACHE_DURATIONS.userTeams) && get().userTeams.length > 0) {
         return get().userTeams;
       }
-      
+
       // Set loading state
-      set(state => ({
+      set((state) => ({
         loading: { ...state.loading, userTeams: true },
-        errors: { ...state.errors, userTeams: null }
+        errors: { ...state.errors, userTeams: null },
       }));
-      
+
       try {
         const teams = await fetchWithDeduplication(key, async () => {
-          const result = await (trpcClient.teams as any).getUserTeams.query();
+          const result = await trpcClient.teams.getUserTeams.query();
           // Map the result to match the expected UserTeam interface
-          return (result.teams || []).map((team: any) => ({
+          return (result.teams || []).map((team) => ({
             id: team.id,
             slug: team.slug,
             school: team.school,
-            division: team.division as 'B' | 'C',
-            user_role: team.user_role || team.role || 'member',
-            name: team.name
+            division: team.division as "B" | "C",
+            user_role: team.user_role || team.role || "member",
+            name: team.name,
           }));
         });
-        
-        set(state => ({
+
+        set((state) => ({
           userTeams: teams,
           loading: { ...state.loading, userTeams: false },
-          cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() }
+          cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() },
         }));
-        
+
         return teams;
       } catch (error) {
-        const errorMessage = handleApiError(error, 'fetchUserTeams');
-        set(state => ({
+        const errorMessage = handleApiError(error, "fetchUserTeams");
+        set((state) => ({
           loading: { ...state.loading, userTeams: false },
-          errors: { ...state.errors, userTeams: errorMessage }
+          errors: { ...state.errors, userTeams: errorMessage },
         }));
         throw error;
       }
     },
-    
+
     fetchSubteams: async (teamSlug: string) => {
-      const key = get().getCacheKey('subteams', teamSlug);
-      
+      const key = get().getCacheKey("subteams", teamSlug);
+
       // Check if data is fresh
       if (get().isDataFresh(key, CACHE_DURATIONS.subteams) && get().subteams[teamSlug]) {
         return get().subteams[teamSlug];
       }
-      
+
       // Set loading state
-      set(state => ({
-        loading: { 
-          ...state.loading, 
-          subteams: { ...state.loading.subteams, [teamSlug]: true }
+      set((state) => ({
+        loading: {
+          ...state.loading,
+          subteams: { ...state.loading.subteams, [teamSlug]: true },
         },
-        errors: { 
-          ...state.errors, 
-          subteams: { ...state.errors.subteams, [teamSlug]: null }
-        }
+        errors: {
+          ...state.errors,
+          subteams: { ...state.errors.subteams, [teamSlug]: null },
+        },
       }));
-      
+
       try {
         const subteams = await fetchWithDeduplication(key, async () => {
-          const result = await (trpcClient.teams as any).getSubteams.query({ teamSlug });
+          const result = await trpcClient.teams.getSubteams.query({ teamSlug });
           // Map the result to match the expected Subteam interface
-          return (result.subteams || []).map((subteam: any) => ({
+          return (result.subteams || []).map((subteam) => ({
             id: subteam.id,
             name: subteam.name,
             team_id: subteam.team_id,
-            description: subteam.description || '',
-            created_at: subteam.created_at
+            description: subteam.description || "",
+            created_at: subteam.created_at,
           }));
         });
-        
-        set(state => ({
+
+        set((state) => ({
           subteams: { ...state.subteams, [teamSlug]: subteams },
-          loading: { 
-            ...state.loading, 
-            subteams: { ...state.loading.subteams, [teamSlug]: false }
+          loading: {
+            ...state.loading,
+            subteams: { ...state.loading.subteams, [teamSlug]: false },
           },
-          cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() }
+          cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() },
         }));
-        
+
         return subteams;
       } catch (error) {
-        const errorMessage = handleApiError(error, 'fetchSubteams');
-        set(state => ({
-          loading: { 
-            ...state.loading, 
-            subteams: { ...state.loading.subteams, [teamSlug]: false }
+        const errorMessage = handleApiError(error, "fetchSubteams");
+        set((state) => ({
+          loading: {
+            ...state.loading,
+            subteams: { ...state.loading.subteams, [teamSlug]: false },
           },
-          errors: { 
-            ...state.errors, 
-            subteams: { ...state.errors.subteams, [teamSlug]: errorMessage }
-          }
+          errors: {
+            ...state.errors,
+            subteams: { ...state.errors.subteams, [teamSlug]: errorMessage },
+          },
         }));
         throw error;
       }
     },
-    
+
     fetchRoster: async (teamSlug: string, subteamId: string) => {
-      const key = get().getCacheKey('roster', teamSlug, subteamId);
-      
+      const key = get().getCacheKey("roster", teamSlug, subteamId);
+
       // Check if data is fresh and not empty
       const cachedRoster = get().roster[key];
       const isFresh = get().isDataFresh(key, CACHE_DURATIONS.roster);
       const hasData = cachedRoster && Object.keys(cachedRoster.roster || {}).length > 0;
-      
+
       // Debug logging
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 [STORE FETCH ROSTER] Cache check:', {
-          key,
-          isFresh,
-          hasCachedData: !!cachedRoster,
-          hasRosterData: hasData,
-          cachedRoster: cachedRoster?.roster,
-          rosterKeys: Object.keys(cachedRoster?.roster || {})
-        });
+      if (process.env.NODE_ENV === "development") {
       }
-      
+
       if (isFresh && hasData) {
         return cachedRoster;
       }
-      
+
       // Set loading state
-      set(state => ({
-        loading: { 
-          ...state.loading, 
-          roster: { ...state.loading.roster, [key]: true }
+      set((state) => ({
+        loading: {
+          ...state.loading,
+          roster: { ...state.loading.roster, [key]: true },
         },
-        errors: { 
-          ...state.errors, 
-          roster: { ...state.errors.roster, [key]: null }
-        }
+        errors: {
+          ...state.errors,
+          roster: { ...state.errors.roster, [key]: null },
+        },
       }));
-      
+
       try {
         // Debug logging
-        if (process.env.NODE_ENV === 'development') {
-          console.log('🔍 [STORE FETCH ROSTER] Making tRPC call:', { teamSlug, subteamId, key });
+        if (process.env.NODE_ENV === "development") {
         }
 
         const rosterData = await fetchWithDeduplication(key, async () => {
-          const result = await (trpcClient.teams as any).getRoster.query({ teamSlug, subteamId });
+          const result = await trpcClient.teams.getRoster.query({ teamSlug, subteamId });
 
           // Debug logging
-          if (process.env.NODE_ENV === 'development') {
-            console.log('🔍 [STORE FETCH ROSTER] tRPC result:', {
-              teamSlug,
-              subteamId,
-              result,
-              rosterKeys: Object.keys(result.roster || {}),
-              hasRosterData: Object.keys(result.roster || {}).length > 0
-            });
+          if (process.env.NODE_ENV === "development") {
           }
-          
+
           return {
             roster: result.roster || {},
-            removed_events: result.removedEvents || []
+            removed_events: result.removedEvents || [],
           };
         });
-        
-        set(state => ({
+
+        set((state) => ({
           roster: { ...state.roster, [key]: rosterData },
-          loading: { 
-            ...state.loading, 
-            roster: { ...state.loading.roster, [key]: false }
+          loading: {
+            ...state.loading,
+            roster: { ...state.loading.roster, [key]: false },
           },
-          cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() }
+          cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() },
         }));
-        
+
         return rosterData;
       } catch (error) {
-        const errorMessage = handleApiError(error, 'fetchRoster');
-        set(state => ({
-          loading: { 
-            ...state.loading, 
-            roster: { ...state.loading.roster, [key]: false }
+        const errorMessage = handleApiError(error, "fetchRoster");
+        set((state) => ({
+          loading: {
+            ...state.loading,
+            roster: { ...state.loading.roster, [key]: false },
           },
-          errors: { 
-            ...state.errors, 
-            roster: { ...state.errors.roster, [key]: errorMessage }
-          }
+          errors: {
+            ...state.errors,
+            roster: { ...state.errors.roster, [key]: errorMessage },
+          },
         }));
         throw error;
       }
     },
-    
-    fetchMembers: async (teamSlug: string, subteamId: string = 'all') => {
-      const key = get().getCacheKey('members', teamSlug, subteamId);
-      
+
+    fetchMembers: async (teamSlug: string, subteamId = "all") => {
+      const key = get().getCacheKey("members", teamSlug, subteamId);
+
       // Check if data is fresh
       if (get().isDataFresh(key, CACHE_DURATIONS.members) && get().members[key]) {
         return get().members[key];
       }
-      
+
       // Set loading state
-      set(state => ({
-        loading: { 
-          ...state.loading, 
-          members: { ...state.loading.members, [key]: true }
+      set((state) => ({
+        loading: {
+          ...state.loading,
+          members: { ...state.loading.members, [key]: true },
         },
-        errors: { 
-          ...state.errors, 
-          members: { ...state.errors.members, [key]: null }
-        }
+        errors: {
+          ...state.errors,
+          members: { ...state.errors.members, [key]: null },
+        },
       }));
-      
+
       try {
         const members = await fetchWithDeduplication(key, async () => {
-          const result = await (trpcClient.teams as any).getMembers.query({
+          const result = await trpcClient.teams.getMembers.query({
             teamSlug,
-            subteamId: subteamId && subteamId !== 'all' ? subteamId : undefined
+            subteamId: subteamId && subteamId !== "all" ? subteamId : undefined,
           });
           return result.members || [];
         });
-        
-        set(state => ({
+
+        set((state) => ({
           members: { ...state.members, [key]: members },
-          loading: { 
-            ...state.loading, 
-            members: { ...state.loading.members, [key]: false }
+          loading: {
+            ...state.loading,
+            members: { ...state.loading.members, [key]: false },
           },
-          cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() }
+          cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() },
         }));
-        
+
         return members;
       } catch (error) {
-        const errorMessage = handleApiError(error, 'fetchMembers');
-        set(state => ({
-          loading: { 
-            ...state.loading, 
-            members: { ...state.loading.members, [key]: false }
+        const errorMessage = handleApiError(error, "fetchMembers");
+        set((state) => ({
+          loading: {
+            ...state.loading,
+            members: { ...state.loading.members, [key]: false },
           },
-          errors: { 
-            ...state.errors, 
-            members: { ...state.errors.members, [key]: errorMessage }
-          }
+          errors: {
+            ...state.errors,
+            members: { ...state.errors.members, [key]: errorMessage },
+          },
         }));
         throw error;
       }
     },
-    
+
     fetchStream: async (teamSlug: string, subteamId: string) => {
-      const key = get().getCacheKey('stream', teamSlug, subteamId);
-      
+      const key = get().getCacheKey("stream", teamSlug, subteamId);
+
       // Check if data is fresh
       if (get().isDataFresh(key, CACHE_DURATIONS.stream) && get().stream[key]) {
         return get().stream[key];
       }
-      
+
       // Set loading state
-      set(state => ({
-        loading: { 
-          ...state.loading, 
-          stream: { ...state.loading.stream, [key]: true }
+      set((state) => ({
+        loading: {
+          ...state.loading,
+          stream: { ...state.loading.stream, [key]: true },
         },
-        errors: { 
-          ...state.errors, 
-          stream: { ...state.errors.stream, [key]: null }
-        }
+        errors: {
+          ...state.errors,
+          stream: { ...state.errors.stream, [key]: null },
+        },
       }));
-      
+
       try {
         const stream = await fetchWithDeduplication(key, async () => {
           const response = await fetch(`/api/teams/${teamSlug}/stream?subteamId=${subteamId}`);
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
           const result = await response.json();
           return result.posts || [];
         });
-        
-        set(state => ({
+
+        set((state) => ({
           stream: { ...state.stream, [key]: stream },
-          loading: { 
-            ...state.loading, 
-            stream: { ...state.loading.stream, [key]: false }
+          loading: {
+            ...state.loading,
+            stream: { ...state.loading.stream, [key]: false },
           },
-          cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() }
+          cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() },
         }));
-        
+
         return stream;
       } catch (error) {
-        const errorMessage = handleApiError(error, 'fetchStream');
-        set(state => ({
-          loading: { 
-            ...state.loading, 
-            stream: { ...state.loading.stream, [key]: false }
+        const errorMessage = handleApiError(error, "fetchStream");
+        set((state) => ({
+          loading: {
+            ...state.loading,
+            stream: { ...state.loading.stream, [key]: false },
           },
-          errors: { 
-            ...state.errors, 
-            stream: { ...state.errors.stream, [key]: errorMessage }
-          }
+          errors: {
+            ...state.errors,
+            stream: { ...state.errors.stream, [key]: errorMessage },
+          },
         }));
         throw error;
       }
     },
-    
+
     fetchAssignments: async (teamSlug: string) => {
-      const key = get().getCacheKey('assignments', teamSlug);
-      
+      const key = get().getCacheKey("assignments", teamSlug);
+
       // Check if data is fresh
       if (get().isDataFresh(key, CACHE_DURATIONS.assignments) && get().assignments[key]) {
         return get().assignments[key];
       }
-      
+
       // Set loading state
-      set(state => ({
-        loading: { 
-          ...state.loading, 
-          assignments: { ...state.loading.assignments, [key]: true }
+      set((state) => ({
+        loading: {
+          ...state.loading,
+          assignments: { ...state.loading.assignments, [key]: true },
         },
-        errors: { 
-          ...state.errors, 
-          assignments: { ...state.errors.assignments, [key]: null }
-        }
+        errors: {
+          ...state.errors,
+          assignments: { ...state.errors.assignments, [key]: null },
+        },
       }));
-      
+
       try {
         const assignments = await fetchWithDeduplication(key, async () => {
           // Use tRPC instead of REST API
-          const response = await fetch('/api/trpc/teams.getAssignments', {
-            method: 'POST',
+          const response = await fetch("/api/trpc/teams.getAssignments", {
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
             },
             body: JSON.stringify({
               json: { teamSlug },
-              meta: { values: { teamSlug: [undefined] } }
-            })
+              meta: { values: { teamSlug: [undefined] } },
+            }),
           });
-          
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
           const result = await response.json();
           return result.result?.data?.assignments || [];
         });
-        
-        set(state => ({
+
+        set((state) => ({
           assignments: { ...state.assignments, [key]: assignments },
-          loading: { 
-            ...state.loading, 
-            assignments: { ...state.loading.assignments, [key]: false }
+          loading: {
+            ...state.loading,
+            assignments: { ...state.loading.assignments, [key]: false },
           },
-          cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() }
+          cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() },
         }));
-        
+
         return assignments;
       } catch (error) {
-        const errorMessage = handleApiError(error, 'fetchAssignments');
-        set(state => ({
-          loading: { 
-            ...state.loading, 
-            assignments: { ...state.loading.assignments, [key]: false }
+        const errorMessage = handleApiError(error, "fetchAssignments");
+        set((state) => ({
+          loading: {
+            ...state.loading,
+            assignments: { ...state.loading.assignments, [key]: false },
           },
-          errors: { 
-            ...state.errors, 
-            assignments: { ...state.errors.assignments, [key]: errorMessage }
-          }
+          errors: {
+            ...state.errors,
+            assignments: { ...state.errors.assignments, [key]: errorMessage },
+          },
         }));
         throw error;
       }
     },
-    
+
     fetchTournaments: async (teamSlug: string, subteamId: string) => {
-      const key = get().getCacheKey('tournaments', teamSlug, subteamId);
-      
+      const key = get().getCacheKey("tournaments", teamSlug, subteamId);
+
       // Check if data is fresh
       if (get().isDataFresh(key, CACHE_DURATIONS.tournaments) && get().tournaments[key]) {
         return get().tournaments[key];
       }
-      
+
       // Set loading state
-      set(state => ({
-        loading: { 
-          ...state.loading, 
-          tournaments: { ...state.loading.tournaments, [key]: true }
+      set((state) => ({
+        loading: {
+          ...state.loading,
+          tournaments: { ...state.loading.tournaments, [key]: true },
         },
-        errors: { 
-          ...state.errors, 
-          tournaments: { ...state.errors.tournaments, [key]: null }
-        }
+        errors: {
+          ...state.errors,
+          tournaments: { ...state.errors.tournaments, [key]: null },
+        },
       }));
-      
+
       try {
         const tournaments = await fetchWithDeduplication(key, async () => {
           const response = await fetch(`/api/teams/${teamSlug}/tournaments?subteamId=${subteamId}`);
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
           const result = await response.json();
           return result.events || [];
         });
-        
-        set(state => ({
+
+        set((state) => ({
           tournaments: { ...state.tournaments, [key]: tournaments },
-          loading: { 
-            ...state.loading, 
-            tournaments: { ...state.loading.tournaments, [key]: false }
+          loading: {
+            ...state.loading,
+            tournaments: { ...state.loading.tournaments, [key]: false },
           },
-          cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() }
+          cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() },
         }));
-        
+
         return tournaments;
       } catch (error) {
-        const _errorMessage = handleApiError(error, 'fetchTournaments');
-        set(state => ({
-          loading: { 
-            ...state.loading, 
-            tournaments: { ...state.loading.tournaments, [key]: false }
+        const _errorMessage = handleApiError(error, "fetchTournaments");
+        set((state) => ({
+          loading: {
+            ...state.loading,
+            tournaments: { ...state.loading.tournaments, [key]: false },
           },
-          errors: { 
-            ...state.errors, 
-            tournaments: { ...state.errors.tournaments, [key]: _errorMessage }
-          }
+          errors: {
+            ...state.errors,
+            tournaments: { ...state.errors.tournaments, [key]: _errorMessage },
+          },
         }));
         throw error;
       }
     },
-    
+
     fetchTimers: async (teamSlug: string, subteamId: string) => {
-      const key = get().getCacheKey('timers', teamSlug, subteamId);
-      
+      const key = get().getCacheKey("timers", teamSlug, subteamId);
+
       // Check if data is fresh
       if (get().isDataFresh(key, CACHE_DURATIONS.timers) && get().timers[key]) {
         return get().timers[key];
       }
-      
+
       // Set loading state
-      set(state => ({
-        loading: { 
-          ...state.loading, 
-          timers: { ...state.loading.timers, [key]: true }
+      set((state) => ({
+        loading: {
+          ...state.loading,
+          timers: { ...state.loading.timers, [key]: true },
         },
-        errors: { 
-          ...state.errors, 
-          timers: { ...state.errors.timers, [key]: null }
-        }
+        errors: {
+          ...state.errors,
+          timers: { ...state.errors.timers, [key]: null },
+        },
       }));
-      
+
       try {
         const timers = await fetchWithDeduplication(key, async () => {
           const response = await fetch(`/api/teams/${teamSlug}/timers?subteamId=${subteamId}`);
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
           const result = await response.json();
           return result.timers || [];
         });
-        
-        set(state => ({
+
+        set((state) => ({
           timers: { ...state.timers, [key]: timers },
-          loading: { 
-            ...state.loading, 
-            timers: { ...state.loading.timers, [key]: false }
+          loading: {
+            ...state.loading,
+            timers: { ...state.loading.timers, [key]: false },
           },
-          cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() }
+          cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() },
         }));
-        
+
         return timers;
       } catch (error) {
-        const errorMessage = handleApiError(error, 'fetchTimers');
-        set(state => ({
-          loading: { 
-            ...state.loading, 
-            timers: { ...state.loading.timers, [key]: false }
+        const errorMessage = handleApiError(error, "fetchTimers");
+        set((state) => ({
+          loading: {
+            ...state.loading,
+            timers: { ...state.loading.timers, [key]: false },
           },
-          errors: { 
-            ...state.errors, 
-            timers: { ...state.errors.timers, [key]: errorMessage }
-          }
+          errors: {
+            ...state.errors,
+            timers: { ...state.errors.timers, [key]: errorMessage },
+          },
         }));
         throw error;
       }
     },
-    
+
     // Combined stream data fetching
     fetchStreamData: async (teamSlug: string, subteamId: string) => {
-      const key = get().getCacheKey('stream-data', teamSlug, subteamId);
-      
+      const key = get().getCacheKey("stream-data", teamSlug, subteamId);
+
       // Check if data is fresh
       if (get().isDataFresh(key, CACHE_DURATIONS.stream) && get().stream[key]) {
-        const streamKey = get().getCacheKey('stream', teamSlug, subteamId);
-        const tournamentsKey = get().getCacheKey('tournaments', teamSlug, subteamId);
-        const timersKey = get().getCacheKey('timers', teamSlug, subteamId);
-        
+        const streamKey = get().getCacheKey("stream", teamSlug, subteamId);
+        const tournamentsKey = get().getCacheKey("tournaments", teamSlug, subteamId);
+        const timersKey = get().getCacheKey("timers", teamSlug, subteamId);
+
         return {
           stream: get().stream[streamKey] || [],
           tournaments: get().tournaments[tournamentsKey] || [],
-          timers: get().timers[timersKey] || []
+          timers: get().timers[timersKey] || [],
         };
       }
-      
+
       // Set loading states for all related data
-      const streamKey = get().getCacheKey('stream', teamSlug, subteamId);
-      const tournamentsKey = get().getCacheKey('tournaments', teamSlug, subteamId);
-      const timersKey = get().getCacheKey('timers', teamSlug, subteamId);
-      
-      set(state => ({
-        loading: { 
-          ...state.loading, 
+      const streamKey = get().getCacheKey("stream", teamSlug, subteamId);
+      const tournamentsKey = get().getCacheKey("tournaments", teamSlug, subteamId);
+      const timersKey = get().getCacheKey("timers", teamSlug, subteamId);
+
+      set((state) => ({
+        loading: {
+          ...state.loading,
           stream: { ...state.loading.stream, [streamKey]: true },
           tournaments: { ...state.loading.tournaments, [tournamentsKey]: true },
-          timers: { ...state.loading.timers, [timersKey]: true }
+          timers: { ...state.loading.timers, [timersKey]: true },
         },
-        errors: { 
-          ...state.errors, 
+        errors: {
+          ...state.errors,
           stream: { ...state.errors.stream, [streamKey]: null },
           tournaments: { ...state.errors.tournaments, [tournamentsKey]: null },
-          timers: { ...state.errors.timers, [timersKey]: null }
-        }
+          timers: { ...state.errors.timers, [timersKey]: null },
+        },
       }));
-      
+
       try {
         const { stream, tournaments, timers } = await fetchWithDeduplication(key, async () => {
           const [streamRes, tournamentsRes, timersRes] = await Promise.all([
             fetch(`/api/teams/${teamSlug}/stream?subteamId=${subteamId}`),
             fetch(`/api/teams/${teamSlug}/tournaments?subteamId=${subteamId}`),
-            fetch(`/api/teams/${teamSlug}/timers?subteamId=${subteamId}`)
+            fetch(`/api/teams/${teamSlug}/timers?subteamId=${subteamId}`),
           ]);
 
-          if (!streamRes.ok) throw new Error(`HTTP ${streamRes.status}`);
-          if (!tournamentsRes.ok) throw new Error(`HTTP ${tournamentsRes.status}`);
-          if (!timersRes.ok) throw new Error(`HTTP ${timersRes.status}`);
+          if (!streamRes.ok) {
+            throw new Error(`HTTP ${streamRes.status}`);
+          }
+          if (!tournamentsRes.ok) {
+            throw new Error(`HTTP ${tournamentsRes.status}`);
+          }
+          if (!timersRes.ok) {
+            throw new Error(`HTTP ${timersRes.status}`);
+          }
 
           const [streamJson, tournamentsJson, timersJson] = await Promise.all([
             streamRes.json(),
             tournamentsRes.json(),
-            timersRes.json()
+            timersRes.json(),
           ]);
 
           return {
             stream: streamJson.posts || [],
             tournaments: tournamentsJson.events || [],
-            timers: timersJson.timers || []
+            timers: timersJson.timers || [],
           };
         });
 
         // Update all related caches
-        set(state => ({
+        set((state) => ({
           stream: { ...state.stream, [streamKey]: stream },
           tournaments: { ...state.tournaments, [tournamentsKey]: tournaments },
           timers: { ...state.timers, [timersKey]: timers },
-          loading: { 
-            ...state.loading, 
+          loading: {
+            ...state.loading,
             stream: { ...state.loading.stream, [streamKey]: false },
             tournaments: { ...state.loading.tournaments, [tournamentsKey]: false },
-            timers: { ...state.loading.timers, [timersKey]: false }
+            timers: { ...state.loading.timers, [timersKey]: false },
           },
-          cacheTimestamps: { 
-            ...state.cacheTimestamps, 
+          cacheTimestamps: {
+            ...state.cacheTimestamps,
             [streamKey]: Date.now(),
             [tournamentsKey]: Date.now(),
-            [timersKey]: Date.now()
-          }
+            [timersKey]: Date.now(),
+          },
         }));
 
         return { stream, tournaments, timers };
       } catch (error) {
-        const errorMessage = handleApiError(error, 'fetchStreamData');
-        set(state => ({
-          loading: { 
-            ...state.loading, 
+        const errorMessage = handleApiError(error, "fetchStreamData");
+        set((state) => ({
+          loading: {
+            ...state.loading,
             stream: { ...state.loading.stream, [streamKey]: false },
             tournaments: { ...state.loading.tournaments, [tournamentsKey]: false },
-            timers: { ...state.loading.timers, [timersKey]: false }
+            timers: { ...state.loading.timers, [timersKey]: false },
           },
-          errors: { 
-            ...state.errors, 
+          errors: {
+            ...state.errors,
             stream: { ...state.errors.stream, [streamKey]: errorMessage },
             tournaments: { ...state.errors.tournaments, [tournamentsKey]: errorMessage },
-            timers: { ...state.errors.timers, [timersKey]: errorMessage }
-          }
+            timers: { ...state.errors.timers, [timersKey]: errorMessage },
+          },
         }));
         throw error;
       }
     },
-    
+
     // Data update functions
     updateRoster: (teamSlug: string, subteamId: string, roster: RosterData) => {
-      const key = get().getCacheKey('roster', teamSlug, subteamId);
-      set(state => ({
+      const key = get().getCacheKey("roster", teamSlug, subteamId);
+      set((state) => ({
         roster: { ...state.roster, [key]: roster },
-        cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() }
+        cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() },
       }));
     },
-    
+
     updateMembers: (teamSlug: string, subteamId: string, members: TeamMember[]) => {
-      const key = get().getCacheKey('members', teamSlug, subteamId);
-      set(state => ({
+      const key = get().getCacheKey("members", teamSlug, subteamId);
+      set((state) => ({
         members: { ...state.members, [key]: members },
-        cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() }
+        cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() },
       }));
     },
-    
+
     updateSubteams: (teamSlug: string, subteams: Subteam[]) => {
-      const key = get().getCacheKey('subteams', teamSlug);
-      console.log('🔍 [TeamStore] updateSubteams called:', {
-        teamSlug,
-        key,
-        subteams,
-        subteamsLength: subteams.length
-      });
-      set(state => ({
+      const key = get().getCacheKey("subteams", teamSlug);
+      set((state) => ({
         subteams: { ...state.subteams, [key]: subteams },
-        cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() }
+        cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() },
       }));
-      console.log('🔍 [TeamStore] updateSubteams completed, new state:', get().subteams[key]);
     },
-    
+
     updateAssignments: (teamSlug: string, assignments: Assignment[]) => {
-      const key = get().getCacheKey('assignments', teamSlug);
-      set(state => ({
+      const key = get().getCacheKey("assignments", teamSlug);
+      set((state) => ({
         assignments: { ...state.assignments, [key]: assignments },
-        cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() }
+        cacheTimestamps: { ...state.cacheTimestamps, [key]: Date.now() },
       }));
     },
-    
+
     addStreamPost: (teamSlug: string, subteamId: string, post: StreamPost) => {
-      const key = get().getCacheKey('stream', teamSlug, subteamId);
-      set(state => ({
-        stream: { 
-          ...state.stream, 
-          [key]: [post, ...(state.stream[key] || [])]
-        }
+      const key = get().getCacheKey("stream", teamSlug, subteamId);
+      set((state) => ({
+        stream: {
+          ...state.stream,
+          [key]: [post, ...(state.stream[key] || [])],
+        },
       }));
     },
-    
+
     addAssignment: (teamSlug: string, assignment: Assignment) => {
-      const key = get().getCacheKey('assignments', teamSlug);
-      set(state => ({
-        assignments: { 
-          ...state.assignments, 
-          [key]: [assignment, ...(state.assignments[key] || [])]
-        }
+      const key = get().getCacheKey("assignments", teamSlug);
+      set((state) => ({
+        assignments: {
+          ...state.assignments,
+          [key]: [assignment, ...(state.assignments[key] || [])],
+        },
       }));
     },
-    
+
     updateTimer: (teamSlug: string, subteamId: string, timer: Timer) => {
-      const key = get().getCacheKey('timers', teamSlug, subteamId);
-      set(state => ({
-        timers: { 
-          ...state.timers, 
-          [key]: (state.timers[key] || []).map(t => t.id === timer.id ? timer : t)
-        }
+      const key = get().getCacheKey("timers", teamSlug, subteamId);
+      set((state) => ({
+        timers: {
+          ...state.timers,
+          [key]: (state.timers[key] || []).map((t) => (t.id === timer.id ? timer : t)),
+        },
       }));
     },
-    
+
     addSubteam: (teamSlug: string, subteam: Subteam) => {
-      set(state => ({
-        subteams: { 
-          ...state.subteams, 
-          [teamSlug]: [...(state.subteams[teamSlug] || []), subteam]
+      set((state) => ({
+        subteams: {
+          ...state.subteams,
+          [teamSlug]: [...(state.subteams[teamSlug] || []), subteam],
         },
-        cacheTimestamps: { 
-          ...state.cacheTimestamps, 
-          [get().getCacheKey('subteams', teamSlug)]: Date.now()
-        }
+        cacheTimestamps: {
+          ...state.cacheTimestamps,
+          [get().getCacheKey("subteams", teamSlug)]: Date.now(),
+        },
       }));
     },
-    
+
     updateSubteam: (teamSlug: string, subteamId: string, updates: Partial<Subteam>) => {
-      set(state => ({
-        subteams: { 
-          ...state.subteams, 
-          [teamSlug]: (state.subteams[teamSlug] || []).map(subteam => 
+      set((state) => ({
+        subteams: {
+          ...state.subteams,
+          [teamSlug]: (state.subteams[teamSlug] || []).map((subteam) =>
             subteam.id === subteamId ? { ...subteam, ...updates } : subteam
-          )
+          ),
         },
-        cacheTimestamps: { 
-          ...state.cacheTimestamps, 
-          [get().getCacheKey('subteams', teamSlug)]: Date.now()
-        }
+        cacheTimestamps: {
+          ...state.cacheTimestamps,
+          [get().getCacheKey("subteams", teamSlug)]: Date.now(),
+        },
       }));
     },
-    
+
     deleteSubteam: (teamSlug: string, subteamId: string) => {
-      set(state => ({
-        subteams: { 
-          ...state.subteams, 
-          [teamSlug]: (state.subteams[teamSlug] || []).filter(subteam => subteam.id !== subteamId)
+      set((state) => ({
+        subteams: {
+          ...state.subteams,
+          [teamSlug]: (state.subteams[teamSlug] || []).filter(
+            (subteam) => subteam.id !== subteamId
+          ),
         },
-        cacheTimestamps: { 
-          ...state.cacheTimestamps, 
-          [get().getCacheKey('subteams', teamSlug)]: Date.now()
-        }
+        cacheTimestamps: {
+          ...state.cacheTimestamps,
+          [get().getCacheKey("subteams", teamSlug)]: Date.now(),
+        },
       }));
     },
-    
+
     // Cache management
     invalidateCache: (key?: string) => {
       if (key) {
-        set(_state => {
+        set((_state) => {
           const newState = { ..._state };
           delete newState.cacheTimestamps[key];
           return newState;
         });
       } else {
-        set(_state => ({
+        set((_state) => ({
           cacheTimestamps: {},
           userTeams: [],
           subteams: {},
@@ -1035,115 +1052,141 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
         }));
       }
     },
-    
+
     // Clear cache for specific data types
     clearCache: (type: string, ...params: string[]) => {
       const key = get().getCacheKey(type, ...params);
-      set(state => ({
-        cacheTimestamps: { ...state.cacheTimestamps, [key]: 0 }
+      set((state) => ({
+        cacheTimestamps: { ...state.cacheTimestamps, [key]: 0 },
       }));
     },
-    
+
     // Clear all cache
     clearAllCache: () => {
       set({ cacheTimestamps: {} });
     },
-    
+
     // Preload critical data
     preloadData: async (userId: string, teamSlug?: string) => {
       const promises: Promise<any>[] = [];
-      
+
       // Always preload user teams
       promises.push(get().fetchUserTeams(userId));
-      
+
       // If we have a team slug, preload team-specific data
       if (teamSlug) {
         promises.push(get().fetchSubteams(teamSlug));
       }
-      
+
       // Wait for all critical data to load
       await Promise.allSettled(promises);
     },
-    
+
     // Optimistic roster updates
-    addRosterEntry: (teamSlug: string, subteamId: string, eventName: string, slotIndex: number, studentName: string) => {
-      const key = get().getCacheKey('roster', teamSlug, subteamId);
+    addRosterEntry: (
+      teamSlug: string,
+      subteamId: string,
+      eventName: string,
+      slotIndex: number,
+      studentName: string
+    ) => {
+      const key = get().getCacheKey("roster", teamSlug, subteamId);
       const currentRoster = get().roster[key];
-      
+
       if (currentRoster) {
         const updatedRoster = { ...currentRoster };
-        if (!updatedRoster[eventName]) {
-          updatedRoster[eventName] = [];
+        if (!updatedRoster.roster[eventName]) {
+          updatedRoster.roster[eventName] = [];
         }
-        updatedRoster[eventName][slotIndex] = studentName;
-        
-        set(state => ({
-          roster: { ...state.roster, [key]: updatedRoster }
+        updatedRoster.roster[eventName][slotIndex] = studentName;
+
+        set((state) => ({
+          roster: { ...state.roster, [key]: updatedRoster },
         }));
       }
     },
-    
-    removeRosterEntry: (teamSlug: string, subteamId: string, eventName: string, slotIndex: number) => {
-      const key = get().getCacheKey('roster', teamSlug, subteamId);
+
+    removeRosterEntry: (
+      teamSlug: string,
+      subteamId: string,
+      eventName: string,
+      slotIndex: number
+    ) => {
+      const key = get().getCacheKey("roster", teamSlug, subteamId);
       const currentRoster = get().roster[key];
-      
-      if (currentRoster && currentRoster[eventName]) {
+
+      if (currentRoster?.roster[eventName]) {
         const updatedRoster = { ...currentRoster };
-        const updatedEvent = [...updatedRoster[eventName]];
-        updatedEvent[slotIndex] = '';
-        updatedRoster[eventName] = updatedEvent;
-        
-        set(state => ({
-          roster: { ...state.roster, [key]: updatedRoster }
+        const eventArray = updatedRoster.roster[eventName];
+        if (eventArray) {
+          const updatedEvent = [...eventArray];
+          updatedEvent[slotIndex] = "";
+          updatedRoster.roster[eventName] = updatedEvent;
+        }
+
+        set((state) => ({
+          roster: { ...state.roster, [key]: updatedRoster },
         }));
       }
     },
-    
+
     // Optimistic member updates
-    addMemberEvent: (teamSlug: string, subteamId: string, memberId: string | null, memberName: string, eventName: string) => {
-      const key = get().getCacheKey('members', teamSlug, subteamId || 'all');
+    addMemberEvent: (
+      teamSlug: string,
+      subteamId: string,
+      memberId: string | null,
+      memberName: string,
+      eventName: string
+    ) => {
+      const key = get().getCacheKey("members", teamSlug, subteamId || "all");
       const currentMembers = get().members[key];
-      
+
       if (currentMembers) {
-        const updatedMembers = currentMembers.map(member => {
+        const updatedMembers = currentMembers.map((member) => {
           // Match by ID if available, otherwise by name
           const isMatch = memberId ? member.id === memberId : member.name === memberName;
-          
+
           if (isMatch) {
             return {
               ...member,
-              events: [...(member.events || []), eventName]
+              events: [...(member.events || []), eventName],
             };
           }
           return member;
         });
-        
-        set(state => ({
-          members: { ...state.members, [key]: updatedMembers }
+
+        set((state) => ({
+          members: { ...state.members, [key]: updatedMembers },
         }));
       }
     },
-    
-    removeMemberEvent: (teamSlug: string, subteamId: string, memberId: string | null, memberName: string, eventName: string) => {
-      const key = get().getCacheKey('members', teamSlug, subteamId || 'all');
+
+    removeMemberEvent: (
+      teamSlug: string,
+      subteamId: string,
+      memberId: string | null,
+      memberName: string,
+      eventName: string
+    ) => {
+      const key = get().getCacheKey("members", teamSlug, subteamId || "all");
       const currentMembers = get().members[key];
-      
+
       if (currentMembers) {
-        const updatedMembers = currentMembers.map(member => {
+        const updatedMembers = currentMembers.map((member) => {
           // Match by ID if available, otherwise by name
           const isMatch = memberId ? member.id === memberId : member.name === memberName;
-          
+
           if (isMatch) {
             return {
               ...member,
-              events: (member.events || []).filter(event => event !== eventName)
+              events: (member.events || []).filter((event) => event !== eventName),
             };
           }
           return member;
         });
-        
-        set(state => ({
-          members: { ...state.members, [key]: updatedMembers }
+
+        set((state) => ({
+          members: { ...state.members, [key]: updatedMembers },
         }));
       }
     },
@@ -1151,14 +1194,14 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
 );
 
 // Export types for use in components
-export type { 
-  UserTeam as TeamUserTeam, 
-  Subteam as TeamSubteam, 
-  TeamMember as TeamMemberType, 
-  RosterData as TeamRosterData, 
-  StreamPost as TeamStreamPost, 
+export type {
+  UserTeam as TeamUserTeam,
+  Subteam as TeamSubteam,
+  TeamMember as TeamMemberType,
+  RosterData as TeamRosterData,
+  StreamPost as TeamStreamPost,
   StreamComment as TeamStreamComment,
-  Assignment as TeamAssignment, 
-  Tournament as TeamTournament, 
-  Timer as TeamTimer 
+  Assignment as TeamAssignment,
+  Tournament as TeamTournament,
+  Timer as TeamTimer,
 };

@@ -1,116 +1,121 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { queryCockroachDB } from '@/lib/cockroachdb';
-import { getServerUser } from '@/lib/supabaseServer';
+import { dbPg } from "@/lib/db";
+import {
+  newTeamGroups,
+  newTeamMemberships,
+  newTeamUnits,
+} from "@/lib/db/schema/teams";
+import {
+  validateRequest,
+} from "@/lib/schemas/teams-validation";
+import {
+  handleError,
+  handleForbiddenError,
+  handleNotFoundError,
+  handleUnauthorizedError,
+  validateEnvironment,
+} from "@/lib/utils/error-handler";
+import logger from "@/lib/utils/logger";
+import { getServerUser } from "@/lib/supabaseServer";
+import { and, eq, inArray } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
 
 // POST /api/teams/[teamId]/archive - Archive team
 export async function POST(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
-    }
+    const envError = validateEnvironment();
+    if (envError) return envError;
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return handleUnauthorizedError();
     }
 
     const { teamId } = await params;
 
-    // First, resolve the slug to team group and get team units
-    const groupResult = await queryCockroachDB<{ id: string }>(
-      `SELECT id FROM new_team_groups WHERE slug = $1`,
-      [teamId]
-    );
+    // Resolve the slug to team group using Drizzle ORM
+    const [groupResult] = await dbPg
+      .select({ id: newTeamGroups.id, createdBy: newTeamGroups.createdBy })
+      .from(newTeamGroups)
+      .where(eq(newTeamGroups.slug, teamId))
+      .limit(1);
 
-    if (groupResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Team group not found' }, { status: 404 });
+    if (!groupResult) {
+      return handleNotFoundError("Team group");
     }
 
-    const groupId = groupResult.rows[0].id;
+    const groupId = groupResult.id;
+    const groupCreator = groupResult.createdBy;
 
-    // Get team units for this group
-    const unitsResult = await queryCockroachDB<{ id: string }>(
-      `SELECT id FROM new_team_units WHERE group_id = $1`,
-      [groupId]
-    );
+    // Get team units for this group using Drizzle ORM
+    const unitsResult = await dbPg
+      .select({ id: newTeamUnits.id })
+      .from(newTeamUnits)
+      .where(eq(newTeamUnits.groupId, groupId));
 
-    if (unitsResult.rows.length === 0) {
-      return NextResponse.json({ error: 'No team units found for this group' }, { status: 404 });
+    if (unitsResult.length === 0) {
+      return handleNotFoundError("No team units found for this group");
     }
 
-    const teamUnitIds = unitsResult.rows.map(row => row.id);
+    const teamUnitIds = unitsResult.map((row) => row.id);
 
-    // Check if user is the creator of the team group OR a captain of any team unit
-    const groupCreatorResult = await queryCockroachDB<{ created_by: string }>(
-      `SELECT created_by FROM new_team_groups WHERE id = $1`,
-      [groupId]
-    );
-
-    if (groupCreatorResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Team group not found' }, { status: 404 });
-    }
-
-    const groupCreator = groupCreatorResult.rows[0].created_by;
-    
     // Allow team creator OR captains to archive the team
     if (groupCreator !== user.id) {
-      // Check if user is a captain of any team unit in this group
-      const captainCheckResult = await queryCockroachDB<{ role: string }>(
-        `SELECT tm.role 
-         FROM new_team_memberships tm
-         JOIN new_team_units tu ON tm.team_id = tu.id
-         WHERE tm.user_id = $1 AND tu.group_id = $2 AND tm.status = 'active'`,
-        [user.id, groupId]
-      );
+      // Check if user is a captain of any team unit in this group using Drizzle ORM
+      const captainCheckResult = await dbPg
+        .select({ role: newTeamMemberships.role })
+        .from(newTeamMemberships)
+        .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+        .where(
+          and(
+            eq(newTeamMemberships.userId, user.id),
+            eq(newTeamUnits.groupId, groupId),
+            eq(newTeamMemberships.status, "active")
+          )
+        )
+        .limit(1);
 
-      if (captainCheckResult.rows.length === 0) {
-        return NextResponse.json({ 
-          error: 'Only the team creator or captains can archive the team' 
-        }, { status: 403 });
+      if (captainCheckResult.length === 0) {
+        return handleForbiddenError("Only the team creator or captains can archive the team");
       }
 
-      const userRole = captainCheckResult.rows[0].role;
-      if (!['captain', 'co_captain'].includes(userRole)) {
-        return NextResponse.json({ 
-          error: 'Only the team creator or captains can archive the team' 
-        }, { status: 403 });
+      const userRole = captainCheckResult[0]?.role;
+      if (!userRole || !["captain", "co_captain"].includes(userRole)) {
+        return handleForbiddenError("Only the team creator or captains can archive the team");
       }
     }
 
-    // Archive the team group (set archived status)
-    await queryCockroachDB(
-      `UPDATE new_team_groups SET status = 'archived', updated_at = NOW() 
-       WHERE id = $1`,
-      [groupId]
-    );
+    // Archive the team group, team units, and memberships using Drizzle ORM
+    await dbPg.transaction(async (tx) => {
+      // Archive the team group
+      await tx
+        .update(newTeamGroups)
+        .set({
+          status: "archived",
+          updatedAt: new Date(),
+        })
+        .where(eq(newTeamGroups.id, groupId));
 
-    // Archive all team units
-    await queryCockroachDB(
-      `UPDATE new_team_units SET status = 'archived', updated_at = NOW() 
-       WHERE group_id = $1`,
-      [groupId]
-    );
+      // Archive all team units
+      await tx
+        .update(newTeamUnits)
+        .set({
+          status: "archived",
+          updatedAt: new Date(),
+        })
+        .where(eq(newTeamUnits.groupId, groupId));
 
-    // Archive all memberships
-    await queryCockroachDB(
-      `UPDATE new_team_memberships SET status = 'archived' 
-       WHERE team_id = ANY($1)`,
-      [teamUnitIds]
-    );
+      // Archive all memberships
+      await tx
+        .update(newTeamMemberships)
+        .set({ status: "archived" })
+        .where(inArray(newTeamMemberships.teamId, teamUnitIds));
+    });
 
-    return NextResponse.json({ message: 'Team successfully archived' });
-
+    return NextResponse.json({ message: "Team successfully archived" });
   } catch (error) {
-    console.error('Error archiving team:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return handleError(error, "POST /api/teams/[teamId]/archive");
   }
 }

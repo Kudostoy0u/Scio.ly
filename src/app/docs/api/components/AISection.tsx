@@ -1,37 +1,53 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Zap } from 'lucide-react';
-import { useTheme } from '@/app/contexts/ThemeContext';
-import SectionHeader from './SectionHeader';
-import Endpoint from '../components/Endpoint';
-import Param from '../components/Param';
-import Example from '../components/Example';
-// import CollapsibleExample from '../components/CollapsibleExample';
-import { WarningBox } from '../components/InfoBox';
+import { useTheme } from "@/app/contexts/ThemeContext";
+import { Zap } from "lucide-react";
+import Endpoint from "@/app/docs/api/components/Endpoint";
+import Example from "@/app/docs/api/components/Example";
+// import CollapsibleExample from '@/app/docs/api/components/CollapsibleExample';
+import { WarningBox } from "@/app/docs/api/components/InfoBox";
+import Param from "@/app/docs/api/components/Param";
+import SectionHeader from "./SectionHeader";
 
 export default function AISection() {
   const { darkMode } = useTheme();
   return (
     <div id="ai">
       <SectionHeader icon={<Zap className="w-6 h-6" />} title="AI-Powered Features" id="ai" />
-      
+
       <WarningBox>
-        <strong>Rate Limiting:</strong> AI endpoints have rate limiting applied. Please implement appropriate retry logic with exponential backoff.
+        <strong>Rate Limiting:</strong> AI endpoints have rate limiting applied. Please implement
+        appropriate retry logic with exponential backoff.
       </WarningBox>
 
       <div className="space-y-6">
-        <Endpoint method="POST" url="/api/gemini/suggest-edit" description="Get AI suggestions for improving question quality, clarity, and accuracy." features={['AI']}>
+        <Endpoint
+          method="POST"
+          url="/api/gemini/suggest-edit"
+          description="Get AI suggestions for improving question quality, clarity, and accuracy."
+          features={["AI"]}
+        >
           <div className="space-y-4">
             <div>
-              <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Request Body Schema</h4>
+              <h4 className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+                Request Body Schema
+              </h4>
               <div className="space-y-2">
-                <Param name="question" type="object" required description="Question object to analyze" />
-                <Param name="userReason" type="string" description="User's reason for requesting edit" />
+                <Param
+                  name="question"
+                  type="object"
+                  required={true}
+                  description="Question object to analyze"
+                />
+                <Param
+                  name="userReason"
+                  type="string"
+                  description="User's reason for requesting edit"
+                />
               </div>
             </div>
             <Example title="Request Example" variant="request">
-{`{
+              {`{
   "question": {
     "question": "What is the chemical formula for water?",
     "options": ["H2O", "CO2", "NaCl"],
@@ -41,7 +57,7 @@ export default function AISection() {
 }`}
             </Example>
             <Example title="Response" variant="response">
-{`{
+              {`{
   "success": true,
   "data": {
     "suggestedQuestion": "What is the molecular formula for dihydrogen monoxide?",
@@ -54,16 +70,28 @@ export default function AISection() {
           </div>
         </Endpoint>
 
-        <Endpoint method="POST" url="/api/gemini/analyze-question" description="AI analysis of question quality, potential issues, and improvement areas." features={['AI']}>
+        <Endpoint
+          method="POST"
+          url="/api/gemini/analyze-question"
+          description="AI analysis of question quality, potential issues, and improvement areas."
+          features={["AI"]}
+        >
           <div className="space-y-4">
             <div>
-              <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Request Body Schema</h4>
+              <h4 className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+                Request Body Schema
+              </h4>
               <div className="space-y-2">
-                <Param name="question" type="object" required description="Question object to analyze" />
+                <Param
+                  name="question"
+                  type="object"
+                  required={true}
+                  description="Question object to analyze"
+                />
               </div>
             </div>
             <Example title="Response" variant="response">
-{`{
+              {`{
   "success": true,
   "data": {
     "qualityScore": 0.78,
@@ -77,18 +105,39 @@ export default function AISection() {
           </div>
         </Endpoint>
 
-        <Endpoint method="POST" url="/api/gemini/explain" description="Generate AI-powered explanations for Science Olympiad questions to aid learning and understanding." features={['AI']}>
+        <Endpoint
+          method="POST"
+          url="/api/gemini/explain"
+          description="Generate AI-powered explanations for Science Olympiad questions to aid learning and understanding."
+          features={["AI"]}
+        >
           <div className="space-y-4">
             <div>
-              <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Request Body Schema</h4>
+              <h4 className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+                Request Body Schema
+              </h4>
               <div className="space-y-2">
-                <Param name="question" type="object" required description="Complete question object with text, options, answers, and optional imageData" />
-                <Param name="userAnswer" type="any" description="User's submitted answer for personalized feedback (optional)" />
-                <Param name="event" type="string" required description="Science Olympiad event name for context-aware explanations" />
+                <Param
+                  name="question"
+                  type="object"
+                  required={true}
+                  description="Complete question object with text, options, answers, and optional imageData"
+                />
+                <Param
+                  name="userAnswer"
+                  type="any"
+                  description="User's submitted answer for personalized feedback (optional)"
+                />
+                <Param
+                  name="event"
+                  type="string"
+                  required={true}
+                  description="Science Olympiad event name for context-aware explanations"
+                />
               </div>
             </div>
             <Example title="Request Example" variant="request">
-{`{
+              {`{
   "question": {
     "question": "What is the chemical formula for water?",
     "options": ["H2O", "CO2", "O2", "H2"],
@@ -100,7 +149,7 @@ export default function AISection() {
 }`}
             </Example>
             <Example title="Response" variant="response">
-{`{
+              {`{
   "success": true,
   "data": {
     "explanation": "...",
@@ -109,27 +158,47 @@ export default function AISection() {
   }
 }`}
             </Example>
-            <div className={`mt-4 p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
-              <h5 className={`font-semibold mb-2 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Response Fields</h5>
+            <div className={`mt-4 p-4 rounded-lg ${darkMode ? "bg-gray-800" : "bg-gray-50"}`}>
+              <h5 className={`font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+                Response Fields
+              </h5>
               <div className="space-y-2 text-sm">
-                <div><strong>explanation</strong> - Detailed educational explanation with formatting</div>
-                <div><strong>correctIndices</strong> - Zero-based indices for MCQ</div>
-                <div><strong>correctedAnswers</strong> - Correct answer strings for FRQ</div>
+                <div>
+                  <strong>explanation</strong> - Detailed educational explanation with formatting
+                </div>
+                <div>
+                  <strong>correctIndices</strong> - Zero-based indices for MCQ
+                </div>
+                <div>
+                  <strong>correctedAnswers</strong> - Correct answer strings for FRQ
+                </div>
               </div>
             </div>
           </div>
         </Endpoint>
 
-        <Endpoint method="POST" url="/api/gemini/grade-free-responses" description="Automatically grade free-response questions using AI analysis." features={['AI']}>
+        <Endpoint
+          method="POST"
+          url="/api/gemini/grade-free-responses"
+          description="Automatically grade free-response questions using AI analysis."
+          features={["AI"]}
+        >
           <div className="space-y-4">
             <div>
-              <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Request Body Schema</h4>
+              <h4 className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+                Request Body Schema
+              </h4>
               <div className="space-y-2">
-                <Param name="responses" type="array" required description="Array of response objects" />
+                <Param
+                  name="responses"
+                  type="array"
+                  required={true}
+                  description="Array of response objects"
+                />
               </div>
             </div>
             <Example title="Request Example" variant="request">
-{`{
+              {`{
   "responses": [
     {
       "question": "Explain the process of photosynthesis",
@@ -140,7 +209,7 @@ export default function AISection() {
 }`}
             </Example>
             <Example title="Response" variant="response">
-{`{
+              {`{
   "success": true,
   "data": {
     "grades": [
@@ -157,19 +226,46 @@ export default function AISection() {
           </div>
         </Endpoint>
 
-        <Endpoint method="POST" url="/api/gemini/validate-edit" description="Validate question edits using AI analysis to ensure quality and accuracy." features={['AI']}>
+        <Endpoint
+          method="POST"
+          url="/api/gemini/validate-edit"
+          description="Validate question edits using AI analysis to ensure quality and accuracy."
+          features={["AI"]}
+        >
           <div className="space-y-4">
             <div>
-              <h4 className={`font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Request Body Schema</h4>
+              <h4 className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+                Request Body Schema
+              </h4>
               <div className="space-y-2">
-                <Param name="originalQuestion" type="object" required description="Original question object" />
-                <Param name="editedQuestion" type="object" required description="Edited question object" />
-                <Param name="event" type="string" required description="Science Olympiad event name" />
-                <Param name="reason" type="string" required description="Reason for the edit" />
+                <Param
+                  name="originalQuestion"
+                  type="object"
+                  required={true}
+                  description="Original question object"
+                />
+                <Param
+                  name="editedQuestion"
+                  type="object"
+                  required={true}
+                  description="Edited question object"
+                />
+                <Param
+                  name="event"
+                  type="string"
+                  required={true}
+                  description="Science Olympiad event name"
+                />
+                <Param
+                  name="reason"
+                  type="string"
+                  required={true}
+                  description="Reason for the edit"
+                />
               </div>
             </div>
             <Example title="Request Example" variant="request">
-{`{
+              {`{
   "originalQuestion": {
     "question": "What is the chemical formula for water?",
     "options": ["H2O", "CO2", "NaCl"],
@@ -185,7 +281,7 @@ export default function AISection() {
 }`}
             </Example>
             <Example title="Response" variant="response">
-{`{
+              {`{
   "success": true,
   "data": {
     "isValid": true,
@@ -200,5 +296,3 @@ export default function AISection() {
     </div>
   );
 }
-
-

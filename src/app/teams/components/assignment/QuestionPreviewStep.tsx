@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import { useTheme } from '@/app/contexts/ThemeContext';
-import { QuestionPreviewStepProps } from './assignmentTypes';
+import { useTheme } from "@/app/contexts/ThemeContext";
+import { motion } from "framer-motion";
+import type { QuestionPreviewStepProps } from "./assignmentTypes";
 
 export default function QuestionPreviewStep({
   onNext,
@@ -10,17 +10,13 @@ export default function QuestionPreviewStep({
   questions,
   showAnswers,
   onShowAnswersChange,
-  onReplaceQuestion
-}: Omit<QuestionPreviewStepProps, 'darkMode'>) {
+  onReplaceQuestion,
+}: Omit<QuestionPreviewStepProps, "darkMode">) {
   const { darkMode } = useTheme();
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      className="space-y-4"
-    >
+    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+        <h3 className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>
           Question Preview ({questions.length} questions)
         </h3>
         <label className="flex items-center space-x-2">
@@ -30,29 +26,42 @@ export default function QuestionPreviewStep({
             onChange={(e) => onShowAnswersChange(e.target.checked)}
             className="rounded"
           />
-          <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            Show Answers
-          </span>
+          <span className={`text-sm ${darkMode ? "text-white" : "text-gray-900"}`}>Show Answers</span>
         </label>
       </div>
 
       <div className="max-h-96 overflow-y-auto space-y-3">
         {questions.map((question, index) => (
-          <div key={index} className={`p-3 border rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+          <div
+            key={index}
+            className={`p-3 border rounded-lg ${darkMode ? "bg-gray-700 border-gray-600" : "bg-gray-50 border-gray-200"}`}
+          >
             <div className="flex justify-between items-start mb-2">
               <div className="flex items-center gap-2">
-                <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                <span className={`text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
                   Q{index + 1} ({question.question_type})
                 </span>
-                {(question as any).difficulty && (
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    (question as any).difficulty <= 0.4 
-                      ? darkMode ? 'bg-green-800/40 text-green-300' : 'bg-green-100 text-green-700'
-                      : (question as any).difficulty <= 0.7
-                      ? darkMode ? 'bg-yellow-800/40 text-yellow-300' : 'bg-yellow-100 text-yellow-700'
-                      : darkMode ? 'bg-red-800/40 text-red-300' : 'bg-red-100 text-red-700'
-                  }`}>
-                    {(question as any).difficulty <= 0.4 ? 'Easy' : (question as any).difficulty <= 0.7 ? 'Medium' : 'Hard'}
+                {question.difficulty && (
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full ${
+                      question.difficulty <= 0.4
+                        ? darkMode
+                          ? "bg-green-800/40 text-green-300"
+                          : "bg-green-100 text-green-700"
+                        : question.difficulty <= 0.7
+                          ? darkMode
+                            ? "bg-yellow-800/40 text-yellow-300"
+                            : "bg-yellow-100 text-yellow-700"
+                          : darkMode
+                            ? "bg-red-800/40 text-red-300"
+                            : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {question.difficulty <= 0.4
+                      ? "Easy"
+                      : question.difficulty <= 0.7
+                        ? "Medium"
+                        : "Hard"}
                   </span>
                 )}
               </div>
@@ -63,49 +72,66 @@ export default function QuestionPreviewStep({
                 Replace
               </button>
             </div>
-            
-            <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+
+            <p className={`text-sm ${darkMode ? "text-white" : "text-gray-900"}`}>
               {question.question_text}
             </p>
-            
+
             {question.imageData && (
               <div className="mt-3 w-full flex justify-center">
-                <img 
-                  src={question.imageData} 
-                  alt="Question Image" 
+                <img
+                  src={question.imageData}
+                  alt="Question Image"
                   className="max-h-48 max-w-full rounded-md border object-contain"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
+                    target.style.display = "none";
                   }}
                 />
               </div>
             )}
-            
+
             {question.options && (
               <div className="mt-2 space-y-1">
                 {question.options.map((option, optIndex) => {
                   // Handle both old format (objects with isCorrect) and new format (strings with answers array)
-                  const isCorrect = showAnswers && (
-                    (typeof option === 'object' && option.isCorrect) ||
-                    (typeof option === 'string' && (question as any).answers && (question as any).answers.includes(optIndex))
-                  );
-                  const optionText = typeof option === 'object' ? option.text : option;
-                  
+                  const isCorrect =
+                    showAnswers &&
+                    ((typeof option === "object" && option.isCorrect) ||
+                      (typeof option === "string" &&
+                        question.answers &&
+                        Array.isArray(question.answers) &&
+                        question.answers.includes(optIndex)));
+                  const optionText = typeof option === "object" ? option.text : option;
+
                   return (
-                    <div key={optIndex} className={`text-xs p-2 rounded flex items-center ${
-                      isCorrect
-                        ? darkMode 
-                          ? 'bg-green-800/40 text-green-300' 
-                          : 'bg-green-100 text-green-700'
-                        : darkMode 
-                          ? 'bg-gray-600 text-gray-300' 
-                          : 'bg-gray-100 text-gray-700'
-                    }`}>
+                    <div
+                      key={optIndex}
+                      className={`text-xs p-2 rounded flex items-center ${
+                        isCorrect
+                          ? darkMode
+                            ? "bg-green-800/40 text-green-300"
+                            : "bg-green-100 text-green-700"
+                          : darkMode
+                            ? "bg-gray-600 text-gray-300"
+                            : "bg-gray-100 text-gray-700"
+                      }`}
+                    >
                       <span className="flex-grow">{optionText}</span>
                       {isCorrect && (
-                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ml-2 ${darkMode ? 'text-green-400' : 'text-green-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className={`h-4 w-4 ml-2 ${darkMode ? "text-green-400" : "text-green-600"}`}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
                         </svg>
                       )}
                     </div>
@@ -113,25 +139,32 @@ export default function QuestionPreviewStep({
                 })}
               </div>
             )}
-            
-            {question.question_type === 'free_response' && showAnswers && (question as any).answers && (question as any).answers.length > 0 && (
-              <div className={`mt-3 p-3 rounded-lg border ${
-                darkMode 
-                  ? 'bg-green-800/20 border-green-600/30' 
-                  : 'bg-green-50 border-green-200'
-              }`}>
-                <div className={`text-xs font-medium mb-1 ${
-                  darkMode ? 'text-green-300' : 'text-green-700'
-                }`}>
-                  Correct Answer:
+
+            {question.question_type === "free_response" &&
+              showAnswers &&
+              question.answers &&
+              (Array.isArray(question.answers) ? question.answers.length > 0 : Boolean(question.answers)) && (
+                <div
+                  className={`mt-3 p-3 rounded-lg border ${
+                    darkMode
+                      ? "bg-green-800/20 border-green-600/30"
+                      : "bg-green-50 border-green-200"
+                  }`}
+                >
+                  <div
+                    className={`text-xs font-medium mb-1 ${
+                      darkMode ? "text-green-300" : "text-green-700"
+                    }`}
+                  >
+                    Correct Answer:
+                  </div>
+                  <div className={`text-sm ${darkMode ? "text-green-200" : "text-green-800"}`}>
+                    {Array.isArray(question.answers)
+                      ? question.answers.join(", ")
+                      : String(question.answers)}
+                  </div>
                 </div>
-                <div className={`text-sm ${
-                  darkMode ? 'text-green-200' : 'text-green-800'
-                }`}>
-                  {Array.isArray((question as any).answers) ? (question as any).answers.join(', ') : (question as any).answers}
-                </div>
-              </div>
-            )}
+              )}
           </div>
         ))}
       </div>
@@ -140,9 +173,9 @@ export default function QuestionPreviewStep({
         <button
           onClick={onBack}
           className={`px-4 py-2 border rounded-lg ${
-            darkMode 
-              ? 'border-gray-600 text-gray-300 hover:bg-gray-800' 
-              : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+            darkMode
+              ? "border-gray-600 text-gray-300 hover:bg-gray-800"
+              : "border-gray-300 text-gray-700 hover:bg-gray-50"
           }`}
         >
           Back

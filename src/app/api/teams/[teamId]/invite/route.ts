@@ -1,8 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { queryCockroachDB } from '@/lib/cockroachdb';
-import { getServerUser } from '@/lib/supabaseServer';
-import { resolveTeamSlugToUnits } from '@/lib/utils/team-resolver';
-import { NotificationSyncService } from '@/lib/services/notification-sync';
+import { dbPg } from "@/lib/db";
+import { users } from "@/lib/db/schema/core";
+import { newTeamNotifications } from "@/lib/db/schema/notifications";
+import {
+  newTeamGroups,
+  newTeamInvitations,
+  newTeamMemberships,
+  newTeamUnits,
+} from "@/lib/db/schema/teams";
+import { PostInviteRequestSchema, InviteResponseSchema, validateRequest } from "@/lib/schemas/teams-validation";
+import {
+  handleConflictError,
+  handleError,
+  handleForbiddenError,
+  handleNotFoundError,
+  handleUnauthorizedError,
+  handleValidationError,
+  validateEnvironment,
+} from "@/lib/utils/error-handler";
+import logger from "@/lib/utils/logger";
+import { NotificationSyncService } from "@/lib/services/notification-sync";
+import { getServerUser } from "@/lib/supabaseServer";
+import { resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
+import { and, eq, inArray, ilike, ne, or } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 // POST /api/teams/[teamId]/invite - Invite user to team
 // Frontend Usage:
@@ -12,25 +33,42 @@ export async function POST(
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
-    }
+    const envError = validateEnvironment();
+    if (envError) return envError;
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return handleUnauthorizedError();
     }
 
     const { teamId } = await params;
-    const body = await request.json();
-    const { username, email, role = 'member', targetTeamUnitId: requestedTeamUnitId } = body;
-
-    if (!username && !email) {
-      return NextResponse.json({ error: 'Username or email is required' }, { status: 400 });
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch (error) {
+      return handleValidationError(
+        new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            message: "Invalid JSON in request body",
+            path: [],
+          },
+        ])
+      );
     }
+
+    // Validate request body using Zod
+    let validatedBody: z.infer<typeof PostInviteRequestSchema>;
+    try {
+      validatedBody = validateRequest(PostInviteRequestSchema, body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return handleValidationError(error);
+      }
+      return handleError(error, "POST /api/teams/[teamId]/invite - validation");
+    }
+
+    const { username, email, requestedTeamUnitId } = validatedBody;
 
     // Resolve team slug to team unit IDs
     let teamUnitIds: string[];
@@ -38,18 +76,27 @@ export async function POST(
       const teamInfo = await resolveTeamSlugToUnits(teamId);
       teamUnitIds = teamInfo.teamUnitIds;
     } catch {
-      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
+      return handleNotFoundError("Team");
     }
 
-    // Check if user is captain or co-captain in any of the team units
-    const membershipResult = await queryCockroachDB<{ id: string, role: string, team_id: string }>(
-      `SELECT id, role, team_id FROM new_team_memberships 
-       WHERE user_id = $1 AND team_id = ANY($2) AND status = 'active'`,
-      [user.id, teamUnitIds]
-    );
+    // Check if user is captain or co-captain in any of the team units using Drizzle ORM
+    const membershipResult = await dbPg
+      .select({
+        id: newTeamMemberships.id,
+        role: newTeamMemberships.role,
+        team_id: newTeamMemberships.teamId,
+      })
+      .from(newTeamMemberships)
+      .where(
+        and(
+          eq(newTeamMemberships.userId, user.id),
+          inArray(newTeamMemberships.teamId, teamUnitIds),
+          eq(newTeamMemberships.status, "active")
+        )
+      );
 
-    if (membershipResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
+    if (membershipResult.length === 0) {
+      return handleForbiddenError("Not a team member");
     }
 
     // Determine which team unit to invite to
@@ -57,149 +104,182 @@ export async function POST(
     if (requestedTeamUnitId) {
       // Validate that the specified team unit is in the group and user has permission
       if (!teamUnitIds.includes(requestedTeamUnitId)) {
-        return NextResponse.json({ error: 'Invalid team unit' }, { status: 400 });
+        return handleValidationError(
+          new z.ZodError([
+            {
+              code: z.ZodIssueCode.custom,
+              message: "Invalid team unit",
+              path: ["requestedTeamUnitId"],
+            },
+          ])
+        );
       }
-      
-      const hasPermissionForUnit = membershipResult.rows.some(membership => 
-        membership.team_id === requestedTeamUnitId && 
-        ['captain', 'co_captain'].includes(membership.role)
+
+      const hasPermissionForUnit = membershipResult.some(
+        (membership) =>
+          membership.team_id === requestedTeamUnitId &&
+          ["captain", "co_captain"].includes(membership.role)
       );
-      
+
       if (!hasPermissionForUnit) {
-        return NextResponse.json({ error: 'No permission to invite to this team unit' }, { status: 403 });
+        return handleForbiddenError("No permission to invite to this team unit");
       }
-      
+
       targetTeamUnitId = requestedTeamUnitId;
     } else {
       // Default to the first team unit where user has captain/co-captain role
-      const captainMembership = membershipResult.rows.find(membership => 
-        ['captain', 'co_captain'].includes(membership.role)
+      const captainMembership = membershipResult.find((membership) =>
+        ["captain", "co_captain"].includes(membership.role)
       );
-      
+
       if (!captainMembership) {
-        return NextResponse.json({ error: 'Only captains can invite members' }, { status: 403 });
+        return handleForbiddenError("Only captains can invite members");
       }
-      
+
       targetTeamUnitId = captainMembership.team_id;
     }
 
-    // Find the user to invite
+    // Find the user to invite using Drizzle ORM
     let invitedUser;
     if (username) {
-      const userResult = await queryCockroachDB<any>(
-        `SELECT id, email, display_name, first_name, last_name, username
-         FROM users 
-         WHERE username = $1 OR email = $1`,
-        [username]
-      );
-      invitedUser = userResult.rows[0];
+      const userResult = await dbPg
+        .select({
+          id: users.id,
+          email: users.email,
+          display_name: users.displayName,
+          first_name: users.firstName,
+          last_name: users.lastName,
+          username: users.username,
+        })
+        .from(users)
+        .where(or(eq(users.username, username), eq(users.email, username)))
+        .limit(1);
+      invitedUser = userResult[0];
     } else if (email) {
-      const userResult = await queryCockroachDB<any>(
-        `SELECT id, email, display_name, first_name, last_name, username
-         FROM users 
-         WHERE email = $1`,
-        [email]
-      );
-      invitedUser = userResult.rows[0];
+      const userResult = await dbPg
+        .select({
+          id: users.id,
+          email: users.email,
+          display_name: users.displayName,
+          first_name: users.firstName,
+          last_name: users.lastName,
+          username: users.username,
+        })
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+      invitedUser = userResult[0];
     }
 
     if (!invitedUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return handleNotFoundError("User");
     }
 
-    // Check if user is already a member of any team unit in this group
-    const existingMembership = await queryCockroachDB<{ id: string }>(
-      `SELECT id FROM new_team_memberships 
-       WHERE user_id = $1 AND team_id = ANY($2)`,
-      [invitedUser.id, teamUnitIds]
-    );
+    // Check if user is already a member of any team unit in this group using Drizzle ORM
+    const existingMembership = await dbPg
+      .select({ id: newTeamMemberships.id })
+      .from(newTeamMemberships)
+      .where(
+        and(
+          eq(newTeamMemberships.userId, invitedUser.id),
+          inArray(newTeamMemberships.teamId, teamUnitIds)
+        )
+      )
+      .limit(1);
 
-    if (existingMembership.rows.length > 0) {
-      return NextResponse.json({ error: 'User is already a team member' }, { status: 400 });
+    if (existingMembership.length > 0) {
+      return handleConflictError("User is already a team member");
     }
 
-    // Check for existing pending invitation to any team unit in this group
-    const existingInvitation = await queryCockroachDB<{ id: string }>(
-      `SELECT id FROM new_team_invitations 
-       WHERE team_id = ANY($1) AND email = $2 AND status = 'pending'`,
-      [teamUnitIds, invitedUser.email]
-    );
+    // Check for existing pending invitation to any team unit in this group using Drizzle ORM
+    const existingInvitation = await dbPg
+      .select({ id: newTeamInvitations.id })
+      .from(newTeamInvitations)
+      .where(
+        and(
+          inArray(newTeamInvitations.teamId, teamUnitIds),
+          eq(newTeamInvitations.email, invitedUser.email),
+          eq(newTeamInvitations.status, "pending")
+        )
+      )
+      .limit(1);
 
-    if (existingInvitation.rows.length > 0) {
-      return NextResponse.json({ error: 'Invitation already sent' }, { status: 400 });
+    if (existingInvitation.length > 0) {
+      return handleConflictError("Invitation already sent");
     }
 
-    // Get the team's join code (user_code for members, captain_code for captains)
-    const teamCodeResult = await queryCockroachDB<{ user_code: string, captain_code: string }>(
-      `SELECT user_code, captain_code FROM new_team_units WHERE id = $1`,
-      [targetTeamUnitId]
-    );
+    // Get the team's join code (user_code for members, captain_code for captains) using Drizzle ORM
+    const teamCodeResult = await dbPg
+      .select({
+        user_code: newTeamUnits.userCode,
+        captain_code: newTeamUnits.captainCode,
+        groupId: newTeamUnits.groupId,
+      })
+      .from(newTeamUnits)
+      .where(eq(newTeamUnits.id, targetTeamUnitId))
+      .limit(1);
 
-    if (teamCodeResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
+    if (teamCodeResult.length === 0 || !teamCodeResult[0]) {
+      return handleNotFoundError("Team unit");
     }
 
-    const teamCodes = teamCodeResult.rows[0];
-    const joinCode = role === 'captain' ? teamCodes.captain_code : teamCodes.user_code;
+    const teamCodes = teamCodeResult[0];
+    // Use user_code for all invites (captain_code is for team creation, not invitations)
+    const joinCode = teamCodes.user_code;
 
-    // Get team group info for notification
-    const teamGroupResult = await queryCockroachDB<{ school: string, division: string, slug: string }>(
-      `SELECT school, division, slug FROM new_team_groups 
-       WHERE id = (SELECT group_id FROM new_team_units WHERE id = $1)`,
-      [targetTeamUnitId]
-    );
+    // Get team group info for notification using Drizzle ORM
+    const teamGroupResult = await dbPg
+      .select({
+        school: newTeamGroups.school,
+        division: newTeamGroups.division,
+        slug: newTeamGroups.slug,
+      })
+      .from(newTeamGroups)
+      .where(eq(newTeamGroups.id, teamCodes.groupId))
+      .limit(1);
 
-    if (teamGroupResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Team group not found' }, { status: 404 });
+    if (teamGroupResult.length === 0 || !teamGroupResult[0]) {
+      return handleNotFoundError("Team group");
     }
 
-    const teamGroup = teamGroupResult.rows[0];
+    const teamGroup = teamGroupResult[0];
 
-    // Create notification for invited user using team_invite type (like the old system)
-    const notificationResult = await queryCockroachDB(
-      `INSERT INTO new_team_notifications 
-       (user_id, team_id, notification_type, title, message, data)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id`,
-      [
-        invitedUser.id,
-        targetTeamUnitId,
-        'team_invite',
-        'Team Invitation',
-        `You've been invited to join ${teamGroup.school} - Division ${teamGroup.division}`,
-        JSON.stringify({ 
-          school: teamGroup.school,
-          division: teamGroup.division,
-          teamId: targetTeamUnitId,
-          memberName: invitedUser.display_name || invitedUser.username || invitedUser.email,
-          joinCode: joinCode,
-          inviter_name: user.email,
-          role: role
-        })
-      ]
-    );
+    // Create notification for invited user using Drizzle ORM
+    const [notificationResult] = await dbPg
+      .insert(newTeamNotifications)
+      .values({
+        userId: invitedUser.id,
+        teamId: targetTeamUnitId,
+        notificationType: "team_invite",
+        title: "Team Invitation",
+        message: `You've been invited to join ${teamGroup.school} - Division ${teamGroup.division}`,
+      })
+      .returning({ id: newTeamNotifications.id });
 
     // Sync notification to Supabase for client-side access
-    if (notificationResult.rows.length > 0) {
+    if (notificationResult) {
       try {
-        await NotificationSyncService.syncNotificationToSupabase(notificationResult.rows[0].id);
+        await NotificationSyncService.syncNotificationToSupabase(notificationResult.id);
       } catch (syncError) {
-        console.error('Failed to sync notification to Supabase:', syncError);
+        logger.error("Failed to sync notification to Supabase", syncError);
         // Don't fail the entire request if sync fails
       }
     }
 
-    return NextResponse.json({ 
-      message: 'Invitation sent successfully',
-      joinCode: joinCode
-    });
+    // Validate response using Zod
+    const responseData = {
+      message: "Invitation sent successfully",
+      joinCode: joinCode,
+    };
+    try {
+      InviteResponseSchema.parse(responseData);
+    } catch (error) {
+      logger.error("Response validation failed", error);
+    }
 
+    return NextResponse.json(responseData);
   } catch (error) {
-    console.error('Error creating team invitation:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return handleError(error, "POST /api/teams/[teamId]/invite");
   }
 }
 
@@ -211,21 +291,17 @@ export async function GET(
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        error: 'Database configuration error',
-        details: 'DATABASE_URL environment variable is missing'
-      }, { status: 500 });
-    }
+    const envError = validateEnvironment();
+    if (envError) return envError;
 
     const user = await getServerUser();
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return handleUnauthorizedError();
     }
 
     const { teamId } = await params;
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q');
+    const query = searchParams.get("q");
 
     if (!query || query.length < 2) {
       return NextResponse.json({ users: [] });
@@ -237,53 +313,59 @@ export async function GET(
       const teamInfo = await resolveTeamSlugToUnits(teamId);
       teamUnitIds = teamInfo.teamUnitIds;
     } catch {
-      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
+      return handleNotFoundError("Team");
     }
 
-    // Check if user is captain or co-captain in any of the team units
-    const membershipResult = await queryCockroachDB<{ id: string, role: string }>(
-      `SELECT id, role FROM new_team_memberships 
-       WHERE user_id = $1 AND team_id = ANY($2) AND status = 'active'`,
-      [user.id, teamUnitIds]
-    );
+    // Check if user is captain or co-captain in any of the team units using Drizzle ORM
+    const membershipResult = await dbPg
+      .select({
+        id: newTeamMemberships.id,
+        role: newTeamMemberships.role,
+      })
+      .from(newTeamMemberships)
+      .where(
+        and(
+          eq(newTeamMemberships.userId, user.id),
+          inArray(newTeamMemberships.teamId, teamUnitIds),
+          eq(newTeamMemberships.status, "active")
+        )
+      );
 
-    if (membershipResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
+    if (membershipResult.length === 0) {
+      return handleForbiddenError("Not a team member");
     }
 
     // Check if user has captain or co-captain role in any team unit
-    const hasCaptainRole = membershipResult.rows.some(membership => 
-      ['captain', 'co_captain'].includes(membership.role)
+    const hasCaptainRole = membershipResult.some((membership) =>
+      ["captain", "co_captain"].includes(membership.role)
     );
 
     if (!hasCaptainRole) {
-      return NextResponse.json({ error: 'Only captains can search users' }, { status: 403 });
+      return handleForbiddenError("Only captains can search users");
     }
 
-    // Search users by username or email
-    const usersResult = await queryCockroachDB<any>(
-      `SELECT 
-         id,
-         email,
-         display_name,
-         first_name,
-         last_name,
-         username,
-         photo_url
-       FROM users 
-       WHERE (username ILIKE $1 OR email ILIKE $1)
-       AND id != $2
-       LIMIT 10`,
-      [`%${query}%`, user.id]
-    );
+    // Search users by username or email using Drizzle ORM
+    const usersResult = await dbPg
+      .select({
+        id: users.id,
+        email: users.email,
+        display_name: users.displayName,
+        first_name: users.firstName,
+        last_name: users.lastName,
+        username: users.username,
+        photo_url: users.photoUrl,
+      })
+      .from(users)
+      .where(
+        and(
+          or(ilike(users.username, `%${query}%`), ilike(users.email, `%${query}%`)),
+          ne(users.id, user.id)
+        )
+      )
+      .limit(10);
 
-    return NextResponse.json({ users: usersResult.rows });
-
+    return NextResponse.json({ users: usersResult });
   } catch (error) {
-    console.error('Error searching users:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return handleError(error, "GET /api/teams/[teamId]/invite");
   }
 }

@@ -1,28 +1,32 @@
 "use client";
-import { useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import SyncLocalStorage from '@/lib/database/localStorage-replacement';
+import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function AssignPage() {
   const params = useSearchParams();
   const router = useRouter();
-  const eventName = params.get('event') || '';
-  const scope = params.get('scope') || 'all';
-  const teamId = params.get('team') || 'A';
+  const eventName = params.get("event") || "";
+  const scope = params.get("scope") || "all";
+  const teamId = params.get("team") || "A";
   const [questionCount, setQuestionCount] = useState<number>(10);
   const [timeLimit, setTimeLimit] = useState<number>(30);
-  const [types, setTypes] = useState<'multiple-choice'|'free-response'|'both'>('multiple-choice');
-  const [division, setDivision] = useState<'B'|'C'|'any'>(() => {
+  const [types, setTypes] = useState<"multiple-choice" | "free-response" | "both">(
+    "multiple-choice"
+  );
+  const [division, setDivision] = useState<"B" | "C" | "any">(() => {
     try {
-      const selStr = SyncLocalStorage.getItem('teamsSelection');
+      const selStr = SyncLocalStorage.getItem("teamsSelection");
       if (selStr) {
         const sel = JSON.parse(selStr);
-        if (sel?.division === 'B' || sel?.division === 'C') return sel.division;
+        if (sel?.division === "B" || sel?.division === "C") {
+          return sel.division;
+        }
       }
     } catch {}
-    return 'any';
+    return "any";
   });
-  const [subtopics, setSubtopics] = useState<string>('');
+  const [subtopics, setSubtopics] = useState<string>("");
   const [preview, setPreview] = useState<any[]>([]);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [sending, setSending] = useState(false);
@@ -32,42 +36,64 @@ export default function AssignPage() {
       setLoadingPreview(true);
       try {
         const sp = new URLSearchParams();
-        sp.set('event', eventName);
-        sp.set('limit', String(questionCount));
-        if (types === 'multiple-choice') sp.set('question_type', 'mcq');
-        if (types === 'free-response') sp.set('question_type', 'frq');
-        if (division && division !== 'any') sp.set('division', division);
-        if (subtopics.trim()) sp.set('subtopics', subtopics.trim());
-        const origin = process.env.NEXT_PUBLIC_SITE_URL ?? '';
-        const res = await fetch(`${origin}/api/questions?${sp.toString()}`, { cache: 'no-store' });
+        sp.set("event", eventName);
+        sp.set("limit", String(questionCount));
+        if (types === "multiple-choice") {
+          sp.set("question_type", "mcq");
+        }
+        if (types === "free-response") {
+          sp.set("question_type", "frq");
+        }
+        if (division && division !== "any") {
+          sp.set("division", division);
+        }
+        if (subtopics.trim()) {
+          sp.set("subtopics", subtopics.trim());
+        }
+        const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+        const res = await fetch(`${origin}/api/questions?${sp.toString()}`, { cache: "no-store" });
         if (res.ok) {
           const json = await res.json();
           const questions = Array.isArray(json.data) ? json.data : json.data?.questions || [];
-          const valid = questions.filter((q: any) => q.answers && Array.isArray(q.answers) && q.answers.length > 0);
+          const valid = questions.filter(
+            (q: any) => q.answers && Array.isArray(q.answers) && q.answers.length > 0
+          );
           setPreview(valid.slice(0, questionCount));
         }
       } catch {}
       setLoadingPreview(false);
     };
-    if (eventName) load();
+    if (eventName) {
+      load();
+    }
   }, [eventName, questionCount, types, division, subtopics]);
 
   const replaceQuestion = async (idx: number) => {
     try {
       const sp = new URLSearchParams();
-      sp.set('event', eventName);
-      sp.set('limit', '1');
-      if (types === 'multiple-choice') sp.set('question_type', 'mcq');
-      if (types === 'free-response') sp.set('question_type', 'frq');
-      if (division && division !== 'any') sp.set('division', division);
-      if (subtopics.trim()) sp.set('subtopics', subtopics.trim());
-      const origin = process.env.NEXT_PUBLIC_SITE_URL ?? '';
-      const res = await fetch(`${origin}/api/questions?${sp.toString()}`, { cache: 'no-store' });
+      sp.set("event", eventName);
+      sp.set("limit", "1");
+      if (types === "multiple-choice") {
+        sp.set("question_type", "mcq");
+      }
+      if (types === "free-response") {
+        sp.set("question_type", "frq");
+      }
+      if (division && division !== "any") {
+        sp.set("division", division);
+      }
+      if (subtopics.trim()) {
+        sp.set("subtopics", subtopics.trim());
+      }
+      const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+      const res = await fetch(`${origin}/api/questions?${sp.toString()}`, { cache: "no-store" });
       const json = await res.json();
       const q = (Array.isArray(json.data) ? json.data : json.data?.questions || [])[0];
       setPreview((prev) => {
         const copy = prev.slice();
-        if (q) copy[idx] = q;
+        if (q) {
+          copy[idx] = q;
+        }
         return copy;
       });
     } catch {}
@@ -76,28 +102,56 @@ export default function AssignPage() {
   const sendAssignment = async () => {
     setSending(true);
     try {
-      const selectionStr = SyncLocalStorage.getItem('teamsSelection');
+      const selectionStr = SyncLocalStorage.getItem("teamsSelection");
       const sel = selectionStr ? JSON.parse(selectionStr) : null;
       const school = sel?.school;
       const divisionSel = sel?.division;
-      if (!school || !divisionSel) return;
-      const assignees = scope === 'all' ? [{ name: 'ALL' }] : [{ name: scope }];
-      const params = { eventName, questionCount, timeLimit, types, division, subtopics: subtopics ? subtopics.split(',').map(s=>s.trim()).filter(Boolean) : [] };
-      const res = await fetch('/api/assignments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ school, division: divisionSel, teamId, eventName, assignees, params, questions: preview }) });
+      if (!(school && divisionSel)) {
+        return;
+      }
+      const assignees = scope === "all" ? [{ name: "ALL" }] : [{ name: scope }];
+      const params = {
+        eventName,
+        questionCount,
+        timeLimit,
+        types,
+        division,
+        subtopics: subtopics
+          ? subtopics
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : [],
+      };
+      const res = await fetch("/api/assignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          school,
+          division: divisionSel,
+          teamId,
+          eventName,
+          assignees,
+          params,
+          questions: preview,
+        }),
+      });
       if (res.ok) {
         const json = await res.json();
         const assignmentId = json?.data?.id;
         if (assignmentId) {
-          SyncLocalStorage.setItem('currentAssignmentId', String(assignmentId));
+          SyncLocalStorage.setItem("currentAssignmentId", String(assignmentId));
         }
         // Launch the test page with configured params
         const sp = new URLSearchParams();
-        sp.set('event', eventName);
-        sp.set('questionCount', String(questionCount));
-        sp.set('timeLimit', String(timeLimit));
-        sp.set('types', types);
-        sp.set('division', division);
-        if (subtopics.trim()) sp.set('subtopics', subtopics.trim());
+        sp.set("event", eventName);
+        sp.set("questionCount", String(questionCount));
+        sp.set("timeLimit", String(timeLimit));
+        sp.set("types", types);
+        sp.set("division", division);
+        if (subtopics.trim()) {
+          sp.set("subtopics", subtopics.trim());
+        }
         router.push(`/test?${sp.toString()}`);
       }
     } catch {}
@@ -108,7 +162,9 @@ export default function AssignPage() {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-4">
         <h1 className="text-2xl font-bold">Assign Test: {eventName}</h1>
-        <div className="text-sm text-gray-600">Team {teamId} — Scope: {scope}</div>
+        <div className="text-sm text-gray-600">
+          Team {teamId} — Scope: {scope}
+        </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div className="border rounded p-3">
@@ -116,15 +172,38 @@ export default function AssignPage() {
           <div className="space-y-2 text-sm">
             <div className="flex gap-2 items-center">
               <label className="w-32">Question Count</label>
-              <input type="number" value={questionCount} onChange={(e)=>setQuestionCount(Math.max(1, Math.min(200, Number(e.target.value||0))))} className="border rounded px-2 py-1 w-24" />
+              <input
+                type="number"
+                value={questionCount}
+                onChange={(e) =>
+                  setQuestionCount(Math.max(1, Math.min(200, Number(e.target.value || 0))))
+                }
+                className="border rounded px-2 py-1 w-24"
+              />
             </div>
             <div className="flex gap-2 items-center">
               <label className="w-32">Time Limit (min)</label>
-              <input type="number" value={timeLimit} onChange={(e)=>setTimeLimit(Math.max(1, Math.min(180, Number(e.target.value||0))))} className="border rounded px-2 py-1 w-24" />
+              <input
+                type="number"
+                value={timeLimit}
+                onChange={(e) =>
+                  setTimeLimit(Math.max(1, Math.min(180, Number(e.target.value || 0))))
+                }
+                className="border rounded px-2 py-1 w-24"
+              />
             </div>
             <div className="flex gap-2 items-center">
               <label className="w-32">Types</label>
-              <select value={types} onChange={(e)=>setTypes(e.target.value as any)} className="border rounded px-2 py-1">
+              <select
+                value={types}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "multiple-choice" || value === "free-response" || value === "both") {
+                    setTypes(value);
+                  }
+                }}
+                className="border rounded px-2 py-1"
+              >
                 <option value="multiple-choice">Multiple Choice</option>
                 <option value="free-response">Free Response</option>
                 <option value="both">Both</option>
@@ -132,7 +211,16 @@ export default function AssignPage() {
             </div>
             <div className="flex gap-2 items-center">
               <label className="w-32">Division</label>
-              <select value={division} onChange={(e)=>setDivision(e.target.value as any)} className="border rounded px-2 py-1">
+              <select
+                value={division}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "B" || value === "C" || value === "any") {
+                    setDivision(value);
+                  }
+                }}
+                className="border rounded px-2 py-1"
+              >
                 <option value="any">Any</option>
                 <option value="B">B</option>
                 <option value="C">C</option>
@@ -140,7 +228,12 @@ export default function AssignPage() {
             </div>
             <div className="flex gap-2 items-center">
               <label className="w-32">Subtopics</label>
-              <input value={subtopics} onChange={(e)=>setSubtopics(e.target.value)} placeholder="comma,separated" className="border rounded px-2 py-1 flex-1" />
+              <input
+                value={subtopics}
+                onChange={(e) => setSubtopics(e.target.value)}
+                placeholder="comma,separated"
+                className="border rounded px-2 py-1 flex-1"
+              />
             </div>
           </div>
         </div>
@@ -149,21 +242,32 @@ export default function AssignPage() {
           <div className="space-y-2 max-h-80 overflow-auto">
             {loadingPreview ? (
               <div>Loading…</div>
-            ) : preview.map((q, idx) => (
-              <div key={idx} className="border rounded p-2">
-                <div className="text-sm font-medium mb-1">Q{idx+1}</div>
-                <div className="text-sm mb-2">{q.question || q.prompt || 'Untitled question'}</div>
-                <button onClick={()=>replaceQuestion(idx)} className="text-xs px-2 py-1 rounded border">Replace</button>
-              </div>
-            ))}
+            ) : (
+              preview.map((q, idx) => (
+                <div key={idx} className="border rounded p-2">
+                  <div className="text-sm font-medium mb-1">Q{idx + 1}</div>
+                  <div className="text-sm mb-2">{q.question || q.prompt || "Untitled question"}</div>
+                  <button
+                    onClick={() => replaceQuestion(idx)}
+                    className="text-xs px-2 py-1 rounded border"
+                  >
+                    Replace
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
       <div className="flex justify-end">
-        <button disabled={sending} onClick={sendAssignment} className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white">Send</button>
+        <button
+          disabled={sending}
+          onClick={sendAssignment}
+          className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          Send
+        </button>
       </div>
     </div>
   );
 }
-
-

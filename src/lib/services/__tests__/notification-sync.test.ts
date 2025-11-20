@@ -1,80 +1,79 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { NotificationSyncService } from '../notification-sync';
-import { queryCockroachDB } from '@/lib/cockroachdb';
-import { createClient } from '@supabase/supabase-js';
+import { queryCockroachDB } from "@/lib/cockroachdb";
+import { createClient } from "@supabase/supabase-js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { NotificationSyncService } from "@/lib/services/notification-sync";
 
 // Mock dependencies
-vi.mock('@/lib/cockroachdb');
-vi.mock('@supabase/supabase-js');
+vi.mock("@/lib/cockroachdb");
+vi.mock("@supabase/supabase-js");
 
-const mockQueryCockroachDB = vi.mocked(queryCockroachDB);
+const mockQueryCockroachDb = vi.mocked(queryCockroachDB);
 const mockCreateClient = vi.mocked(createClient);
 
-describe('NotificationSyncService', () => {
+describe("NotificationSyncService", () => {
   const mockUpsert = vi.fn();
   // const _mockUpdate = vi.fn();
   const mockEq = vi.fn();
-  
+
   // Create a chainable mock for eq
   const createEqMock = () => ({
-    eq: vi.fn().mockResolvedValue({ error: null })
+    eq: vi.fn().mockResolvedValue({ error: null }),
   });
-  
+
   const mockSupabaseClient = {
     from: vi.fn().mockReturnValue({
       upsert: mockUpsert,
       update: vi.fn().mockReturnValue(createEqMock()),
-      eq: mockEq
-    })
+      eq: mockEq,
+    }),
   };
 
   const mockNotification = {
-    id: 'notification-123',
-    notification_type: 'team_invitation',
-    title: 'Team Invitation',
-    message: 'You\'ve been invited to join a team',
-    data: { invitation_id: 'invitation-123' },
+    id: "notification-123",
+    notification_type: "team_invitation",
+    title: "Team Invitation",
+    message: "You've been invited to join a team",
+    data: { invitation_id: "invitation-123" },
     is_read: false,
-    created_at: '2024-01-01T00:00:00Z',
+    created_at: "2024-01-01T00:00:00Z",
     read_at: null,
-    user_id: 'user-123',
-    team_id: 'team-123',
-    team_name: 'Test Team'
+    user_id: "user-123",
+    team_id: "team-123",
+    team_name: "Test Team",
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Set up environment
-    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
-    process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
-    
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
+    process.env.SUPABASE_SERVICE_KEY = "test-service-key";
+
     // Mock Supabase client
     mockCreateClient.mockReturnValue(mockSupabaseClient as any);
-    
+
     // Default mocks
-    mockQueryCockroachDB.mockResolvedValue({ rows: [] });
+    mockQueryCockroachDb.mockResolvedValue({ rows: [] });
     mockUpsert.mockResolvedValue({ error: null });
     mockEq.mockReturnValue(createEqMock());
   });
 
   afterEach(() => {
-    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-    delete process.env.SUPABASE_SERVICE_KEY;
+    process.env.NEXT_PUBLIC_SUPABASE_URL = undefined;
+    process.env.SUPABASE_SERVICE_KEY = undefined;
   });
 
-  describe('syncNotificationToSupabase', () => {
-    it('should sync notification successfully', async () => {
-      mockQueryCockroachDB.mockResolvedValueOnce({ rows: [mockNotification] });
+  describe("syncNotificationToSupabase", () => {
+    it("should sync notification successfully", async () => {
+      mockQueryCockroachDb.mockResolvedValueOnce({ rows: [mockNotification] });
       mockUpsert.mockResolvedValueOnce({ error: null });
 
-      await NotificationSyncService.syncNotificationToSupabase('notification-123');
+      await NotificationSyncService.syncNotificationToSupabase("notification-123");
 
-      expect(mockQueryCockroachDB).toHaveBeenCalledWith(
-        expect.stringContaining('SELECT'),
-        ['notification-123']
-      );
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('notifications');
+      expect(mockQueryCockroachDb).toHaveBeenCalledWith(expect.stringContaining("SELECT"), [
+        "notification-123",
+      ]);
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith("notifications");
       expect(mockUpsert).toHaveBeenCalledWith({
         id: mockNotification.id,
         user_id: mockNotification.user_id,
@@ -86,74 +85,72 @@ describe('NotificationSyncService', () => {
         created_at: mockNotification.created_at,
         read_at: mockNotification.read_at,
         team_id: mockNotification.team_id,
-        team_name: mockNotification.team_name
+        team_name: mockNotification.team_name,
       });
     });
 
-    it('should handle notification not found', async () => {
-      mockQueryCockroachDB.mockResolvedValueOnce({ rows: [] });
+    it("should handle notification not found", async () => {
+      mockQueryCockroachDb.mockResolvedValueOnce({ rows: [] });
 
-      await NotificationSyncService.syncNotificationToSupabase('nonexistent-notification');
+      await NotificationSyncService.syncNotificationToSupabase("nonexistent-notification");
 
-      expect(mockQueryCockroachDB).toHaveBeenCalledWith(
-        expect.stringContaining('SELECT'),
-        ['nonexistent-notification']
-      );
+      expect(mockQueryCockroachDb).toHaveBeenCalledWith(expect.stringContaining("SELECT"), [
+        "nonexistent-notification",
+      ]);
       expect(mockSupabaseClient.from).not.toHaveBeenCalled();
     });
 
-    it('should throw error if Supabase service key is missing', async () => {
+    it("should throw error if Supabase service key is missing", async () => {
       delete process.env.SUPABASE_SERVICE_KEY;
-      mockQueryCockroachDB.mockResolvedValueOnce({ rows: [mockNotification] });
+      mockQueryCockroachDb.mockResolvedValueOnce({ rows: [mockNotification] });
 
       await expect(
-        NotificationSyncService.syncNotificationToSupabase('notification-123')
-      ).rejects.toThrow('Supabase server client not available. SUPABASE_SERVICE_KEY is required.');
+        NotificationSyncService.syncNotificationToSupabase("notification-123")
+      ).rejects.toThrow("Supabase server client not available. SUPABASE_SERVICE_KEY is required.");
     });
 
-    it('should throw error if Supabase upsert fails', async () => {
-      mockQueryCockroachDB.mockResolvedValueOnce({ rows: [mockNotification] });
-      mockUpsert.mockResolvedValueOnce({ 
-        error: { message: 'Upsert failed' } 
+    it("should throw error if Supabase upsert fails", async () => {
+      mockQueryCockroachDb.mockResolvedValueOnce({ rows: [mockNotification] });
+      mockUpsert.mockResolvedValueOnce({
+        error: { message: "Upsert failed" },
       });
 
       await expect(
-        NotificationSyncService.syncNotificationToSupabase('notification-123')
+        NotificationSyncService.syncNotificationToSupabase("notification-123")
       ).rejects.toThrow();
     });
 
-    it('should throw error if database query fails', async () => {
-      mockQueryCockroachDB.mockRejectedValue(new Error('Database error'));
+    it("should throw error if database query fails", async () => {
+      mockQueryCockroachDb.mockRejectedValue(new Error("Database error"));
 
       await expect(
-        NotificationSyncService.syncNotificationToSupabase('notification-123')
-      ).rejects.toThrow('Database error');
+        NotificationSyncService.syncNotificationToSupabase("notification-123")
+      ).rejects.toThrow("Database error");
     });
   });
 
-  describe('syncUserNotificationsToSupabase', () => {
+  describe("syncUserNotificationsToSupabase", () => {
     const mockNotifications = [
       mockNotification,
       {
         ...mockNotification,
-        id: 'notification-456',
-        title: 'Another Notification'
-      }
+        id: "notification-456",
+        title: "Another Notification",
+      },
     ];
 
-    it('should sync all user notifications successfully', async () => {
-      mockQueryCockroachDB.mockResolvedValueOnce({ rows: mockNotifications });
+    it("should sync all user notifications successfully", async () => {
+      mockQueryCockroachDb.mockResolvedValueOnce({ rows: mockNotifications });
       mockUpsert.mockResolvedValueOnce({ error: null });
 
-      await NotificationSyncService.syncUserNotificationsToSupabase('user-123');
+      await NotificationSyncService.syncUserNotificationsToSupabase("user-123");
 
-      expect(mockQueryCockroachDB).toHaveBeenCalledWith(
-        expect.stringContaining('SELECT'),
-        ['user-123']
-      );
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('notifications');
+      expect(mockQueryCockroachDb).toHaveBeenCalledWith(expect.stringContaining("SELECT"), [
+        "user-123",
+      ]);
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith("notifications");
       expect(mockUpsert).toHaveBeenCalledWith(
-        mockNotifications.map(notification => ({
+        mockNotifications.map((notification) => ({
           id: notification.id,
           user_id: notification.user_id,
           notification_type: notification.notification_type,
@@ -164,105 +161,105 @@ describe('NotificationSyncService', () => {
           created_at: notification.created_at,
           read_at: notification.read_at,
           team_id: notification.team_id,
-          team_name: notification.team_name
+          team_name: notification.team_name,
         }))
       );
     });
 
-    it('should handle no notifications found', async () => {
-      mockQueryCockroachDB.mockResolvedValueOnce({ rows: [] });
+    it("should handle no notifications found", async () => {
+      mockQueryCockroachDb.mockResolvedValueOnce({ rows: [] });
 
-      await NotificationSyncService.syncUserNotificationsToSupabase('user-123');
+      await NotificationSyncService.syncUserNotificationsToSupabase("user-123");
 
-      expect(mockQueryCockroachDB).toHaveBeenCalledWith(
-        expect.stringContaining('SELECT'),
-        ['user-123']
-      );
+      expect(mockQueryCockroachDb).toHaveBeenCalledWith(expect.stringContaining("SELECT"), [
+        "user-123",
+      ]);
       expect(mockSupabaseClient.from).not.toHaveBeenCalled();
     });
 
-    it('should throw error if Supabase service key is missing', async () => {
+    it("should throw error if Supabase service key is missing", async () => {
       delete process.env.SUPABASE_SERVICE_KEY;
-      mockQueryCockroachDB.mockResolvedValueOnce({ rows: mockNotifications });
+      mockQueryCockroachDb.mockResolvedValueOnce({ rows: mockNotifications });
 
       await expect(
-        NotificationSyncService.syncUserNotificationsToSupabase('user-123')
-      ).rejects.toThrow('Supabase server client not available. SUPABASE_SERVICE_KEY is required.');
+        NotificationSyncService.syncUserNotificationsToSupabase("user-123")
+      ).rejects.toThrow("Supabase server client not available. SUPABASE_SERVICE_KEY is required.");
     });
 
-    it('should throw error if Supabase upsert fails', async () => {
-      mockQueryCockroachDB.mockResolvedValueOnce({ rows: mockNotifications });
-      mockUpsert.mockResolvedValueOnce({ 
-        error: { message: 'Upsert failed' } 
+    it("should throw error if Supabase upsert fails", async () => {
+      mockQueryCockroachDb.mockResolvedValueOnce({ rows: mockNotifications });
+      mockUpsert.mockResolvedValueOnce({
+        error: { message: "Upsert failed" },
       });
 
       await expect(
-        NotificationSyncService.syncUserNotificationsToSupabase('user-123')
+        NotificationSyncService.syncUserNotificationsToSupabase("user-123")
       ).rejects.toThrow();
     });
   });
 
-  describe('markNotificationAsRead', () => {
-    it('should mark notification as read successfully', async () => {
-      mockQueryCockroachDB.mockResolvedValueOnce({ rows: [] }); // update in CockroachDB
-      
+  describe("markNotificationAsRead", () => {
+    it("should mark notification as read successfully", async () => {
+      mockQueryCockroachDb.mockResolvedValueOnce({ rows: [] }); // update in CockroachDB
+
       // Mock the chain: from().update().eq().eq()
       const mockEqChain = vi.fn().mockResolvedValue({ error: null });
       const mockUpdateChain = vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          eq: mockEqChain
-        })
+          eq: mockEqChain,
+        }),
       });
-      
+
       mockSupabaseClient.from = vi.fn().mockReturnValue({
-        update: mockUpdateChain
+        update: mockUpdateChain,
       });
 
-      await NotificationSyncService.markNotificationAsRead('notification-123', 'user-123');
+      await NotificationSyncService.markNotificationAsRead("notification-123", "user-123");
 
-      expect(mockQueryCockroachDB).toHaveBeenCalledWith(
-        expect.stringContaining('UPDATE'),
-        [expect.any(String), 'notification-123', 'user-123']
-      );
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('notifications');
+      expect(mockQueryCockroachDb).toHaveBeenCalledWith(expect.stringContaining("UPDATE"), [
+        expect.any(String),
+        "notification-123",
+        "user-123",
+      ]);
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith("notifications");
     });
 
-    it('should throw error if Supabase service key is missing', async () => {
+    it("should throw error if Supabase service key is missing", async () => {
       delete process.env.SUPABASE_SERVICE_KEY;
 
       await expect(
-        NotificationSyncService.markNotificationAsRead('notification-123', 'user-123')
-      ).rejects.toThrow('Supabase server client not available. SUPABASE_SERVICE_KEY is required.');
+        NotificationSyncService.markNotificationAsRead("notification-123", "user-123")
+      ).rejects.toThrow("Supabase server client not available. SUPABASE_SERVICE_KEY is required.");
     });
 
-    it('should throw error if Supabase update fails', async () => {
-      mockQueryCockroachDB.mockResolvedValueOnce({ rows: [] });
-      
+    it("should throw error if Supabase update fails", async () => {
+      mockQueryCockroachDb.mockResolvedValueOnce({ rows: [] });
+
       // Mock the chain: from().update().eq().eq()
-      const mockEqChain = vi.fn().mockResolvedValue({ 
-        error: { message: 'Update failed' } 
+      const mockEqChain = vi.fn().mockResolvedValue({
+        error: { message: "Update failed" },
       });
       const mockUpdateChain = vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          eq: mockEqChain
-        })
+          eq: mockEqChain,
+        }),
       });
-      
+
       mockSupabaseClient.from = vi.fn().mockReturnValue({
-        update: mockUpdateChain
+        update: mockUpdateChain,
       });
 
       await expect(
-        NotificationSyncService.markNotificationAsRead('notification-123', 'user-123')
+        NotificationSyncService.markNotificationAsRead("notification-123", "user-123")
       ).rejects.toThrow();
     });
 
-    it('should throw error if database update fails', async () => {
-      mockQueryCockroachDB.mockRejectedValue(new Error('Database error'));
+    it("should throw error if database update fails", async () => {
+      mockQueryCockroachDb.mockRejectedValue(new Error("Database error"));
 
       await expect(
-        NotificationSyncService.markNotificationAsRead('notification-123', 'user-123')
-      ).rejects.toThrow('Database error');
+        NotificationSyncService.markNotificationAsRead("notification-123", "user-123")
+      ).rejects.toThrow("Database error");
     });
   });
 });

@@ -1,8 +1,8 @@
-import { NextRequest } from 'next/server';
-import { ApiResponse } from '@/lib/types/api';
-import { geminiService } from '@/lib/services/gemini';
-import { validateFields, ApiErrors, successResponse, handleApiError } from '@/lib/api/utils';
-import logger from '@/lib/utils/logger';
+import { ApiErrors, handleApiError, successResponse, validateFields } from "@/lib/api/utils";
+import { geminiService } from "@/lib/services/gemini";
+import type { ApiResponse } from "@/lib/types/api";
+import logger from "@/lib/utils/logger";
+import type { NextRequest } from "next/server";
 
 export const maxDuration = 60;
 
@@ -15,33 +15,35 @@ interface ExplainRequest extends Record<string, unknown> {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const validation = validateFields<ExplainRequest>(body, ['question', 'event']);
+    const validation = validateFields<ExplainRequest>(body, ["question", "event"]);
 
-    if (!validation.valid) return validation.error;
+    if (!validation.valid) {
+      return validation.error;
+    }
 
     const { question, event, userAnswer } = validation.data;
 
     logger.info(`Gemini explain request received for event: ${event}`);
 
     if (!geminiService.isAvailable()) {
-      logger.warn('Gemini AI not available');
-      return ApiErrors.serverError('Gemini AI not available');
+      logger.warn("Gemini AI not available");
+      return ApiErrors.serverError("Gemini AI not available");
     }
 
-    logger.info('Sending explain request to Gemini AI');
+    logger.info("Sending explain request to Gemini AI");
 
     try {
-      const result = await geminiService.explain(question, userAnswer || '', event);
+      const result = await geminiService.explain(question, userAnswer || "", event);
 
-      logger.info('Gemini AI explain response received');
+      logger.info("Gemini AI explain response received");
 
-      return successResponse<ApiResponse['data']>(result);
+      return successResponse<ApiResponse["data"]>(result);
     } catch (error) {
-      logger.error('Gemini AI explain error:', error);
-      return ApiErrors.serverError('Failed to generate explanation');
+      logger.error("Gemini AI explain error:", error);
+      return ApiErrors.serverError("Failed to generate explanation");
     }
   } catch (error) {
-    logger.error('POST /api/gemini/explain error:', error);
+    logger.error("POST /api/gemini/explain error:", error);
     return handleApiError(error);
   }
 }

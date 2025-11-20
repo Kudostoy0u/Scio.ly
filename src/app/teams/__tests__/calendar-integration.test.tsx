@@ -1,33 +1,32 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import TeamCalendar from '../components/TeamCalendar';
-import TeamsLanding from '../components/TeamsLanding';
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import TeamCalendar from "@components/TeamCalendar";
+import TeamsLanding from "@components/TeamsLanding";
 
 // Mock all the required modules
-vi.mock('@/app/contexts/ThemeContext', () => ({
+vi.mock("@/app/contexts/ThemeContext", () => ({
   useTheme: () => ({
     darkMode: false,
   }),
 }));
 
-vi.mock('@/app/contexts/AuthContext', () => ({
+vi.mock("@/app/contexts/AuthContext", () => ({
   useAuth: () => ({
     user: {
-      id: 'test-user-id',
-      email: 'test@example.com',
+      id: "test-user-id",
+      email: "test@example.com",
     },
   }),
 }));
 
-vi.mock('react-toastify', () => ({
+vi.mock("react-toastify", () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
   },
 }));
 
-vi.mock('framer-motion', () => ({
+vi.mock("framer-motion", () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   },
@@ -35,7 +34,7 @@ vi.mock('framer-motion', () => ({
 }));
 
 // Mock lucide-react
-vi.mock('lucide-react', () => ({
+vi.mock("lucide-react", () => ({
   Plus: ({ className }: any) => <div className={className} data-testid="plus-icon" />,
   Edit: ({ className }: any) => <div className={className} data-testid="edit-icon" />,
   Trash2: ({ className }: any) => <div className={className} data-testid="trash-icon" />,
@@ -51,7 +50,7 @@ vi.mock('lucide-react', () => ({
 }));
 
 // Mock NotificationsContext
-vi.mock('@/app/contexts/NotificationsContext', () => ({
+vi.mock("@/app/contexts/NotificationsContext", () => ({
   useNotifications: () => ({
     unread: 0,
     notifs: [],
@@ -67,7 +66,7 @@ vi.mock('@/app/contexts/NotificationsContext', () => ({
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-describe('Calendar Integration Tests', () => {
+describe("Calendar Integration Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFetch.mockClear();
@@ -77,35 +76,35 @@ describe('Calendar Integration Tests', () => {
     vi.restoreAllMocks();
   });
 
-  describe('Calendar Component Integration', () => {
-    it('loads and displays team events and personal events', async () => {
+  describe("Calendar Component Integration", () => {
+    it("loads and displays team events and personal events", async () => {
       const mockTeamEvents = [
         {
-          id: 'team-event-1',
-          title: 'Team Practice',
+          id: "team-event-1",
+          title: "Team Practice",
           start_time: new Date().toISOString(),
-          event_type: 'practice',
-          team_id: 'team-123',
+          event_type: "practice",
+          team_id: "team-123",
         },
       ];
 
       const mockPersonalEvents = [
         {
-          id: 'personal-event-1',
-          title: 'Personal Study',
+          id: "personal-event-1",
+          title: "Personal Study",
           start_time: new Date().toISOString(),
-          event_type: 'personal',
+          event_type: "personal",
           team_id: null,
         },
       ];
 
       const mockRecurringMeetings = [
         {
-          id: 'recurring-1',
-          title: 'Weekly Practice',
+          id: "recurring-1",
+          title: "Weekly Practice",
           days_of_week: [1, 3], // Monday and Wednesday
-          start_time: '15:00',
-          end_time: '17:00',
+          start_time: "15:00",
+          end_time: "17:00",
           exceptions: [],
         },
       ];
@@ -124,32 +123,26 @@ describe('Calendar Integration Tests', () => {
           json: () => Promise.resolve({ success: true, meetings: mockRecurringMeetings }),
         });
 
-      render(
-        <TeamCalendar
-          teamId="team-123"
-          isCaptain={true}
-          teamSlug="test-team"
-        />
-      );
+      render(<TeamCalendar teamId="team-123" isCaptain={true} teamSlug="test-team" />);
 
       await waitFor(() => {
-        expect(screen.getByText('Team Practice')).toBeInTheDocument();
-        expect(screen.getByText('Personal Study')).toBeInTheDocument();
+        expect(screen.getByText("Team Practice")).toBeInTheDocument();
+        expect(screen.getByText("Personal Study")).toBeInTheDocument();
       });
 
       // Verify all API calls were made
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/teams/v2/team-123/events')
+        expect.stringContaining("/api/teams/v2/team-123/events")
       );
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/teams/calendar/personal')
+        expect.stringContaining("/api/teams/calendar/personal")
       );
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/teams/v2/team-123/recurring-meetings')
+        expect.stringContaining("/api/teams/v2/team-123/recurring-meetings")
       );
     });
 
-    it('creates event and refreshes calendar', async () => {
+    it("creates event and refreshes calendar", async () => {
       mockFetch
         .mockResolvedValueOnce({
           ok: true,
@@ -165,53 +158,47 @@ describe('Calendar Integration Tests', () => {
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve({ success: true, eventId: 'new-event-id' }),
+          json: () => Promise.resolve({ success: true, eventId: "new-event-id" }),
         });
 
-      render(
-        <TeamCalendar
-          teamId="team-123"
-          isCaptain={true}
-          teamSlug="test-team"
-        />
-      );
+      render(<TeamCalendar teamId="team-123" isCaptain={true} teamSlug="test-team" />);
 
       // Open event modal
-      const addEventButton = screen.getByText('Add Event');
+      const addEventButton = screen.getByText("Add Event");
       fireEvent.click(addEventButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Create Event')).toBeInTheDocument();
+        expect(screen.getByText("Create Event")).toBeInTheDocument();
       });
 
       // Fill out form
-      fireEvent.change(screen.getByPlaceholderText('Event title'), {
-        target: { value: 'New Team Event' },
+      fireEvent.change(screen.getByPlaceholderText("Event title"), {
+        target: { value: "New Team Event" },
       });
-      fireEvent.change(screen.getByDisplayValue(''), {
-        target: { value: '14:00' },
+      fireEvent.change(screen.getByDisplayValue(""), {
+        target: { value: "14:00" },
       });
-      fireEvent.change(screen.getByDisplayValue(''), {
-        target: { value: '16:00' },
+      fireEvent.change(screen.getByDisplayValue(""), {
+        target: { value: "16:00" },
       });
 
       // Submit form
-      const createButton = screen.getByText('Create');
+      const createButton = screen.getByText("Create");
       fireEvent.click(createButton);
 
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith(
-          '/api/teams/calendar/events',
+          "/api/teams/calendar/events",
           expect.objectContaining({
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: expect.stringContaining('New Team Event'),
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: expect.stringContaining("New Team Event"),
           })
         );
       });
     });
 
-    it('creates recurring meeting and refreshes calendar', async () => {
+    it("creates recurring meeting and refreshes calendar", async () => {
       mockFetch
         .mockResolvedValueOnce({
           ok: true,
@@ -227,67 +214,61 @@ describe('Calendar Integration Tests', () => {
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve({ success: true, meetingId: 'new-meeting-id' }),
+          json: () => Promise.resolve({ success: true, meetingId: "new-meeting-id" }),
         });
 
-      render(
-        <TeamCalendar
-          teamId="team-123"
-          isCaptain={true}
-          teamSlug="test-team"
-        />
-      );
+      render(<TeamCalendar teamId="team-123" isCaptain={true} teamSlug="test-team" />);
 
       // Open recurring meeting modal
-      const recurringButton = screen.getByText('Recurring');
+      const recurringButton = screen.getByText("Recurring");
       fireEvent.click(recurringButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Create Recurring Meeting')).toBeInTheDocument();
+        expect(screen.getByText("Create Recurring Meeting")).toBeInTheDocument();
       });
 
       // Fill out form
-      fireEvent.change(screen.getByPlaceholderText('e.g., Weekly Science Olympiad Practice'), {
-        target: { value: 'Weekly Practice' },
+      fireEvent.change(screen.getByPlaceholderText("e.g., Weekly Science Olympiad Practice"), {
+        target: { value: "Weekly Practice" },
       });
 
       // Select days of week
-      const mondayCheckbox = screen.getByDisplayValue('1');
-      const wednesdayCheckbox = screen.getByDisplayValue('3');
+      const mondayCheckbox = screen.getByDisplayValue("1");
+      const wednesdayCheckbox = screen.getByDisplayValue("3");
       fireEvent.click(mondayCheckbox);
       fireEvent.click(wednesdayCheckbox);
 
-      fireEvent.change(screen.getByDisplayValue(''), {
-        target: { value: '15:00' },
+      fireEvent.change(screen.getByDisplayValue(""), {
+        target: { value: "15:00" },
       });
-      fireEvent.change(screen.getByDisplayValue(''), {
-        target: { value: '17:00' },
+      fireEvent.change(screen.getByDisplayValue(""), {
+        target: { value: "17:00" },
       });
 
       // Submit form
-      const createButton = screen.getByText('Create Recurring Meeting');
+      const createButton = screen.getByText("Create Recurring Meeting");
       fireEvent.click(createButton);
 
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith(
-          '/api/teams/calendar/recurring-meetings',
+          "/api/teams/calendar/recurring-meetings",
           expect.objectContaining({
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: expect.stringContaining('Weekly Practice'),
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: expect.stringContaining("Weekly Practice"),
           })
         );
       });
     });
   });
 
-  describe('TeamsLanding Integration', () => {
-    it('switches to upcoming tab and shows calendar', async () => {
+  describe("TeamsLanding Integration", () => {
+    it("switches to upcoming tab and shows calendar", async () => {
       const mockUserTeams = [
         {
-          id: 'team-1',
-          name: 'Test Team',
-          slug: 'test-team',
+          id: "team-1",
+          name: "Test Team",
+          slug: "test-team",
           members: [],
         },
       ];
@@ -316,20 +297,20 @@ describe('Calendar Integration Tests', () => {
       );
 
       // Click on Upcoming tab
-      const upcomingTab = screen.getByText('Upcoming');
+      const upcomingTab = screen.getByText("Upcoming");
       fireEvent.click(upcomingTab);
 
       await waitFor(() => {
-        expect(screen.getByText('Upcoming Events')).toBeInTheDocument();
+        expect(screen.getByText("Upcoming Events")).toBeInTheDocument();
       });
     });
 
-    it('shows different content for different tabs', async () => {
+    it("shows different content for different tabs", async () => {
       const mockUserTeams = [
         {
-          id: 'team-1',
-          name: 'Test Team',
-          slug: 'test-team',
+          id: "team-1",
+          name: "Test Team",
+          slug: "test-team",
           members: [],
         },
       ];
@@ -344,65 +325,53 @@ describe('Calendar Integration Tests', () => {
       );
 
       // Should start with home tab
-      expect(screen.getByText('Add a team to get started')).toBeInTheDocument();
+      expect(screen.getByText("Add a team to get started")).toBeInTheDocument();
 
       // Switch to settings tab
-      const settingsTab = screen.getByText('Settings');
+      const settingsTab = screen.getByText("Settings");
       fireEvent.click(settingsTab);
 
       await waitFor(() => {
-        expect(screen.getByText('Team and account settings will appear here.')).toBeInTheDocument();
+        expect(screen.getByText("Team and account settings will appear here.")).toBeInTheDocument();
       });
     });
   });
 
-  describe('Error Handling Integration', () => {
-    it('handles API errors gracefully', async () => {
-      mockFetch.mockRejectedValue(new Error('Network error'));
+  describe("Error Handling Integration", () => {
+    it("handles API errors gracefully", async () => {
+      mockFetch.mockRejectedValue(new Error("Network error"));
 
-      render(
-        <TeamCalendar
-          teamId="team-123"
-          isCaptain={true}
-          teamSlug="test-team"
-        />
-      );
+      render(<TeamCalendar teamId="team-123" isCaptain={true} teamSlug="test-team" />);
 
       await waitFor(() => {
         // Should not crash and should show calendar
-        expect(screen.getByText('Upcoming Events')).toBeInTheDocument();
+        expect(screen.getByText("Upcoming Events")).toBeInTheDocument();
       });
     });
 
-    it('handles partial API failures', async () => {
+    it("handles partial API failures", async () => {
       mockFetch
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ success: true, events: [] }),
         })
-        .mockRejectedValueOnce(new Error('Personal events failed'))
+        .mockRejectedValueOnce(new Error("Personal events failed"))
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ success: true, meetings: [] }),
         });
 
-      render(
-        <TeamCalendar
-          teamId="team-123"
-          isCaptain={true}
-          teamSlug="test-team"
-        />
-      );
+      render(<TeamCalendar teamId="team-123" isCaptain={true} teamSlug="test-team" />);
 
       await waitFor(() => {
         // Should still show calendar even if personal events fail
-        expect(screen.getByText('Upcoming Events')).toBeInTheDocument();
+        expect(screen.getByText("Upcoming Events")).toBeInTheDocument();
       });
     });
   });
 
-  describe('Calendar Navigation Integration', () => {
-    it('navigates between months and maintains state', async () => {
+  describe("Calendar Navigation Integration", () => {
+    it("navigates between months and maintains state", async () => {
       mockFetch
         .mockResolvedValueOnce({
           ok: true,
@@ -417,16 +386,10 @@ describe('Calendar Integration Tests', () => {
           json: () => Promise.resolve({ success: true, meetings: [] }),
         });
 
-      render(
-        <TeamCalendar
-          teamId="team-123"
-          isCaptain={true}
-          teamSlug="test-team"
-        />
-      );
+      render(<TeamCalendar teamId="team-123" isCaptain={true} teamSlug="test-team" />);
 
       // Navigate to next month
-      const nextButton = screen.getByRole('button', { name: /next/i });
+      const nextButton = screen.getByRole("button", { name: /next/i });
       fireEvent.click(nextButton);
 
       await waitFor(() => {
@@ -435,7 +398,7 @@ describe('Calendar Integration Tests', () => {
       });
 
       // Navigate to previous month
-      const prevButton = screen.getByRole('button', { name: /previous/i });
+      const prevButton = screen.getByRole("button", { name: /previous/i });
       fireEvent.click(prevButton);
 
       await waitFor(() => {
@@ -444,7 +407,7 @@ describe('Calendar Integration Tests', () => {
       });
     });
 
-    it('changes view modes and maintains calendar state', async () => {
+    it("changes view modes and maintains calendar state", async () => {
       mockFetch
         .mockResolvedValueOnce({
           ok: true,
@@ -459,39 +422,33 @@ describe('Calendar Integration Tests', () => {
           json: () => Promise.resolve({ success: true, meetings: [] }),
         });
 
-      render(
-        <TeamCalendar
-          teamId="team-123"
-          isCaptain={true}
-          teamSlug="test-team"
-        />
-      );
+      render(<TeamCalendar teamId="team-123" isCaptain={true} teamSlug="test-team" />);
 
       // Change to week view
-      const weekButton = screen.getByText('Week');
+      const weekButton = screen.getByText("Week");
       fireEvent.click(weekButton);
 
-      expect(weekButton).toHaveClass('bg-blue-500');
+      expect(weekButton).toHaveClass("bg-blue-500");
 
       // Change to day view
-      const dayButton = screen.getByText('Day');
+      const dayButton = screen.getByText("Day");
       fireEvent.click(dayButton);
 
-      expect(dayButton).toHaveClass('bg-blue-500');
-      expect(weekButton).not.toHaveClass('bg-blue-500');
+      expect(dayButton).toHaveClass("bg-blue-500");
+      expect(weekButton).not.toHaveClass("bg-blue-500");
     });
   });
 
-  describe('Event Interaction Integration', () => {
-    it('allows clicking on events to view details', async () => {
+  describe("Event Interaction Integration", () => {
+    it("allows clicking on events to view details", async () => {
       const mockEvents = [
         {
-          id: 'event-1',
-          title: 'Team Practice',
+          id: "event-1",
+          title: "Team Practice",
           start_time: new Date().toISOString(),
-          event_type: 'practice',
-          description: 'Weekly team practice',
-          location: 'Gym',
+          event_type: "practice",
+          description: "Weekly team practice",
+          location: "Gym",
         },
       ];
 
@@ -509,27 +466,21 @@ describe('Calendar Integration Tests', () => {
           json: () => Promise.resolve({ success: true, meetings: [] }),
         });
 
-      render(
-        <TeamCalendar
-          teamId="team-123"
-          isCaptain={true}
-          teamSlug="test-team"
-        />
-      );
+      render(<TeamCalendar teamId="team-123" isCaptain={true} teamSlug="test-team" />);
 
       await waitFor(() => {
-        expect(screen.getByText('Team Practice')).toBeInTheDocument();
+        expect(screen.getByText("Team Practice")).toBeInTheDocument();
       });
 
       // Click on event
-      const eventElement = screen.getByText('Team Practice');
+      const eventElement = screen.getByText("Team Practice");
       fireEvent.click(eventElement);
 
       // Should open event details or modal
       // This would depend on the specific implementation
     });
 
-    it('allows adding events to specific dates', async () => {
+    it("allows adding events to specific dates", async () => {
       mockFetch
         .mockResolvedValueOnce({
           ok: true,
@@ -544,25 +495,19 @@ describe('Calendar Integration Tests', () => {
           json: () => Promise.resolve({ success: true, meetings: [] }),
         });
 
-      render(
-        <TeamCalendar
-          teamId="team-123"
-          isCaptain={true}
-          teamSlug="test-team"
-        />
-      );
+      render(<TeamCalendar teamId="team-123" isCaptain={true} teamSlug="test-team" />);
 
       // Find a day in the current month
-      const dayButtons = screen.getAllByRole('button');
-      const dayButton = dayButtons.find(button => 
-        button.textContent && /^\d+$/.test(button.textContent)
+      const dayButtons = screen.getAllByRole("button");
+      const dayButton = dayButtons.find(
+        (button) => button.textContent && /^\d+$/.test(button.textContent)
       );
 
       if (dayButton) {
         fireEvent.click(dayButton);
 
         await waitFor(() => {
-          expect(screen.getByText('Create Event')).toBeInTheDocument();
+          expect(screen.getByText("Create Event")).toBeInTheDocument();
         });
       }
     });

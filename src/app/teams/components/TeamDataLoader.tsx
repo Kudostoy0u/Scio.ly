@@ -16,13 +16,13 @@
  * - Faster initial page load
  */
 
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
-import { useTeamStore } from '@/app/hooks/useTeamStore';
-import { useTeamPageData } from '@/app/hooks/useTeamPageData';
-import type { TeamMember, Subteam, Assignment } from '@/lib/stores/teamStore';
-import type { RosterData } from '@/lib/schemas/teams.schema';
+import { useTeamPageData } from "@/app/hooks/useTeamPageData";
+import { useTeamStore } from "@/app/hooks/useTeamStore";
+import type { RosterData } from "@/lib/schemas/teams.schema";
+import type { Assignment, Subteam, TeamMember } from "@/lib/stores/teamStore";
+import { useEffect, useRef } from "react";
 
 interface TeamDataLoaderProps {
   teamSlug: string;
@@ -33,41 +33,19 @@ export default function TeamDataLoader({ teamSlug, children }: TeamDataLoaderPro
   const hasLoadedRef = useRef(false);
 
   // Use the MULTIPLEXED endpoint that fetches EVERYTHING in one request
-  const {
-    userTeams,
-    subteams,
-    assignments,
-    members,
-    roster,
-    rosterSubteamId,
-    isLoading,
-    error
-  } = useTeamPageData(teamSlug);
+  const { userTeams, subteams, assignments, members, roster, rosterSubteamId, isLoading, error } =
+    useTeamPageData(teamSlug);
 
-  const {
-    updateSubteams,
-    updateAssignments,
-    updateMembers,
-    updateRoster
-  } = useTeamStore();
+  const { updateSubteams, updateAssignments, updateMembers, updateRoster } = useTeamStore();
 
   // Update store with fetched data from MULTIPLEXED endpoint
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 [TeamDataLoader] MULTIPLEXED effect triggered:', {
-        teamSlug,
-        hasLoaded: hasLoadedRef.current,
-        isLoading,
-        error,
-        userTeamsLength: userTeams?.length,
-        subteamsLength: subteams?.length,
-        assignmentsLength: assignments?.length,
-        membersLength: members?.length,
-        rosterEventsCount: Object.keys(roster || {}).length
-      });
+    if (process.env.NODE_ENV === "development") {
     }
 
-    if (hasLoadedRef.current || isLoading || error) return;
+    if (hasLoadedRef.current || isLoading || error) {
+      return;
+    }
     hasLoadedRef.current = true;
 
     try {
@@ -77,51 +55,48 @@ export default function TeamDataLoader({ teamSlug, children }: TeamDataLoaderPro
 
       // Update subteams
       if (subteams.length > 0) {
-        const teamSubteams: Subteam[] = subteams.map(subteam => ({
+        const teamSubteams: Subteam[] = subteams.map((subteam: any) => ({
           id: subteam.id,
           name: subteam.name,
           team_id: subteam.team_id,
           description: subteam.description,
-          created_at: subteam.created_at
+          created_at: subteam.created_at,
         }));
         updateSubteams(teamSlug, teamSubteams);
-        if (process.env.NODE_ENV === 'development') {
-          console.log('✅ [TeamDataLoader] Updated subteams:', teamSubteams.length);
+        if (process.env.NODE_ENV === "development") {
         }
       }
 
       // Update assignments
       if (assignments.length > 0) {
-        const teamAssignments: Assignment[] = assignments.map(assignment => ({
+        const teamAssignments: Assignment[] = assignments.map((assignment: any) => ({
           id: assignment.id,
           title: assignment.title,
-          description: assignment.description || '',
+          description: assignment.description || "",
           due_date: assignment.dueDate?.toISOString() || new Date().toISOString(),
           assigned_to: [],
           created_by: assignment.createdBy,
-          created_at: assignment.createdAt?.toISOString() || new Date().toISOString()
+          created_at: assignment.createdAt?.toISOString() || new Date().toISOString(),
         }));
         updateAssignments(teamSlug, teamAssignments);
-        if (process.env.NODE_ENV === 'development') {
-          console.log('✅ [TeamDataLoader] Updated assignments:', teamAssignments.length);
+        if (process.env.NODE_ENV === "development") {
         }
       }
 
       // Update members
       if (members.length > 0) {
-        const teamMembers: TeamMember[] = members.map(member => ({
+        const teamMembers: TeamMember[] = members.map((member: any) => ({
           id: member.userId || `unlinked-${Math.random()}`,
           name: member.displayFirstName,
-          email: member.email || '',
+          email: member.email || "",
           events: [],
           isPendingInvitation: false,
-          role: member.role as any,
+          role: member.role,
           subteamId: member.subteamId,
-          isLinked: member.isLinked
+          isLinked: member.isLinked,
         }));
-        updateMembers(teamSlug, 'all', teamMembers);
-        if (process.env.NODE_ENV === 'development') {
-          console.log('✅ [TeamDataLoader] Updated members:', teamMembers.length);
+        updateMembers(teamSlug, "all", teamMembers);
+        if (process.env.NODE_ENV === "development") {
         }
       }
 
@@ -129,21 +104,16 @@ export default function TeamDataLoader({ teamSlug, children }: TeamDataLoaderPro
       if (Object.keys(roster).length > 0 && rosterSubteamId) {
         const rosterData: RosterData = {
           roster,
-          removed_events: []
+          removed_events: [],
         };
         updateRoster(teamSlug, rosterSubteamId, rosterData);
-        if (process.env.NODE_ENV === 'development') {
-          console.log('✅ [TeamDataLoader] Updated roster for subteam:', rosterSubteamId);
+        if (process.env.NODE_ENV === "development") {
         }
       }
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`🚀 [TeamDataLoader] MULTIPLEXED data loaded successfully for team: ${teamSlug}`);
-        console.log('📊 Performance: Reduced 3+ requests to 1 unified request');
+      if (process.env.NODE_ENV === "development") {
       }
-    } catch (error) {
-      console.error('[TeamDataLoader] Failed to update store:', error);
-    }
+    } catch (_error) {}
   }, [
     teamSlug,
     subteams,
@@ -157,7 +127,7 @@ export default function TeamDataLoader({ teamSlug, children }: TeamDataLoaderPro
     updateSubteams,
     updateAssignments,
     updateMembers,
-    updateRoster
+    updateRoster,
   ]);
 
   return <>{children}</>;

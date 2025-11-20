@@ -1,11 +1,9 @@
-import { QuoteData } from '../types';
-
+import type { QuoteData } from "@/app/codebusters/types";
 
 const generateKeywordAlphabet = (keyword: string): string => {
-  const cleanKeyword = keyword.toUpperCase().replace(/[^A-Z]/g, '');
+  const cleanKeyword = keyword.toUpperCase().replace(/[^A-Z]/g, "");
   const used = new Set<string>();
   const result: string[] = [];
-  
 
   for (const char of cleanKeyword) {
     if (!used.has(char)) {
@@ -13,15 +11,14 @@ const generateKeywordAlphabet = (keyword: string): string => {
       result.push(char);
     }
   }
-  
 
-  for (const char of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+  for (const char of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
     if (!used.has(char)) {
       result.push(char);
     }
   }
-  
-  return result.join('');
+
+  return result.join("");
 };
 
 export interface GradingResult {
@@ -42,69 +39,57 @@ export interface GradingResult {
 // Compute a suggested default point value purely from cipher type/length.
 // This serves as a fallback when no explicit points are provided or overridden.
 function getSuggestedPoints(quote: QuoteData): number {
-
   const cipherMultipliers: { [key: string]: number } = {
+    Atbash: 1.0,
+    Caesar: 1.0,
+    Baconian: 1.2,
 
-    'Atbash': 1.0,
-    'Caesar': 1.0,
-    'Baconian': 1.2,
-    
+    Affine: 1.8,
+    Porta: 1.6,
+    Checkerboard: 1.7,
 
-    'Affine': 1.8,
-    'Porta': 1.6,
-    'Checkerboard': 1.7,
-    
+    "K1 Aristocrat": 2.2,
+    "K1 Patristocrat": 2.8,
+    "K1 Xenocrypt": 2.5,
+    "Hill 2x2": 2.8,
+    Nihilist: 2.3,
 
-    'K1 Aristocrat': 2.2,
-    'K1 Patristocrat': 2.8,
-    'K1 Xenocrypt': 2.5,
-    'Hill 2x2': 2.8,
-    'Nihilist': 2.3,
-    
+    "K2 Aristocrat": 3.2,
+    "K2 Patristocrat": 3.8,
+    "K2 Xenocrypt": 3.5,
+    "Hill 3x3": 3.8,
+    "Fractionated Morse": 3.6,
+    "Complete Columnar": 3.4,
 
-    'K2 Aristocrat': 3.2,
-    'K2 Patristocrat': 3.8,
-    'K2 Xenocrypt': 3.5,
-    'Hill 3x3': 3.8,
-    'Fractionated Morse': 3.6,
-    'Complete Columnar': 3.4,
-    
-
-    'K3 Aristocrat': 4.2,
-    'K3 Patristocrat': 4.8,
-    'K3 Xenocrypt': 4.5,
-    'Random Aristocrat': 4.0,
-    'Random Patristocrat': 4.2,
-    'Random Xenocrypt': 4.8,
-    'Cryptarithm': 4.5
+    "K3 Aristocrat": 4.2,
+    "K3 Patristocrat": 4.8,
+    "K3 Xenocrypt": 4.5,
+    "Random Aristocrat": 4.0,
+    "Random Patristocrat": 4.2,
+    "Random Xenocrypt": 4.8,
+    Cryptarithm: 4.5,
   };
 
-
   const baseMultiplier = cipherMultipliers[quote.cipherType] || 2.0;
-  
 
   let baconianMultiplier = baseMultiplier;
-  if (quote.cipherType === 'Baconian' && quote.baconianBinaryType) {
+  if (quote.cipherType === "Baconian" && quote.baconianBinaryType) {
     const binaryType = quote.baconianBinaryType;
-    
 
-    if (binaryType === 'A/B') {
+    if (binaryType === "A/B") {
       baconianMultiplier = 1.0;
-    } else if (binaryType === 'Vowels/Consonants' || binaryType === 'Odd/Even') {
+    } else if (binaryType === "Vowels/Consonants" || binaryType === "Odd/Even") {
       baconianMultiplier = 1.3;
-    } else if (binaryType.includes(' vs ')) {
-
+    } else if (binaryType.includes(" vs ")) {
       baconianMultiplier = 1.4;
     } else {
-
       baconianMultiplier = 1.8;
     }
   }
-  
 
-  const quoteLength = quote.quote.replace(/[^A-Za-z]/g, '').length;
+  const quoteLength = quote.quote.replace(/[^A-Za-z]/g, "").length;
   let lengthMultiplier = 1.0;
-  
+
   if (quoteLength < 50) {
     lengthMultiplier = 0.8;
   } else if (quoteLength < 100) {
@@ -114,10 +99,8 @@ function getSuggestedPoints(quote: QuoteData): number {
   } else {
     lengthMultiplier = 1.4;
   }
-  
 
   const finalPoints = Math.round(50 * baconianMultiplier * lengthMultiplier);
-  
 
   return Math.max(2.5, Math.min(20, Number((finalPoints / 7).toFixed(1))));
 }
@@ -134,16 +117,21 @@ export function resolveQuestionPoints(
   quoteIndex: number,
   questionPoints: { [key: number]: number } = {}
 ): number {
-  if (typeof questionPoints[quoteIndex] === 'number' && questionPoints[quoteIndex]! > 0) {
+  if (typeof questionPoints[quoteIndex] === "number" && questionPoints[quoteIndex]! > 0) {
     return questionPoints[quoteIndex]!;
   }
-  if (typeof (quote as any).points === 'number' && (quote as any).points > 0) {
-    return (quote as any).points as number;
+  if (typeof quote.points === "number" && quote.points > 0) {
+    return quote.points;
   }
   return getSuggestedPoints(quote);
 }
 
-export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hintedLetters: {[questionIndex: number]: {[letter: string]: boolean}} = {}, questionPoints: {[key: number]: number} = {}): GradingResult {
+export function calculateCipherGrade(
+  quote: QuoteData,
+  quoteIndex: number,
+  hintedLetters: { [questionIndex: number]: { [letter: string]: boolean } } = {},
+  questionPoints: { [key: number]: number } = {}
+): GradingResult {
   const questionPointValue = resolveQuestionPoints(quote, quoteIndex, questionPoints);
   let totalInputs = 0;
   let correctInputs = 0;
@@ -151,16 +139,18 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
 
   // Special grading: keyword-only ciphers
   if (quote.askForKeyword && quote.key) {
-    const keyStr = (quote.key || '').toUpperCase();
-    const userStr = (quote.keywordSolution || '').toUpperCase();
+    const keyStr = (quote.key || "").toUpperCase();
+    const userStr = (quote.keywordSolution || "").toUpperCase();
 
     totalInputs = keyStr.length;
     for (let i = 0; i < totalInputs; i++) {
-      const expected = keyStr[i] || '';
-      const provided = userStr[i] || '';
+      const expected = keyStr[i] || "";
+      const provided = userStr[i] || "";
       if (provided && provided.trim().length > 0) {
         filledInputs++;
-        if (provided === expected) correctInputs++;
+        if (provided === expected) {
+          correctInputs++;
+        }
       }
     }
 
@@ -173,17 +163,34 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
       filledInputs,
       score,
       maxScore: questionPointValue,
-      attemptedScore
+      attemptedScore,
     };
   }
 
-  if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'Random Aristocrat', 'Random Patristocrat', 'Caesar', 'Atbash', 'Affine', 'Random Xenocrypt', 'K1 Xenocrypt', 'K2 Xenocrypt', 'K3 Xenocrypt'].includes(quote.cipherType)) {
+  if (
+    [
+      "K1 Aristocrat",
+      "K2 Aristocrat",
+      "K3 Aristocrat",
+      "K1 Patristocrat",
+      "K2 Patristocrat",
+      "K3 Patristocrat",
+      "Random Aristocrat",
+      "Random Patristocrat",
+      "Caesar",
+      "Atbash",
+      "Affine",
+      "Random Xenocrypt",
+      "K1 Xenocrypt",
+      "K2 Xenocrypt",
+      "K3 Xenocrypt",
+    ].includes(quote.cipherType)
+  ) {
     if (quote.solution && Object.keys(quote.solution).length > 0) {
-
-      const allUniqueLetters = [...new Set(quote.encrypted.replace(/[^A-Z]/g, ''))];
-      const nonHintedLetters = allUniqueLetters.filter(c => !Boolean(hintedLetters[quoteIndex]?.[c]));
+      const allUniqueLetters = [...new Set(quote.encrypted.replace(/[^A-Z]/g, ""))];
+      const nonHintedLetters = allUniqueLetters.filter((c) => !hintedLetters[quoteIndex]?.[c]);
       totalInputs = nonHintedLetters.length;
-      
+
       // Prefer exact mapping from stored alphabets when available
       let storedMap: { [cipher: string]: string } | null = null;
       if (quote.plainAlphabet && quote.cipherAlphabet) {
@@ -191,44 +198,56 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
         const pa = quote.plainAlphabet;
         const ca = quote.cipherAlphabet;
         const len = Math.min(pa.length, ca.length);
-        for (let i = 0; i < len; i++) storedMap[ca[i]] = pa[i];
+        for (let i = 0; i < len; i++) {
+          const cipherChar = ca[i];
+          const plainChar = pa[i];
+          if (cipherChar !== undefined && plainChar !== undefined) {
+            storedMap[cipherChar] = plainChar;
+          }
+        }
       }
 
       for (const cipherLetter of nonHintedLetters) {
         const userAnswer = quote.solution[cipherLetter];
         // nonHintedLetters already filters hints
-        
 
         if (userAnswer && userAnswer.trim().length > 0) {
           filledInputs++;
         }
-        
 
         let isCorrect = false;
         if (storedMap) {
           const expectedPlainLetter = storedMap[cipherLetter];
-          if (expectedPlainLetter) isCorrect = userAnswer === expectedPlainLetter;
-        } else if (quote.cipherType === 'Caesar' && quote.caesarShift !== undefined) {
+          if (expectedPlainLetter) {
+            isCorrect = userAnswer === expectedPlainLetter;
+          }
+        } else if (quote.cipherType === "Caesar" && quote.caesarShift !== undefined) {
           const shift = quote.caesarShift;
-          const expectedPlainLetter = String.fromCharCode(((cipherLetter.charCodeAt(0) - 65 - shift + 26) % 26) + 65);
+          const expectedPlainLetter = String.fromCharCode(
+            ((cipherLetter.charCodeAt(0) - 65 - shift + 26) % 26) + 65
+          );
           isCorrect = userAnswer === expectedPlainLetter;
-        } else if (quote.cipherType === 'Caesar' && quote.caesarShift === undefined) {
+        } else if (quote.cipherType === "Caesar" && quote.caesarShift === undefined) {
           // For Caesar cipher without known shift, we need to check if the user's solution
           // correctly deciphers the ciphertext to match the original quote
-          const ciphertext = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, '');
-          const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
-          
+          const ciphertext = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, "");
+          const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, "");
+
           // Find the position of this cipher letter in the ciphertext
           const cipherIndex = ciphertext.indexOf(cipherLetter);
           if (cipherIndex !== -1 && cipherIndex < expectedPlaintext.length) {
             const expectedPlainLetter = expectedPlaintext[cipherIndex];
             isCorrect = userAnswer === expectedPlainLetter;
           }
-        } else if (quote.cipherType === 'Atbash') {
-          const atbashMap = 'ZYXWVUTSRQPONMLKJIHGFEDCBA';
+        } else if (quote.cipherType === "Atbash") {
+          const atbashMap = "ZYXWVUTSRQPONMLKJIHGFEDCBA";
           const expectedPlainLetter = atbashMap[cipherLetter.charCodeAt(0) - 65];
           isCorrect = userAnswer === expectedPlainLetter;
-        } else if (quote.cipherType === 'Affine' && quote.affineA !== undefined && quote.affineB !== undefined) {
+        } else if (
+          quote.cipherType === "Affine" &&
+          quote.affineA !== undefined &&
+          quote.affineB !== undefined
+        ) {
           const a = quote.affineA;
           const b = quote.affineB;
 
@@ -239,27 +258,59 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
               break;
             }
           }
-          const expectedPlainLetter = String.fromCharCode(((aInverse * (cipherLetter.charCodeAt(0) - 65 - b + 26)) % 26) + 65);
+          const expectedPlainLetter = String.fromCharCode(
+            ((aInverse * (cipherLetter.charCodeAt(0) - 65 - b + 26)) % 26) + 65
+          );
           isCorrect = userAnswer === expectedPlainLetter;
-        } else if (['K1 Aristocrat', 'K2 Aristocrat', 'K3 Aristocrat', 'K1 Patristocrat', 'K2 Patristocrat', 'K3 Patristocrat', 'K1 Xenocrypt', 'K2 Xenocrypt', 'K3 Xenocrypt'].includes(quote.cipherType)) {
-
-          const keyword = quote.key || '';
-          const isXeno = quote.cipherType.includes('Xenocrypt');
-          const basePlain = quote.cipherType.includes('K1') || quote.cipherType.includes('K3')
-            ? (isXeno ? generateKeywordAlphabet(keyword) + 'Ñ' : generateKeywordAlphabet(keyword))
-            : (isXeno ? 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ' : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
-          const baseCipher = quote.cipherType.includes('K2') || quote.cipherType.includes('K3')
-            ? (isXeno ? generateKeywordAlphabet(keyword) + 'Ñ' : generateKeywordAlphabet(keyword))
-            : (isXeno ? 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ' : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
-          const shift = typeof (quote as any).kShift === 'number' ? (quote as any).kShift : (quote.cipherType.includes('K3') ? 1 : 0);
+        } else if (
+          [
+            "K1 Aristocrat",
+            "K2 Aristocrat",
+            "K3 Aristocrat",
+            "K1 Patristocrat",
+            "K2 Patristocrat",
+            "K3 Patristocrat",
+            "K1 Xenocrypt",
+            "K2 Xenocrypt",
+            "K3 Xenocrypt",
+          ].includes(quote.cipherType)
+        ) {
+          const keyword = quote.key || "";
+          const isXeno = quote.cipherType.includes("Xenocrypt");
+          const basePlain =
+            quote.cipherType.includes("K1") || quote.cipherType.includes("K3")
+              ? isXeno
+                ? `${generateKeywordAlphabet(keyword)}Ñ`
+                : generateKeywordAlphabet(keyword)
+              : isXeno
+                ? "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ"
+                : "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+          const baseCipher =
+            quote.cipherType.includes("K2") || quote.cipherType.includes("K3")
+              ? isXeno
+                ? `${generateKeywordAlphabet(keyword)}Ñ`
+                : generateKeywordAlphabet(keyword)
+              : isXeno
+                ? "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ"
+                : "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+          const shift =
+            typeof quote.kShift === "number"
+              ? quote.kShift
+              : quote.cipherType.includes("K3")
+                ? 1
+                : 0;
           const rotatedCipher = baseCipher.slice(shift) + baseCipher.slice(0, shift);
           const idx = rotatedCipher.indexOf(cipherLetter);
           if (idx !== -1) {
             const expectedPlainLetter = basePlain[idx];
             isCorrect = userAnswer === expectedPlainLetter;
           }
-        } else if (['Random Aristocrat', 'Random Patristocrat', 'Random Xenocrypt'].includes(quote.cipherType) && quote.key) {
-
+        } else if (
+          ["Random Aristocrat", "Random Patristocrat", "Random Xenocrypt"].includes(
+            quote.cipherType
+          ) &&
+          quote.key
+        ) {
           const keyIndex = quote.key.indexOf(cipherLetter);
           if (keyIndex !== -1) {
             const expectedPlainLetter = String.fromCharCode(keyIndex + 65);
@@ -268,40 +319,38 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
             isCorrect = false;
           }
         } else {
-
           isCorrect = false;
         }
-        
+
         if (isCorrect) {
           correctInputs++;
         }
       }
     }
-  }
-  
-
-  else if (quote.cipherType === 'Hill 2x2' || quote.cipherType === 'Hill 3x3') {
+  } else if (quote.cipherType === "Hill 2x2" || quote.cipherType === "Hill 3x3") {
     if (quote.hillSolution) {
-      const matrixSize = quote.cipherType === 'Hill 2x2' ? 2 : 3;
-      
-      if (quote.cipherType === 'Hill 2x2') {
+      const matrixSize = quote.cipherType === "Hill 2x2" ? 2 : 3;
 
+      if (quote.cipherType === "Hill 2x2") {
         const matrixWeight = 0.5;
         const plaintextWeight = 0.5;
-        
 
         const expectedMatrix = quote.matrix;
         let matrixInputs = 0;
         let matrixFilled = 0;
         let matrixCorrect = 0;
-        
+
         if (expectedMatrix) {
           for (let i = 0; i < expectedMatrix.length; i++) {
-            for (let j = 0; j < expectedMatrix[i].length; j++) {
+            const expectedRow = expectedMatrix[i];
+            if (!expectedRow) {
+              continue;
+            }
+            for (let j = 0; j < expectedRow.length; j++) {
               matrixInputs++;
-              const userAnswer = quote.hillSolution.matrix[i]?.[j] || '';
-              const expected = expectedMatrix[i][j].toString();
-              
+              const userAnswer = quote.hillSolution.matrix[i]?.[j] || "";
+              const expected = expectedRow[j]?.toString() || "";
+
               if (userAnswer && userAnswer.trim().length > 0) {
                 matrixFilled++;
                 if (userAnswer.trim() === expected) {
@@ -311,24 +360,22 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
             }
           }
         }
-        
 
-        const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+        const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, "");
         let plaintextInputs = 0;
         let plaintextFilled = 0;
         let plaintextCorrect = 0;
-        
 
         const cleanPlainLength = expectedPlaintext.length;
         const requiredLength = Math.ceil(cleanPlainLength / matrixSize) * matrixSize;
         const paddingCount = requiredLength - cleanPlainLength;
         const actualPlaintextSlots = requiredLength - paddingCount;
-        
+
         for (let i = 0; i < actualPlaintextSlots; i++) {
           plaintextInputs++;
-          const userAnswer = quote.hillSolution.plaintext[i] || '';
-          const expected = expectedPlaintext[i] || '';
-          
+          const userAnswer = quote.hillSolution.plaintext[i] || "";
+          const expected = expectedPlaintext[i] || "";
+
           if (userAnswer && userAnswer.trim().length > 0) {
             plaintextFilled++;
             if (userAnswer.trim() === expected) {
@@ -336,22 +383,24 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
             }
           }
         }
-        
 
         totalInputs = matrixInputs + plaintextInputs;
         filledInputs = matrixFilled + plaintextFilled;
         correctInputs = matrixCorrect + plaintextCorrect;
-        
 
-        const matrixAttemptedScore = matrixInputs > 0 ? (matrixFilled / matrixInputs) * questionPointValue * matrixWeight : 0;
-        const plaintextAttemptedScore = plaintextInputs > 0 ? (plaintextFilled / plaintextInputs) * questionPointValue * plaintextWeight : 0;
+        const matrixAttemptedScore =
+          matrixInputs > 0 ? (matrixFilled / matrixInputs) * questionPointValue * matrixWeight : 0;
+        const plaintextAttemptedScore =
+          plaintextInputs > 0
+            ? (plaintextFilled / plaintextInputs) * questionPointValue * plaintextWeight
+            : 0;
         const hillAttemptedScore = matrixAttemptedScore + plaintextAttemptedScore;
-        
 
-        const matrixFinalScore = matrixFilled > 0 ? (matrixCorrect / matrixFilled) * matrixAttemptedScore : 0;
-        const plaintextFinalScore = plaintextFilled > 0 ? (plaintextCorrect / plaintextFilled) * plaintextAttemptedScore : 0;
+        const matrixFinalScore =
+          matrixFilled > 0 ? (matrixCorrect / matrixFilled) * matrixAttemptedScore : 0;
+        const plaintextFinalScore =
+          plaintextFilled > 0 ? (plaintextCorrect / plaintextFilled) * plaintextAttemptedScore : 0;
         const hillScore = matrixFinalScore + plaintextFinalScore;
-        
 
         return {
           totalInputs,
@@ -360,72 +409,62 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
           score: hillScore,
           maxScore: questionPointValue,
           attemptedScore: hillAttemptedScore,
-          unitLabel: 'matrix cells + plaintext letters'
-        };
-      } else {
-
-        const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
-        let plaintextInputs = 0;
-        let plaintextFilled = 0;
-        let plaintextCorrect = 0;
-        
-
-        const cleanPlainLength = expectedPlaintext.length;
-        const requiredLength = Math.ceil(cleanPlainLength / matrixSize) * matrixSize;
-        const paddingCount = requiredLength - cleanPlainLength;
-        const actualPlaintextSlots = requiredLength - paddingCount;
-        
-        for (let i = 0; i < actualPlaintextSlots; i++) {
-          plaintextInputs++;
-          const userAnswer = quote.hillSolution.plaintext[i] || '';
-          const expected = expectedPlaintext[i] || '';
-          
-          if (userAnswer && userAnswer.trim().length > 0) {
-            plaintextFilled++;
-            if (userAnswer.trim() === expected) {
-              plaintextCorrect++;
-            }
-          }
-        }
-        
-
-        totalInputs = plaintextInputs;
-        filledInputs = plaintextFilled;
-        correctInputs = plaintextCorrect;
-        
-
-        const attemptedScore = totalInputs > 0 ? (filledInputs / totalInputs) * questionPointValue : 0;
-        
-
-        const score = filledInputs > 0 ? (correctInputs / filledInputs) * attemptedScore : 0;
-        
-
-        return {
-          totalInputs,
-          correctInputs,
-          filledInputs,
-          score,
-          maxScore: questionPointValue,
-          attemptedScore,
-          unitLabel: 'plaintext letters'
+          unitLabel: "matrix cells + plaintext letters",
         };
       }
-    }
-  }
-  
+      const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, "");
+      let plaintextInputs = 0;
+      let plaintextFilled = 0;
+      let plaintextCorrect = 0;
 
-  else if (quote.cipherType === 'Complete Columnar') {
+      const cleanPlainLength = expectedPlaintext.length;
+      const requiredLength = Math.ceil(cleanPlainLength / matrixSize) * matrixSize;
+      const paddingCount = requiredLength - cleanPlainLength;
+      const actualPlaintextSlots = requiredLength - paddingCount;
+
+      for (let i = 0; i < actualPlaintextSlots; i++) {
+        plaintextInputs++;
+        const userAnswer = quote.hillSolution.plaintext[i] || "";
+        const expected = expectedPlaintext[i] || "";
+
+        if (userAnswer && userAnswer.trim().length > 0) {
+          plaintextFilled++;
+          if (userAnswer.trim() === expected) {
+            plaintextCorrect++;
+          }
+        }
+      }
+
+      totalInputs = plaintextInputs;
+      filledInputs = plaintextFilled;
+      correctInputs = plaintextCorrect;
+
+      const attemptedScore =
+        totalInputs > 0 ? (filledInputs / totalInputs) * questionPointValue : 0;
+
+      const score = filledInputs > 0 ? (correctInputs / filledInputs) * attemptedScore : 0;
+
+      return {
+        totalInputs,
+        correctInputs,
+        filledInputs,
+        score,
+        maxScore: questionPointValue,
+        attemptedScore,
+        unitLabel: "plaintext letters",
+      };
+    }
+  } else if (quote.cipherType === "Complete Columnar") {
     if (quote.solution?.decryptedText) {
       const decryptedText = quote.solution.decryptedText.trim();
-      const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+      const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, "");
       const expectedLength = expectedPlaintext.length;
       totalInputs = expectedLength;
-      
 
       for (let i = 0; i < expectedLength; i++) {
-        const userChar = i < decryptedText.length ? decryptedText[i] : '';
+        const userChar = i < decryptedText.length ? decryptedText[i] : "";
         const expectedChar = expectedPlaintext[i];
-        
+
         if (userChar && userChar.trim().length > 0) {
           filledInputs++;
           if (userChar.trim() === expectedChar) {
@@ -434,26 +473,29 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
         }
       }
     }
-  }
-  
-
-  else if (quote.cipherType === 'Nihilist') {
+  } else if (quote.cipherType === "Nihilist") {
     if (quote.nihilistSolution && Object.keys(quote.nihilistSolution).length > 0) {
-
-      const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
-      const hintedPositions = Object.entries((quote as any).nihilistHinted || {}).filter(([, v]) => v === true).map(([k]) => Number(k));
+      const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, "");
+      const hintedPositions = Object.entries(quote.nihilistHinted || {})
+        .filter(([, v]) => v === true)
+        .map(([k]) => Number(k));
       const hintedCount = hintedPositions.length;
       totalInputs = Math.max(0, expectedPlaintext.length - hintedCount);
-      
 
       for (let i = 0; i < expectedPlaintext.length; i++) {
-        const isHinted = Boolean((quote as any).nihilistHinted?.[i]);
-        if (isHinted) continue;
+        const isHinted = Boolean(quote.nihilistHinted?.[i]);
+        if (isHinted) {
+          continue;
+        }
         let userAnswer = quote.nihilistSolution[i];
         // Normalize I/J equivalence
-        const norm = (s: string) => s ? s.toUpperCase().replace(/J/g, 'I') : s;
-        userAnswer = norm(userAnswer || '');
-        const expected = norm(expectedPlaintext[i]);
+        const norm = (s: string) => (s ? s.toUpperCase().replace(/J/g, "I") : s);
+        userAnswer = norm(userAnswer || "");
+        const expectedPlainChar = expectedPlaintext[i];
+        if (expectedPlainChar === undefined) {
+          continue;
+        }
+        const expected = norm(expectedPlainChar);
         if (userAnswer && userAnswer.trim().length > 0) {
           filledInputs++;
 
@@ -463,15 +505,10 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
         }
       }
     }
-  }
-  
-
-  else if (quote.cipherType === 'Baconian') {
+  } else if (quote.cipherType === "Baconian") {
     if (quote.solution && Object.keys(quote.solution).length > 0) {
-
-      const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
+      const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, "");
       totalInputs = expectedPlaintext.length;
-      
 
       for (let i = 0; i < totalInputs; i++) {
         const userAnswer = quote.solution[i];
@@ -484,16 +521,11 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
         }
       }
     }
-  }
-  
-
-  else if (quote.cipherType === 'Porta') {
+  } else if (quote.cipherType === "Porta") {
     if (quote.solution && Object.keys(quote.solution).length > 0) {
-
       // Count all input fields (including duplicates of the same letter)
-      const inputKeys = Object.keys(quote.solution).filter(key => key.includes('-'));
+      const inputKeys = Object.keys(quote.solution).filter((key) => key.includes("-"));
       totalInputs = inputKeys.length;
-      
 
       for (const solutionKey of inputKeys) {
         const plainLetter = quote.solution[solutionKey];
@@ -501,73 +533,89 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
           filledInputs++;
 
           // Extract cipher letter and position from key format "char-position"
-          const [cipherLetter] = solutionKey.split('-');
-          
+          const [cipherLetter] = solutionKey.split("-");
+          if (!cipherLetter) {
+            continue;
+          }
+
           let isCorrect = false;
-          
 
           const portaTable = {
-            'AB': 'NOPQRSTUVWXYZABCDEFGHIJKLM',
-            'CD': 'OPQRSTUVWXYZNABCDEFGHIJKLM', 
-            'EF': 'PQRSTUVWXYZNOABCDEFGHIJKLM',
-            'GH': 'QRSTUVWXYZNOPABCDEFGHIJKLM',
-            'IJ': 'RSTUVWXYZNOPQABCDEFGHIJKLM',
-            'KL': 'STUVWXYZNOPQRABCDEFGHIJKLM',
-            'MN': 'TUVWXYZNOPQRSABCDEFGHIJKLM',
-            'OP': 'UVWXYZNOPQRSTABCDEFGHIJKLM',
-            'QR': 'VWXYZNOPQRSTUABCDEFGHIJKLM',
-            'ST': 'WXYZNOPQRSTUVABCDEFGHIJKLM',
-            'UV': 'XYZNOPQRSTUVWABCDEFGHIJKLM',
-            'WX': 'YZNOPQRSTUVWXABCDEFGHIJKLM',
-            'YZ': 'ZNOPQRSTUVWXYABCDEFGHIJKLM'
+            AB: "NOPQRSTUVWXYZABCDEFGHIJKLM",
+            CD: "OPQRSTUVWXYZNABCDEFGHIJKLM",
+            EF: "PQRSTUVWXYZNOABCDEFGHIJKLM",
+            GH: "QRSTUVWXYZNOPABCDEFGHIJKLM",
+            IJ: "RSTUVWXYZNOPQABCDEFGHIJKLM",
+            KL: "STUVWXYZNOPQRABCDEFGHIJKLM",
+            MN: "TUVWXYZNOPQRSABCDEFGHIJKLM",
+            OP: "UVWXYZNOPQRSTABCDEFGHIJKLM",
+            QR: "VWXYZNOPQRSTUABCDEFGHIJKLM",
+            ST: "WXYZNOPQRSTUVABCDEFGHIJKLM",
+            UV: "XYZNOPQRSTUVWABCDEFGHIJKLM",
+            WX: "YZNOPQRSTUVWXABCDEFGHIJKLM",
+            YZ: "ZNOPQRSTUVWXYABCDEFGHIJKLM",
           };
-          
 
           const charToPair: { [key: string]: string } = {
-            'A': 'AB', 'B': 'AB',
-            'C': 'CD', 'D': 'CD',
-            'E': 'EF', 'F': 'EF',
-            'G': 'GH', 'H': 'GH',
-            'I': 'IJ', 'J': 'IJ',
-            'K': 'KL', 'L': 'KL',
-            'M': 'MN', 'N': 'MN',
-            'O': 'OP', 'P': 'OP',
-            'Q': 'QR', 'R': 'QR',
-            'S': 'ST', 'T': 'ST',
-            'U': 'UV', 'V': 'UV',
-            'W': 'WX', 'X': 'WX',
-            'Y': 'YZ', 'Z': 'YZ'
+            A: "AB",
+            B: "AB",
+            C: "CD",
+            D: "CD",
+            E: "EF",
+            F: "EF",
+            G: "GH",
+            H: "GH",
+            I: "IJ",
+            J: "IJ",
+            K: "KL",
+            L: "KL",
+            M: "MN",
+            N: "MN",
+            O: "OP",
+            P: "OP",
+            Q: "QR",
+            R: "QR",
+            S: "ST",
+            T: "ST",
+            U: "UV",
+            V: "UV",
+            W: "WX",
+            X: "WX",
+            Y: "YZ",
+            Z: "YZ",
           };
-          
 
-          const encryptedLetters = quote.encrypted.replace(/[^A-Z]/g, '');
+          const encryptedLetters = quote.encrypted.replace(/[^A-Z]/g, "");
           const cipherLetterIndex = encryptedLetters.indexOf(cipherLetter);
-          
+
           if (cipherLetterIndex !== -1 && quote.portaKeyword) {
-
             const keywordChar = quote.portaKeyword[cipherLetterIndex % quote.portaKeyword.length];
+            if (!keywordChar) {
+              continue;
+            }
             const pair = charToPair[keywordChar];
-            const portaRow = portaTable[pair];
-            
+            if (!pair) {
+              continue;
+            }
+            const portaRow = portaTable[pair as keyof typeof portaTable];
+            if (!portaRow) {
+              continue;
+            }
 
-            const headerRow = 'ABCDEFGHIJKLM';
+            const headerRow = "ABCDEFGHIJKLM";
             let expectedPlainChar;
-            
 
             const headerIndex = headerRow.indexOf(cipherLetter);
             if (headerIndex !== -1) {
-
               expectedPlainChar = portaRow[headerIndex];
             } else {
-
               const keyRowIndex = portaRow.indexOf(cipherLetter);
               if (keyRowIndex !== -1) {
                 expectedPlainChar = headerRow[keyRowIndex];
               }
             }
-            
 
-            isCorrect = expectedPlainChar && plainLetter.trim().toUpperCase() === expectedPlainChar;
+            isCorrect = Boolean(expectedPlainChar && plainLetter.trim().toUpperCase() === expectedPlainChar);
           }
           if (isCorrect) {
             correctInputs++;
@@ -575,16 +623,11 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
         }
       }
     }
-  }
-  
-
-  else if (quote.cipherType === 'Fractionated Morse') {
+  } else if (quote.cipherType === "Fractionated Morse") {
     if (quote.solution && Object.keys(quote.solution).length > 0) {
-
-      const allUnique = [...new Set(quote.encrypted.replace(/[^A-Z]/g, ''))];
-      const nonHinted = allUnique.filter(c => !Boolean(hintedLetters[quoteIndex]?.[c]));
+      const allUnique = [...new Set(quote.encrypted.replace(/[^A-Z]/g, ""))];
+      const nonHinted = allUnique.filter((c) => !Boolean(hintedLetters[quoteIndex]?.[c]));
       totalInputs = nonHinted.length;
-      
 
       for (const [cipherLetter, triplet] of Object.entries(quote.solution)) {
         if (nonHinted.includes(cipherLetter) && triplet && triplet.trim().length === 3) {
@@ -596,21 +639,20 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
         }
       }
     }
-  }
-  
-
-  else if (quote.cipherType === 'Checkerboard') {
+  } else if (quote.cipherType === "Checkerboard") {
     if (quote.checkerboardSolution && Object.keys(quote.checkerboardSolution).length > 0) {
-
-      const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, '');
-      const hintedPositions = Object.entries((quote as any).checkerboardHinted || {}).filter(([, v]) => v === true).map(([k]) => Number(k));
+      const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, "");
+      const hintedPositions = Object.entries(quote.checkerboardHinted || {})
+        .filter(([, v]) => v === true)
+        .map(([k]) => Number(k));
       const hintedCount = hintedPositions.length;
       totalInputs = Math.max(0, expectedPlaintext.length - hintedCount);
-      
 
       for (let i = 0; i < expectedPlaintext.length; i++) {
-        const isHinted = Boolean((quote as any).checkerboardHinted?.[i]);
-        if (isHinted) continue;
+        const isHinted = Boolean(quote.checkerboardHinted?.[i]);
+        if (isHinted) {
+          continue;
+        }
         const userAnswer = quote.checkerboardSolution[i];
         if (userAnswer && userAnswer.trim().length > 0) {
           filledInputs++;
@@ -621,22 +663,20 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
         }
       }
     }
-  }
-  
-
-  else if (quote.cipherType === 'Cryptarithm') {
+  } else if (quote.cipherType === "Cryptarithm") {
     if (quote.cryptarithmSolution && Object.keys(quote.cryptarithmSolution).length > 0) {
-
-      const expectedWords = quote.cryptarithmData?.digitGroups.map(group => group.word.replace(/\s/g, '')) || [];
-      const allExpectedLetters = expectedWords.join('');
-      const hintedPositions = Object.entries((quote as any).cryptarithmHinted || {}).filter(([, v]) => v === true).map(([k]) => Number(k));
+      const expectedWords =
+        quote.cryptarithmData?.digitGroups.map((group) => group.word.replace(/\s/g, "")) || [];
+      const allExpectedLetters = expectedWords.join("");
+      const hintedPositions = Object.entries(quote.cryptarithmHinted || {})
+        .filter(([, v]) => v === true)
+        .map(([k]) => Number(k));
       const hintedCount = hintedPositions.length;
       totalInputs = Math.max(0, allExpectedLetters.length - hintedCount);
-      
 
       for (let i = 0; i < totalInputs; i++) {
         const userAnswer = quote.cryptarithmSolution[i];
-        const isHinted = Boolean((quote as any).cryptarithmHinted?.[i]);
+        const isHinted = Boolean(quote.cryptarithmHinted?.[i]);
         if (!isHinted && userAnswer && userAnswer.trim().length > 0) {
           filledInputs++;
 
@@ -648,10 +688,9 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
     }
   }
 
-
   const attemptedScore = totalInputs > 0 ? (filledInputs / totalInputs) * questionPointValue : 0;
   const score = filledInputs > 0 ? (correctInputs / filledInputs) * attemptedScore : 0;
-  
+
   return {
     totalInputs,
     correctInputs,
@@ -659,10 +698,34 @@ export function calculateCipherGrade(quote: QuoteData, quoteIndex: number, hinte
     score,
     maxScore: questionPointValue,
     attemptedScore,
-    unitLabel: ['K1 Aristocrat','K2 Aristocrat','K3 Aristocrat','K1 Patristocrat','K2 Patristocrat','K3 Patristocrat','Random Aristocrat','Random Patristocrat','Random Xenocrypt','K1 Xenocrypt','K2 Xenocrypt','K3 Xenocrypt','Caesar','Atbash','Affine'].includes(quote.cipherType)
-      ? 'unique cipher letters'
-      : ['Complete Columnar','Nihilist','Baconian','Checkerboard','Porta','Fractionated Morse','Cryptarithm'].includes(quote.cipherType)
-      ? 'plaintext/cipher units'
-      : 'units'
+    unitLabel: [
+      "K1 Aristocrat",
+      "K2 Aristocrat",
+      "K3 Aristocrat",
+      "K1 Patristocrat",
+      "K2 Patristocrat",
+      "K3 Patristocrat",
+      "Random Aristocrat",
+      "Random Patristocrat",
+      "Random Xenocrypt",
+      "K1 Xenocrypt",
+      "K2 Xenocrypt",
+      "K3 Xenocrypt",
+      "Caesar",
+      "Atbash",
+      "Affine",
+    ].includes(quote.cipherType)
+      ? "unique cipher letters"
+      : [
+            "Complete Columnar",
+            "Nihilist",
+            "Baconian",
+            "Checkerboard",
+            "Porta",
+            "Fractionated Morse",
+            "Cryptarithm",
+          ].includes(quote.cipherType)
+        ? "plaintext/cipher units"
+        : "units",
   };
 }
