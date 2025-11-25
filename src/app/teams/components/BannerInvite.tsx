@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { Copy, Crown, Users, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -11,6 +11,7 @@ interface BannerInviteProps {
   teamSlug: string;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex invite code management with loading states and copy functionality
 export default function BannerInvite({ isOpen, onClose, teamSlug }: BannerInviteProps) {
   const { darkMode } = useTheme();
   const [codes, setCodes] = useState<{ captainCode: string; userCode: string } | null>(null);
@@ -40,7 +41,7 @@ export default function BannerInvite({ isOpen, onClose, teamSlug }: BannerInvite
     if (isOpen) {
       loadCodes();
     }
-  }, [isOpen, teamSlug, loadCodes]);
+  }, [isOpen, loadCodes]);
 
   const copyToClipboard = async (text: string, type: string) => {
     try {
@@ -72,6 +73,7 @@ export default function BannerInvite({ isOpen, onClose, teamSlug }: BannerInvite
                 Team Invite Codes
               </h2>
               <button
+                type="button"
                 onClick={onClose}
                 aria-label="Close"
                 className={`p-2 rounded-lg transition-colors ${
@@ -120,6 +122,7 @@ export default function BannerInvite({ isOpen, onClose, teamSlug }: BannerInvite
                       {codes.captainCode}
                     </div>
                     <button
+                      type="button"
                       onClick={() => copyToClipboard(codes.captainCode, "Captain")}
                       className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg font-medium transition-colors ${
                         darkMode
@@ -160,6 +163,7 @@ export default function BannerInvite({ isOpen, onClose, teamSlug }: BannerInvite
                       {codes.userCode}
                     </div>
                     <button
+                      type="button"
                       onClick={() => copyToClipboard(codes.userCode, "User")}
                       className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg font-medium transition-colors ${
                         darkMode
@@ -173,11 +177,17 @@ export default function BannerInvite({ isOpen, onClose, teamSlug }: BannerInvite
                 </div>
 
                 {/* Instructions */}
-                <div className={`p-3 sm:p-4 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
-                  <h4 className={`font-medium mb-2 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
+                <div
+                  className={`p-3 sm:p-4 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}
+                >
+                  <h4
+                    className={`font-medium mb-2 ${darkMode ? "text-gray-200" : "text-gray-800"}`}
+                  >
                     How to use these codes:
                   </h4>
-                  <ul className={`text-sm space-y-1 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+                  <ul
+                    className={`text-sm space-y-1 ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+                  >
                     <li>• Share the Captain Code with potential co-captains</li>
                     <li>• Share the User Code with regular team members</li>
                     <li>• Recipients can use these codes to join your team</li>
@@ -189,6 +199,7 @@ export default function BannerInvite({ isOpen, onClose, teamSlug }: BannerInvite
               <div className={`text-center py-12 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                 <p>Failed to load invite codes</p>
                 <button
+                  type="button"
                   onClick={loadCodes}
                   className={`mt-4 px-4 py-2 rounded-lg font-medium transition-colors ${
                     darkMode

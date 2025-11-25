@@ -15,7 +15,7 @@ export interface QuestionEntry {
   /** URL-friendly event identifier */
   eventSlug: string;
   /** Array of cached questions */
-  questions: any[];
+  questions: unknown[];
   /** Timestamp when questions were last updated */
   updatedAt: number;
 }

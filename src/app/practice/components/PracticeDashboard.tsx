@@ -3,16 +3,16 @@ import SyncLocalStorage from "@/lib/database/localStorage-replacement";
 import logger from "@/lib/utils/logger";
 
 import Header from "@/app/components/Header";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
+//
+import type { Event, Settings } from "@/app/practice/types";
+import { NORMAL_DEFAULTS, savePreferences } from "@/app/practice/utils";
 import { hasOfflineEvent } from "@/app/utils/storage";
 import { EVENTS_2026 } from "@/lib/constants/events2026";
 import { ArrowUpRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-//
-import type { Event, Settings } from "@/app/practice/types";
-import { NORMAL_DEFAULTS, savePreferences } from "@/app/practice/utils";
 //
 import EventList from "./EventList";
 import TestConfiguration from "./TestConfiguration";
@@ -135,7 +135,9 @@ export default function PracticeDashboard() {
         if (rect && rect.height > 0) {
           setPanelHeight(rect.height);
         }
-      } catch {}
+      } catch {
+        // Ignore getBoundingClientRect errors
+      }
     };
     update();
     let ro: ResizeObserver | null = null;
@@ -149,7 +151,9 @@ export default function PracticeDashboard() {
       if (ro) {
         try {
           ro.disconnect();
-        } catch {}
+        } catch {
+          // Ignore disconnect errors
+        }
       } else {
         window.removeEventListener("resize", update);
       }
@@ -167,7 +171,7 @@ export default function PracticeDashboard() {
       }
     }, 0);
     return () => clearTimeout(t);
-  }, [darkMode, selectedEvent]);
+  }, []);
 
   useEffect(() => {
     setContinueInfo(computeContinueInfo());
@@ -254,6 +258,7 @@ export default function PracticeDashboard() {
     proceedWithUnlimitedNav(selectedEventObj.name, settings, router.push);
   };
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex event selection logic with multiple state updates
   const selectEvent = (id: number) => {
     setSelectedEvent(id);
     const selectedEventObj = events.find((event) => event.id === id);
@@ -283,6 +288,7 @@ export default function PracticeDashboard() {
           const availableDivisions = selectedEventObj.divisions || ["B", "C"];
           const canShowB = availableDivisions.includes("B");
           const canShowC = availableDivisions.includes("C");
+          // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex division selection logic with multiple conditions
           const divisionForEvent = (() => {
             if (savedDivision === "any") {
               return canShowB && canShowC ? "any" : canShowC ? "C" : "B";
@@ -513,7 +519,9 @@ export default function PracticeDashboard() {
           try {
             const subtopicsJson = await subtopicsRes.json();
             window.eventSubtopicsMapping = subtopicsJson as Record<string, string[]>;
-          } catch {}
+          } catch {
+            // Ignore errors
+          }
         }
       } catch (err) {
         logger.error("Error loading all events:", err);
@@ -550,6 +558,7 @@ export default function PracticeDashboard() {
             </h2>
             {/* Mobile down arrow */}
             <button
+              type="button"
               onClick={() => {
                 const testConfigSection = document.querySelector("[data-test-config]");
                 if (testConfigSection) {
@@ -567,7 +576,9 @@ export default function PracticeDashboard() {
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-label="Scroll down"
               >
+                <title>Scroll down</title>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -639,6 +650,7 @@ export default function PracticeDashboard() {
       {/* No floating back button on practice page */}
 
       {/* Global ToastContainer handles notifications */}
+      {/* eslint-disable-next-line react/no-unknown-property */}
       <style jsx={true} global={true}>{`
           /* Handle long words by breaking them */
           .break-words {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { ClipboardList, MessageSquare, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";

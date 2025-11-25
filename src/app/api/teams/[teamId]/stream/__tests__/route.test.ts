@@ -1,3 +1,4 @@
+import { DELETE, GET, POST, PUT } from "@/app/api/teams/[teamId]/stream/route";
 import { getServerUser } from "@/lib/supabaseServer";
 import {
   checkTeamGroupAccessCockroach,
@@ -5,7 +6,6 @@ import {
 } from "@/lib/utils/team-auth";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DELETE, GET, POST, PUT } from "@/app/api/teams/[teamId]/stream/route";
 
 // Mock dependencies
 vi.mock("@/lib/supabaseServer", () => ({
@@ -37,9 +37,12 @@ vi.mock("@/lib/db", () => ({
 
 import { dbPg } from "@/lib/db";
 
+// Regex patterns for test validation
+const CONTENT_REGEX = /content/i;
+
 const mockGetServerUser = vi.mocked(getServerUser);
 const mockCheckTeamGroupAccessCockroach = vi.mocked(checkTeamGroupAccessCockroach);
-const mockCheckTeamGroupLeadershipCockroach = vi.mocked(checkTeamGroupLeadershipCockroach);
+const _mockCheckTeamGroupLeadershipCockroach = vi.mocked(checkTeamGroupLeadershipCockroach);
 const mockDbPg = vi.mocked(dbPg);
 
 describe("/api/teams/[teamId]/stream", () => {
@@ -54,8 +57,12 @@ describe("/api/teams/[teamId]/stream", () => {
     vi.clearAllMocks();
 
     // Mock console methods to reduce noise
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {
+      // Suppress console.log in tests
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {
+      // Suppress console.error in tests
+    });
 
     // Set DATABASE_URL for tests
     process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
@@ -78,7 +85,7 @@ describe("/api/teams/[teamId]/stream", () => {
     });
 
     it("should return 400 when subteamId is missing", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
 
       const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/stream`);
       const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
@@ -89,7 +96,7 @@ describe("/api/teams/[teamId]/stream", () => {
     });
 
     it("should return 403 when user has no access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
       // Mock team group lookup using Drizzle ORM
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -116,8 +123,8 @@ describe("/api/teams/[teamId]/stream", () => {
     });
 
     it("should return stream posts when user has access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       const mockPost = {
         id: mockPostId,
         content: "Test post content",
@@ -131,7 +138,7 @@ describe("/api/teams/[teamId]/stream", () => {
         attachment_url: null,
         attachment_title: null,
       };
-      
+
       // Mock team group lookup
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -140,7 +147,7 @@ describe("/api/teams/[teamId]/stream", () => {
           }),
         }),
       });
-      
+
       // Mock stream posts query (select().from().innerJoin().leftJoin().where().orderBy().limit())
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -155,7 +162,7 @@ describe("/api/teams/[teamId]/stream", () => {
           }),
         }),
       });
-      
+
       // Mock comments query for the post (select().from().innerJoin().where().orderBy())
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -166,7 +173,7 @@ describe("/api/teams/[teamId]/stream", () => {
           }),
         }),
       });
-      
+
       mockCheckTeamGroupAccessCockroach.mockResolvedValue({
         isAuthorized: true,
         hasMembership: true,
@@ -188,8 +195,8 @@ describe("/api/teams/[teamId]/stream", () => {
     });
 
     it("should filter by subteam when subteamId is provided", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock team group lookup
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -198,7 +205,7 @@ describe("/api/teams/[teamId]/stream", () => {
           }),
         }),
       });
-      
+
       // Mock empty stream posts query
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -213,7 +220,7 @@ describe("/api/teams/[teamId]/stream", () => {
           }),
         }),
       });
-      
+
       mockCheckTeamGroupAccessCockroach.mockResolvedValue({
         isAuthorized: true,
         hasMembership: true,
@@ -251,8 +258,8 @@ describe("/api/teams/[teamId]/stream", () => {
     });
 
     it("should return 403 when user has no leadership access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock team group lookup
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -261,7 +268,7 @@ describe("/api/teams/[teamId]/stream", () => {
           }),
         }),
       });
-      
+
       // Mock membership check - user is a member but not captain/co-captain
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -288,8 +295,8 @@ describe("/api/teams/[teamId]/stream", () => {
     });
 
     it("should create post when user has leadership access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock team group lookup
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -298,7 +305,7 @@ describe("/api/teams/[teamId]/stream", () => {
           }),
         }),
       });
-      
+
       // Mock membership check - user is a captain
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -309,7 +316,7 @@ describe("/api/teams/[teamId]/stream", () => {
           }),
         }),
       });
-      
+
       // Mock subteam validation
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -318,7 +325,7 @@ describe("/api/teams/[teamId]/stream", () => {
           }),
         }),
       });
-      
+
       // Mock post creation
       mockDbPg.insert.mockReturnValue({
         values: vi.fn().mockReturnValue({
@@ -342,7 +349,7 @@ describe("/api/teams/[teamId]/stream", () => {
     });
 
     it("should handle missing required fields", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
 
       const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/stream`, {
         method: "POST",
@@ -357,9 +364,7 @@ describe("/api/teams/[teamId]/stream", () => {
       const body = await response.json();
       expect(body.error).toBe("Validation failed");
       expect(body.details).toBeDefined();
-      expect(body.details).toEqual(expect.arrayContaining([
-        expect.stringMatching(/content/i)
-      ]));
+      expect(body.details).toEqual(expect.arrayContaining([expect.stringMatching(CONTENT_REGEX)]));
     });
   });
 
@@ -382,8 +387,8 @@ describe("/api/teams/[teamId]/stream", () => {
     });
 
     it("should return 403 when user has no leadership access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock team group lookup
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -392,7 +397,7 @@ describe("/api/teams/[teamId]/stream", () => {
           }),
         }),
       });
-      
+
       // Mock membership check - user is a member but not captain/co-captain
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -419,8 +424,8 @@ describe("/api/teams/[teamId]/stream", () => {
     });
 
     it("should update post when user has leadership access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock team group lookup
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -429,7 +434,7 @@ describe("/api/teams/[teamId]/stream", () => {
           }),
         }),
       });
-      
+
       // Mock membership check - user is a captain
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -440,7 +445,7 @@ describe("/api/teams/[teamId]/stream", () => {
           }),
         }),
       });
-      
+
       // Mock post verification
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -451,7 +456,7 @@ describe("/api/teams/[teamId]/stream", () => {
           }),
         }),
       });
-      
+
       // Mock update query
       mockDbPg.update.mockReturnValue({
         set: vi.fn().mockReturnValue({
@@ -492,7 +497,7 @@ describe("/api/teams/[teamId]/stream", () => {
     });
 
     it("should return 400 when postId is missing", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
 
       const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/stream`, {
         method: "DELETE",
@@ -505,8 +510,8 @@ describe("/api/teams/[teamId]/stream", () => {
     });
 
     it("should return 403 when user has no leadership access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock team group lookup
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -515,7 +520,7 @@ describe("/api/teams/[teamId]/stream", () => {
           }),
         }),
       });
-      
+
       // Mock membership check - user is a member but not captain/co-captain
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -541,8 +546,8 @@ describe("/api/teams/[teamId]/stream", () => {
     });
 
     it("should delete post when user has leadership access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock team group lookup
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -551,7 +556,7 @@ describe("/api/teams/[teamId]/stream", () => {
           }),
         }),
       });
-      
+
       // Mock membership check - user is a captain
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -562,7 +567,7 @@ describe("/api/teams/[teamId]/stream", () => {
           }),
         }),
       });
-      
+
       // Mock post verification
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -573,7 +578,7 @@ describe("/api/teams/[teamId]/stream", () => {
           }),
         }),
       });
-      
+
       // Mock delete query
       mockDbPg.delete.mockReturnValue({
         where: vi.fn().mockResolvedValue(undefined),

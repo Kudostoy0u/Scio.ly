@@ -71,7 +71,9 @@ function TestPeopleTab({ teamSlug, subteamId }: { teamSlug: string; subteamId: s
 
         mockToast.success(`Removed ${member.name} from ${eventData.event} in ${eventData.subteam}`);
       }
-    } catch (_error) {}
+    } catch (_error) {
+      // Ignore errors
+    }
   };
 
   const handleAddEvent = async (member: any, event: string) => {
@@ -101,7 +103,9 @@ function TestPeopleTab({ teamSlug, subteamId }: { teamSlug: string; subteamId: s
           );
         }
       }
-    } catch (_error) {}
+    } catch (_error) {
+      // Ignore errors
+    }
   };
 
   return (

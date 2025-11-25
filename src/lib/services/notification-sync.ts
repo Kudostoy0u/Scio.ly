@@ -11,7 +11,6 @@
 
 import { queryCockroachDB } from "@/lib/cockroachdb";
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/types/database";
 
 // Create a server-side Supabase client with service key for bypassing RLS
 function getSupabaseServer() {
@@ -31,7 +30,7 @@ interface CockroachNotification {
   notification_type: string;
   title: string;
   message: string;
-  data: any;
+  data: unknown;
   is_read: boolean;
   created_at: string;
   read_at: string | null;
@@ -96,9 +95,7 @@ export class NotificationSyncService {
       team_name: notification.team_name,
     };
 
-    const { error } = await supabaseServer
-      .from<Database["public"]["Tables"]["notifications"]["Insert"]>("notifications")
-      .upsert(upsertData);
+    const { error } = await supabaseServer.from("notifications").upsert(upsertData as unknown);
 
     if (error) {
       throw error;
@@ -156,9 +153,7 @@ export class NotificationSyncService {
       throw new Error("Supabase server client not available. SUPABASE_SERVICE_KEY is required.");
     }
 
-    const { error } = await supabaseServer
-      .from<Database["public"]["Tables"]["notifications"]["Insert"]>("notifications")
-      .upsert(notifications);
+    const { error } = await supabaseServer.from("notifications").upsert(notifications as unknown);
 
     if (error) {
       throw error;

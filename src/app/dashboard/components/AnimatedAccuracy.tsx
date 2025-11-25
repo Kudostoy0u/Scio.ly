@@ -1,21 +1,28 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
 import type { AnimatedAccuracyProps } from "@/app/dashboard/types";
+import { motion } from "framer-motion";
+import { useState } from "react";
 
 export default function AnimatedAccuracy({ value, darkMode, className }: AnimatedAccuracyProps) {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const [isMounted] = useState(() => {
+    if (typeof window !== "undefined") {
+      return true;
+    }
+    return false;
+  });
 
   const content = `${value}%`;
 
   if (!isMounted) {
     return (
-      <text x="50" y="50" className={className} textAnchor="middle" fill={darkMode ? "#fff" : "#000"}>
+      <text
+        x="50"
+        y="50"
+        className={className}
+        textAnchor="middle"
+        fill={darkMode ? "#fff" : "#000"}
+      >
         {content}
       </text>
     );

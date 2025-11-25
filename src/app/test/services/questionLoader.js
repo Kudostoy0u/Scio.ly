@@ -1,3 +1,4 @@
+/* eslint-env node, browser */
 let __assign =
   (this && this.__assign) ||
   function () {
@@ -22,6 +23,7 @@ exports.fetchBaseQuestions = fetchBaseQuestions;
 exports.fetchIdQuestions = fetchIdQuestions;
 exports.dedupeById = dedupeById;
 exports.finalizeQuestions = finalizeQuestions;
+import api_1 from "@/app/api";
 import * as questionUtils1 from "@/app/utils/questionUtils";
 import * as storage1 from "@/app/utils/storage";
 import * as normalizeTestText1 from "../utils/normalizeTestText.js";
@@ -57,7 +59,7 @@ async function fetchBaseQuestions(routerParams, count) {
   // The DB/API expects the full hyphenated name (e.g., "Anatomy - Sense Organs").
   // Past attempts to map to a base event name caused empty results.
   const params = (0, questionUtils1.buildApiParams)(paramsObj, count);
-  const apiUrl = `${api_1.default.questions}?${params}`;
+  const apiUrl = `${api_1.questions}?${params}`;
   let apiResponse = null;
   const isOffline = typeof navigator !== "undefined" ? !navigator.onLine : false;
   if (isOffline) {
@@ -165,7 +167,9 @@ async function fetchIdQuestions(routerParams, idCount) {
       source = Array.isArray(json === null || json === void 0 ? void 0 : json.data)
         ? json.data
         : [];
-    } catch {}
+    } catch {
+      // Ignore fetch errors
+    }
   }
   const idQuestions = source.map((row) => ({
     id: row.id,

@@ -331,7 +331,7 @@ export const updateMetrics = async (
     const { data, error } = await withAuthRetry(async () => {
       const query = supabase
         .from("user_stats")
-        .upsert(updatedStats, { onConflict: "user_id,date" })
+        .upsert(updatedStats as never, { onConflict: "user_id,date" })
         .select()
         .single();
       return await query;
@@ -358,12 +358,19 @@ export const updateMetrics = async (
       }
     }
 
+    const dataTyped = data as {
+      questions_attempted: number;
+      correct_answers: number;
+      events_practiced: string[] | null;
+      event_questions: Record<string, number> | null;
+      game_points: number;
+    };
     return {
-      questionsAttempted: data.questions_attempted,
-      correctAnswers: data.correct_answers,
-      eventsPracticed: data.events_practiced || [],
-      eventQuestions: data.event_questions || {},
-      gamePoints: data.game_points,
+      questionsAttempted: dataTyped.questions_attempted,
+      correctAnswers: dataTyped.correct_answers,
+      eventsPracticed: dataTyped.events_practiced || [],
+      eventQuestions: dataTyped.event_questions || {},
+      gamePoints: dataTyped.game_points,
     };
   } catch (error) {
     logger.error("Error updating metrics:", error);

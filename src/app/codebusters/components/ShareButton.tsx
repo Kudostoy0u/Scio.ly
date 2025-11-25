@@ -22,6 +22,7 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
       <div className="flex items-center gap-4">
         {onReset && (
           <button
+            type="button"
             onClick={onReset}
             title="Reset Test"
             className={`flex items-center transition-all duration-200 ${
@@ -35,6 +36,7 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
 
         {onPrint && (
           <button
+            type="button"
             onClick={onPrint}
             title="Print Questions"
             className={`flex items-center transition-all duration-200 ${
@@ -48,6 +50,7 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
       </div>
 
       <button
+        type="button"
         onClick={onShare}
         disabled={isOffline}
         title={isOffline ? "Share feature not available offline" : "Share Test"}

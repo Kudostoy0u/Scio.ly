@@ -1,4 +1,5 @@
-import { queryCockroachDB } from "@/lib/cockroachdb";
+import { DELETE, GET, POST } from "@/app/api/teams/[teamId]/timers/route";
+import { dbPg } from "@/lib/db";
 import { getServerUser } from "@/lib/supabaseServer";
 import {
   checkTeamGroupAccessCockroach,
@@ -7,7 +8,20 @@ import {
 import { resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DELETE, GET, POST } from "@/app/api/teams/[teamId]/timers/route";
+
+// Type for Drizzle mock chain
+type DrizzleMockChain = {
+  from: ReturnType<typeof vi.fn>;
+  where?: ReturnType<typeof vi.fn>;
+  limit?: ReturnType<typeof vi.fn>;
+  orderBy?: ReturnType<typeof vi.fn>;
+  leftJoin?: ReturnType<typeof vi.fn>;
+  values?: ReturnType<typeof vi.fn>;
+  returning?: ReturnType<typeof vi.fn>;
+};
+
+// Regex patterns for test validation
+const SUBTEAM_ID_REQUIRED_REGEX = /subteam id.*required/i;
 
 // Mock dependencies
 vi.mock("@/lib/supabaseServer", () => ({
@@ -19,8 +33,19 @@ vi.mock("@/lib/utils/team-auth", () => ({
   checkTeamGroupLeadershipCockroach: vi.fn(),
 }));
 
-vi.mock("@/lib/cockroachdb", () => ({
-  queryCockroachDB: vi.fn(),
+vi.mock("@/lib/db", () => ({
+  dbPg: {
+    select: vi.fn(),
+    from: vi.fn(),
+    leftJoin: vi.fn(),
+    where: vi.fn(),
+    orderBy: vi.fn(),
+    limit: vi.fn(),
+    insert: vi.fn(),
+    values: vi.fn(),
+    returning: vi.fn(),
+    delete: vi.fn(),
+  },
 }));
 
 vi.mock("@/lib/utils/team-resolver", () => ({
@@ -30,7 +55,7 @@ vi.mock("@/lib/utils/team-resolver", () => ({
 const mockGetServerUser = vi.mocked(getServerUser);
 const mockCheckTeamGroupAccessCockroach = vi.mocked(checkTeamGroupAccessCockroach);
 const mockCheckTeamGroupLeadershipCockroach = vi.mocked(checkTeamGroupLeadershipCockroach);
-const mockQueryCockroachDb = vi.mocked(queryCockroachDB);
+const mockDbPg = vi.mocked(dbPg);
 const mockResolveTeamSlugToUnits = vi.mocked(resolveTeamSlugToUnits);
 
 describe("/api/teams/[teamId]/timers", () => {
@@ -45,14 +70,35 @@ describe("/api/teams/[teamId]/timers", () => {
     vi.clearAllMocks();
 
     // Mock console methods to reduce noise
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {
+      // Suppress console.log in tests
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {
+      // Suppress console.error in tests
+    });
 
     // Default mock for resolveTeamSlugToUnits
     mockResolveTeamSlugToUnits.mockResolvedValue({
       groupId: mockGroupId,
       teamUnitIds: [mockSubteamId],
     });
+
+    // Reset dbPg mocks
+    mockDbPg.select.mockReturnValue({
+      from: vi.fn(),
+      where: vi.fn(),
+      limit: vi.fn(),
+      orderBy: vi.fn(),
+      leftJoin: vi.fn(),
+    } as unknown as DrizzleMockChain);
+    mockDbPg.insert.mockReturnValue({
+      values: vi.fn(),
+      returning: vi.fn(),
+    } as unknown as DrizzleMockChain);
+    mockDbPg.delete.mockReturnValue({
+      where: vi.fn(),
+      returning: vi.fn(),
+    } as unknown as DrizzleMockChain);
   });
 
   afterEach(() => {
@@ -72,18 +118,23 @@ describe("/api/teams/[teamId]/timers", () => {
     });
 
     it("should return 400 when subteamId is missing", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
 
       const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/timers`);
       const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
 
       expect(response.status).toBe(400);
       const body = await response.json();
-      expect(body.error).toBe("Subteam ID is required");
+      expect(body.error).toBe("Validation failed");
+      expect(body.details).toBeDefined();
+      expect(Array.isArray(body.details)).toBe(true);
+      expect(body.details.some((detail: string) => SUBTEAM_ID_REQUIRED_REGEX.test(detail))).toBe(
+        true
+      );
     });
 
     it("should return 403 when user has no access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
       mockCheckTeamGroupAccessCockroach.mockResolvedValue({
         isAuthorized: false,
         hasMembership: false,
@@ -102,7 +153,7 @@ describe("/api/teams/[teamId]/timers", () => {
     });
 
     it("should return timers when user has access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
       mockCheckTeamGroupAccessCockroach.mockResolvedValue({
         isAuthorized: true,
         hasMembership: true,
@@ -110,19 +161,29 @@ describe("/api/teams/[teamId]/timers", () => {
         role: "captain",
       });
 
-      // Mock timers query - matches the actual SQL query structure
-      mockQueryCockroachDb.mockResolvedValue({
-        rows: [
-          {
-            id: mockEventId,
-            title: "Anatomy Event",
-            start_time: "2024-01-01T10:00:00Z",
-            location: "Room 101",
-            event_type: "meeting",
-            added_at: "2024-01-01T09:00:00Z",
-          },
-        ],
-      });
+      // Mock Drizzle ORM chain for timers query
+      const mockTimersResult = [
+        {
+          id: mockEventId,
+          title: "Anatomy Event",
+          start_time: "2024-01-01T10:00:00Z",
+          location: "Room 101",
+          event_type: "meeting",
+          added_at: "2024-01-01T09:00:00Z",
+        },
+      ];
+
+      mockDbPg.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          leftJoin: vi.fn().mockReturnValue({
+            leftJoin: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                orderBy: vi.fn().mockResolvedValue(mockTimersResult),
+              }),
+            }),
+          }),
+        }),
+      } as unknown as DrizzleMockChain);
 
       const request = new NextRequest(
         `http://localhost:3000/api/teams/${mockTeamId}/timers?subteamId=${mockSubteamId}`
@@ -137,7 +198,7 @@ describe("/api/teams/[teamId]/timers", () => {
     });
 
     it("should return empty array when no timers exist", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
       mockCheckTeamGroupAccessCockroach.mockResolvedValue({
         isAuthorized: true,
         hasMembership: true,
@@ -146,9 +207,17 @@ describe("/api/teams/[teamId]/timers", () => {
       });
 
       // Mock empty timers query
-      mockQueryCockroachDb.mockResolvedValue({
-        rows: [],
-      });
+      mockDbPg.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          leftJoin: vi.fn().mockReturnValue({
+            leftJoin: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                orderBy: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }),
+        }),
+      } as unknown as DrizzleMockChain);
 
       const request = new NextRequest(
         `http://localhost:3000/api/teams/${mockTeamId}/timers?subteamId=${mockSubteamId}`
@@ -180,7 +249,7 @@ describe("/api/teams/[teamId]/timers", () => {
     });
 
     it("should return 403 when user has no leadership access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
       mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
         hasLeadership: false,
         isAuthorized: false,
@@ -204,7 +273,7 @@ describe("/api/teams/[teamId]/timers", () => {
     });
 
     it("should create timer when user has leadership access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
       mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
         hasLeadership: true,
         isAuthorized: true,
@@ -213,15 +282,59 @@ describe("/api/teams/[teamId]/timers", () => {
         role: "captain",
       });
 
-      // Mock event existence check
-      mockQueryCockroachDb.mockResolvedValueOnce({
-        rows: [{ id: mockEventId }],
-      });
+      // Mock Drizzle ORM queries in sequence:
+      // 1. Subteam lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ groupId: mockGroupId }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
-      // Mock timer creation
-      mockQueryCockroachDb.mockResolvedValueOnce({
-        rows: [{ id: mockTimerId }],
-      });
+      // 2. Group team units
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([{ id: mockSubteamId }]),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+
+      // 3. Event existence check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: mockEventId }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+
+      // 4. Existing timer check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+
+      // 5. Timer creation
+      mockDbPg.insert.mockReturnValueOnce({
+        values: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([{ id: mockTimerId }]),
+        }),
+      } as unknown as DrizzleMockChain);
 
       const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/timers`, {
         method: "POST",
@@ -239,7 +352,7 @@ describe("/api/teams/[teamId]/timers", () => {
     });
 
     it("should handle missing required fields", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
       mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
         hasLeadership: true,
         isAuthorized: true,
@@ -258,7 +371,15 @@ describe("/api/teams/[teamId]/timers", () => {
 
       expect(response.status).toBe(400);
       const body = await response.json();
-      expect(body.error).toBe("Subteam ID and event ID are required");
+      expect(body.error).toBe("Validation failed");
+      expect(body.details).toBeDefined();
+      expect(Array.isArray(body.details)).toBe(true);
+      expect(body.details.length).toBeGreaterThan(0);
+      // Check that details contain validation error messages
+      const hasValidationError = body.details.some(
+        (detail: string) => typeof detail === "string" && detail.length > 0
+      );
+      expect(hasValidationError).toBe(true);
     });
   });
 
@@ -281,7 +402,7 @@ describe("/api/teams/[teamId]/timers", () => {
     });
 
     it("should return 403 when user has no leadership access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
       mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
         hasLeadership: false,
         isAuthorized: false,
@@ -305,7 +426,7 @@ describe("/api/teams/[teamId]/timers", () => {
     });
 
     it("should delete timer when user has leadership access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
       mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
         hasLeadership: true,
         isAuthorized: true,
@@ -314,10 +435,12 @@ describe("/api/teams/[teamId]/timers", () => {
         role: "captain",
       });
 
-      // Mock timer deletion
-      mockQueryCockroachDb.mockResolvedValue({
-        rows: [{ id: mockTimerId }],
-      });
+      // Mock Drizzle ORM delete query
+      mockDbPg.delete.mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([{ id: mockTimerId }]),
+        }),
+      } as unknown as DrizzleMockChain);
 
       const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/timers`, {
         method: "DELETE",
@@ -334,7 +457,7 @@ describe("/api/teams/[teamId]/timers", () => {
     });
 
     it("should handle missing required fields", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
       mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
         hasLeadership: true,
         isAuthorized: true,
@@ -351,7 +474,15 @@ describe("/api/teams/[teamId]/timers", () => {
 
       expect(response.status).toBe(400);
       const body = await response.json();
-      expect(body.error).toBe("Subteam ID and event ID are required");
+      expect(body.error).toBe("Validation failed");
+      expect(body.details).toBeDefined();
+      expect(Array.isArray(body.details)).toBe(true);
+      expect(body.details.length).toBeGreaterThan(0);
+      // Check that details contain validation error messages
+      const hasValidationError = body.details.some(
+        (detail: string) => typeof detail === "string" && detail.length > 0
+      );
+      expect(hasValidationError).toBe(true);
     });
   });
 });

@@ -1,12 +1,7 @@
 import { dbPg } from "@/lib/db";
-import {
-  newTeamInvitations,
-  newTeamMemberships,
-} from "@/lib/db/schema/teams";
-import {
-  UUIDSchema,
-  validateRequest,
-} from "@/lib/schemas/teams-validation";
+import { newTeamInvitations, newTeamMemberships } from "@/lib/db/schema/teams";
+import { validateRequest } from "@/lib/schemas/teams-validation";
+import { getServerUser } from "@/lib/supabaseServer";
 import {
   handleError,
   handleForbiddenError,
@@ -15,8 +10,6 @@ import {
   handleValidationError,
   validateEnvironment,
 } from "@/lib/utils/error-handler";
-import logger from "@/lib/utils/logger";
-import { getServerUser } from "@/lib/supabaseServer";
 import { resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
 import { and, eq, inArray } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
@@ -29,7 +22,9 @@ export async function POST(
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -40,7 +35,7 @@ export async function POST(
     let body: unknown;
     try {
       body = await request.json();
-    } catch (error) {
+    } catch (_error) {
       return handleValidationError(
         new z.ZodError([
           {

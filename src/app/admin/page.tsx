@@ -2,7 +2,7 @@
 import logger from "@/lib/utils/logger";
 
 import api from "@/app/api";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import PasswordAuth from "./PasswordAuth";
@@ -94,7 +94,9 @@ interface EditRowCardProps {
 function EditRowCard({ row, darkMode, border, muted, busy, onUndo }: EditRowCardProps) {
   return (
     <div className={`border ${border} rounded-md p-3`}>
-      <div className="text-xs mb-2 ${muted}">Updated {new Date(row.updatedAt).toLocaleString()}</div>
+      <div className="text-xs mb-2 ${muted}">
+        Updated {new Date(row.updatedAt).toLocaleString()}
+      </div>
       <div className="text-xs mb-2 ${muted}">
         Target: {row.canLocateTarget ? "Resolvable" : "Needs manual mapping"}
       </div>
@@ -328,7 +330,7 @@ export default function AdminPage() {
         if (!map[r.event]) {
           map[r.event] = [];
         }
-        map[r.event]!.push(r);
+        map[r.event]?.push(r);
       }
     }
     return map;
@@ -341,7 +343,7 @@ export default function AdminPage() {
         if (!map[r.event]) {
           map[r.event] = [];
         }
-        map[r.event]!.push(r);
+        map[r.event]?.push(r);
       }
     }
     return map;

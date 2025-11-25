@@ -21,7 +21,7 @@ export interface RosterMember {
 export interface AssignmentCreatorProps {
   teamId: string;
   subteamId?: string;
-  onAssignmentCreated: (assignment: any) => void;
+  onAssignmentCreated: (assignment: { id: string; title: string }) => void;
   onCancel: () => void;
   darkMode?: boolean;
   prefillEventName?: string;

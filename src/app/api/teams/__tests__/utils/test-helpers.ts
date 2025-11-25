@@ -1,6 +1,6 @@
 /**
  * Test Helpers for Teams API Tests
- * 
+ *
  * Provides utilities for creating test data, mocking requests, and cleaning up test fixtures.
  */
 
@@ -14,7 +14,7 @@ import {
   users,
 } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
-import { type NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 
 // ==================== TEST DATA CREATION ====================
 
@@ -50,14 +50,16 @@ export async function createTestUser(overrides?: Partial<TestUser>): Promise<Tes
     ...overrides,
   };
 
-  await dbPg.insert(users).values({
-    id: testUser.id,
-    email: testUser.email,
-    username: testUser.username,
-    displayName: testUser.displayName,
-    firstName: testUser.firstName,
-    lastName: testUser.lastName,
-  });
+  await dbPg.insert(users).values([
+    {
+      id: testUser.id,
+      email: testUser.email,
+      username: testUser.username,
+      displayName: testUser.displayName,
+      firstName: testUser.firstName,
+      lastName: testUser.lastName,
+    },
+  ]);
 
   return testUser;
 }
@@ -84,7 +86,7 @@ export async function createTestTeam(
       division,
       slug,
       createdBy: creatorId,
-    })
+    } as typeof newTeamGroups.$inferInsert)
     .returning({ id: newTeamGroups.id });
 
   if (!group) {
@@ -101,7 +103,7 @@ export async function createTestTeam(
       captainCode,
       userCode,
       createdBy: creatorId,
-    })
+    } as typeof newTeamUnits.$inferInsert)
     .returning({ id: newTeamUnits.id });
 
   if (!subteam) {
@@ -193,14 +195,13 @@ export async function createStreamPost(
  */
 export async function cleanupTestData(userIds: string[], teamGroupIds: string[]): Promise<void> {
   // Get all subteam IDs for the groups
-  const subteams = await dbPg
-    .select({ id: newTeamUnits.id })
-    .from(newTeamUnits)
-    .where(
-      teamGroupIds.length > 0
-        ? eq(newTeamUnits.groupId, teamGroupIds[0]) // Simplified for cleanup
-        : undefined
-    );
+  const firstGroupId = teamGroupIds.length > 0 ? teamGroupIds[0] : undefined;
+  const subteams = firstGroupId
+    ? await dbPg
+        .select({ id: newTeamUnits.id })
+        .from(newTeamUnits)
+        .where(eq(newTeamUnits.groupId, firstGroupId))
+    : [];
 
   const subteamIds = subteams.map((s) => s.id);
 
@@ -229,13 +230,15 @@ export async function cleanupTestData(userIds: string[], teamGroupIds: string[])
 /**
  * Creates a mock NextRequest for testing
  */
+type NextRequestInit = ConstructorParameters<typeof NextRequest>[1];
+
 export function createMockRequest(
   url: string,
-  method: string = "GET",
+  method = "GET",
   body?: unknown,
   headers?: Record<string, string>
 ): NextRequest {
-  const requestInit: RequestInit = {
+  const requestInit: NextRequestInit = {
     method,
     headers: {
       "Content-Type": "application/json",
@@ -256,7 +259,7 @@ export function createMockRequest(
 export function createAuthenticatedRequest(
   url: string,
   userId: string,
-  method: string = "GET",
+  method = "GET",
   body?: unknown
 ): NextRequest {
   return createMockRequest(url, method, body, {
@@ -290,9 +293,7 @@ export async function assertUserIsMember(
   }
 
   if (expectedRole && membership.role !== expectedRole) {
-    throw new Error(
-      `User ${userId} has role ${membership.role}, expected ${expectedRole}`
-    );
+    throw new Error(`User ${userId} has role ${membership.role}, expected ${expectedRole}`);
   }
 }
 
@@ -303,15 +304,9 @@ export async function assertUserIsNotMember(userId: string, teamId: string): Pro
   const [membership] = await dbPg
     .select()
     .from(newTeamMemberships)
-    .where(
-      and(
-        eq(newTeamMemberships.userId, userId),
-        eq(newTeamMemberships.teamId, teamId)
-      )
-    );
+    .where(and(eq(newTeamMemberships.userId, userId), eq(newTeamMemberships.teamId, teamId)));
 
   if (membership) {
     throw new Error(`User ${userId} is unexpectedly a member of team ${teamId}`);
   }
 }
-

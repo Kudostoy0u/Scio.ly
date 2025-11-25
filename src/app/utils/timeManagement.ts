@@ -96,7 +96,9 @@ export const getCurrentTestSession = (): TestSession | null => {
 export const saveTestSession = (session: TestSession): void => {
   try {
     SyncLocalStorage.setItem("currentTestSession", JSON.stringify(session));
-  } catch (_error) {}
+  } catch (_error) {
+    // Ignore errors
+  }
 };
 
 export const clearTestSession = (): void => {

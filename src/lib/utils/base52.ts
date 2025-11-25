@@ -49,8 +49,7 @@ export function decodeBase52(core: string): number {
     throw new Error("Code core must be 4 characters");
   }
   let value = 0;
-  for (let i = 0; i < core.length; i++) {
-    const c = core[i];
+  for (const c of core) {
     if (c === undefined) {
       throw new Error("Invalid base52 character");
     }
@@ -167,57 +166,62 @@ function calculateQuestionHash(questionId: string): number {
  */
 export async function getQuestionByCode(
   code: string
-): Promise<{ question: any; table: "questions" | "idEvents" }> {
+): Promise<{ question: Record<string, unknown>; table: "questions" | "idEvents" }> {
+  const suffix = validateCodeSuffix(code);
+  const mapping = await getCodeMapping(code);
+  const resolvedTable = normalizeTableName(mapping.tableName, suffix);
+  const question = await fetchQuestionRow(resolvedTable, mapping.questionId, code);
+  return { question, table: resolvedTable };
+}
+
+function validateCodeSuffix(code: string): "S" | "P" {
   if (code.length !== 5) {
     throw new Error("Invalid code length. Expected 5 characters.");
   }
-
-  const typeSuffix = code.slice(4, 5);
-
-  if (typeSuffix !== "S" && typeSuffix !== "P") {
+  const suffix = code.slice(4, 5);
+  if (suffix !== "S" && suffix !== "P") {
     throw new Error("Invalid type suffix. Expected S or P.");
   }
+  return suffix;
+}
 
-  // Step 1: Look up mapping to get question id and table name
+async function getCodeMapping(
+  code: string
+): Promise<{ questionId: string; tableName: string | null }> {
   const mapping = await db
     .select({ questionId: base52Codes.questionId, tableName: base52Codes.tableName })
     .from(base52Codes)
     .where(eq(base52Codes.code, code))
     .limit(1);
 
-  if (mapping.length === 0 || !mapping[0]) {
+  if (!mapping[0]) {
     throw new Error(`Question not found for code: ${code}`);
   }
 
-  const { questionId, tableName } = mapping[0];
+  return {
+    questionId: mapping[0].questionId,
+    tableName: mapping[0].tableName,
+  };
+}
 
-  // Step 2: Fetch the row from the appropriate table by primary key
-  if (tableName === "questions") {
-    const row = await db.select().from(questions).where(eq(questions.id, questionId)).limit(1);
-
-    if (row.length === 0) {
-      throw new Error(`Question not found for code: ${code}`);
-    }
-    return { question: row[0], table: "questions" };
+function normalizeTableName(tableName: string | null, suffix: "S" | "P"): "questions" | "idEvents" {
+  if (tableName === "questions" || tableName === "idEvents") {
+    return tableName;
   }
+  return suffix === "P" ? "idEvents" : "questions";
+}
 
-  if (tableName === "idEvents") {
-    const row = await db.select().from(idEvents).where(eq(idEvents.id, questionId)).limit(1);
-
-    if (row.length === 0) {
-      throw new Error(`Question not found for code: ${code}`);
-    }
-    return { question: row[0], table: "idEvents" };
-  }
-
-  // Fallback on suffix if an unexpected table name is stored
-  const fallbackTable: "questions" | "idEvents" = typeSuffix === "P" ? "idEvents" : "questions";
-  const table = fallbackTable === "questions" ? questions : idEvents;
+async function fetchQuestionRow(
+  tableName: "questions" | "idEvents",
+  questionId: string,
+  code: string
+): Promise<Record<string, unknown>> {
+  const table = tableName === "questions" ? questions : idEvents;
   const row = await db.select().from(table).where(eq(table.id, questionId)).limit(1);
-  if (row.length === 0) {
+  if (!row[0]) {
     throw new Error(`Question not found for code: ${code}`);
   }
-  return { question: row[0], table: fallbackTable };
+  return row[0] as Record<string, unknown>;
 }
 
 export async function generateQuestionCodes(

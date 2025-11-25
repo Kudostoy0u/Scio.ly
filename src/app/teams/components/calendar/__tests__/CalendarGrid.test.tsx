@@ -1,7 +1,10 @@
+import CalendarGrid from "@/app/teams/components/calendar/CalendarGrid";
+import type {
+  CalendarEvent,
+  RecurringMeeting,
+} from "@/app/teams/components/calendar/calendarUtils";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import CalendarGrid from "@/app/teams/components/calendar/CalendarGrid";
-import type { CalendarEvent, RecurringMeeting } from "@/app/teams/components/calendar/calendarUtils";
 
 // Mock lucide-react icons
 vi.mock("lucide-react", () => ({

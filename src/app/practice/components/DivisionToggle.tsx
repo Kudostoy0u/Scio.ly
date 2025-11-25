@@ -1,7 +1,7 @@
 "use client";
 
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
 import type { Event, Settings } from "@/app/practice/types";
+import SyncLocalStorage from "@/lib/database/localStorage-replacement";
 
 export default function DivisionToggle({
   darkMode,
@@ -18,12 +18,13 @@ export default function DivisionToggle({
 }) {
   return (
     <div>
-      <label
+      <span
         className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
       >
         Division
-      </label>
+      </span>
       <div className={`flex rounded-md border ${darkMode ? "border-gray-600" : "border-gray-300"}`}>
+        {/* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex division toggle logic with conditional rendering */}
         {(() => {
           const availableDivisions = selectedEvent?.divisions || ["B", "C"];
           const canShowB = forceBothDivision ? true : availableDivisions.includes("B");

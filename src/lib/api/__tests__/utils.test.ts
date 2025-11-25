@@ -1,6 +1,3 @@
-import { NextRequest } from "next/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { z } from "zod";
 import {
   createCacheKey,
   createErrorResponse,
@@ -14,6 +11,9 @@ import {
   parseRequestBody,
   sanitizeInput,
 } from "@/lib/api/utils";
+import { NextRequest } from "next/server";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 describe("API Utilities", () => {
   beforeEach(() => {

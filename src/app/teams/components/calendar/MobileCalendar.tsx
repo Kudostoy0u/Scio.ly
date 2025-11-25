@@ -180,7 +180,10 @@ export default function MobileCalendar({
               </div>
               <div className="mt-1 flex flex-wrap gap-1">
                 {dotTypes.map((t, i) => (
-                  <span key={i} className={`w-1.5 h-1.5 rounded-full ${getEventColor(t, darkMode)}`} />
+                  <span
+                    key={i}
+                    className={`w-1.5 h-1.5 rounded-full ${getEventColor(t, darkMode)}`}
+                  />
                 ))}
               </div>
             </button>

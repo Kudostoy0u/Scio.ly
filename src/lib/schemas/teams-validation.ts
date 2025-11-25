@@ -1,6 +1,6 @@
 /**
  * Comprehensive Zod validation schemas for Teams API routes
- * 
+ *
  * This file provides type-safe validation for all teams-related API endpoints.
  * All schemas should be used for request validation and response validation where appropriate.
  */
@@ -20,17 +20,17 @@ export const TeamSlugSchema = z
 
 /** Division validator - validates Science Olympiad division */
 export const DivisionSchema = z.enum(["B", "C"], {
-  errorMap: () => ({ message: "Division must be 'B' or 'C'" }),
+  message: "Division must be 'B' or 'C'",
 });
 
 /** Team role validator - validates team membership roles */
 export const TeamRoleSchema = z.enum(["captain", "co_captain", "member"], {
-  errorMap: () => ({ message: "Role must be 'captain', 'co_captain', or 'member'" }),
+  message: "Role must be 'captain', 'co_captain', or 'member'",
 });
 
 /** Team status validator */
 export const TeamStatusSchema = z.enum(["active", "inactive", "archived"], {
-  errorMap: () => ({ message: "Status must be 'active', 'inactive', or 'archived'" }),
+  message: "Status must be 'active', 'inactive', or 'archived'",
 });
 
 /** Event name validator - validates Science Olympiad event names */
@@ -76,7 +76,10 @@ export const PostRosterRequestSchema = z.object({
 /** Stream post schema */
 export const StreamPostSchema = z.object({
   id: UUIDSchema,
-  content: z.string().min(1, "Content is required").max(5000, "Content must be 5000 characters or less"),
+  content: z
+    .string()
+    .min(1, "Content is required")
+    .max(5000, "Content must be 5000 characters or less"),
   show_tournament_timer: z.boolean().default(false),
   tournament_id: UUIDSchema.nullable().optional(),
   tournament_title: z.string().nullable().optional(),
@@ -91,7 +94,10 @@ export const StreamPostSchema = z.object({
 /** Stream comment schema */
 export const StreamCommentSchema = z.object({
   id: UUIDSchema,
-  content: z.string().min(1, "Content is required").max(2000, "Content must be 2000 characters or less"),
+  content: z
+    .string()
+    .min(1, "Content is required")
+    .max(2000, "Content must be 2000 characters or less"),
   author_name: z.string(),
   author_email: z.string().email(),
   created_at: z.string().datetime(),
@@ -110,7 +116,10 @@ export const StreamResponseSchema = z.object({
 /** POST stream request schema */
 export const PostStreamRequestSchema = z.object({
   subteamId: UUIDSchema,
-  content: z.string().min(1, "Content is required").max(5000, "Content must be 5000 characters or less"),
+  content: z
+    .string()
+    .min(1, "Content is required")
+    .max(5000, "Content must be 5000 characters or less"),
   showTournamentTimer: z.boolean().default(false).optional(),
   tournamentId: UUIDSchema.nullable().optional(),
   attachmentUrl: z.string().url().nullable().optional(),
@@ -120,7 +129,10 @@ export const PostStreamRequestSchema = z.object({
 /** PUT stream request schema */
 export const PutStreamRequestSchema = z.object({
   postId: UUIDSchema,
-  content: z.string().min(1, "Content is required").max(5000, "Content must be 5000 characters or less"),
+  content: z
+    .string()
+    .min(1, "Content is required")
+    .max(5000, "Content must be 5000 characters or less"),
   attachmentUrl: z.string().url().nullable().optional(),
   attachmentTitle: z.string().max(200).nullable().optional(),
 });
@@ -128,7 +140,10 @@ export const PutStreamRequestSchema = z.object({
 /** POST stream comment request schema */
 export const PostStreamCommentRequestSchema = z.object({
   postId: UUIDSchema,
-  content: z.string().min(1, "Content is required").max(2000, "Content must be 2000 characters or less"),
+  content: z
+    .string()
+    .min(1, "Content is required")
+    .max(2000, "Content must be 2000 characters or less"),
 });
 
 // ==================== ASSIGNMENT SCHEMAS ====================
@@ -165,13 +180,19 @@ export const PostAssignmentRequestSchema = z.object({
 
 /** POST subteam request schema */
 export const PostSubteamRequestSchema = z.object({
-  name: z.string().min(1, "Subteam name is required").max(100, "Subteam name must be 100 characters or less"),
+  name: z
+    .string()
+    .min(1, "Subteam name is required")
+    .max(100, "Subteam name must be 100 characters or less"),
   description: z.string().max(500).nullable().optional(),
 });
 
 /** PUT subteam request schema */
 export const PutSubteamRequestSchema = z.object({
-  name: z.string().min(1, "Subteam name is required").max(100, "Subteam name must be 100 characters or less"),
+  name: z
+    .string()
+    .min(1, "Subteam name is required")
+    .max(100, "Subteam name must be 100 characters or less"),
 });
 
 /** Subteam response schema */
@@ -185,13 +206,15 @@ export const SubteamResponseSchema = z.object({
 // ==================== INVITE SCHEMAS ====================
 
 /** POST invite request schema */
-export const PostInviteRequestSchema = z.object({
-  username: z.string().min(1).max(100).optional(),
-  email: z.string().email().optional(),
-  requestedTeamUnitId: UUIDSchema.optional(),
-}).refine((data) => data.username || data.email, {
-  message: "Either username or email is required",
-});
+export const PostInviteRequestSchema = z
+  .object({
+    username: z.string().min(1).max(100).optional(),
+    email: z.string().email().optional(),
+    requestedTeamUnitId: UUIDSchema.optional(),
+  })
+  .refine((data) => data.username || data.email, {
+    message: "Either username or email is required",
+  });
 
 /** Invite response schema */
 export const InviteResponseSchema = z.object({
@@ -210,7 +233,7 @@ export const GetCalendarEventsQuerySchema = z.object({
 
 /** Event type validator */
 export const EventTypeSchema = z.enum(["practice", "tournament", "meeting", "deadline", "other"], {
-  errorMap: () => ({ message: "Event type must be one of: practice, tournament, meeting, deadline, other" }),
+  message: "Event type must be one of: practice, tournament, meeting, deadline, other",
 });
 
 /** POST calendar event request schema */
@@ -224,7 +247,7 @@ export const PostCalendarEventRequestSchema = z.object({
   location: z.string().max(200).nullable().optional(),
   isAllDay: z.boolean().default(false).optional(),
   isRecurring: z.boolean().default(false).optional(),
-  recurrencePattern: z.record(z.any()).nullable().optional(),
+  recurrencePattern: z.record(z.string(), z.any()).nullable().optional(),
   reminderMinutes: z.array(z.number().int()).default([]).optional(),
 });
 
@@ -321,10 +344,7 @@ export function formatValidationError(error: z.ZodError): { error: string; detai
  * @returns The validated data
  * @throws ZodError if validation fails
  */
-export function validateRequest<T extends z.ZodTypeAny>(
-  schema: T,
-  data: unknown
-): z.infer<T> {
+export function validateRequest<T extends z.ZodTypeAny>(schema: T, data: unknown): z.infer<T> {
   return schema.parse(data);
 }
 
@@ -352,4 +372,3 @@ export type PostTimerRequest = z.infer<typeof PostTimerRequestSchema>;
 export type TimerResponse = z.infer<typeof TimerResponseSchema>;
 export type TeamMember = z.infer<typeof TeamMemberSchema>;
 export type MembersResponse = z.infer<typeof MembersResponseSchema>;
-

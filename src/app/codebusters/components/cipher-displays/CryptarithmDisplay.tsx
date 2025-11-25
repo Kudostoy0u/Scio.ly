@@ -1,6 +1,9 @@
-import { useTheme } from "@/app/contexts/ThemeContext";
-import React from "react";
 import type { QuoteData } from "@/app/codebusters/types";
+import { useTheme } from "@/app/contexts/themeContext";
+import React, { useCallback } from "react";
+
+// Regex for splitting equation parts (moved to top level for performance)
+const EQUATION_SPLIT_REGEX = /\s*[+\-=]\s*/;
 
 interface CryptarithmDisplayProps {
   text: string;
@@ -31,7 +34,121 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
 }) => {
   const { darkMode } = useTheme();
   const [focusedDigit, setFocusedDigit] = React.useState<string | null>(null);
-  const [focusedPos, setFocusedPos] = React.useState<number | null>(null);
+  const [, setFocusedPos] = React.useState<number | null>(null);
+
+  // Helper function to get input className
+  const getDigitInputClassName = (
+    isTestSubmitted: boolean,
+    isHinted: boolean,
+    isCorrect: boolean,
+    isSameDigitFocused: boolean,
+    _isBoundary: boolean
+  ): string => {
+    const baseClasses =
+      "w-10 h-10 text-center border rounded text-sm font-mono focus:outline-none focus:ring-0";
+    if (isTestSubmitted) {
+      if (isHinted) {
+        return `${baseClasses} border-yellow-500 text-yellow-800 bg-transparent`;
+      }
+      return isCorrect
+        ? `${baseClasses} border-green-500 text-green-800 bg-transparent`
+        : `${baseClasses} border-red-500 text-red-800 bg-transparent`;
+    }
+    if (isSameDigitFocused) {
+      return `${baseClasses} border-blue-500 ${darkMode ? "bg-blue-900/30" : "bg-blue-50"}`;
+    }
+    return `${baseClasses} ${darkMode ? "bg-gray-800 border-gray-600 text-gray-300" : "bg-white border-gray-300 text-gray-900"}`;
+  };
+
+  // Helper function to handle digit input change
+  const handleDigitInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    position: number,
+    _digit: string,
+    digitToPositions: { [digit: string]: number[] },
+    inlineDigits: { digits: string[]; boundaries: Set<number> },
+    quoteIndex: number,
+    onSolutionChange: (quoteIndex: number, position: number, letter: string) => void
+  ) => {
+    const val = e.target.value.toUpperCase();
+    const currentDigit = inlineDigits.digits[position];
+    if (currentDigit !== undefined) {
+      const positions = digitToPositions[currentDigit] || [position];
+      for (const p of positions) {
+        onSolutionChange(quoteIndex, p, val);
+      }
+    }
+  };
+
+  // Digit input component (extracted to reduce complexity)
+  const DigitInput = ({
+    digit,
+    position,
+    value,
+    isCorrect,
+    isHinted,
+    isSameDigitFocused,
+    isBoundary,
+    quoteIndex,
+    digitToPositions,
+    inlineDigits,
+    onSolutionChange,
+    onFocus,
+    onBlur,
+    isTestSubmitted,
+    darkMode,
+  }: {
+    digit: string;
+    position: number;
+    value: string;
+    isCorrect: boolean;
+    isHinted: boolean;
+    isSameDigitFocused: boolean;
+    isBoundary: boolean;
+    quoteIndex: number;
+    digitToPositions: { [digit: string]: number[] };
+    inlineDigits: { digits: string[]; boundaries: Set<number> };
+    onSolutionChange: (quoteIndex: number, position: number, letter: string) => void;
+    onFocus: () => void;
+    onBlur: () => void;
+    isTestSubmitted: boolean;
+    darkMode: boolean;
+  }) => (
+    <React.Fragment key={`${digit}-${position}`}>
+      <div className="flex flex-col items-center justify-start">
+        <div className={`text-xs mb-1 font-mono ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+          {digit}
+        </div>
+        <input
+          type="text"
+          maxLength={1}
+          value={value}
+          onChange={(e) =>
+            handleDigitInputChange(
+              e,
+              position,
+              digit,
+              digitToPositions,
+              inlineDigits,
+              quoteIndex,
+              onSolutionChange
+            )
+          }
+          onFocus={onFocus}
+          onBlur={onBlur}
+          disabled={isTestSubmitted}
+          className={getDigitInputClassName(
+            isTestSubmitted,
+            isHinted,
+            isCorrect,
+            isSameDigitFocused,
+            isBoundary
+          )}
+        />
+      </div>
+      {isBoundary && <div className="w-4" />}
+    </React.Fragment>
+  );
 
   const inlineDigits = React.useMemo(() => {
     if (!cryptarithmData?.digitGroups) {
@@ -64,62 +181,106 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
     return map;
   }, [inlineDigits]);
 
-  const correctMapping: { [key: number]: string } = {};
-  if (isTestSubmitted && cryptarithmData?.digitGroups) {
-    const allLetters = cryptarithmData.digitGroups
-      .map((group) => group.word.replace(/\s/g, ""))
-      .join("");
-    for (let i = 0; i < allLetters.length; i++) {
-      const letter = allLetters[i];
-      if (letter !== undefined) {
-        correctMapping[i] = letter;
+  // Helper function to build correct mapping
+  const buildCorrectMapping = useCallback(
+    (
+      data: CryptarithmDisplayProps["cryptarithmData"],
+      isTestSubmitted: boolean
+    ): { [key: number]: string } => {
+      const mapping: { [key: number]: string } = {};
+      if (!(isTestSubmitted && data?.digitGroups)) {
+        return mapping;
       }
-    }
-  }
+      const allLetters = data.digitGroups
+        .map((group: { digits: string; word: string }) => group.word.replace(/\s/g, ""))
+        .join("");
+      for (let i = 0; i < allLetters.length; i++) {
+        const letter = allLetters[i];
+        if (letter !== undefined) {
+          mapping[i] = letter;
+        }
+      }
+      return mapping;
+    },
+    []
+  );
+
+  const correctMapping = React.useMemo(
+    () => buildCorrectMapping(cryptarithmData, isTestSubmitted),
+    [cryptarithmData, isTestSubmitted, buildCorrectMapping]
+  );
+
+  // Helper function to pad word
+  const padWord = useCallback((word: string, len: number): string => {
+    return word.padStart(len, " ");
+  }, []);
+
+  // Helper function to parse numeric example
+  const parseNumericExample = useCallback(
+    (
+      numericExample: string,
+      opSymbol: string
+    ): {
+      numLine1: string;
+      numLine2: string;
+      numLine3: string;
+      numSeparator: string;
+    } | null => {
+      const numParts = numericExample.split(EQUATION_SPLIT_REGEX).filter(Boolean);
+      if (numParts.length !== 3) {
+        return null;
+      }
+      const [n1, n2, n3] = numParts;
+      const numMaxLen = Math.max(n1?.length || 0, n2?.length || 0, (n3?.length || 0) - 1);
+      const numLine1 = padWord(n1 || "", numMaxLen);
+      const numLine2 = opSymbol + padWord(n2 || "", numMaxLen).slice(1);
+      const numSeparator = "-".repeat(numMaxLen + 1);
+      const numLine3 = padWord(n3 || "", numMaxLen + 1);
+      return { numLine1, numLine2, numLine3, numSeparator };
+    },
+    [padWord]
+  );
+
+  // Helper function to build vertical display lines
+  const buildVerticalLines = useCallback(
+    (w1: string, w2: string, w3: string, maxLen: number, opSymbol: string) => {
+      const line1 = padWord(w1 || "", maxLen);
+      const line2 = opSymbol + padWord(w2 || "", maxLen).slice(1);
+      const separator = "-".repeat(maxLen + 1);
+      const line3 = padWord(w3 || "", maxLen + 1);
+      return { line1, line2, line3, separator };
+    },
+    [padWord]
+  );
 
   // Parse equation for vertical display
   const verticalDisplay = React.useMemo(() => {
-    if (!cryptarithmData?.equation || !cryptarithmData.digitGroups) {
+    if (!(cryptarithmData?.equation && cryptarithmData.digitGroups)) {
       return null;
     }
 
-    const operation = cryptarithmData.operation || (cryptarithmData.equation.includes("-") ? "-" : "+");
-    const parts = cryptarithmData.equation.split(/\s*[+\-=]\s*/).filter(Boolean);
+    const operation =
+      cryptarithmData.operation || (cryptarithmData.equation.includes("-") ? "-" : "+");
+    const parts = cryptarithmData.equation.split(EQUATION_SPLIT_REGEX).filter(Boolean);
     if (parts.length !== 3) {
       return null;
     }
 
     const [w1, w2, w3] = parts;
-    const maxLen = Math.max(w1?.length || 0, w2?.length || 0, (w3?.length || 0) - 1);
-
-    // Pad words to same length for alignment
-    const padWord = (word: string, len: number) => {
-      return word.padStart(len, " ");
-    };
-
-    const line1 = padWord(w1 || "", maxLen);
-    const opSymbol = operation === "-" ? "-" : "+";
-    const line2 = opSymbol + padWord(w2 || "", maxLen).slice(1);
-    const separator = "-".repeat(maxLen + 1);
-    const line3 = padWord(w3 || "", maxLen + 1);
-
-    // Parse numeric example for vertical display
-    let numericVertical = null;
-    if (cryptarithmData.numericExample) {
-      const numParts = cryptarithmData.numericExample.split(/\s*[+\-=]\s*/).filter(Boolean);
-      if (numParts.length === 3) {
-        const [n1, n2, n3] = numParts;
-        const numMaxLen = Math.max(n1?.length || 0, n2?.length || 0, (n3?.length || 0) - 1);
-        const numLine1 = padWord(n1 || "", numMaxLen);
-        const numLine2 = opSymbol + padWord(n2 || "", numMaxLen).slice(1);
-        const numSeparator = "-".repeat(numMaxLen + 1);
-        const numLine3 = padWord(n3 || "", numMaxLen + 1);
-        numericVertical = { numLine1, numLine2, numLine3, numSeparator };
-      }
+    if (!(w1 && w2 && w3)) {
+      return null;
     }
+    const maxLen = Math.max(w1.length || 0, w2.length || 0, (w3.length || 0) - 1);
+    const opSymbol = operation === "-" ? "-" : "+";
+
+    const { line1, line2, line3, separator } = buildVerticalLines(w1, w2, w3, maxLen, opSymbol);
+
+    const numericVertical = cryptarithmData.numericExample
+      ? parseNumericExample(cryptarithmData.numericExample, opSymbol)
+      : null;
 
     return { line1, line2, line3, separator, operation, numericVertical };
-  }, [cryptarithmData]);
+  }, [cryptarithmData, buildVerticalLines, parseNumericExample]);
 
   return (
     <div className="space-y-4">
@@ -129,25 +290,40 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
           <h4 className={`font-semibold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}>
             Cryptarithm Problem
           </h4>
-          <div className={`font-mono text-center space-y-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-            <div className="text-lg">{verticalDisplay.line1}</div>
-            <div className="text-lg">{verticalDisplay.line2}</div>
-            <div className="text-lg">{verticalDisplay.separator}</div>
-            <div className="text-lg font-semibold">{verticalDisplay.line3}</div>
-          </div>
-          {verticalDisplay.numericVertical && (
-            <div className={`mt-4 pt-4 border-t ${darkMode ? "border-gray-700" : "border-gray-300"}`}>
-              <div className={`text-sm mb-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                Numeric Example:
+          <div className="flex flex-col md:flex-row gap-6 justify-center items-start">
+            {/* Letter Equation */}
+            <div className="flex-1">
+              <div className={`text-xs mb-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                Letter Equation:
               </div>
-              <div className={`font-mono text-center space-y-1 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                <div>{verticalDisplay.numericVertical.numLine1}</div>
-                <div>{verticalDisplay.numericVertical.numLine2}</div>
-                <div>{verticalDisplay.numericVertical.numSeparator}</div>
-                <div className="font-semibold">{verticalDisplay.numericVertical.numLine3}</div>
+              <div
+                className={`font-mono text-center space-y-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+              >
+                <div className="text-lg">{verticalDisplay.line1}</div>
+                <div className="text-lg">{verticalDisplay.line2}</div>
+                <div className="text-lg">{verticalDisplay.separator}</div>
+                <div className="text-lg font-semibold">{verticalDisplay.line3}</div>
               </div>
             </div>
-          )}
+            {/* Numeric Example */}
+            {verticalDisplay.numericVertical && (
+              <div className="flex-1">
+                <div className={`text-xs mb-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                  Numeric Example:
+                </div>
+                <div
+                  className={`font-mono text-center space-y-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+                >
+                  <div className="text-lg">{verticalDisplay.numericVertical.numLine1}</div>
+                  <div className="text-lg">{verticalDisplay.numericVertical.numLine2}</div>
+                  <div className="text-lg">{verticalDisplay.numericVertical.numSeparator}</div>
+                  <div className="text-lg font-semibold">
+                    {verticalDisplay.numericVertical.numLine3}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -165,7 +341,7 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
         </div>
       )}
 
-      {/* Digit values inline (with larger gaps at word boundaries) */}
+      {/* Digit values inline (with larger gaps at word boundaries) - Vertically aligned */}
       {inlineDigits.digits.length > 0 && (
         <div
           className={`p-4 rounded-lg border ${darkMode ? "border-gray-600" : "border-gray-300"} mt-4 mb-6`}
@@ -173,66 +349,40 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
           <h4 className={`font-semibold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}>
             Values to decode for solution
           </h4>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 justify-center">
             {inlineDigits.digits.map((digit, i) => {
               const position = i;
               const isCorrect = correctMapping[position] === (solution?.[position] || "");
               const isHinted = _quotes[quoteIndex]?.cryptarithmHinted?.[position] === true;
               const isSameDigitFocused = focusedDigit !== null && focusedDigit === digit;
+              const isBoundary = inlineDigits.boundaries.has(i);
+
               return (
-                <React.Fragment key={i}>
-                  <div className="flex flex-col items-center">
-                    <div className={`text-xs mb-1 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                      {digit}
-                    </div>
-                    <input
-                      type="text"
-                      maxLength={1}
-                      value={solution?.[position] || ""}
-                      onChange={(e) => {
-                        const val = e.target.value.toUpperCase();
-                        const digit = inlineDigits.digits[position];
-                        if (digit !== undefined) {
-                          const positions = digitToPositions[digit] || [position];
-                          positions.forEach((p: number) => onSolutionChange(quoteIndex, p, val));
-                        }
-                      }}
-                      onFocus={() => {
-                        setFocusedDigit(digit);
-                        setFocusedPos(position);
-                      }}
-                      onBlur={() => {
-                        setFocusedDigit(null);
-                        setFocusedPos(null);
-                      }}
-                      disabled={isTestSubmitted}
-                      className={`w-8 h-8 text-center border rounded text-sm focus:outline-none focus:ring-0 ${
-                        isTestSubmitted
-                          ? isHinted
-                            ? "border-yellow-500 text-yellow-800 bg-transparent"
-                            : isCorrect
-                              ? "border-green-500 text-green-800 bg-transparent"
-                              : "border-red-500 text-red-800 bg-transparent"
-                          : darkMode
-                            ? "bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500"
-                            : "bg-white border-gray-300 text-gray-900 focus:border-blue-500"
-                      } ${isSameDigitFocused ? "border-2" : ""}`}
-                      style={
-                        isSameDigitFocused
-                          ? position === focusedPos
-                            ? { borderColor: "#3b82f6", borderWidth: 2 }
-                            : { borderColor: "#60a5fa", borderWidth: 2 }
-                          : undefined
-                      }
-                    />
-                    {isTestSubmitted && (
-                      <div className={`text-xs mt-1 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                        {correctMapping[position]}
-                      </div>
-                    )}
-                  </div>
-                  {inlineDigits.boundaries.has(i) && <div className="w-4 sm:w-6" />}
-                </React.Fragment>
+                <DigitInput
+                  // biome-ignore lint/suspicious/noArrayIndexKey: Static digit inputs, index is stable
+                  key={`${digit}-${i}`}
+                  digit={digit}
+                  position={position}
+                  value={solution?.[position] || ""}
+                  isCorrect={isCorrect}
+                  isHinted={isHinted}
+                  isSameDigitFocused={isSameDigitFocused}
+                  isBoundary={isBoundary}
+                  quoteIndex={quoteIndex}
+                  digitToPositions={digitToPositions}
+                  inlineDigits={inlineDigits}
+                  onSolutionChange={onSolutionChange}
+                  onFocus={() => {
+                    setFocusedDigit(digit);
+                    setFocusedPos(position);
+                  }}
+                  onBlur={() => {
+                    setFocusedDigit(null);
+                    setFocusedPos(null);
+                  }}
+                  isTestSubmitted={isTestSubmitted}
+                  darkMode={darkMode}
+                />
               );
             })}
           </div>

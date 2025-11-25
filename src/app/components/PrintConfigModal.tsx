@@ -63,10 +63,18 @@ export function PrintConfigModal<T>({
               {title}
             </h2>
             <button
+              type="button"
               onClick={onClose}
               className={`p-2 rounded-full hover:bg-opacity-20 ${darkMode ? "hover:bg-white text-white" : "hover:bg-gray-200 text-gray-600"}`}
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-label="Close"
+              >
+                <title>Close</title>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -80,11 +88,13 @@ export function PrintConfigModal<T>({
           {/* Tournament Name */}
           <div className="mb-6">
             <label
+              htmlFor="tournament-name"
               className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
             >
               Tournament Name *
             </label>
             <input
+              id="tournament-name"
               type="text"
               value={tournamentName}
               onChange={(e) => setTournamentName(e.target.value)}
@@ -107,7 +117,9 @@ export function PrintConfigModal<T>({
                 className="w-5 h-5 mt-0.5 mr-3 flex-shrink-0"
                 fill="currentColor"
                 viewBox="0 0 20 20"
+                aria-label="Warning"
               >
+                <title>Warning</title>
                 <path
                   fillRule="evenodd"
                   d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
@@ -133,7 +145,9 @@ export function PrintConfigModal<T>({
                 className="w-5 h-5 mt-0.5 mr-3 flex-shrink-0"
                 fill="currentColor"
                 viewBox="0 0 20 20"
+                aria-label="Information"
               >
+                <title>Information</title>
                 <path
                   fillRule="evenodd"
                   d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
@@ -152,22 +166,24 @@ export function PrintConfigModal<T>({
 
           {/* Question Points */}
           <div className="mb-6">
-            <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}>
+            <h3
+              className={`text-lg font-semibold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}
+            >
               Question Point Values
             </h3>
             <div className="space-y-3">
-              {items.map((item, index) => {
-                const info = renderQuestionInfo(item, index);
-                const effectivePoints = getEffectivePoints(item, index);
+              {items.map((item, position) => {
+                const info = renderQuestionInfo(item, position);
+                const effectivePoints = getEffectivePoints(item, position);
 
                 return (
                   <div
-                    key={index}
+                    key={`print-item-${position}-${(item as { cipherType?: string }).cipherType || ""}`}
                     className={`p-4 border rounded-lg ${darkMode ? "border-gray-600 bg-gray-700" : "border-gray-200 bg-gray-50"}`}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}>
-                        Question {index + 1}
+                        Question {position + 1}
                       </span>
                       <span className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
                         {info.label}
@@ -182,7 +198,7 @@ export function PrintConfigModal<T>({
                         <input
                           type="number"
                           value={effectivePoints}
-                          onChange={(e) => handlePointChange(index, e.target.value)}
+                          onChange={(e) => handlePointChange(position, e.target.value)}
                           min="1"
                           max="1000"
                           className={`w-16 px-2 py-1 border rounded text-center ${
@@ -202,6 +218,7 @@ export function PrintConfigModal<T>({
           {/* Action Buttons */}
           <div className="flex justify-end space-x-3">
             <button
+              type="button"
               onClick={onClose}
               className={`px-4 py-2 border rounded-md ${
                 darkMode
@@ -212,6 +229,7 @@ export function PrintConfigModal<T>({
               Cancel
             </button>
             <button
+              type="button"
               onClick={onPrint}
               disabled={!tournamentName.trim()}
               className={`px-4 py-2 rounded-md ${

@@ -1,7 +1,7 @@
 import { queryCockroachDB } from "@/lib/cockroachdb";
+import { NotificationSyncService } from "@/lib/services/notification-sync";
 import { createClient } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { NotificationSyncService } from "@/lib/services/notification-sync";
 
 // Mock dependencies
 vi.mock("@/lib/cockroachdb");
@@ -101,7 +101,7 @@ describe("NotificationSyncService", () => {
     });
 
     it("should throw error if Supabase service key is missing", async () => {
-      delete process.env.SUPABASE_SERVICE_KEY;
+      process.env.SUPABASE_SERVICE_KEY = undefined;
       mockQueryCockroachDb.mockResolvedValueOnce({ rows: [mockNotification] });
 
       await expect(
@@ -178,7 +178,7 @@ describe("NotificationSyncService", () => {
     });
 
     it("should throw error if Supabase service key is missing", async () => {
-      delete process.env.SUPABASE_SERVICE_KEY;
+      process.env.SUPABASE_SERVICE_KEY = undefined;
       mockQueryCockroachDb.mockResolvedValueOnce({ rows: mockNotifications });
 
       await expect(
@@ -225,7 +225,7 @@ describe("NotificationSyncService", () => {
     });
 
     it("should throw error if Supabase service key is missing", async () => {
-      delete process.env.SUPABASE_SERVICE_KEY;
+      process.env.SUPABASE_SERVICE_KEY = undefined;
 
       await expect(
         NotificationSyncService.markNotificationAsRead("notification-123", "user-123")

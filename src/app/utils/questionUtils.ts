@@ -1,8 +1,8 @@
 "use client";
 import logger from "@/lib/utils/logger";
 
-import { toast } from "react-toastify";
 import api from "@/app/api";
+import { toast } from "react-toastify";
 import type { Question } from "./geminiService";
 
 /**
@@ -38,6 +38,8 @@ export interface RouterParams {
   assignmentMode?: boolean;
   /** Teams assignment flag (legacy: "1" or 1) */
   teamsAssign?: string | number;
+  /** Index signature for compatibility */
+  [key: string]: unknown;
 }
 
 /**
@@ -272,7 +274,9 @@ export const buildApiParams = (routerParams: RouterParams, requestCount: number)
   }
 
   if (difficulties && difficulties.length > 0) {
-    const allRanges = difficulties.map((d) => difficultyRanges[d]).filter((r): r is { min: number; max: number } => Boolean(r));
+    const allRanges = difficulties
+      .map((d) => difficultyRanges[d])
+      .filter((r): r is { min: number; max: number } => Boolean(r));
     if (allRanges.length > 0) {
       const minValue = Math.min(...allRanges.map((r) => r.min));
       const maxValue = Math.max(...allRanges.map((r) => r.max));
@@ -370,25 +374,38 @@ export const getExplanation = async (
     logger.log("🚀 Making request to:", api.geminiExplain);
 
     // Prepare the request body with image URLs if they exist
-    const requestBody: any = {
+    const userAnswerString = Array.isArray(userAnswer)
+      ? userAnswer.filter((a): a is string => a !== null).join(", ")
+      : typeof userAnswer === "string"
+        ? userAnswer
+        : String(userAnswer ?? "");
+    const requestBody: {
+      question: Question;
+      userAnswer: string;
+      event: string;
+      imageUrls?: string[];
+      imageNote?: string;
+    } = {
       question: question,
-      userAnswer: userAnswer,
+      userAnswer: userAnswerString,
       event: routerData.eventName || "Science Olympiad",
     };
 
     // Add image URLs to the request if they exist
     if (question.imageUrl || question.imageData) {
       const imageUrls: string[] = [];
-      if (question.imageUrl) {
+      if (question.imageUrl && typeof question.imageUrl === "string") {
         imageUrls.push(question.imageUrl);
       }
-      if (question.imageData) {
+      if (question.imageData && typeof question.imageData === "string") {
         imageUrls.push(question.imageData);
       }
 
-      requestBody.imageUrls = imageUrls;
-      requestBody.imageNote =
-        "The above URLs contain relevant images for this question. The URLs themselves may or may not contain useful information for the explanation.";
+      if (imageUrls.length > 0) {
+        requestBody.imageUrls = imageUrls.filter((url): url is string => url !== null);
+        requestBody.imageNote =
+          "The above URLs contain relevant images for this question. The URLs themselves may or may not contain useful information for the explanation.";
+      }
     }
 
     const response = await fetch(api.geminiExplain, {
@@ -494,8 +511,9 @@ export const getExplanation = async (
               let isNowCorrect = false;
               if (isMulti) {
                 isNowCorrect =
-                  correctAnswers.every((correctAns: number | string) => userNumericAnswers.includes(correctAns as number)) &&
-                  userNumericAnswers.length === correctAnswers.length;
+                  correctAnswers.every((correctAns: number | string) =>
+                    userNumericAnswers.includes(correctAns as number)
+                  ) && userNumericAnswers.length === correctAnswers.length;
               } else {
                 isNowCorrect = correctAnswers.includes(userNumericAnswers[0]);
               }
@@ -539,7 +557,7 @@ export const getExplanation = async (
         const answersChanged = !(
           correctedAnswers.length === currentAnswers.length &&
           correctedAnswers.every(
-            (ans: any, idx: number) =>
+            (ans: unknown, idx: number) =>
               String(ans).toLowerCase().trim() === String(currentAnswers[idx]).toLowerCase().trim()
           )
         );

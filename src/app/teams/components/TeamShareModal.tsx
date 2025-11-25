@@ -1,7 +1,7 @@
 "use client";
 import logger from "@/lib/utils/logger";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { Copy, Crown, Share2, Users, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -13,7 +13,7 @@ interface TeamShareModalProps {
   school: string;
   division: "B" | "C";
   isCaptain: boolean;
-  onJoinTeam?: (teamData: any, type: "captain" | "user") => void;
+  onJoinTeam?: (teamData: unknown, type: "captain" | "user") => void;
 }
 
 export default function TeamShareModal({
@@ -185,6 +185,7 @@ export default function TeamShareModal({
                       className="flex-1 px-3 py-2 border rounded text-sm font-mono"
                     />
                     <button
+                      type="button"
                       onClick={() => copyToClipboard(captainCode, "Captain")}
                       className="px-3 py-2 border rounded hover:bg-gray-100"
                     >
@@ -198,18 +199,23 @@ export default function TeamShareModal({
               )}
 
               <div>
-                <label className="flex items-center gap-2 text-sm font-medium mb-2">
+                <label
+                  htmlFor="user-code-input"
+                  className="flex items-center gap-2 text-sm font-medium mb-2"
+                >
                   <Users className="w-4 h-4 text-blue-500" />
                   User Code
                 </label>
                 <div className="flex flex-col sm:flex-row gap-2 mb-2">
                   <input
+                    id="user-code-input"
                     type="text"
                     value={userCode}
                     readOnly={true}
                     className="flex-1 px-3 py-2 border rounded text-sm font-mono"
                   />
                   <button
+                    type="button"
                     onClick={() => copyToClipboard(userCode, "User")}
                     className="px-3 py-2 border rounded hover:bg-gray-100"
                   >

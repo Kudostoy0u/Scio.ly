@@ -1,15 +1,52 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { formatDate } from "@/app/analytics/utils/eloDataProcessor";
+import { useTheme } from "@/app/contexts/themeContext";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { formatDate } from "@/app/analytics/utils/eloDataProcessor";
 
 interface ChartRangeSliderProps {
   dataPoints: Array<{ x: Date; y: number; tournament?: string; link?: string }>;
   onRangeChange: (startIndex: number, endIndex: number) => void;
   isMobile: boolean;
 }
+
+// Helper function to format date from data point
+const formatDataPointDate = (dataPoint: { x: Date } | undefined): string => {
+  if (!dataPoint?.x) {
+    return "";
+  }
+  return formatDate(dataPoint.x.toISOString().split("T")[0] ?? "");
+};
+
+// Helper function to calculate index from client position
+const calculateIndexFromPosition = (
+  clientX: number,
+  rect: DOMRect,
+  dataPointsLength: number
+): number => {
+  const x = clientX - rect.left;
+  const percentage = Math.max(0, Math.min(1, x / rect.width));
+  return Math.round(percentage * (dataPointsLength - 1));
+};
+
+// Helper function to update index based on drag type
+const updateIndexFromDrag = (
+  newIndex: number,
+  dragType: "start" | "end",
+  startIndex: number,
+  endIndex: number,
+  setStartIndex: (index: number) => void,
+  setEndIndex: (index: number) => void
+): void => {
+  if (dragType === "start") {
+    const newStartIndex = Math.min(newIndex, endIndex - 1);
+    setStartIndex(newStartIndex);
+  } else {
+    const newEndIndex = Math.max(newIndex, startIndex + 1);
+    setEndIndex(newEndIndex);
+  }
+};
 
 const ChartRangeSlider: React.FC<ChartRangeSliderProps> = ({
   dataPoints,
@@ -51,50 +88,34 @@ const ChartRangeSlider: React.FC<ChartRangeSliderProps> = ({
     e.preventDefault();
   };
 
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
+  const handleDragMove = useCallback(
+    (clientX: number) => {
       if (!(isDragging && sliderRef.current)) {
         return;
       }
 
       const rect = sliderRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const percentage = Math.max(0, Math.min(1, x / rect.width));
-      const newIndex = Math.round(percentage * (dataPoints.length - 1));
-
-      if (isDragging === "start") {
-        const newStartIndex = Math.min(newIndex, endIndex - 1);
-        setStartIndex(newStartIndex);
-      } else {
-        const newEndIndex = Math.max(newIndex, startIndex + 1);
-        setEndIndex(newEndIndex);
-      }
+      const newIndex = calculateIndexFromPosition(clientX, rect, dataPoints.length);
+      updateIndexFromDrag(newIndex, isDragging, startIndex, endIndex, setStartIndex, setEndIndex);
     },
     [isDragging, endIndex, startIndex, dataPoints.length]
   );
 
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      handleDragMove(e.clientX);
+    },
+    [handleDragMove]
+  );
+
   const handleTouchMove = useCallback(
     (e: TouchEvent) => {
-      if (!(isDragging && sliderRef.current)) {
-        return;
-      }
-
-      const rect = sliderRef.current.getBoundingClientRect();
       const touch = e.touches[0];
-      if (!touch) return;
-      const x = touch.clientX - rect.left;
-      const percentage = Math.max(0, Math.min(1, x / rect.width));
-      const newIndex = Math.round(percentage * (dataPoints.length - 1));
-
-      if (isDragging === "start") {
-        const newStartIndex = Math.min(newIndex, endIndex - 1);
-        setStartIndex(newStartIndex);
-      } else {
-        const newEndIndex = Math.max(newIndex, startIndex + 1);
-        setEndIndex(newEndIndex);
+      if (touch) {
+        handleDragMove(touch.clientX);
       }
     },
-    [isDragging, endIndex, startIndex, dataPoints.length]
+    [handleDragMove]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -128,18 +149,28 @@ const ChartRangeSlider: React.FC<ChartRangeSliderProps> = ({
   const startPercentage = (startIndex / (dataPoints.length - 1)) * 100;
   const endPercentage = (endIndex / (dataPoints.length - 1)) * 100;
 
+  // Helper to get thumb classes
+  const getThumbClasses = (): string => {
+    const baseClasses =
+      "absolute w-4 h-4 rounded-full border-2 cursor-grab active:cursor-grabbing transform -translate-x-1/2 shadow-lg touch-none";
+    const transitionClass = isDragging ? "" : "transition-all duration-200";
+    const colorClasses = darkMode
+      ? "bg-white border-blue-400 hover:border-blue-300 hover:shadow-xl"
+      : "bg-white border-blue-500 hover:border-blue-600 hover:shadow-xl";
+    return `${baseClasses} ${transitionClass} ${colorClasses}`;
+  };
+
+  const thumbClasses = getThumbClasses();
+  const startDateText = formatDataPointDate(dataPoints[startIndex]);
+  const endDateText = formatDataPointDate(dataPoints[endIndex]);
+  const firstDateText = formatDataPointDate(dataPoints[0]);
+  const lastDateText = formatDataPointDate(dataPoints[dataPoints.length - 1]);
+
   return (
     <div className="mt-6 space-y-4">
       <div className="flex items-center justify-between text-sm">
         <span className={darkMode ? "text-gray-300" : "text-gray-700"}>
-          Range:{" "}
-          {dataPoints[startIndex]?.x
-            ? formatDate(dataPoints[startIndex]!.x.toISOString().split("T")[0]!)
-            : ""}{" "}
-          -{" "}
-          {dataPoints[endIndex]?.x
-            ? formatDate(dataPoints[endIndex]!.x.toISOString().split("T")[0]!)
-            : ""}
+          Range: {startDateText} - {endDateText}
         </span>
         <span className={darkMode ? "text-gray-400" : "text-gray-500"}>
           {endIndex - startIndex + 1} of {dataPoints.length} points
@@ -147,14 +178,10 @@ const ChartRangeSlider: React.FC<ChartRangeSliderProps> = ({
       </div>
 
       <div className="relative px-2">
-        {/* Track container */}
         <div ref={sliderRef} className="relative h-8 flex items-center">
-          {/* Background track */}
           <div
             className={`absolute w-full h-1 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}
           />
-
-          {/* Active range track */}
           <div
             className={`absolute h-1 rounded-full bg-blue-500 ${isDragging ? "" : "transition-all duration-200"}`}
             style={{
@@ -162,30 +189,14 @@ const ChartRangeSlider: React.FC<ChartRangeSliderProps> = ({
               width: `${endPercentage - startPercentage}%`,
             }}
           />
-
-          {/* Start thumb */}
           <div
-            className={`absolute w-4 h-4 rounded-full border-2 cursor-grab active:cursor-grabbing transform -translate-x-1/2 shadow-lg touch-none ${
-              isDragging ? "" : "transition-all duration-200"
-            } ${
-              darkMode
-                ? "bg-white border-blue-400 hover:border-blue-300 hover:shadow-xl"
-                : "bg-white border-blue-500 hover:border-blue-600 hover:shadow-xl"
-            }`}
+            className={thumbClasses}
             style={{ left: `${startPercentage}%` }}
             onMouseDown={(e) => handleMouseDown(e, "start")}
             onTouchStart={(e) => handleTouchStart(e, "start")}
           />
-
-          {/* End thumb */}
           <div
-            className={`absolute w-4 h-4 rounded-full border-2 cursor-grab active:cursor-grabbing transform -translate-x-1/2 shadow-lg touch-none ${
-              isDragging ? "" : "transition-all duration-200"
-            } ${
-              darkMode
-                ? "bg-white border-blue-400 hover:border-blue-300 hover:shadow-xl"
-                : "bg-white border-blue-500 hover:border-blue-600 hover:shadow-xl"
-            }`}
+            className={thumbClasses}
             style={{ left: `${endPercentage}%` }}
             onMouseDown={(e) => handleMouseDown(e, "end")}
             onTouchStart={(e) => handleTouchStart(e, "end")}
@@ -193,16 +204,9 @@ const ChartRangeSlider: React.FC<ChartRangeSliderProps> = ({
         </div>
       </div>
 
-      {/* Data point indicators */}
       <div className="flex justify-between text-xs px-2">
-        <span className={darkMode ? "text-gray-400" : "text-gray-500"}>
-          {dataPoints[0] ? formatDate(dataPoints[0]!.x.toISOString().split("T")[0]!) : ""}
-        </span>
-        <span className={darkMode ? "text-gray-400" : "text-gray-500"}>
-          {dataPoints[dataPoints.length - 1]
-            ? formatDate(dataPoints[dataPoints.length - 1]!.x.toISOString().split("T")[0]!)
-            : ""}
-        </span>
+        <span className={darkMode ? "text-gray-400" : "text-gray-500"}>{firstDateText}</span>
+        <span className={darkMode ? "text-gray-400" : "text-gray-500"}>{lastDateText}</span>
       </div>
     </div>
   );

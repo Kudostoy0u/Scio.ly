@@ -1,4 +1,6 @@
-import { pool } from "./pool";
+import { and, count, desc, eq, sql } from "drizzle-orm";
+import { dbPg } from "./index";
+import { notifications } from "./schema/core";
 
 /**
  * Types of notifications supported by the system
@@ -52,22 +54,30 @@ export interface Notification {
 export async function createNotification(
   n: Omit<Notification, "id" | "createdAt" | "updatedAt">
 ): Promise<Notification> {
-  const client = await pool.connect();
   try {
-    const { rows } = await client.query(
-      `INSERT INTO notifications (user_id, type, title, body, data, is_read)
-       VALUES ($1,$2,$3,$4,$5,$6)
-       RETURNING *`,
-      [n.userId, n.type, n.title, n.body ?? null, n.data ?? {}, n.isRead ?? false]
-    );
-    const row = rows[0];
-    return mapRow(row);
+    const [row] = await dbPg
+      .insert(notifications)
+      .values({
+        userId: n.userId,
+        type: n.type,
+        title: n.title,
+        body: n.body ?? null,
+        data: n.data ?? {},
+        isRead: n.isRead ?? false,
+      })
+      .returning();
+    if (!row) {
+      throw new Error("Failed to create notification: No row returned");
+    }
+    return mapRow({
+      ...row,
+      type: row.type as NotificationType,
+      data: row.data as Record<string, unknown>,
+    });
   } catch (err) {
     throw new Error(
       `Failed to create notification: ${err instanceof Error ? err.message : "Unknown error"}`
     );
-  } finally {
-    client.release();
   }
 }
 
@@ -92,21 +102,29 @@ export async function listNotifications(
   userId: string,
   includeRead = false
 ): Promise<Notification[]> {
-  const client = await pool.connect();
   try {
-    const { rows } = await client.query(
-      includeRead
-        ? "SELECT * FROM notifications WHERE user_id=$1 ORDER BY created_at DESC LIMIT 100"
-        : "SELECT * FROM notifications WHERE user_id=$1 AND is_read=false ORDER BY created_at DESC LIMIT 100",
-      [userId]
+    const whereConditions = [eq(notifications.userId, userId)];
+    if (!includeRead) {
+      whereConditions.push(eq(notifications.isRead, false));
+    }
+
+    const rows = await dbPg
+      .select()
+      .from(notifications)
+      .where(and(...whereConditions))
+      .orderBy(desc(notifications.createdAt))
+      .limit(100);
+    return rows.map((row) =>
+      mapRow({
+        ...row,
+        type: row.type as NotificationType,
+        data: row.data as Record<string, unknown>,
+      })
     );
-    return rows.map(mapRow);
   } catch (err) {
     throw new Error(
       `Failed to list notifications: ${err instanceof Error ? err.message : "Unknown error"}`
     );
-  } finally {
-    client.release();
   }
 }
 
@@ -127,19 +145,19 @@ export async function listNotifications(
  * ```
  */
 export async function markNotificationRead(userId: string, id: string): Promise<boolean> {
-  const client = await pool.connect();
   try {
-    const { rowCount } = await client.query(
-      "UPDATE notifications SET is_read=true, updated_at=NOW() WHERE id=$1::INT8 AND user_id=$2",
-      [id, userId]
-    );
-    return (rowCount ?? 0) > 0;
+    const result = await dbPg
+      .update(notifications)
+      .set({
+        isRead: true,
+        updatedAt: sql`NOW()`,
+      })
+      .where(and(eq(notifications.id, Number(id)), eq(notifications.userId, userId)));
+    return (result.rowCount ?? 0) > 0;
   } catch (err) {
     throw new Error(
       `Failed to mark notification as read: ${err instanceof Error ? err.message : "Unknown error"}`
     );
-  } finally {
-    client.release();
   }
 }
 
@@ -159,19 +177,19 @@ export async function markNotificationRead(userId: string, id: string): Promise<
  * ```
  */
 export async function markAllNotificationsRead(userId: string): Promise<boolean> {
-  const client = await pool.connect();
   try {
-    const { rowCount } = await client.query(
-      "UPDATE notifications SET is_read=true, updated_at=NOW() WHERE user_id=$1 AND is_read=false",
-      [userId]
-    );
-    return (rowCount ?? 0) > 0;
+    const result = await dbPg
+      .update(notifications)
+      .set({
+        isRead: true,
+        updatedAt: sql`NOW()`,
+      })
+      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+    return (result.rowCount ?? 0) > 0;
   } catch (err) {
     throw new Error(
       `Failed to mark all notifications as read: ${err instanceof Error ? err.message : "Unknown error"}`
     );
-  } finally {
-    client.release();
   }
 }
 
@@ -189,64 +207,46 @@ export async function markAllNotificationsRead(userId: string): Promise<boolean>
  * ```
  */
 export async function unreadCount(userId: string): Promise<number> {
-  const client = await pool.connect();
   try {
-    const { rows } = await client.query(
-      "SELECT count(*)::INT AS c FROM notifications WHERE user_id=$1 AND is_read=false",
-      [userId]
-    );
-    return (rows[0]?.c as number) || 0;
+    const [result] = await dbPg
+      .select({ count: count() })
+      .from(notifications)
+      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+    return result?.count ?? 0;
   } catch (err) {
     throw new Error(
       `Failed to get unread count: ${err instanceof Error ? err.message : "Unknown error"}`
     );
-  } finally {
-    client.release();
   }
-}
-
-/**
- * Database row structure for notifications
- * Represents the raw database row format before transformation
- */
-interface NotificationRow {
-  /** Database ID (number) */
-  id: number;
-  /** User ID from database */
-  user_id: string;
-  /** Notification type */
-  type: NotificationType;
-  /** Notification title */
-  title: string;
-  /** Notification body (nullable) */
-  body: string | null;
-  /** Additional data */
-  data: Record<string, unknown>;
-  /** Read status */
-  is_read: boolean;
-  /** Creation timestamp */
-  created_at: Date;
-  /** Update timestamp */
-  updated_at: Date;
 }
 
 /**
  * Map database row to Notification interface
  * Transforms database row format to application interface
  *
- * @param {NotificationRow} row - Database row to transform
+ * @param {any} row - Database row to transform
  * @returns {Notification} Transformed notification object
  */
-function mapRow(row: NotificationRow): Notification {
+function mapRow(row: {
+  id: number;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  data: Record<string, unknown>;
+  isRead: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}): Notification {
   return {
     id: row.id.toString(),
-    userId: row.user_id,
+    userId: row.userId,
     type: row.type,
     title: row.title,
     body: row.body,
     data: row.data || {},
-    isRead: row.is_read,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    isRead: row.isRead,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   };
 }

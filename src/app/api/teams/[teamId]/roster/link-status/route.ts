@@ -6,10 +6,8 @@ import {
   newTeamRosterData,
   newTeamUnits,
 } from "@/lib/db/schema/teams";
-import {
-  UUIDSchema,
-  validateRequest,
-} from "@/lib/schemas/teams-validation";
+import { UUIDSchema } from "@/lib/schemas/teams-validation";
+import { getServerUser } from "@/lib/supabaseServer";
 import {
   handleError,
   handleForbiddenError,
@@ -18,19 +16,20 @@ import {
   handleValidationError,
   validateEnvironment,
 } from "@/lib/utils/error-handler";
-import logger from "@/lib/utils/logger";
-import { getServerUser } from "@/lib/supabaseServer";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex roster link status logic with multiple queries
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -139,7 +138,7 @@ export async function GET(
 
     if (userIds.length === 0) {
       // No members, but might have roster entries
-      const linkStatus: Record<string, any> = {};
+      const linkStatus: Record<string, unknown> = {};
       for (const rosterEntry of rosterResult) {
         if (rosterEntry.student_name) {
           linkStatus[rosterEntry.student_name] = {
@@ -168,13 +167,13 @@ export async function GET(
       .where(inArray(users.id, userIds));
 
     // Create a map of user profiles for quick lookup
-    const userProfileMap = new Map<string, typeof userProfilesResult[0]>();
-    userProfilesResult.forEach((profile) => {
+    const userProfileMap = new Map<string, (typeof userProfilesResult)[0]>();
+    for (const profile of userProfilesResult) {
       userProfileMap.set(profile.id, profile);
-    });
+    }
 
     // Build link status object
-    const linkStatus: Record<string, any> = {};
+    const linkStatus: Record<string, unknown> = {};
 
     // First, add all team members from memberships
     for (const member of membersResult) {
@@ -231,12 +230,12 @@ export async function GET(
     // Then, add roster entries to linkStatus
     for (const [studentName, rosterData] of Object.entries(rosterByStudent)) {
       // Get user data if this roster entry is linked
-      let userEmail = null;
-      let username = null;
+      let userEmail: string | null = null;
+      let username: string | null = null;
       if (rosterData.userId) {
         const userProfile = userProfileMap.get(rosterData.userId);
         userEmail = userProfile?.email || `user-${rosterData.userId.substring(0, 8)}@example.com`;
-        username = userProfile?.username;
+        username = userProfile?.username ?? null;
       }
 
       linkStatus[studentName] = {

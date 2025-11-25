@@ -38,7 +38,7 @@ export function prepareUnlimitedQuestions(input: PrepareInput): PrepareResult {
           event: eventName,
           _isIdPlaceholder: true,
           _placeholderId: i,
-        } as Question & { _isIdPlaceholder?: boolean; _placeholderId?: number })
+        }) as Question & { _isIdPlaceholder?: boolean; _placeholderId?: number }
     );
   } else {
     const trimmedBase = baseQuestions.slice(0, baseCount);
@@ -52,7 +52,7 @@ export function prepareUnlimitedQuestions(input: PrepareInput): PrepareResult {
           event: eventName,
           _isIdPlaceholder: true,
           _placeholderId: i,
-        } as Question & { _isIdPlaceholder?: boolean; _placeholderId?: number })
+        }) as Question & { _isIdPlaceholder?: boolean; _placeholderId?: number }
     );
     finalQuestions = [...trimmedBase, ...idPlaceholders];
   }

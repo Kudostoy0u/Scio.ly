@@ -2,15 +2,15 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import { TestProviders } from "@/test-utils/test-providers";
 import TeamDashboard from "@/app/teams/components/TeamDashboard";
+import { TestProviders } from "@/test-utils/test-providers";
 
 // Mock dependencies
-vi.mock("@/app/contexts/ThemeContext", () => ({
+vi.mock("@/app/contexts/themeContext", () => ({
   useTheme: () => ({ darkMode: false }),
 }));
 
-vi.mock("@/app/contexts/AuthContext", () => ({
+vi.mock("@/app/contexts/authContext", () => ({
   useAuth: () => ({ user: { id: "user-123" } }),
 }));
 

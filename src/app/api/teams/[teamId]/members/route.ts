@@ -8,6 +8,9 @@ import {
   rosterLinkInvitations,
 } from "@/lib/db/schema/teams";
 import { UUIDSchema } from "@/lib/schemas/teams-validation";
+// import logger from "@/lib/utils/logger";
+import { getServerUser } from "@/lib/supabaseServer";
+import { generateDisplayName } from "@/lib/utils/displayNameUtils";
 import {
   // handleError,
   handleForbiddenError,
@@ -16,13 +19,35 @@ import {
   handleValidationError,
   validateEnvironment,
 } from "@/lib/utils/error-handler";
-// import logger from "@/lib/utils/logger";
-import { getServerUser } from "@/lib/supabaseServer";
-import { generateDisplayName } from "@/lib/utils/displayNameUtils";
 import { getTeamAccess, getUserDisplayInfo } from "@/lib/utils/team-auth-v2";
 import { and, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+
+interface TeamMember {
+  id: string | null;
+  name: string;
+  email: string | null;
+  username?: string | null;
+  role: string;
+  subteam: {
+    id: string | null;
+    name: string;
+    description: string | null;
+  } | null;
+  joinedAt: Date | string | null;
+  events: string[];
+  isCreator?: boolean;
+  subteams?: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    role: string;
+    events?: string[];
+  }>;
+  hasPendingLinkInvite?: boolean;
+  isUnlinked?: boolean;
+}
 
 // GET /api/teams/[teamId]/members - Get team members with clean Drizzle ORM implementation
 // Frontend Usage:
@@ -31,16 +56,19 @@ import { z } from "zod";
 // - src/app/hooks/useEnhancedTeamData.ts (fetchMembers)
 // - src/app/hooks/useTeamData.ts (fetchMembers)
 // - src/app/teams/components/PeopleTab.tsx (loadMembers)
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex member retrieval logic with multiple data sources
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   let teamId: string | undefined;
-  let user: any;
+  let user: Awaited<ReturnType<typeof getServerUser>>;
 
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     user = await getServerUser();
     if (!user?.id) {
@@ -90,7 +118,7 @@ export async function GET(
     if (!teamAccess.hasAccess) {
       return handleForbiddenError("Not authorized to access this team");
     }
-    const allMembers = new Map<string, any>();
+    const allMembers = new Map<string, TeamMember>();
 
     // 1. Add team creator if they're not already a member
     if (teamAccess.isCreator) {
@@ -155,7 +183,7 @@ export async function GET(
     const userProfileMap = new Map(userProfiles.map((profile) => [profile.id, profile]));
 
     // Add subteam members to the map
-    members.forEach((member) => {
+    for (const member of members) {
       const userProfile = userProfileMap.get(member.userId);
 
       // Use centralized display name generation utility
@@ -166,21 +194,22 @@ export async function GET(
       // If user is already in map (as creator), add subteam info and update role
       if (allMembers.has(member.userId)) {
         const existingMember = allMembers.get(member.userId);
+        if (existingMember) {
+          // Update the main role to reflect their subteam role (captain/co_captain takes precedence over creator)
+          if (["captain", "co_captain"].includes(member.role)) {
+            existingMember.role = member.role;
+          }
 
-        // Update the main role to reflect their subteam role (captain/co_captain takes precedence over creator)
-        if (["captain", "co_captain"].includes(member.role)) {
-          existingMember.role = member.role;
+          if (!existingMember.subteams) {
+            existingMember.subteams = [];
+          }
+          existingMember.subteams.push({
+            id: member.teamUnitId,
+            name: member.description || `Team ${member.teamId}`,
+            description: member.description || null,
+            role: member.role,
+          });
         }
-
-        if (!existingMember.subteams) {
-          existingMember.subteams = [];
-        }
-        existingMember.subteams.push({
-          id: member.teamUnitId,
-          name: member.description || `Team ${member.teamId}`,
-          description: member.description,
-          role: member.role,
-        });
       } else {
         // Add as new member
         allMembers.set(member.userId, {
@@ -199,7 +228,7 @@ export async function GET(
           isCreator: false,
         });
       }
-    });
+    }
 
     // Build the where conditions for linked roster
     const linkedRosterConditions = [
@@ -226,9 +255,9 @@ export async function GET(
 
     // Group roster data by user and subteam
     const rosterDataByUser = new Map<string, Map<string, string[]>>();
-    linkedRosterResult.forEach((rosterData) => {
+    for (const rosterData of linkedRosterResult) {
       if (!rosterData.userId) {
-        return;
+        continue;
       }
 
       if (!rosterDataByUser.has(rosterData.userId)) {
@@ -237,7 +266,7 @@ export async function GET(
 
       const userRosterData = rosterDataByUser.get(rosterData.userId);
       if (!userRosterData) {
-        return;
+        continue;
       }
       if (!userRosterData.has(rosterData.teamUnitId)) {
         userRosterData.set(rosterData.teamUnitId, []);
@@ -249,7 +278,7 @@ export async function GET(
           eventArray.push(rosterData.eventName);
         }
       }
-    });
+    }
 
     // Update existing members with roster data
     rosterDataByUser.forEach((userRosterData, userId) => {
@@ -272,29 +301,48 @@ export async function GET(
           };
 
           // Check if this subteam is already in the array
-          const existingSubteamIndex = existingMember.subteams.findIndex(
+          const existingSubteamIndex = existingMember.subteams?.findIndex(
             (s: { id: string }) => s.id === teamUnitId
           );
-          if (existingSubteamIndex >= 0) {
+          if (
+            existingSubteamIndex !== undefined &&
+            existingSubteamIndex >= 0 &&
+            existingMember.subteams
+          ) {
             // Update existing subteam with events
-            existingMember.subteams[existingSubteamIndex].events = subteamInfo.events;
+            const subteam = existingMember.subteams[existingSubteamIndex] as {
+              id: string;
+              name: string;
+              description: string | null;
+              role: string;
+              events?: string[];
+            };
+            subteam.events = subteamInfo.events;
           } else {
             // Add new subteam
-            existingMember.subteams.push(subteamInfo);
+            existingMember.subteams?.push({
+              id: subteamInfo.id,
+              name: subteamInfo.name,
+              description: subteamInfo.description || null,
+              role: "member",
+              events: subteamInfo.events,
+            });
           }
 
           // For backward compatibility, set the primary subteam (first one or most recent)
-          if (!existingMember.subteam || existingMember.subteams.length === 1) {
+          if (!existingMember.subteam || existingMember.subteams?.length === 1) {
             existingMember.subteam = {
               id: subteamInfo.id,
               name: subteamInfo.name,
-              description: subteamInfo.description,
+              description: subteamInfo.description || null,
             };
           }
         });
 
         // Combine all events from all subteams
-        const allEvents = existingMember.subteams.flatMap((s: { events?: string[] }) => s.events || []);
+        const allEvents = existingMember.subteams?.flatMap(
+          (s: { events?: string[] }) => s.events || []
+        );
         existingMember.events = [...new Set(allEvents)]; // Remove duplicates
       }
     });
@@ -326,16 +374,19 @@ export async function GET(
 
     // Group unlinked roster data by student name and subteam
     const unlinkedRosterByStudent = new Map<string, Map<string, string[]>>();
-    unlinkedRosterResult.forEach((rosterMember) => {
+    for (const rosterMember of unlinkedRosterResult) {
       if (!rosterMember.studentName) {
-        return;
+        continue;
       }
 
       if (!unlinkedRosterByStudent.has(rosterMember.studentName)) {
         unlinkedRosterByStudent.set(rosterMember.studentName, new Map());
       }
 
-      const studentRosterData = unlinkedRosterByStudent.get(rosterMember.studentName)!;
+      const studentRosterData = unlinkedRosterByStudent.get(rosterMember.studentName);
+      if (!studentRosterData) {
+        continue;
+      }
       if (!studentRosterData.has(rosterMember.teamUnitId)) {
         studentRosterData.set(rosterMember.teamUnitId, []);
       }
@@ -343,7 +394,7 @@ export async function GET(
       if (rosterMember.eventName) {
         studentRosterData.get(rosterMember.teamUnitId)?.push(rosterMember.eventName);
       }
-    });
+    }
 
     // Add unlinked roster members to the map with their events
     unlinkedRosterByStudent.forEach((studentRosterData, studentName) => {
@@ -362,6 +413,7 @@ export async function GET(
             email: null, // No email for unlinked members
             username: "unknown", // Special username for unlinked members
             role: "unlinked", // Special role for unlinked members
+            isUnlinked: true,
             subteam: {
               id: teamUnitId,
               name: firstEntry.description || `Team ${firstEntry.teamId}`,
@@ -370,7 +422,6 @@ export async function GET(
             joinedAt: null,
             events: [...new Set(events)], // Remove duplicates
             isCreator: false,
-            isUnlinked: true, // Flag to identify unlinked members
             hasPendingLinkInvite: false, // Will be updated below if there's a pending invitation
           });
         }
@@ -400,13 +451,13 @@ export async function GET(
     // });
 
     // Update members with pending link invite status
-    pendingInvites.forEach((invite) => {
+    for (const invite of pendingInvites) {
       const memberKey = `roster-${invite.studentName}-${invite.teamId}`;
       const member = allMembers.get(memberKey);
       if (member) {
         member.hasPendingLinkInvite = true;
       }
-    });
+    }
     const membersWithRosterData = new Set(rosterDataByUser.keys());
 
     allMembers.forEach((member, _memberId) => {
@@ -417,7 +468,7 @@ export async function GET(
 
       // If member has no roster data, set their subteam to "Unknown team"
       // This applies to both regular members and creators who are also members
-      if (!membersWithRosterData.has(member.id)) {
+      if (member.id && !membersWithRosterData.has(member.id)) {
         member.subteam = {
           id: null,
           name: "Unknown team",
@@ -436,9 +487,7 @@ export async function GET(
     return NextResponse.json({ members: formattedMembers });
   } catch (error) {
     // Log error for debugging in development
-    if (process.env.NODE_ENV === "development") {
-      console.error("Members route error:", error);
-    }
+    // Development logging can be added here if needed
     return NextResponse.json(
       {
         error: "Internal server error",

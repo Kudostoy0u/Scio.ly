@@ -1,13 +1,6 @@
 import { dbPg } from "@/lib/db";
-import {
-  newTeamGroups,
-  newTeamMemberships,
-  newTeamUnits,
-} from "@/lib/db/schema/teams";
-import {
-  UUIDSchema,
-  validateRequest,
-} from "@/lib/schemas/teams-validation";
+import { newTeamGroups, newTeamMemberships, newTeamUnits } from "@/lib/db/schema/teams";
+import { getServerUser } from "@/lib/supabaseServer";
 import {
   handleError,
   handleForbiddenError,
@@ -16,8 +9,6 @@ import {
   handleValidationError,
   validateEnvironment,
 } from "@/lib/utils/error-handler";
-import logger from "@/lib/utils/logger";
-import { getServerUser } from "@/lib/supabaseServer";
 import { and, count, eq, inArray } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -29,7 +20,9 @@ export async function POST(
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -121,10 +114,7 @@ export async function POST(
       .update(newTeamMemberships)
       .set({ status: "inactive" })
       .where(
-        and(
-          eq(newTeamMemberships.userId, user.id),
-          inArray(newTeamMemberships.teamId, teamUnitIds)
-        )
+        and(eq(newTeamMemberships.userId, user.id), inArray(newTeamMemberships.teamId, teamUnitIds))
       );
 
     return NextResponse.json({ message: "Successfully exited team" });

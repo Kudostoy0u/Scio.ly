@@ -1,8 +1,8 @@
+import { GET } from "@/app/api/health/route";
 import { testConnection } from "@/lib/db";
 import { geminiService } from "@/lib/services/gemini";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GET } from "@/app/api/health/route";
 
 // Mock dependencies
 vi.mock("@/lib/db", () => ({
@@ -28,8 +28,8 @@ describe("/api/health", () => {
 
   describe("Basic Health Check", () => {
     it("should return 200 with basic health status", async () => {
-      (testConnection as any).mockResolvedValue(true);
-      (geminiService.isAvailable as any).mockReturnValue(true);
+      vi.mocked(testConnection).mockResolvedValue(true);
+      vi.mocked(geminiService.isAvailable).mockReturnValue(true);
 
       const request = mockRequest();
       const response = await GET(request);
@@ -42,8 +42,8 @@ describe("/api/health", () => {
     });
 
     it("should include service information", async () => {
-      (testConnection as any).mockResolvedValue(true);
-      (geminiService.isAvailable as any).mockReturnValue(true);
+      vi.mocked(testConnection).mockResolvedValue(true);
+      vi.mocked(geminiService.isAvailable).mockReturnValue(true);
 
       const request = mockRequest();
       const response = await GET(request);
@@ -60,8 +60,8 @@ describe("/api/health", () => {
 
   describe("Database Health Check", () => {
     it("should return healthy when database is accessible", async () => {
-      (testConnection as any).mockResolvedValue(true);
-      (geminiService.isAvailable as any).mockReturnValue(true);
+      vi.mocked(testConnection).mockResolvedValue(true);
+      vi.mocked(geminiService.isAvailable).mockReturnValue(true);
 
       const request = mockRequest();
       const response = await GET(request);
@@ -73,8 +73,8 @@ describe("/api/health", () => {
     });
 
     it("should return unhealthy when database is inaccessible", async () => {
-      (testConnection as any).mockResolvedValue(false);
-      (geminiService.isAvailable as any).mockReturnValue(true);
+      vi.mocked(testConnection).mockResolvedValue(false);
+      vi.mocked(geminiService.isAvailable).mockReturnValue(true);
 
       const request = mockRequest();
       const response = await GET(request);
@@ -86,8 +86,8 @@ describe("/api/health", () => {
     });
 
     it("should handle database connection errors", async () => {
-      (testConnection as any).mockRejectedValue(new Error("Database connection failed"));
-      (geminiService.isAvailable as any).mockReturnValue(true);
+      vi.mocked(testConnection).mockRejectedValue(new Error("Database connection failed"));
+      vi.mocked(geminiService.isAvailable).mockReturnValue(true);
 
       const request = mockRequest();
       const response = await GET(request);
@@ -100,8 +100,8 @@ describe("/api/health", () => {
 
   describe("AI Service Health Check", () => {
     it("should return healthy when AI service is available", async () => {
-      (testConnection as any).mockResolvedValue(true);
-      (geminiService.isAvailable as any).mockReturnValue(true);
+      vi.mocked(testConnection).mockResolvedValue(true);
+      vi.mocked(geminiService.isAvailable).mockReturnValue(true);
 
       const request = mockRequest();
       const response = await GET(request);
@@ -113,8 +113,8 @@ describe("/api/health", () => {
     });
 
     it("should return unhealthy when AI service is unavailable", async () => {
-      (testConnection as any).mockResolvedValue(true);
-      (geminiService.isAvailable as any).mockReturnValue(false);
+      vi.mocked(testConnection).mockResolvedValue(true);
+      vi.mocked(geminiService.isAvailable).mockReturnValue(false);
 
       const request = mockRequest();
       const response = await GET(request);
@@ -128,8 +128,8 @@ describe("/api/health", () => {
 
   describe("Overall Health Status", () => {
     it("should return overall healthy when all services are healthy", async () => {
-      (testConnection as any).mockResolvedValue(true);
-      (geminiService.isAvailable as any).mockReturnValue(true);
+      vi.mocked(testConnection).mockResolvedValue(true);
+      vi.mocked(geminiService.isAvailable).mockReturnValue(true);
 
       const request = mockRequest();
       const response = await GET(request);
@@ -142,8 +142,8 @@ describe("/api/health", () => {
     });
 
     it("should return overall unhealthy when any service is unhealthy", async () => {
-      (testConnection as any).mockResolvedValue(false);
-      (geminiService.isAvailable as any).mockReturnValue(true);
+      vi.mocked(testConnection).mockResolvedValue(false);
+      vi.mocked(geminiService.isAvailable).mockReturnValue(true);
 
       const request = mockRequest();
       const response = await GET(request);
@@ -156,7 +156,7 @@ describe("/api/health", () => {
 
   describe("Error Handling", () => {
     it("should handle unexpected errors gracefully", async () => {
-      (testConnection as any).mockRejectedValue(new Error("Unexpected error"));
+      vi.mocked(testConnection).mockRejectedValue(new Error("Unexpected error"));
 
       const request = mockRequest();
       const response = await GET(request);

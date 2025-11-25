@@ -136,6 +136,7 @@ const BookmarkManager: React.FC<BookmarkManagerProps> = ({
   return (
     <div className="relative group">
       <button
+        type="button"
         onClick={handleBookmark}
         disabled={isProcessing}
         className={`flex items-center space-x-1 p-2 rounded-md transition-all duration-200 ${

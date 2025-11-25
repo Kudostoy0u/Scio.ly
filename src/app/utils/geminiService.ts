@@ -71,15 +71,6 @@ export interface ReportAnalysis {
 }
 
 class GeminiService {
-  private getRandomApiKey(): string {
-    const keys = api.arr;
-    return keys[Math.floor(Math.random() * keys.length)];
-  }
-
-  private async callGemini(_prompt: string): Promise<string> {
-    throw new Error("Direct Gemini calls have been migrated to Express API endpoints");
-  }
-
   async suggestQuestionEdit(question: Question, userReason?: string): Promise<EditSuggestion> {
     try {
       const requestBody: {

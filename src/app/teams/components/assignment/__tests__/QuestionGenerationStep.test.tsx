@@ -1,7 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
 import QuestionGenerationStep from "@/app/teams/components/assignment/QuestionGenerationStep";
 import type { QuestionGenerationSettings } from "@/app/teams/components/assignment/assignmentTypes";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 describe("QuestionGenerationStep", () => {
   const mockProps = {

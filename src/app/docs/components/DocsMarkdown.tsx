@@ -7,7 +7,7 @@ import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import "katex/dist/katex.min.css";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { normalizeMath } from "@/lib/utils/markdown";
 
 type DocsMarkdownProps = {
@@ -44,7 +44,11 @@ export function DocsMarkdown({ content, withHeadingIds = true }: DocsMarkdownPro
     <div className={className} style={styleVars}>
       <ReactMarkdown
         remarkPlugins={[remarkMath, remarkGfm]}
-        rehypePlugins={[rehypeKatex, rehypeSlug, rehypeRaw] as any}
+        rehypePlugins={
+          [rehypeKatex, rehypeSlug, rehypeRaw] as unknown as Parameters<
+            typeof ReactMarkdown
+          >[0]["rehypePlugins"]
+        }
         components={
           withHeadingIds
             ? {

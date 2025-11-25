@@ -2,12 +2,13 @@
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
+import type { ReactNode } from "react";
 import { useEffect } from "react";
 
 // (notifications fetch monkeypatch removed)
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ children }: { children: ReactNode }) {
   const { darkMode } = useTheme();
 
   useEffect(() => {
@@ -20,7 +21,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
-      ("standalone" in window.navigator && (window.navigator as { standalone?: boolean }).standalone === true);
+      ("standalone" in window.navigator &&
+        (window.navigator as { standalone?: boolean }).standalone === true);
     const isOfflinePage = window.location.pathname === "/offline/";
 
     if (!(isStandalone || isOfflinePage)) {

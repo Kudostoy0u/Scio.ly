@@ -51,7 +51,7 @@ export async function GET() {
       const originalObj = parseMaybeJson(row.originalQuestion);
       const editedObj = parseMaybeJson(row.editedQuestion);
       if (edits[row.event]) {
-        edits[row.event]!.push({
+        edits[row.event]?.push({
           original: originalObj,
           edited: editedObj,
           timestamp: String(row.updatedAt),
@@ -68,7 +68,7 @@ export async function GET() {
 
       const questionObj = parseMaybeJson(row.questionData);
       if (blacklists[row.event]) {
-        blacklists[row.event]!.push(questionObj);
+        blacklists[row.event]?.push(questionObj);
       }
     }
 

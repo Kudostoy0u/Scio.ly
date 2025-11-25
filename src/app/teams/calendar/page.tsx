@@ -1,12 +1,12 @@
 "use client";
 
-import { useAuth } from "@/app/contexts/AuthContext";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useAuth } from "@/app/contexts/authContext";
+import { useTheme } from "@/app/contexts/themeContext";
+import TeamCalendar from "@/app/teams/components/TeamCalendar";
+import TeamLayout from "@/app/teams/components/TeamLayout";
 import { globalApiCache } from "@/lib/utils/globalApiCache";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import TeamCalendar from "@/app/teams/components/TeamCalendar";
-import TeamLayout from "@/app/teams/components/TeamLayout";
 
 export default function CalendarPage() {
   const { darkMode } = useTheme();
@@ -50,6 +50,7 @@ export default function CalendarPage() {
 
         setUserTeams(teams);
       } catch (_error) {
+        // Ignore errors
       } finally {
         setLoading(false);
       }

@@ -133,5 +133,7 @@ export const loadFromCache = <T>(key: string): T[] => {
 export const saveToCache = <T>(key: string, data: T[]) => {
   try {
     SyncLocalStorage.setItem(key, JSON.stringify(data));
-  } catch (_error) {}
+  } catch (_error) {
+    // Ignore errors
+  }
 };

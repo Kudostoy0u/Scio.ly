@@ -11,6 +11,46 @@ interface LoadingStateProps {
   errorIcon?: string;
 }
 
+// Helper function to render error action button (extracted to reduce complexity)
+const renderErrorActionButton = (
+  error: string,
+  darkMode: boolean,
+  onGoToPractice?: () => void,
+  onRetry?: () => void
+): React.ReactNode => {
+  if (error.includes("No test parameters found") && onGoToPractice) {
+    return (
+      <button
+        type="button"
+        onClick={onGoToPractice}
+        className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
+          darkMode
+            ? "bg-blue-600 hover:bg-blue-700 text-white"
+            : "bg-blue-600 hover:bg-blue-700 text-white"
+        }`}
+      >
+        Go to Practice Page
+      </button>
+    );
+  }
+  if (onRetry) {
+    return (
+      <button
+        type="button"
+        onClick={onRetry}
+        className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
+          darkMode
+            ? "bg-blue-600 hover:bg-blue-700 text-white"
+            : "bg-blue-600 hover:bg-blue-700 text-white"
+        }`}
+      >
+        Try Again
+      </button>
+    );
+  }
+  return null;
+};
+
 export const LoadingState: React.FC<LoadingStateProps> = ({
   isLoading,
   error,
@@ -40,29 +80,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
           <div className="text-6xl mb-4">{errorIcon}</div>
           <p className="text-lg font-medium mb-2">Failed to load questions</p>
           <p className="text-sm opacity-75 mb-4">{error}</p>
-          {error.includes("No test parameters found") && onGoToPractice ? (
-            <button
-              onClick={onGoToPractice}
-              className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
-                darkMode
-                  ? "bg-blue-600 hover:bg-blue-700 text-white"
-                  : "bg-blue-600 hover:bg-blue-700 text-white"
-              }`}
-            >
-              Go to Practice Page
-            </button>
-          ) : onRetry ? (
-            <button
-              onClick={onRetry}
-              className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
-                darkMode
-                  ? "bg-blue-600 hover:bg-blue-700 text-white"
-                  : "bg-blue-600 hover:bg-blue-700 text-white"
-              }`}
-            >
-              Try Again
-            </button>
-          ) : null}
+          {renderErrorActionButton(error, darkMode, onGoToPractice, onRetry)}
         </div>
       </div>
     );

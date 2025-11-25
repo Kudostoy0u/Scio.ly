@@ -4,14 +4,17 @@ import {
   newTeamAssignmentRoster,
   newTeamAssignments,
 } from "@/lib/db/schema/assignments";
-import { newTeamMemberships } from "@/lib/db/schema/teams";
-import { newTeamNotifications } from "@/lib/db/schema/notifications";
 import { users } from "@/lib/db/schema/core";
+import { newTeamNotifications } from "@/lib/db/schema/notifications";
+import { newTeamMemberships } from "@/lib/db/schema/teams";
+import { AssignmentQuestionSchema } from "@/lib/schemas/question";
 import { NotificationSyncService } from "@/lib/services/notification-sync";
 import { getServerUser } from "@/lib/supabaseServer";
+import { parseDifficulty } from "@/lib/types/difficulty";
 import { getUserTeamMemberships, resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
 import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 // GET /api/teams/[teamId]/subteams/[subteamId]/assignments - Get subteam assignments
 export async function GET(
@@ -91,20 +94,22 @@ export async function GET(
         : [];
 
     // Group roster by assignment ID
-    const rosterByAssignment: Record<string, any[]> = {};
-    rosterResult.forEach((roster) => {
-      if (!roster.assignmentId) return;
+    const rosterByAssignment: Record<string, unknown[]> = {};
+    for (const roster of rosterResult) {
+      if (!roster.assignmentId) {
+        continue;
+      }
       if (!rosterByAssignment[roster.assignmentId]) {
         rosterByAssignment[roster.assignmentId] = [];
       }
-      rosterByAssignment[roster.assignmentId]!.push({
+      rosterByAssignment[roster.assignmentId]?.push({
         student_name: roster.studentName,
         user_id: roster.userId,
         email: roster.email,
         username: roster.username,
         display_name: roster.displayName,
       });
-    });
+    }
 
     // Format assignments with roster information
     const assignments = assignmentsResult.map((assignment) => ({
@@ -138,6 +143,7 @@ export async function GET(
 }
 
 // POST /api/teams/[teamId]/subteams/[subteamId]/assignments - Create subteam assignment
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex assignment creation with validation and question processing
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string; subteamId: string }> }
@@ -230,14 +236,14 @@ export async function POST(
 
       // Create a map of names to user IDs
       const nameToUserId = new Map<string, string>();
-      teamMembersResult.forEach((member) => {
+      for (const member of teamMembersResult) {
         const displayName =
           member.displayName ||
           (member.firstName && member.lastName ? `${member.firstName} ${member.lastName}` : null);
         if (displayName) {
           nameToUserId.set(displayName.toLowerCase().trim(), member.userId);
         }
-      });
+      }
 
       const rosterInserts = roster_members.map((studentName: string) => {
         const userId = nameToUserId.get(studentName.toLowerCase().trim()) || null;
@@ -261,69 +267,68 @@ export async function POST(
      * CRITICAL VALIDATION: All questions MUST have a valid answers array.
      */
     if (questions && Array.isArray(questions) && questions.length > 0) {
-      const questionInserts = questions.map((question: any, index: number) => {
-        // Validate question has required fields
-        if (!question.question_text || question.question_text.trim() === "") {
-          throw new Error(`Question ${index + 1} is missing question_text`);
-        }
+      let validatedQuestions: z.infer<typeof AssignmentQuestionSchema>[];
+      try {
+        validatedQuestions = questions.map((question, index) => {
+          try {
+            return AssignmentQuestionSchema.parse(question);
+          } catch (error) {
+            if (error instanceof z.ZodError) {
+              const errorMessages = error.issues?.map(
+                (issue) => `${issue.path.join(".")}: ${issue.message}`
+              ) || ["Unknown validation error"];
+              throw new Error(
+                `Question ${index + 1} validation failed:\n${errorMessages.join("\n")}`
+              );
+            }
+            throw error;
+          }
+        });
+      } catch (error) {
+        return NextResponse.json(
+          {
+            error: "Invalid questions provided",
+            details: error instanceof Error ? error.message : "Unknown validation error",
+          },
+          { status: 400 }
+        );
+      }
 
-        if (!question.question_type) {
-          throw new Error(`Question ${index + 1} is missing question_type`);
-        }
+      const assignmentId = assignment?.id;
+      if (!assignmentId) {
+        return NextResponse.json({ error: "Failed to create assignment record" }, { status: 500 });
+      }
 
-        /**
-         * CRITICAL: Validate and convert answers field
-         *
-         * Frontend sends answers as array:
-         * - MCQ: [0], [1, 2] (numeric indices)
-         * - FRQ: ["answer text"]
-         *
-         * We convert to database format:
-         * - MCQ: "A", "B,C" (letters)
-         * - FRQ: "answer text"
-         */
-        if (
-          !(question.answers && Array.isArray(question.answers)) ||
-          question.answers.length === 0
-        ) {
-          throw new Error(
-            `Cannot create assignment: Question ${index + 1} has no valid answers. ` +
-              `Question: "${question.question_text?.substring(0, 50)}..."`
-          );
-        }
-
-        // Convert answers array to correct_answer string
+      const questionInserts = validatedQuestions.map((q, index: number) => {
         let correctAnswer: string | null = null;
 
-        if (question.question_type === "multiple_choice") {
-          // Convert numeric indices to letters
-          correctAnswer = question.answers
-            .map((ans: number) => {
+        if (q.question_type === "multiple_choice") {
+          correctAnswer = q.answers
+            .map((ans) => {
               if (typeof ans !== "number" || ans < 0) {
                 throw new Error(`Invalid answer index ${ans} for question ${index + 1}`);
               }
-              return String.fromCharCode(65 + ans); // 0→A, 1→B, etc.
+              return String.fromCharCode(65 + ans);
             })
             .join(",");
         } else {
-          // For FRQ, use answers as-is
-          correctAnswer = question.answers.map((ans: any) => String(ans)).join(",");
+          correctAnswer = q.answers.map((ans) => String(ans)).join(",");
         }
 
-        // Validate we got a valid correct_answer
         if (!correctAnswer || correctAnswer.trim() === "") {
           throw new Error(`Failed to convert answers for question ${index + 1}`);
         }
 
         return {
-          assignmentId: assignment?.id ?? "",
-          questionText: question.question_text,
-          questionType: question.question_type,
-          options: question.options || null,
-          correctAnswer: correctAnswer, // GUARANTEED: Valid, non-empty string
-          points: question.points || 1,
-          orderIndex: question.order_index !== undefined ? question.order_index : index,
-          imageData: question.imageData || null,
+          assignmentId,
+          questionText: q.question_text,
+          questionType: q.question_type,
+          options: q.options ? JSON.stringify(q.options) : null,
+          correctAnswer,
+          points: q.points || 1,
+          orderIndex: q.order_index ?? index,
+          imageData: q.imageData ?? null,
+          difficulty: parseDifficulty(q.difficulty),
         };
       });
 

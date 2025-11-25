@@ -1,3 +1,4 @@
+import { normalizeQuestionMedia } from "@/app/test/utils/questionMedia";
 import { loadBookmarksFromSupabase } from "@/app/utils/bookmarks";
 import type { Question } from "@/app/utils/geminiService";
 import {
@@ -10,7 +11,6 @@ import {
 import SyncLocalStorage from "@/lib/database/localStorage-replacement";
 import { supabase } from "@/lib/supabase";
 import logger from "@/lib/utils/logger";
-import { normalizeQuestionMedia } from "@/app/test/utils/questionMedia";
 import { fetchQuestionsForParams } from "./fetchQuestions";
 
 type SetState<T> = (value: T) => void;
@@ -25,9 +25,9 @@ export async function initLoad({
   setTimeLeft,
   fetchCompletedRef,
 }: {
-  initialData?: any[];
-  stableRouterData: Record<string, any>;
-  setRouterData: SetState<Record<string, any>>;
+  initialData?: unknown[];
+  stableRouterData: Record<string, unknown>;
+  setRouterData: SetState<Record<string, unknown>>;
   setFetchError: SetState<string | null>;
   setIsLoading: SetState<boolean>;
   setData: SetState<Question[]>;
@@ -67,12 +67,16 @@ export async function initLoad({
       const newSession = resetTestSession(eventName, timeLimit);
       try {
         setTimeLeft(newSession.timeState.timeLeft);
-      } catch {}
+      } catch {
+        // Ignore setState errors
+      }
       SyncLocalStorage.removeItem("testQuestions");
       SyncLocalStorage.removeItem("testUserAnswers");
       SyncLocalStorage.removeItem("testGradingResults");
     }
-  } catch {}
+  } catch {
+    // Ignore session initialization errors
+  }
 
   let session = migrateFromLegacyStorage(eventName, timeLimit);
   if (!session) {
@@ -89,14 +93,18 @@ export async function initLoad({
     if (session) {
       setTimeLeft(session.timeState.timeLeft);
     }
-  } catch {}
+  } catch {
+    // Ignore setState errors
+  }
 
   if (session?.isSubmitted) {
     const storedGrading = SyncLocalStorage.getItem("testGradingResults");
     if (storedGrading) {
       try {
         /* touch parse to validate */ JSON.parse(storedGrading);
-      } catch {}
+      } catch {
+        // Ignore JSON parse errors
+      }
     }
     const storedQuestions = SyncLocalStorage.getItem("testQuestions");
     if (storedQuestions) {
@@ -109,7 +117,9 @@ export async function initLoad({
           logger.log("resume submitted test from localStorage", { count: parsedQuestions.length });
           return;
         }
-      } catch {}
+      } catch {
+        // Ignore JSON parse errors
+      }
     }
   }
 
@@ -128,7 +138,9 @@ export async function initLoad({
       }
       logger.warn("ignoring empty testQuestions cache");
       SyncLocalStorage.removeItem("testQuestions");
-    } catch {}
+    } catch {
+      // Ignore JSON parse errors
+    }
   }
 
   if (Array.isArray(initialData) && initialData.length > 0) {

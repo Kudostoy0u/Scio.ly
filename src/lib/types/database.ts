@@ -130,7 +130,7 @@ export interface Database {
           notification_type: string;
           title: string;
           message: string;
-          data: any;
+          data: Record<string, unknown>;
           is_read: boolean;
           created_at: string;
           read_at: string | null;
@@ -143,7 +143,7 @@ export interface Database {
           notification_type: string;
           title: string;
           message: string;
-          data?: any;
+          data?: Record<string, unknown>;
           is_read?: boolean;
           created_at?: string;
           read_at?: string | null;
@@ -156,7 +156,7 @@ export interface Database {
           notification_type?: string;
           title?: string;
           message?: string;
-          data?: any;
+          data?: Record<string, unknown>;
           is_read?: boolean;
           created_at?: string;
           read_at?: string | null;

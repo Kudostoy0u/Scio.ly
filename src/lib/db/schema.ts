@@ -61,6 +61,7 @@ export const idEvents = pgTable("id_events", {
   options: jsonb("options").default("[]"),
   answers: jsonb("answers").notNull(),
   subtopics: jsonb("subtopics").default("[]"),
+  images: jsonb("images").default("[]"),
   difficulty: numeric("difficulty").default("0.5"),
   event: text("event").notNull(),
   randomF: doublePrecision("random_f").notNull().default(sql`random()`),

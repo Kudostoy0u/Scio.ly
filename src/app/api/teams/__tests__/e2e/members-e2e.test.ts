@@ -1,6 +1,6 @@
 /**
  * E2E Tests for Team Members Management
- * 
+ *
  * Tests the complete member management workflow including:
  * - Fetching team members
  * - Member roles and permissions
@@ -8,35 +8,35 @@
  * - Member display information
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { dbPg } from "@/lib/db";
 import { newTeamMemberships, newTeamRosterData, newTeamUnits } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  type TestTeam,
+  type TestUser,
+  addTeamMember,
+  assertUserIsMember,
+  cleanupTestData,
+  createRosterEntry,
   createTestTeam,
   createTestUser,
-  cleanupTestData,
-  addTeamMember,
-  createRosterEntry,
-  assertUserIsMember,
-  type TestUser,
-  type TestTeam,
 } from "../utils/test-helpers";
 
 describe("Team Members E2E", () => {
-  let testUsers: TestUser[] = [];
-  let testTeams: TestTeam[] = [];
+  const testUsers: TestUser[] = [];
+  const testTeams: TestTeam[] = [];
 
   beforeAll(async () => {
     // Create test users
     testUsers.push(await createTestUser({ displayName: "Captain User" }));
     testUsers.push(await createTestUser({ displayName: "Member User" }));
     testUsers.push(await createTestUser({ displayName: "Co-Captain User" }));
-    
+
     // Create test team
     const team = await createTestTeam(testUsers[0].id);
     testTeams.push(team);
-    
+
     // Add members
     await addTeamMember(team.subteamId, testUsers[1].id, "member");
     await addTeamMember(team.subteamId, testUsers[2].id, "co_captain");
@@ -110,21 +110,13 @@ describe("Team Members E2E", () => {
       const member = testUsers[1];
 
       // Create linked roster entry
-      await createRosterEntry(
-        team.subteamId,
-        "Astronomy",
-        0,
-        "Member User",
-        member.id
-      );
+      await createRosterEntry(team.subteamId, "Astronomy", 0, "Member User", member.id);
 
       // Verify link
       const [rosterEntry] = await dbPg
         .select()
         .from(newTeamRosterData)
-        .where(
-          eq(newTeamRosterData.teamUnitId, team.subteamId)
-        );
+        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
 
       expect(rosterEntry).toBeDefined();
       expect(rosterEntry?.userId).toBe(member.id);
@@ -135,12 +127,7 @@ describe("Team Members E2E", () => {
       const team = testTeams[0];
 
       // Create unlinked roster entry
-      await createRosterEntry(
-        team.subteamId,
-        "Biology",
-        1,
-        "Unlinked Student"
-      );
+      await createRosterEntry(team.subteamId, "Biology", 1, "Unlinked Student");
 
       // Verify entry exists without userId
       const rosterEntries = await dbPg
@@ -159,7 +146,7 @@ describe("Team Members E2E", () => {
 
   describe("Member Display Information", () => {
     it("should retrieve member display names correctly", async () => {
-      const team = testTeams[0];
+      const _team = testTeams[0];
       const member = testUsers[1];
 
       // Get member with user profile
@@ -169,9 +156,7 @@ describe("Team Members E2E", () => {
           role: newTeamMemberships.role,
         })
         .from(newTeamMemberships)
-        .where(
-          eq(newTeamMemberships.userId, member.id)
-        );
+        .where(eq(newTeamMemberships.userId, member.id));
 
       expect(membership).toBeDefined();
       expect(membership?.userId).toBe(member.id);
@@ -187,15 +172,12 @@ describe("Team Members E2E", () => {
       const activeMemberships = await dbPg
         .select()
         .from(newTeamMemberships)
-        .where(
-          eq(newTeamMemberships.teamId, team.subteamId)
-        );
+        .where(eq(newTeamMemberships.teamId, team.subteamId));
 
       // All should be active
-      activeMemberships.forEach((membership) => {
+      for (const membership of activeMemberships) {
         expect(membership.status).toBe("active");
-      });
+      }
     });
   });
 });
-

@@ -1,12 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { EloData } from "@/app/analytics/types/elo";
+import type { EloData, EloMetadata } from "@/app/analytics/types/elo";
 import { type DataLoadOptions, loadEloData } from "@/app/analytics/utils/dataLoader";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-interface EloMetadata {
-  lastUpdated?: string;
-  totalStates?: number;
-  [key: string]: unknown;
-}
+// Regex for extracting state codes from school names (moved to top level for performance)
+const STATE_CODE_REGEX = /\(([A-Z]{2})\)$/;
 
 /**
  * Simplified hook for lazy loading Elo data with batched state updates
@@ -115,8 +112,6 @@ export function useLazyEloData(options: DataLoadOptions) {
     [loadedStates]
   );
 
-  const stateCodeRegex = /\(([A-Z]{2})\)$/;
-
   // Check if data for a specific school is available
   const isSchoolDataAvailable = useCallback(
     (schoolName: string) => {
@@ -125,15 +120,18 @@ export function useLazyEloData(options: DataLoadOptions) {
       }
 
       // Extract state from school name (format: "School Name (STATE)")
-      const stateMatch = schoolName.match(stateCodeRegex);
+      const stateMatch = schoolName.match(STATE_CODE_REGEX);
       if (!stateMatch) {
         return false;
       }
 
       const stateCode = stateMatch[1];
-      if (!stateCode) return false;
+      if (!stateCode) {
+        return false;
+      }
       return (
-        isStateLoaded(stateCode) && data[stateCode]?.[schoolName.replace(` (${stateCode})`, "")] !== undefined
+        isStateLoaded(stateCode) &&
+        data[stateCode]?.[schoolName.replace(` (${stateCode})`, "")] !== undefined
       );
     },
     [data, isStateLoaded]

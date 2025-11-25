@@ -3,7 +3,7 @@ import { parsePreviewParams } from "./previewParams";
 
 describe("parsePreviewParams", () => {
   it("parses defaults when null", () => {
-    const r = parsePreviewParams(null as any);
+    const r = parsePreviewParams(null);
     expect(r.isPreview).toBe(false);
     expect(r.previewScope).toBe("all");
     expect(r.previewTeam).toBe("A");

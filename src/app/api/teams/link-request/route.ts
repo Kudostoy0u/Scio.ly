@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       .select("id, username")
       .ilike("username", targetUsername)
       .maybeSingle();
-    if (!target?.id) {
+    if (!(target as { id?: string } | null)?.id) {
       return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
     }
     // no-op: linking notifications removed

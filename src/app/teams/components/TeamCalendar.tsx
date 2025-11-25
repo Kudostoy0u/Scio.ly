@@ -1,7 +1,7 @@
 "use client";
 
-import { useAuth } from "@/app/contexts/AuthContext";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useAuth } from "@/app/contexts/authContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { globalApiCache } from "@/lib/utils/globalApiCache";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -257,7 +257,7 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
       );
 
       const captainTeams = allTeams.filter(
-        (team: any) => team.user_role === "captain" || team.user_role === "co_captain"
+        (team: UserTeam) => team.user_role === "captain" || team.user_role === "co_captain"
       );
       setUserTeams(captainTeams);
     } catch {
@@ -780,7 +780,9 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
 
             {/* Selected day events list */}
             <div className="mt-4">
-              <h3 className={`text-sm font-semibold mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}>
+              <h3
+                className={`text-sm font-semibold mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}
+              >
                 {selectedMobileDate.toLocaleDateString(undefined, {
                   month: "long",
                   day: "numeric",

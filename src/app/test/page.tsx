@@ -15,7 +15,7 @@ export default async function Page({
 }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const cookieStore = await cookies();
   const raw = cookieStore.get("scio_test_params")?.value;
-  let parsed: any | undefined;
+  let parsed: Record<string, unknown> | undefined;
   try {
     parsed = raw ? JSON.parse(decodeURIComponent(raw)) : undefined;
   } catch {
@@ -45,7 +45,7 @@ export default async function Page({
 
   // Do not SSR-fetch questions. Client logic handles ID/base composition.
   // Only pass through router parameters so the client can fetch appropriately.
-  const initialData: any[] | undefined = undefined;
+  const initialData: unknown[] | undefined = undefined;
   const initialRouterData:
     | {
         eventName?: string;

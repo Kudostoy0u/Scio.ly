@@ -37,7 +37,8 @@ export const getEventSeasonConfig = (
               (data[school] as Record<string, Record<string, number>>)?.[event]?.[season] || null
           ),
           borderColor:
-            CHART_COLORS[(schoolIndex * events.length + eventIndex) % CHART_COLORS.length] ?? "#000000",
+            CHART_COLORS[(schoolIndex * events.length + eventIndex) % CHART_COLORS.length] ??
+            "#000000",
           backgroundColor: `${CHART_COLORS[(schoolIndex * events.length + eventIndex) % CHART_COLORS.length]}20`,
           borderWidth: 2,
           fill: false,

@@ -78,7 +78,9 @@ export const setupTestPrintWindow = (printContent: string): Promise<Window> => {
             pbtn.addEventListener("click", () => {
               try {
                 printWindow.focus();
-              } catch {}
+              } catch {
+                // Ignore focus errors
+              }
               printWindow.print();
             });
           }
@@ -88,12 +90,16 @@ export const setupTestPrintWindow = (printContent: string): Promise<Window> => {
         } catch (e) {
           import("@/lib/utils/logger")
             .then((m) => m.default.error("Failed to inject banner into print window", e))
-            .catch(() => {});
+            .catch(() => {
+              // Ignore logger import errors
+            });
         }
 
         try {
           printWindow.focus();
-        } catch {}
+        } catch {
+          // Ignore focus errors
+        }
         clearTimeout(timeout);
         resolve(printWindow);
       };

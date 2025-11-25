@@ -16,7 +16,7 @@ export async function GET() {
       .select("username")
       .eq("id", user.id)
       .maybeSingle();
-    const username = profile?.username;
+    const username = (profile as { username?: string } | null)?.username;
     if (!username) {
       return NextResponse.json({ success: true, data: [] });
     }

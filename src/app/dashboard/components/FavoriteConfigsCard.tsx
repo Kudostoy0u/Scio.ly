@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import type { Settings } from "@/app/practice/types";
 import {
   type FavoriteConfig,
@@ -15,6 +15,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
+const DESKTOP_SLOT_IDS = ["desktop-slot-1", "desktop-slot-2", "desktop-slot-3", "desktop-slot-4"];
+const MOBILE_SLOT_IDS = ["mobile-slot-1", "mobile-slot-2"];
+
+const buildConfigKey = (config: FavoriteConfig, prefix: string) =>
+  `${prefix}-${config.eventName}-${JSON.stringify(config.settings)}`;
+
 export default function FavoriteConfigsCard() {
   const { darkMode } = useTheme();
   const router = useRouter();
@@ -26,7 +32,9 @@ export default function FavoriteConfigsCard() {
   useEffect(() => {
     try {
       setFavorites(getFavoriteConfigs());
-    } catch {}
+    } catch {
+      // Ignore local storage read errors
+    }
 
     const onStorage = (e: StorageEvent) => {
       if (e.key === "scio_favorite_test_configs") {
@@ -43,7 +51,9 @@ export default function FavoriteConfigsCard() {
       try {
         const keys = await listDownloadedEventSlugs();
         setDownloadedSet(new Set(keys));
-      } catch {}
+      } catch {
+        // Ignore offline cache read errors
+      }
     })();
     return () => {
       window.removeEventListener("storage", onStorage);
@@ -85,7 +95,9 @@ export default function FavoriteConfigsCard() {
     }
     try {
       clearTestSession();
-    } catch {}
+    } catch {
+      // Ignore session clearing errors
+    }
     const testParams = buildTestParams(eventName, settings);
     saveTestParams(testParams);
     if (eventName === "Codebusters") {
@@ -99,194 +111,27 @@ export default function FavoriteConfigsCard() {
     try {
       const next = removeFavoriteConfig(config);
       setFavorites(next);
-    } catch {}
+    } catch {
+      // Ignore remove errors
+    }
   };
 
   return (
     <div className={`rounded-lg ${cardStyle} pl-5 pr-5 h-32 overflow-hidden`}>
-      {/* Desktop Layout - Horizontal with title on left, configs on right */}
-      <div className="hidden md:flex flex-row w-full items-center gap-4 h-full">
-        {/* Left: Title/Description */}
-        <div className="flex-none min-w-[110px]">
-          <h3
-            className={`${darkMode ? "text-white" : "text-gray-800"} text-lg font-semibold leading-tight`}
-          >
-            <span className="block">Favorited</span>
-            <span className="block">Configs</span>
-          </h3>
-        </div>
-
-        {/* Right: One row, four columns */}
-        <div className="flex-1 h-full">
-          <div className="grid grid-cols-4 gap-4 h-full items-center">
-            {Array.from({ length: 4 }).map((_, idx) => {
-              const fav = favorites[idx];
-              if (!fav) {
-                return (
-                  <div
-                    key={`placeholder-${idx}`}
-                    className={`flex items-center justify-center rounded-md h-[80%] ${darkMode ? "bg-gray-900/30 border border-gray-800" : "bg-gray-50/60 border border-gray-200"}`}
-                  >
-                    <span
-                      className={`${darkMode ? "text-gray-400" : "text-gray-500"} text-xs text-center px-2`}
-                    >
-                      No favorited configuration
-                    </span>
-                  </div>
-                );
-              }
-              return (
-                <div
-                  key={`fav-${idx}`}
-                  role="button"
-                  tabIndex={0}
-                  className={`relative group rounded-md overflow-hidden h-[80%] ${darkMode ? "bg-gray-900" : "bg-gray-50"} border ${darkMode ? "border-gray-700" : "border-gray-200"} cursor-pointer`}
-                  onClick={() => startFromConfig(fav)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      startFromConfig(fav);
-                    }
-                  }}
-                >
-                  <div className="absolute inset-0 p-3 flex flex-col items-start justify-between text-left">
-                    <div
-                      className={`text-xs font-semibold ${darkMode ? "text-white" : "text-gray-900"} break-words leading-snug`}
-                    >
-                      {fav.eventName}
-                    </div>
-                    <div className="w-full">
-                      <ConfigSummaryGrid settings={fav.settings} darkMode={darkMode} />
-                    </div>
-                  </div>
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors" />
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startFromConfig(fav);
-                      }}
-                      className="p-2 rounded-full border border-white/70 text-white hover:border-white"
-                      title="Start"
-                    >
-                      <Play className="w-5 h-5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemove(fav);
-                      }}
-                      className="p-2 rounded-full border border-white/70 text-white hover:border-white"
-                      title="Remove"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Layout - Vertical with centered title and four configs */}
-      <div className="flex md:hidden flex-col w-full h-full pb-2">
-        {/* Title centered at top */}
-        <div className="flex justify-center pt-4 pb-1 px-4">
-          <h3
-            className={`${darkMode ? "text-white" : "text-gray-800"} text-lg font-semibold text-center`}
-          >
-            Favorited Configs
-          </h3>
-        </div>
-
-        {/* Two configs in single row */}
-        <div className="flex-1 px-1" onClick={() => setSelectedMobileCard(null)}>
-          <div className="grid grid-cols-2 gap-3 h-full text-xs">
-            {Array.from({ length: 2 }).map((_, idx) => {
-              const fav = favorites[idx];
-              if (!fav) {
-                return (
-                  <div
-                    key={`mobile-placeholder-${idx}`}
-                    className={`flex items-center justify-center rounded-md h-full ${darkMode ? "bg-gray-900/30 border border-gray-800" : "bg-gray-50/60 border border-gray-200"}`}
-                  >
-                    <span
-                      className={`${darkMode ? "text-gray-400" : "text-gray-500"} text-[10px] text-center px-1`}
-                    >
-                      Empty
-                    </span>
-                  </div>
-                );
-              }
-              return (
-                <div
-                  key={`mobile-fav-${idx}`}
-                  role="button"
-                  tabIndex={0}
-                  className={`relative group rounded-md overflow-hidden h-full ${darkMode ? "bg-gray-900" : "bg-gray-50"} border ${darkMode ? "border-gray-700" : "border-gray-200"} cursor-pointer`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedMobileCard(selectedMobileCard === idx ? null : idx);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setSelectedMobileCard(selectedMobileCard === idx ? null : idx);
-                    }
-                  }}
-                >
-                  <div className="absolute inset-0 p-1.5 flex flex-col items-start justify-between text-left">
-                    <div
-                      className={`text-[11px] font-semibold ${darkMode ? "text-white" : "text-gray-900"} break-words leading-tight`}
-                    >
-                      {fav.eventName}
-                    </div>
-                    <div className="w-full">
-                      <ConfigSummaryGrid
-                        settings={fav.settings}
-                        darkMode={darkMode}
-                        isMobile={true}
-                      />
-                    </div>
-                  </div>
-                  <div
-                    className={`absolute inset-0 transition-colors ${selectedMobileCard === idx ? "bg-black/50" : "bg-black/0"}`}
-                  />
-                  <div
-                    className={`absolute inset-0 transition-opacity flex items-center justify-center gap-1 ${selectedMobileCard === idx ? "opacity-100" : "opacity-0"} ${selectedMobileCard === idx ? "pointer-events-auto" : "pointer-events-none"}`}
-                  >
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startFromConfig(fav);
-                      }}
-                      className="p-1 rounded-full border border-white/70 text-white hover:border-white"
-                      title="Start"
-                    >
-                      <Play className="w-3 h-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemove(fav);
-                      }}
-                      className="p-1 rounded-full border border-white/70 text-white hover:border-white"
-                      title="Remove"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      <DesktopFavoritesGrid
+        favorites={favorites}
+        darkMode={darkMode}
+        onStart={startFromConfig}
+        onRemove={handleRemove}
+      />
+      <MobileFavoritesGrid
+        favorites={favorites}
+        darkMode={darkMode}
+        onStart={startFromConfig}
+        onRemove={handleRemove}
+        selectedIndex={selectedMobileCard}
+        onToggleSelected={setSelectedMobileCard}
+      />
     </div>
   );
 }
@@ -307,23 +152,304 @@ function ConfigSummaryGrid({
   const iconSize = isMobile ? "w-2.5 h-2.5" : "w-3.5 h-3.5";
   const gap = isMobile ? "gap-0.5" : "gap-1";
   const gridGap = isMobile ? "gap-x-1 gap-y-0.5" : "gap-x-3 gap-y-1";
+  const primaryText = `${darkMode ? "text-gray-200" : "text-gray-800"}`;
+  const secondaryText = `${darkMode ? "text-gray-400" : "text-gray-500"}`;
+  const iconColor = darkMode ? "text-gray-300" : "text-gray-600";
+
+  const metricRows: Array<{
+    key: string;
+    value: string | number;
+    suffix: string;
+    Icon: typeof BookCheck;
+  }> = [
+    { key: "questions", value: settings.questionCount, suffix: "qs", Icon: BookCheck },
+    { key: "time", value: settings.timeLimit, suffix: "min", Icon: Hourglass },
+  ];
 
   return (
     <div className={`grid grid-cols-2 ${gridGap} mt-1`}>
-      <div className={`flex items-center ${gap} ${textSize}`}>
-        <BookCheck className={`${iconSize} ${darkMode ? "text-gray-300" : "text-gray-600"}`} />
-        <span className={`${darkMode ? "text-gray-200" : "text-gray-800"}`}>
-          {settings.questionCount}
-        </span>
-        <span className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>qs</span>
+      {metricRows.map(({ key, value, suffix, Icon }) => (
+        <div key={key} className={`flex items-center ${gap} ${textSize}`}>
+          <Icon className={`${iconSize} ${iconColor}`} />
+          <span className={primaryText}>{value}</span>
+          <span className={secondaryText}>{suffix}</span>
+        </div>
+      ))}
+      <div className={`${textSize} ${primaryText}`}>{typeLabel}</div>
+      <div className={`${textSize} ${primaryText}`}>{divLabel}</div>
+    </div>
+  );
+}
+
+function DesktopFavoritesGrid({
+  favorites,
+  darkMode,
+  onStart,
+  onRemove,
+}: {
+  favorites: FavoriteConfig[];
+  darkMode: boolean;
+  onStart: (config: FavoriteConfig) => void;
+  onRemove: (config: FavoriteConfig) => void;
+}) {
+  return (
+    <div className="hidden md:flex flex-row w-full items-center gap-4 h-full">
+      <div className="flex-none min-w-[110px]">
+        <h3
+          className={`${darkMode ? "text-white" : "text-gray-800"} text-lg font-semibold leading-tight`}
+        >
+          <span className="block">Favorited</span>
+          <span className="block">Configs</span>
+        </h3>
       </div>
-      <div className={`flex items-center ${gap} ${textSize}`}>
-        <Hourglass className={`${iconSize} ${darkMode ? "text-gray-300" : "text-gray-600"}`} />
-        <span className={`${darkMode ? "text-gray-200" : "text-gray-800"}`}>{settings.timeLimit}</span>
-        <span className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>min</span>
+
+      <div className="flex-1 h-full">
+        <div className="grid grid-cols-4 gap-4 h-full items-center">
+          {DESKTOP_SLOT_IDS.map((slotId, index) => {
+            const fav = favorites[index];
+            if (!fav) {
+              return (
+                <PlaceholderTile
+                  key={`${slotId}-placeholder`}
+                  darkMode={darkMode}
+                  label="No favorited configuration"
+                />
+              );
+            }
+            return (
+              <FavoriteConfigTile
+                key={buildConfigKey(fav, slotId)}
+                config={fav}
+                darkMode={darkMode}
+                onStart={onStart}
+                onRemove={onRemove}
+                summaryVariant="desktop"
+              />
+            );
+          })}
+        </div>
       </div>
-      <div className={`${textSize} ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{typeLabel}</div>
-      <div className={`${textSize} ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{divLabel}</div>
+    </div>
+  );
+}
+
+function MobileFavoritesGrid({
+  favorites,
+  darkMode,
+  onStart,
+  onRemove,
+  selectedIndex,
+  onToggleSelected,
+}: {
+  favorites: FavoriteConfig[];
+  darkMode: boolean;
+  onStart: (config: FavoriteConfig) => void;
+  onRemove: (config: FavoriteConfig) => void;
+  selectedIndex: number | null;
+  onToggleSelected: (next: number | null) => void;
+}) {
+  return (
+    <div className="flex md:hidden flex-col w-full h-full pb-2">
+      <div className="flex justify-center pt-4 pb-1 px-4">
+        <h3
+          className={`${darkMode ? "text-white" : "text-gray-800"} text-lg font-semibold text-center`}
+        >
+          Favorited Configs
+        </h3>
+      </div>
+
+      <div className="flex-1 px-1">
+        <div className="grid grid-cols-2 gap-3 h-full text-xs">
+          {MOBILE_SLOT_IDS.map((slotId, index) => {
+            const fav = favorites[index];
+            if (!fav) {
+              return (
+                <PlaceholderTile
+                  key={`${slotId}-placeholder`}
+                  darkMode={darkMode}
+                  label="Empty"
+                  isCompact={true}
+                />
+              );
+            }
+            return (
+              <MobileFavoriteTile
+                key={buildConfigKey(fav, slotId)}
+                config={fav}
+                darkMode={darkMode}
+                onStart={onStart}
+                onRemove={onRemove}
+                isSelected={selectedIndex === index}
+                onToggle={() => onToggleSelected(selectedIndex === index ? null : index)}
+              />
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FavoriteConfigTile({
+  config,
+  darkMode,
+  onStart,
+  onRemove,
+  summaryVariant,
+}: {
+  config: FavoriteConfig;
+  darkMode: boolean;
+  onStart: (config: FavoriteConfig) => void;
+  onRemove: (config: FavoriteConfig) => void;
+  summaryVariant: "desktop" | "mobile";
+}) {
+  return (
+    <div
+      className={`relative group rounded-md overflow-hidden h-[80%] ${darkMode ? "bg-gray-900" : "bg-gray-50"} border ${darkMode ? "border-gray-700" : "border-gray-200"}`}
+    >
+      <button
+        type="button"
+        className="relative z-10 w-full h-full p-3 flex flex-col items-start justify-between text-left"
+        onClick={() => onStart(config)}
+      >
+        <div
+          className={`text-xs font-semibold ${darkMode ? "text-white" : "text-gray-900"} break-words leading-snug`}
+        >
+          {config.eventName}
+        </div>
+        <div className="w-full">
+          <ConfigSummaryGrid
+            settings={config.settings}
+            darkMode={darkMode}
+            isMobile={summaryVariant === "mobile"}
+          />
+        </div>
+      </button>
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors pointer-events-none" />
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 pointer-events-none group-hover:pointer-events-auto">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onStart(config);
+          }}
+          className="p-2 rounded-full border border-white/70 text-white hover:border-white"
+          title="Start"
+        >
+          <Play className="w-5 h-5" />
+        </button>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onRemove(config);
+          }}
+          className="p-2 rounded-full border border-white/70 text-white hover:border-white"
+          title="Remove"
+        >
+          <Trash2 className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MobileFavoriteTile({
+  config,
+  darkMode,
+  onStart,
+  onRemove,
+  isSelected,
+  onToggle,
+}: {
+  config: FavoriteConfig;
+  darkMode: boolean;
+  onStart: (config: FavoriteConfig) => void;
+  onRemove: (config: FavoriteConfig) => void;
+  isSelected: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div
+      className={`relative group rounded-md overflow-hidden h-full ${darkMode ? "bg-gray-900" : "bg-gray-50"} border ${darkMode ? "border-gray-700" : "border-gray-200"}`}
+    >
+      <button
+        type="button"
+        className="relative z-10 w-full h-full p-1.5 flex flex-col items-start justify-between text-left"
+        onClick={(event) => {
+          event.stopPropagation();
+          onToggle();
+        }}
+        aria-pressed={isSelected}
+      >
+        <div
+          className={`text-[11px] font-semibold ${darkMode ? "text-white" : "text-gray-900"} break-words leading-tight`}
+        >
+          {config.eventName}
+        </div>
+        <div className="w-full">
+          <ConfigSummaryGrid settings={config.settings} darkMode={darkMode} isMobile={true} />
+        </div>
+      </button>
+      <div
+        className={`absolute inset-0 transition-colors pointer-events-none ${
+          isSelected ? "bg-black/50" : "bg-black/0"
+        }`}
+      />
+      <div
+        className={`absolute inset-0 transition-opacity flex items-center justify-center gap-1 ${
+          isSelected ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onStart(config);
+          }}
+          className="p-1 rounded-full border border-white/70 text-white hover:border-white"
+          title="Start"
+        >
+          <Play className="w-3 h-3" />
+        </button>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onRemove(config);
+          }}
+          className="p-1 rounded-full border border-white/70 text-white hover:border-white"
+          title="Remove"
+        >
+          <Trash2 className="w-3 h-3" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PlaceholderTile({
+  darkMode,
+  label,
+  isCompact = false,
+}: {
+  darkMode: boolean;
+  label: string;
+  isCompact?: boolean;
+}) {
+  const height = isCompact ? "h-full" : "h-[80%]";
+  const textSize = isCompact ? "text-[10px]" : "text-xs";
+  return (
+    <div
+      className={`flex items-center justify-center rounded-md ${height} ${
+        darkMode ? "bg-gray-900/30 border border-gray-800" : "bg-gray-50/60 border border-gray-200"
+      }`}
+    >
+      <span
+        className={`${darkMode ? "text-gray-400" : "text-gray-500"} ${textSize} text-center px-2`}
+      >
+        {label}
+      </span>
     </div>
   );
 }

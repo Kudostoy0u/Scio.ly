@@ -8,7 +8,7 @@ import EditQuestionModal from "@/app/components/EditQuestionModal";
 import { FloatingActionButtons } from "@/app/components/FloatingActionButtons";
 import Header from "@/app/components/Header";
 import ShareModal from "@/app/components/ShareModal";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { useRef } from "react";
 import { toast } from "react-toastify";
 import {
@@ -27,10 +27,13 @@ import {
   setupTestPrintWindow,
 } from "./utils/printUtils";
 
+import type { Question } from "@/app/utils/geminiService";
+import type { RouterParams } from "@/app/utils/questionUtils";
+
 export default function TestContent({
   initialData,
   initialRouterData,
-}: { initialData?: any[]; initialRouterData?: any }) {
+}: { initialData?: Question[]; initialRouterData?: RouterParams }) {
   const isClient = typeof window !== "undefined";
   const search = isClient ? new URLSearchParams(window.location.search) : null;
   const isPreview = !!(search && search.get("preview") === "1");
@@ -93,7 +96,10 @@ export default function TestContent({
     setShareModalOpen,
     setInputCode,
     setIsEditModalOpen,
-  } = useTestState({ initialData, initialRouterData });
+  } = useTestState({
+    initialData,
+    initialRouterData: initialRouterData as Record<string, unknown> | undefined,
+  });
 
   const previewToastsShownRef = useRef(false);
   useEffect(() => {
@@ -111,7 +117,9 @@ export default function TestContent({
           autoClose: 6000,
         });
       }, 1200);
-    } catch {}
+    } catch {
+      // Ignore timeout errors
+    }
   }, [isPreview]);
 
   const handlePrintConfig = () => {
@@ -275,7 +283,9 @@ export default function TestContent({
               onClick={handleBackToMain}
               className={`group inline-flex items-center text-base font-medium ${darkMode ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"}`}
             >
-              <span className="transition-transform duration-200 group-hover:-translate-x-1">←</span>
+              <span className="transition-transform duration-200 group-hover:-translate-x-1">
+                ←
+              </span>
               <span className="ml-2">Go back</span>
             </button>
           </div>
@@ -330,7 +340,12 @@ export default function TestContent({
                         : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -487,7 +502,9 @@ export default function TestContent({
                             await Promise.all(targets.filter((m:any)=>m.userId).map((m:any)=>
                               fetch('/api/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action:'create', userId: m.userId, type: 'assignment', title: `New ${routerData.eventName} test assigned`, data: { assignmentId, eventName: routerData.eventName, url: `/assign/${assignmentId}` } }) })
                             ));
-                          } catch {}
+                          } catch {
+                            // Ignore notification errors
+                          }
                           */
                           const recipientsLabel =
                             previewScope === "all" ? "all members" : previewScope;
@@ -497,7 +514,9 @@ export default function TestContent({
                             window.location.href = `/teams/results?${qp.toString()}`;
                           }, 600);
                         }
-                      } catch {}
+                      } catch {
+                        // Ignore assignment creation errors
+                      }
                     }}
                     className={`w-4/5 px-4 py-2 font-semibold rounded-lg border-2 flex items-center justify-center text-center ${
                       darkMode

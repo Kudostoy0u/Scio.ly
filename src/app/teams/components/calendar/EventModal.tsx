@@ -12,7 +12,7 @@ interface CalendarEvent {
   event_type: "practice" | "tournament" | "meeting" | "deadline" | "other" | "personal";
   is_all_day: boolean;
   is_recurring: boolean;
-  recurrence_pattern?: any;
+  recurrence_pattern?: Record<string, unknown>;
   created_by: string;
   team_id?: string;
   attendees?: Array<{
@@ -33,7 +33,7 @@ interface EventForm {
   event_type: "practice" | "tournament" | "meeting" | "deadline" | "other" | "personal";
   is_all_day: boolean;
   is_recurring: boolean;
-  recurrence_pattern: any;
+  recurrence_pattern: Record<string, unknown>;
   meeting_type: "personal" | "team";
   selected_team_id: string;
 }
@@ -88,7 +88,8 @@ export default function EventModal({
   };
 
   const getTeamOptions = () => {
-    return userTeams.reduce((acc: any[], team) => {
+    type TeamOption = UserTeam & { isAllTeams?: boolean };
+    return userTeams.reduce((acc: TeamOption[], team) => {
       const schoolKey = team.school || "Unknown School";
       const existingGroup = acc.find((group) => group.school === schoolKey);
 
@@ -103,6 +104,9 @@ export default function EventModal({
           school: schoolKey,
           name: "All Teams",
           isAllTeams: true,
+          slug: "",
+          user_role: "",
+          team_id: "",
         });
         acc.push({
           ...team,
@@ -134,7 +138,9 @@ export default function EventModal({
           >
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>
+                <h3
+                  className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}
+                >
                   {selectedEvent ? "Edit Event" : "Create Event"}
                 </h3>
                 <button
@@ -335,7 +341,14 @@ export default function EventModal({
                     value={eventForm.event_type}
                     onChange={(e) => {
                       const value = e.target.value;
-                      if (value === "practice" || value === "tournament" || value === "meeting" || value === "deadline" || value === "other" || value === "personal") {
+                      if (
+                        value === "practice" ||
+                        value === "tournament" ||
+                        value === "meeting" ||
+                        value === "deadline" ||
+                        value === "other" ||
+                        value === "personal"
+                      ) {
                         onFormChange({ event_type: value });
                       }
                     }}

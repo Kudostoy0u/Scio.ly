@@ -1,7 +1,7 @@
+import api from "@/app/api";
 import SyncLocalStorage from "@/lib/database/localStorage-replacement";
 import logger from "@/lib/utils/logger";
 import { toast } from "react-toastify";
-import api from "@/app/api";
 import { clearTestSession, initializeTestSession } from "./timeManagement";
 
 export interface QuoteData {
@@ -193,7 +193,9 @@ export const handleShareCodeRedirect = async (code: string): Promise<boolean> =>
   try {
     const cookiePayload = encodeURIComponent(JSON.stringify(result.testParams));
     document.cookie = `scio_test_params=${cookiePayload}; Path=/; Max-Age=600; SameSite=Lax`;
-  } catch {}
+  } catch {
+    // Ignore cookie errors
+  }
 
   // 5. initialize time management session
   const eventName = result.eventName || "Unknown Event";

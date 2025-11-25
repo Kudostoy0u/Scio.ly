@@ -1,9 +1,9 @@
+import { POST } from "@/app/api/teams/create/route";
 import { cockroachDBTeamsService } from "@/lib/services/cockroachdb-teams";
 import { getServerUser } from "@/lib/supabaseServer";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { POST } from "@/app/api/teams/create/route";
 
 // Mock dependencies
 vi.mock("@/lib/supabaseServer", () => ({
@@ -11,10 +11,10 @@ vi.mock("@/lib/supabaseServer", () => ({
   createSupabaseServerClient: vi.fn(),
 }));
 
-const mockCreateTeamGroup = vi.fn();
-const mockCreateTeamUnit = vi.fn();
-const mockCreateTeamMembership = vi.fn();
-const mockGetTeamMembers = vi.fn();
+const _mockCreateTeamGroup = vi.fn();
+const _mockCreateTeamUnit = vi.fn();
+const _mockCreateTeamMembership = vi.fn();
+const _mockGetTeamMembers = vi.fn();
 
 vi.mock("@/lib/services/cockroachdb-teams", () => ({
   cockroachDBTeamsService: {
@@ -38,8 +38,12 @@ describe("/api/teams/create", () => {
     vi.clearAllMocks();
 
     // Mock console methods to reduce noise
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {
+      // Intentionally empty to suppress console output in tests
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {
+      // Intentionally empty to suppress console output in tests
+    });
 
     // Mock Supabase client
     const mockSupabaseClient = {
@@ -53,7 +57,9 @@ describe("/api/teams/create", () => {
         upsert: vi.fn().mockResolvedValue({ error: null }),
       }),
     };
-    mockCreateSupabaseServerClient.mockResolvedValue(mockSupabaseClient as any);
+    mockCreateSupabaseServerClient.mockResolvedValue(
+      mockSupabaseClient as unknown as ReturnType<typeof createSupabaseServerClient>
+    );
 
     // Set DATABASE_URL for tests
     process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
@@ -83,7 +89,7 @@ describe("/api/teams/create", () => {
     });
 
     it("should return 400 when school is missing", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
 
       const request = new NextRequest("http://localhost:3000/api/teams/create", {
         method: "POST",
@@ -99,7 +105,7 @@ describe("/api/teams/create", () => {
     });
 
     it("should return 400 when division is missing", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
 
       const request = new NextRequest("http://localhost:3000/api/teams/create", {
         method: "POST",
@@ -115,12 +121,14 @@ describe("/api/teams/create", () => {
     });
 
     it("should accept request without description (description is optional)", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock service methods
-      mockService.createTeamGroup.mockResolvedValue({ id: mockGroupId } as any);
-      mockService.createTeamUnit.mockResolvedValue({ id: "unit-123" } as any);
-      mockService.createTeamMembership.mockResolvedValue({ id: "membership-123" } as any);
+      mockService.createTeamGroup.mockResolvedValue({ id: mockGroupId } as { id: string });
+      mockService.createTeamUnit.mockResolvedValue({ id: "unit-123" } as { id: string });
+      mockService.createTeamMembership.mockResolvedValue({ id: "membership-123" } as {
+        id: string;
+      });
       mockService.getTeamMembers.mockResolvedValue([]);
 
       const request = new NextRequest("http://localhost:3000/api/teams/create", {
@@ -138,7 +146,7 @@ describe("/api/teams/create", () => {
     });
 
     it("should return 400 when division is invalid", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
 
       const request = new NextRequest("http://localhost:3000/api/teams/create", {
         method: "POST",
@@ -157,16 +165,19 @@ describe("/api/teams/create", () => {
 
     it("should create team when all required fields are provided", async () => {
       const mockTeamId = "team-123";
-      mockGetServerUser.mockResolvedValue({ id: mockUserId, email: "test@example.com" } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId, email: "test@example.com" } as {
+        id: string;
+        email: string;
+      });
+
       // Mock service methods
       mockService.createTeamGroup.mockResolvedValue({
         id: mockGroupId,
         slug: "test-school-c-abc123",
         school: "Test School",
         division: "C",
-      } as any);
-      
+      } as { id: string; slug: string; school: string; division: string });
+
       mockService.createTeamUnit.mockResolvedValue({
         id: mockTeamId,
         name: "Team A",
@@ -175,14 +186,25 @@ describe("/api/teams/create", () => {
         user_code: "USR123456",
         created_at: new Date(),
         updated_at: new Date(),
-      } as any);
-      
+      } as {
+        id: string;
+        name: string;
+        description: string;
+        captain_code: string;
+        user_code: string;
+        created_at: Date;
+        updated_at: Date;
+      });
+
       mockService.getTeamMembers.mockResolvedValue([
         {
           user_id: mockUserId,
           role: "captain",
         },
-      ] as any);
+      ] as Array<{
+        user_id: string;
+        role: string;
+      }>);
 
       const request = new NextRequest("http://localhost:3000/api/teams/create", {
         method: "POST",
@@ -202,16 +224,19 @@ describe("/api/teams/create", () => {
 
     it("should create team for division B", async () => {
       const mockTeamId = "team-123";
-      mockGetServerUser.mockResolvedValue({ id: mockUserId, email: "test@example.com" } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId, email: "test@example.com" } as {
+        id: string;
+        email: string;
+      });
+
       // Mock service methods
       mockService.createTeamGroup.mockResolvedValue({
         id: mockGroupId,
         slug: "test-school-b-abc123",
         school: "Test School",
         division: "B",
-      } as any);
-      
+      } as { id: string; slug: string; school: string; division: string });
+
       mockService.createTeamUnit.mockResolvedValue({
         id: mockTeamId,
         name: "Team A",
@@ -220,14 +245,25 @@ describe("/api/teams/create", () => {
         user_code: "USR123456",
         created_at: new Date(),
         updated_at: new Date(),
-      } as any);
-      
+      } as {
+        id: string;
+        name: string;
+        description: string;
+        captain_code: string;
+        user_code: string;
+        created_at: Date;
+        updated_at: Date;
+      });
+
       mockService.getTeamMembers.mockResolvedValue([
         {
           user_id: mockUserId,
           role: "captain",
         },
-      ] as any);
+      ] as Array<{
+        user_id: string;
+        role: string;
+      }>);
 
       const request = new NextRequest("http://localhost:3000/api/teams/create", {
         method: "POST",
@@ -244,7 +280,7 @@ describe("/api/teams/create", () => {
     });
 
     it("should handle team creation errors gracefully", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
       mockService.createTeamGroup.mockRejectedValue(new Error("Database connection failed"));
 
       const request = new NextRequest("http://localhost:3000/api/teams/create", {
@@ -262,13 +298,13 @@ describe("/api/teams/create", () => {
     });
 
     it("should handle invalid JSON in request body", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
 
       const request = new NextRequest("http://localhost:3000/api/teams/create", {
         method: "POST",
         body: "invalid json",
       });
-      
+
       // The route should return 400 for invalid JSON (improved error handling)
       const response = await POST(request);
       expect(response.status).toBe(400);
@@ -277,7 +313,7 @@ describe("/api/teams/create", () => {
     });
 
     it("should handle empty request body", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
 
       const request = new NextRequest("http://localhost:3000/api/teams/create", {
         method: "POST",

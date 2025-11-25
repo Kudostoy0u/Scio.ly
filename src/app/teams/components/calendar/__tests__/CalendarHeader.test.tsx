@@ -1,6 +1,6 @@
+import CalendarHeader from "@/app/teams/components/calendar/CalendarHeader";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import CalendarHeader from "@/app/teams/components/calendar/CalendarHeader";
 
 // Mock lucide-react icons
 vi.mock("lucide-react", () => ({

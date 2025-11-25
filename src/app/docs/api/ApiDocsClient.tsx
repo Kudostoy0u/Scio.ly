@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import {
   Code,
   Database,
@@ -114,11 +114,9 @@ export default function ApiDocsClient() {
           <EditingSection />
 
           {/* AI Features Section */}
-          <aiSection />
           <ExplanationsGuide />
           {/* Question Management Integration */}
           <QuestionManagementGuide />
-          <aiFeaturesIntegration />
 
           {/* System Endpoints Section */}
           <SystemSection />

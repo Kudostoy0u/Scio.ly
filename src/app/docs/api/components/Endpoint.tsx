@@ -1,7 +1,8 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import type React from "react";
 import { useState } from "react";
 
 interface EndpointProps {
@@ -27,8 +28,9 @@ export default function Endpoint({ method, url, description, features, children 
     <div
       className={`${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"} rounded-lg border overflow-hidden`}
     >
-      <div
-        className={`p-4 cursor-pointer transition-colors ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"}`}
+      <button
+        type="button"
+        className={`w-full p-4 cursor-pointer transition-colors text-left ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"}`}
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-3">
@@ -51,11 +53,15 @@ export default function Endpoint({ method, url, description, features, children 
                 {feature}
               </span>
             ))}
-            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            {isExpanded ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronRight className="w-4 h-4" />
+            )}
           </div>
         </div>
         <p className={`${darkMode ? "text-gray-400" : "text-gray-600"} mt-2`}>{description}</p>
-      </div>
+      </button>
 
       {isExpanded && (
         <div

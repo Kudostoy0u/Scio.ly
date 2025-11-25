@@ -1,4 +1,7 @@
-import { queryCockroachDB } from "@/lib/cockroachdb";
+import { dbPg } from "@/lib/db/index";
+import { newTeamNotifications } from "@/lib/db/schema/notifications";
+import logger from "@/lib/utils/logger";
+import { and, desc, eq, inArray } from "drizzle-orm";
 
 /**
  * Data structure for roster notification information
@@ -59,27 +62,31 @@ export class RosterNotificationService {
    */
   static async notifyRosterNameAdded(userId: string, data: RosterNotificationData): Promise<void> {
     try {
-      await queryCockroachDB(
-        `INSERT INTO new_team_notifications 
-         (user_id, team_id, notification_type, title, message, data)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
-          userId,
-          data.subteamId,
-          "roster_name_added",
-          "Roster Name Added",
-          `"${data.studentName}" has been added to the roster${data.eventName ? ` for ${data.eventName}` : ""}`,
-          JSON.stringify({
-            student_name: data.studentName,
-            event_name: data.eventName,
-            action: data.action,
-            team_slug: data.teamSlug,
-            subteam_id: data.subteamId,
-          }),
-        ]
-      );
+      await dbPg.insert(newTeamNotifications).values({
+        userId,
+        teamId: data.subteamId,
+        notificationType: "roster_name_added",
+        title: "Roster Name Added",
+        message: `"${data.studentName}" has been added to the roster${data.eventName ? ` for ${data.eventName}` : ""}`,
+        data: {
+          student_name: data.studentName,
+          event_name: data.eventName,
+          action: data.action,
+          team_slug: data.teamSlug,
+          subteam_id: data.subteamId,
+        },
+      });
     } catch (error) {
-      console.error("Error creating roster name added notification:", error);
+      logger.error(
+        "Failed to create roster notification",
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          userId,
+          action: data.action,
+          teamSlug: data.teamSlug,
+        }
+      );
+      // Ignore errors to avoid breaking the main flow
     }
   }
 
@@ -97,26 +104,32 @@ export class RosterNotificationService {
     data: RosterNotificationData
   ): Promise<void> {
     try {
-      await queryCockroachDB(
-        `INSERT INTO new_team_notifications 
-         (user_id, team_id, notification_type, title, message, data)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
+      await dbPg.insert(newTeamNotifications).values({
+        userId,
+        teamId: data.subteamId,
+        notificationType: "roster_name_removed",
+        title: "Roster Name Removed",
+        message: `"${data.studentName}" has been removed from the roster${data.eventName ? ` for ${data.eventName}` : ""}`,
+        data: {
+          student_name: data.studentName,
+          event_name: data.eventName,
+          action: data.action,
+          team_slug: data.teamSlug,
+          subteam_id: data.subteamId,
+        },
+      });
+    } catch (error) {
+      logger.error(
+        "Failed to create roster notification",
+        error instanceof Error ? error : new Error(String(error)),
+        {
           userId,
-          data.subteamId,
-          "roster_name_removed",
-          "Roster Name Removed",
-          `"${data.studentName}" has been removed from the roster${data.eventName ? ` for ${data.eventName}` : ""}`,
-          JSON.stringify({
-            student_name: data.studentName,
-            event_name: data.eventName,
-            action: data.action,
-            team_slug: data.teamSlug,
-            subteam_id: data.subteamId,
-          }),
-        ]
+          action: data.action,
+          teamSlug: data.teamSlug,
+        }
       );
-    } catch (_error) {}
+      // Ignore errors to avoid breaking the main flow
+    }
   }
 
   /**
@@ -130,27 +143,33 @@ export class RosterNotificationService {
    */
   static async notifyRosterNameLinked(userId: string, data: RosterNotificationData): Promise<void> {
     try {
-      await queryCockroachDB(
-        `INSERT INTO new_team_notifications 
-         (user_id, team_id, notification_type, title, message, data)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
+      await dbPg.insert(newTeamNotifications).values({
+        userId,
+        teamId: data.subteamId,
+        notificationType: "roster_name_linked",
+        title: "Roster Name Linked",
+        message: `"${data.studentName}" has been linked to your account`,
+        data: {
+          student_name: data.studentName,
+          event_name: data.eventName,
+          action: data.action,
+          linked_by: data.linkedBy,
+          team_slug: data.teamSlug,
+          subteam_id: data.subteamId,
+        },
+      });
+    } catch (error) {
+      logger.error(
+        "Failed to create roster notification",
+        error instanceof Error ? error : new Error(String(error)),
+        {
           userId,
-          data.subteamId,
-          "roster_name_linked",
-          "Roster Name Linked",
-          `"${data.studentName}" has been linked to your account`,
-          JSON.stringify({
-            student_name: data.studentName,
-            event_name: data.eventName,
-            action: data.action,
-            linked_by: data.linkedBy,
-            team_slug: data.teamSlug,
-            subteam_id: data.subteamId,
-          }),
-        ]
+          action: data.action,
+          teamSlug: data.teamSlug,
+        }
       );
-    } catch (_error) {}
+      // Ignore errors to avoid breaking the main flow
+    }
   }
 
   /**
@@ -167,26 +186,32 @@ export class RosterNotificationService {
     data: RosterNotificationData
   ): Promise<void> {
     try {
-      await queryCockroachDB(
-        `INSERT INTO new_team_notifications 
-         (user_id, team_id, notification_type, title, message, data)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
+      await dbPg.insert(newTeamNotifications).values({
+        userId,
+        teamId: data.subteamId,
+        notificationType: "roster_name_unlinked",
+        title: "Roster Name Unlinked",
+        message: `"${data.studentName}" has been unlinked from your account`,
+        data: {
+          student_name: data.studentName,
+          event_name: data.eventName,
+          action: data.action,
+          team_slug: data.teamSlug,
+          subteam_id: data.subteamId,
+        },
+      });
+    } catch (error) {
+      logger.error(
+        "Failed to create roster notification",
+        error instanceof Error ? error : new Error(String(error)),
+        {
           userId,
-          data.subteamId,
-          "roster_name_unlinked",
-          "Roster Name Unlinked",
-          `"${data.studentName}" has been unlinked from your account`,
-          JSON.stringify({
-            student_name: data.studentName,
-            event_name: data.eventName,
-            action: data.action,
-            team_slug: data.teamSlug,
-            subteam_id: data.subteamId,
-          }),
-        ]
+          action: data.action,
+          teamSlug: data.teamSlug,
+        }
       );
-    } catch (_error) {}
+      // Ignore errors to avoid breaking the main flow
+    }
   }
 
   /**
@@ -200,27 +225,33 @@ export class RosterNotificationService {
    */
   static async notifyRosterInvitation(userId: string, data: RosterNotificationData): Promise<void> {
     try {
-      await queryCockroachDB(
-        `INSERT INTO new_team_notifications 
-         (user_id, team_id, notification_type, title, message, data)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
+      await dbPg.insert(newTeamNotifications).values({
+        userId,
+        teamId: data.subteamId,
+        notificationType: "roster_invitation",
+        title: "Roster Invitation",
+        message: `You've been invited to link to the roster name "${data.studentName}"`,
+        data: {
+          student_name: data.studentName,
+          event_name: data.eventName,
+          action: data.action,
+          inviter_name: data.inviterName,
+          team_slug: data.teamSlug,
+          subteam_id: data.subteamId,
+        },
+      });
+    } catch (error) {
+      logger.error(
+        "Failed to create roster notification",
+        error instanceof Error ? error : new Error(String(error)),
+        {
           userId,
-          data.subteamId,
-          "roster_invitation",
-          "Roster Invitation",
-          `You've been invited to link to the roster name "${data.studentName}"`,
-          JSON.stringify({
-            student_name: data.studentName,
-            event_name: data.eventName,
-            action: data.action,
-            inviter_name: data.inviterName,
-            team_slug: data.teamSlug,
-            subteam_id: data.subteamId,
-          }),
-        ]
+          action: data.action,
+          teamSlug: data.teamSlug,
+        }
       );
-    } catch (_error) {}
+      // Ignore errors to avoid breaking the main flow
+    }
   }
 
   /**
@@ -237,37 +268,54 @@ export class RosterNotificationService {
    * console.log(notifications.length); // Number of notifications retrieved
    * ```
    */
-  static async getRosterNotifications(userId: string, limit = 50): Promise<any[]> {
+  static async getRosterNotifications(userId: string, limit = 50): Promise<unknown[]> {
     try {
-      const result = await queryCockroachDB<{
-        id: string;
-        type: string;
-        title: string;
-        message: string;
-        data: any;
-        created_at: string;
-        is_read: boolean;
-      }>(
-        `SELECT id, notification_type, title, message, data, created_at, is_read
-         FROM new_team_notifications 
-         WHERE user_id = $1 
-         AND notification_type IN ('roster_name_added', 'roster_name_removed', 'roster_name_linked', 'roster_name_unlinked', 'roster_invitation')
-         ORDER BY created_at DESC 
-         LIMIT $2`,
-        [userId, limit]
-      );
+      const rosterTypes = [
+        "roster_name_added",
+        "roster_name_removed",
+        "roster_name_linked",
+        "roster_name_unlinked",
+        "roster_invitation",
+      ];
 
-      return result.rows.map((row: any) => ({
+      const result = await dbPg
+        .select({
+          id: newTeamNotifications.id,
+          notification_type: newTeamNotifications.notificationType,
+          title: newTeamNotifications.title,
+          message: newTeamNotifications.message,
+          data: newTeamNotifications.data,
+          created_at: newTeamNotifications.createdAt,
+          is_read: newTeamNotifications.isRead,
+        })
+        .from(newTeamNotifications)
+        .where(
+          and(
+            eq(newTeamNotifications.userId, userId),
+            inArray(newTeamNotifications.notificationType, rosterTypes)
+          )
+        )
+        .orderBy(desc(newTeamNotifications.createdAt))
+        .limit(limit);
+
+      return result.map((row) => ({
         id: row.id,
         type: row.notification_type,
         title: row.title,
         message: row.message,
-        data: typeof row.data === "string" ? JSON.parse(row.data) : row.data,
-        createdAt: row.created_at,
+        data: row.data,
+        createdAt: row.created_at ? row.created_at.toISOString() : new Date().toISOString(),
         isRead: row.is_read,
       }));
     } catch (error) {
-      console.error("Error fetching roster notifications:", error);
+      logger.error(
+        "Failed to get roster notifications",
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          userId,
+          limit,
+        }
+      );
       return [];
     }
   }
@@ -286,15 +334,27 @@ export class RosterNotificationService {
     notificationIds: string[]
   ): Promise<void> {
     try {
-      await queryCockroachDB(
-        `UPDATE new_team_notifications 
-         SET is_read = true 
-         WHERE user_id = $1 
-         AND id = ANY($2)
-         AND notification_type IN ('roster_name_added', 'roster_name_removed', 'roster_name_linked', 'roster_name_unlinked', 'roster_invitation')`,
-        [userId, notificationIds]
-      );
-    } catch (_error) {}
+      const rosterTypes = [
+        "roster_name_added",
+        "roster_name_removed",
+        "roster_name_linked",
+        "roster_name_unlinked",
+        "roster_invitation",
+      ];
+
+      await dbPg
+        .update(newTeamNotifications)
+        .set({ isRead: true, readAt: new Date() })
+        .where(
+          and(
+            eq(newTeamNotifications.userId, userId),
+            inArray(newTeamNotifications.id, notificationIds),
+            inArray(newTeamNotifications.notificationType, rosterTypes)
+          )
+        );
+    } catch (_error) {
+      // Ignore errors
+    }
   }
 
   /**
@@ -307,12 +367,24 @@ export class RosterNotificationService {
    */
   static async clearRosterNotifications(userId: string): Promise<void> {
     try {
-      await queryCockroachDB(
-        `DELETE FROM new_team_notifications 
-         WHERE user_id = $1 
-         AND notification_type IN ('roster_name_added', 'roster_name_removed', 'roster_name_linked', 'roster_name_unlinked', 'roster_invitation')`,
-        [userId]
-      );
-    } catch (_error) {}
+      const rosterTypes = [
+        "roster_name_added",
+        "roster_name_removed",
+        "roster_name_linked",
+        "roster_name_unlinked",
+        "roster_invitation",
+      ];
+
+      await dbPg
+        .delete(newTeamNotifications)
+        .where(
+          and(
+            eq(newTeamNotifications.userId, userId),
+            inArray(newTeamNotifications.notificationType, rosterTypes)
+          )
+        );
+    } catch {
+      // Ignore errors
+    }
   }
 }

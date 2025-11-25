@@ -8,6 +8,9 @@ import {
 import { users } from "@/lib/db/schema/core";
 import { AssignmentQuestionSchema } from "@/lib/schemas/question";
 import { PostAssignmentRequestSchema, validateRequest } from "@/lib/schemas/teams-validation";
+// import logger from "@/lib/utils/logger";
+import { getServerUser } from "@/lib/supabaseServer";
+import { parseDifficulty } from "@/lib/types/difficulty";
 import {
   handleError,
   handleForbiddenError,
@@ -15,9 +18,6 @@ import {
   handleValidationError,
   validateEnvironment,
 } from "@/lib/utils/error-handler";
-// import logger from "@/lib/utils/logger";
-import { getServerUser } from "@/lib/supabaseServer";
-import { parseDifficulty } from "@/lib/types/difficulty";
 import { hasLeadershipAccessCockroach } from "@/lib/utils/team-auth-v2";
 import { getUserTeamMemberships, resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
@@ -33,9 +33,7 @@ export async function GET(
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   // const startTime = Date.now();
-  // Only log in development
-  if (process.env.NODE_ENV === "development") {
-  }
+  // Development logging can be added here if needed
 
   try {
     if (!process.env.DATABASE_URL) {
@@ -184,7 +182,9 @@ export async function POST(
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -195,7 +195,7 @@ export async function POST(
     let body: unknown;
     try {
       body = await request.json();
-    } catch (error) {
+    } catch (_error) {
       return handleValidationError(
         new z.ZodError([
           {
@@ -273,10 +273,9 @@ export async function POST(
      * Questions without valid answers are REJECTED with a detailed error.
      */
     if (questions && Array.isArray(questions) && questions.length > 0) {
-      // Strict validation of all questions before processing
+      let validatedQuestions: z.infer<typeof AssignmentQuestionSchema>[];
       try {
-        // Validate questions (result unused but validation is the purpose)
-        void questions.map((q, index) => {
+        validatedQuestions = questions.map((q, index) => {
           try {
             return AssignmentQuestionSchema.parse(q);
           } catch (error) {
@@ -300,15 +299,20 @@ export async function POST(
           { status: 400 }
         );
       }
-      const questionInserts = questions.map((question: any, index: number) => {
+
+      const assignmentId = assignment?.id;
+      if (!assignmentId) {
+        return NextResponse.json({ error: "Failed to create assignment record" }, { status: 500 });
+      }
+      const questionInserts = validatedQuestions.map((q, index: number) => {
         /**
          * Validate question has required fields
          */
-        if (!question.question_text || question.question_text.trim() === "") {
+        if (!q.question_text || q.question_text.trim() === "") {
           throw new Error(`Question ${index + 1} is missing question_text`);
         }
 
-        if (!question.question_type) {
+        if (!q.question_type) {
           throw new Error(`Question ${index + 1} is missing question_type`);
         }
 
@@ -318,24 +322,20 @@ export async function POST(
          * Every question MUST have a valid, non-empty answers array.
          * This is the source of truth for grading.
          */
-        if (
-          !(question.answers && Array.isArray(question.answers)) ||
-          question.answers.length === 0
-        ) {
+        if (!(q.answers && Array.isArray(q.answers)) || q.answers.length === 0) {
           // Error details for debugging (unused but kept for potential logging)
+          // biome-ignore lint/complexity/noVoid: Intentional void for debugging info
           void {
             questionNumber: index + 1,
-            questionText: question.question_text?.substring(0, 100),
-            questionType: question.question_type,
-            hasAnswers: !!question.answers,
-            answersType: typeof question.answers,
-            answersValue: question.answers,
-            hasCorrectAnswer: !!question.correct_answer,
-            correctAnswerValue: question.correct_answer,
+            questionText: q.question_text?.substring(0, 100),
+            questionType: q.question_type,
+            hasAnswers: !!q.answers,
+            answersType: typeof q.answers,
+            answersValue: q.answers,
           };
 
           throw new Error(
-            `Cannot create assignment: Question ${index + 1} has no valid answers. Question: "${question.question_text?.substring(0, 50)}..." All questions must have a valid answers array before being saved.`
+            `Cannot create assignment: Question ${index + 1} has no valid answers. Question: "${q.question_text?.substring(0, 50)}..." All questions must have a valid answers array before being saved.`
           );
         }
 
@@ -350,10 +350,10 @@ export async function POST(
          */
         let correctAnswer: string | null = null;
 
-        if (question.question_type === "multiple_choice") {
+        if (q.question_type === "multiple_choice") {
           // Convert numeric indices back to letters for database storage
-          correctAnswer = question.answers
-            .map((ans: number) => {
+          correctAnswer = q.answers
+            .map((ans) => {
               if (typeof ans !== "number" || ans < 0) {
                 throw new Error(`Invalid answer index ${ans} for question ${index + 1}`);
               }
@@ -362,7 +362,7 @@ export async function POST(
             .join(",");
         } else {
           // For FRQ/Codebusters, store answers as-is
-          correctAnswer = question.answers.map((ans: any) => String(ans)).join(",");
+          correctAnswer = q.answers.map((ans) => String(ans)).join(",");
         }
 
         // Double-check we have a valid correct_answer
@@ -371,19 +371,20 @@ export async function POST(
         }
 
         const questionInsert = {
-          assignmentId: assignment?.id ?? "",
-          questionText: question.question_text,
-          questionType: question.question_type,
-          options: question.options ? JSON.stringify(question.options) : null,
+          assignmentId,
+          questionText: q.question_text,
+          questionType: q.question_type,
+          options: q.options ? JSON.stringify(q.options) : null,
           correctAnswer: correctAnswer, // GUARANTEED: Valid, non-empty string
-          points: question.points || 1,
-          orderIndex: question.order_index !== undefined ? question.order_index : index,
-          imageData: question.imageData || null,
-          difficulty: parseDifficulty(question.difficulty), // Strict validation - keep as number for database
+          points: q.points || 1,
+          orderIndex: q.order_index ?? index,
+          imageData: q.imageData ?? null,
+          difficulty: parseDifficulty(q.difficulty), // Strict validation - keep as number for database
         };
 
         // Debug logging for database insert
         if (index < 3) {
+          // Debug logging can be added here if needed
         }
 
         return questionInsert;

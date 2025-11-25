@@ -76,7 +76,9 @@ export function buildTestParams(eventName: string, settings: Settings): TestPara
   )
     ? (settings.types as TestParams["types"])
     : "multiple-choice";
-  const normalizedDivision = (["B", "C", "any"] as const).includes(settings.division as TestParams["division"])
+  const normalizedDivision = (["B", "C", "any"] as const).includes(
+    settings.division as TestParams["division"]
+  )
     ? (settings.division as TestParams["division"])
     : "any";
   const normalizedIdPct =
@@ -115,9 +117,13 @@ export function saveTestParams(params: TestParams) {
     SyncLocalStorage.setItem("testParams", JSON.stringify(params));
     SyncLocalStorage.removeItem("testQuestions");
     SyncLocalStorage.removeItem("testUserAnswers");
-  } catch {}
+  } catch {
+    // Ignore localStorage errors
+  }
   try {
     const cookiePayload = encodeURIComponent(JSON.stringify(params));
     document.cookie = `scio_test_params=${cookiePayload}; Path=/; Max-Age=600; SameSite=Lax`;
-  } catch {}
+  } catch {
+    // Ignore cookie errors
+  }
 }

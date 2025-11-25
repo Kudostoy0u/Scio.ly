@@ -23,10 +23,11 @@ import { useTeamStore } from "@/app/hooks/useTeamStore";
 import type { RosterData } from "@/lib/schemas/teams.schema";
 import type { Assignment, Subteam, TeamMember } from "@/lib/stores/teamStore";
 import { useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 
 interface TeamDataLoaderProps {
   teamSlug: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export default function TeamDataLoader({ teamSlug, children }: TeamDataLoaderProps) {
@@ -41,6 +42,7 @@ export default function TeamDataLoader({ teamSlug, children }: TeamDataLoaderPro
   // Update store with fetched data from MULTIPLEXED endpoint
   useEffect(() => {
     if (process.env.NODE_ENV === "development") {
+      // Development-only code can go here
     }
 
     if (hasLoadedRef.current || isLoading || error) {
@@ -55,48 +57,79 @@ export default function TeamDataLoader({ teamSlug, children }: TeamDataLoaderPro
 
       // Update subteams
       if (subteams.length > 0) {
-        const teamSubteams: Subteam[] = subteams.map((subteam: any) => ({
-          id: subteam.id,
-          name: subteam.name,
-          team_id: subteam.team_id,
-          description: subteam.description,
-          created_at: subteam.created_at,
-        }));
+        const teamSubteams: Subteam[] = subteams.map(
+          (subteam: {
+            id: string;
+            name: string;
+            team_id: string;
+            description: string;
+            created_at: string;
+          }) => ({
+            id: subteam.id,
+            name: subteam.name,
+            team_id: subteam.team_id,
+            description: subteam.description,
+            created_at: subteam.created_at,
+          })
+        );
         updateSubteams(teamSlug, teamSubteams);
         if (process.env.NODE_ENV === "development") {
+          // Development-only code can go here
         }
       }
 
       // Update assignments
       if (assignments.length > 0) {
-        const teamAssignments: Assignment[] = assignments.map((assignment: any) => ({
-          id: assignment.id,
-          title: assignment.title,
-          description: assignment.description || "",
-          due_date: assignment.dueDate?.toISOString() || new Date().toISOString(),
-          assigned_to: [],
-          created_by: assignment.createdBy,
-          created_at: assignment.createdAt?.toISOString() || new Date().toISOString(),
-        }));
+        const teamAssignments: Assignment[] = assignments.map((assignment) => {
+          const assignmentRecord = assignment as {
+            id: string;
+            title: string;
+            description: string | null;
+            dueDate: Date | null;
+            createdBy: string;
+            createdAt: Date | null;
+          };
+          return {
+            id: assignmentRecord.id,
+            title: assignmentRecord.title,
+            description: assignmentRecord.description || "",
+            due_date: assignmentRecord.dueDate?.toISOString() || new Date().toISOString(),
+            assigned_to: [],
+            created_by: assignmentRecord.createdBy,
+            created_at: assignmentRecord.createdAt?.toISOString() || new Date().toISOString(),
+          };
+        });
         updateAssignments(teamSlug, teamAssignments);
         if (process.env.NODE_ENV === "development") {
+          // Development-only code can go here
         }
       }
 
       // Update members
       if (members.length > 0) {
-        const teamMembers: TeamMember[] = members.map((member: any) => ({
-          id: member.userId || `unlinked-${Math.random()}`,
-          name: member.displayFirstName,
-          email: member.email || "",
-          events: [],
-          isPendingInvitation: false,
-          role: member.role,
-          subteamId: member.subteamId,
-          isLinked: member.isLinked,
-        }));
+        const teamMembers: TeamMember[] = members.map((member) => {
+          const memberRecord = member as {
+            userId?: string;
+            displayFirstName: string;
+            email?: string;
+            role: string;
+            subteamId?: string;
+            isLinked?: boolean;
+          };
+          return {
+            id: memberRecord.userId || `unlinked-${Math.random()}`,
+            name: memberRecord.displayFirstName,
+            email: memberRecord.email || "",
+            events: [],
+            isPendingInvitation: false,
+            role: memberRecord.role,
+            subteamId: memberRecord.subteamId,
+            isLinked: memberRecord.isLinked ?? false,
+          };
+        });
         updateMembers(teamSlug, "all", teamMembers);
         if (process.env.NODE_ENV === "development") {
+          // Development-only code can go here
         }
       }
 
@@ -108,12 +141,16 @@ export default function TeamDataLoader({ teamSlug, children }: TeamDataLoaderPro
         };
         updateRoster(teamSlug, rosterSubteamId, rosterData);
         if (process.env.NODE_ENV === "development") {
+          // Development-only code can go here
         }
       }
 
       if (process.env.NODE_ENV === "development") {
+        // Development-only code can go here
       }
-    } catch (_error) {}
+    } catch (_error) {
+      // Ignore errors
+    }
   }, [
     teamSlug,
     subteams,
@@ -123,7 +160,6 @@ export default function TeamDataLoader({ teamSlug, children }: TeamDataLoaderPro
     rosterSubteamId,
     isLoading,
     error,
-    userTeams?.length,
     updateSubteams,
     updateAssignments,
     updateMembers,

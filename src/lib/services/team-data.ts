@@ -1,5 +1,5 @@
 import { dbPg } from "@/lib/db";
-import { newTeamAssignments, newTeamAssignmentSubmissions } from "@/lib/db/schema/assignments";
+import { newTeamAssignmentSubmissions, newTeamAssignments } from "@/lib/db/schema/assignments";
 import { users } from "@/lib/db/schema/core";
 import { newTeamNotifications } from "@/lib/db/schema/notifications";
 import {
@@ -59,7 +59,7 @@ export interface TeamNotification {
   type: string;
   title: string;
   message: string;
-  data: any;
+  data: Record<string, unknown>; // Flexible notification data that varies by type
   is_read: boolean;
   created_at: string;
   read_at?: string;
@@ -68,6 +68,7 @@ export interface TeamNotification {
   team_name?: string;
 }
 
+// biome-ignore lint/complexity/noStaticOnlyClass: This is a service class with static methods for team data operations
 export class TeamDataService {
   static async getTeamPosts(teamId: string, userId: string): Promise<TeamPost[]> {
     // Check if user is member of the team using Drizzle ORM
@@ -114,25 +115,48 @@ export class TeamDataService {
 
     // Map posts with attachments (attachments are stored directly on the post)
     const postsWithAttachments = posts.map((post) => {
-      const mappedAttachments = post.attachmentUrl && post.attachmentTitle ? [{
-        file_name: post.attachmentTitle,
-        file_url: post.attachmentUrl,
-        file_type: null as string | null,
-        file_size: null as number | null,
-      }] : [];
+      const mappedAttachments =
+        post.attachmentUrl && post.attachmentTitle
+          ? [
+              {
+                file_name: post.attachmentTitle,
+                file_url: post.attachmentUrl,
+                file_type: null as string | null,
+                file_size: null as number | null,
+              },
+            ]
+          : [];
 
       return {
         id: post.id,
         title: post.title || undefined,
         content: post.content,
-        post_type: (post.postType || "announcement") as "announcement" | "assignment" | "material" | "event",
+        post_type: (post.postType || "announcement") as
+          | "announcement"
+          | "assignment"
+          | "material"
+          | "event",
         priority: (post.priority || "normal") as "low" | "normal" | "high" | "urgent",
         is_pinned: post.isPinned ?? false,
         is_public: true,
-        created_at: post.createdAt?.toISOString() || new Date().toISOString(),
-        updated_at: post.updatedAt?.toISOString() || new Date().toISOString(),
-        scheduled_at: post.scheduledAt?.toISOString(),
-        expires_at: post.expiresAt?.toISOString(),
+        created_at:
+          post.createdAt && typeof post.createdAt === "object" && "toISOString" in post.createdAt
+            ? (post.createdAt as Date).toISOString()
+            : post.createdAt || new Date().toISOString(),
+        updated_at:
+          post.updatedAt && typeof post.updatedAt === "object" && "toISOString" in post.updatedAt
+            ? (post.updatedAt as Date).toISOString()
+            : post.updatedAt || new Date().toISOString(),
+        scheduled_at:
+          post.scheduledAt &&
+          typeof post.scheduledAt === "object" &&
+          "toISOString" in post.scheduledAt
+            ? (post.scheduledAt as Date).toISOString()
+            : post.scheduledAt || undefined,
+        expires_at:
+          post.expiresAt && typeof post.expiresAt === "object" && "toISOString" in post.expiresAt
+            ? (post.expiresAt as Date).toISOString()
+            : post.expiresAt || undefined,
         author_email: post.authorEmail,
         author_name: post.authorName,
         author_avatar: post.authorAvatar || undefined,
@@ -140,7 +164,7 @@ export class TeamDataService {
       };
     });
 
-    return postsWithAttachments;
+    return postsWithAttachments as TeamPost[];
   }
 
   static async getTeamAssignments(teamId: string, userId: string): Promise<TeamAssignment[]> {
@@ -308,10 +332,10 @@ export class TeamDataService {
         read_at: notification.readAt?.toISOString(),
         school: notification.school || undefined,
         division: notification.division || undefined,
-        team_name: notification.teamName,
+        team_name: notification.teamName || undefined,
       })),
       unread_count: unreadCountResult[0]?.count || 0,
-    };
+    } as { notifications: TeamNotification[]; unread_count: number };
   }
 
   static async markNotificationsAsRead(

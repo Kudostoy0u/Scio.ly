@@ -1,9 +1,7 @@
 import { dbPg } from "@/lib/db";
 import { newTeamEvents } from "@/lib/db/schema/teams";
-import {
-  GetCalendarEventsQuerySchema,
-  validateRequest,
-} from "@/lib/schemas/teams-validation";
+import { GetCalendarEventsQuerySchema, validateRequest } from "@/lib/schemas/teams-validation";
+import { getServerUser } from "@/lib/supabaseServer";
 import {
   handleError,
   handleForbiddenError,
@@ -11,8 +9,6 @@ import {
   handleValidationError,
   validateEnvironment,
 } from "@/lib/utils/error-handler";
-import logger from "@/lib/utils/logger";
-import { getServerUser } from "@/lib/supabaseServer";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -20,7 +16,9 @@ import { z } from "zod";
 export async function GET(request: NextRequest) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -33,9 +31,8 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get("endDate");
 
     // Validate query parameters
-    let validatedParams: z.infer<typeof GetCalendarEventsQuerySchema>;
     try {
-      validatedParams = validateRequest(GetCalendarEventsQuerySchema, {
+      validateRequest(GetCalendarEventsQuerySchema, {
         userId: userId || undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
@@ -53,10 +50,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build where conditions using Drizzle ORM
-    const whereConditions = [
-      eq(newTeamEvents.createdBy, user.id),
-      isNull(newTeamEvents.teamId),
-    ];
+    const whereConditions = [eq(newTeamEvents.createdBy, user.id), isNull(newTeamEvents.teamId)];
 
     if (startDate) {
       whereConditions.push(sql`${newTeamEvents.startTime} >= ${startDate}`);

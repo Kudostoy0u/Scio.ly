@@ -1,9 +1,11 @@
 "use client";
 
-import { useAuth } from "@/app/contexts/AuthContext";
+import { useAuth } from "@/app/contexts/authContext";
 import SyncLocalStorage from "@/lib/database/localStorage-replacement";
 import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
+
+const HEX_ID_REGEX = /^[a-f0-9]{8}$/;
 
 interface NamePromptState {
   needsPrompt: boolean;
@@ -22,6 +24,7 @@ export function useNamePrompt(): NamePromptState {
   });
 
   useEffect(() => {
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex name prompt logic with async checks and state management
     const checkNamePrompt = async () => {
       if (!user?.id) {
         setState({
@@ -34,11 +37,11 @@ export function useNamePrompt(): NamePromptState {
       }
 
       try {
-        const { data: profile, error } = (await supabase
+        const { data: profile, error } = await supabase
           .from("users")
           .select("display_name, first_name, last_name, username, email")
           .eq("id", user.id)
-          .maybeSingle()) as { data: any; error: any };
+          .maybeSingle();
 
         if (error) {
           setState({
@@ -50,25 +53,33 @@ export function useNamePrompt(): NamePromptState {
           return;
         }
 
-        const email = profile?.email || user.email || "";
+        const profileData = profile as {
+          email?: string;
+          display_name?: string | null;
+          first_name?: string | null;
+          last_name?: string | null;
+          username?: string | null;
+        } | null;
+
+        const email = profileData?.email || user.email || "";
 
         // Check if user needs a name prompt
         let needsPrompt = false;
         let currentName = "";
 
-        if (profile?.display_name?.trim()) {
-          currentName = profile.display_name.trim();
-        } else if (profile?.first_name && profile?.last_name) {
-          currentName = `${profile.first_name.trim()} ${profile.last_name.trim()}`;
-        } else if (profile?.first_name?.trim()) {
-          currentName = profile.first_name.trim();
-        } else if (profile?.last_name?.trim()) {
-          currentName = profile.last_name.trim();
-        } else if (profile?.username?.trim() && !profile.username.startsWith("user_")) {
-          currentName = `@${profile.username.trim()}`;
+        if (profileData?.display_name?.trim()) {
+          currentName = profileData.display_name.trim();
+        } else if (profileData?.first_name && profileData?.last_name) {
+          currentName = `${profileData.first_name.trim()} ${profileData.last_name.trim()}`;
+        } else if (profileData?.first_name?.trim()) {
+          currentName = profileData.first_name.trim();
+        } else if (profileData?.last_name?.trim()) {
+          currentName = profileData.last_name.trim();
+        } else if (profileData?.username?.trim() && !profileData.username.startsWith("user_")) {
+          currentName = `@${profileData.username.trim()}`;
         } else if (email?.includes("@")) {
           const emailLocal = email.split("@")[0];
-          if (emailLocal && emailLocal.length > 2 && !emailLocal.match(/^[a-f0-9]{8}$/)) {
+          if (emailLocal && emailLocal.length > 2 && !emailLocal.match(HEX_ID_REGEX)) {
             currentName = `@${emailLocal}`;
           } else {
             currentName = "@unknown";
@@ -83,8 +94,8 @@ export function useNamePrompt(): NamePromptState {
         if (
           !needsPrompt &&
           (currentName.startsWith("User ") ||
-            currentName.match(/^[a-f0-9]{8}$/) ||
-            profile?.username?.startsWith("user_"))
+            currentName.match(HEX_ID_REGEX) ||
+            profileData?.username?.startsWith("user_"))
         ) {
           needsPrompt = true;
         }

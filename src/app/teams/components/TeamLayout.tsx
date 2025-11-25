@@ -1,7 +1,7 @@
 "use client";
 
 import AuthButton from "@/app/components/AuthButton";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import Image from "next/image";
@@ -70,6 +70,7 @@ export default function TeamLayout({
 
                 {/* Mobile menu button */}
                 <button
+                  type="button"
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                   className={`md:hidden p-2 rounded-lg ${darkMode ? "text-gray-300 hover:bg-gray-700" : "text-gray-600 hover:bg-gray-100"}`}
                 >
@@ -114,6 +115,7 @@ export default function TeamLayout({
                       Menu
                     </span>
                     <button
+                      type="button"
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={`p-2 rounded-lg transition-colors ${darkMode ? "text-gray-300 hover:bg-gray-800 hover:text-white" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
                     >

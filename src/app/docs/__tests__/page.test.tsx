@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import DocsHome, { metadata } from "../page";
 
 // Mock the components
@@ -14,7 +14,7 @@ vi.mock("../components/DocsHomeClient", () => ({
 describe("DocsHome", () => {
   it("renders DocsHomeClient and EventCatalogue", () => {
     render(<DocsHome />);
-    
+
     expect(screen.getByTestId("docs-home-client")).toBeInTheDocument();
     expect(screen.getByTestId("event-catalogue")).toBeInTheDocument();
   });
@@ -24,4 +24,3 @@ describe("DocsHome", () => {
     expect(metadata.description).toBeDefined();
   });
 });
-

@@ -1,3 +1,4 @@
+/* eslint-env node */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.normalizeTestText = normalizeTestText;
 exports.normalizeQuestionText = normalizeQuestionText;
@@ -19,7 +20,7 @@ function normalizeTestText(input) {
   // 3) Remove point annotations like [2 pt], [3 pts], [1 point], [5 points]
   // and their parenthesized forms (2 pt), etc., anywhere in the string (case-insensitive)
   // Allow optional spaces inside the brackets/parentheses and after the number
-  const pointPattern = /\s*[\(\[]\s*\d+(?:\.\d+)?\s*(?:pt|pts|point|points)\s*[\)\]]\s*/gi;
+  const pointPattern = /\s*[([]\s*\d+(?:\.\d+)?\s*(?:pt|pts|point|points)\s*[)\]]\s*/gi;
   if (pointPattern.test(text)) {
     text = text.replace(pointPattern, " ");
   }
@@ -57,7 +58,7 @@ function parseLeadingLetterLabel(text) {
   if (typeof text !== "string") {
     return null;
   }
-  const match = text.match(/^\s*([A-Za-z])[\.)]\s*(.+)$/);
+  const match = text.match(/^\s*([A-Za-z])[.)]\s*(.+)$/);
   if (!match) {
     return null;
   }

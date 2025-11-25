@@ -475,7 +475,11 @@ export default function CodebustersAssignmentCreator({
                           : `${settings.cipherTypes?.length || 0} selected`}
                     </span>
                     <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                      <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                      <svg
+                        className="h-5 w-5 text-gray-400"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
                         <path
                           fillRule="evenodd"
                           d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -677,11 +681,15 @@ export default function CodebustersAssignmentCreator({
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <h3 className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}>
+                          <h3
+                            className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}
+                          >
                             {member.student_name}
                           </h3>
                           {member.username && (
-                            <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                            <p
+                              className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+                            >
                               @{member.username}
                             </p>
                           )}
@@ -761,7 +769,9 @@ export default function CodebustersAssignmentCreator({
               <h1 className={`text-2xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
                 Create Codebusters Assignment
               </h1>
-              <p className={`mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Step {step} of 3</p>
+              <p className={`mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                Step {step} of 3
+              </p>
             </div>
             <button
               onClick={onCancel}

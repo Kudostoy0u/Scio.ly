@@ -1,6 +1,6 @@
-import logger from "@/lib/utils/logger";
 import type { EloData } from "@/app/analytics/types/elo";
 import { getLeaderboard } from "@/app/analytics/utils/eloDataProcessor";
+import logger from "@/lib/utils/logger";
 
 /**
  * Collect all available seasons from ELO data
@@ -112,19 +112,25 @@ export type TournamentDate = {
  * console.log(dates[0].tournament); // Tournament name
  * ```
  */
-export function buildTournamentDates(metadata: any, season: string): TournamentDate[] {
+export function buildTournamentDates(
+  metadata: Record<string, unknown>,
+  season: string
+): TournamentDate[] {
   try {
-    if (!metadata?.tournamentTimeline?.[season]) {
+    const tournamentTimeline = metadata?.tournamentTimeline as Record<string, unknown> | undefined;
+    if (!tournamentTimeline?.[season]) {
       return [];
     }
-    const tournaments = metadata.tournamentTimeline[season];
+    const tournaments = tournamentTimeline[season] as Record<string, unknown>[];
     const byDate = new Map<string, string[]>();
-    tournaments.forEach((t: any) => {
-      if (t.date && t.tournamentName) {
-        if (!byDate.has(t.date)) {
-          byDate.set(t.date, []);
+    tournaments.forEach((t) => {
+      const date = t.date as string | undefined;
+      const tournamentName = t.tournamentName as string | undefined;
+      if (date && tournamentName) {
+        if (!byDate.has(date)) {
+          byDate.set(date, []);
         }
-        byDate.get(t.date)?.push(t.tournamentName);
+        byDate.get(date)?.push(tournamentName);
       }
     });
     return Array.from(byDate.entries())

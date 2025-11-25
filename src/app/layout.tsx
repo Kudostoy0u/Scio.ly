@@ -1,14 +1,15 @@
 import { GoogleAnalytics } from "@next/third-parties/google";
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import type React from "react";
 import "./globals.css";
 import NamePromptProvider from "@/app/components/NamePromptProvider";
 import ThemeColorMeta from "@/app/components/ThemeColorMeta";
-import { ThemeProvider } from "@/app/contexts/ThemeContext";
+import { ThemeProvider } from "@/app/contexts/themeContext";
 import { getServerUser } from "@/lib/supabaseServer";
-import { TRPCProvider } from "@/lib/trpc/Provider";
+import { TRPCProvider } from "@/lib/trpc/provider";
 import { cookies } from "next/headers";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider } from "./contexts/authContext";
 import { Providers } from "./providers";
 // import { createsupabaseserverclient } from '@/lib/supabaseserver';
 
@@ -95,7 +96,7 @@ export default async function RootLayout({
 
   const cookieStore = await cookies();
   const themeCookie = cookieStore.get("theme")?.value;
-  const initialDarkMode = themeCookie === "dark" ? true : themeCookie === "light" ? false : false;
+  const initialDarkMode = themeCookie === "dark";
 
   const initialDisplayFirstName: string | null = null;
   return (

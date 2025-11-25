@@ -82,8 +82,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       let options = q.options || [];
       if (Array.isArray(options) && options.length > 0) {
         // If options are objects with text property, extract the text
-        if (typeof options[0] === "object" && options[0].text) {
-          options = options.map((opt: any) => opt.text);
+        if (typeof options[0] === "object" && options[0] && "text" in options[0]) {
+          options = options.map((opt: { text?: string } | string) =>
+            typeof opt === "object" && opt !== null && "text" in opt ? opt.text : opt
+          );
         }
         // If options are already strings, keep them as is
       }
@@ -91,11 +93,11 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       return {
         id: q.id,
         question: q.questionText, // Map questionText to question
-        question_type: q.questionType,
+        questionType: q.questionType,
         options: options,
-        correct_answer: q.correctAnswer,
+        correctAnswer: q.correctAnswer,
         points: q.points,
-        order_index: q.orderIndex,
+        orderIndex: q.orderIndex,
         imageData: q.imageData, // Include image data
       };
     });
@@ -112,12 +114,12 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     const assignmentData = {
       id: assignment.id,
       title: assignment.title,
-      event_name: assignment.eventName,
+      eventName: assignment.eventName,
       school: assignment.school,
       division: assignment.division,
-      team_id: assignment.teamId,
-      created_by: assignment.createdBy,
-      created_at: assignment.createdAt,
+      teamId: assignment.teamId,
+      createdBy: assignment.createdBy,
+      createdAt: assignment.createdAt,
       questions: questions,
       assignees: assignees,
       params: {

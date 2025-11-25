@@ -1,6 +1,6 @@
 "use client";
-import { useTheme } from "@/app/contexts/ThemeContext";
 import { getLetterFrequencies } from "@/app/codebusters/utils/substitution";
+import { useTheme } from "@/app/contexts/themeContext";
 
 interface FrequencyTableProps {
   text: string;
@@ -31,7 +31,9 @@ export const FrequencyTable = ({
             >
               {letter}
             </div>
-            <div className={`text-[10px] sm:text-xs ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+            <div
+              className={`text-[10px] sm:text-xs ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+            >
               {frequencies[letter]}
             </div>
             <input

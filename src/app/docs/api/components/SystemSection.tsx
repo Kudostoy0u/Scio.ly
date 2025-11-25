@@ -1,18 +1,22 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
-import { ExternalLink } from "lucide-react";
+import { useTheme } from "@/app/contexts/themeContext";
 import Endpoint from "@/app/docs/api/components/Endpoint";
 import Example from "@/app/docs/api/components/Example";
 import { InfoBox } from "@/app/docs/api/components/InfoBox";
 import Param from "@/app/docs/api/components/Param";
+import { ExternalLink } from "lucide-react";
 import SectionHeader from "./SectionHeader";
 
 export default function SystemSection() {
   const { darkMode } = useTheme();
   return (
     <div id="system">
-      <SectionHeader icon={<ExternalLink className="w-6 h-6" />} title="System Endpoints" id="system" />
+      <SectionHeader
+        icon={<ExternalLink className="w-6 h-6" />}
+        title="System Endpoints"
+        id="system"
+      />
 
       <div className="space-y-6">
         <Endpoint

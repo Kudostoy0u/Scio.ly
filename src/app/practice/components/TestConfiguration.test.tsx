@@ -1,11 +1,12 @@
+// biome-ignore lint/style/useFilenamingConvention: Test file follows .test.tsx convention
+import type { Event, Settings } from "@/app/types";
 import SyncLocalStorage from "@/lib/database/localStorage-replacement";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Event, Settings } from "@/app/types";
 import TestConfiguration from "./TestConfiguration";
 
 // Mock dependencies
-vi.mock("@/app/contexts/ThemeContext", () => ({
+vi.mock("@/app/contexts/themeContext", () => ({
   useTheme: () => ({ darkMode: false }),
 }));
 
@@ -36,6 +37,14 @@ const defaultSettings: Settings = {
   tournament: "all",
 };
 
+// Regex patterns for test queries
+const NUMBER_OF_QUESTIONS_REGEX = /number of questions/i;
+const TIME_LIMIT_REGEX = /time limit/i;
+const GENERATE_TEST_REGEX = /generate test/i;
+const UNLIMITED_REGEX = /unlimited/i;
+const ALL_DIFFICULTIES_REGEX = /all difficulties/i;
+const ALL_SUBTOPICS_REGEX = /all subtopics/i;
+
 describe("TestConfiguration", () => {
   const mockOnSettingsChange = vi.fn();
   const mockOnGenerateTest = vi.fn();
@@ -57,9 +66,9 @@ describe("TestConfiguration", () => {
       />
     );
 
-    expect(screen.getByLabelText(/number of questions/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/time limit/i)).toBeInTheDocument();
-    expect(screen.getByText(/generate test/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(NUMBER_OF_QUESTIONS_REGEX)).toBeInTheDocument();
+    expect(screen.getByLabelText(TIME_LIMIT_REGEX)).toBeInTheDocument();
+    expect(screen.getByText(GENERATE_TEST_REGEX)).toBeInTheDocument();
   });
 
   it("updates question count on input change", () => {
@@ -73,7 +82,7 @@ describe("TestConfiguration", () => {
       />
     );
 
-    const questionInput = screen.getByLabelText(/number of questions/i);
+    const questionInput = screen.getByLabelText(NUMBER_OF_QUESTIONS_REGEX);
     fireEvent.change(questionInput, { target: { value: "30" } });
 
     expect(mockOnSettingsChange).toHaveBeenCalledWith(
@@ -94,7 +103,7 @@ describe("TestConfiguration", () => {
       />
     );
 
-    const questionInput = screen.getByLabelText(/number of questions/i);
+    const questionInput = screen.getByLabelText(NUMBER_OF_QUESTIONS_REGEX);
     fireEvent.change(questionInput, { target: { value: "250" } });
 
     await waitFor(() => {
@@ -114,7 +123,7 @@ describe("TestConfiguration", () => {
       />
     );
 
-    const questionInput = screen.getByLabelText(/number of questions/i);
+    const questionInput = screen.getByLabelText(NUMBER_OF_QUESTIONS_REGEX);
     fireEvent.change(questionInput, { target: { value: "0" } });
 
     expect(mockOnSettingsChange).toHaveBeenCalledWith(
@@ -133,7 +142,7 @@ describe("TestConfiguration", () => {
       />
     );
 
-    const timeInput = screen.getByLabelText(/time limit/i);
+    const timeInput = screen.getByLabelText(TIME_LIMIT_REGEX);
 
     // Test normal value
     fireEvent.change(timeInput, { target: { value: "60" } });
@@ -159,7 +168,7 @@ describe("TestConfiguration", () => {
       />
     );
 
-    const questionInput = screen.getByLabelText(/number of questions/i);
+    const questionInput = screen.getByLabelText(NUMBER_OF_QUESTIONS_REGEX);
     fireEvent.change(questionInput, { target: { value: "40" } });
 
     expect(SyncLocalStorage.getItem("defaultQuestionCount")).toBe("40");
@@ -182,7 +191,7 @@ describe("TestConfiguration", () => {
       />
     );
 
-    const questionInput = screen.getByLabelText(/number of questions/i);
+    const questionInput = screen.getByLabelText(NUMBER_OF_QUESTIONS_REGEX);
     fireEvent.change(questionInput, { target: { value: "15" } });
 
     expect(SyncLocalStorage.getItem("codebustersQuestionCount")).toBe("15");
@@ -199,7 +208,7 @@ describe("TestConfiguration", () => {
       />
     );
 
-    const generateButton = screen.getByText(/generate test/i);
+    const generateButton = screen.getByText(GENERATE_TEST_REGEX);
     fireEvent.click(generateButton);
 
     expect(mockOnGenerateTest).toHaveBeenCalled();
@@ -217,7 +226,7 @@ describe("TestConfiguration", () => {
       />
     );
 
-    const unlimitedButton = screen.getByText(/unlimited/i);
+    const unlimitedButton = screen.getByText(UNLIMITED_REGEX);
     fireEvent.click(unlimitedButton);
 
     expect(mockOnUnlimited).toHaveBeenCalled();
@@ -235,7 +244,7 @@ describe("TestConfiguration", () => {
       />
     );
 
-    expect(screen.queryByText(/unlimited/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(UNLIMITED_REGEX)).not.toBeInTheDocument();
   });
 
   it("displays custom generate label", () => {
@@ -265,7 +274,7 @@ describe("TestConfiguration", () => {
     );
 
     // Check that difficulty section exists
-    expect(screen.getByText(/all difficulties/i)).toBeInTheDocument();
+    expect(screen.getByText(ALL_DIFFICULTIES_REGEX)).toBeInTheDocument();
   });
 
   it("renders subtopic configuration section", () => {
@@ -280,6 +289,6 @@ describe("TestConfiguration", () => {
     );
 
     // Check that subtopic section exists
-    expect(screen.getByText(/all subtopics/i)).toBeInTheDocument();
+    expect(screen.getByText(ALL_SUBTOPICS_REGEX)).toBeInTheDocument();
   });
 });

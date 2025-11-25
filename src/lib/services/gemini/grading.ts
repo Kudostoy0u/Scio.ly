@@ -2,8 +2,8 @@
  * Grading methods for Gemini service
  */
 
-import { Type } from "@google/genai";
 import logger from "@/lib/utils/logger";
+import { Type } from "@google/genai";
 import type { ClientWithKey } from "./client";
 import type { GradingResult } from "./types";
 

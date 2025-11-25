@@ -1,17 +1,15 @@
 import { dbPg } from "@/lib/db";
 import {
   newTeamAssignmentAnalytics,
-  newTeamAssignmentQuestions,
   newTeamAssignmentQuestionResponses,
+  newTeamAssignmentQuestions,
   newTeamAssignmentRoster,
   newTeamAssignmentSubmissions,
   newTeamAssignments,
 } from "@/lib/db/schema/assignments";
 import { users } from "@/lib/db/schema/core";
-import {
-  UUIDSchema,
-  validateRequest,
-} from "@/lib/schemas/teams-validation";
+import { UUIDSchema } from "@/lib/schemas/teams-validation";
+import { getServerUser } from "@/lib/supabaseServer";
 import {
   handleError,
   handleForbiddenError,
@@ -19,8 +17,6 @@ import {
   handleUnauthorizedError,
   validateEnvironment,
 } from "@/lib/utils/error-handler";
-import logger from "@/lib/utils/logger";
-import { getServerUser } from "@/lib/supabaseServer";
 import { getUserTeamMemberships, resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
@@ -32,7 +28,9 @@ export async function GET(
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -44,7 +42,7 @@ export async function GET(
     // Validate assignmentId
     try {
       UUIDSchema.parse(assignmentId);
-    } catch (error) {
+    } catch (_error) {
       return handleNotFoundError("Assignment");
     }
 
@@ -126,8 +124,21 @@ export async function GET(
     // Get submission status for each roster member using Drizzle ORM
     const rosterWithSubmissions = await Promise.all(
       rosterResult.map(async (rosterMember) => {
-        let submission = null;
-        let analytics = null;
+        let submission: {
+          id: string;
+          status: string | null;
+          grade: number | null;
+          attempt_number: number | null;
+          submitted_at: Date | null;
+        } | null = null;
+        let analytics: {
+          total_questions: number;
+          correct_answers: number;
+          total_points: number;
+          earned_points: number;
+          completion_time_seconds: number | null;
+          submitted_at: Date | null;
+        } | null = null;
 
         if (rosterMember.user_id) {
           // Get latest submission using Drizzle ORM
@@ -236,7 +247,10 @@ export async function GET(
         )
         .leftJoin(users, eq(newTeamAssignmentSubmissions.userId, users.id))
         .where(eq(newTeamAssignmentQuestions.assignmentId, assignmentId))
-        .orderBy(desc(newTeamAssignmentSubmissions.submittedAt), asc(newTeamAssignmentQuestions.orderIndex));
+        .orderBy(
+          desc(newTeamAssignmentSubmissions.submittedAt),
+          asc(newTeamAssignmentQuestions.orderIndex)
+        );
 
       questionResponses = responsesResult;
     }

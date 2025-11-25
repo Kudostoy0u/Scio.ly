@@ -1,13 +1,85 @@
 import { client } from "@/lib/db";
 import type { ApiResponse, Question } from "@/lib/types/api";
 import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+type QuestionTableRow = {
+  id: string;
+  question: string;
+  tournament: string;
+  division: string;
+  options: unknown;
+  answers: unknown;
+  subtopics: unknown;
+  difficulty: number | string | null;
+  event: string;
+  createdAt?: string | Date | null;
+  created_at?: string | Date | null;
+  updatedAt?: string | Date | null;
+  updated_at?: string | Date | null;
+};
+
+type IdEventTableRow = QuestionTableRow & {
+  images?: unknown;
+};
+
+const BatchRequestSchema = z.object({
+  ids: z.array(z.string()).min(1),
+});
+
+const parseStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item): item is string => typeof item === "string");
+};
+
+const parseAnswerArray = (value: unknown): (string | number)[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item): item is string | number => {
+    return typeof item === "string" || typeof item === "number";
+  });
+};
+
+const formatTimestamp = (value?: string | Date | null): string | undefined => {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  return undefined;
+};
+
+const normalizeDifficulty = (value: number | string | null | undefined): number => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+  }
+  return 0.5;
+};
+
+const pickRandomImage = (value: unknown): string | undefined => {
+  const images = parseStringArray(value);
+  if (images.length === 0) {
+    return undefined;
+  }
+  return images[Math.floor(Math.random() * images.length)];
+};
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { ids } = body;
+    const parsedBody = BatchRequestSchema.safeParse(body);
 
-    if (!(ids && Array.isArray(ids)) || ids.length === 0) {
+    if (!parsedBody.success) {
       const response: ApiResponse = {
         success: false,
         error: "Missing or invalid question IDs",
@@ -15,28 +87,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 400 });
     }
 
+    const { ids } = parsedBody.data;
+
     const placeholders = ids.map((_, index) => `$${index + 1}`).join(",");
     const questionsQuery = `SELECT * FROM questions WHERE id IN (${placeholders}) ORDER BY array_position($${ids.length + 1}, id)`;
-    const questionsParams = [...ids, ids];
+    const questionsParams = [...ids, ids] as (string | number | boolean | null)[];
 
-    const questionRows = await client.unsafe<any[]>(
-      questionsQuery,
-      questionsParams as (string | number | boolean | null)[]
-    );
+    const questionRows = await client.unsafe<QuestionTableRow[]>(questionsQuery, questionsParams);
 
     const foundQuestionIds = questionRows.map((row) => row.id);
     const remainingIds = ids.filter((id) => !foundQuestionIds.includes(id));
 
-    let idEventRows: any[] = [];
+    let idEventRows: IdEventTableRow[] = [];
     if (remainingIds.length > 0) {
       const idPlaceholders = remainingIds.map((_, index) => `$${index + 1}`).join(",");
       const idEventsQuery = `SELECT * FROM id_events WHERE id IN (${idPlaceholders}) ORDER BY array_position($${remainingIds.length + 1}, id)`;
-      const idEventsParams = [...remainingIds, remainingIds];
+      const idEventsParams = [...remainingIds, remainingIds] as (
+        | string
+        | number
+        | boolean
+        | null
+      )[];
 
-      idEventRows = await client.unsafe<any[]>(
-        idEventsQuery,
-        idEventsParams as (string | number | boolean | null)[]
-      );
+      idEventRows = await client.unsafe<IdEventTableRow[]>(idEventsQuery, idEventsParams);
     }
 
     const allQuestions: Question[] = [];
@@ -65,38 +138,32 @@ export async function POST(request: NextRequest) {
         question: row.question,
         tournament: row.tournament,
         division: row.division,
-        options: Array.isArray(row.options) ? row.options : [],
-        answers: Array.isArray(row.answers) ? row.answers : [],
-        subtopics: Array.isArray(row.subtopics) ? row.subtopics : [],
-        difficulty:
-          typeof row.difficulty === "number" ? row.difficulty : Number(row.difficulty ?? 0.5),
+        options: parseStringArray(row.options),
+        answers: parseAnswerArray(row.answers),
+        subtopics: parseStringArray(row.subtopics),
+        difficulty: normalizeDifficulty(row.difficulty),
         event: row.event,
         base52: regularQuestionCodes.get(row.id),
-        created_at: row.createdAt ?? row.created_at,
-        updated_at: row.updatedAt ?? row.updated_at,
+        created_at: formatTimestamp(row.createdAt ?? row.created_at),
+        updated_at: formatTimestamp(row.updatedAt ?? row.updated_at),
       });
     }
 
     for (const row of idEventRows) {
-      const images = Array.isArray(row.images) ? row.images : [];
-      const imageData =
-        images.length > 0 ? images[Math.floor(Math.random() * images.length)] : undefined;
-
       allQuestions.push({
         id: row.id,
         question: row.question,
         tournament: row.tournament,
         division: row.division,
-        options: Array.isArray(row.options) ? row.options : [],
-        answers: Array.isArray(row.answers) ? row.answers : [],
-        subtopics: Array.isArray(row.subtopics) ? row.subtopics : [],
-        difficulty:
-          typeof row.difficulty === "number" ? row.difficulty : Number(row.difficulty ?? 0.5),
+        options: parseStringArray(row.options),
+        answers: parseAnswerArray(row.answers),
+        subtopics: parseStringArray(row.subtopics),
+        difficulty: normalizeDifficulty(row.difficulty),
         event: row.event,
-        imageData: imageData,
+        imageData: pickRandomImage(row.images),
         base52: idQuestionCodes.get(row.id),
-        created_at: row.createdAt ?? row.created_at,
-        updated_at: row.updatedAt ?? row.updated_at,
+        created_at: formatTimestamp(row.createdAt ?? row.created_at),
+        updated_at: formatTimestamp(row.updatedAt ?? row.updated_at),
       });
     }
 

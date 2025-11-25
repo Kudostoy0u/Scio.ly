@@ -1,9 +1,9 @@
+import { GET, POST } from "@/app/api/teams/[teamId]/subteams/route";
 import { dbPg } from "@/lib/db";
 import { getServerUser } from "@/lib/supabaseServer";
 import { getTeamAccessCockroach } from "@/lib/utils/team-auth-v2";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GET, POST } from "@/app/api/teams/[teamId]/subteams/route";
 
 // Mock dependencies
 vi.mock("@/lib/supabaseServer", () => ({
@@ -17,8 +17,8 @@ vi.mock("@/lib/utils/team-auth-v2", () => ({
 // Create a proper Drizzle ORM chain mock
 // Handles both: select().from().where() -> result
 // and: select().from().where().orderBy() -> result
-const createDrizzleChain = (result: any[], hasOrderBy = false) => {
-  const chain: any = {
+const createDrizzleChain = (result: unknown[], hasOrderBy = false) => {
+  const chain: unknown = {
     select: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
     where: vi.fn(),
@@ -27,14 +27,14 @@ const createDrizzleChain = (result: any[], hasOrderBy = false) => {
     values: vi.fn().mockReturnThis(),
     returning: vi.fn().mockResolvedValue(result),
   };
-  
+
   // If orderBy will be called, where returns chain; otherwise where resolves directly
   if (hasOrderBy) {
     chain.where.mockReturnValue(chain);
   } else {
     chain.where.mockResolvedValue(result);
   }
-  
+
   return chain;
 };
 
@@ -60,8 +60,12 @@ describe("/api/teams/[teamId]/subteams", () => {
     vi.clearAllMocks();
 
     // Mock console methods to reduce noise
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {
+      // Suppress console.log in tests
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {
+      // Suppress console.error in tests
+    });
 
     // Set DATABASE_URL for tests
     process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
@@ -84,8 +88,8 @@ describe("/api/teams/[teamId]/subteams", () => {
     });
 
     it("should return 404 when team group is not found", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock the database chain to return empty result for team group lookup
       mockDbPg.select.mockReturnValue(createDrizzleChain([]));
 
@@ -98,11 +102,11 @@ describe("/api/teams/[teamId]/subteams", () => {
     });
 
     it("should return 403 when user has no access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock team group lookup (no orderBy, so where resolves directly)
       mockDbPg.select.mockReturnValueOnce(createDrizzleChain([{ id: mockGroupId }], false));
-      
+
       mockGetTeamAccessCockroach.mockResolvedValue({
         hasAccess: false,
         isCreator: false,
@@ -121,11 +125,11 @@ describe("/api/teams/[teamId]/subteams", () => {
     });
 
     it("should return subteams when user has access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock team group lookup (no orderBy)
       mockDbPg.select.mockReturnValueOnce(createDrizzleChain([{ id: mockGroupId }], false));
-      
+
       mockGetTeamAccessCockroach.mockResolvedValue({
         hasAccess: true,
         isCreator: false,
@@ -177,7 +181,7 @@ describe("/api/teams/[teamId]/subteams", () => {
     });
 
     it("should return 400 when name is missing", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
 
       const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/subteams`, {
         method: "POST",
@@ -191,8 +195,8 @@ describe("/api/teams/[teamId]/subteams", () => {
     });
 
     it("should return 404 when team group is not found", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock the database chain to return empty result for team group lookup
       mockDbPg.select.mockReturnValue(createDrizzleChain([]));
 
@@ -208,11 +212,11 @@ describe("/api/teams/[teamId]/subteams", () => {
     });
 
     it("should return 403 when user has no leadership access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock team group lookup
       mockDbPg.select.mockReturnValueOnce(createDrizzleChain([{ id: mockGroupId }]));
-      
+
       mockGetTeamAccessCockroach.mockResolvedValue({
         hasAccess: true,
         isCreator: false,
@@ -234,11 +238,11 @@ describe("/api/teams/[teamId]/subteams", () => {
     });
 
     it("should create subteam when user has leadership access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock team group lookup
       mockDbPg.select.mockReturnValueOnce(createDrizzleChain([{ id: mockGroupId }]));
-      
+
       mockGetTeamAccessCockroach.mockResolvedValue({
         hasAccess: true,
         isCreator: true, // Creator has leadership
@@ -263,7 +267,7 @@ describe("/api/teams/[teamId]/subteams", () => {
           },
         ]),
       };
-      mockDbPg.insert.mockReturnValue(mockInsert as any);
+      mockDbPg.insert.mockReturnValue(mockInsert as unknown as ReturnType<typeof vi.fn>);
 
       const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/subteams`, {
         method: "POST",

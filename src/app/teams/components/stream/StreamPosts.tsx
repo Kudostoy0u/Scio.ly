@@ -158,7 +158,9 @@ export default function StreamPosts({
                 }`}
               >
                 <FileText className="w-4 h-4 text-blue-500" />
-                <span className={`text-sm font-medium ${darkMode ? "text-white" : "text-gray-900"}`}>
+                <span
+                  className={`text-sm font-medium ${darkMode ? "text-white" : "text-gray-900"}`}
+                >
                   {post.attachment_title || "Attachment"}
                 </span>
               </a>

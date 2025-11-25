@@ -4,7 +4,10 @@ import { Pool } from "pg";
 import postgres from "postgres";
 import * as schema from "./schema";
 
-const connectionString = process.env.DATABASE_URL!;
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error("DATABASE_URL environment variable is required");
+}
 
 declare global {
   var __pgClient__: ReturnType<typeof postgres> | undefined;
@@ -84,5 +87,8 @@ export async function closeConnection(): Promise<void> {
   await client.end();
 }
 
+// Explicit exports to avoid barrel file performance issues
+// Schema exports are intentionally kept as re-exports due to large size and frequent usage
+// biome-ignore lint/performance/noBarrelFile: Schema file is intentionally a barrel for convenience
 export * from "./schema";
 export * from "./utils";

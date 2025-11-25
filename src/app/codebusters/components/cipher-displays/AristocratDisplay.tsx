@@ -1,8 +1,79 @@
 "use client";
-import { useTheme } from "@/app/contexts/ThemeContext";
 import type { QuoteData } from "@/app/codebusters/types";
+import { useTheme } from "@/app/contexts/themeContext";
 import { FrequencyTable } from "./FrequencyTable";
 import { ReplacementTable } from "./ReplacementTable";
+
+// Top-level regex for uppercase letter matching
+const UPPERCASE_LETTER_REGEX = /[A-Z]/;
+
+// Character display component (extracted to reduce complexity)
+const CharacterDisplay = ({
+  char,
+  index,
+  quoteIndex,
+  isLetter,
+  value,
+  isCorrect,
+  showCorrectAnswer,
+  correctMapping,
+  darkMode,
+  isTestSubmitted,
+  onSolutionChange,
+}: {
+  char: string;
+  index: number;
+  quoteIndex: number;
+  isLetter: boolean;
+  value: string;
+  isCorrect: boolean;
+  showCorrectAnswer: boolean;
+  correctMapping: Record<string, string>;
+  darkMode: boolean;
+  isTestSubmitted: boolean;
+  onSolutionChange: (quoteIndex: number, char: string, value: string) => void;
+}) => (
+  <div key={index} className="flex flex-col items-center mx-0.5">
+    <span className={`text-base sm:text-lg ${darkMode ? "text-gray-300" : "text-gray-900"}`}>
+      {char}
+    </span>
+    {isLetter && (
+      <div className="relative h-12 sm:h-14">
+        <input
+          type="text"
+          id={`aristocrat-${quoteIndex}-${index}`}
+          name={`aristocrat-${quoteIndex}-${index}`}
+          maxLength={1}
+          value={value}
+          disabled={isTestSubmitted}
+          onChange={(e) => onSolutionChange(quoteIndex, char, e.target.value.toUpperCase())}
+          autoComplete="off"
+          className={`w-5 h-5 sm:w-6 sm:h-6 text-center border rounded mt-1 text-xs sm:text-sm ${
+            darkMode
+              ? "bg-gray-800 border-gray-600 text-gray-300"
+              : "bg-white border-gray-300 text-gray-900"
+          } focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+            showCorrectAnswer
+              ? isCorrect
+                ? "border-green-500 bg-green-100/10"
+                : "border-red-500 bg-red-100/10"
+              : ""
+          }`}
+        />
+        {showCorrectAnswer && !isCorrect && (
+          <div
+            className={`absolute top-8 sm:top-10 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs ${
+              darkMode ? "text-red-400" : "text-red-600"
+            }`}
+          >
+            {correctMapping[char]}
+          </div>
+        )}
+      </div>
+    )}
+    {!isLetter && <div className="w-5 h-12 sm:w-6 sm:h-14 mt-1" />}
+  </div>
+);
 
 interface AristocratDisplayProps {
   text: string;
@@ -65,7 +136,9 @@ export const AristocratDisplay = ({
       {/* Keyword Input Section */}
       {currentQuote?.askForKeyword && (
         <div className="mb-6">
-          <div className={`text-sm font-medium mb-3 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+          <div
+            className={`text-sm font-medium mb-3 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+          >
             Key:
           </div>
           <div className="flex flex-wrap gap-2">
@@ -77,7 +150,11 @@ export const AristocratDisplay = ({
               const showCorrectAnswer = isTestSubmitted;
 
               return (
-                <div key={i} className="flex flex-col items-center">
+                <div
+                  // biome-ignore lint/suspicious/noArrayIndexKey: Keyword input fields are stable and index is needed for mapping
+                  key={i}
+                  className="flex flex-col items-center"
+                >
                   <input
                     type="text"
                     maxLength={1}
@@ -118,54 +195,27 @@ export const AristocratDisplay = ({
       )}
       <div className="flex flex-wrap gap-y-8 text-sm sm:text-base break-words whitespace-pre-wrap">
         {text.split("").map((char, i) => {
-          const isLetter = /[A-Z]/.test(char);
+          const isLetter = UPPERCASE_LETTER_REGEX.test(char);
           const value = solution?.[char] || "";
           const isCorrect = isLetter && value === correctMapping[char];
           const showCorrectAnswer = isTestSubmitted && isLetter;
 
           return (
-            <div key={i} className="flex flex-col items-center mx-0.5">
-              <span className={`text-base sm:text-lg ${darkMode ? "text-gray-300" : "text-gray-900"}`}>
-                {char}
-              </span>
-              {isLetter && (
-                <div className="relative h-12 sm:h-14">
-                  <input
-                    type="text"
-                    id={`aristocrat-${quoteIndex}-${i}`}
-                    name={`aristocrat-${quoteIndex}-${i}`}
-                    maxLength={1}
-                    value={value}
-                    disabled={isTestSubmitted}
-                    onChange={(e) =>
-                      onSolutionChange(quoteIndex, char, e.target.value.toUpperCase())
-                    }
-                    autoComplete="off"
-                    className={`w-5 h-5 sm:w-6 sm:h-6 text-center border rounded mt-1 text-xs sm:text-sm ${
-                      darkMode
-                        ? "bg-gray-800 border-gray-600 text-gray-300"
-                        : "bg-white border-gray-300 text-gray-900"
-                    } focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      showCorrectAnswer
-                        ? isCorrect
-                          ? "border-green-500 bg-green-100/10"
-                          : "border-red-500 bg-red-100/10"
-                        : ""
-                    }`}
-                  />
-                  {showCorrectAnswer && !isCorrect && (
-                    <div
-                      className={`absolute top-8 sm:top-10 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs ${
-                        darkMode ? "text-red-400" : "text-red-600"
-                      }`}
-                    >
-                      {correctMapping[char]}
-                    </div>
-                  )}
-                </div>
-              )}
-              {!isLetter && <div className="w-5 h-12 sm:w-6 sm:h-14 mt-1" />}
-            </div>
+            <CharacterDisplay
+              // biome-ignore lint/suspicious/noArrayIndexKey: Text characters are stable and index is needed for mapping
+              key={i}
+              char={char}
+              index={i}
+              quoteIndex={quoteIndex}
+              isLetter={isLetter}
+              value={value}
+              isCorrect={isCorrect}
+              showCorrectAnswer={showCorrectAnswer}
+              correctMapping={correctMapping}
+              darkMode={darkMode}
+              isTestSubmitted={isTestSubmitted}
+              onSolutionChange={onSolutionChange}
+            />
           );
         })}
       </div>

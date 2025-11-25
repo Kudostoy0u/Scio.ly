@@ -1,8 +1,11 @@
+import type { Question } from "@/app/utils/geminiService";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export async function fetchUserBookmarks(
-  supabase: SupabaseClient<any, any, any>,
-  loadBookmarksFromSupabase: (userId: string) => Promise<Array<{ source?: string; question: any }>>
+  supabase: SupabaseClient,
+  loadBookmarksFromSupabase: (
+    userId: string
+  ) => Promise<Array<{ source?: string; question: Question }>>
 ): Promise<Record<string, boolean>> {
   const map: Record<string, boolean> = {};
   const {
@@ -14,9 +17,10 @@ export async function fetchUserBookmarks(
   const bookmarks = await loadBookmarksFromSupabase(user.id);
   bookmarks.forEach((bookmark) => {
     if (bookmark.source === "test") {
-      const key = "imageData" in bookmark.question && bookmark.question.imageData
-        ? `id:${String(bookmark.question.imageData)}`
-        : bookmark.question.question;
+      const question = bookmark.question as { imageData?: string; question?: string };
+      const key = question.imageData
+        ? `id:${String(question.imageData)}`
+        : (question.question ?? "");
       map[key] = true;
     }
   });

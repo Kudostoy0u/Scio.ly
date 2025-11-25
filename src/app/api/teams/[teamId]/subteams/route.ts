@@ -16,13 +16,13 @@ export async function GET(
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   let teamId: string | undefined;
-  let user: any;
 
   try {
-    user = await getServerUser();
-    if (!user?.id) {
+    const serverUser = await getServerUser();
+    if (!serverUser?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const userId = serverUser.id;
 
     const { teamId: paramTeamId } = await params;
     teamId = paramTeamId;
@@ -40,7 +40,7 @@ export async function GET(
       return NextResponse.json({ error: "Team group not found" }, { status: 404 });
     }
     const groupId = firstGroup.id;
-    const teamAccess = await getTeamAccessCockroach(user.id, groupId);
+    const teamAccess = await getTeamAccessCockroach(userId, groupId);
 
     if (!teamAccess.hasAccess) {
       return NextResponse.json({ error: "Not authorized to access this team" }, { status: 403 });
@@ -67,9 +67,7 @@ export async function GET(
     return NextResponse.json({ subteams });
   } catch (error) {
     // Log error for debugging in development
-    if (process.env.NODE_ENV === "development") {
-      console.error("Subteams GET route error:", error);
-    }
+    // Development logging can be added here if needed
     return NextResponse.json(
       {
         error: "Internal server error",
@@ -88,13 +86,13 @@ export async function POST(
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   let teamId: string | undefined;
-  let user: any;
 
   try {
-    user = await getServerUser();
-    if (!user?.id) {
+    const serverUser = await getServerUser();
+    if (!serverUser?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const userId = serverUser.id;
 
     const { teamId: paramTeamId } = await params;
     teamId = paramTeamId;
@@ -123,7 +121,7 @@ export async function POST(
       return NextResponse.json({ error: "Team group not found" }, { status: 404 });
     }
     const groupId = firstGroup.id;
-    const teamAccess = await getTeamAccessCockroach(user.id, groupId);
+    const teamAccess = await getTeamAccessCockroach(userId, groupId);
     const hasLeadership =
       teamAccess.isCreator ||
       teamAccess.subteamMemberships.some((m) => ["captain", "co_captain"].includes(m.role));
@@ -170,7 +168,7 @@ export async function POST(
         description: description || name, // Use provided description or fallback to name
         captainCode: `CAP${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
         userCode: `USR${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
-        createdBy: user.id,
+        createdBy: userId,
       })
       .returning();
 
@@ -189,9 +187,7 @@ export async function POST(
     });
   } catch (error) {
     // Log error for debugging in development
-    if (process.env.NODE_ENV === "development") {
-      console.error("Subteams POST route error:", error);
-    }
+    // Development logging can be added here if needed
     return NextResponse.json(
       {
         error: "Internal server error",

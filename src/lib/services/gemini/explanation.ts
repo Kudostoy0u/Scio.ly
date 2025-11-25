@@ -2,8 +2,8 @@
  * Explanation generation methods for Gemini service
  */
 
-import { Type } from "@google/genai";
 import logger from "@/lib/utils/logger";
+import { Type } from "@google/genai";
 import type { ClientWithKey } from "./client";
 import type { ExplanationResult } from "./types";
 
@@ -164,7 +164,10 @@ EXPLANATION REQUIREMENTS:
     schema: object,
     imageData?: string
   ): Promise<T> {
-    const contents: any[] = [
+    const contents: Array<{
+      role: string;
+      parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }>;
+    }> = [
       {
         role: "user",
         parts: [{ text: prompt }],
@@ -173,32 +176,38 @@ EXPLANATION REQUIREMENTS:
 
     // Add image if provided
     if (imageData) {
-      // Extract MIME type and base64 data from data URL
-      const dataUrlMatch = imageData.match(/^data:([^;]+);base64,(.+)$/);
-      if (dataUrlMatch) {
-        const mimeType = dataUrlMatch[1] || "image/jpeg";
-        const base64Data = dataUrlMatch[2];
-        contents[0].parts.push({
-          inlineData: {
-            mimeType,
-            data: base64Data,
-          },
-        });
-      } else {
-        // Fallback: assume it's already base64 without prefix
-        contents[0].parts.push({
-          inlineData: {
-            mimeType: "image/jpeg",
-            data: imageData,
-          },
-        });
+      const firstContent = contents[0];
+      if (firstContent) {
+        // Extract MIME type and base64 data from data URL
+        const dataUrlMatch = imageData.match(/^data:([^;]+);base64,(.+)$/);
+        if (dataUrlMatch?.[2]) {
+          const mimeType = dataUrlMatch[1] || "image/jpeg";
+          const base64Data = dataUrlMatch[2];
+          firstContent.parts.push({
+            inlineData: {
+              mimeType,
+              data: base64Data,
+            },
+          });
+        } else {
+          // Fallback: assume it's already base64 without prefix
+          firstContent.parts.push({
+            inlineData: {
+              mimeType: "image/jpeg",
+              data: imageData ?? "",
+            },
+          });
+        }
       }
     }
 
     try {
-      const response = await this.clientWithKey.client.models.generateContent({
+      const generateContent = this.clientWithKey.client.models.generateContent;
+      const response = await generateContent({
         model: "gemini-flash-lite-latest",
-        contents,
+        contents: contents as unknown as Parameters<
+          typeof generateContent
+        >[0]["contents"],
         config: {
           responseMimeType: "application/json",
           responseSchema: schema,

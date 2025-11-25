@@ -101,6 +101,7 @@ function ResetPasswordContent() {
               "This password reset link is invalid or has expired. Please request a new password reset."}
           </p>
           <button
+            type="button"
             onClick={() => router.push("/")}
             className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
           >
@@ -116,7 +117,9 @@ function ResetPasswordContent() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Update Your Password</h1>
-          <p className="text-gray-600">Enter your new password below to complete the update process.</p>
+          <p className="text-gray-600">
+            Enter your new password below to complete the update process.
+          </p>
         </div>
 
         <form onSubmit={handlePasswordReset} className="space-y-4">
@@ -178,6 +181,7 @@ function ResetPasswordContent() {
 
         <div className="mt-6 text-center">
           <button
+            type="button"
             onClick={() => router.push("/")}
             className="text-blue-600 hover:text-blue-700 text-sm"
           >

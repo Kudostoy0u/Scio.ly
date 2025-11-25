@@ -1,16 +1,27 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { EventBadge } from "../EventBadge";
 import type { DocsEvent } from "@/app/docs/utils/events2026";
+import { render, screen } from "@testing-library/react";
+import type React from "react";
+import { describe, expect, it, vi } from "vitest";
+import { EventBadge } from "../EventBadge";
 
 // Mock the theme context
-vi.mock("@/app/contexts/ThemeContext", () => ({
+vi.mock("@/app/contexts/themeContext", () => ({
   useTheme: () => ({ darkMode: false }),
 }));
 
 // Mock Next.js Link
 vi.mock("next/link", () => ({
-  default: ({ children, href, prefetch, ...props }: any) => (
+  default: ({
+    children,
+    href,
+    prefetch,
+    ...props
+  }: {
+    children: React.ReactNode;
+    href: string;
+    prefetch?: boolean;
+    [key: string]: unknown;
+  }) => (
     <a href={href} data-prefetch={prefetch} {...props}>
       {children}
     </a>
@@ -54,7 +65,7 @@ describe("EventBadge", () => {
   it("renders notesheet badge with link", () => {
     const eventWithNotesheet = { ...baseEvent, notesheetAllowed: true };
     render(<EventBadge evt={eventWithNotesheet} />);
-    
+
     const link = screen.getByRole("link");
     expect(link).toHaveTextContent("Notesheet");
     expect(link).toHaveAttribute("href", "/docs/test-event#notesheet");
@@ -64,7 +75,7 @@ describe("EventBadge", () => {
   it("renders build badge without link", () => {
     const buildEvent = { ...baseEvent, eventType: "build" as const };
     render(<EventBadge evt={buildEvent} />);
-    
+
     const badge = screen.getByText("Build Event");
     expect(badge).toBeInTheDocument();
     expect(badge.tagName).toBe("SPAN");
@@ -73,11 +84,10 @@ describe("EventBadge", () => {
   it("disables prefetch on notesheet link", () => {
     const eventWithNotesheet = { ...baseEvent, notesheetAllowed: true };
     render(<EventBadge evt={eventWithNotesheet} />);
-    
+
     const link = screen.getByRole("link");
     // Verify prefetch is disabled (Next.js Link behavior)
     expect(link).toBeInTheDocument();
     expect(link.getAttribute("data-prefetch")).toBe("false");
   });
 });
-

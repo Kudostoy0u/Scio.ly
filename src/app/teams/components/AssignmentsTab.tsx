@@ -1,7 +1,7 @@
 "use client";
 
-import { useAuth } from "@/app/contexts/AuthContext";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useAuth } from "@/app/contexts/authContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { useEnhancedTeamData } from "@/app/hooks/useEnhancedTeamData";
 import SyncLocalStorage from "@/lib/database/localStorage-replacement";
 import { AlertTriangle, BarChart3, Calendar, CheckCircle, Clock, Plus, Trash2 } from "lucide-react";
@@ -269,11 +269,14 @@ export default function AssignmentsTab({
   return (
     <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className={`text-xl md:text-2xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
+        <h2
+          className={`text-xl md:text-2xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}
+        >
           Assignments
         </h2>
         {isCaptain && (
           <button
+            type="button"
             onClick={onCreateAssignment}
             className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
           >
@@ -286,7 +289,9 @@ export default function AssignmentsTab({
       <div className="space-y-4">
         {assignments.length === 0 ? (
           <div className="text-center py-12">
-            <div className={`text-6xl mb-4 ${darkMode ? "text-gray-500" : "text-gray-400"}`}>📋</div>
+            <div className={`text-6xl mb-4 ${darkMode ? "text-gray-500" : "text-gray-400"}`}>
+              📋
+            </div>
             <h3 className={`text-lg font-medium mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}>
               No assignments yet
             </h3>
@@ -297,13 +302,15 @@ export default function AssignmentsTab({
             </p>
           </div>
         ) : (
+          // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex assignment rendering with multiple conditional states
           assignments.map((assignment) => {
-            const status = getAssignmentStatus(assignment);
-            const everyoneDeclined = hasEveryoneDeclined(assignment);
+            const assignmentTyped = assignment as unknown as Assignment;
+            const status = getAssignmentStatus(assignmentTyped);
+            const everyoneDeclined = hasEveryoneDeclined(assignmentTyped);
 
             return (
               <div
-                key={assignment.id}
+                key={assignmentTyped.id}
                 className={`p-3 md:p-4 rounded-lg border ${
                   darkMode
                     ? "bg-gray-800 border-gray-700 hover:bg-gray-750"
@@ -314,7 +321,7 @@ export default function AssignmentsTab({
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-2">
                       <h3 className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}>
-                        {assignment.title}
+                        {assignmentTyped.title}
                       </h3>
                       <div className="ml-4 flex items-center space-x-2">
                         {everyoneDeclined ? (
@@ -327,24 +334,27 @@ export default function AssignmentsTab({
                         {isCaptain && (
                           <>
                             <button
-                              onClick={() => setSelectedAssignmentId(assignment.id)}
+                              type="button"
+                              onClick={() => setSelectedAssignmentId(assignmentTyped.id)}
                               className={`p-2 rounded-lg ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
                               title="View Assignment Analytics"
                             >
                               <BarChart3 className="w-4 h-4" />
                             </button>
-                            {showDeleteConfirm === assignment.id ? (
+                            {showDeleteConfirm === assignmentTyped.id ? (
                               <div className="flex items-center space-x-1">
                                 <button
-                                  onClick={() => handleDeleteAssignment(assignment.id)}
-                                  disabled={deletingAssignmentId === assignment.id}
+                                  type="button"
+                                  onClick={() => handleDeleteAssignment(assignmentTyped.id)}
+                                  disabled={deletingAssignmentId === assignmentTyped.id}
                                   className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
                                 >
-                                  {deletingAssignmentId === assignment.id
+                                  {deletingAssignmentId === assignmentTyped.id
                                     ? "Deleting..."
                                     : "Confirm"}
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => setShowDeleteConfirm(null)}
                                   className="px-2 py-1 text-xs bg-gray-600 text-white rounded hover:bg-gray-700"
                                 >
@@ -353,7 +363,8 @@ export default function AssignmentsTab({
                               </div>
                             ) : (
                               <button
-                                onClick={() => setShowDeleteConfirm(assignment.id)}
+                                type="button"
+                                onClick={() => setShowDeleteConfirm(assignmentTyped.id)}
                                 className={`p-2 rounded-lg ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} hover:bg-red-100`}
                                 title="Delete Assignment"
                               >
@@ -384,38 +395,51 @@ export default function AssignmentsTab({
                           <span
                             className={`text-xs px-2 py-1 rounded ${darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"}`}
                           >
-                            {assignment.assignment_type}
+                            {assignmentTyped.assignment_type}
                           </span>
                         </div>
                         <p className={`mb-3 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                          {assignment.description}
+                          {assignmentTyped.description}
                         </p>
                       </>
                     )}
                     {!everyoneDeclined && (
                       <>
-                        {assignment.roster && assignment.roster.length > 0 && (
+                        {assignmentTyped.roster && assignmentTyped.roster.length > 0 && (
                           <div className={`mb-3 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                             <div className="text-sm font-medium mb-1">Assigned to:</div>
                             <div className="flex flex-wrap gap-1">
-                              {assignment.roster.slice(0, 3).map((student: any, index: number) => {
-                                const studentName = typeof student === "string" 
-                                  ? student 
-                                  : (student?.display_name || student?.student_name || "Unknown");
+                              {assignmentTyped.roster.slice(0, 3).map((student, index: number) => {
+                                const studentName =
+                                  typeof student === "string"
+                                    ? student
+                                    : ((
+                                        student as {
+                                          display_name?: string | null;
+                                          student_name?: string | null;
+                                        }
+                                      )?.display_name ??
+                                      (
+                                        student as {
+                                          display_name?: string | null;
+                                          student_name?: string | null;
+                                        }
+                                      )?.student_name ??
+                                      "Unknown");
                                 return (
                                   <span
-                                    key={index}
+                                    key={`student-${index}-${String(studentName).slice(0, 20)}`}
                                     className={`px-2 py-1 rounded-full text-xs ${darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"}`}
                                   >
                                     {studentName}
                                   </span>
                                 );
                               })}
-                              {assignment.roster.length > 3 && (
+                              {assignmentTyped.roster.length > 3 && (
                                 <span
                                   className={`px-2 py-1 rounded-full text-xs ${darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"}`}
                                 >
-                                  +{assignment.roster.length - 3} more
+                                  +{assignmentTyped.roster.length - 3} more
                                 </span>
                               )}
                             </div>
@@ -424,39 +448,41 @@ export default function AssignmentsTab({
                         <div
                           className={`flex flex-wrap items-center gap-3 text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}
                         >
-                          {assignment.due_date && (
+                          {assignmentTyped.due_date && (
                             <div className="flex items-center space-x-1">
                               <Calendar className="w-4 h-4" />
-                              <span>Due: {formatDate(assignment.due_date)}</span>
+                              <span>Due: {formatDate(assignmentTyped.due_date)}</span>
                             </div>
                           )}
-                          {assignment.time_limit_minutes && (
+                          {assignmentTyped.time_limit_minutes && (
                             <div className="flex items-center space-x-1">
                               <Clock className="w-4 h-4" />
-                              <span>{assignment.time_limit_minutes} min</span>
+                              <span>{assignmentTyped.time_limit_minutes} min</span>
                             </div>
                           )}
-                          {assignment.questions_count && (
+                          {assignmentTyped.questions_count && (
                             <div className="flex items-center space-x-1">
-                              <span>{assignment.questions_count} questions</span>
+                              <span>{assignmentTyped.questions_count} questions</span>
                             </div>
                           )}
-                          {isCaptain && assignment.roster_count && (
+                          {isCaptain && assignmentTyped.roster_count && (
                             <div className="flex items-center space-x-1">
                               <span>
-                                {assignment.submitted_count || 0}/{assignment.roster_count}{" "}
-                                {(assignment.submitted_count || 0) === assignment.roster_count
+                                {assignmentTyped.submitted_count || 0}/
+                                {assignmentTyped.roster_count}{" "}
+                                {(assignmentTyped.submitted_count || 0) ===
+                                assignmentTyped.roster_count
                                   ? "completed"
                                   : "submitted"}
                               </span>
                             </div>
                           )}
                         </div>
-                        {assignment.user_submission && (
+                        {assignmentTyped.user_submission && (
                           <div
                             className={`mt-2 text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
                           >
-                            Submitted: {formatDate(assignment.user_submission.submitted_at)}
+                            Submitted: {formatDate(assignmentTyped.user_submission.submitted_at)}
                           </div>
                         )}
                       </>
@@ -464,11 +490,13 @@ export default function AssignmentsTab({
 
                     {/* Start/Continue Assignment Button for Students */}
                     {!everyoneDeclined &&
-                      (!isCaptain || (isCaptain && isUserAssignedToAssignment(assignment))) && (
+                      (!isCaptain ||
+                        (isCaptain && isUserAssignedToAssignment(assignmentTyped))) && (
                         <div className="mt-3 flex items-center gap-2">
-                          {assignment.user_submission ? (
+                          {assignmentTyped.user_submission ? (
                             <button
-                              onClick={() => handleViewAssignment(assignment.id)}
+                              type="button"
+                              onClick={() => handleViewAssignment(assignmentTyped.id)}
                               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                                 darkMode
                                   ? "bg-purple-600 hover:bg-purple-700 text-white"
@@ -480,19 +508,21 @@ export default function AssignmentsTab({
                           ) : (
                             <>
                               <button
-                                onClick={() => handleStartAssignment(assignment.id)}
+                                type="button"
+                                onClick={() => handleStartAssignment(assignmentTyped.id)}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                                   darkMode
                                     ? "bg-green-600 hover:bg-green-700 text-white"
                                     : "bg-green-100 hover:bg-green-200 text-green-700"
                                 }`}
                               >
-                                {hasAssignmentProgress(assignment.id)
+                                {hasAssignmentProgress(assignmentTyped.id)
                                   ? "Continue Assignment"
                                   : "Start Assignment"}
                               </button>
                               <button
-                                onClick={() => handleDeclineAssignment(assignment.id)}
+                                type="button"
+                                onClick={() => handleDeclineAssignment(assignmentTyped.id)}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                                   darkMode
                                     ? "bg-gray-600 hover:bg-gray-700 text-white"
@@ -509,17 +539,18 @@ export default function AssignmentsTab({
                     {/* Progress bar for captains */}
                     {!everyoneDeclined &&
                       isCaptain &&
-                      assignment.roster_count &&
-                      assignment.roster_count > 0 && (
+                      assignmentTyped.roster_count &&
+                      assignmentTyped.roster_count > 0 && (
                         <div className="mt-3">
                           <div className="flex justify-between text-xs mb-1">
                             <span className={darkMode ? "text-gray-400" : "text-gray-500"}>
-                              {(assignment.submitted_count || 0) === assignment.roster_count
+                              {(assignmentTyped.submitted_count || 0) ===
+                              assignmentTyped.roster_count
                                 ? "Completed"
                                 : "Submissions"}
                             </span>
                             <span className={darkMode ? "text-gray-400" : "text-gray-500"}>
-                              {assignment.submitted_count || 0}/{assignment.roster_count}
+                              {assignmentTyped.submitted_count || 0}/{assignmentTyped.roster_count}
                             </span>
                           </div>
                           <div
@@ -528,15 +559,16 @@ export default function AssignmentsTab({
                             <div
                               className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                               style={{
-                                width: `${((assignment.submitted_count || 0) / assignment.roster_count) * 100}%`,
+                                width: `${((assignmentTyped.submitted_count || 0) / assignmentTyped.roster_count) * 100}%`,
                               }}
                             />
                           </div>
 
                           {/* See results button */}
-                          {(assignment.submitted_count || 0) > 0 && (
+                          {(assignmentTyped.submitted_count || 0) > 0 && (
                             <button
-                              onClick={() => setSelectedAssignmentId(assignment.id)}
+                              type="button"
+                              onClick={() => setSelectedAssignmentId(assignmentTyped.id)}
                               className={`mt-2 text-xs px-3 py-1 rounded-lg transition-colors ${
                                 darkMode
                                   ? "bg-blue-600 hover:bg-blue-700 text-white"

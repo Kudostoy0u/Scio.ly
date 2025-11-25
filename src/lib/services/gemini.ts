@@ -52,9 +52,10 @@ export class GeminiService {
         clientWithKey = this.clientManager.getRandomClient();
       } else {
         // Retry attempts: use a different key
-        const availableIndices = Array.from({ length: this.clientManager.getClientCount() }, (_, i) => i).filter(
-          (i) => !usedIndices.has(i)
-        );
+        const availableIndices = Array.from(
+          { length: this.clientManager.getClientCount() },
+          (_, i) => i
+        ).filter((i) => !usedIndices.has(i));
 
         if (availableIndices.length === 0) {
           // All keys exhausted, reuse one
@@ -62,8 +63,17 @@ export class GeminiService {
           clientWithKey = this.clientManager.getClientByIndex(randomIndex);
         } else {
           const randomIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
-          clientWithKey = this.clientManager.getClientByIndex(randomIndex);
+          if (randomIndex !== undefined) {
+            clientWithKey = this.clientManager.getClientByIndex(randomIndex);
+          } else {
+            // Fallback: use first available index
+            clientWithKey = this.clientManager.getClientByIndex(availableIndices[0]!);
+          }
         }
+      }
+
+      if (!clientWithKey) {
+        throw new Error("No Gemini client available");
       }
 
       usedIndices.add(clientWithKey.keyIndex);
@@ -84,13 +94,16 @@ export class GeminiService {
           clientWithKey.apiKey.length > 12
             ? `${clientWithKey.apiKey.substring(0, 8)}...${clientWithKey.apiKey.substring(clientWithKey.apiKey.length - 4)}`
             : "***";
-        logger.warn(`Gemini API attempt ${attempt + 1} failed with key index ${clientWithKey.keyIndex}`, {
-          attempt: attempt + 1,
-          maxAttempts,
-          keyIndex: clientWithKey.keyIndex,
-          apiKey: maskedKey,
-          error: errorMessage,
-        });
+        logger.warn(
+          `Gemini API attempt ${attempt + 1} failed with key index ${clientWithKey.keyIndex}`,
+          {
+            attempt: attempt + 1,
+            maxAttempts,
+            keyIndex: clientWithKey.keyIndex,
+            apiKey: maskedKey,
+            error: errorMessage,
+          }
+        );
 
         // If this was the last attempt, throw the error
         if (attempt === maxAttempts - 1) {

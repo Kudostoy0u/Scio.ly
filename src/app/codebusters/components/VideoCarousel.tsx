@@ -1,8 +1,11 @@
 "use client";
 
+import type { CipherVideo } from "@/app/codebusters/data/cipherVideos";
 import type React from "react";
 import { useState } from "react";
-import type { CipherVideo } from "@/app/codebusters/data/cipherVideos";
+
+// Top-level regex for YouTube URL matching
+const YOUTUBE_URL_REGEX = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/;
 
 interface VideoCarouselProps {
   videos: CipherVideo[];
@@ -30,7 +33,7 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({ videos, darkMode }
   }
 
   const getYouTubeEmbedUrl = (url: string): string => {
-    const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/)?.[1];
+    const videoId = url.match(YOUTUBE_URL_REGEX)?.[1];
     return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
   };
 
@@ -65,6 +68,7 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({ videos, darkMode }
         {videos.length > 1 && (
           <>
             <button
+              type="button"
               onClick={goToPrevious}
               className={`absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full ${
                 darkMode
@@ -73,7 +77,14 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({ videos, darkMode }
               } shadow-lg transition-colors`}
               aria-label="Previous video"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-label="Previous"
+              >
+                <title>Previous</title>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -83,6 +94,7 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({ videos, darkMode }
               </svg>
             </button>
             <button
+              type="button"
               onClick={goToNext}
               className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full ${
                 darkMode
@@ -91,7 +103,14 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({ videos, darkMode }
               } shadow-lg transition-colors`}
               aria-label="Next video"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-label="Next"
+              >
+                <title>Next</title>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -121,6 +140,8 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({ videos, darkMode }
         <div className="flex justify-center space-x-2">
           {videos.map((_video, index) => (
             <button
+              type="button"
+              // biome-ignore lint/suspicious/noArrayIndexKey: Video thumbnails are stable and index is needed for navigation
               key={index}
               onClick={() => goToVideo(index)}
               className={`w-3 h-3 rounded-full transition-colors ${
@@ -147,6 +168,8 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({ videos, darkMode }
           <div className="space-y-1">
             {videos.map((video, index) => (
               <button
+                type="button"
+                // biome-ignore lint/suspicious/noArrayIndexKey: Video list items are stable and index is needed for navigation
                 key={index}
                 onClick={() => goToVideo(index)}
                 className={`w-full text-left p-2 rounded transition-colors ${

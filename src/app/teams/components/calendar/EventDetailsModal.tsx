@@ -12,7 +12,7 @@ interface CalendarEvent {
   event_type: "practice" | "tournament" | "meeting" | "deadline" | "other" | "personal";
   is_all_day: boolean;
   is_recurring: boolean;
-  recurrence_pattern?: any;
+  recurrence_pattern?: Record<string, unknown>;
   created_by: string;
   team_id?: string;
   attendees?: Array<{
@@ -60,7 +60,9 @@ export default function EventDetailsModal({
           >
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>
+                <h3
+                  className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}
+                >
                   Event Details
                 </h3>
                 <button

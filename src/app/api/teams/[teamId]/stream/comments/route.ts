@@ -10,6 +10,9 @@ import { getServerUser } from "@/lib/supabaseServer";
 import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 // POST /api/teams/[teamId]/stream/comments - Add a comment to a stream post
 export async function POST(
   request: NextRequest,
@@ -45,8 +48,7 @@ export async function POST(
     }
 
     // Validate UUID format for postId
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(postId)) {
+    if (!UUID_REGEX.test(postId)) {
       return NextResponse.json(
         {
           error: "Invalid post ID format. Must be a valid UUID.",
@@ -161,8 +163,7 @@ export async function DELETE(
     }
 
     // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(commentId)) {
+    if (!UUID_REGEX.test(commentId)) {
       return NextResponse.json(
         {
           error: "Invalid comment ID format. Must be a valid UUID.",

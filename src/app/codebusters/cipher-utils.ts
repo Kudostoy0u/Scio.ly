@@ -4,6 +4,7 @@
  */
 
 // Re-export utility functions
+// biome-ignore lint/performance/noBarrelFile: This file provides a convenient API surface for cipher utilities
 export { mod26, letterToNumber, numberToLetter, formatTime } from "./ciphers/utils/cipherUtils";
 
 // Re-export existing cipher functions

@@ -154,7 +154,7 @@ export default function TestSummary({
         })
         .catch(() => {});
     }
-  }, [data.length]);
+  }, [data, subtopics.length]);
 
   const items: SummaryItem[] = [
     {

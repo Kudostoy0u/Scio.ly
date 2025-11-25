@@ -1,6 +1,6 @@
 "use client";
+import type { ProcessedQuestions, QuestionPlagiarismSummary } from "@/app/plagiarism/types";
 import type React from "react";
-import type { QuestionPlagiarismSummary } from "@/app/plagiarism/types";
 import { QuestionItem } from "./QuestionItem";
 
 export default function AnalysisList({
@@ -10,7 +10,7 @@ export default function AnalysisList({
   analysisScrollRef,
   onScroll,
 }: {
-  extractedQuestions: { questions: any[] } | null;
+  extractedQuestions: ProcessedQuestions | null;
   questionSummaries: QuestionPlagiarismSummary[];
   onOpenModal: (summary: QuestionPlagiarismSummary) => void;
   analysisScrollRef: React.RefObject<HTMLDivElement | null>;
@@ -26,11 +26,15 @@ export default function AnalysisList({
           </span>
         )}
       </div>
-      <div className="max-h-96 overflow-y-auto space-y-4" ref={analysisScrollRef} onScroll={onScroll}>
+      <div
+        className="max-h-96 overflow-y-auto space-y-4"
+        ref={analysisScrollRef}
+        onScroll={onScroll}
+      >
         {extractedQuestions ? (
           extractedQuestions.questions.map((question, index) => (
             <QuestionItem
-              key={index}
+              key={`question-${index}-${question.question.slice(0, 20)}`}
               question={question}
               index={index}
               questionSummaries={questionSummaries}

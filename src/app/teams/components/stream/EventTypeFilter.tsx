@@ -40,7 +40,9 @@ export default function EventTypeFilter({
         }`}
       >
         <span>{getDropdownDisplayText()}</span>
-        <ChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
+        <ChevronDown
+          className={`w-4 h-4 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
+        />
       </button>
 
       {isDropdownOpen && (

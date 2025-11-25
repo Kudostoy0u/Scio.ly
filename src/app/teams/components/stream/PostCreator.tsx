@@ -148,7 +148,9 @@ export default function PostCreator({
           >
             <div className="flex items-center space-x-2">
               <FileText className="w-4 h-4 text-blue-500" />
-              <span className={`text-sm font-medium ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+              <span
+                className={`text-sm font-medium ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+              >
                 {pendingAttachment.title}
               </span>
             </div>

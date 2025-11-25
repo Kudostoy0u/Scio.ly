@@ -266,13 +266,14 @@ const CACHE_DURATIONS = {
 } as const;
 
 // Network request deduplication
-const inflightRequests = new Map<string, Promise<any>>();
+const inflightRequests = new Map<string, Promise<unknown>>();
 
 // Helper function to make deduplicated requests
 async function fetchWithDeduplication<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
   // If request is already in flight, return the existing promise
-  if (inflightRequests.has(key)) {
-    return inflightRequests.get(key)!;
+  const existing = inflightRequests.get(key);
+  if (existing) {
+    return existing as Promise<T>;
   }
 
   // Create new request
@@ -280,22 +281,28 @@ async function fetchWithDeduplication<T>(key: string, fetcher: () => Promise<T>)
     inflightRequests.delete(key);
   });
 
-  inflightRequests.set(key, promise);
+  inflightRequests.set(key, promise as Promise<unknown>);
   return promise;
 }
 
 // Helper function to handle API errors
-function handleApiError(error: any, _context: string): string {
-  if (error.status === 403) {
-    return "You are not authorized to access this resource";
+function handleApiError(error: unknown, _context: string): string {
+  if (typeof error === "object" && error !== null && "status" in error) {
+    const status = (error as { status: unknown }).status;
+    if (status === 403) {
+      return "You are not authorized to access this resource";
+    }
+    if (status === 404) {
+      return "Resource not found";
+    }
+    if (typeof status === "number" && status >= 500) {
+      return "Server error. Please try again later.";
+    }
   }
-  if (error.status === 404) {
-    return "Resource not found";
+  if (typeof error === "object" && error !== null && "message" in error) {
+    return String((error as { message: unknown }).message) || "An unexpected error occurred";
   }
-  if (error.status >= 500) {
-    return "Server error. Please try again later.";
-  }
-  return error.message || "An unexpected error occurred";
+  return "An unexpected error occurred";
 }
 
 // Create the store
@@ -368,14 +375,24 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
         const teams = await fetchWithDeduplication(key, async () => {
           const result = await trpcClient.teams.getUserTeams.query();
           // Map the result to match the expected UserTeam interface
-          return (result.teams || []).map((team) => ({
-            id: team.id,
-            slug: team.slug,
-            school: team.school,
-            division: team.division as "B" | "C",
-            user_role: team.user_role || team.role || "member",
-            name: team.name,
-          }));
+          return (result.teams || []).map(
+            (team: {
+              id: unknown;
+              slug: unknown;
+              school: unknown;
+              division: unknown;
+              user_role?: unknown;
+              role?: unknown;
+              name: unknown;
+            }) => ({
+              id: String(team.id ?? ""),
+              slug: String(team.slug ?? ""),
+              school: String(team.school ?? ""),
+              division: (team.division ?? "B") as "B" | "C",
+              user_role: String(team.user_role ?? team.role ?? "member"),
+              name: String(team.name ?? ""),
+            })
+          ) as UserTeam[];
         });
 
         set((state) => ({
@@ -400,7 +417,7 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
 
       // Check if data is fresh
       if (get().isDataFresh(key, CACHE_DURATIONS.subteams) && get().subteams[teamSlug]) {
-        return get().subteams[teamSlug];
+        return get().subteams[teamSlug] || [];
       }
 
       // Set loading state
@@ -416,17 +433,17 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
       }));
 
       try {
-        const subteams = await fetchWithDeduplication(key, async () => {
+        const subteams = (await fetchWithDeduplication(key, async () => {
           const result = await trpcClient.teams.getSubteams.query({ teamSlug });
           // Map the result to match the expected Subteam interface
-          return (result.subteams || []).map((subteam) => ({
+          return (result.subteams || []).map((subteam: Record<string, unknown>) => ({
             id: subteam.id,
             name: subteam.name,
             team_id: subteam.team_id,
             description: subteam.description || "",
             created_at: subteam.created_at,
-          }));
-        });
+          })) as Subteam[];
+        })) as Subteam[];
 
         set((state) => ({
           subteams: { ...state.subteams, [teamSlug]: subteams },
@@ -464,6 +481,7 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
 
       // Debug logging
       if (process.env.NODE_ENV === "development") {
+        /* noop - reserved for future debug logging */
       }
 
       if (isFresh && hasData) {
@@ -485,6 +503,7 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
       try {
         // Debug logging
         if (process.env.NODE_ENV === "development") {
+          /* noop - reserved for future debug logging */
         }
 
         const rosterData = await fetchWithDeduplication(key, async () => {
@@ -492,6 +511,7 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
 
           // Debug logging
           if (process.env.NODE_ENV === "development") {
+            /* noop - reserved for future debug logging */
           }
 
           return {
@@ -531,7 +551,7 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
 
       // Check if data is fresh
       if (get().isDataFresh(key, CACHE_DURATIONS.members) && get().members[key]) {
-        return get().members[key];
+        return get().members[key] || [];
       }
 
       // Set loading state
@@ -547,13 +567,13 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
       }));
 
       try {
-        const members = await fetchWithDeduplication(key, async () => {
+        const members = (await fetchWithDeduplication(key, async () => {
           const result = await trpcClient.teams.getMembers.query({
             teamSlug,
             subteamId: subteamId && subteamId !== "all" ? subteamId : undefined,
           });
           return result.members || [];
-        });
+        })) as TeamMember[];
 
         set((state) => ({
           members: { ...state.members, [key]: members },
@@ -1068,7 +1088,7 @@ export const useTeamStore = create<TeamStoreState & TeamStoreActions>()(
 
     // Preload critical data
     preloadData: async (userId: string, teamSlug?: string) => {
-      const promises: Promise<any>[] = [];
+      const promises: Promise<unknown>[] = [];
 
       // Always preload user teams
       promises.push(get().fetchUserTeams(userId));

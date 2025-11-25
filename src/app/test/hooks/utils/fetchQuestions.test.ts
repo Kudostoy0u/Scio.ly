@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import api from "@/app/api";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchQuestionsForParams } from "./fetchQuestions";
 
 type AnyFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<any>;

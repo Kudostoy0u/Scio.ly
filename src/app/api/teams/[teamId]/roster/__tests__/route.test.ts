@@ -1,3 +1,4 @@
+import { GET, POST } from "@/app/api/teams/[teamId]/roster/route";
 import { queryCockroachDB } from "@/lib/cockroachdb";
 import { dbPg } from "@/lib/db";
 import { getServerUser } from "@/lib/supabaseServer";
@@ -7,7 +8,6 @@ import {
 } from "@/lib/utils/team-auth";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GET, POST } from "@/app/api/teams/[teamId]/roster/route";
 
 // Mock dependencies
 vi.mock("@/lib/supabaseServer", () => ({
@@ -24,7 +24,7 @@ vi.mock("@/lib/cockroachdb", () => ({
 }));
 
 // Create a proper Drizzle ORM chain mock
-const createDrizzleChain = (result: any[]) => {
+const _createDrizzleChain = (result: unknown[]) => {
   const chain = {
     select: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
@@ -45,7 +45,7 @@ vi.mock("@/lib/db", () => ({
 const mockGetServerUser = vi.mocked(getServerUser);
 const mockCheckTeamGroupAccessCockroach = vi.mocked(checkTeamGroupAccessCockroach);
 const mockCheckTeamGroupLeadershipCockroach = vi.mocked(checkTeamGroupLeadershipCockroach);
-const mockQueryCockroachDb = vi.mocked(queryCockroachDB);
+const _mockQueryCockroachDb = vi.mocked(queryCockroachDB);
 const mockDbPg = vi.mocked(dbPg);
 
 describe("/api/teams/[teamId]/roster", () => {
@@ -59,8 +59,12 @@ describe("/api/teams/[teamId]/roster", () => {
     vi.clearAllMocks();
 
     // Mock console methods to reduce noise
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {
+      // Suppress console.log in tests
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {
+      // Suppress console.error in tests
+    });
 
     // Set DATABASE_URL for tests
     process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
@@ -73,9 +77,12 @@ describe("/api/teams/[teamId]/roster", () => {
   describe("GET /api/teams/[teamId]/roster", () => {
     it("should return 500 when DATABASE_URL is missing", async () => {
       const originalEnv = process.env.DATABASE_URL;
+      // biome-ignore lint/performance/noDelete: Need to remove env var for test
       delete process.env.DATABASE_URL;
 
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster?subteamId=${mockSubteamId}`);
+      const request = new NextRequest(
+        `http://localhost:3000/api/teams/${mockTeamId}/roster?subteamId=${mockSubteamId}`
+      );
       const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
 
       expect(response.status).toBe(500);
@@ -83,7 +90,12 @@ describe("/api/teams/[teamId]/roster", () => {
       expect(body.error).toBe("Database configuration error");
 
       // Restore environment
-      process.env.DATABASE_URL = originalEnv;
+      if (originalEnv) {
+        process.env.DATABASE_URL = originalEnv;
+      } else {
+        // biome-ignore lint/performance/noDelete: Need to remove env var for test cleanup
+        delete process.env.DATABASE_URL;
+      }
     });
 
     it("should return 401 when user is not authenticated", async () => {
@@ -98,7 +110,7 @@ describe("/api/teams/[teamId]/roster", () => {
     });
 
     it("should return 400 when subteamId is missing", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
 
       const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`);
       const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
@@ -107,11 +119,13 @@ describe("/api/teams/[teamId]/roster", () => {
       const body = await response.json();
       expect(body.error).toBe("Validation failed");
       expect(body.details).toBeDefined();
-      expect(body.details).toEqual(expect.arrayContaining([expect.stringContaining("Subteam ID is required")]));
+      expect(body.details).toEqual(
+        expect.arrayContaining([expect.stringContaining("Subteam ID is required")])
+      );
     });
 
     it("should return 403 when user has no access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
       // Mock team group lookup using Drizzle ORM (select().from().where().limit())
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -138,8 +152,8 @@ describe("/api/teams/[teamId]/roster", () => {
     });
 
     it("should return roster data when user has access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock team group lookup using Drizzle ORM (select().from().where().limit())
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -148,7 +162,7 @@ describe("/api/teams/[teamId]/roster", () => {
           }),
         }),
       });
-      
+
       mockCheckTeamGroupAccessCockroach.mockResolvedValue({
         isAuthorized: true,
         hasMembership: true,
@@ -209,8 +223,8 @@ describe("/api/teams/[teamId]/roster", () => {
     });
 
     it("should filter by subteam when subteamId is provided", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock team group lookup
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -219,7 +233,7 @@ describe("/api/teams/[teamId]/roster", () => {
           }),
         }),
       });
-      
+
       mockCheckTeamGroupAccessCockroach.mockResolvedValue({
         isAuthorized: true,
         hasMembership: true,
@@ -260,8 +274,8 @@ describe("/api/teams/[teamId]/roster", () => {
     });
 
     it("should return empty array when no roster data exists", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock team group lookup
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -270,7 +284,7 @@ describe("/api/teams/[teamId]/roster", () => {
           }),
         }),
       });
-      
+
       mockCheckTeamGroupAccessCockroach.mockResolvedValue({
         isAuthorized: true,
         hasMembership: true,
@@ -313,6 +327,7 @@ describe("/api/teams/[teamId]/roster", () => {
   describe("POST /api/teams/[teamId]/roster", () => {
     it("should return 500 when DATABASE_URL is missing", async () => {
       const originalEnv = process.env.DATABASE_URL;
+      // biome-ignore lint/performance/noDelete: Need to remove env var for test
       delete process.env.DATABASE_URL;
 
       const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/roster`, {
@@ -326,7 +341,12 @@ describe("/api/teams/[teamId]/roster", () => {
       expect(body.error).toBe("Database configuration error");
 
       // Restore environment
-      process.env.DATABASE_URL = originalEnv;
+      if (originalEnv) {
+        process.env.DATABASE_URL = originalEnv;
+      } else {
+        // biome-ignore lint/performance/noDelete: Need to remove env var for test cleanup
+        delete process.env.DATABASE_URL;
+      }
     });
 
     it("should return 401 when user is not authenticated", async () => {
@@ -344,8 +364,8 @@ describe("/api/teams/[teamId]/roster", () => {
     });
 
     it("should return 403 when user has no leadership access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock team group lookup
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -354,14 +374,14 @@ describe("/api/teams/[teamId]/roster", () => {
           }),
         }),
       });
-      
+
       mockCheckTeamGroupAccessCockroach.mockResolvedValue({
         isAuthorized: true,
         hasMembership: true,
         hasRosterEntry: false,
         role: "member",
       });
-      
+
       mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
         hasLeadership: false,
         isCreator: false,
@@ -388,8 +408,8 @@ describe("/api/teams/[teamId]/roster", () => {
     });
 
     it("should update roster when user has leadership access", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock team group lookup
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -398,14 +418,14 @@ describe("/api/teams/[teamId]/roster", () => {
           }),
         }),
       });
-      
+
       mockCheckTeamGroupAccessCockroach.mockResolvedValue({
         isAuthorized: true,
         hasMembership: true,
         hasRosterEntry: false,
         role: "captain",
       });
-      
+
       mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
         hasLeadership: true,
         isCreator: false,
@@ -460,8 +480,8 @@ describe("/api/teams/[teamId]/roster", () => {
     });
 
     it("should handle empty student name (optional field)", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock team group lookup
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -470,14 +490,14 @@ describe("/api/teams/[teamId]/roster", () => {
           }),
         }),
       });
-      
+
       mockCheckTeamGroupAccessCockroach.mockResolvedValue({
         isAuthorized: true,
         hasMembership: true,
         hasRosterEntry: false,
         role: "captain",
       });
-      
+
       mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
         hasLeadership: true,
         isCreator: false,
@@ -531,8 +551,8 @@ describe("/api/teams/[teamId]/roster", () => {
     });
 
     it("should handle database errors gracefully", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
+
       // Mock team group lookup
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -541,14 +561,14 @@ describe("/api/teams/[teamId]/roster", () => {
           }),
         }),
       });
-      
+
       mockCheckTeamGroupAccessCockroach.mockResolvedValue({
         isAuthorized: true,
         hasMembership: true,
         hasRosterEntry: false,
         role: "captain",
       });
-      
+
       mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
         hasLeadership: true,
         isCreator: false,

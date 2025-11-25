@@ -105,7 +105,9 @@ describe("TeamCache", () => {
     const results = await Promise.all(promises);
 
     // All should return the same data
-    results.forEach((result) => expect(result).toEqual(testData));
+    for (const result of results) {
+      expect(result).toEqual(testData);
+    }
 
     // Fetcher should only be called once
     expect(fetcher).toHaveBeenCalledTimes(1);

@@ -6,7 +6,7 @@ import type { NextRequest } from "next/server";
 
 export const maxDuration = 60;
 
-interface AnalyzeQuestionRequest extends Record<string, unknown> {
+export interface AnalyzeQuestionRequest extends Record<string, unknown> {
   question: Record<string, unknown>;
 }
 

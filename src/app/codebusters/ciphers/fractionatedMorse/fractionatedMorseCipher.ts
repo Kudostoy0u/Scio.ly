@@ -11,7 +11,7 @@ import type { FractionatedMorseResult } from "@/app/codebusters/ciphers/types/ci
  */
 export const encryptFractionatedMorse = (text: string): FractionatedMorseResult => {
   // Morse code mapping
-  const morseCode: { [key: string]: string } = {
+  const morseCode: Record<string, string> = {
     A: ".-",
     B: "-...",
     C: "-.-.",
@@ -38,7 +38,7 @@ export const encryptFractionatedMorse = (text: string): FractionatedMorseResult 
     X: "-..-",
     Y: "-.--",
     Z: "--..",
-  };
+  } as Record<string, string>;
 
   // Generate random key
   const key = Array.from({ length: 26 }, () =>
@@ -49,8 +49,7 @@ export const encryptFractionatedMorse = (text: string): FractionatedMorseResult 
   const fractionationTable: { [key: string]: string } = {};
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-  for (let i = 0; i < alphabet.length; i++) {
-    const letter = alphabet[i];
+  for (const letter of alphabet) {
     if (letter) {
       const morse = morseCode[letter];
       if (morse !== undefined) {

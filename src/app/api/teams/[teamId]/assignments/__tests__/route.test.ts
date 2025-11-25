@@ -1,10 +1,10 @@
+import { GET, POST } from "@/app/api/teams/[teamId]/assignments/route";
 import { dbPg } from "@/lib/db";
 import { getServerUser } from "@/lib/supabaseServer";
 import { hasLeadershipAccessCockroach } from "@/lib/utils/team-auth-v2";
 import { getUserTeamMemberships, resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GET, POST } from "@/app/api/teams/[teamId]/assignments/route";
 
 // Mock dependencies
 vi.mock("@/lib/supabaseServer", () => ({
@@ -52,8 +52,12 @@ describe("/api/teams/[teamId]/assignments", () => {
     vi.clearAllMocks();
 
     // Mock console methods to reduce noise
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {
+      // Suppress console.log in tests
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {
+      // Suppress console.error in tests
+    });
 
     // Set DATABASE_URL for tests that need it
     process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
@@ -66,6 +70,7 @@ describe("/api/teams/[teamId]/assignments", () => {
   describe("GET /api/teams/[teamId]/assignments", () => {
     it("should return 500 when DATABASE_URL is missing", async () => {
       const originalEnv = process.env.DATABASE_URL;
+      // biome-ignore lint/performance/noDelete: Need to remove env var for test
       delete process.env.DATABASE_URL;
 
       const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/assignments`);
@@ -76,7 +81,12 @@ describe("/api/teams/[teamId]/assignments", () => {
       expect(body.error).toBe("Database configuration error");
 
       // Restore environment
-      process.env.DATABASE_URL = originalEnv;
+      if (originalEnv) {
+        process.env.DATABASE_URL = originalEnv;
+      } else {
+        // biome-ignore lint/performance/noDelete: Need to remove env var for test cleanup
+        delete process.env.DATABASE_URL;
+      }
     });
 
     it("should return 401 when user is not authenticated", async () => {
@@ -92,7 +102,8 @@ describe("/api/teams/[teamId]/assignments", () => {
 
     it("should return assignments when user has access", async () => {
       const assignmentId = "123e4567-e89b-12d3-a456-426614174003";
-      
+
+      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
       mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
       mockResolveTeamSlugToUnits.mockResolvedValue({
         groupId: mockGroupId,
@@ -174,6 +185,7 @@ describe("/api/teams/[teamId]/assignments", () => {
     });
 
     it("should return empty array when no assignments exist", async () => {
+      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
       mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
       mockResolveTeamSlugToUnits.mockResolvedValue({
         groupId: mockGroupId,
@@ -204,6 +216,7 @@ describe("/api/teams/[teamId]/assignments", () => {
   describe("POST /api/teams/[teamId]/assignments", () => {
     it("should return 500 when DATABASE_URL is missing", async () => {
       const originalEnv = process.env.DATABASE_URL;
+      // biome-ignore lint/performance/noDelete: Need to remove env var for test
       delete process.env.DATABASE_URL;
 
       const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/assignments`, {
@@ -222,7 +235,12 @@ describe("/api/teams/[teamId]/assignments", () => {
       expect(body.error).toBe("Database configuration error");
 
       // Restore environment
-      process.env.DATABASE_URL = originalEnv;
+      if (originalEnv) {
+        process.env.DATABASE_URL = originalEnv;
+      } else {
+        // biome-ignore lint/performance/noDelete: Need to remove env var for test cleanup
+        delete process.env.DATABASE_URL;
+      }
     });
 
     it("should return 401 when user is not authenticated", async () => {
@@ -245,6 +263,7 @@ describe("/api/teams/[teamId]/assignments", () => {
     });
 
     it("should return 403 when user has no leadership access", async () => {
+      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
       mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
       mockResolveTeamSlugToUnits.mockResolvedValue({
         groupId: mockGroupId,
@@ -269,6 +288,7 @@ describe("/api/teams/[teamId]/assignments", () => {
     });
 
     it("should handle missing required fields", async () => {
+      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
       mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
 
       const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/assignments`, {

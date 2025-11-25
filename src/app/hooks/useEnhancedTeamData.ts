@@ -1,4 +1,5 @@
-import { useAuth } from "@/app/contexts/AuthContext";
+import { useAuth } from "@/app/contexts/authContext";
+import type { Assignment, StreamPost, Subteam, Timer, Tournament } from "@/lib/stores/teamStore";
 import { globalApiCache } from "@/lib/utils/globalApiCache";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -39,14 +40,14 @@ interface TeamMember {
 
 interface TeamData {
   userTeams: UserTeam[];
-  subteams: any[];
+  subteams: Subteam[];
   roster: Record<string, string[]>;
   removedEvents: string[];
   members: TeamMember[];
-  stream: any[];
-  assignments: any[];
-  tournaments: any[];
-  timers: any[];
+  stream: StreamPost[];
+  assignments: Assignment[];
+  tournaments: Tournament[];
+  timers: Timer[];
 }
 
 export function useEnhancedTeamData() {
@@ -98,7 +99,7 @@ export function useEnhancedTeamData() {
 
   // Fetch subteams
   const fetchSubteams = useCallback(
-    async (teamSlug: string): Promise<any[]> => {
+    async (teamSlug: string): Promise<Subteam[]> => {
       if (!teamSlug) {
         return [];
       }
@@ -196,7 +197,7 @@ export function useEnhancedTeamData() {
 
   // Fetch stream data
   const fetchStream = useCallback(
-    async (teamSlug: string, subteamId: string): Promise<any[]> => {
+    async (teamSlug: string, subteamId: string): Promise<StreamPost[]> => {
       if (!(teamSlug && subteamId)) {
         return [];
       }
@@ -225,7 +226,7 @@ export function useEnhancedTeamData() {
 
   // Fetch assignments
   const fetchAssignments = useCallback(
-    async (teamSlug: string): Promise<any[]> => {
+    async (teamSlug: string): Promise<Assignment[]> => {
       if (!teamSlug) {
         return [];
       }
@@ -254,7 +255,7 @@ export function useEnhancedTeamData() {
 
   // Fetch tournaments
   const fetchTournaments = useCallback(
-    async (teamSlug: string, subteamId: string): Promise<any[]> => {
+    async (teamSlug: string, subteamId: string): Promise<Tournament[]> => {
       if (!(teamSlug && subteamId)) {
         return [];
       }
@@ -283,7 +284,7 @@ export function useEnhancedTeamData() {
 
   // Fetch timers
   const fetchTimers = useCallback(
-    async (teamSlug: string, subteamId: string): Promise<any[]> => {
+    async (teamSlug: string, subteamId: string): Promise<Timer[]> => {
       if (!(teamSlug && subteamId)) {
         return [];
       }
@@ -336,7 +337,9 @@ export function useEnhancedTeamData() {
       try {
         const subteams = await fetchSubteams(teamSlug);
         setData((prev) => ({ ...prev, subteams }));
-      } catch (_err) {}
+      } catch (_err) {
+        // Ignore errors when loading subteams
+      }
     },
     [fetchSubteams]
   );
@@ -359,7 +362,9 @@ export function useEnhancedTeamData() {
           () => fetchRoster(teamSlug, subteamId),
           "roster"
         );
-      } catch (_err) {}
+      } catch (_err) {
+        // Ignore errors when loading roster
+      }
     },
     [fetchRoster]
   );
@@ -378,7 +383,9 @@ export function useEnhancedTeamData() {
           () => fetchMembers(teamSlug, subteamId),
           "members"
         );
-      } catch (_err) {}
+      } catch (_err) {
+        // Ignore errors when loading members
+      }
     },
     [fetchMembers]
   );
@@ -397,7 +404,9 @@ export function useEnhancedTeamData() {
           () => fetchStream(teamSlug, subteamId),
           "stream"
         );
-      } catch (_err) {}
+      } catch (_err) {
+        // Ignore errors when loading stream
+      }
     },
     [fetchStream]
   );
@@ -416,7 +425,9 @@ export function useEnhancedTeamData() {
           () => fetchAssignments(teamSlug),
           "assignments"
         );
-      } catch (_err) {}
+      } catch (_err) {
+        // Ignore errors when loading assignments
+      }
     },
     [fetchAssignments]
   );
@@ -435,7 +446,9 @@ export function useEnhancedTeamData() {
           () => fetchTournaments(teamSlug, subteamId),
           "tournaments"
         );
-      } catch (_err) {}
+      } catch (_err) {
+        // Ignore errors when loading tournaments
+      }
     },
     [fetchTournaments]
   );
@@ -454,7 +467,9 @@ export function useEnhancedTeamData() {
           () => fetchTimers(teamSlug, subteamId),
           "timers"
         );
-      } catch (_err) {}
+      } catch (_err) {
+        // Ignore errors when loading timers
+      }
     },
     [fetchTimers]
   );

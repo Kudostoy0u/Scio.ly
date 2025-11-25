@@ -15,7 +15,9 @@ export function useOfflineDownloads(): { isOffline: boolean; downloadedSet: Set<
       try {
         const keys = await listDownloadedEventSlugs();
         setDownloadedSet(new Set(keys));
-      } catch {}
+      } catch {
+        /* ignore errors when listing downloaded event slugs */
+      }
     };
     loadDownloadedSlugs();
     const unsubscribe = subscribeToDownloads(loadDownloadedSlugs);
@@ -25,7 +27,9 @@ export function useOfflineDownloads(): { isOffline: boolean; downloadedSet: Set<
       window.removeEventListener("offline", updateOnline);
       try {
         unsubscribe();
-      } catch {}
+      } catch {
+        /* ignore errors when unsubscribing */
+      }
     };
   }, []);
 

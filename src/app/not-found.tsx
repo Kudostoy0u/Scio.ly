@@ -1,18 +1,19 @@
 "use client";
 
 import Header from "@/app/components/Header";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function NotFound() {
   const { darkMode } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [mounted] = useState(() => {
+    if (typeof window !== "undefined") {
+      return true;
+    }
+    return false;
+  });
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark-scrollbar", darkMode);
@@ -68,7 +69,9 @@ export default function NotFound() {
             </div>
 
             {/* Cat ASCII Art */}
-            <div className={`font-mono text-sm mb-6 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+            <div
+              className={`font-mono text-sm mb-6 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+            >
               <pre className="whitespace-pre">
                 {`  /\\_/\\
  ( o.o )

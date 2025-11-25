@@ -33,7 +33,11 @@ export default function AssignmentDetailsStep({
   };
 
   return (
-    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="space-y-4"
+    >
       <h3 className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>
         Assignment Details
       </h3>
@@ -100,8 +104,15 @@ export default function AssignmentDetailsStep({
             value={details.assignmentType}
             onChange={(e) => {
               const value = e.target.value;
-              if (value === "homework" || value === "project" || value === "study" || value === "other") {
-                onDetailsChange({ assignmentType: value as "homework" | "project" | "study" | "other" });
+              if (
+                value === "homework" ||
+                value === "project" ||
+                value === "study" ||
+                value === "other"
+              ) {
+                onDetailsChange({
+                  assignmentType: value as "homework" | "project" | "study" | "other",
+                });
               }
             }}
             className={`w-full px-3 py-2 border rounded-lg ${

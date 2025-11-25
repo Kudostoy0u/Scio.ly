@@ -2,9 +2,9 @@
  * Baconian cipher encryption function
  */
 
+import type { BaconianCipherResult } from "@/app/codebusters/ciphers/types/cipherTypes";
 import { selectRandomScheme } from "@/app/codebusters/schemes/baconian-schemes";
 import { convertBinaryPattern } from "@/app/codebusters/schemes/pattern-converter";
-import type { BaconianCipherResult } from "@/app/codebusters/ciphers/types/cipherTypes";
 
 /**
  * Encrypts text using Baconian cipher
@@ -45,8 +45,7 @@ export const encryptBaconian = (text: string): BaconianCipherResult => {
   const cleanedText = text.toUpperCase().replace(/[^A-Z]/g, "");
   let binaryPattern = "";
 
-  for (let i = 0; i < cleanedText.length; i++) {
-    const letter = cleanedText[i];
+  for (const letter of cleanedText) {
     if (letter && baconianMap[letter]) {
       binaryPattern += baconianMap[letter];
     }

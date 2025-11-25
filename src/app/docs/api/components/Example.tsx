@@ -1,4 +1,5 @@
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
+import type React from "react";
 
 interface ExampleProps {
   title: string;
@@ -18,7 +19,9 @@ export default function Example({ title, children, variant = "response" }: Examp
 
   return (
     <div className={`p-4 rounded-lg border ${getVariantStyles()}`}>
-      <h4 className={`font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>{title}</h4>
+      <h4 className={`font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+        {title}
+      </h4>
       <pre className="text-sm overflow-x-auto">
         <code className={`${darkMode ? "text-gray-200" : "text-gray-800"}`}>{children}</code>
       </pre>

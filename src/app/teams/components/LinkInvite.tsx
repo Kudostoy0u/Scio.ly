@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { Send, User, X } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
@@ -34,6 +34,7 @@ export default function LinkInvite({
       setUsername("");
       onClose();
     } catch (_error) {
+      // Ignore errors
     } finally {
       setSubmitting(false);
     }

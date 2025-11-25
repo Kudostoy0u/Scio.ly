@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
     const inv = await createInvite(
       user.id,
-      String(target?.username || inviteeUsername),
+      String((target as { username?: string } | null)?.username || inviteeUsername),
       String(school),
       division,
       String(teamId)

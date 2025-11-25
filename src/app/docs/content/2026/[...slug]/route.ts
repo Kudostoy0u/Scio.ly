@@ -1,4 +1,6 @@
+// biome-ignore lint/correctness/noNodejsModules: This is a Next.js route handler (server-side), Node.js modules are valid
 import { promises as fs } from "node:fs";
+// biome-ignore lint/correctness/noNodejsModules: This is a Next.js route handler (server-side), Node.js modules are valid
 import path from "node:path";
 import { NextResponse } from "next/server";
 
@@ -30,7 +32,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ slug: string[]
       try {
         buf = await fs.readFile(p);
         break;
-      } catch {}
+      } catch {
+        // Continue to next candidate if file doesn't exist
+      }
     }
     if (!buf) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });

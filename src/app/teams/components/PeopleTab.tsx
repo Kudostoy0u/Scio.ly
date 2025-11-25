@@ -1,8 +1,8 @@
 "use client";
 
 import NamePromptModal from "@/app/components/NamePromptModal";
-import { useAuth } from "@/app/contexts/AuthContext";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useAuth } from "@/app/contexts/authContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { useTeamStore } from "@/app/hooks/useTeamStore";
 import { invalidateCache } from "@/lib/cache/teamCacheManager";
 import { trpc } from "@/lib/trpc/client";
@@ -429,7 +429,7 @@ export default function PeopleTab({
     // Removed verbose logging - not needed for business logic
 
     return filtered;
-  }, [membersDataKey, team.division, detectMemberConflicts, pendingLinkInvites]);
+  }, [membersData, detectMemberConflicts, pendingLinkInvites]);
 
   // Use the processed members directly instead of storing in state
   const filteredMembers = processedFilteredMembers;
@@ -712,7 +712,9 @@ export default function PeopleTab({
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className={`text-2xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>People</h2>
+        <h2 className={`text-2xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
+          People
+        </h2>
         {isCaptain && (
           <button
             onClick={handleInvitePerson}
@@ -888,7 +890,9 @@ export default function PeopleTab({
                         </button>
                       )}
                     </div>
-                    {member.role === "captain" && <Crown className="w-4 h-4 text-yellow-500 ml-1" />}
+                    {member.role === "captain" && (
+                      <Crown className="w-4 h-4 text-yellow-500 ml-1" />
+                    )}
                     {member.conflicts && member.conflicts.length > 0 && (
                       <div className="relative group">
                         <AlertTriangle className="w-4 h-4 text-orange-500" />
@@ -1024,10 +1028,11 @@ export default function PeopleTab({
                                         return;
                                       }
                                     }
-                                  } catch (e: any) {
+                                  } catch (e: unknown) {
                                     logger.error("Failed to remove from subteam:", e);
                                     const errorMessage =
-                                      e?.message || "Failed to remove from subteam";
+                                      (e instanceof Error ? e.message : String(e)) ||
+                                      "Failed to remove from subteam";
                                     toast.error(errorMessage);
                                   }
                                 }}
@@ -1237,10 +1242,12 @@ export default function PeopleTab({
                                   setShowSubteamDropdown(null);
                                   setSelectedMember(null);
                                 } else {
-                                  const _error = await response.json();
+                                  await response.json();
                                   toast.error("Failed to assign subteam");
                                 }
-                              } catch (_error) {}
+                              } catch {
+                                // Ignore errors
+                              }
                             }}
                             className={`w-full text-left px-4 py-2 text-sm ${darkMode ? "text-gray-300 hover:bg-gray-700" : "text-gray-700 hover:bg-gray-100"}`}
                           >
@@ -1333,7 +1340,9 @@ export default function PeopleTab({
           <div
             className={`relative ${darkMode ? "bg-gray-800" : "bg-white"} rounded-lg shadow-xl max-w-lg w-full max-h-[80vh] overflow-hidden`}
           >
-            <div className={`${darkMode ? "bg-gray-800" : "bg-white"} px-4 pt-5 pb-4 sm:p-6 sm:pb-4`}>
+            <div
+              className={`${darkMode ? "bg-gray-800" : "bg-white"} px-4 pt-5 pb-4 sm:p-6 sm:pb-4`}
+            >
               <h3
                 className={`text-lg leading-6 font-medium ${darkMode ? "text-white" : "text-gray-900"} mb-4`}
               >
@@ -1434,7 +1443,9 @@ export default function PeopleTab({
 
                         setShowEventModal(false);
                         setSelectedMember(null);
-                      } catch (_error) {}
+                      } catch (_error) {
+                        // Ignore errors
+                      }
                     }}
                     className={`w-full text-left px-4 py-2 border ${darkMode ? "border-gray-600 hover:bg-gray-700 text-white" : "border-gray-300 hover:bg-gray-50 text-gray-900"} rounded-md`}
                   >

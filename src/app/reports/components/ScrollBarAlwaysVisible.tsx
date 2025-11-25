@@ -13,7 +13,7 @@ export const ScrollBarAlwaysVisible = ({
   const [isScrollable, setIsScrollable] = React.useState(false);
   const rafPendingRef = React.useRef(false);
 
-  const recalc = () => {
+  const recalc = React.useCallback(() => {
     const el = scrollContainerRef.current;
     if (!el) {
       return;
@@ -45,7 +45,7 @@ export const ScrollBarAlwaysVisible = ({
       thumbRef.current.style.transform = `translateY(${newTop}px)`;
       thumbRef.current.style.height = `${computedThumbHeight}px`;
     }
-  };
+  }, []);
 
   React.useEffect(() => {
     const el = scrollContainerRef.current;
@@ -68,20 +68,24 @@ export const ScrollBarAlwaysVisible = ({
     try {
       ro = new ResizeObserver(() => recalc());
       ro.observe(el);
-    } catch {}
+    } catch {
+      // ResizeObserver not supported, continue without it
+    }
     return () => {
       el.removeEventListener("scroll", onScroll);
       if (ro) {
         try {
           ro.disconnect();
-        } catch {}
+        } catch {
+          // Ignore disconnect errors
+        }
       }
     };
-  }, []);
+  }, [recalc]);
 
   React.useEffect(() => {
     recalc();
-  });
+  }, [recalc]);
 
   return (
     <div className="h-full relative">

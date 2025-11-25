@@ -1,4 +1,5 @@
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
+import type React from "react";
 
 interface InfoBoxProps {
   children: React.ReactNode;
@@ -27,7 +28,9 @@ export function WarningBox({ children }: InfoBoxProps) {
         darkMode ? "bg-yellow-900/20" : "bg-yellow-50"
       }`}
     >
-      <div className={`text-sm ${darkMode ? "text-yellow-200" : "text-yellow-800"}`}>{children}</div>
+      <div className={`text-sm ${darkMode ? "text-yellow-200" : "text-yellow-800"}`}>
+        {children}
+      </div>
     </div>
   );
 }

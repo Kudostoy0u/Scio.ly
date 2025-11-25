@@ -60,7 +60,9 @@ export const getEventSubtopics = async (eventName: string): Promise<string[]> =>
               );
             }
           }
-        } catch (_error) {}
+        } catch (_error) {
+          // Ignore errors
+        }
       }
 
       // Remove duplicates and return
@@ -199,20 +201,28 @@ export const fetchRosterMembers = async (
   });
 
   // Check which roster entries are linked to team members
-  members.forEach((member: any) => {
-    const memberName = member.name;
-    if (rosterEntries.has(memberName)) {
-      const entry = rosterEntries.get(memberName)!;
-      // Only mark as linked if the member has a valid user ID and is not an unlinked roster member
-      // Unlinked roster members have username 'unknown' and should not be considered linked
-      if (member.id && member.username !== "unknown" && !member.isUnlinked) {
-        entry.isLinked = true;
-        entry.userId = member.id;
-        entry.userEmail = member.email;
-        entry.username = member.username; // Use the actual username from the API
+  members.forEach(
+    (member: {
+      name: string;
+      id: string;
+      username: string;
+      email: string;
+      isUnlinked?: boolean;
+    }) => {
+      const memberName = member.name;
+      if (rosterEntries.has(memberName)) {
+        const entry = rosterEntries.get(memberName)!;
+        // Only mark as linked if the member has a valid user ID and is not an unlinked roster member
+        // Unlinked roster members have username 'unknown' and should not be considered linked
+        if (member.id && member.username !== "unknown" && !member.isUnlinked) {
+          entry.isLinked = true;
+          entry.userId = member.id;
+          entry.userEmail = member.email;
+          entry.username = member.username; // Use the actual username from the API
+        }
       }
     }
-  });
+  );
 
   // Create final roster members list
   const rosterMembers: RosterMember[] = [];
@@ -230,7 +240,7 @@ export const fetchRosterMembers = async (
   });
 
   // Add team members who are not in the roster yet
-  members.forEach((member: any) => {
+  members.forEach((member: { name: string; id: string; username: string; email: string }) => {
     const memberName = member.name;
     if (!rosterEntries.has(memberName)) {
       rosterMembers.push({

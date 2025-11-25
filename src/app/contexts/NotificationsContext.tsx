@@ -1,7 +1,8 @@
 "use client";
 
-import { useAuth } from "@/app/contexts/AuthContext";
+import { useAuth } from "@/app/contexts/authContext";
 import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import logger from "@/lib/utils/logger";
 import type React from "react";
 import {
   createContext,
@@ -13,10 +14,14 @@ import {
   useState,
 } from "react";
 
+const NOTIFICATION_CACHE_DURATION_MS = 5 * 60 * 1000;
+
 /**
  * Notification item type definition
  * Represents a single notification with metadata
  */
+type NotificationPayload = Record<string, unknown>;
+
 type NotificationItem = {
   /** Unique notification identifier */
   id: string;
@@ -27,7 +32,7 @@ type NotificationItem = {
   /** Optional notification body text */
   body?: string;
   /** Optional notification data payload */
-  data?: any;
+  data?: NotificationPayload;
 };
 
 /**
@@ -108,7 +113,7 @@ export function NotificationsProvider({
   initialUnreadCount = 0,
 }: {
   children: React.ReactNode;
-  initialNotifications?: any[];
+  initialNotifications?: NotificationItem[];
   initialUnreadCount?: number;
 }) {
   const { user } = useAuth();
@@ -121,7 +126,6 @@ export function NotificationsProvider({
   const lastFetchTimeRef = useRef<number>(0);
   const hasInitializedWithServerDataRef = useRef(false);
   const initialNotificationsLengthRef = useRef(initialNotifications.length);
-  const cacheDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
 
   // Detect page refresh to reset session flag and clear cache on page close
   useEffect(() => {
@@ -163,25 +167,22 @@ export function NotificationsProvider({
     };
   }, [user?.id]);
 
-  const getCachedNotifications = useCallback(
-    (userId: string) => {
-      try {
-        const cached = SyncLocalStorage.getItem(`scio_notifications_${userId}`);
-        const cachedTime = SyncLocalStorage.getItem(`scio_notifications_time_${userId}`);
-        if (cached && cachedTime) {
-          const timeDiff = Date.now() - Number.parseInt(cachedTime);
-          if (timeDiff < cacheDuration) {
-            const parsed = JSON.parse(cached);
-            return parsed;
-          }
+  const getCachedNotifications = useCallback((userId: string): NotificationItem[] | null => {
+    try {
+      const cached = SyncLocalStorage.getItem(`scio_notifications_${userId}`);
+      const cachedTime = SyncLocalStorage.getItem(`scio_notifications_time_${userId}`);
+      if (cached && cachedTime) {
+        const timeDiff = Date.now() - Number.parseInt(cachedTime);
+        if (timeDiff < NOTIFICATION_CACHE_DURATION_MS) {
+          const parsed = JSON.parse(cached);
+          return parsed;
         }
-      } catch {
-        // ignore cache errors
       }
-      return null;
-    },
-    [cacheDuration]
-  );
+    } catch {
+      // ignore cache errors
+    }
+    return null;
+  }, []);
 
   const setCachedNotifications = useCallback((userId: string, data: NotificationItem[]) => {
     try {
@@ -192,14 +193,15 @@ export function NotificationsProvider({
     }
   }, []);
 
-  const _clearNotificationCache = useCallback((userId: string) => {
-    try {
-      SyncLocalStorage.removeItem(`scio_notifications_${userId}`);
-      SyncLocalStorage.removeItem(`scio_notifications_time_${userId}`);
-    } catch {
-      // ignore cache errors
-    }
-  }, []);
+  // Clear notification cache function reserved for future use
+  // const clearNotificationCache = useCallback((userId: string) => {
+  //   try {
+  //     SyncLocalStorage.removeItem(`scio_notifications_${userId}`);
+  //     SyncLocalStorage.removeItem(`scio_notifications_time_${userId}`);
+  //   } catch {
+  //     // ignore cache errors
+  //   }
+  // }, []);
 
   const fetchOnce = useCallback(
     async (forceRefresh = false) => {
@@ -210,31 +212,48 @@ export function NotificationsProvider({
         return;
       }
 
-      // Note: We fetch notifications regardless of team membership
-      // because users can have roster link invitations even if they're not team members yet
-
-      // Check cache first unless force refresh
-      if (!forceRefresh) {
+      // Helper function to check if we should use cached data
+      const shouldUseCache = (): boolean => {
+        if (forceRefresh) {
+          return false;
+        }
         const cached = getCachedNotifications(user.id);
         if (cached) {
           setNotifications(cached);
           setUnreadCount(cached.length);
-          return;
+          return true;
         }
-      }
+        return false;
+      };
 
-      // Check if we've fetched recently (within 30 seconds)
-      const now = Date.now();
-      if (!forceRefresh && now - lastFetchTimeRef.current < 30000) {
-        return;
-      }
+      // Helper function to check if we should skip fetch due to rate limiting
+      const shouldSkipFetch = (): boolean => {
+        if (forceRefresh) {
+          return false;
+        }
+        const now = Date.now();
+        return now - lastFetchTimeRef.current < 30000;
+      };
 
-      isFetchingRef.current = true;
-      lastFetchTimeRef.current = now;
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-      try {
+      // Helper function to process fetch response
+      const processFetchResponse = (json: unknown) => {
+        if (
+          json &&
+          typeof json === "object" &&
+          "success" in json &&
+          json.success &&
+          "data" in json
+        ) {
+          const jsonWithData = json as { data: unknown };
+          const list = Array.isArray(jsonWithData.data) ? jsonWithData.data : [];
+          setNotifications(list);
+          setUnreadCount(list.length);
+          setCachedNotifications(user.id, list);
+        }
+      };
+
+      // Helper function to perform the actual fetch
+      const performFetch = async (controller: AbortController) => {
         const res = await fetch("/api/notifications", {
           signal: controller.signal,
           cache: "no-store",
@@ -243,14 +262,26 @@ export function NotificationsProvider({
           return;
         }
         const json = await res.json();
-        if (json?.success) {
-          const list = Array.isArray(json.data) ? json.data : [];
-          setNotifications(list);
-          setUnreadCount(list.length);
-          setCachedNotifications(user.id, list);
-        }
-      } catch {
-        // ignore
+        processFetchResponse(json);
+      };
+
+      if (shouldUseCache()) {
+        return;
+      }
+
+      if (shouldSkipFetch()) {
+        return;
+      }
+
+      isFetchingRef.current = true;
+      lastFetchTimeRef.current = Date.now();
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      try {
+        await performFetch(controller);
+      } catch (error) {
+        logger.error("Failed to fetch notifications:", error);
       } finally {
         isFetchingRef.current = false;
       }
@@ -340,7 +371,9 @@ export function NotificationsProvider({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "markRead", id }),
         });
-      } catch {}
+      } catch (error) {
+        logger.error("Failed to mark notification as read:", error);
+      }
       const updatedNotifications = notifications.filter((n) => n.id !== id);
       setNotifications(updatedNotifications);
       setUnreadCount((c) => Math.max(0, c - 1));

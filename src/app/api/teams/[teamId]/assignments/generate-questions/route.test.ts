@@ -1,5 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Types for test helper functions
+interface TestQuestion {
+  question?: string;
+  question_text?: string;
+  options?: string[];
+  answers?: (number | string)[];
+  correct_answer?: string | number;
+}
+
+interface FormattedQuestion {
+  question_text: string;
+  question_type: "multiple_choice" | "free_response";
+  options?: string[];
+  answers: (number | string)[];
+  points: number;
+  order_index: number;
+  imageData: null;
+}
+
 // Mock the database client
 vi.mock("@/lib/db", () => ({
   client: {
@@ -179,7 +198,7 @@ describe("Assignment Question Generation", () => {
 });
 
 // Helper functions for testing (these would be extracted from the actual route)
-function validateQuestionFormat(question: any): void {
+function validateQuestionFormat(question: TestQuestion): void {
   if (question.answers === null) {
     throw new Error("Question has null answers");
   }
@@ -193,13 +212,13 @@ function validateQuestionFormat(question: any): void {
   }
 }
 
-function extractCorrectAnswerIndices(question: any): number[] {
+function extractCorrectAnswerIndices(question: TestQuestion): number[] {
   let correctAnswerIndices: number[] = [];
 
   if (Array.isArray(question.answers) && question.answers.length > 0) {
     // Standard format: answers array with numeric indices
-    correctAnswerIndices = question.answers.map((a: any) =>
-      typeof a === "number" ? a : Number.parseInt(a)
+    correctAnswerIndices = question.answers.map((a) =>
+      typeof a === "number" ? a : Number.parseInt(String(a))
     );
   } else if (question.correct_answer !== null && question.correct_answer !== undefined) {
     // Fallback: if correct_answer exists, try to extract from it
@@ -224,7 +243,10 @@ function extractCorrectAnswerIndices(question: any): number[] {
   return correctAnswerIndices;
 }
 
-function formatAssignmentQuestion(originalQuestion: any, index: number): any {
+function formatAssignmentQuestion(
+  originalQuestion: TestQuestion,
+  index: number
+): FormattedQuestion {
   const isMcq =
     originalQuestion.options &&
     Array.isArray(originalQuestion.options) &&
@@ -232,7 +254,7 @@ function formatAssignmentQuestion(originalQuestion: any, index: number): any {
 
   const correctAnswerIndices = extractCorrectAnswerIndices(originalQuestion);
 
-  const formattedQuestion = {
+  const formattedQuestion: FormattedQuestion = {
     question_text: originalQuestion.question || originalQuestion.question_text,
     question_type: isMcq ? "multiple_choice" : "free_response",
     options: isMcq ? originalQuestion.options : undefined,

@@ -83,6 +83,7 @@ interface AssignmentViewerModalProps {
   darkMode?: boolean;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex modal component with multiple sections and state management
 export default function AssignmentViewerModal({
   assignmentId,
   teamId,
@@ -162,13 +163,16 @@ export default function AssignmentViewerModal({
           <div className="p-6">
             <div className="text-center py-12">
               <div className="text-red-500 mb-4">⚠️</div>
-              <h3 className={`text-lg font-medium mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}>
+              <h3
+                className={`text-lg font-medium mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}
+              >
                 Error loading assignment
               </h3>
               <p className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                 {error || "Assignment not found"}
               </p>
               <button
+                type="button"
                 onClick={onClose}
                 className="mt-4 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
               >
@@ -194,14 +198,11 @@ export default function AssignmentViewerModal({
   const averageAccuracy =
     submittedWithAnalytics.length > 0
       ? Math.round(
-          submittedWithAnalytics.reduce(
-            (sum, m) => {
-              const correct = m.analytics?.correct_answers ?? 0;
-              const total = m.analytics?.total_questions ?? 1;
-              return sum + (correct / total) * 100;
-            },
-            0
-          ) / submittedWithAnalytics.length
+          submittedWithAnalytics.reduce((sum, m) => {
+            const correct = m.analytics?.correct_answers ?? 0;
+            const total = m.analytics?.total_questions ?? 1;
+            return sum + (correct / total) * 100;
+          }, 0) / submittedWithAnalytics.length
         )
       : 0;
 
@@ -226,6 +227,7 @@ export default function AssignmentViewerModal({
               {assignment.event_name ? ` - ${assignment.event_name}` : ""}
             </h2>
             <button
+              type="button"
               onClick={onClose}
               className={`p-2 rounded-lg flex-shrink-0 ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
             >
@@ -238,25 +240,33 @@ export default function AssignmentViewerModal({
             <div className="grid grid-cols-2 md:flex md:justify-between items-center py-2 mx-2 md:mx-4 gap-3 md:gap-0">
               <div className="flex items-center space-x-2">
                 <Clock className="w-4 h-4 md:w-5 md:h-5" />
-                <span className={`text-xs md:text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+                <span
+                  className={`text-xs md:text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+                >
                   {assignment.time_limit_minutes} min
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <FileText className="w-4 h-4 md:w-5 md:h-5" />
-                <span className={`text-xs md:text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+                <span
+                  className={`text-xs md:text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+                >
                   {assignment.questions_count} questions
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <Target className="w-4 h-4 md:w-5 md:h-5" />
-                <span className={`text-xs md:text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+                <span
+                  className={`text-xs md:text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+                >
                   {averageAccuracy}% accuracy
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <CheckCircle className="w-4 h-4 md:w-5 md:h-5" />
-                <span className={`text-xs md:text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+                <span
+                  className={`text-xs md:text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+                >
                   {submissionPercentage}% submitted
                 </span>
               </div>
@@ -282,6 +292,7 @@ export default function AssignmentViewerModal({
             {/* Student Results (also shown in analytics for quick access) */}
             <div className={`p-4 md:p-6 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
               <button
+                type="button"
                 onClick={() =>
                   setCollapsedSections((prev) => ({
                     ...prev,
@@ -302,6 +313,7 @@ export default function AssignmentViewerModal({
               {!collapsedSections.studentResults && (
                 <div className="space-y-3 mt-4">
                   {assignment.roster && assignment.roster.length > 0 ? (
+                    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex member rendering with multiple conditional states
                     assignment.roster.map((member) => {
                       const hasSubmission = !!member.submission;
                       const isGraded = member.submission?.status === "graded";
@@ -397,6 +409,7 @@ export default function AssignmentViewerModal({
             {/* Assignment Details */}
             <div className={`p-4 md:p-6 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
               <button
+                type="button"
                 onClick={() =>
                   setCollapsedSections((prev) => ({
                     ...prev,
@@ -433,7 +446,9 @@ export default function AssignmentViewerModal({
                     </div>
                   )}
                   <div className="flex flex-col md:flex-row md:justify-between space-y-1 md:space-y-0">
-                    <span className={`${darkMode ? "text-gray-300" : "text-gray-600"}`}>Created:</span>
+                    <span className={`${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+                      Created:
+                    </span>
                     <span className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}>
                       {formatDate(assignment.created_at)}
                     </span>

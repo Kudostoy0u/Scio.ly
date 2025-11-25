@@ -1,20 +1,23 @@
-import { db } from "@/lib/db";
+import { POST, type RemoveRequest } from "@/app/api/report/remove/route";
 import { blacklists as blacklistsTable, questions as questionsTable } from "@/lib/db/schema";
 import { geminiService } from "@/lib/services/gemini";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { POST } from "@/app/api/report/remove/route";
+import type { Mock } from "vitest";
 // import { and, eq } from 'drizzle-orm';
 
-// Mock dependencies
+// Mock dependencies - use vi.hoisted to define mocks before vi.mock
+const { mockDbInsert, mockDbDelete, mockDbSelect } = vi.hoisted(() => ({
+  mockDbInsert: vi.fn(),
+  mockDbDelete: vi.fn(),
+  mockDbSelect: vi.fn(),
+}));
+
 vi.mock("@/lib/db", () => ({
   db: {
-    insert: vi.fn(),
-    delete: vi.fn(),
-    select: vi.fn(),
-    from: vi.fn(),
-    where: vi.fn(),
-    limit: vi.fn(),
+    insert: mockDbInsert,
+    delete: mockDbDelete,
+    select: mockDbSelect,
   },
 }));
 
@@ -33,6 +36,11 @@ vi.mock("@/lib/db/schema", () => ({
 vi.mock("drizzle-orm", () => ({
   and: vi.fn(),
   eq: vi.fn(),
+  sql: vi.fn((strings, ...values) => ({
+    _: "sql",
+    strings,
+    values,
+  })),
 }));
 
 describe("/api/report/remove", () => {
@@ -49,7 +57,7 @@ describe("/api/report/remove", () => {
     event: "Chemistry Lab",
   };
 
-  const mockRequest = (body: any) =>
+  const mockRequest = (body: RemoveRequest) =>
     new NextRequest("http://localhost:3000/api/report/remove", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -60,23 +68,19 @@ describe("/api/report/remove", () => {
     vi.clearAllMocks();
 
     // Mock database operations - Drizzle ORM pattern
-    const mockInsert = vi.fn().mockReturnValue({
+    mockDbInsert.mockReturnValue({
       values: vi.fn().mockResolvedValue(undefined),
     });
-    const mockDelete = vi.fn().mockReturnValue({
+    mockDbDelete.mockReturnValue({
       where: vi.fn().mockResolvedValue(undefined),
     });
-    const mockSelect = vi.fn().mockReturnValue({
+    mockDbSelect.mockReturnValue({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
           limit: vi.fn().mockResolvedValue([{ id: "test-question-id" }]),
         }),
       }),
     });
-
-    (db as any).insert = mockInsert;
-    (db as any).delete = mockDelete;
-    (db as any).select = mockSelect;
   });
 
   afterEach(() => {
@@ -120,8 +124,8 @@ describe("/api/report/remove", () => {
   describe("AI Analysis", () => {
     it("should remove question when AI decides to remove", async () => {
       // Mock AI service
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestionForRemoval as any).mockResolvedValue({
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestionForRemoval as Mock).mockResolvedValue({
         shouldRemove: true,
         reason: "Question contains incorrect information",
       });
@@ -138,13 +142,16 @@ describe("/api/report/remove", () => {
       expect(data.success).toBe(true);
       expect(data.data.removed).toBe(true);
       expect(data.data.reason).toBe("Question contains incorrect information");
-      expect(geminiService.analyzeQuestionForRemoval).toHaveBeenCalledWith(mockQuestion, "test-event");
+      expect(geminiService.analyzeQuestionForRemoval).toHaveBeenCalledWith(
+        mockQuestion,
+        "test-event"
+      );
     });
 
     it("should keep question when AI decides to keep", async () => {
       // Mock AI service
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestionForRemoval as any).mockResolvedValue({
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestionForRemoval as Mock).mockResolvedValue({
         shouldRemove: false,
         reason: "Question is answerable and correct",
       });
@@ -165,7 +172,7 @@ describe("/api/report/remove", () => {
 
     it("should handle AI service unavailable", async () => {
       // Mock AI service as unavailable
-      (geminiService.isAvailable as any).mockReturnValue(false);
+      (geminiService.isAvailable as Mock).mockReturnValue(false);
 
       const request = mockRequest({
         question: mockQuestion,
@@ -183,8 +190,10 @@ describe("/api/report/remove", () => {
 
     it("should handle AI analysis errors", async () => {
       // Mock AI service to throw error
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestionForRemoval as any).mockRejectedValue(new Error("AI service error"));
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestionForRemoval as Mock).mockRejectedValue(
+        new Error("AI service error")
+      );
 
       const request = mockRequest({
         question: mockQuestion,
@@ -204,8 +213,8 @@ describe("/api/report/remove", () => {
   describe("Database Operations", () => {
     it("should insert into blacklist and delete from questions when AI removes", async () => {
       // Mock AI service to remove
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestionForRemoval as any).mockResolvedValue({
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestionForRemoval as Mock).mockResolvedValue({
         shouldRemove: true,
         reason: "Question should be removed",
       });
@@ -222,20 +231,20 @@ describe("/api/report/remove", () => {
       expect(data.data.removed).toBe(true);
 
       // Verify database operations
-      expect(db.insert).toHaveBeenCalledWith(blacklistsTable);
-      expect(db.delete).toHaveBeenCalledWith(questionsTable);
+      expect(mockDbInsert).toHaveBeenCalledWith(blacklistsTable);
+      expect(mockDbDelete).toHaveBeenCalledWith(questionsTable);
     });
 
     it("should handle database errors during removal", async () => {
       // Mock AI service to remove
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestionForRemoval as any).mockResolvedValue({
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestionForRemoval as Mock).mockResolvedValue({
         shouldRemove: true,
         reason: "Question should be removed",
       });
 
       // Mock database error
-      (db.insert as any).mockReturnValue({
+      mockDbInsert.mockReturnValue({
         values: vi.fn().mockRejectedValue(new Error("Database error")),
       });
 
@@ -253,8 +262,8 @@ describe("/api/report/remove", () => {
 
     it("should handle question deletion by ID", async () => {
       // Mock AI service to remove
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestionForRemoval as any).mockResolvedValue({
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestionForRemoval as Mock).mockResolvedValue({
         shouldRemove: true,
         reason: "Question should be removed",
       });
@@ -271,13 +280,13 @@ describe("/api/report/remove", () => {
       expect(data.data.removed).toBe(true);
 
       // Verify ID-based deletion was attempted
-      expect(db.delete).toHaveBeenCalledWith(questionsTable);
+      expect(mockDbDelete).toHaveBeenCalledWith(questionsTable);
     });
 
     it("should handle question deletion by content when ID not found", async () => {
       // Mock AI service to remove
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestionForRemoval as any).mockResolvedValue({
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestionForRemoval as Mock).mockResolvedValue({
         shouldRemove: true,
         reason: "Question should be removed",
       });
@@ -297,7 +306,7 @@ describe("/api/report/remove", () => {
       expect(data.data.removed).toBe(true);
 
       // Verify content-based deletion was attempted
-      expect(db.select).toHaveBeenCalled();
+      expect(mockDbSelect).toHaveBeenCalled();
     });
   });
 
@@ -309,8 +318,8 @@ describe("/api/report/remove", () => {
         event: "test-event",
       };
 
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestionForRemoval as any).mockResolvedValue({
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestionForRemoval as Mock).mockResolvedValue({
         shouldRemove: false,
         reason: "Question is valid",
       });
@@ -333,8 +342,8 @@ describe("/api/report/remove", () => {
         question: "A".repeat(10000), // Very long question
       };
 
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestionForRemoval as any).mockResolvedValue({
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestionForRemoval as Mock).mockResolvedValue({
         shouldRemove: false,
         reason: "Question is valid despite length",
       });
@@ -358,8 +367,8 @@ describe("/api/report/remove", () => {
         answers: ["3.14159", "π", "3.14"],
       };
 
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestionForRemoval as any).mockResolvedValue({
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestionForRemoval as Mock).mockResolvedValue({
         shouldRemove: false,
         reason: "Question with special characters is valid",
       });
@@ -379,8 +388,8 @@ describe("/api/report/remove", () => {
 
   describe("Performance and Timeout", () => {
     it("should handle AI analysis timeout", async () => {
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestionForRemoval as any).mockImplementation(
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestionForRemoval as Mock).mockImplementation(
         () => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 100))
       );
 

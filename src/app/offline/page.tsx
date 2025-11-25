@@ -1,14 +1,14 @@
 "use client";
 
+import api from "@/app/api";
 import Header from "@/app/components/Header";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import {
   listDownloadedEventSlugs,
   saveOfflineEvent,
   subscribeToDownloads,
 } from "@/app/utils/storage";
 import { useEffect, useState } from "react";
-import api from "@/app/api";
 
 type EventOption = { name: string; slug: string };
 
@@ -82,28 +82,34 @@ export default function OfflinePage() {
           return;
         }
         const flags: Record<string, boolean> = {};
-        keys.forEach((k) => {
+        for (const k of keys) {
           flags[String(k)] = true;
-        });
+        }
         setDownloaded(flags);
-      } catch {}
+      } catch {
+        /* ignore errors when listing downloaded events */
+      }
     })();
 
     const unsubscribe = subscribeToDownloads(async () => {
       try {
         const keys = await listDownloadedEventSlugs();
         const flags: Record<string, boolean> = {};
-        keys.forEach((k) => {
+        for (const k of keys) {
           flags[String(k)] = true;
-        });
+        }
         setDownloaded(flags);
-      } catch {}
+      } catch {
+        /* ignore errors when listing downloaded events */
+      }
     });
     return () => {
       cancelled = true;
       try {
         unsubscribe();
-      } catch {}
+      } catch {
+        // Ignore errors when unsubscribing
+      }
     };
   }, []);
 
@@ -112,11 +118,13 @@ export default function OfflinePage() {
       try {
         const keys = await listDownloadedEventSlugs();
         const flags: Record<string, boolean> = {};
-        keys.forEach((k) => {
+        for (const k of keys) {
           flags[String(k)] = true;
-        });
+        }
         setDownloaded(flags);
-      } catch {}
+      } catch {
+        /* ignore errors when listing downloaded events on focus */
+      }
     };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
@@ -172,8 +180,9 @@ export default function OfflinePage() {
           <div className="space-y-3">
             {events.map((evt) => (
               <div key={evt.slug} className="flex items-center justify-between">
-                <label className={`${darkMode ? "text-white" : "text-gray-900"}`}>{evt.name}</label>
+                <span className={`${darkMode ? "text-white" : "text-gray-900"}`}>{evt.name}</span>
                 <button
+                  type="button"
                   onClick={() => handleDownloadEvent(evt)}
                   disabled={!!downloading[evt.slug]}
                   className={`px-3 py-1.5 rounded-md text-sm ${darkMode ? "bg-blue-600 hover:bg-blue-700 text-white disabled:bg-blue-400" : "bg-blue-600 hover:bg-blue-700 text-white disabled:bg-blue-400"}`}

@@ -1,7 +1,7 @@
 "use client";
 
-import { memo } from "react";
 import type { ExtractedQuestion, QuestionPlagiarismSummary } from "@/app/plagiarism/types";
+import { memo } from "react";
 
 const getRiskColor = (riskLevel: string | null) => {
   if (riskLevel === "high") {
@@ -92,11 +92,20 @@ export const QuestionItem = memo(
                 if (riskLevel && hasMatches) {
                   return (
                     <button
+                      type="button"
                       onClick={() => onOpenModal(summary)}
                       className={`ml-4 flex-shrink-0 px-4 py-2 rounded-full text-xs font-medium border-2 shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2 ${getRiskColor(riskLevel)}`}
                     >
                       {getRiskText(riskLevel)}
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        role="img"
+                        aria-label="View details"
+                      >
+                        <title>View details</title>
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -131,7 +140,7 @@ export const QuestionItem = memo(
                 </div>
                 {question.options.map((option: string, optIndex: number) => (
                   <div
-                    key={optIndex}
+                    key={`${index}-option-${optIndex}-${option.slice(0, 10)}`}
                     className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors"
                   >
                     <div className="flex-shrink-0 w-5 h-5 rounded-full border-2 border-slate-300 bg-white flex items-center justify-center">

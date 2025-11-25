@@ -5,11 +5,12 @@ import logger from "@/lib/utils/logger";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import api from "@/app/api";
 // offline storage handled in fetchBaseQuestions
 // MarkdownExplanation and QuestionActions are used inside QuestionCard
 import EditQuestionModal from "@/app/components/EditQuestionModal";
 import Header from "@/app/components/Header";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 // Reuse the tested /test question loader to avoid divergence
 import { fetchQuestionsForParams } from "@/app/test/hooks/utils/fetchQuestions";
 import { loadBookmarksFromSupabase } from "@/app/utils/bookmarks";
@@ -26,14 +27,15 @@ import {
   gradeWithGemini,
 } from "@/app/utils/questionUtils";
 import { supabase } from "@/lib/supabase";
-import api from "@/app/api";
 
 import LoadingFallback from "./components/LoadingFallback";
 import QuestionCard from "./components/QuestionCard";
 //
 import { buildEditPayload } from "./utils/editPayload";
 
-export default function UnlimitedPracticePage({ initialRouterData }: { initialRouterData?: any }) {
+export default function UnlimitedPracticePage({
+  initialRouterData,
+}: { initialRouterData?: Record<string, unknown> }) {
   const router = useRouter();
 
   const [data, setData] = useState<Question[]>([]);
@@ -113,9 +115,11 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
         }
         // Dedup by normalized text and id
         const seen = new Set<string>();
-        const deduped = arr.filter((q: any) => {
-          const id = q.id ? String(q.id) : "";
-          const text = typeof q.question === "string" ? q.question.trim().toLowerCase() : "";
+        const deduped = arr.filter((q) => {
+          const qRecord = q as { id?: unknown; question?: unknown };
+          const id = qRecord.id ? String(qRecord.id) : "";
+          const text =
+            typeof qRecord.question === "string" ? qRecord.question.trim().toLowerCase() : "";
           const key = id || text;
           if (!key) {
             return true;
@@ -144,6 +148,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
     };
 
     loadBatch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Ensure the current question index is valid/stable once data is loaded
@@ -169,8 +174,8 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
         const bookmarkMap: Record<string, boolean> = {};
         bookmarks.forEach((bookmark) => {
           if (bookmark.source === "unlimited") {
-            const key = bookmark.question.imageData
-              ? `id:${bookmark.question.imageData}`
+            const key = (bookmark.question as { imageData?: string }).imageData
+              ? `id:${(bookmark.question as { imageData?: string }).imageData}`
               : bookmark.question.question;
             bookmarkMap[key] = true;
           }
@@ -276,7 +281,9 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
         // Clear stored batch so next mount won't restore old
         try {
           SyncLocalStorage.removeItem("unlimitedQuestions");
-        } catch {}
+        } catch {
+          // Ignore localStorage errors
+        }
         // Trigger fresh load by re-running initial effect logic minimally
         (async () => {
           setIsLoading(true);
@@ -301,9 +308,11 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
               }
             }
             const seen = new Set<string>();
-            const deduped = arr.filter((q: any) => {
-              const id = q.id ? String(q.id) : "";
-              const text = typeof q.question === "string" ? q.question.trim().toLowerCase() : "";
+            const deduped = arr.filter((q) => {
+              const qRecord = q as { id?: unknown; question?: unknown };
+              const id = qRecord.id ? String(qRecord.id) : "";
+              const text =
+                typeof qRecord.question === "string" ? qRecord.question.trim().toLowerCase() : "";
               const key = id || text;
               if (!key) {
                 return true;
@@ -465,9 +474,7 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
   };
   const renderQuestion = (question: Question) => {
     const currentAnswers = currentAnswer || [];
-    const key = question.imageData
-      ? `id:${question.imageData}`
-      : question.question;
+    const key = question.imageData ? `id:${question.imageData}` : question.question;
     const isBookmarked = bookmarkedQuestions[key];
     return (
       <QuestionCard
@@ -534,7 +541,9 @@ export default function UnlimitedPracticePage({ initialRouterData }: { initialRo
               onClick={handleResetTest}
               className={`group inline-flex items-center text-base font-medium ${darkMode ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"}`}
             >
-              <span className="transition-transform duration-200 group-hover:-translate-x-1">←</span>
+              <span className="transition-transform duration-200 group-hover:-translate-x-1">
+                ←
+              </span>
               <span className="ml-2">Go back</span>
             </button>
           </div>

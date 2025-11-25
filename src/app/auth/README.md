@@ -229,7 +229,7 @@ function PasswordResetComponent() {
 
 ### Authentication Form
 ```typescript
-import { useAuth } from '@/app/contexts/AuthContext';
+import { useAuth } from '@/app/contexts/authContext';
 
 function LoginForm() {
   const { login, loading, error } = useAuth();

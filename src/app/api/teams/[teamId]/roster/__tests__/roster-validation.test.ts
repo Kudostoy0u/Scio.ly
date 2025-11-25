@@ -205,13 +205,18 @@ describe("Roster API Validation", () => {
 
       // Process the data
       const roster: Record<string, string[]> = {};
-      rawData.forEach((row) => {
-        const normalizedEventName = row.event_name.replace(/\band\b/g, "&");
+      for (const row of rawData) {
+        const r = row as {
+          event_name: string;
+          slot_index: number;
+          student_name: string | null;
+        };
+        const normalizedEventName = r.event_name.replace(/\band\b/g, "&");
         if (!roster[normalizedEventName]) {
           roster[normalizedEventName] = [];
         }
-        roster[normalizedEventName][row.slot_index] = row.student_name || "";
-      });
+        roster[normalizedEventName][r.slot_index] = r.student_name || "";
+      }
 
       expect(roster).toEqual({
         Astronomy: ["John Doe", "Jane Doe"],
@@ -220,16 +225,16 @@ describe("Roster API Validation", () => {
     });
 
     it("should handle empty roster data", () => {
-      const rawData: any[] = [];
+      const rawData: unknown[] = [];
       const roster: Record<string, string[]> = {};
 
-      rawData.forEach((row) => {
+      for (const row of rawData) {
         const normalizedEventName = row.event_name.replace(/\band\b/g, "&");
         if (!roster[normalizedEventName]) {
           roster[normalizedEventName] = [];
         }
         roster[normalizedEventName][row.slot_index] = row.student_name || "";
-      });
+      }
 
       expect(roster).toEqual({});
     });
@@ -245,13 +250,13 @@ describe("Roster API Validation", () => {
       ];
 
       const roster: Record<string, string[]> = {};
-      rawData.forEach((row) => {
+      for (const row of rawData) {
         const normalizedEventName = row.event_name.replace(/\band\b/g, "&");
         if (!roster[normalizedEventName]) {
           roster[normalizedEventName] = [];
         }
         roster[normalizedEventName][row.slot_index] = row.student_name || "";
-      });
+      }
 
       expect(roster).toEqual({
         Astronomy: [""],

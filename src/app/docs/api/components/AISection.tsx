@@ -1,12 +1,12 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
-import { Zap } from "lucide-react";
+import { useTheme } from "@/app/contexts/themeContext";
 import Endpoint from "@/app/docs/api/components/Endpoint";
 import Example from "@/app/docs/api/components/Example";
 // import CollapsibleExample from '@/app/docs/api/components/CollapsibleExample';
 import { WarningBox } from "@/app/docs/api/components/InfoBox";
 import Param from "@/app/docs/api/components/Param";
+import { Zap } from "lucide-react";
 import SectionHeader from "./SectionHeader";
 
 export default function AISection() {

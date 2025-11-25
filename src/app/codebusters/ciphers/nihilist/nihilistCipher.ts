@@ -3,42 +3,36 @@
  */
 
 import type { NihilistCipherResult } from "@/app/codebusters/ciphers/types/cipherTypes";
-import { createPolybiusSquare, letterToCoordinates } from "@/app/codebusters/ciphers/utils/cipherUtils";
+import {
+  createPolybiusSquare,
+  letterToCoordinates,
+} from "@/app/codebusters/ciphers/utils/cipherUtils";
 
-/**
- * Encrypts text using Nihilist cipher
- * @param {string} text - Text to encrypt
- * @returns {NihilistCipherResult} Encrypted text and keys
- */
-export const encryptNihilist = (text: string): NihilistCipherResult => {
-  // Generate random keys
-  const polybiusKey = Array.from({ length: 8 }, () =>
+// Top-level regex for performance
+const LETTER_REGEX = /^[A-Za-z]$/;
+
+// Helper function to generate random key
+function generateRandomKey(length: number): string {
+  return Array.from({ length }, () =>
     String.fromCharCode(65 + Math.floor(Math.random() * 26))
   ).join("");
+}
 
-  const cipherKey = Array.from({ length: 6 }, () =>
-    String.fromCharCode(65 + Math.floor(Math.random() * 26))
-  ).join("");
-
-  const polybiusSquare = createPolybiusSquare(polybiusKey);
-
-  // Clean text and convert to numbers
-  const cleanText = text.toUpperCase().replace(/[^A-Z]/g, "");
-  const plaintextNumbers: number[] = [];
-
-  for (const char of cleanText) {
+// Helper function to convert text to numbers
+function textToNumbers(
+  text: string,
+  polybiusSquare: ReturnType<typeof createPolybiusSquare>
+): number[] {
+  const numbers: number[] = [];
+  for (const char of text) {
     const coords = letterToCoordinates(char, polybiusSquare);
-    plaintextNumbers.push(Number.parseInt(coords));
+    numbers.push(Number.parseInt(coords));
   }
+  return numbers;
+}
 
-  // Convert cipher key to numbers
-  const keyNumbers: number[] = [];
-  for (const char of cipherKey.toUpperCase()) {
-    const coords = letterToCoordinates(char, polybiusSquare);
-    keyNumbers.push(Number.parseInt(coords));
-  }
-
-  // Create running key
+// Helper function to create running key
+function createRunningKey(plaintextNumbers: number[], keyNumbers: number[]): number[] {
   const runningKey: number[] = [];
   for (let i = 0; i < plaintextNumbers.length; i++) {
     const keyIndex = i % keyNumbers.length;
@@ -47,8 +41,11 @@ export const encryptNihilist = (text: string): NihilistCipherResult => {
       runningKey.push(keyNum);
     }
   }
+  return runningKey;
+}
 
-  // Encrypt by adding plaintext and key numbers
+// Helper function to encrypt numbers
+function encryptNumbers(plaintextNumbers: number[], runningKey: number[]): number[] {
   const ciphertextNumbers: number[] = [];
   for (let i = 0; i < plaintextNumbers.length; i++) {
     const plainNum = plaintextNumbers[i];
@@ -57,48 +54,104 @@ export const encryptNihilist = (text: string): NihilistCipherResult => {
       ciphertextNumbers.push(plainNum + runKey);
     }
   }
+  return ciphertextNumbers;
+}
+
+// Helper function to determine block size
+function determineBlockSize(): number {
+  const roll = Math.random();
+  return roll < 0.2 ? 0 : roll < 0.4 ? 4 : roll < 0.8 ? 5 : 6;
+}
+
+// Helper function to add pair with spacing
+function addPairWithSpacing(encrypted: string, pair: string): string {
+  if (encrypted.length > 0 && !encrypted.endsWith(" ")) {
+    return `${encrypted} ${pair}`;
+  }
+  return `${encrypted}${pair}`;
+}
+
+// Helper function to process original text characters
+function processOriginalText(
+  originalText: string,
+  pairs: string[]
+): { encrypted: string; pairIndex: number } {
+  let encrypted = "";
+  let pi = 0;
+  for (let i = 0; i < originalText.length && pi < pairs.length; i++) {
+    const ch = originalText[i];
+    if (ch && LETTER_REGEX.test(ch)) {
+      const pair = pairs[pi];
+      if (pair !== undefined) {
+        encrypted = addPairWithSpacing(encrypted, pair);
+        pi++;
+      }
+    } else if (ch === " ") {
+      encrypted += "   ";
+    }
+  }
+  return { encrypted, pairIndex: pi };
+}
+
+// Helper function to add remaining pairs
+function addRemainingPairs(encrypted: string, pairs: string[], startIndex: number): string {
+  let result = encrypted;
+  for (let i = startIndex; i < pairs.length; i++) {
+    const pair = pairs[i];
+    if (pair !== undefined) {
+      result = addPairWithSpacing(result, pair);
+    }
+  }
+  return result;
+}
+
+// Helper function to format with no blocking (preserve spaces)
+function formatWithNoBlocking(pairs: string[], originalText: string): string {
+  const { encrypted, pairIndex } = processOriginalText(originalText, pairs);
+  return addRemainingPairs(encrypted, pairs, pairIndex);
+}
+
+// Helper function to format with blocking
+function formatWithBlocking(pairs: string[], blockSize: number): string {
+  const blocks: string[] = [];
+  for (let i = 0; i < pairs.length; i += blockSize) {
+    blocks.push(pairs.slice(i, i + blockSize).join(" "));
+  }
+  return blocks.join("   "); // triple-space between blocks
+}
+
+/**
+ * Encrypts text using Nihilist cipher
+ * @param {string} text - Text to encrypt
+ * @returns {NihilistCipherResult} Encrypted text and keys
+ */
+export const encryptNihilist = (text: string): NihilistCipherResult => {
+  // Generate random keys
+  const polybiusKey = generateRandomKey(8);
+  const cipherKey = generateRandomKey(6);
+  const polybiusSquare = createPolybiusSquare(polybiusKey);
+
+  // Clean text and convert to numbers
+  const cleanText = text.toUpperCase().replace(/[^A-Z]/g, "");
+  const plaintextNumbers = textToNumbers(cleanText, polybiusSquare);
+
+  // Convert cipher key to numbers
+  const keyNumbers = textToNumbers(cipherKey.toUpperCase(), polybiusSquare);
+
+  // Create running key
+  const runningKey = createRunningKey(plaintextNumbers, keyNumbers);
+
+  // Encrypt by adding plaintext and key numbers
+  const ciphertextNumbers = encryptNumbers(plaintextNumbers, runningKey);
 
   // Format output with visual grouping
   const numberString = ciphertextNumbers.map((n) => n.toString().padStart(2, "0")).join(" ");
   const pairs = numberString.split(" ");
-  let encrypted = "";
 
   // New distribution for visual grouping: 0 (20%), 4 (20%), 5 (40%), 6 (20%)
-  const roll = Math.random();
-  const chosen = roll < 0.2 ? 0 : roll < 0.4 ? 4 : roll < 0.8 ? 5 : 6;
-
-  if (chosen === 0) {
-    // Map spaces in original quote to gaps between tokens
-    const original = text;
-    let pi = 0;
-    for (let i = 0; i < original.length && pi < pairs.length; i++) {
-      const ch = original[i];
-      if (ch && /^[A-Za-z]$/.test(ch)) {
-        const pair = pairs[pi];
-        if (pair !== undefined) {
-          if (encrypted.length > 0 && !encrypted.endsWith(" ")) {
-            encrypted += " ";
-          }
-          encrypted += pair;
-          pi++;
-        }
-      } else if (ch === " ") {
-        encrypted += "   ";
-      }
-    }
-    while (pi < pairs.length) {
-      if (encrypted.length > 0 && !encrypted.endsWith(" ")) {
-        encrypted += " ";
-      }
-      encrypted += pairs[pi++];
-    }
-  } else {
-    const blocks: string[] = [];
-    for (let i = 0; i < pairs.length; i += chosen) {
-      blocks.push(pairs.slice(i, i + chosen).join(" "));
-    }
-    encrypted = blocks.join("   "); // triple-space between blocks
-  }
+  const blockSize = determineBlockSize();
+  const encrypted =
+    blockSize === 0 ? formatWithNoBlocking(pairs, text) : formatWithBlocking(pairs, blockSize);
 
   return { encrypted, polybiusKey, cipherKey };
 };

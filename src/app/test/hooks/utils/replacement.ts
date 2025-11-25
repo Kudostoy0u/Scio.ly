@@ -1,10 +1,10 @@
+import api from "@/app/api";
 import type { Question } from "@/app/utils/geminiService";
 import { buildApiParams } from "@/app/utils/questionUtils";
 import { getEventOfflineQuestions } from "@/app/utils/storage";
-import api from "@/app/api";
 
 export async function fetchReplacementQuestion(
-  routerData: Record<string, any>,
+  routerData: Record<string, unknown>,
   data: Question[]
 ): Promise<Question | null> {
   try {
@@ -25,11 +25,16 @@ export async function fetchReplacementQuestion(
         if (Array.isArray(cached) && cached.length > 0) {
           const filtered =
             typesSel === "multiple-choice"
-              ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
+              ? cached.filter(
+                  (q: Record<string, unknown>) => Array.isArray(q.options) && q.options.length > 0
+                )
               : typesSel === "free-response"
-                ? cached.filter((q: any) => !Array.isArray(q.options) || q.options.length === 0)
+                ? cached.filter(
+                    (q: Record<string, unknown>) =>
+                      !Array.isArray(q.options) || q.options.length === 0
+                  )
                 : cached;
-          pool = filtered;
+          pool = filtered as unknown as Question[];
         }
       }
     } else {
@@ -50,11 +55,16 @@ export async function fetchReplacementQuestion(
           if (Array.isArray(cached) && cached.length > 0) {
             const filtered =
               typesSel === "multiple-choice"
-                ? cached.filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
+                ? cached.filter(
+                    (q: Record<string, unknown>) => Array.isArray(q.options) && q.options.length > 0
+                  )
                 : typesSel === "free-response"
-                  ? cached.filter((q: any) => !Array.isArray(q.options) || q.options.length === 0)
+                  ? cached.filter(
+                      (q: Record<string, unknown>) =>
+                        !Array.isArray(q.options) || q.options.length === 0
+                    )
                   : cached;
-            pool = filtered;
+            pool = filtered as unknown as Question[];
           }
         }
       }
@@ -65,7 +75,7 @@ export async function fetchReplacementQuestion(
       return null;
     }
     const pick = candidates[Math.floor(Math.random() * candidates.length)];
-    return pick;
+    return pick || null;
   } catch {
     return null;
   }

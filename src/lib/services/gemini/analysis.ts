@@ -2,8 +2,8 @@
  * Question analysis methods for Gemini service
  */
 
-import { Type } from "@google/genai";
 import logger from "@/lib/utils/logger";
+import { Type } from "@google/genai";
 import type { ClientWithKey } from "./client";
 import type { QuestionAnalysisResult, QuestionRemovalAnalysis } from "./types";
 
@@ -204,7 +204,10 @@ Respond with your analysis and removal recommendation.`;
     schema: object,
     imageData?: string
   ): Promise<T> {
-    const contents: any[] = [
+    const contents: Array<{
+      role: string;
+      parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }>;
+    }> = [
       {
         role: "user",
         parts: [{ text: prompt }],
@@ -213,18 +216,23 @@ Respond with your analysis and removal recommendation.`;
 
     // Add image if provided
     if (imageData) {
-      contents[0].parts.push({
-        inlineData: {
-          mimeType: "image/jpeg",
-          data: imageData.split(",")[1], // Remove data URL prefix
-        },
-      });
+      const firstContent = contents[0];
+      if (firstContent) {
+        firstContent.parts.push({
+          inlineData: {
+            mimeType: "image/jpeg",
+            data: imageData.split(",")[1] ?? "", // Remove data URL prefix
+          },
+        });
+      }
     }
 
     try {
       const response = await this.clientWithKey.client.models.generateContent({
         model: "gemini-flash-lite-latest",
-        contents,
+        contents: contents as unknown as Parameters<
+          typeof this.clientWithKey.client.models.generateContent
+        >[0]["contents"],
         config: {
           responseMimeType: "application/json",
           responseSchema: schema,

@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import EnhancedAssignmentCreator from "@/app/teams/components/EnhancedAssignmentCreator";
 import type { AssignmentCreatorProps } from "@/app/teams/components/assignment/assignmentTypes";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the child components
 vi.mock("../assignment/AssignmentDetailsStep", () => ({

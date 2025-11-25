@@ -1,6 +1,6 @@
 import { queryCockroachDB } from "@/lib/cockroachdb";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getTeamAccessCockroach, hasLeadershipAccessCockroach } from "@/lib/utils/team-auth-v2";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the CockroachDB query function
 vi.mock("@/lib/cockroachdb", () => ({
@@ -27,7 +27,11 @@ describe("Team Authentication v2", () => {
       // Mock team creator check
       mockQueryCockroachDb
         .mockResolvedValueOnce({
-          rows: [{ created_by: mockUserId }],
+          rows: [
+            {
+              created_by: mockUserId,
+            },
+          ],
         })
         .mockResolvedValueOnce({ rows: [] }) // No subteam memberships
         .mockResolvedValueOnce({ rows: [] }); // No roster entries
@@ -140,8 +144,16 @@ describe("Team Authentication v2", () => {
         .mockResolvedValueOnce({ rows: [] })
         .mockResolvedValueOnce({
           rows: [
-            { role: "captain", team_id: mockSubteamId, subteam_id: mockSubteamId },
-            { role: "member", team_id: subteamId2, subteam_id: subteamId2 },
+            {
+              role: "captain",
+              team_id: mockSubteamId,
+              subteam_id: mockSubteamId,
+            },
+            {
+              role: "member",
+              team_id: subteamId2,
+              subteam_id: subteamId2,
+            },
           ],
         })
         .mockResolvedValueOnce({ rows: [] });
@@ -166,7 +178,11 @@ describe("Team Authentication v2", () => {
     it("should grant leadership to team creator", async () => {
       mockQueryCockroachDb
         .mockResolvedValueOnce({
-          rows: [{ created_by: mockUserId }],
+          rows: [
+            {
+              created_by: mockUserId,
+            },
+          ],
         })
         .mockResolvedValueOnce({ rows: [] })
         .mockResolvedValueOnce({ rows: [] });
@@ -180,7 +196,12 @@ describe("Team Authentication v2", () => {
       mockQueryCockroachDb
         .mockResolvedValueOnce({ rows: [] })
         .mockResolvedValueOnce({
-          rows: [{ role: "captain", team_id: mockSubteamId }],
+          rows: [
+            {
+              role: "captain",
+              team_id: mockSubteamId,
+            },
+          ],
         })
         .mockResolvedValueOnce({ rows: [] });
 
@@ -193,7 +214,12 @@ describe("Team Authentication v2", () => {
       mockQueryCockroachDb
         .mockResolvedValueOnce({ rows: [] })
         .mockResolvedValueOnce({
-          rows: [{ role: "co_captain", team_id: mockSubteamId }],
+          rows: [
+            {
+              role: "co_captain",
+              team_id: mockSubteamId,
+            },
+          ],
         })
         .mockResolvedValueOnce({ rows: [] });
 
@@ -206,7 +232,12 @@ describe("Team Authentication v2", () => {
       mockQueryCockroachDb
         .mockResolvedValueOnce({ rows: [] })
         .mockResolvedValueOnce({
-          rows: [{ role: "member", team_id: mockSubteamId }],
+          rows: [
+            {
+              role: "member",
+              team_id: mockSubteamId,
+            },
+          ],
         })
         .mockResolvedValueOnce({ rows: [] });
 

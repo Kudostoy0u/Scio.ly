@@ -1,12 +1,17 @@
+import type { Event } from "@/app/types";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Event } from "@/app/types";
 import EventList from "./EventList";
 
 // Mock the theme context
-vi.mock("@/app/contexts/ThemeContext", () => ({
+vi.mock("@/app/contexts/themeContext", () => ({
   useTheme: () => ({ darkMode: false }),
 }));
+
+const LOADING_REGEX = /loading/i;
+const SORT_REGEX = /sort/i;
+const ALL_REGEX = /all/i;
+const AVAILABLE_EVENTS_REGEX = /available events/i;
 
 const mockEvents: Event[] = [
   {
@@ -79,7 +84,7 @@ describe("EventList", () => {
       />
     );
 
-    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    expect(screen.getByText(LOADING_REGEX)).toBeInTheDocument();
   });
 
   it("displays error state", () => {
@@ -163,7 +168,7 @@ describe("EventList", () => {
       />
     );
 
-    const sortSelect = screen.getByLabelText(/sort/i);
+    const sortSelect = screen.getByLabelText(SORT_REGEX);
     expect(sortSelect).toHaveValue("subject");
   });
 
@@ -182,7 +187,7 @@ describe("EventList", () => {
       />
     );
 
-    const sortSelect = screen.getByLabelText(/sort/i);
+    const sortSelect = screen.getByLabelText(SORT_REGEX);
     fireEvent.change(sortSelect, { target: { value: "subject" } });
 
     expect(mockOnSortChange).toHaveBeenCalledWith("subject");
@@ -222,7 +227,7 @@ describe("EventList", () => {
       />
     );
 
-    const allButton = screen.getByTitle(/all/i);
+    const allButton = screen.getByTitle(ALL_REGEX);
     fireEvent.click(allButton);
 
     expect(mockOnViewModeChange).toHaveBeenCalledWith("all");
@@ -246,6 +251,6 @@ describe("EventList", () => {
     );
 
     // Should show download indicators for offline mode
-    expect(screen.getByText(/available events/i)).toBeInTheDocument();
+    expect(screen.getByText(AVAILABLE_EVENTS_REGEX)).toBeInTheDocument();
   });
 });

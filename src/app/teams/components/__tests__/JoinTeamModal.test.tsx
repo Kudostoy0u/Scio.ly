@@ -1,6 +1,6 @@
+import JoinTeamModal from "@/app/teams/components/JoinTeamModal";
 import { fireEvent, renderWithProviders, screen, waitFor } from "@/test-utils";
 import { vi } from "vitest";
-import JoinTeamModal from "@/app/teams/components/JoinTeamModal";
 
 // Mock framer-motion
 vi.mock("framer-motion", () => ({

@@ -91,3 +91,19 @@ export interface ComparisonResult {
   tournament?: string;
   date?: string;
 }
+
+export interface TournamentTimelineEntry {
+  date: string;
+  tournamentName: string;
+  link?: string;
+  season?: string;
+  tournamentId?: number;
+}
+
+export interface EloMetadata {
+  tournaments?: Record<string, string>;
+  tournamentTimeline?: Record<string, TournamentTimelineEntry[]>;
+  states?: Record<string, string>;
+  lastUpdated?: string;
+  [key: string]: unknown;
+}

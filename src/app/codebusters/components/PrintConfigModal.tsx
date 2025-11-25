@@ -1,7 +1,7 @@
-import { PrintConfigModal as SharedPrintConfigModal } from "@/app/components/PrintConfigModal";
-import type React from "react";
 import type { QuoteData } from "@/app/codebusters/types";
 import { resolveQuestionPoints } from "@/app/codebusters/utils/gradingUtils";
+import { PrintConfigModal as SharedPrintConfigModal } from "@/app/components/PrintConfigModal";
+import type React from "react";
 
 interface PrintConfigModalProps {
   isOpen: boolean;

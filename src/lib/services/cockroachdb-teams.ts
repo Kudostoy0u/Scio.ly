@@ -1,7 +1,13 @@
-import { queryCockroachDB } from "@/lib/cockroachdb";
 import { dbPg } from "@/lib/db";
-import { newTeamGroups, newTeamMemberships, newTeamUnits } from "@/lib/db/schema/teams";
+import { users } from "@/lib/db/schema/core";
+import {
+  newTeamGroups,
+  newTeamMemberships,
+  newTeamPeople,
+  newTeamUnits,
+} from "@/lib/db/schema/teams";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import logger from "@/lib/utils/logger";
 import { and, eq, inArray, or } from "drizzle-orm";
 
 // Type for user profile data
@@ -29,7 +35,14 @@ async function getUserProfile(userId: string): Promise<UserProfile | null> {
     }
 
     return data as UserProfile;
-  } catch (_error) {
+  } catch (error) {
+    logger.error(
+      "Failed to getUserProfile",
+      error instanceof Error ? error : new Error(String(error)),
+      {
+        userId,
+      }
+    );
     return null;
   }
 }
@@ -42,7 +55,7 @@ export interface TeamMembership {
   joined_at: string;
   invited_by?: string;
   status: "active" | "inactive" | "pending" | "banned";
-  permissions?: Record<string, any>;
+  permissions?: Record<string, unknown>;
 }
 
 export interface TeamUnit {
@@ -171,31 +184,49 @@ export class CockroachDBTeamsService {
 
   async getUserArchivedTeams(userId: string): Promise<TeamWithDetails[]> {
     // Get user's archived team memberships
-    const membershipsResult = await queryCockroachDB<TeamMembership>(
-      `SELECT * FROM new_team_memberships 
-         WHERE user_id = $1 AND status = 'archived' 
-         ORDER BY joined_at ASC`,
-      [userId]
-    );
+    const membershipsResult = await dbPg
+      .select()
+      .from(newTeamMemberships)
+      .where(and(eq(newTeamMemberships.userId, userId), eq(newTeamMemberships.status, "archived")))
+      .orderBy(newTeamMemberships.joinedAt);
 
-    if (membershipsResult.rows.length === 0) {
+    if (membershipsResult.length === 0) {
       return [];
     }
 
     // Get archived team details for each membership
-    const teamIds = membershipsResult.rows.map((m) => m.team_id);
-    const teamsResult = await queryCockroachDB<any>(
-      `SELECT tu.*, tg.school, tg.division, tg.slug, tg.created_at as group_created_at
-         FROM new_team_units tu
-         JOIN new_team_groups tg ON tu.group_id = tg.id
-         WHERE tu.id = ANY($1) AND tu.status = 'archived' AND tg.status = 'archived'`,
-      [teamIds]
-    );
+    const teamIds = membershipsResult.map((m) => m.teamId);
+    const teamsResult = await dbPg
+      .select({
+        id: newTeamUnits.id,
+        group_id: newTeamUnits.groupId,
+        team_id: newTeamUnits.teamId,
+        description: newTeamUnits.description,
+        captain_code: newTeamUnits.captainCode,
+        user_code: newTeamUnits.userCode,
+        created_by: newTeamUnits.createdBy,
+        created_at: newTeamUnits.createdAt,
+        updated_at: newTeamUnits.updatedAt,
+        status: newTeamUnits.status,
+        school: newTeamGroups.school,
+        division: newTeamGroups.division,
+        slug: newTeamGroups.slug,
+        group_created_at: newTeamGroups.createdAt,
+      })
+      .from(newTeamUnits)
+      .innerJoin(newTeamGroups, eq(newTeamUnits.groupId, newTeamGroups.id))
+      .where(
+        and(
+          inArray(newTeamUnits.id, teamIds),
+          eq(newTeamUnits.status, "archived"),
+          eq(newTeamGroups.status, "archived")
+        )
+      );
 
     // Format teams with members
     const formattedTeams = await Promise.all(
-      membershipsResult.rows.map(async (membership) => {
-        const team = teamsResult.rows.find((t) => t.id === membership.team_id);
+      membershipsResult.map(async (membership) => {
+        const team = teamsResult.find((t) => t.id === membership.teamId);
         if (!team) {
           return null;
         }
@@ -252,9 +283,16 @@ export class CockroachDBTeamsService {
         joined_at: member.joinedAt?.toISOString() || new Date().toISOString(),
         invited_by: member.invitedBy || undefined,
         status: member.status as "active" | "inactive" | "pending" | "banned",
-        permissions: member.permissions as Record<string, any> | undefined,
+        permissions: member.permissions as Record<string, unknown> | undefined,
       }));
-    } catch (_error) {
+    } catch (error) {
+      logger.error(
+        "Failed to getTeamMembers",
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          teamId,
+        }
+      );
       return [];
     }
   }
@@ -427,7 +465,7 @@ export class CockroachDBTeamsService {
         joined_at: updatedMembership.joinedAt?.toISOString() || new Date().toISOString(),
         invited_by: updatedMembership.invitedBy || undefined,
         status: updatedMembership.status as "active" | "inactive" | "pending" | "banned",
-        permissions: updatedMembership.permissions as Record<string, any> | undefined,
+        permissions: updatedMembership.permissions as Record<string, unknown> | undefined,
       };
       return result;
     }
@@ -454,7 +492,7 @@ export class CockroachDBTeamsService {
       joined_at: result.joinedAt?.toISOString() || new Date().toISOString(),
       invited_by: result.invitedBy || undefined,
       status: result.status as "active" | "inactive" | "pending" | "banned",
-      permissions: result.permissions as Record<string, any> | undefined,
+      permissions: result.permissions as Record<string, unknown> | undefined,
     };
     return finalResult;
   }
@@ -464,46 +502,58 @@ export class CockroachDBTeamsService {
    */
   private async syncTeamPeopleEntry(userId: string, teamId: string, role: string): Promise<void> {
     try {
-      const userResult = await queryCockroachDB<{
-        display_name: string;
-        username: string;
-        email: string;
-      }>("SELECT display_name, username, email FROM users WHERE id = $1", [userId]);
+      const [userInfo] = await dbPg
+        .select({
+          display_name: users.displayName,
+          username: users.username,
+          email: users.email,
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
 
-      if (userResult.rows.length === 0) {
+      if (!userInfo) {
         return;
       }
 
-      const userInfo = userResult.rows[0];
-      if (!userInfo) {
-        throw new Error("User not found");
-      }
       const displayName =
         userInfo.display_name ||
         userInfo.username ||
         userInfo.email?.split("@")[0] ||
         "Unknown User";
       const isAdmin = role === "captain" || role === "co_captain";
-      const existingEntry = await queryCockroachDB<{ id: string }>(
-        "SELECT id FROM new_team_people WHERE user_id = $1 AND team_unit_id = $2",
-        [userId, teamId]
-      );
+      const [existingEntry] = await dbPg
+        .select({ id: newTeamPeople.id })
+        .from(newTeamPeople)
+        .where(and(eq(newTeamPeople.userId, userId), eq(newTeamPeople.teamUnitId, teamId)))
+        .limit(1);
 
-      if (existingEntry.rows.length > 0) {
-        await queryCockroachDB(
-          `UPDATE new_team_people 
-           SET name = $1, is_admin = $2, updated_at = NOW()
-           WHERE user_id = $3 AND team_unit_id = $4`,
-          [displayName, isAdmin ? "true" : "false", userId, teamId]
-        );
+      if (existingEntry) {
+        await dbPg
+          .update(newTeamPeople)
+          .set({
+            name: displayName,
+            isAdmin: isAdmin ? "true" : "false",
+            updatedAt: new Date(),
+          })
+          .where(and(eq(newTeamPeople.userId, userId), eq(newTeamPeople.teamUnitId, teamId)));
       } else {
-        await queryCockroachDB(
-          `INSERT INTO new_team_people (team_unit_id, name, user_id, is_admin, events, created_at, updated_at)
-           VALUES ($1, $2, $3, $4, '[]', NOW(), NOW())`,
-          [teamId, displayName, userId, isAdmin ? "true" : "false"]
-        );
+        await dbPg.insert(newTeamPeople).values({
+          teamUnitId: teamId,
+          name: displayName,
+          userId,
+          isAdmin: isAdmin ? "true" : "false",
+          events: [],
+        });
       }
-    } catch (_error) {
+    } catch (error) {
+      logger.error(
+        "Failed to syncTeamEventsToCalendar",
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          teamId,
+        }
+      );
       // Don't throw error to avoid breaking the main flow
     }
   }

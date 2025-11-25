@@ -1,6 +1,3 @@
-import type { Question } from "@/app/utils/geminiService";
-import { shuffleArray } from "@/app/utils/questionUtils";
-import logger from "@/lib/utils/logger";
 import {
   type RouterParams,
   dedupeById,
@@ -9,6 +6,9 @@ import {
   finalizeQuestions,
   supportsIdEvent,
 } from "@/app/test/services/questionLoader";
+import type { Question } from "@/app/utils/geminiService";
+import { shuffleArray } from "@/app/utils/questionUtils";
+import logger from "@/lib/utils/logger";
 
 export async function fetchQuestionsForParams(
   routerParams: RouterParams,
@@ -16,8 +16,11 @@ export async function fetchQuestionsForParams(
 ): Promise<Question[]> {
   const idPctRaw = "idPercentage" in routerParams ? routerParams.idPercentage : undefined;
   const idPct =
-    typeof idPctRaw !== "undefined" ? Math.max(0, Math.min(100, Number.parseInt(idPctRaw))) : 0;
-  const idCount = supportsIdEvent(routerParams.eventName) ? Math.round((idPct / 100) * total) : 0;
+    typeof idPctRaw !== "undefined" && idPctRaw !== null
+      ? Math.max(0, Math.min(100, Number.parseInt(String(idPctRaw))))
+      : 0;
+  const eventName = typeof routerParams.eventName === "string" ? routerParams.eventName : undefined;
+  const idCount = supportsIdEvent(eventName) ? Math.round((idPct / 100) * total) : 0;
   const baseCount = Math.max(0, total - idCount);
 
   let selectedQuestions: Question[] = [];
@@ -50,9 +53,9 @@ export async function fetchQuestionsForParams(
       }
       return out;
     };
-    const pickedEndo = takeUniqueByText(poolEndo, wants[0]);
-    const pickedNerv = takeUniqueByText(poolNerv, wants[1]);
-    const pickedSense = takeUniqueByText(poolSense, wants[2]);
+    const pickedEndo = takeUniqueByText(poolEndo, wants[0] ?? 0);
+    const pickedNerv = takeUniqueByText(poolNerv, wants[1] ?? 0);
+    const pickedSense = takeUniqueByText(poolSense, wants[2] ?? 0);
     let pickedAll = pickedEndo.concat(pickedNerv).concat(pickedSense);
     if (pickedAll.length < countTarget) {
       const deficit = countTarget - pickedAll.length;
@@ -98,13 +101,20 @@ export async function fetchQuestionsForParams(
       const subA = "Sense Organs";
       const subB = "Nervous";
       const subC = "Endocrine";
-      const tag = (q: any) =>
-        Array.isArray(q.subtopics) &&
-        q.subtopics.some((s: string) => [subA, subB, subC].includes(s));
+      const tag = (q: Question) => {
+        const subtopics = (q as { subtopics?: unknown }).subtopics;
+        return (
+          Array.isArray(subtopics) &&
+          subtopics.some((s: unknown) => typeof s === "string" && [subA, subB, subC].includes(s))
+        );
+      };
       const withTags = final.filter(tag);
       const withoutTags = final.filter((q) => !tag(q));
-      const pick = (pool: any[], count: number, sub: string) => {
-        const inSub = pool.filter((q) => Array.isArray(q.subtopics) && q.subtopics.includes(sub));
+      const pick = (pool: Question[], count: number, sub: string) => {
+        const inSub = pool.filter((q) => {
+          const subtopics = (q as { subtopics?: unknown }).subtopics;
+          return Array.isArray(subtopics) && subtopics.includes(sub);
+        });
         const taken = inSub.slice(0, count);
         return taken.length < count
           ? taken.concat(withoutTags.slice(0, count - taken.length))
@@ -126,7 +136,9 @@ export async function fetchQuestionsForParams(
         final = combined;
       }
     }
-  } catch {}
+  } catch {
+    // Ignore fetch errors
+  }
 
   logger.log("fetchQuestionsForParams finalized", { total, count: final.length });
   return final;

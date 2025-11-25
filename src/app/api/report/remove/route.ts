@@ -1,20 +1,21 @@
 import { ApiErrors, handleApiError, successResponse, validateFields } from "@/lib/api/utils";
 import { db } from "@/lib/db";
-import { blacklists as blacklistsTable } from "@/lib/db/schema/core";
 import { questions as questionsTable } from "@/lib/db/schema";
+import { blacklists as blacklistsTable } from "@/lib/db/schema/core";
 import { geminiService } from "@/lib/services/gemini";
 import type { ApiResponse } from "@/lib/types/api";
 import logger from "@/lib/utils/logger";
-import { and, eq } from "drizzle-orm";
+import { type SQL, and, eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 
 export const maxDuration = 60;
 
-interface RemoveRequest extends Record<string, unknown> {
+export interface RemoveRequest extends Record<string, unknown> {
   question: Record<string, unknown>;
   event: string;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex report removal logic with validation and database operations
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
@@ -145,7 +146,7 @@ export async function POST(request: NextRequest) {
           }
         } else {
           // Content-based deletion
-          const conditions: any[] = [
+          const conditions: SQL[] = [
             eq(questionsTable.question, String(question.question || "")),
             eq(questionsTable.event, event),
           ];

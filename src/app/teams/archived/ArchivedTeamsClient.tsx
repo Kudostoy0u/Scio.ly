@@ -1,11 +1,11 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
+import TeamLayout from "@/app/teams/components/TeamLayout";
 import { motion } from "framer-motion";
 import { Archive, ArrowLeft, RefreshCw, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import TeamLayout from "@/app/teams/components/TeamLayout";
+import { useCallback, useEffect, useState } from "react";
 
 interface Team {
   id: string;
@@ -29,7 +29,7 @@ export default function ArchivedTeamsClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const loadArchivedTeams = async () => {
+  const loadArchivedTeams = useCallback(async () => {
     try {
       setIsRefreshing(true);
       const response = await fetch("/api/teams/archived");
@@ -38,11 +38,12 @@ export default function ArchivedTeamsClient() {
         setArchivedTeams(data.teams || []);
       }
     } catch (_error) {
+      // Ignore errors
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, []);
 
   const handleTabChange = (tab: "home" | "upcoming" | "settings") => {
     if (tab === "home") {
@@ -76,17 +77,17 @@ export default function ArchivedTeamsClient() {
         // Remove from archived teams list
         setArchivedTeams((prev) => prev.filter((team) => team.slug !== teamSlug));
       } else {
-        const _error = await response.json();
+        await response.json();
         alert("Failed to delete team. Please try again.");
       }
-    } catch (_error) {
+    } catch {
       alert("Failed to delete team. Please try again.");
     }
   };
 
   useEffect(() => {
     loadArchivedTeams();
-  }, []);
+  }, [loadArchivedTeams]);
 
   if (isLoading) {
     return (
@@ -120,6 +121,7 @@ export default function ArchivedTeamsClient() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-4">
               <button
+                type="button"
                 onClick={() => router.push("/teams?view=all")}
                 className={`p-2 rounded-lg transition-colors ${
                   darkMode
@@ -134,6 +136,7 @@ export default function ArchivedTeamsClient() {
               </h1>
             </div>
             <button
+              type="button"
               onClick={loadArchivedTeams}
               disabled={isRefreshing}
               className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${
@@ -158,7 +161,9 @@ export default function ArchivedTeamsClient() {
               <Archive
                 className={`w-16 h-16 mx-auto mb-4 ${darkMode ? "text-gray-600" : "text-gray-400"}`}
               />
-              <h3 className={`text-lg font-semibold mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}>
+              <h3
+                className={`text-lg font-semibold mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}
+              >
                 No archived teams
               </h3>
               <p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>
@@ -172,6 +177,7 @@ export default function ArchivedTeamsClient() {
               transition={{ duration: 0.5 }}
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             >
+              {/* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex team rendering with multiple conditional states */}
               {archivedTeams.map((team) => (
                 <motion.div
                   key={team.id}
@@ -194,7 +200,9 @@ export default function ArchivedTeamsClient() {
                         <Users className="w-6 h-6 text-gray-500" />
                       </div>
                       <div>
-                        <h3 className={`font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>
+                        <h3
+                          className={`font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}
+                        >
                           {team.school}
                         </h3>
                         <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
@@ -241,6 +249,7 @@ export default function ArchivedTeamsClient() {
                       {team.members.length} member{team.members.length !== 1 ? "s" : ""}
                     </span>
                     <button
+                      type="button"
                       onClick={() => handleDeleteTeam(team.slug)}
                       className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                         darkMode

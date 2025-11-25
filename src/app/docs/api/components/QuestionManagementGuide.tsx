@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import CollapsibleExample from "@/app/docs/api/components/CollapsibleExample";
 
 export default function QuestionManagementGuide() {

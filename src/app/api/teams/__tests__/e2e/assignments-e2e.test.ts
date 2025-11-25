@@ -1,6 +1,6 @@
 /**
  * E2E Tests for Assignment Management
- * 
+ *
  * Tests the complete assignment workflow including:
  * - Creating assignments
  * - Fetching assignments
@@ -9,49 +9,43 @@
  * - Roster assignments
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { dbPg } from "@/lib/db";
 import {
-  newTeamAssignments,
   newTeamAssignmentQuestions,
   newTeamAssignmentRoster,
   newTeamAssignmentSubmissions,
+  newTeamAssignments,
 } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  type TestTeam,
+  type TestUser,
+  addTeamMember,
+  cleanupTestData,
+  createRosterEntry,
   createTestTeam,
   createTestUser,
-  cleanupTestData,
-  addTeamMember,
-  createRosterEntry,
-  type TestUser,
-  type TestTeam,
 } from "../utils/test-helpers";
 
 describe("Assignment Management E2E", () => {
-  let testUsers: TestUser[] = [];
-  let testTeams: TestTeam[] = [];
+  const testUsers: TestUser[] = [];
+  const testTeams: TestTeam[] = [];
 
   beforeAll(async () => {
     // Create test users
     testUsers.push(await createTestUser({ displayName: "Captain User" }));
     testUsers.push(await createTestUser({ displayName: "Member User" }));
-    
+
     // Create test team
     const team = await createTestTeam(testUsers[0].id);
     testTeams.push(team);
-    
+
     // Add member
     await addTeamMember(team.subteamId, testUsers[1].id, "member");
-    
+
     // Create roster entry for member
-    await createRosterEntry(
-      team.subteamId,
-      "Astronomy",
-      0,
-      "Member User",
-      testUsers[1].id
-    );
+    await createRosterEntry(team.subteamId, "Astronomy", 0, "Member User", testUsers[1].id);
   });
 
   afterAll(async () => {
@@ -166,11 +160,11 @@ describe("Assignment Management E2E", () => {
       expect(assignments.length).toBeGreaterThan(0);
 
       // Verify assignment structure
-      assignments.forEach((assignment) => {
+      for (const assignment of assignments) {
         expect(assignment.teamId).toBe(team.subteamId);
         expect(assignment.title).toBeDefined();
         expect(assignment.createdBy).toBeDefined();
-      });
+      }
     });
 
     it("should retrieve assignments with questions", async () => {
@@ -190,10 +184,10 @@ describe("Assignment Management E2E", () => {
           .where(eq(newTeamAssignmentQuestions.assignmentId, assignment.id));
 
         // Verify questions are properly linked
-        questions.forEach((question) => {
+        for (const question of questions) {
           expect(question.assignmentId).toBe(assignment.id);
           expect(question.questionText).toBeDefined();
-        });
+        }
       }
     });
   });
@@ -284,7 +278,7 @@ describe("Assignment Management E2E", () => {
 
   describe("Assignment Validation", () => {
     it("should require title for assignment", async () => {
-      const team = testTeams[0];
+      const _team = testTeams[0];
 
       // This should be handled by database constraints or validation
       // In a real scenario, we'd test the API endpoint validation
@@ -325,4 +319,3 @@ describe("Assignment Management E2E", () => {
     });
   });
 });
-

@@ -1,4 +1,3 @@
-import { queryCockroachDB } from "@/lib/cockroachdb";
 import { dbPg } from "@/lib/db";
 import { users } from "@/lib/db/schema/core";
 import {
@@ -7,7 +6,8 @@ import {
   newTeamRosterData,
   newTeamUnits,
 } from "@/lib/db/schema/teams";
-import { and, eq, sql } from "drizzle-orm";
+import logger from "@/lib/utils/logger";
+import { and, count, eq, or, sql } from "drizzle-orm";
 
 // Simple in-memory cache for auth results to avoid repeated database queries
 const authCache = new Map<string, { result: TeamAuthResult; timestamp: number }>();
@@ -37,6 +37,7 @@ export interface TeamAuthResult {
  * 1. Have an active team membership in any subteam of the group, OR
  * 2. Have their name in the roster of any subteam in the group
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex authorization logic with multiple database queries and conditions
 export async function checkTeamGroupAccess(
   userId: string,
   groupId: string
@@ -145,12 +146,20 @@ export async function checkTeamGroupAccess(
       hasRosterEntry,
       role,
     };
-  } catch (_error) {
+  } catch (error) {
+    logger.error(
+      "Failed to check team group access",
+      error instanceof Error ? error : new Error(String(error)),
+      {
+        userId,
+        groupId,
+      }
+    );
     return {
       isAuthorized: false,
       hasMembership: false,
       hasRosterEntry: false,
-      error: "Database error",
+      error: error instanceof Error ? error.message : "Database error",
     };
   }
 }
@@ -197,7 +206,15 @@ export async function checkTeamGroupLeadership(
     }
 
     return { hasLeadership: false };
-  } catch (_error) {
+  } catch (error) {
+    logger.error(
+      "Failed to check team group leadership",
+      error instanceof Error ? error : new Error(String(error)),
+      {
+        userId,
+        groupId,
+      }
+    );
     return { hasLeadership: false };
   }
 }
@@ -208,6 +225,7 @@ export async function checkTeamGroupLeadership(
  * 1. Have an active team membership in any subteam of the group, OR
  * 2. Have their name in the roster of any subteam in the group
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex authorization logic with multiple database queries and conditions
 export async function checkTeamGroupAccessCockroach(
   userId: string,
   groupId: string
@@ -220,85 +238,74 @@ export async function checkTeamGroupAccessCockroach(
       return cached.result;
     }
 
-    // Only log in development
-    if (process.env.NODE_ENV === "development") {
-    }
-
     // Check for active team membership
-    const membershipResult = await queryCockroachDB<{ role: string }>(
-      `SELECT tm.role 
-       FROM new_team_memberships tm
-       JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tm.user_id = $1::uuid AND tu.group_id = $2::uuid AND tm.status = 'active'`,
-      [userId, groupId]
-    );
+    const membershipResult = await dbPg
+      .select({ role: newTeamMemberships.role })
+      .from(newTeamMemberships)
+      .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+      .where(
+        and(
+          eq(newTeamMemberships.userId, userId),
+          eq(newTeamUnits.groupId, groupId),
+          eq(newTeamMemberships.status, "active")
+        )
+      );
 
-    // Only log in development
-    if (process.env.NODE_ENV === "development") {
-    }
-    const hasMembership = membershipResult.rows.length > 0;
-    const role = hasMembership && membershipResult.rows[0] ? membershipResult.rows[0].role : undefined;
+    const hasMembership = membershipResult.length > 0;
+    const role = hasMembership && membershipResult[0] ? membershipResult[0].role : undefined;
 
     // Check for roster entries (user's name appears in roster)
-    const rosterResult = await queryCockroachDB<{ count: string }>(
-      `SELECT COUNT(*) as count
-       FROM new_team_roster_data r
-       JOIN new_team_units tu ON r.team_unit_id = tu.id
-       WHERE tu.group_id = $1::uuid AND r.user_id = $2::uuid`,
-      [groupId, userId]
-    );
+    const [rosterResult] = await dbPg
+      .select({ count: count() })
+      .from(newTeamRosterData)
+      .innerJoin(newTeamUnits, eq(newTeamRosterData.teamUnitId, newTeamUnits.id))
+      .where(and(eq(newTeamUnits.groupId, groupId), eq(newTeamRosterData.userId, userId)));
 
-    // Only log in development
-    if (process.env.NODE_ENV === "development") {
-    }
-    let hasRosterEntry = rosterResult.rows[0] ? Number.parseInt(rosterResult.rows[0].count) > 0 : false;
+    let hasRosterEntry = (rosterResult?.count ?? 0) > 0;
 
     // If no roster entries by userId, check by name with a single optimized query
     if (!hasRosterEntry) {
-      // Get user names from CockroachDB
-      const userResult = await queryCockroachDB<{
-        display_name: string;
-        first_name: string;
-        last_name: string;
-      }>("SELECT display_name, first_name, last_name FROM users WHERE id = $1::uuid", [userId]);
+      // Get user names
+      const [userInfo] = await dbPg
+        .select({
+          display_name: users.displayName,
+          first_name: users.firstName,
+          last_name: users.lastName,
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
 
-      const userDisplayName = userResult.rows[0]?.display_name;
-      const userFirstName = userResult.rows[0]?.first_name;
-      const userLastName = userResult.rows[0]?.last_name;
-      // Only log in development
-      if (process.env.NODE_ENV === "development") {
-      }
+      const userDisplayName = userInfo?.display_name;
+      const userFirstName = userInfo?.first_name;
+      const userLastName = userInfo?.last_name;
 
       if (userDisplayName || userFirstName || userLastName) {
         // Use a single optimized query to check for roster entries
         // This replaces the multiple permutation approach with a single efficient query
-        const rosterByNameResult = await queryCockroachDB<{ count: string }>(
-          `SELECT COUNT(*) as count
-           FROM new_team_roster_data r
-           JOIN new_team_units tu ON r.team_unit_id = tu.id
-           WHERE tu.group_id = $1::uuid 
-           AND (
-             r.student_name = $2 OR 
-             r.student_name = $3 OR 
-             r.student_name = $4 OR
-             r.student_name = $5 OR
-             r.student_name = $6
-           )`,
-          [
-            groupId,
-            userDisplayName,
-            userFirstName,
-            userLastName,
-            userFirstName && userLastName ? `${userFirstName} ${userLastName}` : null,
-            userLastName && userFirstName ? `${userLastName}, ${userFirstName}` : null,
-          ]
-        );
+        const possibleNames = [
+          userDisplayName,
+          userFirstName,
+          userLastName,
+          userFirstName && userLastName ? `${userFirstName} ${userLastName}` : null,
+          userLastName && userFirstName ? `${userLastName}, ${userFirstName}` : null,
+        ].filter((name): name is string => name !== null);
 
-        // Only log in development
-        if (process.env.NODE_ENV === "development") {
-        }
-        if (rosterByNameResult.rows[0] && Number.parseInt(rosterByNameResult.rows[0].count) > 0) {
-          hasRosterEntry = true;
+        if (possibleNames.length > 0) {
+          const [rosterByNameResult] = await dbPg
+            .select({ count: count() })
+            .from(newTeamRosterData)
+            .innerJoin(newTeamUnits, eq(newTeamRosterData.teamUnitId, newTeamUnits.id))
+            .where(
+              and(
+                eq(newTeamUnits.groupId, groupId),
+                or(...possibleNames.map((name) => eq(newTeamRosterData.studentName, name)))
+              )
+            );
+
+          if ((rosterByNameResult?.count ?? 0) > 0) {
+            hasRosterEntry = true;
+          }
         }
       }
     }
@@ -307,28 +314,18 @@ export async function checkTeamGroupAccessCockroach(
     let isAuthorized = hasMembership || hasRosterEntry;
 
     if (!isAuthorized) {
-      // Check if user is the creator of this team group (CockroachDB)
-      const teamGroupResult = await queryCockroachDB<{ created_by: string }>(
-        "SELECT created_by FROM new_team_groups WHERE id = $1::uuid",
-        [groupId]
-      );
+      // Check if user is the creator of this team group
+      const [teamGroupResult] = await dbPg
+        .select({ createdBy: newTeamGroups.createdBy })
+        .from(newTeamGroups)
+        .where(eq(newTeamGroups.id, groupId))
+        .limit(1);
 
-      const isTeamCreator =
-        teamGroupResult.rows.length > 0 && teamGroupResult.rows[0]?.created_by === userId;
-      // Only log in development
-      if (process.env.NODE_ENV === "development") {
-      }
+      const isTeamCreator = teamGroupResult?.createdBy === userId;
 
       if (isTeamCreator) {
         isAuthorized = true;
-        // Only log in development
-        if (process.env.NODE_ENV === "development") {
-        }
       }
-    }
-
-    // Only log in development
-    if (process.env.NODE_ENV === "development") {
     }
 
     const result = {
@@ -342,12 +339,20 @@ export async function checkTeamGroupAccessCockroach(
     authCache.set(cacheKey, { result, timestamp: Date.now() });
 
     return result;
-  } catch (_error) {
+  } catch (error) {
+    logger.error(
+      "Failed to check team group access (CockroachDB)",
+      error instanceof Error ? error : new Error(String(error)),
+      {
+        userId,
+        groupId,
+      }
+    );
     return {
       isAuthorized: false,
       hasMembership: false,
       hasRosterEntry: false,
-      error: "Database error",
+      error: error instanceof Error ? error.message : "Database error",
     };
   }
 }
@@ -360,39 +365,50 @@ export async function checkTeamGroupLeadershipCockroach(
   groupId: string
 ): Promise<{ hasLeadership: boolean; role?: string }> {
   try {
-    const membershipResult = await queryCockroachDB<{ role: string }>(
-      `SELECT tm.role 
-       FROM new_team_memberships tm
-       JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tm.user_id = $1::uuid AND tu.group_id = $2::uuid AND tm.status = 'active'`,
-      [userId, groupId]
-    );
+    const membershipResult = await dbPg
+      .select({ role: newTeamMemberships.role })
+      .from(newTeamMemberships)
+      .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+      .where(
+        and(
+          eq(newTeamMemberships.userId, userId),
+          eq(newTeamUnits.groupId, groupId),
+          eq(newTeamMemberships.status, "active")
+        )
+      );
 
-    if (membershipResult.rows.length > 0) {
-      const row = membershipResult.rows[0];
-      if (!row) {
+    if (membershipResult.length > 0) {
+      const role = membershipResult[0]?.role;
+      if (!role) {
         return { hasLeadership: false, role: "member" };
       }
-      const role = row.role;
       const hasLeadership = ["captain", "co_captain"].includes(role);
       return { hasLeadership, role };
     }
 
     // If no active membership, check if user is the team creator
-    const teamGroupResult = await queryCockroachDB<{ created_by: string }>(
-      "SELECT created_by FROM new_team_groups WHERE id = $1::uuid",
-      [groupId]
-    );
+    const [teamGroupResult] = await dbPg
+      .select({ createdBy: newTeamGroups.createdBy })
+      .from(newTeamGroups)
+      .where(eq(newTeamGroups.id, groupId))
+      .limit(1);
 
-    const isTeamCreator =
-      teamGroupResult.rows.length > 0 && teamGroupResult.rows[0]?.created_by === userId;
+    const isTeamCreator = teamGroupResult?.createdBy === userId;
 
     if (isTeamCreator) {
       return { hasLeadership: true, role: "creator" };
     }
 
     return { hasLeadership: false };
-  } catch (_error) {
+  } catch (error) {
+    logger.error(
+      "Failed to check team group leadership",
+      error instanceof Error ? error : new Error(String(error)),
+      {
+        userId,
+        groupId,
+      }
+    );
     return { hasLeadership: false };
   }
 }

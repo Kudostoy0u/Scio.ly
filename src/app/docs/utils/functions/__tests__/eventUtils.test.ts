@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
-import { getPrimaryBadgeForEvent, getEventBySlug } from "../eventUtils";
-import type { DocsEvent } from "@/app/docs/utils/types/eventTypes";
 import { BINDER_EVENT_NAMES, MISC_EVENT_NAMES } from "@/app/docs/utils/constants/eventConstants";
+import type { DocsEvent } from "@/app/docs/utils/types/eventTypes";
+import { describe, expect, it } from "vitest";
+import { getEventBySlug, getPrimaryBadgeForEvent } from "../eventUtils";
 
 describe("eventUtils", () => {
   const baseEvent: DocsEvent = {
@@ -102,4 +102,3 @@ describe("eventUtils", () => {
     });
   });
 });
-

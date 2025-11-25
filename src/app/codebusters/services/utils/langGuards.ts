@@ -8,10 +8,5 @@ export const isLangObject = (val: unknown): val is LangObject => {
     return false;
   }
   const obj = val as Record<string, unknown>;
-  return (
-    "en" in obj &&
-    "es" in obj &&
-    Array.isArray(obj.en) &&
-    Array.isArray(obj.es)
-  );
+  return "en" in obj && "es" in obj && Array.isArray(obj.en) && Array.isArray(obj.es);
 };

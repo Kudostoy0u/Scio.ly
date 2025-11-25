@@ -94,6 +94,7 @@ export default function QuestionCard(props: Props) {
         <>
           {question.imageData && (
             <div className="mb-4 w-full flex justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={question.imageData}
                 alt="Question image"

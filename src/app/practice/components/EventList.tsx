@@ -1,9 +1,9 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
-import * as Icons from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useTheme } from "@/app/contexts/themeContext";
 import type { Event } from "@/app/practice/types";
+import { Archive, Clock, ClockArrowDown, ClockFading, History } from "lucide-react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 interface EventListProps {
   events: Event[];
@@ -50,9 +50,14 @@ export default function EventList({
       className={`h-full rounded-xl flex flex-col ${darkMode ? "bg-gray-800" : "bg-white shadow-md"}`}
     >
       <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
-        <h3 className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}>Available Events</h3>
+        <h3 className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}>
+          Available Events
+        </h3>
         <div className="flex items-center space-x-3">
-          <label htmlFor="sort" className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+          <label
+            htmlFor="sort"
+            className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+          >
             Sort:
           </label>
           <select
@@ -68,16 +73,12 @@ export default function EventList({
             <option value="alphabetical">Alphabetical</option>
             <option value="subject">Subject</option>
           </select>
-          <div className={`flex rounded-md border ${darkMode ? "border-gray-600" : "border-gray-300"}`}>
+          <div
+            className={`flex rounded-md border ${darkMode ? "border-gray-600" : "border-gray-300"}`}
+          >
             {(() => {
-              const CurrentIcon =
-                ("ClockArrowDown" in Icons ? Icons.ClockArrowDown : undefined) ||
-                ("History" in Icons ? Icons.History : undefined) ||
-                Icons.Clock;
-              const AllIcon =
-                ("ClockFading" in Icons ? Icons.ClockFading : undefined) ||
-                ("Archive" in Icons ? Icons.Archive : undefined) ||
-                Icons.Clock;
+              const CurrentIcon = ClockArrowDown || History || Clock;
+              const AllIcon = ClockFading || Archive || Clock;
               return (
                 <>
                   <button
@@ -140,6 +141,7 @@ export default function EventList({
         ) : (
           <ScrollBarAlwaysVisible>
             <ul className="space-y-2">
+              {/* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex event rendering logic with conditional states */}
               {sortedEvents.map((event) => {
                 const slug = event.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
                 const isDownloaded = downloadedSlugs ? downloadedSlugs.has(slug) : true;
@@ -153,6 +155,13 @@ export default function EventList({
                         onEventSelect(event.id);
                       }
                     }}
+                    onKeyDown={(e) => {
+                      if ((e.key === "Enter" || e.key === " ") && !isDisabled) {
+                        e.preventDefault();
+                        onEventSelect(event.id);
+                      }
+                    }}
+                    tabIndex={isDisabled ? -1 : 0}
                     className={`p-4 rounded-lg transition-all duration-200 ${
                       isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
                     } ${
@@ -219,7 +228,7 @@ function ScrollBarAlwaysVisible({ children }: { children: ReactNode }) {
   const [isScrollable, setIsScrollable] = useState(false);
   const rafPendingRef = useRef(false);
 
-  const recalc = () => {
+  const recalc = useCallback(() => {
     const el = scrollContainerRef.current;
     if (!el) {
       return;
@@ -255,7 +264,7 @@ function ScrollBarAlwaysVisible({ children }: { children: ReactNode }) {
       thumbRef.current.style.transform = `translateY(${newTop}px)`;
       thumbRef.current.style.height = `${computedThumbHeight}px`;
     }
-  };
+  }, []);
 
   useEffect(() => {
     const el = scrollContainerRef.current;
@@ -278,20 +287,24 @@ function ScrollBarAlwaysVisible({ children }: { children: ReactNode }) {
     try {
       ro = new ResizeObserver(() => recalc());
       ro.observe(el);
-    } catch {}
+    } catch {
+      // ResizeObserver not supported, continue without it
+    }
     return () => {
       el.removeEventListener("scroll", onScroll);
       if (ro) {
         try {
           ro.disconnect();
-        } catch {}
+        } catch {
+          // Ignore disconnect errors
+        }
       }
     };
-  }, []);
+  }, [recalc]);
 
   useEffect(() => {
     recalc();
-  });
+  }, [recalc]);
 
   return (
     <div className="h-full relative">

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import { toast } from "react-toastify";
 
-const _pdfViewer = dynamic(
+const PdfViewer = dynamic(
   () => import("@/app/docs/components/react-pdf-client").then((m) => m.PDFViewer),
   { ssr: false }
 );
@@ -59,9 +59,9 @@ export default function NotesheetPreview() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <h1 className="text-2xl font-semibold mb-4">{evt.name} – Sample Notesheet</h1>
         <div className="h-[80vh] border rounded">
-          <pdfViewer width="100%" height="100%" showToolbar={true}>
+          <PdfViewer width="100%" height="100%" showToolbar={true}>
             <DocumentComp evt={evt} />
-          </pdfViewer>
+          </PdfViewer>
         </div>
       </div>
     </div>

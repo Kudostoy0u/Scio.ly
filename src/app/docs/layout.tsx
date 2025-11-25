@@ -1,6 +1,6 @@
 "use client";
 import Header from "@/app/components/Header";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import type { ReactNode } from "react";
 
 export default function DocsLayout({ children }: { children: ReactNode }) {

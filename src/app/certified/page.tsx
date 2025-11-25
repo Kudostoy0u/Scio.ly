@@ -1,7 +1,7 @@
 "use client";
 
 import Header from "@/app/components/Header";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { Trophy } from "lucide-react";
 
 export default function CertifiedPage() {

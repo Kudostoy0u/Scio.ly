@@ -16,6 +16,54 @@ interface SummaryGridProps {
   className?: string; // optional wrapper classes
 }
 
+// Summary card component (extracted to reduce complexity)
+interface SummaryCardProps {
+  item: SummaryItem | undefined;
+  showCompactLayout: boolean;
+  cardBase: string;
+  cardPadding: string;
+  labelClass: string;
+  valueClassBase: string;
+}
+
+const SummaryCard: React.FC<SummaryCardProps> = ({
+  item,
+  showCompactLayout,
+  cardBase,
+  cardPadding,
+  labelClass,
+  valueClassBase,
+}) => {
+  if (!item) {
+    return null;
+  }
+
+  const iconOpacityClass = showCompactLayout ? "opacity-100" : "opacity-0 md:opacity-0";
+  const labelVisibilityClass = showCompactLayout
+    ? "max-h-0 opacity-0 md:max-h-6 md:opacity-100"
+    : "max-h-6 opacity-100";
+
+  return (
+    <div className={`${cardBase} ${cardPadding} relative`}>
+      {item.icon && (
+        <div
+          className={`absolute left-2 top-1/2 -translate-y-1/2 transition-opacity duration-300 md:transition-none ${iconOpacityClass}`}
+        >
+          {React.createElement(item.icon, {
+            className: `w-4 h-4 ${item.valueClassName || ""}`,
+          })}
+        </div>
+      )}
+      <div className={`${valueClassBase} ${item.valueClassName || ""}`}>{item.value}</div>
+      <div
+        className={`${labelClass} transition-all duration-300 md:transition-none overflow-hidden ${labelVisibilityClass}`}
+      >
+        {item.label}
+      </div>
+    </div>
+  );
+};
+
 export default function SummaryGrid({
   items,
   darkMode,
@@ -35,81 +83,38 @@ export default function SummaryGrid({
           : "grid-cols-2 md:grid-cols-4"
       } ${className}`}
     >
-      {/* Top-left */}
-      <div className={`${cardBase} ${cardPadding} relative`}>
-        {items[0]?.icon && (
-          <div
-            className={`absolute left-2 top-1/2 -translate-y-1/2 transition-opacity duration-300 md:transition-none ${showCompactLayout ? "opacity-100" : "opacity-0 md:opacity-0"}`}
-          >
-            {React.createElement(items[0].icon, {
-              className: `w-4 h-4 ${items[0]?.valueClassName || ""}`,
-            })}
-          </div>
-        )}
-        <div className={`${valueClassBase} ${items[0]?.valueClassName || ""}`}>{items[0]?.value}</div>
-        <div
-          className={`${labelClass} transition-all duration-300 md:transition-none overflow-hidden ${showCompactLayout ? "max-h-0 opacity-0 md:max-h-6 md:opacity-100" : "max-h-6 opacity-100"}`}
-        >
-          {items[0]?.label}
-        </div>
-      </div>
-
-      {/* Top-right */}
-      <div className={`${cardBase} ${cardPadding} relative`}>
-        {items[1]?.icon && (
-          <div
-            className={`absolute left-2 top-1/2 -translate-y-1/2 transition-opacity duration-300 md:transition-none ${showCompactLayout ? "opacity-100" : "opacity-0 md:opacity-0"}`}
-          >
-            {React.createElement(items[1].icon, {
-              className: `w-4 h-4 ${items[1]?.valueClassName || ""}`,
-            })}
-          </div>
-        )}
-        <div className={`${valueClassBase} ${items[1]?.valueClassName || ""}`}>{items[1]?.value}</div>
-        <div
-          className={`${labelClass} transition-all duration-300 md:transition-none overflow-hidden ${showCompactLayout ? "max-h-0 opacity-0 md:max-h-6 md:opacity-100" : "max-h-6 opacity-100"}`}
-        >
-          {items[1]?.label}
-        </div>
-      </div>
-
-      {/* Bottom-left */}
-      <div className={`${cardBase} ${cardPadding} relative`}>
-        {items[2]?.icon && (
-          <div
-            className={`absolute left-2 top-1/2 -translate-y-1/2 transition-opacity duration-300 md:transition-none ${showCompactLayout ? "opacity-100" : "opacity-0 md:opacity-0"}`}
-          >
-            {React.createElement(items[2].icon, {
-              className: `w-4 h-4 ${items[2]?.valueClassName || ""}`,
-            })}
-          </div>
-        )}
-        <div className={`${valueClassBase} ${items[2]?.valueClassName || ""}`}>{items[2]?.value}</div>
-        <div
-          className={`${labelClass} transition-all duration-300 md:transition-none overflow-hidden ${showCompactLayout ? "max-h-0 opacity-0 md:max-h-6 md:opacity-100" : "max-h-6 opacity-100"}`}
-        >
-          {items[2]?.label}
-        </div>
-      </div>
-
-      {/* Bottom-right */}
-      <div className={`${cardBase} ${cardPadding} relative`}>
-        {items[3]?.icon && (
-          <div
-            className={`absolute left-2 top-1/2 -translate-y-1/2 transition-opacity duration-300 md:transition-none ${showCompactLayout ? "opacity-100" : "opacity-0 md:opacity-0"}`}
-          >
-            {React.createElement(items[3].icon, {
-              className: `w-4 h-4 ${items[3]?.valueClassName || ""}`,
-            })}
-          </div>
-        )}
-        <div className={`${valueClassBase} ${items[3]?.valueClassName || ""}`}>{items[3]?.value}</div>
-        <div
-          className={`${labelClass} transition-all duration-300 md:transition-none overflow-hidden ${showCompactLayout ? "max-h-0 opacity-0 md:max-h-6 md:opacity-100" : "max-h-6 opacity-100"}`}
-        >
-          {items[3]?.label}
-        </div>
-      </div>
+      <SummaryCard
+        item={items[0]}
+        showCompactLayout={showCompactLayout}
+        cardBase={cardBase}
+        cardPadding={cardPadding}
+        labelClass={labelClass}
+        valueClassBase={valueClassBase}
+      />
+      <SummaryCard
+        item={items[1]}
+        showCompactLayout={showCompactLayout}
+        cardBase={cardBase}
+        cardPadding={cardPadding}
+        labelClass={labelClass}
+        valueClassBase={valueClassBase}
+      />
+      <SummaryCard
+        item={items[2]}
+        showCompactLayout={showCompactLayout}
+        cardBase={cardBase}
+        cardPadding={cardPadding}
+        labelClass={labelClass}
+        valueClassBase={valueClassBase}
+      />
+      <SummaryCard
+        item={items[3]}
+        showCompactLayout={showCompactLayout}
+        cardBase={cardBase}
+        cardPadding={cardPadding}
+        labelClass={labelClass}
+        valueClassBase={valueClassBase}
+      />
     </div>
   );
 }

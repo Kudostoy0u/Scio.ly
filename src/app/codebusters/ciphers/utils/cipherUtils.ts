@@ -45,19 +45,12 @@ export const formatTime = (seconds: number): string => {
   return `${minutes}:${secs < 10 ? "0" : ""}${secs}`;
 };
 
-/**
- * Creates a Polybius square from a key
- * @param {string} key - Key to use for creating the square
- * @returns {string[][]} 5x5 Polybius square
- */
-export const createPolybiusSquare = (key: string): string[][] => {
-  // Build 25-letter square with I/J combined
-  const mapIj = (ch: string) => (ch === "J" ? "I" : ch);
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const used = new Set<string>();
-  const seq: string[] = [];
-  const k = key.toUpperCase().replace(/[^A-Z]/g, "");
+// Helper function to map J to I
+const mapIj = (ch: string) => (ch === "J" ? "I" : ch);
 
+// Helper function to build sequence from key
+function buildSequenceFromKey(key: string, used: Set<string>, seq: string[]): void {
+  const k = key.toUpperCase().replace(/[^A-Z]/g, "");
   for (const c0 of k) {
     const c = mapIj(c0);
     if (c !== "J" && !used.has(c)) {
@@ -68,7 +61,11 @@ export const createPolybiusSquare = (key: string): string[][] => {
       break;
     }
   }
+}
 
+// Helper function to build sequence from alphabet
+function buildSequenceFromAlphabet(used: Set<string>, seq: string[]): void {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   for (const c0 of alphabet) {
     const c = mapIj(c0);
     if (c === "J") {
@@ -82,17 +79,39 @@ export const createPolybiusSquare = (key: string): string[][] => {
       break;
     }
   }
+}
 
+// Helper function to populate square from sequence
+function populateSquare(seq: string[]): string[][] {
   const square: string[][] = Array.from({ length: 5 }, () => Array.from({ length: 5 }, () => ""));
   let kIdx = 0;
   for (let i = 0; i < 5; i++) {
+    const row = square[i];
+    if (!row) {
+      continue;
+    }
     for (let j = 0; j < 5; j++) {
       const seqVal = seq[kIdx];
-      square[i]![j] = seqVal !== undefined ? seqVal : "";
+      row[j] = seqVal !== undefined ? seqVal : "";
       kIdx++;
     }
   }
   return square;
+}
+
+/**
+ * Creates a Polybius square from a key
+ * @param {string} key - Key to use for creating the square
+ * @returns {string[][]} 5x5 Polybius square
+ */
+export const createPolybiusSquare = (key: string): string[][] => {
+  const used = new Set<string>();
+  const seq: string[] = [];
+
+  buildSequenceFromKey(key, used, seq);
+  buildSequenceFromAlphabet(used, seq);
+
+  return populateSquare(seq);
 };
 
 /**
@@ -105,7 +124,9 @@ export const letterToCoordinates = (letter: string, square: string[][]): string 
   const L = letter === "J" ? "I" : letter;
   for (let i = 0; i < 5; i++) {
     const row = square[i];
-    if (!row) continue;
+    if (!row) {
+      continue;
+    }
     for (let j = 0; j < 5; j++) {
       if (row[j] === L) {
         return `${i + 1}${j + 1}`;

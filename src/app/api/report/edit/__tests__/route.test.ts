@@ -1,20 +1,22 @@
-import { db } from "@/lib/db";
+import { type EditRequest, POST } from "@/app/api/report/edit/route";
 import { edits as editsTable, questions as questionsTable } from "@/lib/db/schema";
 import { geminiService } from "@/lib/services/gemini";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { POST } from "@/app/api/report/edit/route";
+import type { Mock } from "vitest";
 
-// Mock the modules
+// Mock the modules - use vi.hoisted to define mocks before vi.mock
+const { mockDbSelect, mockDbInsert, mockDbUpdate } = vi.hoisted(() => ({
+  mockDbSelect: vi.fn(),
+  mockDbInsert: vi.fn(),
+  mockDbUpdate: vi.fn(),
+}));
+
 vi.mock("@/lib/db", () => ({
   db: {
-    select: vi.fn(),
-    insert: vi.fn(),
-    update: vi.fn(),
-    from: vi.fn(),
-    where: vi.fn(),
-    limit: vi.fn(),
-    set: vi.fn(),
+    select: mockDbSelect,
+    insert: mockDbInsert,
+    update: mockDbUpdate,
   },
 }));
 
@@ -33,6 +35,11 @@ vi.mock("@/lib/db/schema", () => ({
 vi.mock("drizzle-orm", () => ({
   and: vi.fn(),
   eq: vi.fn(),
+  sql: vi.fn((strings, ...values) => ({
+    _: "sql",
+    strings,
+    values,
+  })),
 }));
 
 describe("/api/report/edit", () => {
@@ -62,7 +69,7 @@ describe("/api/report/edit", () => {
     event: "Geography",
   };
 
-  const mockRequest = (body: any) =>
+  const mockRequest = (body: EditRequest) =>
     new NextRequest("http://localhost:3000/api/report/edit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -73,25 +80,21 @@ describe("/api/report/edit", () => {
     vi.clearAllMocks();
 
     // Mock database operations
-    const mockSelect = vi.fn().mockReturnValue({
+    mockDbSelect.mockReturnValue({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
           limit: vi.fn().mockResolvedValue([]),
         }),
       }),
     });
-    const mockInsert = vi.fn().mockReturnValue({
+    mockDbInsert.mockReturnValue({
       values: vi.fn().mockResolvedValue(undefined),
     });
-    const mockUpdate = vi.fn().mockReturnValue({
+    mockDbUpdate.mockReturnValue({
       set: vi.fn().mockReturnValue({
         where: vi.fn().mockResolvedValue(undefined),
       }),
     });
-
-    vi.mocked(db.select).mockImplementation(mockSelect);
-    vi.mocked(db.insert).mockImplementation(mockInsert);
-    vi.mocked(db.update).mockImplementation(mockUpdate);
   });
 
   afterEach(() => {
@@ -268,7 +271,7 @@ describe("/api/report/edit", () => {
     });
 
     it("should handle AI service unavailable", async () => {
-      (geminiService.isAvailable as any).mockReturnValue(false);
+      (geminiService.isAvailable as Mock).mockReturnValue(false);
 
       const request = mockRequest({
         originalQuestion: mockOriginalQuestion,
@@ -285,8 +288,8 @@ describe("/api/report/edit", () => {
     });
 
     it("should handle AI validation errors", async () => {
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.validateReportEdit as any).mockRejectedValue(new Error("AI service error"));
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.validateReportEdit as Mock).mockRejectedValue(new Error("AI service error"));
 
       const request = mockRequest({
         originalQuestion: mockOriginalQuestion,
@@ -312,7 +315,7 @@ describe("/api/report/edit", () => {
       });
 
       // Mock no existing edit
-      vi.mocked(db.select).mockReturnValue({
+      mockDbSelect.mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
             limit: vi.fn().mockResolvedValue([]),
@@ -331,7 +334,7 @@ describe("/api/report/edit", () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      expect(db.insert).toHaveBeenCalledWith(editsTable);
+      expect(mockDbInsert).toHaveBeenCalledWith(editsTable);
     });
 
     it("should update existing edit when one exists", async () => {
@@ -342,7 +345,7 @@ describe("/api/report/edit", () => {
       });
 
       // Mock existing edit
-      vi.mocked(db.select).mockReturnValue({
+      mockDbSelect.mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
             limit: vi.fn().mockResolvedValue([{ id: "existing-edit-id" }]),
@@ -361,7 +364,7 @@ describe("/api/report/edit", () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      expect(db.update).toHaveBeenCalledWith(editsTable);
+      expect(mockDbUpdate).toHaveBeenCalledWith(editsTable);
     });
 
     it("should handle database errors during edit creation", async () => {
@@ -372,7 +375,7 @@ describe("/api/report/edit", () => {
       });
 
       // Mock database error
-      vi.mocked(db.insert).mockReturnValue({
+      mockDbInsert.mockReturnValue({
         values: vi.fn().mockRejectedValue(new Error("Database error")),
       });
 
@@ -409,7 +412,7 @@ describe("/api/report/edit", () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      expect(db.update).toHaveBeenCalledWith(questionsTable);
+      expect(mockDbUpdate).toHaveBeenCalledWith(questionsTable);
     });
 
     it("should find question by content when ID not available", async () => {
@@ -420,7 +423,7 @@ describe("/api/report/edit", () => {
       });
 
       // Mock finding question by content
-      vi.mocked(db.select).mockReturnValue({
+      mockDbSelect.mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
             limit: vi.fn().mockResolvedValue([{ id: "found-question-id" }]),
@@ -549,8 +552,8 @@ describe("/api/report/edit", () => {
 
   describe("Performance and Timeout", () => {
     it("should handle AI validation timeout", async () => {
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.validateReportEdit as any).mockImplementation(
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.validateReportEdit as Mock).mockImplementation(
         () => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 100))
       );
 

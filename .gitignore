@@ -44,3 +44,7 @@ public/eloB.json
 public/eloC.json
 scripts/
 Peter - Peter.csv
+
+# IDE
+.cursor
+.vscode

@@ -4,7 +4,10 @@ import { parseQuestion } from "./parseQuestion";
 describe("parseQuestion", () => {
   it("parses stringified question object", () => {
     const raw = JSON.stringify({ question: "Q", options: ["A"], answers: [0], difficulty: 0.6 });
-    const q = parseQuestion(raw)!;
+    const q = parseQuestion(raw);
+    if (!q) {
+      throw new Error("Expected question to be parsed");
+    }
     expect(q.question).toBe("Q");
     expect(q.options?.length).toBe(1);
     expect(q.answers[0]).toBe(0);
@@ -18,7 +21,10 @@ describe("parseQuestion", () => {
   });
 
   it("handles object payloads", () => {
-    const q = parseQuestion({ question: "Obj", answers: ["A"], difficulty: 0.3 } as any)!;
+    const q = parseQuestion({ question: "Obj", answers: ["A"], difficulty: 0.3 } as unknown);
+    if (!q) {
+      throw new Error("Expected question to be parsed");
+    }
     expect(q.question).toBe("Obj");
     expect(q.answers[0]).toBe("A");
     expect(q.difficulty).toBe(0.3);

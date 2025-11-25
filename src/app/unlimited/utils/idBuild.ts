@@ -2,7 +2,7 @@ import type { Question } from "@/app/utils/geminiService";
 import { shuffleArray } from "@/app/utils/questionUtils";
 
 export function buildIdQuestionFromApiRow(
-  row: any,
+  row: Record<string, unknown>,
   params: { eventName?: string; types?: string; namePool: string[] }
 ): Question {
   const imgs: string[] = Array.isArray(row.images) ? row.images : [];
@@ -97,7 +97,7 @@ export function buildIdQuestionFromApiRow(
     return {
       question: frqPrompt,
       answers: [],
-      difficulty: row.difficulty ?? 0.5,
+      difficulty: typeof row.difficulty === "number" ? row.difficulty : 0.5,
       event: params.eventName || "Unknown Event",
       imageData: chosenImg,
     } as Question;

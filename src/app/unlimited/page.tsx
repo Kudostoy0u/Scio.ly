@@ -9,9 +9,11 @@ export const metadata: Metadata = {
 export default async function Page() {
   const cookieStore = await cookies();
   const raw = cookieStore.get("scio_unlimited_params")?.value;
-  let parsed: any | undefined;
+  let parsed: Record<string, unknown> | undefined;
   try {
     parsed = raw ? JSON.parse(decodeURIComponent(raw)) : undefined;
-  } catch {}
+  } catch {
+    // Ignore errors
+  }
   return <Content initialRouterData={parsed} />;
 }

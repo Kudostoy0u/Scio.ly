@@ -5,8 +5,7 @@ export async function createContext(opts?: FetchCreateContextFnOptions) {
   const user = await getServerUser();
 
   // Only log in development and only show important business logic
-  if (process.env.NODE_ENV === "development") {
-  }
+  // Development logging can be added here if needed
 
   return {
     user: user || null,

@@ -1,39 +1,46 @@
 "use client";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { DocsMarkdown } from "@/app/docs/components/DocsMarkdown";
+import type { EventMeta } from "@/app/docs/utils/eventMeta";
+import type { DocsEvent } from "@/app/docs/utils/events2026";
 import Link from "next/link";
 import React from "react";
 import { toast } from "react-toastify";
 
+type EventLink = DocsEvent["links"][number];
+type DocsSubsection = NonNullable<DocsEvent["subsections"]>[number];
+
+const GOOGLE_DOCS_URL_REGEX = /https?:\/\/docs\.google\.com\//;
+const NOTESHEET_LABEL_REGEX = /notesheet/i;
+
 interface EventDocsClientProps {
-  evt: any;
+  evt: DocsEvent;
   md: string | null;
-  meta: any;
+  meta: EventMeta;
   toc: Array<{ level: number; text: string; id: string }>;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex event docs rendering with multiple interactive features
 export function EventDocsClient({ evt, md, meta, toc }: EventDocsClientProps) {
   const { darkMode } = useTheme();
   // Prefer a Google Docs notesheet link if one exists in evt.links
-  const googleNotesheetLink = Array.isArray(evt?.links)
-    ? evt.links.find(
-        (l: any) =>
-          typeof l?.url === "string" &&
-          /https?:\/\/docs\.google\.com\//.test(l.url) &&
-          /notesheet/i.test(l?.label ?? "")
-      )
-    : null;
+  const links: EventLink[] = Array.isArray(evt?.links) ? evt.links : [];
+  const googleNotesheetLink =
+    links.find(
+      (link) =>
+        typeof link?.url === "string" &&
+        GOOGLE_DOCS_URL_REGEX.test(link.url) &&
+        NOTESHEET_LABEL_REGEX.test(link?.label ?? "")
+    ) ?? null;
   const hasGoogleNotesheet = Boolean(googleNotesheetLink?.url);
-  const filteredLinks = Array.isArray(evt?.links)
-    ? evt.links.filter(
-        (l: any) =>
-          !(
-            typeof l?.url === "string" &&
-            /https?:\/\/docs\.google\.com\//.test(l.url) &&
-            /notesheet/i.test(l?.label ?? "")
-          )
+  const filteredLinks = links.filter(
+    (link) =>
+      !(
+        typeof link?.url === "string" &&
+        GOOGLE_DOCS_URL_REGEX.test(link.url) &&
+        NOTESHEET_LABEL_REGEX.test(link?.label ?? "")
       )
-    : [];
+  );
 
   React.useEffect(() => {
     if (typeof window === "undefined") {
@@ -46,7 +53,7 @@ export function EventDocsClient({ evt, md, meta, toc }: EventDocsClientProps) {
         el.scrollIntoView({ behavior: "smooth", block: "start" });
       }
     }
-  }, [md]);
+  }, []);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -87,7 +94,9 @@ export function EventDocsClient({ evt, md, meta, toc }: EventDocsClientProps) {
                       if (el) {
                         try {
                           window.location.hash = targetId;
-                        } catch {}
+                        } catch {
+                          // Ignore hash setting errors (e.g., in some browsers or contexts)
+                        }
                         el.scrollIntoView({ behavior: "smooth", block: "start" });
                       }
                     }}
@@ -117,7 +126,9 @@ export function EventDocsClient({ evt, md, meta, toc }: EventDocsClientProps) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
               <div>
                 <span className={darkMode ? "text-gray-400" : "text-gray-600"}>Type:</span>{" "}
-                <span className={darkMode ? "text-gray-100" : "text-gray-900"}>{meta.typeLabel}</span>
+                <span className={darkMode ? "text-gray-100" : "text-gray-900"}>
+                  {meta.typeLabel}
+                </span>
               </div>
               <div>
                 <span className={darkMode ? "text-gray-400" : "text-gray-600"}>Divisions:</span>{" "}
@@ -133,10 +144,14 @@ export function EventDocsClient({ evt, md, meta, toc }: EventDocsClientProps) {
               </div>
               <div>
                 <span className={darkMode ? "text-gray-400" : "text-gray-600"}>Approx. Time:</span>{" "}
-                <span className={darkMode ? "text-gray-100" : "text-gray-900"}>{meta.approxTime}</span>
+                <span className={darkMode ? "text-gray-100" : "text-gray-900"}>
+                  {meta.approxTime}
+                </span>
               </div>
               <div className="sm:col-span-2">
-                <span className={darkMode ? "text-gray-400" : "text-gray-600"}>Allowed Resources:</span>{" "}
+                <span className={darkMode ? "text-gray-400" : "text-gray-600"}>
+                  Allowed Resources:
+                </span>{" "}
                 <span className={darkMode ? "text-gray-100" : "text-gray-900"}>
                   {meta.allowedResources}
                 </span>
@@ -148,7 +163,9 @@ export function EventDocsClient({ evt, md, meta, toc }: EventDocsClientProps) {
         {evt.subsections && evt.subsections.length > 0 && (
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className={`text-xl font-semibold ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+              <h2
+                className={`text-xl font-semibold ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+              >
                 Subsections
               </h2>
               <Link
@@ -161,7 +178,7 @@ export function EventDocsClient({ evt, md, meta, toc }: EventDocsClientProps) {
             <ul
               className={`divide-y rounded-lg overflow-hidden border ${darkMode ? "divide-gray-800 border-gray-800" : "divide-gray-200 border-gray-200"}`}
             >
-              {evt.subsections.map((s: any) => (
+              {evt.subsections.map((s: DocsSubsection) => (
                 <li
                   key={s.slug}
                   className={`flex items-center justify-between px-4 py-3 ${darkMode ? "bg-gray-900" : "bg-white"}`}
@@ -210,8 +227,10 @@ export function EventDocsClient({ evt, md, meta, toc }: EventDocsClientProps) {
           <h2 className={`text-xl font-semibold ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
             Official references
           </h2>
-          <ul className={`list-disc pl-5 space-y-1 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
-            {filteredLinks.map((link: any) => (
+          <ul
+            className={`list-disc pl-5 space-y-1 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+          >
+            {filteredLinks.map((link) => (
               <li key={link.url}>
                 <a
                   className={`hover:underline ${darkMode ? "text-blue-400" : "text-blue-600"}`}
@@ -235,7 +254,7 @@ export function EventDocsClient({ evt, md, meta, toc }: EventDocsClientProps) {
               Download a printable, rule-compliant sample notesheet. Customize with your notes.
             </p>
             <div className="flex gap-3">
-              {hasGoogleNotesheet ? (
+              {hasGoogleNotesheet && googleNotesheetLink ? (
                 <a
                   className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
                   href={googleNotesheetLink.url}
@@ -266,7 +285,7 @@ export function EventDocsClient({ evt, md, meta, toc }: EventDocsClientProps) {
               Download a printable, rule-compliant sample notesheet. Customize with your notes.
             </p>
             <div className="flex gap-3">
-              {hasGoogleNotesheet ? (
+              {hasGoogleNotesheet && googleNotesheetLink ? (
                 <a
                   className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
                   href={googleNotesheetLink.url}
@@ -277,6 +296,7 @@ export function EventDocsClient({ evt, md, meta, toc }: EventDocsClientProps) {
                 </a>
               ) : (
                 <button
+                  type="button"
                   onClick={() => {
                     toast.info(
                       <div>

@@ -1,6 +1,6 @@
 /**
  * E2E Tests for Notifications Management
- * 
+ *
  * Tests the complete notification workflow including:
  * - Fetching notifications
  * - Marking notifications as read
@@ -9,29 +9,26 @@
  * - Filtering by read status
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { dbPg } from "@/lib/db";
-import {
-  newTeamNotifications,
-} from "@/lib/db/schema/notifications";
-import { newTeamUnits } from "@/lib/db/schema/teams";
+import { newTeamNotifications } from "@/lib/db/schema/notifications";
 import { eq } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  type TestTeam,
+  type TestUser,
+  cleanupTestData,
   createTestTeam,
   createTestUser,
-  cleanupTestData,
-  type TestUser,
-  type TestTeam,
 } from "../utils/test-helpers";
 
 describe("Notifications Management E2E", () => {
-  let testUsers: TestUser[] = [];
-  let testTeams: TestTeam[] = [];
+  const testUsers: TestUser[] = [];
+  const testTeams: TestTeam[] = [];
 
   beforeAll(async () => {
     // Create test users
     testUsers.push(await createTestUser({ displayName: "Notification User" }));
-    
+
     // Create test team
     const team = await createTestTeam(testUsers[0].id);
     testTeams.push(team);
@@ -128,9 +125,7 @@ describe("Notifications Management E2E", () => {
       const unreadNotifications = await dbPg
         .select()
         .from(newTeamNotifications)
-        .where(
-          eq(newTeamNotifications.userId, user.id)
-        );
+        .where(eq(newTeamNotifications.userId, user.id));
 
       const unreadCount = unreadNotifications.filter((n) => !n.isRead).length;
       expect(unreadCount).toBeGreaterThanOrEqual(1);
@@ -194,9 +189,7 @@ describe("Notifications Management E2E", () => {
         .returning({ id: newTeamNotifications.id });
 
       // Delete notification
-      await dbPg
-        .delete(newTeamNotifications)
-        .where(eq(newTeamNotifications.id, notification.id));
+      await dbPg.delete(newTeamNotifications).where(eq(newTeamNotifications.id, notification.id));
 
       // Verify deletion
       const [deletedNotification] = await dbPg
@@ -208,4 +201,3 @@ describe("Notifications Management E2E", () => {
     });
   });
 });
-

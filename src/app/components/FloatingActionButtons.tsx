@@ -61,6 +61,7 @@ export const FloatingActionButtons: React.FC<FloatingActionButtonsProps> = ({
       {showReferenceButton && onShowReference && eventName === "Codebusters" && (
         <div className="md:hidden fixed bottom-8 right-4 z-50 flex flex-col gap-4">
           <button
+            type="button"
             onClick={onShowReference}
             className={buttonBaseClasses}
             title="Codebusters Reference"
@@ -74,6 +75,7 @@ export const FloatingActionButtons: React.FC<FloatingActionButtonsProps> = ({
       {/* Desktop Reference Button - Bottom Right */}
       {showReferenceButton && onShowReference && (
         <button
+          type="button"
           onClick={onShowReference}
           className={`hidden md:block fixed bottom-8 right-8 z-50 ${buttonBaseClasses}`}
           title={`${eventName || "Codebusters"} Reference`}

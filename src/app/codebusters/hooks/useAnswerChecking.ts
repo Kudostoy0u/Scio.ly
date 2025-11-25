@@ -1,5 +1,5 @@
-import { useCallback } from "react";
 import type { QuoteData } from "@/app/codebusters/types";
+import { useCallback } from "react";
 
 const generateKeywordAlphabet = (keyword: string): string => {
   const cleanKeyword = keyword.toUpperCase().replace(/[^A-Z]/g, "");
@@ -22,219 +22,369 @@ const generateKeywordAlphabet = (keyword: string): string => {
   return result.join("");
 };
 
+// Helper function to check Caesar cipher with known shift
+const checkCaesarWithShift = (quote: QuoteData): boolean => {
+  if (quote.caesarShift === undefined || !quote.solution) {
+    return false;
+  }
+  const shift = quote.caesarShift;
+  for (let i = 0; i < 26; i++) {
+    const plainLetter = String.fromCharCode(65 + i);
+    const cipherLetter = String.fromCharCode(((i + shift) % 26) + 65);
+    if (quote.solution[cipherLetter] !== plainLetter) {
+      return false;
+    }
+  }
+  return true;
+};
+
+// Helper function to check Caesar cipher without known shift
+const checkCaesarWithoutShift = (quote: QuoteData): boolean => {
+  if (!quote.solution) {
+    return false;
+  }
+  const ciphertext = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, "");
+  const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, "");
+  let decipheredText = "";
+  for (const cipherLetter of ciphertext) {
+    const userPlainLetter = quote.solution[cipherLetter] || "";
+    decipheredText += userPlainLetter;
+  }
+  return decipheredText === expectedPlaintext;
+};
+
+// Helper function to check Atbash cipher
+const checkAtbash = (quote: QuoteData): boolean => {
+  if (!quote.solution) {
+    return false;
+  }
+  const atbashMap = "ZYXWVUTSRQPONMLKJIHGFEDCBA";
+  for (let i = 0; i < 26; i++) {
+    const plainLetter = String.fromCharCode(65 + i);
+    const cipherLetter = atbashMap[i];
+    if (cipherLetter !== undefined && quote.solution[cipherLetter] !== plainLetter) {
+      return false;
+    }
+  }
+  return true;
+};
+
+// Helper function to check Affine cipher
+const checkAffine = (quote: QuoteData): boolean => {
+  if (quote.affineA === undefined || quote.affineB === undefined || !quote.solution) {
+    return false;
+  }
+  const a = quote.affineA;
+  const b = quote.affineB;
+  for (let i = 0; i < 26; i++) {
+    const plainLetter = String.fromCharCode(65 + i);
+    const cipherLetter = String.fromCharCode(((a * i + b) % 26) + 65);
+    if (quote.solution[cipherLetter] !== plainLetter) {
+      return false;
+    }
+  }
+  return true;
+};
+
+// Helper function to check Fractionated Morse cipher
+const checkFractionatedMorse = (quote: QuoteData): boolean => {
+  if (!(quote.solution && quote.fractionationTable)) {
+    return false;
+  }
+  for (const [cipherLetter, triplet] of Object.entries(quote.solution)) {
+    if (quote.fractionationTable[triplet] !== cipherLetter) {
+      return false;
+    }
+  }
+  return true;
+};
+
+// Valid substitution cipher types
+const SUBSTITUTION_CIPHER_TYPES = [
+  "K1 Aristocrat",
+  "K2 Aristocrat",
+  "K3 Aristocrat",
+  "K1 Patristocrat",
+  "K2 Patristocrat",
+  "K3 Patristocrat",
+  "Random Aristocrat",
+  "Random Patristocrat",
+  "Caesar",
+  "Atbash",
+  "Affine",
+  "Random Xenocrypt",
+  "K1 Xenocrypt",
+  "K2 Xenocrypt",
+  "Nihilist",
+  "Fractionated Morse",
+  "Complete Columnar",
+] as const;
+
 export const useAnswerChecking = (quotes: QuoteData[]) => {
+  // Helper function to check specific cipher types
+  const checkSpecificCipherType = useCallback((quote: QuoteData): boolean | null => {
+    if (quote.cipherType === "Caesar") {
+      return quote.caesarShift !== undefined
+        ? checkCaesarWithShift(quote)
+        : checkCaesarWithoutShift(quote);
+    }
+    if (quote.cipherType === "Atbash") {
+      return checkAtbash(quote);
+    }
+    if (quote.cipherType === "Affine") {
+      return checkAffine(quote);
+    }
+    if (quote.cipherType === "Fractionated Morse") {
+      return checkFractionatedMorse(quote);
+    }
+    return null;
+  }, []);
+
   const checkSubstitutionAnswer = useCallback(
     (quoteIndex: number): boolean => {
       const quote = quotes[quoteIndex];
-      if (!quote) {
+      if (!quote?.solution) {
         return false;
       }
       if (
-        !(
-          [
-            "K1 Aristocrat",
-            "K2 Aristocrat",
-            "K3 Aristocrat",
-            "K1 Patristocrat",
-            "K2 Patristocrat",
-            "K3 Patristocrat",
-            "Random Aristocrat",
-            "Random Patristocrat",
-            "Caesar",
-            "Atbash",
-            "Affine",
-            "Random Xenocrypt",
-            "K1 Xenocrypt",
-            "K2 Xenocrypt",
-            "Nihilist",
-            "Fractionated Morse",
-            "Complete Columnar",
-          ].includes(quote.cipherType) && quote.solution
+        !SUBSTITUTION_CIPHER_TYPES.includes(
+          quote.cipherType as (typeof SUBSTITUTION_CIPHER_TYPES)[number]
         )
       ) {
         return false;
       }
 
-      if (quote.cipherType === "Caesar" && quote.caesarShift !== undefined) {
-        const shift = quote.caesarShift;
-        for (let i = 0; i < 26; i++) {
-          const plainLetter = String.fromCharCode(65 + i);
-          const cipherLetter = String.fromCharCode(((i + shift) % 26) + 65);
-          if (quote.solution[cipherLetter] !== plainLetter) {
+      const specificResult = checkSpecificCipherType(quote);
+      if (specificResult !== null) {
+        return specificResult;
+      }
+
+      // Helper function to build substitution map for K3 ciphers
+      const buildK3SubstitutionMap = (
+        keyword: string,
+        isXeno: boolean,
+        kShift: number,
+        _quoteIndex: number
+      ): { [key: string]: string } => {
+        const substitutionMap: { [key: string]: string } = {};
+        const base = generateKeywordAlphabet(keyword);
+        const alpha = isXeno ? `${base}Ñ` : base;
+        const len = isXeno ? 27 : 26;
+        for (let i = 0; i < len; i++) {
+          const shiftedIndex = (i + kShift) % len;
+          const alphaI = alpha[i];
+          const alphaShifted = alpha[shiftedIndex];
+          if (alphaI !== undefined && alphaShifted !== undefined) {
+            substitutionMap[alphaI] = alphaShifted;
+          }
+        }
+        return substitutionMap;
+      };
+
+      // Helper function to get plain alphabet for K1/K2
+      const getPlainAlphabet = (keyword: string, isXeno: boolean, isK1: boolean): string => {
+        if (isK1) {
+          const base = generateKeywordAlphabet(keyword);
+          return isXeno ? `${base}Ñ` : base;
+        }
+        return isXeno ? "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ" : "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      };
+
+      // Helper function to get base cipher alphabet for K1/K2
+      const getBaseCipher = (keyword: string, isXeno: boolean, isK1: boolean): string => {
+        if (isK1) {
+          return isXeno ? "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ" : "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        }
+        const base = generateKeywordAlphabet(keyword);
+        return isXeno ? `${base}Ñ` : base;
+      };
+
+      // Helper function to build substitution map for K1/K2 ciphers
+      const buildK1K2SubstitutionMap = (
+        keyword: string,
+        isXeno: boolean,
+        isK1: boolean,
+        kShift: number
+      ): { [key: string]: string } => {
+        const substitutionMap: { [key: string]: string } = {};
+        const plainAlphabet = getPlainAlphabet(keyword, isXeno, isK1);
+        const baseCipher = getBaseCipher(keyword, isXeno, isK1);
+        const cipherAlphabet = baseCipher.slice(kShift) + baseCipher.slice(0, kShift);
+        const len = isXeno ? 27 : 26;
+        for (let i = 0; i < len; i++) {
+          const plainChar = plainAlphabet[i];
+          const cipherChar = cipherAlphabet[i];
+          if (plainChar !== undefined && cipherChar !== undefined) {
+            substitutionMap[plainChar] = cipherChar;
+          }
+        }
+        return substitutionMap;
+      };
+
+      // Helper function to build substitution map from provided alphabets
+      const buildSubstitutionMapFromAlphabets = (
+        plainAlphabet: string[],
+        cipherAlphabet: string[]
+      ): { [key: string]: string } => {
+        const substitutionMap: { [key: string]: string } = {};
+        const len = Math.min(plainAlphabet.length, cipherAlphabet.length);
+        for (let i = 0; i < len; i++) {
+          const paChar = plainAlphabet[i];
+          const caChar = cipherAlphabet[i];
+          if (paChar !== undefined && caChar !== undefined) {
+            substitutionMap[paChar] = caChar;
+          }
+        }
+        return substitutionMap;
+      };
+
+      // Helper function to validate solution against substitution map
+      const validateSolutionAgainstMap = (
+        solution: { [key: string]: string },
+        substitutionMap: { [key: string]: string }
+      ): boolean => {
+        for (const [cipherLetter, plainLetter] of Object.entries(solution)) {
+          if (substitutionMap[plainLetter] !== cipherLetter) {
             return false;
           }
         }
         return true;
-      }
+      };
 
-      // Caesar cipher without known shift - check if solution matches original quote
-      if (quote.cipherType === "Caesar" && quote.caesarShift === undefined) {
-        // Get the ciphertext (encrypted text)
-        const ciphertext = quote.encrypted.toUpperCase().replace(/[^A-Z]/g, "");
-        // Get the original quote (expected plaintext)
-        const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, "");
+      // Helper function to check keyword-only answer
+      const checkKeywordOnly = (quote: QuoteData): boolean => {
+        const userKeyword = (quote.keywordSolution || "").toUpperCase().replace(/[^A-Z]/g, "");
+        const expectedKeyword = quote.key || "";
+        return userKeyword === expectedKeyword.toUpperCase();
+      };
 
-        // Check if the user's solution correctly deciphers the ciphertext
-        let decipheredText = "";
-        for (const cipherLetter of ciphertext) {
-          const userPlainLetter = quote.solution[cipherLetter] || "";
-          decipheredText += userPlainLetter;
+      // Helper function to check non-keyword ciphers with key array
+      const checkNonKeywordCipher = (quote: QuoteData): boolean => {
+        if (!quote.solution) {
+          return false;
         }
-
-        // Compare deciphered text with expected plaintext
-        return decipheredText === expectedPlaintext;
-      }
-
-      if (quote.cipherType === "Atbash") {
-        const atbashMap = "ZYXWVUTSRQPONMLKJIHGFEDCBA";
-        for (let i = 0; i < 26; i++) {
-          const plainLetter = String.fromCharCode(65 + i);
-          const cipherLetter = atbashMap[i];
-          if (cipherLetter !== undefined && quote.solution[cipherLetter] !== plainLetter) {
-            return false;
-          }
-        }
-        return true;
-      }
-
-      if (
-        quote.cipherType === "Affine" &&
-        quote.affineA !== undefined &&
-        quote.affineB !== undefined
-      ) {
-        const a = quote.affineA;
-        const b = quote.affineB;
-        for (let i = 0; i < 26; i++) {
-          const plainLetter = String.fromCharCode(65 + i);
-          const cipherLetter = String.fromCharCode(((a * i + b) % 26) + 65);
-          if (quote.solution[cipherLetter] !== plainLetter) {
-            return false;
-          }
-        }
-        return true;
-      }
-
-      if (quote.cipherType === "Fractionated Morse") {
-        for (const [cipherLetter, triplet] of Object.entries(quote.solution)) {
-          if (quote.fractionationTable && quote.fractionationTable[triplet] !== cipherLetter) {
-            return false;
-          }
-        }
-        return true;
-      }
-
-      if (
-        [
-          "K1 Aristocrat",
-          "K2 Aristocrat",
-          "K3 Aristocrat",
-          "Random Aristocrat",
-          "K1 Patristocrat",
-          "K2 Patristocrat",
-          "K3 Patristocrat",
-          "Random Patristocrat",
-          "Random Xenocrypt",
-          "K1 Xenocrypt",
-          "K2 Xenocrypt",
-          "Nihilist",
-          "Complete Columnar",
-        ].includes(quote.cipherType)
-      ) {
-        if (quote.askForKeyword) {
-          const userKeyword = (quote.keywordSolution || "").toUpperCase().replace(/[^A-Z]/g, "");
-          const expectedKeyword = quote.key || "";
-
-          return userKeyword === expectedKeyword.toUpperCase();
-        }
-
-        if (
-          [
-            "K1 Aristocrat",
-            "K2 Aristocrat",
-            "K3 Aristocrat",
-            "K1 Patristocrat",
-            "K2 Patristocrat",
-            "K3 Patristocrat",
-            "K1 Xenocrypt",
-            "K2 Xenocrypt",
-            "K3 Xenocrypt",
-          ].includes(quote.cipherType)
-        ) {
-          const keyword = quote.key || "";
-          const isXeno = quote.cipherType.includes("Xenocrypt");
-
-          const substitutionMap: { [key: string]: string } = {};
-
-          if (quote.plainAlphabet && quote.cipherAlphabet) {
-            const pa = quote.plainAlphabet;
-            const ca = quote.cipherAlphabet;
-            const len = Math.min(pa.length, ca.length);
-            for (let i = 0; i < len; i++) {
-              const paChar = pa[i];
-              const caChar = ca[i];
-              if (paChar !== undefined && caChar !== undefined) {
-                substitutionMap[paChar] = caChar;
-              }
-            }
-          } else if (quote.cipherType.includes("K3")) {
-            const base = generateKeywordAlphabet(keyword);
-            const alpha = isXeno ? `${base}Ñ` : base;
-            const len = isXeno ? 27 : 26;
-            const kShift = quotes[quoteIndex]?.kShift ?? 1;
-            for (let i = 0; i < len; i++) {
-              const shiftedIndex = (i + kShift) % len;
-              const alphaI = alpha[i];
-              const alphaShifted = alpha[shiftedIndex];
-              if (alphaI !== undefined && alphaShifted !== undefined) {
-                substitutionMap[alphaI] = alphaShifted;
-              }
-            }
-          } else {
-            const plainAlphabet = quote.cipherType.includes("K1")
-              ? isXeno
-                ? `${generateKeywordAlphabet(keyword)}Ñ`
-                : generateKeywordAlphabet(keyword)
-              : isXeno
-                ? "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ"
-                : "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-            const baseCipher = quote.cipherType.includes("K1")
-              ? isXeno
-                ? "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ"
-                : "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-              : isXeno
-                ? `${generateKeywordAlphabet(keyword)}Ñ`
-                : generateKeywordAlphabet(keyword);
-            const kShift = quotes[quoteIndex]?.kShift ?? 0;
-            const cipherAlphabet = baseCipher.slice(kShift) + baseCipher.slice(0, kShift);
-            const len = isXeno ? 27 : 26;
-            for (let i = 0; i < len; i++) {
-              const plainChar = plainAlphabet[i];
-              const cipherChar = cipherAlphabet[i];
-              if (plainChar !== undefined && cipherChar !== undefined) {
-                substitutionMap[plainChar] = cipherChar;
-              }
-            }
-          }
-
-          for (const [cipherLetter, plainLetter] of Object.entries(quote.solution)) {
-            if (substitutionMap[plainLetter] !== cipherLetter) {
-              return false;
-            }
-          }
-          return true;
-        }
-
         for (const [cipherLetter, plainLetter] of Object.entries(quote.solution)) {
           if (quote.key && quote.key[plainLetter.charCodeAt(0) - 65] !== cipherLetter) {
             return false;
           }
         }
         return true;
-      }
+      };
 
-      return false;
+      // Helper function to build substitution map for keyword ciphers
+      const buildKeywordSubstitutionMap = (
+        quote: QuoteData,
+        quoteIndex: number,
+        keyword: string,
+        isXeno: boolean
+      ): { [key: string]: string } => {
+        if (quote.plainAlphabet && quote.cipherAlphabet) {
+          return buildSubstitutionMapFromAlphabets(
+            quote.plainAlphabet.split(""),
+            quote.cipherAlphabet.split("")
+          );
+        }
+        if (quote.cipherType.includes("K3")) {
+          const kShift = quotes[quoteIndex]?.kShift ?? 1;
+          return buildK3SubstitutionMap(keyword, isXeno, kShift, quoteIndex);
+        }
+        const isK1 = quote.cipherType.includes("K1");
+        const kShift = quotes[quoteIndex]?.kShift ?? 0;
+        return buildK1K2SubstitutionMap(keyword, isXeno, isK1, kShift);
+      };
+
+      // Helper function to check keyword-based ciphers
+      const checkKeywordBasedCipher = (quote: QuoteData, quoteIndex: number): boolean => {
+        if (quote.askForKeyword) {
+          return checkKeywordOnly(quote);
+        }
+
+        const keywordCipherTypes = [
+          "K1 Aristocrat",
+          "K2 Aristocrat",
+          "K3 Aristocrat",
+          "K1 Patristocrat",
+          "K2 Patristocrat",
+          "K3 Patristocrat",
+          "K1 Xenocrypt",
+          "K2 Xenocrypt",
+          "K3 Xenocrypt",
+        ];
+
+        if (!keywordCipherTypes.includes(quote.cipherType)) {
+          return checkNonKeywordCipher(quote);
+        }
+
+        const keyword = quote.key || "";
+        const isXeno = quote.cipherType.includes("Xenocrypt");
+        const substitutionMap = buildKeywordSubstitutionMap(quote, quoteIndex, keyword, isXeno);
+        if (!quote.solution) {
+          return false;
+        }
+        return validateSolutionAgainstMap(quote.solution, substitutionMap);
+      };
+
+      return checkKeywordBasedCipher(quote, quoteIndex);
     },
-    [quotes]
+    [quotes, checkSpecificCipherType]
+  );
+
+  // Helper function to validate a single Hill matrix row
+  const validateHillMatrixRow = useCallback(
+    (
+      expectedRow: (number | undefined)[],
+      actualRow: (string | undefined)[] | undefined,
+      _rowIndex: number
+    ): boolean => {
+      if (!(expectedRow && actualRow)) {
+        return false;
+      }
+      for (let j = 0; j < expectedRow.length; j++) {
+        const expectedVal = expectedRow[j];
+        if (expectedVal === undefined) {
+          return false;
+        }
+        const expected = expectedVal.toString();
+        const actual = actualRow[j] || "";
+        if (actual !== expected) {
+          return false;
+        }
+      }
+      return true;
+    },
+    []
+  );
+
+  // Helper function to validate Hill matrix
+  const validateHillMatrix = useCallback(
+    (expectedMatrix: (number | undefined)[][], actualMatrix: (string | undefined)[][]): boolean => {
+      for (let i = 0; i < expectedMatrix.length; i++) {
+        const expectedRow = expectedMatrix[i];
+        if (!expectedRow) {
+          return false;
+        }
+        if (!validateHillMatrixRow(expectedRow, actualMatrix[i], i)) {
+          return false;
+        }
+      }
+      return true;
+    },
+    [validateHillMatrixRow]
+  );
+
+  // Helper function to validate Hill plaintext
+  const validateHillPlaintext = useCallback(
+    (expectedPlaintext: string, actualPlaintext: string): boolean => {
+      for (let i = 0; i < expectedPlaintext.length; i++) {
+        const expected = expectedPlaintext[i];
+        const actual = actualPlaintext[i] || "";
+        if (actual !== expected) {
+          return false;
+        }
+      }
+      return true;
+    },
+    []
   );
 
   const checkHillAnswer = useCallback(
@@ -255,36 +405,23 @@ export const useAnswerChecking = (quotes: QuoteData[]) => {
         return false;
       }
 
-      for (let i = 0; i < expectedMatrix.length; i++) {
-        const expectedRow = expectedMatrix[i];
-        if (!expectedRow) {
-          return false;
-        }
-        for (let j = 0; j < expectedRow.length; j++) {
-          const expectedVal = expectedRow[j];
-          if (expectedVal === undefined) {
-            return false;
-          }
-          const expected = expectedVal.toString();
-          const actual = quote.hillSolution.matrix[i]?.[j] || "";
-          if (actual !== expected) {
-            return false;
-          }
-        }
+      if (!validateHillMatrix(expectedMatrix, quote.hillSolution.matrix)) {
+        return false;
       }
 
       const expectedPlaintext = quote.quote.toUpperCase().replace(/[^A-Z]/g, "");
-      for (let i = 0; i < expectedPlaintext.length; i++) {
-        const expected = expectedPlaintext[i];
-        const actual = quote.hillSolution.plaintext[i] || "";
-        if (actual !== expected) {
-          return false;
-        }
+      // Convert plaintext object to string by extracting values in order
+      if (!quote.hillSolution.plaintext) {
+        return false;
       }
-
-      return true;
+      const plaintext = quote.hillSolution.plaintext;
+      const actualPlaintextString = Object.keys(plaintext)
+        .sort((a, b) => Number(a) - Number(b))
+        .map((key) => plaintext[Number(key)] || "")
+        .join("");
+      return validateHillPlaintext(expectedPlaintext, actualPlaintextString);
     },
-    [quotes]
+    [quotes, validateHillMatrix, validateHillPlaintext]
   );
 
   const checkPortaAnswer = useCallback(

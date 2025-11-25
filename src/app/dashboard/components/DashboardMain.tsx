@@ -3,16 +3,16 @@ import SyncLocalStorage from "@/lib/database/localStorage-replacement";
 import logger from "@/lib/utils/logger";
 
 import ContactModal from "@/app/components/ContactModal";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import Header from "@/app/components/Header";
+import { useTheme } from "@/app/contexts/themeContext";
+import type { ContactFormData } from "@/app/dashboard/types";
 import { handleContactSubmission } from "@/app/utils/contactUtils";
 import type { User } from "@supabase/supabase-js";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FaPen } from "react-icons/fa";
 import { toast } from "react-toastify";
-import Header from "@components/Header";
-import type { ContactFormData } from "@/app/dashboard/types";
 import ActionButtons from "./ActionButtons";
 import AnimatedAccuracy from "./AnimatedAccuracy";
 import FavoriteConfigsCard from "./FavoriteConfigsCard";
@@ -21,166 +21,43 @@ import MetricsCard from "./MetricsCard";
 import QuestionsThisWeekChart from "./QuestionsThisWeekChart";
 import WelcomeMessage from "./WelcomeMessage";
 
-import { useAuth } from "@/app/contexts/AuthContext";
-import { BannerProvider, useBannerContext } from "@/app/dashboard/contexts/BannerContext";
+import { useAuth } from "@/app/contexts/authContext";
+import { BannerProvider, useBannerContext } from "@/app/dashboard/contexts/bannerContext";
 import { useDashboardData } from "@/app/dashboard/hooks/useDashboardData";
+import type { UseDashboardDataReturn } from "@/app/dashboard/hooks/useDashboardData";
+
+type HistoryData = UseDashboardDataReturn["historyData"];
+type DashboardMetricsData = UseDashboardDataReturn["metrics"];
+type ViewMode = "daily" | "weekly" | "allTime";
+type Totals = { questions: number; correct: number };
+
+const DAYS_IN_WEEK = 7;
 
 function DashboardContent({ initialUser }: { initialUser?: User | null }) {
-  const router = useRouter();
-  const { darkMode, setDarkMode } = useTheme();
-  const { user: authUser } = useAuth();
-  const [currentUser, setCurrentUser] = useState<User | null>(initialUser ?? null);
-  const [contactModalOpen, setContactModalOpen] = useState(false);
-  const { bannerVisible, closeBanner } = useBannerContext();
-
-  const { metrics, historyData, greetingName, isLoading } = useDashboardData(currentUser);
-
-  const [correctView, setCorrectView] = useState<"daily" | "weekly" | "allTime">(() => {
-    if (typeof window === "undefined") {
-      return "daily";
-    }
-    const stored = SyncLocalStorage.getItem("dashboard.correctView");
-    return stored === "daily" || stored === "weekly" || stored === "allTime"
-      ? (stored as "daily" | "weekly" | "allTime")
-      : "daily";
-  });
-  const [accuracyView, setAccuracyView] = useState<"daily" | "weekly" | "allTime">(() => {
-    if (typeof window === "undefined") {
-      return "daily";
-    }
-    const stored = SyncLocalStorage.getItem("dashboard.accuracyView");
-    return stored === "daily" || stored === "weekly" || stored === "allTime"
-      ? (stored as "daily" | "weekly" | "allTime")
-      : "daily";
-  });
-
-  const cardStyle = darkMode
-    ? "bg-gray-800 border border-gray-700"
-    : "bg-white border border-gray-200";
-
-  // Persist selected views for Correct Answers card and Accuracy card
-
-  useEffect(() => {
-    try {
-      if (typeof window !== "undefined") {
-        SyncLocalStorage.setItem("dashboard.correctView", correctView);
-        SyncLocalStorage.setItem("dashboard.accuracyView", accuracyView);
-      }
-    } catch (error) {
-      logger.error("Error saving dashboard view preferences to localStorage:", error);
-    }
-  }, [correctView, accuracyView]);
-
-  // Source of truth for auth is AuthContext; reflect changes locally
-  useEffect(() => {
-    setCurrentUser(authUser ?? initialUser ?? null);
-  }, [authUser, initialUser]);
-
-  const handleContact = async (data: ContactFormData) => {
-    try {
-      await handleContactSubmission(data);
-      setContactModalOpen(false);
-      toast.success("Message sent successfully!");
-    } catch (error) {
-      logger.error("Error sending contact message:", error);
-      toast.error("Failed to send message. Please try again.");
-    }
-  };
-
-  const getAccuracyForView = (view: "daily" | "weekly" | "allTime"): number => {
-    switch (view) {
-      case "daily":
-        return metrics.questionsAttempted > 0
-          ? (metrics.correctAnswers / metrics.questionsAttempted) * 100
-          : 0;
-      case "weekly":
-        return calculateWeeklyAccuracy();
-      case "allTime":
-        return calculateAllTimeAccuracy();
-      default:
-        return 0;
-    }
-  };
-
-  const calculateWeeklyAccuracy = (): number => {
-    const last7Days: string[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split("T")[0];
-      if (dateStr) {
-        last7Days.push(dateStr);
-      }
-    }
-
-    const weekData = last7Days
-      .map((dateStr): typeof historyData[string] | undefined => {
-        if (!dateStr) return undefined;
-        return historyData[dateStr as string];
-      })
-      .filter((stats): stats is NonNullable<typeof stats> => stats !== undefined && stats !== null && stats.questionsAttempted > 0);
-
-    const totals = weekData.reduce(
-      (acc, stats) => ({
-        attempted: acc.attempted + (stats?.questionsAttempted || 0),
-        correct: acc.correct + (stats?.correctAnswers || 0),
-      }),
-      { attempted: 0, correct: 0 }
-    );
-
-    return totals.attempted > 0 ? (totals.correct / totals.attempted) * 100 : 0;
-  };
-
-  const calculateAllTimeAccuracy = (): number => {
-    const allStats = Object.values(historyData);
-    const totals = allStats.reduce(
-      (acc, stats) => ({
-        attempted: acc.attempted + (stats?.questionsAttempted || 0),
-        correct: acc.correct + (stats?.correctAnswers || 0),
-      }),
-      { attempted: 0, correct: 0 }
-    );
-
-    return totals.attempted > 0 ? (totals.correct / totals.attempted) * 100 : 0;
-  };
-
-  const calculateWeeklyTotals = () => {
-    const last7Days: string[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split("T")[0];
-      if (dateStr) {
-        last7Days.push(dateStr);
-      }
-    }
-
-    const totals = last7Days.reduce(
-      (acc, dateStr) => {
-        if (!dateStr) return acc;
-        const stats = historyData[dateStr as string];
-        return {
-          questions: acc.questions + (stats?.questionsAttempted || 0),
-          correct: acc.correct + (stats?.correctAnswers || 0),
-        };
-      },
-      { questions: 0, correct: 0 }
-    );
-
-    return totals;
-  };
-
-  const calculateAllTimeTotals = () => {
-    const totals = Object.values(historyData).reduce(
-      (acc, stats) => ({
-        questions: acc.questions + (stats?.questionsAttempted || 0),
-        correct: acc.correct + (stats?.correctAnswers || 0),
-      }),
-      { questions: 0, correct: 0 }
-    );
-
-    return totals;
-  };
+  const controller = useDashboardController(initialUser);
+  const {
+    router,
+    darkMode,
+    setDarkMode,
+    metrics,
+    historyData,
+    greetingName,
+    isLoading,
+    contactModalOpen,
+    setContactModalOpen,
+    handleContact,
+    correctView,
+    setCorrectView,
+    accuracyView,
+    cycleAccuracyView,
+    getAccuracyForView,
+    weeklyTotals,
+    allTimeTotals,
+    cardStyle,
+    bannerVisible,
+    closeBanner,
+    currentUser,
+  } = controller;
 
   return (
     <div className="relative min-h-screen">
@@ -202,234 +79,31 @@ function DashboardContent({ initialUser }: { initialUser?: User | null }) {
         </div>
 
         <div className={`container mx-auto px-4 pb-8 ${bannerVisible ? "pt-28" : "pt-24"}`}>
-          {/* Welcome Banner and Practice Button Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 md:mb-8">
-            {/* Welcome Message - Takes 2/3 on desktop */}
-            <div className="lg:col-span-2">
-              <div className="h-32">
-                <WelcomeMessage
-                  greetingName={greetingName}
-                  darkMode={darkMode}
-                  currentUser={currentUser}
-                  setDarkMode={setDarkMode}
-                  isLoading={isLoading}
-                />
-              </div>
-            </div>
-
-            {/* Practice Button - Takes 1/3 on desktop */}
-            <div className="lg:col-span-1">
-              <motion.button
-                onClick={() => router.push("/practice")}
-                className="rounded-lg w-full h-32 py-7 px-6 text-white text-center flex flex-col items-center justify-center bg-blue-600 relative overflow-hidden group"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                {/* Pencil Icon */}
-                <div className="absolute inset-0 flex items-center justify-center transition-all duration-600 ease-in-out -translate-y-4 group-hover:translate-y-0">
-                  <FaPen className="text-3xl transition-all duration-600 ease-in-out group-hover:rotate-[-270deg]" />
-                </div>
-
-                {/* Practice Text */}
-                <span className="text-xl font-bold absolute inset-0 flex items-center justify-center transition-opacity duration-300 group-hover:opacity-0 translate-y-4">
-                  Practice
-                </span>
-              </motion.button>
-            </div>
-          </div>
-
-          {/* Metrics Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 lg:mb-8">
-            {/* [Daily/Weekly/All-Time] Correct Answers Card - Takes 1/3 on desktop */}
-            <div className="lg:col-span-1">
-              <div className="h-32">
-                <MetricsCard
-                  title="Correct Answers"
-                  dailyValue={metrics.correctAnswers}
-                  weeklyValue={calculateWeeklyTotals().correct}
-                  allTimeValue={calculateAllTimeTotals().correct}
-                  view={correctView}
-                  onViewChange={setCorrectView}
-                  color="text-green-600"
-                  darkMode={darkMode}
-                  dailyDenominator={metrics.questionsAttempted}
-                  weeklyDenominator={calculateWeeklyTotals().questions}
-                  allTimeDenominator={calculateAllTimeTotals().questions}
-                  formatAsFraction={true}
-                  isLoading={isLoading}
-                />
-              </div>
-            </div>
-
-            {/* Favorite Configs - Takes 2/3 on desktop, hidden on mobile */}
-            <div className="lg:col-span-2">
-              <div className="h-32 lg:mb-0">
-                <FavoriteConfigsCard />
-              </div>
-            </div>
-          </div>
-
-          {/* Charts and Accuracy Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 lg:mb-8">
-            {/* Questions Chart */}
-            <QuestionsThisWeekChart historyData={historyData} darkMode={darkMode} />
-
-            {/* Accuracy Card */}
-            <div className="perspective-1000 hover:scale-[1.02] transition-transform duration-300">
-              <div
-                className={`p-0 rounded-lg cursor-pointer transition-transform duration-700 relative ${cardStyle}`}
-                style={{
-                  transformStyle: "preserve-3d",
-                  transform:
-                    accuracyView === "daily"
-                      ? "rotateX(0deg)"
-                      : accuracyView === "weekly"
-                        ? "rotateX(180deg)"
-                        : "rotateX(360deg)",
-                  minHeight: "300px",
-                }}
-                onClick={() => {
-                  if (accuracyView === "daily") {
-                    setAccuracyView("weekly");
-                  } else if (accuracyView === "weekly") {
-                    setAccuracyView("allTime");
-                  } else {
-                    setAccuracyView("daily");
-                  }
-                }}
-              >
-                {/* Daily Accuracy */}
-                <div
-                  className="absolute w-full h-full flex flex-col p-6"
-                  style={{
-                    backfaceVisibility: "hidden",
-                    transform: "rotateX(0deg)",
-                    opacity: accuracyView === "daily" ? 1 : 0,
-                    visibility: accuracyView === "daily" ? "visible" : "hidden",
-                  }}
-                >
-                  <h2
-                    className={`text-xl font-semibold mb-2 text-left ${darkMode ? "text-white" : "text-gray-900"}`}
-                  >
-                    Daily Accuracy
-                  </h2>
-                  <div className="flex items-center justify-center flex-grow">
-                    <svg className="w-72 h-40" viewBox="0 0 100 60">
-                      <path
-                        d="M5 50 A 45 45 0 0 1 95 50"
-                        fill="none"
-                        stroke={darkMode ? "#374151" : "#e2e8f0"}
-                        strokeWidth="8"
-                        strokeLinecap="round"
-                      />
-                      <motion.path
-                        d="M5 50 A 45 45 0 0 1 95 50"
-                        fill="none"
-                        stroke={darkMode ? "#60a5fa" : "#3b82f6"}
-                        strokeWidth="8"
-                        strokeLinecap="round"
-                        initial={{ pathLength: 0 }}
-                        animate={{ pathLength: getAccuracyForView("daily") / 100 }}
-                        transition={{ duration: 1, ease: "easeOut" }}
-                      />
-                      <AnimatedAccuracy
-                        value={Math.round(getAccuracyForView("daily"))}
-                        darkMode={darkMode}
-                        className="text-2xl font-bold"
-                      />
-                    </svg>
-                  </div>
-                </div>
-
-                {/* Weekly Accuracy */}
-                <div
-                  className="absolute w-full h-full flex flex-col p-6"
-                  style={{
-                    backfaceVisibility: "hidden",
-                    transform: "rotateX(180deg)",
-                    opacity: accuracyView === "weekly" ? 1 : 0,
-                    visibility: accuracyView === "weekly" ? "visible" : "hidden",
-                  }}
-                >
-                  <h2
-                    className={`text-xl font-semibold mb-2 text-left ${darkMode ? "text-white" : "text-gray-900"}`}
-                  >
-                    Weekly Accuracy
-                  </h2>
-                  <div className="flex items-center justify-center flex-grow">
-                    <svg className="w-72 h-40" viewBox="0 0 100 60">
-                      <path
-                        d="M5 50 A 45 45 0 0 1 95 50"
-                        fill="none"
-                        stroke={darkMode ? "#374151" : "#e2e8f0"}
-                        strokeWidth="8"
-                        strokeLinecap="round"
-                      />
-                      <motion.path
-                        d="M5 50 A 45 45 0 0 1 95 50"
-                        fill="none"
-                        stroke={darkMode ? "#60a5fa" : "#3b82f6"}
-                        strokeWidth="8"
-                        strokeLinecap="round"
-                        initial={{ pathLength: 0 }}
-                        animate={{ pathLength: getAccuracyForView("weekly") / 100 }}
-                        transition={{ duration: 1, ease: "easeOut" }}
-                      />
-                      <AnimatedAccuracy
-                        value={Math.round(getAccuracyForView("weekly"))}
-                        darkMode={darkMode}
-                        className="text-2xl font-bold"
-                      />
-                    </svg>
-                  </div>
-                </div>
-
-                {/* All-Time Accuracy */}
-                <div
-                  className="absolute w-full h-full flex flex-col p-6"
-                  style={{
-                    backfaceVisibility: "hidden",
-                    transform: "rotateX(360deg)",
-                    opacity: accuracyView === "allTime" ? 1 : 0,
-                    visibility: accuracyView === "allTime" ? "visible" : "hidden",
-                  }}
-                >
-                  <h2
-                    className={`text-xl font-semibold mb-2 text-left ${darkMode ? "text-white" : "text-gray-900"}`}
-                  >
-                    All-Time Accuracy
-                  </h2>
-                  <div className="flex items-center justify-center flex-grow">
-                    <svg className="w-72 h-40" viewBox="0 0 100 60">
-                      <path
-                        d="M5 50 A 45 45 0 0 1 95 50"
-                        fill="none"
-                        stroke={darkMode ? "#374151" : "#e2e8f0"}
-                        strokeWidth="8"
-                        strokeLinecap="round"
-                      />
-                      <motion.path
-                        d="M5 50 A 45 45 0 0 1 95 50"
-                        fill="none"
-                        stroke={darkMode ? "#60a5fa" : "#3b82f6"}
-                        strokeWidth="8"
-                        strokeLinecap="round"
-                        initial={{ pathLength: 0 }}
-                        animate={{ pathLength: getAccuracyForView("allTime") / 100 }}
-                        transition={{ duration: 1, ease: "easeOut" }}
-                      />
-                      <AnimatedAccuracy
-                        value={Math.round(getAccuracyForView("allTime"))}
-                        darkMode={darkMode}
-                        className="text-2xl font-bold"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
+          <HeroRow
+            router={router}
+            greetingName={greetingName}
+            darkMode={darkMode}
+            currentUser={currentUser}
+            setDarkMode={setDarkMode}
+            isLoading={isLoading}
+          />
+          <MetricsSection
+            metrics={metrics}
+            weeklyTotals={weeklyTotals}
+            allTimeTotals={allTimeTotals}
+            correctView={correctView}
+            onViewChange={setCorrectView}
+            darkMode={darkMode}
+            isLoading={isLoading}
+          />
+          <AccuracySection
+            historyData={historyData}
+            darkMode={darkMode}
+            accuracyView={accuracyView}
+            onCycleView={cycleAccuracyView}
+            cardStyle={cardStyle}
+            getAccuracyForView={getAccuracyForView}
+          />
           {/* Action Buttons */}
           <ActionButtons darkMode={darkMode} />
         </div>
@@ -446,10 +120,402 @@ function DashboardContent({ initialUser }: { initialUser?: User | null }) {
   );
 }
 
+function HeroRow({
+  router,
+  greetingName,
+  darkMode,
+  currentUser,
+  setDarkMode,
+  isLoading,
+}: {
+  router: ReturnType<typeof useRouter>;
+  greetingName: string;
+  darkMode: boolean;
+  currentUser: User | null;
+  setDarkMode: (value: boolean) => void;
+  isLoading: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 md:mb-8">
+      <div className="lg:col-span-2">
+        <div className="h-32">
+          <WelcomeMessage
+            greetingName={greetingName}
+            darkMode={darkMode}
+            currentUser={currentUser}
+            setDarkMode={setDarkMode}
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
+      <div className="lg:col-span-1">
+        <motion.button
+          onClick={() => router.push("/practice")}
+          className="rounded-lg w-full h-32 py-7 px-6 text-white text-center flex flex-col items-center justify-center bg-blue-600 relative overflow-hidden group"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <div className="absolute inset-0 flex items-center justify-center transition-all duration-600 ease-in-out -translate-y-4 group-hover:translate-y-0">
+            <FaPen className="text-3xl transition-all duration-600 ease-in-out group-hover:rotate-[-270deg]" />
+          </div>
+          <span className="text-xl font-bold absolute inset-0 flex items-center justify-center transition-opacity duration-300 group-hover:opacity-0 translate-y-4">
+            Practice
+          </span>
+        </motion.button>
+      </div>
+    </div>
+  );
+}
+
+function MetricsSection({
+  metrics,
+  weeklyTotals,
+  allTimeTotals,
+  correctView,
+  onViewChange,
+  darkMode,
+  isLoading,
+}: {
+  metrics: DashboardMetricsData;
+  weeklyTotals: Totals;
+  allTimeTotals: Totals;
+  correctView: ViewMode;
+  onViewChange: (view: ViewMode) => void;
+  darkMode: boolean;
+  isLoading: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 lg:mb-8">
+      <div className="lg:col-span-1">
+        <div className="h-32">
+          <MetricsCard
+            title="Correct Answers"
+            dailyValue={metrics.correctAnswers}
+            weeklyValue={weeklyTotals.correct}
+            allTimeValue={allTimeTotals.correct}
+            view={correctView}
+            onViewChange={onViewChange}
+            color="text-green-600"
+            darkMode={darkMode}
+            dailyDenominator={metrics.questionsAttempted}
+            weeklyDenominator={weeklyTotals.questions}
+            allTimeDenominator={allTimeTotals.questions}
+            formatAsFraction={true}
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
+      <div className="lg:col-span-2">
+        <div className="h-32 lg:mb-0">
+          <FavoriteConfigsCard />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AccuracySection({
+  historyData,
+  darkMode,
+  accuracyView,
+  onCycleView,
+  cardStyle,
+  getAccuracyForView,
+}: {
+  historyData: HistoryData;
+  darkMode: boolean;
+  accuracyView: ViewMode;
+  onCycleView: () => void;
+  cardStyle: string;
+  getAccuracyForView: (view: ViewMode) => number;
+}) {
+  const faces: Array<{ view: ViewMode; title: string; rotation: string; aria: string }> = [
+    { view: "daily", title: "Daily Accuracy", rotation: "0deg", aria: "Daily accuracy gauge" },
+    { view: "weekly", title: "Weekly Accuracy", rotation: "180deg", aria: "Weekly accuracy gauge" },
+    {
+      view: "allTime",
+      title: "All-Time Accuracy",
+      rotation: "360deg",
+      aria: "All-time accuracy gauge",
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 lg:mb-8">
+      <QuestionsThisWeekChart historyData={historyData} darkMode={darkMode} />
+      <div className="perspective-1000 hover:scale-[1.02] transition-transform duration-300 h-full">
+        <button
+          type="button"
+          className="w-full h-full p-0 rounded-lg cursor-pointer transition-transform duration-700 relative grid grid-cols-1"
+          style={{
+            transformStyle: "preserve-3d",
+            transform:
+              accuracyView === "daily"
+                ? "rotateX(0deg)"
+                : accuracyView === "weekly"
+                  ? "rotateX(180deg)"
+                  : "rotateX(360deg)",
+          }}
+          onClick={onCycleView}
+          aria-label="Cycle accuracy view"
+        >
+          {faces.map((face) => (
+            <AccuracyFace
+              key={face.view}
+              face={face}
+              accuracyView={accuracyView}
+              darkMode={darkMode}
+              getAccuracyForView={getAccuracyForView}
+              cardStyle={cardStyle}
+            />
+          ))}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AccuracyFace({
+  face,
+  accuracyView,
+  darkMode,
+  getAccuracyForView,
+  cardStyle,
+}: {
+  face: { view: ViewMode; title: string; rotation: string; aria: string };
+  accuracyView: ViewMode;
+  darkMode: boolean;
+  getAccuracyForView: (view: ViewMode) => number;
+  cardStyle: string;
+}) {
+  const accuracyValue = getAccuracyForView(face.view);
+
+  // Logic to prevent z-fighting between Daily (0deg) and All-Time (360deg) faces
+  // We only hide a face if it directly conflicts with the currently active view
+  let opacity = 1;
+  if (face.view === "daily" && accuracyView === "allTime") {
+    opacity = 0;
+  }
+  if (face.view === "allTime" && accuracyView === "daily") {
+    opacity = 0;
+  }
+
+  return (
+    <div
+      className={`w-full h-full col-start-1 row-start-1 flex flex-col p-6 rounded-lg ${cardStyle}`}
+      style={{
+        backfaceVisibility: "hidden",
+        transform: `rotateX(${face.rotation})`,
+        opacity,
+        transition: "opacity 0ms", // Instant switch to avoid z-fighting during reset
+      }}
+    >
+      <h2
+        className={`text-xl font-semibold mb-2 text-left ${darkMode ? "text-white" : "text-gray-900"}`}
+      >
+        {face.title}
+      </h2>
+      <div className="flex items-center justify-center flex-grow">
+        <svg className="w-72 h-40" viewBox="0 0 100 60" role="img" aria-label={face.aria}>
+          <title>{face.title}</title>
+          <path
+            d="M5 50 A 45 45 0 0 1 95 50"
+            fill="none"
+            stroke={darkMode ? "#374151" : "#e2e8f0"}
+            strokeWidth="8"
+            strokeLinecap="round"
+          />
+          <motion.path
+            d="M5 50 A 45 45 0 0 1 95 50"
+            fill="none"
+            stroke={darkMode ? "#60a5fa" : "#3b82f6"}
+            strokeWidth="8"
+            strokeLinecap="round"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: accuracyValue / 100 }}
+            transition={{ duration: 1, ease: "easeOut" }}
+          />
+          <AnimatedAccuracy
+            value={Math.round(accuracyValue)}
+            darkMode={darkMode}
+            className="text-2xl font-bold"
+          />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function useDashboardController(initialUser?: User | null) {
+  const router = useRouter();
+  const { darkMode, setDarkMode } = useTheme();
+  const { user: authUser } = useAuth();
+  const { bannerVisible, closeBanner } = useBannerContext();
+  const [currentUser, setCurrentUser] = useState<User | null>(initialUser ?? null);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [correctView, setCorrectView] = useState<ViewMode>(() =>
+    loadStoredViewPreference("dashboard.correctView")
+  );
+  const [accuracyView, setAccuracyView] = useState<ViewMode>(() =>
+    loadStoredViewPreference("dashboard.accuracyView")
+  );
+  const { metrics, historyData, greetingName, isLoading } = useDashboardData(currentUser);
+
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        SyncLocalStorage.setItem("dashboard.correctView", correctView);
+        SyncLocalStorage.setItem("dashboard.accuracyView", accuracyView);
+      }
+    } catch (error) {
+      logger.error("Error saving dashboard view preferences to localStorage:", error);
+    }
+  }, [correctView, accuracyView]);
+
+  useEffect(() => {
+    setCurrentUser(authUser ?? initialUser ?? null);
+  }, [authUser, initialUser]);
+
+  const handleContact = useCallback(async (data: ContactFormData) => {
+    try {
+      await handleContactSubmission(data);
+      setContactModalOpen(false);
+      toast.success("Message sent successfully!");
+    } catch (error) {
+      logger.error("Error sending contact message:", error);
+      toast.error("Failed to send message. Please try again.");
+    }
+  }, []);
+
+  const cycleAccuracyView = useCallback(() => {
+    setAccuracyView((prev) => {
+      if (prev === "daily") {
+        return "weekly";
+      }
+      if (prev === "weekly") {
+        return "allTime";
+      }
+      return "daily";
+    });
+  }, []);
+
+  const weeklyTotals = useMemo(() => computeWeeklyTotals(historyData), [historyData]);
+  const allTimeTotals = useMemo(() => computeAllTimeTotals(historyData), [historyData]);
+  const weeklyAccuracy = useMemo(() => computeWeeklyAccuracy(historyData), [historyData]);
+  const allTimeAccuracy = useMemo(() => computeAllTimeAccuracy(historyData), [historyData]);
+  const getAccuracyForView = useCallback(
+    (view: ViewMode) => resolveAccuracyValue(view, metrics, weeklyAccuracy, allTimeAccuracy),
+    [metrics, weeklyAccuracy, allTimeAccuracy]
+  );
+  const cardStyle = useMemo(
+    () => (darkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"),
+    [darkMode]
+  );
+
+  return {
+    router,
+    darkMode,
+    setDarkMode,
+    metrics,
+    historyData,
+    greetingName,
+    isLoading,
+    contactModalOpen,
+    setContactModalOpen,
+    handleContact,
+    correctView,
+    setCorrectView,
+    accuracyView,
+    cycleAccuracyView,
+    getAccuracyForView,
+    weeklyTotals,
+    allTimeTotals,
+    cardStyle,
+    bannerVisible,
+    closeBanner,
+    currentUser,
+  };
+}
+
 export default function DashboardMain({ initialUser }: { initialUser?: User | null }) {
   return (
     <BannerProvider>
       <DashboardContent initialUser={initialUser} />
     </BannerProvider>
   );
+}
+
+function loadStoredViewPreference(key: string): ViewMode {
+  if (typeof window === "undefined") {
+    return "daily";
+  }
+  const stored = SyncLocalStorage.getItem(key);
+  if (stored === "weekly" || stored === "allTime") {
+    return stored;
+  }
+  return "daily";
+}
+
+function getRecentDateKeys(days: number): string[] {
+  const dates: string[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    dates.push(date.toISOString().split("T")[0] ?? "");
+  }
+  return dates.filter(Boolean);
+}
+
+function computeWeeklyTotals(historyData: HistoryData): Totals {
+  const recentDates = getRecentDateKeys(DAYS_IN_WEEK);
+  return recentDates.reduce(
+    (acc, date) => {
+      const stats = historyData[date];
+      if (!stats) {
+        return acc;
+      }
+      return {
+        questions: acc.questions + (stats.questionsAttempted || 0),
+        correct: acc.correct + (stats.correctAnswers || 0),
+      };
+    },
+    { questions: 0, correct: 0 }
+  );
+}
+
+function computeAllTimeTotals(historyData: HistoryData): Totals {
+  return Object.values(historyData).reduce(
+    (acc, stats) => ({
+      questions: acc.questions + (stats?.questionsAttempted || 0),
+      correct: acc.correct + (stats?.correctAnswers || 0),
+    }),
+    { questions: 0, correct: 0 }
+  );
+}
+
+function computeWeeklyAccuracy(historyData: HistoryData) {
+  const totals = computeWeeklyTotals(historyData);
+  return totals.questions > 0 ? (totals.correct / totals.questions) * 100 : 0;
+}
+
+function computeAllTimeAccuracy(historyData: HistoryData) {
+  const totals = computeAllTimeTotals(historyData);
+  return totals.questions > 0 ? (totals.correct / totals.questions) * 100 : 0;
+}
+
+function resolveAccuracyValue(
+  view: "daily" | "weekly" | "allTime",
+  metrics: DashboardMetricsData,
+  weeklyAccuracy: number,
+  allTimeAccuracy: number
+) {
+  if (view === "daily") {
+    return metrics.questionsAttempted > 0
+      ? (metrics.correctAnswers / metrics.questionsAttempted) * 100
+      : 0;
+  }
+  if (view === "weekly") {
+    return weeklyAccuracy;
+  }
+  return allTimeAccuracy;
 }

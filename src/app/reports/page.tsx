@@ -1,7 +1,7 @@
 "use client";
 
 import api from "@/app/api";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { approvedEvents } from "./data/approvedEvents";
@@ -10,6 +10,7 @@ import { Pagination } from "./components/Pagination";
 import { BlacklistedQuestionCard, QuestionCard } from "./components/QuestionCards";
 import { ScrollBarAlwaysVisible } from "./components/ScrollBarAlwaysVisible";
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex reports page with multiple data sources and filtering
 export default function ReportsPage() {
   const { darkMode } = useTheme();
   // Lazy-loaded per-event data caches
@@ -55,7 +56,7 @@ export default function ReportsPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedEvent]);
+  }, []);
 
   // Lazy-load per-event data when needed
   useEffect(() => {
@@ -127,12 +128,12 @@ export default function ReportsPage() {
 
   const getTotalReportCount = () => {
     let total = 0;
-    Object.values(removedByEvent).forEach((n) => {
+    for (const n of Object.values(removedByEvent)) {
       total += n || 0;
-    });
-    Object.values(editsByEvent).forEach((n) => {
+    }
+    for (const n of Object.values(editsByEvent)) {
       total += n || 0;
-    });
+    }
     return total;
   };
 
@@ -184,6 +185,7 @@ export default function ReportsPage() {
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                   >
+                    <title>Back to dashboard</title>
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -210,6 +212,7 @@ export default function ReportsPage() {
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                   >
+                    <title>Information</title>
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -247,6 +250,7 @@ export default function ReportsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {getEventsWithReports().map((event) => (
                   <button
+                    type="button"
                     key={event.name}
                     onClick={() => setSelectedEvent(event.name)}
                     className={`p-3 rounded-lg border-2 transition-all duration-200 text-left ${
@@ -300,12 +304,14 @@ export default function ReportsPage() {
         >
           <div className={`flex border-b ${borderColor}`}>
             <button
+              type="button"
               className={`py-3 px-6 font-medium  ${activeTab === "blacklisted" ? `${tabActiveColor} border-b-2` : tabInactiveColor}`}
               onClick={() => setActiveTab("blacklisted")}
             >
               Blacklisted Questions
             </button>
             <button
+              type="button"
               className={`py-3 px-6 font-medium  ${activeTab === "edited" ? `${tabActiveColor} border-b-2` : tabInactiveColor}`}
               onClick={() => setActiveTab("edited")}
             >
@@ -345,7 +351,9 @@ export default function ReportsPage() {
                 </div>
 
                 {getCurrentEventData().length === 0 ? (
-                  <div className={`flex flex-col items-center justify-center py-16 ${mutedTextColor}`}>
+                  <div
+                    className={`flex flex-col items-center justify-center py-16 ${mutedTextColor}`}
+                  >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       className="h-16 w-16 mb-4 opacity-50"
@@ -353,6 +361,7 @@ export default function ReportsPage() {
                       viewBox="0 0 24 24"
                       stroke="currentColor"
                     >
+                      <title>No edits</title>
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -376,7 +385,7 @@ export default function ReportsPage() {
                       <div className="space-y-4">
                         {getPaginatedData().map((question, index) => (
                           <div
-                            key={index}
+                            key={`blacklisted-${selectedEvent}-${index}-${String(question).slice(0, 20)}`}
                             className={`${darkMode ? "bg-gray-700/50" : "bg-gray-50"} p-4 rounded-md border-l-4 ${darkMode ? "border-red-600" : "border-red-500"}`}
                           >
                             <BlacklistedQuestionCard questionData={question} darkMode={darkMode} />
@@ -387,9 +396,15 @@ export default function ReportsPage() {
 
                     {activeTab === "edited" && (
                       <div className="space-y-6">
-                        {(getPaginatedData() as Array<{ original: string; edited: string; timestamp: string }>).map((edit, index) => (
+                        {(
+                          getPaginatedData() as Array<{
+                            original: string;
+                            edited: string;
+                            timestamp: string;
+                          }>
+                        ).map((edit, index) => (
                           <div
-                            key={index}
+                            key={`edited-${selectedEvent}-${index}-${edit.timestamp}`}
                             className={`${darkMode ? "bg-gray-700/50" : "bg-gray-50"} p-5 rounded-md`}
                           >
                             <div className="mb-3 flex items-center">
@@ -400,6 +415,7 @@ export default function ReportsPage() {
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
                               >
+                                <title>Edits</title>
                                 <path
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
@@ -423,6 +439,7 @@ export default function ReportsPage() {
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
                                   >
+                                    <title>Removed</title>
                                     <path
                                       strokeLinecap="round"
                                       strokeLinejoin="round"
@@ -453,6 +470,7 @@ export default function ReportsPage() {
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
                                   >
+                                    <title>Applied</title>
                                     <path
                                       strokeLinecap="round"
                                       strokeLinejoin="round"
@@ -499,6 +517,7 @@ export default function ReportsPage() {
                   viewBox="0 0 24 24"
                   stroke="currentColor"
                 >
+                  <title>No removed items</title>
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -528,6 +547,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Global styles for scrollbar */}
+      {/* eslint-disable-next-line react/no-unknown-property */}
       <style jsx={true} global={true}>{`
         .native-scroll-hidden {
           scrollbar-width: none; /* Firefox */

@@ -19,6 +19,7 @@ export default function TestActions({
   return (
     <div className="flex gap-3 mt-6 lg:mt-auto">
       <button
+        type="button"
         onClick={onGenerateTest}
         disabled={!selectedEvent}
         className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-300 border-2 ${
@@ -33,6 +34,7 @@ export default function TestActions({
       </button>
       {hideUnlimited ? null : (
         <button
+          type="button"
           onClick={onUnlimited}
           disabled={!selectedEvent}
           className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-300 border-2 ${

@@ -1,4 +1,5 @@
-import { pool } from "@/lib/db/pool";
+import { dbPg } from "@/lib/db/index";
+import { assignmentResults } from "@/lib/db/schema/assignments";
 import { initExtrasDatabase } from "@/lib/db/teamExtras";
 import { type NextRequest, NextResponse } from "next/server";
 
@@ -18,24 +19,18 @@ export async function POST(req: NextRequest) {
     }
 
     await initExtrasDatabase();
-    const client = await pool.connect();
-    try {
-      const res = await client.query(
-        `INSERT INTO assignment_results (assignment_id, user_id, name, event_name, score, detail)
-         VALUES ($1::INT8, $2, $3, $4, $5, $6) RETURNING *`,
-        [
-          String(assignmentId),
-          userId || null,
-          name || null,
-          eventName || null,
-          typeof score === "number" ? score : null,
-          detail ? JSON.stringify(detail) : null,
-        ]
-      );
-      return NextResponse.json({ success: true, data: res.rows[0] });
-    } finally {
-      client.release();
-    }
+    const [result] = await dbPg
+      .insert(assignmentResults)
+      .values({
+        assignmentId: Number(assignmentId),
+        userId: userId || null,
+        name: name || null,
+        eventName: eventName || null,
+        score: typeof score === "number" ? score : null,
+        detail: detail || null,
+      })
+      .returning();
+    return NextResponse.json({ success: true, data: result });
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : "Unknown error";
     return NextResponse.json(

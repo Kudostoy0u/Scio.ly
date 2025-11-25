@@ -96,11 +96,11 @@ export async function upsertUserProfile(params: {
       .values(insertValues)
       .onConflictDoUpdate({
         target: schema.users.id,
-        set: updateSet as any,
+        set: updateSet as Record<string, unknown>,
       });
 
     logger.dev.timing("upsertUserProfile", startedAt, { id });
-  } catch (err: any) {
+  } catch (err: unknown) {
     logger.error("upsertUserProfile failed", err);
     logger.dev.error(
       "upsertUserProfile failed",

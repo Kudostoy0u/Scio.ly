@@ -7,7 +7,13 @@ import {
   newTeamMemberships,
   newTeamUnits,
 } from "@/lib/db/schema/teams";
-import { PostInviteRequestSchema, InviteResponseSchema, validateRequest } from "@/lib/schemas/teams-validation";
+import {
+  InviteResponseSchema,
+  PostInviteRequestSchema,
+  validateRequest,
+} from "@/lib/schemas/teams-validation";
+import { NotificationSyncService } from "@/lib/services/notification-sync";
+import { getServerUser } from "@/lib/supabaseServer";
 import {
   handleConflictError,
   handleError,
@@ -18,23 +24,24 @@ import {
   validateEnvironment,
 } from "@/lib/utils/error-handler";
 import logger from "@/lib/utils/logger";
-import { NotificationSyncService } from "@/lib/services/notification-sync";
-import { getServerUser } from "@/lib/supabaseServer";
 import { resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
-import { and, eq, inArray, ilike, ne, or } from "drizzle-orm";
+import { and, eq, ilike, inArray, ne, or } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 // POST /api/teams/[teamId]/invite - Invite user to team
 // Frontend Usage:
 // - src/app/teams/components/PeopleTab.tsx (inviteUser)
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex invitation logic with validation and team management
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -45,7 +52,7 @@ export async function POST(
     let body: unknown;
     try {
       body = await request.json();
-    } catch (error) {
+    } catch (_error) {
       return handleValidationError(
         new z.ZodError([
           {
@@ -140,7 +147,16 @@ export async function POST(
     }
 
     // Find the user to invite using Drizzle ORM
-    let invitedUser;
+    let invitedUser:
+      | {
+          id: string;
+          email: string | null;
+          display_name: string | null;
+          first_name: string | null;
+          last_name: string | null;
+          username: string | null;
+        }
+      | undefined;
     if (username) {
       const userResult = await dbPg
         .select({
@@ -175,6 +191,19 @@ export async function POST(
       return handleNotFoundError("User");
     }
 
+    const inviteeEmail = invitedUser.email ?? email;
+    if (!inviteeEmail) {
+      return handleValidationError(
+        new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            message: "Invited user does not have a valid email",
+            path: ["email"],
+          },
+        ])
+      );
+    }
+
     // Check if user is already a member of any team unit in this group using Drizzle ORM
     const existingMembership = await dbPg
       .select({ id: newTeamMemberships.id })
@@ -198,7 +227,7 @@ export async function POST(
       .where(
         and(
           inArray(newTeamInvitations.teamId, teamUnitIds),
-          eq(newTeamInvitations.email, invitedUser.email),
+          eq(newTeamInvitations.email, inviteeEmail),
           eq(newTeamInvitations.status, "pending")
         )
       )
@@ -292,7 +321,9 @@ export async function GET(
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {

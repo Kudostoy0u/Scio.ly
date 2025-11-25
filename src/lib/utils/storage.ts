@@ -2,11 +2,11 @@
  * Centralized localStorage utility with type safety and error handling
  */
 
-export class StorageService {
+export const StorageService = {
   /**
    * Safely get an item from localStorage
    */
-  static get<T>(key: string): T | null {
+  get<T>(key: string): T | null {
     if (typeof window === "undefined") {
       return null;
     }
@@ -17,30 +17,30 @@ export class StorageService {
         return null;
       }
       return JSON.parse(item) as T;
-    } catch (_error) {
+    } catch {
       return null;
     }
-  }
+  },
 
   /**
    * Safely get a string item from localStorage (no JSON parsing)
    */
-  static getString(key: string): string | null {
+  getString(key: string): string | null {
     if (typeof window === "undefined") {
       return null;
     }
 
     try {
       return localStorage.getItem(key);
-    } catch (_error) {
+    } catch {
       return null;
     }
-  }
+  },
 
   /**
    * Safely set an item in localStorage
    */
-  static set<T>(key: string, value: T): boolean {
+  set<T>(key: string, value: T): boolean {
     if (typeof window === "undefined") {
       return false;
     }
@@ -48,15 +48,15 @@ export class StorageService {
     try {
       localStorage.setItem(key, JSON.stringify(value));
       return true;
-    } catch (_error) {
+    } catch {
       return false;
     }
-  }
+  },
 
   /**
    * Safely set a string item in localStorage (no JSON stringification)
    */
-  static setString(key: string, value: string): boolean {
+  setString(key: string, value: string): boolean {
     if (typeof window === "undefined") {
       return false;
     }
@@ -64,15 +64,15 @@ export class StorageService {
     try {
       localStorage.setItem(key, value);
       return true;
-    } catch (_error) {
+    } catch {
       return false;
     }
-  }
+  },
 
   /**
    * Safely remove an item from localStorage
    */
-  static remove(key: string): boolean {
+  remove(key: string): boolean {
     if (typeof window === "undefined") {
       return false;
     }
@@ -80,31 +80,33 @@ export class StorageService {
     try {
       localStorage.removeItem(key);
       return true;
-    } catch (_error) {
+    } catch {
       return false;
     }
-  }
+  },
 
   /**
    * Safely remove multiple items from localStorage
    */
-  static removeMultiple(keys: string[]): boolean {
+  removeMultiple(keys: string[]): boolean {
     if (typeof window === "undefined") {
       return false;
     }
 
     try {
-      keys.forEach((key) => localStorage.removeItem(key));
+      for (const key of keys) {
+        localStorage.removeItem(key);
+      }
       return true;
-    } catch (_error) {
+    } catch {
       return false;
     }
-  }
+  },
 
   /**
    * Safely clear all localStorage
    */
-  static clear(): boolean {
+  clear(): boolean {
     if (typeof window === "undefined") {
       return false;
     }
@@ -112,34 +114,34 @@ export class StorageService {
     try {
       localStorage.clear();
       return true;
-    } catch (_error) {
+    } catch {
       return false;
     }
-  }
+  },
 
   /**
    * Check if a key exists in localStorage
    */
-  static has(key: string): boolean {
+  has(key: string): boolean {
     if (typeof window === "undefined") {
       return false;
     }
 
     try {
       return localStorage.getItem(key) !== null;
-    } catch (_error) {
+    } catch {
       return false;
     }
-  }
+  },
 
   /**
    * Get with default fallback value
    */
-  static getWithDefault<T>(key: string, defaultValue: T): T {
+  getWithDefault<T>(key: string, defaultValue: T): T {
     const value = StorageService.get<T>(key);
     return value !== null ? value : defaultValue;
-  }
-}
+  },
+};
 
 /**
  * Storage keys constants for type safety

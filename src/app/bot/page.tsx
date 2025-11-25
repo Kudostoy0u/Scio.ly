@@ -1,16 +1,441 @@
 "use client";
 
 import Header from "@/app/components/Header";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { useEffect, useState } from "react";
+
+interface CommandsTableProps {
+  darkMode: boolean;
+}
+
+const CommandsTable = ({ darkMode }: CommandsTableProps) => {
+  const commands = [
+    {
+      command: "/mcq [event name] [division] [difficulty] [subtopic]",
+      description: "Sends a multiple choice question for you to solve",
+      usage: "Required: Event name\nOptional: Division, Difficulty, Subtopic",
+    },
+    {
+      command: "/frq [event name] [division] [difficulty] [subtopic]",
+      description: "Sends a free response question for you to solve",
+      usage: "Required: Event name\nOptional: Division, Difficulty, Subtopic",
+    },
+    {
+      command: "/check [question_id] [answer]",
+      description: "Check your answer to a question",
+      usage: "Required: Question ID, Your answer",
+    },
+    {
+      command: "/explain [question_id]",
+      description: "Get an AI-generated explanation for a question",
+      usage: "Required: Question ID",
+    },
+  ];
+
+  return (
+    <div className="overflow-x-auto">
+      <table
+        className={`w-full border-collapse border ${
+          darkMode ? "border-gray-600" : "border-gray-300"
+        }`}
+      >
+        <thead>
+          <tr className={`${darkMode ? "bg-gray-700 text-white" : "bg-gray-100 text-gray-900"}`}>
+            <th className="border px-4 py-3 text-left font-semibold">Command</th>
+            <th className="border px-4 py-3 text-left font-semibold">Description</th>
+            <th className="border px-4 py-3 text-left font-semibold">How to use</th>
+          </tr>
+        </thead>
+        <tbody>
+          {commands.map((cmd) => (
+            <tr
+              key={cmd.command}
+              className={`${
+                darkMode ? "border-gray-600 hover:bg-gray-700" : "border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              <td
+                className={`border px-4 py-3 font-mono text-sm ${
+                  darkMode ? "text-blue-400" : "text-blue-600"
+                }`}
+              >
+                {cmd.command}
+              </td>
+              <td className={`border px-4 py-3 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                {cmd.description}
+              </td>
+              <td className={`border px-4 py-3 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                {cmd.usage.split("\n").map((line, idx) => (
+                  <span
+                    // biome-ignore lint/suspicious/noArrayIndexKey: Static usage text lines, index is stable
+                    key={idx}
+                  >
+                    {line}
+                    {idx < cmd.usage.split("\n").length - 1 && <br />}
+                  </span>
+                ))}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+interface DivisionSubtopicTableProps {
+  darkMode: boolean;
+}
+
+const DivisionSubtopicTable = ({ darkMode }: DivisionSubtopicTableProps) => {
+  const firstTableHeaders = [
+    "Anatomy - Endocrine",
+    "Anatomy - Nervous",
+    "Anatomy - Sense Organs",
+    "Astronomy",
+    "Chemistry Lab",
+    "Circuit Lab",
+    "Designer Genes",
+    "Disease Detectives",
+    "Dynamic Planet - Oceanography",
+  ];
+
+  const firstTableRows = [
+    [
+      "Hormones",
+      "Brain",
+      "Eyes",
+      "Solar System",
+      "Stoichiometry",
+      "Circuits",
+      "Genetics",
+      "Epidemiology",
+      "Ocean Circulation",
+    ],
+    [
+      "Glands",
+      "Spinal Cord",
+      "Ears",
+      "Stars",
+      "Periodicity",
+      "Sensors",
+      "DNA",
+      "Pathogens",
+      "Marine Life",
+    ],
+    [
+      "Regulation",
+      "Nerves",
+      "Nose",
+      "Galaxies",
+      "Equilibrium",
+      "Calibration",
+      "Proteins",
+      "Prevention",
+      "Chemistry",
+    ],
+    [
+      "Feedback",
+      "Reflexes",
+      "Tongue",
+      "Cosmology",
+      "Redox Reactions",
+      "Design",
+      "Evolution",
+      "Outbreak Investigation",
+      "Geology",
+    ],
+    [
+      "Development",
+      "Neurotransmitters",
+      "Skin",
+      "Instruments",
+      <div key="chemistry-dropdown" className="relative">
+        <details className="cursor-pointer">
+          <summary className={`font-medium ${darkMode ? "text-blue-400" : "text-blue-600"}`}>
+            + More
+          </summary>
+          <div
+            className={`absolute top-full left-0 z-10 mt-1 p-2 rounded border shadow-lg ${
+              darkMode ? "bg-gray-800 border-gray-600" : "bg-white border-gray-300"
+            }`}
+          >
+            <div className={`space-y-1 text-xs ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+              <div>• Aqueous Solutions</div>
+              <div>• Acids and Bases</div>
+              <div>• Physical Properties</div>
+              <div>• Thermodynamics</div>
+              <div>• Gas Laws</div>
+              <div>• Kinetics</div>
+              <div>• Electrochemistry</div>
+            </div>
+          </div>
+        </details>
+      </div>,
+      "Troubleshooting",
+      "Population Genetics",
+      "Statistics",
+      "Climate",
+    ],
+  ];
+
+  return (
+    <div>
+      <table
+        className={`w-full border-collapse border text-xs ${
+          darkMode ? "border-gray-600" : "border-gray-300"
+        }`}
+      >
+        <thead>
+          <tr className={`${darkMode ? "bg-gray-700 text-white" : "bg-gray-100 text-gray-900"}`}>
+            {firstTableHeaders.map((header) => (
+              <th key={header} className="border px-2 py-2 text-left font-semibold">
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            className={`${
+              darkMode ? "border-gray-600 bg-green-900/20" : "border-gray-300 bg-green-50"
+            }`}
+          >
+            {["Div. B", "Div. B", "Div. B", "-", "-", "Div. B", "-", "Div. B", "Div. B"].map(
+              (div, idx) => (
+                <td
+                  // biome-ignore lint/suspicious/noArrayIndexKey: Static table data, index is stable
+                  key={idx}
+                  className={`border px-2 py-1 text-center ${
+                    darkMode ? "text-gray-300" : "text-gray-700"
+                  }`}
+                >
+                  {div}
+                </td>
+              )
+            )}
+          </tr>
+          <tr
+            className={`${
+              darkMode ? "border-gray-600 bg-green-900/20" : "border-gray-300 bg-green-50"
+            }`}
+          >
+            {[
+              "Div. C",
+              "Div. C",
+              "Div. C",
+              "Div. C",
+              "Div. C",
+              "Div. C",
+              "Div. C",
+              "Div. C",
+              "Div. C",
+            ].map((div, idx) => (
+              <td
+                // biome-ignore lint/suspicious/noArrayIndexKey: Static table data, index is stable
+                key={idx}
+                className={`border px-2 py-1 text-center ${
+                  darkMode ? "text-gray-300" : "text-gray-700"
+                }`}
+              >
+                {div}
+              </td>
+            ))}
+          </tr>
+          {firstTableRows.map((row, index) => (
+            <tr
+              // biome-ignore lint/suspicious/noArrayIndexKey: Static table rows, index is stable
+              key={index}
+              className={`${
+                darkMode ? "border-gray-600 hover:bg-gray-700" : "border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              {row.map((cell, cellIndex) => (
+                <td
+                  // biome-ignore lint/suspicious/noArrayIndexKey: Static table cells, index is stable
+                  key={cellIndex}
+                  className={`border px-2 py-1 text-center ${
+                    darkMode ? "text-gray-300" : "text-gray-700"
+                  }`}
+                >
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+const SecondDivisionSubtopicTable = ({ darkMode }: DivisionSubtopicTableProps) => {
+  const secondTableHeaders = [
+    "Entomology",
+    "Forensics",
+    "Heredity",
+    "Meteorology",
+    "Metric Mastery",
+    "Potions and Poisons",
+    "Rocks and Minerals",
+    "Solar System",
+    "Water Quality - Freshwater",
+  ];
+
+  const secondTableRows = [
+    [
+      "Insect Anatomy",
+      "Evidence Analysis",
+      "Genetics",
+      "Weather Systems",
+      "Estimation",
+      "Toxicology",
+      "Igneous",
+      "Planets",
+      "PH",
+    ],
+    [
+      "Life Cycles",
+      "Fingerprints",
+      "DNA",
+      "Clouds",
+      "Orders of Magnitude",
+      "Pharmacology",
+      "Sedimentary",
+      "Moons",
+      "Dissolved Oxygen",
+    ],
+    [
+      "Behavior",
+      "DNA",
+      "Proteins",
+      "Percipitation",
+      "Problem Solving",
+      "Dosage",
+      "Metamorphic",
+      "Asteroids",
+      "Nutrients",
+    ],
+    [
+      "Classification",
+      "Toxicology",
+      "Evolution",
+      "Temperature",
+      "Scientific Reasoning",
+      "Symptoms",
+      "Mineral Properties",
+      "Comets",
+      "Pollutants",
+    ],
+    [
+      "Ecology",
+      "Crime Scene",
+      "Population Genetics",
+      "Pressure",
+      "Calculations",
+      "Antidotes",
+      "Crystal Systems",
+      "Galaxies",
+      "Testing",
+    ],
+  ];
+
+  return (
+    <div className="overflow-x-auto">
+      <table
+        className={`w-full border-collapse border text-xs ${
+          darkMode ? "border-gray-600" : "border-gray-300"
+        }`}
+      >
+        <thead>
+          <tr className={`${darkMode ? "bg-gray-700 text-white" : "bg-gray-100 text-gray-900"}`}>
+            {secondTableHeaders.map((header) => (
+              <th key={header} className="border px-2 py-2 text-left font-semibold">
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            className={`${
+              darkMode ? "border-gray-600 bg-green-900/20" : "border-gray-300 bg-green-50"
+            }`}
+          >
+            {[
+              "Div. B",
+              "-",
+              "Div. B",
+              "Div. B",
+              "Div. B",
+              "Div. B",
+              "Div. B",
+              "Div. B",
+              "Div. B",
+            ].map((div, idx) => (
+              <td
+                // biome-ignore lint/suspicious/noArrayIndexKey: Static table data, index is stable
+                key={idx}
+                className={`border px-2 py-1 text-center ${
+                  darkMode ? "text-gray-300" : "text-gray-700"
+                }`}
+              >
+                {div}
+              </td>
+            ))}
+          </tr>
+          <tr
+            className={`${
+              darkMode ? "border-gray-600 bg-green-900/20" : "border-gray-300 bg-green-50"
+            }`}
+          >
+            {["Div. C", "Div. C", "-", "-", "-", "-", "Div. C", "-", "Div. C"].map((div, idx) => (
+              <td
+                // biome-ignore lint/suspicious/noArrayIndexKey: Static table data, index is stable
+                key={idx}
+                className={`border px-2 py-1 text-center ${
+                  darkMode ? "text-gray-300" : "text-gray-700"
+                }`}
+              >
+                {div}
+              </td>
+            ))}
+          </tr>
+          {secondTableRows.map((row, index) => (
+            <tr
+              // biome-ignore lint/suspicious/noArrayIndexKey: Static table rows, index is stable
+              key={index}
+              className={`${
+                darkMode ? "border-gray-600 hover:bg-gray-700" : "border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              {row.map((cell, cellIndex) => (
+                <td
+                  // biome-ignore lint/suspicious/noArrayIndexKey: Static table cells, index is stable
+                  key={cellIndex}
+                  className={`border px-2 py-1 text-center ${
+                    darkMode ? "text-gray-300" : "text-gray-700"
+                  }`}
+                >
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 
 export default function DocsPage() {
   const { darkMode } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [mounted] = useState(() => {
+    if (typeof window !== "undefined") {
+      return true;
+    }
+    return false;
+  });
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark-scrollbar", darkMode);
@@ -57,114 +482,7 @@ export default function DocsPage() {
             <h2 className={`text-2xl font-bold mb-6 ${darkMode ? "text-white" : "text-gray-900"}`}>
               List of commands:
             </h2>
-
-            <div className="overflow-x-auto">
-              <table
-                className={`w-full border-collapse border ${
-                  darkMode ? "border-gray-600" : "border-gray-300"
-                }`}
-              >
-                <thead>
-                  <tr
-                    className={`${darkMode ? "bg-gray-700 text-white" : "bg-gray-100 text-gray-900"}`}
-                  >
-                    <th className="border px-4 py-3 text-left font-semibold">Command</th>
-                    <th className="border px-4 py-3 text-left font-semibold">Description</th>
-                    <th className="border px-4 py-3 text-left font-semibold">How to use</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    className={`${
-                      darkMode
-                        ? "border-gray-600 hover:bg-gray-700"
-                        : "border-gray-300 hover:bg-gray-50"
-                    }`}
-                  >
-                    <td
-                      className={`border px-4 py-3 font-mono text-sm ${
-                        darkMode ? "text-blue-400" : "text-blue-600"
-                      }`}
-                    >
-                      /mcq [event name] [division] [difficulty] [subtopic]
-                    </td>
-                    <td className={`border px-4 py-3 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                      Sends a multiple choice question for you to solve
-                    </td>
-                    <td className={`border px-4 py-3 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                      Required: Event name
-                      <br />
-                      Optional: Division, Difficulty, Subtopic
-                    </td>
-                  </tr>
-                  <tr
-                    className={`${
-                      darkMode
-                        ? "border-gray-600 hover:bg-gray-700"
-                        : "border-gray-300 hover:bg-gray-50"
-                    }`}
-                  >
-                    <td
-                      className={`border px-4 py-3 font-mono text-sm ${
-                        darkMode ? "text-blue-400" : "text-blue-600"
-                      }`}
-                    >
-                      /frq [event name] [division] [difficulty] [subtopic]
-                    </td>
-                    <td className={`border px-4 py-3 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                      Sends a free response question for you to solve
-                    </td>
-                    <td className={`border px-4 py-3 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                      Required: Event name
-                      <br />
-                      Optional: Division, Difficulty, Subtopic
-                    </td>
-                  </tr>
-                  <tr
-                    className={`${
-                      darkMode
-                        ? "border-gray-600 hover:bg-gray-700"
-                        : "border-gray-300 hover:bg-gray-50"
-                    }`}
-                  >
-                    <td
-                      className={`border px-4 py-3 font-mono text-sm ${
-                        darkMode ? "text-blue-400" : "text-blue-600"
-                      }`}
-                    >
-                      /check [question_id] [answer]
-                    </td>
-                    <td className={`border px-4 py-3 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                      Check your answer to a question
-                    </td>
-                    <td className={`border px-4 py-3 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                      Required: Question ID, Your answer
-                    </td>
-                  </tr>
-                  <tr
-                    className={`${
-                      darkMode
-                        ? "border-gray-600 hover:bg-gray-700"
-                        : "border-gray-300 hover:bg-gray-50"
-                    }`}
-                  >
-                    <td
-                      className={`border px-4 py-3 font-mono text-sm ${
-                        darkMode ? "text-blue-400" : "text-blue-600"
-                      }`}
-                    >
-                      /explain [question_id]
-                    </td>
-                    <td className={`border px-4 py-3 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                      Get an AI-generated explanation for a question
-                    </td>
-                    <td className={`border px-4 py-3 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                      Required: Question ID
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <CommandsTable darkMode={darkMode} />
           </div>
 
           {/* Division & Subtopic Table */}
@@ -192,524 +510,12 @@ export default function DocsPage() {
               , only choose divisions or subtopics that have green cells (or else the bot will
               choose randomly for you).
             </p>
-
-            <div>
-              <table
-                className={`w-full border-collapse border text-xs ${
-                  darkMode ? "border-gray-600" : "border-gray-300"
-                }`}
-              >
-                <thead>
-                  <tr
-                    className={`${darkMode ? "bg-gray-700 text-white" : "bg-gray-100 text-gray-900"}`}
-                  >
-                    <th className="border px-2 py-2 text-left font-semibold">Anatomy - Endocrine</th>
-                    <th className="border px-2 py-2 text-left font-semibold">Anatomy - Nervous</th>
-                    <th className="border px-2 py-2 text-left font-semibold">Anatomy - Sense Organs</th>
-                    <th className="border px-2 py-2 text-left font-semibold">Astronomy</th>
-                    <th className="border px-2 py-2 text-left font-semibold">Chemistry Lab</th>
-                    <th className="border px-2 py-2 text-left font-semibold">Circuit Lab</th>
-                    <th className="border px-2 py-2 text-left font-semibold">Designer Genes</th>
-                    <th className="border px-2 py-2 text-left font-semibold">Disease Detectives</th>
-                    <th className="border px-2 py-2 text-left font-semibold">
-                      Dynamic Planet - Oceanography
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    className={`${
-                      darkMode ? "border-gray-600 bg-green-900/20" : "border-gray-300 bg-green-50"
-                    }`}
-                  >
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. B
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. B
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. B
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      -
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      -
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. B
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      -
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. B
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. B
-                    </td>
-                  </tr>
-                  <tr
-                    className={`${
-                      darkMode ? "border-gray-600 bg-green-900/20" : "border-gray-300 bg-green-50"
-                    }`}
-                  >
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. C
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. C
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. C
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. C
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. C
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. C
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. C
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. C
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. C
-                    </td>
-                  </tr>
-                  {/* Subtopic rows */}
-                  {[
-                    [
-                      "Hormones",
-                      "Brain",
-                      "Eyes",
-                      "Solar System",
-                      "Stoichiometry",
-                      "Circuits",
-                      "Genetics",
-                      "Epidemiology",
-                      "Ocean Circulation",
-                    ],
-                    [
-                      "Glands",
-                      "Spinal Cord",
-                      "Ears",
-                      "Stars",
-                      "Periodicity",
-                      "Sensors",
-                      "DNA",
-                      "Pathogens",
-                      "Marine Life",
-                    ],
-                    [
-                      "Regulation",
-                      "Nerves",
-                      "Nose",
-                      "Galaxies",
-                      "Equilibrium",
-                      "Calibration",
-                      "Proteins",
-                      "Prevention",
-                      "Chemistry",
-                    ],
-                    [
-                      "Feedback",
-                      "Reflexes",
-                      "Tongue",
-                      "Cosmology",
-                      "Redox Reactions",
-                      "Design",
-                      "Evolution",
-                      "Outbreak Investigation",
-                      "Geology",
-                    ],
-                    [
-                      "Development",
-                      "Neurotransmitters",
-                      "Skin",
-                      "Instruments",
-                      <div key="chemistry-dropdown" className="relative">
-                        <details className="cursor-pointer">
-                          <summary
-                            className={`font-medium ${darkMode ? "text-blue-400" : "text-blue-600"}`}
-                          >
-                            + More
-                          </summary>
-                          <div
-                            className={`absolute top-full left-0 z-10 mt-1 p-2 rounded border shadow-lg ${
-                              darkMode ? "bg-gray-800 border-gray-600" : "bg-white border-gray-300"
-                            }`}
-                          >
-                            <div
-                              className={`space-y-1 text-xs ${
-                                darkMode ? "text-gray-300" : "text-gray-700"
-                              }`}
-                            >
-                              <div>• Aqueous Solutions</div>
-                              <div>• Acids and Bases</div>
-                              <div>• Physical Properties</div>
-                              <div>• Thermodynamics</div>
-                              <div>• Gas Laws</div>
-                              <div>• Kinetics</div>
-                              <div>• Electrochemistry</div>
-                            </div>
-                          </div>
-                        </details>
-                      </div>,
-                      "Troubleshooting",
-                      "Population Genetics",
-                      "Statistics",
-                      "Climate",
-                    ],
-                  ].map((row, index) => (
-                    <tr
-                      key={index}
-                      className={`${
-                        darkMode
-                          ? "border-gray-600 hover:bg-gray-700"
-                          : "border-gray-300 hover:bg-gray-50"
-                      }`}
-                    >
-                      {row.map((cell, cellIndex) => (
-                        <td
-                          key={cellIndex}
-                          className={`border px-2 py-1 text-center ${
-                            darkMode ? "text-gray-300" : "text-gray-700"
-                          }`}
-                        >
-                          {cell}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DivisionSubtopicTable darkMode={darkMode} />
           </div>
 
           {/* Second Table */}
           <div className="mb-12">
-            <div className="overflow-x-auto">
-              <table
-                className={`w-full border-collapse border text-xs ${
-                  darkMode ? "border-gray-600" : "border-gray-300"
-                }`}
-              >
-                <thead>
-                  <tr
-                    className={`${darkMode ? "bg-gray-700 text-white" : "bg-gray-100 text-gray-900"}`}
-                  >
-                    <th className="border px-2 py-2 text-left font-semibold">Entomology</th>
-                    <th className="border px-2 py-2 text-left font-semibold">Forensics</th>
-                    <th className="border px-2 py-2 text-left font-semibold">Heredity</th>
-                    <th className="border px-2 py-2 text-left font-semibold">Meteorology</th>
-                    <th className="border px-2 py-2 text-left font-semibold">Metric Mastery</th>
-                    <th className="border px-2 py-2 text-left font-semibold">Potions and Poisons</th>
-                    <th className="border px-2 py-2 text-left font-semibold">Rocks and Minerals</th>
-                    <th className="border px-2 py-2 text-left font-semibold">Solar System</th>
-                    <th className="border px-2 py-2 text-left font-semibold">
-                      Water Quality - Freshwater
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    className={`${
-                      darkMode ? "border-gray-600 bg-green-900/20" : "border-gray-300 bg-green-50"
-                    }`}
-                  >
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. B
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      -
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. B
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. B
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. B
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. B
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. B
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. B
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. B
-                    </td>
-                  </tr>
-                  <tr
-                    className={`${
-                      darkMode ? "border-gray-600 bg-green-900/20" : "border-gray-300 bg-green-50"
-                    }`}
-                  >
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. C
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. C
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      -
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      -
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      -
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      -
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. C
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      -
-                    </td>
-                    <td
-                      className={`border px-2 py-1 text-center ${
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Div. C
-                    </td>
-                  </tr>
-                  {/* Subtopic rows */}
-                  {[
-                    [
-                      "Insect Anatomy",
-                      "Evidence Analysis",
-                      "Genetics",
-                      "Weather Systems",
-                      "Estimation",
-                      "Toxicology",
-                      "Igneous",
-                      "Planets",
-                      "PH",
-                    ],
-                    [
-                      "Life Cycles",
-                      "Fingerprints",
-                      "DNA",
-                      "Clouds",
-                      "Orders of Magnitude",
-                      "Pharmacology",
-                      "Sedimentary",
-                      "Moons",
-                      "Dissolved Oxygen",
-                    ],
-                    [
-                      "Behavior",
-                      "DNA",
-                      "Proteins",
-                      "Percipitation",
-                      "Problem Solving",
-                      "Dosage",
-                      "Metamorphic",
-                      "Asteroids",
-                      "Nutrients",
-                    ],
-                    [
-                      "Classification",
-                      "Toxicology",
-                      "Evolution",
-                      "Temperature",
-                      "Scientific Reasoning",
-                      "Symptoms",
-                      "Mineral Properties",
-                      "Comets",
-                      "Pollutants",
-                    ],
-                    [
-                      "Ecology",
-                      "Crime Scene",
-                      "Population Genetics",
-                      "Pressure",
-                      "Calculations",
-                      "Antidotes",
-                      "Crystal Systems",
-                      "Galaxies",
-                      "Testing",
-                    ],
-                  ].map((row, index) => (
-                    <tr
-                      key={index}
-                      className={`${
-                        darkMode
-                          ? "border-gray-600 hover:bg-gray-700"
-                          : "border-gray-300 hover:bg-gray-50"
-                      }`}
-                    >
-                      {row.map((cell, cellIndex) => (
-                        <td
-                          key={cellIndex}
-                          className={`border px-2 py-1 text-center ${
-                            darkMode ? "text-gray-300" : "text-gray-700"
-                          }`}
-                        >
-                          {cell}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <SecondDivisionSubtopicTable darkMode={darkMode} />
           </div>
 
           {/* Credits */}

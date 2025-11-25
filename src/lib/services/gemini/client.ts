@@ -2,8 +2,8 @@
  * Gemini client management and initialization
  */
 
-import { GoogleGenAI } from "@google/genai";
 import logger from "@/lib/utils/logger";
+import { GoogleGenAI } from "@google/genai";
 
 /**
  * Environment variable containing comma-separated Gemini API keys
@@ -65,7 +65,7 @@ export class GeminiClientManager {
     const keyIndex = Math.floor(Math.random() * this.aiClients.length);
     const client = this.aiClients[keyIndex];
     const apiKey = this.apiKeys[keyIndex];
-    if (!client || !apiKey) {
+    if (!(client && apiKey)) {
       throw new Error("No AI client or API key available");
     }
     return {
@@ -132,7 +132,7 @@ export class GeminiClientManager {
     const index = keyIndex % this.aiClients.length;
     const client = this.aiClients[index];
     const apiKey = this.apiKeys[index];
-    if (!client || !apiKey) {
+    if (!(client && apiKey)) {
       throw new Error("No AI client or API key available");
     }
     return {

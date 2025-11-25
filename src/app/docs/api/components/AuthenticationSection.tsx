@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { Shield } from "lucide-react";
 import Example from "./Example";
 import { WarningBox } from "./InfoBox";
@@ -10,11 +10,17 @@ export default function AuthenticationSection() {
   const { darkMode } = useTheme();
   return (
     <div id="authentication">
-      <SectionHeader icon={<Shield className="w-6 h-6" />} title="Authentication" id="authentication" />
+      <SectionHeader
+        icon={<Shield className="w-6 h-6" />}
+        title="Authentication"
+        id="authentication"
+      />
 
       <div className="space-y-6">
         <div>
-          <h3 className={`text-xl font-semibold mb-4 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+          <h3
+            className={`text-xl font-semibold mb-4 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+          >
             API Key Authentication
           </h3>
           <p className={`mb-4 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
@@ -33,7 +39,9 @@ export default function AuthenticationSection() {
 
               <div className="space-y-3">
                 <div>
-                  <h5 className={`font-medium mb-2 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
+                  <h5
+                    className={`font-medium mb-2 ${darkMode ? "text-gray-200" : "text-gray-800"}`}
+                  >
                     ✅ Recommended: Headers
                   </h5>
                   <Example title="Headers" variant="request">
@@ -43,7 +51,9 @@ Authorization: Bearer your-api-key-here`}
                 </div>
 
                 <div>
-                  <h5 className={`font-medium mb-2 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
+                  <h5
+                    className={`font-medium mb-2 ${darkMode ? "text-gray-200" : "text-gray-800"}`}
+                  >
                     ⚠️ Not Recommended: Query Parameter
                   </h5>
                   <WarningBox>
@@ -64,7 +74,9 @@ Authorization: Bearer your-api-key-here`}
 
               <div className="space-y-3">
                 <div>
-                  <h5 className={`font-medium mb-2 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
+                  <h5
+                    className={`font-medium mb-2 ${darkMode ? "text-gray-200" : "text-gray-800"}`}
+                  >
                     ✅ Recommended: Using Headers
                   </h5>
                   <Example title="API Request with Headers" variant="request">
@@ -74,7 +86,9 @@ Authorization: Bearer your-api-key-here`}
                 </div>
 
                 <div>
-                  <h5 className={`font-medium mb-2 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
+                  <h5
+                    className={`font-medium mb-2 ${darkMode ? "text-gray-200" : "text-gray-800"}`}
+                  >
                     ⚠️ Not Recommended: Using Query Parameter
                   </h5>
                   <Example title="API Request with Query Parameter" variant="request">

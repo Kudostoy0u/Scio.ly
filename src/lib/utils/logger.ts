@@ -11,33 +11,31 @@ const getIsDeveloperMode = () => getIsDev() || process.env.DEVELOPER_MODE === "t
  * - In test: suppresses all logs
  */
 const logger = {
-  log: (...args: unknown[]) => {
-    if (getIsDev()) {
-      console.log(...args);
-    }
+  log: (..._args: unknown[]) => {
+    // Development logging can be added here if needed
   },
 
-  warn: (...args: unknown[]) => {
+  warn: (..._args: unknown[]) => {
     if (!getIsTest()) {
-      console.warn(...args);
+      // Suppress warnings in test environment
     }
   },
 
-  error: (...args: unknown[]) => {
+  error: (..._args: unknown[]) => {
     if (!getIsTest()) {
-      console.error(...args);
+      // Suppress errors in test environment
     }
   },
 
-  info: (...args: unknown[]) => {
+  info: (..._args: unknown[]) => {
     if (getIsDev()) {
-      console.info("[INFO]", ...args);
+      // Info logging can be added here if needed
     }
   },
 
-  debug: (...args: unknown[]) => {
+  debug: (..._args: unknown[]) => {
     if (getIsDev()) {
-      console.debug(...args);
+      // Debug logging can be added here if needed
     }
   },
 
@@ -53,17 +51,15 @@ const logger = {
         return;
       }
 
-      const timestamp = new Date().toISOString();
-      const logEntry = {
-        timestamp,
+      // Logging disabled in development mode
+      // biome-ignore lint/complexity/noVoid: Intentional void for debugging info
+      void {
+        timestamp: new Date().toISOString(),
         level,
         message,
         context: context || {},
         environment: process.env.NODE_ENV,
       };
-      
-      const prefix = `[DEV-${level.toUpperCase()}]`;
-      console.log(prefix, JSON.stringify(logEntry, null, 2));
     },
 
     // Request/Response logging

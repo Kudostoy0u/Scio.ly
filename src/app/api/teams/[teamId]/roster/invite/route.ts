@@ -1,16 +1,15 @@
 import { dbPg } from "@/lib/db";
 import { users } from "@/lib/db/schema/core";
+import { newTeamNotifications } from "@/lib/db/schema/notifications";
 import {
   newTeamGroups,
   newTeamMemberships,
   newTeamUnits,
   rosterLinkInvitations,
 } from "@/lib/db/schema/teams";
-import { newTeamNotifications } from "@/lib/db/schema/notifications";
-import {
-  UUIDSchema,
-  validateRequest,
-} from "@/lib/schemas/teams-validation";
+import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
+import { NotificationSyncService } from "@/lib/services/notification-sync";
+import { getServerUser } from "@/lib/supabaseServer";
 import {
   handleError,
   handleForbiddenError,
@@ -20,11 +19,11 @@ import {
   validateEnvironment,
 } from "@/lib/utils/error-handler";
 import logger from "@/lib/utils/logger";
-import { NotificationSyncService } from "@/lib/services/notification-sync";
-import { getServerUser } from "@/lib/supabaseServer";
-import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
+import { and, eq, ne, or, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+
+type RosterLinkInvitation = typeof rosterLinkInvitations.$inferSelect;
 
 // GET /api/teams/[teamId]/roster/invite - Search users to invite for roster linking
 // Frontend Usage:
@@ -35,7 +34,9 @@ export async function GET(
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -128,7 +129,9 @@ export async function POST(
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -139,7 +142,7 @@ export async function POST(
     let body: unknown;
     try {
       body = await request.json();
-    } catch (error) {
+    } catch (_error) {
       return handleValidationError(
         new z.ZodError([
           {
@@ -270,7 +273,7 @@ export async function POST(
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
 
-    let invitation;
+    let invitation: RosterLinkInvitation | undefined;
 
     if (existingInvitation) {
       if (existingInvitation.status === "pending") {
@@ -291,7 +294,9 @@ export async function POST(
         .set({
           status: "pending",
           invitedBy: user.id,
-          message: message || `You've been invited to link your account to the roster entry "${studentName}"`,
+          message:
+            message ||
+            `You've been invited to link your account to the roster entry "${studentName}"`,
           expiresAt,
           createdAt: new Date(),
         })
@@ -308,7 +313,9 @@ export async function POST(
           studentName,
           invitedUserId: invitedUser.id,
           invitedBy: user.id,
-          message: message || `You've been invited to link your account to the roster entry "${studentName}"`,
+          message:
+            message ||
+            `You've been invited to link your account to the roster entry "${studentName}"`,
           status: "pending",
           expiresAt,
         })
@@ -318,7 +325,10 @@ export async function POST(
     }
 
     if (!invitation) {
-      return handleError(new Error("Failed to create or update invitation"), "POST /api/teams/[teamId]/roster/invite - invitation");
+      return handleError(
+        new Error("Failed to create or update invitation"),
+        "POST /api/teams/[teamId]/roster/invite - invitation"
+      );
     }
 
     // Get team information for the notification using Drizzle ORM
@@ -359,7 +369,10 @@ export async function POST(
         await NotificationSyncService.syncNotificationToSupabase(notificationResult.id);
       } catch (syncError) {
         // Don't fail the entire request if sync fails
-        logger.error("Failed to sync notification to Supabase", { error: syncError, notificationId: notificationResult.id });
+        logger.error("Failed to sync notification to Supabase", {
+          error: syncError,
+          notificationId: notificationResult.id,
+        });
       }
     }
 

@@ -59,7 +59,7 @@ export default function QuestionCard({
   // Use the same format as normal tests: answers as numeric indices
   const answersForMultiSelect = question.answers || [];
   const isMultiSelect = isMultiSelectQuestion(question.question, answersForMultiSelect);
-  const currentAnswers = userAnswers || [];
+  const currentAnswers = useMemo(() => userAnswers || [], [userAnswers]);
 
   // Compute MCQ score directly from question data (single source of truth)
   // This ensures consistency between highlighting and text display
@@ -74,6 +74,7 @@ export default function QuestionCard({
       // Validate against gradingResults if available
       const storedScore = gradingResults[index];
       if (storedScore !== undefined && Math.abs(score - storedScore) > 0.01) {
+        // Score mismatch detected, using calculated score
       }
       return score;
     }
@@ -118,6 +119,7 @@ export default function QuestionCard({
 
       {(question.imageUrl || question.imageData) && (
         <div className="mb-4 w-full flex justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={question.imageData || question.imageUrl}
             alt="Mineral"
@@ -132,7 +134,13 @@ export default function QuestionCard({
           {(() => {
             // Handle both regular test questions (options as strings) and assignment questions (options as objects)
             const options = question.options || [];
-            const optionTexts = options.map((opt) => (typeof opt === "string" ? opt : (typeof opt === "object" && opt !== null && "text" in opt ? opt.text : String(opt))));
+            const optionTexts = options.map((opt) =>
+              typeof opt === "string"
+                ? opt
+                : typeof opt === "object" && opt !== null && "text" in opt
+                  ? (opt as { text: string }).text
+                  : String(opt)
+            );
             return optionTexts;
           })().map((option, optionIndex) => (
             <label

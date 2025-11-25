@@ -1,16 +1,25 @@
+// biome-ignore lint/style/useFilenamingConvention: Test file follows .test.tsx convention
+import TeamCalendar from "@app/teams/components/TeamCalendar";
+import TeamsLanding from "@app/teams/components/TeamsLanding";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import TeamCalendar from "@components/TeamCalendar";
-import TeamsLanding from "@components/TeamsLanding";
+
+// Top-level regex patterns for test matching
+const NEXT_BUTTON_REGEX = /next/i;
+const PREV_BUTTON_REGEX = /previous/i;
+const MONTH_REGEX = /February|March|April/;
+const PREV_MONTH_REGEX = /December|January/;
+const DAY_NUMBER_REGEX = /^\d+$/;
 
 // Mock all the required modules
-vi.mock("@/app/contexts/ThemeContext", () => ({
+vi.mock("@/app/contexts/themeContext", () => ({
   useTheme: () => ({
     darkMode: false,
   }),
 }));
 
-vi.mock("@/app/contexts/AuthContext", () => ({
+vi.mock("@/app/contexts/authContext", () => ({
   useAuth: () => ({
     user: {
       id: "test-user-id",
@@ -28,29 +37,53 @@ vi.mock("react-toastify", () => ({
 
 vi.mock("framer-motion", () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    div: ({ children, ...props }: { children: ReactNode; [key: string]: unknown }) => (
+      <div {...props}>{children}</div>
+    ),
   },
-  AnimatePresence: ({ children }: any) => children,
+  AnimatePresence: ({ children }: { children: ReactNode }) => children,
 }));
 
 // Mock lucide-react
 vi.mock("lucide-react", () => ({
-  Plus: ({ className }: any) => <div className={className} data-testid="plus-icon" />,
-  Edit: ({ className }: any) => <div className={className} data-testid="edit-icon" />,
-  Trash2: ({ className }: any) => <div className={className} data-testid="trash-icon" />,
-  X: ({ className }: any) => <div className={className} data-testid="x-icon" />,
-  Repeat: ({ className }: any) => <div className={className} data-testid="repeat-icon" />,
-  ChevronLeft: ({ className }: any) => <div className={className} data-testid="chevron-left-icon" />,
-  ChevronRight: ({ className }: any) => <div className={className} data-testid="chevron-right-icon" />,
-  Home: ({ className }: any) => <div className={className} data-testid="home-icon" />,
-  Calendar: ({ className }: any) => <div className={className} data-testid="calendar-icon" />,
-  Archive: ({ className }: any) => <div className={className} data-testid="archive-icon" />,
-  Settings: ({ className }: any) => <div className={className} data-testid="settings-icon" />,
-  Users: ({ className }: any) => <div className={className} data-testid="users-icon" />,
+  Plus: ({ className }: { className?: string }) => (
+    <div className={className} data-testid="plus-icon" />
+  ),
+  Edit: ({ className }: { className?: string }) => (
+    <div className={className} data-testid="edit-icon" />
+  ),
+  Trash2: ({ className }: { className?: string }) => (
+    <div className={className} data-testid="trash-icon" />
+  ),
+  X: ({ className }: { className?: string }) => <div className={className} data-testid="x-icon" />,
+  Repeat: ({ className }: { className?: string }) => (
+    <div className={className} data-testid="repeat-icon" />
+  ),
+  ChevronLeft: ({ className }: { className?: string }) => (
+    <div className={className} data-testid="chevron-left-icon" />
+  ),
+  ChevronRight: ({ className }: { className?: string }) => (
+    <div className={className} data-testid="chevron-right-icon" />
+  ),
+  Home: ({ className }: { className?: string }) => (
+    <div className={className} data-testid="home-icon" />
+  ),
+  Calendar: ({ className }: { className?: string }) => (
+    <div className={className} data-testid="calendar-icon" />
+  ),
+  Archive: ({ className }: { className?: string }) => (
+    <div className={className} data-testid="archive-icon" />
+  ),
+  Settings: ({ className }: { className?: string }) => (
+    <div className={className} data-testid="settings-icon" />
+  ),
+  Users: ({ className }: { className?: string }) => (
+    <div className={className} data-testid="users-icon" />
+  ),
 }));
 
 // Mock NotificationsContext
-vi.mock("@/app/contexts/NotificationsContext", () => ({
+vi.mock("@/app/contexts/notificationsContext", () => ({
   useNotifications: () => ({
     unread: 0,
     notifs: [],
@@ -289,10 +322,16 @@ describe("Calendar Integration Tests", () => {
 
       render(
         <TeamsLanding
-          onCreateTeam={() => {}}
-          onJoinTeam={() => {}}
+          onCreateTeam={() => {
+            // Empty handler for test
+          }}
+          onJoinTeam={() => {
+            // Empty handler for test
+          }}
           userTeams={mockUserTeams}
-          onTeamSelect={() => {}}
+          onTeamSelect={() => {
+            // Empty handler for test
+          }}
         />
       );
 
@@ -317,10 +356,16 @@ describe("Calendar Integration Tests", () => {
 
       render(
         <TeamsLanding
-          onCreateTeam={() => {}}
-          onJoinTeam={() => {}}
+          onCreateTeam={() => {
+            // Empty handler for test
+          }}
+          onJoinTeam={() => {
+            // Empty handler for test
+          }}
           userTeams={mockUserTeams}
-          onTeamSelect={() => {}}
+          onTeamSelect={() => {
+            // Empty handler for test
+          }}
         />
       );
 
@@ -389,21 +434,21 @@ describe("Calendar Integration Tests", () => {
       render(<TeamCalendar teamId="team-123" isCaptain={true} teamSlug="test-team" />);
 
       // Navigate to next month
-      const nextButton = screen.getByRole("button", { name: /next/i });
+      const nextButton = screen.getByRole("button", { name: NEXT_BUTTON_REGEX });
       fireEvent.click(nextButton);
 
       await waitFor(() => {
         // Should show next month
-        expect(screen.getByText(/February|March|April/)).toBeInTheDocument();
+        expect(screen.getByText(MONTH_REGEX)).toBeInTheDocument();
       });
 
       // Navigate to previous month
-      const prevButton = screen.getByRole("button", { name: /previous/i });
+      const prevButton = screen.getByRole("button", { name: PREV_BUTTON_REGEX });
       fireEvent.click(prevButton);
 
       await waitFor(() => {
         // Should show previous month
-        expect(screen.getByText(/December|January/)).toBeInTheDocument();
+        expect(screen.getByText(PREV_MONTH_REGEX)).toBeInTheDocument();
       });
     });
 
@@ -500,7 +545,7 @@ describe("Calendar Integration Tests", () => {
       // Find a day in the current month
       const dayButtons = screen.getAllByRole("button");
       const dayButton = dayButtons.find(
-        (button) => button.textContent && /^\d+$/.test(button.textContent)
+        (button) => button.textContent && DAY_NUMBER_REGEX.test(button.textContent)
       );
 
       if (dayButton) {

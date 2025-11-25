@@ -3,8 +3,8 @@ import SyncLocalStorage from "@/lib/database/localStorage-replacement";
 import logger from "@/lib/utils/logger";
 
 // Image and Link are used within UserDropdown/AuthModal
-import { useAuth } from "@/app/contexts/AuthContext";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useAuth } from "@/app/contexts/authContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { preloadImage } from "@/lib/utils/preloadImage";
 import type { User } from "@supabase/supabase-js";
 import {} from "lucide-react";
@@ -57,7 +57,9 @@ export default function AuthButton() {
         if (cachedUsername) {
           setUsername(cachedUsername);
         }
-      } catch {}
+      } catch {
+        // Ignore errors when loading cached username
+      }
     }
   }, [ctxUser?.id]);
   // Notifications are now handled efficiently via useEfficientNotifications hook
@@ -75,7 +77,9 @@ export default function AuthButton() {
             setPhotoUrl(null);
           });
         }
-      } catch {}
+      } catch {
+        // Ignore errors when loading cached photo URL
+      }
     }
   }, [ctxUser?.id]);
 
@@ -90,7 +94,9 @@ export default function AuthButton() {
         SyncLocalStorage.removeItem(`scio_display_name_${user.id}`);
         SyncLocalStorage.removeItem(`scio_username_${user.id}`);
       }
-    } catch {}
+    } catch {
+      // Ignore errors when clearing user data from localStorage
+    }
   };
 
   useEffect(() => {
@@ -112,53 +118,231 @@ export default function AuthButton() {
   useEffect(() => {
     let active = true;
     const supabase = client;
+    const isActive = () => active;
+
+    // Helper function to save display name
+    const saveDisplayNameLocal = (userId: string, displayName: string) => {
+      setDisplayName(displayName);
+      try {
+        SyncLocalStorage.setItem(`scio_display_name_${userId}`, displayName);
+      } catch {
+        // Ignore errors when saving display name to localStorage
+      }
+    };
+
+    // Helper function to save username
+    const saveUsernameLocal = (userId: string, username: string) => {
+      setUsername(username);
+      try {
+        SyncLocalStorage.setItem(`scio_username_${userId}`, username);
+      } catch {
+        // Ignore errors when saving username to localStorage
+      }
+    };
+
+    // Helper function to handle photo URL
+    const handlePhotoUrlLocal = async (
+      userId: string,
+      photo: string,
+      isActiveFn: () => boolean
+    ) => {
+      try {
+        SyncLocalStorage.setItem(`scio_profile_photo_${userId}`, photo);
+        await preloadImage(photo);
+        if (isActiveFn()) {
+          setPhotoUrl(photo);
+        }
+      } catch {
+        SyncLocalStorage.removeItem(`scio_profile_photo_${userId}`);
+      }
+    };
+
+    // Helper function to process profile data
+    const processProfileData = async (
+      userId: string,
+      profile: { display_name?: string; username?: string; photo_url?: string } | null,
+      isActiveFn: () => boolean
+    ) => {
+      if (!isActiveFn()) {
+        return;
+      }
+      if (!profile) {
+        return;
+      }
+
+      if (profile.display_name) {
+        saveDisplayNameLocal(userId, profile.display_name);
+      }
+
+      if (profile.username) {
+        saveUsernameLocal(userId, profile.username);
+      }
+
+      if (profile.photo_url) {
+        await handlePhotoUrlLocal(userId, profile.photo_url, isActiveFn);
+      }
+    };
+
+    // Helper function to fetch and process user profile
+    const fetchUserProfile = async (
+      userId: string,
+      supabaseClient: typeof client,
+      isActiveFn: () => boolean
+    ) => {
+      if (!isActiveFn()) {
+        return;
+      }
+
+      const { data: profile } = await supabaseClient
+        .from("users")
+        .select("display_name, first_name, photo_url, username")
+        .eq("id", userId)
+        .maybeSingle();
+
+      await processProfileData(userId, profile, isActiveFn);
+    };
+
     (async () => {
       try {
         if (!ctxUser?.id || typeof ctxUser.id !== "string" || ctxUser.id.trim() === "") {
           return;
         }
 
-        const { data: profile } = await supabase
-          .from("users")
-          .select("display_name, first_name, photo_url, username")
-          .eq("id", ctxUser.id)
-          .maybeSingle();
-        if (!active) {
-          return;
-        }
-        const dn = profile?.display_name;
-        if (dn) {
-          setDisplayName(dn);
-          try {
-            SyncLocalStorage.setItem(`scio_display_name_${ctxUser.id}`, dn);
-          } catch {}
-        }
-        const un = profile?.username;
-        if (un) {
-          setUsername(un);
-          try {
-            SyncLocalStorage.setItem(`scio_username_${ctxUser.id}`, un);
-          } catch {}
-        }
-        const photo = profile?.photo_url;
-        if (photo) {
-          try {
-            SyncLocalStorage.setItem(`scio_profile_photo_${ctxUser.id}`, photo);
-
-            await preloadImage(photo);
-            if (active) {
-              setPhotoUrl(photo);
-            }
-          } catch {
-            SyncLocalStorage.removeItem(`scio_profile_photo_${ctxUser.id}`);
-          }
-        }
-      } catch {}
+        await fetchUserProfile(ctxUser.id, supabase, isActive);
+      } catch {
+        // Ignore errors when loading user profile
+      }
     })();
     return () => {
       active = false;
     };
   }, [client, ctxUser?.id]);
+
+  // Helper function to validate signup inputs
+  const validateSignupInputs = (): string | null => {
+    if (!(firstName && lastName)) {
+      return "Please enter your first and last name";
+    }
+    if (!confirmPassword) {
+      return "Please confirm your password";
+    }
+    if (confirmPassword !== password) {
+      return "Passwords do not match";
+    }
+    return null;
+  };
+
+  // Helper function to check if email exists
+  const checkEmailExists = async (emailToCheck: string): Promise<boolean> => {
+    try {
+      const { data: existing, error: existsErr } = await client
+        .from("users")
+        .select("id")
+        .eq("email", emailToCheck)
+        .maybeSingle();
+      return existing !== null && !existsErr;
+    } catch {
+      return false;
+    }
+  };
+
+  // Helper function to handle signup error messages
+  const getSignupErrorMessage = (error: { message: string }): string => {
+    if (
+      error.message.includes("already registered") ||
+      error.message.includes("already exists") ||
+      error.message.includes("already been registered") ||
+      error.message.includes("User already registered")
+    ) {
+      return "Email is already in use.";
+    }
+    return error.message;
+  };
+
+  // Helper function to handle signup
+  const handleSignup = async (): Promise<void> => {
+    const validationError = validateSignupInputs();
+    if (validationError) {
+      setAuthError(validationError);
+      return;
+    }
+
+    const emailExists = await checkEmailExists(email);
+    if (emailExists) {
+      setAuthError("Email is already in use.");
+      return;
+    }
+
+    const { data, error } = await client.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}${window.location.pathname}`,
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          name: `${firstName} ${lastName}`.trim(),
+          full_name: `${firstName} ${lastName}`.trim(),
+        },
+      },
+    });
+
+    if (error) {
+      setAuthError(getSignupErrorMessage(error));
+    } else if (data.user?.email_confirmed_at) {
+      setAuthError("Email is already in use.");
+    } else {
+      setAuthSuccess(
+        "Check your email for the confirmation link. Don't forget to check your spam folder."
+      );
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+      setFirstName("");
+      setLastName("");
+    }
+  };
+
+  // Helper function to handle signin error messages
+  const getSigninErrorMessage = async (emailToCheck: string): Promise<string> => {
+    try {
+      const { data: existing, error: readErr } = await client
+        .from("users")
+        .select("id")
+        .eq("email", emailToCheck)
+        .maybeSingle();
+      if (existing && !readErr) {
+        return "Incorrect password.";
+      }
+      if (existing || readErr) {
+        return "Incorrect email or password.";
+      }
+      return "No account found with this email. Please sign up instead.";
+    } catch {
+      return "Incorrect email or password.";
+    }
+  };
+
+  // Helper function to handle signin
+  const handleSignin = async (): Promise<void> => {
+    const { error } = await client.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      if (error.message.includes("Invalid login credentials")) {
+        const errorMsg = await getSigninErrorMessage(email);
+        setAuthError(errorMsg);
+      } else {
+        setAuthError(error.message);
+      }
+    } else {
+      setShowSignInModal(false);
+      setEmail("");
+      setPassword("");
+    }
+  };
 
   const handleEmailPasswordAuth = async () => {
     if (!(email && password)) {
@@ -177,102 +361,9 @@ export default function AuthButton() {
 
     try {
       if (authMode === "signup") {
-        if (!(firstName && lastName)) {
-          setAuthError("Please enter your first and last name");
-          return;
-        }
-        if (!confirmPassword) {
-          setAuthError("Please confirm your password");
-          return;
-        }
-        if (confirmPassword !== password) {
-          setAuthError("Passwords do not match");
-          return;
-        }
-        // Pre-check if email already exists in our public users table.
-        // If this check is blocked by RLS or fails, we will still rely on the signUp error handling below.
-        try {
-          const { data: existing, error: existsErr } = await client
-            .from("users")
-            .select("id")
-            .eq("email", email)
-            .maybeSingle();
-          if (existing && !existsErr) {
-            setAuthError("Email is already in use.");
-            return;
-          }
-        } catch {
-          // ignore and proceed to signUp
-        }
-        const { data, error } = await client.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}${window.location.pathname}`,
-            data: {
-              first_name: firstName,
-              last_name: lastName,
-              name: `${firstName} ${lastName}`.trim(),
-              full_name: `${firstName} ${lastName}`.trim(),
-            },
-          },
-        });
-
-        if (error) {
-          if (
-            error.message.includes("already registered") ||
-            error.message.includes("already exists") ||
-            error.message.includes("already been registered") ||
-            error.message.includes("User already registered")
-          ) {
-            setAuthError("Email is already in use.");
-          } else {
-            setAuthError(error.message);
-          }
-        } else if (data.user?.email_confirmed_at) {
-          setAuthError("Email is already in use.");
-        } else {
-          setAuthSuccess(
-            "Check your email for the confirmation link. Don't forget to check your spam folder."
-          );
-          setEmail("");
-          setPassword("");
-          setConfirmPassword("");
-          setFirstName("");
-          setLastName("");
-        }
+        await handleSignup();
       } else {
-        const { error } = await client.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) {
-          if (error.message.includes("Invalid login credentials")) {
-            try {
-              const { data: existing, error: readErr } = await client
-                .from("users")
-                .select("id")
-                .eq("email", email)
-                .maybeSingle();
-              if (existing && !readErr) {
-                setAuthError("Incorrect password.");
-              } else if (existing || readErr) {
-                setAuthError("Incorrect email or password.");
-              } else {
-                setAuthError("No account found with this email. Please sign up instead.");
-              }
-            } catch {
-              setAuthError("Incorrect email or password.");
-            }
-          } else {
-            setAuthError(error.message);
-          }
-        } else {
-          setShowSignInModal(false);
-          setEmail("");
-          setPassword("");
-        }
+        await handleSignin();
       }
     } catch (error) {
       setAuthError(
@@ -409,6 +500,7 @@ export default function AuthButton() {
   return (
     <>
       <button
+        type="button"
         onClick={() => setShowSignInModal(true)}
         className={`px-2 py-2 text-sm font-medium transition-colors duration-200 ${
           darkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-500 hover:text-blue-600"

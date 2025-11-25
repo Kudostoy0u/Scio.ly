@@ -1,3 +1,4 @@
+// biome-ignore lint/performance/noBarrelFile: Barrel file for convenient component exports
 export { FrequencyTable } from "./FrequencyTable";
 export { ReplacementTable } from "./ReplacementTable";
 export { HillDisplay } from "./HillDisplay";

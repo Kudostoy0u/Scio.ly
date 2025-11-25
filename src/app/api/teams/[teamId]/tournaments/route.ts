@@ -6,10 +6,8 @@ import {
   newTeamRecurringMeetings,
   newTeamUnits,
 } from "@/lib/db/schema/teams";
-import {
-  UUIDSchema,
-  validateRequest,
-} from "@/lib/schemas/teams-validation";
+import { UUIDSchema } from "@/lib/schemas/teams-validation";
+import { getServerUser } from "@/lib/supabaseServer";
 import {
   handleError,
   handleForbiddenError,
@@ -19,9 +17,8 @@ import {
   validateEnvironment,
 } from "@/lib/utils/error-handler";
 import logger from "@/lib/utils/logger";
-import { getServerUser } from "@/lib/supabaseServer";
 import { checkTeamGroupAccessCockroach } from "@/lib/utils/team-auth";
-import { and, asc, eq, gt, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -29,13 +26,16 @@ import { z } from "zod";
 // Frontend Usage:
 // - src/lib/stores/teamStore.ts (fetchTournaments, fetchStreamData)
 // - src/app/hooks/useEnhancedTeamData.ts (fetchTournaments)
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex tournament retrieval with filtering and date logic
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -117,10 +117,7 @@ export async function GET(
         )
       )
       .where(
-        and(
-          inArray(newTeamEvents.teamId, teamUnitIds),
-          gt(newTeamEvents.startTime, sql`NOW()`)
-        )
+        and(inArray(newTeamEvents.teamId, teamUnitIds), gt(newTeamEvents.startTime, sql`NOW()`))
       )
       .orderBy(asc(newTeamEvents.startTime))
       .limit(50);
@@ -164,13 +161,13 @@ export async function GET(
         const daysOfWeek = Array.isArray(meeting.days_of_week)
           ? meeting.days_of_week
           : typeof meeting.days_of_week === "string"
-          ? JSON.parse(meeting.days_of_week || "[]")
-          : [];
+            ? JSON.parse(meeting.days_of_week || "[]")
+            : [];
         const exceptions = Array.isArray(meeting.exceptions)
           ? meeting.exceptions
           : typeof meeting.exceptions === "string"
-          ? JSON.parse(meeting.exceptions || "[]")
-          : [];
+            ? JSON.parse(meeting.exceptions || "[]")
+            : [];
         const startDate = meeting.start_date ? new Date(meeting.start_date) : now;
         const endDate = meeting.end_date ? new Date(meeting.end_date) : futureDate;
 

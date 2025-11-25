@@ -2,6 +2,7 @@
 
 // motion import kept for future animations
 // import { motion } from 'framer-motion';
+import type React from "react";
 import NumberAnimation from "./NumberAnimation";
 
 interface MetricsCardProps {
@@ -50,41 +51,71 @@ export default function MetricsCard({
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleClick();
+    }
+  };
+
+  // Helper function to get value for a specific view
+  const getValueForView = (currentView: "daily" | "weekly" | "allTime"): number => {
+    if (currentView === "daily") {
+      return dailyValue;
+    }
+    if (currentView === "weekly") {
+      return weeklyValue;
+    }
+    return allTimeValue;
+  };
+
+  // Helper function to get denominator for a specific view
+  const getDenominatorForView = (currentView: "daily" | "weekly" | "allTime"): number => {
+    if (currentView === "daily") {
+      return dailyDenominator ?? 0;
+    }
+    if (currentView === "weekly") {
+      return weeklyDenominator ?? 0;
+    }
+    return allTimeDenominator ?? 0;
+  };
+
+  // Helper function to render loading state
+  const renderLoadingState = () => <div className={`text-4xl font-bold ${color}`}>...</div>;
+
+  // Helper function to render simple number display
+  const renderNumberDisplay = (value: number) => (
+    <NumberAnimation value={value} className={`text-4xl font-bold ${color}`} />
+  );
+
+  // Helper function to render fraction display
+  const renderFractionDisplay = (numerator: number, denominator: number) => (
+    <div className={`text-4xl font-bold ${color}`}>
+      <span>{numerator}</span>
+      <span className={darkMode ? "text-gray-300" : "text-gray-500"}>/</span>
+      <span className="text-blue-600">{denominator}</span>
+    </div>
+  );
+
   const getDisplay = (currentView: "daily" | "weekly" | "allTime") => {
     const hasData = dailyValue > 0 || weeklyValue > 0 || allTimeValue > 0;
     if (isLoading && !hasData) {
-      return <div className={`text-4xl font-bold ${color}`}>...</div>;
+      return renderLoadingState();
     }
     if (!formatAsFraction) {
-      const value =
-        currentView === "daily"
-          ? dailyValue
-          : currentView === "weekly"
-            ? weeklyValue
-            : allTimeValue;
-      return <NumberAnimation value={value} className={`text-4xl font-bold ${color}`} />;
+      const value = getValueForView(currentView);
+      return renderNumberDisplay(value);
     }
-    const numerator =
-      currentView === "daily" ? dailyValue : currentView === "weekly" ? weeklyValue : allTimeValue;
-    const denominator =
-      currentView === "daily"
-        ? (dailyDenominator ?? 0)
-        : currentView === "weekly"
-          ? (weeklyDenominator ?? 0)
-          : (allTimeDenominator ?? 0);
-    return (
-      <div className={`text-4xl font-bold ${color}`}>
-        <span>{numerator}</span>
-        <span className={darkMode ? "text-gray-300" : "text-gray-500"}>/</span>
-        <span className="text-blue-600">{denominator}</span>
-      </div>
-    );
+    const numerator = getValueForView(currentView);
+    const denominator = getDenominatorForView(currentView);
+    return renderFractionDisplay(numerator, denominator);
   };
 
   return (
     <div className="perspective-1000 hover:scale-[1.02] transition-transform duration-300 text-center">
-      <div
-        className={`p-0 h-32 rounded-lg cursor-pointer transition-transform duration-700 relative ${cardStyle}`}
+      <button
+        type="button"
+        className="w-full h-32 p-0 rounded-lg cursor-pointer transition-transform duration-700 relative overflow-hidden"
         style={{
           transformStyle: "preserve-3d",
           transform:
@@ -96,10 +127,11 @@ export default function MetricsCard({
           minHeight: "120px",
         }}
         onClick={handleClick}
+        onKeyDown={handleKeyDown}
       >
         {/* Daily View */}
         <div
-          className="absolute w-full h-full flex flex-col px-6 pt-4 md:pt-6"
+          className={`absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 py-4 md:px-5 ${cardStyle}`}
           style={{
             backfaceVisibility: "hidden",
             transform: "rotateX(0deg)",
@@ -108,7 +140,7 @@ export default function MetricsCard({
           }}
         >
           <h3
-            className={`text-lg md:text-xl mb-4 md:mb-2 font-semibold ${darkMode ? "text-white" : "text-gray-800"}`}
+            className={`text-lg md:text-xl font-semibold text-center ${darkMode ? "text-white" : "text-gray-800"}`}
           >
             {`Daily ${title}`}
           </h3>
@@ -117,7 +149,7 @@ export default function MetricsCard({
 
         {/* Weekly View */}
         <div
-          className="absolute w-full h-full flex flex-col px-6 pt-4 md:pt-6"
+          className={`absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 py-4 md:px-5 ${cardStyle}`}
           style={{
             backfaceVisibility: "hidden",
             transform: "rotateX(180deg)",
@@ -126,7 +158,7 @@ export default function MetricsCard({
           }}
         >
           <h3
-            className={`text-lg md:text-xl font-semibold mb-4 md:mb-2 ${darkMode ? "text-white" : "text-gray-800"}`}
+            className={`text-lg md:text-xl font-semibold text-center ${darkMode ? "text-white" : "text-gray-800"}`}
           >
             {`Weekly ${title}`}
           </h3>
@@ -135,7 +167,7 @@ export default function MetricsCard({
 
         {/* All Time View */}
         <div
-          className="absolute w-full h-full flex flex-col px-6 pt-4 md:pt-6"
+          className={`absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 py-4 md:px-5 ${cardStyle}`}
           style={{
             backfaceVisibility: "hidden",
             transform: "rotateX(360deg)",
@@ -144,13 +176,13 @@ export default function MetricsCard({
           }}
         >
           <h3
-            className={`text-lg md:text-xl font-semibold mb-4 md:mb-2 ${darkMode ? "text-white" : "text-gray-800"}`}
+            className={`text-lg md:text-xl font-semibold text-center ${darkMode ? "text-white" : "text-gray-800"}`}
           >
             {`All-time ${title}`}
           </h3>
           {getDisplay("allTime")}
         </div>
-      </div>
+      </button>
     </div>
   );
 }

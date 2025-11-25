@@ -1,5 +1,6 @@
 import { dbPg } from "@/lib/db";
 import { newTeamAssignments } from "@/lib/db/schema/assignments";
+import { users } from "@/lib/db/schema/core";
 import {
   newTeamEvents,
   newTeamGroups,
@@ -8,7 +9,7 @@ import {
   newTeamStreamPosts,
   newTeamUnits,
 } from "@/lib/db/schema/teams";
-import { users } from "@/lib/db/schema/core";
+import { getServerUser } from "@/lib/supabaseServer";
 import {
   handleError,
   handleNotFoundError,
@@ -17,7 +18,6 @@ import {
   validateEnvironment,
 } from "@/lib/utils/error-handler";
 import logger from "@/lib/utils/logger";
-import { getServerUser } from "@/lib/supabaseServer";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -52,7 +52,16 @@ const TeamDataResponseSchema = z.object({
       role: z.string(),
       joinedAt: z.string().nullable().optional(),
       subteamId: z.string(),
-      subteam: z.any().nullable().optional(),
+      subteam: z
+        .object({
+          id: z.string(),
+          name: z.string(),
+          description: z.string().nullable(),
+          teamId: z.string(),
+          createdAt: z.string().nullable(),
+        })
+        .nullable()
+        .optional(),
       events: z.array(z.string()),
       eventCount: z.number(),
       avatar: z.string().nullable().optional(),
@@ -117,7 +126,16 @@ const TeamDataResponseSchema = z.object({
       updatedAt: z.string().nullable().optional(),
     })
   ),
-  timers: z.array(z.any()),
+  timers: z.array(
+    z.object({
+      id: z.string(),
+      teamUnitId: z.string(),
+      eventId: z.string(),
+      addedBy: z.string(),
+      startTime: z.string().nullable().optional(),
+      createdAt: z.string().nullable().optional(),
+    })
+  ),
   userTeams: z.array(
     z.object({
       id: z.string(),
@@ -142,7 +160,9 @@ export async function GET(
 
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     if (!teamId) {
       return handleValidationError(
@@ -402,7 +422,7 @@ export async function GET(
       }),
       roster: rosterResult.reduce(
         (acc, entry) => {
-          if (!entry.teamUnitId || !entry.eventName || !entry.studentName) {
+          if (!(entry.teamUnitId && entry.eventName && entry.studentName)) {
             return acc;
           }
           if (!acc[entry.teamUnitId]) {

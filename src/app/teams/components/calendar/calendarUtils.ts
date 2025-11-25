@@ -10,7 +10,7 @@ export interface CalendarEvent {
   event_type: "practice" | "tournament" | "meeting" | "deadline" | "other" | "personal";
   is_all_day: boolean;
   is_recurring: boolean;
-  recurrence_pattern?: any;
+  recurrence_pattern?: Record<string, unknown>;
   created_by: string;
   team_id?: string;
   attendees?: Array<{
@@ -46,7 +46,7 @@ export interface EventForm {
   event_type: "practice" | "tournament" | "meeting" | "deadline" | "other" | "personal";
   is_all_day: boolean;
   is_recurring: boolean;
-  recurrence_pattern: any;
+  recurrence_pattern: Record<string, unknown>;
   meeting_type: "personal" | "team";
   selected_team_id: string;
 }
@@ -132,7 +132,13 @@ export const generateCalendarDays = (currentDate: Date, events: CalendarEvent[])
   const startDate = new Date(firstDay);
   startDate.setDate(startDate.getDate() - firstDay.getDay());
 
-  const days: any[] = [];
+  const days: Array<{
+    date: Date;
+    events: CalendarEvent[];
+    isCurrentMonth: boolean;
+    isToday: boolean;
+    isLastDay: boolean;
+  }> = [];
   const current = new Date(startDate);
   const endDate = new Date(lastDay);
   endDate.setDate(endDate.getDate() + (6 - lastDay.getDay()));
@@ -215,7 +221,8 @@ export const getEventColors = (type: string, darkMode: boolean) => {
 
 // Get team options for dropdowns
 export const getTeamOptions = (userTeams: UserTeam[]) => {
-  return userTeams.reduce((acc: any[], team) => {
+  type TeamOption = UserTeam & { isAllTeams?: boolean };
+  return userTeams.reduce((acc: TeamOption[], team) => {
     const schoolKey = team.school || "Unknown School";
     const existingGroup = acc.find((group) => group.school === schoolKey);
 
@@ -226,6 +233,9 @@ export const getTeamOptions = (userTeams: UserTeam[]) => {
         id: `all-${schoolKey}`,
         school: schoolKey,
         team_id: "All",
+        name: "",
+        slug: "",
+        user_role: "",
         isAllTeams: true,
       });
       acc.push(team);
@@ -246,7 +256,7 @@ export const getDefaultEventForm = (): EventForm => ({
   event_type: "practice",
   is_all_day: false,
   is_recurring: false,
-  recurrence_pattern: null,
+  recurrence_pattern: {},
   meeting_type: "personal",
   selected_team_id: "",
 });

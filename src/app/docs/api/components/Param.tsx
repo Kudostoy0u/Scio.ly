@@ -1,4 +1,4 @@
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 
 interface ParamProps {
   name: string;
@@ -34,7 +34,9 @@ export default function Param({ name, type, required, description }: ParamProps)
             </span>
           )}
         </div>
-        <p className={`${darkMode ? "text-gray-400" : "text-gray-600"} text-sm mt-1`}>{description}</p>
+        <p className={`${darkMode ? "text-gray-400" : "text-gray-600"} text-sm mt-1`}>
+          {description}
+        </p>
       </div>
     </div>
   );

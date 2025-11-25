@@ -1,5 +1,8 @@
 import { requireAuth } from "@/lib/api/auth";
-import { queryCockroachDB } from "@/lib/cockroachdb";
+import { dbPg } from "@/lib/db/index";
+import { rosterLinkInvitations } from "@/lib/db/schema";
+import { newTeamNotifications } from "@/lib/db/schema/notifications";
+import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -23,20 +26,18 @@ export async function POST(request: NextRequest) {
       }
 
       // Update the roster link invitation status to declined
-      await queryCockroachDB(
-        `UPDATE roster_link_invitations 
-         SET status = 'declined'
-         WHERE id = $1`,
-        [invitationId]
-      );
+      await dbPg
+        .update(rosterLinkInvitations)
+        .set({ status: "declined" })
+        .where(eq(rosterLinkInvitations.id, invitationId));
 
       // Mark the notification as read
-      await queryCockroachDB(
-        `UPDATE new_team_notifications 
-         SET is_read = true, read_at = NOW()
-         WHERE id = $1 AND user_id = $2`,
-        [id, user?.id]
-      );
+      await dbPg
+        .update(newTeamNotifications)
+        .set({ isRead: true, readAt: new Date() })
+        .where(
+          and(eq(newTeamNotifications.id, id), eq(newTeamNotifications.userId, user?.id ?? ""))
+        );
 
       return NextResponse.json({ success: true });
     }
@@ -44,23 +45,21 @@ export async function POST(request: NextRequest) {
     if (type === "assignment_invitation") {
       // For assignment invitations, just mark as read since declining doesn't change anything
       // (the assignment still exists and the user is still assigned to it)
-      await queryCockroachDB(
-        `UPDATE new_team_notifications 
-         SET is_read = true, read_at = NOW()
-         WHERE id = $1 AND user_id = $2`,
-        [id, user?.id]
-      );
+      await dbPg
+        .update(newTeamNotifications)
+        .set({ isRead: true, readAt: new Date() })
+        .where(
+          and(eq(newTeamNotifications.id, id), eq(newTeamNotifications.userId, user?.id ?? ""))
+        );
 
       return NextResponse.json({ success: true });
     }
 
     // For other notification types, just mark as read
-    await queryCockroachDB(
-      `UPDATE new_team_notifications 
-       SET is_read = true, read_at = NOW()
-       WHERE id = $1 AND user_id = $2`,
-      [id, user?.id]
-    );
+    await dbPg
+      .update(newTeamNotifications)
+      .set({ isRead: true, readAt: new Date() })
+      .where(and(eq(newTeamNotifications.id, id), eq(newTeamNotifications.userId, user?.id ?? "")));
 
     return NextResponse.json({ success: true });
   } catch (_error) {

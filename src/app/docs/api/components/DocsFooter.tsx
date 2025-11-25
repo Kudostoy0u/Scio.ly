@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 
 export default function DocsFooter() {
   const { darkMode } = useTheme();
@@ -8,7 +8,9 @@ export default function DocsFooter() {
     <div className={`mt-16 pt-8 border-t ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
-          <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+          <h3
+            className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+          >
             Error Codes
           </h3>
           <div className={`space-y-2 text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
@@ -50,7 +52,9 @@ export default function DocsFooter() {
           </div>
         </div>
         <div>
-          <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+          <h3
+            className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+          >
             Best Practices
           </h3>
           <div className={`space-y-2 text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>

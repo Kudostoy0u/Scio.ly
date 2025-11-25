@@ -72,7 +72,12 @@ export function subscribeToDownloads(onUpdate: () => void): () => void {
     const ch = getDownloadsChannel();
     const handler = (e: MessageEvent) => {
       const payload = e.data ?? e;
-      if (payload && typeof payload === "object" && "type" in payload && payload.type === "updated") {
+      if (
+        payload &&
+        typeof payload === "object" &&
+        "type" in payload &&
+        payload.type === "updated"
+      ) {
         onUpdate();
       }
     };
@@ -87,10 +92,17 @@ export function subscribeToDownloads(onUpdate: () => void): () => void {
       const winHandler = (ev: Event) => {
         try {
           const detail = (ev as CustomEvent).detail;
-          if (detail && typeof detail === "object" && "type" in detail && detail.type === "updated") {
+          if (
+            detail &&
+            typeof detail === "object" &&
+            "type" in detail &&
+            detail.type === "updated"
+          ) {
             onUpdate();
           }
-        } catch {}
+        } catch {
+          // Ignore message handler errors
+        }
       };
       window.addEventListener("scio-downloads-updated", winHandler);
 
@@ -100,11 +112,15 @@ export function subscribeToDownloads(onUpdate: () => void): () => void {
         } catch {
           try {
             (ch as { onmessage: ((e: MessageEvent) => void) | null }).onmessage = null;
-          } catch {}
+          } catch {
+            // Ignore cleanup errors
+          }
         }
         try {
           window.removeEventListener("scio-downloads-updated", winHandler as EventListener);
-        } catch {}
+        } catch {
+          // Ignore removeEventListener errors
+        }
       };
     }
 
@@ -121,7 +137,9 @@ export function subscribeToDownloads(onUpdate: () => void): () => void {
 async function ensureDbOpen() {
   try {
     await db.open();
-  } catch {}
+  } catch {
+    // Ignore database open errors
+  }
 }
 
 function broadcastDownloadUpdate(eventSlug: string) {
@@ -130,14 +148,18 @@ function broadcastDownloadUpdate(eventSlug: string) {
     if (ch) {
       ch.postMessage({ type: "updated", eventSlug });
     }
-  } catch {}
+  } catch {
+    // Ignore BroadcastChannel errors
+  }
   try {
     // same-window fallback
     const ev = new CustomEvent("scio-downloads-updated", {
       detail: { type: "updated", eventSlug },
     });
     window.dispatchEvent(ev);
-  } catch {}
+  } catch {
+    // Ignore event dispatch errors
+  }
 }
 
 export async function listDownloadedEventSlugs(): Promise<string[]> {
@@ -160,13 +182,27 @@ export async function hasOfflineEvent(eventSlug: string): Promise<boolean> {
   }
 }
 
-export async function getEventOfflineQuestions(
-  eventSlug: string
-): Promise<Array<{ id: string; author: string; quote: string }> | { en: Array<{ id: string; author: string; quote: string }>; es: Array<{ id: string; author: string; quote: string }> } | []> {
+export async function getEventOfflineQuestions(eventSlug: string): Promise<
+  | Array<{ id: string; author: string; quote: string }>
+  | {
+      en: Array<{ id: string; author: string; quote: string }>;
+      es: Array<{ id: string; author: string; quote: string }>;
+    }
+  | []
+> {
   try {
     await ensureDbOpen();
     const entry = await db.questions.get(eventSlug);
-    return entry?.questions || [];
+    const questions = entry?.questions;
+    if (Array.isArray(questions)) {
+      return questions as
+        | Array<{ id: string; author: string; quote: string }>
+        | {
+            en: Array<{ id: string; author: string; quote: string }>;
+            es: Array<{ id: string; author: string; quote: string }>;
+          };
+    }
+    return [];
   } catch {
     return [];
   }
@@ -174,13 +210,18 @@ export async function getEventOfflineQuestions(
 
 export async function saveOfflineEvent(
   eventSlug: string,
-  questions: Array<{ id: string; author: string; quote: string }> | { en: Array<{ id: string; author: string; quote: string }>; es: Array<{ id: string; author: string; quote: string }> }
+  questions:
+    | Array<{ id: string; author: string; quote: string }>
+    | {
+        en: Array<{ id: string; author: string; quote: string }>;
+        es: Array<{ id: string; author: string; quote: string }>;
+      }
 ): Promise<boolean> {
   try {
     await ensureDbOpen();
     await db.questions.put({
       eventSlug,
-      questions,
+      questions: Array.isArray(questions) ? questions : [],
       updatedAt: Date.now(),
     });
     broadcastDownloadUpdate(eventSlug);

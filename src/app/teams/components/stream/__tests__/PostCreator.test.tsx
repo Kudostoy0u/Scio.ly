@@ -1,6 +1,6 @@
+import PostCreator from "@/app/teams/components/stream/PostCreator";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import PostCreator from "@/app/teams/components/stream/PostCreator";
 
 // Mock lucide-react icons
 vi.mock("lucide-react", () => ({

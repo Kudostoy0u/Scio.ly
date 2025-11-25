@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import CollapsibleExample from "@/app/docs/api/components/CollapsibleExample";
 
 export default function ExplanationsGuide() {
@@ -15,7 +15,9 @@ export default function ExplanationsGuide() {
 
       <div className="space-y-6">
         <div>
-          <h4 className={`text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+          <h4
+            className={`text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+          >
             Basic Usage
           </h4>
           <p className={`text-sm mb-4 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
@@ -81,7 +83,9 @@ try {
         </div>
 
         <div>
-          <h4 className={`text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+          <h4
+            className={`text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+          >
             React Hook Example
           </h4>
           <p className={`text-sm mb-4 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
@@ -145,7 +149,8 @@ function QuestionComponent({ question, userAnswer, event }) {
     try {
       await getExplanation(question, userAnswer, event);
     } catch (error) {
-      console.error('Failed to get explanation:', error);
+      // Error handling in example code
+      // In actual implementation, use: logger.error('Failed to get explanation:', error);
     }
   };
 
@@ -176,7 +181,9 @@ function QuestionComponent({ question, userAnswer, event }) {
         </div>
 
         <div>
-          <h4 className={`text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+          <h4
+            className={`text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+          >
             Error Handling
           </h4>
           <p className={`text-sm mb-4 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
@@ -211,7 +218,9 @@ function QuestionComponent({ question, userAnswer, event }) {
         </div>
 
         <div>
-          <h4 className={`text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+          <h4
+            className={`text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+          >
             Best Practices
           </h4>
           <ul className={`text-sm space-y-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
@@ -243,7 +252,9 @@ function QuestionComponent({ question, userAnswer, event }) {
         </div>
 
         <div>
-          <h4 className={`text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+          <h4
+            className={`text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+          >
             Rate Limiting Implementation
           </h4>
           <p className={`text-sm mb-4 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>

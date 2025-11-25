@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { Send, UserPlus, X } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
@@ -28,6 +28,7 @@ export default function InlineInvite({ isOpen, onClose, onSubmit }: InlineInvite
       setUsername("");
       onClose();
     } catch (_error) {
+      // Ignore errors
     } finally {
       setSubmitting(false);
     }

@@ -130,7 +130,9 @@ function saveFavoriteConfigs(favorites: FavoriteConfig[]) {
   try {
     const capped = favorites.slice(0, MAX_FAVORITES);
     SyncLocalStorage.setItem(FAVORITES_KEY, JSON.stringify(capped));
-  } catch {}
+  } catch {
+    // Ignore localStorage errors
+  }
 }
 
 /**

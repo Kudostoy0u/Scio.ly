@@ -1,9 +1,9 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
-import { Database } from "lucide-react";
+import { useTheme } from "@/app/contexts/themeContext";
 import Example from "@/app/docs/api/components/Example";
 import Schema from "@/app/docs/api/components/Schema";
+import { Database } from "lucide-react";
 import SectionHeader from "./SectionHeader";
 
 export default function OverviewSection() {
@@ -13,7 +13,9 @@ export default function OverviewSection() {
       <SectionHeader icon={<Database className="w-6 h-6" />} title="Overview" id="overview" />
       <div className="space-y-6">
         <div>
-          <h3 className={`text-xl font-semibold mb-4 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+          <h3
+            className={`text-xl font-semibold mb-4 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+          >
             Response Format
           </h3>
           <p className={`mb-4 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
@@ -46,7 +48,9 @@ export default function OverviewSection() {
         </div>
 
         <div>
-          <h3 className={`text-xl font-semibold mb-4 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+          <h3
+            className={`text-xl font-semibold mb-4 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+          >
             Data Types
           </h3>
           <div className="space-y-4">

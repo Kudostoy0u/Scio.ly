@@ -7,8 +7,8 @@ describe("isLangObject", () => {
   });
 
   it("returns false for missing properties", () => {
-    expect(isLangObject({ en: [] } as any)).toBe(false);
-    expect(isLangObject({ es: [] } as any)).toBe(false);
+    expect(isLangObject({ en: [] } as unknown)).toBe(false);
+    expect(isLangObject({ es: [] } as unknown)).toBe(false);
     expect(isLangObject([])).toBe(false);
     expect(isLangObject(null)).toBe(false);
   });

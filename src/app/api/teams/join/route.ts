@@ -4,6 +4,82 @@ import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import logger from "@/lib/utils/logger";
 import { type NextRequest, NextResponse } from "next/server";
 
+// Helper function to derive display name from user profile
+function deriveDisplayName(
+  currentDisplay: string | undefined,
+  firstName: string | undefined,
+  lastName: string | undefined,
+  username: string | undefined,
+  emailLocal: string | undefined
+): string | undefined {
+  if (currentDisplay?.trim()) {
+    return undefined;
+  }
+  if (firstName && lastName) {
+    return `${firstName.trim()} ${lastName.trim()}`;
+  }
+  if (firstName?.trim()) {
+    return firstName.trim();
+  }
+  if (lastName?.trim()) {
+    return lastName.trim();
+  }
+  if (username?.trim()) {
+    return username.trim();
+  }
+  if (emailLocal?.trim()) {
+    return emailLocal.trim();
+  }
+  return undefined;
+}
+
+// Helper function to ensure user has display name before joining team
+async function ensureDisplayName(userId: string, userEmail: string | undefined): Promise<void> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: existingProfile } = await supabase
+      .from("users")
+      .select("id, email, display_name, first_name, last_name, username")
+      .eq("id", userId)
+      .maybeSingle();
+
+    const email: string | undefined =
+      (existingProfile as { email?: string } | null)?.email || userEmail || undefined;
+    const currentDisplay = (existingProfile as { display_name?: string } | null)?.display_name;
+    const firstName = (existingProfile as { first_name?: string } | null)?.first_name;
+    const lastName = (existingProfile as { last_name?: string } | null)?.last_name;
+    const username = (existingProfile as { username?: string } | null)?.username;
+
+    const emailLocal = email?.includes("@") ? email.split("@")[0] : undefined;
+    const derivedDisplayName = deriveDisplayName(
+      currentDisplay,
+      firstName,
+      lastName,
+      username,
+      emailLocal
+    );
+
+    if (derivedDisplayName && email) {
+      logger.dev.structured("info", "Auto-filling display_name before team join", {
+        userId,
+        derivedDisplayName,
+      });
+      if (!email) {
+        throw new Error("Email is required");
+      }
+      const fallbackUsername = username?.trim() || emailLocal || userId;
+      await upsertUserProfile({
+        id: userId,
+        email,
+        displayName: derivedDisplayName,
+        username: fallbackUsername,
+      });
+    }
+  } catch (e) {
+    logger.warn("Failed to auto-fill display_name before team join", e);
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Check if CockroachDB is properly configured
@@ -36,67 +112,7 @@ export async function POST(request: NextRequest) {
 
     try {
       // Before joining team, ensure user has a meaningful display name
-      try {
-        const supabase = await createSupabaseServerClient();
-        const { data: existingProfile } = await supabase
-          .from("users")
-          .select("id, email, display_name, first_name, last_name, username")
-          .eq("id", userId)
-          .maybeSingle();
-
-        const email: string | undefined =
-          (existingProfile as { email?: string } | null)?.email || user.email || undefined;
-        const currentDisplay = (existingProfile as { display_name?: string } | null)?.display_name;
-        const firstName = (existingProfile as { first_name?: string } | null)?.first_name;
-        const lastName = (existingProfile as { last_name?: string } | null)?.last_name;
-        const username = (existingProfile as { username?: string } | null)?.username;
-
-        const emailLocal = email?.includes("@") ? email.split("@")[0] : undefined;
-        const derivedDisplayName = (() => {
-          if (currentDisplay?.trim()) {
-            return undefined;
-          }
-          if (firstName && lastName) {
-            return `${firstName.trim()} ${lastName.trim()}`;
-          }
-          if (firstName?.trim()) {
-            return firstName.trim();
-          }
-          if (lastName?.trim()) {
-            return lastName.trim();
-          }
-          if (username?.trim()) {
-            return username.trim();
-          }
-          if (emailLocal?.trim()) {
-            return emailLocal.trim();
-          }
-          return undefined;
-        })();
-
-        if (derivedDisplayName && email) {
-          logger.dev.structured("info", "Auto-filling display_name before team join", {
-            userId,
-            derivedDisplayName,
-          });
-          await supabase.from("users").upsert(
-            {
-              id: userId,
-              email: email!,
-              display_name: derivedDisplayName,
-            },
-            { onConflict: "id" }
-          );
-          await upsertUserProfile({
-            id: userId,
-            email,
-            displayName: derivedDisplayName,
-            username: username || emailLocal || undefined,
-          });
-        }
-      } catch (e) {
-        logger.warn("Failed to auto-fill display_name before team join", e);
-      }
+      await ensureDisplayName(userId, user.email);
 
       const team = await cockroachDBTeamsService.joinTeamByCode(userId, code);
 
@@ -116,8 +132,9 @@ export async function POST(request: NextRequest) {
         user_role: team.user_role,
         members: team.members,
       });
-    } catch (joinError: any) {
-      return NextResponse.json({ error: joinError.message }, { status: 400 });
+    } catch (joinError: unknown) {
+      const errorMessage = joinError instanceof Error ? joinError.message : "Failed to join team";
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
   } catch (error) {
     return NextResponse.json(

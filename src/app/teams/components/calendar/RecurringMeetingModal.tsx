@@ -78,7 +78,8 @@ export default function RecurringMeetingModal({
   };
 
   const getTeamOptions = () => {
-    return userTeams.reduce((acc: any[], team) => {
+    type TeamOption = UserTeam & { isAllTeams?: boolean; team_id?: string };
+    return userTeams.reduce((acc: TeamOption[], team) => {
       const schoolKey = team.school || "Unknown School";
       const existingGroup = acc.find((group) => group.school === schoolKey);
 
@@ -90,6 +91,9 @@ export default function RecurringMeetingModal({
           school: schoolKey,
           team_id: "All",
           isAllTeams: true,
+          name: "",
+          slug: "",
+          user_role: "",
         });
         acc.push(team);
       }
@@ -117,7 +121,9 @@ export default function RecurringMeetingModal({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
-              <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}>
+              <h3
+                className={`text-lg font-semibold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}
+              >
                 Create Recurring Meeting
               </h3>
 

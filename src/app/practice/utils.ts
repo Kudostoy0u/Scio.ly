@@ -34,7 +34,9 @@ export const loadPreferences = (eventName: string) => {
         timeLimit: preferences.timeLimit || defaults.timeLimit,
       };
     }
-  } catch (_error) {}
+  } catch (_error) {
+    // Ignore errors
+  }
 
   return defaults;
 };

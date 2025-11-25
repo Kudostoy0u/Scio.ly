@@ -16,7 +16,7 @@ class SyncLocalStorage {
 
     try {
       return localStorage.getItem(key);
-    } catch (_error) {
+    } catch {
       return null;
     }
   }
@@ -33,7 +33,9 @@ class SyncLocalStorage {
 
     try {
       localStorage.setItem(key, value);
-    } catch (_error) {}
+    } catch {
+      // Ignore errors
+    }
   }
 
   /**
@@ -47,7 +49,9 @@ class SyncLocalStorage {
 
     try {
       localStorage.removeItem(key);
-    } catch (_error) {}
+    } catch {
+      // Ignore errors
+    }
   }
 
   /**
@@ -60,7 +64,9 @@ class SyncLocalStorage {
 
     try {
       localStorage.clear();
-    } catch (_error) {}
+    } catch {
+      // Ignore errors
+    }
   }
 
   /**
@@ -74,7 +80,7 @@ class SyncLocalStorage {
 
     try {
       return localStorage.length;
-    } catch (_error) {
+    } catch {
       return 0;
     }
   }
@@ -91,7 +97,7 @@ class SyncLocalStorage {
 
     try {
       return localStorage.key(index);
-    } catch (_error) {
+    } catch {
       return null;
     }
   }

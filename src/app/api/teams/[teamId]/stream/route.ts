@@ -9,16 +9,16 @@ import {
   newTeamUnits,
 } from "@/lib/db/schema/teams";
 import {
+  type PostStreamRequest,
   PostStreamRequestSchema,
+  type PutStreamRequest,
   PutStreamRequestSchema,
   StreamResponseSchema,
   UUIDSchema,
-  validateRequest,
-  type PostStreamRequest,
-  type PutStreamRequest,
   formatValidationError,
+  validateRequest,
 } from "@/lib/schemas/teams-validation";
-import logger from "@/lib/utils/logger";
+import { getServerUser } from "@/lib/supabaseServer";
 import {
   // handleError,
   handleForbiddenError,
@@ -27,7 +27,7 @@ import {
   handleValidationError,
   validateEnvironment,
 } from "@/lib/utils/error-handler";
-import { getServerUser } from "@/lib/supabaseServer";
+import logger from "@/lib/utils/logger";
 import { checkTeamGroupAccessCockroach } from "@/lib/utils/team-auth";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
@@ -43,7 +43,9 @@ export async function GET(
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -191,11 +193,8 @@ export async function POST(
     let body: unknown;
     try {
       body = await request.json();
-    } catch (error) {
-      return NextResponse.json(
-        { error: "Invalid JSON in request body" },
-        { status: 400 }
-      );
+    } catch (_error) {
+      return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
     }
 
     // Validate request body using Zod
@@ -207,7 +206,10 @@ export async function POST(
         return NextResponse.json(formatValidationError(error), { status: 400 });
       }
       return NextResponse.json(
-        { error: "Validation failed", details: error instanceof Error ? error.message : "Unknown error" },
+        {
+          error: "Validation failed",
+          details: error instanceof Error ? error.message : "Unknown error",
+        },
         { status: 400 }
       );
     }
@@ -309,7 +311,7 @@ export async function POST(
         teamUnitId: subteamId,
         authorId: user.id,
         content,
-        showTournamentTimer: showTournamentTimer || false,
+        showTournamentTimer: showTournamentTimer,
         tournamentId: tournamentId || null,
         attachmentUrl: attachmentUrl || null,
         attachmentTitle: attachmentTitle || null,
@@ -358,11 +360,8 @@ export async function PUT(
     let body: unknown;
     try {
       body = await request.json();
-    } catch (error) {
-      return NextResponse.json(
-        { error: "Invalid JSON in request body" },
-        { status: 400 }
-      );
+    } catch (_error) {
+      return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
     }
 
     // Validate request body using Zod
@@ -374,7 +373,10 @@ export async function PUT(
         return NextResponse.json(formatValidationError(error), { status: 400 });
       }
       return NextResponse.json(
-        { error: "Validation failed", details: error instanceof Error ? error.message : "Unknown error" },
+        {
+          error: "Validation failed",
+          details: error instanceof Error ? error.message : "Unknown error",
+        },
         { status: 400 }
       );
     }

@@ -1,5 +1,5 @@
 "use client";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 
 export function DocsHomeClient() {
   const { darkMode } = useTheme();
@@ -18,7 +18,9 @@ export function DocsHomeClient() {
         A superior wiki for the 2026 season – curated resources, rules pointers, and printable
         notesheets.
       </p>
-      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${badgeBg} ${badgeText}`}>
+      <span
+        className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${badgeBg} ${badgeText}`}
+      >
         In alpha development
       </span>
     </header>

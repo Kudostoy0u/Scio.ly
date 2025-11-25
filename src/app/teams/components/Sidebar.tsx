@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { Archive, Calendar, ChevronRight, Home, Settings, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -64,6 +64,7 @@ export default function Sidebar({
         <nav className="space-y-2">
           {/* Home Button */}
           <button
+            type="button"
             onClick={() => {
               if (onNavigateToMainDashboard) {
                 onNavigateToMainDashboard();
@@ -85,9 +86,10 @@ export default function Sidebar({
           </button>
 
           {/* Navigation Items */}
-          {sidebarItems.map((item, index) => (
+          {sidebarItems.map((item) => (
             <button
-              key={index}
+              type="button"
+              key={item.tab}
               onClick={() => onTabChange(item.tab)}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group ${
                 item.active
@@ -109,6 +111,7 @@ export default function Sidebar({
 
           {/* Archived Teams Button */}
           <button
+            type="button"
             onClick={handleArchivedClick}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group ${
               darkMode
@@ -138,6 +141,7 @@ export default function Sidebar({
               <div className="space-y-1">
                 {userTeams.map((team) => (
                   <button
+                    type="button"
                     key={team.id}
                     onClick={() => onTeamSelect?.(team)}
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group ${

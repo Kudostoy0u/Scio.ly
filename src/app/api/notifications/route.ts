@@ -93,7 +93,9 @@ export async function POST(request: NextRequest) {
       }>(body, ["userId", "type", "title"]);
 
       if (!validation.valid) {
-        return validation.error!;
+        return (
+          validation.error ?? NextResponse.json({ error: "Validation failed" }, { status: 400 })
+        );
       }
 
       const { userId, type, title, body: notificationBody, data } = body;

@@ -1,9 +1,9 @@
 "use client";
+import type { QuoteData } from "@/app/codebusters/types";
+import { calculateCipherGrade } from "@/app/codebusters/utils/gradingUtils";
 import SummaryGrid, { type SummaryItem } from "@/app/components/SummaryGrid";
 import { CheckCircle, Hash, Target, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { QuoteData } from "@/app/codebusters/types";
-import { calculateCipherGrade } from "@/app/codebusters/utils/gradingUtils";
 
 interface CodebustersSummaryProps {
   quotes: QuoteData[];
@@ -67,7 +67,10 @@ function NonCompactCodebustersSummary({
             <div className="flex flex-wrap gap-2">
               {cipherTypes.map((cipherType, index) => (
                 <span
-                  key={index}
+                  key={
+                    // biome-ignore lint/suspicious/noArrayIndexKey: Static cipher types list, index is stable
+                    index
+                  }
                   className={`px-2 py-1 text-xs rounded-full ${darkMode ? "bg-gray-600 text-gray-200" : "bg-gray-200 text-gray-700"}`}
                 >
                   {cipherType.toLowerCase() === "unknown" ? "Misc." : cipherType}
@@ -121,11 +124,8 @@ export default function CodebustersSummary({
   quotes,
   darkMode,
   hintedLetters = {},
-  _hintCounts = {},
   questionPoints = {},
 }: CodebustersSummaryProps) {
-  // _hintCounts is intentionally unused but kept for API compatibility
-  void _hintCounts;
   const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {

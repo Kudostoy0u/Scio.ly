@@ -6,7 +6,7 @@ import {
 } from "@/lib/api/utils";
 import { db } from "@/lib/db";
 import { idEvents } from "@/lib/db/schema";
-import { and, gte, lt, sql } from "drizzle-orm";
+import { type SQL, and, gte, lt, sql } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       : p.subtopic
         ? [p.subtopic]
         : [];
-    const conds: any[] = [];
+    const conds: SQL[] = [];
     if (p.event) {
       conds.push(sql`${idEvents.event} = ${p.event}`);
     }
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     // Filter by question type if provided (mcq | frq | both)
     // Note: idEvents table doesn't have questionType or pureId columns
     // These filters are disabled as the schema doesn't support them
-    const qt = (p.question_type || "").toLowerCase();
+    // const qt = (p.question_type || "").toLowerCase();
     // if (qt === "mcq" || qt === "frq") {
     //   conds.push(sql`${idEvents.questionType} = ${qt}`);
     // }
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
                 .orderBy(idEvents.randomF)
                 .limit(limit - first.length)),
             ];
-      const data = rows.map((row: any) => ({
+      const data = rows.map((row) => ({
         id: row.id,
         question: row.question,
         tournament: row.tournament,
@@ -100,8 +100,8 @@ export async function GET(request: NextRequest) {
         answers: toArray(row.answers),
         subtopics: toArray(row.subtopics),
         images: toArray(row.images),
-        created_at: row.createdAt ?? row.created_at,
-        updated_at: row.updatedAt ?? row.updated_at,
+        created_at: row.createdAt,
+        updated_at: row.updatedAt,
       }));
       const res = createSuccessResponse(data);
       logApiResponse("GET", "/api/id-questions", 200, Date.now() - started);
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
         ? db.select().from(idEvents).where(where).orderBy(sql`RANDOM()`).limit(limit)
         : db.select().from(idEvents).orderBy(sql`RANDOM()`).limit(limit);
       const rows = await base;
-      const data = rows.map((row: any) => ({
+      const data = rows.map((row) => ({
         id: row.id,
         question: row.question,
         tournament: row.tournament,
@@ -122,8 +122,8 @@ export async function GET(request: NextRequest) {
         answers: toArray(row.answers),
         subtopics: toArray(row.subtopics),
         images: toArray(row.images),
-        created_at: row.createdAt ?? row.created_at,
-        updated_at: row.updatedAt ?? row.updated_at,
+        created_at: row.createdAt,
+        updated_at: row.updatedAt,
       }));
       const res = createSuccessResponse(data);
       logApiResponse("GET", "/api/id-questions", 200, Date.now() - started);

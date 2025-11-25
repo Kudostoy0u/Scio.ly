@@ -34,7 +34,11 @@ interface Assignment {
 
 interface AssignmentViewerProps {
   assignment: Assignment;
-  onSubmissionComplete: (submission: any) => void;
+  onSubmissionComplete: (submission: {
+    assignmentId: string;
+    responses: Record<string, unknown>;
+    timeSpent: number;
+  }) => void;
   darkMode?: boolean;
 }
 
@@ -44,7 +48,7 @@ export default function AssignmentViewer({
   darkMode = false,
 }: AssignmentViewerProps) {
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [responses, setResponses] = useState<Record<string, any>>({});
+  const [responses, setResponses] = useState<Record<string, { text?: string; data?: unknown }>>({});
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [startTime, setStartTime] = useState<Date | null>(null);
@@ -72,7 +76,7 @@ export default function AssignmentViewer({
     return () => clearInterval(interval);
   }, [startTime]);
 
-  const handleResponse = (questionId: string, response: any) => {
+  const handleResponse = (questionId: string, response: { text?: string; data?: unknown }) => {
     setResponses((prev) => ({
       ...prev,
       [questionId]: response,
@@ -91,6 +95,207 @@ export default function AssignmentViewer({
     }
   };
 
+  const renderAssignmentHeader = () => {
+    const progress = ((currentQuestion + 1) / assignment.questions.length) * 100;
+
+    return (
+      <div className="mb-6">
+        <h1 className={`text-2xl font-bold mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}>
+          {assignment.title}
+        </h1>
+        {assignment.description && (
+          <p className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+            {assignment.description}
+          </p>
+        )}
+
+        <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center space-x-4 text-sm">
+            <span className={`px-2 py-1 rounded ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+              {assignment.questions.length} questions
+            </span>
+            {assignment.due_date && (
+              <span className={`px-2 py-1 rounded ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+                Due: {new Date(assignment.due_date).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-4">
+            {assignment.user_submission && (
+              <div
+                className={`text-sm font-medium ${darkMode ? "text-green-400" : "text-green-600"}`}
+              >
+                <div>Submitted</div>
+                {assignment.user_submission?.grade && (
+                  <div>{assignment.user_submission.grade}%</div>
+                )}
+              </div>
+            )}
+
+            {timeLeft !== null && (
+              <div
+                className={`text-sm font-medium ${timeLeft > 1800 ? "text-green-600" : timeLeft > 300 ? "text-yellow-600" : "text-red-600"}`}
+              >
+                Time: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, "0")}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="mt-4">
+          <div
+            className={`w-full bg-gray-200 rounded-full h-2 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
+          >
+            <div
+              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-xs mt-1">
+            <span>
+              Question {currentQuestion + 1} of {assignment.questions.length}
+            </span>
+            <span>{Math.round(progress)}% complete</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderQuestion = (currentQ: Question) => {
+    const baseInputClasses = `w-full px-3 py-2 border rounded-lg resize-none ${
+      darkMode
+        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+    }`;
+
+    switch (currentQ.question_type) {
+      case "multiple_choice":
+        return currentQ.options ? (
+          <div className="space-y-2">
+            {currentQ.options.map((option, index: number) => (
+              <label
+                key={`option-${option.id || index}-${String(option.text || option.id).slice(0, 20)}`}
+                className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
+                  responses[currentQ.id]?.text === option.id
+                    ? "bg-blue-100 border-blue-300"
+                    : darkMode
+                      ? "bg-gray-700 border-gray-600 hover:bg-gray-600"
+                      : "bg-white border-gray-200 hover:bg-gray-50"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name={`question_${currentQ.id}`}
+                  value={option.id}
+                  checked={
+                    (responses[currentQ.id] as { text?: string } | undefined)?.text === option.id
+                  }
+                  onChange={(e) => handleResponse(currentQ.id, { text: e.target.value })}
+                  className="mr-3"
+                />
+                <span className="font-medium mr-2">{option.id}.</span>
+                <span>{option.text}</span>
+              </label>
+            ))}
+          </div>
+        ) : null;
+
+      case "free_response":
+        return (
+          <div>
+            <textarea
+              value={(responses[currentQ.id] as { text?: string } | undefined)?.text || ""}
+              onChange={(e) => handleResponse(currentQ.id, { text: e.target.value })}
+              placeholder="Enter your answer here..."
+              rows={6}
+              className={baseInputClasses}
+            />
+          </div>
+        );
+
+      case "codebusters":
+        return (
+          <div>
+            <textarea
+              value={(responses[currentQ.id] as { text?: string } | undefined)?.text || ""}
+              onChange={(e) => handleResponse(currentQ.id, { text: e.target.value })}
+              placeholder="Enter your codebusters answer here..."
+              rows={4}
+              className={`${baseInputClasses} font-mono`}
+            />
+            <p className={`text-xs mt-2 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+              Enter the decoded message or cipher type
+            </p>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  const renderNavigation = () => {
+    return (
+      <div className="flex justify-between items-center mt-6">
+        <button
+          type="button"
+          onClick={prevQuestion}
+          disabled={currentQuestion === 0}
+          className={`px-4 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${
+            darkMode
+              ? "border-gray-600 text-gray-300 hover:bg-gray-700"
+              : "border-gray-300 text-gray-700 hover:bg-gray-50"
+          }`}
+        >
+          Previous
+        </button>
+
+        <div className="flex items-center space-x-2">
+          {assignment.questions.map((question, index) => (
+            <button
+              type="button"
+              key={`question-${question.id || index}-${index}`}
+              onClick={() => setCurrentQuestion(index)}
+              className={`w-8 h-8 rounded-full text-sm font-medium ${
+                index === currentQuestion
+                  ? "bg-blue-600 text-white"
+                  : assignment.questions[index] && responses[assignment.questions[index].id]
+                    ? "bg-green-100 text-green-700"
+                    : darkMode
+                      ? "bg-gray-700 text-gray-300"
+                      : "bg-gray-200 text-gray-600"
+              }`}
+            >
+              {index + 1}
+            </button>
+          ))}
+        </div>
+
+        {currentQuestion === assignment.questions.length - 1 ? (
+          <button
+            type="button"
+            onClick={submitAssignment}
+            disabled={submitting}
+            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+          >
+            {submitting ? "Submitting..." : "Submit Assignment"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={nextQuestion}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Next
+          </button>
+        )}
+      </div>
+    );
+  };
+
   const submitAssignment = async () => {
     if (Object.keys(responses).length === 0) {
       setError("Please answer at least one question");
@@ -101,11 +306,21 @@ export default function AssignmentViewer({
     setError(null);
 
     try {
-      const responseData = Object.entries(responses).map(([questionId, response]) => ({
-        question_id: questionId,
-        response_text: response.text || response,
-        response_data: response.data || null,
-      }));
+      const responseData = Object.entries(responses).map(([questionId, response]) => {
+        const responseObj =
+          typeof response === "object" &&
+          response !== null &&
+          !Array.isArray(response) &&
+          "text" in response
+            ? (response as { text?: string; data?: unknown })
+            : null;
+        return {
+          question_id: questionId,
+          response_text:
+            responseObj?.text ?? (typeof response === "string" ? response : String(response)),
+          response_data: responseObj?.data ?? null,
+        };
+      });
 
       const timeTaken = startTime ? Math.floor((Date.now() - startTime.getTime()) / 1000) : 0;
 
@@ -142,75 +357,18 @@ export default function AssignmentViewer({
       </div>
     );
   }
-  const progress = ((currentQuestion + 1) / assignment.questions.length) * 100;
 
   return (
     <div
       className={`max-w-4xl mx-auto p-6 ${darkMode ? "bg-gray-900 text-white" : "bg-white text-gray-900"}`}
     >
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className={`text-2xl font-bold mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}>
-          {assignment.title}
-        </h1>
-        {assignment.description && (
-          <p className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
-            {assignment.description}
-          </p>
-        )}
-
-        <div className="flex items-center justify-between mt-4">
-          <div className="flex items-center space-x-4 text-sm">
-            <span className={`px-2 py-1 rounded ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
-              {assignment.questions.length} questions
-            </span>
-            {assignment.due_date && (
-              <span className={`px-2 py-1 rounded ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
-                Due: {new Date(assignment.due_date).toLocaleDateString()}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center space-x-4">
-            {assignment.user_submission && (
-              <div className={`text-sm font-medium ${darkMode ? "text-green-400" : "text-green-600"}`}>
-                <div>Submitted</div>
-                {assignment.user_submission?.grade && <div>{assignment.user_submission.grade}%</div>}
-              </div>
-            )}
-
-            {timeLeft !== null && (
-              <div
-                className={`text-sm font-medium ${timeLeft > 1800 ? "text-green-600" : timeLeft > 300 ? "text-yellow-600" : "text-red-600"}`}
-              >
-                Time: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, "0")}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Progress bar */}
-        <div className="mt-4">
-          <div
-            className={`w-full bg-gray-200 rounded-full h-2 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-          >
-            <div
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <div className="flex justify-between text-xs mt-1">
-            <span>
-              Question {currentQuestion + 1} of {assignment.questions.length}
-            </span>
-            <span>{Math.round(progress)}% complete</span>
-          </div>
-        </div>
-      </div>
+      {renderAssignmentHeader()}
 
       {/* Error Message */}
       {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">{error}</div>
+        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          {error}
+        </div>
       )}
 
       {/* Question */}
@@ -231,124 +389,10 @@ export default function AssignmentViewer({
           </h3>
         </div>
 
-        {/* Multiple Choice */}
-        {currentQ.question_type === "multiple_choice" && currentQ.options && (
-          <div className="space-y-2">
-            {currentQ.options.map((option, index) => (
-              <label
-                key={index}
-                className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
-                  responses[currentQ.id]?.text === option.id
-                    ? "bg-blue-100 border-blue-300"
-                    : darkMode
-                      ? "bg-gray-700 border-gray-600 hover:bg-gray-600"
-                      : "bg-white border-gray-200 hover:bg-gray-50"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name={`question_${currentQ.id}`}
-                  value={option.id}
-                  checked={responses[currentQ.id]?.text === option.id}
-                  onChange={(e) => handleResponse(currentQ.id, { text: e.target.value })}
-                  className="mr-3"
-                />
-                <span className="font-medium mr-2">{option.id}.</span>
-                <span>{option.text}</span>
-              </label>
-            ))}
-          </div>
-        )}
-
-        {/* Free Response */}
-        {currentQ.question_type === "free_response" && (
-          <div>
-            <textarea
-              value={responses[currentQ.id]?.text || ""}
-              onChange={(e) => handleResponse(currentQ.id, { text: e.target.value })}
-              placeholder="Enter your answer here..."
-              rows={6}
-              className={`w-full px-3 py-2 border rounded-lg resize-none ${
-                darkMode
-                  ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-              }`}
-            />
-          </div>
-        )}
-
-        {/* Codebusters */}
-        {currentQ.question_type === "codebusters" && (
-          <div>
-            <textarea
-              value={responses[currentQ.id]?.text || ""}
-              onChange={(e) => handleResponse(currentQ.id, { text: e.target.value })}
-              placeholder="Enter your codebusters answer here..."
-              rows={4}
-              className={`w-full px-3 py-2 border rounded-lg resize-none font-mono ${
-                darkMode
-                  ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-              }`}
-            />
-            <p className={`text-xs mt-2 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-              Enter the decoded message or cipher type
-            </p>
-          </div>
-        )}
+        {renderQuestion(currentQ)}
       </motion.div>
 
-      {/* Navigation */}
-      <div className="flex justify-between items-center mt-6">
-        <button
-          onClick={prevQuestion}
-          disabled={currentQuestion === 0}
-          className={`px-4 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${
-            darkMode
-              ? "border-gray-600 text-gray-300 hover:bg-gray-700"
-              : "border-gray-300 text-gray-700 hover:bg-gray-50"
-          }`}
-        >
-          Previous
-        </button>
-
-        <div className="flex items-center space-x-2">
-          {assignment.questions.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentQuestion(index)}
-              className={`w-8 h-8 rounded-full text-sm font-medium ${
-                index === currentQuestion
-                  ? "bg-blue-600 text-white"
-                  : assignment.questions[index] && responses[assignment.questions[index].id]
-                    ? "bg-green-100 text-green-700"
-                    : darkMode
-                      ? "bg-gray-700 text-gray-300"
-                      : "bg-gray-200 text-gray-600"
-              }`}
-            >
-              {index + 1}
-            </button>
-          ))}
-        </div>
-
-        {currentQuestion === assignment.questions.length - 1 ? (
-          <button
-            onClick={submitAssignment}
-            disabled={submitting}
-            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-          >
-            {submitting ? "Submitting..." : "Submit Assignment"}
-          </button>
-        ) : (
-          <button
-            onClick={nextQuestion}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Next
-          </button>
-        )}
-      </div>
+      {renderNavigation()}
 
       {/* Response Summary */}
       <div className="mt-6 p-4 border rounded-lg">

@@ -1,4 +1,4 @@
-import type { EloData } from "@/app/analytics/types/elo";
+import type { EloData, EloMetadata } from "@/app/analytics/types/elo";
 
 /**
  * Centralized data loading system for Elo ratings with lazy loading
@@ -16,12 +16,6 @@ export interface DataLoadOptions {
   states?: string[];
   forceReload?: boolean;
   onBatchLoaded?: (loadedStates: string[], totalStates: number) => void;
-}
-
-interface EloMetadata {
-  states?: Record<string, string>;
-  lastUpdated?: string;
-  [key: string]: unknown;
 }
 
 export interface DataLoadResult {

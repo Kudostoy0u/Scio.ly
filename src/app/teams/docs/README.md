@@ -7,7 +7,8 @@ This directory contains comprehensive documentation for all teams features, incl
 - `API_ROUTES.md` - Complete documentation of all teams API routes with business logic flows
 - `BUSINESS_LOGIC.md` - Core business logic and workflows
 - `SCHEMA.md` - Database schema reference for teams tables
-- `AUTHENTICATION.md` - Authentication and authorization flows
+- `TESTING.md` - Testing guide for teams features
+- `FLOWCHARTS.md` - Visual flow charts for major team workflows
 
 ## Purpose
 

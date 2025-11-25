@@ -54,8 +54,15 @@ const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: ContactModalProps
           >
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Contact Us</h2>
-              <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button type="button" onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-label="Close"
+                >
+                  <title>Close</title>
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -71,10 +78,11 @@ const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: ContactModalProps
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">
+                  <label htmlFor="contact-name" className="block text-sm font-medium mb-1">
                     Name (will not be shown publicly)
                   </label>
                   <input
+                    id="contact-name"
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -85,10 +93,11 @@ const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: ContactModalProps
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">
+                  <label htmlFor="contact-email" className="block text-sm font-medium mb-1">
                     Email (will not be shown publicly)
                   </label>
                   <input
+                    id="contact-email"
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -99,8 +108,11 @@ const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: ContactModalProps
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Topic</label>
+                  <label htmlFor="contact-topic" className="block text-sm font-medium mb-1">
+                    Topic
+                  </label>
                   <select
+                    id="contact-topic"
                     value={formData.topic}
                     onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
                     className={`w-full p-2 rounded-md ${
@@ -115,8 +127,11 @@ const ContactModal = ({ isOpen, onClose, onSubmit, darkMode }: ContactModalProps
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Message</label>
+                  <label htmlFor="contact-message" className="block text-sm font-medium mb-1">
+                    Message
+                  </label>
                   <textarea
+                    id="contact-message"
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     rows={4}

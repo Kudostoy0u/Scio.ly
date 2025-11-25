@@ -1,6 +1,6 @@
+import TeamDashboard from "@/app/teams/components/TeamDashboard";
 import { fireEvent, renderWithProviders, screen, waitFor } from "@/test-utils";
 import { vi } from "vitest";
-import TeamDashboard from "@/app/teams/components/TeamDashboard";
 
 // Mock Next.js navigation
 vi.mock("next/navigation", () => ({

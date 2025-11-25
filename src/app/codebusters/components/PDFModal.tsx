@@ -27,6 +27,18 @@ export const PDFModal: React.FC<PdfModalProps> = ({ showPDFViewer, darkMode, onC
     setIframeError(true);
   };
 
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  const handleBackdropKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Escape") {
+      onClose();
+    }
+  };
+
   if (!showPDFViewer) {
     return null;
   }
@@ -36,20 +48,37 @@ export const PDFModal: React.FC<PdfModalProps> = ({ showPDFViewer, darkMode, onC
       <div
         className="fixed inset-0 z-50 flex items-center justify-center"
         style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
-        onClick={onClose}
+        onClick={handleBackdropClick}
+        // biome-ignore lint/a11y/useSemanticElements: Using div for modal backdrop with custom styling
+        onKeyDown={handleBackdropKeyDown}
+        role="button"
+        tabIndex={0}
       >
         <div
           className={`relative w-11/12 max-w-md p-6 rounded-lg shadow-2xl ${darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}`}
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              e.stopPropagation();
+            }
+          }}
         >
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">Codebusters Reference</h3>
             <button
+              type="button"
               onClick={onClose}
               className={`p-2 rounded-full transition-colors ${darkMode ? "hover:bg-gray-700 text-gray-300 hover:text-white" : "hover:bg-gray-100 text-gray-500 hover:text-gray-700"}`}
               aria-label="Close"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-label="Close"
+              >
+                <title>Close</title>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -65,6 +94,7 @@ export const PDFModal: React.FC<PdfModalProps> = ({ showPDFViewer, darkMode, onC
               : "Failed to load PDF in embedded viewer."}
           </p>
           <button
+            type="button"
             onClick={handleOpenInNewWindow}
             className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${darkMode ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"}`}
           >
@@ -79,22 +109,36 @@ export const PDFModal: React.FC<PdfModalProps> = ({ showPDFViewer, darkMode, onC
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
-      onClick={onClose}
+      onClick={handleBackdropClick}
+      // biome-ignore lint/a11y/useSemanticElements: Using div for modal backdrop with custom styling
+      onKeyDown={handleBackdropKeyDown}
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
     >
       <div
         className="relative w-11/12 h-5/6 max-w-5xl bg-white rounded-lg shadow-2xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         <div
           className={`flex justify-between items-center p-4 ${darkMode ? "bg-gray-800 text-white" : "bg-blue-100 text-gray-800"} rounded-t-lg`}
         >
           <h3 className="text-lg font-semibold">Codebusters Reference</h3>
           <button
+            type="button"
             onClick={onClose}
             className={`p-2 rounded-full transition-colors ${darkMode ? "hover:bg-gray-700 text-gray-300 hover:text-white" : "hover:bg-gray-500 text-gray-700"}`}
             aria-label="Close"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-label="Close"
+            >
+              <title>Close</title>
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"

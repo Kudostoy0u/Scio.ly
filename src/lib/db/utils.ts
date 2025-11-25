@@ -32,7 +32,7 @@ export async function getQuotesByLanguage(
 
     const numBatches = Math.min(5, maxLimit);
     const batchSize = Math.ceil(maxLimit / numBatches);
-    const allRows: any[] = [];
+    const allRows: unknown[] = [];
 
     for (let i = 0; i < numBatches && allRows.length < maxLimit; i++) {
       const randomStart = Math.random();

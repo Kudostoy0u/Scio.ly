@@ -1,7 +1,7 @@
 "use client";
-import type React from "react";
 import { SCIENCE_OLYMPIAD_EVENTS } from "@/app/plagiarism/constants";
 import type { ProcessedQuestions, QuestionPlagiarismSummary } from "@/app/plagiarism/types";
+import type React from "react";
 
 export default function SetupPanel({
   selectedEvent,
@@ -114,6 +114,7 @@ export default function SetupPanel({
                 className="hidden"
               />
               <button
+                type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
               >
@@ -127,6 +128,7 @@ export default function SetupPanel({
         </div>
 
         <button
+          type="button"
           onClick={onCheck}
           disabled={!isCheckEnabled}
           className={`w-full px-6 py-3 rounded-lg transition-all duration-200 font-medium text-lg ${

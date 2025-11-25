@@ -12,7 +12,9 @@ export function usePauseOnUnmount(): void {
     return () => {
       try {
         pauseTestSession();
-      } catch {}
+      } catch {
+        // Ignore pause errors
+      }
     };
   }, []);
 }
@@ -21,7 +23,9 @@ export function useResumeOnMount(): void {
   useEffect(() => {
     try {
       resumeFromPause();
-    } catch {}
+    } catch {
+      // Ignore resume errors
+    }
   }, []);
 }
 
@@ -29,7 +33,9 @@ export function useSetupVisibility(): void {
   useEffect(() => {
     try {
       setupVisibilityHandling();
-    } catch {}
+    } catch {
+      // Ignore setup errors
+    }
   }, []);
 }
 

@@ -6,7 +6,7 @@ describe("robots", () => {
   it("returns correct allow/disallow and sitemap", () => {
     const r = robots();
     expect(r.rules).toBeTruthy();
-    const rules = r.rules as any;
+    const rules = r.rules as { allow: string; disallow: string[] };
     expect(rules.allow).toBe("/");
     expect(rules.disallow).toContain("/json");
     expect(r.sitemap).toContain("sitemap.xml");

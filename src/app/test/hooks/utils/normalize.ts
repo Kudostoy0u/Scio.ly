@@ -1,6 +1,6 @@
-import type { Question } from "@/app/utils/geminiService";
 import { normalizeQuestionText, normalizeTestText } from "@/app/test/utils/normalizeTestText";
 import { normalizeQuestionMedia } from "@/app/test/utils/questionMedia";
+import type { Question } from "@/app/utils/geminiService";
 
 /**
  * Normalizes questions while preserving the answers field
@@ -21,10 +21,18 @@ export function normalizeQuestionsFull(questions: Question[]): Question[] {
   const mediaNormalized = normalizeQuestionMedia(questions);
 
   return mediaNormalized.map((q, _index) => {
-    const out: any = { ...q };
+    const out = { ...q } as {
+      answers?: unknown;
+      question?: string;
+      options?: unknown[];
+      [key: string]: unknown;
+    };
 
     // Validate that answers field exists and is valid
-    if (!(out.answers && Array.isArray(out.answers)) || out.answers.length === 0) {
+    if (
+      !(out.answers && Array.isArray(out.answers)) ||
+      (Array.isArray(out.answers) && out.answers.length === 0)
+    ) {
       // Don't throw, but log prominently - this question won't be gradable
     }
 
@@ -35,9 +43,10 @@ export function normalizeQuestionsFull(questions: Question[]): Question[] {
 
     // Normalize options (for MCQ)
     if (Array.isArray(out.options) && out.options.length > 0) {
-      out.options = out.options.map((opt: any) =>
-        typeof opt === "string" ? normalizeTestText(opt) : opt
-      );
+      out.options = out.options.map((opt) => {
+        const optRecord = opt as Record<string, unknown> | string;
+        return typeof optRecord === "string" ? normalizeTestText(optRecord) : optRecord;
+      });
     }
 
     // CRITICAL: Preserve answers field exactly as-is
@@ -46,11 +55,20 @@ export function normalizeQuestionsFull(questions: Question[]): Question[] {
     // - Array of numbers for MCQ (e.g., [0], [1, 2])
     // - Array of strings for FRQ (e.g., ["answer text"])
 
-    // Preserve difficulty field if present
-    if (out.difficulty !== undefined) {
-      out.difficulty = out.difficulty;
-    }
-
-    return out as Question;
+    // Preserve difficulty field if present (already set above)
+    const outRecord = out as {
+      question?: string;
+      options?: unknown[];
+      answers?: unknown;
+      difficulty?: number;
+      [key: string]: unknown;
+    };
+    return {
+      ...outRecord,
+      question: outRecord.question ?? "",
+      options: Array.isArray(outRecord.options) ? (outRecord.options as string[]) : undefined,
+      answers: Array.isArray(outRecord.answers) ? (outRecord.answers as (number | string)[]) : [],
+      difficulty: typeof outRecord.difficulty === "number" ? outRecord.difficulty : 0.5,
+    } as Question;
   });
 }

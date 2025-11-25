@@ -16,7 +16,7 @@ export interface AuthResult {
  */
 export async function validateAuth(
   _request: NextRequest
-): Promise<{ success: boolean; user?: any; error?: any }> {
+): Promise<{ success: boolean; user?: User; error?: string }> {
   try {
     const supabase = await createSupabaseServerClient();
     const {
@@ -108,7 +108,7 @@ export async function requireAdmin(request: NextRequest): Promise<AuthResult> {
   const { user, error } = await requireAuth(request);
 
   if (error || !user) {
-    return { user: null, error: error || new Error("User not found") };
+    return { user: null, error: null };
   }
 
   // Check if user has admin role

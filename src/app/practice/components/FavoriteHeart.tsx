@@ -1,10 +1,10 @@
 "use client";
 
+import type { Settings } from "@/app/practice/types";
 import { getFavoriteConfigs, isConfigFavorited, toggleFavoriteConfig } from "@/app/utils/favorites";
 import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import type { Settings } from "@/app/practice/types";
 
 export default function FavoriteHeart({
   darkMode,
@@ -24,7 +24,9 @@ export default function FavoriteHeart({
     }
     try {
       setFavorited(isConfigFavorited({ eventName: selectedEventName, settings }));
-    } catch {}
+    } catch {
+      // Ignore errors when checking favorite status
+    }
   }, [selectedEventName, settings]);
 
   const toggle = () => {
@@ -41,7 +43,9 @@ export default function FavoriteHeart({
           );
           return;
         }
-      } catch {}
+      } catch {
+        // Ignore errors when checking favorite count
+      }
     }
     const { favorited: nowFav } = toggleFavoriteConfig({ eventName: selectedEventName, settings });
     setFavorited(nowFav);

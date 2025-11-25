@@ -52,9 +52,9 @@ export function getCockroachDBPool(): Pool {
  * console.log(result.rows); // Array of User objects
  * ```
  */
-export async function queryCockroachDB<T = any>(
+export async function queryCockroachDB<T = unknown>(
   text: string,
-  params?: any[]
+  params?: unknown[]
 ): Promise<{ rows: T[]; rowCount: number }> {
   const pool = getCockroachDBPool();
   const client = await pool.connect();

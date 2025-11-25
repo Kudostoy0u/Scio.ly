@@ -1,6 +1,6 @@
 /**
  * E2E Tests for Timer Management
- * 
+ *
  * Tests the complete timer workflow including:
  * - Creating timers for events
  * - Fetching active timers
@@ -9,37 +9,32 @@
  * - Authorization checks
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { dbPg } from "@/lib/db";
-import {
-  newTeamActiveTimers,
-  newTeamEvents,
-  newTeamMemberships,
-  newTeamUnits,
-} from "@/lib/db/schema";
+import { newTeamActiveTimers, newTeamEvents, newTeamMemberships } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  type TestTeam,
+  type TestUser,
+  addTeamMember,
+  cleanupTestData,
   createTestTeam,
   createTestUser,
-  cleanupTestData,
-  addTeamMember,
-  type TestUser,
-  type TestTeam,
 } from "../utils/test-helpers";
 
 describe("Timer Management E2E", () => {
-  let testUsers: TestUser[] = [];
-  let testTeams: TestTeam[] = [];
+  const testUsers: TestUser[] = [];
+  const testTeams: TestTeam[] = [];
 
   beforeAll(async () => {
     // Create test users
     testUsers.push(await createTestUser({ displayName: "Captain User" }));
     testUsers.push(await createTestUser({ displayName: "Member User" }));
-    
+
     // Create test team
     const team = await createTestTeam(testUsers[0].id);
     testTeams.push(team);
-    
+
     // Add member
     await addTeamMember(team.subteamId, testUsers[1].id, "member");
   });
@@ -123,9 +118,7 @@ describe("Timer Management E2E", () => {
       const existingTimers = await dbPg
         .select()
         .from(newTeamActiveTimers)
-        .where(
-          eq(newTeamActiveTimers.teamUnitId, team.subteamId)
-        );
+        .where(eq(newTeamActiveTimers.teamUnitId, team.subteamId));
 
       const duplicateCount = existingTimers.filter((t) => t.eventId === event.id).length;
       expect(duplicateCount).toBe(1); // Should only be one
@@ -210,9 +203,7 @@ describe("Timer Management E2E", () => {
         .returning({ id: newTeamActiveTimers.id });
 
       // Delete timer
-      await dbPg
-        .delete(newTeamActiveTimers)
-        .where(eq(newTeamActiveTimers.id, timer.id));
+      await dbPg.delete(newTeamActiveTimers).where(eq(newTeamActiveTimers.id, timer.id));
 
       // Verify deletion
       const [deletedTimer] = await dbPg
@@ -226,7 +217,7 @@ describe("Timer Management E2E", () => {
 
   describe("Authorization", () => {
     it("should verify only captains can manage timers", async () => {
-      const team = testTeams[0];
+      const _team = testTeams[0];
       const captain = testUsers[0];
       const member = testUsers[1];
 
@@ -234,9 +225,7 @@ describe("Timer Management E2E", () => {
       const [captainMembership] = await dbPg
         .select()
         .from(newTeamMemberships)
-        .where(
-          eq(newTeamMemberships.userId, captain.id)
-        );
+        .where(eq(newTeamMemberships.userId, captain.id));
 
       expect(captainMembership?.role).toBe("captain");
 
@@ -244,13 +233,10 @@ describe("Timer Management E2E", () => {
       const [memberMembership] = await dbPg
         .select()
         .from(newTeamMemberships)
-        .where(
-          eq(newTeamMemberships.userId, member.id)
-        );
+        .where(eq(newTeamMemberships.userId, member.id));
 
       expect(memberMembership?.role).toBe("member");
       expect(memberMembership?.role).not.toBe("captain");
     });
   });
 });
-

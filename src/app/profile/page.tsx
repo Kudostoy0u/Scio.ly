@@ -3,15 +3,17 @@ import SyncLocalStorage from "@/lib/database/localStorage-replacement";
 import logger from "@/lib/utils/logger";
 
 import Header from "@/app/components/Header";
-import { useAuth } from "@/app/contexts/AuthContext";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useAuth } from "@/app/contexts/authContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { generateDisplayName } from "@/lib/utils/displayNameUtils";
 import type { User } from "@supabase/supabase-js";
 import { Save, User as UserIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
+import type { ChangeEvent } from "react";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex profile page with multiple form fields and state management
 export default function ProfilePage() {
   const { darkMode } = useTheme();
   const router = useRouter();
@@ -38,22 +40,29 @@ export default function ProfilePage() {
           .select("display_name, first_name, last_name, username, photo_url")
           .eq("id", currentUser.id)
           .maybeSingle();
+        const profileData = data as {
+          display_name?: string | null;
+          first_name?: string | null;
+          last_name?: string | null;
+          username?: string | null;
+          photo_url?: string | null;
+        } | null;
         const { name: robustName } = generateDisplayName(
           {
-            displayName: data?.display_name || null,
-            firstName: data?.first_name || null,
-            lastName: data?.last_name || null,
-            username: data?.username || null,
+            displayName: profileData?.display_name || null,
+            firstName: profileData?.first_name || null,
+            lastName: profileData?.last_name || null,
+            username: profileData?.username || null,
             email: currentUser.email || null,
           },
           currentUser.id
         );
         setDisplayName(robustName || "");
-        setFirstName(data?.first_name || "");
-        setLastName(data?.last_name || "");
-        setUsername(data?.username || currentUser.email?.split("@")[0] || "");
+        setFirstName(profileData?.first_name || "");
+        setLastName(profileData?.last_name || "");
+        setUsername(profileData?.username || currentUser.email?.split("@")[0] || "");
         setPhotoUrl(
-          data?.photo_url ||
+          profileData?.photo_url ||
             currentUser.user_metadata?.avatar_url ||
             currentUser.user_metadata?.picture ||
             null
@@ -66,6 +75,7 @@ export default function ProfilePage() {
     })();
   }, [router, ctxUser, client]);
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex save handler with validation and state management
   const handleSave = async () => {
     if (!user) {
       return;
@@ -89,7 +99,7 @@ export default function ProfilePage() {
           display_name: displayName || null,
           photo_url: photoUrl || null,
           created_at: new Date().toISOString(),
-        },
+        } as never,
         { onConflict: "id" }
       );
 
@@ -113,7 +123,9 @@ export default function ProfilePage() {
               username: username || undefined,
             }),
           });
-        } catch {}
+        } catch {
+          // Ignore update errors
+        }
         try {
           if (user?.id) {
             if (displayName) {
@@ -125,7 +137,9 @@ export default function ProfilePage() {
               SyncLocalStorage.setItem(`scio_username_${user.id}`, username);
             }
           }
-        } catch {}
+        } catch {
+          // Ignore localStorage errors
+        }
       }
     } catch (error) {
       logger.error("Error updating profile:", error);
@@ -135,7 +149,7 @@ export default function ProfilePage() {
     }
   };
 
-  const handlePhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!(file && user)) {
       return;
@@ -168,8 +182,13 @@ export default function ProfilePage() {
       const publicUrl = publicUrlData.publicUrl;
       setPhotoUrl(publicUrl);
 
-      await client
-        .from("users")
+      await (
+        client.from("users") as unknown as {
+          update: (values: { photo_url: string }) => {
+            eq: (column: string, value: string) => Promise<unknown>;
+          };
+        }
+      )
         .update({ photo_url: publicUrl })
         .eq("id", user.id);
       toast.success("Profile picture updated!");
@@ -222,6 +241,7 @@ export default function ProfilePage() {
             {/* Profile Picture */}
             <div className="flex items-center mb-6">
               {photoUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={photoUrl} alt="Profile" className="w-16 h-16 rounded-full" />
               ) : (
                 <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center">
@@ -254,6 +274,7 @@ export default function ProfilePage() {
             {/* Email (Read-only) */}
             <div className="mb-6">
               <label
+                htmlFor="email-address"
                 className={`block text-sm font-medium mb-2 ${
                   darkMode ? "text-gray-300" : "text-gray-700"
                 }`}
@@ -261,6 +282,7 @@ export default function ProfilePage() {
                 Email Address
               </label>
               <input
+                id="email-address"
                 type="email"
                 value={user.email || ""}
                 disabled={true}
@@ -278,6 +300,7 @@ export default function ProfilePage() {
             {/* Display Name */}
             <div className="mb-6">
               <label
+                htmlFor="display-name"
                 className={`block text-sm font-medium mb-2 ${
                   darkMode ? "text-gray-300" : "text-gray-700"
                 }`}
@@ -285,6 +308,7 @@ export default function ProfilePage() {
                 Display Name
               </label>
               <input
+                id="display-name"
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
@@ -305,11 +329,13 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div>
                 <label
+                  htmlFor="first-name"
                   className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
                 >
                   First Name
                 </label>
                 <input
+                  id="first-name"
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
@@ -322,11 +348,13 @@ export default function ProfilePage() {
               </div>
               <div>
                 <label
+                  htmlFor="last-name"
                   className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
                 >
                   Last Name
                 </label>
                 <input
+                  id="last-name"
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
@@ -342,11 +370,13 @@ export default function ProfilePage() {
             {/* Username */}
             <div className="mb-6">
               <label
+                htmlFor="username"
                 className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
               >
                 Username
               </label>
               <input
+                id="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -364,6 +394,7 @@ export default function ProfilePage() {
             {/* Save Button */}
             <div className="flex justify-end">
               <button
+                type="button"
                 onClick={handleSave}
                 disabled={saving}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-lg transition-colors duration-200"

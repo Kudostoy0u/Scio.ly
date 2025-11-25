@@ -8,7 +8,12 @@ const handler = (req: Request) =>
     req,
     router: appRouter,
     createContext,
-    onError: process.env.NODE_ENV === "development" ? () => {} : undefined,
+    onError:
+      process.env.NODE_ENV === "development"
+        ? () => {
+            // Intentionally empty - error handling disabled in development
+          }
+        : undefined,
   });
 
 export { handler as GET, handler as POST };

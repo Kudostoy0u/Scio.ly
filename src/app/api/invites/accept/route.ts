@@ -19,8 +19,16 @@ export async function POST(req: NextRequest) {
     if (!inv) {
       return NextResponse.json({ success: false, error: "Invalid invite" }, { status: 400 });
     }
-    const teamCode = `${inv.school}::${inv.division}::${inv.team_id}`;
-    await supabase.from("users").update({ team_code: teamCode }).eq("id", user.id);
+    const teamCode = `${inv.school}::${inv.division}::${inv.teamId}`;
+    await (
+      supabase.from("users") as unknown as {
+        update: (data: { team_code: string }) => {
+          eq: (column: string, value: string) => Promise<unknown>;
+        };
+      }
+    )
+      .update({ team_code: teamCode })
+      .eq("id", user.id);
     return NextResponse.json({ success: true, data: { teamCode } });
   } catch {
     return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });

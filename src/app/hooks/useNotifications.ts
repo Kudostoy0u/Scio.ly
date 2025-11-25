@@ -1,4 +1,4 @@
-import { useAuth } from "@/app/contexts/AuthContext";
+import { useAuth } from "@/app/contexts/authContext";
 import { supabase } from "@/lib/supabase";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -7,7 +7,7 @@ interface NotificationItem {
   title: string;
   message: string;
   type: string;
-  data: any;
+  data: Record<string, unknown>;
   is_read: boolean;
   created_at: string;
 }
@@ -73,28 +73,13 @@ export function useNotifications() {
       const fetchPromise = (async (): Promise<NotificationsState> => {
         try {
           // Fetch notifications directly from Supabase
-          const { data: notifications, error } = (await supabase
+          const { data: notifications, error } = await supabase
             .from("notifications")
             .select("*")
             .eq("user_id", user.id)
             .eq("is_read", false)
             .order("created_at", { ascending: false })
-            .limit(50)) as {
-            data: Array<{
-              id: string;
-              user_id: string;
-              notification_type: string;
-              title: string;
-              message: string;
-              data: any;
-              is_read: boolean;
-              created_at: string;
-              read_at: string | null;
-              team_id: string | null;
-              team_name: string | null;
-            }> | null;
-            error: any;
-          };
+            .limit(50);
 
           if (error) {
             // If table doesn't exist, provide helpful error message
@@ -114,15 +99,25 @@ export function useNotifications() {
             throw error;
           }
 
-          const notificationItems: NotificationItem[] = (notifications || []).map((n) => ({
-            id: n.id,
-            title: n.title,
-            message: n.message,
-            type: n.notification_type,
-            data: n.data,
-            is_read: n.is_read,
-            created_at: n.created_at,
-          }));
+          const notificationItems: NotificationItem[] = (notifications || []).map(
+            (n: {
+              id: string;
+              title: string;
+              message: string;
+              notification_type: string;
+              data: unknown;
+              is_read: boolean;
+              created_at: string;
+            }) => ({
+              id: n.id,
+              title: n.title,
+              message: n.message,
+              type: n.notification_type,
+              data: (n.data as Record<string, unknown>) || {},
+              is_read: n.is_read,
+              created_at: n.created_at,
+            })
+          );
 
           const result: NotificationsState = {
             notifications: notificationItems,
@@ -172,9 +167,20 @@ export function useNotifications() {
       }
 
       try {
-        const { error } = await supabase
-          .from("notifications")
-          .update({ is_read: true, read_at: new Date().toISOString() } as any)
+        const { error } = await (
+          supabase.from("notifications") as unknown as {
+            update: (values: { is_read: boolean; read_at: string }) => {
+              eq: (
+                column: string,
+                value: string
+              ) => { eq: (column: string, value: string) => Promise<{ error: unknown }> };
+            };
+          }
+        )
+          .update({
+            is_read: true,
+            read_at: new Date().toISOString(),
+          })
           .eq("id", notificationId)
           .eq("user_id", user.id);
 
@@ -191,7 +197,9 @@ export function useNotifications() {
 
         // Invalidate cache to force refresh on next fetch
         notificationCache.delete(`notifications-${user.id}`);
-      } catch (_err) {}
+      } catch {
+        /* ignore errors when marking notification as read */
+      }
     },
     [user?.id]
   );
@@ -202,9 +210,20 @@ export function useNotifications() {
     }
 
     try {
-      const { error } = await supabase
-        .from("notifications")
-        .update({ is_read: true, read_at: new Date().toISOString() } as any)
+      const { error } = await (
+        supabase.from("notifications") as unknown as {
+          update: (values: { is_read: boolean; read_at: string }) => {
+            eq: (
+              column: string,
+              value: string | boolean
+            ) => { eq: (column: string, value: boolean) => Promise<{ error: unknown }> };
+          };
+        }
+      )
+        .update({
+          is_read: true,
+          read_at: new Date().toISOString(),
+        })
         .eq("user_id", user.id)
         .eq("is_read", false);
 
@@ -221,7 +240,9 @@ export function useNotifications() {
 
       // Invalidate cache to force refresh on next fetch
       notificationCache.delete(`notifications-${user.id}`);
-    } catch (_err) {}
+    } catch {
+      /* ignore errors when marking all notifications as read */
+    }
   }, [user?.id]);
 
   const refresh = useCallback(

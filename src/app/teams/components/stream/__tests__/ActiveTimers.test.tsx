@@ -1,7 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
 import ActiveTimers from "@/app/teams/components/stream/ActiveTimers";
 import type { Event } from "@/app/teams/components/stream/streamTypes";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 // Mock lucide-react icons
 vi.mock("lucide-react", () => ({

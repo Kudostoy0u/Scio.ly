@@ -72,14 +72,16 @@ export async function GET(request: NextRequest) {
     let _rowCount = 0;
     for (const row of result) {
       _rowCount++;
-      if (!row.event) continue;
+      if (!row.event) {
+        continue;
+      }
       if (!edits[row.event]) {
         edits[row.event] = [];
       }
 
       const originalObj = parseMaybeJson(row.originalQuestion);
       const editedObj = parseMaybeJson(row.editedQuestion);
-      edits[row.event]!.push({
+      edits[row.event]?.push({
         original: originalObj,
         edited: editedObj,
         timestamp: String(row.updatedAt),
@@ -99,6 +101,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex edit validation and processing logic
 export async function POST(request: NextRequest) {
   try {
     const body: EditRequest = await request.json();
@@ -120,7 +123,7 @@ export async function POST(request: NextRequest) {
       }
       return answers.map((a) => {
         if (typeof a === "number") {
-          return a >= 0 && a < opts.length ? opts[a] ?? String(a) : String(a);
+          return a >= 0 && a < opts.length ? (opts[a] ?? String(a)) : String(a);
         }
         const s = String(a);
         const idx = opts.map((o) => o.toLowerCase()).indexOf(s.toLowerCase());
@@ -185,7 +188,9 @@ export async function POST(request: NextRequest) {
         if (matches) {
           canBypass = true;
         }
-      } catch (_e) {}
+      } catch (_e) {
+        // Ignore regex errors
+      }
     }
 
     if (canBypass) {

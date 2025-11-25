@@ -41,6 +41,7 @@ export function useTeamPageData(
 
   // Debug logging in development only
   if (process.env.NODE_ENV === "development" && data) {
+    // Debug logging can be added here if needed
   }
 
   return {

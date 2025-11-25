@@ -1,12 +1,12 @@
 "use client";
 import logger from "@/lib/utils/logger";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import type { EloData, LeaderboardEntry } from "@/app/analytics/types/elo";
+import { getLeaderboard } from "@/app/analytics/utils/eloDataProcessor";
+import { useTheme } from "@/app/contexts/themeContext";
 import { Calendar, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { EloData, LeaderboardEntry } from "@/app/analytics/types/elo";
-import { getLeaderboard } from "@/app/analytics/utils/eloDataProcessor";
 import { EVENT_WHITELISTS } from "./leaderboard/constants";
 import {
   type TournamentDate,
@@ -23,13 +23,14 @@ import {
 interface LeaderboardProps {
   eloData: EloData;
   division: "b" | "c";
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 // TournamentDate moved to utils
 
 // Whitelists moved to constants
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This component handles complex leaderboard logic with filtering, sorting, and pagination
 const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }) => {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<string>("");
@@ -53,7 +54,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
   );
 
   const getTournamentDatesForSeason = useCallback(
-    (season: string): TournamentDate[] => buildTournamentDates(metadata, season),
+    (season: string): TournamentDate[] => buildTournamentDates(metadata ?? {}, season),
     [metadata]
   );
 
@@ -63,6 +64,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
     if (!selectedSeason) {
       setSelectedSeason(mostRecentSeason);
     }
+    // biome-ignore lint/correctness/useExhaustiveDependencies: setSelectedSeason is stable and doesn't need to be in deps
   }, [mostRecentSeason, selectedSeason]);
 
   const tournamentDates = useMemo(() => {
@@ -79,11 +81,12 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
     if (!selectedDate && lastTournamentDate) {
       setSelectedDate(lastTournamentDate);
     }
+    // biome-ignore lint/correctness/useExhaustiveDependencies: setSelectedDate is stable and doesn't need to be in deps
   }, [lastTournamentDate, selectedDate]);
 
   useEffect(() => {
     setSelectedEvent("");
-  }, [selectedSeason, division]);
+  }, []);
 
   const rankingChanges = useMemo(
     () =>
@@ -134,7 +137,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
     if (selectedEvent && !eventsForSelectedSeason.includes(selectedEvent)) {
       setSelectedEvent("");
     }
-  }, [selectedSeason, selectedEvent, eventsForSelectedSeason]);
+  }, [selectedEvent, eventsForSelectedSeason]);
 
   const originalRankMap = useMemo(() => {
     const rankMap = new Map<string, number>();
@@ -158,7 +161,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredData.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredData, currentPage, itemsPerPage]);
+  }, [filteredData, currentPage]);
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
@@ -167,17 +170,86 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
       prevSearchTerm.current = searchTerm;
       setCurrentPage(1);
     }
+    // biome-ignore lint/correctness/useExhaustiveDependencies: prevSearchTerm is a ref and setCurrentPage is stable, don't need to be in deps
   }, [searchTerm]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedSeason, selectedEvent, selectedState, selectedDate]);
+  }, []);
 
   const getRankColor = (rank: number) => rankColor(!!darkMode, rank);
 
   // formatDate moved to utils
 
   const selectedTournament = tournamentDates.find((t) => t.date === selectedDate);
+
+  const renderLoadingSkeleton = () => {
+    return Array.from({ length: Math.min(20, paginatedData.length || 20) }).map(
+      (_, index) => (
+        <tr
+          key={`placeholder-${index}`}
+          className={darkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"}
+        >
+          <td className="px-2 sm:px-6 py-4 whitespace-nowrap">
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRankColor(index + 1)}`}
+            >
+              {index + 1}
+            </span>
+          </td>
+          <td
+            className={`px-2 sm:px-6 py-4 text-sm font-medium ${darkMode ? "text-white" : "text-gray-900"}`}
+          >
+            <div>
+              <div
+                className={`h-4 rounded w-32 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
+              />
+              <div className={"sm:hidden text-xs mt-1"}>
+                <div
+                  className={`h-3 rounded w-8 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
+                />
+              </div>
+            </div>
+          </td>
+          <td
+            className={`hidden sm:table-cell px-6 py-4 text-sm ${darkMode ? "text-gray-300" : "text-gray-500"}`}
+          >
+            <div
+              className={`h-4 rounded w-8 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
+            />
+          </td>
+          <td
+            className={`hidden md:table-cell px-6 py-4 text-sm ${darkMode ? "text-gray-300" : "text-gray-500"}`}
+          >
+            <div
+              className={`h-4 rounded w-12 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
+            />
+          </td>
+          {selectedEvent && (
+            <td
+              className={`hidden lg:table-cell px-6 py-4 text-sm ${darkMode ? "text-gray-300" : "text-gray-500"}`}
+            >
+              <div
+                className={`h-4 rounded w-20 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
+              />
+            </td>
+          )}
+          <td
+            className={`px-2 sm:px-6 py-4 text-sm ${darkMode ? "text-blue-400" : "text-blue-600"}`}
+          >
+            <div
+              className={`h-4 rounded w-12 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
+            />
+          </td>
+          <td className={"hidden sm:table-cell px-6 py-4 text-sm"}>
+            <div
+              className={`h-4 rounded w-16 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
+            />
+          </td>
+        </tr>
+      )
+    );
+  };
 
   return (
     <div
@@ -197,11 +269,13 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <label
+              htmlFor="season-select"
               className={`text-sm font-medium text-center sm:text-left ${darkMode ? "text-gray-300" : "text-gray-700"}`}
             >
               Season:
             </label>
             <select
+              id="season-select"
               value={selectedSeason}
               onChange={(e) => setSelectedSeason(e.target.value)}
               className={`px-3 py-2 border rounded-md ${darkMode ? "border-gray-600 bg-gray-700 text-white" : "border-gray-300 bg-white text-gray-900"} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
@@ -216,11 +290,13 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <label
+              htmlFor="state-select"
               className={`text-sm font-medium text-center sm:text-left ${darkMode ? "text-gray-300" : "text-gray-700"}`}
             >
               State:
             </label>
             <select
+              id="state-select"
               value={selectedState}
               onChange={(e) => setSelectedState(e.target.value)}
               className={`px-3 py-2 border rounded-md ${darkMode ? "border-gray-600 bg-gray-700 text-white" : "border-gray-300 bg-white text-gray-900"} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
@@ -239,11 +315,13 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <label
+              htmlFor="event-select"
               className={`text-sm font-medium text-center sm:text-left ${darkMode ? "text-gray-300" : "text-gray-700"}`}
             >
               Event:
             </label>
             <select
+              id="event-select"
               value={selectedEvent}
               onChange={(e) => setSelectedEvent(e.target.value)}
               className={`px-3 py-2 border rounded-md ${darkMode ? "border-gray-600 bg-gray-700 text-white" : "border-gray-300 bg-white text-gray-900"} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
@@ -277,12 +355,16 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Calendar className={`h-4 w-4 ${darkMode ? "text-gray-400" : "text-gray-500"}`} />
-              <label className={`text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+              <label
+                htmlFor="season-timeline-range"
+                className={`text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+              >
                 Season Timeline: {selectedTournament ? formatDate(selectedDate) : "Select date"}
               </label>
             </div>
             <div className="relative">
               <input
+                id="season-timeline-range"
                 type="range"
                 min="0"
                 max={tournamentDates.length - 1}
@@ -310,7 +392,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
                 </span>
                 <span className={darkMode ? "text-gray-400" : "text-gray-500"}>
                   {tournamentDates.length > 0 && tournamentDates[tournamentDates.length - 1]
-                    ? formatDate(tournamentDates[tournamentDates.length - 1]!.date)
+                    ? formatDate(tournamentDates[tournamentDates.length - 1]?.date || "")
                     : ""}
                 </span>
               </div>
@@ -334,9 +416,10 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
                           >
                             All tournaments on this date:
                           </div>
+                          {/* biome-ignore lint/suspicious/noArrayIndexKey: Tournament list is stable, index is appropriate */}
                           {selectedTournament.allTournaments.map((tournament, index) => (
                             <div
-                              key={index}
+                              key={`tournament-${index}-${tournament}`}
                               className={`text-sm py-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
                             >
                               {tournament}
@@ -436,72 +519,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
               <tbody
                 className={`divide-y ${darkMode ? "bg-gray-800 divide-gray-700" : "bg-white divide-gray-200"}`}
               >
-                {isLoading
-                  ? Array.from({ length: Math.min(20, paginatedData.length || 20) }).map(
-                      (_, index) => (
-                        <tr
-                          key={`placeholder-${index}`}
-                          className={darkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"}
-                        >
-                          <td className="px-2 sm:px-6 py-4 whitespace-nowrap">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRankColor(index + 1)}`}
-                            >
-                              {index + 1}
-                            </span>
-                          </td>
-                          <td
-                            className={`px-2 sm:px-6 py-4 text-sm font-medium ${darkMode ? "text-white" : "text-gray-900"}`}
-                          >
-                            <div>
-                              <div
-                                className={`h-4 rounded w-32 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-                              />
-                              <div className={"sm:hidden text-xs mt-1"}>
-                                <div
-                                  className={`h-3 rounded w-8 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-                                />
-                              </div>
-                            </div>
-                          </td>
-                          <td
-                            className={`hidden sm:table-cell px-6 py-4 text-sm ${darkMode ? "text-gray-300" : "text-gray-500"}`}
-                          >
-                            <div
-                              className={`h-4 rounded w-8 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-                            />
-                          </td>
-                          <td
-                            className={`hidden md:table-cell px-6 py-4 text-sm ${darkMode ? "text-gray-300" : "text-gray-500"}`}
-                          >
-                            <div
-                              className={`h-4 rounded w-12 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-                            />
-                          </td>
-                          {selectedEvent && (
-                            <td
-                              className={`hidden lg:table-cell px-6 py-4 text-sm ${darkMode ? "text-gray-300" : "text-gray-500"}`}
-                            >
-                              <div
-                                className={`h-4 rounded w-20 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-                              />
-                            </td>
-                          )}
-                          <td
-                            className={`px-2 sm:px-6 py-4 text-sm ${darkMode ? "text-blue-400" : "text-blue-600"}`}
-                          >
-                            <div
-                              className={`h-4 rounded w-12 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-                            />
-                          </td>
-                          <td className={"hidden sm:table-cell px-6 py-4 text-sm"}>
-                            <div
-                              className={`h-4 rounded w-16 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-                            />
-                          </td>
-                        </tr>
-                      )
-                    )
+                {isLoading ? renderLoadingSkeleton()
                   : paginatedData.map((entry) => {
                       const key = `${entry.school}-${entry.state}-${entry.season}-${entry.event || "overall"}`;
                       const actualRank = originalRankMap.get(key) || 1;
@@ -581,6 +599,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
 
           <div className="flex items-center space-x-1 sm:space-x-2">
             <button
+              type="button"
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
               className={`flex items-center px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
@@ -601,7 +620,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
             {/* Page Numbers */}
             <div className="flex items-center space-x-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum;
+                let pageNum: number;
                 if (totalPages <= 5) {
                   pageNum = i + 1;
                 } else if (currentPage <= 3) {
@@ -614,6 +633,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
 
                 return (
                   <button
+                    type="button"
                     key={pageNum}
                     onClick={() => setCurrentPage(pageNum)}
                     className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
@@ -631,6 +651,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
             </div>
 
             <button
+              type="button"
               onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
               className={`flex items-center px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
@@ -651,7 +672,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
         </div>
       )}
 
-      <style jsx={true}>{`
+      <style>{`
         .slider-dark::-webkit-slider-thumb {
           appearance: none;
           height: 20px;

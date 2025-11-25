@@ -3,10 +3,10 @@ import { getLetterGradeFromPercentage, percentageFromEarnedAndTotal } from "./gr
 
 describe("getLetterGradeFromPercentage", () => {
   it("returns N/A for invalid inputs", () => {
-    expect(getLetterGradeFromPercentage(Number.NaN as any)).toBe("N/A");
-    expect(getLetterGradeFromPercentage("abc" as any)).toBe("N/A");
-    expect(getLetterGradeFromPercentage(null as any)).toBe("N/A");
-    expect(getLetterGradeFromPercentage(undefined as any)).toBe("N/A");
+    expect(getLetterGradeFromPercentage(Number.NaN as unknown as number)).toBe("N/A");
+    expect(getLetterGradeFromPercentage("abc" as unknown as number)).toBe("N/A");
+    expect(getLetterGradeFromPercentage(null as unknown as number)).toBe("N/A");
+    expect(getLetterGradeFromPercentage(undefined as unknown as number)).toBe("N/A");
   });
   it("clamps and rounds percentage and maps to letter", () => {
     expect(getLetterGradeFromPercentage(97)).toBe("A+");
@@ -34,8 +34,8 @@ describe("getLetterGradeFromPercentage", () => {
 
 describe("percentageFromEarnedAndTotal", () => {
   it("handles invalid parameters", () => {
-    expect(percentageFromEarnedAndTotal(Number.NaN as any, 10)).toBe(0);
-    expect(percentageFromEarnedAndTotal(5, Number.NaN as any)).toBe(0);
+    expect(percentageFromEarnedAndTotal(Number.NaN as unknown as number, 10)).toBe(0);
+    expect(percentageFromEarnedAndTotal(5, Number.NaN as unknown as number)).toBe(0);
     expect(percentageFromEarnedAndTotal(5, 0)).toBe(0);
     expect(percentageFromEarnedAndTotal(5, -2)).toBe(0);
   });

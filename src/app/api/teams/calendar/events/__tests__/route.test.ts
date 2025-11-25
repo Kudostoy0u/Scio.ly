@@ -1,6 +1,6 @@
+import { GET, POST } from "@/app/api/teams/calendar/events/route";
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { GET, POST } from "@/app/api/teams/calendar/events/route";
 
 // Mock the dependencies
 vi.mock("@/lib/supabaseServer", () => ({
@@ -50,7 +50,7 @@ describe("/api/teams/calendar/events", () => {
 
       mockGetServerUser.mockResolvedValue(mockUser);
       mockResolveTeamSlugToUnits.mockResolvedValue(mockTeamInfo);
-      
+
       // Mock events query (select().from().leftJoin().where().orderBy())
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -61,7 +61,7 @@ describe("/api/teams/calendar/events", () => {
           }),
         }),
       });
-      
+
       // Mock attendees query for first event (select().from().leftJoin().where())
       mockDbPg.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -144,7 +144,7 @@ describe("/api/teams/calendar/events", () => {
 
       mockGetServerUser.mockResolvedValue(mockUser);
       mockResolveTeamSlugToUnits.mockResolvedValue(mockTeamInfo);
-      
+
       // Mock insert event (insert().values().returning())
       mockDbPg.insert = vi.fn().mockReturnValue({
         values: vi.fn().mockReturnValue({
@@ -176,7 +176,7 @@ describe("/api/teams/calendar/events", () => {
       const uuidTeamId = "123e4567-e89b-12d3-a456-426614174000";
 
       mockGetServerUser.mockResolvedValue(mockUser);
-      
+
       // Mock insert event (insert().values().returning())
       mockDbPg.insert = vi.fn().mockReturnValue({
         values: vi.fn().mockReturnValue({

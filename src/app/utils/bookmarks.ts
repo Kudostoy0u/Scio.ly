@@ -66,12 +66,18 @@ export const loadBookmarksFromSupabase = async (userId: string): Promise<Bookmar
       return [];
     }
 
-    return data.map((bookmark: any) => ({
-      question: bookmark.question_data,
-      eventName: bookmark.event_name,
-      source: bookmark.source,
-      timestamp: new Date(bookmark.created_at).getTime(),
-    }));
+    return data.map((bookmark) => {
+      const bookmarkRecord = bookmark as Record<string, unknown>;
+      const created_at = bookmarkRecord.created_at;
+      const eventName = bookmarkRecord.event_name;
+      const source = bookmarkRecord.source;
+      return {
+        question: bookmarkRecord.question_data as Question,
+        eventName: typeof eventName === "string" ? eventName : "",
+        source: typeof source === "string" ? source : "",
+        timestamp: created_at ? new Date(String(created_at)).getTime() : Date.now(),
+      };
+    });
   } catch (_error) {
     return [];
   }
@@ -147,14 +153,18 @@ export const addBookmark = async (
 
     const { error } = await supabase.from("bookmarks").insert({
       user_id: userId,
-      question_data: question,
+      question_data: question as unknown,
       event_name: eventName,
       source: source,
-    });
+      timestamp: Date.now(),
+    } as never);
 
     if (error) {
+      // Error handling can go here if needed
     }
-  } catch (_error) {}
+  } catch (_error) {
+    // Ignore errors
+  }
 };
 
 /**
@@ -202,5 +212,7 @@ export const removeBookmark = async (userId: string | null, question: Question, 
         throw error;
       }
     }
-  } catch (_error) {}
+  } catch (_error) {
+    // Ignore errors
+  }
 };

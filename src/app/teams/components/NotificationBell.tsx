@@ -1,9 +1,9 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bell, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface Notification {
   id: string;
@@ -19,18 +19,14 @@ interface NotificationBellProps {
   userId: string;
 }
 
-export default function NotificationBell({ userId }: NotificationBellProps) {
+export default function NotificationBell({ userId: _userId }: NotificationBellProps) {
   const { darkMode } = useTheme();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchNotifications();
-  }, [userId]);
-
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch("/api/teams/notifications?limit=10");
@@ -40,10 +36,15 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
         setUnreadCount(data.unread_count);
       }
     } catch (_error) {
+      // Ignore errors
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   const markAsRead = async (notificationIds: string[]) => {
     try {
@@ -61,7 +62,9 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
         );
         setUnreadCount((prev) => Math.max(0, prev - notificationIds.length));
       }
-    } catch (_error) {}
+    } catch (_error) {
+      // Ignore errors
+    }
   };
 
   const markAllAsRead = async () => {
@@ -76,7 +79,9 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
         setNotifications((prev) => prev.map((notif) => ({ ...notif, is_read: true })));
         setUnreadCount(0);
       }
-    } catch (_error) {}
+    } catch (_error) {
+      // Ignore errors
+    }
   };
 
   const getNotificationIcon = (type: string) => {
@@ -114,6 +119,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
   return (
     <div className="relative">
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`relative p-2 rounded-full transition-colors ${
           darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
@@ -145,6 +151,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                 <div className="flex items-center space-x-2">
                   {unreadCount > 0 && (
                     <button
+                      type="button"
                       onClick={markAllAsRead}
                       className="text-xs text-blue-600 hover:text-blue-700"
                     >
@@ -152,6 +159,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                     </button>
                   )}
                   <button
+                    type="button"
                     onClick={() => setIsOpen(false)}
                     className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                   >
@@ -170,9 +178,10 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                 <div className="p-4 text-center text-gray-500">No notifications</div>
               ) : (
                 notifications.map((notification) => (
-                  <div
+                  <button
+                    type="button"
                     key={notification.id}
-                    className={`p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
+                    className={`w-full text-left p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
                       notification.is_read ? "" : "bg-blue-50 dark:bg-blue-900/20"
                     }`}
                     onClick={() => {
@@ -203,7 +212,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                         <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2" />
                       )}
                     </div>
-                  </div>
+                  </button>
                 ))
               )}
             </div>
@@ -211,6 +220,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
             {notifications.length > 0 && (
               <div className="p-3 border-t border-gray-200 dark:border-gray-700">
                 <button
+                  type="button"
                   onClick={() => {
                     // Navigate to full notifications page
                     window.location.href = "/notifications";

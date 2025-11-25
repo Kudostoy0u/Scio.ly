@@ -6,11 +6,12 @@ import {
   newTeamRecurringMeetings,
   newTeamUnits,
 } from "@/lib/db/schema/teams";
+import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
+import { getServerUser } from "@/lib/supabaseServer";
 import {
-  UUIDSchema,
-  validateRequest,
-} from "@/lib/schemas/teams-validation";
-import {
+  ERROR_CODES,
+  HTTP_STATUS,
+  createErrorResponse,
   handleError,
   handleForbiddenError,
   handleNotFoundError,
@@ -18,31 +19,28 @@ import {
   handleValidationError,
   validateEnvironment,
 } from "@/lib/utils/error-handler";
-import logger from "@/lib/utils/logger";
-import { getServerUser } from "@/lib/supabaseServer";
-import { resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
-import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 // Utility function to safely parse JSON with fallback
-function safeJsonParse(jsonString: string | null | any, fallback: any = []): any {
+function safeJsonParse<T = unknown>(jsonString: string | null | unknown, fallback: T = [] as T): T {
   if (!jsonString) {
     return fallback;
   }
 
   // If it's already an array or object, return it as-is
   if (Array.isArray(jsonString) || (typeof jsonString === "object" && jsonString !== null)) {
-    return jsonString;
+    return jsonString as T;
   }
 
   // Handle empty array string case
   if (jsonString === "[]") {
-    return [];
+    return [] as T;
   }
 
   try {
-    return JSON.parse(jsonString);
+    return JSON.parse(String(jsonString)) as T;
   } catch (_error) {
     return fallback;
   }
@@ -54,251 +52,344 @@ const RecurringMeetingCreateSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   description: z.string().max(5000).nullable().optional(),
   location: z.string().max(200).nullable().optional(),
-  days_of_week: z.array(z.number().int().min(0).max(6)).min(1, "At least one day of week is required"),
+  days_of_week: z
+    .array(z.number().int().min(0).max(6))
+    .min(1, "At least one day of week is required"),
   start_time: z.string().nullable().optional(),
   end_time: z.string().nullable().optional(),
-  start_date: z.string().datetime(),
+  start_date: z.string().datetime("Start date is required"),
   end_date: z.string().datetime().nullable().optional(),
-  exceptions: z.array(z.any()).nullable().optional(),
+  exceptions: z.array(z.unknown()).nullable().optional(),
   created_by: UUIDSchema.optional(),
   meeting_type: z.enum(["personal", "team"]).default("personal").optional(),
   selected_team_id: z.string().nullable().optional(),
 });
 
-// Note: Utility functions removed as they are no longer needed
-// since we no longer create individual events in the API
+// Helper function to determine target team slug based on meeting type
+async function determineTargetTeamSlug(
+  teamSlug: string,
+  meetingType: string,
+  selectedTeamId: string | null | undefined
+): Promise<string> {
+  let targetTeamSlug = teamSlug;
+  if (meetingType === "team" && selectedTeamId) {
+    if (selectedTeamId.startsWith("all-")) {
+      const schoolName = selectedTeamId.replace("all-", "");
+      const teamGroupResult = await dbPg
+        .select({ slug: newTeamGroups.slug })
+        .from(newTeamGroups)
+        .where(eq(newTeamGroups.school, schoolName))
+        .limit(1);
+
+      if (teamGroupResult.length > 0 && teamGroupResult[0]) {
+        targetTeamSlug = teamGroupResult[0].slug;
+      }
+    } else {
+      const selectedTeamResult = await dbPg
+        .select({ slug: newTeamGroups.slug })
+        .from(newTeamGroups)
+        .innerJoin(newTeamUnits, eq(newTeamGroups.id, newTeamUnits.groupId))
+        .where(eq(newTeamUnits.id, selectedTeamId))
+        .limit(1);
+
+      if (selectedTeamResult.length > 0 && selectedTeamResult[0]) {
+        targetTeamSlug = selectedTeamResult[0].slug;
+      }
+    }
+  }
+  return targetTeamSlug;
+}
+
+// Helper function to resolve team group and units
+async function resolveTeamGroupAndUnits(targetTeamSlug: string) {
+  const [groupResult] = await dbPg
+    .select({ id: newTeamGroups.id })
+    .from(newTeamGroups)
+    .where(eq(newTeamGroups.slug, targetTeamSlug))
+    .limit(1);
+
+  if (!groupResult) {
+    return null;
+  }
+
+  const groupId = groupResult.id;
+  const unitsResult = await dbPg
+    .select({ id: newTeamUnits.id })
+    .from(newTeamUnits)
+    .where(eq(newTeamUnits.groupId, groupId));
+
+  return { groupId, unitsResult };
+}
+
+// Helper function to check team membership
+async function checkTeamMembership(
+  userId: string,
+  teamUnitIds: string[],
+  meetingType: string,
+  selectedTeamId: string | null | undefined
+) {
+  const membershipResult = await dbPg
+    .select({
+      role: newTeamMemberships.role,
+      teamId: newTeamMemberships.teamId,
+    })
+    .from(newTeamMemberships)
+    .where(
+      and(
+        eq(newTeamMemberships.userId, userId),
+        inArray(newTeamMemberships.teamId, teamUnitIds),
+        eq(newTeamMemberships.status, "active")
+      )
+    );
+
+  if (membershipResult.length === 0 && meetingType !== "personal") {
+    if (meetingType === "team" && selectedTeamId && selectedTeamId.startsWith("all-")) {
+      const schoolName = selectedTeamId.replace("all-", "");
+      const schoolMembershipResult = await dbPg
+        .select({
+          role: newTeamMemberships.role,
+          teamId: newTeamMemberships.teamId,
+        })
+        .from(newTeamMemberships)
+        .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+        .innerJoin(newTeamGroups, eq(newTeamUnits.groupId, newTeamGroups.id))
+        .where(
+          and(
+            eq(newTeamMemberships.userId, userId),
+            eq(newTeamGroups.school, schoolName),
+            eq(newTeamMemberships.status, "active")
+          )
+        );
+
+      if (schoolMembershipResult.length === 0) {
+        return null;
+      }
+      membershipResult.push(...schoolMembershipResult);
+    } else {
+      return null;
+    }
+  }
+
+  return membershipResult;
+}
+
+// Helper function to get target team IDs for personal meetings
+function getPersonalMeetingTeamIds(
+  membershipResult: Array<{ role: string; teamId: string }>,
+  unitsResult: Array<{ id: string }>
+): string[] {
+  if (membershipResult.length > 0) {
+    const firstMembership = membershipResult[0];
+    if (firstMembership?.teamId) {
+      return [firstMembership.teamId];
+    }
+  }
+  const firstUnit = unitsResult[0];
+  if (firstUnit?.id) {
+    return [firstUnit.id];
+  }
+  return [];
+}
+
+// Helper function to get target team IDs for team meetings
+function getTeamMeetingTeamIds(
+  selectedTeamId: string,
+  membershipResult: Array<{ role: string; teamId: string }>
+): string[] {
+  if (selectedTeamId.startsWith("all-")) {
+    return membershipResult.map((m) => m.teamId);
+  }
+  const selectedTeamUnit = membershipResult.find((m) => m.teamId === selectedTeamId);
+  if (selectedTeamUnit) {
+    return [selectedTeamUnit.teamId];
+  }
+  return [];
+}
+
+// Helper function to determine target team IDs
+function determineTargetTeamIds(
+  meetingType: string,
+  selectedTeamId: string | null | undefined,
+  membershipResult: Array<{ role: string; teamId: string }>,
+  unitsResult: Array<{ id: string }>
+): string[] {
+  if (meetingType === "personal") {
+    return getPersonalMeetingTeamIds(membershipResult, unitsResult);
+  }
+  if (meetingType === "team" && selectedTeamId) {
+    return getTeamMeetingTeamIds(selectedTeamId, membershipResult);
+  }
+  return [];
+}
+
+// Helper function to create recurring meetings
+async function createRecurringMeetings(
+  targetTeamIds: string[],
+  validatedBody: z.infer<typeof RecurringMeetingCreateSchema>,
+  userId: string
+): Promise<string[]> {
+  const {
+    title,
+    description,
+    location,
+    days_of_week,
+    start_time,
+    end_time,
+    start_date,
+    end_date,
+    exceptions,
+    created_by,
+  } = validatedBody;
+  const meetingIds: string[] = [];
+  for (const teamId of targetTeamIds) {
+    const [result] = await dbPg
+      .insert(newTeamRecurringMeetings)
+      .values({
+        teamId,
+        createdBy: created_by || userId,
+        title,
+        description: description || null,
+        location: location || null,
+        daysOfWeek: days_of_week,
+        startTime: start_time || "00:00:00",
+        endTime: end_time || "23:59:59",
+        startDate: start_date ? new Date(start_date) : null,
+        endDate: end_date ? new Date(end_date) : null,
+        exceptions: exceptions || [],
+      })
+      .returning({ id: newTeamRecurringMeetings.id });
+
+    if (result?.id) {
+      meetingIds.push(result.id);
+    }
+  }
+  return meetingIds;
+}
+
+// Helper function to validate request and get user
+async function validateRequestAndGetUser(
+  request: NextRequest
+): Promise<
+  | { user: { id: string }; validatedBody: z.infer<typeof RecurringMeetingCreateSchema> }
+  | NextResponse
+> {
+  const envError = validateEnvironment();
+  if (envError) {
+    return envError;
+  }
+
+  const user = await getServerUser();
+  if (!user?.id) {
+    return handleUnauthorizedError();
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch (_error) {
+    return handleValidationError(
+      new z.ZodError([
+        {
+          code: z.ZodIssueCode.custom,
+          message: "Invalid JSON in request body",
+          path: [],
+        },
+      ])
+    );
+  }
+
+  let validatedBody: z.infer<typeof RecurringMeetingCreateSchema>;
+  try {
+    validatedBody = validateRequest(RecurringMeetingCreateSchema, body);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return handleValidationError(error);
+    }
+    return handleError(error, "POST /api/teams/calendar/recurring-meetings - validation");
+  }
+
+  return { user, validatedBody };
+}
+
+// Helper function to resolve team and validate membership
+async function resolveTeamAndValidateMembership(
+  teamSlug: string,
+  meetingType: string,
+  selectedTeamId: string | null | undefined,
+  userId: string
+): Promise<
+  | {
+      unitsResult: Array<{ id: string }>;
+      membershipResult: Array<{ role: string; teamId: string }>;
+    }
+  | NextResponse
+> {
+  const targetTeamSlug = await determineTargetTeamSlug(teamSlug, meetingType, selectedTeamId);
+  const teamGroupAndUnits = await resolveTeamGroupAndUnits(targetTeamSlug);
+  if (!teamGroupAndUnits) {
+    return handleNotFoundError("Team");
+  }
+
+  const { unitsResult } = teamGroupAndUnits;
+  if (unitsResult.length === 0) {
+    return handleNotFoundError("No team units found for this group");
+  }
+
+  const teamUnitIds = unitsResult.map((row) => row.id);
+  const membershipResult = await checkTeamMembership(
+    userId,
+    teamUnitIds,
+    meetingType,
+    selectedTeamId
+  );
+
+  if (!membershipResult) {
+    return handleForbiddenError("Not a team member");
+  }
+
+  const isMember = membershipResult.some((m) =>
+    ["member", "captain", "co_captain"].includes(m.role)
+  );
+
+  if (!isMember && meetingType === "team") {
+    return handleForbiddenError("Not a team member");
+  }
+
+  return { unitsResult, membershipResult };
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const envError = validateEnvironment();
-    if (envError) return envError;
-
-    const user = await getServerUser();
-    if (!user?.id) {
-      return handleUnauthorizedError();
+    const validationResult = await validateRequestAndGetUser(request);
+    if (validationResult instanceof NextResponse) {
+      return validationResult;
     }
 
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch (error) {
-      return handleValidationError(
-        new z.ZodError([
-          {
-            code: z.ZodIssueCode.custom,
-            message: "Invalid JSON in request body",
-            path: [],
-          },
-        ])
-      );
-    }
+    const { user, validatedBody } = validationResult;
+    const { team_slug, meeting_type = "personal", selected_team_id } = validatedBody;
 
-    let validatedBody: z.infer<typeof RecurringMeetingCreateSchema>;
-    try {
-      validatedBody = validateRequest(RecurringMeetingCreateSchema, body);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return handleValidationError(error);
-      }
-      return handleError(error, "POST /api/teams/calendar/recurring-meetings - validation");
-    }
-
-    const {
+    const teamResult = await resolveTeamAndValidateMembership(
       team_slug,
-      title,
-      description,
-      location,
-      days_of_week,
-      start_time,
-      end_time,
-      start_date,
-      end_date,
-      exceptions,
-      created_by,
-      meeting_type = "personal",
+      meeting_type,
       selected_team_id,
-    } = validatedBody;
-
-    if (
-      !(team_slug && title && days_of_week) ||
-      days_of_week.length === 0 ||
-      !start_date ||
-      !end_date
-    ) {
-      return NextResponse.json(
-        {
-          error: "Team slug, title, days of week, start date, and end date are required",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Determine which team to use based on meeting type
-    let targetTeamSlug = team_slug;
-    if (meeting_type === "team" && selected_team_id) {
-      if (selected_team_id.startsWith("all-")) {
-        // "All Subteams" option - use the school name to get the team group slug
-        const schoolName = selected_team_id.replace("all-", "");
-        const teamGroupResult = await dbPg
-          .select({ slug: newTeamGroups.slug })
-          .from(newTeamGroups)
-          .where(eq(newTeamGroups.school, schoolName))
-          .limit(1);
-
-        if (teamGroupResult.length > 0 && teamGroupResult[0]) {
-          targetTeamSlug = teamGroupResult[0].slug;
-        }
-      } else {
-        // Specific team - get the team slug for the selected team using Drizzle ORM
-        const selectedTeamResult = await dbPg
-          .select({ slug: newTeamGroups.slug })
-          .from(newTeamGroups)
-          .innerJoin(newTeamUnits, eq(newTeamGroups.id, newTeamUnits.groupId))
-          .where(eq(newTeamUnits.id, selected_team_id))
-          .limit(1);
-
-        if (selectedTeamResult.length > 0 && selectedTeamResult[0]) {
-          targetTeamSlug = selectedTeamResult[0].slug;
-        }
-      }
-    }
-
-    // Resolve the team slug to get the team group and units using Drizzle ORM
-    const [groupResult] = await dbPg
-      .select({ id: newTeamGroups.id })
-      .from(newTeamGroups)
-      .where(eq(newTeamGroups.slug, targetTeamSlug))
-      .limit(1);
-
-    if (!groupResult) {
-      return handleNotFoundError("Team");
-    }
-
-    const groupId = groupResult.id;
-
-    // Get team units for this group using Drizzle ORM
-    const unitsResult = await dbPg
-      .select({ id: newTeamUnits.id })
-      .from(newTeamUnits)
-      .where(eq(newTeamUnits.groupId, groupId));
-
-    if (unitsResult.length === 0) {
-      return handleNotFoundError("No team units found for this group");
-    }
-
-    // Check if user is a member of any team unit in this group using Drizzle ORM
-    const teamUnitIds = unitsResult.map((row) => row.id);
-    const membershipResult = await dbPg
-      .select({
-        role: newTeamMemberships.role,
-        teamId: newTeamMemberships.teamId,
-      })
-      .from(newTeamMemberships)
-      .where(
-        and(
-          eq(newTeamMemberships.userId, user.id),
-          inArray(newTeamMemberships.teamId, teamUnitIds),
-          eq(newTeamMemberships.status, "active")
-        )
-      );
-
-    // For "All Subteams", we need to check if the user is a member of any team in this school
-    // For personal meetings, we don't need to be a member of this specific team group
-    if (membershipResult.length === 0 && meeting_type !== "personal") {
-      if (meeting_type === "team" && selected_team_id && selected_team_id.startsWith("all-")) {
-        // For "All Subteams", check if user is a member of any team in this school using Drizzle ORM
-        const schoolName = selected_team_id.replace("all-", "");
-        const schoolMembershipResult = await dbPg
-          .select({
-            role: newTeamMemberships.role,
-            teamId: newTeamMemberships.teamId,
-          })
-          .from(newTeamMemberships)
-          .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
-          .innerJoin(newTeamGroups, eq(newTeamUnits.groupId, newTeamGroups.id))
-          .where(
-            and(
-              eq(newTeamMemberships.userId, user.id),
-              eq(newTeamGroups.school, schoolName),
-              eq(newTeamMemberships.status, "active")
-            )
-          );
-
-        if (schoolMembershipResult.length === 0) {
-          return handleForbiddenError("Not a team member");
-        }
-
-        // Add the school membership results to the main membership result
-        membershipResult.push(...schoolMembershipResult);
-      } else {
-        return handleForbiddenError("Not a team member");
-      }
-    }
-
-    // Check if user is a member (for personal meetings)
-    const isMember = membershipResult.some((m) =>
-      ["member", "captain", "co_captain"].includes(m.role)
+      user.id
     );
-
-    // For team meetings, user must be a member. For personal meetings, this check is not required.
-    if (!isMember && meeting_type === "team") {
-      return handleForbiddenError("Not a team member");
+    if (teamResult instanceof NextResponse) {
+      return teamResult;
     }
+
+    const { unitsResult, membershipResult } = teamResult;
 
     // Determine which team units to create recurring meetings for
-    let targetTeamIds: string[] = [];
+    const targetTeamIds = determineTargetTeamIds(
+      meeting_type,
+      selected_team_id,
+      membershipResult,
+      unitsResult
+    );
 
-    if (meeting_type === "personal") {
-      // Personal meeting - use the first team unit from the group, or any team unit if user is not a member
-      if (membershipResult.length > 0) {
-        const firstMembership = membershipResult[0];
-        if (firstMembership?.teamId) {
-          targetTeamIds = [firstMembership.teamId];
-        }
-      } else {
-        // User is not a member of this team group, use the first team unit for personal meeting
-        const firstUnit = unitsResult[0];
-        if (firstUnit?.id) {
-          targetTeamIds = [firstUnit.id];
-        }
-      }
-    } else if (meeting_type === "team" && selected_team_id) {
-      if (selected_team_id.startsWith("all-")) {
-        // "All Subteams" - create for all team units the user is a member of in this school
-        targetTeamIds = membershipResult.map((m) => m.teamId);
-      } else {
-        // Specific team - find the team unit that matches the selected team
-        const selectedTeamUnit = membershipResult.find((m) => m.teamId === selected_team_id);
-        if (selectedTeamUnit) {
-          targetTeamIds = [selectedTeamUnit.teamId];
-        }
-      }
-    }
-
-    // Create recurring meetings for all target teams using Drizzle ORM
-    const meetingIds: string[] = [];
-    for (const teamId of targetTeamIds) {
-      const [result] = await dbPg
-        .insert(newTeamRecurringMeetings)
-        .values({
-          teamId,
-          createdBy: created_by || user.id,
-          title,
-          description: description || null,
-          location: location || null,
-          daysOfWeek: days_of_week,
-          startTime: start_time || "00:00:00",
-          endTime: end_time || "23:59:59",
-          startDate: start_date ? new Date(start_date) : null,
-          endDate: end_date ? new Date(end_date) : null,
-          exceptions: exceptions || [],
-        })
-        .returning({ id: newTeamRecurringMeetings.id });
-
-      if (result?.id) {
-        meetingIds.push(result.id);
-      }
-    }
+    // Create recurring meetings for all target teams
+    const meetingIds = await createRecurringMeetings(targetTeamIds, validatedBody, user.id);
 
     // Note: We no longer create individual events here to avoid duplicates.
     // The frontend will generate events from the recurring meeting pattern.
@@ -311,14 +402,29 @@ export async function POST(request: NextRequest) {
       count: meetingIds.length,
     });
   } catch (error) {
-    return handleError(error, "POST /api/teams/calendar/recurring-meetings");
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    if (errorMessage.toLowerCase().includes("database")) {
+      return createErrorResponse(
+        "Database error",
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        errorMessage,
+        ERROR_CODES.DATABASE_ERROR
+      );
+    }
+    return handleError(
+      error,
+      "POST /api/teams/calendar/recurring-meetings",
+      "Failed to create recurring meeting"
+    );
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {

@@ -1,16 +1,16 @@
 import { ApiErrors, handleApiError, successResponse, validateFields } from "@/lib/api/utils";
 import { db } from "@/lib/db";
-import { edits as editsTable } from "@/lib/db/schema/core";
 import { questions as questionsTable } from "@/lib/db/schema";
+import { edits as editsTable } from "@/lib/db/schema/core";
 import { geminiService } from "@/lib/services/gemini";
 import type { ApiResponse } from "@/lib/types/api";
 import logger from "@/lib/utils/logger";
-import { and, eq } from "drizzle-orm";
+import { type SQL, and, eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 
 export const maxDuration = 60;
 
-interface EditRequest extends Record<string, unknown> {
+export interface EditRequest extends Record<string, unknown> {
   originalQuestion: Record<string, unknown>;
   editedQuestion: Record<string, unknown>;
   event: string;
@@ -19,6 +19,7 @@ interface EditRequest extends Record<string, unknown> {
   aiSuggestion?: Record<string, unknown>;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex edit report processing with validation and AI suggestions
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -171,7 +172,7 @@ export async function POST(request: NextRequest) {
         let targetId: string | undefined =
           (originalQuestion.id as string | undefined) || (editedQuestion.id as string | undefined);
         if (!targetId) {
-          const conditions: any[] = [
+          const conditions: SQL[] = [
             eq(questionsTable.question, String(originalQuestion.question || "")),
             eq(questionsTable.event, String(event)),
           ];
@@ -188,7 +189,7 @@ export async function POST(request: NextRequest) {
             .limit(1);
           targetId = found[0]?.id as string | undefined;
           if (!targetId) {
-            const cond2: any[] = [
+            const cond2: SQL[] = [
               eq(questionsTable.question, String(editedQuestion.question || "")),
               eq(questionsTable.event, String(event)),
             ];

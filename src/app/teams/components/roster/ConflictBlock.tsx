@@ -77,7 +77,9 @@ export default function ConflictBlock({
             </div>
           </div>
         </div>
-        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 ${isCollapsed ? "hidden md:grid" : ""}`}>
+        <div
+          className={`grid grid-cols-1 lg:grid-cols-2 gap-6 ${isCollapsed ? "hidden md:grid" : ""}`}
+        >
           <div className="space-y-3">
             {group.events.slice(0, Math.ceil(group.events.length / 2)).map((evt) => (
               <EventInput

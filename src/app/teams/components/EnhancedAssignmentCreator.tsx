@@ -11,7 +11,9 @@ import RosterSelectionStep from "./assignment/RosterSelectionStep";
 import type {
   AssignmentCreatorProps,
   AssignmentDetails,
+  Question,
   QuestionGenerationSettings,
+  RosterMember,
 } from "./assignment/assignmentTypes";
 import {
   createAssignment,
@@ -55,9 +57,9 @@ export default function EnhancedAssignmentCreator({
   });
 
   // Generated questions and roster
-  const [generatedQuestions, setGeneratedQuestions] = useState<any[]>([]);
+  const [generatedQuestions, setGeneratedQuestions] = useState<Question[]>([]);
   const [generatingQuestions, setGeneratingQuestions] = useState(false);
-  const [rosterMembers, setRosterMembers] = useState<any[]>([]);
+  const [rosterMembers, setRosterMembers] = useState<RosterMember[]>([]);
   const [selectedRoster, setSelectedRoster] = useState<string[]>([]);
   const [loadingRoster, setLoadingRoster] = useState(false);
   const [showAnswers, setShowAnswers] = useState(false);
@@ -163,7 +165,7 @@ export default function EnhancedAssignmentCreator({
         teamId
       );
 
-      if (newQuestion.length > 0) {
+      if (newQuestion.length > 0 && newQuestion[0]) {
         const updatedQuestions = [...generatedQuestions];
         updatedQuestions[index] = newQuestion[0];
         setGeneratedQuestions(updatedQuestions);
@@ -248,12 +250,14 @@ export default function EnhancedAssignmentCreator({
               Create Assignment
             </h2>
             <button
+              type="button"
               onClick={onCancel}
               className={`p-2 rounded-lg hover:bg-opacity-20 transition-colors ${
                 darkMode ? "hover:bg-gray-600" : "hover:bg-gray-200"
               }`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <title>Close</title>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"

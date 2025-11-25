@@ -2,8 +2,8 @@
 
 import { DISABLED_CIPHERS } from "@/app/codebusters/config";
 import type { QuoteData } from "@/app/codebusters/types";
-import type { MutableRefObject } from "react";
 import type { Event, Settings } from "@/app/practice/types";
+import type { MutableRefObject } from "react";
 
 export default function SubtopicDropdown({
   darkMode,
@@ -86,7 +86,9 @@ export default function SubtopicDropdown({
 
   const renderSubtopics = () => {
     const topics = selectedEvent
-      ? (typeof window !== "undefined" && window.eventSubtopicsMapping ? window.eventSubtopicsMapping[selectedEvent.name] : undefined)
+      ? typeof window !== "undefined" && window.eventSubtopicsMapping
+        ? window.eventSubtopicsMapping[selectedEvent.name]
+        : undefined
       : null;
     if (!topics) {
       return null;
@@ -120,6 +122,7 @@ export default function SubtopicDropdown({
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          aria-hidden="true"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>

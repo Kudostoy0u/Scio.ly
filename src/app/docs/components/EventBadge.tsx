@@ -1,5 +1,5 @@
 "use client";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import type { DocsEvent } from "@/app/docs/utils/events2026";
 import { getPrimaryBadgeForEvent } from "@/app/docs/utils/events2026";
 import Link from "next/link";

@@ -1,4 +1,3 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createAssignment,
   fetchRosterMembers,
@@ -10,6 +9,7 @@ import {
   validateQuestionGeneration,
   validateRosterSelection,
 } from "@/app/teams/components/assignment/assignmentUtils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the external dependencies
 vi.mock("@/lib/utils/eventConfig", () => ({

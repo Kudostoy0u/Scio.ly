@@ -79,8 +79,6 @@ export default function MobileDayEvents({
   onDeleteEvent,
   isEventBlacklisted,
 }: MobileDayEventsProps) {
-  const dateStr = date.toISOString().split("T")[0];
-
   const sameDayEvents = React.useMemo(() => {
     const dateStrParts = date.toISOString().split("T");
     const dateStr = dateStrParts[0];
@@ -128,7 +126,7 @@ export default function MobileDayEvents({
     return [...base, ...recurringToday].sort(
       (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
     );
-  }, [events, recurringMeetings, dateStr, date, isEventBlacklisted]);
+  }, [events, recurringMeetings, date, isEventBlacklisted]);
 
   if (sameDayEvents.length === 0) {
     return (

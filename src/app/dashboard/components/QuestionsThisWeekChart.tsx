@@ -4,9 +4,89 @@ import type { HistoryRecord } from "@/app/utils/dashboardData";
 import SyncLocalStorage from "@/lib/database/localStorage-replacement";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import dynamic from "next/dynamic";
+import type { ComponentType, KeyboardEvent, MouseEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-const ReactApexChart = dynamic(() => import("react-apexcharts"), { ssr: false }) as any;
+interface HeatmapCellProps {
+  cell: { date: Date; key: string; value: number; isFuture: boolean };
+  cellSizePx: number;
+  darkMode: boolean;
+  getCellColor: (v: number) => string;
+  heatmapPalette: { empty: string; border: string; levels: string[] };
+  tooltipAlignClass: string;
+  tooltipId: string;
+  isTooltipActive: boolean;
+  setActiveTooltip: (id: string | null) => void;
+}
+
+function HeatmapCell({
+  cell,
+  cellSizePx,
+  darkMode,
+  getCellColor,
+  heatmapPalette,
+  tooltipAlignClass,
+  tooltipId,
+  isTooltipActive,
+  setActiveTooltip,
+}: HeatmapCellProps) {
+  const label = `${cell.date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}: ${cell.value} answered`;
+  const isFuture = cell.isFuture;
+
+  const handleClick = (e: MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    if (!isFuture) {
+      setActiveTooltip(isTooltipActive ? null : tooltipId);
+    }
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if ((e.key === "Enter" || e.key === " ") && !isFuture) {
+      e.preventDefault();
+      e.stopPropagation();
+      setActiveTooltip(isTooltipActive ? null : tooltipId);
+    }
+  };
+
+  return (
+    <div className="relative group">
+      <div
+        aria-label={isFuture ? undefined : label}
+        style={{
+          width: `${cellSizePx}px`,
+          height: `${cellSizePx}px`,
+          backgroundColor: isFuture ? "transparent" : getCellColor(cell.value),
+          border: isFuture
+            ? "none"
+            : `1px solid ${isTooltipActive ? (darkMode ? "#60a5fa" : "#2563eb") : heatmapPalette.border}`,
+          borderRadius: 3,
+          transform: isTooltipActive ? "scale(1.1)" : "scale(1)",
+          transition: "transform 0.1s ease-in-out, border-color 0.1s ease-in-out",
+        }}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        role={isFuture ? undefined : "button"}
+        tabIndex={isFuture ? undefined : 0}
+        className={isFuture ? "" : "cursor-pointer heatmap-cell"}
+      />
+      {!isFuture && (
+        <div
+          className={`pointer-events-none absolute -top-8 ${tooltipAlignClass} whitespace-nowrap rounded px-2 py-1 text-xs border shadow transition-opacity ${
+            darkMode
+              ? "bg-gray-800 text-white border-gray-700"
+              : "bg-white text-gray-900 border-gray-200"
+          } ${isTooltipActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+        >
+          {label}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const ReactApexChart = dynamic(() => import("react-apexcharts"), { ssr: false }) as ComponentType<
+  Record<string, unknown>
+>;
 
 export default function QuestionsThisWeekChart({
   historyData,
@@ -28,7 +108,7 @@ export default function QuestionsThisWeekChart({
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: Event) => {
       const target = event.target as Element;
       if (!target.closest(".heatmap-cell")) {
         setActiveTooltip(null);
@@ -42,7 +122,9 @@ export default function QuestionsThisWeekChart({
   useEffect(() => {
     try {
       SyncLocalStorage.setItem("scio_chart_type", chartType);
-    } catch {}
+    } catch {
+      /* ignore localStorage errors */
+    }
   }, [chartType]);
 
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -113,7 +195,7 @@ export default function QuestionsThisWeekChart({
     const yesterday = new Date(now);
     yesterday.setDate(now.getDate() - 1);
     const yKey = yesterday.toISOString().split("T")[0];
-    if (!todayKey || !yKey) {
+    if (!(todayKey && yKey)) {
       return { today: 0, yesterday: 0 };
     }
     const today = historyData[todayKey]?.questionsAttempted ?? 0;
@@ -256,11 +338,15 @@ export default function QuestionsThisWeekChart({
   };
 
   useEffect(() => {
-      const RO =
-        typeof ResizeObserver !== "undefined" ? ResizeObserver : (typeof window !== "undefined" && "ResizeObserver" in window ? window.ResizeObserver : undefined);
+    const RO =
+      typeof ResizeObserver !== "undefined"
+        ? ResizeObserver
+        : typeof window !== "undefined" && "ResizeObserver" in window
+          ? window.ResizeObserver
+          : undefined;
     if (wrapperRef.current && RO) {
       const el = wrapperRef.current;
-      const ro = new RO((entries: any[]) => {
+      const ro = new RO((entries: ResizeObserverEntry[]) => {
         for (const entry of entries) {
           const cw = entry.contentRect?.width ?? el.clientWidth;
           setContainerWidth(Math.max(0, cw));
@@ -317,12 +403,14 @@ export default function QuestionsThisWeekChart({
         </h2>
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => setChartType("line")}
             className={`px-2.5 py-1 rounded-md text-sm font-medium border ${chartType === "line" ? (darkMode ? "bg-blue-600 text-white border-blue-600" : "bg-blue-600 text-white border-blue-600") : darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-800 border-gray-200"}`}
           >
             Line
           </button>
           <button
+            type="button"
             onClick={() => setChartType("heatmap")}
             className={`px-2.5 py-1 rounded-md text-sm font-medium border ${chartType === "heatmap" ? (darkMode ? "bg-blue-600 text-white border-blue-600" : "bg-blue-600 text-white border-blue-600") : darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-800 border-gray-200"}`}
           >
@@ -365,8 +453,6 @@ export default function QuestionsThisWeekChart({
             >
               {gridData.flatMap((row, rIdx) =>
                 row.map((cell, cIdx) => {
-                  const label = `${cell.date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}: ${cell.value} answered`;
-                  const isFuture = cell.isFuture;
                   const tooltipAlignClass =
                     cIdx >= weeksCount - 1
                       ? "right-0 translate-x-0"
@@ -377,40 +463,18 @@ export default function QuestionsThisWeekChart({
                   const isTooltipActive = activeTooltip === tooltipId;
 
                   return (
-                    <div key={tooltipId} className="relative group">
-                      <div
-                        aria-label={isFuture ? undefined : label}
-                        style={{
-                          width: `${cellSizePx}px`,
-                          height: `${cellSizePx}px`,
-                          backgroundColor: isFuture ? "transparent" : getCellColor(cell.value),
-                          border: isFuture
-                            ? "none"
-                            : `1px solid ${isTooltipActive ? (darkMode ? "#60a5fa" : "#2563eb") : heatmapPalette.border}`,
-                          borderRadius: 3,
-                          transform: isTooltipActive ? "scale(1.1)" : "scale(1)",
-                          transition: "transform 0.1s ease-in-out, border-color 0.1s ease-in-out",
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!isFuture) {
-                            setActiveTooltip(isTooltipActive ? null : tooltipId);
-                          }
-                        }}
-                        className={isFuture ? "" : "cursor-pointer heatmap-cell"}
-                      />
-                      {!isFuture && (
-                        <div
-                          className={`pointer-events-none absolute -top-8 ${tooltipAlignClass} whitespace-nowrap rounded px-2 py-1 text-xs border shadow transition-opacity ${
-                            darkMode
-                              ? "bg-gray-800 text-white border-gray-700"
-                              : "bg-white text-gray-900 border-gray-200"
-                          } ${isTooltipActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
-                        >
-                          {label}
-                        </div>
-                      )}
-                    </div>
+                    <HeatmapCell
+                      key={tooltipId}
+                      cell={cell}
+                      cellSizePx={cellSizePx}
+                      darkMode={darkMode}
+                      getCellColor={getCellColor}
+                      heatmapPalette={heatmapPalette}
+                      tooltipAlignClass={tooltipAlignClass}
+                      tooltipId={tooltipId}
+                      isTooltipActive={isTooltipActive}
+                      setActiveTooltip={setActiveTooltip}
+                    />
                   );
                 })
               )}

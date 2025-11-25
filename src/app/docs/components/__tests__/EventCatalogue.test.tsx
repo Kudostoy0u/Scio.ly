@@ -1,16 +1,27 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { EventCatalogue } from "../EventCatalogue";
 import type { DocsEvent } from "@/app/docs/utils/events2026";
+import { render, screen } from "@testing-library/react";
+import type React from "react";
+import { describe, expect, it, vi } from "vitest";
+import { EventCatalogue } from "../EventCatalogue";
 
 // Mock the theme context
-vi.mock("@/app/contexts/ThemeContext", () => ({
+vi.mock("@/app/contexts/themeContext", () => ({
   useTheme: () => ({ darkMode: false }),
 }));
 
 // Mock Next.js Link
 vi.mock("next/link", () => ({
-  default: ({ children, href, prefetch, ...props }: any) => (
+  default: ({
+    children,
+    href,
+    prefetch,
+    ...props
+  }: {
+    children: React.ReactNode;
+    href: string;
+    prefetch?: boolean;
+    [key: string]: unknown;
+  }) => (
     <a href={href} data-prefetch={prefetch} {...props}>
       {children}
     </a>
@@ -19,7 +30,9 @@ vi.mock("next/link", () => ({
 
 // Mock EventBadge
 vi.mock("../EventBadge", () => ({
-  EventBadge: ({ evt }: { evt: DocsEvent }) => <span data-testid={`badge-${evt.slug}`}>{evt.name}</span>,
+  EventBadge: ({ evt }: { evt: DocsEvent }) => (
+    <span data-testid={`badge-${evt.slug}`}>{evt.name}</span>
+  ),
 }));
 
 describe("EventCatalogue", () => {
@@ -62,7 +75,7 @@ describe("EventCatalogue", () => {
 
   it("renders events for both divisions", () => {
     render(<EventCatalogue eventsByDivision={mockEvents} />);
-    
+
     expect(screen.getByText("Division B")).toBeInTheDocument();
     expect(screen.getByText("Division C")).toBeInTheDocument();
     expect(screen.getAllByText("Anatomy and Physiology").length).toBeGreaterThan(0);
@@ -78,9 +91,9 @@ describe("EventCatalogue", () => {
       ],
       C: [],
     };
-    
+
     render(<EventCatalogue eventsByDivision={unsortedEvents} />);
-    
+
     const links = screen.getAllByRole("link");
     expect(links.length).toBeGreaterThan(0);
     // Verify links are rendered (sorting is tested by checking they exist)
@@ -101,13 +114,10 @@ describe("EventCatalogue", () => {
 
   it("handles null/undefined event properties", () => {
     const eventsWithNulls = {
-      B: [
-        { ...mockEvents.B[0] },
-        { slug: "", name: "" } as unknown as DocsEvent,
-      ],
+      B: [{ ...mockEvents.B[0] }, { slug: "", name: "" } as unknown as DocsEvent],
       C: [],
     };
-    
+
     render(<EventCatalogue eventsByDivision={eventsWithNulls} />);
     expect(screen.getAllByText("Anatomy and Physiology").length).toBeGreaterThan(0);
   });
@@ -116,11 +126,11 @@ describe("EventCatalogue", () => {
     render(<EventCatalogue eventsByDivision={mockEvents} />);
     const links = screen.getAllByRole("link");
     expect(links.length).toBeGreaterThan(0);
-    links.forEach((link) => {
+    for (const link of links) {
       expect(link).toHaveAttribute("href");
       // Verify prefetch is disabled via data attribute
       expect(link.getAttribute("data-prefetch")).toBe("false");
-    });
+    }
   });
 
   it("renders only division B when C is empty", () => {
@@ -135,4 +145,3 @@ describe("EventCatalogue", () => {
     expect(screen.queryByText("Division B")).not.toBeInTheDocument();
   });
 });
-

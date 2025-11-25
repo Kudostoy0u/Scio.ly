@@ -1,7 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
 import RosterSelectionStep from "@/app/teams/components/assignment/RosterSelectionStep";
 import type { RosterMember } from "@/app/teams/components/assignment/assignmentTypes";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 describe("RosterSelectionStep", () => {
   const mockRosterMembers: RosterMember[] = [

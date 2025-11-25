@@ -35,8 +35,10 @@ export function supportsPictureQuestions(eventName: string): boolean {
     "Forensics",
     "Meteorology",
   ];
-  if (!eventName) return false;
-  return candidates.includes(eventName) || candidates.includes(base);
+  if (!eventName) {
+    return false;
+  }
+  return candidates.includes(eventName) || (base ? candidates.includes(base) : false);
 }
 
 /**

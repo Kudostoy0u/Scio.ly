@@ -1,7 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
 import AssignmentDetailsStep from "@/app/teams/components/assignment/AssignmentDetailsStep";
 import type { AssignmentDetails } from "@/app/teams/components/assignment/assignmentTypes";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 describe("AssignmentDetailsStep", () => {
   const mockProps = {

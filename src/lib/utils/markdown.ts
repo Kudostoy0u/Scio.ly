@@ -5,6 +5,8 @@ import GithubSlugger from "github-slugger";
  * Handles math normalization, text slugification, and table of contents extraction
  */
 
+const HEADER_REGEX = /^(#{1,6})\s+(.+)$/;
+
 /**
  * Normalizes LaTeX math expressions in markdown content
  * Converts LaTeX block and inline math to standard markdown format
@@ -20,7 +22,7 @@ import GithubSlugger from "github-slugger";
  */
 export function normalizeMath(input: string): string {
   let output = input.replace(/\\\[([\s\S]*?)\\\]/g, (_match, inner: string) => `$$${inner}$$`);
-  output = output.replace(/\\\(([^]*?)\\\)/g, (_match, inner: string) => `$${inner}$`);
+  output = output.replace(/\\\(([\s\S]*?)\\\)/g, (_match, inner: string) => `$${inner}$`);
   return output;
 }
 
@@ -82,8 +84,8 @@ export function extractToc(content: string | null): TocItem[] {
   const items: TocItem[] = [];
   const slugger = new GithubSlugger();
   for (const line of lines) {
-    const match = /^(#{1,6})\s+(.+)$/.exec(line.trim());
-    if (match && match[1] && match[2]) {
+    const match = HEADER_REGEX.exec(line.trim());
+    if (match?.[1] && match[2]) {
       const level = match[1].length;
       const text = match[2].replace(/[#*`_]/g, "").trim();
       const id = slugger.slug(text);

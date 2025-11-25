@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { motion } from "framer-motion";
 import { Calendar, Settings, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -107,7 +107,9 @@ export default function TeamsLanding({
                   <div
                     className={`w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-gray-100"}`}
                   >
-                    <Users className={`w-12 h-12 ${darkMode ? "text-gray-400" : "text-gray-500"}`} />
+                    <Users
+                      className={`w-12 h-12 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+                    />
                   </div>
                   <h2
                     className={`text-3xl font-bold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}
@@ -119,8 +121,8 @@ export default function TeamsLanding({
                   >
                     Create teams, manage rosters, track assignments, and collaborate with your
                     Science Olympiad team.{" "}
-                    <span className="text-blue-500 font-bold">Sign in to get started </span>with your
-                    team management journey.
+                    <span className="text-blue-500 font-bold">Sign in to get started </span>with
+                    your team management journey.
                   </p>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -130,7 +132,9 @@ export default function TeamsLanding({
                       <div
                         className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 mx-auto ${darkMode ? "bg-blue-900" : "bg-blue-100"}`}
                       >
-                        <Users className={`w-6 h-6 ${darkMode ? "text-blue-300" : "text-blue-600"}`} />
+                        <Users
+                          className={`w-6 h-6 ${darkMode ? "text-blue-300" : "text-blue-600"}`}
+                        />
                       </div>
                       <h3
                         className={`text-lg font-semibold mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}
@@ -192,7 +196,9 @@ export default function TeamsLanding({
                 transition={{ duration: 0.5 }}
               >
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className={`text-2xl font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>
+                  <h2
+                    className={`text-2xl font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}
+                  >
                     Your Teams
                   </h2>
                   <div className="flex space-x-3">
@@ -240,7 +246,9 @@ export default function TeamsLanding({
                             >
                               {team.school}
                             </h3>
-                            <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                            <p
+                              className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+                            >
                               Division {team.division}
                             </p>
                           </div>
@@ -249,7 +257,9 @@ export default function TeamsLanding({
 
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                          <span
+                            className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+                          >
                             Members
                           </span>
                           <span
@@ -259,7 +269,9 @@ export default function TeamsLanding({
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                          <span
+                            className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+                          >
                             Captains
                           </span>
                           <span
@@ -345,7 +357,9 @@ export default function TeamsLanding({
                         darkMode ? "bg-blue-700" : "bg-blue-200"
                       }`}
                     >
-                      <div className={`w-8 h-4 rounded ${darkMode ? "bg-blue-500" : "bg-blue-100"}`} />
+                      <div
+                        className={`w-8 h-4 rounded ${darkMode ? "bg-blue-500" : "bg-blue-100"}`}
+                      />
                     </div>
                   </div>
                 </div>
@@ -401,11 +415,15 @@ export default function TeamsLanding({
             <h2 className={`text-2xl font-bold mb-6 ${darkMode ? "text-white" : "text-gray-900"}`}>
               Settings
             </h2>
-            <div className={`p-8 text-center rounded-lg ${darkMode ? "bg-gray-800" : "bg-gray-50"}`}>
+            <div
+              className={`p-8 text-center rounded-lg ${darkMode ? "bg-gray-800" : "bg-gray-50"}`}
+            >
               <Settings
                 className={`w-16 h-16 mx-auto mb-4 ${darkMode ? "text-gray-600" : "text-gray-400"}`}
               />
-              <h3 className={`text-lg font-semibold mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}>
+              <h3
+                className={`text-lg font-semibold mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}
+              >
                 Settings
               </h3>
               <p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>

@@ -6,7 +6,7 @@ import { type NextRequest, NextResponse } from "next/server";
 interface TestParamsRaw {
   eventName?: string;
   encryptedQuotes?: unknown[];
-  quoteUUIDs?: string[];
+  quoteUuids?: string[];
   testParams?: Record<string, unknown>;
   timeRemainingSeconds?: number | null;
   createdAtMs?: number;
@@ -119,6 +119,7 @@ export async function GET(request: NextRequest) {
         checkerboardRowKey?: string;
         checkerboardColKey?: string;
         checkerboardPolybiusKey?: string;
+        checkerboardUsesIj?: boolean;
         checkerboardUsesIJ?: boolean;
         blockSize?: number;
         columnarKey?: string;
@@ -145,7 +146,7 @@ export async function GET(request: NextRequest) {
         checkerboardRowKey: quote.checkerboardRowKey,
         checkerboardColKey: quote.checkerboardColKey,
         checkerboardPolybiusKey: quote.checkerboardPolybiusKey,
-        checkerboardUsesIJ: quote.checkerboardUsesIJ,
+        checkerboardUsesIj: quote.checkerboardUsesIj ?? quote.checkerboardUsesIJ,
         blockSize: quote.blockSize,
         columnarKey: quote.columnarKey,
         fractionationTable: quote.fractionationTable,

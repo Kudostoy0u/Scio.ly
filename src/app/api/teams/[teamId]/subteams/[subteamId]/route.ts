@@ -1,5 +1,5 @@
 import { dbPg } from "@/lib/db";
-import { newTeamAssignments, newTeamAssignmentRoster } from "@/lib/db/schema/assignments";
+import { newTeamAssignmentRoster, newTeamAssignments } from "@/lib/db/schema/assignments";
 import {
   newTeamActiveTimers,
   newTeamEvents,
@@ -224,14 +224,18 @@ export async function DELETE(
 
       // Delete related data (most will cascade, but being explicit for safety)
       if (postIds.length > 0) {
-        await tx.delete(newTeamStreamComments).where(inArray(newTeamStreamComments.postId, postIds));
+        await tx
+          .delete(newTeamStreamComments)
+          .where(inArray(newTeamStreamComments.postId, postIds));
       }
       await tx.delete(newTeamMemberships).where(eq(newTeamMemberships.teamId, subteamId));
       await tx.delete(newTeamRosterData).where(eq(newTeamRosterData.teamUnitId, subteamId));
       await tx.delete(newTeamStreamPosts).where(eq(newTeamStreamPosts.teamUnitId, subteamId));
       await tx.delete(newTeamActiveTimers).where(eq(newTeamActiveTimers.teamUnitId, subteamId));
       await tx.delete(newTeamRemovedEvents).where(eq(newTeamRemovedEvents.teamUnitId, subteamId));
-      await tx.delete(newTeamAssignmentRoster).where(eq(newTeamAssignmentRoster.subteamId, subteamId));
+      await tx
+        .delete(newTeamAssignmentRoster)
+        .where(eq(newTeamAssignmentRoster.subteamId, subteamId));
       await tx.delete(newTeamAssignments).where(eq(newTeamAssignments.teamId, subteamId));
       await tx.delete(newTeamEvents).where(eq(newTeamEvents.teamId, subteamId));
 

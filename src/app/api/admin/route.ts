@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
-import { blacklists as blacklistsTable, edits as editsTable } from "@/lib/db/schema/core";
 import { questions as questionsTable } from "@/lib/db/schema";
+import { blacklists as blacklistsTable, edits as editsTable } from "@/lib/db/schema/core";
 import type { ApiResponse } from "@/lib/types/api";
 import { and, desc, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
@@ -97,6 +97,311 @@ function buildQuestionPayload(
   };
 }
 
+async function findTargetQuestionId(
+  event: string,
+  original: Record<string, unknown>,
+  edited: Record<string, unknown>
+): Promise<string | null> {
+  const originalId = (original.id as string | undefined) || undefined;
+  const editedId = (edited.id as string | undefined) || undefined;
+  const initialTargetId: string | null = originalId || editedId || null;
+  if (initialTargetId) {
+    return initialTargetId;
+  }
+  const idByOriginal = await locateQuestionIdByContent(event, original);
+  if (idByOriginal) {
+    return idByOriginal;
+  }
+  const idByEdited = await locateQuestionIdByContent(event, edited);
+  return idByEdited || null;
+}
+
+async function handleUndoEdit(id: string): Promise<NextResponse> {
+  const rows = await db.select().from(editsTable).where(eq(editsTable.id, id)).limit(1);
+  const row = rows[0];
+  if (!row) {
+    const response: ApiResponse = { success: false, error: "Edit not found" };
+    return NextResponse.json(response, { status: 404 });
+  }
+
+  const event = row.event;
+  const original = parseMaybeJson(row.originalQuestion);
+  const edited = parseMaybeJson(row.editedQuestion);
+
+  const targetId = await findTargetQuestionId(event, original, edited);
+  if (!targetId) {
+    const response: ApiResponse = {
+      success: false,
+      error: "Could not locate target question to revert",
+    };
+    return NextResponse.json(response, { status: 404 });
+  }
+
+  const payload = buildQuestionPayload(event, original);
+  await db
+    .update(questionsTable)
+    .set({ ...payload, updatedAt: new Date() })
+    .where(eq(questionsTable.id, targetId));
+  await db.delete(editsTable).where(eq(editsTable.id, id));
+
+  const response: ApiResponse = { success: true, message: "Edit reverted and record removed" };
+  return NextResponse.json(response);
+}
+
+async function handleApplyEdit(id: string): Promise<NextResponse> {
+  const rows = await db.select().from(editsTable).where(eq(editsTable.id, id)).limit(1);
+  const row = rows[0];
+  if (!row) {
+    return NextResponse.json({ success: false, error: "Edit not found" } as ApiResponse, {
+      status: 404,
+    });
+  }
+  const event = row.event;
+  const original = parseMaybeJson(row.originalQuestion);
+  const edited = parseMaybeJson(row.editedQuestion);
+
+  const targetId = await findTargetQuestionId(event, original, edited);
+  if (!targetId) {
+    const response: ApiResponse = {
+      success: false,
+      error: "Could not locate target question to apply edit",
+    };
+    return NextResponse.json(response, { status: 404 });
+  }
+
+  const payload = buildQuestionPayload(event, edited);
+  await db
+    .update(questionsTable)
+    .set({ ...payload, updatedAt: new Date() })
+    .where(eq(questionsTable.id, targetId));
+  const response: ApiResponse = { success: true, message: "Edit applied to database" };
+  return NextResponse.json(response);
+}
+
+async function handleDeleteEdit(id: string): Promise<NextResponse> {
+  await db.delete(editsTable).where(eq(editsTable.id, id));
+  const response: ApiResponse = { success: true, message: "Edit record deleted" };
+  return NextResponse.json(response);
+}
+
+async function handleUndoRemove(id: string): Promise<NextResponse> {
+  const rows = await db.select().from(blacklistsTable).where(eq(blacklistsTable.id, id)).limit(1);
+  const row = rows[0];
+  if (!row) {
+    const response: ApiResponse = { success: false, error: "Blacklisted item not found" };
+    return NextResponse.json(response, { status: 404 });
+  }
+
+  const q = parseMaybeJson(row.questionData);
+  const payload = buildQuestionPayload(row.event, q);
+  const values: typeof questionsTable.$inferInsert = {
+    id: (q.id as string | undefined) || uuidv4(),
+    question: payload.question || "",
+    tournament: payload.tournament || "",
+    division: payload.division || "",
+    event: payload.event || row.event || "",
+    answers: payload.answers || [],
+    options: payload.options,
+    subtopics: payload.subtopics,
+    difficulty: payload.difficulty,
+  };
+
+  let inserted = false;
+  try {
+    await db.insert(questionsTable).values(values);
+    inserted = true;
+  } catch {
+    await db
+      .update(questionsTable)
+      .set({
+        question: values.question,
+        tournament: values.tournament,
+        division: values.division,
+        event: values.event,
+        options: values.options,
+        answers: values.answers,
+        subtopics: values.subtopics,
+        difficulty: values.difficulty,
+        updatedAt: new Date(),
+      })
+      .where(eq(questionsTable.id, values.id as string));
+  }
+
+  await db.delete(blacklistsTable).where(eq(blacklistsTable.id, id));
+
+  const response: ApiResponse = {
+    success: true,
+    message: inserted
+      ? "Question restored and blacklist removed"
+      : "Question updated and blacklist removed",
+  };
+  return NextResponse.json(response);
+}
+
+async function handleApplyRemoved(_id: string): Promise<NextResponse> {
+  const rows = await db.select().from(blacklistsTable).where(eq(blacklistsTable.id, _id)).limit(1);
+  const row = rows[0];
+  if (!row) {
+    return NextResponse.json(
+      { success: false, error: "Blacklisted item not found" } as ApiResponse,
+      { status: 404 }
+    );
+  }
+  const q = parseMaybeJson(row.questionData);
+  const candidateId =
+    (q.id as string | undefined) || (await locateQuestionIdByContent(row.event, q)) || null;
+  if (!candidateId) {
+    const response: ApiResponse = {
+      success: false,
+      error: "Question not found in database to remove",
+    };
+    return NextResponse.json(response, { status: 404 });
+  }
+  await db.delete(questionsTable).where(eq(questionsTable.id, candidateId));
+  const response: ApiResponse = {
+    success: true,
+    message: "Question removed from database (kept in blacklist)",
+  };
+  return NextResponse.json(response);
+}
+
+async function handleDeleteRemoved(id: string): Promise<NextResponse> {
+  await db.delete(blacklistsTable).where(eq(blacklistsTable.id, id));
+  const response: ApiResponse = { success: true, message: "Blacklisted record deleted" };
+  return NextResponse.json(response);
+}
+
+async function handleApplyAllEdits(): Promise<NextResponse> {
+  const edits = await db.select().from(editsTable).orderBy(desc(editsTable.updatedAt));
+  let applied = 0;
+  let skipped = 0;
+  for (const row of edits) {
+    const event = row.event;
+    const original = parseMaybeJson(row.originalQuestion);
+    const edited = parseMaybeJson(row.editedQuestion);
+    const targetId = await findTargetQuestionId(event, original, edited);
+    if (!targetId) {
+      skipped++;
+      continue;
+    }
+    const payload = buildQuestionPayload(event, edited);
+    await db
+      .update(questionsTable)
+      .set({ ...payload, updatedAt: new Date() })
+      .where(eq(questionsTable.id, targetId));
+    applied++;
+  }
+  const response: ApiResponse = {
+    success: true,
+    message: `Applied ${applied} edits, skipped ${skipped}`,
+  };
+  return NextResponse.json(response);
+}
+
+async function handleUndoAllEdits(): Promise<NextResponse> {
+  const edits = await db.select().from(editsTable).orderBy(desc(editsTable.updatedAt));
+  let reverted = 0;
+  let skipped = 0;
+  for (const row of edits) {
+    const event = row.event;
+    const original = parseMaybeJson(row.originalQuestion);
+    const edited = parseMaybeJson(row.editedQuestion);
+    const targetId = await findTargetQuestionId(event, original, edited);
+    if (!targetId) {
+      skipped++;
+      continue;
+    }
+    const payload = buildQuestionPayload(event, original);
+    await db
+      .update(questionsTable)
+      .set({ ...payload, updatedAt: new Date() })
+      .where(eq(questionsTable.id, targetId));
+
+    await db.delete(editsTable).where(eq(editsTable.id, row.id));
+    reverted++;
+  }
+  const response: ApiResponse = {
+    success: true,
+    message: `Reverted ${reverted} edits, skipped ${skipped}`,
+  };
+  return NextResponse.json(response);
+}
+
+async function handleApplyAllRemoved(): Promise<NextResponse> {
+  const list = await db.select().from(blacklistsTable).orderBy(desc(blacklistsTable.createdAt));
+  let removed = 0;
+  let skipped = 0;
+  for (const row of list) {
+    const q = parseMaybeJson(row.questionData);
+    const candidateId =
+      (q.id as string | undefined) || (await locateQuestionIdByContent(row.event, q)) || null;
+    if (!candidateId) {
+      skipped++;
+      continue;
+    }
+    await db.delete(questionsTable).where(eq(questionsTable.id, candidateId));
+    removed++;
+  }
+  const response: ApiResponse = {
+    success: true,
+    message: `Removed ${removed} questions from DB, skipped ${skipped}`,
+  };
+  return NextResponse.json(response);
+}
+
+async function handleRestoreAllRemoved(): Promise<NextResponse> {
+  const list = await db.select().from(blacklistsTable).orderBy(desc(blacklistsTable.createdAt));
+  let restored = 0;
+  let updated = 0;
+  let failed = 0;
+  for (const row of list) {
+    const q = parseMaybeJson(row.questionData);
+    const payload = buildQuestionPayload(row.event, q);
+    const values: typeof questionsTable.$inferInsert = {
+      id: (q.id as string | undefined) || uuidv4(),
+      question: payload.question || "",
+      tournament: payload.tournament || "",
+      division: payload.division || "",
+      event: payload.event || row.event || "",
+      answers: payload.answers || [],
+      options: payload.options,
+      subtopics: payload.subtopics,
+      difficulty: payload.difficulty,
+    };
+    try {
+      await db.insert(questionsTable).values(values);
+      restored++;
+    } catch {
+      try {
+        await db
+          .update(questionsTable)
+          .set({
+            question: values.question,
+            tournament: values.tournament,
+            division: values.division,
+            event: values.event,
+            options: values.options,
+            answers: values.answers,
+            subtopics: values.subtopics,
+            difficulty: values.difficulty,
+            updatedAt: new Date(),
+          })
+          .where(eq(questionsTable.id, values.id as string));
+        updated++;
+      } catch {
+        failed++;
+      }
+    }
+
+    await db.delete(blacklistsTable).where(eq(blacklistsTable.id, row.id));
+  }
+  const response: ApiResponse = {
+    success: true,
+    message: `Restored ${restored}, updated ${updated}, failed ${failed}`,
+  };
+  return NextResponse.json(response);
+}
+
 export async function GET(request: NextRequest) {
   if (!checkAdminPassword(request)) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
@@ -182,6 +487,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
+type ActionHandler = (id?: string) => Promise<NextResponse>;
+
+function requireId(id: string | undefined): NextResponse | null {
+  if (!id) {
+    return NextResponse.json({ success: false, error: "Missing id" } as ApiResponse, {
+      status: 400,
+    });
+  }
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   if (!checkAdminPassword(request)) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
@@ -197,343 +513,92 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 400 });
     }
 
-    if (action === "undoEdit") {
-      if (!id) {
-        return NextResponse.json({ success: false, error: "Missing id" } as ApiResponse, {
-          status: 400,
-        });
-      }
-      const rows = await db.select().from(editsTable).where(eq(editsTable.id, id)).limit(1);
-      const row = rows[0];
-      if (!row) {
-        const response: ApiResponse = { success: false, error: "Edit not found" };
-        return NextResponse.json(response, { status: 404 });
-      }
-
-      const event = row.event;
-      const original = parseMaybeJson(row.originalQuestion);
-      const edited = parseMaybeJson(row.editedQuestion);
-
-      const originalId = (original.id as string | undefined) || undefined;
-      const editedId = (edited.id as string | undefined) || undefined;
-
-      const initialTargetId: string | null = originalId || editedId || null;
-      let targetId: string | null = initialTargetId;
-
-      if (!targetId) {
-        const idByOriginal = await locateQuestionIdByContent(event, original);
-        targetId = idByOriginal || (await locateQuestionIdByContent(event, edited)) || null;
-      }
-
-      if (!targetId) {
-        const response: ApiResponse = {
-          success: false,
-          error: "Could not locate target question to revert",
-        };
-        return NextResponse.json(response, { status: 404 });
-      }
-
-      const payload = buildQuestionPayload(event, original);
-
-      await db
-        .update(questionsTable)
-        .set({ ...payload, updatedAt: new Date() })
-        .where(eq(questionsTable.id, targetId));
-      await db.delete(editsTable).where(eq(editsTable.id, id));
-
-      const response: ApiResponse = { success: true, message: "Edit reverted and record removed" };
-      return NextResponse.json(response);
-    }
-
-    if (action === "applyEdit") {
-      if (!id) {
-        return NextResponse.json({ success: false, error: "Missing id" } as ApiResponse, {
-          status: 400,
-        });
-      }
-      const rows = await db.select().from(editsTable).where(eq(editsTable.id, id)).limit(1);
-      const row = rows[0];
-      if (!row) {
-        return NextResponse.json({ success: false, error: "Edit not found" } as ApiResponse, {
-          status: 404,
-        });
-      }
-      const event = row.event;
-      const original = parseMaybeJson(row.originalQuestion);
-      const edited = parseMaybeJson(row.editedQuestion);
-
-      const targetId =
-        (original.id as string | undefined) ||
-        (await locateQuestionIdByContent(event, original)) ||
-        (edited.id as string | undefined) ||
-        (await locateQuestionIdByContent(event, edited)) ||
-        null;
-
-      if (!targetId) {
-        const response: ApiResponse = {
-          success: false,
-          error: "Could not locate target question to apply edit",
-        };
-        return NextResponse.json(response, { status: 404 });
-      }
-
-      const payload = buildQuestionPayload(event, edited);
-      await db
-        .update(questionsTable)
-        .set({ ...payload, updatedAt: new Date() })
-        .where(eq(questionsTable.id, targetId));
-      const response: ApiResponse = { success: true, message: "Edit applied to database" };
-      return NextResponse.json(response);
-    }
-
-    if (action === "deleteEdit") {
-      if (!id) {
-        return NextResponse.json({ success: false, error: "Missing id" } as ApiResponse, {
-          status: 400,
-        });
-      }
-      await db.delete(editsTable).where(eq(editsTable.id, id));
-      const response: ApiResponse = { success: true, message: "Edit record deleted" };
-      return NextResponse.json(response);
-    }
-
-    if (action === "undoRemove") {
-      if (!id) {
-        return NextResponse.json({ success: false, error: "Missing id" } as ApiResponse, {
-          status: 400,
-        });
-      }
-      const rows = await db
-        .select()
-        .from(blacklistsTable)
-        .where(eq(blacklistsTable.id, id))
-        .limit(1);
-      const row = rows[0];
-      if (!row) {
-        const response: ApiResponse = { success: false, error: "Blacklisted item not found" };
-        return NextResponse.json(response, { status: 404 });
-      }
-
-      const q = parseMaybeJson(row.questionData);
-      const values: typeof questionsTable.$inferInsert = {
-        id: (q.id as string | undefined) || uuidv4(),
-        ...buildQuestionPayload(row.event, q),
-      };
-
-      let inserted = false;
-      try {
-        await db.insert(questionsTable).values(values);
-        inserted = true;
-      } catch {
-        await db
-          .update(questionsTable)
-          .set({
-            question: values.question,
-            tournament: values.tournament,
-            division: values.division,
-            event: values.event,
-            options: values.options,
-            answers: values.answers,
-            subtopics: values.subtopics,
-            difficulty: values.difficulty,
-            updatedAt: new Date(),
-          })
-          .where(eq(questionsTable.id, values.id as string));
-      }
-
-      await db.delete(blacklistsTable).where(eq(blacklistsTable.id, id));
-
-      const response: ApiResponse = {
-        success: true,
-        message: inserted
-          ? "Question restored and blacklist removed"
-          : "Question updated and blacklist removed",
-      };
-      return NextResponse.json(response);
-    }
-
-    if (action === "applyRemoved") {
-      if (!id) {
-        return NextResponse.json({ success: false, error: "Missing id" } as ApiResponse, {
-          status: 400,
-        });
-      }
-      const rows = await db
-        .select()
-        .from(blacklistsTable)
-        .where(eq(blacklistsTable.id, id))
-        .limit(1);
-      const row = rows[0];
-      if (!row) {
-        return NextResponse.json(
-          { success: false, error: "Blacklisted item not found" } as ApiResponse,
-          { status: 404 }
-        );
-      }
-      const q = parseMaybeJson(row.questionData);
-      const candidateId =
-        (q.id as string | undefined) || (await locateQuestionIdByContent(row.event, q)) || null;
-      if (!candidateId) {
-        const response: ApiResponse = {
-          success: false,
-          error: "Question not found in database to remove",
-        };
-        return NextResponse.json(response, { status: 404 });
-      }
-      await db.delete(questionsTable).where(eq(questionsTable.id, candidateId));
-      const response: ApiResponse = {
-        success: true,
-        message: "Question removed from database (kept in blacklist)",
-      };
-      return NextResponse.json(response);
-    }
-
-    if (action === "deleteRemoved") {
-      if (!id) {
-        return NextResponse.json({ success: false, error: "Missing id" } as ApiResponse, {
-          status: 400,
-        });
-      }
-      await db.delete(blacklistsTable).where(eq(blacklistsTable.id, id));
-      const response: ApiResponse = { success: true, message: "Blacklisted record deleted" };
-      return NextResponse.json(response);
-    }
-
-    if (action === "applyAllEdits") {
-      const edits = await db.select().from(editsTable).orderBy(desc(editsTable.updatedAt));
-      let applied = 0;
-      let skipped = 0;
-      for (const row of edits) {
-        const event = row.event;
-        const original = parseMaybeJson(row.originalQuestion);
-        const edited = parseMaybeJson(row.editedQuestion);
-        const targetId =
-          (original.id as string | undefined) ||
-          (await locateQuestionIdByContent(event, original)) ||
-          (edited.id as string | undefined) ||
-          (await locateQuestionIdByContent(event, edited)) ||
-          null;
-        if (!targetId) {
-          skipped++;
-          continue;
+    const handlers: Record<AdminAction, ActionHandler> = {
+      undoEdit: async (id?: string) => {
+        const error = requireId(id);
+        if (error) {
+          return error;
         }
-        const payload = buildQuestionPayload(event, edited);
-        await db
-          .update(questionsTable)
-          .set({ ...payload, updatedAt: new Date() })
-          .where(eq(questionsTable.id, targetId));
-        applied++;
-      }
-      const response: ApiResponse = {
-        success: true,
-        message: `Applied ${applied} edits, skipped ${skipped}`,
-      };
-      return NextResponse.json(response);
-    }
-
-    if (action === "undoAllEdits") {
-      const edits = await db.select().from(editsTable).orderBy(desc(editsTable.updatedAt));
-      let reverted = 0;
-      let skipped = 0;
-      for (const row of edits) {
-        const event = row.event;
-        const original = parseMaybeJson(row.originalQuestion);
-        const edited = parseMaybeJson(row.editedQuestion);
-        const targetId =
-          (original.id as string | undefined) ||
-          (await locateQuestionIdByContent(event, original)) ||
-          (edited.id as string | undefined) ||
-          (await locateQuestionIdByContent(event, edited)) ||
-          null;
-        if (!targetId) {
-          skipped++;
-          continue;
+        if (!id) {
+          return NextResponse.json({ success: false, error: "Missing id" } as ApiResponse, {
+            status: 400,
+          });
         }
-        const payload = buildQuestionPayload(event, original);
-        await db
-          .update(questionsTable)
-          .set({ ...payload, updatedAt: new Date() })
-          .where(eq(questionsTable.id, targetId));
-
-        await db.delete(editsTable).where(eq(editsTable.id, row.id));
-        reverted++;
-      }
-      const response: ApiResponse = {
-        success: true,
-        message: `Reverted ${reverted} edits, skipped ${skipped}`,
-      };
-      return NextResponse.json(response);
-    }
-
-    if (action === "applyAllRemoved") {
-      const list = await db.select().from(blacklistsTable).orderBy(desc(blacklistsTable.createdAt));
-      let removed = 0;
-      let skipped = 0;
-      for (const row of list) {
-        const q = parseMaybeJson(row.questionData);
-        const candidateId =
-          (q.id as string | undefined) || (await locateQuestionIdByContent(row.event, q)) || null;
-        if (!candidateId) {
-          skipped++;
-          continue;
+        return handleUndoEdit(id);
+      },
+      applyEdit: async (id?: string) => {
+        const error = requireId(id);
+        if (error) {
+          return error;
         }
-        await db.delete(questionsTable).where(eq(questionsTable.id, candidateId));
-        removed++;
-      }
-      const response: ApiResponse = {
-        success: true,
-        message: `Removed ${removed} questions from DB, skipped ${skipped}`,
-      };
-      return NextResponse.json(response);
-    }
-
-    if (action === "restoreAllRemoved") {
-      const list = await db.select().from(blacklistsTable).orderBy(desc(blacklistsTable.createdAt));
-      let restored = 0;
-      let updated = 0;
-      let failed = 0;
-      for (const row of list) {
-        const q = parseMaybeJson(row.questionData);
-        const values: typeof questionsTable.$inferInsert = {
-          id: (q.id as string | undefined) || uuidv4(),
-          ...buildQuestionPayload(row.event, q),
-        };
-        try {
-          await db.insert(questionsTable).values(values);
-          restored++;
-        } catch {
-          try {
-            await db
-              .update(questionsTable)
-              .set({
-                question: values.question,
-                tournament: values.tournament,
-                division: values.division,
-                event: values.event,
-                options: values.options,
-                answers: values.answers,
-                subtopics: values.subtopics,
-                difficulty: values.difficulty,
-                updatedAt: new Date(),
-              })
-              .where(eq(questionsTable.id, values.id as string));
-            updated++;
-          } catch {
-            failed++;
-          }
+        if (!id) {
+          return NextResponse.json({ success: false, error: "Missing id" } as ApiResponse, {
+            status: 400,
+          });
         }
+        return handleApplyEdit(id);
+      },
+      deleteEdit: async (id?: string) => {
+        const error = requireId(id);
+        if (error) {
+          return error;
+        }
+        if (!id) {
+          return NextResponse.json({ success: false, error: "Missing id" } as ApiResponse, {
+            status: 400,
+          });
+        }
+        return handleDeleteEdit(id);
+      },
+      undoRemove: async (id?: string) => {
+        const error = requireId(id);
+        if (error) {
+          return error;
+        }
+        if (!id) {
+          return NextResponse.json({ success: false, error: "Missing id" } as ApiResponse, {
+            status: 400,
+          });
+        }
+        return handleUndoRemove(id);
+      },
+      applyRemoved: async (id?: string) => {
+        const error = requireId(id);
+        if (error) {
+          return error;
+        }
+        if (!id) {
+          return NextResponse.json({ success: false, error: "Missing id" } as ApiResponse, {
+            status: 400,
+          });
+        }
+        return handleApplyRemoved(id);
+      },
+      deleteRemoved: async (id?: string) => {
+        const error = requireId(id);
+        if (error) {
+          return error;
+        }
+        if (!id) {
+          return NextResponse.json({ success: false, error: "Missing id" } as ApiResponse, {
+            status: 400,
+          });
+        }
+        return handleDeleteRemoved(id);
+      },
+      applyAllEdits: async () => handleApplyAllEdits(),
+      undoAllEdits: async () => handleUndoAllEdits(),
+      applyAllRemoved: async () => handleApplyAllRemoved(),
+      restoreAllRemoved: async () => handleRestoreAllRemoved(),
+    };
 
-        await db.delete(blacklistsTable).where(eq(blacklistsTable.id, row.id));
-      }
-      const response: ApiResponse = {
-        success: true,
-        message: `Restored ${restored}, updated ${updated}, failed ${failed}`,
-      };
-      return NextResponse.json(response);
+    const handler = handlers[action];
+    if (!handler) {
+      const response: ApiResponse = { success: false, error: "Unknown action" };
+      return NextResponse.json(response, { status: 400 });
     }
 
-    const response: ApiResponse = { success: false, error: "Unknown action" };
-    return NextResponse.json(response, { status: 400 });
+    return handler(id);
   } catch (_error) {
     const response: ApiResponse = { success: false, error: "Failed to perform admin action" };
     return NextResponse.json(response, { status: 500 });

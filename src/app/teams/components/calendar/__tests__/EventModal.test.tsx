@@ -1,7 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
 import EventModal from "@/app/teams/components/calendar/EventModal";
 import type { EventForm, UserTeam } from "@/app/teams/components/calendar/calendarUtils";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 // Mock framer-motion
 vi.mock("framer-motion", () => ({

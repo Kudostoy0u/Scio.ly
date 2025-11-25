@@ -9,23 +9,25 @@
  */
 
 import { useTeamStore } from "@/lib/stores/teamStore";
+import type { RosterData, Subteam, TeamMember } from "@/lib/stores/teamStore";
+import logger from "@/lib/utils/logger";
 
 export interface CacheUpdateResult {
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
 }
 
 export interface CacheOperation {
   type: "fetch" | "invalidate" | "update";
   key: string;
-  data?: any;
+  data?: unknown;
   timestamp?: number;
 }
 
 class TeamCacheManager {
   private static instance: TeamCacheManager;
-  private pendingOperations: Map<string, Promise<any>> = new Map();
+  private pendingOperations: Map<string, Promise<unknown>> = new Map();
   private cacheUpdateQueue: CacheOperation[] = [];
   private isProcessingQueue = false;
 
@@ -83,7 +85,16 @@ class TeamCacheManager {
 
       try {
         await this.executeOperation(operation);
-      } catch (_error) {}
+      } catch (error) {
+        logger.error(
+          "Failed to execute cache operation",
+          error instanceof Error ? error : new Error(String(error)),
+          {
+            operationType: operation.type,
+          }
+        );
+        // Ignore errors to avoid breaking the main flow
+      }
     }
 
     this.isProcessingQueue = false;
@@ -118,7 +129,7 @@ class TeamCacheManager {
   /**
    * Update cache data with new information
    */
-  private updateCacheData(key: string, data: any, timestamp?: number): void {
+  private updateCacheData(key: string, data: unknown, timestamp?: number): void {
     const updateTimestamp = timestamp || Date.now();
 
     // Determine data type from key
@@ -131,7 +142,8 @@ class TeamCacheManager {
 
         // Update the team store directly
         useTeamStore.setState((state) => ({
-          members: { ...state.members, [key]: data },
+          ...state,
+          members: { ...state.members, [key]: data as TeamMember[] },
           cacheTimestamps: { ...state.cacheTimestamps, [key]: updateTimestamp },
         }));
         break;
@@ -140,7 +152,8 @@ class TeamCacheManager {
         // const rosterSubteamId = this.extractSubteamId(key);
 
         useTeamStore.setState((state) => ({
-          roster: { ...state.roster, [key]: data },
+          ...state,
+          roster: { ...state.roster, [key]: data as RosterData },
           cacheTimestamps: { ...state.cacheTimestamps, [key]: updateTimestamp },
         }));
         break;
@@ -148,7 +161,8 @@ class TeamCacheManager {
         // Update subteams cache
         const subteamsTeamSlug = this.extractTeamSlug(key);
         useTeamStore.setState((state) => ({
-          subteams: { ...state.subteams, [subteamsTeamSlug]: data },
+          ...state,
+          subteams: { ...state.subteams, [subteamsTeamSlug]: data as Subteam[] },
           cacheTimestamps: { ...state.cacheTimestamps, [key]: updateTimestamp },
         }));
         break;
@@ -181,14 +195,6 @@ class TeamCacheManager {
   }
 
   /**
-   * Extract subteam ID from cache key
-   */
-  private extractSubteamId(key: string): string {
-    const parts = key.split("-");
-    return parts[2] || "all";
-  }
-
-  /**
    * Fetch data with proper cache management
    */
   async fetchData<T>(type: string, fetcher: () => Promise<T>, ...params: string[]): Promise<T> {
@@ -196,12 +202,12 @@ class TeamCacheManager {
 
     // Check if data is fresh
     if (this.isDataFresh(key) && this.hasCachedData(key)) {
-      return this.getCachedData(key);
+      return this.getCachedData(key) as T;
     }
 
     // Check if request is already in flight
     if (this.pendingOperations.has(key)) {
-      return this.pendingOperations.get(key)!;
+      return this.pendingOperations.get(key)! as T;
     }
 
     // Create new request
@@ -248,7 +254,7 @@ class TeamCacheManager {
   /**
    * Get cached data for a key
    */
-  private getCachedData(key: string): any {
+  private getCachedData(key: string): unknown {
     const store = useTeamStore.getState();
     const [type] = key.split("-");
 
@@ -280,7 +286,7 @@ class TeamCacheManager {
   /**
    * Update cache with new data from API
    */
-  updateCache(type: string, data: any, ...params: string[]): void {
+  updateCache(type: string, data: unknown, ...params: string[]): void {
     const key = this.getCacheKey(type, ...params);
     this.queueOperation({
       type: "update",
@@ -354,7 +360,7 @@ export const fetchWithCache = <T>(type: string, fetcher: () => Promise<T>, ...pa
 export const invalidateCache = (type: string, ...params: string[]) =>
   teamCacheManager.invalidateAfterOperation(type, ...params);
 
-export const updateCache = (type: string, data: any, ...params: string[]) =>
+export const updateCache = (type: string, data: unknown, ...params: string[]) =>
   teamCacheManager.updateCache(type, data, ...params);
 
 export const forceRefresh = <T>(type: string, fetcher: () => Promise<T>, ...params: string[]) =>

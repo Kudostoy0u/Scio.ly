@@ -38,7 +38,11 @@ export default function QuestionGenerationStep({
   };
 
   return (
-    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="space-y-4"
+    >
       <h3 className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>
         Question Generation
       </h3>
@@ -226,7 +230,10 @@ export default function QuestionGenerationStep({
             onChange={(e) => onSettingsChange({ pureIdOnly: e.target.checked })}
             className="rounded"
           />
-          <label htmlFor="pureIdOnly" className={`text-sm ${darkMode ? "text-white" : "text-gray-900"}`}>
+          <label
+            htmlFor="pureIdOnly"
+            className={`text-sm ${darkMode ? "text-white" : "text-gray-900"}`}
+          >
             Identification Only Mode
           </label>
         </div>

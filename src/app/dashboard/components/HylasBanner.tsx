@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import SyncLocalStorage from "@/lib/database/localStorage-replacement";
 import { ExternalLink, X } from "lucide-react";
 import { useEffect } from "react";
@@ -13,7 +13,10 @@ export default function HylasBanner({ onClose }: HylasBannerProps) {
   const { darkMode } = useTheme();
 
   // Banner background is fully opaque at all times; no scroll-based effects
-  useEffect(() => {}, []);
+  // This useEffect is intentionally empty as a placeholder for future scroll-based effects
+  useEffect(() => {
+    // No-op: placeholder for potential future scroll-based effects
+  }, []);
 
   const backgroundColor = darkMode ? "rgb(17, 24, 39)" : "rgb(255, 255, 255)";
   const borderColor = darkMode ? "rgb(31, 41, 55)" : "rgb(229, 231, 235)";
@@ -75,6 +78,7 @@ export default function HylasBanner({ onClose }: HylasBannerProps) {
 
       {/* Close button - positioned at screen edge */}
       <button
+        type="button"
         onClick={handleClose}
         className={`absolute right-4 top-1/2 transform -translate-y-1/2 p-1 rounded-md transition-colors duration-200 ${
           darkMode

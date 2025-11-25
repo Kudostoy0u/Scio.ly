@@ -1,4 +1,5 @@
 "use client";
+import api from "@/app/api";
 import { loadBookmarksFromSupabase } from "@/app/utils/bookmarks";
 import type { Question } from "@/app/utils/geminiService";
 // import { fetchIdQuestionsForParams } from '../utils/idFetch';
@@ -24,7 +25,6 @@ import logger from "@/lib/utils/logger";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
-import api from "@/app/api";
 // import { getEventOfflineQuestions } from '@/app/utils/storage';
 // normalizeQuestionText used only within old inline fetch logic (now moved)
 // difficultyRanges only used in removed inline fetching logic
@@ -66,29 +66,30 @@ import {
  * ```
  */
 // Validation function for assignment questions
-function validateAssignmentQuestions(questions: any[]): void {
+function validateAssignmentQuestions(questions: unknown[]): void {
   questions.forEach((question, index) => {
-    if (!question.answers) {
+    const q = question as { answers?: unknown; question?: string };
+    if (!q.answers) {
       throw new Error(
-        `Assignment question ${index + 1} (${question.question}) missing required answers field`
+        `Assignment question ${index + 1} (${q.question ?? "unknown"}) missing required answers field`
       );
     }
 
-    if (question.answers === undefined) {
+    if (q.answers === undefined) {
       throw new Error(
-        `Assignment question ${index + 1} (${question.question}) has undefined answers field`
+        `Assignment question ${index + 1} (${q.question ?? "unknown"}) has undefined answers field`
       );
     }
 
-    if (question.answers === null) {
+    if (q.answers === null) {
       throw new Error(
-        `Assignment question ${index + 1} (${question.question}) has null answers field`
+        `Assignment question ${index + 1} (${q.question ?? "unknown"}) has null answers field`
       );
     }
 
-    if (Array.isArray(question.answers) && question.answers.length === 0) {
+    if (Array.isArray(q.answers) && q.answers.length === 0) {
       throw new Error(
-        `Assignment question ${index + 1} (${question.question}) has empty answers array`
+        `Assignment question ${index + 1} (${q.question ?? "unknown"}) has empty answers array`
       );
     }
   });
@@ -97,7 +98,7 @@ function validateAssignmentQuestions(questions: any[]): void {
 export function useTestState({
   initialData,
   initialRouterData,
-}: { initialData?: any[]; initialRouterData?: any } = {}) {
+}: { initialData?: unknown[]; initialRouterData?: Record<string, unknown> } = {}) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const fetchStartedRef = useRef(false);
@@ -109,6 +110,7 @@ export function useTestState({
   // Debug data state changes
   useEffect(() => {
     if (data.length > 0) {
+      // Debug logging can go here if needed
     }
   }, [data]);
   const [routerData, setRouterData] = useState<RouterParams>(initialRouterData || {});
@@ -174,14 +176,18 @@ export function useTestState({
         try {
           const parsedAnswers = JSON.parse(storedAnswers);
           setUserAnswers(parsedAnswers);
-        } catch (_error) {}
+        } catch (_error) {
+          // Ignore errors
+        }
       }
 
       if (storedGrading) {
         try {
           const parsedGrading = JSON.parse(storedGrading);
           setGradingResults(parsedGrading);
-        } catch (_error) {}
+        } catch (_error) {
+          // Ignore errors
+        }
       }
     }
 
@@ -245,8 +251,8 @@ export function useTestState({
 
                   setRouterData({
                     ...stableRouterData,
-                    eventName: stableRouterData.eventName || "Assignment",
-                    timeLimit: stableRouterData.timeLimit || "60",
+                    eventName: (stableRouterData.eventName as string | undefined) || "Assignment",
+                    timeLimit: (stableRouterData.timeLimit as string | undefined) || "60",
                     assignmentMode: true,
                   });
 
@@ -341,11 +347,13 @@ export function useTestState({
             const questions = assignment.questions;
 
             if (questions.length > 0) {
+              // Questions validated
             }
 
             const normalized = normalizeQuestionsFull(questions);
 
             if (normalized.length > 0) {
+              // Normalized questions validated
             }
 
             setData(normalized);
@@ -410,7 +418,7 @@ export function useTestState({
           }
 
           // Update current assignment ID
-          localStorage.setItem("currentAssignmentId", newAssignmentId);
+          localStorage.setItem("currentAssignmentId", String(newAssignmentId));
         }
 
         const stored = localStorage.getItem("testQuestions");
@@ -446,22 +454,30 @@ export function useTestState({
                 try {
                   const parsed = JSON.parse(storedAnswers);
                   setUserAnswers(parsed);
-                } catch (_e) {}
+                } catch (_e) {
+                  // Ignore errors
+                }
               }
               const storedGrades = localStorage.getItem(gradesKey);
               if (storedGrades) {
                 try {
                   setGradingResults(JSON.parse(storedGrades));
-                } catch {}
+                } catch {
+                  // Ignore errors
+                }
               }
-            } catch {}
+            } catch {
+              // Ignore errors
+            }
             setIsLoading(false);
             fetchCompletedRef.current = true;
             logger.log("resume from localStorage before SSR", { count: normalized.length });
             return;
           }
         }
-      } catch {}
+      } catch {
+        // Ignore errors
+      }
     }
     // Short-circuit if SSR provided data
     if (ssrAppliedRef.current) {
@@ -477,12 +493,13 @@ export function useTestState({
       logger.log("short-circuit: applying SSR initialData", { count: initialData.length });
       // Persist SSR data with normalization for consistent reloads
       const paramsStr = localStorage.getItem("testParams");
-      resolveRouterParams(initialRouterData, paramsStr);
+      resolveRouterParams(initialRouterData ?? {}, paramsStr);
       const base = normalizeQuestionsFull(initialData as Question[]);
       setData(base);
       setIsLoading(false);
       fetchCompletedRef.current = true;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData]);
 
   useEffect(() => {
@@ -512,6 +529,7 @@ export function useTestState({
         );
 
         if (isAssignmentMode) {
+          // Assignment mode handling
         } else {
           const restored = restoreStoredState();
           if (restored.userAnswers) {
@@ -559,7 +577,9 @@ export function useTestState({
       setIsSubmitted(true);
       localStorage.setItem("testUserAnswers", JSON.stringify(filled));
       localStorage.setItem("testGradingResults", JSON.stringify(grades));
-    } catch {}
+    } catch {
+      // Ignore errors
+    }
   }, [isPreviewMode, data, isSubmitted]);
 
   // Ensure timer shows immediately by syncing from session when available
@@ -569,7 +589,9 @@ export function useTestState({
       if (session) {
         setTimeLeft(session.timeState.timeLeft);
       }
-    } catch {}
+    } catch {
+      // Ignore errors
+    }
     // Re-run when router params are established (session is created in initLoad)
   }, [routerData]);
 
@@ -598,6 +620,7 @@ export function useTestState({
       setTimeLeft,
       fetchCompletedRef,
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, initialData, stableRouterData]);
 
   useEffect(() => {
@@ -685,7 +708,9 @@ export function useTestState({
         if (Object.keys(computed).length > 0) {
           setGradingResults((prev) => ({ ...prev, ...computed }));
         }
-      } catch {}
+      } catch {
+        // Ignore errors
+      }
     })();
   }, [isSubmitted, data, userAnswers, gradingResults, setGradingResults]);
 
@@ -695,7 +720,9 @@ export function useTestState({
         try {
           const map = await fetchUserBookmarks(supabase, loadBookmarksFromSupabase);
           setBookmarkedQuestions(map);
-        } catch {}
+        } catch {
+          // Ignore errors
+        }
       })
       .catch(() => {});
   }, []);
@@ -758,7 +785,9 @@ export function useTestState({
         // General practice mode
         localStorage.setItem("testGradingResults", JSON.stringify(gradingResults));
       }
-    } catch {}
+    } catch {
+      // Ignore errors
+    }
   }, [gradingResults, routerData]);
 
   const handleSubmit = useCallback(async () => {
@@ -777,7 +806,9 @@ export function useTestState({
         markTestSubmitted();
       }
       localStorage.setItem("testSubmitted", "true");
-    } catch {}
+    } catch {
+      // Ignore errors
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
 
     const { computeMcqTotals } = await import("./utils/submission");
@@ -842,8 +873,7 @@ export function useTestState({
       const hasCurrentAssignmentId = !!localStorage.getItem("currentAssignmentId");
       const isAssignmentMode = !!(
         routerData.assignmentId ||
-        ((routerData.teamsAssign === "1" || routerData.teamsAssign === 1) &&
-          hasCurrentAssignmentId)
+        ((routerData.teamsAssign === "1" || routerData.teamsAssign === 1) && hasCurrentAssignmentId)
       );
 
       if (isAssignmentMode && routerData.assignmentId) {
@@ -864,7 +894,9 @@ export function useTestState({
 
       // localstorage.setitem('testuseranswers', json.stringify(useranswers)); // answers are already persisted on change
       localStorage.removeItem("testFromBookmarks");
-    } catch {}
+    } catch {
+      // Ignore errors
+    }
 
     const {
       data: { user },
@@ -881,7 +913,7 @@ export function useTestState({
     if (routerData.assignmentId) {
       try {
         // Format answers for submission
-        const formattedAnswers: Record<string, any> = {};
+        const formattedAnswers: Record<string, unknown> = {};
         data.forEach((question, index) => {
           const answer = userAnswers[index];
           if (answer !== null && answer !== undefined && question.id) {
@@ -911,23 +943,28 @@ export function useTestState({
             const url = new URL(window.location.href);
             url.searchParams.delete("assignment");
             window.history.replaceState({}, "", url.pathname + url.search);
-          } catch {}
+          } catch {
+            // Ignore errors
+          }
         } else {
           try {
             const j = await res.json().catch(() => null);
             const msg = j?.error || "Failed to submit assignment";
             (await import("react-toastify")).toast.error(msg);
-          } catch {}
+          } catch {
+            // Ignore errors
+          }
         }
       } catch (_error) {
         try {
           (await import("react-toastify")).toast.error("Failed to submit assignment");
-        } catch {}
+        } catch {
+          // Ignore errors
+        }
       }
     } else {
       // Handle legacy assignment submission - only if we're actually in assignment mode
-      const isLegacyAssignmentMode =
-        routerData.teamsAssign === "1" || routerData.teamsAssign === 1;
+      const isLegacyAssignmentMode = routerData.teamsAssign === "1" || routerData.teamsAssign === 1;
       if (isLegacyAssignmentMode) {
         try {
           const assignmentIdStr = localStorage.getItem("currentAssignmentId");
@@ -940,7 +977,9 @@ export function useTestState({
                 (await import("react-toastify")).toast.error(
                   "Invalid assignment ID detected. Test submitted as practice mode."
                 );
-              } catch {}
+              } catch {
+                // Ignore errors
+              }
               return;
             }
             const name = (user?.user_metadata?.name || user?.email || "").toString();
@@ -965,17 +1004,23 @@ export function useTestState({
                 if (teamName) {
                   (await import("react-toastify")).toast.success(`Sent results to ${teamName}!`);
                 }
-              } catch {}
+              } catch {
+                // Ignore errors
+              }
             } else {
               try {
                 const j = await res.json().catch(() => null);
                 const msg = j?.error || "Failed to submit results";
                 (await import("react-toastify")).toast.error(msg);
-              } catch {}
+              } catch {
+                // Ignore errors
+              }
             }
             localStorage.removeItem("currentAssignmentId");
           }
-        } catch {}
+        } catch {
+          // Ignore errors
+        }
       }
     }
   }, [data, userAnswers, gradingResults, routerData, timeLeft]);
@@ -986,7 +1031,7 @@ export function useTestState({
 
     try {
       const total = Number.parseInt(routerData.questionCount || "10");
-      const questions = await fetchQuestionsForParams(routerData, total);
+      const questions = await fetchQuestionsForParams(routerData as Record<string, unknown>, total);
       setData(questions);
       localStorage.setItem("testQuestions", JSON.stringify(questions));
     } catch (error) {
@@ -1064,7 +1109,7 @@ export function useTestState({
 
   const handleQuestionRemoved = (questionIndex: number) => {
     const fetchReplacement = async (): Promise<Question | null> =>
-      fetchReplacementQuestion(routerData, data);
+      fetchReplacementQuestion(routerData as Record<string, unknown>, data);
 
     (async () => {
       const replacement = await fetchReplacement();
@@ -1209,8 +1254,7 @@ export function useTestState({
     }
   };
 
-  const getBookmarkKey = (q: Question): string =>
-    q.imageData ? `id:${q.imageData}` : q.question;
+  const getBookmarkKey = (q: Question): string => (q.imageData ? `id:${q.imageData}` : q.question);
   const isQuestionBookmarked = (question: Question): boolean => {
     return Boolean(bookmarkedQuestions[getBookmarkKey(question)]);
   };

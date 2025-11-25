@@ -1,10 +1,10 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
-import { Users } from "lucide-react";
+import { useTheme } from "@/app/contexts/themeContext";
 import Endpoint from "@/app/docs/api/components/Endpoint";
 import Example from "@/app/docs/api/components/Example";
 import Param from "@/app/docs/api/components/Param";
+import { Users } from "lucide-react";
 import SectionHeader from "./SectionHeader";
 
 export default function SharingSection() {

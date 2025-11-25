@@ -6,10 +6,8 @@ import {
   newTeamRosterData,
   newTeamUnits,
 } from "@/lib/db/schema/teams";
-import {
-  UUIDSchema,
-  validateRequest,
-} from "@/lib/schemas/teams-validation";
+import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
+import { getServerUser } from "@/lib/supabaseServer";
 import {
   handleError,
   handleForbiddenError,
@@ -18,9 +16,7 @@ import {
   handleValidationError,
   validateEnvironment,
 } from "@/lib/utils/error-handler";
-import logger from "@/lib/utils/logger";
-import { getServerUser } from "@/lib/supabaseServer";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -31,7 +27,9 @@ export async function GET(
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -120,7 +118,9 @@ export async function POST(
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -131,7 +131,7 @@ export async function POST(
     let body: unknown;
     try {
       body = await request.json();
-    } catch (error) {
+    } catch (_error) {
       return handleValidationError(
         new z.ZodError([
           {
@@ -219,10 +219,7 @@ export async function POST(
     const rosterCleanupResult = await dbPg
       .delete(newTeamRosterData)
       .where(
-        and(
-          eq(newTeamRosterData.teamUnitId, subteamId),
-          eq(newTeamRosterData.eventName, eventName)
-        )
+        and(eq(newTeamRosterData.teamUnitId, subteamId), eq(newTeamRosterData.eventName, eventName))
       )
       .returning({ id: newTeamRosterData.id });
 
@@ -260,7 +257,9 @@ export async function DELETE(
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -271,7 +270,7 @@ export async function DELETE(
     let body: unknown;
     try {
       body = await request.json();
-    } catch (error) {
+    } catch (_error) {
       return handleValidationError(
         new z.ZodError([
           {

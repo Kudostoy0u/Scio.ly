@@ -2,16 +2,11 @@ import { dbPg } from "@/lib/db";
 import {
   newTeamActiveTimers,
   newTeamEvents,
-  newTeamGroups,
   newTeamRecurringMeetings,
   newTeamUnits,
 } from "@/lib/db/schema/teams";
-import {
-  PostTimerRequestSchema,
-  TimerResponseSchema,
-  UUIDSchema,
-  validateRequest,
-} from "@/lib/schemas/teams-validation";
+import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
+import { getServerUser } from "@/lib/supabaseServer";
 import {
   handleError,
   handleForbiddenError,
@@ -20,14 +15,12 @@ import {
   handleValidationError,
   validateEnvironment,
 } from "@/lib/utils/error-handler";
-import logger from "@/lib/utils/logger";
-import { getServerUser } from "@/lib/supabaseServer";
 import {
   checkTeamGroupAccessCockroach,
   checkTeamGroupLeadershipCockroach,
 } from "@/lib/utils/team-auth";
 import { resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
-import { and, asc, eq, inArray, like, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -41,7 +34,9 @@ export async function GET(
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -106,7 +101,9 @@ export async function GET(
               CONCAT(SUBSTRING(${newTeamActiveTimers.eventId}::text FROM 'recurring-[^-]+-(.+)'), 'T00:00:00')::timestamptz::text
           END
         )`,
-        location: sql<string | null>`COALESCE(${newTeamEvents.location}, ${newTeamRecurringMeetings.location})`,
+        location: sql<
+          string | null
+        >`COALESCE(${newTeamEvents.location}, ${newTeamRecurringMeetings.location})`,
         event_type: sql<string>`COALESCE(${newTeamEvents.eventType}, 'meeting')`,
         added_at: sql<string>`${newTeamActiveTimers.addedAt}::text`,
       })
@@ -139,7 +136,9 @@ export async function POST(
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -150,7 +149,7 @@ export async function POST(
     let body: unknown;
     try {
       body = await request.json();
-    } catch (error) {
+    } catch (_error) {
       return handleValidationError(
         new z.ZodError([
           {
@@ -243,12 +242,7 @@ export async function POST(
       const eventResult = await dbPg
         .select({ id: newTeamEvents.id })
         .from(newTeamEvents)
-        .where(
-          and(
-            eq(newTeamEvents.id, eventId),
-            inArray(newTeamEvents.teamId, groupTeamUnitIds)
-          )
-        )
+        .where(and(eq(newTeamEvents.id, eventId), inArray(newTeamEvents.teamId, groupTeamUnitIds)))
         .limit(1);
       eventExists = eventResult.length > 0;
     }
@@ -262,10 +256,7 @@ export async function POST(
       .select({ id: newTeamActiveTimers.id })
       .from(newTeamActiveTimers)
       .where(
-        and(
-          eq(newTeamActiveTimers.teamUnitId, subteamId),
-          eq(newTeamActiveTimers.eventId, eventId)
-        )
+        and(eq(newTeamActiveTimers.teamUnitId, subteamId), eq(newTeamActiveTimers.eventId, eventId))
       )
       .limit(1);
 
@@ -287,7 +278,10 @@ export async function POST(
       .returning({ id: newTeamActiveTimers.id });
 
     if (!timerResult) {
-      return handleError(new Error("Failed to create timer"), "POST /api/teams/[teamId]/timers - insert");
+      return handleError(
+        new Error("Failed to create timer"),
+        "POST /api/teams/[teamId]/timers - insert"
+      );
     }
 
     return NextResponse.json({
@@ -308,7 +302,9 @@ export async function DELETE(
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -319,7 +315,7 @@ export async function DELETE(
     let body: unknown;
     try {
       body = await request.json();
-    } catch (error) {
+    } catch (_error) {
       return handleValidationError(
         new z.ZodError([
           {
@@ -371,10 +367,7 @@ export async function DELETE(
     const deleteResult = await dbPg
       .delete(newTeamActiveTimers)
       .where(
-        and(
-          eq(newTeamActiveTimers.teamUnitId, subteamId),
-          eq(newTeamActiveTimers.eventId, eventId)
-        )
+        and(eq(newTeamActiveTimers.teamUnitId, subteamId), eq(newTeamActiveTimers.eventId, eventId))
       )
       .returning({ id: newTeamActiveTimers.id });
 

@@ -1,18 +1,60 @@
-import { queryCockroachDB } from "@/lib/cockroachdb";
+import { GET, POST } from "@/app/api/teams/[teamId]/roster/invite/route";
+import { dbPg } from "@/lib/db";
 import { NotificationSyncService } from "@/lib/services/notification-sync";
 import { getServerUser } from "@/lib/supabaseServer";
+import { resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GET, POST } from "@/app/api/teams/[teamId]/roster/invite/route";
+
+// Type for Drizzle mock chain
+type DrizzleMockChain = {
+  from: ReturnType<typeof vi.fn>;
+  where?: ReturnType<typeof vi.fn>;
+  limit?: ReturnType<typeof vi.fn>;
+  values?: ReturnType<typeof vi.fn>;
+  returning?: ReturnType<typeof vi.fn>;
+  set?: ReturnType<typeof vi.fn>;
+  innerJoin?: ReturnType<typeof vi.fn>;
+};
+
+// Regex patterns for test validation
+const SUBTEAM_ID_REGEX = /subteam id.*invalid|uuid/i;
+const INVITATION_SENT_REGEX = /roster link invitation already sent/i;
 
 // Mock dependencies
-vi.mock("@/lib/cockroachdb");
-vi.mock("@/lib/supabaseServer");
-vi.mock("@/lib/services/notification-sync");
+vi.mock("@/lib/db", () => ({
+  dbPg: {
+    select: vi.fn(),
+    from: vi.fn(),
+    innerJoin: vi.fn(),
+    where: vi.fn(),
+    limit: vi.fn(),
+    insert: vi.fn(),
+    values: vi.fn(),
+    returning: vi.fn(),
+    update: vi.fn(),
+    set: vi.fn(),
+  },
+}));
 
-const mockQueryCockroachDb = vi.mocked(queryCockroachDB);
+vi.mock("@/lib/supabaseServer", () => ({
+  getServerUser: vi.fn(),
+}));
+
+vi.mock("@/lib/services/notification-sync", () => ({
+  NotificationSyncService: {
+    syncNotificationToSupabase: vi.fn(),
+  },
+}));
+
+vi.mock("@/lib/utils/team-resolver", () => ({
+  resolveTeamSlugToUnits: vi.fn(),
+}));
+
+const mockDbPg = vi.mocked(dbPg);
 const mockGetServerUser = vi.mocked(getServerUser);
 const mockNotificationSyncService = vi.mocked(NotificationSyncService);
+const _mockResolveTeamSlugToUnits = vi.mocked(resolveTeamSlugToUnits);
 
 describe("/api/teams/[teamId]/roster/invite", () => {
   const mockUser = {
@@ -70,26 +112,127 @@ describe("/api/teams/[teamId]/roster/invite", () => {
 
     // Default mocks
     mockGetServerUser.mockResolvedValue(mockUser);
-    mockQueryCockroachDb.mockResolvedValue({ rows: [] });
     mockNotificationSyncService.syncNotificationToSupabase.mockResolvedValue();
+
+    // Default Drizzle ORM mocks
+    mockDbPg.select.mockReturnValue({
+      from: vi.fn(),
+      innerJoin: vi.fn(),
+      where: vi.fn(),
+      limit: vi.fn(),
+    } as unknown as DrizzleMockChain);
+    mockDbPg.insert.mockReturnValue({
+      values: vi.fn(),
+      returning: vi.fn(),
+    } as unknown as DrizzleMockChain);
+    mockDbPg.update.mockReturnValue({
+      set: vi.fn(),
+      where: vi.fn(),
+      returning: vi.fn(),
+    } as unknown as DrizzleMockChain);
   });
 
   afterEach(() => {
-    process.env.DATABASE_URL = undefined;
+    // biome-ignore lint/performance/noDelete: Need to remove env var for test cleanup
+    delete process.env.DATABASE_URL;
   });
 
   describe("POST", () => {
     it("should create roster link invitation successfully", async () => {
-      // Set up the mock sequence properly
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [mockGroup] }) // group lookup
-        .mockResolvedValueOnce({ rows: [mockMembership] }) // membership check
-        .mockResolvedValueOnce({ rows: [mockSubteam] }) // subteam validation
-        .mockResolvedValueOnce({ rows: [mockInvitedUser] }) // user lookup
-        .mockResolvedValueOnce({ rows: [] }) // existing invitation check
-        .mockResolvedValueOnce({ rows: [mockInvitation] }) // create invitation
-        .mockResolvedValueOnce({ rows: [mockTeamInfo] }) // team info
-        .mockResolvedValueOnce({ rows: [mockNotification] }); // create notification
+      // Mock Drizzle ORM queries in sequence:
+      // 1. Group lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: mockGroup.id }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+
+      // 2. Membership check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              innerJoin: vi.fn().mockReturnValue({
+                where: vi.fn().mockResolvedValue([{ role: mockMembership.role }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+
+      // 3. Subteam validation
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: mockSubteam.id }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+
+      // 4. User lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([mockInvitedUser]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+
+      // 5. Existing invitation check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+
+      // 6. Create invitation
+      mockDbPg.insert.mockImplementationOnce(
+        () =>
+          ({
+            values: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([mockInvitation]),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+
+      // 7. Get team info (for notification)
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              innerJoin: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue([mockTeamInfo]),
+                }),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+
+      // 8. Create notification
+      mockDbPg.insert.mockImplementationOnce(
+        () =>
+          ({
+            values: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([mockNotification]),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest("http://localhost:3000/api/teams/test-team/roster/invite", {
         method: "POST",
@@ -155,7 +298,15 @@ describe("/api/teams/[teamId]/roster/invite", () => {
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.error).toBe("Subteam ID, student name, and username are required");
+      expect(data.error).toBe("Validation failed");
+      expect(data.details).toBeDefined();
+      expect(Array.isArray(data.details)).toBe(true);
+      expect(data.details.length).toBeGreaterThan(0);
+      // Check that details contain validation error messages
+      const hasValidationError = data.details.some(
+        (detail: string) => typeof detail === "string" && detail.length > 0
+      );
+      expect(hasValidationError).toBe(true);
     });
 
     it("should return 400 if subteam ID is invalid UUID", async () => {
@@ -175,11 +326,23 @@ describe("/api/teams/[teamId]/roster/invite", () => {
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.error).toBe("Invalid subteam ID format. Must be a valid UUID.");
+      expect(data.error).toBe("Validation failed");
+      expect(Array.isArray(data.details)).toBe(true);
+      expect(data.details.some((detail: string) => SUBTEAM_ID_REGEX.test(detail))).toBe(true);
     });
 
     it("should return 404 if team group is not found", async () => {
-      mockQueryCockroachDb.mockResolvedValueOnce({ rows: [] }); // no group found
+      // Mock group lookup returning empty
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest("http://localhost:3000/api/teams/test-team/roster/invite", {
         method: "POST",
@@ -201,9 +364,28 @@ describe("/api/teams/[teamId]/roster/invite", () => {
     });
 
     it("should return 403 if user is not a team member", async () => {
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [mockGroup] }) // group lookup
-        .mockResolvedValueOnce({ rows: [] }); // no membership
+      // Mock group lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: mockGroup.id }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock membership check returning empty
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              innerJoin: vi.fn().mockReturnValue({
+                where: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest("http://localhost:3000/api/teams/test-team/roster/invite", {
         method: "POST",
@@ -226,9 +408,28 @@ describe("/api/teams/[teamId]/roster/invite", () => {
 
     it("should return 403 if user is not a captain", async () => {
       const memberMembership = { role: "member" };
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [mockGroup] }) // group lookup
-        .mockResolvedValueOnce({ rows: [memberMembership] }); // member role
+      // Mock group lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: mockGroup.id }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock membership check returning member role
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              innerJoin: vi.fn().mockReturnValue({
+                where: vi.fn().mockResolvedValue([memberMembership]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest("http://localhost:3000/api/teams/test-team/roster/invite", {
         method: "POST",
@@ -250,10 +451,39 @@ describe("/api/teams/[teamId]/roster/invite", () => {
     });
 
     it("should return 404 if subteam is not found", async () => {
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [mockGroup] }) // group lookup
-        .mockResolvedValueOnce({ rows: [mockMembership] }) // membership check
-        .mockResolvedValueOnce({ rows: [] }); // no subteam found
+      // Mock group lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: mockGroup.id }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock membership check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              innerJoin: vi.fn().mockReturnValue({
+                where: vi.fn().mockResolvedValue([{ role: mockMembership.role }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock subteam validation returning empty
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest("http://localhost:3000/api/teams/test-team/roster/invite", {
         method: "POST",
@@ -275,12 +505,50 @@ describe("/api/teams/[teamId]/roster/invite", () => {
     });
 
     it("should return 404 if invited user is not found", async () => {
-      mockQueryCockroachDb.mockReset();
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [mockGroup] }) // group lookup
-        .mockResolvedValueOnce({ rows: [mockMembership] }) // membership check
-        .mockResolvedValueOnce({ rows: [mockSubteam] }) // subteam validation
-        .mockResolvedValueOnce({ rows: [] }); // no user found
+      // Mock group lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: mockGroup.id }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock membership check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              innerJoin: vi.fn().mockReturnValue({
+                where: vi.fn().mockResolvedValue([{ role: mockMembership.role }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock subteam validation
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: mockSubteam.id }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock user lookup returning empty
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest("http://localhost:3000/api/teams/test-team/roster/invite", {
         method: "POST",
@@ -303,13 +571,61 @@ describe("/api/teams/[teamId]/roster/invite", () => {
 
     it("should return 400 if invitation already sent", async () => {
       const existingInvitation = { id: "existing-invitation", status: "pending" };
-      mockQueryCockroachDb.mockReset();
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [mockGroup] }) // group lookup
-        .mockResolvedValueOnce({ rows: [mockMembership] }) // membership check
-        .mockResolvedValueOnce({ rows: [mockSubteam] }) // subteam validation
-        .mockResolvedValueOnce({ rows: [mockInvitedUser] }) // user lookup
-        .mockResolvedValueOnce({ rows: [existingInvitation] }); // existing invitation
+      // Mock group lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: mockGroup.id }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock membership check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              innerJoin: vi.fn().mockReturnValue({
+                where: vi.fn().mockResolvedValue([{ role: mockMembership.role }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock subteam validation
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: mockSubteam.id }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock user lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([mockInvitedUser]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock existing invitation check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([existingInvitation]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest("http://localhost:3000/api/teams/test-team/roster/invite", {
         method: "POST",
@@ -327,21 +643,102 @@ describe("/api/teams/[teamId]/roster/invite", () => {
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.error).toBe("Roster link invitation already sent");
+      expect(data.error).toBe("Validation failed");
+      expect(data.details).toBeDefined();
+      expect(Array.isArray(data.details)).toBe(true);
+      expect(data.details.some((detail: string) => INVITATION_SENT_REGEX.test(detail))).toBe(true);
     });
 
     it("should update existing declined invitation", async () => {
       const existingInvitation = { id: "existing-invitation", status: "declined" };
-      mockQueryCockroachDb.mockReset();
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [mockGroup] }) // group lookup
-        .mockResolvedValueOnce({ rows: [mockMembership] }) // membership check
-        .mockResolvedValueOnce({ rows: [mockSubteam] }) // subteam validation
-        .mockResolvedValueOnce({ rows: [mockInvitedUser] }) // user lookup
-        .mockResolvedValueOnce({ rows: [existingInvitation] }) // existing invitation
-        .mockResolvedValueOnce({ rows: [mockInvitation] }) // update invitation
-        .mockResolvedValueOnce({ rows: [mockTeamInfo] }) // team info
-        .mockResolvedValueOnce({ rows: [mockNotification] }); // create notification
+      // Mock group lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: mockGroup.id }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock membership check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              innerJoin: vi.fn().mockReturnValue({
+                where: vi.fn().mockResolvedValue([{ role: mockMembership.role }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock subteam validation
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: mockSubteam.id }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock user lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([mockInvitedUser]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock existing invitation check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([existingInvitation]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock update invitation
+      mockDbPg.update.mockImplementationOnce(
+        () =>
+          ({
+            set: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                returning: vi.fn().mockResolvedValue([mockInvitation]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock get team info (for notification)
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              innerJoin: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue([mockTeamInfo]),
+                }),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock create notification
+      mockDbPg.insert.mockImplementationOnce(
+        () =>
+          ({
+            values: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([mockNotification]),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest("http://localhost:3000/api/teams/test-team/roster/invite", {
         method: "POST",
@@ -363,15 +760,92 @@ describe("/api/teams/[teamId]/roster/invite", () => {
     });
 
     it("should handle notification sync failure gracefully", async () => {
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [mockGroup] }) // group lookup
-        .mockResolvedValueOnce({ rows: [mockMembership] }) // membership check
-        .mockResolvedValueOnce({ rows: [mockSubteam] }) // subteam validation
-        .mockResolvedValueOnce({ rows: [mockInvitedUser] }) // user lookup
-        .mockResolvedValueOnce({ rows: [] }) // existing invitation check
-        .mockResolvedValueOnce({ rows: [mockInvitation] }) // create invitation
-        .mockResolvedValueOnce({ rows: [mockTeamInfo] }) // team info
-        .mockResolvedValueOnce({ rows: [mockNotification] }); // create notification
+      // Mock group lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: mockGroup.id }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock membership check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              innerJoin: vi.fn().mockReturnValue({
+                where: vi.fn().mockResolvedValue([{ role: mockMembership.role }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock subteam validation
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: mockSubteam.id }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock user lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([mockInvitedUser]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock existing invitation check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock create invitation
+      mockDbPg.insert.mockImplementationOnce(
+        () =>
+          ({
+            values: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([mockInvitation]),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock get team info (for notification)
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              innerJoin: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue([mockTeamInfo]),
+                }),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock create notification
+      mockDbPg.insert.mockImplementationOnce(
+        () =>
+          ({
+            values: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([mockNotification]),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       mockNotificationSyncService.syncNotificationToSupabase.mockRejectedValue(
         new Error("Sync failed")
@@ -412,12 +886,39 @@ describe("/api/teams/[teamId]/roster/invite", () => {
         },
       ];
 
-      // Reset and set up specific mocks for this test
-      mockQueryCockroachDb.mockReset();
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [mockGroup] }) // group lookup
-        .mockResolvedValueOnce({ rows: [mockMembership] }) // membership check
-        .mockResolvedValueOnce({ rows: mockSearchResults }); // search results
+      // Mock group lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: mockGroup.id }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock membership check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              innerJoin: vi.fn().mockReturnValue({
+                where: vi.fn().mockResolvedValue([{ role: mockMembership.role }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock user search
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue(mockSearchResults),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest(
         "http://localhost:3000/api/teams/test-team/roster/invite?q=user"
@@ -457,8 +958,17 @@ describe("/api/teams/[teamId]/roster/invite", () => {
     });
 
     it("should return 404 if team group is not found", async () => {
-      mockQueryCockroachDb.mockReset();
-      mockQueryCockroachDb.mockResolvedValueOnce({ rows: [] }); // no group found
+      // Mock group lookup returning empty
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest(
         "http://localhost:3000/api/teams/test-team/roster/invite?q=user"
@@ -472,10 +982,28 @@ describe("/api/teams/[teamId]/roster/invite", () => {
     });
 
     it("should return 403 if user is not a team member", async () => {
-      mockQueryCockroachDb.mockReset();
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [mockGroup] }) // group lookup
-        .mockResolvedValueOnce({ rows: [] }); // no membership
+      // Mock group lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: mockGroup.id }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock membership check returning empty
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              innerJoin: vi.fn().mockReturnValue({
+                where: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest(
         "http://localhost:3000/api/teams/test-team/roster/invite?q=user"
@@ -490,9 +1018,28 @@ describe("/api/teams/[teamId]/roster/invite", () => {
 
     it("should return 403 if user is not a captain", async () => {
       const memberMembership = { role: "member" };
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [mockGroup] }) // group lookup
-        .mockResolvedValueOnce({ rows: [memberMembership] }); // member role
+      // Mock group lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: mockGroup.id }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock membership check returning member role
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              innerJoin: vi.fn().mockReturnValue({
+                where: vi.fn().mockResolvedValue([memberMembership]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest(
         "http://localhost:3000/api/teams/test-team/roster/invite?q=user"

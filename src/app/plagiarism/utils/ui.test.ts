@@ -3,10 +3,13 @@ import { getRiskColor, getRiskText, getSimilarityColor, getSimilarityLabel } fro
 
 // We only test return values; classes need not match Tailwind config exactly
 
+const HIGH_OR_VERY_REGEX = /High|Very/;
+const VERY_REGEX = /Very/;
+
 describe("plagiarism ui helpers", () => {
   it("getSimilarityLabel and color map thresholds correctly", () => {
-    expect(getSimilarityLabel(0.85)).toMatch(/High|Very/);
-    expect(getSimilarityLabel(0.95)).toMatch(/Very/);
+    expect(getSimilarityLabel(0.85)).toMatch(HIGH_OR_VERY_REGEX);
+    expect(getSimilarityLabel(0.95)).toMatch(VERY_REGEX);
 
     // Color should vary by bucket; just ensure non-empty string
     expect(getSimilarityColor(0.2)).toBeTypeOf("string");

@@ -1,4 +1,3 @@
-import { queryCockroachDB } from "@/lib/cockroachdb";
 import { dbPg } from "@/lib/db";
 import { users } from "@/lib/db/schema/core";
 import {
@@ -7,6 +6,7 @@ import {
   newTeamRosterData,
   newTeamUnits,
 } from "@/lib/db/schema/teams";
+import logger from "@/lib/utils/logger";
 import { and, eq } from "drizzle-orm";
 import { generateDisplayName } from "./displayNameUtils";
 
@@ -83,7 +83,8 @@ export async function getTeamAccess(userId: string, groupId: string): Promise<Te
     }));
 
     const hasSubteamMembership = subteamMemberships.length > 0;
-    const subteamRole = hasSubteamMembership && subteamMemberships[0] ? subteamMemberships[0].role : undefined;
+    const subteamRole =
+      hasSubteamMembership && subteamMemberships[0] ? subteamMemberships[0].role : undefined;
 
     // 3. Get all roster entries for this user
     const rosterResult = await dbPg
@@ -120,7 +121,15 @@ export async function getTeamAccess(userId: string, groupId: string): Promise<Te
       subteamMemberships,
       rosterSubteams,
     };
-  } catch (_error) {
+  } catch (error) {
+    logger.error(
+      "Failed to get team access",
+      error instanceof Error ? error : new Error(String(error)),
+      {
+        userId,
+        groupId,
+      }
+    );
     return {
       hasAccess: false,
       isCreator: false,
@@ -217,7 +226,7 @@ export async function getUserDisplayInfo(userId: string): Promise<{
       username: user.username || undefined,
       needsNamePrompt,
     };
-  } catch (_error) {
+  } catch {
     return {
       name: "@unknown",
       email: `user-${userId.substring(0, 8)}@example.com`,
@@ -228,6 +237,7 @@ export async function getUserDisplayInfo(userId: string): Promise<{
 
 /**
  * CockroachDB version of getTeamAccess for APIs that use CockroachDB
+ * Now uses Drizzle ORM instead of raw SQL
  */
 export async function getTeamAccessCockroach(
   userId: string,
@@ -235,52 +245,55 @@ export async function getTeamAccessCockroach(
 ): Promise<TeamAccessResult> {
   try {
     // 1. Check if user is the team creator
-    const creatorResult = await queryCockroachDB<{ created_by: string }>(
-      "SELECT created_by FROM new_team_groups WHERE id = $1::uuid",
-      [groupId]
-    );
+    const creatorResult = await dbPg
+      .select({ createdBy: newTeamGroups.createdBy })
+      .from(newTeamGroups)
+      .where(eq(newTeamGroups.id, groupId));
 
-    const isCreator = creatorResult.rows.length > 0 && creatorResult.rows[0]?.created_by === userId;
+    const isCreator = creatorResult.length > 0 && creatorResult[0]?.createdBy === userId;
 
     // 2. Get all subteam memberships for this user
-    const membershipResult = await queryCockroachDB<{
-      subteam_id: string;
-      team_id: string;
-      role: string;
-    }>(
-      `SELECT tu.id as subteam_id, tu.team_id, tm.role
-       FROM new_team_memberships tm
-       JOIN new_team_units tu ON tm.team_id = tu.id
-       WHERE tm.user_id = $1::uuid AND tu.group_id = $2::uuid AND tm.status = 'active'`,
-      [userId, groupId]
-    );
+    const membershipResult = await dbPg
+      .select({
+        subteamId: newTeamUnits.id,
+        teamId: newTeamUnits.teamId,
+        role: newTeamMemberships.role,
+      })
+      .from(newTeamMemberships)
+      .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+      .where(
+        and(
+          eq(newTeamMemberships.userId, userId),
+          eq(newTeamUnits.groupId, groupId),
+          eq(newTeamMemberships.status, "active")
+        )
+      );
 
-    const subteamMemberships = membershipResult.rows.map((m) => ({
-      subteamId: m.subteam_id,
-      teamId: m.team_id,
+    const subteamMemberships = membershipResult.map((m) => ({
+      subteamId: m.subteamId,
+      teamId: m.teamId,
       role: m.role,
     }));
 
     const hasSubteamMembership = subteamMemberships.length > 0;
-    const subteamRole = hasSubteamMembership && subteamMemberships[0] ? subteamMemberships[0].role : undefined;
+    const subteamRole =
+      hasSubteamMembership && subteamMemberships[0] ? subteamMemberships[0].role : undefined;
 
     // 3. Get all roster entries for this user
-    const rosterResult = await queryCockroachDB<{
-      subteam_id: string;
-      team_id: string;
-      student_name: string;
-    }>(
-      `SELECT tu.id as subteam_id, tu.team_id, r.student_name
-       FROM new_team_roster_data r
-       JOIN new_team_units tu ON r.team_unit_id = tu.id
-       WHERE tu.group_id = $1::uuid AND r.user_id = $2::uuid`,
-      [groupId, userId]
-    );
+    const rosterResult = await dbPg
+      .select({
+        subteamId: newTeamUnits.id,
+        teamId: newTeamUnits.teamId,
+        studentName: newTeamRosterData.studentName,
+      })
+      .from(newTeamRosterData)
+      .innerJoin(newTeamUnits, eq(newTeamRosterData.teamUnitId, newTeamUnits.id))
+      .where(and(eq(newTeamUnits.groupId, groupId), eq(newTeamRosterData.userId, userId)));
 
-    const rosterSubteams = rosterResult.rows.map((r) => ({
-      subteamId: r.subteam_id,
-      teamId: r.team_id,
-      studentName: r.student_name,
+    const rosterSubteams = rosterResult.map((r) => ({
+      subteamId: r.subteamId,
+      teamId: r.teamId,
+      studentName: r.studentName,
     }));
 
     const hasRosterEntries = rosterSubteams.length > 0;
@@ -297,7 +310,15 @@ export async function getTeamAccessCockroach(
       subteamMemberships,
       rosterSubteams,
     };
-  } catch (_error) {
+  } catch (error) {
+    logger.error(
+      "Failed to get team access",
+      error instanceof Error ? error : new Error(String(error)),
+      {
+        userId,
+        groupId,
+      }
+    );
     return {
       hasAccess: false,
       isCreator: false,

@@ -1,3 +1,4 @@
+/* eslint-env node */
 let __assign =
   (this && this.__assign) ||
   function () {

@@ -1,3 +1,4 @@
+// biome-ignore lint/correctness/noUndeclaredDependencies: server-only is a Next.js package for server-only code
 import "server-only";
 
 const BUCKET = "docs";
@@ -59,8 +60,11 @@ export async function getLocalEventMarkdown(slug: string): Promise<string | null
     // First try reading from the filesystem (works at build time / SSG)
     try {
       const parts = slug.split("/");
+      // biome-ignore lint/correctness/noNodejsModules: This is a server-only file, Node.js modules are valid
       const pathMod = await import("node:path");
+      // biome-ignore lint/correctness/noNodejsModules: This is a server-only file, Node.js modules are valid
       const { readFile, access } = await import("node:fs/promises");
+      // biome-ignore lint/correctness/noNodejsModules: This is a server-only file, Node.js modules are valid
       const { constants } = await import("node:fs");
 
       const candidatePaths: string[] = [];

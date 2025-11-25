@@ -1,4 +1,5 @@
 import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import logger from "@/lib/utils/logger";
 /**
  * Enhanced team data caching system with localStorage persistence
  * Provides efficient caching, background updates, and request deduplication
@@ -56,15 +57,15 @@ const CACHE_CONFIGS: Record<string, CacheConfig> = {
 };
 
 class TeamCache {
-  private memoryCache = new Map<string, CacheEntry<any>>();
+  private memoryCache = new Map<string, CacheEntry<unknown>>();
   private backgroundRefreshTimers = new Map<string, NodeJS.Timeout>();
-  private readonly STORAGE_PREFIX = "scioly_team_cache_";
+  private readonly storagePrefix = "scioly_team_cache_";
 
   /**
    * Get cache key for localStorage
    */
   private getStorageKey(key: string): string {
-    return `${this.STORAGE_PREFIX}${key}`;
+    return `${this.storagePrefix}${key}`;
   }
 
   /**
@@ -103,7 +104,14 @@ class TeamCache {
       // Cache expired, remove it
       SyncLocalStorage.removeItem(storageKey);
       return null;
-    } catch (_error) {
+    } catch (error) {
+      logger.debug(
+        "Failed to load from storage",
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          key,
+        }
+      );
       return null;
     }
   }
@@ -119,7 +127,16 @@ class TeamCache {
         timestamp: Date.now(),
       };
       SyncLocalStorage.setItem(storageKey, JSON.stringify(cacheEntry));
-    } catch (_error) {}
+    } catch (error) {
+      logger.debug(
+        "Failed to save to storage",
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          key,
+        }
+      );
+      // Ignore storage errors (e.g., quota exceeded)
+    }
   }
 
   /**
@@ -160,7 +177,7 @@ class TeamCache {
 
     // Return from memory cache if valid
     if (cached && now - cached.timestamp < config.duration) {
-      return cached.data;
+      return cached.data as T;
     }
 
     // Try localStorage as fallback
@@ -194,7 +211,7 @@ class TeamCache {
 
     // Return cached data if still valid
     if (cached && now - cached.timestamp < config.duration) {
-      return cached.data;
+      return cached.data as T;
     }
 
     // Try localStorage as fallback
@@ -207,7 +224,7 @@ class TeamCache {
 
     // Return existing promise if already fetching
     if (cached?.promise) {
-      return cached.promise;
+      return cached.promise as Promise<T>;
     }
 
     // Create new fetch promise
@@ -253,7 +270,17 @@ class TeamCache {
       try {
         const freshData = await fetcher();
         this.set(key, freshData);
-      } catch (_error) {}
+      } catch (error) {
+        logger.error(
+          "Background cache refresh failed",
+          error instanceof Error ? error : new Error(String(error)),
+          {
+            key,
+            dataType: type,
+          }
+        );
+        // Ignore background refresh errors to avoid breaking the main flow
+      }
     }, config.backgroundRefreshInterval);
 
     this.backgroundRefreshTimers.set(key, timer);
@@ -271,6 +298,32 @@ class TeamCache {
   }
 
   /**
+   * Clear all cache entries
+   */
+  private clearAllCaches(): void {
+    this.memoryCache.clear();
+    for (const timer of this.backgroundRefreshTimers.values()) {
+      clearInterval(timer);
+    }
+    this.backgroundRefreshTimers.clear();
+
+    // Clear localStorage - in test environment, just call clear
+    if (typeof localStorage !== "undefined") {
+      try {
+        const keys = Object.keys(localStorage);
+        for (const storageKey of keys) {
+          if (storageKey.startsWith(this.storagePrefix)) {
+            SyncLocalStorage.removeItem(storageKey);
+          }
+        }
+      } catch {
+        // If we can't iterate over keys, just clear all
+        SyncLocalStorage.clear();
+      }
+    }
+  }
+
+  /**
    * Invalidate cache entry
    */
   invalidate(key?: string): void {
@@ -279,25 +332,7 @@ class TeamCache {
       SyncLocalStorage.removeItem(this.getStorageKey(key));
       this.stopBackgroundRefresh(key);
     } else {
-      // Clear all caches
-      this.memoryCache.clear();
-      this.backgroundRefreshTimers.forEach((timer) => clearInterval(timer));
-      this.backgroundRefreshTimers.clear();
-
-      // Clear localStorage - in test environment, just call clear
-      if (typeof localStorage !== "undefined") {
-        try {
-          const keys = Object.keys(localStorage);
-          keys.forEach((storageKey) => {
-            if (storageKey.startsWith(this.STORAGE_PREFIX)) {
-              SyncLocalStorage.removeItem(storageKey);
-            }
-          });
-        } catch {
-          // If we can't iterate over keys, just clear all
-          SyncLocalStorage.clear();
-        }
-      }
+      this.clearAllCaches();
     }
   }
 

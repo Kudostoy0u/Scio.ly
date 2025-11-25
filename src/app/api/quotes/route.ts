@@ -31,11 +31,14 @@ const fetchQuotes = async (
     );
   }
 
-  return quotes.map((quote) => ({
-    id: quote.id,
-    author: quote.author,
-    quote: quote.quote,
-  }));
+  return quotes.map((quote) => {
+    const quoteRecord = quote as { id: string; author: string; quote: string };
+    return {
+      id: quoteRecord.id,
+      author: quoteRecord.author,
+      quote: quoteRecord.quote,
+    };
+  });
 };
 
 export async function GET(request: NextRequest) {

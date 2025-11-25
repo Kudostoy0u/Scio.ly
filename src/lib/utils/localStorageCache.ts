@@ -8,21 +8,21 @@ export interface CacheItem<T> {
   expiresIn: number; // milliseconds
 }
 
-export class LocalStorageCache {
-  private static readonly PREFIX = "scioly_cache_";
-  private static readonly DEFAULT_EXPIRY = 5 * 60 * 1000; // 5 minutes
-  public static readonly INFINITE_TTL = 0; // Never expires
+const PREFIX = "scioly_cache_";
+const DEFAULT_EXPIRY = 5 * 60 * 1000; // 5 minutes
+export const INFINITE_TTL = 0; // Never expires
 
+export const LocalStorageCache = {
   /**
    * Get cached data if it exists and hasn't expired
    */
-  static get<T>(key: string): T | null {
+  get<T>(key: string): T | null {
     if (typeof window === "undefined") {
       return null;
     }
 
     try {
-      const cached = localStorage.getItem(LocalStorageCache.PREFIX + key);
+      const cached = localStorage.getItem(PREFIX + key);
       if (!cached) {
         return null;
       }
@@ -39,16 +39,16 @@ export class LocalStorageCache {
       }
 
       return item.data;
-    } catch (_error) {
+    } catch {
       LocalStorageCache.remove(key);
       return null;
     }
-  }
+  },
 
   /**
    * Set cached data with optional expiration
    */
-  static set<T>(key: string, data: T, expiresIn: number = LocalStorageCache.DEFAULT_EXPIRY): void {
+  set<T>(key: string, data: T, expiresIn: number = DEFAULT_EXPIRY): void {
     if (typeof window === "undefined") {
       return;
     }
@@ -59,50 +59,52 @@ export class LocalStorageCache {
         timestamp: Date.now(),
         expiresIn,
       };
-      localStorage.setItem(LocalStorageCache.PREFIX + key, JSON.stringify(item));
-    } catch (_error) {}
-  }
+      localStorage.setItem(PREFIX + key, JSON.stringify(item));
+    } catch {
+      // Ignore localStorage errors (e.g., quota exceeded, disabled in private mode)
+    }
+  },
 
   /**
    * Remove cached data
    */
-  static remove(key: string): void {
+  remove(key: string): void {
     if (typeof window === "undefined") {
       return;
     }
-    localStorage.removeItem(LocalStorageCache.PREFIX + key);
-  }
+    localStorage.removeItem(PREFIX + key);
+  },
 
   /**
    * Clear all cached data
    */
-  static clear(): void {
+  clear(): void {
     if (typeof window === "undefined") {
       return;
     }
 
     const keys = Object.keys(localStorage);
-    keys.forEach((key) => {
-      if (key.startsWith(LocalStorageCache.PREFIX)) {
+    for (const key of keys) {
+      if (key.startsWith(PREFIX)) {
         localStorage.removeItem(key);
       }
-    });
-  }
+    }
+  },
 
   /**
    * Get cache key for team-specific data
    */
-  static getTeamKey(teamId: string, dataType: string): string {
+  getTeamKey(teamId: string, dataType: string): string {
     return `team_${teamId}_${dataType}`;
-  }
+  },
 
   /**
    * Get cache key for user-specific data
    */
-  static getUserKey(userId: string, dataType: string): string {
+  getUserKey(userId: string, dataType: string): string {
     return `user_${userId}_${dataType}`;
-  }
-}
+  },
+} as const;
 
 // Removed unused export: useCachedData
 

@@ -2,6 +2,7 @@
 import type { DocsEvent } from "@/app/docs/utils/events2026";
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { DocumentProps } from "@react-pdf/renderer";
+import type React from "react";
 
 const styles = StyleSheet.create({
   page: {

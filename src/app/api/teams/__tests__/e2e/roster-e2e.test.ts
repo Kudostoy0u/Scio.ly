@@ -1,6 +1,6 @@
 /**
  * E2E Tests for Roster Management
- * 
+ *
  * Tests the complete roster management workflow including:
  * - Creating roster entries
  * - Updating roster entries
@@ -8,29 +8,28 @@
  * - Fetching roster data
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { dbPg } from "@/lib/db";
-import { newTeamRosterData, newTeamUnits } from "@/lib/db/schema";
+import { newTeamRosterData } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
-  createTestTeam,
-  createTestUser,
+  type TestTeam,
+  type TestUser,
   cleanupTestData,
   createRosterEntry,
-  assertUserIsMember,
-  type TestUser,
-  type TestTeam,
+  createTestTeam,
+  createTestUser,
 } from "../utils/test-helpers";
 
 describe("Roster Management E2E", () => {
-  let testUsers: TestUser[] = [];
-  let testTeams: TestTeam[] = [];
+  const testUsers: TestUser[] = [];
+  const testTeams: TestTeam[] = [];
 
   beforeAll(async () => {
     // Create test users
     testUsers.push(await createTestUser({ displayName: "John Doe" }));
     testUsers.push(await createTestUser({ displayName: "Jane Smith" }));
-    
+
     // Create test team
     const team = await createTestTeam(testUsers[0].id);
     testTeams.push(team);
@@ -56,9 +55,7 @@ describe("Roster Management E2E", () => {
       const [rosterEntry] = await dbPg
         .select()
         .from(newTeamRosterData)
-        .where(
-          eq(newTeamRosterData.teamUnitId, team.subteamId)
-        );
+        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
 
       expect(rosterEntry).toBeDefined();
       expect(rosterEntry?.eventName).toBe(eventName);
@@ -106,9 +103,7 @@ describe("Roster Management E2E", () => {
       const [rosterEntry] = await dbPg
         .select()
         .from(newTeamRosterData)
-        .where(
-          eq(newTeamRosterData.teamUnitId, team.subteamId)
-        );
+        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
 
       expect(rosterEntry).toBeDefined();
       expect(rosterEntry?.studentName).toBe(studentName);
@@ -131,17 +126,13 @@ describe("Roster Management E2E", () => {
       await dbPg
         .update(newTeamRosterData)
         .set({ studentName: updatedName })
-        .where(
-          eq(newTeamRosterData.teamUnitId, team.subteamId)
-        );
+        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
 
       // Verify update
       const [rosterEntry] = await dbPg
         .select()
         .from(newTeamRosterData)
-        .where(
-          eq(newTeamRosterData.teamUnitId, team.subteamId)
-        );
+        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
 
       expect(rosterEntry?.studentName).toBe(updatedName);
     });
@@ -158,17 +149,13 @@ describe("Roster Management E2E", () => {
       await dbPg
         .update(newTeamRosterData)
         .set({ userId: testUsers[1].id })
-        .where(
-          eq(newTeamRosterData.teamUnitId, team.subteamId)
-        );
+        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
 
       // Verify link
       const [rosterEntry] = await dbPg
         .select()
         .from(newTeamRosterData)
-        .where(
-          eq(newTeamRosterData.teamUnitId, team.subteamId)
-        );
+        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
 
       expect(rosterEntry?.userId).toBe(testUsers[1].id);
     });
@@ -190,14 +177,14 @@ describe("Roster Management E2E", () => {
         .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
 
       expect(rosterEntries.length).toBeGreaterThan(0);
-      
+
       // Verify structure
-      rosterEntries.forEach((entry) => {
+      for (const entry of rosterEntries) {
         expect(entry.teamUnitId).toBe(team.subteamId);
         expect(entry.eventName).toBeDefined();
         expect(entry.slotIndex).toBeGreaterThanOrEqual(0);
         expect(entry.slotIndex).toBeLessThanOrEqual(10);
-      });
+      }
     });
 
     it("should retrieve roster entries with user information", async () => {
@@ -206,7 +193,13 @@ describe("Roster Management E2E", () => {
       const slotIndex = 6;
 
       // Create linked entry
-      await createRosterEntry(team.subteamId, eventName, slotIndex, "Linked Student", testUsers[0].id);
+      await createRosterEntry(
+        team.subteamId,
+        eventName,
+        slotIndex,
+        "Linked Student",
+        testUsers[0].id
+      );
 
       // Retrieve with user join
       const rosterWithUsers = await dbPg
@@ -231,7 +224,7 @@ describe("Roster Management E2E", () => {
   describe("Roster Validation", () => {
     it("should enforce slot index range (0-10)", async () => {
       const team = testTeams[0];
-      
+
       // Valid slot indices
       await createRosterEntry(team.subteamId, "Event", 0, "Student");
       await createRosterEntry(team.subteamId, "Event", 10, "Student");
@@ -264,4 +257,3 @@ describe("Roster Management E2E", () => {
     });
   });
 });
-

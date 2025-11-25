@@ -1,5 +1,44 @@
-import { type Dispatch, type SetStateAction, useCallback } from "react";
 import type { QuoteData } from "@/app/codebusters/types";
+import { type Dispatch, type SetStateAction, useCallback } from "react";
+
+// Top-level regex patterns
+const TRIPLE_OR_MORE_SPACES_REGEX = /\s{3,}/;
+const WHITESPACE_REGEX = /\s+/;
+
+// Helper function to build tokens from encrypted text
+const buildTokensFromEncrypted = (encrypted: string): string[] => {
+  const blocks = encrypted.trim().split(TRIPLE_OR_MORE_SPACES_REGEX);
+  const tokens: string[] = [];
+  for (const block of blocks) {
+    const compact = block.replace(WHITESPACE_REGEX, "");
+    for (let i = 0; i < compact.length; i += 2) {
+      const a = compact[i];
+      if (a) {
+        const b = compact[i + 1] || "";
+        tokens.push(b ? a + b : a);
+      }
+    }
+  }
+  return tokens;
+};
+
+// Helper function to update checkerboard solution
+const updateCheckerboardSolution = (
+  tokens: string[],
+  position: number,
+  plainLetter: string,
+  currentSolution: { [key: number]: string } | undefined
+): { [key: number]: string } => {
+  const updated: { [key: number]: string } = { ...(currentSolution || {}) };
+  const targetToken = tokens[position];
+  const upper = plainLetter.toUpperCase();
+  for (let idx = 0; idx < tokens.length; idx++) {
+    if (tokens[idx] === targetToken) {
+      updated[idx] = upper;
+    }
+  }
+  return updated;
+};
 
 export const useSolutionHandlers = (
   _quotes: QuoteData[],
@@ -101,29 +140,13 @@ export const useSolutionHandlers = (
             return quote;
           }
 
-          // Build tokens honoring block separators (triple spaces)
-          const blocks = (quote.encrypted || "").trim().split(/\s{3,}/);
-          const tokens: string[] = [];
-          blocks.forEach((block) => {
-            const compact = block.replace(/\s+/g, "");
-            for (let i = 0; i < compact.length; i += 2) {
-              const a = compact[i];
-              if (a) {
-                const b = compact[i + 1] || "";
-                tokens.push(b ? a + b : a);
-              }
-            }
-          });
-
-          const targetToken = tokens[position];
-          const upper = plainLetter.toUpperCase();
-
-          const updated: { [key: number]: string } = { ...(quote.checkerboardSolution || {}) };
-          tokens.forEach((tok, idx) => {
-            if (tok === targetToken) {
-              updated[idx] = upper;
-            }
-          });
+          const tokens = buildTokensFromEncrypted(quote.encrypted || "");
+          const updated = updateCheckerboardSolution(
+            tokens,
+            position,
+            plainLetter,
+            quote.checkerboardSolution
+          );
 
           return {
             ...quote,

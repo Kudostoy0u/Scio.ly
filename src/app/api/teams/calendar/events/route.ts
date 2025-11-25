@@ -1,31 +1,74 @@
 import { dbPg } from "@/lib/db";
 import { users } from "@/lib/db/schema/core";
-import {
-  newTeamEventAttendees,
-  newTeamEvents,
-  newTeamMemberships,
-  newTeamUnits,
-} from "@/lib/db/schema/teams";
-import {
-  PostCalendarEventRequestSchema,
-  PutCalendarEventRequestSchema,
-  UUIDSchema,
-  validateRequest,
-} from "@/lib/schemas/teams-validation";
+import { newTeamEventAttendees, newTeamEvents } from "@/lib/db/schema/teams";
+import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
+import { getServerUser } from "@/lib/supabaseServer";
 import {
   handleError,
-  handleForbiddenError,
   handleNotFoundError,
   handleUnauthorizedError,
   handleValidationError,
   validateEnvironment,
 } from "@/lib/utils/error-handler";
-import logger from "@/lib/utils/logger";
-import { getServerUser } from "@/lib/supabaseServer";
 import { resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
-import { and, asc, eq, gte, inArray, lte, or, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+
+// Recurrence pattern type for calendar events
+const RecurrencePatternSchema = z
+  .object({
+    days_of_week: z.array(z.number().int().min(0).max(6)).optional(),
+    start_date: z.string().datetime().optional(),
+    end_date: z.string().datetime().nullable().optional(),
+    exceptions: z.array(z.unknown()).nullable().optional(),
+  })
+  .passthrough(); // Allow additional fields for flexibility
+
+// Schema for calendar event creation
+const CalendarEventCreateSchema = z.object({
+  title: z.string().min(1, "Title is required").max(200),
+  description: z.string().max(5000).nullable().optional(),
+  start_time: z.string().datetime(),
+  end_time: z.string().datetime().nullable().optional(),
+  location: z.string().max(200).nullable().optional(),
+  event_type: z
+    .enum(["practice", "tournament", "meeting", "deadline", "other"])
+    .default("practice")
+    .optional(),
+  is_all_day: z.boolean().default(false).optional(),
+  is_recurring: z.boolean().default(false).optional(),
+  recurrence_pattern: RecurrencePatternSchema.nullable().optional(),
+  team_id: z.string().nullable().optional(),
+  created_by: UUIDSchema.optional(),
+});
+
+// Helper function to resolve team ID from slug or UUID
+async function resolveTeamId(
+  teamId: string | null | undefined
+): Promise<string | null | NextResponse> {
+  // Handle personal events (team_id is "personal" or null)
+  if (!teamId || teamId === "personal") {
+    return null;
+  }
+
+  // Check if it's a UUID
+  try {
+    UUIDSchema.parse(teamId);
+    return teamId;
+  } catch {
+    // It's a slug, resolve it
+    try {
+      const teamInfo = await resolveTeamSlugToUnits(teamId);
+      if (teamInfo.teamUnitIds.length > 0) {
+        return teamInfo.teamUnitIds[0] ?? null;
+      }
+      return handleNotFoundError("No team units found");
+    } catch {
+      return handleNotFoundError("Team");
+    }
+  }
+}
 
 // POST /api/teams/calendar/events - Create team event
 // Frontend Usage:
@@ -33,7 +76,9 @@ import { z } from "zod";
 export async function POST(request: NextRequest) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -43,7 +88,7 @@ export async function POST(request: NextRequest) {
     let body: unknown;
     try {
       body = await request.json();
-    } catch (error) {
+    } catch (_error) {
       return handleValidationError(
         new z.ZodError([
           {
@@ -55,22 +100,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate request body - Note: PostCalendarEventRequestSchema expects different field names
-    // Map from API format to schema format
-    const CalendarEventCreateSchema = z.object({
-      title: z.string().min(1, "Title is required").max(200),
-      description: z.string().max(5000).nullable().optional(),
-      start_time: z.string().datetime(),
-      end_time: z.string().datetime().nullable().optional(),
-      location: z.string().max(200).nullable().optional(),
-      event_type: z.enum(["practice", "tournament", "meeting", "deadline", "other"]).default("practice").optional(),
-      is_all_day: z.boolean().default(false).optional(),
-      is_recurring: z.boolean().default(false).optional(),
-      recurrence_pattern: z.record(z.string(), z.any()).nullable().optional(),
-      team_id: z.string().nullable().optional(),
-      created_by: UUIDSchema.optional(),
-    });
-
+    // Validate request body
     let validatedBody: z.infer<typeof CalendarEventCreateSchema>;
     try {
       validatedBody = validateRequest(CalendarEventCreateSchema, body);
@@ -95,32 +125,6 @@ export async function POST(request: NextRequest) {
       created_by,
     } = validatedBody;
 
-    // Resolve team_id if it's a slug
-    let resolvedTeamId: string | null = null;
-
-    // Handle personal events (team_id is "personal" or null)
-    if (!team_id || team_id === "personal") {
-      resolvedTeamId = null;
-    } else {
-      // Check if it's a UUID
-      try {
-        UUIDSchema.parse(team_id);
-        resolvedTeamId = team_id;
-      } catch {
-        // It's a slug, resolve it
-        try {
-          const teamInfo = await resolveTeamSlugToUnits(team_id);
-          if (teamInfo.teamUnitIds.length > 0) {
-            resolvedTeamId = teamInfo.teamUnitIds[0] ?? null;
-          } else {
-            return handleNotFoundError("No team units found");
-          }
-        } catch {
-          return handleNotFoundError("Team");
-        }
-      }
-    }
-
     // Validate start_time is required
     if (!start_time) {
       return handleValidationError(
@@ -133,6 +137,13 @@ export async function POST(request: NextRequest) {
         ])
       );
     }
+
+    // Resolve team_id if it's a slug
+    const teamIdResult = await resolveTeamId(team_id);
+    if (teamIdResult instanceof NextResponse) {
+      return teamIdResult;
+    }
+    const resolvedTeamId = teamIdResult;
 
     // Insert the event using Drizzle ORM
     const [result] = await dbPg
@@ -153,7 +164,10 @@ export async function POST(request: NextRequest) {
       .returning({ id: newTeamEvents.id });
 
     if (!result) {
-      return handleError(new Error("Failed to create event"), "POST /api/teams/calendar/events - insert");
+      return handleError(
+        new Error("Failed to create event"),
+        "POST /api/teams/calendar/events - insert"
+      );
     }
 
     return NextResponse.json({
@@ -168,7 +182,9 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {

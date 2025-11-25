@@ -1,4 +1,4 @@
-import Content from "@/app/dashboard/Content";
+import Content from "@/app/dashboard/dashboardContent";
 import type { Metadata } from "next";
 
 export const dynamic = "force-static";

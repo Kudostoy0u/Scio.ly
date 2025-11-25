@@ -8,7 +8,7 @@
  * - Optimistic updates
  */
 
-import { useAuth } from "@/app/contexts/AuthContext";
+import { useAuth } from "@/app/contexts/authContext";
 import { useTeamStore as useTeamStoreBase } from "@/lib/stores/teamStore";
 import { useCallback } from "react";
 import { toast } from "react-toastify";
@@ -164,9 +164,11 @@ export function useTeamStore() {
 
       try {
         await preloadData(user.id, teamSlug);
-      } catch (_error) {}
+      } catch (_error) {
+        // Ignore preload errors
+      }
     },
-    [user?.id, preloadData]
+    [user, preloadData]
   );
 
   // Get data for specific keys

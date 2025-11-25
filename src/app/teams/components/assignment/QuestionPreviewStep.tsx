@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { motion } from "framer-motion";
 import type { QuestionPreviewStepProps } from "./assignmentTypes";
 
@@ -14,7 +14,11 @@ export default function QuestionPreviewStep({
 }: Omit<QuestionPreviewStepProps, "darkMode">) {
   const { darkMode } = useTheme();
   return (
-    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="space-y-4"
+    >
       <div className="flex justify-between items-center">
         <h3 className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>
           Question Preview ({questions.length} questions)
@@ -26,7 +30,9 @@ export default function QuestionPreviewStep({
             onChange={(e) => onShowAnswersChange(e.target.checked)}
             className="rounded"
           />
-          <span className={`text-sm ${darkMode ? "text-white" : "text-gray-900"}`}>Show Answers</span>
+          <span className={`text-sm ${darkMode ? "text-white" : "text-gray-900"}`}>
+            Show Answers
+          </span>
         </label>
       </div>
 
@@ -38,7 +44,9 @@ export default function QuestionPreviewStep({
           >
             <div className="flex justify-between items-start mb-2">
               <div className="flex items-center gap-2">
-                <span className={`text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+                <span
+                  className={`text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+                >
                   Q{index + 1} ({question.question_type})
                 </span>
                 {question.difficulty && (
@@ -79,6 +87,7 @@ export default function QuestionPreviewStep({
 
             {question.imageData && (
               <div className="mt-3 w-full flex justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={question.imageData}
                   alt="Question Image"
@@ -143,7 +152,9 @@ export default function QuestionPreviewStep({
             {question.question_type === "free_response" &&
               showAnswers &&
               question.answers &&
-              (Array.isArray(question.answers) ? question.answers.length > 0 : Boolean(question.answers)) && (
+              (Array.isArray(question.answers)
+                ? question.answers.length > 0
+                : Boolean(question.answers)) && (
                 <div
                   className={`mt-3 p-3 rounded-lg border ${
                     darkMode

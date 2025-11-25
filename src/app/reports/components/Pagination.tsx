@@ -23,6 +23,7 @@ export const Pagination = ({
     <div className="flex items-center justify-between mt-6">
       <div className="flex items-center space-x-2">
         <button
+          type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
           className={currentPage === 1 ? disabledButtonClass : buttonClass}
@@ -30,7 +31,7 @@ export const Pagination = ({
           Previous
         </button>
         {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-          let pageNum;
+          let pageNum: number;
           if (totalPages <= 5) {
             pageNum = i + 1;
           } else if (currentPage <= 3) {
@@ -42,6 +43,7 @@ export const Pagination = ({
           }
           return (
             <button
+              type="button"
               key={pageNum}
               onClick={() => onPageChange(pageNum)}
               className={currentPage === pageNum ? activeButtonClass : buttonClass}
@@ -51,6 +53,7 @@ export const Pagination = ({
           );
         })}
         <button
+          type="button"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
           className={currentPage === totalPages ? disabledButtonClass : buttonClass}

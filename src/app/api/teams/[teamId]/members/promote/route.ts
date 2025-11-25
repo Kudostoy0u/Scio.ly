@@ -1,14 +1,7 @@
 import { dbPg } from "@/lib/db";
-import {
-  newTeamGroups,
-  newTeamMemberships,
-  newTeamUnits,
-} from "@/lib/db/schema/teams";
-import {
-  TeamRoleSchema,
-  UUIDSchema,
-  validateRequest,
-} from "@/lib/schemas/teams-validation";
+import { newTeamGroups, newTeamMemberships, newTeamUnits } from "@/lib/db/schema/teams";
+import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
+import { getServerUser } from "@/lib/supabaseServer";
 import {
   handleError,
   handleForbiddenError,
@@ -17,8 +10,6 @@ import {
   handleValidationError,
   validateEnvironment,
 } from "@/lib/utils/error-handler";
-import logger from "@/lib/utils/logger";
-import { getServerUser } from "@/lib/supabaseServer";
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -32,7 +23,9 @@ export async function POST(
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -43,7 +36,7 @@ export async function POST(
     let body: unknown;
     try {
       body = await request.json();
-    } catch (error) {
+    } catch (_error) {
       return handleValidationError(
         new z.ZodError([
           {
@@ -122,10 +115,7 @@ export async function POST(
       .select({ id: newTeamMemberships.id, role: newTeamMemberships.role })
       .from(newTeamMemberships)
       .where(
-        and(
-          inArray(newTeamMemberships.teamId, teamUnitIds),
-          eq(newTeamMemberships.userId, userId)
-        )
+        and(inArray(newTeamMemberships.teamId, teamUnitIds), eq(newTeamMemberships.userId, userId))
       )
       .limit(1);
 
@@ -160,7 +150,10 @@ export async function POST(
       .returning({ id: newTeamMemberships.id });
 
     if (promoteResult.length === 0) {
-      return handleError(new Error("Failed to promote user"), "POST /api/teams/[teamId]/members/promote - update");
+      return handleError(
+        new Error("Failed to promote user"),
+        "POST /api/teams/[teamId]/members/promote - update"
+      );
     }
 
     return NextResponse.json({

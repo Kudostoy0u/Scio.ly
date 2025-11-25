@@ -2,8 +2,8 @@
 import logger from "@/lib/utils/logger";
 
 import Header from "@/app/components/Header";
-import { useAuth } from "@/app/contexts/AuthContext";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useAuth } from "@/app/contexts/authContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -35,7 +35,12 @@ export default function JoinLeaderboardPage({ params }: { params: Promise<{ code
       return;
     }
 
-    const { error } = await client.rpc("join_leaderboard_by_code", {
+    const { error } = await (
+      client.rpc as unknown as (
+        name: string,
+        args?: Record<string, unknown>
+      ) => Promise<{ error: unknown }>
+    )("join_leaderboard_by_code", {
       p_join_code: code.toUpperCase(),
     });
 

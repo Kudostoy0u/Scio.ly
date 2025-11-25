@@ -1,16 +1,16 @@
+import TeamCalendar from "@/app/teams/components/TeamCalendar";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import TeamCalendar from "@/app/teams/components/TeamCalendar";
 
 // Mock the theme context
-vi.mock("@/app/contexts/ThemeContext", () => ({
+vi.mock("@/app/contexts/themeContext", () => ({
   useTheme: () => ({
     darkMode: false,
   }),
 }));
 
 // Mock the auth context
-vi.mock("@/app/contexts/AuthContext", () => ({
+vi.mock("@/app/contexts/authContext", () => ({
   useAuth: () => ({
     user: {
       id: "test-user-id",

@@ -4,14 +4,15 @@ import {
   newTeamAssignmentRoster,
   newTeamAssignments,
 } from "@/lib/db/schema/assignments";
-import { newTeamMemberships } from "@/lib/db/schema/teams";
-import { newTeamNotifications } from "@/lib/db/schema/notifications";
 import { users } from "@/lib/db/schema/core";
+import { newTeamNotifications } from "@/lib/db/schema/notifications";
+import { newTeamMemberships } from "@/lib/db/schema/teams";
 import { NotificationSyncService } from "@/lib/services/notification-sync";
 import { getServerUser } from "@/lib/supabaseServer";
 import { and, eq, ne } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex codebusters assignment creation logic
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string; subteamId: string }> }
@@ -95,14 +96,14 @@ export async function POST(
 
       // Create a map of names to user IDs
       const nameToUserId = new Map<string, string>();
-      teamMembersResult.forEach((member) => {
+      for (const member of teamMembersResult) {
         const displayName =
           member.displayName ||
           (member.firstName && member.lastName ? `${member.firstName} ${member.lastName}` : null);
         if (displayName) {
           nameToUserId.set(displayName.toLowerCase().trim(), member.userId);
         }
-      });
+      }
 
       const rosterInserts = roster_members.map((studentName: string) => {
         const userId = nameToUserId.get(studentName.toLowerCase().trim()) || null;
@@ -133,7 +134,6 @@ export async function POST(
         imageData: null,
       };
       await dbPg.insert(newTeamAssignmentQuestions).values([parameterInsert]);
-    } else {
     }
 
     // Check if creator is in the selected roster

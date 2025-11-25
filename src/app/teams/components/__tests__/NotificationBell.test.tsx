@@ -1,10 +1,10 @@
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
+import NotificationBell from "@/app/teams/components/NotificationBell";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { type Mock, vi } from "vitest";
-import NotificationBell from "@/app/teams/components/NotificationBell";
 
 // Mock dependencies
-vi.mock("@/app/contexts/ThemeContext");
+vi.mock("@/app/contexts/themeContext");
 vi.mock("framer-motion", () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,

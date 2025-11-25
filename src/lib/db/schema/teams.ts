@@ -1,4 +1,14 @@
-import { bigint, boolean, jsonb, pgTable, text, timestamp, unique, uuid, varchar } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  boolean,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+  uuid,
+  varchar,
+} from "drizzle-orm/pg-core";
 import { users } from "./core";
 
 // ==================== TEAM GROUPS ====================
@@ -192,7 +202,9 @@ export const teamLinks = pgTable("team_links", {
 export const newTeamEvents = pgTable("new_team_events", {
   id: uuid("id").primaryKey().defaultRandom(),
   teamId: uuid("team_id").references(() => newTeamUnits.id, { onDelete: "cascade" }), // Nullable for personal events
-  createdBy: uuid("created_by").notNull().references(() => users.id),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => users.id),
   title: text("title").notNull(),
   description: text("description"),
   eventType: text("event_type").default("practice"), // 'practice', 'tournament', 'meeting', 'deadline', 'other'
@@ -214,7 +226,9 @@ export const newTeamEventAttendees = pgTable("new_team_event_attendees", {
   eventId: uuid("event_id")
     .notNull()
     .references(() => newTeamEvents.id, { onDelete: "cascade" }),
-  userId: uuid("user_id").notNull().references(() => users.id),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id),
   status: text("status").default("pending"), // 'pending', 'attending', 'declined', 'tentative'
   respondedAt: timestamp("responded_at", { withTimezone: true }),
   notes: text("notes"),
@@ -231,7 +245,9 @@ export const newTeamRemovedEvents = pgTable(
       .references(() => newTeamUnits.id, { onDelete: "cascade" }),
     eventName: text("event_name").notNull(),
     conflictBlock: text("conflict_block").notNull(),
-    removedBy: uuid("removed_by").notNull().references(() => users.id),
+    removedBy: uuid("removed_by")
+      .notNull()
+      .references(() => users.id),
     removedAt: timestamp("removed_at", { withTimezone: true }).defaultNow(),
   },
   (table) => ({
@@ -246,7 +262,9 @@ export const newTeamStreamPosts = pgTable("new_team_stream_posts", {
   teamUnitId: uuid("team_unit_id")
     .notNull()
     .references(() => newTeamUnits.id, { onDelete: "cascade" }),
-  authorId: uuid("author_id").notNull().references(() => users.id),
+  authorId: uuid("author_id")
+    .notNull()
+    .references(() => users.id),
   content: text("content").notNull(),
   showTournamentTimer: boolean("show_tournament_timer").default(false),
   tournamentId: uuid("tournament_id").references(() => newTeamEvents.id, { onDelete: "set null" }),
@@ -263,7 +281,9 @@ export const newTeamStreamComments = pgTable("new_team_stream_comments", {
   postId: uuid("post_id")
     .notNull()
     .references(() => newTeamStreamPosts.id, { onDelete: "cascade" }),
-  authorId: uuid("author_id").notNull().references(() => users.id),
+  authorId: uuid("author_id")
+    .notNull()
+    .references(() => users.id),
   content: text("content").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
@@ -278,7 +298,9 @@ export const newTeamActiveTimers = pgTable("new_team_active_timers", {
   eventId: uuid("event_id")
     .notNull()
     .references(() => newTeamEvents.id, { onDelete: "cascade" }),
-  addedBy: uuid("added_by").notNull().references(() => users.id),
+  addedBy: uuid("added_by")
+    .notNull()
+    .references(() => users.id),
   addedAt: timestamp("added_at", { withTimezone: true }).defaultNow(),
 });
 
@@ -289,7 +311,9 @@ export const newTeamRecurringMeetings = pgTable("new_team_recurring_meetings", {
   teamId: uuid("team_id")
     .notNull()
     .references(() => newTeamUnits.id, { onDelete: "cascade" }),
-  createdBy: uuid("created_by").notNull().references(() => users.id),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => users.id),
   title: text("title").notNull(),
   description: text("description"),
   location: text("location"),

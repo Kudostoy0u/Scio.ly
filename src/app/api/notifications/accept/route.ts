@@ -1,6 +1,7 @@
 import { requireAuth } from "@/lib/api/auth";
 import { queryCockroachDB } from "@/lib/cockroachdb";
 import { dbPg } from "@/lib/db";
+import { users } from "@/lib/db/schema/core";
 import { newTeamNotifications } from "@/lib/db/schema/notifications";
 import {
   newTeamGroups,
@@ -24,6 +25,7 @@ const NotificationAcceptanceSchema = z.object({
   invitationId: z.string().uuid().optional(),
 });
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex notification acceptance logic with multiple validation steps
 export async function POST(request: NextRequest) {
   try {
     // Require authentication
@@ -57,7 +59,9 @@ export async function POST(request: NextRequest) {
             teamId: newTeamNotifications.teamId,
           })
           .from(newTeamNotifications)
-          .where(and(eq(newTeamNotifications.id, id), eq(newTeamNotifications.userId, user?.id ?? "")))
+          .where(
+            and(eq(newTeamNotifications.id, id), eq(newTeamNotifications.userId, user?.id ?? ""))
+          )
           .limit(1);
 
         if (notificationResult.length === 0) {
@@ -87,7 +91,7 @@ export async function POST(request: NextRequest) {
         const { cockroachDBTeamsService } = await import("@/lib/services/cockroachdb-teams");
 
         // Add retry logic for robustness
-        let team: any = null;
+        let team: Awaited<ReturnType<typeof cockroachDBTeamsService.joinTeamByCode>> = null;
         let retryCount = 0;
         const maxRetries = 3;
 
@@ -115,7 +119,10 @@ export async function POST(request: NextRequest) {
           })
           .from(newTeamMemberships)
           .where(
-            and(eq(newTeamMemberships.userId, user?.id ?? ""), eq(newTeamMemberships.teamId, team.id))
+            and(
+              eq(newTeamMemberships.userId, user?.id ?? ""),
+              eq(newTeamMemberships.teamId, team.id)
+            )
           )
           .limit(1);
 
@@ -129,12 +136,13 @@ export async function POST(request: NextRequest) {
             isAdmin: newTeamPeople.isAdmin,
           })
           .from(newTeamPeople)
-          .where(and(eq(newTeamPeople.userId, user?.id ?? ""), eq(newTeamPeople.teamUnitId, team.id)))
+          .where(
+            and(eq(newTeamPeople.userId, user?.id ?? ""), eq(newTeamPeople.teamUnitId, team.id))
+          )
           .limit(1);
 
         if (peopleVerification.length === 0) {
           // Don't fail the request, just log the warning
-        } else {
         }
         await dbPg
           .update(newTeamNotifications)
@@ -142,7 +150,9 @@ export async function POST(request: NextRequest) {
             isRead: true,
             readAt: new Date(),
           })
-          .where(and(eq(newTeamNotifications.id, id), eq(newTeamNotifications.userId, user?.id ?? "")));
+          .where(
+            and(eq(newTeamNotifications.id, id), eq(newTeamNotifications.userId, user?.id ?? ""))
+          );
 
         return NextResponse.json({
           success: true,
@@ -163,7 +173,9 @@ export async function POST(request: NextRequest) {
           teamId: newTeamNotifications.teamId,
         })
         .from(newTeamNotifications)
-        .where(and(eq(newTeamNotifications.id, id), eq(newTeamNotifications.userId, user?.id ?? "")))
+        .where(
+          and(eq(newTeamNotifications.id, id), eq(newTeamNotifications.userId, user?.id ?? ""))
+        )
         .limit(1);
 
       if (notificationResult.length === 0) {
@@ -193,7 +205,9 @@ export async function POST(request: NextRequest) {
           role: newTeamMemberships.role,
         })
         .from(newTeamMemberships)
-        .where(and(eq(newTeamMemberships.userId, user?.id ?? ""), eq(newTeamMemberships.teamId, teamId)))
+        .where(
+          and(eq(newTeamMemberships.userId, user?.id ?? ""), eq(newTeamMemberships.teamId, teamId))
+        )
         .limit(1);
 
       if (existingMembership.length === 0) {
@@ -214,18 +228,23 @@ export async function POST(request: NextRequest) {
             joinedAt: new Date(),
           })
           .where(
-            and(eq(newTeamMemberships.userId, user?.id ?? ""), eq(newTeamMemberships.teamId, teamId))
+            and(
+              eq(newTeamMemberships.userId, user?.id ?? ""),
+              eq(newTeamMemberships.teamId, teamId)
+            )
           );
       }
 
       // Get user's display name for the roster
-      const userResult = await queryCockroachDB<{
-        display_name: string;
-        username: string;
-        email: string;
-      }>("SELECT display_name, username, email FROM users WHERE id = $1", [user?.id]);
-
-      const userInfo = userResult.rows[0];
+      const [userInfo] = await dbPg
+        .select({
+          display_name: users.displayName,
+          username: users.username,
+          email: users.email,
+        })
+        .from(users)
+        .where(eq(users.id, user?.id ?? ""))
+        .limit(1);
       const displayName =
         userInfo?.display_name ||
         userInfo?.username ||
@@ -259,7 +278,7 @@ export async function POST(request: NextRequest) {
             `UPDATE new_team_assignment_roster 
              SET student_name = $1, user_id = $2
              WHERE student_name = $3 AND user_id IS NULL`,
-            [displayName, user?.id, unlinkedEntry.studentName]
+            [displayName, user?.id ?? null, unlinkedEntry.studentName]
           );
 
           // Update any team posts that might reference the student
@@ -284,7 +303,7 @@ export async function POST(request: NextRequest) {
             `UPDATE new_team_assignment_analytics 
              SET student_name = $1, user_id = $2
              WHERE student_name = $3 AND user_id IS NULL`,
-            [displayName, user?.id, unlinkedEntry.studentName]
+            [displayName, user?.id ?? null, unlinkedEntry.studentName]
           );
 
           // Update any materials or other team content that might reference the student
@@ -302,8 +321,9 @@ export async function POST(request: NextRequest) {
           .set({
             name: displayName,
           })
-          .where(and(eq(newTeamPeople.userId, user?.id ?? ""), eq(newTeamPeople.teamUnitId, teamId)));
-      } else {
+          .where(
+            and(eq(newTeamPeople.userId, user?.id ?? ""), eq(newTeamPeople.teamUnitId, teamId))
+          );
       }
       await dbPg
         .update(newTeamNotifications)
@@ -311,14 +331,18 @@ export async function POST(request: NextRequest) {
           isRead: true,
           readAt: new Date(),
         })
-        .where(and(eq(newTeamNotifications.id, id), eq(newTeamNotifications.userId, user?.id ?? "")));
+        .where(
+          and(eq(newTeamNotifications.id, id), eq(newTeamNotifications.userId, user?.id ?? ""))
+        );
       const membershipVerification = await dbPg
         .select({
           id: newTeamMemberships.id,
           role: newTeamMemberships.role,
         })
         .from(newTeamMemberships)
-        .where(and(eq(newTeamMemberships.userId, user?.id ?? ""), eq(newTeamMemberships.teamId, teamId)))
+        .where(
+          and(eq(newTeamMemberships.userId, user?.id ?? ""), eq(newTeamMemberships.teamId, teamId))
+        )
         .limit(1);
 
       if (membershipVerification.length === 0) {
@@ -336,7 +360,6 @@ export async function POST(request: NextRequest) {
 
       if (peopleVerification.length === 0) {
         // Don't fail the request, just log the warning
-      } else {
       }
       const teamResult = await dbPg
         .select({
@@ -381,6 +404,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (_error) {
     return NextResponse.json({ error: "Failed to accept notification" }, { status: 500 });
-  } finally {
   }
 }

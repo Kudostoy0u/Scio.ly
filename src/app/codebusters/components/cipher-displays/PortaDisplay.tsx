@@ -1,7 +1,10 @@
 "use client";
-import { useTheme } from "@/app/contexts/ThemeContext";
-import { useState } from "react";
 import type { QuoteData } from "@/app/codebusters/types";
+import { useTheme } from "@/app/contexts/themeContext";
+import { useState } from "react";
+
+// Top-level regex pattern
+const UPPERCASE_LETTER_REGEX = /[A-Z]/;
 
 interface PortaDisplayProps {
   text: string;
@@ -32,12 +35,9 @@ export const PortaDisplay = ({
   if (!quote) {
     return <div>Quote not found</div>;
   }
-  const originalQuote = quote.quote.toUpperCase();
-  const cleanOriginalQuote = originalQuote.replace(/[^A-Z]/g, "");
-  const cleanCipherText = text.replace(/[^A-Z]/g, "");
-  const correctMapping: { [key: number]: string } = {};
 
-  const portaTable = {
+  // Helper constants (extracted to reduce complexity)
+  const PORTA_TABLE = {
     AB: "NOPQRSTUVWXYZABCDEFGHIJKLM",
     CD: "OPQRSTUVWXYZNABCDEFGHIJKLM",
     EF: "PQRSTUVWXYZNOABCDEFGHIJKLM",
@@ -51,9 +51,9 @@ export const PortaDisplay = ({
     UV: "XYZNOPQRSTUVWABCDEFGHIJKLM",
     WX: "YZNOPQRSTUVWXABCDEFGHIJKLM",
     YZ: "ZNOPQRSTUVWXYABCDEFGHIJKLM",
-  };
+  } as const;
 
-  const charToPair: { [key: string]: string } = {
+  const CHAR_TO_PAIR: { [key: string]: string } = {
     A: "AB",
     B: "AB",
     C: "CD",
@@ -82,47 +82,181 @@ export const PortaDisplay = ({
     Z: "YZ",
   };
 
-  let cipherLetterIndex = 0;
-  for (let i = 0; i < text.length; i++) {
-    const textChar = text[i];
-    if (textChar && /[A-Z]/.test(textChar)) {
-      if (
-        cipherLetterIndex < cleanCipherText.length &&
-        cipherLetterIndex < cleanOriginalQuote.length
-      ) {
-        const cipherChar = cleanCipherText[cipherLetterIndex];
+  const HEADER_ROW = "ABCDEFGHIJKLM";
 
-        const keywordChar = keyword[cipherLetterIndex % keyword.length];
-        if (!keywordChar) continue;
-        const pair = charToPair[keywordChar];
-        if (!pair) continue;
-        const portaRow = portaTable[pair as keyof typeof portaTable];
-        if (!portaRow) continue;
-
-        const headerRow = "ABCDEFGHIJKLM";
-        let plainChar;
-
-        if (!cipherChar) continue;
-        const headerIndex = headerRow.indexOf(cipherChar);
-        if (headerIndex !== -1) {
-          plainChar = portaRow[headerIndex];
-        } else {
-          const keyRowIndex = portaRow.indexOf(cipherChar);
-          if (keyRowIndex !== -1) {
-            const headerChar = headerRow[keyRowIndex];
-            if (headerChar !== undefined) {
-              plainChar = headerChar;
-            }
-          }
-        }
-
-        if (plainChar) {
-          correctMapping[i] = plainChar;
-        }
-      }
-      cipherLetterIndex++;
+  // Helper function to decrypt a single character
+  const decryptChar = (cipherChar: string, keywordChar: string): string | undefined => {
+    const pair = CHAR_TO_PAIR[keywordChar];
+    if (!pair) {
+      return undefined;
     }
-  }
+    const portaRow = PORTA_TABLE[pair as keyof typeof PORTA_TABLE];
+    if (!portaRow) {
+      return undefined;
+    }
+
+    const headerIndex = HEADER_ROW.indexOf(cipherChar);
+    if (headerIndex !== -1) {
+      return portaRow[headerIndex];
+    }
+    const keyRowIndex = portaRow.indexOf(cipherChar);
+    if (keyRowIndex !== -1) {
+      return HEADER_ROW[keyRowIndex];
+    }
+    return undefined;
+  };
+
+  // Helper function to process a single character in the mapping
+  const processCharacterForMapping = (
+    textChar: string,
+    i: number,
+    cipherLetterIndex: number,
+    cleanCipherText: string,
+    cleanOriginalQuote: string,
+    keyword: string,
+    correctMapping: { [key: number]: string }
+  ): number => {
+    if (!(textChar && UPPERCASE_LETTER_REGEX.test(textChar))) {
+      return cipherLetterIndex;
+    }
+
+    if (
+      !(cipherLetterIndex < cleanCipherText.length && cipherLetterIndex < cleanOriginalQuote.length)
+    ) {
+      return cipherLetterIndex + 1;
+    }
+
+    const cipherChar = cleanCipherText[cipherLetterIndex];
+    const keywordChar = keyword[cipherLetterIndex % keyword.length];
+    if (keywordChar && cipherChar) {
+      const plainChar = decryptChar(cipherChar, keywordChar);
+      if (plainChar) {
+        correctMapping[i] = plainChar;
+      }
+    }
+
+    return cipherLetterIndex + 1;
+  };
+
+  // Helper function to build correct mapping (extracted to reduce complexity)
+  const buildCorrectMapping = (
+    text: string,
+    originalQuote: string,
+    keyword: string
+  ): { [key: number]: string } => {
+    const originalQuoteUpper = originalQuote.toUpperCase();
+    const cleanOriginalQuote = originalQuoteUpper.replace(/[^A-Z]/g, "");
+    const cleanCipherText = text.replace(/[^A-Z]/g, "");
+    const correctMapping: { [key: number]: string } = {};
+    let cipherLetterIndex = 0;
+
+    for (let i = 0; i < text.length; i++) {
+      const textChar = text[i];
+      if (textChar) {
+        cipherLetterIndex = processCharacterForMapping(
+          textChar,
+          i,
+          cipherLetterIndex,
+          cleanCipherText,
+          cleanOriginalQuote,
+          keyword,
+          correctMapping
+        );
+      }
+    }
+    return correctMapping;
+  };
+
+  const originalQuote = quote.quote.toUpperCase();
+  const correctMapping = buildCorrectMapping(text, originalQuote, keyword);
+
+  // Helper function to get input className
+  const getInputClassName = (
+    isTestSubmitted: boolean,
+    isCorrect: boolean,
+    darkMode: boolean
+  ): string => {
+    const baseClasses = "w-5 h-5 sm:w-6 sm:h-6 text-center border rounded mt-1 text-xs sm:text-sm";
+    const darkClasses = darkMode
+      ? "bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500"
+      : "bg-white border-gray-300 text-gray-900 focus:border-blue-500";
+    const stateClasses = isTestSubmitted
+      ? isCorrect
+        ? "border-green-500 bg-green-100/10"
+        : "border-red-500 bg-red-100/10"
+      : "";
+    return `${baseClasses} ${darkClasses} ${stateClasses}`;
+  };
+
+  // Character display component (extracted to reduce complexity)
+  const CharacterDisplay = ({
+    char,
+    i,
+    isLetter,
+    value,
+    correctLetter,
+    isCorrect,
+    keywordChar,
+    quoteIndex,
+    isTestSubmitted,
+    darkMode,
+  }: {
+    char: string;
+    i: number;
+    isLetter: boolean;
+    value: string;
+    correctLetter: string | undefined;
+    isCorrect: boolean;
+    keywordChar: string;
+    quoteIndex: number;
+    isTestSubmitted: boolean;
+    darkMode: boolean;
+  }) => {
+    return (
+      <div key={i} className="flex flex-col items-center mx-0.5">
+        {isLetter && (
+          <span
+            className={`text-xs sm:text-sm font-medium mb-1 ${
+              darkMode ? "text-blue-400" : "text-blue-600"
+            }`}
+          >
+            {keywordChar}
+          </span>
+        )}
+        {!isLetter && <div className="h-4 sm:h-5 mb-1" />}
+
+        <span className={`text-base sm:text-lg ${darkMode ? "text-gray-300" : "text-gray-900"}`}>
+          {char}
+        </span>
+        {isLetter && (
+          <div className="relative h-12 sm:h-14">
+            <input
+              type="text"
+              id={`porta-${quoteIndex}-${i}`}
+              name={`porta-${quoteIndex}-${i}`}
+              maxLength={1}
+              disabled={isTestSubmitted}
+              value={value}
+              onChange={(e) =>
+                onSolutionChange(quoteIndex, `${char}-${i}`, e.target.value.toUpperCase())
+              }
+              autoComplete="off"
+              className={getInputClassName(isTestSubmitted, isCorrect, darkMode)}
+            />
+            {isTestSubmitted && !isCorrect && correctLetter && (
+              <div
+                className={`absolute top-8 sm:top-10 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs ${
+                  darkMode ? "text-red-400" : "text-red-600"
+                }`}
+              >
+                {correctLetter}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const portaTableDisplay = [
     { pair: "AB", row: "NOPQRSTUVWXYZABCDEFGHIJKLM" },
@@ -151,72 +285,33 @@ export const PortaDisplay = ({
 
       {/* Cipher text with keyword above each letter */}
       <div className="flex flex-wrap gap-y-8 text-sm sm:text-base break-words whitespace-pre-wrap mb-6">
-        {text.split("").map((char, i) => {
-          const isLetter = /[A-Z]/.test(char);
-          const value = solution?.[`${char}-${i}`] || "";
-          const correctLetter = correctMapping[i];
-          const isCorrect = isLetter && value.toUpperCase() === correctLetter;
+        {(() => {
+          const charsWithPositions = text.split("").map((char, i) => ({ char, position: i }));
+          return charsWithPositions.map(({ char, position }) => {
+            const isLetter = UPPERCASE_LETTER_REGEX.test(char);
+            const value = solution?.[`${char}-${position}`] || "";
+            const correctLetter = correctMapping[position] ?? undefined;
+            const isCorrect = isLetter && value.toUpperCase() === correctLetter;
+            const letterCount = text.substring(0, position).replace(/[^A-Z]/g, "").length;
+            const keywordChar = isLetter ? (keyword[letterCount % keyword.length] ?? "") : "";
 
-          const letterCount = text.substring(0, i).replace(/[^A-Z]/g, "").length;
-          const keywordChar = isLetter ? keyword[letterCount % keyword.length] : "";
-
-          return (
-            <div key={i} className="flex flex-col items-center mx-0.5">
-              {/* Keyword letter above cipher letter */}
-              {isLetter && (
-                <span
-                  className={`text-xs sm:text-sm font-medium mb-1 ${
-                    darkMode ? "text-blue-400" : "text-blue-600"
-                  }`}
-                >
-                  {keywordChar}
-                </span>
-              )}
-              {!isLetter && <div className="h-4 sm:h-5 mb-1" />}
-
-              <span className={`text-base sm:text-lg ${darkMode ? "text-gray-300" : "text-gray-900"}`}>
-                {char}
-              </span>
-              {isLetter && (
-                <div className="relative h-12 sm:h-14">
-                  <input
-                    type="text"
-                    id={`porta-${quoteIndex}-${i}`}
-                    name={`porta-${quoteIndex}-${i}`}
-                    maxLength={1}
-                    disabled={isTestSubmitted}
-                    value={value}
-                    onChange={(e) =>
-                      onSolutionChange(quoteIndex, `${char}-${i}`, e.target.value.toUpperCase())
-                    }
-                    autoComplete="off"
-                    className={`w-5 h-5 sm:w-6 sm:h-6 text-center border rounded mt-1 text-xs sm:text-sm ${
-                      darkMode
-                        ? "bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500"
-                        : "bg-white border-gray-300 text-gray-900 focus:border-blue-500"
-                    } ${
-                      isTestSubmitted
-                        ? isCorrect
-                          ? "border-green-500 bg-green-100/10"
-                          : "border-red-500 bg-red-100/10"
-                        : ""
-                    }`}
-                  />
-                  {isTestSubmitted && !isCorrect && correctLetter && (
-                    <div
-                      className={`absolute top-8 sm:top-10 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs ${
-                        darkMode ? "text-red-400" : "text-red-600"
-                      }`}
-                    >
-                      {correctLetter}
-                    </div>
-                  )}
-                </div>
-              )}
-              {!isLetter && <div className="w-5 h-12 sm:w-6 sm:h-14 mt-1" />}
-            </div>
-          );
-        })}
+            return (
+              <CharacterDisplay
+                key={`porta-char-${char}-${position}`}
+                char={char}
+                i={position}
+                isLetter={isLetter}
+                value={value}
+                correctLetter={correctLetter}
+                isCorrect={isCorrect}
+                keywordChar={keywordChar}
+                quoteIndex={quoteIndex}
+                isTestSubmitted={isTestSubmitted}
+                darkMode={darkMode}
+              />
+            );
+          });
+        })()}
       </div>
 
       {/* Porta Table - collapsible */}
@@ -234,7 +329,9 @@ export const PortaDisplay = ({
           aria-controls="porta-table-content"
         >
           <span>Porta Table</span>
-          <span className={`transform transition-transform ${showTable ? "rotate-90" : ""}`}>▸</span>
+          <span className={`transform transition-transform ${showTable ? "rotate-90" : ""}`}>
+            ▸
+          </span>
         </button>
         {showTable && (
           <div
@@ -243,7 +340,7 @@ export const PortaDisplay = ({
           >
             {portaTableDisplay.map((row, index) => (
               <div
-                key={index}
+                key={`porta-row-${row.pair}-${index}`}
                 className={`p-3 rounded border min-h-[80px] ${
                   darkMode ? "bg-gray-700/30 border-gray-600" : "bg-white border-gray-200"
                 }`}
@@ -262,7 +359,7 @@ export const PortaDisplay = ({
                 >
                   {row.row.split("").map((char, charIndex) => (
                     <span
-                      key={charIndex}
+                      key={`porta-char-${row.pair}-${index}-${charIndex}-${char}`}
                       className="relative inline-block cursor-help hover:bg-blue-100/20 hover:text-blue-600 dark:hover:text-blue-400 px-0.5 rounded transition-colors"
                       onMouseEnter={() => setHoveredChar({ rowIndex: index, charIndex })}
                       onMouseLeave={() => setHoveredChar(null)}

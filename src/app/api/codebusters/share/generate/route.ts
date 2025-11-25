@@ -43,15 +43,15 @@ export async function POST(request: NextRequest) {
 
     // CockroachDB can reject JSONB with invalid surrogate pairs (common with emoji).
     // Sanitize by stripping surrogate code units to ensure valid UTF-8 JSON.
-    const sanitizeJsonForDb = (val: unknown): any => {
+    const sanitizeJsonForDb = (val: unknown): unknown => {
       if (val == null) {
-        return val as any;
+        return val;
       }
       if (Array.isArray(val)) {
         return val.map(sanitizeJsonForDb);
       }
       if (typeof val === "object") {
-        const o: Record<string, any> = {};
+        const o: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
           o[k] = sanitizeJsonForDb(v);
         }

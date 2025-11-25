@@ -98,7 +98,9 @@ export function computeContinueInfo(): ContinueInfo {
               hasNotes
             );
           });
-      } catch {}
+      } catch {
+        // Ignore errors when checking progress
+      }
     }
     if (hasGeneralProgress || testSubmitted) {
       const params = SyncLocalStorage.getItem("testParams");

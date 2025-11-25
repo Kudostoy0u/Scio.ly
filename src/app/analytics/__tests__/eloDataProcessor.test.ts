@@ -1,12 +1,12 @@
-import { describe, expect, it } from "vitest";
 import {
   calculateWinProbability,
   getAllSchools,
   getLeaderboard,
 } from "@/app/analytics/utils/eloDataProcessor";
+import { describe, expect, it } from "vitest";
 
 describe("eloDataProcessor", () => {
-  const testData = {
+  const testData: Record<string, unknown> = {
     CA: {
       "Alpha High": {
         seasons: {

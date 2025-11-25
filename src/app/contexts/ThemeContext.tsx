@@ -1,7 +1,7 @@
 "use client";
 
 import SyncLocalStorage from "@/lib/database/localStorage-replacement";
-import { createContext, useContext, useEffect, useState } from "react";
+import { type ReactNode, createContext, useContext, useEffect, useState } from "react";
 
 /**
  * Theme context type definition
@@ -41,7 +41,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export function ThemeProvider({
   children,
   initialDarkMode,
-}: { children: React.ReactNode; initialDarkMode?: boolean }) {
+}: { children: ReactNode; initialDarkMode?: boolean }) {
   // initialdarkmode (from cookie) to guarantee ssr/csr match and avoid hydration errors.
   const getInitialDarkMode = (): boolean => {
     // to guarantee markup parity and avoid hydration mismatches.

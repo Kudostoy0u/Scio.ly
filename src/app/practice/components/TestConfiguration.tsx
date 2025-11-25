@@ -1,10 +1,11 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
+import type { Event, Settings } from "@/app/practice/types";
 import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import type { ChangeEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
-import type { Event, Settings } from "@/app/practice/types";
 import DifficultyDropdown from "./DifficultyDropdown";
 import DivisionToggle from "./DivisionToggle";
 // DISABLED_CIPHERS and QuoteData are used in SubtopicDropdown
@@ -25,6 +26,7 @@ interface TestConfigurationProps {
   forceBothDivision?: boolean;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex configuration component with multiple state management
 export default function TestConfiguration({
   selectedEvent,
   settings,
@@ -43,7 +45,8 @@ export default function TestConfiguration({
 
   // FavoriteHeart moved to its own component
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex change handler with multiple conditional logic paths
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
 
     if (id === "questionCount") {
@@ -138,6 +141,7 @@ export default function TestConfiguration({
     onSettingsChange({ ...settings, difficulties: newDifficulties });
   };
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex useEffect with multiple conditional branches
   useEffect(() => {
     if (!selectedEvent || selectedEvent.name !== "Codebusters") {
       const availableDivisions = selectedEvent?.divisions || ["B", "C"];
@@ -309,6 +313,7 @@ export default function TestConfiguration({
 
           {/* Question Types Toggle */}
           <div>
+            {/* biome-ignore lint/a11y/noLabelWithoutControl: Label is for custom button group component */}
             <label
               className={`block text-sm font-medium mb-2 ${
                 darkMode ? "text-gray-300" : "text-gray-700"
@@ -513,6 +518,7 @@ export default function TestConfiguration({
           {/* Character Length Range - Only for Codebusters */}
           {selectedEvent?.name === "Codebusters" && (
             <div>
+              {/* biome-ignore lint/a11y/noLabelWithoutControl: Label is for custom slider component */}
               <label
                 className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
               >
@@ -546,6 +552,7 @@ export default function TestConfiguration({
           {/* Difficulty and Subtopic on same line */}
           <div className="grid grid-cols-2 gap-3">
             <div>
+              {/* biome-ignore lint/a11y/noLabelWithoutControl: Label is for custom dropdown component */}
               <label
                 className={`block text-sm font-medium mb-2 ${
                   darkMode ? "text-gray-300" : "text-gray-700"
@@ -566,6 +573,7 @@ export default function TestConfiguration({
             </div>
 
             <div>
+              {/* biome-ignore lint/a11y/noLabelWithoutControl: Label is for custom dropdown component */}
               <label
                 className={`block text-sm font-medium mb-2 ${
                   darkMode ? "text-gray-300" : "text-gray-700"
@@ -599,6 +607,7 @@ export default function TestConfiguration({
       </div>
 
       {/* Modern Slider Styles */}
+      {/* eslint-disable-next-line react/no-unknown-property */}
       <style jsx={true}>{`
         input[type="range"]::-webkit-slider-thumb {
           appearance: none;

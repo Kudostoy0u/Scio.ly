@@ -221,14 +221,17 @@ export default function DivisionGroupsGrid({
                           <div className="flex items-center gap-2">
                             <span>{evt}</span>
                           </div>
-                          <span className={`text-xs ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+                          <span
+                            className={`text-xs ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+                          >
                             {slots.filter((n) => (n || "").trim()).length}/{max}
                           </span>
                         </div>
                         <div className="grid grid-cols-3 gap-2">
                           {[...new Array(max)].map((_, i) => (
                             <input
-                              key={i}
+                              // biome-ignore lint/suspicious/noArrayIndexKey: Array is dynamically created, index is appropriate for key
+                              key={`slot-${division}-${evt}-${i}`}
                               value={slots[i] || ""}
                               onChange={(e) => setName(division, evt, i, e.target.value)}
                               disabled={!isLeader}
@@ -270,14 +273,17 @@ export default function DivisionGroupsGrid({
                           <div className="flex items-center gap-2">
                             <span>{evt}</span>
                           </div>
-                          <span className={`text-xs ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+                          <span
+                            className={`text-xs ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+                          >
                             {slots.filter((n) => (n || "").trim()).length}/{max}
                           </span>
                         </div>
                         <div className="grid grid-cols-3 gap-2">
                           {[...new Array(max)].map((_, i) => (
                             <input
-                              key={i}
+                              // biome-ignore lint/suspicious/noArrayIndexKey: Array is dynamically created, index is appropriate for key
+                              key={`slot-${division}-${evt}-${i}`}
                               value={slots[i] || ""}
                               onChange={(e) => setName(division, evt, i, e.target.value)}
                               disabled={!isLeader}
@@ -303,7 +309,10 @@ export default function DivisionGroupsGrid({
           );
         }
         return (
-          <div key={group.label} className={`rounded-lg border-2 p-4 ${colors.bg} ${colors.border}`}>
+          <div
+            key={group.label}
+            className={`rounded-lg border-2 p-4 ${colors.bg} ${colors.border}`}
+          >
             <h3 className={`text-lg font-semibold mb-4 ${colors.text}`}>{group.label}</h3>
             <div className="space-y-3">
               {group.events.map((evt) => {
@@ -333,7 +342,8 @@ export default function DivisionGroupsGrid({
                     <div className="grid grid-cols-3 gap-2">
                       {[...new Array(max)].map((_, i) => (
                         <input
-                          key={i}
+                          // biome-ignore lint/suspicious/noArrayIndexKey: Array is dynamically created, index is appropriate for key
+                          key={`slot-${division}-${evt}-${i}`}
                           value={slots[i] || ""}
                           onChange={(e) => setName(division, evt, i, e.target.value)}
                           disabled={!isLeader}

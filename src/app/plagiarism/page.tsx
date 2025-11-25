@@ -1,8 +1,9 @@
 "use client";
 import logger from "@/lib/utils/logger";
 
-import { useCallback, useEffect, useRef, useState } from "react";
 import api from "@/app/api";
+import type React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import AnalysisList from "./components/AnalysisList";
 import { PlagiarismModal } from "./components/PlagiarismModal";
 import SetupPanel from "./components/SetupPanel";
@@ -59,7 +60,11 @@ export default function PlagiarismPage() {
   }, []);
 
   useEffect(() => {
-    if (analysisScrollRef.current && scrollPositionRef.current > 0) {
+    if (
+      analysisScrollRef.current &&
+      scrollPositionRef.current > 0 &&
+      questionSummaries.length > 0
+    ) {
       analysisScrollRef.current.scrollTop = scrollPositionRef.current;
     }
   }, [questionSummaries]);

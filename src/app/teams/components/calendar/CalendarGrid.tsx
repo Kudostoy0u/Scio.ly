@@ -12,7 +12,7 @@ interface CalendarEvent {
   event_type: "practice" | "tournament" | "meeting" | "deadline" | "other" | "personal";
   is_all_day: boolean;
   is_recurring: boolean;
-  recurrence_pattern?: any;
+  recurrence_pattern?: Record<string, unknown>;
   created_by: string;
   team_id?: string;
   attendees?: Array<{
@@ -71,7 +71,13 @@ export default function CalendarGrid({
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDay.getDay());
 
-    const days: any[] = [];
+    const days: Array<{
+      date: Date;
+      events: CalendarEvent[];
+      isCurrentMonth: boolean;
+      isToday: boolean;
+      isLastDay: boolean;
+    }> = [];
     const current = new Date(startDate);
     const endDate = new Date(lastDay);
     endDate.setDate(endDate.getDate() + (6 - lastDay.getDay()));

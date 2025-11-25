@@ -1,8 +1,8 @@
+import { GET } from "@/app/api/teams/user-teams/route";
 import { cockroachDBTeamsService } from "@/lib/services/cockroachdb-teams";
 import { getServerUser } from "@/lib/supabaseServer";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GET } from "@/app/api/teams/user-teams/route";
 
 // Mock dependencies
 vi.mock("@/lib/supabaseServer", () => ({
@@ -25,8 +25,12 @@ describe("/api/teams/user-teams", () => {
     vi.clearAllMocks();
 
     // Mock console methods to reduce noise
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {
+      // Intentionally empty to suppress console output in tests
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {
+      // Intentionally empty to suppress console output in tests
+    });
 
     // Set DATABASE_URL for tests
     process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
@@ -49,7 +53,7 @@ describe("/api/teams/user-teams", () => {
     });
 
     it("should return user teams when user is authenticated", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
       mockService.getUserTeams.mockResolvedValue([
         {
           id: "team-1",
@@ -138,7 +142,7 @@ describe("/api/teams/user-teams", () => {
     });
 
     it("should return empty array when user has no teams", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
       mockService.getUserTeams.mockResolvedValue([]);
 
       const request = new NextRequest("http://localhost:3000/api/teams/user-teams");
@@ -150,7 +154,7 @@ describe("/api/teams/user-teams", () => {
     });
 
     it("should handle database errors gracefully", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
       mockService.getUserTeams.mockRejectedValue(new Error("Database connection failed"));
 
       const request = new NextRequest("http://localhost:3000/api/teams/user-teams");
@@ -162,7 +166,7 @@ describe("/api/teams/user-teams", () => {
     });
 
     it("should handle teams with different roles", async () => {
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
       mockService.getUserTeams.mockResolvedValue([
         {
           id: "team-1",
@@ -237,7 +241,7 @@ describe("/api/teams/user-teams", () => {
     it("should handle teams with multiple members", async () => {
       const otherUserId = "user-456";
 
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+      mockGetServerUser.mockResolvedValue({ id: mockUserId } as { id: string });
       mockService.getUserTeams.mockResolvedValue([
         {
           id: "team-1",

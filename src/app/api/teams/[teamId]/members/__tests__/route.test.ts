@@ -1,10 +1,10 @@
+import { GET } from "@/app/api/teams/[teamId]/members/route";
 import { queryCockroachDB } from "@/lib/cockroachdb";
 import { dbPg } from "@/lib/db";
 import { getServerUser } from "@/lib/supabaseServer";
 import { getTeamAccess, getUserDisplayInfo } from "@/lib/utils/team-auth-v2";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GET } from "@/app/api/teams/[teamId]/members/route";
 
 // Mock dependencies
 vi.mock("@/lib/supabaseServer", () => ({
@@ -19,9 +19,12 @@ vi.mock("@/lib/utils/team-auth-v2", () => ({
 // Create a proper Drizzle ORM chain mock
 // Drizzle chains are awaitable, so the final method in the chain should return a resolved promise
 // dbPg.select() returns an object with .from(), which returns an object with .where() or .innerJoin()
-const createDrizzleChain = (result: any[], options?: { hasInnerJoin?: boolean; hasLimit?: boolean }) => {
+const _createDrizzleChain = (
+  result: unknown[],
+  options?: { hasInnerJoin?: boolean; hasLimit?: boolean }
+) => {
   const { hasInnerJoin = false, hasLimit = false } = options || {};
-  
+
   if (hasInnerJoin) {
     // Chain: select().from().innerJoin().where()
     // The innerJoin() method takes parameters and returns an object with .where()
@@ -32,7 +35,7 @@ const createDrizzleChain = (result: any[], options?: { hasInnerJoin?: boolean; h
     const fromMock = vi.fn().mockReturnValue(fromChain);
     return { from: fromMock };
   }
-  
+
   if (hasLimit) {
     // Chain: select().from().where().limit()
     const limitMock = vi.fn().mockResolvedValue(result);
@@ -42,7 +45,7 @@ const createDrizzleChain = (result: any[], options?: { hasInnerJoin?: boolean; h
     const fromMock = vi.fn().mockReturnValue(fromChain);
     return { from: fromMock };
   }
-  
+
   // Simple chain: select().from().where()
   const whereMock = vi.fn().mockResolvedValue(result);
   const fromChain = { where: whereMock };
@@ -77,8 +80,12 @@ describe("/api/teams/[teamId]/members", () => {
     vi.clearAllMocks();
 
     // Mock console methods to reduce noise
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {
+      // Suppress console.log in tests
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {
+      // Suppress console.error in tests
+    });
 
     // Default mock for queryCockroachDB to return empty results
     mockQueryCockroachDb.mockResolvedValue({ rows: [] });
@@ -101,6 +108,7 @@ describe("/api/teams/[teamId]/members", () => {
     });
 
     it("should return 404 when team group is not found", async () => {
+      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
       mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
       // Mock team group lookup - empty result
       mockDbPg.select.mockReturnValueOnce({
@@ -128,6 +136,7 @@ describe("/api/teams/[teamId]/members", () => {
     });
 
     it("should return 403 when user has no access", async () => {
+      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
       mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
       // Mock team group lookup
       mockDbPg.select.mockReturnValueOnce({
@@ -156,6 +165,7 @@ describe("/api/teams/[teamId]/members", () => {
     });
 
     it("should return team creator as member when user is creator", async () => {
+      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
       mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
       // Mock team group lookup: dbPg.select().from().where().limit()
       mockDbPg.select.mockReturnValueOnce({
@@ -230,6 +240,7 @@ describe("/api/teams/[teamId]/members", () => {
     it("should return subteam members when user has subteam membership", async () => {
       const otherUserId = "123e4567-e89b-12d3-a456-426614174003";
 
+      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
       mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
       // Mock team group lookup (needs .limit(1))
       mockDbPg.select.mockReturnValueOnce({
@@ -320,6 +331,7 @@ describe("/api/teams/[teamId]/members", () => {
     });
 
     it("should filter by subteam when subteamId is provided", async () => {
+      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
       mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
       // Mock team group lookup: dbPg.select().from().where().limit()
       mockDbPg.select.mockReturnValueOnce({
@@ -390,6 +402,7 @@ describe("/api/teams/[teamId]/members", () => {
       const subteam1Id = "123e4567-e89b-12d3-a456-426614174005";
       const subteam2Id = "123e4567-e89b-12d3-a456-426614174006";
 
+      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
       mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
       // Mock team group lookup (needs .limit(1))
       mockDbPg.select.mockReturnValueOnce({
@@ -488,13 +501,16 @@ describe("/api/teams/[teamId]/members", () => {
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.members.length).toBeGreaterThanOrEqual(2);
+      // biome-ignore lint/suspicious/noExplicitAny: Test mock data structure
       const captainMember = body.members.find((m: any) => m.role === "captain");
+      // biome-ignore lint/suspicious/noExplicitAny: Test mock data structure
       const memberMember = body.members.find((m: any) => m.role === "member");
       expect(captainMember).toBeDefined();
       expect(memberMember).toBeDefined();
     });
 
     it("should include unlinked roster members in the response", async () => {
+      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
       mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
       // Mock team group lookup (needs .limit(1))
       mockDbPg.select.mockReturnValueOnce({
@@ -570,6 +586,7 @@ describe("/api/teams/[teamId]/members", () => {
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.members.length).toBeGreaterThanOrEqual(2);
+      // biome-ignore lint/suspicious/noExplicitAny: Test mock data structure
       const unlinkedMembers = body.members.filter((m: any) => m.isUnlinked);
       expect(unlinkedMembers.length).toBeGreaterThanOrEqual(2);
       expect(unlinkedMembers[0].name).toBe("Alice Johnson");
@@ -580,6 +597,7 @@ describe("/api/teams/[teamId]/members", () => {
     it("should include both linked and unlinked members in the response", async () => {
       const linkedUserId = "123e4567-e89b-12d3-a456-426614174003";
 
+      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
       mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
       // Mock team group lookup (needs .limit(1))
       mockDbPg.select.mockReturnValueOnce({
@@ -673,14 +691,14 @@ describe("/api/teams/[teamId]/members", () => {
       expect(body.members.length).toBeGreaterThanOrEqual(2);
 
       // Find linked member
-      const linkedMember = body.members.find((m: any) => m.id === linkedUserId);
+      const linkedMember = body.members.find((m: { id?: string }) => m.id === linkedUserId);
       expect(linkedMember).toBeDefined();
       expect(linkedMember.name).toBe("Jane Smith");
       expect(linkedMember.email).toBe("jane@example.com");
       expect(linkedMember.role).toBe("captain");
 
       // Find unlinked member
-      const unlinkedMember = body.members.find((m: any) => m.isUnlinked);
+      const unlinkedMember = body.members.find((m: { isUnlinked?: boolean }) => m.isUnlinked);
       expect(unlinkedMember).toBeDefined();
       expect(unlinkedMember.name).toBe("Alice Johnson");
       expect(unlinkedMember.role).toBe("unlinked");
@@ -688,6 +706,7 @@ describe("/api/teams/[teamId]/members", () => {
     });
 
     it("should filter unlinked roster members by subteam when subteamId is provided", async () => {
+      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
       mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
       // Mock team group lookup (needs .limit(1))
       mockDbPg.select.mockReturnValueOnce({
@@ -757,13 +776,14 @@ describe("/api/teams/[teamId]/members", () => {
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.members.length).toBeGreaterThanOrEqual(1);
-      const unlinkedMember = body.members.find((m: any) => m.isUnlinked);
+      const unlinkedMember = body.members.find((m: { isUnlinked?: boolean }) => m.isUnlinked);
       expect(unlinkedMember).toBeDefined();
       expect(unlinkedMember.name).toBe("Alice Johnson");
       expect(unlinkedMember.subteam.id).toBe(mockSubteamId);
     });
 
     it("should handle database errors gracefully", async () => {
+      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
       mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
       // Mock team group lookup to throw an error
       mockDbPg.select.mockReturnValueOnce({

@@ -76,92 +76,76 @@ vi.mock("postgres", () => {
   }));
 });
 
-// Mock Drizzle database
-vi.mock("@/lib/db/index", () => ({
-  db: {
-    select: vi.fn(() => ({
-      from: vi.fn(() => ({
-        where: vi.fn(() => ({
-          orderBy: vi.fn(() => ({
-            limit: vi.fn(() =>
-              Promise.resolve([
-                {
-                  id: "test-id-1",
-                  question: "Test question 1",
-                  tournament: "Test Tournament",
-                  division: "C",
-                  event: "Test Event",
-                  difficulty: "0.5",
-                  options: ["Option A", "Option B", "Option C", "Option D"],
-                  answers: ["A"],
-                  subtopics: ["Test Topic"],
-                  createdAt: new Date("2024-01-01"),
-                  updatedAt: new Date("2024-01-01"),
-                  randomF: 0.5,
-                },
-              ])
-            ),
-          })),
-        })),
+// Create a reusable Drizzle mock object
+const createDrizzleMock = () => ({
+  select: vi.fn(() => ({
+    from: vi.fn(() => ({
+      where: vi.fn(() => ({
         orderBy: vi.fn(() => ({
-          limit: vi.fn(() =>
-            Promise.resolve([
-              {
-                id: "test-id-1",
-                question: "Test question 1",
-                tournament: "Test Tournament",
-                division: "C",
-                event: "Test Event",
-                difficulty: "0.5",
-                options: ["Option A", "Option B", "Option C", "Option D"],
-                answers: ["A"],
-                subtopics: ["Test Topic"],
-                createdAt: new Date("2024-01-01"),
-                updatedAt: new Date("2024-01-01"),
-                randomF: 0.5,
-              },
-            ])
-          ),
+          limit: vi.fn(() => Promise.resolve([])),
         })),
-        limit: vi.fn(() =>
-          Promise.resolve([
-            {
-              id: "test-id-1",
-              question: "Test question 1",
-              tournament: "Test Tournament",
-              division: "C",
-              event: "Test Event",
-              difficulty: "0.5",
-              options: ["Option A", "Option B", "Option C", "Option D"],
-              answers: ["A"],
-              subtopics: ["Test Topic"],
-              createdAt: new Date("2024-01-01"),
-              updatedAt: new Date("2024-01-01"),
-              randomF: 0.5,
-            },
-          ])
-        ),
+        limit: vi.fn(() => Promise.resolve([])),
+      })),
+      innerJoin: vi.fn(() => ({
+        where: vi.fn(() => Promise.resolve([])),
+      })),
+      leftJoin: vi.fn(() => ({
+        where: vi.fn(() => ({
+          orderBy: vi.fn(() => Promise.resolve([])),
+        })),
+      })),
+      orderBy: vi.fn(() => ({
+        limit: vi.fn(() => Promise.resolve([])),
+      })),
+      limit: vi.fn(() => Promise.resolve([])),
+    })),
+  })),
+  insert: vi.fn(() => ({
+    values: vi.fn(() => ({
+      returning: vi.fn(() => Promise.resolve([])),
+    })),
+  })),
+  update: vi.fn(() => ({
+    set: vi.fn(() => ({
+      where: vi.fn(() => ({
+        returning: vi.fn(() => Promise.resolve([])),
       })),
     })),
-    insert: vi.fn(() => Promise.resolve({ insertId: "mock-id" })),
-    update: vi.fn(() => Promise.resolve({ affectedRows: 1 })),
-    delete: vi.fn(() => Promise.resolve({ affectedRows: 1 })),
-  },
-  testConnection: vi.fn(() => Promise.resolve(true)),
-  closeConnection: vi.fn(() => Promise.resolve()),
-}));
+  })),
+  delete: vi.fn(() => ({
+    where: vi.fn(() => ({
+      returning: vi.fn(() => Promise.resolve([])),
+    })),
+  })),
+});
+
+// Mock Drizzle database
+vi.mock("@/lib/db/index", () => {
+  const mockDb = createDrizzleMock();
+  const mockDbPg = createDrizzleMock();
+  return {
+    db: mockDb,
+    dbPg: mockDbPg,
+    testConnection: vi.fn(() => Promise.resolve(true)),
+    closeConnection: vi.fn(() => Promise.resolve()),
+  };
+});
 
 // Mock Gemini service
-vi.mock("@/lib/services/gemini", () => ({
-  GeminiService: {
+vi.mock("@/lib/services/gemini", () => {
+  const geminiServiceInstance = {
     getInstance: vi.fn(() => ({
       explainQuestion: vi.fn(() => Promise.resolve("Mock explanation")),
       gradeFreeResponse: vi.fn(() => Promise.resolve({ score: 5, feedback: "Mock feedback" })),
       analyzeQuestion: vi.fn(() => Promise.resolve({ difficulty: "medium", topics: ["biology"] })),
       suggestEdit: vi.fn(() => Promise.resolve("Mock edit suggestion")),
     })),
-  },
-}));
+  };
+  const mockExports = {
+    GeminiService: geminiServiceInstance,
+  } as { GeminiService: typeof geminiServiceInstance };
+  return mockExports;
+});
 
 // Mock teams service
 vi.mock("@/lib/services/teams", () => ({
@@ -356,6 +340,17 @@ export function cleanupTestEnvironment() {
   }
 }
 
-// Re-export everything from testing library
-export * from "@testing-library/react";
+// Re-export specific items from testing library to avoid barrel file performance issues
+// biome-ignore lint/performance/noBarrelFile: This is a test utilities file that intentionally re-exports testing library functions
+export {
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+  within,
+  cleanup,
+  act,
+  renderHook,
+} from "@testing-library/react";
+export type { RenderOptions, RenderResult } from "@testing-library/react";
 export { vi } from "vitest";

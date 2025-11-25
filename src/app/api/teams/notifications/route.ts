@@ -1,18 +1,14 @@
 import { dbPg } from "@/lib/db";
-import { newTeamGroups, newTeamUnits } from "@/lib/db/schema/teams";
 import { newTeamNotifications as notificationsSchema } from "@/lib/db/schema/notifications";
-import {
-  UUIDSchema,
-  validateRequest,
-} from "@/lib/schemas/teams-validation";
+import { newTeamGroups, newTeamUnits } from "@/lib/db/schema/teams";
+import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
+import { getServerUser } from "@/lib/supabaseServer";
 import {
   handleError,
   handleUnauthorizedError,
   handleValidationError,
   validateEnvironment,
 } from "@/lib/utils/error-handler";
-import logger from "@/lib/utils/logger";
-import { getServerUser } from "@/lib/supabaseServer";
 import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -21,7 +17,9 @@ import { z } from "zod";
 export async function GET(request: NextRequest) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -37,7 +35,7 @@ export async function GET(request: NextRequest) {
     const limit = limitParam ? Number.parseInt(limitParam, 10) : 20;
     const offset = offsetParam ? Number.parseInt(offsetParam, 10) : 0;
 
-    if (isNaN(limit) || limit < 1 || limit > 100) {
+    if (Number.isNaN(limit) || limit < 1 || limit > 100) {
       return handleValidationError(
         new z.ZodError([
           {
@@ -49,7 +47,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (isNaN(offset) || offset < 0) {
+    if (Number.isNaN(offset) || offset < 0) {
       return handleValidationError(
         new z.ZodError([
           {
@@ -77,7 +75,6 @@ export async function GET(request: NextRequest) {
         data: notificationsSchema.data,
         is_read: notificationsSchema.isRead,
         created_at: notificationsSchema.createdAt,
-        read_at: notificationsSchema.readAt,
         school: newTeamGroups.school,
         division: newTeamGroups.division,
         team_name: sql<string>`COALESCE(${newTeamUnits.description}, ${newTeamUnits.teamId}::text)`,
@@ -94,12 +91,7 @@ export async function GET(request: NextRequest) {
     const [unreadCountResult] = await dbPg
       .select({ count: count() })
       .from(notificationsSchema)
-      .where(
-        and(
-          eq(notificationsSchema.userId, user.id),
-          eq(notificationsSchema.isRead, false)
-        )
-      );
+      .where(and(eq(notificationsSchema.userId, user.id), eq(notificationsSchema.isRead, false)));
 
     return NextResponse.json({
       notifications: notificationsResult,
@@ -114,7 +106,9 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -124,7 +118,7 @@ export async function PUT(request: NextRequest) {
     let body: unknown;
     try {
       body = await request.json();
-    } catch (error) {
+    } catch (_error) {
       return handleValidationError(
         new z.ZodError([
           {
@@ -162,12 +156,7 @@ export async function PUT(request: NextRequest) {
           isRead: true,
           readAt: new Date(),
         })
-        .where(
-          and(
-            eq(notificationsSchema.userId, user.id),
-            eq(notificationsSchema.isRead, false)
-          )
-        );
+        .where(and(eq(notificationsSchema.userId, user.id), eq(notificationsSchema.isRead, false)));
     } else if (notification_ids && notification_ids.length > 0) {
       // Mark specific notifications as read using Drizzle ORM
       await dbPg
@@ -204,7 +193,9 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -214,7 +205,7 @@ export async function DELETE(request: NextRequest) {
     let body: unknown;
     try {
       body = await request.json();
-    } catch (error) {
+    } catch (_error) {
       return handleValidationError(
         new z.ZodError([
           {
@@ -246,9 +237,7 @@ export async function DELETE(request: NextRequest) {
 
     if (delete_all) {
       // Delete all notifications using Drizzle ORM
-      await dbPg
-        .delete(notificationsSchema)
-        .where(eq(notificationsSchema.userId, user.id));
+      await dbPg.delete(notificationsSchema).where(eq(notificationsSchema.userId, user.id));
     } else if (notification_ids && notification_ids.length > 0) {
       // Delete specific notifications using Drizzle ORM
       await dbPg

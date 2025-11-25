@@ -1,12 +1,6 @@
 import { dbPg } from "@/lib/db";
-import {
-  newTeamGroups,
-  newTeamMemberships,
-  newTeamUnits,
-} from "@/lib/db/schema/teams";
-import {
-  validateRequest,
-} from "@/lib/schemas/teams-validation";
+import { newTeamGroups, newTeamMemberships, newTeamUnits } from "@/lib/db/schema/teams";
+import { getServerUser } from "@/lib/supabaseServer";
 import {
   handleError,
   handleForbiddenError,
@@ -14,8 +8,6 @@ import {
   handleUnauthorizedError,
   validateEnvironment,
 } from "@/lib/utils/error-handler";
-import logger from "@/lib/utils/logger";
-import { getServerUser } from "@/lib/supabaseServer";
 import { and, eq, inArray } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 
@@ -26,7 +18,9 @@ export async function GET(
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { motion } from "framer-motion";
 import { School, Trophy, X } from "lucide-react";
 import type React from "react";
@@ -70,6 +70,7 @@ export default function CreateTeamModal({ isOpen, onClose, onCreateTeam }: Creat
       onClose();
       setFormData({ school: "", division: "C" });
     } catch (_error) {
+      // Ignore errors
     } finally {
       setIsSubmitting(false);
     }
@@ -107,6 +108,7 @@ export default function CreateTeamModal({ isOpen, onClose, onCreateTeam }: Creat
                 Create a new team
               </h3>
               <button
+                type="button"
                 onClick={onClose}
                 className={`p-2 rounded-full transition-colors ${
                   darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"

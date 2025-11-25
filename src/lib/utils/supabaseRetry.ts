@@ -47,12 +47,12 @@ function clearSupabaseCookies(): void {
 
   const domains = ["", `domain=${window.location.hostname}`, `domain=.${window.location.hostname}`];
 
-  cookieNames.forEach((name) => {
-    domains.forEach((domain) => {
+  for (const name of cookieNames) {
+    for (const domain of domains) {
       const cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;${domain ? ` ${domain};` : ""}`;
       document.cookie = cookie;
-    });
-  });
+    }
+  }
 
   logger.warn("Cleared Supabase cookies after session refresh failure");
 }
@@ -70,10 +70,10 @@ function clearSupabaseCookies(): void {
  *   'fetchUser'
  * );
  */
-export async function withAuthRetry<T = any>(
-  operation: () => Promise<{ data: T | null; error: any }>,
+export async function withAuthRetry<T = unknown>(
+  operation: () => Promise<{ data: T | null; error: unknown }>,
   operationName = "query"
-): Promise<{ data: T | null; error: any }> {
+): Promise<{ data: T | null; error: unknown }> {
   // First attempt
   let result = await operation();
 
@@ -116,8 +116,8 @@ export async function withAuthRetry<T = any>(
  *   () => supabase.from('users').select('*').eq('id', userId).single()
  * );
  */
-export async function withAuthRetryData<T = any>(
-  operation: () => Promise<{ data: T | null; error: any }>,
+export async function withAuthRetryData<T = unknown>(
+  operation: () => Promise<{ data: T | null; error: unknown }>,
   operationName = "query"
 ): Promise<T | null> {
   const { data, error } = await withAuthRetry(operation, operationName);

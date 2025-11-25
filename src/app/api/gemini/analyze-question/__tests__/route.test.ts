@@ -1,7 +1,9 @@
+import { POST } from "@/app/api/gemini/analyze-question/route";
+import type { AnalyzeQuestionRequest } from "@/app/api/gemini/analyze-question/route";
 import { geminiService } from "@/lib/services/gemini";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { POST } from "@/app/api/gemini/analyze-question/route";
+import type { Mock } from "vitest";
 
 // Mock dependencies
 vi.mock("@/lib/services/gemini", () => ({
@@ -25,7 +27,7 @@ describe("/api/gemini/analyze-question", () => {
     event: "Chemistry Lab",
   };
 
-  const mockRequest = (body: any) =>
+  const mockRequest = (body: AnalyzeQuestionRequest) =>
     new NextRequest("http://localhost:3000/api/gemini/analyze-question", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -67,7 +69,7 @@ describe("/api/gemini/analyze-question", () => {
 
   describe("Service Availability", () => {
     it("should return 500 when Gemini service is not available", async () => {
-      (geminiService.isAvailable as any).mockReturnValue(false);
+      (geminiService.isAvailable as Mock).mockReturnValue(false);
 
       const request = mockRequest({ question: mockQuestion });
       const response = await POST(request);
@@ -78,8 +80,8 @@ describe("/api/gemini/analyze-question", () => {
     });
 
     it("should proceed when Gemini service is available", async () => {
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestion as any).mockResolvedValue({
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestion as Mock).mockResolvedValue({
         remove: false,
         reason: "Question is valid",
       });
@@ -102,8 +104,8 @@ describe("/api/gemini/analyze-question", () => {
         suggestions: ["Consider adding more context"],
       };
 
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestion as any).mockResolvedValue(mockAnalysisResult);
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestion as Mock).mockResolvedValue(mockAnalysisResult);
 
       const request = mockRequest({ question: mockQuestion });
       const response = await POST(request);
@@ -112,7 +114,11 @@ describe("/api/gemini/analyze-question", () => {
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
       expect(data.data).toEqual(mockAnalysisResult);
-      expect(geminiService.analyzeQuestion).toHaveBeenCalledWith(mockQuestion);
+      expect(geminiService.analyzeQuestion).toHaveBeenCalledWith(
+        mockQuestion,
+        "",
+        mockQuestion.event
+      );
     });
 
     it("should handle analysis that recommends removal", async () => {
@@ -123,8 +129,8 @@ describe("/api/gemini/analyze-question", () => {
         issues: ["Factual error in answer"],
       };
 
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestion as any).mockResolvedValue(mockAnalysisResult);
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestion as Mock).mockResolvedValue(mockAnalysisResult);
 
       const request = mockRequest({ question: mockQuestion });
       const response = await POST(request);
@@ -136,8 +142,8 @@ describe("/api/gemini/analyze-question", () => {
     });
 
     it("should handle analysis errors", async () => {
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestion as any).mockRejectedValue(new Error("Analysis failed"));
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestion as Mock).mockRejectedValue(new Error("Analysis failed"));
 
       const request = mockRequest({ question: mockQuestion });
       const response = await POST(request);
@@ -157,8 +163,8 @@ describe("/api/gemini/analyze-question", () => {
         event: "Geography",
       };
 
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestion as any).mockResolvedValue({
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestion as Mock).mockResolvedValue({
         remove: false,
         reason: "Valid multiple choice question",
       });
@@ -178,8 +184,8 @@ describe("/api/gemini/analyze-question", () => {
         event: "Biology",
       };
 
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestion as any).mockResolvedValue({
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestion as Mock).mockResolvedValue({
         remove: false,
         reason: "Valid free response question",
       });
@@ -200,8 +206,8 @@ describe("/api/gemini/analyze-question", () => {
         event: "Geology",
       };
 
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestion as any).mockResolvedValue({
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestion as Mock).mockResolvedValue({
         remove: false,
         reason: "Valid image-based question",
       });
@@ -222,8 +228,8 @@ describe("/api/gemini/analyze-question", () => {
         answers: ["4"],
       };
 
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestion as any).mockResolvedValue({
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestion as Mock).mockResolvedValue({
         remove: false,
         reason: "Valid minimal question",
       });
@@ -244,8 +250,8 @@ describe("/api/gemini/analyze-question", () => {
         event: "Mathematics",
       };
 
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestion as any).mockResolvedValue({
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestion as Mock).mockResolvedValue({
         remove: false,
         reason: "Valid question with special characters",
       });
@@ -265,8 +271,8 @@ describe("/api/gemini/analyze-question", () => {
         event: "Test",
       };
 
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestion as any).mockResolvedValue({
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestion as Mock).mockResolvedValue({
         remove: false,
         reason: "Valid long question",
       });
@@ -282,8 +288,8 @@ describe("/api/gemini/analyze-question", () => {
 
   describe("Performance and Timeout", () => {
     it("should handle analysis timeout", async () => {
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestion as any).mockImplementation(
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestion as Mock).mockImplementation(
         () => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 100))
       );
 
@@ -296,8 +302,8 @@ describe("/api/gemini/analyze-question", () => {
     });
 
     it("should handle concurrent analysis requests", async () => {
-      (geminiService.isAvailable as any).mockReturnValue(true);
-      (geminiService.analyzeQuestion as any).mockResolvedValue({
+      (geminiService.isAvailable as Mock).mockReturnValue(true);
+      (geminiService.analyzeQuestion as Mock).mockResolvedValue({
         remove: false,
         reason: "Question is valid",
       });

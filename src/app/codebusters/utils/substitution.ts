@@ -4,6 +4,10 @@ export const ALPHABET_26 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 export const ALPHABET_27_SPANISH = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ";
 export const ALPHABET_27_INDEX_ORDER = "ABCDEFGHIJKLMNOPQRSTUVWXYZÑ";
 
+// Top-level regex patterns for performance
+const XENOCRYPT_LETTER_REGEX = /[A-ZÑ]/;
+const STANDARD_LETTER_REGEX = /[A-Z]/;
+
 export const generateKeywordAlphabet = (keyword: string): string => {
   const cleanKeyword = (keyword || "").toUpperCase().replace(/[^A-Z]/g, "");
   const seen = new Set<string>();
@@ -167,7 +171,7 @@ export const getLetterFrequencies = (text: string): { [key: string]: number } =>
     frequencies[l] = 0;
   }
   for (const ch of upper) {
-    if (isXeno ? /[A-ZÑ]/.test(ch) : /[A-Z]/.test(ch)) {
+    if (isXeno ? XENOCRYPT_LETTER_REGEX.test(ch) : STANDARD_LETTER_REGEX.test(ch)) {
       const currentFreq = frequencies[ch];
       if (currentFreq !== undefined) {
         frequencies[ch] = currentFreq + 1;

@@ -1,6 +1,6 @@
 /**
  * Standardized Error Handling for Teams API Routes
- * 
+ *
  * Provides consistent error response formatting and logging across all teams routes.
  */
 
@@ -82,21 +82,26 @@ export function handleValidationError(error: ZodError): NextResponse<ErrorRespon
 /**
  * Handles authentication errors
  */
-export function handleUnauthorizedError(message: string = "Unauthorized"): NextResponse<ErrorResponse> {
-  return createErrorResponse(message, HTTP_STATUS.UNAUTHORIZED, undefined, ERROR_CODES.UNAUTHORIZED);
+export function handleUnauthorizedError(message = "Unauthorized"): NextResponse<ErrorResponse> {
+  return createErrorResponse(
+    message,
+    HTTP_STATUS.UNAUTHORIZED,
+    undefined,
+    ERROR_CODES.UNAUTHORIZED
+  );
 }
 
 /**
  * Handles authorization errors
  */
-export function handleForbiddenError(message: string = "Forbidden"): NextResponse<ErrorResponse> {
+export function handleForbiddenError(message = "Forbidden"): NextResponse<ErrorResponse> {
   return createErrorResponse(message, HTTP_STATUS.FORBIDDEN, undefined, ERROR_CODES.FORBIDDEN);
 }
 
 /**
  * Handles not found errors
  */
-export function handleNotFoundError(resource: string = "Resource"): NextResponse<ErrorResponse> {
+export function handleNotFoundError(resource = "Resource"): NextResponse<ErrorResponse> {
   return createErrorResponse(
     `${resource} not found`,
     HTTP_STATUS.NOT_FOUND,
@@ -117,7 +122,7 @@ export function handleConflictError(message: string): NextResponse<ErrorResponse
  */
 export function handleDatabaseError(error: unknown, context?: string): NextResponse<ErrorResponse> {
   const errorMessage = error instanceof Error ? error.message : "Unknown database error";
-  
+
   logger.error("Database error", {
     error: errorMessage,
     context,
@@ -198,4 +203,3 @@ export function withErrorHandling<T extends unknown[]>(
     }
   };
 }
-

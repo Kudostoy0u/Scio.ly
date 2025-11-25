@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/app/contexts/AuthContext";
+import { useAuth } from "@/app/contexts/authContext";
 import { useTeamStore } from "@/app/hooks/useTeamStore";
 import SyncLocalStorage from "@/lib/database/localStorage-replacement";
 import { trpc } from "@/lib/trpc/client";
@@ -49,9 +49,9 @@ export default function TeamsPageClient({
       const counts: Record<string, { total: number; captains: number }> = {};
 
       // Set default counts for now
-      userTeams.forEach((userTeam) => {
+      for (const userTeam of userTeams) {
         counts[userTeam.slug] = { total: 0, captains: 0 };
-      });
+      }
 
       setTeamMemberCounts(counts);
     };
@@ -69,18 +69,30 @@ export default function TeamsPageClient({
     school: userTeam.school,
     division: userTeam.division,
     members: teamMemberCounts[userTeam.slug]
-      ? Array.from({ length: teamMemberCounts[userTeam.slug]!.total }, (_, i) => ({
+      ? Array.from({ length: teamMemberCounts[userTeam.slug]?.total ?? 0 }, (_, i) => ({
           id: `member-${i}`,
           name: `Member ${i + 1}`,
           email: `member${i + 1}@example.com`,
-          role: (i < teamMemberCounts[userTeam.slug]!.captains ? "captain" : "member") as
+          role: (i < (teamMemberCounts[userTeam.slug]?.captains || 0) ? "captain" : "member") as
             | "captain"
             | "member",
         }))
       : [],
-  }));
+  })) as Array<{
+    id: string;
+    name: string;
+    slug: string;
+    school: string;
+    division: "B" | "C";
+    members: Array<{
+      id: string;
+      name: string;
+      email: string;
+      role: "captain" | "member";
+    }>;
+  }>;
 
-  const handleCreateTeam = async (teamData: any) => {
+  const handleCreateTeam = async (teamData: { school: string; division: "B" | "C" }) => {
     try {
       const newTeam = await createTeamMutation.mutateAsync(teamData);
 
@@ -111,7 +123,7 @@ export default function TeamsPageClient({
     }
   };
 
-  const handleJoinTeam = async (joinData: any) => {
+  const handleJoinTeam = async (joinData: { code: string }) => {
     try {
       const joinedTeam = await joinTeamMutation.mutateAsync(joinData);
 
@@ -176,7 +188,9 @@ export default function TeamsPageClient({
         onCreateTeam={() => setIsCreateModalOpen(true)}
         onJoinTeam={() => setIsJoinModalOpen(true)}
         userTeams={teamsForLanding}
-        onTeamSelect={() => {}} // Not used anymore, but keeping for interface compatibility
+        onTeamSelect={() => {
+          // Not used anymore, but keeping for interface compatibility
+        }}
       />
 
       <CreateTeamModal

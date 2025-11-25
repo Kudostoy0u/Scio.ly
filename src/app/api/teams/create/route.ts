@@ -4,6 +4,107 @@ import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import logger from "@/lib/utils/logger";
 import { type NextRequest, NextResponse } from "next/server";
 
+// Helper function to derive display name from user profile
+function deriveDisplayName(
+  currentDisplay: string | undefined,
+  firstName: string | undefined,
+  lastName: string | undefined,
+  username: string | undefined,
+  emailLocal: string | undefined
+): string | undefined {
+  if (currentDisplay?.trim()) {
+    return undefined;
+  }
+  if (firstName && lastName) {
+    return `${firstName.trim()} ${lastName.trim()}`;
+  }
+  if (firstName?.trim()) {
+    return firstName.trim();
+  }
+  if (lastName?.trim()) {
+    return lastName.trim();
+  }
+  if (username?.trim()) {
+    return username.trim();
+  }
+  if (emailLocal?.trim()) {
+    return emailLocal.trim();
+  }
+  return undefined;
+}
+
+// Helper function to ensure user has display name before creating team
+async function ensureDisplayName(userId: string, userEmail: string | undefined): Promise<void> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: existingProfile } = await supabase
+      .from("users")
+      .select("id, email, display_name, first_name, last_name, username")
+      .eq("id", userId)
+      .maybeSingle();
+
+    const email: string | undefined =
+      (existingProfile as { email?: string } | null)?.email || userEmail || undefined;
+    const currentDisplay = (existingProfile as { display_name?: string } | null)?.display_name;
+    const firstName = (existingProfile as { first_name?: string } | null)?.first_name;
+    const lastName = (existingProfile as { last_name?: string } | null)?.last_name;
+    const username = (existingProfile as { username?: string } | null)?.username;
+
+    const emailLocal = email?.includes("@") ? email.split("@")[0] : undefined;
+    const derivedDisplayName = deriveDisplayName(
+      currentDisplay,
+      firstName,
+      lastName,
+      username,
+      emailLocal
+    );
+
+    if (derivedDisplayName && email) {
+      logger.dev.structured("info", "Auto-filling display_name before team creation", {
+        userId,
+        derivedDisplayName,
+      });
+      if (!email) {
+        throw new Error("Email is required");
+      }
+      const fallbackUsername = username?.trim() || emailLocal || userId;
+      await upsertUserProfile({
+        id: userId,
+        email,
+        displayName: derivedDisplayName,
+        username: fallbackUsername,
+      });
+    }
+  } catch (e) {
+    logger.warn("Failed to auto-fill display_name before team creation", e);
+  }
+}
+
+// Helper function to validate request body
+function validateCreateTeamBody(
+  body: unknown
+): { school: string; division: string } | NextResponse {
+  if (typeof body !== "object" || body === null) {
+    return NextResponse.json({ error: "Request body must be an object" }, { status: 400 });
+  }
+
+  const { school, division } = body as { school?: unknown; division?: unknown };
+
+  if (!(school && division)) {
+    return NextResponse.json({ error: "School and division are required" }, { status: 400 });
+  }
+
+  if (typeof school !== "string" || typeof division !== "string") {
+    return NextResponse.json({ error: "School and division must be strings" }, { status: 400 });
+  }
+
+  if (!["B", "C"].includes(division)) {
+    return NextResponse.json({ error: "Division must be B or C" }, { status: 400 });
+  }
+
+  return { school, division };
+}
+
 // POST /api/teams/create - Create a new team
 // Frontend Usage:
 // - src/app/teams/components/TeamsPageClient.tsx (createTeam)
@@ -62,29 +163,23 @@ export async function POST(request: NextRequest) {
     const userId = user.id;
 
     // Handle empty request body
-    let body: any;
+    let body: unknown;
     try {
       const text = await request.text();
       if (!text || text.trim() === "") {
         return NextResponse.json({ error: "Request body is required" }, { status: 400 });
       }
       body = JSON.parse(text);
-    } catch (error) {
-      return NextResponse.json(
-        { error: "Invalid JSON in request body" },
-        { status: 400 }
-      );
+    } catch (_error) {
+      return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
     }
 
-    const { school, division } = body;
-
-    if (!(school && division)) {
-      return NextResponse.json({ error: "School and division are required" }, { status: 400 });
+    // Validate request body
+    const validationResult = validateCreateTeamBody(body);
+    if (validationResult instanceof NextResponse) {
+      return validationResult;
     }
-
-    if (!["B", "C"].includes(division)) {
-      return NextResponse.json({ error: "Division must be B or C" }, { status: 400 });
-    }
+    const { school, division } = validationResult;
 
     // Generate unique slug with timestamp to prevent collisions
     const baseSlug = `${school.toLowerCase().replace(/\s+/g, "-")}-${division.toLowerCase()}`;
@@ -92,68 +187,7 @@ export async function POST(request: NextRequest) {
     const slug = `${baseSlug}-${timestamp}`;
 
     // Before team creation, ensure the creator has a meaningful display_name
-    try {
-      const supabase = await createSupabaseServerClient();
-      const { data: existingProfile } = await supabase
-        .from("users")
-        .select("id, email, display_name, first_name, last_name, username")
-        .eq("id", userId)
-        .maybeSingle();
-
-      const email: string | undefined = (existingProfile as { email?: string } | null)?.email || user.email || undefined;
-      const currentDisplay = (existingProfile as { display_name?: string } | null)?.display_name;
-      const firstName = (existingProfile as { first_name?: string } | null)?.first_name;
-      const lastName = (existingProfile as { last_name?: string } | null)?.last_name;
-      const username = (existingProfile as { username?: string } | null)?.username;
-
-      const emailLocal = email?.includes("@") ? email.split("@")[0] : undefined;
-      const derivedDisplayName = (() => {
-        if (currentDisplay?.trim()) {
-          return undefined; // nothing to do
-        }
-        if (firstName && lastName) {
-          return `${firstName.trim()} ${lastName.trim()}`;
-        }
-        if (firstName?.trim()) {
-          return firstName.trim();
-        }
-        if (lastName?.trim()) {
-          return lastName.trim();
-        }
-        if (username?.trim()) {
-          return username.trim();
-        }
-        if (emailLocal?.trim()) {
-          return emailLocal.trim();
-        }
-        return undefined;
-      })();
-
-      if (derivedDisplayName && email) {
-        logger.dev.structured("info", "Auto-filling display_name before team creation", {
-          userId,
-          derivedDisplayName,
-        });
-        // Update Supabase users
-        await supabase.from("users").upsert(
-          {
-            id: userId,
-            email: email!,
-            display_name: derivedDisplayName,
-          },
-          { onConflict: "id" }
-        );
-        // Sync to Cockroach for team views
-        await upsertUserProfile({
-          id: userId,
-          email,
-          displayName: derivedDisplayName,
-          username: username || emailLocal || undefined,
-        });
-      }
-    } catch (e) {
-      logger.warn("Failed to auto-fill display_name before team creation", e);
-    }
+    await ensureDisplayName(userId, user.email);
 
     // Create team group using CockroachDB
     const group = await cockroachDBTeamsService.createTeamGroup({

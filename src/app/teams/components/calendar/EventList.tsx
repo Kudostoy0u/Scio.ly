@@ -10,7 +10,7 @@ interface CalendarEvent {
   event_type: "practice" | "tournament" | "meeting" | "deadline" | "other" | "personal";
   is_all_day: boolean;
   is_recurring: boolean;
-  recurrence_pattern?: any;
+  recurrence_pattern?: Record<string, unknown>;
   created_by: string;
   team_id?: string;
   attendees?: Array<{
@@ -301,7 +301,12 @@ export default function EventList({
                       }`}
                       title="Delete event"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"

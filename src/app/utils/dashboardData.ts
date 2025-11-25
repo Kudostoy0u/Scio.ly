@@ -45,7 +45,10 @@ const GREETING_NAME_KEY = "scio_display_name";
  *
  * @returns {string} Today's date in YYYY-MM-DD format
  */
-const getTodayKey = (): string => new Date().toISOString().split("T")[0];
+const getTodayKey = (): string => {
+  const dateStr = new Date().toISOString().split("T")[0];
+  return dateStr || new Date().toISOString().split("T")[0]!;
+};
 
 /**
  * Retrieves greeting name from localStorage
@@ -68,7 +71,9 @@ const getLocalGreetingName = (): string => {
 const setLocalGreetingName = (name: string): void => {
   try {
     SyncLocalStorage.setItem(GREETING_NAME_KEY, name);
-  } catch {}
+  } catch {
+    // Ignore localStorage errors
+  }
 };
 
 const getLocalDailyMetrics = (): DailyMetrics => {
@@ -92,7 +97,9 @@ const setLocalDailyMetrics = (metrics: DailyMetrics): void => {
   const today = getTodayKey();
   try {
     SyncLocalStorage.setItem(`${METRICS_PREFIX}${today}`, JSON.stringify(metrics));
-  } catch {}
+  } catch {
+    // Ignore localStorage errors
+  }
 };
 
 const getLocalHistory = (): Record<string, HistoryRecord> => {
@@ -117,14 +124,18 @@ const getLocalHistory = (): Record<string, HistoryRecord> => {
           correctAnswers: parsed.correctAnswers || 0,
           eventsPracticed: parsed.eventsPracticed || [],
         };
-      } catch {}
+      } catch {
+        // Ignore JSON parse errors
+      }
     }
-  } catch {}
+  } catch {
+    // Ignore localStorage errors
+  }
 
   return historyData;
 };
 
-const fetchUserStatsSince = async (userId: string, fromDate: string): Promise<any[]> => {
+const fetchUserStatsSince = async (userId: string, fromDate: string): Promise<unknown[]> => {
   const result = await withAuthRetryData(async () => {
     const query = supabase
       .from("user_stats")
@@ -137,7 +148,7 @@ const fetchUserStatsSince = async (userId: string, fromDate: string): Promise<an
   return result || [];
 };
 
-const fetchDailyUserStatsRow = async (userId: string, date: string): Promise<any | null> => {
+const fetchDailyUserStatsRow = async (userId: string, date: string): Promise<unknown | null> => {
   const result = await withAuthRetryData(async () => {
     const query = supabase
       .from("user_stats")
@@ -182,18 +193,30 @@ export const syncDashboardData = async (userId: string | null): Promise<Dashboar
     // 1. sync all historical data from supabase to localstorage
     const allRows = await fetchUserStatsSince(userId, "1970-01-01");
     if (Array.isArray(allRows)) {
-      allRows.forEach((row: any) => {
+      allRows.forEach((row) => {
+        const rowRecord = row as Record<string, unknown>;
         try {
-          const key = `${METRICS_PREFIX}${row.date}`;
+          const key = `${METRICS_PREFIX}${rowRecord.date}`;
           const payload: DailyMetrics = {
-            questionsAttempted: row.questions_attempted || 0,
-            correctAnswers: row.correct_answers || 0,
-            eventsPracticed: row.events_practiced || [],
-            eventQuestions: row.event_questions || {},
-            gamePoints: row.game_points || 0,
+            questionsAttempted:
+              typeof rowRecord.questions_attempted === "number" ? rowRecord.questions_attempted : 0,
+            correctAnswers:
+              typeof rowRecord.correct_answers === "number" ? rowRecord.correct_answers : 0,
+            eventsPracticed: Array.isArray(rowRecord.events_practiced)
+              ? (rowRecord.events_practiced as string[])
+              : [],
+            eventQuestions:
+              typeof rowRecord.event_questions === "object" &&
+              rowRecord.event_questions !== null &&
+              !Array.isArray(rowRecord.event_questions)
+                ? (rowRecord.event_questions as Record<string, number>)
+                : {},
+            gamePoints: typeof rowRecord.game_points === "number" ? rowRecord.game_points : 0,
           };
           SyncLocalStorage.setItem(key, JSON.stringify(payload));
-        } catch {}
+        } catch {
+          // Ignore localStorage errors
+        }
       });
     }
 
@@ -201,12 +224,24 @@ export const syncDashboardData = async (userId: string | null): Promise<Dashboar
     const today = getTodayKey();
     const todayRow = await fetchDailyUserStatsRow(userId, today);
     if (todayRow) {
+      const todayRowRecord = todayRow as Record<string, unknown>;
       const payload: DailyMetrics = {
-        questionsAttempted: todayRow.questions_attempted || 0,
-        correctAnswers: todayRow.correct_answers || 0,
-        eventsPracticed: todayRow.events_practiced || [],
-        eventQuestions: todayRow.event_questions || {},
-        gamePoints: todayRow.game_points || 0,
+        questionsAttempted:
+          typeof todayRowRecord.questions_attempted === "number"
+            ? todayRowRecord.questions_attempted
+            : 0,
+        correctAnswers:
+          typeof todayRowRecord.correct_answers === "number" ? todayRowRecord.correct_answers : 0,
+        eventsPracticed: Array.isArray(todayRowRecord.events_practiced)
+          ? (todayRowRecord.events_practiced as string[])
+          : [],
+        eventQuestions:
+          typeof todayRowRecord.event_questions === "object" &&
+          todayRowRecord.event_questions !== null &&
+          !Array.isArray(todayRowRecord.event_questions)
+            ? (todayRowRecord.event_questions as Record<string, number>)
+            : {},
+        gamePoints: typeof todayRowRecord.game_points === "number" ? todayRowRecord.game_points : 0,
       };
       setLocalDailyMetrics(payload);
     }
@@ -225,8 +260,9 @@ export const syncDashboardData = async (userId: string | null): Promise<Dashboar
           .eq("id", userId.trim())
           .maybeSingle();
 
-        const firstName = profile?.first_name;
-        const displayName = profile?.display_name;
+        const profileTyped = profile as { first_name?: string; display_name?: string } | null;
+        const firstName = profileTyped?.first_name;
+        const displayName = profileTyped?.display_name;
         const chosen = firstName?.trim()
           ? firstName.trim()
           : displayName?.trim()
@@ -237,7 +273,9 @@ export const syncDashboardData = async (userId: string | null): Promise<Dashboar
           setLocalGreetingName(chosen);
         }
       }
-    } catch {}
+    } catch {
+      // Ignore localStorage errors
+    }
 
     // 4. return the synced data
     const metrics = getLocalDailyMetrics();
@@ -379,13 +417,28 @@ export const updateDashboardMetrics = async (
 
   try {
     const currentData = await fetchDailyUserStatsRow(userId, today);
-    const currentStats = currentData
+    const currentDataRecord = currentData as Record<string, unknown> | null;
+    const currentStats = currentDataRecord
       ? {
-          questionsAttempted: currentData.questions_attempted || 0,
-          correctAnswers: currentData.correct_answers || 0,
-          eventsPracticed: currentData.events_practiced || [],
-          eventQuestions: currentData.event_questions || {},
-          gamePoints: currentData.game_points || 0,
+          questionsAttempted:
+            typeof currentDataRecord.questions_attempted === "number"
+              ? currentDataRecord.questions_attempted
+              : 0,
+          correctAnswers:
+            typeof currentDataRecord.correct_answers === "number"
+              ? currentDataRecord.correct_answers
+              : 0,
+          eventsPracticed: Array.isArray(currentDataRecord.events_practiced)
+            ? (currentDataRecord.events_practiced as string[])
+            : [],
+          eventQuestions:
+            typeof currentDataRecord.event_questions === "object" &&
+            currentDataRecord.event_questions !== null &&
+            !Array.isArray(currentDataRecord.event_questions)
+              ? (currentDataRecord.event_questions as Record<string, number>)
+              : {},
+          gamePoints:
+            typeof currentDataRecord.game_points === "number" ? currentDataRecord.game_points : 0,
         }
       : {
           questionsAttempted: 0,
@@ -418,19 +471,26 @@ export const updateDashboardMetrics = async (
 
     let { data, error } = await supabase
       .from("user_stats")
-      .upsert(updatedStats, { onConflict: "user_id,date" })
+      .upsert(updatedStats as never, { onConflict: "user_id,date" })
       .select()
       .single();
 
     if (error) {
-      if (error && typeof error === "object" && "status" in error && 
-          typeof error.status === "number" && [401, 403].includes(error.status)) {
+      if (
+        error &&
+        typeof error === "object" &&
+        "status" in error &&
+        typeof error.status === "number" &&
+        [401, 403].includes(error.status)
+      ) {
         try {
           await supabase.auth.refreshSession();
-        } catch {}
+        } catch {
+          // Ignore refresh session errors
+        }
         const retry = await supabase
           .from("user_stats")
-          .upsert(updatedStats, { onConflict: "user_id,date" })
+          .upsert(updatedStats as never, { onConflict: "user_id,date" })
           .select()
           .single();
         if (retry.error) {
@@ -445,12 +505,23 @@ export const updateDashboardMetrics = async (
       }
     }
 
+    if (!data) {
+      logger.error("No data returned from upsert");
+      return null;
+    }
+    const dataTyped = data as {
+      questions_attempted: number;
+      correct_answers: number;
+      events_practiced: string[] | null;
+      event_questions: Record<string, number> | null;
+      game_points: number;
+    };
     const localMetrics: DailyMetrics = {
-      questionsAttempted: data.questions_attempted,
-      correctAnswers: data.correct_answers,
-      eventsPracticed: data.events_practiced || [],
-      eventQuestions: data.event_questions || {},
-      gamePoints: data.game_points,
+      questionsAttempted: dataTyped.questions_attempted,
+      correctAnswers: dataTyped.correct_answers,
+      eventsPracticed: dataTyped.events_practiced || [],
+      eventQuestions: dataTyped.event_questions || {},
+      gamePoints: dataTyped.game_points,
     };
     setLocalDailyMetrics(localMetrics);
 
@@ -481,13 +552,21 @@ export function resetAllLocalStorageExceptTheme(): void {
 
     try {
       SyncLocalStorage.removeItem(GREETING_NAME_KEY);
-    } catch {}
+    } catch {
+      // Ignore localStorage errors
+    }
     try {
       SyncLocalStorage.removeItem("scio_chart_type");
-    } catch {}
+    } catch {
+      // Ignore localStorage errors
+    }
 
     try {
       window.dispatchEvent(new CustomEvent("scio-display-name-updated", { detail: "" }));
-    } catch {}
-  } catch {}
+    } catch {
+      // Ignore event dispatch errors
+    }
+  } catch {
+    // Ignore localStorage errors
+  }
 }

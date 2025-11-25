@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import type { NumberAnimationProps } from "@/app/dashboard/types";
+import { useEffect, useRef, useState } from "react";
 
 export default function NumberAnimation({ value, className }: NumberAnimationProps) {
-  const [isMounted, setIsMounted] = useState(false);
+  const [isMounted] = useState(() => {
+    if (typeof window !== "undefined") {
+      return true;
+    }
+    return false;
+  });
   const [displayValue, setDisplayValue] = useState(0);
   const prevValueRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   useEffect(() => {
     if (!isMounted) {

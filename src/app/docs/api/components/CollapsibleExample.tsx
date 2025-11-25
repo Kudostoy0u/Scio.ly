@@ -1,7 +1,8 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import type React from "react";
 import { useState } from "react";
 
 interface CollapsibleExampleProps {
@@ -37,6 +38,7 @@ export default function CollapsibleExample({
   return (
     <div className={`rounded-lg border ${getVariantStyles()}`}>
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`w-full p-4 text-left flex items-center justify-between transition-colors rounded-lg ${getHoverStyles()}`}
       >

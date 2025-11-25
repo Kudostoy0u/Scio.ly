@@ -11,18 +11,23 @@ const shuffleArray = <T>(array: T[]): T[] => {
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     const temp = shuffled[i];
-    shuffled[i] = shuffled[j]!;
-    shuffled[j] = temp!;
+    if (temp !== undefined && shuffled[j] !== undefined) {
+      shuffled[i] = shuffled[j];
+      shuffled[j] = temp;
+    }
   }
   return shuffled;
 };
+
+const URL_REGEX = /^https?:\/\//i;
+const LETTER_REGEX = /^[A-Z]$/i;
 
 const buildAbsoluteUrl = <T extends string | undefined>(src?: T, origin?: string): T => {
   if (!src) {
     return undefined as T;
   }
   try {
-    if (/^https?:\/\//i.test(src)) {
+    if (URL_REGEX.test(src)) {
       return src as T;
     }
     if (origin && src.startsWith("/")) {
@@ -34,6 +39,37 @@ const buildAbsoluteUrl = <T extends string | undefined>(src?: T, origin?: string
   }
 };
 
+interface QuestionCandidate {
+  id?: string;
+  question?: string;
+  question_text?: string;
+  questionText?: string;
+  question_type?: string;
+  questionType?: string;
+  correct_answer?: string | number | (string | number)[];
+  correctAnswer?: string | number | (string | number)[];
+  options?: unknown[];
+  answers?: unknown[];
+  difficulty?: number | string | null;
+  subtopic?: string;
+  subtopics?: string[];
+  imageData?: string;
+  images?: unknown;
+  [key: string]: unknown;
+}
+
+const isQuestionCandidate = (value: unknown): value is QuestionCandidate => {
+  return typeof value === "object" && value !== null;
+};
+
+const sanitizeQuestionArray = (value: unknown): QuestionCandidate[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter(isQuestionCandidate);
+};
+
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex question generation logic with validation and filtering
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
@@ -108,7 +144,7 @@ export async function POST(
 
     // Fetch questions from multiple events if needed (e.g., Anatomy & Physiology)
     const origin = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-    const allQuestions: any[] = [];
+    const allQuestions: QuestionCandidate[] = [];
 
     // Calculate distribution for multiple events
     const calculateEventDistribution = (totalQuestions: number, numEvents: number): number[] => {
@@ -129,7 +165,9 @@ export async function POST(
     for (let i = 0; i < targetEvents.length; i++) {
       const targetEvent = targetEvents[i];
       const currentEventLimit = eventDistribution[i];
-      if (!targetEvent || currentEventLimit === undefined) continue;
+      if (!targetEvent || currentEventLimit === undefined) {
+        continue;
+      }
 
       // Build query parameters for question fetching
       const queryParams = new URLSearchParams();
@@ -179,27 +217,30 @@ export async function POST(
 
       if (questionsResponse.ok) {
         const questionsData = await questionsResponse.json();
-        const eventQuestions = Array.isArray(questionsData.data)
+        const eventQuestionsRaw = Array.isArray(questionsData.data)
           ? questionsData.data
           : questionsData.data?.questions || [];
+        const eventQuestions = sanitizeQuestionArray(eventQuestionsRaw);
 
         allQuestions.push(...eventQuestions);
       }
     }
 
-    let questions = allQuestions;
+    let questions: QuestionCandidate[] = allQuestions;
 
     // Handle image support - fetch from id-questions API if needed
     if (pureIdOnly) {
       // Only fetch ID questions from all target events
-      const idQuestions: any[] = [];
+      const idQuestions: QuestionCandidate[] = [];
 
       const pureIdDistribution = calculateEventDistribution(question_count, targetEvents.length);
 
       for (let i = 0; i < targetEvents.length; i++) {
         const targetEvent = targetEvents[i];
         const currentEventLimit = pureIdDistribution[i];
-        if (!targetEvent || currentEventLimit === undefined) continue;
+        if (!targetEvent || currentEventLimit === undefined) {
+          continue;
+        }
 
         const idQueryParams = new URLSearchParams();
         idQueryParams.set("event", targetEvent);
@@ -247,7 +288,7 @@ export async function POST(
 
         if (idQuestionsResponse.ok) {
           const idQuestionsData = await idQuestionsResponse.json();
-          const eventIdQuestions = Array.isArray(idQuestionsData.data) ? idQuestionsData.data : [];
+          const eventIdQuestions = sanitizeQuestionArray(idQuestionsData.data);
           idQuestions.push(...eventIdQuestions);
         }
       }
@@ -258,8 +299,8 @@ export async function POST(
       const idQuestionsCount = Math.round((idPercentage / 100) * question_count);
       const regularQuestionsCount = question_count - idQuestionsCount;
 
-      const regularQuestions: any[] = [];
-      const idQuestions: any[] = [];
+      const regularQuestions: QuestionCandidate[] = [];
+      const idQuestions: QuestionCandidate[] = [];
 
       // Fetch regular questions from all target events
       if (regularQuestionsCount > 0) {
@@ -271,7 +312,9 @@ export async function POST(
         for (let i = 0; i < targetEvents.length; i++) {
           const targetEvent = targetEvents[i];
           const currentEventLimit = regularDistribution[i];
-          if (!targetEvent || currentEventLimit === undefined) continue;
+          if (!targetEvent || currentEventLimit === undefined) {
+            continue;
+          }
 
           const regularQueryParams = new URLSearchParams();
           regularQueryParams.set("event", targetEvent);
@@ -307,7 +350,9 @@ export async function POST(
 
           if (regularResponse.ok) {
             const regularData = await regularResponse.json();
-            const eventRegularQuestions = Array.isArray(regularData.data) ? regularData.data : [];
+            const eventRegularQuestions = sanitizeQuestionArray(
+              Array.isArray(regularData.data) ? regularData.data : regularData.data?.questions || []
+            );
             regularQuestions.push(...eventRegularQuestions);
           }
         }
@@ -320,7 +365,9 @@ export async function POST(
         for (let i = 0; i < targetEvents.length; i++) {
           const targetEvent = targetEvents[i];
           const currentEventLimit = idDistribution[i];
-          if (!targetEvent || currentEventLimit === undefined) continue;
+          if (!targetEvent || currentEventLimit === undefined) {
+            continue;
+          }
 
           const idQueryParams = new URLSearchParams();
           idQueryParams.set("event", targetEvent);
@@ -354,9 +401,7 @@ export async function POST(
 
           if (idQuestionsResponse.ok) {
             const idQuestionsData = await idQuestionsResponse.json();
-            const eventIdQuestions = Array.isArray(idQuestionsData.data)
-              ? idQuestionsData.data
-              : [];
+            const eventIdQuestions = sanitizeQuestionArray(idQuestionsData.data);
             idQuestions.push(...eventIdQuestions);
           }
         }
@@ -376,16 +421,18 @@ export async function POST(
      * @throws {Error} If any question is missing valid answers
      */
     const validQuestions = questions
-      .filter((q: any) => {
-        // Pre-filter: Must have either options (MCQ) or answers (any type)
-        const hasContent = q && (q.options?.length > 0 || q.answers?.length > 0);
-        if (!hasContent) {
-        }
+      .filter((question) => {
+        const optionList = Array.isArray(question.options) ? question.options : undefined;
+        const answerList = Array.isArray(question.answers) ? question.answers : undefined;
+        const hasContent = (optionList?.length ?? 0) > 0 || (answerList?.length ?? 0) > 0;
         return hasContent;
       })
       .slice(0, question_count)
-      .map((q: any, index: number) => {
-        const isMcq = q.options && Array.isArray(q.options) && q.options.length > 0;
+      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex question transformation logic with validation
+      .map((question, index: number) => {
+        const optionList = Array.isArray(question.options) ? question.options : undefined;
+        const answerList = Array.isArray(question.answers) ? question.answers : undefined;
+        const isMcq = (optionList?.length ?? 0) > 0;
 
         /**
          * Extract correct answer indices from question data
@@ -401,31 +448,34 @@ export async function POST(
         let answers: (number | string)[] = [];
 
         // Try extracting from answers field first (preferred)
-        if (Array.isArray(q.answers) && q.answers.length > 0) {
+        if (answerList && answerList.length > 0) {
           if (isMcq) {
             // For MCQ, convert to numeric indices
-            answers = q.answers.map((a: any) => {
+            answers = answerList.map((a: unknown) => {
               const num = typeof a === "number" ? a : Number.parseInt(String(a));
-              if (Number.isNaN(num) || num < 0 || num >= q.options.length) {
+              if (Number.isNaN(num) || num < 0 || num >= (optionList?.length ?? 0)) {
                 throw new Error(
-                  `Invalid answer index ${a} for question: ${q.question || q.question_text}`
+                  `Invalid answer index ${a} for question: ${
+                    question.question || question.question_text
+                  }`
                 );
               }
               return num;
             });
           } else {
             // For FRQ, keep as strings
-            answers = q.answers.map((a: any) => String(a));
+            answers = answerList.map((a: unknown) => String(a));
           }
         }
         // Fallback: try extracting from correct_answer field
         else if (
-          q.correct_answer !== null &&
-          q.correct_answer !== undefined &&
-          q.correct_answer !== ""
+          question.correct_answer !== null &&
+          question.correct_answer !== undefined &&
+          question.correct_answer !== ""
         ) {
+          const correctAnswer = question.correct_answer ?? question.correctAnswer;
           if (isMcq) {
-            const answerStr = String(q.correct_answer).trim();
+            const answerStr = String(correctAnswer).trim();
 
             // Handle comma-separated answers (e.g., "A,B" or "0,1")
             const parts = answerStr
@@ -435,59 +485,68 @@ export async function POST(
 
             answers = parts.map((part) => {
               // Try parsing as letter (A, B, C, etc.)
-              if (part.match(/^[A-Z]$/i)) {
+              if (LETTER_REGEX.test(part)) {
                 const index = part.toUpperCase().charCodeAt(0) - 65;
-                if (index < 0 || index >= q.options.length) {
+                if (index < 0 || index >= (optionList?.length ?? 0)) {
                   throw new Error(
-                    `Invalid answer letter "${part}" for question with ${q.options.length} options: ${q.question || q.question_text}`
+                    `Invalid answer letter "${part}" for question with ${
+                      optionList?.length ?? 0
+                    } options: ${question.question || question.question_text}`
                   );
                 }
                 return index;
               }
               // Try parsing as number
               const num = Number.parseInt(part);
-              if (Number.isNaN(num) || num < 0 || num >= q.options.length) {
+              if (Number.isNaN(num) || num < 0 || num >= (optionList?.length ?? 0)) {
                 throw new Error(
-                  `Invalid answer "${part}" for question: ${q.question || q.question_text}`
+                  `Invalid answer "${part}" for question: ${question.question || question.question_text}`
                 );
               }
               return num;
             });
           } else {
             // For FRQ, use the answer directly
-            answers = [String(q.correct_answer)];
+            answers = [String(correctAnswer)];
           }
         }
 
         // CRITICAL VALIDATION: Reject questions without valid answers
         if (!answers || answers.length === 0) {
           // Error message for debugging (unused but kept for potential logging)
+          // biome-ignore lint/complexity/noVoid: Intentional void for debugging info
           void [
             "❌ INVALID QUESTION - No valid answers found",
-            `Question: "${q.question || q.question_text}"`,
-            `Type: ${q.question_type || (isMcq ? "MCQ" : "FRQ")}`,
-            `Has answers field: ${!!q.answers}`,
-            `Has correct_answer field: ${!!q.correct_answer}`,
-            `Answers value: ${JSON.stringify(q.answers)}`,
-            `Correct answer value: ${JSON.stringify(q.correct_answer)}`,
+            `Question: "${question.question || question.question_text}"`,
+            `Type: ${question.question_type || (isMcq ? "MCQ" : "FRQ")}`,
+            `Has answers field: ${!!question.answers}`,
+            `Has correct_answer field: ${!!question.correct_answer}`,
+            `Answers value: ${JSON.stringify(question.answers)}`,
+            `Correct answer value: ${JSON.stringify(question.correct_answer)}`,
           ].join("\n  ");
           throw new Error(
-            `Question "${q.question || q.question_text}" has no valid answers. Cannot generate assignment with invalid questions.`
+            `Question "${
+              question.question || question.question_text
+            }" has no valid answers. Cannot generate assignment with invalid questions.`
           );
         }
 
         const formattedQuestion = {
-          question_text: q.question || q.question_text,
+          question_text: question.question || question.question_text || question.questionText,
           question_type: isMcq ? "multiple_choice" : "free_response",
-          options: isMcq ? q.options : undefined,
+          options: isMcq ? optionList : undefined,
           answers: answers, // GUARANTEED: Always present, always valid, always non-empty array
           points: 1,
           order_index: index,
-          difficulty: parseDifficulty(q.difficulty), // Strict validation - throws error if invalid
+          difficulty: parseDifficulty(question.difficulty), // Strict validation - throws error if invalid
           imageData: (() => {
-            let candidate = q.imageData;
-            if (!candidate && Array.isArray(q.images) && q.images.length > 0) {
-              candidate = q.images[Math.floor(Math.random() * q.images.length)];
+            let candidate = question.imageData;
+            if (!candidate && Array.isArray(question.images) && question.images.length > 0) {
+              const images = question.images as unknown[];
+              const validImages = images.filter((img): img is string => typeof img === "string");
+              if (validImages.length > 0) {
+                candidate = validImages[Math.floor(Math.random() * validImages.length)];
+              }
             }
             return buildAbsoluteUrl(candidate, origin);
           })(),
@@ -495,6 +554,7 @@ export async function POST(
 
         // Debug logging for formatted question difficulty
         if (index < 3) {
+          // Debug logging can be added here if needed
         }
 
         // Validate the formatted question with strict schema
@@ -515,6 +575,7 @@ export async function POST(
         }
 
         // Double-check the formatted question (belt and suspenders)
+        // biome-ignore lint/correctness/noUnreachable: Defensive check - answers are validated above but this provides extra safety
         if (!formattedQuestion.answers || formattedQuestion.answers.length === 0) {
           throw new Error(
             `INTERNAL ERROR: Formatted question has invalid answers: ${formattedQuestion.question_text}`

@@ -1,22 +1,49 @@
-import { queryCockroachDB } from "@/lib/cockroachdb";
+import { GET, POST } from "@/app/api/teams/[teamId]/invite/route";
+import { dbPg } from "@/lib/db";
 import { NotificationSyncService } from "@/lib/services/notification-sync";
 import { getServerUser } from "@/lib/supabaseServer";
 import { resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GET, POST } from "@/app/api/teams/[teamId]/invite/route";
+
+// Type for Drizzle mock chain
+type DrizzleMockChain = {
+  from: ReturnType<typeof vi.fn>;
+  where?: ReturnType<typeof vi.fn>;
+  limit?: ReturnType<typeof vi.fn>;
+  values?: ReturnType<typeof vi.fn>;
+  returning?: ReturnType<typeof vi.fn>;
+};
 
 // Mock dependencies
-vi.mock("@/lib/cockroachdb");
-vi.mock("@/lib/supabaseServer");
-vi.mock("@/lib/utils/team-resolver");
+vi.mock("@/lib/db", () => ({
+  dbPg: {
+    select: vi.fn(),
+    from: vi.fn(),
+    innerJoin: vi.fn(),
+    where: vi.fn(),
+    limit: vi.fn(),
+    insert: vi.fn(),
+    values: vi.fn(),
+    returning: vi.fn(),
+  },
+}));
+
+vi.mock("@/lib/supabaseServer", () => ({
+  getServerUser: vi.fn(),
+}));
+
+vi.mock("@/lib/utils/team-resolver", () => ({
+  resolveTeamSlugToUnits: vi.fn(),
+}));
+
 vi.mock("@/lib/services/notification-sync", () => ({
   NotificationSyncService: {
     syncNotificationToSupabase: vi.fn(),
   },
 }));
 
-const mockQueryCockroachDb = vi.mocked(queryCockroachDB);
+const mockDbPg = vi.mocked(dbPg);
 const mockGetServerUser = vi.mocked(getServerUser);
 const mockResolveTeamSlugToUnits = vi.mocked(resolveTeamSlugToUnits);
 const mockSyncNotificationToSupabase = vi.mocked(
@@ -80,8 +107,19 @@ describe("/api/teams/[teamId]/invite", () => {
     // Default mocks
     mockGetServerUser.mockResolvedValue(mockUser);
     mockResolveTeamSlugToUnits.mockResolvedValue(mockTeamInfo);
-    mockQueryCockroachDb.mockResolvedValue({ rows: [] });
     mockSyncNotificationToSupabase.mockResolvedValue();
+
+    // Default Drizzle ORM mocks
+    mockDbPg.select.mockReturnValue({
+      from: vi.fn(),
+      innerJoin: vi.fn(),
+      where: vi.fn(),
+      limit: vi.fn(),
+    } as unknown as DrizzleMockChain);
+    mockDbPg.insert.mockReturnValue({
+      values: vi.fn(),
+      returning: vi.fn(),
+    } as unknown as DrizzleMockChain);
   });
 
   afterEach(() => {
@@ -93,15 +131,80 @@ describe("/api/teams/[teamId]/invite", () => {
 
   describe("POST", () => {
     it("should create team invitation successfully", async () => {
-      // Mock successful user lookup
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [mockMembership] }) // membership check
-        .mockResolvedValueOnce({ rows: [mockInvitedUser] }) // user lookup
-        .mockResolvedValueOnce({ rows: [] }) // existing membership check
-        .mockResolvedValueOnce({ rows: [] }) // existing invitation check
-        .mockResolvedValueOnce({ rows: [mockTeamCodes] }) // get team codes
-        .mockResolvedValueOnce({ rows: [mockTeamGroup] }) // get team group
-        .mockResolvedValueOnce({ rows: [mockNotification] }); // create notification
+      // Mock Drizzle ORM queries in sequence:
+      // 1. Membership check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([mockMembership]),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // 2. User lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([mockInvitedUser]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // 3. Existing membership check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // 4. Existing invitation check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // 5. Get team codes
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([mockTeamCodes]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // 6. Get team group
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([mockTeamGroup]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // 7. Create notification
+      mockDbPg.insert.mockImplementationOnce(
+        () =>
+          ({
+            values: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([mockNotification]),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest("http://localhost:3000/api/teams/test-team/invite", {
         method: "POST",
@@ -148,6 +251,7 @@ describe("/api/teams/[teamId]/invite", () => {
 
     it("should return 500 if DATABASE_URL is missing", async () => {
       const originalEnv = process.env.DATABASE_URL;
+      // biome-ignore lint/performance/noDelete: Need to remove env var for test
       delete process.env.DATABASE_URL;
 
       const request = new NextRequest("http://localhost:3000/api/teams/test-team/invite", {
@@ -165,7 +269,12 @@ describe("/api/teams/[teamId]/invite", () => {
       const data = await response.json();
 
       // Restore environment
-      process.env.DATABASE_URL = originalEnv;
+      if (originalEnv) {
+        process.env.DATABASE_URL = originalEnv;
+      } else {
+        // biome-ignore lint/performance/noDelete: Need to remove env var for test cleanup
+        delete process.env.DATABASE_URL;
+      }
 
       expect(response.status).toBe(500);
       expect(data.error).toBe("Database configuration error");
@@ -193,7 +302,15 @@ describe("/api/teams/[teamId]/invite", () => {
     });
 
     it("should return 403 if user is not a team member", async () => {
-      mockQueryCockroachDb.mockResolvedValueOnce({ rows: [] }); // no membership
+      // Mock membership check returning empty
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([]),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest("http://localhost:3000/api/teams/test-team/invite", {
         method: "POST",
@@ -215,7 +332,15 @@ describe("/api/teams/[teamId]/invite", () => {
 
     it("should return 403 if user is not a captain", async () => {
       const memberMembership = { ...mockMembership, role: "member" };
-      mockQueryCockroachDb.mockResolvedValueOnce({ rows: [memberMembership] });
+      // Mock membership check returning member role
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([memberMembership]),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest("http://localhost:3000/api/teams/test-team/invite", {
         method: "POST",
@@ -236,9 +361,26 @@ describe("/api/teams/[teamId]/invite", () => {
     });
 
     it("should return 404 if invited user is not found", async () => {
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [mockMembership] }) // membership check
-        .mockResolvedValueOnce({ rows: [] }); // user lookup - no user found
+      // Mock membership check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([mockMembership]),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock user lookup returning empty
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest("http://localhost:3000/api/teams/test-team/invite", {
         method: "POST",
@@ -259,10 +401,37 @@ describe("/api/teams/[teamId]/invite", () => {
     });
 
     it("should return 400 if user is already a team member", async () => {
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [mockMembership] }) // membership check
-        .mockResolvedValueOnce({ rows: [mockInvitedUser] }) // user lookup
-        .mockResolvedValueOnce({ rows: [{ id: "existing-membership" }] }); // existing membership
+      // Mock membership check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([mockMembership]),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock user lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([mockInvitedUser]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock existing membership check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: "existing-membership" }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest("http://localhost:3000/api/teams/test-team/invite", {
         method: "POST",
@@ -278,16 +447,53 @@ describe("/api/teams/[teamId]/invite", () => {
       const response = await POST(request, { params: Promise.resolve({ teamId: "test-team" }) });
       const data = await response.json();
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(409);
       expect(data.error).toBe("User is already a team member");
     });
 
     it("should return 400 if invitation already sent", async () => {
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [mockMembership] }) // membership check
-        .mockResolvedValueOnce({ rows: [mockInvitedUser] }) // user lookup
-        .mockResolvedValueOnce({ rows: [] }) // existing membership check
-        .mockResolvedValueOnce({ rows: [{ id: "existing-invitation" }] }); // existing invitation
+      // Mock membership check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([mockMembership]),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock user lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([mockInvitedUser]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock existing membership check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock existing invitation check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: "existing-invitation" }]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest("http://localhost:3000/api/teams/test-team/invite", {
         method: "POST",
@@ -303,23 +509,86 @@ describe("/api/teams/[teamId]/invite", () => {
       const response = await POST(request, { params: Promise.resolve({ teamId: "test-team" }) });
       const data = await response.json();
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(409);
       expect(data.error).toBe("Invitation already sent");
     });
 
     it("should handle notification sync failure gracefully", async () => {
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [mockMembership] }) // membership check
-        .mockResolvedValueOnce({ rows: [mockInvitedUser] }) // user lookup
-        .mockResolvedValueOnce({ rows: [] }) // existing membership check
-        .mockResolvedValueOnce({ rows: [] }) // existing invitation check
-        .mockResolvedValueOnce({ rows: [mockTeamCodes] }) // get team codes
-        .mockResolvedValueOnce({ rows: [mockTeamGroup] }) // get team group
-        .mockResolvedValueOnce({ rows: [mockNotification] }); // create notification
-
-      mockNotificationSyncService.syncNotificationToSupabase.mockRejectedValue(
-        new Error("Sync failed")
+      // Mock membership check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([mockMembership]),
+            }),
+          }) as unknown as DrizzleMockChain
       );
+      // Mock user lookup
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([mockInvitedUser]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock existing membership check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock existing invitation check
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock get team codes
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([mockTeamCodes]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock get team group
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([mockTeamGroup]),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+      // Mock create notification
+      mockDbPg.insert.mockImplementationOnce(
+        () =>
+          ({
+            values: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([mockNotification]),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
+
+      mockSyncNotificationToSupabase.mockRejectedValue(new Error("Sync failed"));
 
       const request = new NextRequest("http://localhost:3000/api/teams/test-team/invite", {
         method: "POST",
@@ -364,15 +633,26 @@ describe("/api/teams/[teamId]/invite", () => {
         },
       ];
 
-      // Clear any default mocks for this test
-      mockQueryCockroachDb.mockReset();
-      
       // Mock membership check - user must be a captain/co-captain
-      mockQueryCockroachDb.mockResolvedValueOnce({
-        rows: [{ ...mockMembership, role: "captain" }],
-      });
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([{ ...mockMembership, role: "captain" }]),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
       // Mock user search results
-      mockQueryCockroachDb.mockResolvedValueOnce({ rows: mockSearchResults });
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue(mockSearchResults),
+              }),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest("http://localhost:3000/api/teams/test-team/invite?q=user");
 
@@ -406,7 +686,15 @@ describe("/api/teams/[teamId]/invite", () => {
     });
 
     it("should return 403 if user is not a team member", async () => {
-      mockQueryCockroachDb.mockResolvedValueOnce({ rows: [] }); // no membership
+      // Mock membership check returning empty
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([]),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest("http://localhost:3000/api/teams/test-team/invite?q=user");
 
@@ -419,7 +707,15 @@ describe("/api/teams/[teamId]/invite", () => {
 
     it("should return 403 if user is not a captain", async () => {
       const memberMembership = { ...mockMembership, role: "member" };
-      mockQueryCockroachDb.mockResolvedValueOnce({ rows: [memberMembership] });
+      // Mock membership check returning member role
+      mockDbPg.select.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([memberMembership]),
+            }),
+          }) as unknown as DrizzleMockChain
+      );
 
       const request = new NextRequest("http://localhost:3000/api/teams/test-team/invite?q=user");
 

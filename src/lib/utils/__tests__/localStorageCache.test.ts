@@ -4,7 +4,7 @@
 
 import { LocalStorageCache } from "@/lib/utils/localStorageCache";
 
-import { vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock localStorage
 const localStorageMock = {
@@ -12,6 +12,11 @@ const localStorageMock = {
   setItem: vi.fn(),
   removeItem: vi.fn(),
   clear: vi.fn(),
+};
+
+// Declare window for test environment
+declare const window: {
+  localStorage: typeof localStorageMock;
 };
 
 Object.defineProperty(window, "localStorage", {

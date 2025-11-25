@@ -1,12 +1,6 @@
 import { dbPg } from "@/lib/db";
-import {
-  newTeamGroups,
-  newTeamMemberships,
-  newTeamUnits,
-} from "@/lib/db/schema/teams";
-import {
-  validateRequest,
-} from "@/lib/schemas/teams-validation";
+import { newTeamGroups, newTeamMemberships, newTeamUnits } from "@/lib/db/schema/teams";
+import { getServerUser } from "@/lib/supabaseServer";
 import {
   handleError,
   handleForbiddenError,
@@ -15,9 +9,7 @@ import {
   handleValidationError,
   validateEnvironment,
 } from "@/lib/utils/error-handler";
-import logger from "@/lib/utils/logger";
-import { getServerUser } from "@/lib/supabaseServer";
-import { and, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -28,7 +20,9 @@ export async function DELETE(
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -88,9 +82,7 @@ export async function DELETE(
     // Delete all memberships, team units, and team group using Drizzle ORM in a transaction
     await dbPg.transaction(async (tx) => {
       // Delete all memberships
-      await tx
-        .delete(newTeamMemberships)
-        .where(inArray(newTeamMemberships.teamId, teamUnitIds));
+      await tx.delete(newTeamMemberships).where(inArray(newTeamMemberships.teamId, teamUnitIds));
 
       // Delete all team units (cascade will handle related records)
       await tx.delete(newTeamUnits).where(eq(newTeamUnits.groupId, groupId));

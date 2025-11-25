@@ -1,5 +1,5 @@
-import type React from "react";
 import { formatTime } from "@/app/codebusters/cipher-utils";
+import type React from "react";
 
 interface HeaderProps {
   darkMode: boolean;

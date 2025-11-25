@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+// biome-ignore lint/style/useFilenamingConvention: Test file follows .test.tsx convention
 import { describe, expect, it } from "vitest";
 import { BlacklistedQuestionCard, QuestionCard } from "./QuestionCards";
 

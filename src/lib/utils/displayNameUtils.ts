@@ -2,6 +2,11 @@
  * Utility functions for consistent user display name handling across the application
  */
 
+// Regex for matching 8-character hex strings (UUID fragments)
+const HEX_8_REGEX = /^[a-f0-9]{8}$/;
+// Regex for matching user- prefixed names
+const USER_PREFIX_REGEX = /^@user-/;
+
 export interface UserProfile {
   displayName?: string | null;
   firstName?: string | null;
@@ -68,7 +73,7 @@ export function generateDisplayName(
 
   if (profile.email?.includes("@")) {
     const emailLocal = profile.email.split("@")[0];
-    if (emailLocal && emailLocal.length > 2 && !emailLocal.match(/^[a-f0-9]{8}$/)) {
+    if (emailLocal && emailLocal.length > 2 && !emailLocal.match(HEX_8_REGEX)) {
       return {
         name: `@${emailLocal}`,
         needsNamePrompt: false,
@@ -106,9 +111,9 @@ export function needsNamePrompt(name: string | null | undefined): boolean {
   return (
     name === "@unknown" ||
     name.startsWith("User ") ||
-    Boolean(name.match(/^[a-f0-9]{8}$/)) ||
+    Boolean(name.match(HEX_8_REGEX)) ||
     name.startsWith("user_") ||
-    /^@user-/.test(name)
+    USER_PREFIX_REGEX.test(name)
   );
 }
 

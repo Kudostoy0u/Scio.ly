@@ -1,3 +1,4 @@
+// biome-ignore lint/performance/noBarrelFile: Barrel file for convenient component exports
 export { Header } from "./Header";
 export { LoadingState } from "./LoadingState";
 export { EmptyState } from "./EmptyState";
@@ -9,4 +10,5 @@ export { VideoCarousel } from "./VideoCarousel";
 export { default as CodebustersSummary } from "./CodebustersSummary";
 export { PrintConfigModal } from "./PrintConfigModal";
 
+// biome-ignore lint/performance/noReExportAll: cipher-displays/index.ts uses explicit exports
 export * from "./cipher-displays";

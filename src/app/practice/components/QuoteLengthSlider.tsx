@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -87,13 +87,13 @@ const QuoteLengthSlider: React.FC<QuoteLengthSliderProps> = ({
     [isDragging, value, min, max, onValueChange, disabled]
   );
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging(null);
-  };
+  }, []);
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = useCallback(() => {
     setIsDragging(null);
-  };
+  }, []);
 
   useEffect(() => {
     if (isDragging) {
@@ -109,7 +109,7 @@ const QuoteLengthSlider: React.FC<QuoteLengthSliderProps> = ({
       };
     }
     return undefined;
-  }, [isDragging, handleMouseMove, handleTouchMove]);
+  }, [isDragging, handleMouseMove, handleTouchMove, handleMouseUp, handleTouchEnd]);
 
   const startPercentage = ((value[0] - min) / (max - min)) * 100;
   const endPercentage = ((value[1] - min) / (max - min)) * 100;

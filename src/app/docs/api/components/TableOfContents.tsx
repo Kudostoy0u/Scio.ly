@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import type React from "react";
 
 export type TocSection = { id: string; title: string; icon: React.ReactNode };
@@ -24,6 +24,7 @@ export default function TableOfContents({ sections, activeSection, onSelect }: P
         {sections.map((section) => (
           <button
             key={section.id}
+            type="button"
             onClick={() => onSelect(section.id)}
             className={`flex items-center gap-2 p-3 rounded-lg text-left transition-colors ${
               activeSection === section.id

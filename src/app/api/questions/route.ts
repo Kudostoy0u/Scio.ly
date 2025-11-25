@@ -1,3 +1,4 @@
+// biome-ignore lint/correctness/noNodejsModules: Node.js crypto module is required for API routes
 import crypto from "node:crypto";
 import { ApiError, handleApiError, parseRequestBody } from "@/lib/api/utils";
 import { db } from "@/lib/db";
@@ -91,12 +92,16 @@ class QueryBuilder {
 
     if (subtopicConditions.length === 1) {
       const condition = subtopicConditions[0];
-      if (!condition) return this;
+      if (!condition) {
+        return this;
+      }
       return this.addCondition(condition);
     }
 
     const orCondition = or(...subtopicConditions);
-    if (!orCondition) return this;
+    if (!orCondition) {
+      return this;
+    }
     if (orCondition) {
       return this.addCondition(orCondition);
     }

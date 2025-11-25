@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
         username: trimmedUsername || undefined,
         displayName: trimmedDisplayName || undefined,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error("profile/sync: upsertUserProfile failed", err);
       logger.dev.error(
         "profile/sync upsert failed",
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     const res = NextResponse.json({ ok: true });
     logger.dev.response(res.status, { ok: true }, Date.now() - startedAt);
     return res;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("profile/sync: unhandled error", error);
     logger.dev.error(
       "profile/sync unhandled error",

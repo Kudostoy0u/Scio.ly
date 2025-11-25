@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { motion } from "framer-motion";
 import { Key, Users, X } from "lucide-react";
 import type React from "react";
@@ -40,6 +40,7 @@ export default function JoinTeamModal({ isOpen, onClose, onJoinTeam }: JoinTeamM
       onClose();
       setFormData({ code: "" });
     } catch (_error) {
+      // Ignore errors
     } finally {
       setIsSubmitting(false);
     }
@@ -77,6 +78,7 @@ export default function JoinTeamModal({ isOpen, onClose, onJoinTeam }: JoinTeamM
                 Join a team
               </h3>
               <button
+                type="button"
                 onClick={onClose}
                 className={`p-2 rounded-full transition-colors ${
                   darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"

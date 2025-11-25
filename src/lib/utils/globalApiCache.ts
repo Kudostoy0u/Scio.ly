@@ -1,4 +1,5 @@
 import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import logger from "@/lib/utils/logger";
 /**
  * Global API cache system to eliminate duplicate requests across the entire application
  * This replaces all individual caching systems with a single, unified cache
@@ -61,7 +62,7 @@ const CACHE_CONFIGS: Record<string, CacheConfig> = {
 };
 
 class GlobalApiCache {
-  private memoryCache = new Map<string, CacheEntry<any>>();
+  private memoryCache = new Map<string, CacheEntry<unknown>>();
   private backgroundRefreshTimers = new Map<string, NodeJS.Timeout>();
   private readonly STORAGE_PREFIX = "scioly_global_cache_";
 
@@ -102,13 +103,20 @@ class GlobalApiCache {
 
       // Check if cache is still valid
       if (now - parsed.timestamp < config.duration) {
-        return parsed.data;
+        return parsed.data as T;
       }
 
       // Cache expired, remove it
       SyncLocalStorage.removeItem(storageKey);
       return null;
-    } catch (_error) {
+    } catch (error) {
+      logger.debug(
+        "Failed to load from storage",
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          key,
+        }
+      );
       return null;
     }
   }
@@ -124,7 +132,16 @@ class GlobalApiCache {
         timestamp: Date.now(),
       };
       SyncLocalStorage.setItem(storageKey, JSON.stringify(cacheEntry));
-    } catch (_error) {}
+    } catch (error) {
+      logger.debug(
+        "Failed to save to storage",
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          key,
+        }
+      );
+      // Ignore storage errors
+    }
   }
 
   /**
@@ -168,7 +185,7 @@ class GlobalApiCache {
 
     // Return from memory cache if valid
     if (cached && now - cached.timestamp < config.duration) {
-      return cached.data;
+      return cached.data as T;
     }
 
     // Try localStorage as fallback
@@ -203,7 +220,7 @@ class GlobalApiCache {
 
     // Return cached data if still valid
     if (cached && now - cached.timestamp < config.duration) {
-      return cached.data;
+      return cached.data as T;
     }
 
     // Try localStorage as fallback
@@ -216,7 +233,7 @@ class GlobalApiCache {
 
     // Return existing promise if already fetching
     if (cached?.promise) {
-      return cached.promise;
+      return cached.promise as Promise<T>;
     }
 
     // Create new fetch promise
@@ -262,7 +279,17 @@ class GlobalApiCache {
       try {
         const freshData = await fetcher();
         this.set(key, freshData);
-      } catch (_error) {}
+      } catch (error) {
+        logger.error(
+          "Background cache refresh failed",
+          error instanceof Error ? error : new Error(String(error)),
+          {
+            key,
+            dataType: type,
+          }
+        );
+        // Ignore storage errors to avoid breaking the main flow
+      }
     }, config.backgroundRefreshInterval);
 
     this.backgroundRefreshTimers.set(key, timer);
@@ -290,18 +317,20 @@ class GlobalApiCache {
     } else {
       // Clear all caches
       this.memoryCache.clear();
-      this.backgroundRefreshTimers.forEach((timer) => clearInterval(timer));
+      for (const timer of this.backgroundRefreshTimers.values()) {
+        clearInterval(timer);
+      }
       this.backgroundRefreshTimers.clear();
 
       // Clear localStorage
       if (typeof localStorage !== "undefined") {
         try {
           const keys = Object.keys(localStorage);
-          keys.forEach((storageKey) => {
+          for (const storageKey of keys) {
             if (storageKey.startsWith(this.STORAGE_PREFIX)) {
               SyncLocalStorage.removeItem(storageKey);
             }
-          });
+          }
         } catch {
           // If we can't iterate over keys, just clear all
           SyncLocalStorage.clear();
@@ -329,13 +358,15 @@ class GlobalApiCache {
     // Clear all calendar-related caches if no specific identifiers provided
     if (!(teamSlug || userId)) {
       const keysToDelete: string[] = [];
-      this.memoryCache.forEach((_, key) => {
+      for (const [key] of this.memoryCache.entries()) {
         if (key.includes("calendar_") && (key.includes("_events") || key.includes("_recurring"))) {
           keysToDelete.push(key);
         }
-      });
+      }
 
-      keysToDelete.forEach((key) => this.invalidate(key));
+      for (const key of keysToDelete) {
+        this.invalidate(key);
+      }
     }
   }
 
@@ -346,7 +377,7 @@ class GlobalApiCache {
     if (typeof localStorage !== "undefined") {
       try {
         const keys = Object.keys(localStorage);
-        keys.forEach((storageKey) => {
+        for (const storageKey of keys) {
           if (
             storageKey.startsWith(this.STORAGE_PREFIX) &&
             storageKey.includes("calendar_") &&
@@ -354,8 +385,14 @@ class GlobalApiCache {
           ) {
             SyncLocalStorage.removeItem(storageKey);
           }
-        });
-      } catch (_error) {}
+        }
+      } catch (error) {
+        logger.debug(
+          "Failed to clear calendar localStorage",
+          error instanceof Error ? error : new Error(String(error))
+        );
+        // Ignore storage errors
+      }
     }
   }
 
@@ -373,7 +410,7 @@ class GlobalApiCache {
    * Preload critical data to avoid multiple requests on page load
    */
   async preloadCriticalData(userId: string, teamSlug?: string): Promise<void> {
-    const promises: Promise<any>[] = [];
+    const promises: Promise<unknown>[] = [];
 
     // Always preload user teams
     promises.push(

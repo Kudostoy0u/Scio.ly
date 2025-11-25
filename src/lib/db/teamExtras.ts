@@ -1,4 +1,7 @@
+import { and, desc, eq, sql } from "drizzle-orm";
+import { dbPg } from "./index";
 import { pool } from "./pool";
+import { assignmentResults, assignments, invitesV2 } from "./schema/assignments";
 
 export async function initExtrasDatabase() {
   const client = await pool.connect();
@@ -66,95 +69,87 @@ export async function createAssignment(data: {
   teamId: string;
   eventName: string;
   assignees: Array<{ name: string; userId?: string }>;
-  params: any;
-  questions: any;
+  params: unknown;
+  questions: unknown;
   createdBy: string;
 }) {
-  const client = await pool.connect();
-  try {
-    await initExtrasDatabase();
-    const res = await client.query(
-      "INSERT INTO assignments (school, division, team_id, event_name, assignees, params, questions, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *",
-      [
-        data.school,
-        data.division,
-        data.teamId,
-        data.eventName,
-        JSON.stringify(data.assignees),
-        JSON.stringify(data.params),
-        JSON.stringify(data.questions),
-        data.createdBy,
-      ]
-    );
-    const assignment = res.rows[0];
+  await initExtrasDatabase();
+  const [assignment] = await dbPg
+    .insert(assignments)
+    .values({
+      school: data.school,
+      division: data.division,
+      teamId: data.teamId,
+      eventName: data.eventName,
+      assignees: data.assignees,
+      params: data.params,
+      questions: data.questions,
+      createdBy: data.createdBy,
+    })
+    .returning();
 
-    // Notification dispatch removed in new architecture
+  // Notification dispatch removed in new architecture
 
-    return assignment;
-  } finally {
-    client.release();
-  }
+  return assignment;
 }
 
 export async function listRecentAssignments(school: string, division: "B" | "C") {
-  const client = await pool.connect();
-  try {
-    await initExtrasDatabase();
-    const res = await client.query(
-      "SELECT id, event_name, created_at, assignees FROM assignments WHERE school = $1 AND division = $2 ORDER BY created_at DESC LIMIT 50",
-      [school, division]
-    );
-    return res.rows;
-  } finally {
-    client.release();
-  }
+  await initExtrasDatabase();
+  const rows = await dbPg
+    .select({
+      id: assignments.id,
+      event_name: assignments.eventName,
+      created_at: assignments.createdAt,
+      assignees: assignments.assignees,
+    })
+    .from(assignments)
+    .where(and(eq(assignments.school, school), eq(assignments.division, division)))
+    .orderBy(desc(assignments.createdAt))
+    .limit(50);
+  return rows;
 }
 
 export async function listRecentResults(school: string, division: "B" | "C") {
-  const client = await pool.connect();
-  try {
-    await initExtrasDatabase();
-    const res = await client.query(
-      "SELECT ar.*, a.event_name FROM assignment_results ar JOIN assignments a ON a.id = ar.assignment_id WHERE a.school = $1 AND a.division = $2 ORDER BY ar.submitted_at DESC LIMIT 100",
-      [school, division]
-    );
-    return res.rows;
-  } finally {
-    client.release();
-  }
+  await initExtrasDatabase();
+  const rows = await dbPg
+    .select({
+      id: assignmentResults.id,
+      assignment_id: assignmentResults.assignmentId,
+      user_id: assignmentResults.userId,
+      name: assignmentResults.name,
+      event_name: assignments.eventName,
+      score: assignmentResults.score,
+      submitted_at: assignmentResults.submittedAt,
+      detail: assignmentResults.detail,
+    })
+    .from(assignmentResults)
+    .innerJoin(assignments, eq(assignmentResults.assignmentId, assignments.id))
+    .where(and(eq(assignments.school, school), eq(assignments.division, division)))
+    .orderBy(desc(assignmentResults.submittedAt))
+    .limit(100);
+  return rows;
 }
 
 export async function deleteAssignmentResult(id: number | string) {
-  const client = await pool.connect();
-  try {
-    await initExtrasDatabase();
-    await client.query("DELETE FROM assignment_results WHERE id=$1::INT8", [id]);
-    return true;
-  } finally {
-    client.release();
-  }
+  await initExtrasDatabase();
+  await dbPg.delete(assignmentResults).where(eq(assignmentResults.id, Number(id)));
+  return true;
 }
 
 export async function deleteAssignment(id: number | string) {
-  const client = await pool.connect();
-  try {
-    await initExtrasDatabase();
-    await client.query("DELETE FROM assignments WHERE id=$1::INT8", [id]);
-    return true;
-  } finally {
-    client.release();
-  }
+  await initExtrasDatabase();
+  await dbPg.delete(assignments).where(eq(assignments.id, Number(id)));
+  return true;
 }
 
 export async function getAssignmentById(id: number | string) {
-  const client = await pool.connect();
-  try {
-    await initExtrasDatabase();
-    const res = await client.query("SELECT * FROM assignments WHERE id=$1::INT8", [id]);
-    return res.rows[0] || null;
-  } finally {
-    client.release();
-  }
+  await initExtrasDatabase();
+  const [assignment] = await dbPg
+    .select()
+    .from(assignments)
+    .where(eq(assignments.id, Number(id)))
+    .limit(1);
+  return assignment || null;
 }
 
 // Invites v2 helpers
@@ -165,82 +160,108 @@ export async function createInvite(
   division: "B" | "C",
   teamId: string
 ) {
-  const client = await pool.connect();
-  try {
-    await initExtrasDatabase();
-    // If a pending exists, return it; else insert
-    const existing = await client.query(
-      `SELECT * FROM invites_v2 WHERE invitee_username=$1 AND school=$2 AND division=$3 AND team_id=$4 AND status='pending' LIMIT 1`,
-      [inviteeUsername, school, division, teamId]
-    );
-    if (existing.rows.length > 0) {
-      return existing.rows[0];
-    }
-    const res = await client.query(
-      "INSERT INTO invites_v2 (inviter_user_id, invitee_username, school, division, team_id) VALUES ($1,$2,$3,$4,$5) RETURNING *",
-      [inviterUserId, inviteeUsername, school, division, teamId]
-    );
-    return res.rows[0];
-  } finally {
-    client.release();
+  await initExtrasDatabase();
+  // If a pending exists, return it; else insert
+  const [existing] = await dbPg
+    .select()
+    .from(invitesV2)
+    .where(
+      and(
+        eq(invitesV2.inviteeUsername, inviteeUsername),
+        eq(invitesV2.school, school),
+        eq(invitesV2.division, division),
+        eq(invitesV2.teamId, teamId),
+        eq(invitesV2.status, "pending")
+      )
+    )
+    .limit(1);
+  if (existing) {
+    return existing;
   }
+  const [invite] = await dbPg
+    .insert(invitesV2)
+    .values({
+      inviterUserId,
+      inviteeUsername,
+      school,
+      division,
+      teamId,
+    })
+    .returning();
+  return invite;
 }
 
 export async function listInvitesByUsername(inviteeUsername: string) {
-  const client = await pool.connect();
-  try {
-    await initExtrasDatabase();
-    const res = await client.query(
-      `SELECT * FROM invites_v2 WHERE invitee_username=$1 AND status='pending' ORDER BY created_at DESC`,
-      [inviteeUsername]
-    );
-    return res.rows;
-  } finally {
-    client.release();
-  }
+  await initExtrasDatabase();
+  const rows = await dbPg
+    .select()
+    .from(invitesV2)
+    .where(and(eq(invitesV2.inviteeUsername, inviteeUsername), eq(invitesV2.status, "pending")))
+    .orderBy(desc(invitesV2.createdAt));
+  return rows;
 }
 
 export async function acceptInvite(inviteId: number) {
-  const client = await pool.connect();
-  try {
-    await initExtrasDatabase();
-    await client.query("BEGIN");
-    const res = await client.query("SELECT * FROM invites_v2 WHERE id=$1 FOR UPDATE", [inviteId]);
-    if (res.rows.length === 0) {
-      await client.query("ROLLBACK");
-      return null;
-    }
-    const inv = res.rows[0];
-    if (inv.status !== "pending") {
-      await client.query("ROLLBACK");
-      return null;
-    }
-    await client.query(`UPDATE invites_v2 SET status='accepted' WHERE id=$1`, [inviteId]);
-    // decline duplicates for same user+team
-    await client.query(
-      `UPDATE invites_v2 SET status='declined' WHERE invitee_username=$1 AND school=$2 AND division=$3 AND team_id=$4 AND status='pending' AND id<>$5`,
-      [inv.invitee_username, inv.school, inv.division, inv.team_id, inviteId]
+  await initExtrasDatabase();
+  return await dbPg.transaction(async (tx) => {
+    // Use FOR UPDATE to lock the row - using raw SQL for FOR UPDATE clause
+    const result = await tx.execute(
+      sql`SELECT * FROM invites_v2 WHERE id = ${inviteId} FOR UPDATE LIMIT 1`
     );
-    await client.query("COMMIT");
-    return inv;
-  } catch (e) {
-    try {
-      await client.query("ROLLBACK");
-    } catch {}
-    throw e;
-  } finally {
-    client.release();
-  }
+    const rows = result.rows as Array<{
+      id: number;
+      created_at: Date;
+      inviter_user_id: string;
+      invitee_username: string;
+      invitee_user_id: string | null;
+      school: string;
+      division: string;
+      team_id: string;
+      code: string;
+      status: string;
+    }>;
+    if (!rows || rows.length === 0) {
+      return null;
+    }
+    const inv = rows[0];
+    if (!inv || inv.status !== "pending") {
+      return null;
+    }
+    // Update the invite to accepted
+    await tx.update(invitesV2).set({ status: "accepted" }).where(eq(invitesV2.id, inviteId));
+    // Decline duplicates for same user+team
+    await tx
+      .update(invitesV2)
+      .set({ status: "declined" })
+      .where(
+        and(
+          eq(invitesV2.inviteeUsername, inv.invitee_username),
+          eq(invitesV2.school, inv.school),
+          eq(invitesV2.division, inv.division),
+          eq(invitesV2.teamId, inv.team_id),
+          eq(invitesV2.status, "pending"),
+          sql`${invitesV2.id} <> ${inviteId}`
+        )
+      );
+    return {
+      id: inv.id,
+      createdAt: inv.created_at,
+      inviterUserId: inv.inviter_user_id,
+      inviteeUsername: inv.invitee_username,
+      inviteeUserId: inv.invitee_user_id,
+      school: inv.school,
+      division: inv.division,
+      teamId: inv.team_id,
+      code: inv.code,
+      status: inv.status,
+    };
+  });
 }
 
 export async function declineInvite(inviteId: number) {
-  const client = await pool.connect();
-  try {
-    await initExtrasDatabase();
-    await client.query(`UPDATE invites_v2 SET status='declined' WHERE id=$1 AND status='pending'`, [
-      inviteId,
-    ]);
-  } finally {
-    client.release();
-  }
+  await initExtrasDatabase();
+  await dbPg
+    .update(invitesV2)
+    .set({ status: "declined" })
+    .where(and(eq(invitesV2.id, inviteId), eq(invitesV2.status, "pending")));
 }

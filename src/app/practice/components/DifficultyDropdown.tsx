@@ -1,7 +1,7 @@
 "use client";
 
-import type { MutableRefObject } from "react";
 import type { Settings } from "@/app/practice/types";
+import type { MutableRefObject } from "react";
 
 export default function DifficultyDropdown({
   darkMode,
@@ -51,7 +51,10 @@ export default function DifficultyDropdown({
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          role="img"
+          aria-label="Dropdown arrow"
         >
+          <title>Dropdown arrow</title>
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>

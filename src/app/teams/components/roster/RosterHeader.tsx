@@ -63,7 +63,9 @@ export default function RosterHeader({ darkMode, conflicts, isSaving }: RosterHe
       </div>
       <div className="flex items-center space-x-4">
         {isSaving && (
-          <div className={`text-sm ${darkMode ? "text-yellow-400" : "text-yellow-600"}`}>Saving...</div>
+          <div className={`text-sm ${darkMode ? "text-yellow-400" : "text-yellow-600"}`}>
+            Saving...
+          </div>
         )}
       </div>
     </div>

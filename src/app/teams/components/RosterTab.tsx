@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { useTeamStore } from "@/app/hooks/useTeamStore";
 import SyncLocalStorage from "@/lib/database/localStorage-replacement";
 import { trpc } from "@/lib/trpc/client";
@@ -100,7 +100,9 @@ export default function RosterTab({
           getRemovedEventsCacheKey(teamSlug, subteamId),
           JSON.stringify(Array.from(events))
         );
-      } catch (_error) {}
+      } catch (_error) {
+        // Ignore errors
+      }
     },
     [getRemovedEventsCacheKey]
   );
@@ -140,6 +142,7 @@ export default function RosterTab({
   useEffect(() => {
     if (rosterData) {
       if (process.env.NODE_ENV === "development") {
+        // Development-only code can go here
       }
 
       setRoster(rosterData.roster);
@@ -172,7 +175,7 @@ export default function RosterTab({
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [activeSubteamId]);
+  }, []);
 
   // Save roster data - OPTIMIZED BULK VERSION
   const saveRoster = async () => {
@@ -215,6 +218,7 @@ export default function RosterTab({
       // Invalidate members cache so PeopleTab shows new unlinked members
       // Only log in development
       if (process.env.NODE_ENV === "development") {
+        // Development-only code can go here
       }
       invalidateCache(`members-${team.slug}-all`);
       invalidateCache(`members-${team.slug}-${activeSubteamId}`);
@@ -226,6 +230,7 @@ export default function RosterTab({
       const detectedConflicts = detectConflicts(rosterRef.current, groups);
       setConflicts(detectedConflicts);
     } catch (_error) {
+      // Ignore errors
     } finally {
       setIsSaving(false);
     }
@@ -265,7 +270,7 @@ export default function RosterTab({
     setShowAssignmentCreator(true);
   };
 
-  const handleAssignmentCreated = (_assignment: any) => {
+  const handleAssignmentCreated = (_assignment: { id: string; title: string }) => {
     setShowAssignmentCreator(false);
     setSelectedEvent(null);
   };
@@ -345,7 +350,9 @@ export default function RosterTab({
         // We need to get the events for this conflict block to remove them from the set
         const group = groups.find((g) => g.label === conflictBlock);
         if (group) {
-          group.events.forEach((event) => newRemovedEvents.delete(event));
+          for (const event of group.events) {
+            newRemovedEvents.delete(event);
+          }
         }
         setRemovedEvents(newRemovedEvents);
         // Update cache

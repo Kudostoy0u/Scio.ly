@@ -1,6 +1,6 @@
 /**
  * E2E Tests for Calendar Event Management
- * 
+ *
  * Tests the complete calendar event workflow including:
  * - Creating events
  * - Fetching events with filters
@@ -10,37 +10,32 @@
  * - Authorization checks
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { dbPg } from "@/lib/db";
-import {
-  newTeamEventAttendees,
-  newTeamEvents,
-  newTeamMemberships,
-  newTeamUnits,
-} from "@/lib/db/schema/teams";
+import { newTeamEventAttendees, newTeamEvents, newTeamMemberships } from "@/lib/db/schema/teams";
 import { eq } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  type TestTeam,
+  type TestUser,
+  addTeamMember,
+  cleanupTestData,
   createTestTeam,
   createTestUser,
-  cleanupTestData,
-  addTeamMember,
-  type TestUser,
-  type TestTeam,
 } from "../utils/test-helpers";
 
 describe("Calendar Event Management E2E", () => {
-  let testUsers: TestUser[] = [];
-  let testTeams: TestTeam[] = [];
+  const testUsers: TestUser[] = [];
+  const testTeams: TestTeam[] = [];
 
   beforeAll(async () => {
     // Create test users
     testUsers.push(await createTestUser({ displayName: "Captain User" }));
     testUsers.push(await createTestUser({ displayName: "Member User" }));
-    
+
     // Create test team
     const team = await createTestTeam(testUsers[0].id);
     testTeams.push(team);
-    
+
     // Add member
     await addTeamMember(team.subteamId, testUsers[1].id, "member");
   });
@@ -190,8 +185,8 @@ describe("Calendar Event Management E2E", () => {
       const team = testTeams[0];
       const captain = testUsers[0];
 
-      const startDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
-      const endDate = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+      const _startDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+      const _endDate = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
 
       // Create event in range
       await dbPg.insert(newTeamEvents).values({
@@ -349,13 +344,10 @@ describe("Calendar Event Management E2E", () => {
       const [memberMembership] = await dbPg
         .select()
         .from(newTeamMemberships)
-        .where(
-          eq(newTeamMemberships.userId, member.id)
-        );
+        .where(eq(newTeamMemberships.userId, member.id));
 
       expect(memberMembership?.role).toBe("member");
       expect(memberMembership?.role).not.toBe("captain");
     });
   });
 });
-

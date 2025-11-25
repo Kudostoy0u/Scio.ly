@@ -20,7 +20,9 @@ async function getAutoLinkSelection() {
 
     // Get user's primary team group using Drizzle ORM
     const { dbPg } = await import("@/lib/db");
-    const { newTeamGroups, newTeamMemberships, newTeamUnits } = await import("@/lib/db/schema");
+    const { newTeamGroups, newTeamMemberships, newTeamUnits } = await import(
+      "@/lib/db/schema/teams"
+    );
     const { eq, and, desc } = await import("drizzle-orm");
 
     const primaryMembership = await dbPg
@@ -35,7 +37,7 @@ async function getAutoLinkSelection() {
       .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
       .innerJoin(newTeamGroups, eq(newTeamUnits.groupId, newTeamGroups.id))
       .where(and(eq(newTeamMemberships.userId, user.id), eq(newTeamMemberships.status, "active")))
-      .orderBy(desc(newTeamMemberships.joinedAt as any))
+      .orderBy(desc(newTeamMemberships.joinedAt))
       .limit(1);
 
     if (primaryMembership.length > 0) {

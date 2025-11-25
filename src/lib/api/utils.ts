@@ -121,24 +121,21 @@ export const createRateLimiter = (maxRequests: number, windowMs: number) => {
 };
 
 export const logApiRequest = (
-  method: string,
-  path: string,
-  params?: Record<string, unknown>
+  _method: string,
+  _path: string,
+  _params?: Record<string, unknown>
 ) => {
-  if (process.env.NODE_ENV === "development") {
-    const paramsStr = params ? `- Params: ${JSON.stringify(params)}` : "";
-    console.log(`[API] ${method} ${path}`, paramsStr);
-  }
+  // Reserved for future logging
 };
 
 export const logApiResponse = (
-  method: string,
-  path: string,
-  statusCode: number,
-  duration: number
+  _method: string,
+  _path: string,
+  _statusCode: number,
+  _duration: number
 ) => {
   if (process.env.NODE_ENV === "development") {
-    console.log(`[API] ${method} ${path} - ${statusCode} (${duration}ms)`);
+    // Development-only code can go here
   }
 };
 

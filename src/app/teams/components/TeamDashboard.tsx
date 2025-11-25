@@ -1,7 +1,7 @@
 "use client";
 
-import { useAuth } from "@/app/contexts/AuthContext";
-import { useTheme } from "@/app/contexts/ThemeContext";
+import { useAuth } from "@/app/contexts/authContext";
+import { useTheme } from "@/app/contexts/themeContext";
 import { useTeamStore } from "@/app/hooks/useTeamStore";
 import { trpc } from "@/lib/trpc/client";
 import { Archive, LogOut, UserPlus } from "lucide-react";
@@ -74,6 +74,13 @@ export default function TeamDashboard({
   const { userTeams, getSubteams, loadSubteams, updateSubteam, deleteSubteam, invalidateCache } =
     useTeamStore();
 
+  // tRPC mutations - must be called at top level before any conditional returns
+  const createSubteamMutation = trpc.teams.createSubteam.useMutation();
+  const updateSubteamMutation = trpc.teams.updateSubteam.useMutation();
+  const deleteSubteamMutation = trpc.teams.deleteSubteam.useMutation();
+  const exitTeamMutation = trpc.teams.exitTeam.useMutation();
+  const archiveTeamMutation = trpc.teams.archiveTeam.useMutation();
+
   // Set active subteam when subteams are available
   useEffect(() => {
     const subteamsData = getSubteams(team.slug);
@@ -89,6 +96,7 @@ export default function TeamDashboard({
     } else if (subteamsData && subteamsData.length === 0) {
       setLoadingSubteams(false);
     }
+    // biome-ignore lint/correctness/useExhaustiveDependencies: getSubteams, setActiveSubteamId, setLoadingSubteams are stable functions from store
   }, [team.slug, getSubteams, activeSubteamId, loadingSubteams]);
 
   // REMOVED: Additional effect to ensure subteams are loaded
@@ -152,7 +160,7 @@ export default function TeamDashboard({
     setShowAssignmentCreator(true);
   };
 
-  const handleAssignmentCreated = (_assignment: any) => {
+  const handleAssignmentCreated = (_assignment: { id: string; title: string }) => {
     setShowAssignmentCreator(false);
   };
 
@@ -207,13 +215,6 @@ export default function TeamDashboard({
   const cancelArchiveTeam = () => {
     setShowArchiveModal(false);
   };
-
-  // tRPC mutations
-  const createSubteamMutation = trpc.teams.createSubteam.useMutation();
-  const updateSubteamMutation = trpc.teams.updateSubteam.useMutation();
-  const deleteSubteamMutation = trpc.teams.deleteSubteam.useMutation();
-  const exitTeamMutation = trpc.teams.exitTeam.useMutation();
-  const archiveTeamMutation = trpc.teams.archiveTeam.useMutation();
 
   const handleCreateSubteam = async (name: string) => {
     try {
@@ -521,7 +522,9 @@ export default function TeamDashboard({
           <div
             className={`rounded-lg p-6 max-w-md w-full mx-4 ${darkMode ? "bg-gray-800" : "bg-white"}`}
           >
-            <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}>
+            <h3
+              className={`text-lg font-semibold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}
+            >
               Exit Team
             </h3>
             <p className={`mb-6 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
@@ -558,7 +561,9 @@ export default function TeamDashboard({
           <div
             className={`rounded-lg p-6 max-w-md w-full mx-4 ${darkMode ? "bg-gray-800" : "bg-white"}`}
           >
-            <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}>
+            <h3
+              className={`text-lg font-semibold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}
+            >
               Archive Team
             </h3>
             <p className={`mb-6 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
@@ -594,7 +599,9 @@ export default function TeamDashboard({
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white dark:bg-gray-800 p-8 rounded-lg">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto" />
-                <p className="mt-2 text-gray-600 dark:text-gray-300">Loading assignment creator...</p>
+                <p className="mt-2 text-gray-600 dark:text-gray-300">
+                  Loading assignment creator...
+                </p>
               </div>
             </div>
           }
@@ -618,7 +625,9 @@ export default function TeamDashboard({
           <div
             className={`rounded-lg p-6 max-w-md w-full mx-4 ${darkMode ? "bg-gray-800" : "bg-white"}`}
           >
-            <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}>
+            <h3
+              className={`text-lg font-semibold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}
+            >
               Delete Subteam
             </h3>
             <p className={`mb-6 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>

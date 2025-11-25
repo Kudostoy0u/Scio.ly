@@ -1,4 +1,5 @@
 "use client";
+// biome-ignore lint/style/useFilenamingConvention: Component file follows PascalCase convention
 import { parseQuestion } from "@/app/reports/utils/parseQuestion";
 
 export const BlacklistedQuestionCard = ({
@@ -29,7 +30,7 @@ export const BlacklistedQuestionCard = ({
                 (typeof question.answers[0] === "string" && question.answers.includes(option));
               return (
                 <div
-                  key={idx}
+                  key={`option-${idx}-${String(option).slice(0, 20)}`}
                   className={`p-2 rounded-md ${darkMode ? (isCorrect ? "bg-green-800/30" : "bg-gray-600") : isCorrect ? "bg-green-100" : "bg-gray-200"}`}
                 >
                   <span className="mr-2">{idx + 1}.</span>
@@ -111,7 +112,7 @@ export const QuestionCard = ({
                 (typeof question.answers[0] === "string" && question.answers.includes(option));
               return (
                 <div
-                  key={idx}
+                  key={`option-${idx}-${String(option).slice(0, 20)}`}
                   className={`p-2 rounded-md ${darkMode ? (isCorrect ? "bg-green-800/30" : "bg-gray-600") : isCorrect ? "bg-green-100" : "bg-gray-200"}`}
                 >
                   <span className="mr-2">{idx + 1}.</span>

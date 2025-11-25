@@ -1,10 +1,10 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { vi } from "vitest";
 import DivisionGroupsGrid, {
   DIVISION_B_GROUPS,
   DIVISION_C_GROUPS,
   getGroupColors,
 } from "@/app/teams/components/DivisionGroupsGrid";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { vi } from "vitest";
 
 describe("DivisionGroupsGrid", () => {
   const defaultProps = {

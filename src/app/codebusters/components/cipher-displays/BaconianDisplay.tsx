@@ -1,6 +1,3 @@
-import { useTheme } from "@/app/contexts/ThemeContext";
-import type React from "react";
-import { useMemo, useState } from "react";
 import { baconianSchemes } from "@/app/codebusters/schemes/baconian-schemes";
 import {
   getCssClassForFormatting,
@@ -8,6 +5,12 @@ import {
   renderBinaryGroup,
 } from "@/app/codebusters/schemes/display-renderer";
 import type { QuoteData } from "@/app/codebusters/types";
+import { useTheme } from "@/app/contexts/themeContext";
+import type React from "react";
+import { useCallback, useMemo, useState } from "react";
+
+// Top-level regex for whitespace splitting
+const WHITESPACE_REGEX = /\s+/;
 
 interface BaconianDisplayProps {
   quotes: QuoteData[];
@@ -32,11 +35,186 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
   const { darkMode } = useTheme();
   const [focusedGroupIndex, setFocusedGroupIndex] = useState<number | null>(null);
 
+  // Helper function to render binary group characters
+  const renderBinaryGroupChars = (
+    group: string,
+    groupIndex: number,
+    binaryType: string
+  ): React.ReactNode[] => {
+    return toGraphemes(group)
+      .slice(0, 5)
+      .map((char, j) => {
+        const allSchemes = [
+          ...baconianSchemes.schemes.traditional,
+          ...baconianSchemes.schemes.emoji,
+          ...baconianSchemes.schemes.symbols,
+          ...baconianSchemes.schemes.formatting,
+        ];
+        const scheme = allSchemes.find((s) => s.type === binaryType);
+
+        if (scheme && scheme.renderType === "formatting") {
+          const cssClass = getCssClassForFormatting(char, scheme);
+          const position = `${groupIndex}-${j}`;
+          const displayLetter = getDisplayLetter(char, position, scheme);
+
+          let inlineStyle = {};
+          if (scheme.type === "Highlight vs Plain" && char === "A") {
+            inlineStyle = {
+              backgroundColor: darkMode ? "#fef3c7" : "#fef9c3",
+              padding: "1px 2px",
+              borderRadius: "2px",
+            };
+          }
+
+          return (
+            <span
+              // biome-ignore lint/suspicious/noArrayIndexKey: Binary group characters are stable and index is needed for mapping
+              key={j}
+              className={`mx-0.5 ${cssClass}`}
+              style={inlineStyle}
+            >
+              {displayLetter}
+            </span>
+          );
+        }
+        return (
+          <span
+            // biome-ignore lint/suspicious/noArrayIndexKey: Binary group characters are stable and index is needed for mapping
+            key={j}
+            className="mx-0.5"
+          >
+            {char}
+          </span>
+        );
+      });
+  };
+
+  // Helper function to get focus classes
+  const getFocusClasses = (groupIndex: number, shouldHighlight: boolean): string => {
+    if (focusedGroupIndex === groupIndex) {
+      return "border-2 border-blue-500";
+    }
+    if (shouldHighlight) {
+      return "border-2 border-blue-300";
+    }
+    return darkMode
+      ? "bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500"
+      : "bg-white border-gray-300 text-gray-900 focus:border-blue-500";
+  };
+
+  // Helper function to get state classes
+  const getStateClasses = (
+    isTestSubmitted: boolean,
+    isHinted: boolean,
+    isCorrect: boolean
+  ): string => {
+    if (!isTestSubmitted) {
+      return "";
+    }
+    if (isHinted) {
+      return "border-yellow-500 bg-yellow-100/10";
+    }
+    return isCorrect ? "border-green-500 bg-green-100/10" : "border-red-500 bg-red-100/10";
+  };
+
+  // Helper function to get input className
+  const getInputClassName = (
+    groupIndex: number,
+    shouldHighlight: boolean,
+    isTestSubmitted: boolean,
+    isHinted: boolean,
+    isCorrect: boolean
+  ): string => {
+    const baseClasses = "w-8 h-8 text-center border rounded text-sm font-mono";
+    const focusClasses = getFocusClasses(groupIndex, shouldHighlight);
+    const stateClasses = getStateClasses(isTestSubmitted, isHinted, isCorrect);
+    return `${baseClasses} ${focusClasses} ${stateClasses}`;
+  };
+
+  // Helper function to get group display className
+  const getGroupDisplayClassName = (binaryType: string): string => {
+    const baseClasses = `text-xs sm:text-sm mb-1 font-mono ${
+      darkMode ? "text-gray-400" : "text-gray-600"
+    }`;
+    const emojiClass =
+      binaryType && baconianSchemes.schemes.emoji.some((s) => s.type === binaryType)
+        ? "baconian-emoji"
+        : "";
+    return `${baseClasses} ${emojiClass}`;
+  };
+
+  // Binary group display component (extracted to reduce complexity)
+  const BinaryGroupDisplay = ({
+    group,
+    groupIndex,
+    value,
+    correctLetter,
+    isCorrect,
+    isHinted,
+    shouldHighlight,
+    binaryType,
+    quoteIndex,
+    onInputChange,
+    onFocus,
+    onBlur,
+  }: {
+    group: string;
+    groupIndex: number;
+    value: string;
+    correctLetter: string;
+    isCorrect: boolean;
+    isHinted: boolean;
+    shouldHighlight: boolean;
+    binaryType: string;
+    quoteIndex: number;
+    onInputChange: (value: string) => void;
+    onFocus: () => void;
+    onBlur: () => void;
+  }) => (
+    <div key={groupIndex} className="flex flex-col items-center">
+      <div className={getGroupDisplayClassName(binaryType)}>
+        {renderBinaryGroupChars(group, groupIndex, binaryType)}
+      </div>
+      <div className="relative h-12 sm:h-14">
+        <input
+          type="text"
+          id={`baconian-${quoteIndex}-${groupIndex}`}
+          value={value}
+          disabled={isTestSubmitted}
+          onChange={(e) => onInputChange(e.target.value)}
+          onFocus={onFocus}
+          onBlur={onBlur}
+          className={getInputClassName(
+            groupIndex,
+            shouldHighlight,
+            isTestSubmitted,
+            isHinted,
+            isCorrect
+          )}
+          maxLength={1}
+          autoComplete="off"
+          data-quote-index={quoteIndex}
+          data-group-index={groupIndex}
+        />
+        {isTestSubmitted && !isCorrect && (
+          <div
+            className={`absolute top-8 sm:top-10 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs ${
+              darkMode ? "text-red-400" : "text-red-600"
+            }`}
+          >
+            {correctLetter}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const toGraphemes = (str: string): string[] => {
     try {
       // Use grapheme segmentation so multi-codepoint emojis count as a single symbol
       // Fallback to Array.from if Intl.Segmenter is unavailable
-      const Segmenter = typeof Intl !== "undefined" && "Segmenter" in Intl ? Intl.Segmenter : undefined;
+      const Segmenter =
+        typeof Intl !== "undefined" && "Segmenter" in Intl ? Intl.Segmenter : undefined;
       if (Segmenter) {
         const seg = new Segmenter(undefined, { granularity: "grapheme" });
         return Array.from(seg.segment(str), (s) => s.segment);
@@ -47,14 +225,8 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
     }
   };
 
-  const baconianData = useMemo(() => {
-    const quote = quotes[quoteIndex];
-    if (!quote) {
-      return { originalQuote: "", originalBinaryGroups: [], binaryGroups: [], binaryType: "" };
-    }
-
-    const cleanedQuote = quote.quote.toUpperCase().replace(/[^A-Z]/g, "");
-
+  // Helper function to convert letters to binary groups
+  const convertLettersToBinary = useCallback((cleanedQuote: string): string[] => {
     const letterToBinary: { [key: string]: string } = {
       A: "AAAAA",
       B: "AAAAB",
@@ -85,8 +257,7 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
     };
 
     const binaryGroups: string[] = [];
-    for (let i = 0; i < cleanedQuote.length; i++) {
-      const letter = cleanedQuote[i];
+    for (const letter of cleanedQuote) {
       if (letter) {
         const binary = letterToBinary[letter];
         if (binary !== undefined) {
@@ -94,39 +265,72 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
         }
       }
     }
+    return binaryGroups;
+  }, []);
 
-    const applyBinaryFilter = (binaryGroup: string): string => {
-      const allSchemes = [
-        ...baconianSchemes.schemes.traditional,
-        ...baconianSchemes.schemes.emoji,
-        ...baconianSchemes.schemes.symbols,
-        ...baconianSchemes.schemes.formatting,
-      ];
-      const scheme = allSchemes.find((s) => s.type === quote.baconianBinaryType);
+  // Helper function to apply binary filter
+  const applyBinaryFilter = useCallback((binaryGroup: string, binaryType: string): string => {
+    const allSchemes = [
+      ...baconianSchemes.schemes.traditional,
+      ...baconianSchemes.schemes.emoji,
+      ...baconianSchemes.schemes.symbols,
+      ...baconianSchemes.schemes.formatting,
+    ];
+    const scheme = allSchemes.find((s) => s.type === binaryType);
 
-      if (scheme) {
-        return renderBinaryGroup(binaryGroup, scheme);
+    if (scheme) {
+      return renderBinaryGroup(binaryGroup, scheme);
+    }
+
+    return binaryGroup;
+  }, []);
+
+  // Helper function to get filtered groups from stored or generate new
+  const getFilteredGroups = useCallback(
+    (storedGroups: string[] | null, binaryGroups: string[], binaryType: string): string[] => {
+      if (storedGroups && storedGroups.length > 0) {
+        return storedGroups;
+      }
+      return binaryGroups.map((group) => applyBinaryFilter(group, binaryType));
+    },
+    [applyBinaryFilter]
+  );
+
+  // Helper function to process filtered groups
+  const processFilteredGroups = useCallback(
+    (storedGroups: string[] | null, binaryGroups: string[], binaryType: string): string[] => {
+      let filteredGroups = getFilteredGroups(storedGroups, binaryGroups, binaryType);
+
+      // Ensure groups align exactly with 5-bit Baconian groups
+      if (filteredGroups.length !== binaryGroups.length) {
+        filteredGroups = binaryGroups.map((group) => applyBinaryFilter(group, binaryType));
       }
 
-      return binaryGroup;
-    };
+      // Clamp to the exact number of plaintext groups so no extras render or get graded
+      return filteredGroups.slice(0, binaryGroups.length);
+    },
+    [getFilteredGroups, applyBinaryFilter]
+  );
+
+  const baconianData = useMemo(() => {
+    const quote = quotes[quoteIndex];
+    if (!quote) {
+      return { originalQuote: "", originalBinaryGroups: [], binaryGroups: [], binaryType: "" };
+    }
+
+    const cleanedQuote = quote.quote.toUpperCase().replace(/[^A-Z]/g, "");
+    const binaryGroups = convertLettersToBinary(cleanedQuote);
 
     // Prefer pre-generated encrypted groups from the question (stable and synchronized with grading)
     const storedGroups =
       (quote.encrypted || "").trim().length > 0
-        ? (quote.encrypted as string).trim().split(/\s+/)
+        ? (quote.encrypted as string).trim().split(WHITESPACE_REGEX)
         : null;
-    let filteredGroups =
-      storedGroups && storedGroups.length > 0 ? storedGroups : binaryGroups.map(applyBinaryFilter);
-
-    // Ensure groups align exactly with 5-bit Baconian groups
-    // If the stored groups length doesn't match, regenerate deterministically from the pattern
-    if (filteredGroups.length !== binaryGroups.length) {
-      filteredGroups = binaryGroups.map(applyBinaryFilter);
-    }
-
-    // Clamp to the exact number of plaintext groups so no extras render or get graded
-    filteredGroups = filteredGroups.slice(0, binaryGroups.length);
+    const filteredGroups = processFilteredGroups(
+      storedGroups,
+      binaryGroups,
+      quote.baconianBinaryType || ""
+    );
 
     return {
       originalQuote: cleanedQuote,
@@ -134,7 +338,7 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
       binaryGroups: filteredGroups,
       binaryType: quote.baconianBinaryType || "",
     };
-  }, [quotes, quoteIndex]);
+  }, [quotes, quoteIndex, convertLettersToBinary, processFilteredGroups]);
 
   const handleInputChange = (groupIndex: number, value: string) => {
     if (!onSolutionChange) {
@@ -193,92 +397,22 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
               baconianData.originalBinaryGroups?.[i];
 
           return (
-            <div key={i} className="flex flex-col items-center">
-              <div
-                className={`text-xs sm:text-sm mb-1 font-mono ${
-                  darkMode ? "text-gray-400" : "text-gray-600"
-                } ${baconianData.binaryType && baconianSchemes.schemes.emoji.some((s) => s.type === baconianData.binaryType) ? "baconian-emoji" : ""}`}
-              >
-                {toGraphemes(group)
-                  .slice(0, 5)
-                  .map((char, j) => {
-                    const allSchemes = [
-                      ...baconianSchemes.schemes.traditional,
-                      ...baconianSchemes.schemes.emoji,
-                      ...baconianSchemes.schemes.symbols,
-                      ...baconianSchemes.schemes.formatting,
-                    ];
-                    const scheme = allSchemes.find((s) => s.type === baconianData.binaryType);
-
-                    if (scheme && scheme.renderType === "formatting") {
-                      const cssClass = getCssClassForFormatting(char, scheme);
-                      const position = `${i}-${j}`;
-                      const displayLetter = getDisplayLetter(char, position, scheme);
-
-                      let inlineStyle = {};
-                      if (scheme.type === "Highlight vs Plain" && char === "A") {
-                        inlineStyle = {
-                          backgroundColor: darkMode ? "#fef3c7" : "#fef9c3", // yellow-200 for light, yellow-100 for dark
-                          padding: "1px 2px",
-                          borderRadius: "2px",
-                        };
-                      }
-
-                      return (
-                        <span key={j} className={`mx-0.5 ${cssClass}`} style={inlineStyle}>
-                          {displayLetter}
-                        </span>
-                      );
-                    }
-                    return (
-                      <span key={j} className="mx-0.5">
-                        {char}
-                      </span>
-                    );
-                  })}
-              </div>
-              <div className="relative h-12 sm:h-14">
-                <input
-                  type="text"
-                  id={`baconian-${quoteIndex}-${i}`}
-                  value={value}
-                  disabled={isTestSubmitted}
-                  onChange={(e) => handleInputChange(i, e.target.value)}
-                  onFocus={() => setFocusedGroupIndex(i)}
-                  onBlur={() => setFocusedGroupIndex(null)}
-                  className={`w-8 h-8 text-center border rounded text-sm font-mono ${
-                    focusedGroupIndex === i
-                      ? "border-2 border-blue-500"
-                      : shouldHighlight
-                        ? "border-2 border-blue-300"
-                        : darkMode
-                          ? "bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500"
-                          : "bg-white border-gray-300 text-gray-900 focus:border-blue-500"
-                  } ${
-                    isTestSubmitted
-                      ? isHinted
-                        ? "border-yellow-500 bg-yellow-100/10"
-                        : isCorrect
-                          ? "border-green-500 bg-green-100/10"
-                          : "border-red-500 bg-red-100/10"
-                      : ""
-                  }`}
-                  maxLength={1}
-                  autoComplete="off"
-                  data-quote-index={quoteIndex}
-                  data-group-index={i}
-                />
-                {isTestSubmitted && !isCorrect && (
-                  <div
-                    className={`absolute top-8 sm:top-10 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs ${
-                      darkMode ? "text-red-400" : "text-red-600"
-                    }`}
-                  >
-                    {correctLetter}
-                  </div>
-                )}
-              </div>
-            </div>
+            <BinaryGroupDisplay
+              // biome-ignore lint/suspicious/noArrayIndexKey: Binary groups are stable and index is needed for mapping
+              key={i}
+              group={group}
+              groupIndex={i}
+              value={value}
+              correctLetter={correctLetter}
+              isCorrect={isCorrect}
+              isHinted={isHinted}
+              shouldHighlight={shouldHighlight}
+              binaryType={baconianData.binaryType}
+              quoteIndex={quoteIndex}
+              onInputChange={(val) => handleInputChange(i, val)}
+              onFocus={() => setFocusedGroupIndex(i)}
+              onBlur={() => setFocusedGroupIndex(null)}
+            />
           );
         })}
       </div>

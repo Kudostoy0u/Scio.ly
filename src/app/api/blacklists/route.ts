@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
-import { blacklists as blacklistsTable } from "@/lib/db/schema/core";
 import { questions as questionsTable } from "@/lib/db/schema";
+import { blacklists as blacklistsTable } from "@/lib/db/schema/core";
 import type { ApiResponse, BlacklistRequest } from "@/lib/types/api";
 import { desc, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
@@ -55,14 +55,16 @@ export async function GET(request: NextRequest) {
 
     for (const row of result) {
       _rowCount++;
-      if (!row.event) continue;
+      if (!row.event) {
+        continue;
+      }
       if (!blacklists[row.event]) {
         blacklists[row.event] = [];
       }
 
       const questionObj = parseMaybeJson(row.questionData);
       if (blacklists[row.event]) {
-        blacklists[row.event]!.push(questionObj);
+        blacklists[row.event]?.push(questionObj);
       }
     }
 
@@ -106,7 +108,9 @@ export async function POST(request: NextRequest) {
           await db
             .delete(questionsTable)
             .where(eq(questionsTable.id, questionId as unknown as string));
-        } catch (_error) {}
+        } catch (_error) {
+          // Ignore deletion errors
+        }
       }
 
       const response: ApiResponse = {

@@ -1,4 +1,5 @@
 "use client";
+import type { Question } from "@/app/utils/geminiService";
 import SyncLocalStorage from "@/lib/database/localStorage-replacement";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -23,11 +24,13 @@ export default function AssignPage() {
           return sel.division;
         }
       }
-    } catch {}
+    } catch {
+      // Ignore localStorage parse errors
+    }
     return "any";
   });
   const [subtopics, setSubtopics] = useState<string>("");
-  const [preview, setPreview] = useState<any[]>([]);
+  const [preview, setPreview] = useState<Question[]>([]);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [sending, setSending] = useState(false);
 
@@ -56,11 +59,13 @@ export default function AssignPage() {
           const json = await res.json();
           const questions = Array.isArray(json.data) ? json.data : json.data?.questions || [];
           const valid = questions.filter(
-            (q: any) => q.answers && Array.isArray(q.answers) && q.answers.length > 0
+            (q: Question) => q.answers && Array.isArray(q.answers) && q.answers.length > 0
           );
           setPreview(valid.slice(0, questionCount));
         }
-      } catch {}
+      } catch {
+        // Ignore preview load errors
+      }
       setLoadingPreview(false);
     };
     if (eventName) {
@@ -96,7 +101,9 @@ export default function AssignPage() {
         }
         return copy;
       });
-    } catch {}
+    } catch {
+      // Ignore localStorage errors
+    }
   };
 
   const sendAssignment = async () => {
@@ -154,7 +161,9 @@ export default function AssignPage() {
         }
         router.push(`/test?${sp.toString()}`);
       }
-    } catch {}
+    } catch {
+      // Ignore assignment creation errors
+    }
     setSending(false);
   };
 
@@ -171,8 +180,11 @@ export default function AssignPage() {
           <div className="font-medium mb-2">Parameters</div>
           <div className="space-y-2 text-sm">
             <div className="flex gap-2 items-center">
-              <label className="w-32">Question Count</label>
+              <label htmlFor="question-count" className="w-32">
+                Question Count
+              </label>
               <input
+                id="question-count"
                 type="number"
                 value={questionCount}
                 onChange={(e) =>
@@ -182,8 +194,11 @@ export default function AssignPage() {
               />
             </div>
             <div className="flex gap-2 items-center">
-              <label className="w-32">Time Limit (min)</label>
+              <label htmlFor="time-limit" className="w-32">
+                Time Limit (min)
+              </label>
               <input
+                id="time-limit"
                 type="number"
                 value={timeLimit}
                 onChange={(e) =>
@@ -193,12 +208,19 @@ export default function AssignPage() {
               />
             </div>
             <div className="flex gap-2 items-center">
-              <label className="w-32">Types</label>
+              <label htmlFor="types" className="w-32">
+                Types
+              </label>
               <select
+                id="types"
                 value={types}
                 onChange={(e) => {
                   const value = e.target.value;
-                  if (value === "multiple-choice" || value === "free-response" || value === "both") {
+                  if (
+                    value === "multiple-choice" ||
+                    value === "free-response" ||
+                    value === "both"
+                  ) {
                     setTypes(value);
                   }
                 }}
@@ -210,8 +232,11 @@ export default function AssignPage() {
               </select>
             </div>
             <div className="flex gap-2 items-center">
-              <label className="w-32">Division</label>
+              <label htmlFor="division" className="w-32">
+                Division
+              </label>
               <select
+                id="division"
                 value={division}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -227,8 +252,11 @@ export default function AssignPage() {
               </select>
             </div>
             <div className="flex gap-2 items-center">
-              <label className="w-32">Subtopics</label>
+              <label htmlFor="subtopics" className="w-32">
+                Subtopics
+              </label>
               <input
+                id="subtopics"
                 value={subtopics}
                 onChange={(e) => setSubtopics(e.target.value)}
                 placeholder="comma,separated"
@@ -244,10 +272,14 @@ export default function AssignPage() {
               <div>Loading…</div>
             ) : (
               preview.map((q, idx) => (
-                <div key={idx} className="border rounded p-2">
+                <div
+                  key={`preview-${idx}-${String(q.question).slice(0, 20)}`}
+                  className="border rounded p-2"
+                >
                   <div className="text-sm font-medium mb-1">Q{idx + 1}</div>
-                  <div className="text-sm mb-2">{q.question || q.prompt || "Untitled question"}</div>
+                  <div className="text-sm mb-2">{q.question || "Untitled question"}</div>
                   <button
+                    type="button"
                     onClick={() => replaceQuestion(idx)}
                     className="text-xs px-2 py-1 rounded border"
                   >
@@ -261,6 +293,7 @@ export default function AssignPage() {
       </div>
       <div className="flex justify-end">
         <button
+          type="button"
           disabled={sending}
           onClick={sendAssignment}
           className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white"

@@ -1,7 +1,7 @@
 "use client";
 
+import type { ModalProps, PlagiarismMatch } from "@/app/plagiarism/types";
 import { memo } from "react";
-import type { ModalProps } from "@/app/plagiarism/types";
 
 const getSimilarityColor = (similarity: number) => {
   if (similarity >= 0.8) {
@@ -51,8 +51,20 @@ export const PlagiarismModal = memo(({ isOpen, onClose, summary }: ModalProps) =
           <h2 className="text-xl font-semibold text-slate-800">
             Question {summary.questionIndex + 1} - Plagiarism Details
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 transition-colors"
+            aria-label="Close modal"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <title>Close</title>
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -77,14 +89,16 @@ export const PlagiarismModal = memo(({ isOpen, onClose, summary }: ModalProps) =
                   </div>
                   {summary.question.options.map((option: string, i: number) => (
                     <div
-                      key={i}
+                      key={`option-${i}-${option.slice(0, 10)}`}
                       className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200"
                     >
                       <div className="flex-shrink-0 w-5 h-5 rounded-full border-2 border-slate-300 bg-white flex items-center justify-center">
                         <div className="w-2 h-2 rounded-full bg-slate-400" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-slate-700 leading-relaxed break-words">{option}</p>
+                        <p className="text-sm text-slate-700 leading-relaxed break-words">
+                          {option}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -133,8 +147,11 @@ export const PlagiarismModal = memo(({ isOpen, onClose, summary }: ModalProps) =
             </h3>
             {hasMatches ? (
               <div className="space-y-4">
-                {matches.map((match: any, index: number) => (
-                  <div key={index} className="border border-slate-200 rounded-lg overflow-hidden">
+                {matches.map((match: PlagiarismMatch, index: number) => (
+                  <div
+                    key={`match-${index}-${match.matchedQuestion.id}`}
+                    className="border border-slate-200 rounded-lg overflow-hidden"
+                  >
                     <div className={`p-3 ${getSimilarityColor(match.similarity)}`}>
                       <div className="flex items-center justify-between">
                         <span className="font-medium">
@@ -148,7 +165,9 @@ export const PlagiarismModal = memo(({ isOpen, onClose, summary }: ModalProps) =
                       </div>
                     </div>
                     <div className="p-6 bg-white">
-                      <h4 className="font-medium text-slate-800 mb-3">Matched Official Question:</h4>
+                      <h4 className="font-medium text-slate-800 mb-3">
+                        Matched Official Question:
+                      </h4>
                       <p className="text-slate-700 text-sm bg-blue-50 p-4 rounded-lg mb-4 leading-relaxed break-words">
                         {match.matchedQuestion.question}
                       </p>
@@ -159,7 +178,7 @@ export const PlagiarismModal = memo(({ isOpen, onClose, summary }: ModalProps) =
                           </div>
                           {match.matchedQuestion.options.map((option: string, i: number) => (
                             <div
-                              key={i}
+                              key={`matched-option-${i}-${option.slice(0, 10)}`}
                               className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200"
                             >
                               <div className="flex-shrink-0 w-4 h-4 rounded-full border-2 border-slate-300 bg-white flex items-center justify-center">

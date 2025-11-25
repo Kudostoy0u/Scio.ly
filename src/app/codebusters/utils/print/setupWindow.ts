@@ -26,7 +26,9 @@ export const setupCodebustersPrintWindow = (printContent: string): Promise<Windo
           } catch (e) {
             import("@/lib/utils/logger")
               .then((m) => m.default.warn("Immediate auto-print failed", e))
-              .catch(() => {});
+              .catch(() => {
+                // Ignore logger import errors
+              });
           }
         }, 200);
 
@@ -78,7 +80,9 @@ export const setupCodebustersPrintWindow = (printContent: string): Promise<Windo
             pbtn.addEventListener("click", () => {
               try {
                 printWindow.focus();
-              } catch {}
+              } catch {
+                // Ignore focus errors (window may be closed)
+              }
               printWindow.print();
             });
           }
@@ -88,12 +92,16 @@ export const setupCodebustersPrintWindow = (printContent: string): Promise<Windo
         } catch (e) {
           import("@/lib/utils/logger")
             .then((m) => m.default.error("Failed to inject banner into print window", e))
-            .catch(() => {});
+            .catch(() => {
+              // Ignore logger import errors
+            });
         }
 
         try {
           printWindow.focus();
-        } catch {}
+        } catch {
+          // Ignore focus errors (window may be closed)
+        }
         clearTimeout(timeout);
         resolve(printWindow);
       };
@@ -106,4 +114,3 @@ export const setupCodebustersPrintWindow = (printContent: string): Promise<Windo
     }
   });
 };
-

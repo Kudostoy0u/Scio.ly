@@ -1,13 +1,12 @@
 /**
  * E2E Tests for Teams Feature
- * 
+ *
  * These tests verify end-to-end workflows for the teams feature,
  * including team creation, joining, roster management, assignments, and more.
- * 
+ *
  * Run with: npm run test:teams-integration
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { dbPg } from "@/lib/db";
 import {
   newTeamGroups,
@@ -17,7 +16,8 @@ import {
   newTeamUnits,
   users,
 } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 // Test utilities
 interface TestUser {
@@ -126,7 +126,7 @@ async function cleanupTestData(userIds: string[], teamIds: string[]) {
     await dbPg.delete(newTeamUnits).where(eq(newTeamUnits.id, teamId));
   }
 
-  for (const groupId of teamIds.map((_, i) => {
+  for (const groupId of teamIds.map((_, _i) => {
     // Get group ID from team
     return ""; // Will be handled separately
   })) {
@@ -141,7 +141,7 @@ async function cleanupTestData(userIds: string[], teamIds: string[]) {
 }
 
 describe("Teams E2E Tests", () => {
-  let testUsers: TestUser[] = [];
+  const testUsers: TestUser[] = [];
   let testTeams: TestTeam[] = [];
 
   beforeAll(async () => {
@@ -362,4 +362,3 @@ describe("Teams E2E Tests", () => {
     });
   });
 });
-

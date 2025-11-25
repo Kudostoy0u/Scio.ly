@@ -77,7 +77,9 @@ export default function TimerManager({
             >
               <div className="flex items-center space-x-2 mb-1">
                 <Calendar className="w-4 h-4 text-blue-500" />
-                <span className={`font-medium text-sm ${darkMode ? "text-white" : "text-gray-900"}`}>
+                <span
+                  className={`font-medium text-sm ${darkMode ? "text-white" : "text-gray-900"}`}
+                >
                   {event.title}
                 </span>
                 <span

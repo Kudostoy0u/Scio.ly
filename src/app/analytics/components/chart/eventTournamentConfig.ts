@@ -1,5 +1,5 @@
-import type { ActiveElement, Chart, ChartEvent, TooltipModel } from "chart.js";
 import type { ChartData } from "@/app/analytics/types/elo";
+import type { ActiveElement, Chart, ChartEvent, TooltipModel } from "chart.js";
 import type { ChartConfig, RangeFilter } from "./chartConstants";
 import { CHART_COLORS } from "./chartConstants";
 import { showResultsBox } from "./chartUtils";
@@ -94,7 +94,9 @@ function handleTooltipUpdate(context: TooltipContext, tooltipEl: HTMLElement): v
 
   if (tooltipModel.dataPoints && tooltipModel.dataPoints.length > 0) {
     const dataPoint = tooltipModel.dataPoints[0];
-    if (!dataPoint) return;
+    if (!dataPoint) {
+      return;
+    }
     const point = dataPoint.raw as ChartPoint;
     const eloChange = point.eloChange || 0;
     const eloChangeHtml = formatEloChangeHtml(eloChange);
@@ -173,7 +175,8 @@ export const getEventTournamentConfig = (
   if (rangeFilter && allDataPoints && allDataPoints.length > 0) {
     const sortedPoints = [...allDataPoints].sort((a, b) => a.x.getTime() - b.x.getTime());
     startDate = sortedPoints[rangeFilter.startIndex]?.x || sortedPoints[0]?.x || null;
-    endDate = sortedPoints[rangeFilter.endIndex]?.x || sortedPoints[sortedPoints.length - 1]?.x || null;
+    endDate =
+      sortedPoints[rangeFilter.endIndex]?.x || sortedPoints[sortedPoints.length - 1]?.x || null;
   }
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
@@ -201,14 +204,16 @@ export const getEventTournamentConfig = (
               startDate && endDate
                 ? eventData.filter((point) => {
                     const pointDate = new Date(point.date);
-                    return pointDate >= startDate! && pointDate <= endDate!;
+                    // startDate and endDate are guaranteed to be non-null by the condition above
+                    return pointDate >= startDate && pointDate <= endDate;
                   })
                 : eventData;
 
             return {
               label: `${school} - ${event}`,
               data: filteredData.map((point, index) => {
-                const previousElo = index > 0 ? filteredData[index - 1]?.elo ?? point.elo : point.elo;
+                const previousElo =
+                  index > 0 ? (filteredData[index - 1]?.elo ?? point.elo) : point.elo;
                 const eloChange = point.elo - previousElo;
 
                 return {
@@ -220,7 +225,8 @@ export const getEventTournamentConfig = (
                 };
               }),
               borderColor:
-                CHART_COLORS[(schoolIndex * events.length + eventIndex) % CHART_COLORS.length] ?? "#000000",
+                CHART_COLORS[(schoolIndex * events.length + eventIndex) % CHART_COLORS.length] ??
+                "#000000",
               backgroundColor: `${CHART_COLORS[(schoolIndex * events.length + eventIndex) % CHART_COLORS.length] ?? "#000000"}20`,
               borderWidth: 2,
               fill: false,
@@ -292,7 +298,9 @@ export const getEventTournamentConfig = (
         }
 
         const el = elements[0];
-        if (!el) return;
+        if (!el) {
+          return;
+        }
         const datasetIndex = el.datasetIndex;
         const idx = el.index;
         const point = chart?.data?.datasets?.[datasetIndex]?.data?.[idx] as ChartPoint | undefined;

@@ -1,6 +1,6 @@
 /**
  * E2E Tests for Team Invitation Flow
- * 
+ *
  * Tests the complete invitation workflow including:
  * - Inviting users by username
  * - Inviting users by email
@@ -10,7 +10,6 @@
  * - Authorization checks
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { dbPg } from "@/lib/db";
 import {
   newTeamInvitations,
@@ -19,31 +18,32 @@ import {
   newTeamUnits,
   users,
 } from "@/lib/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
-  createTestTeam,
-  createTestUser,
-  cleanupTestData,
+  type TestTeam,
+  type TestUser,
   addTeamMember,
   assertUserIsMember,
-  type TestUser,
-  type TestTeam,
+  cleanupTestData,
+  createTestTeam,
+  createTestUser,
 } from "../utils/test-helpers";
 
 describe("Team Invitation E2E", () => {
-  let testUsers: TestUser[] = [];
-  let testTeams: TestTeam[] = [];
+  const testUsers: TestUser[] = [];
+  const testTeams: TestTeam[] = [];
 
   beforeAll(async () => {
     // Create test users
     testUsers.push(await createTestUser({ displayName: "Captain User", username: "captain" }));
     testUsers.push(await createTestUser({ displayName: "Member User", username: "member" }));
     testUsers.push(await createTestUser({ displayName: "Invitee User", username: "invitee" }));
-    
+
     // Create test team
     const team = await createTestTeam(testUsers[0].id);
     testTeams.push(team);
-    
+
     // Add existing member
     await addTeamMember(team.subteamId, testUsers[1].id, "member");
   });
@@ -123,6 +123,12 @@ describe("Team Invitation E2E", () => {
     it("should prevent duplicate invitations", async () => {
       const team = testTeams[0];
       const invitee = testUsers[2];
+      if (!team) {
+        throw new Error("Test setup failed: missing team");
+      }
+      if (!invitee) {
+        throw new Error("Test setup failed: missing invitee");
+      }
 
       // Check for existing invitation
       const existingInvitations = await dbPg
@@ -179,6 +185,12 @@ describe("Team Invitation E2E", () => {
     it("should verify captain can invite", async () => {
       const team = testTeams[0];
       const captain = testUsers[0];
+      if (!team) {
+        throw new Error("Test setup failed: missing team");
+      }
+      if (!captain) {
+        throw new Error("Test setup failed: missing captain");
+      }
 
       // Verify captain membership
       await assertUserIsMember(captain.id, team.subteamId, "captain");
@@ -202,6 +214,12 @@ describe("Team Invitation E2E", () => {
     it("should prevent existing members from being invited", async () => {
       const team = testTeams[0];
       const existingMember = testUsers[1];
+      if (!team) {
+        throw new Error("Test setup failed: missing team");
+      }
+      if (!existingMember) {
+        throw new Error("Test setup failed: missing existingMember");
+      }
 
       // Check if user is already a member
       const existingMemberships = await dbPg
@@ -238,4 +256,3 @@ describe("Team Invitation E2E", () => {
     });
   });
 });
-

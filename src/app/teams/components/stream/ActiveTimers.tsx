@@ -80,7 +80,9 @@ export default function ActiveTimers({ darkMode, activeTimers, onRemoveTimer }: 
                 {/* Time units with white cards */}
                 <div className="flex justify-between gap-2 mb-3">
                   {displayUnits.map((unit, _index) => {
-                    if (!unit) return null;
+                    if (!unit) {
+                      return null;
+                    }
                     return (
                       <div key={unit.key} className="flex-1">
                         <div
@@ -93,7 +95,9 @@ export default function ActiveTimers({ darkMode, activeTimers, onRemoveTimer }: 
                           >
                             {Number.isNaN(unit.value) ? 0 : unit.value}
                           </div>
-                          <div className={`text-xs ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+                          <div
+                            className={`text-xs ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+                          >
                             {unit.label}
                           </div>
                         </div>

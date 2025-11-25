@@ -7,7 +7,7 @@
  * Removes trailing parenthetical content from a string
  * Strips text in parentheses at the end of the string
  *
- * @param {string} input - The input string to process
+ * @param {unknown} input - The input string to process
  * @returns {string} String with trailing parenthetical content removed
  * @example
  * ```typescript
@@ -16,9 +16,11 @@
  * stripTrailingParenthetical("Simple text"); // Returns "Simple text"
  * ```
  */
-export function stripTrailingParenthetical(input: string): string {
+const TRAILING_PARENTHESES_REGEX = /\s*\([^)]*\)\s*$/;
+
+export function stripTrailingParenthetical(input: unknown): string {
   if (typeof input !== "string") {
     return input as unknown as string;
   }
-  return input.replace(/\s*\([^)]*\)\s*$/, "").trimEnd();
+  return input.replace(TRAILING_PARENTHESES_REGEX, "").trimEnd();
 }

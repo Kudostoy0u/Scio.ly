@@ -1,16 +1,19 @@
+// biome-ignore lint/style/useFilenamingConvention: Test file follows .test.tsx convention
+// biome-ignore lint/correctness/noUndeclaredDependencies: TeamsLanding is imported via path alias
+import TeamsLanding from "@app/teams/components/TeamsLanding";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import TeamsLanding from "@components/TeamsLanding";
+import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the theme context
-vi.mock("@/app/contexts/ThemeContext", () => ({
+vi.mock("@/app/contexts/themeContext", () => ({
   useTheme: () => ({
     darkMode: false,
   }),
 }));
 
 // Mock the auth context
-vi.mock("@/app/contexts/AuthContext", () => ({
+vi.mock("@/app/contexts/authContext", () => ({
   useAuth: () => ({
     user: {
       id: "test-user-id",
@@ -20,7 +23,7 @@ vi.mock("@/app/contexts/AuthContext", () => ({
 }));
 
 // Mock the notifications context
-vi.mock("@/app/contexts/NotificationsContext", () => ({
+vi.mock("@/app/contexts/notificationsContext", () => ({
   useNotifications: () => ({
     unread: 0,
     notifs: [],
@@ -41,12 +44,14 @@ vi.mock("next/navigation", () => ({
 
 // Mock next/link
 vi.mock("next/link", () => ({
-  default: ({ children }: any) => children,
+  default: ({ children }: { children: ReactNode }) => children,
 }));
 
 // Mock next/image
 vi.mock("next/image", () => ({
-  default: (props: any) => <img {...props} alt={props.alt || ""} />,
+  default: (props: { alt?: string; [key: string]: unknown }) => (
+    <img {...props} alt={props.alt || ""} />
+  ),
 }));
 
 describe("TeamsLanding", () => {
@@ -63,7 +68,9 @@ describe("TeamsLanding", () => {
         onCreateTeam={mockOnCreateTeam}
         onJoinTeam={mockOnJoinTeam}
         userTeams={[]}
-        onTeamSelect={() => {}}
+        onTeamSelect={() => {
+          // Empty handler for test
+        }}
       />
     );
 
@@ -80,7 +87,9 @@ describe("TeamsLanding", () => {
         onCreateTeam={mockOnCreateTeam}
         onJoinTeam={mockOnJoinTeam}
         userTeams={[]}
-        onTeamSelect={() => {}}
+        onTeamSelect={() => {
+          // Empty handler for test
+        }}
       />
     );
 
@@ -96,7 +105,9 @@ describe("TeamsLanding", () => {
         onCreateTeam={mockOnCreateTeam}
         onJoinTeam={mockOnJoinTeam}
         userTeams={[]}
-        onTeamSelect={() => {}}
+        onTeamSelect={() => {
+          // Empty handler for test
+        }}
       />
     );
 
@@ -112,7 +123,9 @@ describe("TeamsLanding", () => {
         onCreateTeam={mockOnCreateTeam}
         onJoinTeam={mockOnJoinTeam}
         userTeams={[]}
-        onTeamSelect={() => {}}
+        onTeamSelect={() => {
+          // Empty handler for test
+        }}
       />
     );
 
@@ -128,7 +141,9 @@ describe("TeamsLanding", () => {
         onCreateTeam={mockOnCreateTeam}
         onJoinTeam={mockOnJoinTeam}
         userTeams={[]}
-        onTeamSelect={() => {}}
+        onTeamSelect={() => {
+          // Empty handler for test
+        }}
       />
     );
 
@@ -141,7 +156,9 @@ describe("TeamsLanding", () => {
         onCreateTeam={mockOnCreateTeam}
         onJoinTeam={mockOnJoinTeam}
         userTeams={[]}
-        onTeamSelect={() => {}}
+        onTeamSelect={() => {
+          // Empty handler for test
+        }}
       />
     );
 

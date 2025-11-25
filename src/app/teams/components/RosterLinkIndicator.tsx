@@ -90,7 +90,9 @@ export default function RosterLinkIndicator({
         const data = await response.json();
         setSearchResults(data.users || []);
       }
-    } catch (_error) {}
+    } catch (_error) {
+      // Ignore errors
+    }
   };
 
   const handleInviteUser = async () => {
@@ -132,6 +134,7 @@ export default function RosterLinkIndicator({
   return (
     <>
       <button
+        type="button"
         onClick={handleLinkClick}
         disabled={isLinking}
         className={`p-1 rounded-full transition-colors ${
@@ -146,6 +149,7 @@ export default function RosterLinkIndicator({
             className="w-4 h-4"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <title>Loading</title>
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -156,6 +160,7 @@ export default function RosterLinkIndicator({
           </motion.div>
         ) : isLinked ? (
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <title>Linked</title>
             <path
               fillRule="evenodd"
               d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -164,6 +169,7 @@ export default function RosterLinkIndicator({
           </svg>
         ) : (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <title>Not linked</title>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
         )}
@@ -177,12 +183,20 @@ export default function RosterLinkIndicator({
               className="fixed inset-0 transition-opacity"
               style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
               onClick={() => setShowInviteModal(false)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setShowInviteModal(false);
+                }
+              }}
+              role="button"
+              tabIndex={0}
             />
             <div className="relative z-50 inline-block align-bottom rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full bg-white">
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900">Invite User for Roster</h3>
                   <button
+                    type="button"
                     onClick={() => setShowInviteModal(false)}
                     className="p-2 rounded-full hover:bg-gray-100 transition-colors"
                   >
@@ -192,6 +206,7 @@ export default function RosterLinkIndicator({
                       stroke="currentColor"
                       viewBox="0 0 24 24"
                     >
+                      <title>Close</title>
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -212,8 +227,14 @@ export default function RosterLinkIndicator({
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Search Users</label>
+                    <label
+                      htmlFor="search-users-input"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Search Users
+                    </label>
                     <input
+                      id="search-users-input"
                       type="text"
                       value={searchQuery}
                       onChange={(e) => {
@@ -227,9 +248,10 @@ export default function RosterLinkIndicator({
                     {searchResults.length > 0 && (
                       <div className="mt-2 border border-gray-200 rounded-md max-h-40 overflow-y-auto">
                         {searchResults.map((user) => (
-                          <div
+                          <button
+                            type="button"
                             key={user.id}
-                            className={`p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 ${
+                            className={`w-full text-left p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 ${
                               selectedUser?.id === user.id ? "bg-blue-50" : ""
                             }`}
                             onClick={() => setSelectedUser(user)}
@@ -251,7 +273,7 @@ export default function RosterLinkIndicator({
                                 )}
                               </div>
                             </div>
-                          </div>
+                          </button>
                         ))}
                       </div>
                     )}
@@ -269,6 +291,7 @@ export default function RosterLinkIndicator({
 
                 <div className="flex justify-end space-x-3 mt-6">
                   <button
+                    type="button"
                     onClick={() => {
                       setShowInviteModal(false);
                       setSearchQuery("");
@@ -280,6 +303,7 @@ export default function RosterLinkIndicator({
                     Cancel
                   </button>
                   <button
+                    type="button"
                     onClick={handleInviteUser}
                     disabled={!selectedUser || isLoading}
                     className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"

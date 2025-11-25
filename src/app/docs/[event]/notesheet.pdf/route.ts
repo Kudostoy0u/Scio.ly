@@ -1,12 +1,14 @@
 import { getEventBySlug } from "@/app/docs/utils/events2026";
+import type { DocsEvent } from "@/app/docs/utils/events2026";
 import { renderToStream } from "@react-pdf/renderer";
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import type { DocumentProps } from "@react-pdf/renderer";
 import { NextResponse } from "next/server";
 import React from "react";
 
 export const dynamic = "force-dynamic";
 
-function notesheetPdfDocument({ evt }: { evt: any }) {
+function notesheetPdfDocument({ evt }: { evt: DocsEvent }): React.ReactElement<DocumentProps> {
   const styles = StyleSheet.create({
     page: {
       padding: 24,
@@ -79,16 +81,18 @@ function notesheetPdfDocument({ evt }: { evt: any }) {
   );
 }
 
-export async function GET(_req: Request, context: any) {
+export async function GET(_req: Request, context: { params: Promise<{ event: string }> }) {
   const { params } = context;
-  const { event } = (await params) as { event: string };
+  const { event } = await params;
 
   const evt = getEventBySlug(event);
   if (!evt?.notesheetAllowed) {
     return new NextResponse("Notesheet not available for this event", { status: 404 });
   }
 
-  const element = React.createElement(notesheetPdfDocument, { evt }) as any;
+  const element = React.createElement(notesheetPdfDocument, {
+    evt,
+  }) as React.ReactElement<DocumentProps>;
   const stream = await renderToStream(element);
 
   return new NextResponse(stream as unknown as ReadableStream, {

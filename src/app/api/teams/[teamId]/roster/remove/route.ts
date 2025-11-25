@@ -5,10 +5,8 @@ import {
   newTeamRosterData,
   newTeamUnits,
 } from "@/lib/db/schema/teams";
-import {
-  UUIDSchema,
-  validateRequest,
-} from "@/lib/schemas/teams-validation";
+import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
+import { getServerUser } from "@/lib/supabaseServer";
 import {
   handleError,
   handleForbiddenError,
@@ -17,10 +15,8 @@ import {
   handleValidationError,
   validateEnvironment,
 } from "@/lib/utils/error-handler";
-import logger from "@/lib/utils/logger";
-import { getServerUser } from "@/lib/supabaseServer";
 import { checkTeamGroupLeadershipCockroach } from "@/lib/utils/team-auth";
-import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -33,7 +29,9 @@ export async function POST(
 ) {
   try {
     const envError = validateEnvironment();
-    if (envError) return envError;
+    if (envError) {
+      return envError;
+    }
 
     const user = await getServerUser();
     if (!user?.id) {
@@ -44,7 +42,7 @@ export async function POST(
     let body: unknown;
     try {
       body = await request.json();
-    } catch (error) {
+    } catch (_error) {
       return handleValidationError(
         new z.ZodError([
           {
@@ -57,18 +55,17 @@ export async function POST(
     }
 
     // Validate request body
-    const RemoveRosterSchema = z.object({
-      studentName: z.string().min(1).optional(),
-      userId: UUIDSchema.optional(),
-      eventName: z.string().min(1).optional(),
-      subteamId: UUIDSchema.optional(),
-    }).refine(
-      (data) => data.studentName?.trim() || data.userId,
-      {
+    const RemoveRosterSchema = z
+      .object({
+        studentName: z.string().min(1).optional(),
+        userId: UUIDSchema.optional(),
+        eventName: z.string().min(1).optional(),
+        subteamId: UUIDSchema.optional(),
+      })
+      .refine((data) => data.studentName?.trim() || data.userId, {
         message: "Either studentName or userId is required",
         path: [],
-      }
-    );
+      });
 
     let validatedBody: z.infer<typeof RemoveRosterSchema>;
     try {
@@ -105,12 +102,7 @@ export async function POST(
     const teamUnits = await dbPg
       .select({ id: newTeamUnits.id })
       .from(newTeamUnits)
-      .where(
-        and(
-          eq(newTeamUnits.groupId, groupId),
-          eq(newTeamUnits.status, "active")
-        )
-      );
+      .where(and(eq(newTeamUnits.groupId, groupId), eq(newTeamUnits.status, "active")));
 
     const teamUnitIds = teamUnits.map((u) => u.id);
 
@@ -136,10 +128,7 @@ export async function POST(
         const deleteByUserSubteam = await dbPg
           .delete(newTeamRosterData)
           .where(
-            and(
-              eq(newTeamRosterData.userId, userId),
-              eq(newTeamRosterData.teamUnitId, subteamId)
-            )
+            and(eq(newTeamRosterData.userId, userId), eq(newTeamRosterData.teamUnitId, subteamId))
           )
           .returning({ teamUnitId: newTeamRosterData.teamUnitId });
 
@@ -147,10 +136,7 @@ export async function POST(
         await dbPg
           .delete(newTeamMemberships)
           .where(
-            and(
-              eq(newTeamMemberships.userId, userId),
-              eq(newTeamMemberships.teamId, subteamId)
-            )
+            and(eq(newTeamMemberships.userId, userId), eq(newTeamMemberships.teamId, subteamId))
           );
 
         return NextResponse.json({ removedEntries: deleteByUserSubteam.length });

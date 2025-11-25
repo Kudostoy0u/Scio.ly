@@ -2,10 +2,26 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+interface Invite {
+  id: number;
+  school: string;
+  division: string;
+  team_id: string;
+  inviter_user_id: string;
+  created_at: string;
+}
+
 export default function InvitesPage() {
-  const [invites, setInvites] = useState<any[]>([]);
+  const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (redirectUrl) {
+      window.location.href = redirectUrl;
+    }
+  }, [redirectUrl]);
 
   const load = async () => {
     setLoading(true);
@@ -36,9 +52,11 @@ export default function InvitesPage() {
         body: JSON.stringify({ inviteId: id }),
       });
       if (res.ok) {
-        window.location.href = "/teams";
+        setRedirectUrl("/teams");
       }
-    } catch {}
+    } catch {
+      // Ignore errors
+    }
   };
 
   const decline = async (id: number) => {
@@ -49,7 +67,9 @@ export default function InvitesPage() {
         body: JSON.stringify({ inviteId: id }),
       });
       load();
-    } catch {}
+    } catch {
+      // Ignore errors
+    }
   };
 
   return (

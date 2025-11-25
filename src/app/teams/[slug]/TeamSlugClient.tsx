@@ -1,8 +1,8 @@
 "use client";
 
+import TeamDashboard from "@/app/teams/components/TeamDashboard";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import TeamDashboard from "@/app/teams/components/TeamDashboard";
 
 interface TeamSlugClientProps {
   teamSlug: string;
