@@ -191,13 +191,13 @@ BEGIN
     END;
 
     -- Create cron job: Daily at midnight (00:00)
-    -- The function handles special timing for "Public Monthly Leaderboard" (last day of month only)
+-- The function handles special timing for "Public Monthly Leaderboard" (last day of month only)
     BEGIN
         PERFORM cron.schedule(
-            'auto-reset-leaderboards',                     -- Job name
-            '0 0 * * *',                                   -- At midnight every day
-            $$SELECT auto_reset_expired_leaderboards()$$   -- Command to run
-        );
+    'auto-reset-leaderboards',                     -- Job name
+    '0 0 * * *',                                   -- At midnight every day
+    $$SELECT auto_reset_expired_leaderboards()$$   -- Command to run
+);
         RAISE NOTICE 'Cron job scheduled successfully: auto-reset-leaderboards';
     EXCEPTION 
         WHEN insufficient_privilege THEN
