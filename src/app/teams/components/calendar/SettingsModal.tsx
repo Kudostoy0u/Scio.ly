@@ -23,6 +23,7 @@ export default function SettingsModal({
           className="fixed inset-0 z-50 overflow-y-auto"
         >
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            {/* biome-ignore lint/a11y/useKeyWithClickEvents: Modal backdrop click to close */}
             <div
               className="fixed inset-0 transition-opacity"
               style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
@@ -32,8 +33,13 @@ export default function SettingsModal({
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium text-gray-900">Calendar Settings</h3>
-                  <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <title>Close settings</title>
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"

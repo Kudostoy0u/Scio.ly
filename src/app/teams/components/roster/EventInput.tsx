@@ -45,26 +45,28 @@ export default function EventInput({
       <div className={`text-sm font-medium ${colors.text} flex items-center gap-2`}>
         <span className={isRemoved ? "line-through opacity-50" : ""}>{eventName}</span>
         {shouldShowAssign && (
-          <span
+          <button
+            type="button"
             onClick={() => onCreateAssignment(eventName)}
-            className="text-blue-400 hover:text-blue-500 text-xs cursor-pointer"
+            className="text-blue-400 hover:text-blue-500 text-xs"
           >
             Assign?
-          </span>
+          </button>
         )}
         {isCaptain && !isRemoved && (
-          <span
+          <button
+            type="button"
             onClick={() => onRemoveEvent(eventName, conflictBlock)}
-            className="text-red-400 hover:text-red-500 text-xs cursor-pointer"
+            className="text-red-400 hover:text-red-500 text-xs"
           >
             Remove?
-          </span>
+          </button>
         )}
       </div>
       <div className="grid grid-cols-3 gap-2">
         {[...new Array(max)].map((_, i) => (
           <input
-            key={i}
+            key={i.toString()}
             value={isRemoved ? "" : slots[i] || ""}
             onChange={(e) => {
               if (isRemoved) {

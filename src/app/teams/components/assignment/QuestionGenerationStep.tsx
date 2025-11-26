@@ -75,6 +75,7 @@ export default function QuestionGenerationStep({
 
       <div>
         <label
+          htmlFor="question-type-mcq"
           className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
         >
           Question Type
@@ -87,6 +88,7 @@ export default function QuestionGenerationStep({
           ].map((type) => (
             <label key={type.value} className="flex items-center">
               <input
+                id={type.value === "mcq" ? "question-type-mcq" : undefined}
                 type="radio"
                 name="questionType"
                 value={type.value}
@@ -107,6 +109,7 @@ export default function QuestionGenerationStep({
 
       <div>
         <label
+          htmlFor="difficulty-any"
           className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
         >
           Difficulty Levels
@@ -120,6 +123,7 @@ export default function QuestionGenerationStep({
           ].map((difficulty) => (
             <label key={difficulty.value} className="flex items-center">
               <input
+                id={difficulty.value === "any" ? "difficulty-any" : undefined}
                 type="checkbox"
                 checked={settings.difficulties.includes(difficulty.value)}
                 onChange={(e) => {
@@ -154,11 +158,11 @@ export default function QuestionGenerationStep({
       </div>
 
       <div>
-        <label
+        <h4
           className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
         >
           Subtopics (optional)
-        </label>
+        </h4>
         <div className="max-h-48 overflow-y-auto border rounded-lg p-3">
           {availableSubtopics.length > 0 ? (
             <div className="grid grid-cols-2 gap-2">
@@ -241,6 +245,7 @@ export default function QuestionGenerationStep({
 
       <div className="flex justify-between">
         <button
+          type="button"
           onClick={onBack}
           className={`px-4 py-2 border rounded-lg ${
             darkMode
@@ -251,6 +256,7 @@ export default function QuestionGenerationStep({
           Back
         </button>
         <button
+          type="button"
           onClick={handleNext}
           disabled={generatingQuestions}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"

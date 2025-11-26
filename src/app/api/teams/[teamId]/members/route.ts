@@ -281,7 +281,7 @@ export async function GET(
     }
 
     // Update existing members with roster data
-    rosterDataByUser.forEach((userRosterData, userId) => {
+    for (const [userId, userRosterData] of rosterDataByUser) {
       const existingMember = allMembers.get(userId);
       if (existingMember) {
         // Initialize subteams array if it doesn't exist
@@ -290,7 +290,7 @@ export async function GET(
         }
 
         // Update or add subteam information with events
-        userRosterData.forEach((events, teamUnitId) => {
+        for (const [teamUnitId, events] of userRosterData) {
           const subteamInfo = {
             id: teamUnitId,
             name:
@@ -337,7 +337,7 @@ export async function GET(
               description: subteamInfo.description || null,
             };
           }
-        });
+        }
 
         // Combine all events from all subteams
         const allEvents = existingMember.subteams?.flatMap(
@@ -345,7 +345,7 @@ export async function GET(
         );
         existingMember.events = [...new Set(allEvents)]; // Remove duplicates
       }
-    });
+    }
 
     // Build the where conditions for unlinked roster
     const unlinkedRosterConditions = [
@@ -397,8 +397,8 @@ export async function GET(
     }
 
     // Add unlinked roster members to the map with their events
-    unlinkedRosterByStudent.forEach((studentRosterData, studentName) => {
-      studentRosterData.forEach((events, teamUnitId) => {
+    for (const [studentName, studentRosterData] of unlinkedRosterByStudent) {
+      for (const [teamUnitId, events] of studentRosterData) {
         const memberKey = `roster-${studentName}-${teamUnitId}`;
 
         // Get the subteam info from the first roster entry for this student/subteam
@@ -425,8 +425,8 @@ export async function GET(
             hasPendingLinkInvite: false, // Will be updated below if there's a pending invitation
           });
         }
-      });
-    });
+      }
+    }
 
     const pendingInviteConditions = [eq(rosterLinkInvitations.status, "pending")];
 

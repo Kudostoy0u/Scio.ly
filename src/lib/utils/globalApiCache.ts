@@ -1,4 +1,4 @@
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import logger from "@/lib/utils/logger";
 /**
  * Global API cache system to eliminate duplicate requests across the entire application

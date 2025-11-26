@@ -27,6 +27,63 @@ type Props = {
   onQuestionRemoved: (questionIndex: number) => void;
 };
 
+// Helper functions to reduce complexity
+function getQuestionBackgroundClass(
+  isSubmitted: boolean,
+  isUserSelected: boolean,
+  isCorrectAnswer: boolean,
+  gradingScore: number | null,
+  darkMode: boolean
+) {
+  if (isSubmitted && isUserSelected) {
+    return gradingScore && gradingScore >= 1
+      ? darkMode
+        ? "bg-green-800"
+        : "bg-green-200"
+      : isCorrectAnswer
+        ? darkMode
+          ? "bg-green-800"
+          : "bg-green-200"
+        : darkMode
+          ? "bg-red-900"
+          : "bg-red-200";
+  }
+  if (isSubmitted && isCorrectAnswer && !isUserSelected) {
+    return darkMode ? "bg-green-800" : "bg-green-200";
+  }
+  return darkMode ? "bg-gray-700" : "bg-gray-200";
+}
+
+function getTextareaBackgroundClass(
+  isSubmitted: boolean,
+  gradingScore: number | null,
+  darkMode: boolean
+) {
+  if (isSubmitted) {
+    if (gradingScore === 1) {
+      return darkMode ? "bg-green-800 border-green-700" : "bg-green-200 border-green-300";
+    }
+    if (gradingScore === 0) {
+      return darkMode ? "bg-red-900 border-red-800" : "bg-red-200 border-red-300";
+    }
+    return darkMode ? "bg-amber-400 border-amber-500" : "bg-amber-400 border-amber-500";
+  }
+  return darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300";
+}
+
+function getResultText(gradingScore: number | null, hasAnswer: boolean) {
+  if (!hasAnswer) {
+    return { text: "Skipped", color: "text-blue-500" };
+  }
+  if (gradingScore === 1 || gradingScore === 2 || gradingScore === 3) {
+    return { text: "Correct!", color: "text-green-600" };
+  }
+  if (gradingScore === 0) {
+    return { text: "Wrong!", color: "text-red-600" };
+  }
+  return { text: "Partial Credit", color: "text-amber-400" };
+}
+
 export default function QuestionCard(props: Props) {
   const {
     question,
@@ -51,8 +108,6 @@ export default function QuestionCard(props: Props) {
   } = props;
 
   const isMultiSelect = isMultiSelectQuestion(question.question, question.answers);
-  // Key used by parent for bookmarking; not needed here
-
   const correctAnswersText =
     question.options && question.options.length > 0
       ? question.answers.map((ans) => question.options?.[ans as number]).join(", ")
@@ -79,7 +134,9 @@ export default function QuestionCard(props: Props) {
           compact={true}
           isSubmittedReport={isSubmittedReport}
           isSubmittedEdit={isSubmittedEdit}
-          onReportSubmitted={() => {}}
+          onReportSubmitted={() => {
+            // Intentionally empty - placeholder callback
+          }}
           _isSubmitted={isSubmitted}
           onEdit={onEdit}
           onQuestionRemoved={onQuestionRemoved}
@@ -95,11 +152,7 @@ export default function QuestionCard(props: Props) {
           {question.imageData && (
             <div className="mb-4 w-full flex justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={question.imageData}
-                alt="Question image"
-                className="max-h-64 rounded-md border"
-              />
+              <img src={question.imageData} alt="Question" className="max-h-64 rounded-md border" />
             </div>
           )}
           <p className="mb-4 break-words whitespace-normal overflow-x-auto">{question.question}</p>
@@ -108,36 +161,24 @@ export default function QuestionCard(props: Props) {
 
       {question.options && question.options.length > 0 ? (
         <div className="space-y-2">
-          {question.options.map((option, idx) => {
+          {question.options.map((option) => {
             const correctAnswers = question.answers
               .map((ans) => (typeof ans === "number" ? question.options?.[ans] : ans))
               .filter((text): text is string => !!text && text !== "");
             const isCorrectAnswer = correctAnswers.includes(option);
             const isUserSelected = currentAnswers.includes(option);
 
-            const bgClass = (() => {
-              if (isSubmitted && isUserSelected) {
-                return gradingScore && gradingScore >= 1
-                  ? darkMode
-                    ? "bg-green-800"
-                    : "bg-green-200"
-                  : isCorrectAnswer
-                    ? darkMode
-                      ? "bg-green-800"
-                      : "bg-green-200"
-                    : darkMode
-                      ? "bg-red-900"
-                      : "bg-red-200";
-              }
-              if (isSubmitted && isCorrectAnswer && !isUserSelected) {
-                return darkMode ? "bg-green-800" : "bg-green-200";
-              }
-              return darkMode ? "bg-gray-700" : "bg-gray-200";
-            })();
+            const bgClass = getQuestionBackgroundClass(
+              isSubmitted,
+              isUserSelected,
+              isCorrectAnswer,
+              gradingScore ?? null,
+              darkMode
+            );
 
             return (
               <label
-                key={idx}
+                key={`${questionIndex}-${option}`}
                 className={`block p-2 rounded-md ${bgClass} ${!isSubmitted && (darkMode ? "hover:bg-gray-600" : "hover:bg-gray-300")}`}
               >
                 <input
@@ -159,23 +200,11 @@ export default function QuestionCard(props: Props) {
           value={currentAnswers[0] || ""}
           onChange={(e) => onAnswerToggle(e.target.value, false)}
           disabled={isSubmitted}
-          className={`w-full p-2 border rounded-md  ${
-            isSubmitted
-              ? gradingScore === 1
-                ? darkMode
-                  ? "bg-green-800 border-green-700"
-                  : "bg-green-200 border-green-300"
-                : gradingScore === 0
-                  ? darkMode
-                    ? "bg-red-900 border-red-800"
-                    : "bg-red-200 border-red-300"
-                  : darkMode
-                    ? "bg-amber-400 border-amber-500"
-                    : "bg-amber-400 border-amber-500"
-              : darkMode
-                ? "bg-gray-700 border-gray-600 text-white"
-                : "bg-white border-gray-300"
-          }`}
+          className={`w-full p-2 border rounded-md ${getTextareaBackgroundClass(
+            isSubmitted,
+            gradingScore ?? null,
+            darkMode
+          )}`}
           rows={3}
           placeholder="Type your answer here..."
         />
@@ -184,23 +213,8 @@ export default function QuestionCard(props: Props) {
       {isSubmitted && (
         <>
           {(() => {
-            const score = gradingScore ?? 0;
-            let resultText = "";
-            let resultColor = "";
-            if (!currentAnswers[0]) {
-              resultText = "Skipped";
-              resultColor = "text-blue-500";
-            } else if (score === 1 || score === 2 || score === 3) {
-              resultText = "Correct!";
-              resultColor = "text-green-600";
-            } else if (score === 0) {
-              resultText = "Wrong!";
-              resultColor = "text-red-600";
-            } else {
-              resultText = "Partial Credit";
-              resultColor = "text-amber-400";
-            }
-            return <p className={`mt-2 font-semibold ${resultColor}`}>{resultText}</p>;
+            const result = getResultText(gradingScore ?? null, !!currentAnswers[0]);
+            return <p className={`mt-2 font-semibold ${result.color}`}>{result.text}</p>;
           })()}
           <p className="text-sm mt-1">
             <strong>Correct Answer(s):</strong> {correctAnswersText}
@@ -210,6 +224,7 @@ export default function QuestionCard(props: Props) {
               <MarkdownExplanation text={explanation} />
             ) : (
               <button
+                type="button"
                 onClick={onGetExplanation}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-300 ${
                   darkMode
@@ -224,6 +239,7 @@ export default function QuestionCard(props: Props) {
                   <>
                     <span>Explain</span>
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <title>Information</title>
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"

@@ -1,15 +1,16 @@
 import { useTheme } from "@/app/contexts/themeContext";
 import NotificationBell from "@/app/teams/components/NotificationBell";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type React from "react";
 import { type Mock, vi } from "vitest";
 
 // Mock dependencies
 vi.mock("@/app/contexts/themeContext");
 vi.mock("framer-motion", () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    div: ({ children, ...props }: Record<string, unknown>) => <div {...props}>{children}</div>,
   },
-  AnimatePresence: ({ children }: any) => children,
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 const mockUseTheme = useTheme as Mock<typeof useTheme>;
@@ -151,7 +152,7 @@ describe("NotificationBell", () => {
 
   it("should show loading state", async () => {
     // Create a promise that we can control
-    let resolveFunc: any;
+    let resolveFunc: (value: Response) => void;
     const promise = new Promise<Response>((resolve) => {
       resolveFunc = resolve;
     });

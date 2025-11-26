@@ -1,7 +1,7 @@
 "use client";
 
 import type { Settings } from "@/app/practice/types";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 
 /**
  * Test parameters interface for practice tests

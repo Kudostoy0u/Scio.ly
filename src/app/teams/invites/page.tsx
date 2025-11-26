@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface Invite {
   id: number;
@@ -23,7 +23,7 @@ export default function InvitesPage() {
     }
   }, [redirectUrl]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -38,11 +38,11 @@ export default function InvitesPage() {
       setError("Failed to load invites");
     }
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const accept = async (id: number) => {
     try {
@@ -98,12 +98,14 @@ export default function InvitesPage() {
               </div>
               <div className="mt-2 flex gap-2">
                 <button
+                  type="button"
                   onClick={() => accept(inv.id)}
                   className="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm"
                 >
                   Accept
                 </button>
                 <button
+                  type="button"
                   onClick={() => decline(inv.id)}
                   className="px-3 py-1.5 rounded bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm"
                 >

@@ -2,6 +2,9 @@ import TeamDashboard from "@/app/teams/components/TeamDashboard";
 import { fireEvent, renderWithProviders, screen, waitFor } from "@/test-utils";
 import { vi } from "vitest";
 
+// Top-level regex for performance
+const CLOSE_BUTTON_REGEX = /close/i;
+
 // Mock Next.js navigation
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -109,7 +112,7 @@ describe("TeamDashboard", () => {
     });
 
     // Click the close button
-    const closeButton = screen.getByRole("button", { name: /close/i });
+    const closeButton = screen.getByRole("button", { name: CLOSE_BUTTON_REGEX });
     fireEvent.click(closeButton);
 
     await waitFor(() => {

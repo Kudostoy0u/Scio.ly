@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/app/contexts/authContext";
 import { useTeamStore } from "@/app/hooks/useTeamStore";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { trpc } from "@/lib/trpc/client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -188,9 +188,7 @@ export default function TeamsPageClient({
         onCreateTeam={() => setIsCreateModalOpen(true)}
         onJoinTeam={() => setIsJoinModalOpen(true)}
         userTeams={teamsForLanding}
-        onTeamSelect={() => {
-          // Not used anymore, but keeping for interface compatibility
-        }}
+        onTeamSelect={() => undefined}
       />
 
       <CreateTeamModal

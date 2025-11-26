@@ -8,53 +8,35 @@ import {
   resetTestSession,
   resumeTestSession,
 } from "@/app/utils/timeManagement";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { supabase } from "@/lib/supabase";
 import logger from "@/lib/utils/logger";
 import { fetchQuestionsForParams } from "./fetchQuestions";
 
 type SetState<T> = (value: T) => void;
 
-export async function initLoad({
-  initialData,
-  stableRouterData,
-  setRouterData,
-  setFetchError,
-  setIsLoading,
-  setData,
-  setTimeLeft,
-  fetchCompletedRef,
-}: {
-  initialData?: unknown[];
-  stableRouterData: Record<string, unknown>;
-  setRouterData: SetState<Record<string, unknown>>;
-  setFetchError: SetState<string | null>;
-  setIsLoading: SetState<boolean>;
-  setData: SetState<Question[]>;
-  setTimeLeft: SetState<number | null>;
-  fetchCompletedRef: { current: boolean };
-}): Promise<void> {
-  SyncLocalStorage.removeItem("testFromBookmarks");
-
-  if (fetchCompletedRef.current) {
-    return;
-  }
-
+// Helper function to get router parameters from storage or initial data
+function getRouterParams(stableRouterData: Record<string, unknown>): Record<string, unknown> {
   const storedParams = SyncLocalStorage.getItem("testParams");
   const hasInitial = stableRouterData && Object.keys(stableRouterData).length > 0;
   const routerParams = hasInitial ? stableRouterData : storedParams ? JSON.parse(storedParams) : {};
-  logger.log("init routerParams", { hasInitial, routerParams, hasStoredParams: !!storedParams });
-  if (!routerParams || Object.keys(routerParams).length === 0) {
-    logger.warn("empty routerParams; staying on page with friendly message");
-    setFetchError("No test parameters found. Go to Practice to start a test.");
-    setIsLoading(false);
-    fetchCompletedRef.current = true;
-    return;
-  }
-  setRouterData(routerParams);
 
-  const eventName = routerParams.eventName || "Unknown Event";
-  const timeLimit = Number.parseInt(routerParams.timeLimit || "30");
+  logger.log("init routerParams", {
+    hasInitial,
+    routerParams,
+    hasStoredParams: !!storedParams,
+  });
+
+  return routerParams;
+}
+
+// Helper function to handle session management and timer setup
+function handleSessionManagement(
+  routerParams: Record<string, unknown>,
+  setTimeLeft: SetState<number | null>
+) {
+  const eventName = String(routerParams.eventName || "Unknown Event");
+  const timeLimit = Number.parseInt(String(routerParams.timeLimit || "30"));
 
   try {
     const existingSession = getCurrentTestSession();
@@ -97,6 +79,106 @@ export async function initLoad({
     // Ignore setState errors
   }
 
+  return { session, eventName, timeLimit };
+}
+
+// Helper function to load questions from localStorage
+function loadQuestionsFromLocalStorage(
+  setData: SetState<Question[]>,
+  setIsLoading: SetState<boolean>,
+  fetchCompletedRef: { current: boolean },
+  logMessage: string
+) {
+  const storedQuestions = SyncLocalStorage.getItem("testQuestions");
+  if (storedQuestions) {
+    try {
+      const parsedQuestions = JSON.parse(storedQuestions);
+      const hasQuestions = Array.isArray(parsedQuestions) && parsedQuestions.length > 0;
+      if (hasQuestions) {
+        setData(normalizeQuestionMedia(parsedQuestions));
+        setIsLoading(false);
+        fetchCompletedRef.current = true;
+        logger.log(logMessage, { count: parsedQuestions.length });
+        return true;
+      }
+      logger.warn("ignoring empty testQuestions cache");
+      SyncLocalStorage.removeItem("testQuestions");
+    } catch {
+      // Ignore JSON parse errors
+    }
+  }
+  return false;
+}
+
+// Helper function to load bookmarked questions from Supabase
+async function loadBookmarkedQuestionsFromSupabase(
+  eventName: string,
+  setData: SetState<Question[]>,
+  setFetchError: SetState<string | null>,
+  setIsLoading: SetState<boolean>,
+  fetchCompletedRef: { current: boolean }
+) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    try {
+      const bookmarks = await loadBookmarksFromSupabase(user.id);
+      const eventBookmarks = bookmarks.filter((b) => b.eventName === eventName);
+      if (eventBookmarks.length > 0) {
+        const questions = eventBookmarks.map((b) => b.question);
+        setData(questions);
+        SyncLocalStorage.setItem("testQuestions", JSON.stringify(questions));
+      } else {
+        setFetchError("No bookmarked questions found for this event.");
+      }
+    } catch (error) {
+      logger.error("Error loading bookmarked questions:", error);
+      setFetchError("Failed to load bookmarked questions.");
+    } finally {
+      setIsLoading(false);
+      fetchCompletedRef.current = true;
+    }
+  }
+}
+
+export async function initLoad({
+  initialData,
+  stableRouterData,
+  setRouterData,
+  setFetchError,
+  setIsLoading,
+  setData,
+  setTimeLeft,
+  fetchCompletedRef,
+}: {
+  initialData?: unknown[];
+  stableRouterData: Record<string, unknown>;
+  setRouterData: SetState<Record<string, unknown>>;
+  setFetchError: SetState<string | null>;
+  setIsLoading: SetState<boolean>;
+  setData: SetState<Question[]>;
+  setTimeLeft: SetState<number | null>;
+  fetchCompletedRef: { current: boolean };
+}): Promise<void> {
+  SyncLocalStorage.removeItem("testFromBookmarks");
+
+  if (fetchCompletedRef.current) {
+    return;
+  }
+
+  const routerParams = getRouterParams(stableRouterData);
+  if (!routerParams || Object.keys(routerParams).length === 0) {
+    logger.warn("empty routerParams; staying on page with friendly message");
+    setFetchError("No test parameters found. Go to Practice to start a test.");
+    setIsLoading(false);
+    fetchCompletedRef.current = true;
+    return;
+  }
+  setRouterData(routerParams);
+
+  const { session } = handleSessionManagement(routerParams, setTimeLeft);
+
   if (session?.isSubmitted) {
     const storedGrading = SyncLocalStorage.getItem("testGradingResults");
     if (storedGrading) {
@@ -106,41 +188,28 @@ export async function initLoad({
         // Ignore JSON parse errors
       }
     }
-    const storedQuestions = SyncLocalStorage.getItem("testQuestions");
-    if (storedQuestions) {
-      try {
-        const parsedQuestions = JSON.parse(storedQuestions);
-        if (Array.isArray(parsedQuestions) && parsedQuestions.length > 0) {
-          setData(normalizeQuestionMedia(parsedQuestions));
-          setIsLoading(false);
-          fetchCompletedRef.current = true;
-          logger.log("resume submitted test from localStorage", { count: parsedQuestions.length });
-          return;
-        }
-      } catch {
-        // Ignore JSON parse errors
-      }
+    if (
+      loadQuestionsFromLocalStorage(
+        setData,
+        setIsLoading,
+        fetchCompletedRef,
+        "resume submitted test from localStorage"
+      )
+    ) {
+      return;
     }
   }
 
-  const storedQuestions = SyncLocalStorage.getItem("testQuestions");
   const isFromBookmarks = SyncLocalStorage.getItem("testFromBookmarks") === "true";
-  if (storedQuestions) {
-    try {
-      const parsedQuestions = JSON.parse(storedQuestions);
-      const hasQuestions = Array.isArray(parsedQuestions) && parsedQuestions.length > 0;
-      if (hasQuestions) {
-        setData(normalizeQuestionMedia(parsedQuestions));
-        setIsLoading(false);
-        fetchCompletedRef.current = true;
-        logger.log("loaded questions from localStorage", { count: parsedQuestions.length });
-        return;
-      }
-      logger.warn("ignoring empty testQuestions cache");
-      SyncLocalStorage.removeItem("testQuestions");
-    } catch {
-      // Ignore JSON parse errors
-    }
+  if (
+    loadQuestionsFromLocalStorage(
+      setData,
+      setIsLoading,
+      fetchCompletedRef,
+      "loaded questions from localStorage"
+    )
+  ) {
+    return;
   }
 
   if (Array.isArray(initialData) && initialData.length > 0) {
@@ -151,39 +220,20 @@ export async function initLoad({
     return;
   }
 
-  const loadBookmarkedQuestionsFromSupabase = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (isFromBookmarks && user) {
-      try {
-        const bookmarks = await loadBookmarksFromSupabase(user.id);
-        const eventBookmarks = bookmarks.filter((b) => b.eventName === eventName);
-        if (eventBookmarks.length > 0) {
-          const questions = eventBookmarks.map((b) => b.question);
-          setData(questions);
-          SyncLocalStorage.setItem("testQuestions", JSON.stringify(questions));
-        } else {
-          setFetchError("No bookmarked questions found for this event.");
-        }
-      } catch (error) {
-        logger.error("Error loading bookmarked questions:", error);
-        setFetchError("Failed to load bookmarked questions.");
-      } finally {
-        setIsLoading(false);
-        fetchCompletedRef.current = true;
-      }
-    }
-  };
-
   if (isFromBookmarks) {
-    await loadBookmarkedQuestionsFromSupabase();
+    await loadBookmarkedQuestionsFromSupabase(
+      routerParams.eventName as string,
+      setData,
+      setFetchError,
+      setIsLoading,
+      fetchCompletedRef
+    );
     return;
   }
 
   // Fallback to API fetch
   try {
-    const total = Number.parseInt(routerParams.questionCount || "10");
+    const total = Number.parseInt(String(routerParams.questionCount || "10"));
     const questions = await fetchQuestionsForParams(routerParams, total);
     SyncLocalStorage.setItem("testQuestions", JSON.stringify(questions));
     setData(questions);

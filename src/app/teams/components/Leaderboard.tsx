@@ -64,7 +64,6 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
     if (!selectedSeason) {
       setSelectedSeason(mostRecentSeason);
     }
-    // biome-ignore lint/correctness/useExhaustiveDependencies: setSelectedSeason is stable and doesn't need to be in deps
   }, [mostRecentSeason, selectedSeason]);
 
   const tournamentDates = useMemo(() => {
@@ -81,7 +80,6 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
     if (!selectedDate && lastTournamentDate) {
       setSelectedDate(lastTournamentDate);
     }
-    // biome-ignore lint/correctness/useExhaustiveDependencies: setSelectedDate is stable and doesn't need to be in deps
   }, [lastTournamentDate, selectedDate]);
 
   useEffect(() => {
@@ -141,10 +139,10 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
 
   const originalRankMap = useMemo(() => {
     const rankMap = new Map<string, number>();
-    leaderboardData.forEach((entry, index) => {
+    for (const [index, entry] of leaderboardData.entries()) {
       const key = `${entry.school}-${entry.state}-${entry.season}-${entry.event || "overall"}`;
       rankMap.set(key, index + 1);
-    });
+    }
     return rankMap;
   }, [leaderboardData]);
 
@@ -170,7 +168,6 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
       prevSearchTerm.current = searchTerm;
       setCurrentPage(1);
     }
-    // biome-ignore lint/correctness/useExhaustiveDependencies: prevSearchTerm is a ref and setCurrentPage is stable, don't need to be in deps
   }, [searchTerm]);
 
   useEffect(() => {
@@ -183,72 +180,59 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
 
   const selectedTournament = tournamentDates.find((t) => t.date === selectedDate);
 
+  const SkeletonCell = ({ width, height = 4 }: { width: string; height?: number }) => (
+    <div
+      className={`h-${height} rounded w-${width} animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
+    />
+  );
+
   const renderLoadingSkeleton = () => {
-    return Array.from({ length: Math.min(20, paginatedData.length || 20) }).map(
-      (_, index) => (
-        <tr
-          key={`placeholder-${index}`}
-          className={darkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"}
+    const skeletonCount = Math.min(20, paginatedData.length || 20);
+    return Array.from({ length: skeletonCount }).map((_, index) => (
+      // biome-ignore lint/suspicious/noArrayIndexKey: Skeleton rows use stable index as key since they have no unique identifiers
+      <tr key={`skeleton-${index}`} className={darkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"}>
+        <td className="px-2 sm:px-6 py-4 whitespace-nowrap">
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRankColor(index + 1)}`}
+          >
+            {index + 1}
+          </span>
+        </td>
+        <td
+          className={`px-2 sm:px-6 py-4 text-sm font-medium ${darkMode ? "text-white" : "text-gray-900"}`}
         >
-          <td className="px-2 sm:px-6 py-4 whitespace-nowrap">
-            <span
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRankColor(index + 1)}`}
-            >
-              {index + 1}
-            </span>
-          </td>
-          <td
-            className={`px-2 sm:px-6 py-4 text-sm font-medium ${darkMode ? "text-white" : "text-gray-900"}`}
-          >
-            <div>
-              <div
-                className={`h-4 rounded w-32 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-              />
-              <div className={"sm:hidden text-xs mt-1"}>
-                <div
-                  className={`h-3 rounded w-8 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-                />
-              </div>
+          <div>
+            <SkeletonCell width="32" />
+            <div className="sm:hidden text-xs mt-1">
+              <SkeletonCell width="8" height={3} />
             </div>
-          </td>
+          </div>
+        </td>
+        <td
+          className={`hidden sm:table-cell px-6 py-4 text-sm ${darkMode ? "text-gray-300" : "text-gray-500"}`}
+        >
+          <SkeletonCell width="8" />
+        </td>
+        <td
+          className={`hidden md:table-cell px-6 py-4 text-sm ${darkMode ? "text-gray-300" : "text-gray-500"}`}
+        >
+          <SkeletonCell width="12" />
+        </td>
+        {selectedEvent && (
           <td
-            className={`hidden sm:table-cell px-6 py-4 text-sm ${darkMode ? "text-gray-300" : "text-gray-500"}`}
+            className={`hidden lg:table-cell px-6 py-4 text-sm ${darkMode ? "text-gray-300" : "text-gray-500"}`}
           >
-            <div
-              className={`h-4 rounded w-8 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-            />
+            <SkeletonCell width="20" />
           </td>
-          <td
-            className={`hidden md:table-cell px-6 py-4 text-sm ${darkMode ? "text-gray-300" : "text-gray-500"}`}
-          >
-            <div
-              className={`h-4 rounded w-12 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-            />
-          </td>
-          {selectedEvent && (
-            <td
-              className={`hidden lg:table-cell px-6 py-4 text-sm ${darkMode ? "text-gray-300" : "text-gray-500"}`}
-            >
-              <div
-                className={`h-4 rounded w-20 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-              />
-            </td>
-          )}
-          <td
-            className={`px-2 sm:px-6 py-4 text-sm ${darkMode ? "text-blue-400" : "text-blue-600"}`}
-          >
-            <div
-              className={`h-4 rounded w-12 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-            />
-          </td>
-          <td className={"hidden sm:table-cell px-6 py-4 text-sm"}>
-            <div
-              className={`h-4 rounded w-16 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-            />
-          </td>
-        </tr>
-      )
-    );
+        )}
+        <td className={`px-2 sm:px-6 py-4 text-sm ${darkMode ? "text-blue-400" : "text-blue-600"}`}>
+          <SkeletonCell width="12" />
+        </td>
+        <td className="hidden sm:table-cell px-6 py-4 text-sm">
+          <SkeletonCell width="16" />
+        </td>
+      </tr>
+    ));
   };
 
   return (
@@ -416,7 +400,6 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
                           >
                             All tournaments on this date:
                           </div>
-                          {/* biome-ignore lint/suspicious/noArrayIndexKey: Tournament list is stable, index is appropriate */}
                           {selectedTournament.allTournaments.map((tournament, index) => (
                             <div
                               key={`tournament-${index}-${tournament}`}
@@ -519,7 +502,8 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
               <tbody
                 className={`divide-y ${darkMode ? "bg-gray-800 divide-gray-700" : "bg-white divide-gray-200"}`}
               >
-                {isLoading ? renderLoadingSkeleton()
+                {isLoading
+                  ? renderLoadingSkeleton()
                   : paginatedData.map((entry) => {
                       const key = `${entry.school}-${entry.state}-${entry.season}-${entry.event || "overall"}`;
                       const actualRank = originalRankMap.get(key) || 1;

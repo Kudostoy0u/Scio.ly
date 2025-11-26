@@ -1,10 +1,13 @@
+// Regex for detecting HTTP/HTTPS URLs - moved to top level for performance
+const HTTP_URL_REGEX = /^https?:\/\//i;
+
 export function buildAbsoluteUrl(src: string | undefined, origin?: string): string | undefined {
   if (!src) {
     return undefined;
   }
 
   try {
-    if (/^https?:\/\//i.test(src)) {
+    if (HTTP_URL_REGEX.test(src)) {
       return src;
     }
     if (origin && src.startsWith("/")) {

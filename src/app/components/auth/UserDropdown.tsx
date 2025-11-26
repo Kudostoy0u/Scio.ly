@@ -1,6 +1,6 @@
 "use client";
 import { useNotifications } from "@/app/hooks/useNotifications";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import logger from "@/lib/utils/logger";
 import type { User } from "@supabase/supabase-js";
 import { Bell, Settings, Trophy } from "lucide-react";

@@ -27,13 +27,13 @@ export default function RosterHeader({ darkMode, conflicts, isSaving }: RosterHe
               } hidden md:block`}
             >
               <div className="font-medium mb-1">Conflict Detected:</div>
-              {conflicts.map((conflict, index) => (
-                <div key={index} className="text-xs">
+              {conflicts.map((conflict) => (
+                <div key={`${conflict.person}-${conflict.conflictBlock}`} className="text-xs">
                   {conflict.person} in {conflict.conflictBlock}: {conflict.events.join(", ")}
                 </div>
               ))}
               <div
-                className={`absolute right-full top-1/2 transform -translate-y-1/2 w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent ${
+                className={`absolute right-full top-1/2 transform -translate-y-1/2 w-0 h-0 border-t-4 border-b-4 border-transparent ${
                   darkMode ? "border-r-gray-800" : "border-r-white"
                 }`}
               />
@@ -47,8 +47,8 @@ export default function RosterHeader({ darkMode, conflicts, isSaving }: RosterHe
               } md:hidden`}
             >
               <div className="font-medium mb-1">Conflict Detected:</div>
-              {conflicts.map((conflict, index) => (
-                <div key={index} className="text-xs">
+              {conflicts.map((conflict) => (
+                <div key={`${conflict.person}-${conflict.conflictBlock}`} className="text-xs">
                   {conflict.person} in {conflict.conflictBlock}: {conflict.events.join(", ")}
                 </div>
               ))}

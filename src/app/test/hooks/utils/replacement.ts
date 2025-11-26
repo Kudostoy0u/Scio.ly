@@ -3,6 +3,48 @@ import type { Question } from "@/app/utils/geminiService";
 import { buildApiParams } from "@/app/utils/questionUtils";
 import { getEventOfflineQuestions } from "@/app/utils/storage";
 
+// Helper function to filter questions by type
+function filterQuestionsByType(
+  questions: Record<string, unknown>[],
+  typesSel: string
+): Record<string, unknown>[] {
+  if (typesSel === "multiple-choice") {
+    return questions.filter((q) => Array.isArray(q.options) && q.options.length > 0);
+  }
+  if (typesSel === "free-response") {
+    return questions.filter((q) => !Array.isArray(q.options) || q.options.length === 0);
+  }
+  return questions;
+}
+
+// Helper function to get offline questions for an event
+async function getOfflineQuestionsForEvent(
+  eventName: string,
+  typesSel: string
+): Promise<Question[]> {
+  const slug = eventName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const cached = await getEventOfflineQuestions(slug);
+  if (!Array.isArray(cached) || cached.length === 0) {
+    return [];
+  }
+  const filtered = filterQuestionsByType(cached, typesSel);
+  return filtered as unknown as Question[];
+}
+
+// Helper function to fetch questions from API
+async function fetchQuestionsFromAPI(apiUrl: string): Promise<Question[]> {
+  try {
+    const response = await fetch(apiUrl);
+    if (response?.ok) {
+      const j = await response.json();
+      return (j?.data || []) as Question[];
+    }
+  } catch {
+    // Ignore fetch errors
+  }
+  return [];
+}
+
 export async function fetchReplacementQuestion(
   routerData: Record<string, unknown>,
   data: Question[]
@@ -18,59 +60,22 @@ export async function fetchReplacementQuestion(
     let pool: Question[] = [];
 
     if (isOffline) {
-      const evt = routerData.eventName as string | undefined;
-      if (evt) {
-        const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-        const cached = await getEventOfflineQuestions(slug);
-        if (Array.isArray(cached) && cached.length > 0) {
-          const filtered =
-            typesSel === "multiple-choice"
-              ? cached.filter(
-                  (q: Record<string, unknown>) => Array.isArray(q.options) && q.options.length > 0
-                )
-              : typesSel === "free-response"
-                ? cached.filter(
-                    (q: Record<string, unknown>) =>
-                      !Array.isArray(q.options) || q.options.length === 0
-                  )
-                : cached;
-          pool = filtered as unknown as Question[];
-        }
+      const eventName = routerData.eventName as string | undefined;
+      if (eventName) {
+        pool = await getOfflineQuestionsForEvent(eventName, typesSel);
       }
     } else {
-      let response: Response | null = null;
-      try {
-        response = await fetch(apiUrl);
-      } catch {
-        response = null;
-      }
-      if (response?.ok) {
-        const j = await response.json();
-        pool = (j?.data || []) as Question[];
-      } else {
-        const evt = routerData.eventName as string | undefined;
-        if (evt) {
-          const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-          const cached = await getEventOfflineQuestions(slug);
-          if (Array.isArray(cached) && cached.length > 0) {
-            const filtered =
-              typesSel === "multiple-choice"
-                ? cached.filter(
-                    (q: Record<string, unknown>) => Array.isArray(q.options) && q.options.length > 0
-                  )
-                : typesSel === "free-response"
-                  ? cached.filter(
-                      (q: Record<string, unknown>) =>
-                        !Array.isArray(q.options) || q.options.length === 0
-                    )
-                  : cached;
-            pool = filtered as unknown as Question[];
-          }
+      pool = await fetchQuestionsFromAPI(apiUrl);
+      // Fallback to offline cache if API fails
+      if (pool.length === 0) {
+        const eventName = routerData.eventName as string | undefined;
+        if (eventName) {
+          pool = await getOfflineQuestionsForEvent(eventName, typesSel);
         }
       }
     }
 
-    const candidates = (pool as Question[]).filter((q) => !existingQuestions.includes(q.question));
+    const candidates = pool.filter((q) => !existingQuestions.includes(q.question));
     if (candidates.length === 0) {
       return null;
     }

@@ -5,6 +5,81 @@ import type { Question } from "@/app/utils/geminiService";
 import { calculateMCQScore, isMultiSelectQuestion } from "@/app/utils/questionUtils";
 import { useMemo } from "react";
 
+// Helper function to calculate option className
+function getOptionClassName({
+  isSubmitted,
+  darkMode,
+  question,
+  option,
+  currentAnswers,
+  finalScore,
+}: {
+  isSubmitted: boolean;
+  darkMode: boolean;
+  question: Question;
+  option: string;
+  currentAnswers: string[];
+  finalScore: number;
+}): string {
+  if (!isSubmitted) {
+    return darkMode ? "bg-gray-700" : "bg-gray-200";
+  }
+
+  // Use the same format as normal tests: answers as numeric indices
+  const correctAnswers = question.answers
+    ? question.answers
+        .map((ans) => {
+          if (typeof ans === "string") {
+            if (ans === "") {
+              return undefined;
+            }
+            return ans;
+          }
+          if (typeof ans === "number") {
+            return question.options && ans >= 0 && ans < question.options.length
+              ? question.options[ans]
+              : undefined;
+          }
+          return undefined;
+        })
+        .filter((text): text is string => text !== undefined)
+    : [];
+
+  const isCorrectAnswer = correctAnswers.includes(option);
+  const isUserSelected = currentAnswers.includes(option);
+
+  // Check if the question was answered correctly overall
+  // Use computed score for consistency
+  const isQuestionCorrect = finalScore === 1 || finalScore === 2 || finalScore === 3;
+
+  // Check if the question was completely skipped (no answers provided)
+  const isQuestionSkipped = !(currentAnswers.length > 0 && currentAnswers[0]);
+
+  if (isCorrectAnswer && isUserSelected) {
+    // User selected correct answer - always green
+    return darkMode ? "bg-green-800" : "bg-green-200";
+  }
+  if (isCorrectAnswer && !isUserSelected) {
+    // Correct answer that user didn't select
+    if (isQuestionSkipped) {
+      // If question was skipped, show correct answers in blue
+      return darkMode ? "bg-blue-700" : "bg-blue-200";
+    }
+    if (isQuestionCorrect) {
+      // If question is correct, show unselected correct answers in blue
+      return darkMode ? "bg-blue-700" : "bg-blue-200";
+    }
+    // If question is wrong, show correct answers in green
+    return darkMode ? "bg-green-800" : "bg-green-200";
+  }
+  if (!isCorrectAnswer && isUserSelected) {
+    // User selected wrong answer - always red
+    return darkMode ? "bg-red-900" : "bg-red-200";
+  }
+  // Neither correct nor selected - gray
+  return darkMode ? "bg-gray-700" : "bg-gray-200";
+}
+
 interface QuestionCardProps {
   question: Question;
   index: number;
@@ -59,7 +134,10 @@ export default function QuestionCard({
   // Use the same format as normal tests: answers as numeric indices
   const answersForMultiSelect = question.answers || [];
   const isMultiSelect = isMultiSelectQuestion(question.question, answersForMultiSelect);
-  const currentAnswers = useMemo(() => userAnswers || [], [userAnswers]);
+  const currentAnswers = useMemo(
+    () => (userAnswers || []).filter((answer): answer is string => answer !== null),
+    [userAnswers]
+  );
 
   // Compute MCQ score directly from question data (single source of truth)
   // This ensures consistency between highlighting and text display
@@ -85,6 +163,85 @@ export default function QuestionCard({
 
   // Use computed score if available, otherwise fall back to gradingResults
   const finalScore = computedScore !== undefined ? computedScore : (gradingResults[index] ?? 0);
+
+  // Helper function to calculate result text and color for MCQ questions
+  const calculateMCQResult = (score: number, recomputedScore: number) => {
+    if (Math.abs(score - recomputedScore) > 0.01) {
+      // Use recomputed score
+      return getResultTextAndColor(recomputedScore);
+    }
+    // Scores match - use stored score
+    if (!currentAnswers[0]) {
+      return {
+        text: isAssignmentMode ? "Wrong" : "Skipped",
+        color: isAssignmentMode ? "text-red-600" : "text-blue-500",
+      };
+    }
+    return getResultTextAndColor(score);
+  };
+
+  // Helper function to get result text and color based on score
+  const getResultTextAndColor = (score: number) => {
+    if (score === 1 || score === 2 || score === 3) {
+      return { text: "Correct!", color: "text-green-600" };
+    }
+    if (score === 0) {
+      return { text: "Wrong!", color: "text-red-600" };
+    }
+    return { text: "Partial Credit", color: "text-amber-400" };
+  };
+
+  // Helper function to calculate result for FRQ questions
+  const calculateFRQResult = (score: number) => {
+    if (!currentAnswers[0]) {
+      return {
+        text: isAssignmentMode ? "Wrong" : "Skipped",
+        color: isAssignmentMode ? "text-red-600" : "text-blue-500",
+      };
+    }
+    return getResultTextAndColor(score);
+  };
+
+  // Helper function to render result display
+  const renderResultDisplay = () => {
+    const isGrading = gradingFRQs[index];
+
+    if (isGrading) {
+      return <p className="mt-2 font-semibold text-blue-500">Grading...</p>;
+    }
+
+    // Use computed score for consistency with highlighting
+    const score = finalScore;
+    let result = { text: "", color: "" };
+
+    // For MCQ questions, validate score matches computed value
+    if (question.options && question.options.length > 0) {
+      const recomputedScore = calculateMCQScore(question, currentAnswers);
+      result = calculateMCQResult(score, recomputedScore);
+    } else {
+      result = calculateFRQResult(score);
+    }
+
+    return (
+      <>
+        <p className={`mt-2 font-semibold ${result.color}`}>{result.text}</p>
+        {question.options?.length === 0 && (
+          <p className="text-sm mt-1">
+            <strong>Correct Answer(s):</strong> {(() => {
+              // Handle both regular test questions and assignment questions
+              if (question.answers && Array.isArray(question.answers)) {
+                return question.answers.join(", ");
+              }
+              if ("correct_answer" in question && question.correct_answer) {
+                return String(question.correct_answer);
+              }
+              return "No answer available";
+            })()}
+          </p>
+        )}
+      </>
+    );
+  };
 
   return (
     <div
@@ -142,68 +299,17 @@ export default function QuestionCard({
                   : String(opt)
             );
             return optionTexts;
-          })().map((option, optionIndex) => (
+          })().map((option) => (
             <label
-              key={optionIndex}
-              className={`block p-2 rounded-md ${(() => {
-                if (!isSubmitted) {
-                  return darkMode ? "bg-gray-700" : "bg-gray-200";
-                }
-
-                // Use the same format as normal tests: answers as numeric indices
-                const correctAnswers = question.answers
-                  ? question.answers
-                      .map((ans) => {
-                        if (typeof ans === "string") {
-                          if (ans === "") {
-                            return undefined;
-                          }
-                          return ans;
-                        }
-                        if (typeof ans === "number") {
-                          return question.options && ans >= 0 && ans < question.options.length
-                            ? question.options[ans]
-                            : undefined;
-                        }
-                        return undefined;
-                      })
-                      .filter((text): text is string => text !== undefined)
-                  : [];
-
-                const isCorrectAnswer = correctAnswers.includes(option);
-                const isUserSelected = currentAnswers.includes(option);
-
-                // Check if the question was answered correctly overall
-                // Use computed score for consistency
-                const isQuestionCorrect = finalScore === 1 || finalScore === 2 || finalScore === 3;
-
-                // Check if the question was completely skipped (no answers provided)
-                const isQuestionSkipped = !(currentAnswers.length > 0 && currentAnswers[0]);
-
-                if (isCorrectAnswer && isUserSelected) {
-                  // User selected correct answer - always green
-                  return darkMode ? "bg-green-800" : "bg-green-200";
-                }
-                if (isCorrectAnswer && !isUserSelected) {
-                  // Correct answer that user didn't select
-                  if (isQuestionSkipped) {
-                    // If question was skipped, show correct answers in blue
-                    return darkMode ? "bg-blue-700" : "bg-blue-200";
-                  }
-                  if (isQuestionCorrect) {
-                    // If question is correct, show unselected correct answers in blue
-                    return darkMode ? "bg-blue-700" : "bg-blue-200";
-                  }
-                  // If question is wrong, show correct answers in green
-                  return darkMode ? "bg-green-800" : "bg-green-200";
-                }
-                if (!isCorrectAnswer && isUserSelected) {
-                  // User selected wrong answer - always red
-                  return darkMode ? "bg-red-900" : "bg-red-200";
-                }
-                // Neither correct nor selected - gray
-                return darkMode ? "bg-gray-700" : "bg-gray-200";
-              })()} ${!isSubmitted && (darkMode ? "hover:bg-gray-600" : "hover:bg-gray-300")}`}
+              key={option}
+              className={`block p-2 rounded-md ${getOptionClassName({
+                isSubmitted,
+                darkMode,
+                question,
+                option,
+                currentAnswers,
+                finalScore,
+              })} ${!isSubmitted && (darkMode ? "hover:bg-gray-600" : "hover:bg-gray-300")}`}
             >
               <input
                 type={isMultiSelect ? "checkbox" : "radio"}
@@ -229,96 +335,13 @@ export default function QuestionCard({
         />
       )}
 
-      {isSubmitted &&
-        !hideResultText &&
-        (() => {
-          const isGrading = gradingFRQs[index];
-
-          if (isGrading) {
-            return <p className="mt-2 font-semibold text-blue-500">Grading...</p>;
-          }
-
-          // Use computed score for consistency with highlighting
-          const score = finalScore;
-          let resultText = "";
-          let resultColor = "";
-
-          // For MCQ questions, validate score matches computed value
-          if (question.options && question.options.length > 0) {
-            const recomputedScore = calculateMCQScore(question, currentAnswers);
-            if (Math.abs(score - recomputedScore) > 0.01) {
-              // Use recomputed score
-              const correctedScore = recomputedScore;
-              if (correctedScore === 1 || correctedScore === 2 || correctedScore === 3) {
-                resultText = "Correct!";
-                resultColor = "text-green-600";
-              } else if (correctedScore === 0) {
-                resultText = "Wrong!";
-                resultColor = "text-red-600";
-              } else {
-                resultText = "Partial Credit";
-                resultColor = "text-amber-400";
-              }
-            } else {
-              // Scores match - use stored score
-              if (!currentAnswers[0]) {
-                resultText = isAssignmentMode ? "Wrong" : "Skipped";
-                resultColor = isAssignmentMode ? "text-red-600" : "text-blue-500";
-              } else if (score === 1 || score === 2 || score === 3) {
-                resultText = "Correct!";
-                resultColor = "text-green-600";
-              } else if (score === 0) {
-                resultText = "Wrong!";
-                resultColor = "text-red-600";
-              } else {
-                resultText = "Partial Credit";
-                resultColor = "text-amber-400";
-              }
-            }
-          } else {
-            // FRQ questions - use stored score
-            if (!currentAnswers[0]) {
-              resultText = isAssignmentMode ? "Wrong" : "Skipped";
-              resultColor = isAssignmentMode ? "text-red-600" : "text-blue-500";
-            } else if (score === 1 || score === 2 || score === 3) {
-              resultText = "Correct!";
-              resultColor = "text-green-600";
-            } else if (score === 0) {
-              resultText = "Wrong!";
-              resultColor = "text-red-600";
-            } else {
-              resultText = "Partial Credit";
-              resultColor = "text-amber-400";
-            }
-          }
-
-          return (
-            <>
-              <p className={`mt-2 font-semibold ${resultColor}`}>{resultText}</p>
-              {question.options?.length === 0 && (
-                <p className="text-sm mt-1">
-                  <strong>Correct Answer(s):</strong> {(() => {
-                    // Handle both regular test questions and assignment questions
-                    if (question.answers && Array.isArray(question.answers)) {
-                      return question.answers.join(", ");
-                    }
-                    if ("correct_answer" in question && question.correct_answer) {
-                      return String(question.correct_answer);
-                    }
-                    return "No answer available";
-                  })()}
-                </p>
-              )}
-            </>
-          );
-        })()}
-
       {isSubmitted && (
         <div className="mt-2">
           {explanations[index] ? (
             <MarkdownExplanation text={explanations[index]} />
           ) : (
             <button
+              type="button"
               onClick={() => onGetExplanation(index, question, currentAnswers)}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-300 ${
                 darkMode
@@ -333,6 +356,7 @@ export default function QuestionCard({
                 <>
                   <span>Explain</span>
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <title>Get explanation</title>
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -346,6 +370,8 @@ export default function QuestionCard({
           )}
         </div>
       )}
+
+      {isSubmitted && !hideResultText && renderResultDisplay()}
 
       <br />
 

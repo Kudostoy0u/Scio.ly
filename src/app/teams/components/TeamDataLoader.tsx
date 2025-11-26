@@ -34,7 +34,7 @@ export default function TeamDataLoader({ teamSlug, children }: TeamDataLoaderPro
   const hasLoadedRef = useRef(false);
 
   // Use the MULTIPLEXED endpoint that fetches EVERYTHING in one request
-  const { userTeams, subteams, assignments, members, roster, rosterSubteamId, isLoading, error } =
+  const { subteams, assignments, members, roster, rosterSubteamId, isLoading, error } =
     useTeamPageData(teamSlug);
 
   const { updateSubteams, updateAssignments, updateMembers, updateRoster } = useTeamStore();

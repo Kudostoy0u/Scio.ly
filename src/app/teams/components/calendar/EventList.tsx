@@ -21,6 +21,19 @@ interface CalendarEvent {
   }>;
 }
 
+interface PracticeEvent {
+  id: string;
+  title: string;
+  description?: string;
+  start_time: string;
+  end_time?: string;
+  location?: string;
+  is_all_day: boolean;
+  is_recurring: boolean;
+  created_by: string;
+  team_id?: string;
+}
+
 interface RecurringMeeting {
   id: string;
   team_id: string;
@@ -90,96 +103,179 @@ export default function EventList({
     }
   };
 
+  // Helper function to check if a recurring event should be included
+  const shouldIncludeRecurringEvent = (
+    meeting: RecurringMeeting,
+    dateStr: string,
+    dayOfWeek: number
+  ) => {
+    if (!(Array.isArray(meeting.days_of_week) && meeting.days_of_week.includes(dayOfWeek))) {
+      return false;
+    }
+
+    if (
+      meeting.exceptions &&
+      Array.isArray(meeting.exceptions) &&
+      meeting.exceptions.includes(dateStr)
+    ) {
+      return false;
+    }
+
+    if (meeting.start_date && dateStr < meeting.start_date) {
+      return false;
+    }
+
+    if (meeting.end_date && dateStr > meeting.end_date) {
+      return false;
+    }
+
+    return true;
+  };
+
+  // Helper function to create a recurring event object
+  const createRecurringEvent = (meeting: RecurringMeeting, dateStr: string, eventId: string) => {
+    const startTime = meeting.start_time
+      ? `${dateStr}T${meeting.start_time}`
+      : `${dateStr}T00:00:00`;
+    const endTime = meeting.end_time ? `${dateStr}T${meeting.end_time}` : undefined;
+
+    return {
+      id: eventId,
+      title: meeting.title,
+      description: meeting.description,
+      start_time: startTime,
+      end_time: endTime,
+      location: meeting.location,
+      event_type: "meeting" as const,
+      is_all_day: !(meeting.start_time && meeting.end_time),
+      is_recurring: true,
+      recurrence_pattern: {
+        days_of_week: meeting.days_of_week,
+        start_date: meeting.start_date,
+        end_date: meeting.end_date,
+        exceptions: meeting.exceptions,
+      },
+      created_by: meeting.created_by || "",
+      team_id: meeting.team_id,
+      attendees: [],
+    };
+  };
+
+  // Helper function to generate recurring events for a specific month
+  const generateRecurringEventsForMonth = (targetYear: number, targetMonth: number) => {
+    const recurringEvents: CalendarEvent[] = [];
+    const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(targetYear, targetMonth, day);
+      const dayOfWeek = date.getDay();
+      const dateStr = date.toISOString().split("T")[0];
+
+      if (!dateStr) {
+        continue;
+      }
+
+      for (const meeting of recurringMeetings) {
+        if (!shouldIncludeRecurringEvent(meeting, dateStr, dayOfWeek)) {
+          continue;
+        }
+
+        const eventId = `recurring-${meeting.id}-${dateStr}`;
+
+        // Skip if this event is blacklisted
+        if (isEventBlacklisted?.(eventId)) {
+          continue;
+        }
+
+        recurringEvents.push(createRecurringEvent(meeting, dateStr, eventId));
+      }
+    }
+
+    return recurringEvents;
+  };
+
+  // Helper function to filter and sort events
+  const filterAndSortEvents = (allEvents: CalendarEvent[]) => {
+    const filtered =
+      eventTypeFilter === "all"
+        ? allEvents
+        : allEvents.filter((event) => event.event_type === eventTypeFilter);
+
+    return filtered.sort(
+      (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+    );
+  };
+
+  // Helper function to get event type badge classes
+  const getEventTypeBadgeClasses = (eventType: string) => {
+    const baseClasses = "px-2 py-1 text-xs rounded-full";
+
+    switch (eventType) {
+      case "tournament":
+        return `${baseClasses} ${darkMode ? "bg-red-800 text-red-200" : "bg-red-200 text-red-800"}`;
+      case "practice":
+        return `${baseClasses} ${
+          darkMode ? "bg-green-800 text-green-200" : "bg-green-200 text-green-800"
+        }`;
+      case "meeting":
+        return `${baseClasses} ${
+          darkMode ? "bg-blue-800 text-blue-200" : "bg-blue-200 text-blue-800"
+        }`;
+      case "personal":
+        return `${baseClasses} ${
+          darkMode ? "bg-green-800 text-green-200" : "bg-green-200 text-green-800"
+        }`;
+      case "deadline":
+        return `${baseClasses} ${
+          darkMode ? "bg-orange-800 text-orange-200" : "bg-orange-200 text-orange-800"
+        }`;
+      default:
+        return `${baseClasses} ${
+          darkMode ? "bg-gray-600 text-gray-200" : "bg-gray-200 text-gray-800"
+        }`;
+    }
+  };
+
+  // Helper function to format event time
+  const formatEventTime = (event: CalendarEvent | PracticeEvent) => {
+    const startTime = new Date(event.start_time).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    if (event.end_time) {
+      const endTime = new Date(event.end_time).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      return `${startTime} - ${endTime}`;
+    }
+
+    return startTime;
+  };
+
+  // Helper function to handle event click
+  const handleEventClick = (event: CalendarEvent | PracticeEvent) => {
+    if ("event_type" in event) {
+      onEventClick(event as CalendarEvent);
+    }
+  };
+
   // Get filtered events for list view
   const getFilteredEvents = () => {
-    // Generate recurring events for the current month and next month
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
     const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
     const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
 
-    const recurringEvents: CalendarEvent[] = [];
-
-    // Generate events for current and next month
-    for (let monthOffset = 0; monthOffset < 2; monthOffset++) {
-      const targetMonth = monthOffset === 0 ? currentMonth : nextMonth;
-      const targetYear = monthOffset === 0 ? currentYear : nextYear;
-      const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
-
-      for (let day = 1; day <= daysInMonth; day++) {
-        const date = new Date(targetYear, targetMonth, day);
-        const dayOfWeek = date.getDay();
-        const dateStrParts = date.toISOString().split("T");
-        const dateStr = dateStrParts[0];
-        if (!dateStr) {
-          continue;
-        }
-
-        recurringMeetings.forEach((meeting) => {
-          if (Array.isArray(meeting.days_of_week) && meeting.days_of_week.includes(dayOfWeek)) {
-            if (
-              meeting.exceptions &&
-              Array.isArray(meeting.exceptions) &&
-              meeting.exceptions.includes(dateStr)
-            ) {
-              return;
-            }
-            if (meeting.start_date && dateStr < meeting.start_date) {
-              return;
-            }
-            if (meeting.end_date && dateStr > meeting.end_date) {
-              return;
-            }
-
-            const startTime = meeting.start_time
-              ? `${dateStr}T${meeting.start_time}`
-              : `${dateStr}T00:00:00`;
-            const endTime = meeting.end_time ? `${dateStr}T${meeting.end_time}` : undefined;
-
-            const eventId = `recurring-${meeting.id}-${dateStr}`;
-
-            // Skip if this event is blacklisted
-            if (isEventBlacklisted?.(eventId)) {
-              return;
-            }
-
-            recurringEvents.push({
-              id: eventId,
-              title: meeting.title,
-              description: meeting.description,
-              start_time: startTime,
-              end_time: endTime,
-              location: meeting.location,
-              event_type: "meeting",
-              is_all_day: !(meeting.start_time && meeting.end_time),
-              is_recurring: true,
-              recurrence_pattern: {
-                days_of_week: meeting.days_of_week,
-                start_date: meeting.start_date,
-                end_date: meeting.end_date,
-                exceptions: meeting.exceptions,
-              },
-              created_by: meeting.created_by || "",
-              team_id: meeting.team_id,
-              attendees: [],
-            });
-          }
-        });
-      }
-    }
+    // Generate recurring events for current and next month
+    const currentMonthEvents = generateRecurringEventsForMonth(currentYear, currentMonth);
+    const nextMonthEvents = generateRecurringEventsForMonth(nextYear, nextMonth);
+    const recurringEvents = [...currentMonthEvents, ...nextMonthEvents];
 
     const allEvents = [...events, ...recurringEvents];
-
-    if (eventTypeFilter === "all") {
-      return allEvents.sort(
-        (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
-      );
-    }
-
-    return allEvents
-      .filter((event) => event.event_type === eventTypeFilter)
-      .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+    return filterAndSortEvents(allEvents);
   };
 
   const filteredEvents = getFilteredEvents();
@@ -202,50 +298,21 @@ export default function EventList({
           )
         ) : (
           <div className="space-y-3">
-            {filteredEvents.map((event, index) => {
+            {filteredEvents.map((event) => {
               const eventType = "event_type" in event ? event.event_type : "practice";
 
               return (
-                <div
-                  key={index}
-                  className={`p-4 rounded-lg border cursor-pointer transition-colors hover:opacity-80 ${getEventColors(eventType)}`}
-                  onClick={() => {
-                    if ("event_type" in event) {
-                      onEventClick(event as CalendarEvent);
-                    }
-                  }}
+                <button
+                  type="button"
+                  key={event.id}
+                  className={`w-full text-left p-4 rounded-lg border cursor-pointer transition-colors hover:opacity-80 ${getEventColors(eventType)}`}
+                  onClick={() => handleEventClick(event)}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h4 className="font-semibold text-lg">{event.title}</h4>
-                        <span
-                          className={`px-2 py-1 text-xs rounded-full ${
-                            eventType === "tournament"
-                              ? darkMode
-                                ? "bg-red-800 text-red-200"
-                                : "bg-red-200 text-red-800"
-                              : eventType === "practice"
-                                ? darkMode
-                                  ? "bg-green-800 text-green-200"
-                                  : "bg-green-200 text-green-800"
-                                : eventType === "meeting"
-                                  ? darkMode
-                                    ? "bg-blue-800 text-blue-200"
-                                    : "bg-blue-200 text-blue-800"
-                                  : eventType === "personal"
-                                    ? darkMode
-                                      ? "bg-green-800 text-green-200"
-                                      : "bg-green-200 text-green-800"
-                                    : eventType === "deadline"
-                                      ? darkMode
-                                        ? "bg-orange-800 text-orange-200"
-                                        : "bg-orange-200 text-orange-800"
-                                      : darkMode
-                                        ? "bg-gray-600 text-gray-200"
-                                        : "bg-gray-200 text-gray-800"
-                          }`}
-                        >
+                        <span className={getEventTypeBadgeClasses(eventType)}>
                           {eventType.charAt(0).toUpperCase() + eventType.slice(1)}
                         </span>
                       </div>
@@ -259,17 +326,7 @@ export default function EventList({
                         {event.start_time && (
                           <div className="flex items-center gap-2">
                             <span className="font-medium">Time:</span>
-                            <span>
-                              {new Date(event.start_time).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                              {event.end_time &&
-                                ` - ${new Date(event.end_time).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}`}
-                            </span>
+                            <span>{formatEventTime(event)}</span>
                           </div>
                         )}
 
@@ -290,6 +347,7 @@ export default function EventList({
                     </div>
 
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         onDeleteEvent(event.id);
@@ -307,6 +365,7 @@ export default function EventList({
                         stroke="currentColor"
                         viewBox="0 0 24 24"
                       >
+                        <title>Delete event</title>
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -316,7 +375,7 @@ export default function EventList({
                       </svg>
                     </button>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>

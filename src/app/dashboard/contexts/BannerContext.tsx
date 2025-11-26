@@ -1,6 +1,6 @@
 "use client";
 
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { type ReactNode, createContext, useContext, useEffect, useState } from "react";
 
 interface BannerContextType {

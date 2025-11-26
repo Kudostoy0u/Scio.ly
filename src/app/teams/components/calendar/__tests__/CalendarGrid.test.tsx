@@ -108,7 +108,8 @@ describe("CalendarGrid", () => {
       render(<CalendarGrid {...defaultProps} />);
 
       const deleteButton = screen.getByTestId("x-icon").closest("button");
-      fireEvent.click(deleteButton!);
+      expect(deleteButton).toBeTruthy();
+      fireEvent.click(deleteButton);
 
       expect(defaultProps.onDeleteEvent).toHaveBeenCalledWith("1");
     });

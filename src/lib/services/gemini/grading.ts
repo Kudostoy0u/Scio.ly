@@ -11,7 +11,11 @@ import type { GradingResult } from "./types";
  * Grading service for free response questions
  */
 export class GeminiGradingService {
-  constructor(private clientWithKey: ClientWithKey) {}
+  private clientWithKey: ClientWithKey;
+
+  constructor(clientWithKey: ClientWithKey) {
+    this.clientWithKey = clientWithKey;
+  }
 
   /**
    * Grades multiple free response answers

@@ -12,14 +12,14 @@ global.alert = vi.fn();
 // Mock framer-motion
 vi.mock("framer-motion", () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    div: ({ children, ...props }: Record<string, unknown>) => <div {...props}>{children}</div>,
   },
 }));
 
 const mockFetch = vi.mocked(global.fetch);
 
 // Helper function to create mock responses
-const createMockResponse = (data: any, status = 200) =>
+const createMockResponse = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), { status });
 
 describe("RosterLinkIndicator", () => {
@@ -212,7 +212,9 @@ describe("RosterLinkIndicator", () => {
       .mockResolvedValueOnce(createMockResponse({ error: "User not found" }, 404));
 
     // Mock alert
-    const mockAlert = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const mockAlert = vi.spyOn(window, "alert").mockImplementation(() => {
+      // Mock implementation - do nothing
+    });
 
     render(<RosterLinkIndicator {...defaultProps} />);
 

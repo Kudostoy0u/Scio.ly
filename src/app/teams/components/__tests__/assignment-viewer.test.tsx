@@ -11,7 +11,7 @@ global.alert = vi.fn();
 
 const mockFetch = vi.mocked(global.fetch);
 
-const createMockResponse = (data: any, status = 200) =>
+const createMockResponse = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), { status });
 
 const mockAssignment = {

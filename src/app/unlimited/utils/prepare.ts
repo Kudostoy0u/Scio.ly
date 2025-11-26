@@ -59,11 +59,11 @@ export function prepareUnlimitedQuestions(input: PrepareInput): PrepareResult {
 
   // Shuffle deterministically not required; caller can shuffle. Here preserve order
   const idIndices: number[] = [];
-  finalQuestions.forEach((q, idx) => {
+  for (const [idx, q] of finalQuestions.entries()) {
     if ("_isIdPlaceholder" in q && q._isIdPlaceholder) {
       idIndices.push(idx);
     }
-  });
+  }
 
   return { finalQuestions, idIndices, idCount, baseCount };
 }

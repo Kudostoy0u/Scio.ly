@@ -166,7 +166,12 @@ describe("Test State Validation", () => {
 });
 
 // Helper functions for testing
-function validateAssignmentQuestions(questions: any[]): void {
+interface TestQuestion {
+  question?: string;
+  answers?: unknown[];
+}
+
+function validateAssignmentQuestions(questions: TestQuestion[]): void {
   questions.forEach((question, index) => {
     if (!question.answers) {
       throw new Error(
@@ -194,7 +199,7 @@ function validateAssignmentQuestions(questions: any[]): void {
   });
 }
 
-function validateLoadedQuestions(questions: any[], isAssignment: boolean): void {
+function validateLoadedQuestions(questions: TestQuestion[], isAssignment: boolean): void {
   if (isAssignment) {
     try {
       validateAssignmentQuestions(questions);

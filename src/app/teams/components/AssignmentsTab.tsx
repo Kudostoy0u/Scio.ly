@@ -3,7 +3,7 @@
 import { useAuth } from "@/app/contexts/authContext";
 import { useTheme } from "@/app/contexts/themeContext";
 import { useEnhancedTeamData } from "@/app/hooks/useEnhancedTeamData";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { AlertTriangle, BarChart3, Calendar, CheckCircle, Clock, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";

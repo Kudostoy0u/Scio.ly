@@ -39,6 +39,7 @@ interface CockroachNotification {
   user_id: string;
 }
 
+// biome-ignore lint/complexity/noStaticOnlyClass: Service class with related notification methods
 export class NotificationSyncService {
   /**
    * Sync notifications from CockroachDB to Supabase

@@ -156,7 +156,8 @@ function QuestionComponent({ question, userAnswer, event }) {
 
   return (
     <div>
-      <button 
+      <button
+        type="button"
         onClick={handleGetExplanation}
         disabled={loading}
         className="px-4 py-2 bg-blue-500 text-white rounded"

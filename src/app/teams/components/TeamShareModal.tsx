@@ -139,6 +139,7 @@ export default function TeamShareModal({
               Team Sharing
             </h2>
             <button
+              type="button"
               onClick={onClose}
               className={`p-1 rounded-full hover:bg-gray-100 ${darkMode ? "hover:bg-gray-700" : ""}`}
             >
@@ -148,6 +149,7 @@ export default function TeamShareModal({
 
           <div className="flex border-b mb-4 text-sm">
             <button
+              type="button"
               onClick={() => setActiveTab("share")}
               className={`flex-1 py-2 px-4 text-sm font-medium ${
                 activeTab === "share" ? "border-b-2 border-blue-500" : ""
@@ -156,6 +158,7 @@ export default function TeamShareModal({
               Share Team
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab("join")}
               className={`flex-1 py-2 px-4 text-sm font-medium ${
                 activeTab === "join" ? "border-b-2 border-blue-500" : ""
@@ -173,12 +176,16 @@ export default function TeamShareModal({
 
               {isCaptain && (
                 <div>
-                  <label className="flex items-center gap-2 text-sm font-medium mb-2">
+                  <label
+                    htmlFor="captain-code"
+                    className="flex items-center gap-2 text-sm font-medium mb-2"
+                  >
                     <Crown className="w-4 h-4 text-yellow-500" />
                     Captain Code
                   </label>
                   <div className="flex flex-col sm:flex-row gap-2 mb-2">
                     <input
+                      id="captain-code"
                       type="text"
                       value={captainCode}
                       readOnly={true}
@@ -235,8 +242,11 @@ export default function TeamShareModal({
               </p>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Team Code</label>
+                <label htmlFor="join-code" className="block text-sm font-medium mb-2">
+                  Team Code
+                </label>
                 <input
+                  id="join-code"
                   type="text"
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value)}
@@ -246,6 +256,7 @@ export default function TeamShareModal({
               </div>
 
               <button
+                type="button"
                 onClick={handleJoinTeam}
                 disabled={isLoading || !joinCode.trim()}
                 className="w-full py-2 px-4 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-300"

@@ -1,4 +1,4 @@
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { supabase } from "@/lib/supabase";
 import logger from "@/lib/utils/logger";
 import { withAuthRetry } from "@/lib/utils/supabaseRetry";

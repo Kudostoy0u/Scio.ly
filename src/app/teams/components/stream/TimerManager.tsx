@@ -67,6 +67,7 @@ export default function TimerManager({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {availableEvents.map((event) => (
             <button
+              type="button"
               key={event.id}
               onClick={() => onAddTimer(event)}
               className={`p-3 rounded-lg border text-left transition-colors ${

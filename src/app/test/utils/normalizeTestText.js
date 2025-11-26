@@ -3,6 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.normalizeTestText = normalizeTestText;
 exports.normalizeQuestionText = normalizeQuestionText;
 exports.normalizeOptionAnswerLabels = normalizeOptionAnswerLabels;
+
+// Regex for parsing leading letter labels - moved to top level for performance
+const LEADING_LETTER_LABEL_REGEX = /^\s*([A-Za-z])[.)]\s*(.+)$/;
+
 function normalizeTestText(input) {
   if (typeof input !== "string" || input.length === 0) {
     return input;
@@ -58,12 +62,12 @@ function parseLeadingLetterLabel(text) {
   if (typeof text !== "string") {
     return null;
   }
-  const match = text.match(/^\s*([A-Za-z])[.)]\s*(.+)$/);
+  const match = text.match(LEADING_LETTER_LABEL_REGEX);
   if (!match) {
     return null;
   }
   const letter = match[1];
-  const rest = ((_a = match[2]) === null || _a === void 0 ? void 0 : _a.trim()) || "";
+  const rest = match[2]?.trim() || "";
   if (!rest) {
     return null;
   }

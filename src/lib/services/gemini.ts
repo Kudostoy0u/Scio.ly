@@ -45,7 +45,7 @@ export class GeminiService {
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      let clientWithKey: import("./gemini/client").ClientWithKey;
+      let clientWithKey: import("./gemini/client").ClientWithKey | undefined;
 
       if (attempt === 0) {
         // First attempt: use random client
@@ -67,7 +67,13 @@ export class GeminiService {
             clientWithKey = this.clientManager.getClientByIndex(randomIndex);
           } else {
             // Fallback: use first available index
-            clientWithKey = this.clientManager.getClientByIndex(availableIndices[0]!);
+            const firstIndex = availableIndices[0];
+            if (firstIndex !== undefined) {
+              clientWithKey = this.clientManager.getClientByIndex(firstIndex);
+            } else {
+              // Final fallback: use random client
+              clientWithKey = this.clientManager.getRandomClient();
+            }
           }
         }
       }

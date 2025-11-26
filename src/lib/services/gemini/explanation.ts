@@ -7,11 +7,18 @@ import { Type } from "@google/genai";
 import type { ClientWithKey } from "./client";
 import type { ExplanationResult } from "./types";
 
+// Regex for extracting MIME type and base64 data from data URL
+const DATA_URL_REGEX = /^data:([^;]+);base64,(.+)$/;
+
 /**
  * Explanation generation service
  */
 export class GeminiExplanationService {
-  constructor(private clientWithKey: ClientWithKey) {}
+  private clientWithKey: ClientWithKey;
+
+  constructor(clientWithKey: ClientWithKey) {
+    this.clientWithKey = clientWithKey;
+  }
 
   /**
    * Converts an image URL to a base64 data URL
@@ -179,7 +186,7 @@ EXPLANATION REQUIREMENTS:
       const firstContent = contents[0];
       if (firstContent) {
         // Extract MIME type and base64 data from data URL
-        const dataUrlMatch = imageData.match(/^data:([^;]+);base64,(.+)$/);
+        const dataUrlMatch = imageData.match(DATA_URL_REGEX);
         if (dataUrlMatch?.[2]) {
           const mimeType = dataUrlMatch[1] || "image/jpeg";
           const base64Data = dataUrlMatch[2];
@@ -205,9 +212,7 @@ EXPLANATION REQUIREMENTS:
       const generateContent = this.clientWithKey.client.models.generateContent;
       const response = await generateContent({
         model: "gemini-flash-lite-latest",
-        contents: contents as unknown as Parameters<
-          typeof generateContent
-        >[0]["contents"],
+        contents: contents as unknown as Parameters<typeof generateContent>[0]["contents"],
         config: {
           responseMimeType: "application/json",
           responseSchema: schema,

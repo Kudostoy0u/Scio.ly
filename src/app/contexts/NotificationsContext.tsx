@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/app/contexts/authContext";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import logger from "@/lib/utils/logger";
 import type React from "react";
 import {

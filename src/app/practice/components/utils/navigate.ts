@@ -1,7 +1,7 @@
 import type { Settings } from "@/app/practice/types";
 import { buildTestParams, saveTestParams } from "@/app/utils/testParams";
 import { clearTestSession } from "@/app/utils/timeManagement";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 
 export function proceedWithTest(
   selectedEventName: string,

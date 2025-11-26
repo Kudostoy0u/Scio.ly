@@ -1,6 +1,29 @@
 import type { Question } from "@/app/utils/geminiService";
 import type { Explanations, GradingResults, LoadingExplanation } from "@/app/utils/questionUtils";
 
+// Helper function to shift indices after removing an item
+function shiftIndicesAfterRemoval<T>(
+  original: Record<number, T>,
+  indexToRemove: number
+): Record<number, T> {
+  const result: Record<number, T> = {};
+
+  for (const key of Object.keys(original)) {
+    const idx = Number.parseInt(key);
+    const value = original[idx];
+
+    if (value !== undefined) {
+      if (idx < indexToRemove) {
+        result[idx] = value;
+      } else if (idx > indexToRemove) {
+        result[idx - 1] = value;
+      }
+    }
+  }
+
+  return result;
+}
+
 export function removeQuestionAtIndex(
   data: Question[],
   indexToRemove: number,
@@ -16,55 +39,10 @@ export function removeQuestionAtIndex(
   newLoading: LoadingExplanation;
 } {
   const newData = data.filter((_, idx) => idx !== indexToRemove);
-
-  const newAnswers: Record<number, (string | null)[] | null> = {};
-  Object.keys(userAnswers).forEach((key) => {
-    const idx = Number.parseInt(key);
-    if (idx < indexToRemove) {
-      newAnswers[idx] = userAnswers[idx] ?? null;
-    } else if (idx > indexToRemove) {
-      newAnswers[idx - 1] = userAnswers[idx] ?? null;
-    }
-  });
-
-  const newResults: GradingResults = {};
-  Object.keys(gradingResults).forEach((key) => {
-    const idx = Number.parseInt(key);
-    const result = gradingResults[idx];
-    if (result !== undefined) {
-      if (idx < indexToRemove) {
-        newResults[idx] = result;
-      } else if (idx > indexToRemove) {
-        newResults[idx - 1] = result;
-      }
-    }
-  });
-
-  const newExplanations: Explanations = {};
-  Object.keys(explanations).forEach((key) => {
-    const idx = Number.parseInt(key);
-    const explanation = explanations[idx];
-    if (explanation !== undefined) {
-      if (idx < indexToRemove) {
-        newExplanations[idx] = explanation;
-      } else if (idx > indexToRemove) {
-        newExplanations[idx - 1] = explanation;
-      }
-    }
-  });
-
-  const newLoading: LoadingExplanation = {};
-  Object.keys(loadingExplanation).forEach((key) => {
-    const idx = Number.parseInt(key);
-    const loading = loadingExplanation[idx];
-    if (loading !== undefined) {
-      if (idx < indexToRemove) {
-        newLoading[idx] = loading;
-      } else if (idx > indexToRemove) {
-        newLoading[idx - 1] = loading;
-      }
-    }
-  });
+  const newAnswers = shiftIndicesAfterRemoval(userAnswers, indexToRemove);
+  const newResults = shiftIndicesAfterRemoval(gradingResults, indexToRemove);
+  const newExplanations = shiftIndicesAfterRemoval(explanations, indexToRemove);
+  const newLoading = shiftIndicesAfterRemoval(loadingExplanation, indexToRemove);
 
   return { newData, newAnswers, newResults, newExplanations, newLoading };
 }

@@ -2,7 +2,7 @@
 
 import AuthButton from "@/app/components/AuthButton";
 import { useTheme } from "@/app/contexts/themeContext";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";

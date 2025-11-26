@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 export class ApiError extends Error {
-  constructor(
-    public statusCode: number,
-    message: string,
-    public code?: string
-  ) {
+  public statusCode: number;
+  public code?: string;
+
+  constructor(statusCode: number, message: string, code?: string) {
     super(message);
     this.name = "ApiError";
+    this.statusCode = statusCode;
+    this.code = code;
   }
 }
 
@@ -156,8 +157,9 @@ export const sanitizeInput = (input: string): string => {
     .replace(/'/g, "&#x27;");
 };
 
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export const validateUUID = (uuid: string): boolean => {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidRegex.test(uuid);
 };
 

@@ -1,5 +1,8 @@
+import type { Question } from "@/app/utils/geminiService";
 import { describe, expect, it } from "vitest";
 import { prepareUnlimitedQuestions } from "./prepare";
+
+type QuestionWithPlaceholder = Question & { _isIdPlaceholder?: boolean; _placeholderId?: number };
 
 const makeQ = (i: number) => ({
   question: `Q${i}`,
@@ -19,7 +22,7 @@ describe("prepareUnlimitedQuestions", () => {
     });
     expect(out.idCount).toBeGreaterThan(0);
     expect(out.baseCount).toBe(0);
-    expect(out.finalQuestions.every((q) => (q as any)._isIdPlaceholder)).toBe(true);
+    expect(out.finalQuestions.every((q: QuestionWithPlaceholder) => q._isIdPlaceholder)).toBe(true);
   });
 
   it("splits base and id placeholders according to percentage", () => {
@@ -39,7 +42,7 @@ describe("prepareUnlimitedQuestions", () => {
     const base = Array.from({ length: 10 }, (_, i) => makeQ(i));
     const out = prepareUnlimitedQuestions({
       baseQuestions: base,
-      idPercentage: "not-a-number" as any,
+      idPercentage: "not-a-number" as unknown,
     });
     expect(out.idCount).toBe(0);
     expect(out.finalQuestions.length).toBe(10);

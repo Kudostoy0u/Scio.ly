@@ -252,7 +252,9 @@ describe("API Utilities", () => {
     });
 
     it("should log API requests", () => {
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {
+        // Intentionally empty - suppress console.log for this test
+      });
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = "development";
 
@@ -265,7 +267,9 @@ describe("API Utilities", () => {
     });
 
     it("should log API responses", () => {
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {
+        // Intentionally empty - suppress console.log for this test
+      });
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = "development";
 

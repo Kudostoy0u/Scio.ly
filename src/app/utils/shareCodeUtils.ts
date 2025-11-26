@@ -1,5 +1,5 @@
 import api from "@/app/api";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import logger from "@/lib/utils/logger";
 import { toast } from "react-toastify";
 import { clearTestSession, initializeTestSession } from "./timeManagement";

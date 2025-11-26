@@ -1,6 +1,6 @@
 // Utility functions for Stream components
 
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import type { TimeRemaining } from "./streamTypes";
 
 // Calculate time remaining for a tournament

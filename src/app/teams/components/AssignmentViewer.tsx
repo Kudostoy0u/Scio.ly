@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import QuestionRenderer from "./QuestionRenderer";
 
 interface Question {
   id: string;
@@ -11,6 +12,47 @@ interface Question {
   correct_answer?: string;
   points: number;
   order_index: number;
+}
+
+interface ApiQuestion {
+  id?: string;
+  question?: string;
+  type?: "mcq" | "frq" | "codebusters";
+  options?: string[];
+  answers?: number[]; // indices of correct answers
+  points?: number;
+  order?: number;
+}
+
+// Transform API question format to component format
+function transformQuestion(apiQuestion: ApiQuestion): Question {
+  const questionType =
+    apiQuestion.type === "mcq"
+      ? "multiple_choice"
+      : apiQuestion.type === "frq"
+        ? "free_response"
+        : apiQuestion.type === "codebusters"
+          ? "codebusters"
+          : "free_response";
+
+  let options: Array<{ id: string; text: string; isCorrect: boolean }> | undefined;
+  if (apiQuestion.options && Array.isArray(apiQuestion.options)) {
+    options = apiQuestion.options.map((opt: string, index: number) => ({
+      id: String.fromCharCode(65 + index), // A, B, C, D...
+      text: opt,
+      isCorrect: apiQuestion.answers?.includes(index) ?? false,
+    }));
+  }
+
+  return {
+    id: apiQuestion.id || "",
+    question_text: apiQuestion.question || "",
+    question_type: questionType,
+    options,
+    correct_answer: apiQuestion.answers?.join(", ") || "",
+    points: apiQuestion.points || 1,
+    order_index: apiQuestion.order || 0,
+  };
 }
 
 interface Assignment {
@@ -23,7 +65,7 @@ interface Assignment {
   is_required: boolean;
   max_attempts?: number;
   created_at: string;
-  questions: Question[];
+  questions: ApiQuestion[]; // API returns schema format, will be transformed
   user_submission?: {
     status: string;
     submitted_at: string;
@@ -54,12 +96,14 @@ export default function AssignmentViewer({
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const questions = assignment.questions.map(transformQuestion);
+
   // Initialize timer if assignment has time limit
   useEffect(() => {
-    if (assignment.questions.length > 0 && !startTime) {
+    if (questions.length > 0 && !startTime) {
       setStartTime(new Date());
     }
-  }, [assignment.questions.length, startTime]);
+  }, [questions.length, startTime]);
 
   // Timer countdown
   useEffect(() => {
@@ -84,7 +128,7 @@ export default function AssignmentViewer({
   };
 
   const nextQuestion = () => {
-    if (currentQuestion < assignment.questions.length - 1) {
+    if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     }
   };
@@ -96,7 +140,7 @@ export default function AssignmentViewer({
   };
 
   const renderAssignmentHeader = () => {
-    const progress = ((currentQuestion + 1) / assignment.questions.length) * 100;
+    const progress = ((currentQuestion + 1) / questions.length) * 100;
 
     return (
       <div className="mb-6">
@@ -155,7 +199,7 @@ export default function AssignmentViewer({
           </div>
           <div className="flex justify-between text-xs mt-1">
             <span>
-              Question {currentQuestion + 1} of {assignment.questions.length}
+              Question {currentQuestion + 1} of {questions.length}
             </span>
             <span>{Math.round(progress)}% complete</span>
           </div>
@@ -165,76 +209,14 @@ export default function AssignmentViewer({
   };
 
   const renderQuestion = (currentQ: Question) => {
-    const baseInputClasses = `w-full px-3 py-2 border rounded-lg resize-none ${
-      darkMode
-        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-    }`;
-
-    switch (currentQ.question_type) {
-      case "multiple_choice":
-        return currentQ.options ? (
-          <div className="space-y-2">
-            {currentQ.options.map((option, index: number) => (
-              <label
-                key={`option-${option.id || index}-${String(option.text || option.id).slice(0, 20)}`}
-                className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
-                  responses[currentQ.id]?.text === option.id
-                    ? "bg-blue-100 border-blue-300"
-                    : darkMode
-                      ? "bg-gray-700 border-gray-600 hover:bg-gray-600"
-                      : "bg-white border-gray-200 hover:bg-gray-50"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name={`question_${currentQ.id}`}
-                  value={option.id}
-                  checked={
-                    (responses[currentQ.id] as { text?: string } | undefined)?.text === option.id
-                  }
-                  onChange={(e) => handleResponse(currentQ.id, { text: e.target.value })}
-                  className="mr-3"
-                />
-                <span className="font-medium mr-2">{option.id}.</span>
-                <span>{option.text}</span>
-              </label>
-            ))}
-          </div>
-        ) : null;
-
-      case "free_response":
-        return (
-          <div>
-            <textarea
-              value={(responses[currentQ.id] as { text?: string } | undefined)?.text || ""}
-              onChange={(e) => handleResponse(currentQ.id, { text: e.target.value })}
-              placeholder="Enter your answer here..."
-              rows={6}
-              className={baseInputClasses}
-            />
-          </div>
-        );
-
-      case "codebusters":
-        return (
-          <div>
-            <textarea
-              value={(responses[currentQ.id] as { text?: string } | undefined)?.text || ""}
-              onChange={(e) => handleResponse(currentQ.id, { text: e.target.value })}
-              placeholder="Enter your codebusters answer here..."
-              rows={4}
-              className={`${baseInputClasses} font-mono`}
-            />
-            <p className={`text-xs mt-2 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-              Enter the decoded message or cipher type
-            </p>
-          </div>
-        );
-
-      default:
-        return null;
-    }
+    return (
+      <QuestionRenderer
+        question={currentQ}
+        responses={responses}
+        onResponse={handleResponse}
+        darkMode={darkMode}
+      />
+    );
   };
 
   const renderNavigation = () => {
@@ -262,7 +244,8 @@ export default function AssignmentViewer({
               className={`w-8 h-8 rounded-full text-sm font-medium ${
                 index === currentQuestion
                   ? "bg-blue-600 text-white"
-                  : assignment.questions[index] && responses[assignment.questions[index].id]
+                  : assignment.questions[index]?.id &&
+                      responses[assignment.questions[index].id || ""]
                     ? "bg-green-100 text-green-700"
                     : darkMode
                       ? "bg-gray-700 text-gray-300"
@@ -349,7 +332,7 @@ export default function AssignmentViewer({
     setSubmitting(false);
   };
 
-  const currentQ = assignment.questions[currentQuestion];
+  const currentQ = questions[currentQuestion];
   if (!currentQ) {
     return (
       <div className="p-6 border rounded-lg">

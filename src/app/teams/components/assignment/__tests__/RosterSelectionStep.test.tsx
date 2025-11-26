@@ -292,9 +292,9 @@ describe("RosterSelectionStep", () => {
       const checkboxes = screen.getAllByRole("checkbox");
       expect(checkboxes).toHaveLength(3);
 
-      checkboxes.forEach((checkbox) => {
+      for (const checkbox of checkboxes) {
         expect(checkbox).toHaveAttribute("type", "checkbox");
-      });
+      }
     });
 
     it("disables checkboxes for unlinked members", () => {
@@ -324,11 +324,11 @@ describe("RosterSelectionStep", () => {
       render(<RosterSelectionStep {...mockProps} />);
 
       const linkedDots = screen.getAllByText("Linked");
-      linkedDots.forEach((linkedText) => {
+      for (const linkedText of linkedDots) {
         const container = linkedText.closest("div");
         const dot = container?.querySelector(".bg-green-500");
         expect(dot).toBeInTheDocument();
-      });
+      }
     });
 
     it("shows red dot for unlinked members", () => {

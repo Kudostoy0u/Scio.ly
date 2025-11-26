@@ -66,10 +66,19 @@ export default function EventDetailsModal({
                   Event Details
                 </h3>
                 <button
+                  type="button"
                   onClick={onClose}
                   className={`text-gray-400 hover:text-gray-600 ${darkMode ? "hover:text-gray-300" : ""}`}
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    role="img"
+                    aria-label="Close modal"
+                  >
+                    <title>Close modal</title>
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -82,11 +91,11 @@ export default function EventDetailsModal({
 
               <div className="space-y-4">
                 <div>
-                  <label
+                  <span
                     className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
                   >
                     Title
-                  </label>
+                  </span>
                   <p className={`text-sm ${darkMode ? "text-white" : "text-gray-900"}`}>
                     {selectedEvent.title}
                   </p>
@@ -94,11 +103,11 @@ export default function EventDetailsModal({
 
                 {selectedEvent.description && (
                   <div>
-                    <label
+                    <span
                       className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
                     >
                       Description
-                    </label>
+                    </span>
                     <p className={`text-sm ${darkMode ? "text-white" : "text-gray-900"}`}>
                       {selectedEvent.description}
                     </p>
@@ -106,11 +115,11 @@ export default function EventDetailsModal({
                 )}
 
                 <div>
-                  <label
+                  <span
                     className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
                   >
                     Date
-                  </label>
+                  </span>
                   <p className={`text-sm ${darkMode ? "text-white" : "text-gray-900"}`}>
                     {new Date(selectedEvent.start_time).toLocaleDateString()}
                   </p>
@@ -118,11 +127,11 @@ export default function EventDetailsModal({
 
                 {selectedEvent.start_time && (
                   <div>
-                    <label
+                    <span
                       className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
                     >
                       Start Time
-                    </label>
+                    </span>
                     <p className={`text-sm ${darkMode ? "text-white" : "text-gray-900"}`}>
                       {new Date(selectedEvent.start_time).toLocaleTimeString([], {
                         hour: "2-digit",
@@ -134,11 +143,11 @@ export default function EventDetailsModal({
 
                 {selectedEvent.end_time && (
                   <div>
-                    <label
+                    <span
                       className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
                     >
                       End Time
-                    </label>
+                    </span>
                     <p className={`text-sm ${darkMode ? "text-white" : "text-gray-900"}`}>
                       {new Date(selectedEvent.end_time).toLocaleTimeString([], {
                         hour: "2-digit",
@@ -150,11 +159,11 @@ export default function EventDetailsModal({
 
                 {selectedEvent.location && (
                   <div>
-                    <label
+                    <span
                       className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
                     >
                       Location
-                    </label>
+                    </span>
                     <p className={`text-sm ${darkMode ? "text-white" : "text-gray-900"}`}>
                       {selectedEvent.location}
                     </p>
@@ -162,11 +171,11 @@ export default function EventDetailsModal({
                 )}
 
                 <div>
-                  <label
+                  <span
                     className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
                   >
                     Event Type
-                  </label>
+                  </span>
                   <p className={`text-sm ${darkMode ? "text-white" : "text-gray-900"}`}>
                     {selectedEvent.event_type}
                   </p>
@@ -175,6 +184,7 @@ export default function EventDetailsModal({
 
               <div className="flex justify-end mt-6">
                 <button
+                  type="button"
                   onClick={onClose}
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                     darkMode

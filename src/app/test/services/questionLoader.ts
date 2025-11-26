@@ -11,6 +11,33 @@ import { getEventOfflineQuestions } from "@/app/utils/storage";
 
 export type RouterParams = Record<string, unknown>;
 
+// Helper function to filter questions by type
+function filterQuestionsByType(
+  questions: Record<string, unknown>[],
+  typesSel: string
+): Record<string, unknown>[] {
+  if (typesSel === "multiple-choice") {
+    return questions.filter((q) => Array.isArray(q.options) && q.options.length > 0);
+  }
+  if (typesSel === "free-response") {
+    return questions.filter((q) => !Array.isArray(q.options) || q.options.length === 0);
+  }
+  return questions;
+}
+
+// Helper function to get filtered offline questions
+async function getFilteredOfflineQuestions(
+  eventName: string,
+  typesSel: string
+): Promise<Record<string, unknown>[] | null> {
+  const slug = eventName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const cached = await getEventOfflineQuestions(slug);
+  if (!Array.isArray(cached) || cached.length === 0) {
+    return null;
+  }
+  return filterQuestionsByType(cached, typesSel);
+}
+
 export function supportsIdEvent(eventName?: string): boolean {
   if (!eventName) {
     return false;
@@ -47,78 +74,56 @@ export async function fetchBaseQuestions(
   // Past attempts to map to a base event name caused empty results.
   const params = buildApiParams(paramsObj, count);
   const apiUrl = `${api.questions}?${params}`;
-  let apiResponse: unknown = null;
+
   const isOffline = typeof navigator !== "undefined" ? !navigator.onLine : false;
+  const typesSel = (routerParams.types as string) || "multiple-choice";
+
+  let questions: Question[] = [];
+
   if (isOffline) {
-    const evt = routerParams.eventName as string | undefined;
-    if (evt) {
-      const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-      const cached = await getEventOfflineQuestions(slug);
-      if (Array.isArray(cached) && cached.length > 0) {
-        const typesSel = (routerParams.types as string) || "multiple-choice";
-        const filtered =
-          typesSel === "multiple-choice"
-            ? cached.filter(
-                (q: Record<string, unknown>) => Array.isArray(q.options) && q.options.length > 0
-              )
-            : typesSel === "free-response"
-              ? cached.filter(
-                  (q: Record<string, unknown>) =>
-                    !Array.isArray(q.options) || q.options.length === 0
-                )
-              : cached;
-        apiResponse = { success: true, data: filtered };
-      }
-    }
-    if (!apiResponse) {
+    const eventName = routerParams.eventName as string | undefined;
+    if (!eventName) {
       throw new Error("No offline data available for this event.");
     }
+    const filtered = await getFilteredOfflineQuestions(eventName, typesSel);
+    if (!filtered) {
+      throw new Error("No offline data available for this event.");
+    }
+    questions = filtered as unknown as Question[];
   } else {
+    // Try API first
     let response: Response | null = null;
     try {
       response = await fetch(apiUrl);
     } catch {
       response = null;
     }
+
     if (response?.ok) {
-      apiResponse = await response.json();
+      const apiResponse = await response.json();
+      const apiData = apiResponse as { data?: unknown[] };
+      questions = (apiData.data || []) as unknown as Question[];
     } else {
-      const evt = routerParams.eventName as string | undefined;
-      if (evt) {
-        const slug = evt.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-        const cached = await getEventOfflineQuestions(slug);
-        if (Array.isArray(cached) && cached.length > 0) {
-          const typesSel = (routerParams.types as string) || "multiple-choice";
-          const filtered =
-            typesSel === "multiple-choice"
-              ? cached.filter(
-                  (q: Record<string, unknown>) => Array.isArray(q.options) && q.options.length > 0
-                )
-              : typesSel === "free-response"
-                ? cached.filter(
-                    (q: Record<string, unknown>) =>
-                      !Array.isArray(q.options) || q.options.length === 0
-                  )
-                : cached;
-          apiResponse = { success: true, data: filtered };
+      // Fallback to offline cache
+      const eventName = routerParams.eventName as string | undefined;
+      if (eventName) {
+        const filtered = await getFilteredOfflineQuestions(eventName, typesSel);
+        if (filtered) {
+          questions = filtered as unknown as Question[];
         }
       }
-      if (!apiResponse) {
+      if (questions.length === 0) {
         throw new Error("Failed to load questions.");
       }
     }
   }
-  const apiData = apiResponse as { data?: unknown[] };
-  const allQuestions = (apiData.data || []) as Question[];
-  // Filter by requested question types
-  const typesSel = (routerParams.types as string) || "multiple-choice";
-  const filtered =
-    typesSel === "multiple-choice"
-      ? allQuestions.filter((q) => Array.isArray(q.options) && q.options.length > 0)
-      : typesSel === "free-response"
-        ? allQuestions.filter((q) => !Array.isArray(q.options) || q.options.length === 0)
-        : allQuestions;
-  return normalizeQuestionMedia(filtered);
+
+  // Apply final filtering by question type
+  const finalFiltered = filterQuestionsByType(
+    questions as unknown as Record<string, unknown>[],
+    typesSel
+  );
+  return normalizeQuestionMedia(finalFiltered as unknown as Question[]);
 }
 
 export async function fetchIdQuestions(
@@ -234,7 +239,7 @@ export function dedupeByText(arr: Question[]): Question[] {
 
 export function finalizeQuestions(questions: Question[]): Question[] {
   const finalized = normalizeQuestionMedia(questions);
-  finalized.forEach((question) => {
+  for (const question of finalized) {
     if (question.question) {
       question.question = normalizeQuestionText(question.question);
     }
@@ -256,6 +261,6 @@ export function finalizeQuestions(questions: Question[]): Question[] {
         typeof answer === "string" ? normalizeTestText(answer) : answer
       );
     }
-  });
+  }
   return finalized;
 }

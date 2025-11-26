@@ -1,7 +1,7 @@
 "use client";
 
 import type { WelcomeMessageProps } from "@/app/dashboard/types";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 

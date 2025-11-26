@@ -13,6 +13,9 @@ import EventDetailsModal from "./calendar/EventDetailsModal";
 import EventList from "./calendar/EventList";
 import EventModal from "./calendar/EventModal";
 import MobileCalendar from "./calendar/MobileCalendar";
+
+// Top-level regex for performance
+const TIME_REGEX = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/;
 import MobileDayEvents from "./calendar/MobileDayEvents";
 import RecurringMeetingModal from "./calendar/RecurringMeetingModal";
 import SettingsModal from "./calendar/SettingsModal";
@@ -60,7 +63,7 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
   const [recurringForm, setRecurringForm] = useState<RecurringForm>(getDefaultRecurringForm());
 
   // Helper function to validate and filter events with invalid dates
-  const filterValidEvents = (events: CalendarEvent[]): CalendarEvent[] => {
+  const filterValidEvents = useCallback((events: CalendarEvent[]): CalendarEvent[] => {
     return events.filter((event) => {
       try {
         // Check if start_time is valid
@@ -85,43 +88,44 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
         return false;
       }
     });
-  };
+  }, []);
 
   // Helper function to validate and filter recurring meetings with invalid dates
-  const filterValidRecurringMeetings = (meetings: RecurringMeeting[]): RecurringMeeting[] => {
-    return meetings.filter((meeting) => {
-      try {
-        // Check if start_date and end_date are valid
-        if (!(meeting.start_date && meeting.end_date)) {
-          return false;
-        }
-        const startDate = new Date(meeting.start_date);
-        const endDate = new Date(meeting.end_date);
-        if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-          return false;
-        }
-
-        // Check if start_time and end_time are valid (if provided)
-        if (meeting.start_time) {
-          const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/;
-          if (!timeRegex.test(meeting.start_time)) {
+  const filterValidRecurringMeetings = useCallback(
+    (meetings: RecurringMeeting[]): RecurringMeeting[] => {
+      return meetings.filter((meeting) => {
+        try {
+          // Check if start_date and end_date are valid
+          if (!(meeting.start_date && meeting.end_date)) {
             return false;
           }
-        }
-
-        if (meeting.end_time) {
-          const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/;
-          if (!timeRegex.test(meeting.end_time)) {
+          const startDate = new Date(meeting.start_date);
+          const endDate = new Date(meeting.end_date);
+          if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
             return false;
           }
-        }
 
-        return true;
-      } catch {
-        return false;
-      }
-    });
-  };
+          // Check if start_time and end_time are valid (if provided)
+          if (meeting.start_time) {
+            if (!TIME_REGEX.test(meeting.start_time)) {
+              return false;
+            }
+          }
+
+          if (meeting.end_time) {
+            if (!TIME_REGEX.test(meeting.end_time)) {
+              return false;
+            }
+          }
+
+          return true;
+        } catch {
+          return false;
+        }
+      });
+    },
+    []
+  );
 
   // Helper function to permanently blacklist an event ID
   const blacklistEventId = (eventId: string) => {
@@ -148,7 +152,7 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
     (events: CalendarEvent[]): CalendarEvent[] => {
       return filterValidEvents(events).filter((event) => !isEventBlacklisted(event.id));
     },
-    [isEventBlacklisted]
+    [isEventBlacklisted, filterValidEvents]
   );
 
   // Enhanced filter function for recurring meetings that also removes blacklisted events
@@ -158,10 +162,11 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
         (meeting) => !isEventBlacklisted(meeting.id)
       );
     },
-    [isEventBlacklisted]
+    [isEventBlacklisted, filterValidRecurringMeetings]
   );
 
   // Load events and recurring meetings
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex async function handling multiple data loading scenarios with caching
   const loadEvents = useCallback(async () => {
     if (!user?.id) {
       return;
@@ -377,6 +382,7 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
   };
 
   // Create new event
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex event creation with multiple validation steps
   const createEvent = async () => {
     if (!user?.id) {
       return;
@@ -493,6 +499,7 @@ export default function TeamCalendar({ teamId: _teamId, isCaptain, teamSlug }: T
   };
 
   // Create recurring meeting
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex recurring meeting creation with extensive validation
   const createRecurringMeeting = async () => {
     if (!user?.id) {
       toast.error("User not authenticated. Please log in and try again.");

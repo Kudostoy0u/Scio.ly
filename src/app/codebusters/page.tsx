@@ -1,6 +1,6 @@
 "use client";
 import { useTheme } from "@/app/contexts/themeContext";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { FaShareAlt } from "react-icons/fa";

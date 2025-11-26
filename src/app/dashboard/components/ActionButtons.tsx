@@ -42,11 +42,11 @@ export default function ActionButtons({ darkMode }: ActionButtonsProps) {
       .slice(0, 6);
 
     const newDigits = [...testCodeDigits];
-    chars.forEach((digit, i) => {
+    for (const [i, digit] of chars.entries()) {
       if (index + i < 6) {
         newDigits[index + i] = digit;
       }
-    });
+    }
 
     setTestCodeDigits(newDigits);
 

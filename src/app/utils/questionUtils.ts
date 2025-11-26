@@ -1,8 +1,10 @@
 "use client";
 import logger from "@/lib/utils/logger";
+import type React from "react";
 
 import api from "@/app/api";
 import { toast } from "react-toastify";
+import { processFrqExplanation, processMcqExplanation } from "./explanationLogic";
 import type { Question } from "./geminiService";
 
 /**
@@ -354,6 +356,7 @@ export const getExplanation = async (
   setGradingResults: React.Dispatch<React.SetStateAction<GradingResults>>,
   userAnswers?: Record<number, (string | null)[] | null>,
   rateLimitDelay = 2000
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex logic required for explanation generation with rate limiting and error handling
 ) => {
   if (explanations[index]) {
     return;
@@ -430,225 +433,127 @@ export const getExplanation = async (
     const { explanation, correctIndices, correctedAnswers } = data.data;
     let explanationText = explanation;
 
+    let result: import("./explanationLogic").ExplanationResult | null = null;
+
     if (isMcq && correctIndices && correctIndices.length > 0) {
       logger.log("🔍 Found correct indices in explanation");
       try {
-        const suggestedIndices = correctIndices.filter((n: number) => !Number.isNaN(n));
-        if (suggestedIndices.length > 0) {
-          const correctedAnswers = suggestedIndices;
-          const currentAnswers = question.answers || [];
-
-          const normalizedCurrentAnswers = currentAnswers
-            .map((ans) => (typeof ans === "string" ? Number.parseInt(ans) : ans))
-            .filter((n) => typeof n === "number" && !Number.isNaN(n));
-
-          const normalizedNewAnswers = correctedAnswers;
-
-          logger.log("🔍 Answer Comparison Debug:");
-          logger.log("  Original question.answers:", currentAnswers);
-          logger.log("  Normalized current answers:", normalizedCurrentAnswers);
-          logger.log("  Explanation suggested answers:", normalizedNewAnswers);
-
-          const answersChanged = !(
-            normalizedNewAnswers.length === normalizedCurrentAnswers.length &&
-            normalizedNewAnswers.every((val: number) => normalizedCurrentAnswers.includes(val)) &&
-            normalizedCurrentAnswers.every((val: number) => normalizedNewAnswers.includes(val))
-          );
-
-          logger.log("  Answers changed?", answersChanged);
-
-          if (answersChanged) {
-            logger.log("✅ Explanation suggested different answers, submitting edit request.");
-            const newQ = { ...question, answers: correctedAnswers };
-
-            toast.info("Answer has been updated based on explanation");
-
-            try {
-              await fetch(api.reportEdit, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  question: question.question,
-                  answer: question.answers,
-                  originalQuestion: question,
-                  editedQuestion: newQ,
-                  event: routerData.eventName || "Unknown Event",
-                  reason: "Explanation corrected answers",
-                  bypass: true,
-                }),
-              });
-            } catch (editError) {
-              logger.error("Failed to submit auto-edit request:", editError);
-            }
-          } else {
-            logger.log("✅ Explanation confirmed existing answers are correct - no edit needed.");
-          }
-
-          setData((prevData) => {
-            const newData = [...prevData];
-            const currentQuestion = newData[index];
-            if (!currentQuestion) {
-              return newData;
-            }
-            newData[index] = { ...currentQuestion, answers: correctedAnswers } as Question;
-
-            if (userAnswers) {
-              const currentUserAnswers = userAnswers[index] || [];
-              const correctAnswers = correctedAnswers;
-              const updatedQuestion = newData[index];
-              if (!updatedQuestion) {
-                return newData;
-              }
-              const isMulti = isMultiSelectQuestion(updatedQuestion.question, correctAnswers);
-
-              const userNumericAnswers = currentUserAnswers
-                .map((ans) => {
-                  const idx = updatedQuestion.options?.indexOf(ans ?? "");
-                  return idx !== undefined && idx >= 0 ? idx : -1;
-                })
-                .filter((idx) => idx >= 0);
-
-              let isNowCorrect = false;
-              if (isMulti) {
-                isNowCorrect =
-                  correctAnswers.every((correctAns: number | string) =>
-                    userNumericAnswers.includes(correctAns as number)
-                  ) && userNumericAnswers.length === correctAnswers.length;
-              } else {
-                isNowCorrect = correctAnswers.includes(userNumericAnswers[0]);
-              }
-
-              logger.log(`🔍 MCQ Grading Debug for question ${index + 1}:`);
-              logger.log(`  User's numeric answers:`, userNumericAnswers);
-              logger.log("  Corrected answers:", correctAnswers);
-              logger.log("  Is multi-select:", isMulti);
-              logger.log("  Is now correct:", isNowCorrect);
-              logger.log("  Current grading result:", gradingResults[index]);
-
-              if (isNowCorrect && (gradingResults[index] ?? 0) !== 1) {
-                logger.log(
-                  `✅ Updating grading result for question ${index + 1} to Correct based on explanation.`
-                );
-                setGradingResults((prev) => ({ ...prev, [index]: 1 }));
-              } else if (!isNowCorrect && gradingResults[index] === 1) {
-                logger.log(
-                  `❌ Updating grading result for question ${index + 1} to Incorrect based on explanation.`
-                );
-                setGradingResults((prev) => ({ ...prev, [index]: 0 }));
-              } else {
-                logger.log(`ℹ️ No grading change needed for question ${index + 1}`);
-              }
-            }
-
-            return newData;
-          });
-        }
+        result = processMcqExplanation(
+          index,
+          question,
+          explanation,
+          correctIndices,
+          userAnswers,
+          gradingResults
+        );
       } catch (parseError) {
         logger.error("Failed to parse correct indices:", parseError);
-        explanationText = explanation;
       }
     }
 
     if (!isMcq && correctedAnswers && correctedAnswers.length > 0) {
       logger.log("🔍 Found corrected answers for FRQ in explanation");
       try {
-        const currentAnswers = question.answers || [];
-
-        const answersChanged = !(
-          correctedAnswers.length === currentAnswers.length &&
-          correctedAnswers.every(
-            (ans: unknown, idx: number) =>
-              String(ans).toLowerCase().trim() === String(currentAnswers[idx]).toLowerCase().trim()
-          )
+        result = processFrqExplanation(
+          index,
+          question,
+          explanation,
+          correctedAnswers,
+          userAnswers,
+          gradingResults
         );
-
-        logger.log("🔍 FRQ Answer Comparison Debug:");
-        logger.log("  Original question.answers:", currentAnswers);
-        logger.log("  Explanation suggested answers:", correctedAnswers);
-        logger.log("  Answers changed?", answersChanged);
-
-        if (answersChanged) {
-          logger.log(
-            "✅ Explanation suggested different answers for FRQ, submitting edit request."
-          );
-          const newQ = { ...question, answers: correctedAnswers };
-
-          toast.info("Answer has been updated based on explanation");
-
-          try {
-            await fetch(api.reportEdit, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                question: question.question,
-                answer: question.answers,
-                originalQuestion: question,
-                editedQuestion: newQ,
-                event: routerData.eventName || "Unknown Event",
-                reason: "Explanation corrected answers",
-                bypass: true,
-              }),
-            });
-          } catch (editError) {
-            logger.error("Failed to submit auto-edit request:", editError);
-          }
-
-          setData((prevData) => {
-            const newData = [...prevData];
-            const currentQuestion = newData[index];
-            if (!currentQuestion) {
-              return newData;
-            }
-            newData[index] = { ...currentQuestion, answers: correctedAnswers } as Question;
-
-            if (userAnswers) {
-              const currentUserAnswers = userAnswers[index] || [];
-              const userAnswerText = currentUserAnswers[0] || "";
-
-              let isNowCorrect = false;
-              if (userAnswerText.trim()) {
-                isNowCorrect = correctedAnswers.some(
-                  (correctAnswer: number | string) =>
-                    String(correctAnswer).toLowerCase().trim() ===
-                    userAnswerText.toLowerCase().trim()
-                );
-              }
-
-              if (isNowCorrect && (gradingResults[index] ?? 0) !== 1) {
-                logger.log(
-                  `Updating grading result for question ${index + 1} to Correct based on explanation.`
-                );
-                setGradingResults((prev) => ({ ...prev, [index]: 1 }));
-              } else if (!isNowCorrect && gradingResults[index] === 1) {
-                logger.log(
-                  `Updating grading result for question ${index + 1} to Incorrect based on explanation.`
-                );
-                setGradingResults((prev) => ({ ...prev, [index]: 0 }));
-              }
-            }
-
-            return newData;
-          });
-        } else {
-          logger.log("✅ Explanation confirmed existing FRQ answers are correct - no edit needed.");
-        }
       } catch (parseError) {
         logger.error("Failed to parse corrected answers for FRQ:", parseError);
       }
     }
 
+    if (result) {
+      await handleExplanationResult(
+        result,
+        index,
+        question,
+        routerData,
+        setData,
+        setGradingResults
+      );
+      explanationText = result.explanationText;
+    }
+
     logger.log("🎯 Setting explanation text:", explanationText);
     setExplanations((prev) => ({ ...prev, [index]: explanationText }));
   } catch (error) {
-    logger.error("Error in getExplanation:", error);
-    const errorMsg = `Failed to load explanation: ${(error as Error).message}`;
-    setExplanations((prev) => ({
-      ...prev,
-      [index]: errorMsg,
-    }));
-    toast.error(errorMsg);
+    handleExplanationError(error, index, setExplanations);
   } finally {
     setLoadingExplanation((prev) => ({ ...prev, [index]: false }));
+  }
+};
+
+const handleExplanationError = (
+  error: unknown,
+  index: number,
+  setExplanations: React.Dispatch<React.SetStateAction<Record<number, string>>>
+) => {
+  logger.error("Error in getExplanation:", error);
+  const errorMsg = `Failed to load explanation: ${(error as Error).message}`;
+  setExplanations((prev) => ({
+    ...prev,
+    [index]: errorMsg,
+  }));
+  toast.error(errorMsg);
+};
+
+const handleExplanationResult = async (
+  result: import("./explanationLogic").ExplanationResult,
+  index: number,
+  question: Question,
+  routerData: RouterParams,
+  setData: React.Dispatch<React.SetStateAction<Question[]>>,
+  setGradingResults: React.Dispatch<React.SetStateAction<GradingResults>>
+) => {
+  if (result.shouldSubmitEdit && result.updatedQuestion) {
+    logger.log("✅ Explanation suggested different answers, submitting edit request.");
+    toast.info("Answer has been updated based on explanation");
+
+    try {
+      await fetch(api.reportEdit, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: question.question,
+          answer: question.answers,
+          originalQuestion: question,
+          editedQuestion: result.updatedQuestion,
+          event: routerData.eventName || "Unknown Event",
+          reason: result.editReason,
+          bypass: true,
+        }),
+      });
+    } catch (editError) {
+      logger.error("Failed to submit auto-edit request:", editError);
+    }
+
+    setData((prevData) => {
+      const newData = [...prevData];
+      if (newData[index]) {
+        newData[index] = result.updatedQuestion as Question;
+      }
+      return newData;
+    });
+  }
+
+  if (result.gradingUpdate) {
+    const { isCorrect } = result.gradingUpdate;
+    if (isCorrect) {
+      logger.log(
+        `✅ Updating grading result for question ${index + 1} to Correct based on explanation.`
+      );
+      setGradingResults((prev) => ({ ...prev, [index]: 1 }));
+    } else {
+      logger.log(
+        `❌ Updating grading result for question ${index + 1} to Incorrect based on explanation.`
+      );
+      setGradingResults((prev) => ({ ...prev, [index]: 0 }));
+    }
   }
 };
 

@@ -1,5 +1,5 @@
 "use client";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import logger from "@/lib/utils/logger";
 
 import { useParams, useRouter } from "next/navigation";

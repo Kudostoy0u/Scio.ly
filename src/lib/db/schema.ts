@@ -338,6 +338,7 @@ export const users = pgTable("users", {
 });
 
 // Re-export team-related schemas from teams.ts
+// biome-ignore lint/performance/noBarrelFile: Schema file is intentionally a barrel for convenience
 export {
   newTeamStreamPosts,
   newTeamStreamComments,

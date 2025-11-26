@@ -1,7 +1,7 @@
 "use client";
 
 import type { HistoryRecord } from "@/app/utils/dashboardData";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { ComponentType, KeyboardEvent, MouseEvent } from "react";

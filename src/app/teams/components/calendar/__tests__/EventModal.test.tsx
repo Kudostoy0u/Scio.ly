@@ -1,20 +1,29 @@
 import EventModal from "@/app/teams/components/calendar/EventModal";
 import type { EventForm, UserTeam } from "@/app/teams/components/calendar/calendarUtils";
 import { fireEvent, render, screen } from "@testing-library/react";
+import type React from "react";
 import { describe, expect, it, vi } from "vitest";
 
 // Mock framer-motion
-vi.mock("framer-motion", () => ({
-  motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-  },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
-}));
+vi.mock("framer-motion", () => {
+  return {
+    motion: {
+      div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+        <div {...props}>{children}</div>
+      ),
+    },
+    AnimatePresence: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+  };
+});
 
 // Mock lucide-react icons
 vi.mock("lucide-react", () => ({
   X: () => <div data-testid="x-icon" />,
 }));
+
+// Regex constants for performance
+const TITLE_REGEX = /Title/;
+const DATE_REGEX = /Date/;
 
 describe("EventModal", () => {
   const mockUserTeams: UserTeam[] = [
@@ -66,8 +75,8 @@ describe("EventModal", () => {
       render(<EventModal {...defaultProps} />);
 
       expect(screen.getByText("Create Event")).toBeInTheDocument();
-      expect(screen.getByLabelText(/Title/)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Date/)).toBeInTheDocument();
+      expect(screen.getByLabelText(TITLE_REGEX)).toBeInTheDocument();
+      expect(screen.getByLabelText(DATE_REGEX)).toBeInTheDocument();
     });
 
     it("does not render modal when showModal is false", () => {
@@ -103,9 +112,9 @@ describe("EventModal", () => {
     it("renders all required form fields", () => {
       render(<EventModal {...defaultProps} />);
 
-      expect(screen.getByLabelText(/Title/)).toBeInTheDocument();
+      expect(screen.getByLabelText(TITLE_REGEX)).toBeInTheDocument();
       expect(screen.getByLabelText("Description")).toBeInTheDocument();
-      expect(screen.getByLabelText(/Date/)).toBeInTheDocument();
+      expect(screen.getByLabelText(DATE_REGEX)).toBeInTheDocument();
       expect(screen.getByLabelText("Start Time")).toBeInTheDocument();
       expect(screen.getByLabelText("End Time")).toBeInTheDocument();
       expect(screen.getByLabelText("Location")).toBeInTheDocument();
@@ -153,7 +162,7 @@ describe("EventModal", () => {
     it("calls onFormChange when form fields are updated", () => {
       render(<EventModal {...defaultProps} />);
 
-      const titleInput = screen.getByLabelText(/Title/);
+      const titleInput = screen.getByLabelText(TITLE_REGEX);
       fireEvent.change(titleInput, { target: { value: "New Title" } });
 
       expect(defaultProps.onFormChange).toHaveBeenCalledWith({ title: "New Title" });
@@ -195,7 +204,8 @@ describe("EventModal", () => {
       render(<EventModal {...defaultProps} />);
 
       const closeButton = screen.getByTestId("x-icon").closest("button");
-      fireEvent.click(closeButton!);
+      expect(closeButton).toBeTruthy();
+      fireEvent.click(closeButton);
 
       expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
     });

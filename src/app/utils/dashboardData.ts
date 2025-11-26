@@ -1,5 +1,5 @@
 "use client";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import logger from "@/lib/utils/logger";
 import { withAuthRetryData } from "@/lib/utils/supabaseRetry";
 
@@ -46,8 +46,7 @@ const GREETING_NAME_KEY = "scio_display_name";
  * @returns {string} Today's date in YYYY-MM-DD format
  */
 const getTodayKey = (): string => {
-  const dateStr = new Date().toISOString().split("T")[0];
-  return dateStr || new Date().toISOString().split("T")[0]!;
+  return new Date().toISOString().split("T")[0] || "";
 };
 
 /**
@@ -176,129 +175,198 @@ const fetchDailyUserStatsRow = async (userId: string, date: string): Promise<unk
  * console.log(dashboardData.historyData); // Historical data
  * ```
  */
-export const syncDashboardData = async (userId: string | null): Promise<DashboardData> => {
-  if (!userId) {
-    const metrics = getLocalDailyMetrics();
-    const historyData = getLocalHistory();
-    const greetingName = getLocalGreetingName();
+const parseDailyMetricsFromRow = (rowRecord: Record<string, unknown>): DailyMetrics => {
+  return {
+    questionsAttempted:
+      typeof rowRecord.questions_attempted === "number" ? rowRecord.questions_attempted : 0,
+    correctAnswers: typeof rowRecord.correct_answers === "number" ? rowRecord.correct_answers : 0,
+    eventsPracticed: Array.isArray(rowRecord.events_practiced)
+      ? (rowRecord.events_practiced as string[])
+      : [],
+    eventQuestions:
+      typeof rowRecord.event_questions === "object" &&
+      rowRecord.event_questions !== null &&
+      !Array.isArray(rowRecord.event_questions)
+        ? (rowRecord.event_questions as Record<string, number>)
+        : {},
+    gamePoints: typeof rowRecord.game_points === "number" ? rowRecord.game_points : 0,
+  };
+};
 
-    return {
-      metrics,
-      historyData,
-      greetingName,
-    };
+const syncHistoricalData = async (userId: string): Promise<void> => {
+  const allRows = await fetchUserStatsSince(userId, "1970-01-01");
+  if (!Array.isArray(allRows)) {
+    return;
   }
 
-  try {
-    // 1. sync all historical data from supabase to localstorage
-    const allRows = await fetchUserStatsSince(userId, "1970-01-01");
-    if (Array.isArray(allRows)) {
-      allRows.forEach((row) => {
-        const rowRecord = row as Record<string, unknown>;
-        try {
-          const key = `${METRICS_PREFIX}${rowRecord.date}`;
-          const payload: DailyMetrics = {
-            questionsAttempted:
-              typeof rowRecord.questions_attempted === "number" ? rowRecord.questions_attempted : 0,
-            correctAnswers:
-              typeof rowRecord.correct_answers === "number" ? rowRecord.correct_answers : 0,
-            eventsPracticed: Array.isArray(rowRecord.events_practiced)
-              ? (rowRecord.events_practiced as string[])
-              : [],
-            eventQuestions:
-              typeof rowRecord.event_questions === "object" &&
-              rowRecord.event_questions !== null &&
-              !Array.isArray(rowRecord.event_questions)
-                ? (rowRecord.event_questions as Record<string, number>)
-                : {},
-            gamePoints: typeof rowRecord.game_points === "number" ? rowRecord.game_points : 0,
-          };
-          SyncLocalStorage.setItem(key, JSON.stringify(payload));
-        } catch {
-          // Ignore localStorage errors
-        }
-      });
-    }
-
-    // 2. ensure today's data is up to date
-    const today = getTodayKey();
-    const todayRow = await fetchDailyUserStatsRow(userId, today);
-    if (todayRow) {
-      const todayRowRecord = todayRow as Record<string, unknown>;
-      const payload: DailyMetrics = {
-        questionsAttempted:
-          typeof todayRowRecord.questions_attempted === "number"
-            ? todayRowRecord.questions_attempted
-            : 0,
-        correctAnswers:
-          typeof todayRowRecord.correct_answers === "number" ? todayRowRecord.correct_answers : 0,
-        eventsPracticed: Array.isArray(todayRowRecord.events_practiced)
-          ? (todayRowRecord.events_practiced as string[])
-          : [],
-        eventQuestions:
-          typeof todayRowRecord.event_questions === "object" &&
-          todayRowRecord.event_questions !== null &&
-          !Array.isArray(todayRowRecord.event_questions)
-            ? (todayRowRecord.event_questions as Record<string, number>)
-            : {},
-        gamePoints: typeof todayRowRecord.game_points === "number" ? todayRowRecord.game_points : 0,
-      };
-      setLocalDailyMetrics(payload);
-    }
-
-    // 3. sync greeting name
+  for (const row of allRows) {
+    const rowRecord = row as Record<string, unknown>;
     try {
-      if (!userId) {
-        logger.warn("No userId provided for greeting name sync");
-      } else if (typeof userId !== "string" || userId.trim() === "") {
-        logger.warn("Invalid userId for greeting name sync:", userId);
-      } else {
-        logger.log("Fetching user profile for greeting name, userId:", userId);
-        const { data: profile } = await supabase
-          .from("users")
-          .select("first_name, display_name")
-          .eq("id", userId.trim())
-          .maybeSingle();
-
-        const profileTyped = profile as { first_name?: string; display_name?: string } | null;
-        const firstName = profileTyped?.first_name;
-        const displayName = profileTyped?.display_name;
-        const chosen = firstName?.trim()
-          ? firstName.trim()
-          : displayName?.trim()
-            ? displayName.trim().split(" ")[0]
-            : "";
-
-        if (chosen) {
-          setLocalGreetingName(chosen);
-        }
-      }
+      const key = `${METRICS_PREFIX}${rowRecord.date}`;
+      const payload = parseDailyMetricsFromRow(rowRecord);
+      SyncLocalStorage.setItem(key, JSON.stringify(payload));
     } catch {
       // Ignore localStorage errors
     }
+  }
+};
 
-    // 4. return the synced data
-    const metrics = getLocalDailyMetrics();
-    const historyData = getLocalHistory();
-    const greetingName = getLocalGreetingName();
+const syncTodayData = async (userId: string): Promise<void> => {
+  const today = getTodayKey();
+  const todayRow = await fetchDailyUserStatsRow(userId, today);
+  if (!todayRow) {
+    return;
+  }
 
+  const todayRowRecord = todayRow as Record<string, unknown>;
+  const payload = parseDailyMetricsFromRow(todayRowRecord);
+  setLocalDailyMetrics(payload);
+};
+
+const syncGreetingName = async (userId: string): Promise<void> => {
+  try {
+    if (!userId || typeof userId !== "string" || userId.trim() === "") {
+      logger.warn("Invalid userId for greeting name sync:", userId);
+      return;
+    }
+
+    logger.log("Fetching user profile for greeting name, userId:", userId);
+    const { data: profile } = await supabase
+      .from("users")
+      .select("first_name, display_name")
+      .eq("id", userId.trim())
+      .maybeSingle();
+
+    const profileTyped = profile as { first_name?: string; display_name?: string } | null;
+    const firstName = profileTyped?.first_name;
+    const displayName = profileTyped?.display_name;
+    const chosen = firstName?.trim()
+      ? firstName.trim()
+      : displayName?.trim()
+        ? displayName.trim().split(" ")[0]
+        : "";
+
+    if (chosen) {
+      setLocalGreetingName(chosen);
+    }
+  } catch {
+    // Ignore localStorage errors
+  }
+};
+
+const parseCurrentStatsFromRow = (
+  currentDataRecord: Record<string, unknown> | null
+): DailyMetrics => {
+  if (!currentDataRecord) {
     return {
-      metrics,
-      historyData,
-      greetingName,
+      questionsAttempted: 0,
+      correctAnswers: 0,
+      eventsPracticed: [],
+      eventQuestions: {},
+      gamePoints: 0,
     };
+  }
+
+  return {
+    questionsAttempted:
+      typeof currentDataRecord.questions_attempted === "number"
+        ? currentDataRecord.questions_attempted
+        : 0,
+    correctAnswers:
+      typeof currentDataRecord.correct_answers === "number" ? currentDataRecord.correct_answers : 0,
+    eventsPracticed: Array.isArray(currentDataRecord.events_practiced)
+      ? (currentDataRecord.events_practiced as string[])
+      : [],
+    eventQuestions:
+      typeof currentDataRecord.event_questions === "object" &&
+      currentDataRecord.event_questions !== null &&
+      !Array.isArray(currentDataRecord.event_questions)
+        ? (currentDataRecord.event_questions as Record<string, number>)
+        : {},
+    gamePoints:
+      typeof currentDataRecord.game_points === "number" ? currentDataRecord.game_points : 0,
+  };
+};
+
+const buildUpdatedStats = (
+  userId: string,
+  today: string,
+  currentStats: DailyMetrics,
+  updates: { questionsAttempted?: number; correctAnswers?: number; eventName?: string },
+  attemptedDelta: number
+) => {
+  return {
+    user_id: userId,
+    date: today,
+    questions_attempted: currentStats.questionsAttempted + attemptedDelta,
+    correct_answers: currentStats.correctAnswers + (updates.correctAnswers || 0),
+    events_practiced:
+      updates.eventName && !currentStats.eventsPracticed.includes(updates.eventName)
+        ? [...currentStats.eventsPracticed, updates.eventName]
+        : currentStats.eventsPracticed,
+    event_questions: {
+      ...currentStats.eventQuestions,
+      ...(updates.eventName && attemptedDelta
+        ? {
+            [updates.eventName]:
+              (currentStats.eventQuestions?.[updates.eventName] || 0) + attemptedDelta,
+          }
+        : {}),
+    },
+    game_points: currentStats.gamePoints,
+  };
+};
+
+const handleUpsertError = async (error: unknown, updatedStats: Record<string, unknown>) => {
+  if (
+    error &&
+    typeof error === "object" &&
+    "status" in error &&
+    typeof error.status === "number" &&
+    [401, 403].includes(error.status)
+  ) {
+    try {
+      await supabase.auth.refreshSession();
+    } catch {
+      // Ignore refresh session errors
+    }
+    const retry = await supabase
+      .from("user_stats")
+      .upsert(updatedStats as never, { onConflict: "user_id,date" })
+      .select()
+      .single();
+    if (retry.error) {
+      logger.error("Error updating metrics after refresh:", retry.error);
+      return null;
+    }
+    return retry.data;
+  }
+
+  logger.error("Error updating metrics:", error);
+  return null;
+};
+
+const getDashboardData = (): DashboardData => {
+  return {
+    metrics: getLocalDailyMetrics(),
+    historyData: getLocalHistory(),
+    greetingName: getLocalGreetingName(),
+  };
+};
+
+export const syncDashboardData = async (userId: string | null): Promise<DashboardData> => {
+  if (!userId) {
+    return getDashboardData();
+  }
+
+  try {
+    await syncHistoricalData(userId);
+    await syncTodayData(userId);
+    await syncGreetingName(userId);
+    return getDashboardData();
   } catch (error) {
     logger.error("Error syncing dashboard data:", error);
-
-    const metrics = getLocalDailyMetrics();
-    const historyData = getLocalHistory();
-    const greetingName = getLocalGreetingName();
-
-    return {
-      metrics,
-      historyData,
-      greetingName,
-    };
+    return getDashboardData();
   }
 };
 
@@ -418,56 +486,8 @@ export const updateDashboardMetrics = async (
   try {
     const currentData = await fetchDailyUserStatsRow(userId, today);
     const currentDataRecord = currentData as Record<string, unknown> | null;
-    const currentStats = currentDataRecord
-      ? {
-          questionsAttempted:
-            typeof currentDataRecord.questions_attempted === "number"
-              ? currentDataRecord.questions_attempted
-              : 0,
-          correctAnswers:
-            typeof currentDataRecord.correct_answers === "number"
-              ? currentDataRecord.correct_answers
-              : 0,
-          eventsPracticed: Array.isArray(currentDataRecord.events_practiced)
-            ? (currentDataRecord.events_practiced as string[])
-            : [],
-          eventQuestions:
-            typeof currentDataRecord.event_questions === "object" &&
-            currentDataRecord.event_questions !== null &&
-            !Array.isArray(currentDataRecord.event_questions)
-              ? (currentDataRecord.event_questions as Record<string, number>)
-              : {},
-          gamePoints:
-            typeof currentDataRecord.game_points === "number" ? currentDataRecord.game_points : 0,
-        }
-      : {
-          questionsAttempted: 0,
-          correctAnswers: 0,
-          eventsPracticed: [],
-          eventQuestions: {},
-          gamePoints: 0,
-        };
-
-    const updatedStats = {
-      user_id: userId,
-      date: today,
-      questions_attempted: currentStats.questionsAttempted + attemptedDelta,
-      correct_answers: currentStats.correctAnswers + (updates.correctAnswers || 0),
-      events_practiced:
-        updates.eventName && !currentStats.eventsPracticed.includes(updates.eventName)
-          ? [...currentStats.eventsPracticed, updates.eventName]
-          : currentStats.eventsPracticed,
-      event_questions: {
-        ...currentStats.eventQuestions,
-        ...(updates.eventName && attemptedDelta
-          ? {
-              [updates.eventName]:
-                (currentStats.eventQuestions?.[updates.eventName] || 0) + attemptedDelta,
-            }
-          : {}),
-      },
-      game_points: currentStats.gamePoints,
-    };
+    const currentStats = parseCurrentStatsFromRow(currentDataRecord);
+    const updatedStats = buildUpdatedStats(userId, today, currentStats, updates, attemptedDelta);
 
     let { data, error } = await supabase
       .from("user_stats")
@@ -476,31 +496,8 @@ export const updateDashboardMetrics = async (
       .single();
 
     if (error) {
-      if (
-        error &&
-        typeof error === "object" &&
-        "status" in error &&
-        typeof error.status === "number" &&
-        [401, 403].includes(error.status)
-      ) {
-        try {
-          await supabase.auth.refreshSession();
-        } catch {
-          // Ignore refresh session errors
-        }
-        const retry = await supabase
-          .from("user_stats")
-          .upsert(updatedStats as never, { onConflict: "user_id,date" })
-          .select()
-          .single();
-        if (retry.error) {
-          logger.error("Error updating metrics after refresh:", retry.error);
-          return null;
-        }
-        data = retry.data;
-        error = retry.error;
-      } else {
-        logger.error("Error updating metrics:", error);
+      data = await handleUpsertError(error, updatedStats);
+      if (!data) {
         return null;
       }
     }
@@ -509,6 +506,7 @@ export const updateDashboardMetrics = async (
       logger.error("No data returned from upsert");
       return null;
     }
+
     const dataTyped = data as {
       questions_attempted: number;
       correct_answers: number;
@@ -516,6 +514,7 @@ export const updateDashboardMetrics = async (
       event_questions: Record<string, number> | null;
       game_points: number;
     };
+
     const localMetrics: DailyMetrics = {
       questionsAttempted: dataTyped.questions_attempted,
       correctAnswers: dataTyped.correct_answers,

@@ -42,7 +42,9 @@ describe("RosterNotificationService", () => {
     });
 
     it("should handle errors gracefully", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // Intentionally empty - suppress console.error for this test
+      });
       mockQueryCockroachDb.mockRejectedValueOnce(new Error("Database error"));
 
       const userId = "user-123";
@@ -152,7 +154,9 @@ describe("RosterNotificationService", () => {
     });
 
     it("should return empty array on error", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // Intentionally empty - suppress console.error for this test
+      });
       mockQueryCockroachDb.mockRejectedValueOnce(new Error("Database error"));
 
       const result = await RosterNotificationService.getRosterNotifications("user-123");

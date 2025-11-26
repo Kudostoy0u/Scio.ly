@@ -1,6 +1,6 @@
 // biome-ignore lint/style/useFilenamingConvention: Test file follows .test.tsx convention
 import type { Event, Settings } from "@/app/types";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import TestConfiguration from "./TestConfiguration";

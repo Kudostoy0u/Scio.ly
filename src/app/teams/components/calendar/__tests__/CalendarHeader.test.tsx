@@ -71,14 +71,16 @@ describe("CalendarHeader", () => {
     it("calls onPreviousMonth when previous button is clicked", () => {
       render(<CalendarHeader {...defaultProps} />);
       const prevButton = screen.getByTestId("chevron-left-icon").closest("button");
-      fireEvent.click(prevButton!);
+      expect(prevButton).toBeTruthy();
+      fireEvent.click(prevButton);
       expect(defaultProps.onPreviousMonth).toHaveBeenCalledTimes(1);
     });
 
     it("calls onNextMonth when next button is clicked", () => {
       render(<CalendarHeader {...defaultProps} />);
       const nextButton = screen.getByTestId("chevron-right-icon").closest("button");
-      fireEvent.click(nextButton!);
+      expect(nextButton).toBeTruthy();
+      fireEvent.click(nextButton);
       expect(defaultProps.onNextMonth).toHaveBeenCalledTimes(1);
     });
   });

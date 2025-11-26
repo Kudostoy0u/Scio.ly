@@ -24,7 +24,13 @@ describe("questionMedia utils", () => {
   it("normalizeQuestionMedia selects image from images array and normalizes fields", () => {
     // Force Math.random to pick index 0 consistently
     vi.spyOn(Math, "random").mockReturnValue(0);
-    const input = [
+    const input: Array<{
+      id: string;
+      question: string;
+      options: string[];
+      answers: unknown[];
+      images: string[];
+    }> = [
       {
         id: "1",
         question: "q",
@@ -32,7 +38,7 @@ describe("questionMedia utils", () => {
         answers: [],
         images: ["https://cdn/img1.png", "https://cdn/img2.png"],
       },
-    ] as any;
+    ];
     const out = normalizeQuestionMedia(input);
     expect(out[0].imageData).toBe("https://cdn/img1.png");
     expect(out[0].imageUrl).toBe("https://cdn/img1.png");

@@ -1,6 +1,6 @@
 "use client";
 import type { Question } from "@/app/utils/geminiService";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 

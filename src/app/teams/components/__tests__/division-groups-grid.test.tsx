@@ -73,18 +73,18 @@ describe("DivisionGroupsGrid", () => {
     render(<DivisionGroupsGrid {...defaultProps} isLeader={false} />);
 
     const inputs = screen.getAllByRole("textbox");
-    inputs.forEach((input) => {
+    for (const input of inputs) {
       expect(input).toBeDisabled();
-    });
+    }
   });
 
   it("should enable inputs when is a leader", () => {
     render(<DivisionGroupsGrid {...defaultProps} isLeader={true} />);
 
     const inputs = screen.getAllByRole("textbox");
-    inputs.forEach((input) => {
+    for (const input of inputs) {
       expect(input).not.toBeDisabled();
-    });
+    }
   });
 
   it("should show correct slot counts for different events", () => {
@@ -302,12 +302,12 @@ describe("getGroupColors", () => {
   it("should return dark mode colors for all color keys", () => {
     const colorKeys = ["blue", "green", "yellow", "purple", "pink", "indigo", "orange"];
 
-    colorKeys.forEach((colorKey) => {
+    for (const colorKey of colorKeys) {
       const colors = getGroupColors(true, colorKey);
       expect(colors.bg).toContain("950/30");
       expect(colors.border).toContain("500/60");
       expect(colors.text).toContain("100");
-    });
+    }
   });
 });
 

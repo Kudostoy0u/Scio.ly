@@ -1,5 +1,4 @@
 import { renderWithProviders, screen, waitFor } from "@/test-utils";
-// biome-ignore lint/correctness/noUndeclaredDependencies: TeamsPageClient is imported via path alias
 import TeamsPageClient from "@components/TeamsPageClient";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";

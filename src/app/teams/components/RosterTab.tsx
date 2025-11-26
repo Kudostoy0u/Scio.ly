@@ -2,7 +2,7 @@
 
 import { useTheme } from "@/app/contexts/themeContext";
 import { useTeamStore } from "@/app/hooks/useTeamStore";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { trpc } from "@/lib/trpc/client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";

@@ -1,4 +1,4 @@
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 export function clearPreviewLocalStorage(): void {
   const keys = [
     "codebustersQuotes",

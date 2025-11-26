@@ -11,6 +11,10 @@ vi.mock("lucide-react", () => ({
   MapPin: () => <div data-testid="map-pin-icon" />,
 }));
 
+// Regex constants for performance
+const TOURNAMENT_REGEX = /Tournament 1/;
+const PRACTICE_SESSION_REGEX = /Practice Session/;
+
 describe("ActiveTimers", () => {
   const mockActiveTimers: Event[] = [
     {
@@ -72,8 +76,8 @@ describe("ActiveTimers", () => {
       render(<ActiveTimers {...defaultProps} />);
 
       // Should show countdown text (format may vary based on implementation)
-      expect(screen.getByText(/Tournament 1/)).toBeInTheDocument();
-      expect(screen.getByText(/Practice Session/)).toBeInTheDocument();
+      expect(screen.getByText(TOURNAMENT_REGEX)).toBeInTheDocument();
+      expect(screen.getByText(PRACTICE_SESSION_REGEX)).toBeInTheDocument();
     });
   });
 
@@ -82,7 +86,9 @@ describe("ActiveTimers", () => {
       render(<ActiveTimers {...defaultProps} />);
 
       const removeButtons = screen.getAllByTestId("x-icon");
-      fireEvent.click(removeButtons[0].closest("button")!);
+      const firstButton = removeButtons[0].closest("button");
+      expect(firstButton).toBeTruthy();
+      fireEvent.click(firstButton);
 
       expect(defaultProps.onRemoveTimer).toHaveBeenCalledWith("1");
     });
@@ -93,11 +99,15 @@ describe("ActiveTimers", () => {
       const removeButtons = screen.getAllByTestId("x-icon");
 
       // Click first remove button
-      fireEvent.click(removeButtons[0].closest("button")!);
+      const firstButton = removeButtons[0].closest("button");
+      expect(firstButton).toBeTruthy();
+      fireEvent.click(firstButton);
       expect(defaultProps.onRemoveTimer).toHaveBeenCalledWith("1");
 
       // Click second remove button
-      fireEvent.click(removeButtons[1].closest("button")!);
+      const secondButton = removeButtons[1].closest("button");
+      expect(secondButton).toBeTruthy();
+      fireEvent.click(secondButton);
       expect(defaultProps.onRemoveTimer).toHaveBeenCalledWith("2");
     });
   });

@@ -16,7 +16,7 @@ vi.mock("@/app/contexts/authContext", () => ({
 
 vi.mock("framer-motion", () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    div: ({ children, ...props }: Record<string, unknown>) => <div {...props}>{children}</div>,
   },
 }));
 
@@ -26,7 +26,7 @@ global.fetch = vi.fn();
 const mockFetch = vi.mocked(global.fetch);
 
 // Helper function to create mock responses
-const createMockResponse = (data: any, status = 200) =>
+const createMockResponse = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), { status });
 
 // Helper function to render with providers
@@ -215,7 +215,9 @@ describe("TeamDashboard - Roster Linking Integration", () => {
   });
 
   it("should handle errors when loading link status", async () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      // Mock implementation - suppress console.error
+    });
 
     mockFetch
       .mockResolvedValueOnce(createMockResponse({ members: [] }))

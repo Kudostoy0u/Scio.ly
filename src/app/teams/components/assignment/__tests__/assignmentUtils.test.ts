@@ -38,7 +38,7 @@ global.fetch = vi.fn();
 describe("assignmentUtils", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (fetch as any).mockClear();
+    (global.fetch as ReturnType<typeof vi.fn>).mockClear();
   });
 
   describe("getAvailableEvents", () => {
@@ -51,7 +51,7 @@ describe("assignmentUtils", () => {
   describe("getEventSubtopics", () => {
     it("should return subtopics for existing event", async () => {
       // Mock fetch for API call
-      (fetch as any).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true, data: ["Subtopic 1", "Subtopic 2"] }),
       });
@@ -62,7 +62,7 @@ describe("assignmentUtils", () => {
 
     it("should return subtopics for mapped event (Water Quality)", async () => {
       // Mock fetch for API call with mapped event name
-      (fetch as any).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -81,7 +81,7 @@ describe("assignmentUtils", () => {
 
     it("should return subtopics for mapped event (Dynamic Planet)", async () => {
       // Mock fetch for API call with mapped event name
-      (fetch as any).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -100,7 +100,7 @@ describe("assignmentUtils", () => {
 
     it("should return combined subtopics for Anatomy & Physiology", async () => {
       // Mock fetch for all three anatomy events
-      (fetch as any)
+      (global.fetch as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({
@@ -133,7 +133,7 @@ describe("assignmentUtils", () => {
 
     it("should return empty array for non-existing event", async () => {
       // Mock fetch for API call
-      (fetch as any).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true, data: [] }),
       });
@@ -164,7 +164,7 @@ describe("assignmentUtils", () => {
         },
       ];
 
-      (fetch as any).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ questions: mockQuestions }),
       });
@@ -197,7 +197,7 @@ describe("assignmentUtils", () => {
     });
 
     it("should throw error when API call fails", async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
       });
 
@@ -221,7 +221,7 @@ describe("assignmentUtils", () => {
         ],
       };
 
-      (fetch as any)
+      (global.fetch as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({ roster: mockRosterData }),
@@ -274,7 +274,7 @@ describe("assignmentUtils", () => {
         ],
       };
 
-      (fetch as any)
+      (global.fetch as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({ roster: mockRosterData }),
@@ -307,7 +307,7 @@ describe("assignmentUtils", () => {
         ],
       };
 
-      (fetch as any)
+      (global.fetch as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({ roster: {} }),
@@ -332,7 +332,7 @@ describe("assignmentUtils", () => {
     });
 
     it("should throw error when roster API call fails", async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
       });
 
@@ -340,7 +340,7 @@ describe("assignmentUtils", () => {
     });
 
     it("should throw error when members API call fails", async () => {
-      (fetch as any)
+      (global.fetch as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({ roster: {} }),
@@ -368,7 +368,7 @@ describe("assignmentUtils", () => {
         roster_members: ["John Doe"],
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockAssignment,
       });
@@ -397,7 +397,7 @@ describe("assignmentUtils", () => {
         roster_members: ["John Doe"],
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockAssignment,
       });
@@ -413,7 +413,7 @@ describe("assignmentUtils", () => {
     });
 
     it("should throw error when API call fails", async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
       });
 

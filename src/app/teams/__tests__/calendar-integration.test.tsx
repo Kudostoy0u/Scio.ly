@@ -1,4 +1,3 @@
-// biome-ignore lint/style/useFilenamingConvention: Test file follows .test.tsx convention
 import TeamCalendar from "@app/teams/components/TeamCalendar";
 import TeamsLanding from "@app/teams/components/TeamsLanding";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";

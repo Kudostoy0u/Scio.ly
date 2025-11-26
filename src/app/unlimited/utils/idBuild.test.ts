@@ -28,6 +28,6 @@ describe("buildIdQuestionFromApiRow", () => {
       namePool: ["Quartz", "Halite", "Gypsum"],
     });
     expect(Array.isArray(q.options)).toBe(true);
-    expect((q.answers as any[]).length).toBe(1);
+    expect(q.answers.length).toBe(1);
   });
 });

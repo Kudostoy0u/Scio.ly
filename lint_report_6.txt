@@ -1,0 +1,415 @@
+
+> science-olympiad-practice@0.1.0 lint /Users/kundanbaliga/Programs/Scio.ly/website
+> biome check . && npx tsgo
+
+./src/app/teams/components/AssignmentViewer.tsx format ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Formatter would have printed the following content:
+  
+     27  27 │   // Transform API question format to component format
+     28  28 │   function transformQuestion(apiQuestion: ApiQuestion): Question {
+     29     │ - ··const·questionType·=·apiQuestion.type·===·"mcq"·?·"multiple_choice"·:
+     30     │ - ······················apiQuestion.type·===·"frq"·?·"free_response"·:
+     31     │ - ······················apiQuestion.type·===·"codebusters"·?·"codebusters"·:·"free_response";
+         29 │ + ··const·questionType·=
+         30 │ + ····apiQuestion.type·===·"mcq"
+         31 │ + ······?·"multiple_choice"
+         32 │ + ······:·apiQuestion.type·===·"frq"
+         33 │ + ········?·"free_response"
+         34 │ + ········:·apiQuestion.type·===·"codebusters"
+         35 │ + ··········?·"codebusters"
+         36 │ + ··········:·"free_response";
+     32  37 │   
+     33  38 │     let options: Array<{ id: string; text: string; isCorrect: boolean }> | undefined;
+  
+
+./src/app/test/components/TestCodebustersMessage.tsx format ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Formatter would have printed the following content:
+  
+     8  8 │     return (
+     9  9 │       <div className="flex flex-col items-center justify-center h-64">
+    10    │ - ······<p
+    11    │ - ········className={`text-xl·font-semibold·mb-4·${darkMode·?·"text-white"·:·"text-gray-900"}`}
+    12    │ - ······>
+       10 │ + ······<p·className={`text-xl·font-semibold·mb-4·${darkMode·?·"text-white"·:·"text-gray-900"}`}>
+    13 11 │           No MCQs available for this event
+    14 12 │         </p>
+  
+
+./src/app/test/content.tsx:81:25 lint/complexity/noExcessiveCognitiveComplexity ━━━━━━━━━━━━━━━━━━━━
+
+  × Excessive complexity of 32 detected (max: 30).
+  
+    79 │ };
+    80 │ 
+  > 81 │ export default function TestContent({
+       │                         ^^^^^^^^^^^
+    82 │   initialData,
+    83 │   initialRouterData,
+  
+  i Please refactor this function to reduce its complexity score from 32 to the max allowed complexity 30.
+  
+
+./src/app/unlimited/hooks/useUnlimitedPractice.ts:2:10 lint/correctness/noUnusedImports  FIXABLE  ━━━━━━━━━━
+
+  ! This import is unused.
+  
+    1 │ import { useState, useCallback, useRef } from "react";
+  > 2 │ import { toast } from "react-toastify";
+      │          ^^^^^
+    3 │ import type { Question } from "@/app/utils/geminiService";
+    4 │ import { fetchQuestionsForParams } from "@/app/utils/geminiService";
+  
+  i Unused imports might be the result of an incomplete refactoring.
+  
+  i Safe fix: Remove the unused import.
+  
+     1  1 │   import { useState, useCallback, useRef } from "react";
+     2    │ - import·{·toast·}·from·"react-toastify";
+     3  2 │   import type { Question } from "@/app/utils/geminiService";
+     4  3 │   import { fetchQuestionsForParams } from "@/app/utils/geminiService";
+  
+
+./src/app/unlimited/hooks/useUnlimitedPractice.ts:9:3 lint/correctness/noUnusedFunctionParameters  FIXABLE  ━━━━━━━━━━
+
+  ! This parameter is unused.
+  
+     8 │ export const useUnlimitedPractice = (
+   > 9 │   initialRouterData: Record<string, unknown> | undefined,
+       │   ^^^^^^^^^^^^^^^^^
+    10 │   batchSize: number
+    11 │ ) => {
+  
+  i Unused parameters might be the result of an incomplete refactoring.
+  
+  i Unsafe fix: If this is intentional, prepend initialRouterData with an underscore.
+  
+     7  7 │   
+     8  8 │   export const useUnlimitedPractice = (
+     9    │ - ··initialRouterData:·Record<string,·unknown>·|·undefined,
+        9 │ + ··_initialRouterData:·Record<string,·unknown>·|·undefined,
+    10 10 │     batchSize: number
+    11 11 │   ) => {
+  
+
+./src/app/unlimited/hooks/useUnlimitedPractice.ts:9:3 lint/correctness/noUnusedVariables  FIXABLE  ━━━━━━━━━━
+
+  ! This parameter is unused.
+  
+     8 │ export const useUnlimitedPractice = (
+   > 9 │   initialRouterData: Record<string, unknown> | undefined,
+       │   ^^^^^^^^^^^^^^^^^
+    10 │   batchSize: number
+    11 │ ) => {
+  
+  i Unused variables usually are result of incomplete refactoring, typos and other source of bugs.
+  
+  i Unsafe fix: If this is intentional, prepend initialRouterData with an underscore.
+  
+     7  7 │   
+     8  8 │   export const useUnlimitedPractice = (
+     9    │ - ··initialRouterData:·Record<string,·unknown>·|·undefined,
+        9 │ + ··_initialRouterData:·Record<string,·unknown>·|·undefined,
+    10 10 │     batchSize: number
+    11 11 │   ) => {
+  
+
+./src/app/unlimited/hooks/useUnlimitedPractice.ts organizeImports ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Import statements could be sorted:
+  
+     1    │ - import·{·useState,·useCallback,·useRef·}·from·"react";
+     2    │ - import·{·toast·}·from·"react-toastify";
+     3    │ - import·type·{·Question·}·from·"@/app/utils/geminiService";
+     4    │ - import·{·fetchQuestionsForParams·}·from·"@/app/utils/geminiService";
+     5    │ - import·{·shuffleQuestions,·deduplicateQuestions·}·from·"../utils/batchHelpers";
+     6    │ - import·SyncLocalStorage·from·"@/lib/utils/syncLocalStorage";
+        1 │ + import·type·{·Question·}·from·"@/app/utils/geminiService";
+        2 │ + import·{·fetchQuestionsForParams·}·from·"@/app/utils/geminiService";
+        3 │ + import·SyncLocalStorage·from·"@/lib/utils/syncLocalStorage";
+        4 │ + import·{·useCallback,·useRef,·useState·}·from·"react";
+        5 │ + import·{·toast·}·from·"react-toastify";
+        6 │ + import·{·deduplicateQuestions,·shuffleQuestions·}·from·"../utils/batchHelpers";
+     7  7 │   
+     8  8 │   export const useUnlimitedPractice = (
+  
+
+./src/app/unlimited/content.tsx:37:25 lint/complexity/noExcessiveCognitiveComplexity ━━━━━━━━━━━━━━━
+
+  × Excessive complexity of 51 detected (max: 30).
+  
+    35 │ import { useUnlimitedPractice } from "./hooks/useUnlimitedPractice";
+    36 │ 
+  > 37 │ export default function UnlimitedPracticePage({
+       │                         ^^^^^^^^^^^^^^^^^^^^^
+    38 │   initialRouterData,
+    39 │ }: { initialRouterData?: Record<string, unknown> }) {
+  
+  i Please refactor this function to reduce its complexity score from 51 to the max allowed complexity 30.
+  
+
+./src/app/unlimited/content.tsx:53:5 lint/suspicious/noRedeclare ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Shouldn't redeclare 'data'. Consider to delete it or rename it.
+  
+    52 │   const {
+  > 53 │     data,
+       │     ^^^^
+    54 │     setData,
+    55 │     isLoading,
+  
+  i 'data' is defined here:
+  
+    40 │   const router = useRouter();
+    41 │ 
+  > 42 │   const [data, setData] = useState<Question[]>([]);
+       │          ^^^^
+    43 │   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+    44 │   const [isLoading, setIsLoading] = useState(true);
+  
+
+./src/app/unlimited/content.tsx:54:5 lint/suspicious/noRedeclare ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Shouldn't redeclare 'setData'. Consider to delete it or rename it.
+  
+    52 │   const {
+    53 │     data,
+  > 54 │     setData,
+       │     ^^^^^^^
+    55 │     isLoading,
+    56 │     setIsLoading,
+  
+  i 'setData' is defined here:
+  
+    40 │   const router = useRouter();
+    41 │ 
+  > 42 │   const [data, setData] = useState<Question[]>([]);
+       │                ^^^^^^^
+    43 │   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+    44 │   const [isLoading, setIsLoading] = useState(true);
+  
+
+./src/app/unlimited/content.tsx:55:5 lint/suspicious/noRedeclare ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Shouldn't redeclare 'isLoading'. Consider to delete it or rename it.
+  
+    53 │     data,
+    54 │     setData,
+  > 55 │     isLoading,
+       │     ^^^^^^^^^
+    56 │     setIsLoading,
+    57 │     fetchError,
+  
+  i 'isLoading' is defined here:
+  
+    42 │   const [data, setData] = useState<Question[]>([]);
+    43 │   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+  > 44 │   const [isLoading, setIsLoading] = useState(true);
+       │          ^^^^^^^^^
+    45 │   const [fetchError, setFetchError] = useState<string | null>(null);
+    46 │   const [isSubmitted, setIsSubmitted] = useState(false);
+  
+
+./src/app/unlimited/content.tsx:56:5 lint/suspicious/noRedeclare ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Shouldn't redeclare 'setIsLoading'. Consider to delete it or rename it.
+  
+    54 │     setData,
+    55 │     isLoading,
+  > 56 │     setIsLoading,
+       │     ^^^^^^^^^^^^
+    57 │     fetchError,
+    58 │     setFetchError,
+  
+  i 'setIsLoading' is defined here:
+  
+    42 │   const [data, setData] = useState<Question[]>([]);
+    43 │   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+  > 44 │   const [isLoading, setIsLoading] = useState(true);
+       │                     ^^^^^^^^^^^^
+    45 │   const [fetchError, setFetchError] = useState<string | null>(null);
+    46 │   const [isSubmitted, setIsSubmitted] = useState(false);
+  
+
+./src/app/unlimited/content.tsx:57:5 lint/suspicious/noRedeclare ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Shouldn't redeclare 'fetchError'. Consider to delete it or rename it.
+  
+    55 │     isLoading,
+    56 │     setIsLoading,
+  > 57 │     fetchError,
+       │     ^^^^^^^^^^
+    58 │     setFetchError,
+    59 │     currentQuestionIndex,
+  
+  i 'fetchError' is defined here:
+  
+    43 │   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+    44 │   const [isLoading, setIsLoading] = useState(true);
+  > 45 │   const [fetchError, setFetchError] = useState<string | null>(null);
+       │          ^^^^^^^^^^
+    46 │   const [isSubmitted, setIsSubmitted] = useState(false);
+    47 │ 
+  
+
+./src/app/unlimited/content.tsx:58:5 lint/suspicious/noRedeclare ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Shouldn't redeclare 'setFetchError'. Consider to delete it or rename it.
+  
+    56 │     setIsLoading,
+    57 │     fetchError,
+  > 58 │     setFetchError,
+       │     ^^^^^^^^^^^^^
+    59 │     currentQuestionIndex,
+    60 │     setCurrentQuestionIndex,
+  
+  i 'setFetchError' is defined here:
+  
+    43 │   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+    44 │   const [isLoading, setIsLoading] = useState(true);
+  > 45 │   const [fetchError, setFetchError] = useState<string | null>(null);
+       │                      ^^^^^^^^^^^^^
+    46 │   const [isSubmitted, setIsSubmitted] = useState(false);
+    47 │ 
+  
+
+./src/app/unlimited/content.tsx:59:5 lint/suspicious/noRedeclare ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Shouldn't redeclare 'currentQuestionIndex'. Consider to delete it or rename it.
+  
+    57 │     fetchError,
+    58 │     setFetchError,
+  > 59 │     currentQuestionIndex,
+       │     ^^^^^^^^^^^^^^^^^^^^
+    60 │     setCurrentQuestionIndex,
+    61 │     answeredInBatch,
+  
+  i 'currentQuestionIndex' is defined here:
+  
+    42 │   const [data, setData] = useState<Question[]>([]);
+  > 43 │   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+       │          ^^^^^^^^^^^^^^^^^^^^
+    44 │   const [isLoading, setIsLoading] = useState(true);
+    45 │   const [fetchError, setFetchError] = useState<string | null>(null);
+  
+
+./src/app/unlimited/content.tsx:60:5 lint/suspicious/noRedeclare ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Shouldn't redeclare 'setCurrentQuestionIndex'. Consider to delete it or rename it.
+  
+    58 │     setFetchError,
+    59 │     currentQuestionIndex,
+  > 60 │     setCurrentQuestionIndex,
+       │     ^^^^^^^^^^^^^^^^^^^^^^^
+    61 │     answeredInBatch,
+    62 │     setAnsweredInBatch,
+  
+  i 'setCurrentQuestionIndex' is defined here:
+  
+    42 │   const [data, setData] = useState<Question[]>([]);
+  > 43 │   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+       │                                ^^^^^^^^^^^^^^^^^^^^^^^
+    44 │   const [isLoading, setIsLoading] = useState(true);
+    45 │   const [fetchError, setFetchError] = useState<string | null>(null);
+  
+
+./src/app/unlimited/content.tsx:6:10 lint/correctness/noUnusedImports  FIXABLE  ━━━━━━━━━━━━━━━━━━━━
+
+  ! This import is unused.
+  
+    5 │ import { useRouter } from "next/navigation";
+  > 6 │ import { useCallback, useEffect, useRef, useState } from "react";
+      │          ^^^^^^^^^^^
+    7 │ 
+    8 │ import api from "@/app/api";
+  
+  i Unused imports might be the result of an incomplete refactoring.
+  
+  i Safe fix: Remove the unused import.
+  
+    6 │ import·{·useCallback,·useEffect,·useRef,·useState·}·from·"react";
+      │          -------------                                           
+
+./src/app/unlimited/content.tsx:42:10 lint/correctness/noUnusedVariables  FIXABLE  ━━━━━━━━━━━━━━━━━
+
+  ! This variable is unused.
+  
+    40 │   const router = useRouter();
+    41 │ 
+  > 42 │   const [data, setData] = useState<Question[]>([]);
+       │          ^^^^
+    43 │   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+    44 │   const [isLoading, setIsLoading] = useState(true);
+  
+  i Unused variables usually are result of incomplete refactoring, typos and other source of bugs.
+  
+  i Unsafe fix: If this is intentional, prepend data with an underscore.
+  
+     40  40 │     const router = useRouter();
+     41  41 │   
+     42     │ - ··const·[data,·setData]·=·useState<Question[]>([]);
+         42 │ + ··const·[_data,·setData]·=·useState<Question[]>([]);
+     43  43 │     const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+     44  44 │     const [isLoading, setIsLoading] = useState(true);
+  
+
+./src/app/unlimited/content.tsx:42:16 lint/correctness/noUnusedVariables  FIXABLE  ━━━━━━━━━━━━━━━━━
+
+  ! This variable is unused.
+  
+    40 │   const router = useRouter();
+    41 │ 
+  > 42 │   const [data, setData] = useState<Question[]>([]);
+       │                ^^^^^^^
+    43 │   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+    44 │   const [isLoading, setIsLoading] = useState(true);
+  
+  i Unused variables usually are result of incomplete refactoring, typos and other source of bugs.
+  
+  i Unsafe fix: If this is intentional, prepend setData with an underscore.
+  
+     40  40 │     const router = useRouter();
+     41  41 │   
+     42     │ - ··const·[data,·setData]·=·useState<Question[]>([]);
+         42 │ + ··const·[data,·_setData]·=·useState<Question[]>([]);
+     43  43 │     const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+     44  44 │     const [isLoading, setIsLoading] = useState(true);
+  
+
+./src/app/unlimited/content.tsx:43:10 lint/correctness/noUnusedVariables  FIXABLE  ━━━━━━━━━━━━━━━━━
+
+  ! This variable is unused.
+  
+    42 │   const [data, setData] = useState<Question[]>([]);
+  > 43 │   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+       │          ^^^^^^^^^^^^^^^^^^^^
+    44 │   const [isLoading, setIsLoading] = useState(true);
+    45 │   const [fetchError, setFetchError] = useState<string | null>(null);
+  
+  i Unused variables usually are result of incomplete refactoring, typos and other source of bugs.
+  
+  i Unsafe fix: If this is intentional, prepend currentQuestionIndex with an underscore.
+  
+     41  41 │   
+     42  42 │     const [data, setData] = useState<Question[]>([]);
+     43     │ - ··const·[currentQuestionIndex,·setCurrentQuestionIndex]·=·useState<number>(0);
+         43 │ + ··const·[_currentQuestionIndex,·setCurrentQuestionIndex]·=·useState<number>(0);
+     44  44 │     const [isLoading, setIsLoading] = useState(true);
+     45  45 │     const [fetchError, setFetchError] = useState<string | null>(null);
+  
+
+Skipped 2 suggested fixes.
+If you wish to apply the suggested (unsafe) fixes, use the command biome check --fix --unsafe
+
+The number of diagnostics exceeds the number allowed by Biome.
+Diagnostics not shown: 11.
+Checked 659 files in 1360ms. No fixes applied.
+Found 17 errors.
+Found 12 warnings.
+check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while running checks.
+  
+
+ ELIFECYCLE  Command failed with exit code 1.

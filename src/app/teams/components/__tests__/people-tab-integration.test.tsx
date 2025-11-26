@@ -5,6 +5,31 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+interface Member {
+  id: string | null;
+  name: string | null;
+  email: string | null;
+  username?: string | null;
+  role: string;
+  joinedAt?: string | null;
+  subteam?: {
+    id: string;
+    name: string;
+    description: string;
+  };
+  subteams?: Array<{
+    id: string;
+    name: string;
+  }>;
+  events: string[];
+}
+
+interface EventData {
+  event: string;
+  subteam: string;
+  subteamId: string;
+}
+
 // Mock the team store
 const mockTeamStore = {
   addRosterEntry: vi.fn(),
@@ -50,7 +75,7 @@ function TestPeopleTab({ teamSlug, subteamId }: { teamSlug: string; subteamId: s
     },
   ]);
 
-  const handleRemoveEvent = async (member: any, eventData: any) => {
+  const handleRemoveEvent = async (member: Member, eventData: EventData) => {
     try {
       const response = await fetch(`/api/teams/${teamSlug}/roster/remove`, {
         method: "POST",
@@ -76,7 +101,7 @@ function TestPeopleTab({ teamSlug, subteamId }: { teamSlug: string; subteamId: s
     }
   };
 
-  const handleAddEvent = async (member: any, event: string) => {
+  const handleAddEvent = async (member: Member, event: string) => {
     try {
       const response = await fetch(`/api/teams/${teamSlug}/roster`, {
         method: "POST",
@@ -115,10 +140,11 @@ function TestPeopleTab({ teamSlug, subteamId }: { teamSlug: string; subteamId: s
         <div key={member.id} data-testid={`member-${member.id}`}>
           <h3>{member.name}</h3>
           <div data-testid={`member-${member.id}-events`}>
-            {member.events.map((event, index) => (
-              <div key={index} data-testid={`event-${member.id}-${event}`}>
+            {member.events.map((event, _index) => (
+              <div key={`${member.id}-${event}`} data-testid={`event-${member.id}-${event}`}>
                 <span>{event}</span>
                 <button
+                  type="button"
                   onClick={() =>
                     handleRemoveEvent(member, {
                       event,
@@ -134,6 +160,7 @@ function TestPeopleTab({ teamSlug, subteamId }: { teamSlug: string; subteamId: s
             ))}
           </div>
           <button
+            type="button"
             onClick={() => handleAddEvent(member, "Chemistry")}
             data-testid={`add-event-${member.id}`}
           >
@@ -161,7 +188,7 @@ describe("PeopleTab Integration Tests", () => {
       const subteamId = "test-subteam";
 
       // Mock successful API response
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as vi.MockedFunction<typeof global.fetch>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true }),
       });
@@ -206,7 +233,7 @@ describe("PeopleTab Integration Tests", () => {
       const subteamId = "test-subteam";
 
       // Mock successful API response
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as vi.MockedFunction<typeof global.fetch>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true }),
       });
@@ -223,7 +250,7 @@ describe("PeopleTab Integration Tests", () => {
           },
         ]);
 
-        const handleRemoveEvent = async (member: any, eventData: any) => {
+        const handleRemoveEvent = async (member: Member, eventData: EventData) => {
           const response = await fetch(`/api/teams/${teamSlug}/roster/remove`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -251,9 +278,10 @@ describe("PeopleTab Integration Tests", () => {
           <div>
             {members.map((member) => (
               <div key={member.id}>
-                {member.events.map((event, index) => (
+                {member.events.map((event, _index) => (
                   <button
-                    key={index}
+                    type="button"
+                    key={`${member.id}-${event}`}
                     onClick={() =>
                       handleRemoveEvent(member, {
                         event,
@@ -299,7 +327,7 @@ describe("PeopleTab Integration Tests", () => {
       const subteamId = "test-subteam";
 
       // Mock successful API response
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as vi.MockedFunction<typeof global.fetch>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true }),
       });
@@ -344,7 +372,7 @@ describe("PeopleTab Integration Tests", () => {
       const subteamId = "test-subteam";
 
       // Mock successful API response
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as vi.MockedFunction<typeof global.fetch>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true }),
       });
@@ -361,7 +389,7 @@ describe("PeopleTab Integration Tests", () => {
           },
         ]);
 
-        const handleAddEvent = async (member: any, event: string) => {
+        const handleAddEvent = async (member: Member, event: string) => {
           const response = await fetch(`/api/teams/${teamSlug}/roster`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -393,6 +421,7 @@ describe("PeopleTab Integration Tests", () => {
             {members.map((member) => (
               <div key={member.id}>
                 <button
+                  type="button"
                   onClick={() => handleAddEvent(member, "Anatomy and Physiology")}
                   data-testid={`add-event-${member.id}`}
                 >
@@ -432,7 +461,7 @@ describe("PeopleTab Integration Tests", () => {
       const subteamId = "test-subteam";
 
       // Mock API error
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as vi.MockedFunction<typeof global.fetch>).mockResolvedValueOnce({
         ok: false,
         status: 500,
       });
@@ -464,7 +493,9 @@ describe("PeopleTab Integration Tests", () => {
       const subteamId = "test-subteam";
 
       // Mock network error
-      (global.fetch as any).mockRejectedValueOnce(new Error("Network error"));
+      (global.fetch as vi.MockedFunction<typeof global.fetch>).mockRejectedValueOnce(
+        new Error("Network error")
+      );
 
       render(
         <QueryClientProvider client={queryClient}>

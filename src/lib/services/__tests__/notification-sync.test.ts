@@ -50,7 +50,7 @@ describe("NotificationSyncService", () => {
     process.env.SUPABASE_SERVICE_KEY = "test-service-key";
 
     // Mock Supabase client
-    mockCreateClient.mockReturnValue(mockSupabaseClient as any);
+    mockCreateClient.mockReturnValue(mockSupabaseClient as ReturnType<typeof createClient>);
 
     // Default mocks
     mockQueryCockroachDb.mockResolvedValue({ rows: [] });

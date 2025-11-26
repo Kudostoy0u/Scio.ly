@@ -53,6 +53,7 @@ export default function ActiveTimers({ darkMode, activeTimers, onRemoveTimer }: 
                     </span>
                   </div>
                   <button
+                    type="button"
                     onClick={() => onRemoveTimer(event.id)}
                     className="text-gray-400 hover:text-red-500 transition-colors"
                     title="Remove timer"

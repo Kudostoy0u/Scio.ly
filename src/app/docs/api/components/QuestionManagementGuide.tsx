@@ -77,12 +77,12 @@ export function useQuestions(apiKey, initialFilters = {}) {
     setError(null);
     const params = new URLSearchParams();
     const mergedFilters = { ...filters, ...newFilters };
-    Object.entries(mergedFilters).forEach(([key, value]) => {
+    for (const [key, value] of Object.entries(mergedFilters)) {
       if (value !== undefined && value !== null && value !== '') {
         if (Array.isArray(value)) params.append(key, value.join(','));
         else params.append(key, String(value));
       }
-    });
+    }
     const response = await fetch('/api/questions?' + params, {
       headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json' }
     });

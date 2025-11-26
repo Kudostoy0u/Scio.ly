@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/app/contexts/authContext";
 import { useTheme } from "@/app/contexts/themeContext";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { supabase } from "@/lib/supabase";
 import { Edit3, Mail, User, X } from "lucide-react";
 import { useEffect, useState } from "react";

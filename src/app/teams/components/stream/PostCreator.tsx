@@ -78,6 +78,7 @@ export default function PostCreator({
         {/* Attachment Section */}
         {!(showAttachmentForm || pendingAttachment) && (
           <button
+            type="button"
             onClick={() => setShowAttachmentForm(true)}
             className={`inline-flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
               darkMode
@@ -122,6 +123,7 @@ export default function PostCreator({
             </div>
             <div className="flex items-center space-x-2">
               <button
+                type="button"
                 onClick={handleAddAttachment}
                 disabled={!newPostAttachment.trim()}
                 className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
@@ -130,6 +132,7 @@ export default function PostCreator({
                 <span>Add</span>
               </button>
               <button
+                type="button"
                 onClick={handleCancelAttachment}
                 className="flex items-center space-x-1 px-3 py-1 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-sm"
               >
@@ -155,6 +158,7 @@ export default function PostCreator({
               </span>
             </div>
             <button
+              type="button"
               onClick={handleRemovePendingAttachment}
               className={`${
                 darkMode ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700"
@@ -167,6 +171,7 @@ export default function PostCreator({
 
         <div className="flex justify-end">
           <button
+            type="button"
             onClick={handleSubmit}
             disabled={posting || !newPostContent.trim()}
             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"

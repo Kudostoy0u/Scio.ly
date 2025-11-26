@@ -20,7 +20,9 @@ export function collectSeasons(eloData: EloData): string[] {
     for (const schoolName in eloData[stateCode]) {
       const school = eloData[stateCode][schoolName];
       if (school) {
-        Object.keys(school.seasons).forEach((season) => seasons.add(season));
+        for (const season of Object.keys(school.seasons)) {
+          seasons.add(season);
+        }
       }
     }
   }
@@ -72,11 +74,11 @@ export function eventsForSeason(
       if (school) {
         const seasonData = school.seasons[selectedSeason];
         if (seasonData) {
-          Object.keys(seasonData.events).forEach((event) => {
+          for (const event of Object.keys(seasonData.events)) {
             if (event !== "__OVERALL__" && allowed.includes(event)) {
               events.add(event);
             }
-          });
+          }
         }
       }
     }
@@ -123,7 +125,7 @@ export function buildTournamentDates(
     }
     const tournaments = tournamentTimeline[season] as Record<string, unknown>[];
     const byDate = new Map<string, string[]>();
-    tournaments.forEach((t) => {
+    for (const t of tournaments) {
       const date = t.date as string | undefined;
       const tournamentName = t.tournamentName as string | undefined;
       if (date && tournamentName) {
@@ -132,7 +134,7 @@ export function buildTournamentDates(
         }
         byDate.get(date)?.push(tournamentName);
       }
-    });
+    }
     return Array.from(byDate.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, list]) => ({
@@ -174,14 +176,18 @@ export function computeRankingChanges(
     }
     const currentRankMap = new Map<string, number>();
     const previousRankMap = new Map<string, number>();
-    current.forEach((entry, idx) => currentRankMap.set(`${entry.school}-${entry.state}`, idx + 1));
-    prev.forEach((entry, idx) => previousRankMap.set(`${entry.school}-${entry.state}`, idx + 1));
-    current.forEach((entry) => {
+    for (const [idx, entry] of current.entries()) {
+      currentRankMap.set(`${entry.school}-${entry.state}`, idx + 1);
+    }
+    for (const [idx, entry] of prev.entries()) {
+      previousRankMap.set(`${entry.school}-${entry.state}`, idx + 1);
+    }
+    for (const entry of current) {
       const key = `${entry.school}-${entry.state}`;
       const currentRank = currentRankMap.get(key) || 0;
       const previousRank = previousRankMap.get(key) || 0;
       changes.set(key, currentRank > 0 && previousRank > 0 ? previousRank - currentRank : 0);
-    });
+    }
   } catch (error) {
     logger.error("Error calculating ranking changes:", error);
   }

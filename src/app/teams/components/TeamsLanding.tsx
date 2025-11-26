@@ -5,7 +5,9 @@ import { motion } from "framer-motion";
 import { Calendar, Settings, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { TeamActionSection } from "./TeamActionSection";
 import TeamCalendar from "./TeamCalendar";
+import { TeamCard } from "./TeamCard";
 import TeamLayout from "./TeamLayout";
 
 interface Team {
@@ -31,6 +33,7 @@ interface TeamsLandingProps {
   isPreviewMode?: boolean;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Large component with complex conditional rendering for different UI states
 export default function TeamsLanding({
   onCreateTeam,
   onJoinTeam,
@@ -201,87 +204,20 @@ export default function TeamsLanding({
                   >
                     Your Teams
                   </h2>
-                  <div className="flex space-x-3">
-                    <button
-                      onClick={onCreateTeam}
-                      className={`px-4 py-2 border rounded-lg transition-colors font-medium ${
-                        darkMode
-                          ? "border-blue-400 text-blue-400 hover:bg-blue-900"
-                          : "border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white"
-                      }`}
-                    >
-                      Create team
-                    </button>
-                    <button
-                      onClick={onJoinTeam}
-                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
-                    >
-                      Join team
-                    </button>
-                  </div>
+                  <TeamActionSection
+                    onCreateTeam={onCreateTeam}
+                    onJoinTeam={onJoinTeam}
+                    isCompact={true}
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {userTeams.map((team) => (
-                    <motion.div
+                    <TeamCard
                       key={team.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3 }}
-                      onClick={() => router.push(`/teams/${team.slug}`)}
-                      className={`p-6 rounded-lg border cursor-pointer transition-all hover:shadow-lg ${
-                        darkMode
-                          ? "bg-gray-800 border-gray-700 hover:border-gray-600"
-                          : "bg-white border-gray-200 hover:border-gray-300"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <Users className="w-6 h-6 text-blue-600" />
-                          </div>
-                          <div>
-                            <h3
-                              className={`font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}
-                            >
-                              {team.school}
-                            </h3>
-                            <p
-                              className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-                            >
-                              Division {team.division}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span
-                            className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-                          >
-                            Members
-                          </span>
-                          <span
-                            className={`text-sm font-medium ${darkMode ? "text-white" : "text-gray-900"}`}
-                          >
-                            {team.members.length}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span
-                            className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-                          >
-                            Captains
-                          </span>
-                          <span
-                            className={`text-sm font-medium ${darkMode ? "text-white" : "text-gray-900"}`}
-                          >
-                            {team.members.filter((m) => m.role === "captain").length}
-                          </span>
-                        </div>
-                      </div>
-                    </motion.div>
+                      team={team}
+                      onClick={(teamSlug) => router.push(`/teams/${teamSlug}`)}
+                    />
                   ))}
                 </div>
               </motion.div>
@@ -372,24 +308,7 @@ export default function TeamsLanding({
                 </h2>
 
                 {/* Action buttons */}
-                <div className="flex justify-center space-x-4">
-                  <button
-                    onClick={onCreateTeam}
-                    className={`px-6 py-3 border rounded-lg transition-colors font-medium shadow-sm ${
-                      darkMode
-                        ? "border-blue-400 text-blue-400 hover:bg-blue-900"
-                        : "border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white"
-                    }`}
-                  >
-                    Create team
-                  </button>
-                  <button
-                    onClick={onJoinTeam}
-                    className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium shadow-sm"
-                  >
-                    Join team
-                  </button>
-                </div>
+                <TeamActionSection onCreateTeam={onCreateTeam} onJoinTeam={onJoinTeam} />
 
                 {/* Help text */}
                 <div className="mt-8 text-sm text-gray-500 dark:text-gray-400">

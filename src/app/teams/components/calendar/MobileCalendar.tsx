@@ -104,9 +104,9 @@ export default function MobileCalendar({
     >
       {/* Day headers */}
       <div className={`${darkMode ? "bg-gray-800" : "bg-gray-50"} grid grid-cols-7`}>
-        {dayNamesShort.map((d, i) => (
+        {dayNamesShort.map((d, _i) => (
           <div
-            key={i}
+            key={d}
             className={`p-2 text-center text-xs ${darkMode ? "text-gray-300" : "text-gray-600"}`}
           >
             {d}
@@ -115,7 +115,7 @@ export default function MobileCalendar({
       </div>
       {/* Grid */}
       <div className="grid grid-cols-7 grid-rows-6">
-        {days.map((date, idx) => {
+        {days.map((date, _idx) => {
           const dateStrParts = date.toISOString().split("T");
           const dateStr = dateStrParts[0];
           if (!dateStr) {
@@ -157,7 +157,8 @@ export default function MobileCalendar({
 
           return (
             <button
-              key={idx}
+              type="button"
+              key={dateStr}
               onClick={() => onSelectDate(date)}
               className={`h-16 p-1 border-r border-b text-left ${
                 darkMode ? "border-gray-700" : "border-gray-200"
@@ -179,9 +180,9 @@ export default function MobileCalendar({
                 </span>
               </div>
               <div className="mt-1 flex flex-wrap gap-1">
-                {dotTypes.map((t, i) => (
+                {dotTypes.map((t, _i) => (
                   <span
-                    key={i}
+                    key={t}
                     className={`w-1.5 h-1.5 rounded-full ${getEventColor(t, darkMode)}`}
                   />
                 ))}

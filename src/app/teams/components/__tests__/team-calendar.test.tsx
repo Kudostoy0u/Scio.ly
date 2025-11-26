@@ -1,6 +1,10 @@
 import TeamCalendar from "@/app/teams/components/TeamCalendar";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// Top-level regex for performance
+const NUMBER_REGEX = /^\d+$/;
 
 // Mock the theme context
 vi.mock("@/app/contexts/themeContext", () => ({
@@ -30,9 +34,9 @@ vi.mock("react-toastify", () => ({
 // Mock framer-motion
 vi.mock("framer-motion", () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    div: ({ children, ...props }: Record<string, unknown>) => <div {...props}>{children}</div>,
   },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 // Mock lucide-react icons
@@ -186,7 +190,7 @@ describe("TeamCalendar", () => {
       // Find a day in the current month
       const dayButtons = screen.getAllByRole("button");
       const dayButton = dayButtons.find(
-        (button) => button.textContent && /^\d+$/.test(button.textContent)
+        (button) => button.textContent && NUMBER_REGEX.test(button.textContent)
       );
 
       if (dayButton) {

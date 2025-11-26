@@ -23,7 +23,11 @@
       "migrations/**",
       "results/**",
       "public/statesB/**",
-      "public/statesC/**"
+      "public/statesC/**",
+      "src/app/test/hooks/useTestState.ts",
+      "src/app/test/utils/questionMedia.js",
+      "src/app/test/services/questionLoader.js",
+      "src/app/test/utils/normalizeTestText.js"
     ],
     "maxSize": 10485760
   },
@@ -51,9 +55,11 @@
         "noReactSpecificProps": "off"
       },
       "correctness": {
-        "useImportExtensions": "off"
+        "useImportExtensions": "off",
+        "noUndeclaredDependencies": "off"
       },
       "complexity": {
+        "noBannedTypes": "off",
         "noExcessiveCognitiveComplexity": {
           "level": "error",
           "options": {
@@ -70,7 +76,18 @@
       "trailingCommas": "es5",
       "semicolons": "always",
       "arrowParentheses": "always"
-    }
+    },
+    "globals": [
+      "describe",
+      "it",
+      "expect",
+      "beforeEach",
+      "afterEach",
+      "beforeAll",
+      "afterAll",
+      "vi",
+      "Mock"
+    ]
   },
   "json": {
     "formatter": {

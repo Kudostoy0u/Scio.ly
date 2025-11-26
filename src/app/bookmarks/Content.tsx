@@ -1,5 +1,5 @@
 "use client";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import logger from "@/lib/utils/logger";
 
 import { useAuth } from "@/app/contexts/authContext";
@@ -7,7 +7,6 @@ import { useTheme } from "@/app/contexts/themeContext";
 import { loadBookmarksFromSupabase, removeBookmark } from "@/app/utils/bookmarks";
 import { clearTestSession } from "@/app/utils/timeManagement";
 import { supabase } from "@/lib/supabase";
-// biome-ignore lint/correctness/noUndeclaredDependencies: @components is a path alias, not an npm package
 import Header from "@components/Header";
 import { ArrowRight, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";

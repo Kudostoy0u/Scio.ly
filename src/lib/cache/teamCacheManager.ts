@@ -123,6 +123,10 @@ class TeamCacheManager {
           this.updateCacheData(operation.key, operation.data, operation.timestamp);
         }
         break;
+
+      default:
+        // Unknown operation type, ignore
+        break;
     }
   }
 
@@ -206,8 +210,9 @@ class TeamCacheManager {
     }
 
     // Check if request is already in flight
-    if (this.pendingOperations.has(key)) {
-      return this.pendingOperations.get(key)! as T;
+    const pending = this.pendingOperations.get(key);
+    if (pending) {
+      return pending as T;
     }
 
     // Create new request

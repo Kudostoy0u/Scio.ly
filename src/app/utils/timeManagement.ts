@@ -1,4 +1,4 @@
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 /**
  * Time management utilities for Science Olympiad platform
  * Provides comprehensive test timing and session management

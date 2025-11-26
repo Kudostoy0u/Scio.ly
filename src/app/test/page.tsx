@@ -1,4 +1,4 @@
-import Content from "@/app/test/Content";
+import Content from "@/app/test/content";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {

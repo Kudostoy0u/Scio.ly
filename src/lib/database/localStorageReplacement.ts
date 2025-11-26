@@ -3,13 +3,13 @@
  * Provides a consistent interface for localStorage operations
  */
 
-class SyncLocalStorage {
+const SyncLocalStorage = {
   /**
    * Get an item from localStorage
    * @param key - The key to retrieve
    * @returns The stored value or null if not found
    */
-  static getItem(key: string): string | null {
+  getItem(key: string): string | null {
     if (typeof window === "undefined") {
       return null;
     }
@@ -19,14 +19,14 @@ class SyncLocalStorage {
     } catch {
       return null;
     }
-  }
+  },
 
   /**
    * Set an item in localStorage
    * @param key - The key to store
    * @param value - The value to store
    */
-  static setItem(key: string, value: string): void {
+  setItem(key: string, value: string): void {
     if (typeof window === "undefined") {
       return;
     }
@@ -36,13 +36,13 @@ class SyncLocalStorage {
     } catch {
       // Ignore errors
     }
-  }
+  },
 
   /**
    * Remove an item from localStorage
    * @param key - The key to remove
    */
-  static removeItem(key: string): void {
+  removeItem(key: string): void {
     if (typeof window === "undefined") {
       return;
     }
@@ -52,12 +52,12 @@ class SyncLocalStorage {
     } catch {
       // Ignore errors
     }
-  }
+  },
 
   /**
    * Clear all items from localStorage
    */
-  static clear(): void {
+  clear(): void {
     if (typeof window === "undefined") {
       return;
     }
@@ -67,13 +67,13 @@ class SyncLocalStorage {
     } catch {
       // Ignore errors
     }
-  }
+  },
 
   /**
    * Get the number of items in localStorage
    * @returns The number of items
    */
-  static getLength(): number {
+  getLength(): number {
     if (typeof window === "undefined") {
       return 0;
     }
@@ -83,14 +83,14 @@ class SyncLocalStorage {
     } catch {
       return 0;
     }
-  }
+  },
 
   /**
    * Get the key at a specific index
    * @param index - The index to get the key for
    * @returns The key or null if not found
    */
-  static key(index: number): string | null {
+  key(index: number): string | null {
     if (typeof window === "undefined") {
       return null;
     }
@@ -100,7 +100,7 @@ class SyncLocalStorage {
     } catch {
       return null;
     }
-  }
-}
+  },
+};
 
 export default SyncLocalStorage;

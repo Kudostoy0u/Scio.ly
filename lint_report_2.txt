@@ -1,0 +1,431 @@
+
+> science-olympiad-practice@0.1.0 lint /Users/kundanbaliga/Programs/Scio.ly/website
+> biome check . && npx tsgo
+
+./src/app/teams/components/AssignmentViewer.tsx format ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Formatter would have printed the following content:
+  
+     27  27 │   // Transform API question format to component format
+     28  28 │   function transformQuestion(apiQuestion: ApiQuestion): Question {
+     29     │ - ··const·questionType·=·apiQuestion.type·===·"mcq"·?·"multiple_choice"·:
+     30     │ - ······················apiQuestion.type·===·"frq"·?·"free_response"·:
+     31     │ - ······················apiQuestion.type·===·"codebusters"·?·"codebusters"·:·"free_response";
+         29 │ + ··const·questionType·=
+         30 │ + ····apiQuestion.type·===·"mcq"
+         31 │ + ······?·"multiple_choice"
+         32 │ + ······:·apiQuestion.type·===·"frq"
+         33 │ + ········?·"free_response"
+         34 │ + ········:·apiQuestion.type·===·"codebusters"
+         35 │ + ··········?·"codebusters"
+         36 │ + ··········:·"free_response";
+     32  37 │   
+     33  38 │     let options: Array<{ id: string; text: string; isCorrect: boolean }> | undefined;
+  
+
+./src/app/test/content.tsx:28:25 lint/complexity/noExcessiveCognitiveComplexity ━━━━━━━━━━━━━━━━━━━━
+
+  × Excessive complexity of 32 detected (max: 30).
+  
+    26 │ import type { RouterParams } from "@/app/utils/questionUtils";
+    27 │ 
+  > 28 │ export default function TestContent({
+       │                         ^^^^^^^^^^^
+    29 │   initialData,
+    30 │   initialRouterData,
+  
+  i Please refactor this function to reduce its complexity score from 32 to the max allowed complexity 30.
+  
+
+./src/app/test/content.tsx:206:9 lint/suspicious/noRedeclare ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Shouldn't redeclare 'handleActualPrint'. Consider to delete it or rename it.
+  
+    204 │   };
+    205 │ 
+  > 206 │   const handleActualPrint = async () => {
+        │         ^^^^^^^^^^^^^^^^^
+    207 │     if (!tournamentName.trim()) {
+    208 │       toast.error("Tournament name is required");
+  
+  i 'handleActualPrint' is defined here:
+  
+    174 │   };
+    175 │ 
+  > 176 │   const handleActualPrint = async () => {
+        │         ^^^^^^^^^^^^^^^^^
+    177 │     if (!tournamentName.trim()) {
+    178 │       toast.error("Tournament name is required");
+  
+
+./src/app/test/content.tsx:176:9 lint/correctness/noUnusedVariables  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━
+
+  ! This variable is unused.
+  
+    174 │   };
+    175 │ 
+  > 176 │   const handleActualPrint = async () => {
+        │         ^^^^^^^^^^^^^^^^^
+    177 │     if (!tournamentName.trim()) {
+    178 │       toast.error("Tournament name is required");
+  
+  i Unused variables usually are result of incomplete refactoring, typos and other source of bugs.
+  
+  i Unsafe fix: If this is intentional, prepend handleActualPrint with an underscore.
+  
+    174 174 │     };
+    175 175 │   
+    176     │ - ··const·handleActualPrint·=·async·()·=>·{
+        176 │ + ··const·_handleActualPrint·=·async·()·=>·{
+    177 177 │       if (!tournamentName.trim()) {
+    178 178 │         toast.error("Tournament name is required");
+  
+
+./src/app/unlimited/content.tsx:36:25 lint/complexity/noExcessiveCognitiveComplexity ━━━━━━━━━━━━━━━
+
+  × Excessive complexity of 51 detected (max: 30).
+  
+    34 │ import { buildEditPayload } from "./utils/editPayload";
+    35 │ 
+  > 36 │ export default function UnlimitedPracticePage({
+       │                         ^^^^^^^^^^^^^^^^^^^^^
+    37 │   initialRouterData,
+    38 │ }: { initialRouterData?: Record<string, unknown> }) {
+  
+  i Please refactor this function to reduce its complexity score from 51 to the max allowed complexity 30.
+  
+
+./src/app/unlimited/content.tsx:71:21 lint/correctness/useExhaustiveDependencies ━━━━━━━━━━━━━━━━━━━
+
+  × This hook specifies more dependencies than necessary: batchSize, setData, setCurrentQuestionIndex, setAnsweredInBatch, setIsLoading, setFetchError
+  
+    69 │   const batchReloadingRef = useRef(false);
+    70 │ 
+  > 71 │   const loadBatch = useCallback(async (routerParams: Record<string, unknown>) => {
+       │                     ^^^^^^^^^^^
+    72 │     try {
+    73 │       fetchStartedRef.current = true;
+  
+  i This dependency can be removed from the list.
+  
+    125 │         fetchStartedRef.current = true;
+    126 │       }
+  > 127 │     }, [batchSize, setData, setCurrentQuestionIndex, setAnsweredInBatch, setIsLoading, setFetchError]);
+        │         ^^^^^^^^^
+    128 │ 
+    129 │   useEffect(() => {
+  
+  i This dependency can be removed from the list.
+  
+    125 │         fetchStartedRef.current = true;
+    126 │       }
+  > 127 │     }, [batchSize, setData, setCurrentQuestionIndex, setAnsweredInBatch, setIsLoading, setFetchError]);
+        │                    ^^^^^^^
+    128 │ 
+    129 │   useEffect(() => {
+  
+  i This dependency can be removed from the list.
+  
+    125 │         fetchStartedRef.current = true;
+    126 │       }
+  > 127 │     }, [batchSize, setData, setCurrentQuestionIndex, setAnsweredInBatch, setIsLoading, setFetchError]);
+        │                             ^^^^^^^^^^^^^^^^^^^^^^^
+    128 │ 
+    129 │   useEffect(() => {
+  
+  i This dependency can be removed from the list.
+  
+    125 │         fetchStartedRef.current = true;
+    126 │       }
+  > 127 │     }, [batchSize, setData, setCurrentQuestionIndex, setAnsweredInBatch, setIsLoading, setFetchError]);
+        │                                                      ^^^^^^^^^^^^^^^^^^
+    128 │ 
+    129 │   useEffect(() => {
+  
+  i This dependency can be removed from the list.
+  
+    125 │         fetchStartedRef.current = true;
+    126 │       }
+  > 127 │     }, [batchSize, setData, setCurrentQuestionIndex, setAnsweredInBatch, setIsLoading, setFetchError]);
+        │                                                                          ^^^^^^^^^^^^
+    128 │ 
+    129 │   useEffect(() => {
+  
+  i This dependency can be removed from the list.
+  
+    125 │         fetchStartedRef.current = true;
+    126 │       }
+  > 127 │     }, [batchSize, setData, setCurrentQuestionIndex, setAnsweredInBatch, setIsLoading, setFetchError]);
+        │                                                                                        ^^^^^^^^^^^^^
+    128 │ 
+    129 │   useEffect(() => {
+  
+
+./src/app/utils/dashboardData.ts:49:10 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Forbidden non-null assertion.
+  
+    47 │  */
+    48 │ const getTodayKey = (): string => {
+  > 49 │   return new Date().toISOString().split("T")[0]!;
+       │          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    50 │ };
+    51 │ 
+  
+
+./src/app/utils/dashboardData.ts:344:5 lint/style/noUselessElse  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × This else clause can be omitted because previous branches break early.
+  
+    342 │     }
+    343 │     return retry.data;
+  > 344 │   } else {
+        │     ^^^^^^
+  > 345 │     logger.error("Error updating metrics:", error);
+  > 346 │     return null;
+  > 347 │   }
+        │   ^
+    348 │ };
+    349 │ 
+  
+  i Unsafe fix: Omit the else clause.
+  
+    342 342 │       }
+    343 343 │       return retry.data;
+    344     │ - ··}·else·{
+        344 │ + ··}
+    345 345 │       logger.error("Error updating metrics:", error);
+    346 346 │       return null;
+    347     │ - ··}
+    348 347 │   };
+    349 348 │   
+  
+
+./src/app/utils/dashboardData.ts format ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Formatter would have printed the following content:
+  
+    180 180 │       questionsAttempted:
+    181 181 │         typeof rowRecord.questions_attempted === "number" ? rowRecord.questions_attempted : 0,
+    182     │ - ····correctAnswers:
+    183     │ - ······typeof·rowRecord.correct_answers·===·"number"·?·rowRecord.correct_answers·:·0,
+        182 │ + ····correctAnswers:·typeof·rowRecord.correct_answers·===·"number"·?·rowRecord.correct_answers·:·0,
+    184 183 │       eventsPracticed: Array.isArray(rowRecord.events_practiced)
+    185 184 │         ? (rowRecord.events_practiced as string[])
+    ······· │ 
+    256 255 │   };
+    257 256 │   
+    258     │ - const·parseCurrentStatsFromRow·=·(currentDataRecord:·Record<string,·unknown>·|·null):·DailyMetrics·=>·{
+        257 │ + const·parseCurrentStatsFromRow·=·(
+        258 │ + ··currentDataRecord:·Record<string,·unknown>·|·null
+        259 │ + ):·DailyMetrics·=>·{
+    259 260 │     if (!currentDataRecord) {
+    260 261 │       return {
+    ······· │ 
+    273 274 │           : 0,
+    274 275 │       correctAnswers:
+    275     │ - ······typeof·currentDataRecord.correct_answers·===·"number"
+    276     │ - ········?·currentDataRecord.correct_answers
+    277     │ - ········:·0,
+        276 │ + ······typeof·currentDataRecord.correct_answers·===·"number"·?·currentDataRecord.correct_answers·:·0,
+    278 277 │       eventsPracticed: Array.isArray(currentDataRecord.events_practiced)
+    279 278 │         ? (currentDataRecord.events_practiced as string[])
+  
+
+./src/app/unlimited/content.tsx format ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Formatter would have printed the following content:
+  
+     69  69 │     const batchReloadingRef = useRef(false);
+     70  70 │   
+     71     │ - ··const·loadBatch·=·useCallback(async·(routerParams:·Record<string,·unknown>)·=>·{
+     72     │ - ····try·{
+     73     │ - ······fetchStartedRef.current·=·true;
+     74     │ - ······//·Reuse·test·loader·for·consistent·normalization·and·ID·behavior
+     75     │ - ······let·questions·=·await·fetchQuestionsForParams(routerParams,·batchSize);
+     76     │ - ······//·Deterministic·shuffle·per-batch·to·provide·a·fixed·order
+     77     │ - ······const·seed·=·Date.now();
+     78     │ - ······const·rng·=·(()·=>·{
+     79     │ - ········let·s·=·seed·%·2147483647;
+     80     │ - ········return·()·=>·{
+     81     │ - ··········s·=·(s·*·48271)·%·2147483647;
+     82     │ - ··········return·s·/·2147483647;
+     83     │ - ········};
+     84     │ - ······})();
+     85     │ - ······const·arr·=·[...questions];
+     86     │ - ······for·(let·i·=·arr.length·-·1;·i·>·0;·i--)·{
+     87     │ - ········const·j·=·Math.floor(rng()·*·(i·+·1));
+     88     │ - ········const·temp·=·arr[i];
+     89     │ - ········const·temp2·=·arr[j];
+     90     │ - ········if·(temp·!==·undefined·&&·temp2·!==·undefined)·{
+     91     │ - ··········arr[i]·=·temp2;
+     92     │ - ··········arr[j]·=·temp;
+     93     │ - ········}
+     94     │ - ······}
+     95     │ - ······//·Dedup·by·normalized·text·and·id
+     96     │ - ······const·seen·=·new·Set<string>();
+     97     │ - ······const·deduped·=·arr.filter((q)·=>·{
+     98     │ - ········const·qRecord·=·q·as·{·id?:·unknown;·question?:·unknown·};
+     99     │ - ········const·id·=·qRecord.id·?·String(qRecord.id)·:·"";
+    100     │ - ········const·text·=
+    101     │ - ··········typeof·qRecord.question·===·"string"·?·qRecord.question.trim().toLowerCase()·:·"";
+    102     │ - ········const·key·=·id·||·text;
+    103     │ - ········if·(!key)·{
+    104     │ - ··········return·true;
+    105     │ - ········}
+    106     │ - ········if·(seen.has(key))·{
+    107     │ - ··········return·false;
+    108     │ - ········}
+    109     │ - ········seen.add(key);
+    110     │ - ········return·true;
+    111     │ - ······});
+         71 │ + ··const·loadBatch·=·useCallback(
+         72 │ + ····async·(routerParams:·Record<string,·unknown>)·=>·{
+         73 │ + ······try·{
+         74 │ + ········fetchStartedRef.current·=·true;
+         75 │ + ········//·Reuse·test·loader·for·consistent·normalization·and·ID·behavior
+         76 │ + ········let·questions·=·await·fetchQuestionsForParams(routerParams,·batchSize);
+         77 │ + ········//·Deterministic·shuffle·per-batch·to·provide·a·fixed·order
+         78 │ + ········const·seed·=·Date.now();
+         79 │ + ········const·rng·=·(()·=>·{
+         80 │ + ··········let·s·=·seed·%·2147483647;
+         81 │ + ··········return·()·=>·{
+         82 │ + ············s·=·(s·*·48271)·%·2147483647;
+         83 │ + ············return·s·/·2147483647;
+         84 │ + ··········};
+         85 │ + ········})();
+         86 │ + ········const·arr·=·[...questions];
+         87 │ + ········for·(let·i·=·arr.length·-·1;·i·>·0;·i--)·{
+         88 │ + ··········const·j·=·Math.floor(rng()·*·(i·+·1));
+         89 │ + ··········const·temp·=·arr[i];
+         90 │ + ··········const·temp2·=·arr[j];
+         91 │ + ··········if·(temp·!==·undefined·&&·temp2·!==·undefined)·{
+         92 │ + ············arr[i]·=·temp2;
+         93 │ + ············arr[j]·=·temp;
+         94 │ + ··········}
+         95 │ + ········}
+         96 │ + ········//·Dedup·by·normalized·text·and·id
+         97 │ + ········const·seen·=·new·Set<string>();
+         98 │ + ········const·deduped·=·arr.filter((q)·=>·{
+         99 │ + ··········const·qRecord·=·q·as·{·id?:·unknown;·question?:·unknown·};
+        100 │ + ··········const·id·=·qRecord.id·?·String(qRecord.id)·:·"";
+        101 │ + ··········const·text·=
+        102 │ + ············typeof·qRecord.question·===·"string"·?·qRecord.question.trim().toLowerCase()·:·"";
+        103 │ + ··········const·key·=·id·||·text;
+        104 │ + ··········if·(!key)·{
+        105 │ + ············return·true;
+        106 │ + ··········}
+        107 │ + ··········if·(seen.has(key))·{
+        108 │ + ············return·false;
+        109 │ + ··········}
+        110 │ + ··········seen.add(key);
+        111 │ + ··········return·true;
+        112 │ + ········});
+    112 113 │           questions = deduped;
+    113 114 │           setData(questions);
+    ······· │ 
+    125 126 │           fetchStartedRef.current = true;
+    126 127 │         }
+    127     │ - ····},·[batchSize,·setData,·setCurrentQuestionIndex,·setAnsweredInBatch,·setIsLoading,·setFetchError]);
+        128 │ + ····},
+        129 │ + ····[batchSize,·setData,·setCurrentQuestionIndex,·setAnsweredInBatch,·setIsLoading,·setFetchError]
+        130 │ + ··);
+    128 131 │   
+    129 132 │     useEffect(() => {
+  
+
+./src/app/utils/questionUtils.ts:358:3 lint/complexity/noExcessiveCognitiveComplexity ━━━━━━━━━━━━━━
+
+  × Excessive complexity of 51 detected (max: 30).
+  
+    356 │   userAnswers?: Record<number, (string | null)[] | null>,
+    357 │   rateLimitDelay = 2000
+  > 358 │ ) => {
+        │   ^^^
+    359 │   if (explanations[index]) {
+    360 │     return;
+  
+  i Please refactor this function to reduce its complexity score from 51 to the max allowed complexity 30.
+  
+
+./src/lib/db/index.ts:5:8 lint/style/noNamespaceImport ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Avoid namespace imports, it can prevent efficient tree shaking and increase bundle size.
+  
+    3 │ import { Pool } from "pg";
+    4 │ import postgres from "postgres";
+  > 5 │ import * as schema from "./schema";
+      │        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    6 │ 
+    7 │ const connectionString = process.env.DATABASE_URL;
+  
+  i Use named imports instead.
+  
+
+./src/lib/db/index.ts:93:8 lint/performance/noReExportAll ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Do not use export all ( export * from ... ).
+  
+    91 │ // Schema exports are intentionally kept as re-exports due to large size and frequent usage
+    92 │ // biome-ignore lint/performance/noBarrelFile: Schema file is intentionally a barrel for convenience
+  > 93 │ export * from "./schema";
+       │        ^^^^^^^^^^^^^^^^^^
+    94 │ export * from "./utils";
+    95 │ 
+  
+  i Use named export instead.
+  
+
+./src/lib/db/index.ts:94:8 lint/performance/noReExportAll ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Do not use export all ( export * from ... ).
+  
+    92 │ // biome-ignore lint/performance/noBarrelFile: Schema file is intentionally a barrel for convenience
+    93 │ export * from "./schema";
+  > 94 │ export * from "./utils";
+       │        ^^^^^^^^^^^^^^^^^
+    95 │ 
+  
+  i Use named export instead.
+  
+
+./src/lib/cache/teamCacheManager.ts:214:14 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Forbidden non-null assertion.
+  
+    212 │     // Check if request is already in flight
+    213 │     if (this.pendingOperations.has(key)) {
+  > 214 │       return this.pendingOperations.get(key)! as T;
+        │              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    215 │     }
+    216 │ 
+  
+
+./src/lib/db/schema.ts:341:1 lint/performance/noBarrelFile ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Avoid barrel files, they slow down performance, and cause large module graphs with modules that go unused.
+  
+    340 │ // Re-export team-related schemas from teams.ts
+  > 341 │ export {
+        │ ^^^^^^^^
+  > 342 │   newTeamStreamPosts,
+  > 343 │   newTeamStreamComments,
+  > 344 │   newTeamActiveTimers,
+  > 345 │   newTeamRemovedEvents,
+  > 346 │ } from "./schema/teams";
+        │ ^^^^^^^^^^^^^^^^^^^^^^^^
+    347 │ 
+    348 │ // Re-export longquotes from core.ts
+  
+  i Check this thorough explanation to better understand the context.
+  
+
+Checked 654 files in 1356ms. No fixes applied.
+Found 11 errors.
+Found 5 warnings.
+check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while running checks.
+  
+
+ ELIFECYCLE  Command failed with exit code 1.

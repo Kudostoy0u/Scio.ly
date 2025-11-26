@@ -2,7 +2,7 @@ import api from "@/app/api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchQuestionsForParams } from "./fetchQuestions";
 
-type AnyFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<any>;
+type MockFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 describe("fetchQuestionsForParams", () => {
   const fakeBaseQuestions = Array.from({ length: 20 }).map((_, i) => ({
@@ -28,7 +28,7 @@ describe("fetchQuestionsForParams", () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    const fetchMock = vi.fn<Parameters<AnyFetch>, ReturnType<AnyFetch>>((input: any) => {
+    const fetchMock = vi.fn<Parameters<MockFetch>, ReturnType<MockFetch>>((input) => {
       const url = typeof input === "string" ? input : input?.toString?.() || "";
       if (url.startsWith(api.idQuestions)) {
         return Promise.resolve({ ok: true, json: async () => ({ data: fakeIdRows }) });
@@ -39,9 +39,9 @@ describe("fetchQuestionsForParams", () => {
       return Promise.resolve({ ok: false, json: async () => ({}) });
     });
     // @ts-expect-error override global
-    global.fetch = fetchMock as any;
+    global.fetch = fetchMock as typeof global.fetch;
     // @ts-expect-error add navigator for online
-    global.navigator = { onLine: true } as any;
+    (global as { navigator: { onLine: boolean } }).navigator = { onLine: true };
   });
 
   it("uses ID endpoint when idPercentage is 100", async () => {
@@ -49,11 +49,17 @@ describe("fetchQuestionsForParams", () => {
       eventName: "Water Quality - Freshwater",
       idPercentage: 100,
       types: "multiple-choice",
-    } as any;
+    } as {
+      eventName: string;
+      idPercentage: number;
+      types: string;
+    };
     const total = 10;
     const result = await fetchQuestionsForParams(routerParams, total);
     expect(result.length).toBe(total);
-    const calls = (global.fetch as any).mock.calls.map((c: any[]) => (c[0] as string).toString());
+    const calls = (global.fetch as { mock: { calls: unknown[][] } }).mock.calls.map((c) =>
+      (c[0] as string).toString()
+    );
     expect(calls.some((u: string) => u.startsWith(api.idQuestions))).toBe(true);
     expect(calls.some((u: string) => u.startsWith(api.questions))).toBe(false);
   });
@@ -63,11 +69,17 @@ describe("fetchQuestionsForParams", () => {
       eventName: "Water Quality - Freshwater",
       idPercentage: 0,
       types: "multiple-choice",
-    } as any;
+    } as {
+      eventName: string;
+      idPercentage: number;
+      types: string;
+    };
     const total = 5;
     const result = await fetchQuestionsForParams(routerParams, total);
     expect(result.length).toBe(total);
-    const calls = (global.fetch as any).mock.calls.map((c: any[]) => (c[0] as string).toString());
+    const calls = (global.fetch as { mock: { calls: unknown[][] } }).mock.calls.map((c) =>
+      (c[0] as string).toString()
+    );
     expect(calls.some((u: string) => u.startsWith(api.questions))).toBe(true);
     expect(calls.some((u: string) => u.startsWith(api.idQuestions))).toBe(false);
   });

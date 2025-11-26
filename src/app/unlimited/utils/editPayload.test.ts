@@ -1,14 +1,15 @@
+import type { Question } from "@/app/utils/geminiService";
 import { describe, expect, it } from "vitest";
 import { buildEditPayload } from "./editPayload";
 
 describe("buildEditPayload", () => {
-  const q = {
+  const q: Question = {
     question: "Q",
     answers: [0],
     difficulty: 0.5,
     event: "Test",
     options: ["A", "B"],
-  } as any;
+  };
 
   it("builds payload with defaults", () => {
     const p = buildEditPayload({

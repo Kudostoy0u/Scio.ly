@@ -129,7 +129,9 @@ export function subscribeToDownloads(onUpdate: () => void): () => void {
     return () =>
       window.removeEventListener("scio-downloads-updated", winHandlerOnly as EventListener);
   } catch {
-    return () => {};
+    return () => {
+      // Intentionally empty - no-op cleanup function when event listener setup fails
+    };
   }
 }
 
@@ -242,4 +244,6 @@ export async function removeOfflineEvent(eventSlug: string): Promise<void> {
   }
 }
 
-export async function syncOfflineDownloads(): Promise<void> {}
+export async function syncOfflineDownloads(): Promise<void> {
+  // TODO: Implement offline downloads synchronization
+}

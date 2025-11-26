@@ -40,6 +40,7 @@ export interface RosterNotificationData {
  * });
  * ```
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: Service class with related notification methods
 export class RosterNotificationService {
   /**
    * Create a notification when a roster name is added

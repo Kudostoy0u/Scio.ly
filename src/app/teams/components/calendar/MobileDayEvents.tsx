@@ -138,45 +138,50 @@ export default function MobileDayEvents({
     );
   }
 
+  // Helper function to get event type badge classes
+  const getEventTypeBadgeClasses = (eventType: string) => {
+    const baseClasses = "px-2 py-1 text-xs rounded-full";
+
+    switch (eventType) {
+      case "tournament":
+        return `${baseClasses} ${darkMode ? "bg-red-800 text-red-200" : "bg-red-200 text-red-800"}`;
+      case "practice":
+        return `${baseClasses} ${
+          darkMode ? "bg-green-800 text-green-200" : "bg-green-200 text-green-800"
+        }`;
+      case "meeting":
+        return `${baseClasses} ${
+          darkMode ? "bg-blue-800 text-blue-200" : "bg-blue-200 text-blue-800"
+        }`;
+      case "personal":
+        return `${baseClasses} ${
+          darkMode ? "bg-green-800 text-green-200" : "bg-green-200 text-green-800"
+        }`;
+      case "deadline":
+        return `${baseClasses} ${
+          darkMode ? "bg-orange-800 text-orange-200" : "bg-orange-200 text-orange-800"
+        }`;
+      default:
+        return `${baseClasses} ${
+          darkMode ? "bg-gray-600 text-gray-200" : "bg-gray-200 text-gray-800"
+        }`;
+    }
+  };
+
   return (
     <div className="space-y-3">
       {sameDayEvents.map((event) => (
-        <div
+        <button
+          type="button"
           key={event.id}
-          className={`p-4 rounded-lg border cursor-pointer transition-colors hover:opacity-80 ${getEventColors(event.event_type, darkMode)}`}
+          className={`w-full text-left p-4 rounded-lg border cursor-pointer transition-colors hover:opacity-80 ${getEventColors(event.event_type, darkMode)}`}
           onClick={() => onEventClick(event)}
         >
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
                 <h4 className="font-semibold text-base">{event.title}</h4>
-                <span
-                  className={`px-2 py-1 text-xs rounded-full ${
-                    event.event_type === "tournament"
-                      ? darkMode
-                        ? "bg-red-800 text-red-200"
-                        : "bg-red-200 text-red-800"
-                      : event.event_type === "practice"
-                        ? darkMode
-                          ? "bg-green-800 text-green-200"
-                          : "bg-green-200 text-green-800"
-                        : event.event_type === "meeting"
-                          ? darkMode
-                            ? "bg-blue-800 text-blue-200"
-                            : "bg-blue-200 text-blue-800"
-                          : event.event_type === "personal"
-                            ? darkMode
-                              ? "bg-green-800 text-green-200"
-                              : "bg-green-200 text-green-800"
-                            : event.event_type === "deadline"
-                              ? darkMode
-                                ? "bg-orange-800 text-orange-200"
-                                : "bg-orange-200 text-orange-800"
-                              : darkMode
-                                ? "bg-gray-600 text-gray-200"
-                                : "bg-gray-200 text-gray-800"
-                  }`}
-                >
+                <span className={getEventTypeBadgeClasses(event.event_type)}>
                   {event.event_type.charAt(0).toUpperCase() + event.event_type.slice(1)}
                 </span>
               </div>
@@ -209,6 +214,7 @@ export default function MobileDayEvents({
               </div>
             </div>
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onDeleteEvent(event.id);
@@ -217,6 +223,7 @@ export default function MobileDayEvents({
               title="Delete event"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <title>Delete event</title>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -226,7 +233,7 @@ export default function MobileDayEvents({
               </svg>
             </button>
           </div>
-        </div>
+        </button>
       ))}
     </div>
   );

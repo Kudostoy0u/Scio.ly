@@ -1,14 +1,18 @@
 import JoinTeamModal from "@/app/teams/components/JoinTeamModal";
 import { fireEvent, renderWithProviders, screen, waitFor } from "@/test-utils";
+import type React from "react";
 import { vi } from "vitest";
 
 // Mock framer-motion
 vi.mock("framer-motion", () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    div: ({ children, ...props }: Record<string, unknown>) => <div {...props}>{children}</div>,
   },
-  AnimatePresence: ({ children }: any) => children,
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
 }));
+
+// Top-level regex for performance
+const CLOSE_BUTTON_REGEX = /close/i;
 
 // Mock fetch globally
 global.fetch = vi.fn();
@@ -56,7 +60,7 @@ describe("JoinTeamModal", () => {
   it("should close modal when close button is clicked", () => {
     renderWithProviders(<JoinTeamModal {...defaultProps} />);
 
-    const closeButton = screen.getByRole("button", { name: /close/i });
+    const closeButton = screen.getByRole("button", { name: CLOSE_BUTTON_REGEX });
     fireEvent.click(closeButton);
 
     expect(defaultProps.onClose).toHaveBeenCalled();
@@ -227,7 +231,10 @@ describe("JoinTeamModal", () => {
     fireEvent.change(codeInput, { target: { value: "TEAM123" } });
 
     // Enter key submits the form
-    fireEvent.submit(codeInput.closest("form")!);
+    const form = codeInput.closest("form");
+    if (form) {
+      fireEvent.submit(form);
+    }
 
     await waitFor(() => {
       expect(defaultProps.onJoinTeam).toHaveBeenCalledWith({

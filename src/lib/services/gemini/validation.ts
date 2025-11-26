@@ -11,7 +11,11 @@ import type { EditValidationResult, ReportEditResult } from "./types";
  * Validation and utility service
  */
 export class GeminiValidationService {
-  constructor(private clientWithKey: ClientWithKey) {}
+  private clientWithKey: ClientWithKey;
+
+  constructor(clientWithKey: ClientWithKey) {
+    this.clientWithKey = clientWithKey;
+  }
 
   /**
    * Validates an edit to a question

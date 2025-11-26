@@ -144,6 +144,7 @@ export default function EventModal({
                   {selectedEvent ? "Edit Event" : "Create Event"}
                 </h3>
                 <button
+                  type="button"
                   onClick={onClose}
                   className={`p-1 rounded-lg hover:bg-opacity-20 transition-colors ${
                     darkMode ? "hover:bg-gray-600" : "hover:bg-gray-200"
@@ -156,6 +157,7 @@ export default function EventModal({
                     viewBox="0 0 24 24"
                     data-testid="x-icon"
                   >
+                    <title>Close modal</title>
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -370,6 +372,7 @@ export default function EventModal({
 
               <div className="flex justify-end space-x-3 mt-6">
                 <button
+                  type="button"
                   onClick={onClose}
                   className={`px-4 py-2 rounded-lg font-medium ${
                     darkMode
@@ -380,6 +383,7 @@ export default function EventModal({
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={onSubmit}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium"
                 >

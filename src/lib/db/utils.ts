@@ -17,7 +17,7 @@ export async function getQuotesByLanguage(
         baseCondition,
         gte(quotes.charLength, charLengthRange.min),
         lte(quotes.charLength, Math.min(charLengthRange.max, 100))
-      )!;
+      ) as NonNullable<typeof baseCondition>;
     }
 
     /*
@@ -63,7 +63,7 @@ export async function getQuotesByLanguage(
         fallbackCondition,
         gte(quotes.charLength, charLengthRange.min),
         lte(quotes.charLength, Math.min(charLengthRange.max, 100))
-      )!;
+      ) as NonNullable<typeof fallbackCondition>;
     }
 
     const rows = await db

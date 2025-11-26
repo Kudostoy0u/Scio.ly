@@ -148,87 +148,83 @@ export const generateQuestions = async (
   return data.questions || [];
 };
 
-export const fetchRosterMembers = async (
-  teamId: string,
-  subteamId?: string
-): Promise<RosterMember[]> => {
-  // Fetch both roster data and team members data
-  const rosterUrl = subteamId
-    ? `/api/teams/${teamId}/roster?subteamId=${subteamId}`
-    : `/api/teams/${teamId}/roster`;
+// Types for roster processing
+type RosterEntry = {
+  isLinked: boolean;
+  userId?: string;
+  userEmail?: string;
+  username?: string;
+};
 
-  const membersUrl = subteamId
-    ? `/api/teams/${teamId}/members?subteamId=${subteamId}`
-    : `/api/teams/${teamId}/members`;
+type TeamMember = {
+  name: string;
+  id: string;
+  username: string;
+  email: string;
+  isUnlinked?: boolean;
+};
 
-  const [rosterResponse, membersResponse] = await Promise.all([
-    fetch(rosterUrl),
-    fetch(membersUrl),
-  ]);
+// Helper functions to reduce cognitive complexity
+const buildApiUrl = (teamId: string, endpoint: string, subteamId?: string): string => {
+  const baseUrl = `/api/teams/${teamId}/${endpoint}`;
+  return subteamId ? `${baseUrl}?subteamId=${subteamId}` : baseUrl;
+};
 
-  if (!rosterResponse.ok) {
-    throw new Error("Failed to fetch roster data");
+const fetchApiData = async (url: string) => {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch data from ${url}`);
   }
+  return response.json();
+};
 
-  if (!membersResponse.ok) {
-    throw new Error("Failed to fetch team members");
-  }
-
-  const rosterData = await rosterResponse.json();
-  const membersData = await membersResponse.json();
-
-  const roster = rosterData.roster || {};
-  const members = membersData.members || [];
-
-  // Create a map of roster entries with their linking status
-  const rosterEntries = new Map<
-    string,
-    { isLinked: boolean; userId?: string; userEmail?: string; username?: string }
-  >();
+const processRosterData = (roster: Record<string, unknown>) => {
+  const rosterEntries = new Map<string, RosterEntry>();
 
   // Process roster data to find linked entries
-  Object.values(roster).forEach((students: unknown) => {
+  for (const students of Object.values(roster)) {
     if (Array.isArray(students)) {
-      students.forEach((student) => {
+      for (const student of students) {
         if (typeof student === "string" && student.trim()) {
           const studentName = student.trim();
           if (!rosterEntries.has(studentName)) {
             rosterEntries.set(studentName, { isLinked: false });
           }
         }
-      });
-    }
-  });
-
-  // Check which roster entries are linked to team members
-  members.forEach(
-    (member: {
-      name: string;
-      id: string;
-      username: string;
-      email: string;
-      isUnlinked?: boolean;
-    }) => {
-      const memberName = member.name;
-      if (rosterEntries.has(memberName)) {
-        const entry = rosterEntries.get(memberName)!;
-        // Only mark as linked if the member has a valid user ID and is not an unlinked roster member
-        // Unlinked roster members have username 'unknown' and should not be considered linked
-        if (member.id && member.username !== "unknown" && !member.isUnlinked) {
-          entry.isLinked = true;
-          entry.userId = member.id;
-          entry.userEmail = member.email;
-          entry.username = member.username; // Use the actual username from the API
-        }
       }
     }
-  );
+  }
 
-  // Create final roster members list
+  return rosterEntries;
+};
+
+const linkMembersToRoster = (rosterEntries: Map<string, RosterEntry>, members: TeamMember[]) => {
+  // Check which roster entries are linked to team members
+  for (const member of members) {
+    const memberName = member.name;
+    const entry = rosterEntries.get(memberName);
+    if (entry) {
+      // Only mark as linked if the member has a valid user ID and is not an unlinked roster member
+      // Unlinked roster members have username 'unknown' and should not be considered linked
+      if (member.id && member.username !== "unknown" && !member.isUnlinked) {
+        entry.isLinked = true;
+        entry.userId = member.id;
+        entry.userEmail = member.email;
+        entry.username = member.username; // Use the actual username from the API
+      }
+    }
+  }
+};
+
+const createFinalRosterList = (
+  rosterEntries: Map<string, RosterEntry>,
+  members: TeamMember[],
+  subteamId?: string
+) => {
   const rosterMembers: RosterMember[] = [];
 
-  // Add all roster entries
-  rosterEntries.forEach((entry, studentName) => {
+  // Add roster entries
+  for (const [studentName, entry] of rosterEntries) {
     rosterMembers.push({
       student_name: studentName,
       isLinked: entry.isLinked,
@@ -237,10 +233,10 @@ export const fetchRosterMembers = async (
       userEmail: entry.userEmail,
       username: entry.username,
     });
-  });
+  }
 
   // Add team members who are not in the roster yet
-  members.forEach((member: { name: string; id: string; username: string; email: string }) => {
+  for (const member of members) {
     const memberName = member.name;
     if (!rosterEntries.has(memberName)) {
       rosterMembers.push({
@@ -252,9 +248,31 @@ export const fetchRosterMembers = async (
         username: member.username, // Use the actual username from the API
       });
     }
-  });
+  }
 
   return rosterMembers;
+};
+
+export const fetchRosterMembers = async (
+  teamId: string,
+  subteamId?: string
+): Promise<RosterMember[]> => {
+  // Fetch both roster data and team members data
+  const rosterUrl = buildApiUrl(teamId, "roster", subteamId);
+  const membersUrl = buildApiUrl(teamId, "members", subteamId);
+
+  const [rosterData, membersData] = await Promise.all([
+    fetchApiData(rosterUrl),
+    fetchApiData(membersUrl),
+  ]);
+
+  const roster = rosterData.roster || {};
+  const members = membersData.members || [];
+
+  const rosterEntries = processRosterData(roster);
+  linkMembersToRoster(rosterEntries, members);
+
+  return createFinalRosterList(rosterEntries, members, subteamId);
 };
 
 export const createAssignment = async (

@@ -128,7 +128,7 @@ export async function GET(
     // Convert to roster format using validated data
     const roster: Record<string, string[]> = {};
 
-    validatedRosterData.forEach((row, _index) => {
+    for (const row of validatedRosterData) {
       // Convert "and" to "&" in event names to match frontend expectations
       const normalizedEventName = row.event_name.replace(/\band\b/g, "&");
 
@@ -136,7 +136,7 @@ export async function GET(
         roster[normalizedEventName] = [];
       }
       roster[normalizedEventName][row.slot_index] = row.student_name || "";
-    });
+    }
     const removedEvents = removedEventsResult.map((row) => row.event_name);
     const responseData = { roster, removedEvents };
 

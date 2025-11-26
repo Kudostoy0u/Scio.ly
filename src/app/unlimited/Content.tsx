@@ -1,5 +1,5 @@
 "use client";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import logger from "@/lib/utils/logger";
 
 import { useRouter } from "next/navigation";
@@ -30,23 +30,36 @@ import { supabase } from "@/lib/supabase";
 
 import LoadingFallback from "./components/LoadingFallback";
 import QuestionCard from "./components/QuestionCard";
+import { useUnlimitedPractice } from "./hooks/useUnlimitedPractice";
 //
 import { buildEditPayload } from "./utils/editPayload";
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex state management and event handlers required for unlimited practice functionality
 export default function UnlimitedPracticePage({
   initialRouterData,
 }: { initialRouterData?: Record<string, unknown> }) {
   const router = useRouter();
 
-  const [data, setData] = useState<Question[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const [currentAnswer, setCurrentAnswer] = useState<(string | null)[]>([]);
   const [routerData, setRouterData] = useState<RouterParams>(initialRouterData || {});
   const { darkMode } = useTheme();
+
+  const {
+    data,
+    setData,
+    isLoading,
+    setIsLoading,
+    fetchError,
+    setFetchError,
+    currentQuestionIndex,
+    setCurrentQuestionIndex,
+    answeredInBatch,
+    setAnsweredInBatch,
+    fetchStartedRef,
+    loadBatch,
+  } = useUnlimitedPractice(20);
 
   const [explanations, setExplanations] = useState<Explanations>({});
   const [loadingExplanation, setLoadingExplanation] = useState<LoadingExplanation>({});
@@ -64,10 +77,9 @@ export default function UnlimitedPracticePage({
 
   // No explicit namePool state needed; built per-batch
   const batchSize = 20;
-  const [answeredInBatch, setAnsweredInBatch] = useState<number>(0);
-  const fetchStartedRef = useRef(false);
   const batchReloadingRef = useRef(false);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fetchStartedRef is a ref and doesn't need to be in dependencies
   useEffect(() => {
     if (fetchStartedRef.current) {
       return;
@@ -92,64 +104,8 @@ export default function UnlimitedPracticePage({
       return;
     }
 
-    const loadBatch = async () => {
-      try {
-        fetchStartedRef.current = true;
-        // Reuse test loader for consistent normalization and ID behavior
-        let questions = await fetchQuestionsForParams(routerParams, batchSize);
-        // Deterministic shuffle per-batch to provide a fixed order
-        const seed = Date.now();
-        const rng = (() => {
-          let s = seed % 2147483647;
-          return () => (s = (s * 48271) % 2147483647) / 2147483647;
-        })();
-        const arr = [...questions];
-        for (let i = arr.length - 1; i > 0; i--) {
-          const j = Math.floor(rng() * (i + 1));
-          const temp = arr[i];
-          const temp2 = arr[j];
-          if (temp !== undefined && temp2 !== undefined) {
-            arr[i] = temp2;
-            arr[j] = temp;
-          }
-        }
-        // Dedup by normalized text and id
-        const seen = new Set<string>();
-        const deduped = arr.filter((q) => {
-          const qRecord = q as { id?: unknown; question?: unknown };
-          const id = qRecord.id ? String(qRecord.id) : "";
-          const text =
-            typeof qRecord.question === "string" ? qRecord.question.trim().toLowerCase() : "";
-          const key = id || text;
-          if (!key) {
-            return true;
-          }
-          if (seen.has(key)) {
-            return false;
-          }
-          seen.add(key);
-          return true;
-        });
-        questions = deduped;
-        setData(questions);
-        setCurrentQuestionIndex(0);
-        setAnsweredInBatch(0);
-        const serialized = JSON.stringify(questions, (key, value) =>
-          key === "imageData" ? undefined : value
-        );
-        SyncLocalStorage.setItem("unlimitedQuestions", serialized);
-        setIsLoading(false);
-      } catch {
-        setFetchError("Failed to load questions. Please try again later.");
-        setIsLoading(false);
-      } finally {
-        fetchStartedRef.current = true;
-      }
-    };
-
-    loadBatch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    loadBatch(routerParams);
+  }, [data.length, isLoading, initialRouterData, router, loadBatch, setData, setIsLoading]);
 
   // Ensure the current question index is valid/stable once data is loaded
   useEffect(() => {
@@ -161,7 +117,7 @@ export default function UnlimitedPracticePage({
         return 0; // start at the first question in this batch
       });
     }
-  }, [data.length]);
+  }, [data.length, setCurrentQuestionIndex]);
 
   useEffect(() => {
     const loadUserBookmarks = async () => {
@@ -172,14 +128,14 @@ export default function UnlimitedPracticePage({
         const bookmarks = await loadBookmarksFromSupabase(user.id);
 
         const bookmarkMap: Record<string, boolean> = {};
-        bookmarks.forEach((bookmark) => {
+        for (const bookmark of bookmarks) {
           if (bookmark.source === "unlimited") {
             const key = (bookmark.question as { imageData?: string }).imageData
               ? `id:${(bookmark.question as { imageData?: string }).imageData}`
               : bookmark.question.question;
             bookmarkMap[key] = true;
           }
-        });
+        }
 
         setBookmarkedQuestions(bookmarkMap);
       }
@@ -295,7 +251,10 @@ export default function UnlimitedPracticePage({
             const seed = Date.now();
             const rng = (() => {
               let s = seed % 2147483647;
-              return () => (s = (s * 48271) % 2147483647) / 2147483647;
+              return () => {
+                s = (s * 48271) % 2147483647;
+                return s / 2147483647;
+              };
             })();
             const arr = [...questions];
             for (let i = arr.length - 1; i > 0; i--) {
@@ -538,6 +497,7 @@ export default function UnlimitedPracticePage({
           {/* Inline back link to Practice */}
           <div className="w-full max-w-3xl">
             <button
+              type="button"
               onClick={handleResetTest}
               className={`group inline-flex items-center text-base font-medium ${darkMode ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"}`}
             >
@@ -576,6 +536,7 @@ export default function UnlimitedPracticePage({
                 <div className="text-center">
                   {isSubmitted ? (
                     <button
+                      type="button"
                       onClick={handleNext}
                       className={`w-full px-4 py-2 font-semibold rounded-lg border-2 transition-colors ${
                         darkMode
@@ -587,6 +548,7 @@ export default function UnlimitedPracticePage({
                     </button>
                   ) : (
                     <button
+                      type="button"
                       onClick={handleSubmit}
                       className={`w-full px-4 py-2 font-semibold rounded-lg border-2 transition-colors ${
                         darkMode

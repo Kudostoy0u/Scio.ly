@@ -21,88 +21,13 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
+import type { Member } from "../types";
+import { getDisplayName } from "../utils/displayNameUtils";
+import { detectMemberConflicts } from "./utils/conflictDetection";
+import { processMembersData } from "./utils/memberDataProcessor";
+import EventAssignmentModal from "./EventAssignmentModal";
 import InlineInvite from "./InlineInvite";
 import LinkInvite from "./LinkInvite";
-
-// Division groups data
-const DIVISION_B_GROUPS = [
-  {
-    label: "Conflict Block 1",
-    events: ["Codebusters", "Disease Detectives", "Remote Sensing"],
-    colorKey: "blue",
-  },
-  {
-    label: "Conflict Block 2",
-    events: ["Entomology", "Experimental Design", "Solar System"],
-    colorKey: "green",
-  },
-  {
-    label: "Conflict Block 3",
-    events: ["Machines", "Meteorology", "Metric Mastery"],
-    colorKey: "yellow",
-  },
-  {
-    label: "Conflict Block 4",
-    events: ["Circuit Lab", "Dynamic Planet", "Water Quality"],
-    colorKey: "purple",
-  },
-  {
-    label: "Conflict Block 5",
-    events: ["Heredity", "Potions & Poisons", "Rocks and Minerals"],
-    colorKey: "pink",
-  },
-  {
-    label: "Conflict Block 6",
-    events: ["Anatomy & Physiology", "Crime Busters", "Write It Do It"],
-    colorKey: "indigo",
-  },
-  {
-    label: "Conflict Block 7",
-    events: ["Boomilever", "Helicopter", "Hovercraft", "Mission Possible", "Scrambler"],
-    colorKey: "orange",
-  },
-];
-
-const DIVISION_C_GROUPS = [
-  {
-    label: "Conflict Block 1",
-    events: ["Anatomy & Physiology", "Engineering CAD", "Forensics"],
-    colorKey: "blue",
-  },
-  {
-    label: "Conflict Block 2",
-    events: ["Codebusters", "Disease Detectives", "Remote Sensing"],
-    colorKey: "green",
-  },
-  {
-    label: "Conflict Block 3",
-    events: ["Astronomy", "Entomology", "Experimental Design"],
-    colorKey: "yellow",
-  },
-  { label: "Conflict Block 4", events: ["Chemistry Lab", "Machines"], colorKey: "purple" },
-  {
-    label: "Conflict Block 5",
-    events: ["Circuit Lab", "Dynamic Planet", "Water Quality"],
-    colorKey: "pink",
-  },
-  {
-    label: "Conflict Block 6",
-    events: ["Designer Genes", "Materials Science", "Rocks and Minerals"],
-    colorKey: "indigo",
-  },
-  {
-    label: "Conflict Block 7",
-    events: [
-      "Boomilever",
-      "Bungee Drop",
-      "Electric Vehicle",
-      "Helicopter",
-      "Hovercraft",
-      "Robot Tour",
-    ],
-    colorKey: "orange",
-  },
-];
 
 interface PeopleTabProps {
   team: {
@@ -122,56 +47,6 @@ interface PeopleTabProps {
     created_at: string;
   }>;
   onSubteamChange?: (subteamId: string) => void;
-}
-
-interface Member {
-  id: string | null; // null for unlinked roster members
-  name: string | null; // Can be null for unlinked roster members
-  email: string | null; // null for unlinked roster members
-  username?: string | null; // null for unlinked roster members
-  role: string;
-  joinedAt?: string | null;
-  subteam?: {
-    id: string;
-    name: string;
-    description: string;
-  };
-  subteams?: Array<{
-    id: string;
-    name: string;
-    description: string;
-    events?: string[];
-  }>;
-  subteamId?: string;
-  events: string[];
-  eventCount?: number;
-  avatar?: string;
-  isOnline?: boolean;
-  hasPendingInvite?: boolean;
-  hasPendingLinkInvite?: boolean;
-  isPendingInvitation?: boolean;
-  invitationCode?: string;
-  isUnlinked?: boolean; // true for unlinked roster members
-  conflicts?: Array<{
-    events: string[];
-    conflictBlock: string;
-    conflictBlockNumber: number;
-  }>;
-}
-
-// Helper function to safely get display name
-function getDisplayName(member: Member): string {
-  if (member.name && typeof member.name === "string" && member.name.trim().length > 0) {
-    return member.name;
-  }
-  if (member.email && typeof member.email === "string") {
-    const emailLocal = member.email.split("@")[0];
-    return emailLocal || "Unknown";
-  }
-  if (member.username && typeof member.username === "string") {
-    return member.username;
-  }
-  return "Unknown User";
 }
 
 export default function PeopleTab({
@@ -225,6 +100,56 @@ export default function PeopleTab({
   const [showSubteamDropdown, setShowSubteamDropdown] = useState<string | null>(null);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
 
+  // Helper functions to reduce cognitive complexity
+  const invalidateMemberCaches = (subteamId: string) => {
+    invalidateCache("members", team.slug, "all");
+    if (selectedSubteam !== "all") {
+      invalidateCache("members", team.slug, selectedSubteam);
+    }
+    invalidateCache("members", team.slug, subteamId);
+  };
+
+  const reloadMembersData = async () => {
+    await loadMembers(team.slug, selectedSubteam === "all" ? undefined : selectedSubteam);
+    // Also reload 'all' to ensure the member list is updated everywhere
+    await loadMembers(team.slug, undefined);
+  };
+
+  const handleRemoveSelfFromSubteam = async (subteamId: string) => {
+    await exitSubteamMutation.mutateAsync({
+      teamSlug: team.slug,
+      subteamId,
+    });
+    toast.success("Removed yourself from subteam");
+    invalidateMemberCaches(subteamId);
+    await reloadMembersData();
+  };
+
+  const handleRemoveOtherFromSubteam = async (
+    member: Member,
+    subteamId: string,
+    _subteamName: string
+  ) => {
+    const response = await fetch(`/api/teams/${team.slug}/roster/remove`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: member.id,
+        subteamId,
+      }),
+    });
+
+    if (response.ok) {
+      toast.success(`Removed ${member.name} from subteam`);
+      invalidateMemberCaches(subteamId);
+      await reloadMembersData();
+    } else {
+      const err = await response.json();
+      toast.error(err.error || "Failed to remove subteam badge");
+      throw new Error("Failed to remove from subteam");
+    }
+  };
+
   // Removed custom optimistic updates - using store's built-in optimistic updates
 
   // Handle clicking on own name to edit it
@@ -263,58 +188,6 @@ export default function PeopleTab({
     };
   }, [user?.id, loadMembers, team.slug, selectedSubteam]);
 
-  // Conflict detection function for member events
-  const detectMemberConflicts = useCallback(
-    (members: Member[]) => {
-      const conflicts: Record<
-        string,
-        Array<{
-          events: string[];
-          conflictBlock: string;
-          conflictBlockNumber: number;
-        }>
-      > = {};
-
-      const groups = team.division === "B" ? DIVISION_B_GROUPS : DIVISION_C_GROUPS;
-      const conflictBlocks: Record<string, number> = {};
-      let nextConflictBlock = 1;
-
-      // Check each member for conflicts
-      members.forEach((member) => {
-        if (!member.events || member.events.length === 0) {
-          return;
-        }
-
-        // Check each conflict block for conflicts
-        groups.forEach((group) => {
-          const groupEvents = group.events;
-          const memberEventsInBlock = member.events.filter((event) => groupEvents.includes(event));
-
-          // If member has multiple events in the same conflict block, it's a conflict
-          if (memberEventsInBlock.length > 1) {
-            const memberName = getDisplayName(member);
-            const conflictKey = `${memberName}-${group.label}`;
-            if (!conflictBlocks[conflictKey]) {
-              conflictBlocks[conflictKey] = nextConflictBlock++;
-            }
-
-            if (!conflicts[memberName]) {
-              conflicts[memberName] = [];
-            }
-
-            conflicts[memberName].push({
-              events: memberEventsInBlock,
-              conflictBlock: group.label,
-              conflictBlockNumber: conflictBlocks[conflictKey],
-            });
-          }
-        });
-      });
-
-      return conflicts;
-    },
-    [team.division]
-  );
 
   // Create a stable key for membersData to prevent unnecessary recalculations
   const membersDataKey =
@@ -603,6 +476,49 @@ export default function PeopleTab({
     }
   };
 
+  const removeLinkedMember = async (member: Member) => {
+    const response = await fetch(`/api/teams/${team.slug}/members/remove`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: member.id,
+      }),
+    });
+
+    if (response.ok) {
+      toast.success(`${member.name} has been removed from the team`);
+      const subteamParam = selectedSubteam === "all" ? "" : `?subteamId=${selectedSubteam}`;
+      const refreshResponse = await fetch(`/api/teams/${team.slug}/members${subteamParam}`);
+      if (refreshResponse.ok) {
+        loadMembers(team.slug, selectedSubteam === "all" ? undefined : selectedSubteam);
+      }
+    } else {
+      const error = await response.json();
+      toast.error(error.error || "Failed to remove member");
+    }
+  };
+
+  const removeUnlinkedMember = async (member: Member) => {
+    const response = await fetch(`/api/teams/${team.slug}/roster/remove`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentName: getDisplayName(member),
+      }),
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      toast.success(
+        `${getDisplayName(member)} has been removed from the roster (${result.removedEntries} entries)`
+      );
+      loadMembers(team.slug, selectedSubteam === "all" ? undefined : selectedSubteam);
+    } else {
+      const error = await response.json();
+      toast.error(error.error || "Failed to remove roster entry");
+    }
+  };
+
   const handleRemoveMember = async (member: Member) => {
     if (member.role === "captain") {
       toast.error("Cannot remove team captain");
@@ -619,50 +535,10 @@ export default function PeopleTab({
     }
 
     try {
-      // For unlinked members (no user ID), remove from roster data
       if (member.id) {
-        // For linked members (with user ID), remove from team memberships and roster
-        const response = await fetch(`/api/teams/${team.slug}/members/remove`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: member.id,
-          }),
-        });
-
-        if (response.ok) {
-          toast.success(`${member.name} has been removed from the team`);
-          // Refresh members list
-          const subteamParam = selectedSubteam === "all" ? "" : `?subteamId=${selectedSubteam}`;
-          const response = await fetch(`/api/teams/${team.slug}/members${subteamParam}`);
-          if (response.ok) {
-            loadMembers(team.slug, selectedSubteam === "all" ? undefined : selectedSubteam);
-          }
-        } else {
-          const error = await response.json();
-          toast.error(error.error || "Failed to remove member");
-        }
+        await removeLinkedMember(member);
       } else {
-        const response = await fetch(`/api/teams/${team.slug}/roster/remove`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            studentName: getDisplayName(member),
-          }),
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          toast.success(
-            `${getDisplayName(member)} has been removed from the roster (${result.removedEntries} entries)`
-          );
-
-          // Reload members to show updated data
-          loadMembers(team.slug, selectedSubteam === "all" ? undefined : selectedSubteam);
-        } else {
-          const error = await response.json();
-          toast.error(error.error || "Failed to remove roster entry");
-        }
+        await removeUnlinkedMember(member);
       }
     } catch (_error) {
       toast.error("Failed to remove member");
@@ -717,6 +593,7 @@ export default function PeopleTab({
         </h2>
         {isCaptain && (
           <button
+            type="button"
             onClick={handleInvitePerson}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               darkMode
@@ -770,6 +647,7 @@ export default function PeopleTab({
             <p>No members found</p>
           </div>
         ) : (
+          // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex member rendering with multiple conditional UI states
           filteredMembers.map((member, index) => (
             <div
               key={member.id || `member-${index}`}
@@ -785,6 +663,7 @@ export default function PeopleTab({
                   {/* Promote to captain button */}
                   {member.role !== "captain" && member.id && (
                     <button
+                      type="button"
                       onClick={() => handlePromoteToCaptain(member)}
                       className={`p-1 rounded transition-colors ${
                         darkMode
@@ -800,6 +679,7 @@ export default function PeopleTab({
                   {/* Remove button */}
                   {member.role !== "captain" && (
                     <button
+                      type="button"
                       onClick={() => handleRemoveMember(member)}
                       className={`p-1 rounded transition-colors ${
                         darkMode
@@ -850,6 +730,13 @@ export default function PeopleTab({
                             : ""
                         }`}
                         onClick={() => handleNameClick(member)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleNameClick(member);
+                          }
+                        }}
+                        tabIndex={member.id === user?.id ? 0 : undefined}
                         title={member.id === user?.id ? "Click to edit your name" : undefined}
                       >
                         {(() => {
@@ -905,7 +792,10 @@ export default function PeopleTab({
                         >
                           <div className="font-medium mb-1">Event Conflicts:</div>
                           {member.conflicts.map((conflict, index) => (
-                            <div key={index} className="text-xs">
+                            <div
+                              key={`conflict-${conflict.conflictBlockNumber}-${index}`}
+                              className="text-xs"
+                            >
                               Conflict Block {conflict.conflictBlockNumber}:{" "}
                               {conflict.events.join(", ")}
                             </div>
@@ -960,6 +850,15 @@ export default function PeopleTab({
                                         showSubteamDropdown === member.id ? null : member.id
                                       );
                                     }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        setSelectedMember(member);
+                                        setShowSubteamDropdown(
+                                          showSubteamDropdown === member.id ? null : member.id
+                                        );
+                                      }
+                                    }}
                                     title="Set subteam for this user"
                                   >
                                     <span>,</span>
@@ -969,64 +868,17 @@ export default function PeopleTab({
                             </div>
                             {subteam?.id && (isCaptain || member.id === user?.id) && (
                               <button
+                                type="button"
                                 onClick={async () => {
                                   try {
-                                    // If user is removing themselves, use exitSubteam mutation
                                     if (member.id === user?.id) {
-                                      await exitSubteamMutation.mutateAsync({
-                                        teamSlug: team.slug,
-                                        subteamId: subteam.id,
-                                      });
-                                      toast.success(`Removed yourself from ${subteam.name}`);
-
-                                      // Invalidate all member caches to ensure UI refreshes properly
-                                      invalidateCache("members", team.slug, "all");
-                                      if (selectedSubteam !== "all") {
-                                        invalidateCache("members", team.slug, selectedSubteam);
-                                      }
-                                      invalidateCache("members", team.slug, subteam.id);
-
-                                      // Reload members data immediately
-                                      await loadMembers(
-                                        team.slug,
-                                        selectedSubteam === "all" ? undefined : selectedSubteam
-                                      );
-                                      // Also reload 'all' to ensure the member list is updated everywhere
-                                      await loadMembers(team.slug, undefined);
+                                      await handleRemoveSelfFromSubteam(subteam.id);
                                     } else {
-                                      // Captains removing others use the existing API route
-                                      const response = await fetch(
-                                        `/api/teams/${team.slug}/roster/remove`,
-                                        {
-                                          method: "POST",
-                                          headers: { "Content-Type": "application/json" },
-                                          body: JSON.stringify({
-                                            userId: member.id,
-                                            subteamId: subteam.id,
-                                          }),
-                                        }
+                                      await handleRemoveOtherFromSubteam(
+                                        member,
+                                        subteam.id,
+                                        subteam.name
                                       );
-                                      if (response.ok) {
-                                        toast.success(`Removed ${member.name} from subteam`);
-
-                                        // Invalidate all member caches
-                                        invalidateCache("members", team.slug, "all");
-                                        if (selectedSubteam !== "all") {
-                                          invalidateCache("members", team.slug, selectedSubteam);
-                                        }
-                                        invalidateCache("members", team.slug, subteam.id);
-
-                                        // Reload members data
-                                        await loadMembers(
-                                          team.slug,
-                                          selectedSubteam === "all" ? undefined : selectedSubteam
-                                        );
-                                        await loadMembers(team.slug, undefined);
-                                      } else {
-                                        const err = await response.json();
-                                        toast.error(err.error || "Failed to remove subteam badge");
-                                        return;
-                                      }
                                     }
                                   } catch (e: unknown) {
                                     logger.error("Failed to remove from subteam:", e);
@@ -1054,6 +906,7 @@ export default function PeopleTab({
 
                     {/* Event badges */}
                     {member.events.length > 0 &&
+                      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex event rendering with subteam logic
                       (() => {
                         // Create a list of all events with their subteams
                         const eventsWithSubteams: Array<{
@@ -1064,33 +917,31 @@ export default function PeopleTab({
 
                         // If member has multiple subteams, show each event for each subteam it appears in
                         if (member.subteams && member.subteams.length > 0) {
-                          (
-                            member.subteams as Array<{
-                              id: string;
-                              name: string;
-                              description: string;
-                              events?: string[];
-                            }>
-                          ).forEach((subteam) => {
+                          for (const subteam of member.subteams as Array<{
+                            id: string;
+                            name: string;
+                            description: string;
+                            events?: string[];
+                          }>) {
                             if (subteam.events) {
-                              subteam.events.forEach((event) => {
+                              for (const event of subteam.events) {
                                 eventsWithSubteams.push({
                                   event,
                                   subteam: subteam.name,
                                   subteamId: subteam.id,
                                 });
-                              });
+                              }
                             }
-                          });
+                          }
                         } else if (member.subteam) {
                           // Fallback for single subteam
-                          member.events.forEach((event) => {
+                          for (const event of member.events) {
                             eventsWithSubteams.push({
                               event,
                               subteam: member.subteam?.name || "Unknown",
                               subteamId: member.subteam?.id || "",
                             });
-                          });
+                          }
                         }
 
                         // Filter out "General" events if there are specific events
@@ -1123,6 +974,7 @@ export default function PeopleTab({
                             </span>
                             {isCaptain && (
                               <button
+                                type="button"
                                 onClick={async () => {
                                   try {
                                     // Simple cache invalidation approach
@@ -1179,6 +1031,7 @@ export default function PeopleTab({
                       member.subteam.name !== "Unknown team" &&
                       member.subteam.name !== "Unknown" && (
                         <button
+                          type="button"
                           onClick={() => {
                             setSelectedMember(member);
                             setShowEventModal(true);
@@ -1205,6 +1058,7 @@ export default function PeopleTab({
                       <div className="py-1">
                         {subteams.map((subteam) => (
                           <button
+                            type="button"
                             key={subteam.id}
                             onClick={async () => {
                               try {
@@ -1268,6 +1122,7 @@ export default function PeopleTab({
                     </div>
                     {isCaptain && (
                       <button
+                        type="button"
                         onClick={() => handleCancelInvitation(member)}
                         className="text-red-600 hover:text-red-700 text-xs font-medium transition-colors"
                       >
@@ -1288,6 +1143,7 @@ export default function PeopleTab({
                     </div>
                     {isCaptain && (
                       <button
+                        type="button"
                         onClick={() => handleCancelLinkInvite(getDisplayName(member))}
                         className="text-red-600 hover:text-red-700 text-xs font-medium transition-colors"
                       >
@@ -1308,6 +1164,7 @@ export default function PeopleTab({
                     </div>
                     {isCaptain && (
                       <button
+                        type="button"
                         onClick={() => handleLinkInvite(getDisplayName(member))}
                         className="text-blue-600 hover:text-blue-700 text-xs font-medium transition-colors"
                       >
@@ -1374,6 +1231,7 @@ export default function PeopleTab({
                   "Water Quality",
                 ].map((event) => (
                   <button
+                    type="button"
                     key={event}
                     onClick={async () => {
                       try {
@@ -1458,6 +1316,7 @@ export default function PeopleTab({
               className={`${darkMode ? "bg-gray-700" : "bg-gray-50"} px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse`}
             >
               <button
+                type="button"
                 onClick={() => {
                   setShowEventModal(false);
                   setSelectedMember(null);

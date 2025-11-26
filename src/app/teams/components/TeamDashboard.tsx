@@ -54,7 +54,7 @@ export default function TeamDashboard({
 
   // Subteam state
   const [activeSubteamId, setActiveSubteamId] = useState<string | null>(null);
-  const [loadingSubteams, setLoadingSubteams] = useState(true);
+  const [_loadingSubteams, setLoadingSubteams] = useState(true);
   const [showBannerInvite, setShowBannerInvite] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
@@ -96,8 +96,7 @@ export default function TeamDashboard({
     } else if (subteamsData && subteamsData.length === 0) {
       setLoadingSubteams(false);
     }
-    // biome-ignore lint/correctness/useExhaustiveDependencies: getSubteams, setActiveSubteamId, setLoadingSubteams are stable functions from store
-  }, [team.slug, getSubteams, activeSubteamId, loadingSubteams]);
+  }, [team.slug, getSubteams, activeSubteamId]);
 
   // REMOVED: Additional effect to ensure subteams are loaded
   // Now using multiplexed endpoint in TeamDataLoader which loads subteams
@@ -455,6 +454,7 @@ export default function TeamDashboard({
               <div className="flex items-center space-x-4">
                 {isCaptain && (
                   <button
+                    type="button"
                     onClick={handleInvitePerson}
                     className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 group shadow-lg ${
                       darkMode
@@ -467,6 +467,7 @@ export default function TeamDashboard({
                   </button>
                 )}
                 <button
+                  type="button"
                   onClick={handleExitTeam}
                   className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 group shadow-lg ${
                     darkMode
@@ -479,6 +480,7 @@ export default function TeamDashboard({
                 </button>
                 {isCaptain && (
                   <button
+                    type="button"
                     onClick={handleArchiveTeam}
                     className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 group shadow-lg ${
                       darkMode
@@ -532,6 +534,7 @@ export default function TeamDashboard({
             </p>
             <div className="flex justify-end space-x-3">
               <button
+                type="button"
                 onClick={cancelExitTeam}
                 className={`px-4 py-2 border rounded-lg transition-colors ${
                   darkMode
@@ -542,6 +545,7 @@ export default function TeamDashboard({
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={confirmExitTeam}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
@@ -572,6 +576,7 @@ export default function TeamDashboard({
             </p>
             <div className="flex justify-end space-x-3">
               <button
+                type="button"
                 onClick={cancelArchiveTeam}
                 className={`px-4 py-2 border rounded-lg transition-colors ${
                   darkMode
@@ -582,6 +587,7 @@ export default function TeamDashboard({
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={confirmArchiveTeam}
                 className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
               >
@@ -636,6 +642,7 @@ export default function TeamDashboard({
             </p>
             <div className="flex justify-end space-x-3">
               <button
+                type="button"
                 onClick={cancelDeleteSubteam}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   darkMode
@@ -646,6 +653,7 @@ export default function TeamDashboard({
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={confirmDeleteSubteam}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >

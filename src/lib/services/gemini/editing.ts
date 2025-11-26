@@ -11,7 +11,11 @@ import type { EditSuggestionResult } from "./types";
  * Question editing service
  */
 export class GeminiEditingService {
-  constructor(private clientWithKey: ClientWithKey) {}
+  private clientWithKey: ClientWithKey;
+
+  constructor(clientWithKey: ClientWithKey) {
+    this.clientWithKey = clientWithKey;
+  }
 
   /**
    * Suggests improvements for a question

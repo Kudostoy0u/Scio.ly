@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "@/app/contexts/themeContext";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { ExternalLink, X } from "lucide-react";
 import { useEffect } from "react";
 

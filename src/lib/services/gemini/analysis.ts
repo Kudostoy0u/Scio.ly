@@ -11,7 +11,11 @@ import type { QuestionAnalysisResult, QuestionRemovalAnalysis } from "./types";
  * Question analysis service
  */
 export class GeminiAnalysisService {
-  constructor(private clientWithKey: ClientWithKey) {}
+  private clientWithKey: ClientWithKey;
+
+  constructor(clientWithKey: ClientWithKey) {
+    this.clientWithKey = clientWithKey;
+  }
 
   /**
    * Analyzes a question and user's answer

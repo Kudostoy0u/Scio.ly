@@ -15,7 +15,7 @@ export async function fetchUserBookmarks(
     return map;
   }
   const bookmarks = await loadBookmarksFromSupabase(user.id);
-  bookmarks.forEach((bookmark) => {
+  for (const bookmark of bookmarks) {
     if (bookmark.source === "test") {
       const question = bookmark.question as { imageData?: string; question?: string };
       const key = question.imageData
@@ -23,6 +23,6 @@ export async function fetchUserBookmarks(
         : (question.question ?? "");
       map[key] = true;
     }
-  });
+  }
   return map;
 }

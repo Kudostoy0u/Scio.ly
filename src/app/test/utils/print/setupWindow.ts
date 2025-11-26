@@ -26,7 +26,9 @@ export const setupTestPrintWindow = (printContent: string): Promise<Window> => {
           } catch (e) {
             import("@/lib/utils/logger")
               .then((m) => m.default.warn("Immediate auto-print failed", e))
-              .catch(() => {});
+              .catch(() => {
+                // Ignore import errors - logger is optional for printing
+              });
           }
         }, 200);
 

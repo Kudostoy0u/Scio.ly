@@ -1,4 +1,4 @@
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 // localstorage keys for different event types
 export const NORMAL_EVENT_PREFERENCES = "scio_normal_event_preferences";
 export const CODEBUSTERS_PREFERENCES = "scio_codebusters_preferences";

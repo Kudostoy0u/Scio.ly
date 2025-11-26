@@ -157,25 +157,25 @@ export function detectConflicts(
   let nextConflictBlock = 1;
 
   // Check each conflict block for conflicts
-  groups.forEach((group) => {
+  for (const group of groups) {
     const groupEvents = group.events;
     const personToEvents: Record<string, string[]> = {};
 
     // Collect all people assigned to events in this conflict block
-    groupEvents.forEach((eventName) => {
+    for (const eventName of groupEvents) {
       const eventRoster = rosterData[eventName] || [];
-      eventRoster.forEach((person) => {
+      for (const person of eventRoster) {
         if (person.trim()) {
           if (!personToEvents[person]) {
             personToEvents[person] = [];
           }
           personToEvents[person].push(eventName);
         }
-      });
-    });
+      }
+    }
 
     // Find conflicts (people assigned to multiple events in the same conflict block)
-    Object.entries(personToEvents).forEach(([person, events]) => {
+    for (const [person, events] of Object.entries(personToEvents)) {
       if (events.length > 1) {
         const conflictKey = `${person}-${group.label}`;
         if (!conflictBlocks[conflictKey]) {
@@ -189,8 +189,8 @@ export function detectConflicts(
           conflictBlockNumber: conflictBlocks[conflictKey],
         });
       }
-    });
-  });
+    }
+  }
 
   return conflicts;
 }

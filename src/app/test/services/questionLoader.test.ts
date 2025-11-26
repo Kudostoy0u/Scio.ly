@@ -18,13 +18,18 @@ vi.mock("@/app/api", () => ({
 import api from "@/app/api";
 import { fetchBaseQuestions, fetchIdQuestions, supportsIdEvent } from "./questionLoader";
 
-type AnyFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<any>;
+type MockResponse = {
+  ok: boolean;
+  json: () => Promise<Record<string, unknown>>;
+};
+
+type MockFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<MockResponse>;
 
 describe("questionLoader service", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     // @ts-expect-error override navigator for online
-    global.navigator = { onLine: true } as any;
+    (global as { navigator: { onLine: boolean } }).navigator = { onLine: true };
   });
 
   it("supportsIdEvent recognizes base and variant event names", () => {
@@ -46,15 +51,17 @@ describe("questionLoader service", () => {
         images: ["/id/img.png"],
       },
     ];
-    const fetchMock = vi.fn<Parameters<AnyFetch>, ReturnType<AnyFetch>>((input: any) => {
-      const url = typeof input === "string" ? input : input?.toString?.() || "";
-      if (url.startsWith(api.idQuestions)) {
-        return Promise.resolve({ ok: true, json: async () => ({ data: idRows }) });
+    const fetchMock = vi.fn<Parameters<MockFetch>, ReturnType<MockFetch>>(
+      (input: RequestInfo | URL) => {
+        const url = typeof input === "string" ? input : input?.toString?.() || "";
+        if (url.startsWith(api.idQuestions)) {
+          return Promise.resolve({ ok: true, json: async () => ({ data: idRows }) });
+        }
+        return Promise.resolve({ ok: false, json: async () => ({}) });
       }
-      return Promise.resolve({ ok: false, json: async () => ({}) });
-    });
+    );
     // @ts-expect-error override global fetch
-    global.fetch = fetchMock as any;
+    (global as { fetch: MockFetch }).fetch = fetchMock;
 
     const out = await fetchIdQuestions(
       { eventName: "Water Quality - Freshwater", types: "multiple-choice" },
@@ -62,7 +69,9 @@ describe("questionLoader service", () => {
     );
     expect(out.length).toBe(1);
     expect(out[0].imageData).toContain("/id/img.png");
-    const calls = (global.fetch as any).mock.calls.map((c: any[]) => c[0].toString());
+    const calls = (global as { fetch: { mock: { calls: unknown[][] } } }).fetch.mock.calls.map(
+      (c) => c[0]?.toString() || ""
+    );
     expect(calls[0].startsWith(api.idQuestions)).toBe(true);
   });
 
@@ -76,17 +85,19 @@ describe("questionLoader service", () => {
         difficulty: 0.5,
       },
     ];
-    const fetchMock = vi.fn<Parameters<AnyFetch>, ReturnType<AnyFetch>>((input: any) => {
-      const url = typeof input === "string" ? input : input?.toString?.() || "";
-      if (url.startsWith(api.questions)) {
-        expect(url).toContain("limit=3");
-        expect(url).toContain("event=Water%20Quality"); // base part extracted
-        return Promise.resolve({ ok: true, json: async () => ({ data: base }) });
+    const fetchMock = vi.fn<Parameters<MockFetch>, ReturnType<MockFetch>>(
+      (input: RequestInfo | URL) => {
+        const url = typeof input === "string" ? input : input?.toString?.() || "";
+        if (url.startsWith(api.questions)) {
+          expect(url).toContain("limit=3");
+          expect(url).toContain("event=Water%20Quality"); // base part extracted
+          return Promise.resolve({ ok: true, json: async () => ({ data: base }) });
+        }
+        return Promise.resolve({ ok: false, json: async () => ({}) });
       }
-      return Promise.resolve({ ok: false, json: async () => ({}) });
-    });
+    );
     // @ts-expect-error override global fetch
-    global.fetch = fetchMock as any;
+    (global as { fetch: MockFetch }).fetch = fetchMock;
 
     const out = await fetchBaseQuestions(
       { eventName: "Water Quality - Freshwater", types: "multiple-choice" },

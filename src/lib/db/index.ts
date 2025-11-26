@@ -2,6 +2,7 @@ import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { Pool } from "pg";
 import postgres from "postgres";
+// biome-ignore lint/style/noNamespaceImport: Drizzle requires schema object
 import * as schema from "./schema";
 
 const connectionString = process.env.DATABASE_URL;
@@ -90,5 +91,7 @@ export async function closeConnection(): Promise<void> {
 // Explicit exports to avoid barrel file performance issues
 // Schema exports are intentionally kept as re-exports due to large size and frequent usage
 // biome-ignore lint/performance/noBarrelFile: Schema file is intentionally a barrel for convenience
+// biome-ignore lint/performance/noReExportAll: Schema file is intentionally a barrel for convenience
 export * from "./schema";
+// biome-ignore lint/performance/noReExportAll: Utils file is intentionally a barrel for convenience
 export * from "./utils";

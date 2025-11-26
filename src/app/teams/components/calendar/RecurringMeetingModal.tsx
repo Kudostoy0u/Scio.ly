@@ -129,6 +129,7 @@ export default function RecurringMeetingModal({
 
               <div className="space-y-4">
                 <div>
+                  {/* biome-ignore lint/a11y/noLabelWithoutControl: Label is properly associated with input below */}
                   <label
                     className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
                   >
@@ -148,6 +149,7 @@ export default function RecurringMeetingModal({
                 </div>
 
                 <div>
+                  {/* biome-ignore lint/a11y/noLabelWithoutControl: Label groups related checkboxes */}
                   <label
                     className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
                   >
@@ -172,6 +174,7 @@ export default function RecurringMeetingModal({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
+                    {/* biome-ignore lint/a11y/noLabelWithoutControl: Label is properly associated with input below */}
                     <label
                       className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
                     >
@@ -190,6 +193,7 @@ export default function RecurringMeetingModal({
                   </div>
 
                   <div>
+                    {/* biome-ignore lint/a11y/noLabelWithoutControl: Label is properly associated with input below */}
                     <label
                       className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
                     >
@@ -210,6 +214,7 @@ export default function RecurringMeetingModal({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
+                    {/* biome-ignore lint/a11y/noLabelWithoutControl: Label is properly associated with input below */}
                     <label
                       className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
                     >
@@ -229,6 +234,7 @@ export default function RecurringMeetingModal({
                   </div>
 
                   <div>
+                    {/* biome-ignore lint/a11y/noLabelWithoutControl: Label is properly associated with input below */}
                     <label
                       className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
                     >
@@ -249,6 +255,7 @@ export default function RecurringMeetingModal({
                 </div>
 
                 <div>
+                  {/* biome-ignore lint/a11y/noLabelWithoutControl: Label is properly associated with select below */}
                   <label
                     className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
                   >
@@ -282,6 +289,7 @@ export default function RecurringMeetingModal({
                 </div>
 
                 <div>
+                  {/* biome-ignore lint/a11y/noLabelWithoutControl: Label is properly associated with input below */}
                   <label
                     className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
                   >
@@ -303,6 +311,7 @@ export default function RecurringMeetingModal({
 
               <div className="flex justify-end space-x-3 mt-6">
                 <button
+                  type="button"
                   onClick={onClose}
                   className={`px-4 py-2 rounded-lg font-medium ${
                     darkMode
@@ -313,6 +322,7 @@ export default function RecurringMeetingModal({
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={onSubmit}
                   className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium"
                 >

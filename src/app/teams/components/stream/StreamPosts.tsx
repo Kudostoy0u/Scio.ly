@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Clock, Edit, FileText, MessageCircle, Send, Trash2, User, X } from "lucide-react";
+import { Check, Edit, FileText, MessageCircle, Send, Trash2, User, X } from "lucide-react";
 import { useState } from "react";
 import type { StreamPost } from "./streamTypes";
 
@@ -75,6 +75,126 @@ export default function StreamPosts({
     );
   }
 
+  // Helper function to render post content
+  const renderPostContent = (post: StreamPost) => {
+    if (editingPost === post.id) {
+      return (
+        <div className="space-y-3">
+          <textarea
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            className={`w-full p-3 rounded-lg border resize-none ${
+              darkMode
+                ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+                : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+            }`}
+            rows={3}
+            placeholder="Edit post content..."
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input
+              type="text"
+              value={editAttachmentTitle}
+              onChange={(e) => setEditAttachmentTitle(e.target.value)}
+              placeholder="Attachment title"
+              className={`p-2 rounded-lg border ${
+                darkMode
+                  ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+              }`}
+            />
+            <input
+              type="url"
+              value={editAttachmentUrl}
+              onChange={(e) => setEditAttachmentUrl(e.target.value)}
+              placeholder="Attachment URL"
+              className={`p-2 rounded-lg border ${
+                darkMode
+                  ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+              }`}
+            />
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={handleSaveEdit}
+              disabled={!editContent.trim()}
+              className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              <Check className="w-4 h-4" />
+              <span>Save</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="flex items-center space-x-1 px-3 py-1 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-sm"
+            >
+              <X className="w-4 h-4" />
+              <span>Cancel</span>
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div>
+        <p className="text-sm whitespace-pre-wrap mb-2">{post.content}</p>
+        {post.attachment_url && (
+          <div className="mt-2 p-2 rounded border bg-gray-50 dark:bg-gray-800">
+            <a
+              href={post.attachment_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:text-blue-600 underline"
+            >
+              {post.attachment_title || "Attachment"}
+            </a>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Helper function to render post actions
+  const renderPostActions = (post: StreamPost) => {
+    return (
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2 text-xs text-gray-500">
+          <span>{post.author_name}</span>
+          <span>•</span>
+          <span>{new Date(post.created_at).toLocaleString()}</span>
+        </div>
+        {/* Captain Controls */}
+        {isCaptain && !editingPost && (
+          <div className="flex items-center space-x-1 ml-4">
+            <button
+              type="button"
+              onClick={() => handleStartEdit(post)}
+              className={`p-1 rounded hover:bg-gray-600 transition-colors ${
+                darkMode ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-700"
+              }`}
+              title="Edit post"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onDeletePost(post.id)}
+              className={`p-1 rounded hover:bg-red-600 transition-colors ${
+                darkMode ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-white"
+              }`}
+              title="Delete post"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {posts.map((post) => (
@@ -83,66 +203,7 @@ export default function StreamPosts({
           className={`p-4 rounded-lg border ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}
         >
           {/* Post Content */}
-          <div className="mb-3">
-            {editingPost === post.id ? (
-              <div className="space-y-3">
-                <textarea
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  className={`w-full p-3 rounded-lg border resize-none ${
-                    darkMode
-                      ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                      : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-                  }`}
-                  rows={3}
-                  placeholder="Edit post content..."
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <input
-                    type="text"
-                    value={editAttachmentTitle}
-                    onChange={(e) => setEditAttachmentTitle(e.target.value)}
-                    placeholder="Attachment title (optional)"
-                    className={`w-full p-2 rounded-lg border text-sm ${
-                      darkMode
-                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-                    }`}
-                  />
-                  <input
-                    type="url"
-                    value={editAttachmentUrl}
-                    onChange={(e) => setEditAttachmentUrl(e.target.value)}
-                    placeholder="Attachment URL"
-                    className={`w-full p-2 rounded-lg border text-sm ${
-                      darkMode
-                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-                    }`}
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={handleSaveEdit}
-                    disabled={!editContent.trim()}
-                    className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                  >
-                    <Check className="w-4 h-4" />
-                    <span>Save</span>
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    className="flex items-center space-x-1 px-3 py-1 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-sm"
-                  >
-                    <X className="w-4 h-4" />
-                    <span>Cancel</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <p className={`${darkMode ? "text-gray-100" : "text-gray-900"}`}>{post.content}</p>
-            )}
-          </div>
+          <div className="mb-3">{renderPostContent(post)}</div>
 
           {/* Attachment */}
           {post.attachment_url && !editingPost && (
@@ -168,50 +229,13 @@ export default function StreamPosts({
           )}
 
           {/* Post Meta */}
-          <div className="flex items-center justify-between text-sm mb-3">
-            <div className="flex items-center space-x-2">
-              <User className="w-4 h-4 text-gray-400" />
-              <span className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                {post.author_name}
-              </span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-gray-400" />
-              <span className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                {new Date(post.created_at).toLocaleString()}
-              </span>
-              {/* Captain Controls */}
-              {isCaptain && !editingPost && (
-                <div className="flex items-center space-x-1 ml-4">
-                  <button
-                    onClick={() => handleStartEdit(post)}
-                    className={`p-1 rounded hover:bg-gray-600 transition-colors ${
-                      darkMode
-                        ? "text-gray-400 hover:text-white"
-                        : "text-gray-500 hover:text-gray-700"
-                    }`}
-                    title="Edit post"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => onDeletePost(post.id)}
-                    className={`p-1 rounded hover:bg-red-600 transition-colors ${
-                      darkMode ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-white"
-                    }`}
-                    title="Delete post"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+          <div className="mb-3">{renderPostActions(post)}</div>
 
           {/* Comments Section */}
           <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
             <div className="flex items-center justify-between mb-3">
               <button
+                type="button"
                 onClick={() => onToggleComments(post.id)}
                 className="flex items-center space-x-2 text-sm text-blue-500 hover:text-blue-600 transition-colors"
               >
@@ -246,6 +270,7 @@ export default function StreamPosts({
                       {/* Captain Controls for Comments */}
                       {isCaptain && (
                         <button
+                          type="button"
                           onClick={() => onDeleteComment(comment.id)}
                           className={`p-1 rounded hover:bg-red-600 transition-colors ${
                             darkMode
@@ -286,6 +311,7 @@ export default function StreamPosts({
                   }}
                 />
                 <button
+                  type="button"
                   onClick={() => onAddComment(post.id)}
                   disabled={!newComments[post.id]?.trim()}
                   className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"

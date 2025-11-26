@@ -1,4 +1,4 @@
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { describe, expect, it } from "vitest";
 import { clearPreviewLocalStorage } from "./preview";
 

@@ -1,4 +1,4 @@
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { beforeEach, describe, expect, it } from "vitest";
 import { StorageKeys, StorageService } from "./storage";
 

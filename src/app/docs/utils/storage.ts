@@ -1,4 +1,3 @@
-// biome-ignore lint/correctness/noUndeclaredDependencies: server-only is a Next.js package for server-only code
 import "server-only";
 
 const BUCKET = "docs";

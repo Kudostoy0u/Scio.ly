@@ -1,7 +1,7 @@
 "use client";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { RefreshCcw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FaShareAlt } from "react-icons/fa";
 
 import EditQuestionModal from "@/app/components/EditQuestionModal";
@@ -9,27 +9,75 @@ import { FloatingActionButtons } from "@/app/components/FloatingActionButtons";
 import Header from "@/app/components/Header";
 import ShareModal from "@/app/components/ShareModal";
 import { useTheme } from "@/app/contexts/themeContext";
-import { useRef } from "react";
 import { toast } from "react-toastify";
-import {
-  ProgressBar,
-  QuestionCard,
-  TestFooter,
-  TestHeader,
-  TestLayout,
-  TestPrintConfigModal,
-  TestSummary,
-} from "./components";
+import { default as ProgressBar } from "./components/ProgressBar";
+import { default as TestFooter } from "./components/TestFooter";
+import { default as TestHeader } from "./components/TestHeader";
+import { default as TestLayout } from "./components/TestLayout";
+import TestMainContent from "./components/TestMainContent";
+import { TestPrintConfigModal } from "./components/TestPrintConfigModal";
+import { default as TestSummary } from "./components/TestSummary";
 import { useTestState } from "./hooks/useTestState";
-import {
-  createTestPrintContent,
-  createTestPrintStyles,
-  setupTestPrintWindow,
-} from "./utils/printUtils";
+import { createTestPrintContent } from "./utils/print/content";
+import { setupTestPrintWindow } from "./utils/print/setupWindow";
+import { createTestPrintStyles } from "./utils/print/styles";
 
 import type { Question } from "@/app/utils/geminiService";
 import type { RouterParams } from "@/app/utils/questionUtils";
 
+// Helper functions for printing
+const formatQuestionsForPrint = (data: Question[], questionPoints: Record<number, number>) => {
+  let questionsHtml = "";
+
+  for (const [index, question] of data.entries()) {
+    const points =
+      questionPoints[index] || (question.options && question.options.length > 0 ? 2 : 5);
+
+    questionsHtml += `<div class="question">`;
+
+    questionsHtml += `<div class="question-header">${index + 1}. ${question.question} [${points} pts]</div>`;
+
+    if (question.imageUrl || question.imageData) {
+      questionsHtml += `<div class="question-image">
+        <img src="${question.imageData || question.imageUrl}" alt="Question Image" />
+      </div>`;
+    }
+
+    if (question.options && question.options.length > 0) {
+      questionsHtml += `<div class="question-options">`;
+      for (const [optionIndex, option] of question.options.entries()) {
+        const letter = String.fromCharCode(97 + optionIndex); // a, b, c, d...
+        questionsHtml += `<div class="option">${letter}. ${option}</div>`;
+      }
+      questionsHtml += "</div>";
+    } else {
+      questionsHtml += `<div class="answer-space">
+        <div class="answer-line">Answer: _________________________________________________</div>
+        <div class="answer-line">_______________________________________________________</div>
+        <div class="answer-line">_______________________________________________________</div>
+      </div>`;
+    }
+
+    questionsHtml += "</div>";
+  }
+
+  return questionsHtml;
+};
+
+const createAnswerKey = (data: Question[]) => {
+  let answerKeyHtml = '<div class="answer-key"><h2>Answer Key</h2>';
+
+  for (const [index, question] of data.entries()) {
+    if (question.answers && question.answers.length > 0) {
+      answerKeyHtml += `<div class="answer-item">${index + 1}. ${question.answers.join(", ")}</div>`;
+    }
+  }
+
+  answerKeyHtml += "</div>";
+  return answerKeyHtml;
+};
+
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex state management required for test functionality
 export default function TestContent({
   initialData,
   initialRouterData,
@@ -122,7 +170,7 @@ export default function TestContent({
     }
   }, [isPreview]);
 
-  const handlePrintConfig = () => {
+  const handlePrintConfig = async () => {
     setPrintModalOpen(true);
   };
 
@@ -132,118 +180,16 @@ export default function TestContent({
       return;
     }
 
-    const formatQuestionsForPrint = () => {
-      let questionsHtml = "";
-
-      data.forEach((question, index) => {
-        const points =
-          questionPoints[index] || (question.options && question.options.length > 0 ? 2 : 5);
-
-        questionsHtml += `<div className="question">`;
-
-        questionsHtml += `<div className="question-header">${index + 1}. ${question.question} [${points} pts]</div>`;
-
-        if (question.imageUrl || question.imageData) {
-          questionsHtml += `<div className="question-image">
-            <img src="${question.imageData || question.imageUrl}" alt="Question Image" />
-          </div>`;
-        }
-
-        if (question.options && question.options.length > 0) {
-          questionsHtml += `<div className="question-options">`;
-          question.options.forEach((option, optionIndex) => {
-            const letter = String.fromCharCode(97 + optionIndex); // a, b, c, d...
-            questionsHtml += `<div className="option">${letter}. ${option}</div>`;
-          });
-          questionsHtml += "</div>";
-        } else {
-          questionsHtml += `<div className="answer-space">
-            <div className="answer-line">Answer: _________________________________________________</div>
-            <div className="answer-line">_______________________________________________________</div>
-            <div className="answer-line">_______________________________________________________</div>
-          </div>`;
-        }
-
-        questionsHtml += "</div>";
-      });
-
-      return questionsHtml;
-    };
-
     const getStylesheets = () => {
       return "";
     };
 
     const printStyles = createTestPrintStyles(getStylesheets);
 
-    const createAnswerKey = () => {
-      let answerKeyHtml = '<div className="answer-key-section">';
-      answerKeyHtml += '<div className="answer-key-header">ANSWER KEY</div>';
-      answerKeyHtml += '<div className="answer-key-content">';
-
-      const totalQuestions = data.length;
-      const columns = Math.min(5, Math.ceil(totalQuestions / 20)); // 20 questions per column max
-      const questionsPerColumn = Math.ceil(totalQuestions / columns);
-
-      for (let col = 0; col < columns; col++) {
-        answerKeyHtml += '<div className="answer-column">';
-
-        for (
-          let i = col * questionsPerColumn;
-          i < Math.min((col + 1) * questionsPerColumn, totalQuestions);
-          i++
-        ) {
-          const question = data[i];
-          if (!question) {
-            continue;
-          }
-          const questionNumber = i + 1;
-
-          if (question.options && question.options.length > 0) {
-            const correctAnswers = question.answers;
-            let answerLetters = "";
-
-            if (Array.isArray(correctAnswers)) {
-              answerLetters = correctAnswers
-                .map((ans) => {
-                  if (typeof ans === "string") {
-                    const optionIndex = question.options?.findIndex((opt) => opt === ans) ?? -1;
-                    return optionIndex >= 0 ? String.fromCharCode(97 + optionIndex) : ans;
-                  }
-                  if (typeof ans === "number") {
-                    return String.fromCharCode(97 + ans);
-                  }
-                  return ans;
-                })
-                .join(", ");
-            } else if (typeof correctAnswers === "string") {
-              const optionIndex =
-                question.options?.findIndex((opt) => opt === correctAnswers) ?? -1;
-              answerLetters =
-                optionIndex >= 0 ? String.fromCharCode(97 + optionIndex) : correctAnswers;
-            } else if (typeof correctAnswers === "number") {
-              answerLetters = String.fromCharCode(97 + correctAnswers);
-            }
-
-            answerKeyHtml += `<div className="answer-item">${questionNumber}. ${answerLetters}</div>`;
-          } else {
-            answerKeyHtml += `<div className="answer-item">${questionNumber}. [judge on accuracy and completeness]</div>`;
-          }
-        }
-
-        answerKeyHtml += "</div>";
-      }
-
-      answerKeyHtml += "</div>";
-      answerKeyHtml += "</div>";
-
-      return answerKeyHtml;
-    };
-
     const printContent = createTestPrintContent(
       {
         tournamentName,
-        questionsHtml: formatQuestionsForPrint() + createAnswerKey(),
+        questionsHtml: formatQuestionsForPrint(data, questionPoints) + createAnswerKey(data),
         questionPoints,
       },
       printStyles
@@ -280,6 +226,7 @@ export default function TestContent({
           {/* Inline back link to Practice */}
           <div className="w-full max-w-3xl mt-0.5 mb-5">
             <button
+              type="button"
               onClick={handleBackToMain}
               className={`group inline-flex items-center text-base font-medium ${darkMode ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"}`}
             >
@@ -316,6 +263,7 @@ export default function TestContent({
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-4">
                 <button
+                  type="button"
                   onClick={handleResetTest}
                   title="Reset Test"
                   className={`flex items-center transition-all duration-200 ${
@@ -329,6 +277,7 @@ export default function TestContent({
                 </button>
 
                 <button
+                  type="button"
                   onClick={handlePrintConfig}
                   disabled={isOffline || data.length === 0}
                   title={isOffline ? "Print feature not available offline" : "Print Test"}
@@ -346,6 +295,7 @@ export default function TestContent({
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
+                    <title>Print test</title>
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -359,6 +309,7 @@ export default function TestContent({
 
               <div className="flex items-center gap-4">
                 <button
+                  type="button"
                   onClick={() => setShareModalOpen(true)}
                   disabled={isOffline}
                   title={isOffline ? "Share feature not available offline" : "Share Test"}
@@ -378,64 +329,32 @@ export default function TestContent({
             </div>
 
             <div className="container mx-auto px-4 mt-3">
-              {isLoading && !isResetting ? (
-                <div className="flex justify-center items-center h-64">
-                  <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600" />
-                </div>
-              ) : fetchError ? (
-                <div className="text-red-600 text-center">{fetchError}</div>
-              ) : routerData.eventName === "Codebusters" &&
-                routerData.types === "multiple-choice" ? (
-                <div className="flex flex-col items-center justify-center h-64">
-                  <p
-                    className={`text-xl font-semibold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}
-                  >
-                    No MCQs available for this event
-                  </p>
-                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
-                    Please select &quot;MCQ + FRQ&quot; in the dashboard to practice this event
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {data.map((question, index) => {
-                    const isBookmarked = isQuestionBookmarked(question);
-
-                    const questionKey = question.id
-                      ? `${question.id}-${index}`
-                      : `question-${index}-${question.question.substring(0, 50)}`;
-
-                    return (
-                      <QuestionCard
-                        key={questionKey}
-                        question={question}
-                        index={index}
-                        userAnswers={userAnswers[index] || []}
-                        isSubmitted={isSubmitted}
-                        darkMode={darkMode}
-                        eventName={routerData.eventName || "Unknown Event"}
-                        isBookmarked={isBookmarked}
-                        gradingResults={gradingResults}
-                        explanations={explanations}
-                        loadingExplanation={loadingExplanation}
-                        submittedReports={submittedReports}
-                        submittedEdits={submittedEdits}
-                        gradingFRQs={gradingFRQs}
-                        onAnswerChange={handleAnswerChange}
-                        onBookmarkChange={handleBookmarkChange}
-                        onReportSubmitted={handleReportSubmitted}
-                        onEditSubmitted={handleEditSubmitted}
-                        onEdit={handleEditOpen}
-                        onQuestionRemoved={handleQuestionRemoved}
-                        onGetExplanation={handleGetExplanation}
-                        isOffline={isOffline}
-                        hideResultText={isPreview}
-                        isAssignmentMode={!!routerData.assignmentMode}
-                      />
-                    );
-                  })}
-                </>
-              )}
+              <TestMainContent
+                isLoading={isLoading}
+                isResetting={isResetting}
+                fetchError={fetchError}
+                routerData={routerData}
+                darkMode={darkMode}
+                data={data}
+                userAnswers={userAnswers}
+                isSubmitted={isSubmitted}
+                gradingResults={gradingResults}
+                explanations={explanations}
+                loadingExplanation={loadingExplanation}
+                submittedReports={submittedReports}
+                submittedEdits={submittedEdits}
+                gradingFRQs={gradingFRQs}
+                handleAnswerChange={handleAnswerChange}
+                handleBookmarkChange={handleBookmarkChange}
+                handleReportSubmitted={handleReportSubmitted}
+                handleEditSubmitted={handleEditSubmitted}
+                handleEditOpen={handleEditOpen}
+                handleQuestionRemoved={handleQuestionRemoved}
+                handleGetExplanation={handleGetExplanation}
+                isOffline={isOffline}
+                isPreview={isPreview}
+                isQuestionBookmarked={isQuestionBookmarked}
+              />
             </div>
 
             {!(
@@ -447,6 +366,7 @@ export default function TestContent({
               (isPreview ? (
                 <div className="mt-6 flex items-center gap-3">
                   <button
+                    type="button"
                     onClick={handleBackToMain}
                     className={`w-1/5 px-4 py-2 font-semibold rounded-lg border-2 transition-colors flex items-center justify-center text-center ${
                       darkMode
@@ -457,6 +377,7 @@ export default function TestContent({
                     Back
                   </button>
                   <button
+                    type="button"
                     onClick={async () => {
                       try {
                         const selectionStr = SyncLocalStorage.getItem("teamsSelection");

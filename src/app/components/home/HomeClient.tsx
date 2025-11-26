@@ -1,6 +1,6 @@
 "use client";
 
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import logger from "@/lib/utils/logger";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -30,7 +30,6 @@ interface Testimonial {
   school: string;
 }
 import HylasBanner from "@/app/dashboard/components/HylasBanner";
-// biome-ignore lint/correctness/noUndeclaredDependencies: @components is a path alias, not an npm package
 import Header from "@components/Header";
 import Autoplay from "embla-carousel-autoplay";
 import useEmblaCarousel from "embla-carousel-react";

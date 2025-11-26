@@ -3,7 +3,7 @@
  */
 
 import { dbPg } from "@/lib/db";
-import * as schema from "@/lib/db/schema";
+import { users } from "@/lib/db/schema";
 import logger from "@/lib/utils/logger";
 
 // Removed unused function: generateCode
@@ -50,7 +50,7 @@ export async function upsertUserProfile(params: {
     })();
 
     // Prepare insert values
-    const insertValues: typeof schema.users.$inferInsert = {
+    const insertValues: typeof users.$inferInsert = {
       id,
       email: params.email,
       username: fallbackUsername,
@@ -62,7 +62,7 @@ export async function upsertUserProfile(params: {
     };
 
     // Prepare update set only for provided (non-undefined) fields to avoid overwriting with nulls
-    const updateSet: Partial<typeof schema.users.$inferInsert> & { updatedAt?: Date } = {
+    const updateSet: Partial<typeof users.$inferInsert> & { updatedAt?: Date } = {
       email: params.email,
       updatedAt: new Date(),
     };
@@ -92,10 +92,10 @@ export async function upsertUserProfile(params: {
     ]);
 
     await dbPg
-      .insert(schema.users)
+      .insert(users)
       .values(insertValues)
       .onConflictDoUpdate({
-        target: schema.users.id,
+        target: users.id,
         set: updateSet as Record<string, unknown>,
       });
 

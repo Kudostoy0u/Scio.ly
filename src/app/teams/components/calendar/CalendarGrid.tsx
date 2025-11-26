@@ -237,7 +237,7 @@ export default function CalendarGrid({
 
       {/* Calendar Days */}
       <div className="grid grid-cols-7 grid-rows-6 h-[calc(500px-48px)] md:h-[calc(600px-60px)]">
-        {calendarDays.map((day, index) => {
+        {calendarDays.map((day, _index) => {
           const isCurrentMonth = day.date.getMonth() === currentDate.getMonth();
           const isToday = day.date.toDateString() === new Date().toDateString();
           const dayEvents = getEventsForDate(day.date);
@@ -246,7 +246,7 @@ export default function CalendarGrid({
 
           return (
             <div
-              key={index}
+              key={day.date.toISOString()}
               className={`p-1 md:p-2 border-r border-b overflow-hidden max-h-[200%] flex flex-col ${
                 darkMode ? "border-gray-700" : "border-gray-200"
               } ${isCurrentMonth ? "" : darkMode ? "bg-gray-800 text-gray-500" : "bg-gray-50 text-gray-400"}`}
@@ -271,6 +271,7 @@ export default function CalendarGrid({
                 </span>
                 {isCurrentMonth && (
                   <button
+                    type="button"
                     onClick={() => onAddEventForDate(day.date)}
                     className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${
                       darkMode
@@ -289,14 +290,16 @@ export default function CalendarGrid({
                   const eventType = "event_type" in event ? event.event_type : "practice";
 
                   return (
-                    <div
-                      key={eventIndex}
-                      className={`text-[10px] md:text-xs p-1 rounded border cursor-pointer transition-colors hover:opacity-80 ${getEventColors(eventType)}`}
+                    <button
+                      key={`${eventIndex}-${event.title}-${event.start_time || "no-time"}`}
+                      type="button"
+                      className={`text-[10px] md:text-xs p-1 rounded border cursor-pointer transition-colors hover:opacity-80 text-left w-full ${getEventColors(eventType)}`}
                       onClick={() => {
                         if ("event_type" in event) {
                           onEventClick(event as CalendarEvent);
                         }
                       }}
+                      aria-label={`View event: ${event.title}`}
                     >
                       <div className="flex items-start justify-between gap-1">
                         <div className="flex-1 min-w-0">
@@ -311,6 +314,7 @@ export default function CalendarGrid({
                           )}
                         </div>
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             onDeleteEvent(event.id);
@@ -325,7 +329,7 @@ export default function CalendarGrid({
                           ×
                         </button>
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>

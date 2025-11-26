@@ -22,6 +22,7 @@ export default function TestFooter({
   return (
     <div className="mt-6 flex items-center gap-3">
       <button
+        type="button"
         onClick={onBackToMain}
         className={`w-1/5 px-4 py-2 font-semibold rounded-lg border-2 transition-colors flex items-center justify-center text-center ${
           darkMode
@@ -34,6 +35,7 @@ export default function TestFooter({
 
       {isSubmitted && !isAssignment ? (
         <button
+          type="button"
           onClick={onReset}
           className={`w-4/5 px-4 py-2 font-semibold rounded-lg border-2 flex items-center justify-center text-center ${
             darkMode
@@ -49,6 +51,7 @@ export default function TestFooter({
         </div>
       ) : (
         <button
+          type="button"
           onClick={onSubmit}
           className={`w-4/5 px-4 py-2 font-semibold rounded-lg border-2 flex items-center justify-center text-center ${
             darkMode

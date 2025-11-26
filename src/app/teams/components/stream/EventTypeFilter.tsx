@@ -32,6 +32,7 @@ export default function EventTypeFilter({
   return (
     <div className="relative dropdown-container">
       <button
+        type="button"
         onClick={onToggleDropdown}
         className={`flex items-center space-x-2 px-3 py-2 border rounded-lg text-sm transition-colors ${
           darkMode
@@ -54,6 +55,7 @@ export default function EventTypeFilter({
           <div className="p-2 space-y-1">
             {EVENT_TYPES.map((eventType) => (
               <button
+                type="button"
                 key={eventType.value}
                 onClick={() => {
                   const newSelection = selectedEventTypes.includes(eventType.value)

@@ -1,4 +1,8 @@
-import type { TestPrintConfig } from "@/app/test/utils/printUtils";
+export interface TestPrintConfig {
+  tournamentName: string;
+  questionsHtml: string;
+  questionPoints: { [key: number]: number };
+}
 
 export const createTestPrintContent = (_config: TestPrintConfig, _printStyles: string) => `
 <!DOCTYPE html>

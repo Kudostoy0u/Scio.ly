@@ -1,0 +1,39 @@
+
+> science-olympiad-practice@0.1.0 lint /Users/kundanbaliga/Programs/Scio.ly/website
+> biome check . && npx tsgo
+
+./src/app/unlimited/content.tsx:82:3 lint/correctness/useExhaustiveDependencies ━━━━━━━━━━━━━━━━━━━━
+
+  × This hook does not specify all of its dependencies: fetchStartedRef.current
+  
+    80 │   const batchReloadingRef = useRef(false);
+    81 │ 
+  > 82 │   useEffect(() => {
+       │   ^^^^^^^^^
+    83 │     if (fetchStartedRef.current) {
+    84 │       return;
+  
+  i This dependency is not specified in the hook dependency list.
+  
+    82 │   useEffect(() => {
+  > 83 │     if (fetchStartedRef.current) {
+       │         ^^^^^^^^^^^^^^^^^^^^^^^
+    84 │       return;
+    85 │     }
+  
+
+./src/app/utils/questionUtils.ts format ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Formatter would have printed the following content:
+  
+    359 │ ··//·biome-ignore·lint/complexity/noExcessiveCognitiveComplexity:·Complex·logic·required·for·explanation·generation·with·rate·limiting·and·error·handling
+        │ ++                                                                                                                                                       
+
+Checked 660 files in 1236ms. No fixes applied.
+Found 2 errors.
+check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while running checks.
+  
+
+ ELIFECYCLE  Command failed with exit code 1.

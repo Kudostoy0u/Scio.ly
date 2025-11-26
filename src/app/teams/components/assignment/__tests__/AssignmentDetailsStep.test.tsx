@@ -3,6 +3,10 @@ import type { AssignmentDetails } from "@/app/teams/components/assignment/assign
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+// Regex patterns for test matching
+const TITLE_REGEX = /Title/;
+const EVENT_REGEX = /Event/;
+
 describe("AssignmentDetailsStep", () => {
   const mockProps = {
     darkMode: false,
@@ -31,8 +35,8 @@ describe("AssignmentDetailsStep", () => {
     it("renders all form fields", () => {
       render(<AssignmentDetailsStep {...mockProps} />);
 
-      expect(screen.getByLabelText(/Title/)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Event/)).toBeInTheDocument();
+      expect(screen.getByLabelText(TITLE_REGEX)).toBeInTheDocument();
+      expect(screen.getByLabelText(EVENT_REGEX)).toBeInTheDocument();
       expect(screen.getByLabelText("Type")).toBeInTheDocument();
       expect(screen.getByLabelText("Due Date")).toBeInTheDocument();
       expect(screen.getByLabelText("Points")).toBeInTheDocument();
@@ -48,7 +52,7 @@ describe("AssignmentDetailsStep", () => {
     it("renders available events in dropdown", () => {
       render(<AssignmentDetailsStep {...mockProps} />);
 
-      const eventSelect = screen.getByLabelText(/Event/);
+      const eventSelect = screen.getByLabelText(EVENT_REGEX);
       expect(eventSelect).toBeInTheDocument();
 
       fireEvent.click(eventSelect);
@@ -61,7 +65,7 @@ describe("AssignmentDetailsStep", () => {
     it("calls onDetailsChange when title is updated", () => {
       render(<AssignmentDetailsStep {...mockProps} />);
 
-      const titleInput = screen.getByLabelText(/Title/);
+      const titleInput = screen.getByLabelText(TITLE_REGEX);
       fireEvent.change(titleInput, { target: { value: "New Title" } });
 
       expect(mockProps.onDetailsChange).toHaveBeenCalledWith({ title: "New Title" });
@@ -70,7 +74,7 @@ describe("AssignmentDetailsStep", () => {
     it("calls onDetailsChange when event is selected", () => {
       render(<AssignmentDetailsStep {...mockProps} />);
 
-      const eventSelect = screen.getByLabelText(/Event/);
+      const eventSelect = screen.getByLabelText(EVENT_REGEX);
       fireEvent.change(eventSelect, { target: { value: "Test Event 1" } });
 
       expect(mockProps.onDetailsChange).toHaveBeenCalledWith({ eventName: "Test Event 1" });
@@ -166,14 +170,14 @@ describe("AssignmentDetailsStep", () => {
     it("applies dark mode classes when darkMode is true", () => {
       render(<AssignmentDetailsStep {...mockProps} darkMode={true} />);
 
-      const titleInput = screen.getByLabelText(/Title/);
+      const titleInput = screen.getByLabelText(TITLE_REGEX);
       expect(titleInput).toHaveClass("bg-gray-700", "border-gray-600", "text-white");
     });
 
     it("applies light mode classes when darkMode is false", () => {
       render(<AssignmentDetailsStep {...mockProps} darkMode={false} />);
 
-      const titleInput = screen.getByLabelText(/Title/);
+      const titleInput = screen.getByLabelText(TITLE_REGEX);
       expect(titleInput).toHaveClass("bg-white", "border-gray-300", "text-gray-900");
     });
   });
@@ -182,8 +186,8 @@ describe("AssignmentDetailsStep", () => {
     it("has proper labels for all form fields", () => {
       render(<AssignmentDetailsStep {...mockProps} />);
 
-      expect(screen.getByLabelText(/Title/)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Event/)).toBeInTheDocument();
+      expect(screen.getByLabelText(TITLE_REGEX)).toBeInTheDocument();
+      expect(screen.getByLabelText(EVENT_REGEX)).toBeInTheDocument();
       expect(screen.getByLabelText("Type")).toBeInTheDocument();
       expect(screen.getByLabelText("Due Date")).toBeInTheDocument();
       expect(screen.getByLabelText("Points")).toBeInTheDocument();

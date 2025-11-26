@@ -46,9 +46,9 @@ function NonCompactSummary({
               Subtopics Covered ({subtopics.length})
             </h3>
             <div className="flex flex-wrap gap-2">
-              {subtopics.map((subtopic, index) => (
+              {subtopics.map((subtopic) => (
                 <span
-                  key={index}
+                  key={subtopic}
                   className={`px-2 py-1 text-xs rounded-full ${darkMode ? "bg-gray-600 text-gray-200" : "bg-gray-200 text-gray-700"}`}
                 >
                   {subtopic.toLowerCase() === "unknown" ? "Misc." : subtopic}
@@ -152,7 +152,9 @@ export default function TestSummary({
             }))
           );
         })
-        .catch(() => {});
+        .catch(() => {
+          // Intentionally ignore errors for analytics submission
+        });
     }
   }, [data, subtopics.length]);
 

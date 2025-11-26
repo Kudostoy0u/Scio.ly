@@ -29,7 +29,7 @@ import type { CipherResult, QuoteData } from "@/app/codebusters/types";
 import { getCustomWordBank, setCustomWordBank } from "@/app/codebusters/utils/common";
 import { cleanQuote } from "@/app/codebusters/utils/quoteCleaner";
 import { getEventOfflineQuestions } from "@/app/utils/storage";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import logger from "@/lib/utils/logger";
 import { computeCipherDifficulty } from "./utils/difficulty";
 import { isLangObject } from "./utils/langGuards";

@@ -2,14 +2,21 @@ import EnhancedAssignmentCreator from "@/app/teams/components/EnhancedAssignment
 import type { AssignmentCreatorProps } from "@/app/teams/components/assignment/assignmentTypes";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createAssignment } from "../assignment/assignmentUtils";
 
 // Mock the child components
 vi.mock("../assignment/AssignmentDetailsStep", () => ({
-  default: ({ onNext, onBack, onError, details, onDetailsChange }: any) => (
+  default: ({ onNext, onBack, onError, details, onDetailsChange }: Record<string, unknown>) => (
     <div data-testid="assignment-details-step">
-      <button onClick={onNext}>Next: Generate Questions</button>
-      <button onClick={onBack}>Back</button>
-      <button onClick={() => onError("Test error")}>Trigger Error</button>
+      <button type="button" onClick={onNext}>
+        Next: Generate Questions
+      </button>
+      <button type="button" onClick={onBack}>
+        Back
+      </button>
+      <button type="button" onClick={() => onError("Test error")}>
+        Trigger Error
+      </button>
       <input
         data-testid="title-input"
         value={details.title}
@@ -20,52 +27,71 @@ vi.mock("../assignment/AssignmentDetailsStep", () => ({
 }));
 
 vi.mock("../assignment/QuestionGenerationStep", () => ({
-  default: ({ onNext, onBack, onGenerateQuestions }: any) => (
+  default: ({ onNext, onBack, onGenerateQuestions }: Record<string, unknown>) => (
     <div data-testid="question-generation-step">
-      <button onClick={onNext}>Next: Preview Questions</button>
-      <button onClick={onBack}>Back</button>
-      <button onClick={onGenerateQuestions}>Generate Questions</button>
+      <button type="button" onClick={onNext}>
+        Next: Preview Questions
+      </button>
+      <button type="button" onClick={onBack}>
+        Back
+      </button>
+      <button type="button" onClick={onGenerateQuestions}>
+        Generate Questions
+      </button>
     </div>
   ),
 }));
 
 vi.mock("../assignment/QuestionPreviewStep", () => ({
-  default: ({ onNext, onBack }: any) => (
+  default: ({ onNext, onBack }: Record<string, unknown>) => (
     <div data-testid="question-preview-step">
-      <button onClick={onNext}>Next: Select Roster</button>
-      <button onClick={onBack}>Back</button>
+      <button type="button" onClick={onNext}>
+        Next: Select Roster
+      </button>
+      <button type="button" onClick={onBack}>
+        Back
+      </button>
     </div>
   ),
 }));
 
 vi.mock("../assignment/RosterSelectionStep", () => ({
-  default: ({ onBack, onCreateAssignment }: any) => (
+  default: ({ onBack, onCreateAssignment }: Record<string, unknown>) => (
     <div data-testid="roster-selection-step">
-      <button onClick={onBack}>Back</button>
-      <button onClick={onCreateAssignment}>Create Assignment</button>
+      <button type="button" onClick={onBack}>
+        Back
+      </button>
+      <button type="button" onClick={onCreateAssignment}>
+        Create Assignment
+      </button>
     </div>
   ),
 }));
 
 // Mock the utility functions
+const fetchRosterMembers = vi.fn();
+const getEventSubtopics = vi.fn(() => ["Subtopic 1", "Subtopic 2"]);
+const getEventCapabilitiesForEvent = vi.fn(() => ({
+  supportsPictureQuestions: true,
+  supportsIdentificationOnly: false,
+}));
+const generateQuestions = vi.fn();
 vi.mock("../assignment/assignmentUtils", () => ({
   getAvailableEvents: vi.fn(() => ["Test Event 1", "Test Event 2"]),
-  getEventSubtopics: vi.fn(() => ["Subtopic 1", "Subtopic 2"]),
-  getEventCapabilitiesForEvent: vi.fn(() => ({
-    supportsPictureQuestions: true,
-    supportsIdentificationOnly: false,
-  })),
-  generateQuestions: vi.fn(),
-  fetchRosterMembers: vi.fn(),
+  getEventSubtopics,
+  getEventCapabilitiesForEvent,
+  generateQuestions,
+  fetchRosterMembers,
   createAssignment: vi.fn(),
 }));
 
 // Mock react-toastify
+const toast = {
+  success: vi.fn(),
+  error: vi.fn(),
+};
 vi.mock("react-toastify", () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
+  toast,
 }));
 
 describe("EnhancedAssignmentCreator", () => {

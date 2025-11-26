@@ -1,6 +1,5 @@
 "use client";
 import api from "@/app/api";
-import { loadBookmarksFromSupabase } from "@/app/utils/bookmarks";
 import type { Question } from "@/app/utils/geminiService";
 // import { fetchIdQuestionsForParams } from '../utils/idFetch';
 import { updateMetrics } from "@/app/utils/metrics";
@@ -42,6 +41,11 @@ import {
   useResumeOnMount,
   useSetupVisibility,
 } from "./utils/timeHooks";
+import { useTestAnswers } from "./useTestAnswers";
+import { useTestBookmarks } from "./useTestBookmarks";
+import { useTestEdit } from "./useTestEdit";
+import { useTestGrading } from "./useTestGrading";
+import { useTestTimer } from "./useTestTimer";
 
 /**
  * Test state management hook for Science Olympiad practice tests
@@ -67,7 +71,7 @@ import {
  */
 // Validation function for assignment questions
 function validateAssignmentQuestions(questions: unknown[]): void {
-  questions.forEach((question, index) => {
+  for (const [index, question] of questions.entries()) {
     const q = question as { answers?: unknown; question?: string };
     if (!q.answers) {
       throw new Error(
@@ -92,7 +96,7 @@ function validateAssignmentQuestions(questions: unknown[]): void {
         `Assignment question ${index + 1} (${q.question ?? "unknown"}) has empty answers array`
       );
     }
-  });
+  }
 }
 
 export function useTestState({
@@ -113,33 +117,54 @@ export function useTestState({
       // Debug logging can go here if needed
     }
   }, [data]);
+
   const [routerData, setRouterData] = useState<RouterParams>(initialRouterData || {});
-  const [userAnswers, setUserAnswers] = useState<Record<number, (string | null)[] | null>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [explanations, setExplanations] = useState<Explanations>({});
   const [loadingExplanation, setLoadingExplanation] = useState<LoadingExplanation>({});
   const [lastCallTime, setLastCallTime] = useState<number>(0);
   const rateLimitDelay = 2000;
-  const [gradingResults, setGradingResults] = useState<GradingResults>({});
   const [isMounted, setIsMounted] = useState(false);
   const ssrAppliedRef = useRef(false);
   const mountLoggedRef = useRef(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [inputCode, setInputCode] = useState<string>("");
-  const [bookmarkedQuestions, setBookmarkedQuestions] = useState<Record<string, boolean>>({});
-  const [submittedReports, setSubmittedReports] = useState<Record<number, boolean>>({});
-  const [submittedEdits, setSubmittedEdits] = useState<Record<number, boolean>>({});
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
-  const [gradingFrQs, setGradingFrQs] = useState<Record<number, boolean>>({});
   const [isResetting, setIsResetting] = useState(false);
   const isClient = typeof window !== "undefined";
   const previewSearch = isClient ? new URLSearchParams(window.location.search) : null;
   const isPreviewMode = !!(previewSearch && previewSearch.get("preview") === "1");
 
   const stableRouterData = useMemo(() => initialRouterData || {}, [initialRouterData]);
+
+  // Use extracted hooks
+  const { userAnswers, setUserAnswers, handleAnswerChange } = useTestAnswers({ routerData });
+  const { handleBookmarkChange, isQuestionBookmarked } = useTestBookmarks();
+  const {
+    submittedReports,
+    submittedEdits,
+    isEditModalOpen,
+    editingQuestion,
+    handleReportSubmitted,
+    handleEditSubmitted,
+    handleEditOpen,
+    handleBackToMain,
+    setIsEditModalOpen,
+    setSubmittedReports,
+    setSubmittedEdits,
+  } = useTestEdit();
+  const { timeLeft, setTimeLeft } = useTestTimer({
+    routerData,
+    isSubmitted,
+    onTimeUp: () => handleSubmit(),
+  });
+  const { gradingResults, setGradingResults, gradingFRQs, setGradingFrQs } = useTestGrading(
+    data,
+    userAnswers,
+    isSubmitted,
+    routerData
+  );
+
 
   useEffect(() => {
     // Handle view results mode - set submitted state if viewResults=true
@@ -535,28 +560,30 @@ export function useTestState({
           if (restored.userAnswers) {
             // Validate userAnswers structure
             const validAnswers: Record<number, (string | null)[] | null> = {};
-            Object.entries(restored.userAnswers).forEach(([key, value]) => {
+            for (const [key, value] of Object.entries(restored.userAnswers)) {
               const index = Number.parseInt(key, 10);
               if (!Number.isNaN(index) && (Array.isArray(value) || value === null)) {
                 validAnswers[index] = value;
               }
-            });
+            }
             setUserAnswers(validAnswers);
           }
           if (restored.gradingResults) {
             // Validate gradingResults structure and values
             const validGrading: GradingResults = {};
-            Object.entries(restored.gradingResults).forEach(([key, value]) => {
+            for (const [key, value] of Object.entries(restored.gradingResults)) {
               const index = Number.parseInt(key, 10);
               if (!Number.isNaN(index) && typeof value === "number" && value >= 0 && value <= 3) {
                 validGrading[index] = value;
               }
-            });
+            }
             setGradingResults(validGrading);
           }
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        // Ignore errors - fallback handling is already in place
+      });
   }, [initialData, initialRouterData, routerData]);
 
   // If in preview mode, auto-fill answers with correct ones (all correct for multi-select) and mark submitted once data is loaded
@@ -638,158 +665,6 @@ export function useTestState({
   useResumeOnMount();
   useSetupVisibility();
 
-  useEffect(() => {
-    if (!isSubmitted || data.length === 0) {
-      return;
-    }
-
-    const missing: number[] = [];
-    const invalid: number[] = [];
-
-    // Check for missing and invalid grades
-    for (let i = 0; i < data.length; i++) {
-      const question = data[i];
-      if (!question) {
-        continue;
-      }
-      const answer = userAnswers[i] || [];
-
-      // For MCQ questions, validate stored score matches computed score
-      if (question.options && question.options.length > 0) {
-        const storedScore = gradingResults[i];
-        if (storedScore !== undefined) {
-          const computedScore = calculateMCQScore(question, answer);
-          // If scores don't match, mark as invalid
-          if (Math.abs(storedScore - computedScore) > 0.01) {
-            invalid.push(i);
-            logger.warn(
-              `Invalid score detected for question ${i}: stored=${storedScore}, computed=${computedScore}`
-            );
-          }
-        } else {
-          missing.push(i);
-        }
-      } else {
-        // For FRQ questions, just check if missing
-        if (typeof gradingResults[i] === "undefined") {
-          missing.push(i);
-        }
-      }
-    }
-
-    // Fix invalid scores immediately
-    if (invalid.length > 0) {
-      const corrected: GradingResults = {};
-      invalid.forEach((i) => {
-        const question = data[i];
-        if (!question) {
-          return;
-        }
-        const answer = userAnswers[i] || [];
-        corrected[i] = calculateMCQScore(question, answer);
-      });
-      setGradingResults((prev) => ({ ...prev, ...corrected }));
-    }
-
-    // Compute missing grades
-    if (missing.length === 0) {
-      return;
-    }
-
-    (async () => {
-      try {
-        const { gradeMissing } = await import("./utils/grading");
-        const computed: GradingResults = gradeMissing(
-          data,
-          userAnswers,
-          calculateMCQScore,
-          missing
-        );
-        if (Object.keys(computed).length > 0) {
-          setGradingResults((prev) => ({ ...prev, ...computed }));
-        }
-      } catch {
-        // Ignore errors
-      }
-    })();
-  }, [isSubmitted, data, userAnswers, gradingResults, setGradingResults]);
-
-  useEffect(() => {
-    import("./utils/bookmarks")
-      .then(async ({ fetchUserBookmarks }) => {
-        try {
-          const map = await fetchUserBookmarks(supabase, loadBookmarksFromSupabase);
-          setBookmarkedQuestions(map);
-        } catch {
-          // Ignore errors
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  const handleAnswerChange = (
-    questionIndex: number,
-    answer: string | null,
-    multiselect = false
-  ) => {
-    setUserAnswers((prev) => {
-      const currentAnswers = prev[questionIndex] || [];
-      let newAnswers;
-
-      if (multiselect) {
-        newAnswers = currentAnswers.includes(answer)
-          ? currentAnswers.filter((ans) => ans !== answer)
-          : [...currentAnswers, answer];
-      } else {
-        newAnswers = [answer];
-      }
-
-      const updatedAnswers = { ...prev, [questionIndex]: newAnswers };
-
-      // Use assignment-specific localStorage keys if in assignment mode
-      // Check if we're in assignment mode (has assignmentId or teamsAssign=1)
-      const isAssignmentMode = !!(
-        routerData.assignmentId ||
-        routerData.teamsAssign === "1" ||
-        routerData.teamsAssign === 1
-      );
-
-      if (isAssignmentMode && routerData.assignmentId) {
-        // Assignment mode with specific assignmentId
-        const assignmentKey = `assignment_${routerData.assignmentId}`;
-        localStorage.setItem(`${assignmentKey}_answers`, JSON.stringify(updatedAnswers));
-      } else {
-        // General practice mode
-        localStorage.setItem("testUserAnswers", JSON.stringify(updatedAnswers));
-      }
-
-      return updatedAnswers;
-    });
-  };
-
-  useEffect(() => {
-    try {
-      // Use assignment-specific localStorage keys if in assignment mode
-      // Check if we're in assignment mode (has assignmentId or teamsAssign=1)
-      const isAssignmentMode = !!(
-        routerData.assignmentId ||
-        routerData.teamsAssign === "1" ||
-        routerData.teamsAssign === 1
-      );
-
-      if (isAssignmentMode && routerData.assignmentId) {
-        // Assignment mode with specific assignmentId
-        const assignmentKey = `assignment_${routerData.assignmentId}`;
-        localStorage.setItem(`${assignmentKey}_grading`, JSON.stringify(gradingResults));
-      } else {
-        // General practice mode
-        localStorage.setItem("testGradingResults", JSON.stringify(gradingResults));
-      }
-    } catch {
-      // Ignore errors
-    }
-  }, [gradingResults, routerData]);
-
   const handleSubmit = useCallback(async () => {
     setIsSubmitted(true);
     try {
@@ -824,28 +699,28 @@ export function useTestState({
     const finalGradingResults = { ...newGrading };
 
     if (frqsToGrade.length > 0) {
-      frqsToGrade.forEach((item) => {
+      for (const item of frqsToGrade) {
         setGradingFrQs((prev) => ({ ...prev, [item.index]: true }));
-      });
+      }
 
       const online = typeof navigator !== "undefined" ? navigator.onLine : true;
       const { gradeFrqBatch } = await import("./utils/grading");
       const scores = await gradeFrqBatch(frqsToGrade, online);
-      scores.forEach((score, idx) => {
+      for (const [idx, score] of scores.entries()) {
         const frqItem = frqsToGrade[idx];
         if (!frqItem) {
-          return;
+          continue;
         }
         const questionIndex = frqItem.index;
         finalGradingResults[questionIndex] = score;
         setGradingResults((prev) => ({ ...prev, [questionIndex]: score }));
         setGradingFrQs((prev) => ({ ...prev, [questionIndex]: false }));
-      });
+      }
     }
 
     // Validate and correct all MCQ scores before saving
     const validatedGrading: GradingResults = { ...finalGradingResults };
-    data.forEach((question, index) => {
+    for (const [index, question] of data.entries()) {
       if (question.options && question.options.length > 0) {
         const answer = userAnswers[index] || [];
         const storedScore = validatedGrading[index];
@@ -860,7 +735,7 @@ export function useTestState({
           }
         }
       }
-    });
+    }
 
     // Update state with validated scores
     setGradingResults(validatedGrading);
@@ -914,12 +789,12 @@ export function useTestState({
       try {
         // Format answers for submission
         const formattedAnswers: Record<string, unknown> = {};
-        data.forEach((question, index) => {
+        for (const [index, question] of data.entries()) {
           const answer = userAnswers[index];
           if (answer !== null && answer !== undefined && question.id) {
             formattedAnswers[question.id] = answer;
           }
-        });
+        }
 
         const res = await fetch(`/api/assignments/${routerData.assignmentId}/submit`, {
           method: "POST",
@@ -1092,21 +967,6 @@ export function useTestState({
     );
   };
 
-  const handleBookmarkChange = (questionText: string, isBookmarked: boolean) => {
-    setBookmarkedQuestions((prev) => ({
-      ...prev,
-      [questionText]: isBookmarked,
-    }));
-  };
-
-  const handleReportSubmitted = (index: number) => {
-    setSubmittedReports((prev) => ({ ...prev, [index]: true }));
-  };
-
-  const handleEditSubmitted = (index: number) => {
-    setSubmittedEdits((prev) => ({ ...prev, [index]: true }));
-  };
-
   const handleQuestionRemoved = (questionIndex: number) => {
     const fetchReplacement = async (): Promise<Question | null> =>
       fetchReplacementQuestion(routerData as Record<string, unknown>, data);
@@ -1166,11 +1026,6 @@ export function useTestState({
         }, 0);
       }
     })();
-  };
-
-  const handleEditOpen = (question: Question) => {
-    setEditingQuestion(question);
-    setIsEditModalOpen(true);
   };
 
   const handleEditSubmit = async (
@@ -1245,18 +1100,13 @@ export function useTestState({
     setShareModalOpen(false);
   }, []);
 
-  const handleBackToMain = () => {
+  const handleBackToPractice = () => {
     try {
       router.push("/practice");
     } catch (e) {
       logger.error("Error navigating back to practice:", e);
       window.location.href = "/practice";
     }
-  };
-
-  const getBookmarkKey = (q: Question): string => (q.imageData ? `id:${q.imageData}` : q.question);
-  const isQuestionBookmarked = (question: Question): boolean => {
-    return Boolean(bookmarkedQuestions[getBookmarkKey(question)]);
   };
 
   return {
@@ -1270,7 +1120,7 @@ export function useTestState({
     explanations,
     loadingExplanation,
     gradingResults,
-    gradingFRQs: gradingFrQs,
+    gradingFRQs,
     isMounted,
     shareModalOpen,
     inputCode,
@@ -1292,6 +1142,7 @@ export function useTestState({
     handleEditSubmit,
     closeShareModal,
     handleBackToMain,
+    handleBackToPractice,
     isQuestionBookmarked,
     setShareModalOpen,
     setInputCode,

@@ -1,3 +1,4 @@
+import type { Question } from "@/app/utils/geminiService";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { normalizeQuestionsFull } from "./normalize";
 
@@ -8,14 +9,16 @@ vi.mock("../../utils/normalizeTestText", () => ({
 }));
 
 vi.mock("../../utils/questionMedia", () => ({
-  normalizeQuestionMedia: (questions: any[]) => questions,
+  normalizeQuestionMedia: (questions: unknown[]) => questions,
 }));
 
 describe("normalizeQuestionsFull", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Suppress console.error for tests
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {
+      // Intentionally suppress console errors in tests
+    });
   });
 
   describe("Answer Field Preservation", () => {
@@ -176,7 +179,7 @@ describe("normalizeQuestionsFull", () => {
     it("should handle non-array input gracefully", () => {
       const consoleErrorSpy = vi.spyOn(console, "error");
 
-      const result = normalizeQuestionsFull(null as any);
+      const result = normalizeQuestionsFull(null as unknown as Question[]);
 
       expect(result).toEqual([]);
       expect(consoleErrorSpy).toHaveBeenCalledWith(

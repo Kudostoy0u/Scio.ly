@@ -86,7 +86,7 @@ export function gradeMissing(
   missing: number[]
 ): Record<number, number> {
   const newResults: Record<number, number> = {};
-  missing.forEach((i) => {
+  for (const i of missing) {
     const q = data[i];
     const ans = userAnswers[i] || [];
     if (q?.options && q.options.length > 0) {
@@ -100,7 +100,7 @@ export function gradeMissing(
         newResults[i] = 0;
       }
     }
-  });
+  }
   return newResults;
 }
 

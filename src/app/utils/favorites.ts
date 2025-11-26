@@ -1,7 +1,7 @@
 "use client";
 
 import type { Settings } from "@/app/practice/types";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 
 /**
  * Favorites management utilities for Science Olympiad test configurations

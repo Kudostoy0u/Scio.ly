@@ -2,7 +2,7 @@
 
 import { useTheme } from "@/app/contexts/themeContext";
 import type { Event, Settings } from "@/app/practice/types";
-import SyncLocalStorage from "@/lib/database/localStorage-replacement";
+import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import type { ChangeEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
