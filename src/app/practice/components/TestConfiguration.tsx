@@ -2,18 +2,32 @@
 
 import { useTheme } from "@/app/contexts/themeContext";
 import type { Event, Settings } from "@/app/practice/types";
-import SyncLocalStorage from "@/lib/database/localStorageReplacement";
-import type { ChangeEvent } from "react";
 import { useEffect, useRef, useState } from "react";
-import { toast } from "react-toastify";
 import DifficultyDropdown from "./DifficultyDropdown";
 import DivisionToggle from "./DivisionToggle";
-// DISABLED_CIPHERS and QuoteData are used in SubtopicDropdown
 import FavoriteHeart from "./FavoriteHeart";
-// favorites helpers are used inside FavoriteHeart
 import QuoteLengthSlider from "./QuoteLengthSlider";
 import SubtopicDropdown from "./SubtopicDropdown";
 import TestActions from "./TestActions";
+import { useClickOutside } from "./hooks/useClickOutside";
+import { SliderStyles } from "./styles/sliderStyles";
+import { getDifficultyDisplayText, getSubtopicDisplayText } from "./utils/displayTextUtils";
+import { supportsIdentificationOnly, supportsPictureQuestions } from "./utils/eventSelection";
+import {
+  calculateIdPercentageFromValue,
+  calculateIdPercentageValue,
+  getPictureQuestionsDisplay,
+  getSliderBackground,
+} from "./utils/idPercentageSlider";
+import {
+  createSettingsChangeHandler,
+  saveCharLengthRange,
+  saveIdPercentage,
+  savePureIdOnly,
+  saveQuestionTypes,
+  validateTimeLimit,
+} from "./utils/settingsHandlers";
+import { persistDivisionAndTypes } from "./utils/settingsPersistence";
 
 interface TestConfigurationProps {
   selectedEvent: Event | null;
@@ -40,206 +54,36 @@ export default function TestConfiguration({
   const { darkMode } = useTheme();
   const [isSubtopicDropdownOpen, setIsSubtopicDropdownOpen] = useState(false);
   const [isDifficultyDropdownOpen, setIsDifficultyDropdownOpen] = useState(false);
-  const subtopicDropdownRef = useRef<HTMLDivElement>(null);
-  const difficultyDropdownRef = useRef<HTMLDivElement>(null);
+  const subtopicDropdownRef = useRef<HTMLDivElement | null>(null);
+  const difficultyDropdownRef = useRef<HTMLDivElement | null>(null);
 
-  // FavoriteHeart moved to its own component
-
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex change handler with multiple conditional logic paths
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { id, value } = e.target;
-
-    if (id === "questionCount") {
-      const questionCount = Number.parseInt(value);
-      if (questionCount > 200) {
-        toast.warning("You cannot select more than 200 questions");
-        return;
-      }
-      if (questionCount < 1) {
-        onSettingsChange({ ...settings, questionCount: 1 });
-
-        if (!selectedEvent || selectedEvent.name !== "Codebusters") {
-          SyncLocalStorage.setItem("defaultQuestionCount", "1");
-        } else if (selectedEvent && selectedEvent.name === "Codebusters") {
-          SyncLocalStorage.setItem("codebustersQuestionCount", "1");
-        }
-        return;
-      }
-      onSettingsChange({ ...settings, questionCount });
-
-      if (!selectedEvent || selectedEvent.name !== "Codebusters") {
-        SyncLocalStorage.setItem("defaultQuestionCount", questionCount.toString());
-      } else if (selectedEvent && selectedEvent.name === "Codebusters") {
-        SyncLocalStorage.setItem("codebustersQuestionCount", questionCount.toString());
-      }
-    } else if (id === "timeLimit") {
-      const timeLimit = Number.parseInt(value);
-      if (timeLimit < 1) {
-        onSettingsChange({ ...settings, timeLimit: 1 });
-
-        if (!selectedEvent || selectedEvent.name !== "Codebusters") {
-          SyncLocalStorage.setItem("defaultTimeLimit", "1");
-        } else if (selectedEvent && selectedEvent.name === "Codebusters") {
-          SyncLocalStorage.setItem("codebustersTimeLimit", "1");
-        }
-      } else if (timeLimit > 120) {
-        onSettingsChange({ ...settings, timeLimit: 120 });
-
-        if (!selectedEvent || selectedEvent.name !== "Codebusters") {
-          SyncLocalStorage.setItem("defaultTimeLimit", "120");
-        } else if (selectedEvent && selectedEvent.name === "Codebusters") {
-          SyncLocalStorage.setItem("codebustersTimeLimit", "120");
-        }
-      } else {
-        onSettingsChange({ ...settings, timeLimit });
-
-        if (!selectedEvent || selectedEvent.name !== "Codebusters") {
-          SyncLocalStorage.setItem("defaultTimeLimit", timeLimit.toString());
-        } else if (selectedEvent && selectedEvent.name === "Codebusters") {
-          SyncLocalStorage.setItem("codebustersTimeLimit", timeLimit.toString());
-        }
-      }
-    } else {
-      onSettingsChange({
-        ...settings,
-        [id]: value,
-      });
-    }
-  };
-
-  const validateTimeLimit = () => {
-    if (settings.timeLimit < 1) {
-      onSettingsChange({ ...settings, timeLimit: 1 });
-    } else if (settings.timeLimit > 120) {
-      onSettingsChange({ ...settings, timeLimit: 120 });
-    }
-  };
-
+  const handleChange = createSettingsChangeHandler(selectedEvent, settings, onSettingsChange);
   const handleSubtopicChange = (subtopic: string) => {
     const newSubtopics = settings.subtopics.includes(subtopic)
       ? settings.subtopics.filter((s: string) => s !== subtopic)
       : [...settings.subtopics, subtopic];
-
     onSettingsChange({ ...settings, subtopics: newSubtopics });
   };
-
-  const getSubtopicDisplayText = (): string => {
-    if (settings.subtopics.length === 0) {
-      return "All Subtopics";
-    }
-    if (settings.subtopics.length === 1) {
-      return settings.subtopics[0] || "All Subtopics";
-    }
-    return `${settings.subtopics.length} selected`;
-  };
-
   const handleDifficultyChange = (difficultyId: string) => {
     const newDifficulties = settings.difficulties.includes(difficultyId)
       ? settings.difficulties.filter((d: string) => d !== difficultyId)
       : [...settings.difficulties, difficultyId];
-
     onSettingsChange({ ...settings, difficulties: newDifficulties });
   };
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex useEffect with multiple conditional branches
-  useEffect(() => {
-    if (!selectedEvent || selectedEvent.name !== "Codebusters") {
-      const availableDivisions = selectedEvent?.divisions || ["B", "C"];
-      const canShowB = availableDivisions.includes("B");
-      const canShowC = availableDivisions.includes("C");
-      const normalizedDivision =
-        settings.division === "any"
-          ? canShowB && canShowC
-            ? "any"
-            : canShowC
-              ? "C"
-              : "B"
-          : settings.division === "B" && !canShowB
-            ? "C"
-            : settings.division === "C" && !canShowC
-              ? "B"
-              : settings.division;
-
-      SyncLocalStorage.setItem("defaultDivision", normalizedDivision);
-
-      const normalizedTypes = ["multiple-choice", "both", "free-response"].includes(settings.types)
-        ? settings.types
-        : "multiple-choice";
-      SyncLocalStorage.setItem("defaultQuestionTypes", normalizedTypes);
-    }
-  }, [settings.division, settings.types, selectedEvent]);
-
-  const getDifficultyDisplayText = (): string => {
-    if (settings.difficulties.length === 0) {
-      return "All Difficulties";
-    }
-    if (settings.difficulties.length === 1) {
-      return settings.difficulties[0] || "All Difficulties";
-    }
-    return `${settings.difficulties.length} selected`;
-  };
+  useClickOutside(
+    [subtopicDropdownRef, difficultyDropdownRef],
+    [() => setIsSubtopicDropdownOpen(false), () => setIsDifficultyDropdownOpen(false)]
+  );
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        subtopicDropdownRef.current &&
-        !subtopicDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsSubtopicDropdownOpen(false);
-      }
-      if (
-        difficultyDropdownRef.current &&
-        !difficultyDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsDifficultyDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+    persistDivisionAndTypes(selectedEvent, settings);
+  }, [selectedEvent, settings]);
 
   const isCodebusters = selectedEvent?.name === "Codebusters";
-  const supportsPictureQuestions = (() => {
-    const name = selectedEvent?.name || "";
-    const base = name.split(" - ")[0] || "";
-    const candidates = [
-      "Rocks and Minerals",
-      "Entomology",
-      "Anatomy - Nervous",
-      "Anatomy - Endocrine",
-      "Anatomy - Sense Organs",
-      "Anatomy & Physiology",
-      "Dynamic Planet",
-      "Dynamic Planet - Oceanography",
-      "Water Quality",
-      "Water Quality - Freshwater",
-      "Remote Sensing",
-      "Circuit Lab",
-      "Astronomy",
-      "Designer Genes",
-      "Forensics",
-      "Meteorology",
-      "Potions and Poisons",
-      "Solar System",
-    ];
-    return candidates.includes(name) || candidates.includes(base);
-  })();
-
-  const supportsIdentificationOnly = (() => {
-    const name = selectedEvent?.name || "";
-    const candidates = [
-      "Rocks and Minerals",
-      "Entomology",
-      "Water Quality - Freshwater",
-      "Astronomy",
-      "Potions and Poisons",
-      "Solar System",
-    ];
-    return candidates.includes(name);
-  })();
+  const eventName = selectedEvent?.name || "";
+  const supportsPicture = supportsPictureQuestions(eventName);
+  const supportsIdOnly = supportsIdentificationOnly(eventName);
 
   return (
     <div
@@ -301,7 +145,7 @@ export default function TestConfiguration({
                 max="120"
                 value={Number.isNaN(settings.timeLimit) ? "" : settings.timeLimit}
                 onChange={handleChange}
-                onBlur={validateTimeLimit}
+                onBlur={() => validateTimeLimit(settings, onSettingsChange)}
                 className={`block w-full rounded-md border-0 py-1.5 px-3 ${
                   darkMode
                     ? "bg-gray-700 text-white focus:ring-blue-500"
@@ -328,10 +172,7 @@ export default function TestConfiguration({
                 type="button"
                 onClick={() => {
                   onSettingsChange({ ...settings, types: "multiple-choice" });
-
-                  if (!selectedEvent || selectedEvent.name !== "Codebusters") {
-                    SyncLocalStorage.setItem("defaultQuestionTypes", "multiple-choice");
-                  }
+                  saveQuestionTypes(selectedEvent, "multiple-choice");
                 }}
                 disabled={isCodebusters}
                 className={`flex-1 py-2 px-3 text-sm font-medium rounded-l-md border ${
@@ -352,10 +193,7 @@ export default function TestConfiguration({
                 type="button"
                 onClick={() => {
                   onSettingsChange({ ...settings, types: "both" });
-
-                  if (!selectedEvent || selectedEvent.name !== "Codebusters") {
-                    SyncLocalStorage.setItem("defaultQuestionTypes", "both");
-                  }
+                  saveQuestionTypes(selectedEvent, "both");
                 }}
                 disabled={isCodebusters}
                 className={`px-3 py-2 text-sm font-medium border-t border-b border-l border-r ${
@@ -376,10 +214,7 @@ export default function TestConfiguration({
                 type="button"
                 onClick={() => {
                   onSettingsChange({ ...settings, types: "free-response" });
-
-                  if (!selectedEvent || selectedEvent.name !== "Codebusters") {
-                    SyncLocalStorage.setItem("defaultQuestionTypes", "free-response");
-                  }
+                  saveQuestionTypes(selectedEvent, "free-response");
                 }}
                 disabled={isCodebusters}
                 className={`flex-1 py-2 px-3 text-sm font-medium rounded-r-md border ${
@@ -408,7 +243,7 @@ export default function TestConfiguration({
           </div>
 
           {/* Identification slider for events with image ID */}
-          {supportsPictureQuestions && (
+          {supportsPicture && (
             <div>
               <label
                 htmlFor="idPercentage"
@@ -425,65 +260,33 @@ export default function TestConfiguration({
                     Number.isNaN(settings.questionCount) ? 1 : Math.max(1, settings.questionCount)
                   }
                   step={1}
-                  value={(() => {
-                    const questionCount = Number.isNaN(settings.questionCount)
-                      ? 1
-                      : Math.max(1, settings.questionCount);
-                    return Math.round(((settings.idPercentage ?? 0) * questionCount) / 100);
-                  })()}
+                  value={calculateIdPercentageValue(settings)}
                   onChange={(e) => {
                     const questionCount = Number.isNaN(settings.questionCount)
                       ? 1
                       : Math.max(1, settings.questionCount);
                     const pictureQuestions = Number.parseInt(e.target.value);
-                    const percentage = Math.round((pictureQuestions / questionCount) * 100);
+                    const percentage = calculateIdPercentageFromValue(
+                      pictureQuestions,
+                      questionCount
+                    );
                     onSettingsChange({ ...settings, idPercentage: percentage });
-
-                    if (typeof window !== "undefined") {
-                      SyncLocalStorage.setItem("defaultIdPercentage", percentage.toString());
-                    }
+                    saveIdPercentage(percentage);
                   }}
                   className={`flex-1 h-2 rounded-lg appearance-none cursor-pointer ${
                     darkMode ? "bg-gray-600 slider-thumb-dark" : "bg-gray-200 slider-thumb-light"
                   }`}
-                  style={{
-                    background: `linear-gradient(to right, ${
-                      darkMode ? "#3b82f6" : "#2563eb"
-                    } 0%, ${darkMode ? "#3b82f6" : "#2563eb"} ${(() => {
-                      const questionCount = Number.isNaN(settings.questionCount)
-                        ? 1
-                        : Math.max(1, settings.questionCount);
-                      return (
-                        (Math.round(((settings.idPercentage ?? 0) * questionCount) / 100) /
-                          questionCount) *
-                        100
-                      );
-                    })()}%, ${darkMode ? "#4b5563" : "#e5e7eb"} ${(() => {
-                      const questionCount = Number.isNaN(settings.questionCount)
-                        ? 1
-                        : Math.max(1, settings.questionCount);
-                      return (
-                        (Math.round(((settings.idPercentage ?? 0) * questionCount) / 100) /
-                          questionCount) *
-                        100
-                      );
-                    })()}%, ${darkMode ? "#4b5563" : "#e5e7eb"} 100%)`,
-                  }}
+                  style={{ background: getSliderBackground(darkMode, settings) }}
                 />
                 <span
                   className={`text-sm font-medium min-w-[3rem] text-center ${darkMode ? "text-gray-300" : "text-gray-700"}`}
                 >
-                  {(() => {
-                    const questionCount = Number.isNaN(settings.questionCount)
-                      ? 1
-                      : Math.max(1, settings.questionCount);
-                    return `${Math.round(((settings.idPercentage ?? 0) * questionCount) / 100)}/${questionCount}`;
-                  })()}
+                  {getPictureQuestionsDisplay(settings)}
                 </span>
               </div>
 
               {/* Identification Only checkbox */}
-              {supportsIdentificationOnly && (
+              {supportsIdOnly && (
                 <div className="mt-3 flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -491,12 +294,7 @@ export default function TestConfiguration({
                     checked={settings.pureIdOnly}
                     onChange={(e) => {
                       onSettingsChange({ ...settings, pureIdOnly: e.target.checked });
-                      if (typeof window !== "undefined") {
-                        SyncLocalStorage.setItem(
-                          "defaultPureIdOnly",
-                          e.target.checked ? "true" : "false"
-                        );
-                      }
+                      savePureIdOnly(e.target.checked);
                     }}
                     className={`w-4 h-4 rounded border ${
                       darkMode
@@ -529,13 +327,8 @@ export default function TestConfiguration({
                 max={200}
                 value={[settings.charLengthMin || 1, settings.charLengthMax || 100]}
                 onValueChange={([min, max]) => {
-                  const newSettings = { ...settings, charLengthMin: min, charLengthMax: max };
-                  onSettingsChange(newSettings);
-
-                  if (typeof window !== "undefined") {
-                    SyncLocalStorage.setItem("codebustersCharLengthMin", min.toString());
-                    SyncLocalStorage.setItem("codebustersCharLengthMax", max.toString());
-                  }
+                  onSettingsChange({ ...settings, charLengthMin: min, charLengthMax: max });
+                  saveCharLengthRange(min, max);
                 }}
               />
             </div>
@@ -567,7 +360,7 @@ export default function TestConfiguration({
                 isOpen={isDifficultyDropdownOpen}
                 onToggleOpen={() => setIsDifficultyDropdownOpen(!isDifficultyDropdownOpen)}
                 onToggleDifficulty={handleDifficultyChange}
-                displayText={getDifficultyDisplayText()}
+                displayText={getDifficultyDisplayText(settings.difficulties)}
                 dropdownRef={difficultyDropdownRef}
               />
             </div>
@@ -589,7 +382,7 @@ export default function TestConfiguration({
                 isOpen={isSubtopicDropdownOpen}
                 onToggleOpen={() => setIsSubtopicDropdownOpen(!isSubtopicDropdownOpen)}
                 onToggleSubtopic={handleSubtopicChange}
-                displayText={getSubtopicDisplayText()}
+                displayText={getSubtopicDisplayText(settings.subtopics)}
                 dropdownRef={subtopicDropdownRef}
               />
             </div>
@@ -606,73 +399,7 @@ export default function TestConfiguration({
         </div>
       </div>
 
-      {/* Modern Slider Styles */}
-      {/* eslint-disable-next-line react/no-unknown-property */}
-      <style jsx={true}>{`
-        input[type="range"]::-webkit-slider-thumb {
-          appearance: none;
-          height: 20px;
-          width: 20px;
-          border-radius: 50%;
-          background: ${darkMode ? "#3b82f6" : "#2563eb"};
-          cursor: pointer;
-          border: 2px solid ${darkMode ? "#1f2937" : "#ffffff"};
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-          transition: all 0.2s ease;
-        }
-
-        input[type="range"]::-webkit-slider-thumb:hover {
-          transform: scale(1.1);
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        input[type="range"]::-moz-range-thumb {
-          height: 20px;
-          width: 20px;
-          border-radius: 50%;
-          background: ${darkMode ? "#3b82f6" : "#2563eb"};
-          cursor: pointer;
-          border: 2px solid ${darkMode ? "#1f2937" : "#ffffff"};
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-          transition: all 0.2s ease;
-        }
-
-        input[type="range"]::-moz-range-thumb:hover {
-          transform: scale(1.1);
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        input[type="range"]::-ms-thumb {
-          height: 20px;
-          width: 20px;
-          border-radius: 50%;
-          background: ${darkMode ? "#3b82f6" : "#2563eb"};
-          cursor: pointer;
-          border: 2px solid ${darkMode ? "#1f2937" : "#ffffff"};
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-          transition: all 0.2s ease;
-        }
-
-        input[type="range"]::-ms-thumb:hover {
-          transform: scale(1.1);
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        input[type="range"]::-webkit-slider-track {
-          background: transparent;
-          border: none;
-        }
-
-        input[type="range"]::-moz-range-track {
-          background: transparent;
-          border: none;
-        }
-
-        input[type="range"]::-ms-track {
-          background: transparent;
-          border: none;
-        }
-      `}</style>
+      <SliderStyles darkMode={!!darkMode} />
     </div>
   );
 }

@@ -172,8 +172,9 @@ describe("JoinTeamModal", () => {
   it("should handle dark mode correctly", () => {
     renderWithProviders(<JoinTeamModal {...defaultProps} />, { initialDarkMode: true });
 
-    const modal = screen.getByText("Join a team").parentElement?.parentElement?.parentElement;
-    expect(modal).toHaveClass("bg-white");
+    // The modal uses bg-gray-800 in dark mode
+    const modal = screen.getByText("Join a team").closest('[class*="bg-gray-800"]');
+    expect(modal).toBeInTheDocument();
   });
 
   it("should reset form when modal is closed and reopened", () => {

@@ -192,6 +192,7 @@ describe("assignmentUtils", () => {
           pure_id_only: false,
           supports_picture_questions: false,
           supports_identification_only: false,
+          difficulties: ["any"],
         }),
       });
     });
@@ -336,7 +337,7 @@ describe("assignmentUtils", () => {
         ok: false,
       });
 
-      await expect(fetchRosterMembers("team123")).rejects.toThrow("Failed to fetch roster data");
+      await expect(fetchRosterMembers("team123")).rejects.toThrow("Failed to fetch data from");
     });
 
     it("should throw error when members API call fails", async () => {
@@ -349,7 +350,7 @@ describe("assignmentUtils", () => {
           ok: false,
         });
 
-      await expect(fetchRosterMembers("team123")).rejects.toThrow("Failed to fetch team members");
+      await expect(fetchRosterMembers("team123")).rejects.toThrow("Failed to fetch data from");
     });
   });
 

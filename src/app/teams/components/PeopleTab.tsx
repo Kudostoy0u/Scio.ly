@@ -4,30 +4,15 @@ import NamePromptModal from "@/app/components/NamePromptModal";
 import { useAuth } from "@/app/contexts/authContext";
 import { useTheme } from "@/app/contexts/themeContext";
 import { useTeamStore } from "@/app/hooks/useTeamStore";
-import { invalidateCache } from "@/lib/cache/teamCacheManager";
-import { trpc } from "@/lib/trpc/client";
-// Removed tRPC import - using centralized team store instead
 import { generateDisplayName, needsNamePrompt } from "@/lib/utils/displayNameUtils";
-import logger from "@/lib/utils/logger";
-import {
-  AlertTriangle,
-  ArrowUpCircle,
-  Crown,
-  Edit3,
-  Link,
-  Link2Off,
-  UserPlus,
-  X,
-} from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "react-toastify";
+import { UserPlus } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Member } from "../types";
-import { getDisplayName } from "../utils/displayNameUtils";
-import { detectMemberConflicts } from "./utils/conflictDetection";
-import { processMembersData } from "./utils/memberDataProcessor";
 import EventAssignmentModal from "./EventAssignmentModal";
 import InlineInvite from "./InlineInvite";
-import LinkInvite from "./LinkInvite";
+import MemberCard from "./MemberCard";
+import { useMemberActions } from "./hooks/useMemberActions";
+import { processMembers } from "./utils/processMembers";
 
 interface PeopleTabProps {
   team: {
@@ -59,22 +44,10 @@ export default function PeopleTab({
 }: PeopleTabProps) {
   const { darkMode } = useTheme();
   const { user } = useAuth();
-  // Removed filteredMembers state - using computed value directly
   const [selectedSubteam, setSelectedSubteam] = useState<string>("all");
-  const prevMembersDataRef = useRef<string>("");
 
   // Use centralized team store for data fetching
-  const {
-    getMembers,
-    loadMembers,
-    // isMembersLoading,
-    // getMembersError
-  } = useTeamStore();
-
-  // tRPC mutations
-  const updateRosterMutation = trpc.teams.updateRoster.useMutation();
-  const removeRosterEntryMutation = trpc.teams.removeRosterEntry.useMutation();
-  const exitSubteamMutation = trpc.teams.exitSubteam.useMutation();
+  const { getMembers, loadMembers } = useTeamStore();
 
   // Load members data when component mounts or subteam changes
   useEffect(() => {
@@ -100,57 +73,35 @@ export default function PeopleTab({
   const [showSubteamDropdown, setShowSubteamDropdown] = useState<string | null>(null);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
 
-  // Helper functions to reduce cognitive complexity
-  const invalidateMemberCaches = (subteamId: string) => {
-    invalidateCache("members", team.slug, "all");
-    if (selectedSubteam !== "all") {
-      invalidateCache("members", team.slug, selectedSubteam);
+  // Get processed members using utility function
+  const processedFilteredMembers = useMemo(() => {
+    if (!membersData) {
+      return [];
     }
-    invalidateCache("members", team.slug, subteamId);
-  };
+    return processMembers(membersData, pendingLinkInvites, team.division);
+  }, [membersData, pendingLinkInvites, team.division]);
 
-  const reloadMembersData = async () => {
-    await loadMembers(team.slug, selectedSubteam === "all" ? undefined : selectedSubteam);
-    // Also reload 'all' to ensure the member list is updated everywhere
-    await loadMembers(team.slug, undefined);
-  };
+  const filteredMembers = processedFilteredMembers;
 
-  const handleRemoveSelfFromSubteam = async (subteamId: string) => {
-    await exitSubteamMutation.mutateAsync({
-      teamSlug: team.slug,
-      subteamId,
-    });
-    toast.success("Removed yourself from subteam");
-    invalidateMemberCaches(subteamId);
-    await reloadMembersData();
-  };
-
-  const handleRemoveOtherFromSubteam = async (
-    member: Member,
-    subteamId: string,
-    _subteamName: string
-  ) => {
-    const response = await fetch(`/api/teams/${team.slug}/roster/remove`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: member.id,
-        subteamId,
-      }),
-    });
-
-    if (response.ok) {
-      toast.success(`Removed ${member.name} from subteam`);
-      invalidateMemberCaches(subteamId);
-      await reloadMembersData();
-    } else {
-      const err = await response.json();
-      toast.error(err.error || "Failed to remove subteam badge");
-      throw new Error("Failed to remove from subteam");
-    }
-  };
-
-  // Removed custom optimistic updates - using store's built-in optimistic updates
+  // Use member actions hook
+  const {
+    handleRemoveSelfFromSubteam,
+    handleRemoveOtherFromSubteam,
+    handleRemoveEvent,
+    handleAddEvent,
+    handleSubteamAssign,
+    handleInviteSubmit,
+    handleLinkInviteSubmit,
+    handleCancelLinkInvite,
+    handleCancelInvitation,
+    handleRemoveMember,
+    handlePromoteToCaptain,
+  } = useMemberActions({
+    teamSlug: team.slug,
+    selectedSubteam,
+    loadMembers,
+    filteredMembers,
+  });
 
   // Handle clicking on own name to edit it
   const handleNameClick = useCallback(
@@ -164,19 +115,17 @@ export default function PeopleTab({
 
   // Handle name update completion
   const handleNameUpdate = useCallback(() => {
-    // Refresh the members list to show updated names
     loadMembers(team.slug, selectedSubteam === "all" ? undefined : selectedSubteam);
     setShowNamePrompt(false);
   }, [loadMembers, team.slug, selectedSubteam]);
 
-  // Listen for name updates from NamePromptModal and optimistically update UI
+  // Listen for name updates from NamePromptModal
   useEffect(() => {
     const onDisplayNameUpdated = (e: Event) => {
       const newName = (e as CustomEvent<string>).detail as string | undefined;
       if (!(newName && user?.id)) {
         return;
       }
-      // Refresh members from server in background
       loadMembers(team.slug, selectedSubteam === "all" ? undefined : selectedSubteam);
     };
     window.addEventListener("scio-display-name-updated", onDisplayNameUpdated as EventListener);
@@ -187,127 +136,6 @@ export default function PeopleTab({
       );
     };
   }, [user?.id, loadMembers, team.slug, selectedSubteam]);
-
-
-  // Create a stable key for membersData to prevent unnecessary recalculations
-  const membersDataKey =
-    membersData?.map((m) => `${m.id}-${m.name}-${m.role}-${m.events?.join(",") || ""}`).join("|") ||
-    "";
-  const hasDataChanged = membersDataKey !== prevMembersDataRef.current;
-
-  // Update the ref when data changes
-  if (hasDataChanged) {
-    prevMembersDataRef.current = membersDataKey;
-  }
-
-  // Process store data and filter, enrich names, and sort members using useMemo
-  const processedFilteredMembers = useMemo(() => {
-    // Removed verbose logging - not needed for business logic
-
-    if (!membersData) {
-      // Removed verbose logging - not needed for business logic
-      return [];
-    }
-
-    if (membersData.length === 0) {
-      // Removed verbose logging - not needed for business logic
-      return [];
-    }
-
-    // Removed verbose logging - not needed for business logic
-
-    const processedMembers = membersData.map((person) => ({
-      id: person.id,
-      name: person.name,
-      email: person.email || null,
-      username: person.username || null,
-      role: person.role,
-      joinedAt: person.joinedAt || null,
-      subteam: {
-        id: person.subteamId || "",
-        name: person.subteam?.name || "Unknown",
-        description: person.subteam?.description || "",
-      },
-      subteams: [],
-      subteamId: person.subteamId || "",
-      events: person.events || [],
-      eventCount: person.events?.length || 0,
-      avatar: undefined,
-      isOnline: false,
-      hasPendingInvite: person.isPendingInvitation,
-      hasPendingLinkInvite: false,
-      isPendingInvitation: person.isPendingInvitation,
-      invitationCode: undefined,
-      isUnlinked: person.isUnlinked,
-      conflicts: [], // Conflicts not available in current store response
-    }));
-
-    // Detect conflicts based on member events
-    const conflicts = detectMemberConflicts(processedMembers);
-
-    const filtered = processedMembers.map((member) => {
-      let name = member.name;
-      // Handle null/undefined names safely
-      if (!name || typeof name !== "string") {
-        name = null;
-      }
-      // If the name is weak ('@unknown'), derive a better display using same logic as NamePromptModal
-      if (needsNamePrompt(name)) {
-        const emailLocal =
-          member.email && typeof member.email === "string" && (member.email as string).includes("@")
-            ? (member.email as string).split("@")[0]
-            : "";
-        const { name: robust } = generateDisplayName({
-          displayName: null,
-          firstName: null,
-          lastName: null,
-          username:
-            member.username &&
-            typeof member.username === "string" &&
-            (member.username as string).trim()
-              ? (member.username as string).trim()
-              : emailLocal && emailLocal.length > 2
-                ? emailLocal
-                : null,
-          email: member.email,
-        });
-        if (robust?.trim()) {
-          name = robust.trim();
-        }
-      }
-
-      // If server hasn't reflected link-pending yet, honor our optimistic state
-      const hasPendingLinkInvite =
-        member.hasPendingLinkInvite || pendingLinkInvites[getDisplayName(member)] === true;
-
-      return {
-        ...member,
-        name,
-        hasPendingLinkInvite,
-        conflicts: conflicts[getDisplayName(member)] || [],
-      };
-    });
-
-    // Sort: captains first, then alphabetical
-    filtered.sort((a, b) => {
-      if (a.role === "captain" && b.role !== "captain") {
-        return -1;
-      }
-      if (b.role === "captain" && a.role !== "captain") {
-        return 1;
-      }
-      return getDisplayName(a).localeCompare(getDisplayName(b));
-    });
-
-    // Removed verbose logging - not needed for business logic
-
-    return filtered;
-  }, [membersData, detectMemberConflicts, pendingLinkInvites]);
-
-  // Use the processed members directly instead of storing in state
-  const filteredMembers = processedFilteredMembers;
-
-  // Removed custom optimistic update clearing - using store's built-in system
 
   // Auto-open name prompt if current user's name is '@unknown' or otherwise needs prompt
   useEffect(() => {
@@ -327,30 +155,6 @@ export default function PeopleTab({
     setShowInlineInvite(true);
   };
 
-  const handleInviteSubmit = async (username: string) => {
-    try {
-      const response = await fetch(`/api/teams/${team.slug}/invite`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username,
-          role: "member",
-        }),
-      });
-
-      if (response.ok) {
-        toast.success(`Invitation sent to ${username}`);
-        // Refresh members list
-        loadMembers(team.slug, selectedSubteam === "all" ? undefined : selectedSubteam);
-      } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to send invitation");
-      }
-    } catch (_error) {
-      toast.error("Failed to send invitation");
-    }
-  };
-
   const handleLinkInvite = (memberName: string) => {
     setLinkInviteStates((prev) => ({ ...prev, [memberName]: true }));
   };
@@ -359,231 +163,48 @@ export default function PeopleTab({
     setLinkInviteStates((prev) => ({ ...prev, [memberName]: false }));
   };
 
-  const handleLinkInviteSubmit = async (memberName: string, username: string) => {
-    try {
-      // Find the member's subteam
-      const member = filteredMembers.find((m) => m.name === memberName);
-      if (!member) {
-        toast.error("Member not found");
+  const handleLinkInviteSubmitWrapper = async (memberName: string, username: string) => {
+    const result = await handleLinkInviteSubmit(memberName, username);
+    if (result) {
+      setPendingLinkInvites((prev) => ({ ...prev, [memberName]: true }));
+      setLinkInviteStates((prev) => ({ ...prev, [memberName]: false }));
+    }
+  };
+
+  const handleAddEventClick = (member: Member) => {
+    setSelectedMember(member);
+    setShowEventModal(true);
+  };
+
+  const handleEventSelect = async (eventName: string, subteamId: string) => {
+    if (!selectedMember) {
+      return;
+    }
+
+    let finalSubteamId = subteamId || selectedMember.subteamId;
+
+    if (!finalSubteamId || finalSubteamId.trim() === "") {
+      const matchingSubteam = subteams.find((s) => s.name === selectedMember.subteam?.name);
+      if (matchingSubteam) {
+        finalSubteamId = matchingSubteam.id;
+      } else if (selectedMember.subteam?.id) {
+        finalSubteamId = selectedMember.subteam.id;
+      } else {
+        alert(
+          'This member needs to be assigned to a subteam first. Please use the "set?" option next to their team badge.'
+        );
         return;
       }
-
-      // Use the member's subteam ID or fall back to the selected subteam
-      const subteamId =
-        (member as Member).subteam?.id ||
-        member.subteamId ||
-        (selectedSubteam !== "all" ? selectedSubteam : null);
-      if (!subteamId) {
-        toast.error("Unable to determine subteam for this member");
-        return;
-      }
-
-      const response = await fetch(`/api/teams/${team.slug}/roster/invite`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subteamId: subteamId,
-          studentName: memberName,
-          username,
-          message: `You've been invited to link your account to the roster entry "${memberName}"`,
-        }),
-      });
-
-      if (response.ok) {
-        toast.success(`Link invitation sent to ${username}`);
-        // Optimistically mark as link pending in UI
-        setPendingLinkInvites((prev) => ({ ...prev, [memberName]: true }));
-        setLinkInviteStates((prev) => ({ ...prev, [memberName]: false }));
-        // Refresh members list
-        loadMembers(team.slug, selectedSubteam === "all" ? undefined : selectedSubteam);
-      } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to send link invitation");
-      }
-    } catch (_error) {
-      toast.error("Failed to send link invitation");
     }
+
+    await handleAddEvent(selectedMember, eventName, finalSubteamId);
+    setShowEventModal(false);
+    setSelectedMember(null);
   };
 
-  const handleCancelLinkInvite = async (memberName: string) => {
-    try {
-      // Find the member's subteam
-      const member = filteredMembers.find((m) => m.name === memberName);
-      if (!member) {
-        toast.error("Member not found");
-        return;
-      }
-
-      // Use the member's subteam ID or fall back to the selected subteam
-      const subteamId =
-        (member as Member).subteam?.id ||
-        member.subteamId ||
-        (selectedSubteam !== "all" ? selectedSubteam : null);
-      if (!subteamId) {
-        toast.error("Unable to determine subteam for this member");
-        return;
-      }
-
-      const response = await fetch(`/api/teams/${team.slug}/roster/invite/cancel`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subteamId: subteamId,
-          studentName: memberName,
-        }),
-      });
-
-      if (response.ok) {
-        toast.success("Link invitation cancelled");
-        // Optimistically clear link pending in UI
-        setPendingLinkInvites((prev) => ({ ...prev, [memberName]: false }));
-        // Refresh members list
-        loadMembers(team.slug, selectedSubteam === "all" ? undefined : selectedSubteam);
-      } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to cancel link invitation");
-      }
-    } catch (_error) {
-      toast.error("Failed to cancel link invitation");
-    }
+  const handleSubteamDropdownToggle = (memberId: string | null) => {
+    setShowSubteamDropdown(memberId);
   };
-
-  const handleCancelInvitation = async (member: Member) => {
-    if (!member.invitationCode) {
-      toast.error("No invitation code found");
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/teams/${team.slug}/invite/cancel`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          invitationCode: member.invitationCode,
-        }),
-      });
-
-      if (response.ok) {
-        toast.success(`Invitation cancelled for ${getDisplayName(member)}`);
-        // Refresh members list
-        loadMembers(team.slug, selectedSubteam === "all" ? undefined : selectedSubteam);
-      } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to cancel invitation");
-      }
-    } catch (_error) {
-      toast.error("Failed to cancel invitation");
-    }
-  };
-
-  const removeLinkedMember = async (member: Member) => {
-    const response = await fetch(`/api/teams/${team.slug}/members/remove`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: member.id,
-      }),
-    });
-
-    if (response.ok) {
-      toast.success(`${member.name} has been removed from the team`);
-      const subteamParam = selectedSubteam === "all" ? "" : `?subteamId=${selectedSubteam}`;
-      const refreshResponse = await fetch(`/api/teams/${team.slug}/members${subteamParam}`);
-      if (refreshResponse.ok) {
-        loadMembers(team.slug, selectedSubteam === "all" ? undefined : selectedSubteam);
-      }
-    } else {
-      const error = await response.json();
-      toast.error(error.error || "Failed to remove member");
-    }
-  };
-
-  const removeUnlinkedMember = async (member: Member) => {
-    const response = await fetch(`/api/teams/${team.slug}/roster/remove`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        studentName: getDisplayName(member),
-      }),
-    });
-
-    if (response.ok) {
-      const result = await response.json();
-      toast.success(
-        `${getDisplayName(member)} has been removed from the roster (${result.removedEntries} entries)`
-      );
-      loadMembers(team.slug, selectedSubteam === "all" ? undefined : selectedSubteam);
-    } else {
-      const error = await response.json();
-      toast.error(error.error || "Failed to remove roster entry");
-    }
-  };
-
-  const handleRemoveMember = async (member: Member) => {
-    if (member.role === "captain") {
-      toast.error("Cannot remove team captain");
-      return;
-    }
-
-    if (member.id === user?.id) {
-      toast.error("Cannot remove yourself");
-      return;
-    }
-
-    if (!confirm(`Are you sure you want to remove ${getDisplayName(member)} from the team?`)) {
-      return;
-    }
-
-    try {
-      if (member.id) {
-        await removeLinkedMember(member);
-      } else {
-        await removeUnlinkedMember(member);
-      }
-    } catch (_error) {
-      toast.error("Failed to remove member");
-    }
-  };
-
-  const handlePromoteToCaptain = async (member: Member) => {
-    if (member.role === "captain") {
-      toast.error("User is already a captain");
-      return;
-    }
-
-    if (!member.id) {
-      toast.error("Cannot promote unlinked members to captain");
-      return;
-    }
-
-    if (!confirm(`Are you sure you want to promote ${member.name} to captain?`)) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/teams/${team.slug}/members/promote`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: member.id,
-          newRole: "captain",
-        }),
-      });
-
-      if (response.ok) {
-        toast.success(`${member.name} has been promoted to captain`);
-        // Refresh members list
-        loadMembers(team.slug, selectedSubteam === "all" ? undefined : selectedSubteam);
-      } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to promote member");
-      }
-    } catch (_error) {
-      toast.error("Failed to promote member");
-    }
-  };
-
-  // Loading state is now handled by the store
 
   return (
     <div className="p-6 space-y-6">
@@ -647,688 +268,47 @@ export default function PeopleTab({
             <p>No members found</p>
           </div>
         ) : (
-          // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex member rendering with multiple conditional UI states
           filteredMembers.map((member, index) => (
-            <div
+            <MemberCard
               key={member.id || `member-${index}`}
-              className={`p-4 rounded-lg border relative ${
-                darkMode
-                  ? "bg-gray-800 border-gray-700 hover:bg-gray-750"
-                  : "bg-white border-gray-200 hover:bg-gray-50"
-              } transition-colors`}
-            >
-              {/* Action buttons for captains */}
-              {isCaptain && member.id !== user?.id && (
-                <div className="absolute top-2 right-2 flex items-center space-x-1">
-                  {/* Promote to captain button */}
-                  {member.role !== "captain" && member.id && (
-                    <button
-                      type="button"
-                      onClick={() => handlePromoteToCaptain(member)}
-                      className={`p-1 rounded transition-colors ${
-                        darkMode
-                          ? "text-gray-400 hover:text-yellow-400 hover:bg-gray-700"
-                          : "text-gray-500 hover:text-yellow-500 hover:bg-gray-100"
-                      }`}
-                      title={`Promote ${member.name} to captain`}
-                    >
-                      <ArrowUpCircle className="w-5 h-5" />
-                    </button>
-                  )}
-
-                  {/* Remove button */}
-                  {member.role !== "captain" && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveMember(member)}
-                      className={`p-1 rounded transition-colors ${
-                        darkMode
-                          ? "text-gray-400 hover:text-red-400 hover:bg-gray-700"
-                          : "text-gray-500 hover:text-red-500 hover:bg-gray-100"
-                      }`}
-                      title={`Remove ${member.name} from team`}
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  )}
-                </div>
-              )}
-              <div className="flex flex-col items-center text-center space-y-3">
-                {/* Profile Picture */}
-                <div className="relative">
-                  <div
-                    className={`w-16 h-16 rounded-full flex items-center justify-center ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}
-                  >
-                    {member.avatar ? (
-                      <div
-                        className="w-16 h-16 rounded-full bg-cover bg-center"
-                        style={{ backgroundImage: `url(${member.avatar})` }}
-                      />
-                    ) : (
-                      <span
-                        className={`font-medium text-xl ${darkMode ? "text-gray-300" : "text-gray-600"}`}
-                      >
-                        {getDisplayName(member).charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                  {member.isOnline && (
-                    <div
-                      className={`absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-2 rounded-full ${darkMode ? "border-gray-800" : "border-white"}`}
-                    />
-                  )}
-                </div>
-
-                {/* Name and Role */}
-                <div>
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="flex items-center space-x-1">
-                      <h3
-                        className={`font-semibold ${darkMode ? "text-white" : "text-gray-900"} ${
-                          member.id === user?.id
-                            ? "cursor-pointer hover:opacity-80 transition-opacity"
-                            : ""
-                        }`}
-                        onClick={() => handleNameClick(member)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            handleNameClick(member);
-                          }
-                        }}
-                        tabIndex={member.id === user?.id ? 0 : undefined}
-                        title={member.id === user?.id ? "Click to edit your name" : undefined}
-                      >
-                        {(() => {
-                          // For the current user, if name is weak, show a better fallback immediately
-                          if (member.id === user?.id && needsNamePrompt(member.name)) {
-                            const emailLocal = user?.email?.split("@")[0] || "";
-                            const { name: robust } = generateDisplayName(
-                              {
-                                displayName: null,
-                                firstName: null,
-                                lastName: null,
-                                username: emailLocal && emailLocal.length > 2 ? emailLocal : null,
-                                email: user?.email || null,
-                              },
-                              user?.id
-                            );
-                            return robust || getDisplayName(member);
-                          }
-                          return getDisplayName(member);
-                        })()}
-                        {member.id === user?.id && (
-                          <span
-                            className={`ml-2 text-xs font-normal ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-                          >
-                            (me)
-                          </span>
-                        )}
-                      </h3>
-                      {member.id === user?.id && (
-                        <button
-                          type="button"
-                          onClick={() => handleNameClick(member)}
-                          title="Edit your name"
-                          className="p-0.5 rounded cursor-pointer hover:opacity-80"
-                          aria-label="Edit your name"
-                        >
-                          <Edit3 className="w-3 h-3 opacity-60" />
-                        </button>
-                      )}
-                    </div>
-                    {member.role === "captain" && (
-                      <Crown className="w-4 h-4 text-yellow-500 ml-1" />
-                    )}
-                    {member.conflicts && member.conflicts.length > 0 && (
-                      <div className="relative group">
-                        <AlertTriangle className="w-4 h-4 text-orange-500" />
-                        <div
-                          className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap z-10 ${
-                            darkMode
-                              ? "bg-gray-800 text-white border border-gray-700"
-                              : "bg-white text-gray-900 border border-gray-200 shadow-lg"
-                          } opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none`}
-                        >
-                          <div className="font-medium mb-1">Event Conflicts:</div>
-                          {member.conflicts.map((conflict, index) => (
-                            <div
-                              key={`conflict-${conflict.conflictBlockNumber}-${index}`}
-                              className="text-xs"
-                            >
-                              Conflict Block {conflict.conflictBlockNumber}:{" "}
-                              {conflict.events.join(", ")}
-                            </div>
-                          ))}
-                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800 dark:border-t-gray-700" />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  {member.username && (
-                    <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                      @{member.username}
-                    </p>
-                  )}
-                </div>
-
-                {/* All Badges - Subteams, Events, and Add Event */}
-                {!member.isPendingInvitation && (
-                  <div className="flex flex-wrap gap-1 gap-y-2 justify-center">
-                    {/* Subteam badges */}
-                    {(() => {
-                      // Always show at least one badge - if no subteam, show "Unknown"
-                      const subteamsToShow =
-                        member.subteams && member.subteams.length > 0
-                          ? member.subteams
-                          : member.subteam
-                            ? [member.subteam]
-                            : [{ id: null, name: "Unknown", description: "" }];
-                      return subteamsToShow
-                        .filter((s) => s !== null && s !== undefined)
-                        .map((subteam, index) => (
-                          <div key={subteam?.id || index} className="relative group">
-                            <div
-                              className={`px-2 py-1 rounded-full text-xs font-medium border ${
-                                darkMode
-                                  ? "bg-green-900 text-green-300 border-green-700"
-                                  : "bg-green-100 text-green-800 border-green-200"
-                              }`}
-                            >
-                              {subteam?.name || "Unknown"}
-                              {/* Show "set?" for captains when subteam is "Unknown" */}
-                              {isCaptain &&
-                                member.id &&
-                                (subteam?.name === "Unknown team" ||
-                                  subteam?.name === "Unknown" ||
-                                  !subteam?.name) && (
-                                  <span
-                                    className="cursor-pointer"
-                                    onClick={() => {
-                                      setSelectedMember(member);
-                                      setShowSubteamDropdown(
-                                        showSubteamDropdown === member.id ? null : member.id
-                                      );
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter" || e.key === " ") {
-                                        e.preventDefault();
-                                        setSelectedMember(member);
-                                        setShowSubteamDropdown(
-                                          showSubteamDropdown === member.id ? null : member.id
-                                        );
-                                      }
-                                    }}
-                                    title="Set subteam for this user"
-                                  >
-                                    <span>,</span>
-                                    <span className="text-blue-600 hover:text-blue-800"> set?</span>
-                                  </span>
-                                )}
-                            </div>
-                            {subteam?.id && (isCaptain || member.id === user?.id) && (
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  try {
-                                    if (member.id === user?.id) {
-                                      await handleRemoveSelfFromSubteam(subteam.id);
-                                    } else {
-                                      await handleRemoveOtherFromSubteam(
-                                        member,
-                                        subteam.id,
-                                        subteam.name
-                                      );
-                                    }
-                                  } catch (e: unknown) {
-                                    logger.error("Failed to remove from subteam:", e);
-                                    const errorMessage =
-                                      (e instanceof Error ? e.message : String(e)) ||
-                                      "Failed to remove from subteam";
-                                    toast.error(errorMessage);
-                                  }
-                                }}
-                                className={`absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity px-1 py-0.5 rounded ${
-                                  darkMode ? "bg-red-600 text-white" : "bg-red-600 text-white"
-                                }`}
-                                title={
-                                  member.id === user?.id
-                                    ? "Remove yourself from this subteam"
-                                    : "Remove subteam badge"
-                                }
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            )}
-                          </div>
-                        ));
-                    })()}
-
-                    {/* Event badges */}
-                    {member.events.length > 0 &&
-                      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex event rendering with subteam logic
-                      (() => {
-                        // Create a list of all events with their subteams
-                        const eventsWithSubteams: Array<{
-                          event: string;
-                          subteam: string;
-                          subteamId: string;
-                        }> = [];
-
-                        // If member has multiple subteams, show each event for each subteam it appears in
-                        if (member.subteams && member.subteams.length > 0) {
-                          for (const subteam of member.subteams as Array<{
-                            id: string;
-                            name: string;
-                            description: string;
-                            events?: string[];
-                          }>) {
-                            if (subteam.events) {
-                              for (const event of subteam.events) {
-                                eventsWithSubteams.push({
-                                  event,
-                                  subteam: subteam.name,
-                                  subteamId: subteam.id,
-                                });
-                              }
-                            }
-                          }
-                        } else if (member.subteam) {
-                          // Fallback for single subteam
-                          for (const event of member.events) {
-                            eventsWithSubteams.push({
-                              event,
-                              subteam: member.subteam?.name || "Unknown",
-                              subteamId: member.subteam?.id || "",
-                            });
-                          }
-                        }
-
-                        // Filter out "General" events if there are specific events
-                        const hasSpecificEvents = eventsWithSubteams.some(
-                          (e) => e.event !== "General"
-                        );
-                        const filteredEvents = hasSpecificEvents
-                          ? eventsWithSubteams.filter((e) => e.event !== "General")
-                          : eventsWithSubteams;
-
-                        // Check if person is only on one subteam
-                        const uniqueSubteams = [...new Set(filteredEvents.map((e) => e.subteamId))];
-                        const isSingleSubteam = uniqueSubteams.length === 1;
-
-                        return filteredEvents.map((eventData, eventIndex) => (
-                          <div
-                            key={`${eventData.event}-${eventData.subteamId}-${eventIndex}`}
-                            className="relative group"
-                          >
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium border ${
-                                darkMode
-                                  ? "bg-blue-900 text-blue-300 border-blue-700"
-                                  : "bg-blue-100 text-blue-800 border-blue-200"
-                              }`}
-                            >
-                              {isSingleSubteam
-                                ? eventData.event
-                                : `${eventData.event} - ${eventData.subteam}`}
-                            </span>
-                            {isCaptain && (
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  try {
-                                    // Simple cache invalidation approach
-
-                                    // Remove this user's event badge from the specific subteam
-                                    await removeRosterEntryMutation.mutateAsync({
-                                      teamSlug: team.slug,
-                                      subteamId: eventData.subteamId,
-                                      eventName: eventData.event,
-                                      userId: member.id || undefined,
-                                      studentName: getDisplayName(member),
-                                    });
-
-                                    // Show success message
-                                    toast.success(
-                                      `Removed ${getDisplayName(member)} from ${eventData.event} in ${eventData.subteam}`
-                                    );
-
-                                    // Small delay to ensure API has processed the change, then reload
-                                    setTimeout(() => {
-                                      // Invalidate members cache for People tab
-                                      invalidateCache(
-                                        "members",
-                                        team.slug,
-                                        selectedSubteam === "all" ? "all" : selectedSubteam
-                                      );
-                                      loadMembers(
-                                        team.slug,
-                                        selectedSubteam === "all" ? undefined : selectedSubteam
-                                      );
-
-                                      // Invalidate roster cache for Roster tab to show updated data
-                                      invalidateCache("roster", team.slug, eventData.subteamId);
-                                    }, 100);
-                                  } catch (_e) {
-                                    toast.error("Failed to remove event badge");
-                                  }
-                                }}
-                                className={`absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity px-1 py-0.5 rounded ${
-                                  darkMode ? "bg-red-600 text-white" : "bg-red-600 text-white"
-                                }`}
-                                title={`Remove ${eventData.event} from ${eventData.subteam}`}
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            )}
-                          </div>
-                        ));
-                      })()}
-
-                    {/* Add event badge for captains - works for both linked and unlinked members */}
-                    {isCaptain &&
-                      member.subteam &&
-                      member.subteam.name !== "Unknown team" &&
-                      member.subteam.name !== "Unknown" && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedMember(member);
-                            setShowEventModal(true);
-                          }}
-                          className={`px-2 py-1 rounded-full text-xs font-medium border ${
-                            darkMode
-                              ? "bg-purple-900 text-purple-300 border-purple-700 hover:bg-purple-800"
-                              : "bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200"
-                          }`}
-                          title="Add this user to an event"
-                        >
-                          Add event?
-                        </button>
-                      )}
-                  </div>
-                )}
-
-                {/* Subteam assignment dropdown */}
-                {showSubteamDropdown === member.id && selectedMember && (
-                  <div className="mt-2">
-                    <div
-                      className={`relative inline-block text-left ${darkMode ? "bg-gray-800" : "bg-white"} border ${darkMode ? "border-gray-600" : "border-gray-300"} rounded-md shadow-lg`}
-                    >
-                      <div className="py-1">
-                        {subteams.map((subteam) => (
-                          <button
-                            type="button"
-                            key={subteam.id}
-                            onClick={async () => {
-                              try {
-                                // Add user to roster in the selected subteam
-                                const response = await fetch(`/api/teams/${team.slug}/roster`, {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({
-                                    subteamId: subteam.id, // This is the UUID
-                                    eventName: "General", // Placeholder event
-                                    slotIndex: 0,
-                                    studentName: selectedMember.name,
-                                    userId: selectedMember.id, // Link to existing user
-                                  }),
-                                });
-
-                                if (response.ok) {
-                                  toast.success(
-                                    `Assigned ${selectedMember.name} to ${subteam.name}`
-                                  );
-
-                                  // Small delay to ensure API has processed the change, then reload
-                                  setTimeout(() => {
-                                    invalidateCache(
-                                      "members",
-                                      team.slug,
-                                      selectedSubteam === "all" ? "all" : selectedSubteam
-                                    );
-                                    loadMembers(
-                                      team.slug,
-                                      selectedSubteam === "all" ? undefined : selectedSubteam
-                                    );
-                                  }, 100);
-
-                                  setShowSubteamDropdown(null);
-                                  setSelectedMember(null);
-                                } else {
-                                  await response.json();
-                                  toast.error("Failed to assign subteam");
-                                }
-                              } catch {
-                                // Ignore errors
-                              }
-                            }}
-                            className={`w-full text-left px-4 py-2 text-sm ${darkMode ? "text-gray-300 hover:bg-gray-700" : "text-gray-700 hover:bg-gray-100"}`}
-                          >
-                            {subteam.name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Link Status */}
-                {member.isPendingInvitation ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="flex items-center space-x-1 text-yellow-600">
-                      <UserPlus className="w-4 h-4" />
-                      <span className="text-xs font-medium">Invite Pending</span>
-                    </div>
-                    {isCaptain && (
-                      <button
-                        type="button"
-                        onClick={() => handleCancelInvitation(member)}
-                        className="text-red-600 hover:text-red-700 text-xs font-medium transition-colors"
-                      >
-                        Cancel?
-                      </button>
-                    )}
-                  </div>
-                ) : member.hasPendingInvite ? (
-                  <div className="flex items-center space-x-1 text-yellow-600">
-                    <UserPlus className="w-4 h-4" />
-                    <span className="text-xs font-medium">Invite Pending</span>
-                  </div>
-                ) : member.hasPendingLinkInvite ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="flex items-center space-x-1 text-yellow-600">
-                      <UserPlus className="w-4 h-4" />
-                      <span className="text-xs font-medium">Link Pending</span>
-                    </div>
-                    {isCaptain && (
-                      <button
-                        type="button"
-                        onClick={() => handleCancelLinkInvite(getDisplayName(member))}
-                        className="text-red-600 hover:text-red-700 text-xs font-medium transition-colors"
-                      >
-                        Cancel?
-                      </button>
-                    )}
-                  </div>
-                ) : member.id ? (
-                  <div className="flex items-center space-x-1 text-green-600">
-                    <Link className="w-4 h-4" />
-                    <span className="text-xs font-medium">Linked</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <div className="flex items-center space-x-1 text-red-500">
-                      <Link2Off className="w-4 h-4" />
-                      <span className="text-xs">Unlinked</span>
-                    </div>
-                    {isCaptain && (
-                      <button
-                        type="button"
-                        onClick={() => handleLinkInvite(getDisplayName(member))}
-                        className="text-blue-600 hover:text-blue-700 text-xs font-medium transition-colors"
-                      >
-                        Link?
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Link Invitation */}
-                {linkInviteStates[getDisplayName(member)] === true && (
-                  <LinkInvite
-                    isOpen={linkInviteStates[getDisplayName(member)] === true}
-                    onClose={() => handleLinkInviteClose(getDisplayName(member))}
-                    onSubmit={(username) =>
-                      handleLinkInviteSubmit(getDisplayName(member), username)
-                    }
-                    studentName={getDisplayName(member)}
-                  />
-                )}
-              </div>
-            </div>
+              member={member}
+              index={index}
+              isCaptain={isCaptain}
+              subteams={subteams}
+              showSubteamDropdown={showSubteamDropdown}
+              selectedMember={selectedMember}
+              onNameClick={handleNameClick}
+              onPromoteToCaptain={(m) => handlePromoteToCaptain(m)}
+              onRemoveMember={(m) => handleRemoveMember(m, user?.id)}
+              onRemoveFromSubteam={handleRemoveOtherFromSubteam}
+              onRemoveSelfFromSubteam={handleRemoveSelfFromSubteam}
+              onRemoveEvent={handleRemoveEvent}
+              onAddEvent={handleAddEventClick}
+              onSubteamAssign={handleSubteamAssign}
+              onSubteamDropdownToggle={handleSubteamDropdownToggle}
+              onSetSelectedMember={setSelectedMember}
+              linkInviteStates={linkInviteStates}
+              onLinkInvite={handleLinkInvite}
+              onLinkInviteClose={handleLinkInviteClose}
+              onLinkInviteSubmit={handleLinkInviteSubmitWrapper}
+              onCancelLinkInvite={handleCancelLinkInvite}
+              onCancelInvitation={handleCancelInvitation}
+            />
           ))
         )}
       </div>
 
       {/* Event Assignment Modal */}
-      {showEventModal && selectedMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className={`relative ${darkMode ? "bg-gray-800" : "bg-white"} rounded-lg shadow-xl max-w-lg w-full max-h-[80vh] overflow-hidden`}
-          >
-            <div
-              className={`${darkMode ? "bg-gray-800" : "bg-white"} px-4 pt-5 pb-4 sm:p-6 sm:pb-4`}
-            >
-              <h3
-                className={`text-lg leading-6 font-medium ${darkMode ? "text-white" : "text-gray-900"} mb-4`}
-              >
-                Add Event for {selectedMember.name}
-              </h3>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                <p className={`${darkMode ? "text-gray-400" : "text-gray-600"} mb-3`}>
-                  Select an event to add {selectedMember.name} to in {selectedMember.subteam?.name}.
-                </p>
-                {/* Common Science Olympiad events for Division C */}
-                {[
-                  "Anatomy & Physiology",
-                  "Astronomy",
-                  "Chemistry Lab",
-                  "Circuit Lab",
-                  "Codebusters",
-                  "Designer Genes",
-                  "Disease Detectives",
-                  "Dynamic Planet",
-                  "Entomology",
-                  "Experimental Design",
-                  "Forensics",
-                  "Machines",
-                  "Materials Science",
-                  "Meteorology",
-                  "Remote Sensing",
-                  "Rocks and Minerals",
-                  "Solar System",
-                  "Water Quality",
-                ].map((event) => (
-                  <button
-                    type="button"
-                    key={event}
-                    onClick={async () => {
-                      try {
-                        // Find the correct subteam ID for this member
-                        let subteamId = selectedMember.subteamId;
-
-                        // If subteamId is not available, try to find it from the subteam name
-                        if (!subteamId || subteamId.trim() === "") {
-                          const matchingSubteam = subteams.find(
-                            (s) => s.name === selectedMember.subteam?.name
-                          );
-                          if (matchingSubteam) {
-                            subteamId = matchingSubteam.id;
-                          }
-                        }
-
-                        // For unlinked members, check if they have a subteam assigned
-                        if (!subteamId || subteamId.trim() === "") {
-                          // Removed verbose logging - not needed for business logic
-
-                          // Check if this is an unlinked member with a subteam
-                          if (selectedMember.subteam?.id) {
-                            subteamId = selectedMember.subteam.id;
-                            // Removed verbose logging - not needed for business logic
-                          } else {
-                            // Removed verbose logging - not needed for business logic
-                            alert(
-                              'This member needs to be assigned to a subteam first. Please use the "set?" option next to their team badge.'
-                            );
-                            return;
-                          }
-                        }
-
-                        // Simple cache invalidation approach
-
-                        // Add user to the selected event in their subteam
-                        const studentName = getDisplayName(selectedMember);
-
-                        await updateRosterMutation.mutateAsync({
-                          teamSlug: team.slug,
-                          subteamId: subteamId,
-                          eventName: event,
-                          slotIndex: 0,
-                          studentName: studentName,
-                          userId: selectedMember.id || undefined,
-                        });
-
-                        // Show success message
-                        toast.success(`Added ${getDisplayName(selectedMember)} to ${event}`);
-
-                        // Small delay to ensure API has processed the change, then reload
-                        setTimeout(() => {
-                          // Invalidate members cache for People tab
-                          invalidateCache(
-                            "members",
-                            team.slug,
-                            selectedSubteam === "all" ? "all" : selectedSubteam
-                          );
-                          loadMembers(
-                            team.slug,
-                            selectedSubteam === "all" ? undefined : selectedSubteam
-                          );
-
-                          // Invalidate roster cache for Roster tab to show updated data
-                          invalidateCache("roster", team.slug, subteamId);
-                        }, 100);
-
-                        setShowEventModal(false);
-                        setSelectedMember(null);
-                      } catch (_error) {
-                        // Ignore errors
-                      }
-                    }}
-                    className={`w-full text-left px-4 py-2 border ${darkMode ? "border-gray-600 hover:bg-gray-700 text-white" : "border-gray-300 hover:bg-gray-50 text-gray-900"} rounded-md`}
-                  >
-                    {event}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div
-              className={`${darkMode ? "bg-gray-700" : "bg-gray-50"} px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse`}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setShowEventModal(false);
-                  setSelectedMember(null);
-                }}
-                className={`w-full inline-flex justify-center rounded-md border ${darkMode ? "border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700" : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"} shadow-sm px-4 py-2 text-base font-medium sm:ml-3 sm:w-auto sm:text-sm`}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <EventAssignmentModal
+        isOpen={showEventModal}
+        onClose={() => {
+          setShowEventModal(false);
+          setSelectedMember(null);
+        }}
+        onSelectEvent={handleEventSelect}
+        selectedMember={selectedMember}
+        subteamId={selectedMember?.subteamId || selectedMember?.subteam?.id || ""}
+      />
 
       {/* Name Prompt Modal */}
       <NamePromptModal

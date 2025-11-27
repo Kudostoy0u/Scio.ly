@@ -5,6 +5,56 @@ import "@testing-library/jest-dom/vitest";
 import TeamDashboard from "@/app/teams/components/TeamDashboard";
 import { TestProviders } from "@/test-utils/test-providers";
 
+// Mock tRPC client
+vi.mock("@/lib/trpc/client", () => ({
+  trpc: {
+    teams: {
+      exitTeam: {
+        useMutation: () => ({
+          mutateAsync: vi.fn(() => Promise.resolve()),
+        }),
+      },
+      archiveTeam: {
+        useMutation: () => ({
+          mutateAsync: vi.fn(() => Promise.resolve()),
+        }),
+      },
+      createSubteam: {
+        useMutation: () => ({
+          mutateAsync: vi.fn(() => Promise.resolve()),
+        }),
+      },
+      updateSubteam: {
+        useMutation: () => ({
+          mutateAsync: vi.fn(() => Promise.resolve()),
+        }),
+      },
+      deleteSubteam: {
+        useMutation: () => ({
+          mutateAsync: vi.fn(() => Promise.resolve()),
+        }),
+      },
+      getTeamPageData: {
+        useQuery: () => ({
+          data: {
+            userTeams: [],
+            currentTeam: null,
+            subteams: [],
+            assignments: [],
+            members: [],
+            roster: {},
+            auth: { role: "captain", isAuthorized: true },
+          },
+          isLoading: false,
+          error: null,
+          refetch: vi.fn(),
+          isError: false,
+        }),
+      },
+    },
+  },
+}));
+
 // Mock dependencies
 vi.mock("@/app/contexts/themeContext", () => ({
   useTheme: () => ({ darkMode: false }),
@@ -18,6 +68,19 @@ vi.mock("framer-motion", () => ({
   motion: {
     div: ({ children, ...props }: Record<string, unknown>) => <div {...props}>{children}</div>,
   },
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+// Mock useTeamStore
+vi.mock("@/app/hooks/useTeamStore", () => ({
+  useTeamStore: () => ({
+    userTeams: [],
+    getSubteams: vi.fn(() => []),
+    loadSubteams: vi.fn(() => Promise.resolve()),
+    updateSubteam: vi.fn(),
+    deleteSubteam: vi.fn(),
+    invalidateCache: vi.fn(),
+  }),
 }));
 
 // Mock fetch

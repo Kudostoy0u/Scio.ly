@@ -48,7 +48,14 @@ export default function RosterTab({
   const { invalidateCache } = useTeamStore();
 
   // tRPC queries and mutations
-  const { data: rosterData } = trpc.teams.getRoster.useQuery(
+  const { data: rosterData } = (
+    trpc.teams.getRoster as {
+      useQuery: (
+        input: { teamSlug: string; subteamId: string },
+        options?: { enabled?: boolean }
+      ) => { data: { roster: Record<string, string[]>; removedEvents: string[] } | undefined };
+    }
+  ).useQuery(
     { teamSlug: team.slug, subteamId: activeSubteamId || "" },
     { enabled: !!activeSubteamId && !!team.slug }
   );
@@ -157,9 +164,10 @@ export default function RosterTab({
 
   // Update removed events when tRPC data changes
   useEffect(() => {
-    if (rosterData && rosterData.removedEvents.length > 0) {
-      setRemovedEvents(new Set(rosterData.removedEvents));
-      saveRemovedEventsToCache(team.slug, activeSubteamId || "", new Set(rosterData.removedEvents));
+    const data = rosterData as { removedEvents?: string[] } | undefined;
+    if (data?.removedEvents && data.removedEvents.length > 0) {
+      setRemovedEvents(new Set(data.removedEvents));
+      saveRemovedEventsToCache(team.slug, activeSubteamId || "", new Set(data.removedEvents));
     }
   }, [rosterData, team.slug, activeSubteamId, saveRemovedEventsToCache]);
 

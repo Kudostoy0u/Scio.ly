@@ -1,21 +1,14 @@
 import { dbPg } from "@/lib/db";
-import { users } from "@/lib/db/schema/core";
-import {
-  newTeamGroups,
-  newTeamMemberships,
-  newTeamUnits,
-} from "@/lib/db/schema/teams";
+import { newTeamMemberships, newTeamUnits } from "@/lib/db/schema/teams";
 import { upsertUserProfile } from "@/lib/db/teams/utils";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import logger from "@/lib/utils/logger";
 import { checkTeamGroupAccessCockroach } from "@/lib/utils/team-auth";
 import { getTeamAccess } from "@/lib/utils/team-auth-v2";
-import logger from "@/lib/utils/logger";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
-import {
-  findMatchingTeamMember,
-  getTeamMembersForGroup,
-} from "./data-access";
+import { getTeamMembersForGroup } from "./data-access";
+import { findMatchingTeamMember } from "./data-processing";
 
 export async function checkTeamAccessOrThrow(userId: string, groupId: string) {
   const teamAccess = await getTeamAccess(userId, groupId);

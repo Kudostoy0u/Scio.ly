@@ -42,11 +42,9 @@ describe("CalendarGrid", () => {
       start_time: "14:00:00",
       end_time: "15:00:00",
       location: "Team Room",
-      meeting_type: "team",
-      team_slug: "test-team",
+      team_id: "test-team-id",
       created_by: "user1",
-      created_at: "2023-12-01T00:00:00Z",
-      updated_at: "2023-12-01T00:00:00Z",
+      exceptions: [],
     },
   ];
 
@@ -81,9 +79,10 @@ describe("CalendarGrid", () => {
       render(<CalendarGrid {...defaultProps} />);
 
       // December 2023 starts on Friday, so we should see some days from November
-      expect(screen.getByText("26")).toBeInTheDocument(); // November 26
-      expect(screen.getByText("1")).toBeInTheDocument(); // December 1
-      expect(screen.getByText("31")).toBeInTheDocument(); // December 31
+      // Use getAllByText since numbers can appear multiple times
+      expect(screen.getAllByText("26").length).toBeGreaterThan(0); // November 26
+      expect(screen.getAllByText("1").length).toBeGreaterThan(0); // December 1
+      expect(screen.getAllByText("31").length).toBeGreaterThan(0); // December 31
     });
 
     it("renders events on correct dates", () => {
@@ -107,11 +106,14 @@ describe("CalendarGrid", () => {
     it("calls onDeleteEvent when delete button is clicked", () => {
       render(<CalendarGrid {...defaultProps} />);
 
-      const deleteButton = screen.getByTestId("x-icon").closest("button");
+      // Find the delete button for the "Test Event" specifically
+      const testEvent = screen.getByText("Test Event");
+      const deleteButton = testEvent.closest("button")?.querySelector('[title="Delete event"]');
       expect(deleteButton).toBeTruthy();
-      fireEvent.click(deleteButton);
-
-      expect(defaultProps.onDeleteEvent).toHaveBeenCalledWith("1");
+      if (deleteButton) {
+        fireEvent.click(deleteButton);
+        expect(defaultProps.onDeleteEvent).toHaveBeenCalledWith("1");
+      }
     });
 
     it("calls onAddEventForDate when add event button is clicked", () => {
@@ -135,7 +137,9 @@ describe("CalendarGrid", () => {
       // The recurring meeting is on Monday, Wednesday, Friday
       // We need to find a Monday, Wednesday, or Friday in December 2023
       // December 1, 2023 is a Friday, so it should show the recurring meeting
-      expect(screen.getByText("Weekly Meeting")).toBeInTheDocument();
+      // Use getAllByText since the meeting might appear on multiple days
+      const meetings = screen.queryAllByText("Weekly Meeting");
+      expect(meetings.length).toBeGreaterThan(0);
     });
   });
 
@@ -143,15 +147,19 @@ describe("CalendarGrid", () => {
     it("applies dark mode classes when darkMode is true", () => {
       render(<CalendarGrid {...defaultProps} darkMode={true} />);
 
-      const gridContainer = screen.getByText("Sun").closest("div");
-      expect(gridContainer).toHaveClass("bg-gray-50");
+      // Check the day headers container which has bg-gray-800 in dark mode
+      const dayHeader = screen.getByText("Sun");
+      const headersContainer = dayHeader.closest("div")?.parentElement;
+      expect(headersContainer).toHaveClass("bg-gray-800");
     });
 
     it("applies light mode classes when darkMode is false", () => {
       render(<CalendarGrid {...defaultProps} darkMode={false} />);
 
-      const gridContainer = screen.getByText("Sun").closest("div");
-      expect(gridContainer).toHaveClass("bg-gray-50");
+      // Check the day headers container which has bg-gray-50 in light mode
+      const dayHeader = screen.getByText("Sun");
+      const headersContainer = dayHeader.closest("div")?.parentElement;
+      expect(headersContainer).toHaveClass("bg-gray-50");
     });
   });
 

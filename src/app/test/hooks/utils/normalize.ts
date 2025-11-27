@@ -15,12 +15,13 @@ import type { Question } from "@/app/utils/geminiService";
  */
 export function normalizeQuestionsFull(questions: Question[]): Question[] {
   if (!Array.isArray(questions)) {
+    console.error("normalizeQuestionsFull received non-array", questions);
     return [];
   }
 
   const mediaNormalized = normalizeQuestionMedia(questions);
 
-  return mediaNormalized.map((q, _index) => {
+  return mediaNormalized.map((q, index) => {
     const out = { ...q } as {
       answers?: unknown;
       question?: string;
@@ -34,6 +35,7 @@ export function normalizeQuestionsFull(questions: Question[]): Question[] {
       (Array.isArray(out.answers) && out.answers.length === 0)
     ) {
       // Don't throw, but log prominently - this question won't be gradable
+      console.error(`Question ${index + 1} missing valid answers field`, out);
     }
 
     // Normalize question text

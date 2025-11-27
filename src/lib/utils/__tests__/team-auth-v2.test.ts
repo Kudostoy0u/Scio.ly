@@ -1,13 +1,16 @@
-import { queryCockroachDB } from "@/lib/cockroachdb";
 import { getTeamAccessCockroach, hasLeadershipAccessCockroach } from "@/lib/utils/team-auth-v2";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock the CockroachDB query function
-vi.mock("@/lib/cockroachdb", () => ({
-  queryCockroachDB: vi.fn(),
+// Mock Drizzle ORM
+vi.mock("@/lib/db", () => ({
+  dbPg: {
+    select: vi.fn(),
+  },
 }));
 
-const mockQueryCockroachDb = vi.mocked(queryCockroachDB);
+import { dbPg } from "@/lib/db";
+
+const mockDbPg = vi.mocked(dbPg);
 
 describe("Team Authentication v2", () => {
   const mockUserId = "user-123";
@@ -25,16 +28,26 @@ describe("Team Authentication v2", () => {
   describe("getTeamAccessCockroach", () => {
     it("should grant access to team creator", async () => {
       // Mock team creator check
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              created_by: mockUserId,
-            },
-          ],
-        })
-        .mockResolvedValueOnce({ rows: [] }) // No subteam memberships
-        .mockResolvedValueOnce({ rows: [] }); // No roster entries
+      const mockWhereCreator = vi.fn().mockResolvedValue([{ createdBy: mockUserId }]);
+      const mockFromCreator = vi.fn().mockReturnValue({ where: mockWhereCreator });
+      const mockSelectCreator = vi.fn().mockReturnValue({ from: mockFromCreator });
+
+      // Mock no subteam memberships
+      const mockWhereMembership = vi.fn().mockResolvedValue([]);
+      const mockInnerJoinMembership = vi.fn().mockReturnValue({ where: mockWhereMembership });
+      const mockFromMembership = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinMembership });
+      const mockSelectMembership = vi.fn().mockReturnValue({ from: mockFromMembership });
+
+      // Mock no roster entries
+      const mockWhereRoster = vi.fn().mockResolvedValue([]);
+      const mockInnerJoinRoster = vi.fn().mockReturnValue({ where: mockWhereRoster });
+      const mockFromRoster = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinRoster });
+      const mockSelectRoster = vi.fn().mockReturnValue({ from: mockFromRoster });
+
+      mockDbPg.select
+        .mockReturnValueOnce(mockSelectCreator())
+        .mockReturnValueOnce(mockSelectMembership())
+        .mockReturnValueOnce(mockSelectRoster());
 
       const result = await getTeamAccessCockroach(mockUserId, mockGroupId);
 
@@ -51,18 +64,32 @@ describe("Team Authentication v2", () => {
 
     it("should grant access to subteam member", async () => {
       // Mock not team creator
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              role: "captain",
-              team_id: mockSubteamId,
-              subteam_id: mockSubteamId,
-            },
-          ],
-        })
-        .mockResolvedValueOnce({ rows: [] }); // No roster entries
+      const mockWhereCreator = vi.fn().mockResolvedValue([]);
+      const mockFromCreator = vi.fn().mockReturnValue({ where: mockWhereCreator });
+      const mockSelectCreator = vi.fn().mockReturnValue({ from: mockFromCreator });
+
+      // Mock subteam membership
+      const mockWhereMembership = vi.fn().mockResolvedValue([
+        {
+          subteamId: mockSubteamId,
+          teamId: mockSubteamId,
+          role: "captain",
+        },
+      ]);
+      const mockInnerJoinMembership = vi.fn().mockReturnValue({ where: mockWhereMembership });
+      const mockFromMembership = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinMembership });
+      const mockSelectMembership = vi.fn().mockReturnValue({ from: mockFromMembership });
+
+      // Mock no roster entries
+      const mockWhereRoster = vi.fn().mockResolvedValue([]);
+      const mockInnerJoinRoster = vi.fn().mockReturnValue({ where: mockWhereRoster });
+      const mockFromRoster = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinRoster });
+      const mockSelectRoster = vi.fn().mockReturnValue({ from: mockFromRoster });
+
+      mockDbPg.select
+        .mockReturnValueOnce(mockSelectCreator())
+        .mockReturnValueOnce(mockSelectMembership())
+        .mockReturnValueOnce(mockSelectRoster());
 
       const result = await getTeamAccessCockroach(mockUserId, mockGroupId);
 
@@ -85,18 +112,32 @@ describe("Team Authentication v2", () => {
 
     it("should grant access to user with roster entries", async () => {
       // Mock not team creator, no subteam membership
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              subteam_id: mockSubteamId,
-              team_id: mockSubteamId,
-              student_name: "John Doe",
-            },
-          ],
-        });
+      const mockWhereCreator = vi.fn().mockResolvedValue([]);
+      const mockFromCreator = vi.fn().mockReturnValue({ where: mockWhereCreator });
+      const mockSelectCreator = vi.fn().mockReturnValue({ from: mockFromCreator });
+
+      // Mock no subteam membership
+      const mockWhereMembership = vi.fn().mockResolvedValue([]);
+      const mockInnerJoinMembership = vi.fn().mockReturnValue({ where: mockWhereMembership });
+      const mockFromMembership = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinMembership });
+      const mockSelectMembership = vi.fn().mockReturnValue({ from: mockFromMembership });
+
+      // Mock roster entries
+      const mockWhereRoster = vi.fn().mockResolvedValue([
+        {
+          subteamId: mockSubteamId,
+          teamId: mockSubteamId,
+          studentName: "John Doe",
+        },
+      ]);
+      const mockInnerJoinRoster = vi.fn().mockReturnValue({ where: mockWhereRoster });
+      const mockFromRoster = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinRoster });
+      const mockSelectRoster = vi.fn().mockReturnValue({ from: mockFromRoster });
+
+      mockDbPg.select
+        .mockReturnValueOnce(mockSelectCreator())
+        .mockReturnValueOnce(mockSelectMembership())
+        .mockReturnValueOnce(mockSelectRoster());
 
       const result = await getTeamAccessCockroach(mockUserId, mockGroupId);
 
@@ -119,10 +160,24 @@ describe("Team Authentication v2", () => {
 
     it("should deny access when user has no team relationship", async () => {
       // Mock no team creator, no subteam membership, no roster entries
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [] });
+      const mockWhereCreator = vi.fn().mockResolvedValue([]);
+      const mockFromCreator = vi.fn().mockReturnValue({ where: mockWhereCreator });
+      const mockSelectCreator = vi.fn().mockReturnValue({ from: mockFromCreator });
+
+      const mockWhereMembership = vi.fn().mockResolvedValue([]);
+      const mockInnerJoinMembership = vi.fn().mockReturnValue({ where: mockWhereMembership });
+      const mockFromMembership = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinMembership });
+      const mockSelectMembership = vi.fn().mockReturnValue({ from: mockFromMembership });
+
+      const mockWhereRoster = vi.fn().mockResolvedValue([]);
+      const mockInnerJoinRoster = vi.fn().mockReturnValue({ where: mockWhereRoster });
+      const mockFromRoster = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinRoster });
+      const mockSelectRoster = vi.fn().mockReturnValue({ from: mockFromRoster });
+
+      mockDbPg.select
+        .mockReturnValueOnce(mockSelectCreator())
+        .mockReturnValueOnce(mockSelectMembership())
+        .mockReturnValueOnce(mockSelectRoster());
 
       const result = await getTeamAccessCockroach(mockUserId, mockGroupId);
 
@@ -140,23 +195,35 @@ describe("Team Authentication v2", () => {
     it("should handle multiple subteam memberships", async () => {
       const subteamId2 = "subteam-999";
 
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              role: "captain",
-              team_id: mockSubteamId,
-              subteam_id: mockSubteamId,
-            },
-            {
-              role: "member",
-              team_id: subteamId2,
-              subteam_id: subteamId2,
-            },
-          ],
-        })
-        .mockResolvedValueOnce({ rows: [] });
+      const mockWhereCreator = vi.fn().mockResolvedValue([]);
+      const mockFromCreator = vi.fn().mockReturnValue({ where: mockWhereCreator });
+      const mockSelectCreator = vi.fn().mockReturnValue({ from: mockFromCreator });
+
+      const mockWhereMembership = vi.fn().mockResolvedValue([
+        {
+          subteamId: mockSubteamId,
+          teamId: mockSubteamId,
+          role: "captain",
+        },
+        {
+          subteamId: subteamId2,
+          teamId: subteamId2,
+          role: "member",
+        },
+      ]);
+      const mockInnerJoinMembership = vi.fn().mockReturnValue({ where: mockWhereMembership });
+      const mockFromMembership = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinMembership });
+      const mockSelectMembership = vi.fn().mockReturnValue({ from: mockFromMembership });
+
+      const mockWhereRoster = vi.fn().mockResolvedValue([]);
+      const mockInnerJoinRoster = vi.fn().mockReturnValue({ where: mockWhereRoster });
+      const mockFromRoster = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinRoster });
+      const mockSelectRoster = vi.fn().mockReturnValue({ from: mockFromRoster });
+
+      mockDbPg.select
+        .mockReturnValueOnce(mockSelectCreator())
+        .mockReturnValueOnce(mockSelectMembership())
+        .mockReturnValueOnce(mockSelectRoster());
 
       const result = await getTeamAccessCockroach(mockUserId, mockGroupId);
 
@@ -176,16 +243,24 @@ describe("Team Authentication v2", () => {
 
   describe("hasLeadershipAccessCockroach", () => {
     it("should grant leadership to team creator", async () => {
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              created_by: mockUserId,
-            },
-          ],
-        })
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [] });
+      const mockWhereCreator = vi.fn().mockResolvedValue([{ createdBy: mockUserId }]);
+      const mockFromCreator = vi.fn().mockReturnValue({ where: mockWhereCreator });
+      const mockSelectCreator = vi.fn().mockReturnValue({ from: mockFromCreator });
+
+      const mockWhereMembership = vi.fn().mockResolvedValue([]);
+      const mockInnerJoinMembership = vi.fn().mockReturnValue({ where: mockWhereMembership });
+      const mockFromMembership = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinMembership });
+      const mockSelectMembership = vi.fn().mockReturnValue({ from: mockFromMembership });
+
+      const mockWhereRoster = vi.fn().mockResolvedValue([]);
+      const mockInnerJoinRoster = vi.fn().mockReturnValue({ where: mockWhereRoster });
+      const mockFromRoster = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinRoster });
+      const mockSelectRoster = vi.fn().mockReturnValue({ from: mockFromRoster });
+
+      mockDbPg.select
+        .mockReturnValueOnce(mockSelectCreator())
+        .mockReturnValueOnce(mockSelectMembership())
+        .mockReturnValueOnce(mockSelectRoster());
 
       const result = await hasLeadershipAccessCockroach(mockUserId, mockGroupId);
 
@@ -193,17 +268,30 @@ describe("Team Authentication v2", () => {
     });
 
     it("should grant leadership to captain", async () => {
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              role: "captain",
-              team_id: mockSubteamId,
-            },
-          ],
-        })
-        .mockResolvedValueOnce({ rows: [] });
+      const mockWhereCreator = vi.fn().mockResolvedValue([]);
+      const mockFromCreator = vi.fn().mockReturnValue({ where: mockWhereCreator });
+      const mockSelectCreator = vi.fn().mockReturnValue({ from: mockFromCreator });
+
+      const mockWhereMembership = vi.fn().mockResolvedValue([
+        {
+          subteamId: mockSubteamId,
+          teamId: mockSubteamId,
+          role: "captain",
+        },
+      ]);
+      const mockInnerJoinMembership = vi.fn().mockReturnValue({ where: mockWhereMembership });
+      const mockFromMembership = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinMembership });
+      const mockSelectMembership = vi.fn().mockReturnValue({ from: mockFromMembership });
+
+      const mockWhereRoster = vi.fn().mockResolvedValue([]);
+      const mockInnerJoinRoster = vi.fn().mockReturnValue({ where: mockWhereRoster });
+      const mockFromRoster = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinRoster });
+      const mockSelectRoster = vi.fn().mockReturnValue({ from: mockFromRoster });
+
+      mockDbPg.select
+        .mockReturnValueOnce(mockSelectCreator())
+        .mockReturnValueOnce(mockSelectMembership())
+        .mockReturnValueOnce(mockSelectRoster());
 
       const result = await hasLeadershipAccessCockroach(mockUserId, mockGroupId);
 
@@ -211,17 +299,30 @@ describe("Team Authentication v2", () => {
     });
 
     it("should grant leadership to co-captain", async () => {
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              role: "co_captain",
-              team_id: mockSubteamId,
-            },
-          ],
-        })
-        .mockResolvedValueOnce({ rows: [] });
+      const mockWhereCreator = vi.fn().mockResolvedValue([]);
+      const mockFromCreator = vi.fn().mockReturnValue({ where: mockWhereCreator });
+      const mockSelectCreator = vi.fn().mockReturnValue({ from: mockFromCreator });
+
+      const mockWhereMembership = vi.fn().mockResolvedValue([
+        {
+          subteamId: mockSubteamId,
+          teamId: mockSubteamId,
+          role: "co_captain",
+        },
+      ]);
+      const mockInnerJoinMembership = vi.fn().mockReturnValue({ where: mockWhereMembership });
+      const mockFromMembership = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinMembership });
+      const mockSelectMembership = vi.fn().mockReturnValue({ from: mockFromMembership });
+
+      const mockWhereRoster = vi.fn().mockResolvedValue([]);
+      const mockInnerJoinRoster = vi.fn().mockReturnValue({ where: mockWhereRoster });
+      const mockFromRoster = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinRoster });
+      const mockSelectRoster = vi.fn().mockReturnValue({ from: mockFromRoster });
+
+      mockDbPg.select
+        .mockReturnValueOnce(mockSelectCreator())
+        .mockReturnValueOnce(mockSelectMembership())
+        .mockReturnValueOnce(mockSelectRoster());
 
       const result = await hasLeadershipAccessCockroach(mockUserId, mockGroupId);
 
@@ -229,17 +330,30 @@ describe("Team Authentication v2", () => {
     });
 
     it("should deny leadership to regular member", async () => {
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              role: "member",
-              team_id: mockSubteamId,
-            },
-          ],
-        })
-        .mockResolvedValueOnce({ rows: [] });
+      const mockWhereCreator = vi.fn().mockResolvedValue([]);
+      const mockFromCreator = vi.fn().mockReturnValue({ where: mockWhereCreator });
+      const mockSelectCreator = vi.fn().mockReturnValue({ from: mockFromCreator });
+
+      const mockWhereMembership = vi.fn().mockResolvedValue([
+        {
+          subteamId: mockSubteamId,
+          teamId: mockSubteamId,
+          role: "member",
+        },
+      ]);
+      const mockInnerJoinMembership = vi.fn().mockReturnValue({ where: mockWhereMembership });
+      const mockFromMembership = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinMembership });
+      const mockSelectMembership = vi.fn().mockReturnValue({ from: mockFromMembership });
+
+      const mockWhereRoster = vi.fn().mockResolvedValue([]);
+      const mockInnerJoinRoster = vi.fn().mockReturnValue({ where: mockWhereRoster });
+      const mockFromRoster = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinRoster });
+      const mockSelectRoster = vi.fn().mockReturnValue({ from: mockFromRoster });
+
+      mockDbPg.select
+        .mockReturnValueOnce(mockSelectCreator())
+        .mockReturnValueOnce(mockSelectMembership())
+        .mockReturnValueOnce(mockSelectRoster());
 
       const result = await hasLeadershipAccessCockroach(mockUserId, mockGroupId);
 
@@ -247,10 +361,24 @@ describe("Team Authentication v2", () => {
     });
 
     it("should deny leadership when user has no team relationship", async () => {
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [] });
+      const mockWhereCreator = vi.fn().mockResolvedValue([]);
+      const mockFromCreator = vi.fn().mockReturnValue({ where: mockWhereCreator });
+      const mockSelectCreator = vi.fn().mockReturnValue({ from: mockFromCreator });
+
+      const mockWhereMembership = vi.fn().mockResolvedValue([]);
+      const mockInnerJoinMembership = vi.fn().mockReturnValue({ where: mockWhereMembership });
+      const mockFromMembership = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinMembership });
+      const mockSelectMembership = vi.fn().mockReturnValue({ from: mockFromMembership });
+
+      const mockWhereRoster = vi.fn().mockResolvedValue([]);
+      const mockInnerJoinRoster = vi.fn().mockReturnValue({ where: mockWhereRoster });
+      const mockFromRoster = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinRoster });
+      const mockSelectRoster = vi.fn().mockReturnValue({ from: mockFromRoster });
+
+      mockDbPg.select
+        .mockReturnValueOnce(mockSelectCreator())
+        .mockReturnValueOnce(mockSelectMembership())
+        .mockReturnValueOnce(mockSelectRoster());
 
       const result = await hasLeadershipAccessCockroach(mockUserId, mockGroupId);
 
@@ -260,7 +388,11 @@ describe("Team Authentication v2", () => {
 
   describe("Error Handling", () => {
     it("should handle database errors gracefully", async () => {
-      mockQueryCockroachDb.mockRejectedValueOnce(new Error("Database connection failed"));
+      const mockWhereCreator = vi.fn().mockRejectedValue(new Error("Database connection failed"));
+      const mockFromCreator = vi.fn().mockReturnValue({ where: mockWhereCreator });
+      const mockSelectCreator = vi.fn().mockReturnValue({ from: mockFromCreator });
+
+      mockDbPg.select.mockReturnValueOnce(mockSelectCreator());
 
       // The function should handle errors and return a default result
       const result = await getTeamAccessCockroach(mockUserId, mockGroupId);
@@ -277,10 +409,24 @@ describe("Team Authentication v2", () => {
     });
 
     it("should handle empty results gracefully", async () => {
-      mockQueryCockroachDb
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [] });
+      const mockWhereCreator = vi.fn().mockResolvedValue([]);
+      const mockFromCreator = vi.fn().mockReturnValue({ where: mockWhereCreator });
+      const mockSelectCreator = vi.fn().mockReturnValue({ from: mockFromCreator });
+
+      const mockWhereMembership = vi.fn().mockResolvedValue([]);
+      const mockInnerJoinMembership = vi.fn().mockReturnValue({ where: mockWhereMembership });
+      const mockFromMembership = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinMembership });
+      const mockSelectMembership = vi.fn().mockReturnValue({ from: mockFromMembership });
+
+      const mockWhereRoster = vi.fn().mockResolvedValue([]);
+      const mockInnerJoinRoster = vi.fn().mockReturnValue({ where: mockWhereRoster });
+      const mockFromRoster = vi.fn().mockReturnValue({ innerJoin: mockInnerJoinRoster });
+      const mockSelectRoster = vi.fn().mockReturnValue({ from: mockFromRoster });
+
+      mockDbPg.select
+        .mockReturnValueOnce(mockSelectCreator())
+        .mockReturnValueOnce(mockSelectMembership())
+        .mockReturnValueOnce(mockSelectRoster());
 
       const result = await getTeamAccessCockroach(mockUserId, mockGroupId);
 

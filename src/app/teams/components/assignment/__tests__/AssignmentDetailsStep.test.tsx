@@ -39,7 +39,6 @@ describe("AssignmentDetailsStep", () => {
       expect(screen.getByLabelText(EVENT_REGEX)).toBeInTheDocument();
       expect(screen.getByLabelText("Type")).toBeInTheDocument();
       expect(screen.getByLabelText("Due Date")).toBeInTheDocument();
-      expect(screen.getByLabelText("Points")).toBeInTheDocument();
       expect(screen.getByLabelText("Description")).toBeInTheDocument();
     });
 
@@ -98,7 +97,8 @@ describe("AssignmentDetailsStep", () => {
       expect(mockProps.onDetailsChange).toHaveBeenCalledWith({ dueDate: "2023-12-31" });
     });
 
-    it("calls onDetailsChange when points are updated", () => {
+    // Points field was removed from the component
+    it.skip("calls onDetailsChange when points are updated", () => {
       render(<AssignmentDetailsStep {...mockProps} />);
 
       const pointsInput = screen.getByLabelText("Points");
@@ -190,7 +190,6 @@ describe("AssignmentDetailsStep", () => {
       expect(screen.getByLabelText(EVENT_REGEX)).toBeInTheDocument();
       expect(screen.getByLabelText("Type")).toBeInTheDocument();
       expect(screen.getByLabelText("Due Date")).toBeInTheDocument();
-      expect(screen.getByLabelText("Points")).toBeInTheDocument();
       expect(screen.getByLabelText("Description")).toBeInTheDocument();
     });
 

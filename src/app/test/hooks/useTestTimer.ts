@@ -1,19 +1,18 @@
-import {
-  getCurrentTestSession,
-  initializeTestSession,
-  markTestSubmitted,
-  resumeTestSession,
-} from "@/app/utils/timeManagement";
 import type { RouterParams } from "@/app/utils/questionUtils";
+import { getCurrentTestSession, resumeTestSession } from "@/app/utils/timeManagement";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { useCountdown, usePauseOnUnmount, useResumeOnMount, useSetupVisibility } from "./utils/timeHooks";
+import {
+  useCountdown,
+  usePauseOnUnmount,
+  useResumeOnMount,
+  useSetupVisibility,
+} from "./utils/timeHooks";
 
 /**
  * Hook for managing test timer and countdown
  */
 export function useTestTimer({
-  routerData,
   isSubmitted,
   onTimeUp,
 }: {
@@ -33,7 +32,7 @@ export function useTestTimer({
     } catch {
       // Ignore errors
     }
-  }, [routerData]);
+  }, []);
 
   // Time warnings
   useEffect(() => {

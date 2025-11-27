@@ -1,5 +1,5 @@
 import type { RouterParams } from "@/app/utils/questionUtils";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 /**
  * Hook for managing user answers with localStorage persistence
@@ -18,7 +18,7 @@ export function useTestAnswers({ routerData }: { routerData: RouterParams }) {
   ) => {
     setUserAnswers((prev) => {
       const currentAnswers = prev[questionIndex] || [];
-      let newAnswers;
+      let newAnswers: (string | null)[];
 
       if (multiselect) {
         newAnswers = currentAnswers.includes(answer)
@@ -53,7 +53,7 @@ export function useTestAnswers({ routerData }: { routerData: RouterParams }) {
    */
   const resetAnswers = () => {
     setUserAnswers({});
-    
+
     const isAssignmentMode = !!(
       routerData.assignmentId ||
       routerData.teamsAssign === "1" ||

@@ -1,93 +1,42 @@
+/**
+ * Tests for GET /api/teams/[teamId]/members
+ */
+
 import { GET } from "@/app/api/teams/[teamId]/members/route";
-import { queryCockroachDB } from "@/lib/cockroachdb";
-import { dbPg } from "@/lib/db";
-import { getServerUser } from "@/lib/supabaseServer";
-import { getTeamAccess, getUserDisplayInfo } from "@/lib/utils/team-auth-v2";
-import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-// Mock dependencies
-vi.mock("@/lib/supabaseServer", () => ({
-  getServerUser: vi.fn(),
-}));
-
-vi.mock("@/lib/utils/team-auth-v2", () => ({
-  getTeamAccess: vi.fn(),
-  getUserDisplayInfo: vi.fn(),
-}));
-
-// Create a proper Drizzle ORM chain mock
-// Drizzle chains are awaitable, so the final method in the chain should return a resolved promise
-// dbPg.select() returns an object with .from(), which returns an object with .where() or .innerJoin()
-const _createDrizzleChain = (
-  result: unknown[],
-  options?: { hasInnerJoin?: boolean; hasLimit?: boolean }
-) => {
-  const { hasInnerJoin = false, hasLimit = false } = options || {};
-
-  if (hasInnerJoin) {
-    // Chain: select().from().innerJoin().where()
-    // The innerJoin() method takes parameters and returns an object with .where()
-    const whereMock = vi.fn().mockResolvedValue(result);
-    const innerJoinChain = { where: whereMock };
-    const innerJoinMock = vi.fn().mockReturnValue(innerJoinChain);
-    const fromChain = { innerJoin: innerJoinMock };
-    const fromMock = vi.fn().mockReturnValue(fromChain);
-    return { from: fromMock };
-  }
-
-  if (hasLimit) {
-    // Chain: select().from().where().limit()
-    const limitMock = vi.fn().mockResolvedValue(result);
-    const whereChain = { limit: limitMock };
-    const whereMock = vi.fn().mockReturnValue(whereChain);
-    const fromChain = { where: whereMock };
-    const fromMock = vi.fn().mockReturnValue(fromChain);
-    return { from: fromMock };
-  }
-
-  // Simple chain: select().from().where()
-  const whereMock = vi.fn().mockResolvedValue(result);
-  const fromChain = { where: whereMock };
-  const fromMock = vi.fn().mockReturnValue(fromChain);
-  return { from: fromMock };
-};
-
-vi.mock("@/lib/db", () => ({
-  dbPg: {
-    select: vi.fn(),
-  },
-}));
-
-vi.mock("@/lib/cockroachdb", () => ({
-  queryCockroachDB: vi.fn(),
-}));
-
-const mockGetServerUser = vi.mocked(getServerUser);
-const mockGetTeamAccess = vi.mocked(getTeamAccess);
-const mockDbPg = vi.mocked(dbPg);
-const mockGetUserDisplayInfo = vi.mocked(getUserDisplayInfo);
-const mockQueryCockroachDb = vi.mocked(queryCockroachDB);
+import {
+  linkedUserId,
+  mockSubteamId,
+  mockSubteamMember,
+  mockTeamAccessCreator,
+  mockTeamAccessNoAccess,
+  mockTeamAccessSubteamMember,
+  mockTeamGroup,
+  mockTeamId,
+  mockUnlinkedRosterMember,
+  mockUser,
+  mockUserId,
+  mockUserProfile,
+  mockUserProfileData,
+  otherUserId,
+  subteam1Id,
+  subteam2Id,
+  user1Id,
+  user2Id,
+} from "./fixtures";
+import { createDrizzleChain, createParams, createRequest, setupConsoleMocks } from "./helpers";
+import {
+  mockDbPg,
+  mockGetServerUser,
+  mockGetTeamAccess,
+  mockGetUserDisplayInfo,
+  mockQueryCockroachDb,
+} from "./mocks";
 
 describe("/api/teams/[teamId]/members", () => {
-  // Use proper UUID format for better type safety
-  const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
-  const mockTeamId = "team-slug-123";
-  const mockGroupId = "123e4567-e89b-12d3-a456-426614174001";
-  const mockSubteamId = "123e4567-e89b-12d3-a456-426614174002";
-
   beforeEach(() => {
     vi.clearAllMocks();
-
-    // Mock console methods to reduce noise
-    vi.spyOn(console, "log").mockImplementation(() => {
-      // Suppress console.log in tests
-    });
-    vi.spyOn(console, "error").mockImplementation(() => {
-      // Suppress console.error in tests
-    });
-
-    // Default mock for queryCockroachDB to return empty results
+    setupConsoleMocks();
     mockQueryCockroachDb.mockResolvedValue({ rows: [] });
   });
 
@@ -99,8 +48,8 @@ describe("/api/teams/[teamId]/members", () => {
     it("should return 401 when user is not authenticated", async () => {
       mockGetServerUser.mockResolvedValue(null);
 
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/members`);
-      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+      const request = createRequest(mockTeamId);
+      const response = await GET(request, createParams(mockTeamId));
 
       expect(response.status).toBe(401);
       const body = await response.json();
@@ -109,26 +58,12 @@ describe("/api/teams/[teamId]/members", () => {
 
     it("should return 404 when team group is not found", async () => {
       // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      // Mock team group lookup - empty result
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-      // getTeamAccess won't be called if group is not found, but mock it anyway
-      mockGetTeamAccess.mockResolvedValue({
-        hasAccess: false,
-        isCreator: false,
-        hasMembership: false,
-        hasRosterEntry: false,
-        role: undefined,
-      });
+      mockGetServerUser.mockResolvedValue(mockUser as any);
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasLimit: true }));
+      mockGetTeamAccess.mockResolvedValue(mockTeamAccessNoAccess);
 
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/members`);
-      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+      const request = createRequest(mockTeamId);
+      const response = await GET(request, createParams(mockTeamId));
 
       expect(response.status).toBe(404);
       const body = await response.json();
@@ -137,27 +72,12 @@ describe("/api/teams/[teamId]/members", () => {
 
     it("should return 403 when user has no access", async () => {
       // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      // Mock team group lookup
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ id: mockGroupId }]),
-          }),
-        }),
-      });
-      mockGetTeamAccess.mockResolvedValue({
-        hasAccess: false,
-        isCreator: false,
-        hasSubteamMembership: false,
-        hasRosterEntries: false,
-        subteamRole: undefined,
-        subteamMemberships: [],
-        rosterSubteams: [],
-      });
+      mockGetServerUser.mockResolvedValue(mockUser as any);
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([mockTeamGroup], { hasLimit: true }));
+      mockGetTeamAccess.mockResolvedValue(mockTeamAccessNoAccess);
 
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/members`);
-      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+      const request = createRequest(mockTeamId);
+      const response = await GET(request, createParams(mockTeamId));
 
       expect(response.status).toBe(403);
       const body = await response.json();
@@ -166,62 +86,17 @@ describe("/api/teams/[teamId]/members", () => {
 
     it("should return team creator as member when user is creator", async () => {
       // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      // Mock team group lookup: dbPg.select().from().where().limit()
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ id: mockGroupId }]),
-          }),
-        }),
-      });
-      mockGetTeamAccess.mockResolvedValue({
-        hasAccess: true,
-        isCreator: true,
-        hasSubteamMembership: false,
-        hasRosterEntries: false,
-        subteamMemberships: [],
-        rosterSubteams: [],
-      });
-      mockGetUserDisplayInfo.mockResolvedValue({
-        name: "John Doe",
-        email: "john@example.com",
-        username: "johndoe",
-      });
-      // Mock subteam members query - no members (this query uses innerJoin)
-      // When there are no members, userProfiles query is skipped (userIds is empty)
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-      // Mock linked roster query - no linked roster (this query uses innerJoin)
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-      // Mock unlinked roster query - no unlinked roster (this query uses innerJoin)
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-      // Mock pending invites query - no pending invites (simple select().from().where())
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([]),
-        }),
-      });
+      mockGetServerUser.mockResolvedValue(mockUser as any);
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([mockTeamGroup], { hasLimit: true }));
+      mockGetTeamAccess.mockResolvedValue(mockTeamAccessCreator);
+      mockGetUserDisplayInfo.mockResolvedValue(mockUserProfile);
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasInnerJoin: true }));
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasInnerJoin: true }));
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasInnerJoin: true }));
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([]));
 
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/members`);
-      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+      const request = createRequest(mockTeamId);
+      const response = await GET(request, createParams(mockTeamId));
 
       if (response.status !== 200) {
         const errorBody = await response.json();
@@ -238,87 +113,20 @@ describe("/api/teams/[teamId]/members", () => {
     });
 
     it("should return subteam members when user has subteam membership", async () => {
-      const otherUserId = "123e4567-e89b-12d3-a456-426614174003";
-
       // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      // Mock team group lookup (needs .limit(1))
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ id: mockGroupId }]),
-          }),
-        }),
-      });
-      mockGetTeamAccess.mockResolvedValue({
-        hasAccess: true,
-        isCreator: false,
-        hasSubteamMembership: true,
-        hasRosterEntries: false,
-        subteamRole: "captain",
-        subteamMemberships: [{ subteamId: mockSubteamId, teamId: mockSubteamId, role: "captain" }],
-        rosterSubteams: [],
-      });
+      mockGetServerUser.mockResolvedValue(mockUser as any);
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([mockTeamGroup], { hasLimit: true }));
+      mockGetTeamAccess.mockResolvedValue(mockTeamAccessSubteamMember);
+      mockDbPg.select.mockReturnValueOnce(
+        createDrizzleChain([mockSubteamMember], { hasInnerJoin: true })
+      );
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([mockUserProfileData]));
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasInnerJoin: true }));
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasInnerJoin: true }));
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([]));
 
-      // Mock subteam members query (select().from().innerJoin().where())
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([
-              {
-                userId: otherUserId,
-                role: "captain",
-                joinedAt: new Date("2024-01-01"),
-                teamUnitId: mockSubteamId,
-                teamId: mockSubteamId,
-                description: "Team A",
-              },
-            ]),
-          }),
-        }),
-      });
-
-      // Mock user profiles query (select().from().where())
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([
-            {
-              id: otherUserId,
-              email: "jane@example.com",
-              displayName: "Jane Smith",
-              firstName: "Jane",
-              lastName: "Smith",
-              username: "janesmith",
-            },
-          ]),
-        }),
-      });
-
-      // Mock linked roster query (select().from().innerJoin().where()) - empty
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-      // Mock unlinked roster query (select().from().innerJoin().where()) - empty
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-      // Mock pending invites query (select().from().where()) - empty
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([]),
-        }),
-      });
-
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/members`);
-      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+      const request = createRequest(mockTeamId);
+      const response = await GET(request, createParams(mockTeamId));
 
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -332,60 +140,16 @@ describe("/api/teams/[teamId]/members", () => {
 
     it("should filter by subteam when subteamId is provided", async () => {
       // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      // Mock team group lookup: dbPg.select().from().where().limit()
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ id: mockGroupId }]),
-          }),
-        }),
-      });
-      mockGetTeamAccess.mockResolvedValue({
-        hasAccess: true,
-        isCreator: false,
-        hasSubteamMembership: true,
-        hasRosterEntries: false,
-        subteamRole: "captain",
-        subteamMemberships: [{ subteamId: mockSubteamId, teamId: mockSubteamId, role: "captain" }],
-        rosterSubteams: [],
-      });
-      // Mock subteam members query - no members (uses innerJoin)
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-      // Note: User profiles query is skipped when members.length === 0 (userIds.length === 0)
-      // Mock linked roster query - empty (uses innerJoin)
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-      // Mock unlinked roster query - empty (uses innerJoin)
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-      // Mock pending invites query - empty
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([]),
-        }),
-      });
+      mockGetServerUser.mockResolvedValue(mockUser as any);
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([mockTeamGroup], { hasLimit: true }));
+      mockGetTeamAccess.mockResolvedValue(mockTeamAccessSubteamMember);
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasInnerJoin: true }));
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasInnerJoin: true }));
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasInnerJoin: true }));
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([]));
 
-      const request = new NextRequest(
-        `http://localhost:3000/api/teams/${mockTeamId}/members?subteamId=${mockSubteamId}`
-      );
-      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+      const request = createRequest(mockTeamId, `subteamId=${mockSubteamId}`);
+      const response = await GET(request, createParams(mockTeamId));
 
       if (response.status !== 200) {
         const errorBody = await response.json();
@@ -397,106 +161,59 @@ describe("/api/teams/[teamId]/members", () => {
     });
 
     it("should handle multiple subteam memberships correctly", async () => {
-      const user1Id = "123e4567-e89b-12d3-a456-426614174003";
-      const user2Id = "123e4567-e89b-12d3-a456-426614174004";
-      const subteam1Id = "123e4567-e89b-12d3-a456-426614174005";
-      const subteam2Id = "123e4567-e89b-12d3-a456-426614174006";
-
       // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      // Mock team group lookup (needs .limit(1))
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ id: mockGroupId }]),
-          }),
-        }),
-      });
-      mockGetTeamAccess.mockResolvedValue({
-        hasAccess: true,
-        isCreator: false,
-        hasSubteamMembership: true,
-        hasRosterEntries: false,
-        subteamRole: "captain",
-        subteamMemberships: [{ subteamId: mockSubteamId, teamId: mockSubteamId, role: "captain" }],
-        rosterSubteams: [],
-      });
-
-      // Mock subteam members query (select().from().innerJoin().where())
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([
-              {
-                userId: user1Id,
-                role: "captain",
-                joinedAt: new Date("2024-01-01"),
-                teamUnitId: subteam1Id,
-                teamId: subteam1Id,
-                description: "Team A",
-              },
-              {
-                userId: user2Id,
-                role: "member",
-                joinedAt: new Date("2024-01-02"),
-                teamUnitId: subteam2Id,
-                teamId: subteam2Id,
-                description: "Team B",
-              },
-            ]),
-          }),
-        }),
-      });
-
-      // Mock user profiles query (select().from().where())
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([
+      mockGetServerUser.mockResolvedValue(mockUser as any);
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([mockTeamGroup], { hasLimit: true }));
+      mockGetTeamAccess.mockResolvedValue(mockTeamAccessSubteamMember);
+      mockDbPg.select.mockReturnValueOnce(
+        createDrizzleChain(
+          [
             {
-              id: user1Id,
-              email: "user1@example.com",
-              displayName: "User One",
-              firstName: "User",
-              lastName: "One",
-              username: "user1",
+              userId: user1Id,
+              role: "captain",
+              joinedAt: new Date("2024-01-01"),
+              teamUnitId: subteam1Id,
+              teamId: subteam1Id,
+              description: "Team A",
             },
             {
-              id: user2Id,
-              email: "user2@example.com",
-              displayName: "User Two",
-              firstName: "User",
-              lastName: "Two",
-              username: "user2",
+              userId: user2Id,
+              role: "member",
+              joinedAt: new Date("2024-01-02"),
+              teamUnitId: subteam2Id,
+              teamId: subteam2Id,
+              description: "Team B",
             },
-          ]),
-        }),
-      });
+          ],
+          { hasInnerJoin: true }
+        )
+      );
+      mockDbPg.select.mockReturnValueOnce(
+        createDrizzleChain([
+          {
+            id: user1Id,
+            email: "user1@example.com",
+            displayName: "User One",
+            firstName: "User",
+            lastName: "One",
+            username: "user1",
+          },
+          {
+            id: user2Id,
+            email: "user2@example.com",
+            displayName: "User Two",
+            firstName: "User",
+            lastName: "Two",
+            username: "user2",
+          },
+        ])
+      );
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasInnerJoin: true }));
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasInnerJoin: true }));
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([]));
 
-      // Mock linked roster query (select().from().innerJoin().where()) - empty
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-      // Mock unlinked roster query (select().from().innerJoin().where()) - empty
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-      // Mock pending invites query (select().from().where()) - empty
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([]),
-        }),
-      });
-
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/members`);
-      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+      const request = createRequest(mockTeamId);
+      const response = await GET(request, createParams(mockTeamId));
 
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -511,77 +228,30 @@ describe("/api/teams/[teamId]/members", () => {
 
     it("should include unlinked roster members in the response", async () => {
       // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      // Mock team group lookup (needs .limit(1))
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ id: mockGroupId }]),
-          }),
-        }),
-      });
-      mockGetTeamAccess.mockResolvedValue({
-        hasAccess: true,
-        isCreator: false,
-        hasSubteamMembership: true,
-        hasRosterEntries: false,
-        subteamRole: "captain",
-        subteamMemberships: [{ subteamId: mockSubteamId, teamId: mockSubteamId, role: "captain" }],
-        rosterSubteams: [],
-      });
+      mockGetServerUser.mockResolvedValue(mockUser as any);
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([mockTeamGroup], { hasLimit: true }));
+      mockGetTeamAccess.mockResolvedValue(mockTeamAccessSubteamMember);
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasInnerJoin: true }));
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasInnerJoin: true }));
+      mockDbPg.select.mockReturnValueOnce(
+        createDrizzleChain(
+          [
+            mockUnlinkedRosterMember,
+            {
+              studentName: "Bob Smith",
+              teamUnitId: mockSubteamId,
+              eventName: null,
+              teamId: mockSubteamId,
+              description: "Division B Team A",
+            },
+          ],
+          { hasInnerJoin: true }
+        )
+      );
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([]));
 
-      // Mock subteam members query (select().from().innerJoin().where()) - no linked members
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-
-      // Note: User profiles query is skipped when members.length === 0 (userIds.length === 0)
-
-      // Mock linked roster query (select().from().innerJoin().where()) - empty
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-
-      // Mock unlinked roster members query (select().from().innerJoin().where())
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([
-              {
-                studentName: "Alice Johnson",
-                teamUnitId: mockSubteamId,
-                eventName: null,
-                teamId: mockSubteamId,
-                description: "Division B Team A",
-              },
-              {
-                studentName: "Bob Smith",
-                teamUnitId: mockSubteamId,
-                eventName: null,
-                teamId: mockSubteamId,
-                description: "Division B Team A",
-              },
-            ]),
-          }),
-        }),
-      });
-      // Mock pending invites query (select().from().where()) - empty
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([]),
-        }),
-      });
-
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/members`);
-      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+      const request = createRequest(mockTeamId);
+      const response = await GET(request, createParams(mockTeamId));
 
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -595,109 +265,56 @@ describe("/api/teams/[teamId]/members", () => {
     });
 
     it("should include both linked and unlinked members in the response", async () => {
-      const linkedUserId = "123e4567-e89b-12d3-a456-426614174003";
-
       // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      // Mock team group lookup (needs .limit(1))
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ id: mockGroupId }]),
-          }),
-        }),
-      });
-      mockGetTeamAccess.mockResolvedValue({
-        hasAccess: true,
-        isCreator: false,
-        hasSubteamMembership: true,
-        hasRosterEntries: false,
-        subteamRole: "captain",
-        subteamMemberships: [{ subteamId: mockSubteamId, teamId: mockSubteamId, role: "captain" }],
-        rosterSubteams: [],
-      });
-
-      // Mock subteam members query (select().from().innerJoin().where()) - one linked member
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([
-              {
-                userId: linkedUserId,
-                role: "captain",
-                joinedAt: new Date("2024-01-01"),
-                teamUnitId: mockSubteamId,
-                teamId: mockSubteamId,
-                description: "Team A",
-              },
-            ]),
-          }),
-        }),
-      });
-
-      // Mock user profiles query (select().from().where()) - one user profile
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([
+      mockGetServerUser.mockResolvedValue(mockUser as any);
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([mockTeamGroup], { hasLimit: true }));
+      mockGetTeamAccess.mockResolvedValue(mockTeamAccessSubteamMember);
+      mockDbPg.select.mockReturnValueOnce(
+        createDrizzleChain(
+          [
             {
-              id: linkedUserId,
-              email: "jane@example.com",
-              displayName: "Jane Smith",
-              firstName: "Jane",
-              lastName: "Smith",
-              username: "janesmith",
+              userId: linkedUserId,
+              role: "captain",
+              joinedAt: new Date("2024-01-01"),
+              teamUnitId: mockSubteamId,
+              teamId: mockSubteamId,
+              description: "Team A",
             },
-          ]),
-        }),
-      });
+          ],
+          { hasInnerJoin: true }
+        )
+      );
+      mockDbPg.select.mockReturnValueOnce(
+        createDrizzleChain([
+          {
+            id: linkedUserId,
+            email: "jane@example.com",
+            displayName: "Jane Smith",
+            firstName: "Jane",
+            lastName: "Smith",
+            username: "janesmith",
+          },
+        ])
+      );
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasInnerJoin: true }));
+      mockDbPg.select.mockReturnValueOnce(
+        createDrizzleChain([mockUnlinkedRosterMember], { hasInnerJoin: true })
+      );
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([]));
 
-      // Mock linked roster query (select().from().innerJoin().where()) - empty
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-
-      // Mock unlinked roster members query (select().from().innerJoin().where()) - one unlinked member
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([
-              {
-                studentName: "Alice Johnson",
-                teamUnitId: mockSubteamId,
-                eventName: null,
-                teamId: mockSubteamId,
-                description: "Division B Team A",
-              },
-            ]),
-          }),
-        }),
-      });
-      // Mock pending invites query (select().from().where()) - empty
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([]),
-        }),
-      });
-
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/members`);
-      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+      const request = createRequest(mockTeamId);
+      const response = await GET(request, createParams(mockTeamId));
 
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.members.length).toBeGreaterThanOrEqual(2);
 
-      // Find linked member
       const linkedMember = body.members.find((m: { id?: string }) => m.id === linkedUserId);
       expect(linkedMember).toBeDefined();
       expect(linkedMember.name).toBe("Jane Smith");
       expect(linkedMember.email).toBe("jane@example.com");
       expect(linkedMember.role).toBe("captain");
 
-      // Find unlinked member
       const unlinkedMember = body.members.find((m: { isUnlinked?: boolean }) => m.isUnlinked);
       expect(unlinkedMember).toBeDefined();
       expect(unlinkedMember.name).toBe("Alice Johnson");
@@ -707,71 +324,18 @@ describe("/api/teams/[teamId]/members", () => {
 
     it("should filter unlinked roster members by subteam when subteamId is provided", async () => {
       // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      // Mock team group lookup (needs .limit(1))
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ id: mockGroupId }]),
-          }),
-        }),
-      });
-      mockGetTeamAccess.mockResolvedValue({
-        hasAccess: true,
-        isCreator: false,
-        hasSubteamMembership: true,
-        hasRosterEntries: false,
-        subteamRole: "captain",
-        subteamMemberships: [{ subteamId: mockSubteamId, teamId: mockSubteamId, role: "captain" }],
-        rosterSubteams: [],
-      });
-
-      // Mock subteam members query (select().from().innerJoin().where()) - no linked members
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-
-      // Note: User profiles query is skipped when members.length === 0 (userIds.length === 0)
-      // Mock linked roster query (select().from().innerJoin().where()) - empty
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-
-      // Mock unlinked roster members query (select().from().innerJoin().where()) with subteam filter
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([
-              {
-                studentName: "Alice Johnson",
-                teamUnitId: mockSubteamId,
-                eventName: null,
-                teamId: mockSubteamId,
-                description: "Division B Team A",
-              },
-            ]),
-          }),
-        }),
-      });
-      // Mock pending invites query (select().from().where()) - empty
-      mockDbPg.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([]),
-        }),
-      });
-
-      const request = new NextRequest(
-        `http://localhost:3000/api/teams/${mockTeamId}/members?subteamId=${mockSubteamId}`
+      mockGetServerUser.mockResolvedValue(mockUser as any);
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([mockTeamGroup], { hasLimit: true }));
+      mockGetTeamAccess.mockResolvedValue(mockTeamAccessSubteamMember);
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasInnerJoin: true }));
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasInnerJoin: true }));
+      mockDbPg.select.mockReturnValueOnce(
+        createDrizzleChain([mockUnlinkedRosterMember], { hasInnerJoin: true })
       );
-      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+      mockDbPg.select.mockReturnValueOnce(createDrizzleChain([]));
+
+      const request = createRequest(mockTeamId, `subteamId=${mockSubteamId}`);
+      const response = await GET(request, createParams(mockTeamId));
 
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -784,16 +348,16 @@ describe("/api/teams/[teamId]/members", () => {
 
     it("should handle database errors gracefully", async () => {
       // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-      // Mock team group lookup to throw an error
-      mockDbPg.select.mockReturnValueOnce({
+      mockGetServerUser.mockResolvedValue(mockUser as any);
+      const errorChain = {
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockRejectedValue(new Error("Database connection failed")),
         }),
-      });
+      };
+      mockDbPg.select.mockReturnValueOnce(errorChain);
 
-      const request = new NextRequest(`http://localhost:3000/api/teams/${mockTeamId}/members`);
-      const response = await GET(request, { params: Promise.resolve({ teamId: mockTeamId }) });
+      const request = createRequest(mockTeamId);
+      const response = await GET(request, createParams(mockTeamId));
 
       expect(response.status).toBe(500);
       const body = await response.json();

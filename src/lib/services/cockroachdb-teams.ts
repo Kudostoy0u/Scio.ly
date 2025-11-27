@@ -6,46 +6,13 @@ import {
   newTeamPeople,
   newTeamUnits,
 } from "@/lib/db/schema/teams";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import logger from "@/lib/utils/logger";
 import { and, eq, inArray, or } from "drizzle-orm";
-
-// Type for user profile data
-interface UserProfile {
-  id: string;
-  email: string;
-  display_name: string | null;
-  first_name: string | null;
-  last_name: string | null;
-  username: string | null;
-}
-
-// Helper function to get real user data from Supabase
-async function getUserProfile(userId: string): Promise<UserProfile | null> {
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase
-      .from("users")
-      .select("id, email, display_name, first_name, last_name, username")
-      .eq("id", userId)
-      .single();
-
-    if (error || !data) {
-      return null;
-    }
-
-    return data as UserProfile;
-  } catch (error) {
-    logger.error(
-      "Failed to getUserProfile",
-      error instanceof Error ? error : new Error(String(error)),
-      {
-        userId,
-      }
-    );
-    return null;
-  }
-}
+import { formatMember } from "./utils/memberFormatters";
+import { generateUniqueSlug } from "./utils/slugGenerator";
+import { formatTeamWithDetails } from "./utils/teamFormatters";
+import { generateNextTeamId } from "./utils/teamIdGenerator";
+import { getUserProfile } from "./utils/userProfileUtils";
 
 export interface TeamMembership {
   id: string;
@@ -147,35 +114,27 @@ export class CockroachDBTeamsService {
 
         // Get team members using Drizzle ORM
         const members = await this.getTeamMembers(team.id);
+        const formattedMembers = await Promise.all(
+          members.map(async (m) => {
+            const userProfile = await getUserProfile(m.user_id);
+            return formatMember(m, userProfile);
+          })
+        );
 
-        return {
-          id: team.id,
-          team_id: team.teamId,
-          name: team.teamId, // Use teamId as name since name column was removed
-          slug: team.slug,
-          school: team.school,
-          division: team.division,
-          description: team.description || undefined,
-          captain_code: team.captainCode,
-          user_code: team.userCode,
-          user_role: membership.role,
-          members: await Promise.all(
-            members.map(async (m) => {
-              const userProfile = await getUserProfile(m.user_id);
-              return {
-                id: m.user_id,
-                name:
-                  userProfile?.display_name ||
-                  (userProfile?.first_name && userProfile?.last_name
-                    ? `${userProfile.first_name} ${userProfile.last_name}`
-                    : `User ${m.user_id.substring(0, 8)}`),
-                email: userProfile?.email || `user-${m.user_id.substring(0, 8)}@example.com`,
-                role: m.role,
-                joined_at: m.joined_at,
-              };
-            })
-          ),
-        };
+        return formatTeamWithDetails(
+          {
+            id: team.id,
+            teamId: team.teamId,
+            description: team.description,
+            captainCode: team.captainCode,
+            userCode: team.userCode,
+            school: team.school,
+            division: team.division,
+            slug: team.slug,
+          },
+          { role: membership.role },
+          formattedMembers
+        );
       })
     );
 
@@ -233,32 +192,27 @@ export class CockroachDBTeamsService {
 
         // Get team members
         const members = await this.getTeamMembers(team.id);
+        const formattedMembers = await Promise.all(
+          members.map(async (m) => {
+            const userProfile = await getUserProfile(m.user_id);
+            return formatMember(m, userProfile);
+          })
+        );
 
-        return {
-          id: team.id,
-          name: team.team_id, // Use team_id as name since name column was removed
-          slug: team.slug,
-          school: team.school,
-          division: team.division,
-          description: team.description || undefined,
-          captain_code: team.captain_code,
-          user_code: team.user_code,
-          members: await Promise.all(
-            members.map(async (m) => {
-              const userProfile = await getUserProfile(m.user_id);
-              return {
-                id: m.user_id,
-                name:
-                  userProfile?.display_name ||
-                  (userProfile?.first_name && userProfile?.last_name
-                    ? `${userProfile.first_name} ${userProfile.last_name}`
-                    : `User ${m.user_id.substring(0, 8)}`),
-                email: userProfile?.email || `user-${m.user_id.substring(0, 8)}@example.com`,
-                role: m.role,
-              };
-            })
-          ),
-        };
+        return formatTeamWithDetails(
+          {
+            id: team.id,
+            teamId: team.team_id,
+            description: team.description,
+            captainCode: team.captain_code,
+            userCode: team.user_code,
+            school: team.school,
+            division: team.division,
+            slug: team.slug,
+          },
+          { role: membership.role },
+          formattedMembers
+        );
       })
     );
 
@@ -307,20 +261,8 @@ export class CockroachDBTeamsService {
     // This prevents unauthorized access to existing teams when someone tries to create
     // a team with the same school+division combination
 
-    // Check if the provided slug already exists
-    const existingSlug = await dbPg
-      .select()
-      .from(newTeamGroups)
-      .where(eq(newTeamGroups.slug, data.slug))
-      .limit(1);
-
-    let finalSlug = data.slug;
-
-    // If slug exists, generate a unique one
-    if (existingSlug.length > 0) {
-      const timestamp = Date.now().toString(36);
-      finalSlug = `${data.slug}-${timestamp}`;
-    }
+    // Generate unique slug
+    const finalSlug = await generateUniqueSlug(data.slug);
 
     // Create the team group with the final slug
     const [result] = await dbPg
@@ -371,26 +313,8 @@ export class CockroachDBTeamsService {
         .where(eq(newTeamGroups.id, data.groupId));
     }
 
-    // Create a new team unit with a unique team ID
-    // Find the next available team ID (A, B, C, etc.)
-    const existingTeams = await dbPg
-      .select({ teamId: newTeamUnits.teamId })
-      .from(newTeamUnits)
-      .where(eq(newTeamUnits.groupId, data.groupId))
-      .orderBy(newTeamUnits.teamId);
-
-    const existingTeamIds = existingTeams.map((t) => t.teamId);
-    let nextTeamId = "A";
-    let teamIdCounter = 0;
-
-    while (existingTeamIds.includes(nextTeamId)) {
-      teamIdCounter++;
-      nextTeamId = String.fromCharCode(65 + teamIdCounter); // A=65, B=66, C=67, etc.
-      if (teamIdCounter > 25) {
-        // If we go beyond Z, use numbers
-        nextTeamId = (teamIdCounter - 25).toString();
-      }
-    }
+    // Generate next available team ID
+    const nextTeamId = await generateNextTeamId(data.groupId);
 
     const [result] = await dbPg
       .insert(newTeamUnits)
@@ -594,33 +518,26 @@ export class CockroachDBTeamsService {
       if (!firstMembership) {
         throw new Error("Membership not found");
       }
-      return {
-        id: team.id,
-        name: team.teamId, // Use teamId as name since name column was removed
-        slug: team.slug,
-        school: team.school,
-        division: team.division,
-        description: team.description || undefined,
-        captain_code: team.captainCode,
-        user_code: team.userCode,
-        user_role: firstMembership.role,
-        members: await Promise.all(
-          members.map(async (m) => {
-            const userProfile = await getUserProfile(m.user_id);
-            return {
-              id: m.user_id,
-              name:
-                userProfile?.display_name ||
-                (userProfile?.first_name && userProfile?.last_name
-                  ? `${userProfile.first_name} ${userProfile.last_name}`
-                  : `User ${m.user_id.substring(0, 8)}`),
-              email: userProfile?.email || `user-${m.user_id.substring(0, 8)}@example.com`,
-              role: m.role,
-              joined_at: m.joined_at,
-            };
-          })
-        ),
-      };
+      const formattedMembers = await Promise.all(
+        members.map(async (m) => {
+          const userProfile = await getUserProfile(m.user_id);
+          return formatMember(m, userProfile);
+        })
+      );
+      return formatTeamWithDetails(
+        {
+          id: team.id,
+          teamId: team.teamId,
+          description: team.description,
+          captainCode: team.captainCode,
+          userCode: team.userCode,
+          school: team.school,
+          division: team.division,
+          slug: team.slug,
+        },
+        { role: firstMembership.role },
+        formattedMembers
+      );
     }
 
     // Determine role based on code type
@@ -633,35 +550,26 @@ export class CockroachDBTeamsService {
       status: "active",
     });
     const members = await this.getTeamMembers(team.id);
-
-    const result = {
-      id: team.id,
-      name: team.teamId, // Use teamId as name since name column was removed
-      slug: team.slug,
-      school: team.school,
-      division: team.division,
-      description: team.description || undefined,
-      captain_code: team.captainCode,
-      user_code: team.userCode,
-      user_role: membership.role,
-      members: await Promise.all(
-        members.map(async (m) => {
-          const userProfile = await getUserProfile(m.user_id);
-          return {
-            id: m.user_id,
-            name:
-              userProfile?.display_name ||
-              (userProfile?.first_name && userProfile?.last_name
-                ? `${userProfile.first_name} ${userProfile.last_name}`
-                : `User ${m.user_id.substring(0, 8)}`),
-            email: userProfile?.email || `user-${m.user_id.substring(0, 8)}@example.com`,
-            role: m.role,
-            joined_at: m.joined_at,
-          };
-        })
-      ),
-    };
-    return result;
+    const formattedMembers = await Promise.all(
+      members.map(async (m) => {
+        const userProfile = await getUserProfile(m.user_id);
+        return formatMember(m, userProfile);
+      })
+    );
+    return formatTeamWithDetails(
+      {
+        id: team.id,
+        teamId: team.teamId,
+        description: team.description,
+        captainCode: team.captainCode,
+        userCode: team.userCode,
+        school: team.school,
+        division: team.division,
+        slug: team.slug,
+      },
+      { role: membership.role },
+      formattedMembers
+    );
   }
 }
 

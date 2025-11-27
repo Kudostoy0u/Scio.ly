@@ -81,9 +81,7 @@ export async function getUsersWithRosterEntries(groupId: string) {
   );
 }
 
-export async function getMembersWithSubteamMemberships(
-  whereCondition: ReturnType<typeof and>
-) {
+export async function getMembersWithSubteamMemberships(whereCondition: ReturnType<typeof and>) {
   return await dbPg
     .select({
       userId: newTeamMemberships.userId,

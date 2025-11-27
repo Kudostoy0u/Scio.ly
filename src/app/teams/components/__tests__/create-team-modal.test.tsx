@@ -175,9 +175,9 @@ describe("CreateTeamModal", () => {
     mockUseTheme.mockReturnValue({ darkMode: true });
     render(<CreateTeamModal {...defaultProps} />);
 
-    // The modal itself always has bg-white regardless of dark mode
-    const modal = screen.getByText("Create a new team").parentElement?.parentElement?.parentElement;
-    expect(modal).toHaveClass("bg-white");
+    // The modal uses bg-gray-800 in dark mode
+    const modal = screen.getByText("Create a new team").closest('[class*="bg-gray-800"]');
+    expect(modal).toBeInTheDocument();
   });
 
   it("should reset form when modal is closed and reopened", () => {

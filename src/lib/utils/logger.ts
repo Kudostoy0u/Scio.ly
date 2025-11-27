@@ -11,31 +11,33 @@ const getIsDeveloperMode = () => getIsDev() || process.env.DEVELOPER_MODE === "t
  * - In test: suppresses all logs
  */
 const logger = {
-  log: (..._args: unknown[]) => {
-    // Development logging can be added here if needed
+  log: (...args: unknown[]) => {
+    if (getIsDeveloperMode()) {
+      console.log(...args);
+    }
   },
 
-  warn: (..._args: unknown[]) => {
+  warn: (...args: unknown[]) => {
     if (!getIsTest()) {
-      // Suppress warnings in test environment
+      console.warn(...args);
     }
   },
 
-  error: (..._args: unknown[]) => {
+  error: (...args: unknown[]) => {
     if (!getIsTest()) {
-      // Suppress errors in test environment
+      console.error(...args);
     }
   },
 
-  info: (..._args: unknown[]) => {
+  info: (...args: unknown[]) => {
     if (getIsDev()) {
-      // Info logging can be added here if needed
+      console.info("[INFO]", ...args);
     }
   },
 
-  debug: (..._args: unknown[]) => {
+  debug: (...args: unknown[]) => {
     if (getIsDev()) {
-      // Debug logging can be added here if needed
+      console.debug(...args);
     }
   },
 
@@ -51,15 +53,15 @@ const logger = {
         return;
       }
 
-      // Logging disabled in development mode
-      // biome-ignore lint/complexity/noVoid: Intentional void for debugging info
-      void {
+      const prefix = `[DEV-${level.toUpperCase()}]`;
+      const logData = JSON.stringify({
         timestamp: new Date().toISOString(),
         level,
         message,
         context: context || {},
         environment: process.env.NODE_ENV,
-      };
+      }, null, 2);
+      console.log(prefix, logData);
     },
 
     // Request/Response logging
@@ -68,27 +70,29 @@ const logger = {
         return;
       }
 
+      const maskedHeaders = headers
+        ? Object.keys(headers).reduce(
+            (acc, key) => {
+              // Mask sensitive headers
+              if (
+                key.toLowerCase().includes("authorization") ||
+                key.toLowerCase().includes("token")
+              ) {
+                acc[key] = "[REDACTED]";
+              } else {
+                acc[key] = headers[key] || "";
+              }
+              return acc;
+            },
+            {} as Record<string, string>
+          )
+        : undefined;
+
       logger.dev.structured("info", `API Request: ${method} ${url}`, {
         method,
         url,
         body: body ? JSON.stringify(body, null, 2) : undefined,
-        headers: headers
-          ? Object.keys(headers).reduce(
-              (acc, key) => {
-                // Mask sensitive headers
-                if (
-                  key.toLowerCase().includes("authorization") ||
-                  key.toLowerCase().includes("token")
-                ) {
-                  acc[key] = "[REDACTED]";
-                } else {
-                  acc[key] = headers[key] || "";
-                }
-                return acc;
-              },
-              {} as Record<string, string>
-            )
-          : undefined,
+        headers: maskedHeaders,
       });
     },
 

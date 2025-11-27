@@ -59,8 +59,16 @@ describe("NotificationSyncService", () => {
   });
 
   afterEach(() => {
-    process.env.NEXT_PUBLIC_SUPABASE_URL = undefined;
-    process.env.SUPABASE_SERVICE_KEY = undefined;
+    // Restore environment variables if they were set
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL === undefined) {
+      delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    }
+    if (process.env.SUPABASE_SERVICE_KEY === undefined) {
+      delete process.env.SUPABASE_SERVICE_KEY;
+    }
+    // Reset to test values
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
+    process.env.SUPABASE_SERVICE_KEY = "test-service-key";
   });
 
   describe("syncNotificationToSupabase", () => {
@@ -101,7 +109,7 @@ describe("NotificationSyncService", () => {
     });
 
     it("should throw error if Supabase service key is missing", async () => {
-      process.env.SUPABASE_SERVICE_KEY = undefined;
+      delete process.env.SUPABASE_SERVICE_KEY;
       mockQueryCockroachDb.mockResolvedValueOnce({ rows: [mockNotification] });
 
       await expect(
@@ -178,7 +186,7 @@ describe("NotificationSyncService", () => {
     });
 
     it("should throw error if Supabase service key is missing", async () => {
-      process.env.SUPABASE_SERVICE_KEY = undefined;
+      delete process.env.SUPABASE_SERVICE_KEY;
       mockQueryCockroachDb.mockResolvedValueOnce({ rows: mockNotifications });
 
       await expect(
@@ -225,7 +233,7 @@ describe("NotificationSyncService", () => {
     });
 
     it("should throw error if Supabase service key is missing", async () => {
-      process.env.SUPABASE_SERVICE_KEY = undefined;
+      delete process.env.SUPABASE_SERVICE_KEY;
 
       await expect(
         NotificationSyncService.markNotificationAsRead("notification-123", "user-123")

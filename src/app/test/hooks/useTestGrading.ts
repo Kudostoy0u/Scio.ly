@@ -7,7 +7,84 @@ import {
   calculateMCQScore,
 } from "@/app/utils/questionUtils";
 import logger from "@/lib/utils/logger";
+import type React from "react";
 import { useEffect, useState } from "react";
+
+function validateGradingResults(
+  data: Question[],
+  userAnswers: Record<number, (string | null)[] | null>,
+  gradingResults: GradingResults,
+  calculateMCQScore: (question: Question, answer: (string | null)[]) => number
+): { missing: number[]; invalid: number[] } {
+  const missing: number[] = [];
+  const invalid: number[] = [];
+
+  for (let i = 0; i < data.length; i++) {
+    const question = data[i];
+    if (!question) {
+      continue;
+    }
+    const answer = userAnswers[i] || [];
+
+    // For MCQ questions, validate stored score matches computed score
+    if (question.options && question.options.length > 0) {
+      const storedScore = gradingResults[i];
+      if (storedScore !== undefined) {
+        const computedScore = calculateMCQScore(question, answer || []);
+        // If scores don't match (allowing for floating point precision), mark as invalid
+        if (Math.abs(storedScore - computedScore) > 0.01) {
+          invalid.push(i);
+          logger.warn(
+            `Invalid score detected for question ${i}: stored=${storedScore}, computed=${computedScore}`
+          );
+        }
+      } else {
+        missing.push(i);
+      }
+    } else if (typeof gradingResults[i] === "undefined") {
+      // For FRQ questions, just check if missing
+      missing.push(i);
+    }
+  }
+
+  return { missing, invalid };
+}
+
+function correctInvalidScores(
+  invalid: number[],
+  data: Question[],
+  userAnswers: Record<number, (string | null)[] | null>,
+  calculateMCQScore: (question: Question, answer: (string | null)[]) => number
+): GradingResults {
+  const corrected: GradingResults = {};
+  for (const i of invalid) {
+    const question = data[i];
+    if (!question) {
+      continue;
+    }
+    const answer = userAnswers[i] || [];
+    corrected[i] = calculateMCQScore(question, answer);
+  }
+  return corrected;
+}
+
+async function computeMissingGrades(
+  data: Question[],
+  userAnswers: Record<number, (string | null)[] | null>,
+  calculateMCQScore: (question: Question, answer: (string | null)[]) => number,
+  missing: number[],
+  setGradingResults: React.Dispatch<React.SetStateAction<GradingResults>>
+): Promise<void> {
+  try {
+    const { gradeMissing } = await import("./utils/grading");
+    const computed: GradingResults = gradeMissing(data, userAnswers, calculateMCQScore, missing);
+    if (Object.keys(computed).length > 0) {
+      setGradingResults((prev) => ({ ...prev, ...computed }));
+    }
+  } catch (error) {
+    logger.error("Error computing missing grades:", error);
+  }
+}
 
 /**
  * Custom hook for managing grading state and logic in test sessions
@@ -75,75 +152,23 @@ export function useTestGrading(
       return;
     }
 
-    const missing: number[] = [];
-    const invalid: number[] = [];
-
-    // Pass 1: Check for missing and invalid grades
-    for (let i = 0; i < data.length; i++) {
-      const question = data[i];
-      if (!question) {
-        continue;
-      }
-      const answer = userAnswers[i] || [];
-
-      // For MCQ questions, validate stored score matches computed score
-      if (question.options && question.options.length > 0) {
-        const storedScore = gradingResults[i];
-        if (storedScore !== undefined) {
-          const computedScore = calculateMCQScore(question, answer);
-          // If scores don't match (allowing for floating point precision), mark as invalid
-          if (Math.abs(storedScore - computedScore) > 0.01) {
-            invalid.push(i);
-            logger.warn(
-              `Invalid score detected for question ${i}: stored=${storedScore}, computed=${computedScore}`
-            );
-          }
-        } else {
-          missing.push(i);
-        }
-      } else {
-        // For FRQ questions, just check if missing
-        if (typeof gradingResults[i] === "undefined") {
-          missing.push(i);
-        }
-      }
-    }
+    const { missing, invalid } = validateGradingResults(
+      data,
+      userAnswers,
+      gradingResults,
+      calculateMCQScore
+    );
 
     // Pass 2: Fix invalid scores immediately (synchronous)
     if (invalid.length > 0) {
-      const corrected: GradingResults = {};
-      for (const i of invalid) {
-        const question = data[i];
-        if (!question) {
-          continue;
-        }
-        const answer = userAnswers[i] || [];
-        corrected[i] = calculateMCQScore(question, answer);
-      }
+      const corrected = correctInvalidScores(invalid, data, userAnswers, calculateMCQScore);
       setGradingResults((prev) => ({ ...prev, ...corrected }));
     }
 
     // Pass 3: Compute missing grades (asynchronous)
-    if (missing.length === 0) {
-      return;
+    if (missing.length > 0) {
+      computeMissingGrades(data, userAnswers, calculateMCQScore, missing, setGradingResults);
     }
-
-    (async () => {
-      try {
-        const { gradeMissing } = await import("./utils/grading");
-        const computed: GradingResults = gradeMissing(
-          data,
-          userAnswers,
-          calculateMCQScore,
-          missing
-        );
-        if (Object.keys(computed).length > 0) {
-          setGradingResults((prev) => ({ ...prev, ...computed }));
-        }
-      } catch (error) {
-        logger.error("Error computing missing grades:", error);
-      }
-    })();
   }, [isSubmitted, data, userAnswers, gradingResults]);
 
   /**

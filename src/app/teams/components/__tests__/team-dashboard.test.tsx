@@ -1,9 +1,87 @@
 import TeamDashboard from "@/app/teams/components/TeamDashboard";
 import { fireEvent, renderWithProviders, screen, waitFor } from "@/test-utils";
+import type React from "react";
 import { vi } from "vitest";
 
 // Top-level regex for performance
 const CLOSE_BUTTON_REGEX = /close/i;
+
+// Mock tRPC client
+vi.mock("@/lib/trpc/client", () => ({
+  trpc: {
+    teams: {
+      exitTeam: {
+        useMutation: () => ({
+          mutateAsync: vi.fn(() => Promise.resolve()),
+        }),
+      },
+      archiveTeam: {
+        useMutation: () => ({
+          mutateAsync: vi.fn(() => Promise.resolve()),
+        }),
+      },
+      createSubteam: {
+        useMutation: () => ({
+          mutateAsync: vi.fn(() => Promise.resolve({ id: "subteam-1" })),
+        }),
+      },
+      updateSubteam: {
+        useMutation: () => ({
+          mutateAsync: vi.fn(() => Promise.resolve()),
+        }),
+      },
+      deleteSubteam: {
+        useMutation: () => ({
+          mutateAsync: vi.fn(() => Promise.resolve()),
+        }),
+      },
+      getTeamPageData: {
+        useQuery: () => ({
+          data: {
+            userTeams: [],
+            currentTeam: null,
+            subteams: [],
+            assignments: [],
+            members: [],
+            roster: {},
+            auth: { role: "captain", isAuthorized: true },
+          },
+          isLoading: false,
+          error: null,
+          refetch: vi.fn(),
+          isError: false,
+        }),
+      },
+    },
+  },
+}));
+
+// Mock useTeamStore
+vi.mock("@/app/hooks/useTeamStore", () => ({
+  useTeamStore: () => ({
+    userTeams: [],
+    getSubteams: vi.fn(() => []),
+    loadSubteams: vi.fn(() => Promise.resolve()),
+    updateSubteams: vi.fn(),
+    updateAssignments: vi.fn(),
+    updateMembers: vi.fn(),
+    updateRoster: vi.fn(),
+    invalidateCache: vi.fn(),
+  }),
+}));
+
+// Mock useAuth to return user immediately
+vi.mock("@/app/contexts/authContext", () => {
+  const actual = vi.importActual("@/app/contexts/authContext");
+  return {
+    ...actual,
+    useAuth: () => ({
+      user: { id: "test-user-id", email: "test@example.com" },
+      loading: false,
+      client: {},
+    }),
+  };
+});
 
 // Mock Next.js navigation
 vi.mock("next/navigation", () => ({
@@ -19,6 +97,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("TeamDashboard", () => {
+  const mockUser = { id: "test-user-id", email: "test@example.com" } as any;
+
   const defaultProps = {
     team: {
       id: "test-team-id",
@@ -34,44 +114,64 @@ describe("TeamDashboard", () => {
     vi.clearAllMocks();
   });
 
-  it("should render team dashboard with basic elements", () => {
-    renderWithProviders(<TeamDashboard {...defaultProps} />);
+  it("should render team dashboard with basic elements", async () => {
+    renderWithProviders(<TeamDashboard {...defaultProps} />, {
+      initialUser: mockUser,
+    });
 
-    expect(screen.getByText("Test School")).toBeInTheDocument();
-    expect(screen.getByText("Division B")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Test School")).toBeInTheDocument();
+    }, { timeout: 3000 });
+    
+    // Division text might be split, so use a more flexible matcher
+    await waitFor(() => {
+      expect(screen.getByText((content, element) => {
+        return element?.textContent === "Division B" || content.includes("Division B");
+      })).toBeInTheDocument();
+    }, { timeout: 3000 });
     // Note: Tab navigation is now handled by separate routes, so we don't test for tab text here
   });
 
-  it("should render with roster tab by default", () => {
-    renderWithProviders(<TeamDashboard {...defaultProps} />);
+  it("should render with roster tab by default", async () => {
+    renderWithProviders(<TeamDashboard {...defaultProps} />, { initialUser: mockUser });
 
-    // The component should render without errors
-    expect(screen.getByText("Test School")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Test School")).toBeInTheDocument();
+    });
   });
 
-  it("should render with stream tab when specified", () => {
-    renderWithProviders(<TeamDashboard {...defaultProps} activeTab="stream" />);
+  it("should render with stream tab when specified", async () => {
+    renderWithProviders(<TeamDashboard {...defaultProps} activeTab="stream" />, {
+      initialUser: mockUser,
+    });
 
-    // The component should render without errors
-    expect(screen.getByText("Test School")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Test School")).toBeInTheDocument();
+    });
   });
 
-  it("should render with assignments tab when specified", () => {
-    renderWithProviders(<TeamDashboard {...defaultProps} activeTab="assignments" />);
+  it("should render with assignments tab when specified", async () => {
+    renderWithProviders(<TeamDashboard {...defaultProps} activeTab="assignments" />, {
+      initialUser: mockUser,
+    });
 
-    // The component should render without errors
-    expect(screen.getByText("Test School")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Test School")).toBeInTheDocument();
+    });
   });
 
-  it("should render with people tab when specified", () => {
-    renderWithProviders(<TeamDashboard {...defaultProps} activeTab="people" />);
+  it("should render with people tab when specified", async () => {
+    renderWithProviders(<TeamDashboard {...defaultProps} activeTab="people" />, {
+      initialUser: mockUser,
+    });
 
-    // The component should render without errors
-    expect(screen.getByText("Test School")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Test School")).toBeInTheDocument();
+    });
   });
 
-  it("should show invite and exit buttons for captain", () => {
-    renderWithProviders(<TeamDashboard {...defaultProps} />);
+  it("should show invite and exit buttons for captain", async () => {
+    renderWithProviders(<TeamDashboard {...defaultProps} />, { initialUser: mockUser });
 
     const inviteButton = screen.getByTitle("Invite Person");
     const exitButton = screen.getByTitle("Exit Team");
@@ -80,30 +180,50 @@ describe("TeamDashboard", () => {
     expect(exitButton).toBeInTheDocument();
   });
 
-  it("should not show invite and exit buttons for non-captain", () => {
-    renderWithProviders(<TeamDashboard {...defaultProps} isCaptain={false} />);
+  it("should not show invite and exit buttons for non-captain", async () => {
+    renderWithProviders(<TeamDashboard {...defaultProps} isCaptain={false} />, {
+      initialUser: mockUser,
+    });
 
-    expect(screen.queryByTitle("Invite Person")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByTitle("Invite Person")).not.toBeInTheDocument();
+    });
     // Exit button is still shown for non-captains
     expect(screen.getByTitle("Exit Team")).toBeInTheDocument();
   });
 
-  it("should open invite modal when invite button is clicked", () => {
-    renderWithProviders(<TeamDashboard {...defaultProps} />);
+  it("should open invite modal when invite button is clicked", async () => {
+    renderWithProviders(<TeamDashboard {...defaultProps} />, { initialUser: mockUser });
+
+    await waitFor(() => {
+      expect(screen.getByTitle("Invite Person")).toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByTitle("Invite Person"));
-    expect(screen.getByText("Team Invite Codes")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Team Invite Codes")).toBeInTheDocument();
+    });
   });
 
-  it("should open exit modal when exit button is clicked", () => {
-    renderWithProviders(<TeamDashboard {...defaultProps} />);
+  it("should open exit modal when exit button is clicked", async () => {
+    renderWithProviders(<TeamDashboard {...defaultProps} />, { initialUser: mockUser });
+
+    await waitFor(() => {
+      expect(screen.getByTitle("Exit Team")).toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByTitle("Exit Team"));
-    expect(screen.getByText("Are you sure you want to exit this team?")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Are you sure you want to exit this team?")).toBeInTheDocument();
+    });
   });
 
   it("should close invite modal when cancel is clicked", async () => {
-    renderWithProviders(<TeamDashboard {...defaultProps} />);
+    renderWithProviders(<TeamDashboard {...defaultProps} />, { initialUser: mockUser });
+
+    await waitFor(() => {
+      expect(screen.getByTitle("Invite Person")).toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByTitle("Invite Person"));
 
@@ -120,12 +240,22 @@ describe("TeamDashboard", () => {
     });
   });
 
-  it("should close exit modal when cancel is clicked", () => {
-    renderWithProviders(<TeamDashboard {...defaultProps} />);
+  it("should close exit modal when cancel is clicked", async () => {
+    renderWithProviders(<TeamDashboard {...defaultProps} />, { initialUser: mockUser });
+
+    await waitFor(() => {
+      expect(screen.getByTitle("Exit Team")).toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByTitle("Exit Team"));
+    await waitFor(() => {
+      expect(screen.getByText("Are you sure you want to exit this team?")).toBeInTheDocument();
+    });
+
     fireEvent.click(screen.getByText("Cancel"));
-    expect(screen.queryByText("Are you sure you want to exit this team?")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText("Are you sure you want to exit this team?")).not.toBeInTheDocument();
+    });
   });
 
   // Search functionality not implemented in current BannerInvite component
@@ -164,7 +294,11 @@ describe("TeamDashboard", () => {
         json: () => Promise.resolve({ success: true }),
       });
 
-    renderWithProviders(<TeamDashboard {...defaultProps} />);
+    renderWithProviders(<TeamDashboard {...defaultProps} />, { initialUser: mockUser });
+
+    await waitFor(() => {
+      expect(screen.getByTitle("Invite Person")).toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByTitle("Invite Person"));
     const searchInput = screen.getByPlaceholderText("Search by username or email...");
@@ -194,7 +328,13 @@ describe("TeamDashboard", () => {
   });
 
   it("should show assignments tab content when activeTab is assignments", async () => {
-    renderWithProviders(<TeamDashboard {...defaultProps} activeTab="assignments" />);
+    renderWithProviders(<TeamDashboard {...defaultProps} activeTab="assignments" />, {
+      initialUser: mockUser,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Test School")).toBeInTheDocument();
+    });
 
     await waitFor(() => {
       // Verify the assignments tab content is rendered
@@ -203,7 +343,13 @@ describe("TeamDashboard", () => {
   });
 
   it("should show people tab content when activeTab is people", async () => {
-    renderWithProviders(<TeamDashboard {...defaultProps} activeTab="people" />);
+    renderWithProviders(<TeamDashboard {...defaultProps} activeTab="people" />, {
+      initialUser: mockUser,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Test School")).toBeInTheDocument();
+    });
 
     // Wait for the lazy-loaded People tab to render
     await waitFor(() => {
@@ -212,7 +358,14 @@ describe("TeamDashboard", () => {
   });
 
   it("should handle dark mode correctly", async () => {
-    renderWithProviders(<TeamDashboard {...defaultProps} />, { initialDarkMode: true });
+    renderWithProviders(<TeamDashboard {...defaultProps} />, {
+      initialDarkMode: true,
+      initialUser: mockUser,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Test School")).toBeInTheDocument();
+    });
 
     // Verify the component renders
     await waitFor(() => {
@@ -224,8 +377,12 @@ describe("TeamDashboard", () => {
     expect(screen.getByText("Test School")).toBeInTheDocument();
   });
 
-  it("should have All Teams button for navigation", () => {
-    renderWithProviders(<TeamDashboard {...defaultProps} />);
+  it("should have All Teams button for navigation", async () => {
+    renderWithProviders(<TeamDashboard {...defaultProps} />, { initialUser: mockUser });
+
+    await waitFor(() => {
+      expect(screen.getByText("Test School")).toBeInTheDocument();
+    });
 
     // Look for the "All Teams" button in the sidebar which acts as back navigation
     const allTeamsButton = screen.getByText("All Teams");

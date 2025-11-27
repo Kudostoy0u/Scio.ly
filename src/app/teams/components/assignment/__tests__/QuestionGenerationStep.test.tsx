@@ -16,6 +16,7 @@ describe("QuestionGenerationStep", () => {
       idPercentage: 0,
       pureIdOnly: false,
       timeLimitMinutes: 30,
+      difficulties: ["any"],
     } as QuestionGenerationSettings,
     onSettingsChange: vi.fn(),
     availableSubtopics: ["Subtopic 1", "Subtopic 2", "Subtopic 3"],

@@ -88,7 +88,7 @@ export default function EventAssignmentModal({
   const { darkMode } = useTheme();
 
   // Don't render if modal is not open or no member is selected
-  if (!isOpen || !selectedMember) {
+  if (!(isOpen && selectedMember)) {
     return null;
   }
 
@@ -100,9 +100,8 @@ export default function EventAssignmentModal({
     try {
       await onSelectEvent(event, subteamId);
       onClose();
-    } catch (error) {
-      // Error handling is delegated to the parent component
-      console.error("Failed to assign event:", error);
+    } catch (_error) {
+      // Error is handled by the parent component
     }
   };
 
@@ -122,11 +121,10 @@ export default function EventAssignmentModal({
       />
 
       {/* Modal dialog */}
-      <div
+      <dialog
         className={`relative ${darkMode ? "bg-gray-800" : "bg-white"} rounded-lg shadow-xl max-w-lg w-full max-h-[80vh] overflow-hidden`}
-        role="dialog"
-        aria-modal="true"
         aria-labelledby="event-modal-title"
+        open={true}
       >
         {/* Modal header */}
         <div className={`${darkMode ? "bg-gray-800" : "bg-white"} px-4 pt-5 pb-4 sm:p-6 sm:pb-4`}>
@@ -177,7 +175,7 @@ export default function EventAssignmentModal({
             Cancel
           </button>
         </div>
-      </div>
+      </dialog>
     </div>
   );
 }

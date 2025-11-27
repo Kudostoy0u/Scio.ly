@@ -35,7 +35,7 @@ describe("DivisionGroupsGrid", () => {
   it("should render division B groups correctly", () => {
     render(<DivisionGroupsGrid {...defaultProps} />);
 
-    expect(screen.getByText("Group 1")).toBeInTheDocument();
+    expect(screen.getByText("Conflict Block 1")).toBeInTheDocument();
     expect(screen.getByText("Codebusters")).toBeInTheDocument();
     expect(screen.getByText("Disease Detectives")).toBeInTheDocument();
     expect(screen.getByText("Remote Sensing")).toBeInTheDocument();
@@ -44,7 +44,7 @@ describe("DivisionGroupsGrid", () => {
   it("should render division C groups correctly", () => {
     render(<DivisionGroupsGrid {...defaultProps} division="C" groups={DIVISION_C_GROUPS} />);
 
-    expect(screen.getByText("Group 1")).toBeInTheDocument();
+    expect(screen.getByText("Conflict Block 1")).toBeInTheDocument();
     expect(screen.getByText("Anatomy & Physiology")).toBeInTheDocument();
     expect(screen.getByText("Engineering CAD")).toBeInTheDocument();
     expect(screen.getByText("Forensics")).toBeInTheDocument();
@@ -118,7 +118,7 @@ describe("DivisionGroupsGrid", () => {
   it("should apply correct colors for different groups", () => {
     render(<DivisionGroupsGrid {...defaultProps} />);
 
-    const group1 = screen.getByText("Group 1").closest("div");
+    const group1 = screen.getByText("Conflict Block 1").closest("div");
     expect(group1).toHaveClass("bg-blue-50/80", "border-blue-400/80");
   });
 
@@ -131,14 +131,14 @@ describe("DivisionGroupsGrid", () => {
 
     render(<DivisionGroupsGrid {...darkModeProps} />);
 
-    const group1 = screen.getByText("Group 1").closest("div");
+    const group1 = screen.getByText("Conflict Block 1").closest("div");
     expect(group1).toHaveClass("bg-blue-950/30", "border-blue-500/60");
   });
 
   it("should render last group spanning full width", () => {
     render(<DivisionGroupsGrid {...defaultProps} />);
 
-    const lastGroup = screen.getByText("Group 7").closest("div");
+    const lastGroup = screen.getByText("Conflict Block 7").closest("div");
     expect(lastGroup).toHaveClass("lg:col-span-2");
   });
 
@@ -314,7 +314,7 @@ describe("getGroupColors", () => {
 describe("DIVISION_B_GROUPS", () => {
   it("should have correct structure", () => {
     expect(DIVISION_B_GROUPS).toHaveLength(7);
-    expect(DIVISION_B_GROUPS[0]).toHaveProperty("label", "Group 1");
+    expect(DIVISION_B_GROUPS[0]).toHaveProperty("label", "Conflict Block 1");
     expect(DIVISION_B_GROUPS[0]).toHaveProperty("events");
     expect(DIVISION_B_GROUPS[0]).toHaveProperty("colorKey", "blue");
   });
@@ -349,7 +349,7 @@ describe("DIVISION_B_GROUPS", () => {
 describe("DIVISION_C_GROUPS", () => {
   it("should have correct structure", () => {
     expect(DIVISION_C_GROUPS).toHaveLength(7);
-    expect(DIVISION_C_GROUPS[0]).toHaveProperty("label", "Group 1");
+    expect(DIVISION_C_GROUPS[0]).toHaveProperty("label", "Conflict Block 1");
     expect(DIVISION_C_GROUPS[0]).toHaveProperty("events");
     expect(DIVISION_C_GROUPS[0]).toHaveProperty("colorKey", "blue");
   });
