@@ -38,6 +38,10 @@ export default function TeamDataLoader({ teamSlug, children }: TeamDataLoaderPro
     useTeamPageData(teamSlug);
 
   const { updateSubteams, updateAssignments, updateMembers, updateRoster } = useTeamStore();
+  
+  // Store update functions in refs to avoid dependency changes
+  const updateFunctionsRef = useRef({ updateSubteams, updateAssignments, updateMembers, updateRoster });
+  updateFunctionsRef.current = { updateSubteams, updateAssignments, updateMembers, updateRoster };
 
   // Update store with fetched data from MULTIPLEXED endpoint
   useEffect(() => {
@@ -45,9 +49,12 @@ export default function TeamDataLoader({ teamSlug, children }: TeamDataLoaderPro
       // Development-only code can go here
     }
 
+    // Don't run if already loaded, still loading, or there's an error
     if (hasLoadedRef.current || isLoading || error) {
       return;
     }
+
+    // Mark as loaded
     hasLoadedRef.current = true;
 
     try {
@@ -72,7 +79,7 @@ export default function TeamDataLoader({ teamSlug, children }: TeamDataLoaderPro
             created_at: subteam.created_at,
           })
         );
-        updateSubteams(teamSlug, teamSubteams);
+        updateFunctionsRef.current.updateSubteams(teamSlug, teamSubteams);
         if (process.env.NODE_ENV === "development") {
           // Development-only code can go here
         }
@@ -99,7 +106,7 @@ export default function TeamDataLoader({ teamSlug, children }: TeamDataLoaderPro
             created_at: assignmentRecord.createdAt?.toISOString() || new Date().toISOString(),
           };
         });
-        updateAssignments(teamSlug, teamAssignments);
+        updateFunctionsRef.current.updateAssignments(teamSlug, teamAssignments);
         if (process.env.NODE_ENV === "development") {
           // Development-only code can go here
         }
@@ -127,7 +134,7 @@ export default function TeamDataLoader({ teamSlug, children }: TeamDataLoaderPro
             isLinked: memberRecord.isLinked ?? false,
           };
         });
-        updateMembers(teamSlug, "all", teamMembers);
+        updateFunctionsRef.current.updateMembers(teamSlug, "all", teamMembers);
         if (process.env.NODE_ENV === "development") {
           // Development-only code can go here
         }
@@ -139,7 +146,7 @@ export default function TeamDataLoader({ teamSlug, children }: TeamDataLoaderPro
           roster,
           removed_events: [],
         };
-        updateRoster(teamSlug, rosterSubteamId, rosterData);
+        updateFunctionsRef.current.updateRoster(teamSlug, rosterSubteamId, rosterData);
         if (process.env.NODE_ENV === "development") {
           // Development-only code can go here
         }
@@ -149,22 +156,10 @@ export default function TeamDataLoader({ teamSlug, children }: TeamDataLoaderPro
         // Development-only code can go here
       }
     } catch (_error) {
-      // Ignore errors
+      // Ignore errors  
     }
-  }, [
-    teamSlug,
-    subteams,
-    assignments,
-    members,
-    roster,
-    rosterSubteamId,
-    isLoading,
-    error,
-    updateSubteams,
-    updateAssignments,
-    updateMembers,
-    updateRoster,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamSlug, isLoading, error]);
 
   return <>{children}</>;
 }

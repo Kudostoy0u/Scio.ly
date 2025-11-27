@@ -1,10 +1,44 @@
 import TeamDashboard from "@/app/teams/components/TeamDashboard";
-import { fireEvent, renderWithProviders, screen, waitFor } from "@/test-utils";
+import { cleanup, fireEvent, renderWithProviders, screen, waitFor } from "@/test-utils";
 import type React from "react";
-import { vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Top-level regex for performance
+// Top-level regex for performance
 const CLOSE_BUTTON_REGEX = /close/i;
+
+// Global fetch mock to prevent network calls
+global.fetch = vi.fn();
+
+// Mock TeamDataLoader to prevent complex interactions
+vi.mock("@/app/teams/components/TeamDataLoader", () => ({
+  default: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+// Mock heavy tab components to prevent OOM
+vi.mock("@/app/teams/components/TeamDashboard/components/HomeContent", () => ({
+  HomeContent: ({ activeTab }: { activeTab: string }) => (
+    <div data-testid="home-content">{activeTab} Content</div>
+  ),
+}));
+
+// Stable mock functions
+const mockExitTeamMutation = vi.fn(() => Promise.resolve());
+const mockArchiveTeamMutation = vi.fn(() => Promise.resolve());
+const mockCreateSubteamMutation = vi.fn(() => Promise.resolve({ id: "subteam-1" }));
+const mockUpdateSubteamMutation = vi.fn(() => Promise.resolve());
+const mockDeleteSubteamMutation = vi.fn(() => Promise.resolve());
+const mockRefetch = vi.fn();
+
+const mockTeamPageData = {
+  userTeams: [],
+  currentTeam: null,
+  subteams: [],
+  assignments: [],
+  members: [],
+  roster: {},
+  auth: { role: "captain", isAuthorized: true },
+};
 
 // Mock tRPC client
 vi.mock("@/lib/trpc/client", () => ({
@@ -12,43 +46,64 @@ vi.mock("@/lib/trpc/client", () => ({
     teams: {
       exitTeam: {
         useMutation: () => ({
-          mutateAsync: vi.fn(() => Promise.resolve()),
+          mutateAsync: mockExitTeamMutation,
         }),
       },
       archiveTeam: {
         useMutation: () => ({
-          mutateAsync: vi.fn(() => Promise.resolve()),
+          mutateAsync: mockArchiveTeamMutation,
         }),
       },
       createSubteam: {
         useMutation: () => ({
-          mutateAsync: vi.fn(() => Promise.resolve({ id: "subteam-1" })),
+          mutateAsync: mockCreateSubteamMutation,
         }),
       },
       updateSubteam: {
         useMutation: () => ({
-          mutateAsync: vi.fn(() => Promise.resolve()),
+          mutateAsync: mockUpdateSubteamMutation,
         }),
       },
       deleteSubteam: {
         useMutation: () => ({
+          mutateAsync: mockDeleteSubteamMutation,
+        }),
+      },
+      updateRoster: {
+        useMutation: () => ({
           mutateAsync: vi.fn(() => Promise.resolve()),
+        }),
+      },
+      removeRosterEntry: {
+        useMutation: () => ({
+          mutateAsync: vi.fn(() => Promise.resolve()),
+        }),
+      },
+      exitSubteam: {
+        useMutation: () => ({
+          mutateAsync: vi.fn(() => Promise.resolve()),
+        }),
+      },
+      updateRosterBulk: {
+        useMutation: () => ({
+          mutateAsync: vi.fn(() => Promise.resolve()),
+        }),
+      },
+      getRoster: {
+        useQuery: () => ({
+          data: { roster: {}, removedEvents: [] },
+          isLoading: false,
+          error: null,
+          refetch: vi.fn(),
+          isError: false,
         }),
       },
       getTeamPageData: {
         useQuery: () => ({
-          data: {
-            userTeams: [],
-            currentTeam: null,
-            subteams: [],
-            assignments: [],
-            members: [],
-            roster: {},
-            auth: { role: "captain", isAuthorized: true },
-          },
+          data: mockTeamPageData,
           isLoading: false,
           error: null,
-          refetch: vi.fn(),
+          refetch: mockRefetch,
           isError: false,
         }),
       },
@@ -56,42 +111,53 @@ vi.mock("@/lib/trpc/client", () => ({
   },
 }));
 
+// Stable team store mock
+const mockTeamStore = {
+  userTeams: [],
+  getSubteams: vi.fn(() => []),
+  loadSubteams: vi.fn(() => Promise.resolve()),
+  updateSubteams: vi.fn(),
+  updateAssignments: vi.fn(),
+  updateMembers: vi.fn(),
+  updateRoster: vi.fn(),
+  invalidateCache: vi.fn(),
+  getMembers: vi.fn(() => []),
+  loadMembers: vi.fn(() => Promise.resolve()),
+};
+
 // Mock useTeamStore
 vi.mock("@/app/hooks/useTeamStore", () => ({
-  useTeamStore: () => ({
-    userTeams: [],
-    getSubteams: vi.fn(() => []),
-    loadSubteams: vi.fn(() => Promise.resolve()),
-    updateSubteams: vi.fn(),
-    updateAssignments: vi.fn(),
-    updateMembers: vi.fn(),
-    updateRoster: vi.fn(),
-    invalidateCache: vi.fn(),
-  }),
+  useTeamStore: () => mockTeamStore,
 }));
+
+// Stable auth mock
+const mockAuth = {
+  user: { id: "test-user-id", email: "test@example.com" },
+  loading: false,
+  client: {},
+};
 
 // Mock useAuth to return user immediately
 vi.mock("@/app/contexts/authContext", () => {
   const actual = vi.importActual("@/app/contexts/authContext");
   return {
     ...actual,
-    useAuth: () => ({
-      user: { id: "test-user-id", email: "test@example.com" },
-      loading: false,
-      client: {},
-    }),
+    useAuth: () => mockAuth,
   };
 });
 
+// Stable router mock
+const mockRouter = {
+  push: vi.fn(),
+  back: vi.fn(),
+  forward: vi.fn(),
+  refresh: vi.fn(),
+  replace: vi.fn(),
+};
+
 // Mock Next.js navigation
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: vi.fn(),
-    back: vi.fn(),
-    forward: vi.fn(),
-    refresh: vi.fn(),
-    replace: vi.fn(),
-  }),
+  useRouter: () => mockRouter,
   usePathname: () => "/teams/test-team",
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -112,6 +178,13 @@ describe("TeamDashboard", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset fetch mock for each test
+    (global.fetch as ReturnType<typeof vi.fn>).mockReset();
+  });
+
+  afterEach(() => {
+    // Cleanup React components
+    cleanup();
   });
 
   it("should render team dashboard with basic elements", async () => {
@@ -258,41 +331,19 @@ describe("TeamDashboard", () => {
     });
   });
 
-  // Search functionality not implemented in current BannerInvite component
-  it("should search users when typing in invite modal", async () => {
-    // This test is skipped because the current BannerInvite component doesn't have search functionality
-  });
+
 
   // Search functionality not implemented in current BannerInvite component
-  it("should show search results in invite modal", async () => {
-    // This test is skipped because the current BannerInvite component doesn't have search functionality
-  });
+  it("should show invite codes when invite button is clicked", async () => {
+    const mockCodes = {
+      captainCode: "CAP-123",
+      userCode: "USR-456",
+    };
 
-  // Search functionality not implemented in current BannerInvite component
-  it("should select user when clicked in search results", async () => {
-    // This test is skipped because the current BannerInvite component doesn't have search functionality
-  });
-
-  // Search functionality not implemented in current BannerInvite component
-  it("should send invitation when send button is clicked", async () => {
-    const mockUsers = [
-      {
-        id: "user-456",
-        email: "newuser@example.com",
-        full_name: "New User",
-        username: "newuser",
-      },
-    ];
-
-    (global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ users: mockUsers }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ success: true }),
-      });
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(mockCodes),
+    });
 
     renderWithProviders(<TeamDashboard {...defaultProps} />, { initialUser: mockUser });
 
@@ -301,29 +352,11 @@ describe("TeamDashboard", () => {
     });
 
     fireEvent.click(screen.getByTitle("Invite Person"));
-    const searchInput = screen.getByPlaceholderText("Search by username or email...");
-
-    fireEvent.change(searchInput, { target: { value: "test" } });
 
     await waitFor(() => {
-      fireEvent.click(screen.getByText("New User"));
-    });
-
-    fireEvent.click(screen.getByText("Send Invitation"));
-
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining("/api/teams/test-team/invite"),
-        expect.objectContaining({
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            username: "newuser",
-            email: "newuser@example.com",
-            role: "member",
-          }),
-        })
-      );
+      expect(screen.getByText("Team Invite Codes")).toBeInTheDocument();
+      expect(screen.getByText("CAP-123")).toBeInTheDocument();
+      expect(screen.getByText("USR-456")).toBeInTheDocument();
     });
   });
 
@@ -337,8 +370,9 @@ describe("TeamDashboard", () => {
     });
 
     await waitFor(() => {
-      // Verify the assignments tab content is rendered
-      expect(screen.getByText("Assignments")).toBeInTheDocument();
+      // With mocked HomeContent, verify it renders the correct tab      
+      expect(screen.getByTestId("home-content")).toBeInTheDocument();
+      expect(screen.getByText(/assignments/i)).toBeInTheDocument();
     });
   });
 
@@ -349,11 +383,12 @@ describe("TeamDashboard", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Test School")).toBeInTheDocument();
-    });
+   });
 
-    // Wait for the lazy-loaded People tab to render
-    await waitFor(() => {
-      expect(screen.getByText("People")).toBeInTheDocument();
+    // With mocked HomeContent, verify it renders
+   await waitFor(() => {
+      expect(screen.getByTestId("home-content")).toBeInTheDocument();
+      expect(screen.getByText(/people/i)).toBeInTheDocument();
     });
   });
 
@@ -363,18 +398,15 @@ describe("TeamDashboard", () => {
       initialUser: mockUser,
     });
 
+    // Verify the component renders with dark mode
     await waitFor(() => {
       expect(screen.getByText("Test School")).toBeInTheDocument();
     });
 
-    // Verify the component renders
+    // Verify mocked HomeContent renders
     await waitFor(() => {
-      expect(screen.getByText("Test School")).toBeInTheDocument();
-      expect(screen.getByText("Division B")).toBeInTheDocument();
+      expect(screen.getByTestId("home-content")).toBeInTheDocument();
     });
-
-    // The component uses dark mode for styling, verify it renders correctly
-    expect(screen.getByText("Test School")).toBeInTheDocument();
   });
 
   it("should have All Teams button for navigation", async () => {

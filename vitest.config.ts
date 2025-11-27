@@ -11,6 +11,14 @@ export default defineConfig({
     css: false,
     globals: true,
     include: ["src/**/*.test.{ts,tsx}"],
+    isolate: process.env.VITEST_ISOLATE !== "false",
+    poolOptions: {
+      threads: {
+        minThreads: 1,
+        maxThreads: process.env.VITEST_ISOLATE === "true" ? 1 : maxThreads,
+        isolate: process.env.VITEST_ISOLATE === "true",
+      },
+    },
     coverage: {
       enabled: coverageEnabled,
       provider: "v8",
@@ -37,12 +45,6 @@ export default defineConfig({
       functions: 100,
       branches: 100,
       statements: 100,
-    },
-    poolOptions: {
-      threads: {
-        minThreads: 1,
-        maxThreads,
-      },
     },
   },
   esbuild: {

@@ -11,6 +11,7 @@ import type { Member } from "../types";
 import EventAssignmentModal from "./EventAssignmentModal";
 import InlineInvite from "./InlineInvite";
 import MemberCard from "./MemberCard";
+import RosterLinkIndicator from "./RosterLinkIndicator";
 import { useMemberActions } from "./hooks/useMemberActions";
 import { processMembers } from "./utils/processMembers";
 
@@ -73,6 +74,14 @@ export default function PeopleTab({
   const [showSubteamDropdown, setShowSubteamDropdown] = useState<string | null>(null);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
 
+  // Roster linking state
+  const [linkStatus, setLinkStatus] = useState<Record<string, {
+    isLinked: boolean;
+    userId?: string;
+    userEmail?: string;
+  }>>({});
+  const [linkStatusLoading, setLinkStatusLoading] = useState(false);
+
   // Get processed members using utility function
   const processedFilteredMembers = useMemo(() => {
     if (!membersData) {
@@ -82,6 +91,51 @@ export default function PeopleTab({
   }, [membersData, pendingLinkInvites, team.division]);
 
   const filteredMembers = processedFilteredMembers;
+
+  // Get roster data from store
+  const { getRoster } = useTeamStore();
+  const roster = getRoster?.(team.slug, selectedSubteam === 'all' ? undefined : selectedSubteam) || {};
+
+  // Extract unique roster names from roster
+  const rosterNames = useMemo(() => {
+    const names = new Set<string>();
+    Object.values(roster).forEach((eventNames: unknown) => {
+      if (Array.isArray(eventNames)) {
+        eventNames.forEach(name => {
+          if (typeof name === 'string') {
+            names.add(name);
+          }
+        });
+      }
+    });
+    return Array.from(names).sort();
+  }, [roster]);
+
+  // Load link status when component mounts or subteam changes
+  useEffect(() => {
+    const loadLinkStatus = async () => {
+      if (!team.slug) return;
+      
+      try {
+        setLinkStatusLoading(true);
+        const url = `/api/teams/${team.slug}/roster/link-status${
+          selectedSubteam !== 'all' ? `?subteamId=${selectedSubteam}` : ''
+        }`;
+        const response = await fetch(url);
+        
+        if (response.ok) {
+          const data = await response.json();
+          setLinkStatus(data.linkStatus || {});
+        }
+      } catch (error) {
+        console.error('Error loading link status:', error);
+      } finally {
+        setLinkStatusLoading(false);
+      }
+    };
+
+    loadLinkStatus();
+  }, [team.slug, selectedSubteam]);
 
   // Use member actions hook
   const {
@@ -259,6 +313,63 @@ export default function PeopleTab({
         </div>
       )}
 
+      {/* Roster Names Section */}
+      {isCaptain && rosterNames.length > 0 && (
+        <div className={`p-6 rounded-lg border ${
+          darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+        }`}>
+          <h3 className={`text-xl font-bold mb-4 ${
+            darkMode ? 'text-white' : 'text-gray-900'
+          }`}>
+            Roster Names
+          </h3>
+          <p className={`text-sm mb-4 ${
+            darkMode ? 'text-gray-400' : 'text-gray-600'
+          }`}>
+            Link roster names to actual team members. Click the indicator to invite users.
+          </p>
+          
+          {linkStatusLoading ? (
+            <div className="flex justify-center py-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {rosterNames.map(name => (
+                <div key={name} className={`flex items-center justify-between p-3 rounded-lg ${
+                  darkMode ? 'bg-gray-700' : 'bg-gray-50'
+                }`}>
+                  <span className={darkMode ? 'text-white' : 'text-gray-900'}>{name}</span>
+                  <RosterLinkIndicator
+                    studentName={name}
+                    isLinked={linkStatus[name]?.isLinked || false}
+                    userId={linkStatus[name]?.userId}
+                    userEmail={linkStatus[name]?.userEmail}
+                    teamSlug={team.slug}
+                    subteamId={selectedSubteam === 'all' ? '' : selectedSubteam}
+                    onLinkStatusChange={(studentName, isLinked) => {
+                      setLinkStatus(prev => ({
+                        ...prev,
+                        [studentName]: { ...prev[studentName], isLinked }
+                      }));
+                    }}
+                    darkMode={darkMode}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Team Members Section */}
+      <div>
+        <h3 className={`text-xl font-bold mb-4 ${
+          darkMode ? 'text-white' : 'text-gray-900'
+        }`}>
+          Team Members
+        </h3>
+
       {/* Members Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
         {filteredMembers.length === 0 ? (
@@ -297,6 +408,9 @@ export default function PeopleTab({
           ))
         )}
       </div>
+      </div>
+
+      {/* Linked Members section could be added here if needed */}
 
       {/* Event Assignment Modal */}
       <EventAssignmentModal
