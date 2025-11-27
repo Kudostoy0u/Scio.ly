@@ -2,26 +2,35 @@
  * GET endpoint tests for team invite route
  */
 
+// Import mocks first to ensure they're set up before route handler
+import "./mocks";
+
 import { GET } from "@/app/api/teams/[teamId]/invite/route";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockMembership, mockSearchResults } from "./fixtures";
+import { mockMembership, mockSearchResults, mockTeamInfo } from "./fixtures";
 import {
   createDrizzleSelectChain,
   createDrizzleSelectChainWithLimit,
   createGetRequest,
   createParams,
 } from "./helpers";
-import { mockDbPg, mockGetServerUser } from "./mocks";
+import { mockDbPg, mockGetServerUser, mockResolveTeamSlugToUnits } from "./mocks";
 import type { DrizzleMockChain } from "./mocks";
 
 describe("GET /api/teams/[teamId]/invite", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Reset only the mocks we need, not all mocks
+    mockGetServerUser.mockReset();
+    mockResolveTeamSlugToUnits.mockReset();
+    mockDbPg.select.mockReset();
+    
     process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
+    // Set up mocks
     mockGetServerUser.mockResolvedValue({
       id: "123e4567-e89b-12d3-a456-426614174000",
       email: "test@example.com",
     });
+    mockResolveTeamSlugToUnits.mockResolvedValue(mockTeamInfo);
 
     mockDbPg.select.mockReturnValue({
       from: vi.fn(),
@@ -64,6 +73,7 @@ describe("GET /api/teams/[teamId]/invite", () => {
   });
 
   it("should return 401 if user is not authenticated", async () => {
+    mockGetServerUser.mockReset();
     mockGetServerUser.mockResolvedValue(null);
 
     const request = createGetRequest("test-team", "q=user");

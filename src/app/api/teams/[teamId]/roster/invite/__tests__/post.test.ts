@@ -2,6 +2,9 @@
  * POST endpoint tests for roster invite route
  */
 
+// Import mocks first to ensure they're set up before route handler
+import "./mocks";
+
 import { POST } from "@/app/api/teams/[teamId]/roster/invite/route";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -24,14 +27,22 @@ import {
   createParams,
   createPostRequest,
 } from "./helpers";
-import { mockDbPg, mockGetServerUser, mockNotificationSyncService } from "./mocks";
+import { mockDbPg, mockGetServerUser, mockNotificationSyncService, mockResolveTeamSlugToUnits } from "./mocks";
 import type { DrizzleMockChain } from "./mocks";
 
 describe("POST /api/teams/[teamId]/roster/invite", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Reset only the mocks we need, not all mocks
+    mockGetServerUser.mockReset();
+    mockResolveTeamSlugToUnits.mockReset();
+    mockNotificationSyncService.syncNotificationToSupabase.mockReset();
+    mockDbPg.select.mockReset();
+    mockDbPg.insert.mockReset();
+    mockDbPg.update.mockReset();
+    
     process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
     mockGetServerUser.mockResolvedValue(mockUser);
+    mockResolveTeamSlugToUnits.mockResolvedValue(mockTeamInfo);
     mockNotificationSyncService.syncNotificationToSupabase.mockResolvedValue();
 
     mockDbPg.select.mockReturnValue({
@@ -63,7 +74,7 @@ describe("POST /api/teams/[teamId]/roster/invite", () => {
       .mockImplementationOnce(() => createMockDrizzleChain({ id: mockSubteam.id }))
       .mockImplementationOnce(() => createMockDrizzleChain(mockInvitedUser))
       .mockImplementationOnce(() => createMockDrizzleChain([]))
-      .mockImplementationOnce(() => createMockDrizzleChain(mockTeamInfo));
+      .mockImplementationOnce(() => createMockDrizzleChainWithJoin(mockTeamInfo, true));
 
     mockDbPg.insert
       .mockImplementationOnce(() => createMockDrizzleInsert(mockInvitation))
@@ -263,7 +274,7 @@ describe("POST /api/teams/[teamId]/roster/invite", () => {
       .mockImplementationOnce(() => createMockDrizzleChain({ id: mockSubteam.id }))
       .mockImplementationOnce(() => createMockDrizzleChain(mockInvitedUser))
       .mockImplementationOnce(() => createMockDrizzleChain(existingInvitation))
-      .mockImplementationOnce(() => createMockDrizzleChainWithJoin(mockTeamInfo));
+      .mockImplementationOnce(() => createMockDrizzleChainWithJoin(mockTeamInfo, true));
 
     mockDbPg.update.mockImplementationOnce(() => createMockDrizzleUpdate(mockInvitation));
     mockDbPg.insert.mockImplementationOnce(() => createMockDrizzleInsert(mockNotification));
@@ -288,7 +299,7 @@ describe("POST /api/teams/[teamId]/roster/invite", () => {
       .mockImplementationOnce(() => createMockDrizzleChain({ id: mockSubteam.id }))
       .mockImplementationOnce(() => createMockDrizzleChain(mockInvitedUser))
       .mockImplementationOnce(() => createMockDrizzleChain([]))
-      .mockImplementationOnce(() => createMockDrizzleChainWithJoin(mockTeamInfo));
+      .mockImplementationOnce(() => createMockDrizzleChainWithJoin(mockTeamInfo, true));
 
     mockDbPg.insert
       .mockImplementationOnce(() => createMockDrizzleInsert(mockInvitation))

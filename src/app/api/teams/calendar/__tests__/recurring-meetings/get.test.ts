@@ -2,6 +2,9 @@
  * GET endpoint tests for recurring meetings route
  */
 
+// Import mocks first to ensure they're set up before route handler
+import "./mocks";
+
 import { GET } from "@/app/api/teams/calendar/recurring-meetings/route";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -23,7 +26,9 @@ import { mockDbPg, mockGetServerUser } from "./mocks";
 
 describe("GET /api/teams/calendar/recurring-meetings", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Reset only the mocks we need, not all mocks
+    mockGetServerUser.mockReset();
+    mockDbPg.select.mockReset();
   });
 
   afterEach(() => {
@@ -31,6 +36,7 @@ describe("GET /api/teams/calendar/recurring-meetings", () => {
   });
 
   it("fetches recurring meetings successfully", async () => {
+    mockGetServerUser.mockReset();
     mockGetServerUser.mockResolvedValue(mockUser as { id: string });
 
     mockDbPg.select

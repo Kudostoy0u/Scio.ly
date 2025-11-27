@@ -8,9 +8,6 @@
  * - Member display information
  */
 
-import { dbPg } from "@/lib/db";
-import { newTeamMemberships, newTeamRosterData, newTeamUnits } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   type TestTeam,
@@ -21,6 +18,10 @@ import {
   createRosterEntry,
   createTestTeam,
   createTestUser,
+  getMembershipsByGroupId,
+  getMembershipsByTeamId,
+  getMembershipsByUser,
+  getRosterEntries,
 } from "../utils/test-helpers";
 
 describe("Team Members E2E", () => {
@@ -54,16 +55,12 @@ describe("Team Members E2E", () => {
       const team = testTeams[0];
 
       // Get all memberships
-      const memberships = await dbPg
-        .select()
-        .from(newTeamMemberships)
-        .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
-        .where(eq(newTeamUnits.groupId, team.groupId));
+      const memberships = getMembershipsByGroupId(team.groupId);
 
       expect(memberships.length).toBeGreaterThanOrEqual(3); // Captain + Member + Co-Captain
 
       // Verify roles
-      const roles = memberships.map((m) => m.newTeamMemberships.role);
+      const roles = memberships.map((m) => m.role);
       expect(roles).toContain("captain");
       expect(roles).toContain("member");
       expect(roles).toContain("co_captain");
@@ -73,10 +70,7 @@ describe("Team Members E2E", () => {
       const team = testTeams[0];
 
       // Get members for specific subteam
-      const memberships = await dbPg
-        .select()
-        .from(newTeamMemberships)
-        .where(eq(newTeamMemberships.teamId, team.subteamId));
+      const memberships = getMembershipsByTeamId(team.subteamId);
 
       expect(memberships.length).toBe(3); // Captain + Member + Co-Captain
     });
@@ -94,10 +88,7 @@ describe("Team Members E2E", () => {
       const team = testTeams[0];
 
       // Verify different roles exist
-      const memberships = await dbPg
-        .select()
-        .from(newTeamMemberships)
-        .where(eq(newTeamMemberships.teamId, team.subteamId));
+      const memberships = getMembershipsByTeamId(team.subteamId);
 
       const roles = new Set(memberships.map((m) => m.role));
       expect(roles.size).toBeGreaterThan(1);
@@ -113,10 +104,7 @@ describe("Team Members E2E", () => {
       await createRosterEntry(team.subteamId, "Astronomy", 0, "Member User", member.id);
 
       // Verify link
-      const [rosterEntry] = await dbPg
-        .select()
-        .from(newTeamRosterData)
-        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
+      const [rosterEntry] = getRosterEntries(team.subteamId);
 
       expect(rosterEntry).toBeDefined();
       expect(rosterEntry?.userId).toBe(member.id);
@@ -130,10 +118,7 @@ describe("Team Members E2E", () => {
       await createRosterEntry(team.subteamId, "Biology", 1, "Unlinked Student");
 
       // Verify entry exists without userId
-      const rosterEntries = await dbPg
-        .select()
-        .from(newTeamRosterData)
-        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
+      const rosterEntries = getRosterEntries(team.subteamId);
 
       const unlinkedEntry = rosterEntries.find(
         (e) => e.eventName === "Biology" && e.userId === null
@@ -150,13 +135,7 @@ describe("Team Members E2E", () => {
       const member = testUsers[1];
 
       // Get member with user profile
-      const [membership] = await dbPg
-        .select({
-          userId: newTeamMemberships.userId,
-          role: newTeamMemberships.role,
-        })
-        .from(newTeamMemberships)
-        .where(eq(newTeamMemberships.userId, member.id));
+      const membership = getMembershipsByUser(member.id)[0];
 
       expect(membership).toBeDefined();
       expect(membership?.userId).toBe(member.id);
@@ -169,10 +148,7 @@ describe("Team Members E2E", () => {
       const team = testTeams[0];
 
       // Get only active memberships
-      const activeMemberships = await dbPg
-        .select()
-        .from(newTeamMemberships)
-        .where(eq(newTeamMemberships.teamId, team.subteamId));
+      const activeMemberships = getMembershipsByTeamId(team.subteamId);
 
       // All should be active
       for (const membership of activeMemberships) {

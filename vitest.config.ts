@@ -1,6 +1,9 @@
 import path from "node:path";
 import { defineConfig } from "vitest/config";
 
+const maxThreads = Number(process.env.VITEST_MAX_THREADS ?? "4");
+const coverageEnabled = process.env.VITEST_COVERAGE === "true";
+
 export default defineConfig({
   test: {
     environment: "jsdom",
@@ -9,6 +12,7 @@ export default defineConfig({
     globals: true,
     include: ["src/**/*.test.{ts,tsx}"],
     coverage: {
+      enabled: coverageEnabled,
       provider: "v8",
       reporter: ["text", "json", "html", "lcov"],
       reportsDirectory: "./coverage",
@@ -34,6 +38,12 @@ export default defineConfig({
       branches: 100,
       statements: 100,
     },
+    poolOptions: {
+      threads: {
+        minThreads: 1,
+        maxThreads,
+      },
+    },
   },
   esbuild: {
     jsx: "automatic",
@@ -43,6 +53,12 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "@/": path.resolve(__dirname, "./src/"),
+      "@components": path.resolve(__dirname, "./src/app/components"),
+      "@app": path.resolve(__dirname, "./src/app"),
+      "@lib": path.resolve(__dirname, "./src/lib"),
+      "@utils": path.resolve(__dirname, "./src/lib/utils"),
+      "@app-utils": path.resolve(__dirname, "./src/app/utils"),
+      "@test-utils": path.resolve(__dirname, "./src/test-utils"),
     },
   },
 });

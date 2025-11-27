@@ -52,5 +52,5 @@ vi.mock("@/lib/utils/team-resolver", () => ({
 export const mockDbPg = vi.mocked(dbPg);
 export const mockGetServerUser = vi.mocked(getServerUser);
 export const mockNotificationSyncService = vi.mocked(NotificationSyncService);
-export const _mockResolveTeamSlugToUnits = vi.mocked(resolveTeamSlugToUnits);
+export const mockResolveTeamSlugToUnits = vi.mocked(resolveTeamSlugToUnits);
 

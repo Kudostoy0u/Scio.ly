@@ -2,6 +2,9 @@
  * POST endpoint tests for team invite route
  */
 
+// Import mocks first to ensure they're set up before route handler
+import "./mocks";
+
 import { POST } from "@/app/api/teams/[teamId]/invite/route";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -31,8 +34,15 @@ import type { DrizzleMockChain } from "./mocks";
 
 describe("POST /api/teams/[teamId]/invite", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Reset only the mocks we need, not all mocks
+    mockGetServerUser.mockReset();
+    mockResolveTeamSlugToUnits.mockReset();
+    mockSyncNotificationToSupabase.mockReset();
+    mockDbPg.select.mockReset();
+    mockDbPg.insert.mockReset();
+    
     process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
+    // Set up mocks
     mockGetServerUser.mockResolvedValue(mockUser);
     mockResolveTeamSlugToUnits.mockResolvedValue(mockTeamInfo);
     mockSyncNotificationToSupabase.mockResolvedValue();
@@ -81,6 +91,7 @@ describe("POST /api/teams/[teamId]/invite", () => {
   });
 
   it("should return 401 if user is not authenticated", async () => {
+    mockGetServerUser.mockReset();
     mockGetServerUser.mockResolvedValue(null);
 
     const request = createPostRequest("test-team", {
@@ -120,6 +131,7 @@ describe("POST /api/teams/[teamId]/invite", () => {
   });
 
   it("should return 404 if team is not found", async () => {
+    mockResolveTeamSlugToUnits.mockReset();
     mockResolveTeamSlugToUnits.mockRejectedValue(new Error("Team not found"));
 
     const request = createPostRequest("test-team", {
@@ -234,6 +246,7 @@ describe("POST /api/teams/[teamId]/invite", () => {
 
     mockDbPg.insert.mockImplementationOnce(() => createDrizzleInsertChain([mockNotification]));
 
+    mockSyncNotificationToSupabase.mockReset();
     mockSyncNotificationToSupabase.mockRejectedValue(new Error("Sync failed"));
 
     const request = createPostRequest("test-team", {

@@ -9,23 +9,23 @@
  * - Roster assignments
  */
 
-import { dbPg } from "@/lib/db";
-import {
-  newTeamAssignmentQuestions,
-  newTeamAssignmentRoster,
-  newTeamAssignmentSubmissions,
-  newTeamAssignments,
-} from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   type TestTeam,
   type TestUser,
   addTeamMember,
+  addAssignmentRosterEntry,
   cleanupTestData,
+  createAssignment,
+  createAssignmentQuestions,
+  createAssignmentSubmission,
   createRosterEntry,
   createTestTeam,
   createTestUser,
+  getAssignmentQuestions,
+  getAssignmentRosterEntries,
+  getAssignmentSubmissions,
+  getAssignmentsByTeamId,
 } from "../utils/test-helpers";
 
 describe("Assignment Management E2E", () => {
@@ -61,51 +61,42 @@ describe("Assignment Management E2E", () => {
       const captain = testUsers[0];
 
       // Create assignment
-      const [assignment] = await dbPg
-        .insert(newTeamAssignments)
-        .values({
-          teamId: team.subteamId,
-          createdBy: captain.id,
-          title: "Test Assignment",
-          description: "Test description",
-          assignmentType: "task",
-          isRequired: true,
-        })
-        .returning({ id: newTeamAssignments.id });
+      const assignment = createAssignment({
+        teamId: team.subteamId,
+        createdBy: captain.id,
+        title: "Test Assignment",
+        description: "Test description",
+        assignmentType: "task",
+        isRequired: true,
+      });
 
       expect(assignment).toBeDefined();
       expect(assignment?.id).toBeDefined();
 
       // Create questions
-      const questions = await dbPg
-        .insert(newTeamAssignmentQuestions)
-        .values([
-          {
-            assignmentId: assignment.id,
-            questionText: "What is 2+2?",
-            questionType: "frq",
-            correctAnswer: "4",
-            orderIndex: 0,
-            points: 1,
-          },
-          {
-            assignmentId: assignment.id,
-            questionText: "What is the capital of France?",
-            questionType: "frq",
-            correctAnswer: "Paris",
-            orderIndex: 1,
-            points: 1,
-          },
-        ])
-        .returning({ id: newTeamAssignmentQuestions.id });
+      const questions = createAssignmentQuestions(assignment.id, [
+        {
+          questionText: "What is 2+2?",
+          questionType: "frq",
+          correctAnswer: "4",
+          orderIndex: 0,
+          points: 1,
+        },
+        {
+          questionText: "What is the capital of France?",
+          questionType: "frq",
+          correctAnswer: "Paris",
+          orderIndex: 1,
+          points: 1,
+        },
+      ]);
 
       expect(questions.length).toBe(2);
 
       // Verify assignment exists
-      const [retrievedAssignment] = await dbPg
-        .select()
-        .from(newTeamAssignments)
-        .where(eq(newTeamAssignments.id, assignment.id));
+      const [retrievedAssignment] = getAssignmentsByTeamId(team.subteamId).filter(
+        (item) => item.id === assignment.id
+      );
 
       expect(retrievedAssignment).toBeDefined();
       expect(retrievedAssignment?.title).toBe("Test Assignment");
@@ -117,18 +108,14 @@ describe("Assignment Management E2E", () => {
       const member = testUsers[1];
 
       // Create assignment
-      const [assignment] = await dbPg
-        .insert(newTeamAssignments)
-        .values({
-          teamId: team.subteamId,
-          createdBy: captain.id,
-          title: "Roster Assignment",
-          assignmentType: "task",
-        })
-        .returning({ id: newTeamAssignments.id });
+      const assignment = createAssignment({
+        teamId: team.subteamId,
+        createdBy: captain.id,
+        title: "Roster Assignment",
+        assignmentType: "task",
+      });
 
-      // Assign to roster member
-      await dbPg.insert(newTeamAssignmentRoster).values({
+      addAssignmentRosterEntry({
         assignmentId: assignment.id,
         studentName: "Member User",
         userId: member.id,
@@ -136,10 +123,7 @@ describe("Assignment Management E2E", () => {
       });
 
       // Verify roster assignment
-      const [rosterAssignment] = await dbPg
-        .select()
-        .from(newTeamAssignmentRoster)
-        .where(eq(newTeamAssignmentRoster.assignmentId, assignment.id));
+      const [rosterAssignment] = getAssignmentRosterEntries(assignment.id);
 
       expect(rosterAssignment).toBeDefined();
       expect(rosterAssignment?.userId).toBe(member.id);
@@ -152,10 +136,7 @@ describe("Assignment Management E2E", () => {
       const team = testTeams[0];
 
       // Get all assignments
-      const assignments = await dbPg
-        .select()
-        .from(newTeamAssignments)
-        .where(eq(newTeamAssignments.teamId, team.subteamId));
+      const assignments = getAssignmentsByTeamId(team.subteamId);
 
       expect(assignments.length).toBeGreaterThan(0);
 
@@ -171,17 +152,10 @@ describe("Assignment Management E2E", () => {
       const team = testTeams[0];
 
       // Get assignments
-      const assignments = await dbPg
-        .select()
-        .from(newTeamAssignments)
-        .where(eq(newTeamAssignments.teamId, team.subteamId));
+      const assignments = getAssignmentsByTeamId(team.subteamId);
 
-      // Get questions for each assignment
       for (const assignment of assignments) {
-        const questions = await dbPg
-          .select()
-          .from(newTeamAssignmentQuestions)
-          .where(eq(newTeamAssignmentQuestions.assignmentId, assignment.id));
+        const questions = getAssignmentQuestions(assignment.id);
 
         // Verify questions are properly linked
         for (const question of questions) {
@@ -198,40 +172,30 @@ describe("Assignment Management E2E", () => {
       const member = testUsers[1];
 
       // Get an assignment
-      const [assignment] = await dbPg
-        .select()
-        .from(newTeamAssignments)
-        .where(eq(newTeamAssignments.teamId, team.subteamId))
-        .limit(1);
+      const assignments = getAssignmentsByTeamId(team.subteamId);
+      let assignment = assignments[0];
 
       if (!assignment) {
-        // Create one if none exists
-        const [newAssignment] = await dbPg
-          .insert(newTeamAssignments)
-          .values({
-            teamId: team.subteamId,
-            createdBy: testUsers[0].id,
-            title: "Submission Test Assignment",
-            assignmentType: "task",
-          })
-          .returning({ id: newTeamAssignments.id });
-
-        // Create submission
-        const [submission] = await dbPg
-          .insert(newTeamAssignmentSubmissions)
-          .values({
-            assignmentId: newAssignment.id,
-            userId: member.id,
-            content: "Test submission",
-            status: "submitted",
-            attemptNumber: 1,
-          })
-          .returning({ id: newTeamAssignmentSubmissions.id });
-
-        expect(submission).toBeDefined();
-        expect(submission?.userId).toBe(member.id);
-        expect(submission?.status).toBe("submitted");
+        assignment = createAssignment({
+          teamId: team.subteamId,
+          createdBy: testUsers[0].id,
+          title: "Submission Test Assignment",
+          assignmentType: "task",
+        });
       }
+
+      const submission = createAssignmentSubmission({
+        assignmentId: assignment.id,
+        userId: member.id,
+        content: "Test submission",
+        status: "submitted",
+        attemptNumber: 1,
+      });
+
+      expect(submission).toBeDefined();
+      const [retrievedSubmission] = getAssignmentSubmissions(assignment.id);
+      expect(retrievedSubmission?.userId).toBe(member.id);
+      expect(retrievedSubmission?.status).toBe("submitted");
     });
 
     it("should track submission attempts", async () => {
@@ -239,15 +203,10 @@ describe("Assignment Management E2E", () => {
       const member = testUsers[1];
 
       // Get an assignment
-      const [assignment] = await dbPg
-        .select()
-        .from(newTeamAssignments)
-        .where(eq(newTeamAssignments.teamId, team.subteamId))
-        .limit(1);
+      const assignment = getAssignmentsByTeamId(team.subteamId)[0];
 
       if (assignment) {
-        // Create multiple submissions (attempts)
-        await dbPg.insert(newTeamAssignmentSubmissions).values({
+        createAssignmentSubmission({
           assignmentId: assignment.id,
           userId: member.id,
           content: "Attempt 1",
@@ -255,7 +214,7 @@ describe("Assignment Management E2E", () => {
           attemptNumber: 1,
         });
 
-        await dbPg.insert(newTeamAssignmentSubmissions).values({
+        createAssignmentSubmission({
           assignmentId: assignment.id,
           userId: member.id,
           content: "Attempt 2",
@@ -263,12 +222,7 @@ describe("Assignment Management E2E", () => {
           attemptNumber: 2,
         });
 
-        // Verify attempts
-        const submissions = await dbPg
-          .select()
-          .from(newTeamAssignmentSubmissions)
-          .where(eq(newTeamAssignmentSubmissions.assignmentId, assignment.id));
-
+        const submissions = getAssignmentSubmissions(assignment.id);
         const attemptNumbers = submissions.map((s) => s.attemptNumber);
         expect(attemptNumbers).toContain(1);
         expect(attemptNumbers).toContain(2);
@@ -290,32 +244,27 @@ describe("Assignment Management E2E", () => {
       const captain = testUsers[0];
 
       // Create assignment
-      const [assignment] = await dbPg
-        .insert(newTeamAssignments)
-        .values({
-          teamId: team.subteamId,
-          createdBy: captain.id,
-          title: "Validation Test",
-          assignmentType: "task",
-        })
-        .returning({ id: newTeamAssignments.id });
+      const assignment = createAssignment({
+        teamId: team.subteamId,
+        createdBy: captain.id,
+        title: "Validation Test",
+        assignmentType: "task",
+      });
 
-      // Create valid question
-      const [question] = await dbPg
-        .insert(newTeamAssignmentQuestions)
-        .values({
-          assignmentId: assignment.id,
+      const [question] = createAssignmentQuestions(assignment.id, [
+        {
           questionText: "Valid question",
           questionType: "frq",
           correctAnswer: "Answer",
           orderIndex: 0,
           points: 1,
-        })
-        .returning({ id: newTeamAssignmentQuestions.id });
+        },
+      ]);
 
       expect(question).toBeDefined();
-      expect(question?.questionText).toBe("Valid question");
-      expect(question?.questionType).toBe("frq");
+      const storedQuestion = getAssignmentQuestions(assignment.id)[0];
+      expect(storedQuestion?.questionText).toBe("Valid question");
+      expect(storedQuestion?.questionType).toBe("frq");
     });
   });
 });

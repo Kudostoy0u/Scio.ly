@@ -8,9 +8,6 @@
  * - Fetching roster data
  */
 
-import { dbPg } from "@/lib/db";
-import { newTeamRosterData } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   type TestTeam,
@@ -19,6 +16,9 @@ import {
   createRosterEntry,
   createTestTeam,
   createTestUser,
+  getRosterEntries,
+  getRosterEntry,
+  updateRosterEntry,
 } from "../utils/test-helpers";
 
 describe("Roster Management E2E", () => {
@@ -52,10 +52,7 @@ describe("Roster Management E2E", () => {
       await createRosterEntry(team.subteamId, eventName, slotIndex, studentName, testUsers[0].id);
 
       // Verify roster entry exists
-      const [rosterEntry] = await dbPg
-        .select()
-        .from(newTeamRosterData)
-        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
+      const rosterEntry = getRosterEntry(team.subteamId, eventName, slotIndex);
 
       expect(rosterEntry).toBeDefined();
       expect(rosterEntry?.eventName).toBe(eventName);
@@ -83,10 +80,7 @@ describe("Roster Management E2E", () => {
       }
 
       // Verify all entries exist
-      const rosterEntries = await dbPg
-        .select()
-        .from(newTeamRosterData)
-        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
+      const rosterEntries = getRosterEntries(team.subteamId);
 
       expect(rosterEntries.length).toBeGreaterThanOrEqual(events.length);
     });
@@ -100,10 +94,7 @@ describe("Roster Management E2E", () => {
       await createRosterEntry(team.subteamId, eventName, slotIndex, studentName);
 
       // Verify roster entry exists without userId
-      const [rosterEntry] = await dbPg
-        .select()
-        .from(newTeamRosterData)
-        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
+      const rosterEntry = getRosterEntry(team.subteamId, eventName, slotIndex);
 
       expect(rosterEntry).toBeDefined();
       expect(rosterEntry?.studentName).toBe(studentName);
@@ -123,16 +114,10 @@ describe("Roster Management E2E", () => {
       await createRosterEntry(team.subteamId, eventName, slotIndex, originalName);
 
       // Update entry
-      await dbPg
-        .update(newTeamRosterData)
-        .set({ studentName: updatedName })
-        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
+      updateRosterEntry(team.subteamId, eventName, slotIndex, { studentName: updatedName });
 
       // Verify update
-      const [rosterEntry] = await dbPg
-        .select()
-        .from(newTeamRosterData)
-        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
+      const rosterEntry = getRosterEntry(team.subteamId, eventName, slotIndex);
 
       expect(rosterEntry?.studentName).toBe(updatedName);
     });
@@ -146,16 +131,10 @@ describe("Roster Management E2E", () => {
       await createRosterEntry(team.subteamId, eventName, slotIndex, "Unlinked");
 
       // Link user
-      await dbPg
-        .update(newTeamRosterData)
-        .set({ userId: testUsers[1].id })
-        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
+      updateRosterEntry(team.subteamId, eventName, slotIndex, { userId: testUsers[1].id });
 
       // Verify link
-      const [rosterEntry] = await dbPg
-        .select()
-        .from(newTeamRosterData)
-        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
+      const rosterEntry = getRosterEntry(team.subteamId, eventName, slotIndex);
 
       expect(rosterEntry?.userId).toBe(testUsers[1].id);
     });
@@ -171,10 +150,7 @@ describe("Roster Management E2E", () => {
       await createRosterEntry(team.subteamId, "Event2", 0, "Student3");
 
       // Retrieve entries
-      const rosterEntries = await dbPg
-        .select()
-        .from(newTeamRosterData)
-        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
+      const rosterEntries = getRosterEntries(team.subteamId);
 
       expect(rosterEntries.length).toBeGreaterThan(0);
 
@@ -202,15 +178,7 @@ describe("Roster Management E2E", () => {
       );
 
       // Retrieve with user join
-      const rosterWithUsers = await dbPg
-        .select({
-          eventName: newTeamRosterData.eventName,
-          slotIndex: newTeamRosterData.slotIndex,
-          studentName: newTeamRosterData.studentName,
-          userId: newTeamRosterData.userId,
-        })
-        .from(newTeamRosterData)
-        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
+      const rosterWithUsers = getRosterEntries(team.subteamId);
 
       const linkedEntry = rosterWithUsers.find(
         (e) => e.eventName === eventName && e.slotIndex === slotIndex
@@ -230,10 +198,7 @@ describe("Roster Management E2E", () => {
       await createRosterEntry(team.subteamId, "Event", 10, "Student");
 
       // Verify entries exist
-      const entries = await dbPg
-        .select()
-        .from(newTeamRosterData)
-        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
+      const entries = getRosterEntries(team.subteamId);
 
       const slotIndices = entries.map((e) => e.slotIndex);
       expect(slotIndices).toContain(0);
@@ -248,10 +213,7 @@ describe("Roster Management E2E", () => {
       await createRosterEntry(team.subteamId, normalizedName, 7, "Student");
 
       // Verify entry uses normalized name
-      const [entry] = await dbPg
-        .select()
-        .from(newTeamRosterData)
-        .where(eq(newTeamRosterData.teamUnitId, team.subteamId));
+      const entry = getRosterEntry(team.subteamId, normalizedName, 7);
 
       expect(entry?.eventName).toBe(normalizedName);
     });

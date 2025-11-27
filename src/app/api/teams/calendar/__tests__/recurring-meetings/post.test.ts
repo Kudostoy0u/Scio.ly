@@ -2,6 +2,9 @@
  * POST endpoint tests for recurring meetings route
  */
 
+// Import mocks first to ensure they're set up before route handler
+import "./mocks";
+
 import { POST } from "@/app/api/teams/calendar/recurring-meetings/route";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -27,7 +30,10 @@ import { mockDbPg, mockGetServerUser } from "./mocks";
 
 describe("POST /api/teams/calendar/recurring-meetings", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Reset only the mocks we need, not all mocks
+    mockGetServerUser.mockReset();
+    mockDbPg.select.mockReset();
+    mockDbPg.insert.mockReset();
   });
 
   afterEach(() => {
@@ -35,6 +41,7 @@ describe("POST /api/teams/calendar/recurring-meetings", () => {
   });
 
   it("creates recurring meeting successfully for captain", async () => {
+    mockGetServerUser.mockReset();
     mockGetServerUser.mockResolvedValue(mockUser as { id: string });
 
     mockDbPg.select

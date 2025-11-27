@@ -50,6 +50,6 @@ export function createGetRequest(teamId: string, query?: string): NextRequest {
 }
 
 export function createParams(teamId: string) {
-  return Promise.resolve({ teamId });
+  return { params: Promise.resolve({ teamId }) };
 }
 

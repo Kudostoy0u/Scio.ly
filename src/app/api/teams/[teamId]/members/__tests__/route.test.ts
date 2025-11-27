@@ -2,6 +2,9 @@
  * Tests for GET /api/teams/[teamId]/members
  */
 
+// Import mocks first to ensure they're set up before route handler
+import "./mocks";
+
 import { GET } from "@/app/api/teams/[teamId]/members/route";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -35,9 +38,18 @@ import {
 
 describe("/api/teams/[teamId]/members", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Reset only the mocks we need, not all mocks
+    mockGetServerUser.mockReset();
+    mockGetTeamAccess.mockReset();
+    mockGetUserDisplayInfo.mockReset();
+    mockDbPg.select.mockReset();
+    mockQueryCockroachDb.mockReset();
+    
     setupConsoleMocks();
     mockQueryCockroachDb.mockResolvedValue({ rows: [] });
+    // Set up default mock for getServerUser - tests can override this
+    // Use mockResolvedValue to ensure it overrides the global mock
+    mockGetServerUser.mockResolvedValue(mockUser as any);
   });
 
   afterEach(() => {
@@ -46,6 +58,7 @@ describe("/api/teams/[teamId]/members", () => {
 
   describe("GET /api/teams/[teamId]/members", () => {
     it("should return 401 when user is not authenticated", async () => {
+      mockGetServerUser.mockReset();
       mockGetServerUser.mockResolvedValue(null);
 
       const request = createRequest(mockTeamId);
@@ -57,9 +70,11 @@ describe("/api/teams/[teamId]/members", () => {
     });
 
     it("should return 404 when team group is not found", async () => {
-      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue(mockUser as any);
+      // First query: team group lookup (returns empty)
       mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasLimit: true }));
+      // getTeamAccess is called with user.id and groupId (which is undefined since group not found)
+      // But the route should return 404 before calling getTeamAccess
+      // Actually, let me check the route - it might call getTeamAccess even if group not found
       mockGetTeamAccess.mockResolvedValue(mockTeamAccessNoAccess);
 
       const request = createRequest(mockTeamId);
@@ -71,8 +86,6 @@ describe("/api/teams/[teamId]/members", () => {
     });
 
     it("should return 403 when user has no access", async () => {
-      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue(mockUser as any);
       mockDbPg.select.mockReturnValueOnce(createDrizzleChain([mockTeamGroup], { hasLimit: true }));
       mockGetTeamAccess.mockResolvedValue(mockTeamAccessNoAccess);
 
@@ -85,8 +98,6 @@ describe("/api/teams/[teamId]/members", () => {
     });
 
     it("should return team creator as member when user is creator", async () => {
-      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue(mockUser as any);
       mockDbPg.select.mockReturnValueOnce(createDrizzleChain([mockTeamGroup], { hasLimit: true }));
       mockGetTeamAccess.mockResolvedValue(mockTeamAccessCreator);
       mockGetUserDisplayInfo.mockResolvedValue(mockUserProfile);
@@ -113,8 +124,6 @@ describe("/api/teams/[teamId]/members", () => {
     });
 
     it("should return subteam members when user has subteam membership", async () => {
-      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue(mockUser as any);
       mockDbPg.select.mockReturnValueOnce(createDrizzleChain([mockTeamGroup], { hasLimit: true }));
       mockGetTeamAccess.mockResolvedValue(mockTeamAccessSubteamMember);
       mockDbPg.select.mockReturnValueOnce(
@@ -139,8 +148,6 @@ describe("/api/teams/[teamId]/members", () => {
     });
 
     it("should filter by subteam when subteamId is provided", async () => {
-      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue(mockUser as any);
       mockDbPg.select.mockReturnValueOnce(createDrizzleChain([mockTeamGroup], { hasLimit: true }));
       mockGetTeamAccess.mockResolvedValue(mockTeamAccessSubteamMember);
       mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasInnerJoin: true }));
@@ -161,8 +168,6 @@ describe("/api/teams/[teamId]/members", () => {
     });
 
     it("should handle multiple subteam memberships correctly", async () => {
-      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue(mockUser as any);
       mockDbPg.select.mockReturnValueOnce(createDrizzleChain([mockTeamGroup], { hasLimit: true }));
       mockGetTeamAccess.mockResolvedValue(mockTeamAccessSubteamMember);
       mockDbPg.select.mockReturnValueOnce(
@@ -227,8 +232,6 @@ describe("/api/teams/[teamId]/members", () => {
     });
 
     it("should include unlinked roster members in the response", async () => {
-      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue(mockUser as any);
       mockDbPg.select.mockReturnValueOnce(createDrizzleChain([mockTeamGroup], { hasLimit: true }));
       mockGetTeamAccess.mockResolvedValue(mockTeamAccessSubteamMember);
       mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasInnerJoin: true }));
@@ -265,8 +268,6 @@ describe("/api/teams/[teamId]/members", () => {
     });
 
     it("should include both linked and unlinked members in the response", async () => {
-      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue(mockUser as any);
       mockDbPg.select.mockReturnValueOnce(createDrizzleChain([mockTeamGroup], { hasLimit: true }));
       mockGetTeamAccess.mockResolvedValue(mockTeamAccessSubteamMember);
       mockDbPg.select.mockReturnValueOnce(
@@ -323,8 +324,6 @@ describe("/api/teams/[teamId]/members", () => {
     });
 
     it("should filter unlinked roster members by subteam when subteamId is provided", async () => {
-      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue(mockUser as any);
       mockDbPg.select.mockReturnValueOnce(createDrizzleChain([mockTeamGroup], { hasLimit: true }));
       mockGetTeamAccess.mockResolvedValue(mockTeamAccessSubteamMember);
       mockDbPg.select.mockReturnValueOnce(createDrizzleChain([], { hasInnerJoin: true }));
@@ -347,8 +346,6 @@ describe("/api/teams/[teamId]/members", () => {
     });
 
     it("should handle database errors gracefully", async () => {
-      // biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-      mockGetServerUser.mockResolvedValue(mockUser as any);
       const errorChain = {
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockRejectedValue(new Error("Database connection failed")),

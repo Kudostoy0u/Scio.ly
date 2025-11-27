@@ -1,5 +1,5 @@
 import EnhancedAssignmentCreator from "@/app/teams/components/EnhancedAssignmentCreator";
-import type { AssignmentCreatorProps } from "@/app/teams/components/assignment/assignmentTypes";
+import type { AssignmentCreatorProps, Question } from "@/app/teams/components/assignment/assignmentTypes";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createAssignment } from "../assignment/assignmentUtils";
@@ -69,13 +69,15 @@ vi.mock("../assignment/RosterSelectionStep", () => ({
 }));
 
 // Mock the utility functions
-const fetchRosterMembers = vi.fn();
-const getEventSubtopics = vi.fn(() => ["Subtopic 1", "Subtopic 2"]);
-const getEventCapabilitiesForEvent = vi.fn(() => ({
-  supportsPictureQuestions: true,
-  supportsIdentificationOnly: false,
-}));
-const generateQuestions = vi.fn();
+const fetchRosterMembers = vi.hoisted(() => vi.fn());
+const getEventSubtopics = vi.hoisted(() => vi.fn(() => ["Subtopic 1", "Subtopic 2"]));
+const getEventCapabilitiesForEvent = vi.hoisted(() =>
+  vi.fn(() => ({
+    supportsPictureQuestions: true,
+    supportsIdentificationOnly: false,
+  }))
+);
+const generateQuestions = vi.hoisted(() => vi.fn());
 vi.mock("../assignment/assignmentUtils", () => ({
   getAvailableEvents: vi.fn(() => ["Test Event 1", "Test Event 2"]),
   getEventSubtopics,
@@ -86,13 +88,30 @@ vi.mock("../assignment/assignmentUtils", () => ({
 }));
 
 // Mock react-toastify
-const toast = {
+const toast = vi.hoisted(() => ({
   success: vi.fn(),
   error: vi.fn(),
-};
+}));
 vi.mock("react-toastify", () => ({
   toast,
 }));
+
+async function advanceToRosterStep() {
+  fireEvent.click(screen.getByText("Next: Generate Questions"));
+  await waitFor(() => {
+    expect(screen.getByTestId("question-generation-step")).toBeInTheDocument();
+  });
+
+  fireEvent.click(screen.getByText("Next: Preview Questions"));
+  await waitFor(() => {
+    expect(screen.getByText("Next: Select Roster")).toBeInTheDocument();
+  });
+
+  fireEvent.click(screen.getByText("Next: Select Roster"));
+  await waitFor(() => {
+    expect(screen.getByTestId("roster-selection-step")).toBeInTheDocument();
+  });
+}
 
 describe("EnhancedAssignmentCreator", () => {
   const mockProps: AssignmentCreatorProps = {
@@ -106,6 +125,8 @@ describe("EnhancedAssignmentCreator", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    generateQuestions.mockResolvedValue([{ id: "question-1" } as Question]);
+    createAssignment.mockResolvedValue({ id: "assignment123", title: "Test Assignment" });
   });
 
   describe("Rendering", () => {
@@ -137,7 +158,7 @@ describe("EnhancedAssignmentCreator", () => {
     it("renders close button", () => {
       render(<EnhancedAssignmentCreator {...mockProps} />);
 
-      const closeButton = screen.getByRole("button", { name: "" });
+      const closeButton = screen.getByRole("button", { name: /close/i });
       expect(closeButton).toBeInTheDocument();
     });
   });
@@ -175,20 +196,10 @@ describe("EnhancedAssignmentCreator", () => {
       expect(screen.queryByTestId("question-generation-step")).not.toBeInTheDocument();
     });
 
-    it("navigates through all steps", () => {
+    it("navigates through all steps", async () => {
       render(<EnhancedAssignmentCreator {...mockProps} />);
 
-      // Step 1 -> 2
-      fireEvent.click(screen.getByText("Next: Generate Questions"));
-      expect(screen.getByTestId("question-generation-step")).toBeInTheDocument();
-
-      // Step 2 -> 3
-      fireEvent.click(screen.getByText("Next: Preview Questions"));
-      expect(screen.getByTestId("question-preview-step")).toBeInTheDocument();
-
-      // Step 3 -> 4
-      fireEvent.click(screen.getByText("Next: Select Roster"));
-      expect(screen.getByTestId("roster-selection-step")).toBeInTheDocument();
+      await advanceToRosterStep();
     });
   });
 
@@ -243,7 +254,7 @@ describe("EnhancedAssignmentCreator", () => {
       });
     });
 
-    it("shows error toast when question generation fails", async () => {
+    it("shows error message when question generation fails", async () => {
       generateQuestions.mockRejectedValueOnce(new Error("Generation failed"));
 
       render(<EnhancedAssignmentCreator {...mockProps} />);
@@ -255,7 +266,9 @@ describe("EnhancedAssignmentCreator", () => {
       fireEvent.click(screen.getByText("Generate Questions"));
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalled();
+        expect(
+          screen.getByText("Failed to generate questions. Please try again.")
+        ).toBeInTheDocument();
       });
     });
   });
@@ -264,13 +277,10 @@ describe("EnhancedAssignmentCreator", () => {
     it("creates assignment when create button is clicked", async () => {
       render(<EnhancedAssignmentCreator {...mockProps} />);
 
-      // Navigate to step 4
-      fireEvent.click(screen.getByText("Next: Generate Questions"));
-      fireEvent.click(screen.getByText("Next: Preview Questions"));
-      fireEvent.click(screen.getByText("Next: Select Roster"));
+      await advanceToRosterStep();
 
       // Click create assignment
-      fireEvent.click(screen.getByText("Create Assignment"));
+      fireEvent.click(screen.getByRole("button", { name: "Create Assignment" }));
 
       await waitFor(() => {
         expect(createAssignment).toHaveBeenCalled();
@@ -280,13 +290,10 @@ describe("EnhancedAssignmentCreator", () => {
     it("calls onAssignmentCreated when assignment is created successfully", async () => {
       render(<EnhancedAssignmentCreator {...mockProps} />);
 
-      // Navigate to step 4
-      fireEvent.click(screen.getByText("Next: Generate Questions"));
-      fireEvent.click(screen.getByText("Next: Preview Questions"));
-      fireEvent.click(screen.getByText("Next: Select Roster"));
+      await advanceToRosterStep();
 
       // Click create assignment
-      fireEvent.click(screen.getByText("Create Assignment"));
+      fireEvent.click(screen.getByRole("button", { name: "Create Assignment" }));
 
       await waitFor(() => {
         expect(mockProps.onAssignmentCreated).toHaveBeenCalledWith({
@@ -299,13 +306,10 @@ describe("EnhancedAssignmentCreator", () => {
     it("shows success toast when assignment is created", async () => {
       render(<EnhancedAssignmentCreator {...mockProps} />);
 
-      // Navigate to step 4
-      fireEvent.click(screen.getByText("Next: Generate Questions"));
-      fireEvent.click(screen.getByText("Next: Preview Questions"));
-      fireEvent.click(screen.getByText("Next: Select Roster"));
+      await advanceToRosterStep();
 
       // Click create assignment
-      fireEvent.click(screen.getByText("Create Assignment"));
+      fireEvent.click(screen.getByRole("button", { name: "Create Assignment" }));
 
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith("Assignment created successfully!");
@@ -344,14 +348,14 @@ describe("EnhancedAssignmentCreator", () => {
     it("applies dark mode classes when darkMode is true", () => {
       render(<EnhancedAssignmentCreator {...mockProps} darkMode={true} />);
 
-      const modal = screen.getByText("Create Assignment").closest("div");
+      const modal = screen.getByText("Create Assignment").closest("div")?.parentElement?.parentElement;
       expect(modal).toHaveClass("bg-gray-800");
     });
 
     it("applies light mode classes when darkMode is false", () => {
       render(<EnhancedAssignmentCreator {...mockProps} darkMode={false} />);
 
-      const modal = screen.getByText("Create Assignment").closest("div");
+      const modal = screen.getByText("Create Assignment").closest("div")?.parentElement?.parentElement;
       expect(modal).toHaveClass("bg-white");
     });
   });
@@ -360,7 +364,7 @@ describe("EnhancedAssignmentCreator", () => {
     it("calls onCancel when close button is clicked", () => {
       render(<EnhancedAssignmentCreator {...mockProps} />);
 
-      const closeButton = screen.getByRole("button", { name: "" });
+      const closeButton = screen.getByRole("button", { name: /close/i });
       fireEvent.click(closeButton);
 
       expect(mockProps.onCancel).toHaveBeenCalled();

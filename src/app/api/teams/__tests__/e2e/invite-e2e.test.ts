@@ -10,15 +10,6 @@
  * - Authorization checks
  */
 
-import { dbPg } from "@/lib/db";
-import {
-  newTeamInvitations,
-  newTeamMemberships,
-  newTeamNotifications,
-  newTeamUnits,
-  users,
-} from "@/lib/db/schema";
-import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   type TestTeam,
@@ -28,6 +19,15 @@ import {
   cleanupTestData,
   createTestTeam,
   createTestUser,
+  createTeamInvitation,
+  createTeamNotification,
+  findUsersByEmail,
+  findUsersByUsername,
+  getMembershipsByTeamId,
+  getTeamInvitationById,
+  getTeamInvitations,
+  getTeamNotificationById,
+  getTeamUnit,
 } from "../utils/test-helpers";
 
 describe("Team Invitation E2E", () => {
@@ -57,31 +57,14 @@ describe("Team Invitation E2E", () => {
 
   describe("User Search", () => {
     it("should search users by username", async () => {
-      const searchResults = await dbPg
-        .select({
-          id: users.id,
-          username: users.username,
-          email: users.email,
-        })
-        .from(users)
-        .where(eq(users.username, "invitee"))
-        .limit(10);
-
+      const searchResults = findUsersByUsername("invitee");
       expect(searchResults.length).toBeGreaterThan(0);
       expect(searchResults[0]?.username).toBe("invitee");
     });
 
     it("should search users by email", async () => {
       const invitee = testUsers[2];
-      const searchResults = await dbPg
-        .select({
-          id: users.id,
-          email: users.email,
-        })
-        .from(users)
-        .where(eq(users.email, invitee.email))
-        .limit(10);
-
+      const searchResults = findUsersByEmail(invitee.email);
       expect(searchResults.length).toBeGreaterThan(0);
       expect(searchResults[0]?.email).toBe(invitee.email);
     });
@@ -92,28 +75,19 @@ describe("Team Invitation E2E", () => {
       const team = testTeams[0];
       const invitee = testUsers[2];
 
-      // Create invitation
-      const [invitation] = await dbPg
-        .insert(newTeamInvitations)
-        .values({
-          teamId: team.subteamId,
-          invitedBy: testUsers[0].id,
-          email: invitee.email,
-          role: "member",
-          invitationCode: "TEST-CODE-123",
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-          status: "pending",
-        })
-        .returning({ id: newTeamInvitations.id });
+      const invitation = createTeamInvitation({
+        teamId: team.subteamId,
+        invitedBy: testUsers[0].id,
+        email: invitee.email,
+        role: "member",
+        invitationCode: "TEST-CODE-123",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
 
       expect(invitation).toBeDefined();
-      expect(invitation?.id).toBeDefined();
+      expect(invitation.id).toBeDefined();
 
-      // Verify invitation exists
-      const [retrievedInvitation] = await dbPg
-        .select()
-        .from(newTeamInvitations)
-        .where(eq(newTeamInvitations.id, invitation.id));
+      const retrievedInvitation = getTeamInvitationById(invitation.id);
 
       expect(retrievedInvitation).toBeDefined();
       expect(retrievedInvitation?.email).toBe(invitee.email);
@@ -129,18 +103,11 @@ describe("Team Invitation E2E", () => {
       if (!invitee) {
         throw new Error("Test setup failed: missing invitee");
       }
-
-      // Check for existing invitation
-      const existingInvitations = await dbPg
-        .select()
-        .from(newTeamInvitations)
-        .where(
-          and(
-            eq(newTeamInvitations.teamId, team.subteamId),
-            eq(newTeamInvitations.email, invitee.email),
-            eq(newTeamInvitations.status, "pending")
-          )
-        );
+      const existingInvitations = getTeamInvitations({
+        teamId: team.subteamId,
+        email: invitee.email,
+        status: "pending",
+      });
 
       // If invitation exists, we should not create another
       if (existingInvitations.length > 0) {
@@ -154,29 +121,21 @@ describe("Team Invitation E2E", () => {
       const team = testTeams[0];
       const invitee = testUsers[2];
 
-      // Create notification
-      const [notification] = await dbPg
-        .insert(newTeamNotifications)
-        .values({
-          userId: invitee.id,
-          teamId: team.subteamId,
-          type: "team_invite",
-          title: "Team Invitation",
-          message: "You've been invited to join the team",
-        })
-        .returning({ id: newTeamNotifications.id });
+      const notification = createTeamNotification({
+        userId: invitee.id,
+        teamId: team.subteamId,
+        notificationType: "team_invite",
+        title: "Team Invitation",
+        message: "You've been invited to join the team",
+      });
 
       expect(notification).toBeDefined();
-      expect(notification?.id).toBeDefined();
+      expect(notification.id).toBeDefined();
 
-      // Verify notification exists
-      const [retrievedNotification] = await dbPg
-        .select()
-        .from(newTeamNotifications)
-        .where(eq(newTeamNotifications.id, notification.id));
+      const retrievedNotification = getTeamNotificationById(notification.id);
 
       expect(retrievedNotification).toBeDefined();
-      expect(retrievedNotification?.type).toBe("team_invite");
+      expect(retrievedNotification?.notificationType).toBe("team_invite");
       expect(retrievedNotification?.userId).toBe(invitee.id);
     });
   });
@@ -196,16 +155,9 @@ describe("Team Invitation E2E", () => {
       await assertUserIsMember(captain.id, team.subteamId, "captain");
 
       // Verify captain has permission to invite
-      const [membership] = await dbPg
-        .select()
-        .from(newTeamMemberships)
-        .where(
-          and(
-            eq(newTeamMemberships.userId, captain.id),
-            eq(newTeamMemberships.teamId, team.subteamId),
-            eq(newTeamMemberships.status, "active")
-          )
-        );
+      const membership = getMembershipsByTeamId(team.subteamId).find(
+        (entry) => entry.userId === captain.id
+      );
 
       expect(membership).toBeDefined();
       expect(["captain", "co_captain"]).toContain(membership.role);
@@ -222,15 +174,9 @@ describe("Team Invitation E2E", () => {
       }
 
       // Check if user is already a member
-      const existingMemberships = await dbPg
-        .select()
-        .from(newTeamMemberships)
-        .where(
-          and(
-            eq(newTeamMemberships.userId, existingMember.id),
-            eq(newTeamMemberships.teamId, team.subteamId)
-          )
-        );
+      const existingMemberships = getMembershipsByTeamId(team.subteamId).filter(
+        (membership) => membership.userId === existingMember.id
+      );
 
       expect(existingMemberships.length).toBeGreaterThan(0);
     });
@@ -240,15 +186,7 @@ describe("Team Invitation E2E", () => {
     it("should retrieve team codes for invitation", async () => {
       const team = testTeams[0];
 
-      // Get team codes
-      const [teamUnit] = await dbPg
-        .select({
-          userCode: newTeamUnits.userCode,
-          captainCode: newTeamUnits.captainCode,
-        })
-        .from(newTeamUnits)
-        .where(eq(newTeamUnits.id, team.subteamId))
-        .limit(1);
+      const teamUnit = getTeamUnit(team.subteamId);
 
       expect(teamUnit).toBeDefined();
       expect(teamUnit?.userCode).toBeDefined();

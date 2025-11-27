@@ -9,17 +9,19 @@
  * - Authorization checks
  */
 
-import { dbPg } from "@/lib/db";
-import { newTeamActiveTimers, newTeamEvents, newTeamMemberships } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   type TestTeam,
   type TestUser,
   addTeamMember,
   cleanupTestData,
+  addActiveTimer,
   createTestTeam,
   createTestUser,
+  createEvent,
+  deleteActiveTimer,
+  getActiveTimersByTeamUnit,
+  getMembershipsByUser,
 } from "../utils/test-helpers";
 
 describe("Timer Management E2E", () => {
@@ -51,39 +53,29 @@ describe("Timer Management E2E", () => {
       const team = testTeams[0];
       const captain = testUsers[0];
 
-      // Create a test event first
-      const [event] = await dbPg
-        .insert(newTeamEvents)
-        .values({
-          teamId: team.subteamId,
-          createdBy: captain.id,
-          title: "Test Tournament",
-          eventType: "tournament",
-          startTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-        })
-        .returning({ id: newTeamEvents.id });
+      const event = createEvent({
+        teamId: team.subteamId,
+        createdBy: captain.id,
+        title: "Test Tournament",
+        eventType: "tournament",
+        startTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
 
       expect(event).toBeDefined();
-      expect(event?.id).toBeDefined();
+      expect(event.id).toBeDefined();
 
-      // Create timer
-      const [timer] = await dbPg
-        .insert(newTeamActiveTimers)
-        .values({
-          teamUnitId: team.subteamId,
-          eventId: event.id,
-          addedBy: captain.id,
-        })
-        .returning({ id: newTeamActiveTimers.id });
+      const timer = addActiveTimer({
+        teamUnitId: team.subteamId,
+        eventId: event.id,
+        addedBy: captain.id,
+      });
 
       expect(timer).toBeDefined();
-      expect(timer?.id).toBeDefined();
+      expect(timer.id).toBeDefined();
 
-      // Verify timer exists
-      const [retrievedTimer] = await dbPg
-        .select()
-        .from(newTeamActiveTimers)
-        .where(eq(newTeamActiveTimers.id, timer.id));
+      const retrievedTimer = getActiveTimersByTeamUnit(team.subteamId).find(
+        (entry) => entry.id === timer.id
+      );
 
       expect(retrievedTimer).toBeDefined();
       expect(retrievedTimer?.teamUnitId).toBe(team.subteamId);
@@ -95,30 +87,22 @@ describe("Timer Management E2E", () => {
       const team = testTeams[0];
       const captain = testUsers[0];
 
-      // Create a test event
-      const [event] = await dbPg
-        .insert(newTeamEvents)
-        .values({
-          teamId: team.subteamId,
-          createdBy: captain.id,
-          title: "Duplicate Test Event",
-          eventType: "practice",
-          startTime: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-        })
-        .returning({ id: newTeamEvents.id });
+      const event = createEvent({
+        teamId: team.subteamId,
+        createdBy: captain.id,
+        title: "Duplicate Test Event",
+        eventType: "practice",
+        startTime: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      });
 
-      // Create first timer
-      await dbPg.insert(newTeamActiveTimers).values({
+      addActiveTimer({
         teamUnitId: team.subteamId,
         eventId: event.id,
         addedBy: captain.id,
       });
 
       // Try to create duplicate
-      const existingTimers = await dbPg
-        .select()
-        .from(newTeamActiveTimers)
-        .where(eq(newTeamActiveTimers.teamUnitId, team.subteamId));
+      const existingTimers = getActiveTimersByTeamUnit(team.subteamId);
 
       const duplicateCount = existingTimers.filter((t) => t.eventId === event.id).length;
       expect(duplicateCount).toBe(1); // Should only be one
@@ -130,47 +114,35 @@ describe("Timer Management E2E", () => {
       const team = testTeams[0];
       const captain = testUsers[0];
 
-      // Create multiple events and timers
-      const [event1] = await dbPg
-        .insert(newTeamEvents)
-        .values({
-          teamId: team.subteamId,
-          createdBy: captain.id,
-          title: "Event 1",
-          eventType: "tournament",
-          startTime: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
-        })
-        .returning({ id: newTeamEvents.id });
+      const event1 = createEvent({
+        teamId: team.subteamId,
+        createdBy: captain.id,
+        title: "Event 1",
+        eventType: "tournament",
+        startTime: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
+      });
 
-      const [event2] = await dbPg
-        .insert(newTeamEvents)
-        .values({
-          teamId: team.subteamId,
-          createdBy: captain.id,
-          title: "Event 2",
-          eventType: "practice",
-          startTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-        })
-        .returning({ id: newTeamEvents.id });
+      const event2 = createEvent({
+        teamId: team.subteamId,
+        createdBy: captain.id,
+        title: "Event 2",
+        eventType: "practice",
+        startTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      });
 
-      // Create timers
-      await dbPg.insert(newTeamActiveTimers).values({
+      addActiveTimer({
         teamUnitId: team.subteamId,
         eventId: event1.id,
         addedBy: captain.id,
       });
 
-      await dbPg.insert(newTeamActiveTimers).values({
+      addActiveTimer({
         teamUnitId: team.subteamId,
         eventId: event2.id,
         addedBy: captain.id,
       });
 
-      // Retrieve timers
-      const timers = await dbPg
-        .select()
-        .from(newTeamActiveTimers)
-        .where(eq(newTeamActiveTimers.teamUnitId, team.subteamId));
+      const timers = getActiveTimersByTeamUnit(team.subteamId);
 
       expect(timers.length).toBeGreaterThanOrEqual(2);
     });
@@ -181,36 +153,23 @@ describe("Timer Management E2E", () => {
       const team = testTeams[0];
       const captain = testUsers[0];
 
-      // Create event and timer
-      const [event] = await dbPg
-        .insert(newTeamEvents)
-        .values({
-          teamId: team.subteamId,
-          createdBy: captain.id,
-          title: "Delete Test Event",
-          eventType: "tournament",
-          startTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-        })
-        .returning({ id: newTeamEvents.id });
+      const event = createEvent({
+        teamId: team.subteamId,
+        createdBy: captain.id,
+        title: "Delete Test Event",
+        eventType: "tournament",
+        startTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+      });
 
-      const [timer] = await dbPg
-        .insert(newTeamActiveTimers)
-        .values({
-          teamUnitId: team.subteamId,
-          eventId: event.id,
-          addedBy: captain.id,
-        })
-        .returning({ id: newTeamActiveTimers.id });
+      const timer = addActiveTimer({
+        teamUnitId: team.subteamId,
+        eventId: event.id,
+        addedBy: captain.id,
+      });
 
-      // Delete timer
-      await dbPg.delete(newTeamActiveTimers).where(eq(newTeamActiveTimers.id, timer.id));
+      deleteActiveTimer(timer.id);
 
-      // Verify deletion
-      const [deletedTimer] = await dbPg
-        .select()
-        .from(newTeamActiveTimers)
-        .where(eq(newTeamActiveTimers.id, timer.id));
-
+      const deletedTimer = getActiveTimersByTeamUnit(team.subteamId).find((t) => t.id === timer.id);
       expect(deletedTimer).toBeUndefined();
     });
   });
@@ -222,18 +181,12 @@ describe("Timer Management E2E", () => {
       const member = testUsers[1];
 
       // Verify captain membership
-      const [captainMembership] = await dbPg
-        .select()
-        .from(newTeamMemberships)
-        .where(eq(newTeamMemberships.userId, captain.id));
+      const captainMembership = getMembershipsByUser(captain.id)[0];
 
       expect(captainMembership?.role).toBe("captain");
 
       // Verify member is not captain
-      const [memberMembership] = await dbPg
-        .select()
-        .from(newTeamMemberships)
-        .where(eq(newTeamMemberships.userId, member.id));
+      const memberMembership = getMembershipsByUser(member.id)[0];
 
       expect(memberMembership?.role).toBe("member");
       expect(memberMembership?.role).not.toBe("captain");

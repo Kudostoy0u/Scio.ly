@@ -2,6 +2,9 @@
  * GET endpoint tests for roster invite route
  */
 
+// Import mocks first to ensure they're set up before route handler
+import "./mocks";
+
 import { GET } from "@/app/api/teams/[teamId]/roster/invite/route";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockGroup, mockMembership, mockSearchResults } from "./fixtures";
@@ -16,7 +19,10 @@ import type { DrizzleMockChain } from "./mocks";
 
 describe("GET /api/teams/[teamId]/roster/invite", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Reset only the mocks we need, not all mocks
+    mockGetServerUser.mockReset();
+    mockDbPg.select.mockReset();
+    
     process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
     mockGetServerUser.mockResolvedValue({
       id: "user-123",

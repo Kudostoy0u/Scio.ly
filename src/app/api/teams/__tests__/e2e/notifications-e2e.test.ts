@@ -9,9 +9,6 @@
  * - Filtering by read status
  */
 
-import { dbPg } from "@/lib/db";
-import { newTeamNotifications } from "@/lib/db/schema/notifications";
-import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   type TestTeam,
@@ -19,6 +16,11 @@ import {
   cleanupTestData,
   createTestTeam,
   createTestUser,
+  createTeamNotification,
+  deleteTeamNotification,
+  getNotificationsByUser,
+  getTeamNotificationById,
+  updateTeamNotification,
 } from "../utils/test-helpers";
 
 describe("Notifications Management E2E", () => {
@@ -46,27 +48,19 @@ describe("Notifications Management E2E", () => {
       const team = testTeams[0];
       const user = testUsers[0];
 
-      // Create notification
-      const [notification] = await dbPg
-        .insert(newTeamNotifications)
-        .values({
-          userId: user.id,
-          teamId: team.subteamId,
-          notificationType: "invitation",
-          title: "Test Notification",
-          message: "You have been invited to join a team",
-          isRead: false,
-        })
-        .returning({ id: newTeamNotifications.id });
+      const notification = createTeamNotification({
+        userId: user.id,
+        teamId: team.subteamId,
+        notificationType: "invitation",
+        title: "Test Notification",
+        message: "You have been invited to join a team",
+        isRead: false,
+      });
 
       expect(notification).toBeDefined();
-      expect(notification?.id).toBeDefined();
+      expect(notification.id).toBeDefined();
 
-      // Verify notification exists
-      const [retrievedNotification] = await dbPg
-        .select()
-        .from(newTeamNotifications)
-        .where(eq(newTeamNotifications.id, notification.id));
+      const retrievedNotification = getTeamNotificationById(notification.id);
 
       expect(retrievedNotification).toBeDefined();
       expect(retrievedNotification?.userId).toBe(user.id);
@@ -80,7 +74,7 @@ describe("Notifications Management E2E", () => {
       const user = testUsers[0];
 
       // Create multiple notifications
-      await dbPg.insert(newTeamNotifications).values({
+      createTeamNotification({
         userId: user.id,
         teamId: team.subteamId,
         notificationType: "assignment",
@@ -89,7 +83,7 @@ describe("Notifications Management E2E", () => {
         isRead: false,
       });
 
-      await dbPg.insert(newTeamNotifications).values({
+      createTeamNotification({
         userId: user.id,
         teamId: team.subteamId,
         notificationType: "event",
@@ -98,11 +92,7 @@ describe("Notifications Management E2E", () => {
         isRead: true,
       });
 
-      // Retrieve notifications
-      const notifications = await dbPg
-        .select()
-        .from(newTeamNotifications)
-        .where(eq(newTeamNotifications.userId, user.id));
+      const notifications = getNotificationsByUser(user.id);
 
       expect(notifications.length).toBeGreaterThanOrEqual(2);
     });
@@ -112,7 +102,7 @@ describe("Notifications Management E2E", () => {
       const user = testUsers[0];
 
       // Create read and unread notifications
-      await dbPg.insert(newTeamNotifications).values({
+      createTeamNotification({
         userId: user.id,
         teamId: team.subteamId,
         notificationType: "message",
@@ -121,11 +111,7 @@ describe("Notifications Management E2E", () => {
         isRead: false,
       });
 
-      // Retrieve only unread notifications
-      const unreadNotifications = await dbPg
-        .select()
-        .from(newTeamNotifications)
-        .where(eq(newTeamNotifications.userId, user.id));
+      const unreadNotifications = getNotificationsByUser(user.id);
 
       const unreadCount = unreadNotifications.filter((n) => !n.isRead).length;
       expect(unreadCount).toBeGreaterThanOrEqual(1);
@@ -138,32 +124,18 @@ describe("Notifications Management E2E", () => {
       const user = testUsers[0];
 
       // Create unread notification
-      const [notification] = await dbPg
-        .insert(newTeamNotifications)
-        .values({
-          userId: user.id,
-          teamId: team.subteamId,
-          notificationType: "invitation",
-          title: "Mark as Read Test",
-          message: "This should be marked as read",
-          isRead: false,
-        })
-        .returning({ id: newTeamNotifications.id });
+      const notification = createTeamNotification({
+        userId: user.id,
+        teamId: team.subteamId,
+        notificationType: "invitation",
+        title: "Mark as Read Test",
+        message: "This should be marked as read",
+        isRead: false,
+      });
 
-      // Mark as read
-      await dbPg
-        .update(newTeamNotifications)
-        .set({
-          isRead: true,
-          readAt: new Date(),
-        })
-        .where(eq(newTeamNotifications.id, notification.id));
+      updateTeamNotification(notification.id, { isRead: true, readAt: new Date() });
 
-      // Verify it's marked as read
-      const [updatedNotification] = await dbPg
-        .select()
-        .from(newTeamNotifications)
-        .where(eq(newTeamNotifications.id, notification.id));
+      const updatedNotification = getTeamNotificationById(notification.id);
 
       expect(updatedNotification?.isRead).toBe(true);
       expect(updatedNotification?.readAt).toBeDefined();
@@ -176,26 +148,18 @@ describe("Notifications Management E2E", () => {
       const user = testUsers[0];
 
       // Create notification
-      const [notification] = await dbPg
-        .insert(newTeamNotifications)
-        .values({
-          userId: user.id,
-          teamId: team.subteamId,
-          notificationType: "invitation",
-          title: "Delete Test",
-          message: "This should be deleted",
-          isRead: false,
-        })
-        .returning({ id: newTeamNotifications.id });
+      const notification = createTeamNotification({
+        userId: user.id,
+        teamId: team.subteamId,
+        notificationType: "invitation",
+        title: "Delete Test",
+        message: "This should be deleted",
+        isRead: false,
+      });
 
-      // Delete notification
-      await dbPg.delete(newTeamNotifications).where(eq(newTeamNotifications.id, notification.id));
+      deleteTeamNotification(notification.id);
 
-      // Verify deletion
-      const [deletedNotification] = await dbPg
-        .select()
-        .from(newTeamNotifications)
-        .where(eq(newTeamNotifications.id, notification.id));
+      const deletedNotification = getTeamNotificationById(notification.id);
 
       expect(deletedNotification).toBeUndefined();
     });
