@@ -111,11 +111,16 @@ export default function MetricsCard({
     return renderFractionDisplay(numerator, denominator);
   };
 
+  // Compute opacity for each face to prevent z-fighting between 0deg and 360deg faces
+  const getDailyOpacity = () => (view === "daily" ? 1 : 0);
+  const getWeeklyOpacity = () => (view === "weekly" ? 1 : 0);
+  const getAllTimeOpacity = () => (view === "allTime" ? 1 : 0);
+
   return (
     <div className="perspective-1000 hover:scale-[1.02] transition-transform duration-300 text-center">
       <button
         type="button"
-        className="w-full h-32 p-0 rounded-lg cursor-pointer transition-transform duration-700 relative overflow-hidden"
+        className="w-full h-32 p-0 rounded-lg cursor-pointer transition-transform duration-700 relative"
         style={{
           transformStyle: "preserve-3d",
           transform:
@@ -131,12 +136,13 @@ export default function MetricsCard({
       >
         {/* Daily View */}
         <div
-          className={`absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 py-4 md:px-5 ${cardStyle}`}
+          className={`absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 py-4 md:px-5 rounded-lg ${cardStyle}`}
           style={{
             backfaceVisibility: "hidden",
             transform: "rotateX(0deg)",
-            opacity: view === "daily" ? 1 : 0,
-            visibility: view === "daily" ? "visible" : "hidden",
+            opacity: getDailyOpacity(),
+            transition: "opacity 0ms",
+            pointerEvents: view === "daily" ? "auto" : "none",
           }}
         >
           <h3
@@ -149,12 +155,13 @@ export default function MetricsCard({
 
         {/* Weekly View */}
         <div
-          className={`absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 py-4 md:px-5 ${cardStyle}`}
+          className={`absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 py-4 md:px-5 rounded-lg ${cardStyle}`}
           style={{
             backfaceVisibility: "hidden",
             transform: "rotateX(180deg)",
-            opacity: view === "weekly" ? 1 : 0,
-            visibility: view === "weekly" ? "visible" : "hidden",
+            opacity: getWeeklyOpacity(),
+            transition: "opacity 0ms",
+            pointerEvents: view === "weekly" ? "auto" : "none",
           }}
         >
           <h3
@@ -167,12 +174,13 @@ export default function MetricsCard({
 
         {/* All Time View */}
         <div
-          className={`absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 py-4 md:px-5 ${cardStyle}`}
+          className={`absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 py-4 md:px-5 rounded-lg ${cardStyle}`}
           style={{
             backfaceVisibility: "hidden",
             transform: "rotateX(360deg)",
-            opacity: view === "allTime" ? 1 : 0,
-            visibility: view === "allTime" ? "visible" : "hidden",
+            opacity: getAllTimeOpacity(),
+            transition: "opacity 0ms",
+            pointerEvents: view === "allTime" ? "auto" : "none",
           }}
         >
           <h3

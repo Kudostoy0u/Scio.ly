@@ -4,6 +4,7 @@
  * Provides utilities for creating test data, mocking requests, and cleaning up test fixtures.
  */
 
+// biome-ignore lint/correctness/noNodejsModules: randomUUID is needed for test data generation
 import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
 
@@ -422,7 +423,9 @@ export function getMembership(userId: string, teamId: string) {
 }
 
 export function getRosterEntries(teamUnitId: string) {
-  return Array.from(mockDb.rosterEntries.values()).filter((entry) => entry.teamUnitId === teamUnitId);
+  return Array.from(mockDb.rosterEntries.values()).filter(
+    (entry) => entry.teamUnitId === teamUnitId
+  );
 }
 
 export function getRosterEntry(teamUnitId: string, eventName: string, slotIndex: number) {
@@ -474,7 +477,9 @@ export function addEventAttendee(eventId: string, userId: string, status: string
 }
 
 export function getEventAttendees(eventId: string) {
-  return Array.from(mockDb.eventAttendees.values()).filter((attendee) => attendee.eventId === eventId);
+  return Array.from(mockDb.eventAttendees.values()).filter(
+    (attendee) => attendee.eventId === eventId
+  );
 }
 
 export function createAssignment(data: Omit<AssignmentRecord, "id">) {
@@ -484,7 +489,9 @@ export function createAssignment(data: Omit<AssignmentRecord, "id">) {
 }
 
 export function getAssignmentsByTeamId(teamId: string) {
-  return Array.from(mockDb.assignments.values()).filter((assignment) => assignment.teamId === teamId);
+  return Array.from(mockDb.assignments.values()).filter(
+    (assignment) => assignment.teamId === teamId
+  );
 }
 
 export function createAssignmentQuestions(
@@ -538,7 +545,9 @@ export function findUsersByEmail(email: string) {
   return Array.from(mockDb.users.values()).filter((user) => user.email === email);
 }
 
-export function createTeamInvitation(data: Omit<TeamInvitationRecord, "id" | "status"> & { status?: TeamInvitationRecord["status"] }) {
+export function createTeamInvitation(
+  data: Omit<TeamInvitationRecord, "id" | "status"> & { status?: TeamInvitationRecord["status"] }
+) {
   const id = nextId();
   const invitation: TeamInvitationRecord = {
     id,
@@ -553,7 +562,11 @@ export function getTeamInvitationById(invitationId: string) {
   return mockDb.teamInvitations.get(invitationId);
 }
 
-export function getTeamInvitations(filter: { teamId?: string; email?: string; status?: TeamInvitationRecord["status"] }) {
+export function getTeamInvitations(filter: {
+  teamId?: string;
+  email?: string;
+  status?: TeamInvitationRecord["status"];
+}) {
   return Array.from(mockDb.teamInvitations.values()).filter((invitation) => {
     if (filter.teamId && invitation.teamId !== filter.teamId) {
       return false;
@@ -587,10 +600,15 @@ export function getTeamNotificationById(notificationId: string) {
 }
 
 export function getNotificationsByUser(userId: string) {
-  return Array.from(mockDb.teamNotifications.values()).filter((notification) => notification.userId === userId);
+  return Array.from(mockDb.teamNotifications.values()).filter(
+    (notification) => notification.userId === userId
+  );
 }
 
-export function updateTeamNotification(notificationId: string, updates: Partial<TeamNotificationRecord>) {
+export function updateTeamNotification(
+  notificationId: string,
+  updates: Partial<TeamNotificationRecord>
+) {
   const existing = mockDb.teamNotifications.get(notificationId);
   if (existing) {
     mockDb.teamNotifications.set(notificationId, { ...existing, ...updates });
@@ -615,7 +633,9 @@ export function addActiveTimer(data: Omit<TeamActiveTimerRecord, "id" | "addedAt
 }
 
 export function getActiveTimersByTeamUnit(teamUnitId: string) {
-  return Array.from(mockDb.activeTimers.values()).filter((timer) => timer.teamUnitId === teamUnitId);
+  return Array.from(mockDb.activeTimers.values()).filter(
+    (timer) => timer.teamUnitId === teamUnitId
+  );
 }
 
 export function deleteActiveTimer(timerId: string) {
@@ -623,7 +643,9 @@ export function deleteActiveTimer(timerId: string) {
 }
 
 export function getMembershipsByTeamId(teamId: string) {
-  return Array.from(mockDb.memberships.values()).filter((membership) => membership.teamId === teamId);
+  return Array.from(mockDb.memberships.values()).filter(
+    (membership) => membership.teamId === teamId
+  );
 }
 
 export function getMembershipsByGroupId(groupId: string) {
@@ -637,5 +659,7 @@ export function getMembershipsByGroupId(groupId: string) {
 }
 
 export function getMembershipsByUser(userId: string) {
-  return Array.from(mockDb.memberships.values()).filter((membership) => membership.userId === userId);
+  return Array.from(mockDb.memberships.values()).filter(
+    (membership) => membership.userId === userId
+  );
 }

@@ -22,7 +22,7 @@ describe("GET /api/teams/[teamId]/roster/invite", () => {
     // Reset only the mocks we need, not all mocks
     mockGetServerUser.mockReset();
     mockDbPg.select.mockReset();
-    
+
     process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
     mockGetServerUser.mockResolvedValue({
       id: "user-123",
@@ -120,4 +120,3 @@ describe("GET /api/teams/[teamId]/roster/invite", () => {
     expect(data.error).toBe("Only captains can search users");
   });
 });
-

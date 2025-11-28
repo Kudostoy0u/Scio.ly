@@ -33,4 +33,3 @@ export const mockGetTeamAccess = vi.mocked(getTeamAccess);
 export const mockDbPg = vi.mocked(dbPg);
 export const mockGetUserDisplayInfo = vi.mocked(getUserDisplayInfo);
 export const mockQueryCockroachDb = vi.mocked(queryCockroachDB);
-

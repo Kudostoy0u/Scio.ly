@@ -350,9 +350,7 @@ export function useTestSubmission(
     await updateUserMetrics(routerData, mcqTotal, mcqScore);
     await submitEnhancedAssignment(routerData, data, userAnswers, mcqScore, mcqTotal, timeLeft);
     await submitLegacyAssignment(routerData, mcqScore, mcqTotal);
-    // setGradingFrQs is a setState function and doesn't need to be in dependencies
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, userAnswers, gradingResults, routerData, timeLeft]);
+  }, [data, userAnswers, gradingResults, routerData, timeLeft, setGradingFrQs]);
 
   /**
    * Reload questions with the same parameters

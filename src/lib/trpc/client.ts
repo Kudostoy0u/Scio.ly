@@ -3,7 +3,6 @@ import superjson from "superjson";
 import type { AppRouter } from "./routers/_app";
 
 export const trpc = createTRPCReact<AppRouter>();
-export const api = trpc;
 export type TRPCUtils = ReturnType<typeof trpc.useUtils>;
 
 export function getTRPCClient() {

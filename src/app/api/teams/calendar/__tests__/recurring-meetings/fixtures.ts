@@ -47,4 +47,3 @@ export const mockMembershipMember = {
   role: "member",
   teamId: mockTeamId,
 };
-

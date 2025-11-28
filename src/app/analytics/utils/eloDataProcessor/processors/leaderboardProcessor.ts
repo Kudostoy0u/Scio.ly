@@ -31,15 +31,28 @@ const findEloAtDate = (history: EloHistoryEntry[], targetDate: string): number |
     }
   }
 
-  return bestMatch ? bestMatch.e : null;
+  if (!bestMatch) {
+    return null;
+  }
+
+  // Validate that bestMatch.e is a valid number
+  const eloValue = bestMatch.e;
+  if (!Number.isFinite(eloValue)) {
+    return null;
+  }
+
+  return eloValue;
 };
 
 function getEloRatingForEvent(
   eventData: { rating: number; history?: Array<{ d: string; r: number }> },
   date?: string
 ): number {
+  // Validate eventData.rating is a valid number
+  const defaultRating = Number.isFinite(eventData.rating) ? eventData.rating : 1500;
+
   if (!(date && eventData.history) || eventData.history.length === 0) {
-    return eventData.rating;
+    return defaultRating;
   }
 
   const sortedHistory = [...eventData.history].sort((a, b) => {
@@ -57,7 +70,11 @@ function getEloRatingForEvent(
   }));
 
   const historicalElo = findEloAtDate(eloHistoryEntries, date);
-  return historicalElo !== null ? historicalElo : 1500;
+  // Check for both null and NaN
+  if (historicalElo !== null && Number.isFinite(historicalElo)) {
+    return historicalElo;
+  }
+  return defaultRating;
 }
 
 function processSchoolForLeaderboard(
@@ -150,4 +167,3 @@ export const getLeaderboard = (
 
   return entries.sort((a, b) => b.elo - a.elo).slice(0, limit);
 };
-

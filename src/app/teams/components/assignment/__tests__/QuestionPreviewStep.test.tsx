@@ -112,15 +112,15 @@ describe("QuestionPreviewStep", () => {
       // Check that correct answers are displayed
       // "Paris" appears in the option list with checkmark
       expect(screen.getByText("Paris")).toBeInTheDocument();
-      
+
       // For free_response, the answer is shown in a "Correct Answer:" section if answers array exists
       // The question text should still be visible
       expect(screen.getByText("Explain the process of photosynthesis.")).toBeInTheDocument();
-      
+
       // The answer text should be visible in the "Correct Answer:" section
       // Use getAllByText since the text might appear in multiple places
       const answerElements = screen.getAllByText(
-        (content, element) => {
+        (_content, element) => {
           return (
             element?.textContent?.includes(
               "Photosynthesis is the process by which plants convert light energy into chemical energy."
@@ -130,7 +130,7 @@ describe("QuestionPreviewStep", () => {
         { exact: false }
       );
       expect(answerElements.length).toBeGreaterThan(0);
-      
+
       // Codebusters questions don't show answers in a "Correct Answer:" section
       // Only free_response questions show answers when showAnswers is true
       // So we just verify the question text is visible

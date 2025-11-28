@@ -44,12 +44,12 @@ describe("/api/teams/[teamId]/members", () => {
     mockGetUserDisplayInfo.mockReset();
     mockDbPg.select.mockReset();
     mockQueryCockroachDb.mockReset();
-    
+
     setupConsoleMocks();
     mockQueryCockroachDb.mockResolvedValue({ rows: [] });
     // Set up default mock for getServerUser - tests can override this
     // Use mockResolvedValue to ensure it overrides the global mock
-    mockGetServerUser.mockResolvedValue(mockUser as any);
+    mockGetServerUser.mockResolvedValue(mockUser as { id: string });
   });
 
   afterEach(() => {

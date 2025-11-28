@@ -78,4 +78,3 @@ export const mockTeamAccessSubteamMember = {
   subteamMemberships: [{ subteamId: mockSubteamId, teamId: mockSubteamId, role: "captain" }],
   rosterSubteams: [],
 };
-

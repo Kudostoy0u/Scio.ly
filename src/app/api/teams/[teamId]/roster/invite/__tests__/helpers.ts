@@ -16,7 +16,10 @@ export function createMockDrizzleChain(result: unknown[] | unknown): DrizzleMock
   } as unknown as DrizzleMockChain;
 }
 
-export function createMockDrizzleChainWithJoin(result: unknown[] | unknown, hasLimit = false): DrizzleMockChain {
+export function createMockDrizzleChainWithJoin(
+  result: unknown[] | unknown,
+  hasLimit = false
+): DrizzleMockChain {
   const resultArray = Array.isArray(result) ? result : [result];
   if (hasLimit) {
     return {
@@ -76,4 +79,3 @@ export function createGetRequest(teamId: string, query?: string): NextRequest {
 export function createParams(teamId: string) {
   return { params: Promise.resolve({ teamId }) };
 }
-

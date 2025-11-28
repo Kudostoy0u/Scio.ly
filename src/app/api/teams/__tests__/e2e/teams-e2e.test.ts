@@ -153,7 +153,7 @@ async function createTestTeam(creatorId: string): Promise<TestTeam> {
 /**
  * Cleans up test data
  */
-async function cleanupTestData(userIds: string[], teamIds: string[]) {
+async function cleanupTestData(_userIds: string[], _teamIds: string[]) {
   mockDb.rosterData.clear();
   mockDb.streamPosts.clear();
   mockDb.memberships.clear();
@@ -254,10 +254,13 @@ describe("Teams E2E Tests", () => {
       expect(rosterEntry?.studentName).toBe("John Doe");
       expect(rosterEntry?.userId).toBe(creator.id);
 
-      mockDb.rosterData.set(key, {
-        ...mockDb.rosterData.get(key)!,
-        studentName: "Jane Doe",
-      });
+      const existing = mockDb.rosterData.get(key);
+      if (existing) {
+        mockDb.rosterData.set(key, {
+          ...existing,
+          studentName: "Jane Doe",
+        });
+      }
 
       expect(mockDb.rosterData.get(key)?.studentName).toBe("Jane Doe");
     });

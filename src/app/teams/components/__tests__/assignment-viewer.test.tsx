@@ -54,6 +54,13 @@ const defaultProps = {
   darkMode: false,
 };
 
+// Regex constants for test queries
+const QUESTION_1_MULTIPLE_CHOICE_REGEX = /Question 1 \(multiple choice\)/;
+const QUESTION_2_FREE_RESPONSE_REGEX = /Question 2 \(free response\)/;
+const QUESTION_1_CODEBUSTERS_REGEX = /Question 1 \(codebusters\)/;
+const DUE_REGEX = /Due:/;
+const OPTION_B_REGEX = /B\./;
+
 describe("AssignmentViewer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -65,7 +72,7 @@ describe("AssignmentViewer", () => {
     expect(screen.getByText("Test Assignment")).toBeInTheDocument();
     expect(screen.getByText("Test description")).toBeInTheDocument();
     // The component renders "Question 1 (multiple choice)" with replace("_", " ")
-    expect(screen.getByText(/Question 1 \(multiple choice\)/)).toBeInTheDocument();
+    expect(screen.getByText(QUESTION_1_MULTIPLE_CHOICE_REGEX)).toBeInTheDocument();
     expect(screen.getByText("What is 2+2?")).toBeInTheDocument();
   });
 
@@ -74,7 +81,7 @@ describe("AssignmentViewer", () => {
 
     expect(screen.getByText("2 questions")).toBeInTheDocument();
     // The component shows due date but not points in the header
-    expect(screen.getByText(/Due:/)).toBeInTheDocument();
+    expect(screen.getByText(DUE_REGEX)).toBeInTheDocument();
   });
 
   it("should show progress bar", () => {
@@ -95,7 +102,7 @@ describe("AssignmentViewer", () => {
 
     // Should show question 2
     expect(screen.getByText("Explain photosynthesis")).toBeInTheDocument();
-    expect(screen.getByText(/Question 2 \(free response\)/)).toBeInTheDocument();
+    expect(screen.getByText(QUESTION_2_FREE_RESPONSE_REGEX)).toBeInTheDocument();
 
     // Click previous
     fireEvent.click(screen.getByText("Previous"));
@@ -108,7 +115,7 @@ describe("AssignmentViewer", () => {
     render(<AssignmentViewer {...defaultProps} />);
 
     // QuestionRenderer uses radio inputs with value={option.id}
-    const optionB = screen.getByRole("radio", { name: /B\./ });
+    const optionB = screen.getByRole("radio", { name: OPTION_B_REGEX });
     fireEvent.click(optionB);
 
     expect(optionB).toBeChecked();
@@ -151,7 +158,7 @@ describe("AssignmentViewer", () => {
     render(<AssignmentViewer {...defaultProps} />);
 
     // Answer first question
-    const optionB = screen.getByRole("radio", { name: /B\./ });
+    const optionB = screen.getByRole("radio", { name: OPTION_B_REGEX });
     fireEvent.click(optionB);
 
     // Navigate to second question
@@ -184,7 +191,7 @@ describe("AssignmentViewer", () => {
     render(<AssignmentViewer {...defaultProps} />);
 
     // Answer first question
-    const optionB = screen.getByRole("radio", { name: /B\./ });
+    const optionB = screen.getByRole("radio", { name: OPTION_B_REGEX });
     fireEvent.click(optionB);
 
     // Navigate to second question
@@ -226,7 +233,7 @@ describe("AssignmentViewer", () => {
     render(<AssignmentViewer {...defaultProps} />);
 
     // Answer first question
-    const optionB = screen.getByRole("radio", { name: /B\./ });
+    const optionB = screen.getByRole("radio", { name: OPTION_B_REGEX });
     fireEvent.click(optionB);
 
     expect(screen.getByText("Answered: 1 / 2 questions")).toBeInTheDocument();
@@ -255,7 +262,7 @@ describe("AssignmentViewer", () => {
     render(<AssignmentViewer {...defaultProps} />);
 
     // Answer first question
-    const optionB = screen.getByRole("radio", { name: /B\./ });
+    const optionB = screen.getByRole("radio", { name: OPTION_B_REGEX });
     fireEvent.click(optionB);
 
     // Navigate to question 2
@@ -285,7 +292,7 @@ describe("AssignmentViewer", () => {
 
     render(<AssignmentViewer {...defaultProps} assignment={codebustersAssignment} />);
 
-    expect(screen.getByText(/Question 1 \(codebusters\)/)).toBeInTheDocument();
+    expect(screen.getByText(QUESTION_1_CODEBUSTERS_REGEX)).toBeInTheDocument();
     expect(
       screen.getByPlaceholderText("Enter your codebusters answer here...")
     ).toBeInTheDocument();

@@ -38,10 +38,19 @@ export default function TeamDataLoader({ teamSlug, children }: TeamDataLoaderPro
     useTeamPageData(teamSlug);
 
   const { updateSubteams, updateAssignments, updateMembers, updateRoster } = useTeamStore();
-  
+
   // Store update functions in refs to avoid dependency changes
-  const updateFunctionsRef = useRef({ updateSubteams, updateAssignments, updateMembers, updateRoster });
-  updateFunctionsRef.current = { updateSubteams, updateAssignments, updateMembers, updateRoster };
+  const updateFunctionsRef = useRef({
+    updateSubteams,
+    updateAssignments,
+    updateMembers,
+    updateRoster,
+  });
+
+  // Update ref in effect to avoid updating during render
+  useEffect(() => {
+    updateFunctionsRef.current = { updateSubteams, updateAssignments, updateMembers, updateRoster };
+  }, [updateSubteams, updateAssignments, updateMembers, updateRoster]);
 
   // Update store with fetched data from MULTIPLEXED endpoint
   useEffect(() => {
@@ -156,10 +165,9 @@ export default function TeamDataLoader({ teamSlug, children }: TeamDataLoaderPro
         // Development-only code can go here
       }
     } catch (_error) {
-      // Ignore errors  
+      // Ignore errors
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teamSlug, isLoading, error]);
+  }, [teamSlug, isLoading, error, subteams, assignments, members, roster, rosterSubteamId]);
 
   return <>{children}</>;
 }

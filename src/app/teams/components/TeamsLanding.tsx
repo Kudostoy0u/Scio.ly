@@ -230,28 +230,28 @@ export default function TeamsLanding({
                 className="text-center"
               >
                 {/* Illustration */}
-                <div className="mb-8">
-                  <div className="relative w-96 h-64 mx-auto">
+                <div className="mb-8 px-4 overflow-hidden">
+                  <div className="relative w-full max-w-96 h-48 sm:h-64 mx-auto">
                     {/* Window frame */}
                     <div
                       className={`absolute inset-0 rounded-lg shadow-lg border-2 ${
                         darkMode ? "bg-gray-800 border-gray-600" : "bg-white border-gray-200"
                       }`}
                     >
-                      <div className="p-4">
-                        <div className="flex items-center space-x-2 mb-4">
-                          <div className="w-3 h-3 bg-red-400 rounded-full" />
-                          <div className="w-3 h-3 bg-yellow-400 rounded-full" />
-                          <div className="w-3 h-3 bg-green-400 rounded-full" />
+                      <div className="p-2 sm:p-4">
+                        <div className="flex items-center space-x-1 sm:space-x-2 mb-2 sm:mb-4">
+                          <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-400 rounded-full" />
+                          <div className="w-2 h-2 sm:w-3 sm:h-3 bg-yellow-400 rounded-full" />
+                          <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-400 rounded-full" />
                         </div>
-                        <div className="grid grid-cols-2 gap-2 h-32">
+                        <div className="grid grid-cols-2 gap-1 sm:gap-2 h-20 sm:h-32">
                           <div
                             className={`rounded flex items-center justify-center ${
                               darkMode ? "bg-blue-900" : "bg-blue-100"
                             }`}
                           >
                             <div
-                              className={`w-8 h-8 rounded ${darkMode ? "bg-blue-600" : "bg-blue-300"}`}
+                              className={`w-6 h-6 sm:w-8 sm:h-8 rounded ${darkMode ? "bg-blue-600" : "bg-blue-300"}`}
                             />
                           </div>
                           <div
@@ -260,7 +260,7 @@ export default function TeamsLanding({
                             }`}
                           >
                             <div
-                              className={`w-6 h-6 rounded-full ${
+                              className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full ${
                                 darkMode ? "bg-green-600" : "bg-green-300"
                               }`}
                             />
@@ -271,30 +271,30 @@ export default function TeamsLanding({
 
                     {/* Decorative elements */}
                     <div
-                      className={`absolute -left-4 top-8 w-8 h-8 rounded-full flex items-center justify-center ${
+                      className={`absolute left-0 sm:-left-4 top-12 sm:top-8 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center ${
                         darkMode ? "bg-pink-600" : "bg-pink-300"
                       }`}
                     >
                       <div
-                        className={`w-4 h-4 rounded-full ${darkMode ? "bg-pink-400" : "bg-pink-100"}`}
+                        className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full ${darkMode ? "bg-pink-400" : "bg-pink-100"}`}
                       />
                     </div>
                     <div
-                      className={`absolute -right-4 top-16 w-6 h-6 rounded flex items-center justify-center ${
+                      className={`absolute right-0 sm:-right-4 top-8 sm:top-16 w-4 h-4 sm:w-6 sm:h-6 rounded flex items-center justify-center ${
                         darkMode ? "bg-yellow-600" : "bg-yellow-300"
                       }`}
                     >
                       <div
-                        className={`w-3 h-3 rounded ${darkMode ? "bg-yellow-400" : "bg-yellow-100"}`}
+                        className={`w-2 h-2 sm:w-3 sm:h-3 rounded ${darkMode ? "bg-yellow-400" : "bg-yellow-100"}`}
                       />
                     </div>
                     <div
-                      className={`absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-12 h-8 rounded flex items-center justify-center ${
+                      className={`absolute -bottom-2 sm:-bottom-4 left-1/2 transform -translate-x-1/2 w-8 h-6 sm:w-12 sm:h-8 rounded flex items-center justify-center ${
                         darkMode ? "bg-blue-700" : "bg-blue-200"
                       }`}
                     >
                       <div
-                        className={`w-8 h-4 rounded ${darkMode ? "bg-blue-500" : "bg-blue-100"}`}
+                        className={`w-6 h-3 sm:w-8 sm:h-4 rounded ${darkMode ? "bg-blue-500" : "bg-blue-100"}`}
                       />
                     </div>
                   </div>

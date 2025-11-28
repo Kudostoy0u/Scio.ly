@@ -14,8 +14,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   type TestTeam,
   type TestUser,
-  addTeamMember,
   addEventAttendee,
+  addTeamMember,
   cleanupTestData,
   createEvent,
   createTestTeam,

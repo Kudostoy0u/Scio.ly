@@ -273,8 +273,22 @@ export function useTestState({
       setIsLoading(false);
       fetchCompletedRef.current = true;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialData]);
+  }, [
+    initialData,
+    initialRouterData,
+    stableRouterData,
+    isSubmitted,
+    isLoading,
+    routerData,
+    setData,
+    setUserAnswers,
+    setGradingResults,
+    setRouterData,
+    setIsLoading,
+    setTimeLeft,
+    setIsSubmitted,
+    setFetchError,
+  ]);
 
   useEffect(() => {
     if (!mountLoggedRef.current) {
@@ -333,7 +347,7 @@ export function useTestState({
       .catch(() => {
         // Ignore errors - fallback handling is already in place
       });
-  }, [initialData, initialRouterData, routerData]);
+  }, [initialData, initialRouterData, routerData, setUserAnswers, setGradingResults]);
 
   // If in preview mode, auto-fill answers with correct ones (all correct for multi-select) and mark submitted once data is loaded
   useEffect(() => {
@@ -356,7 +370,7 @@ export function useTestState({
     } catch {
       // Ignore errors
     }
-  }, [isPreviewMode, data, isSubmitted]);
+  }, [isPreviewMode, data, isSubmitted, setUserAnswers, setGradingResults, setIsSubmitted]);
 
   // Ensure timer shows immediately by syncing from session when available
   useEffect(() => {
@@ -369,7 +383,7 @@ export function useTestState({
       // Ignore errors
     }
     // Re-run when router params are established (session is created in initLoad)
-  }, [routerData]);
+  }, [routerData, setTimeLeft]);
 
   useEffect(() => {
     // Skip initLoad if we're in assignment mode - assignment loading is handled separately
@@ -396,8 +410,7 @@ export function useTestState({
       setTimeLeft,
       fetchCompletedRef,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router, initialData, stableRouterData]);
+  }, [initialData, stableRouterData, data.length, isLoading, setRouterData, setFetchError, setIsLoading, setData, setTimeLeft]);
 
   useEffect(() => {
     if (timeLeft === 30) {
@@ -427,7 +440,7 @@ export function useTestState({
         setGradingFrQs,
       }
     );
-  }, [data, userAnswers, gradingResults, routerData, timeLeft]);
+  }, [data, userAnswers, gradingResults, routerData, timeLeft, setIsSubmitted, setGradingResults, setGradingFrQs]);
 
   const reloadQuestions = async () => {
     setIsResetting(true);
@@ -549,14 +562,16 @@ export function useTestState({
     setShareModalOpen(false);
   }, []);
 
-  const handleBackToPractice = () => {
-    try {
-      router.push("/practice");
-    } catch (e) {
-      logger.error("Error navigating back to practice:", e);
-      window.location.href = "/practice";
-    }
-  };
+  const handleBackToPractice = useCallback(() => {
+    router.push("/practice");
+  }, [router]);
+
+  // Wrap handleBackToMain to also navigate to practice immediately
+  const handleBackToMainWithNavigation = useCallback(() => {
+    handleBackToMain(); // Close edit modal if open
+    // Navigate immediately using router.push for instant navigation
+    router.push("/practice");
+  }, [router, handleBackToMain]);
 
   return {
     isLoading,
@@ -590,7 +605,7 @@ export function useTestState({
     handleEditOpen,
     handleEditSubmit,
     closeShareModal,
-    handleBackToMain,
+    handleBackToMain: handleBackToMainWithNavigation,
     handleBackToPractice,
     isQuestionBookmarked,
     setShareModalOpen,

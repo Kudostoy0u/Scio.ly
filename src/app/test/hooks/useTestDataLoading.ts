@@ -369,8 +369,16 @@ export function useTestDataLoading(
       setIsLoading(false);
       fetchCompletedRef.current = true;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialData, initialRouterData, stableRouterDataMemo, isLoading]);
+  }, [
+    initialData,
+    initialRouterData,
+    stableRouterDataMemo,
+    isLoading,
+    setData,
+    setIsLoading,
+    setRouterData,
+    setFetchError,
+  ]);
 
   /**
    * Effect 2: initLoad fallback fetch
@@ -405,8 +413,7 @@ export function useTestDataLoading(
       },
       fetchCompletedRef,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialData, stableRouterDataMemo, data.length, isLoading]);
+  }, [initialData, stableRouterDataMemo, data.length, isLoading, setRouterData, setFetchError, setIsLoading, setData]);
 
   /**
    * Effect 3: Preview mode auto-fill (optional, data-related)

@@ -121,4 +121,3 @@ export function CreateLeaderboardModal({ onClose, onCreated }: CreateLeaderboard
     </div>
   );
 }
-

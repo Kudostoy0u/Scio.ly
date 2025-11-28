@@ -1,5 +1,8 @@
 import EnhancedAssignmentCreator from "@/app/teams/components/EnhancedAssignmentCreator";
-import type { AssignmentCreatorProps, Question } from "@/app/teams/components/assignment/assignmentTypes";
+import type {
+  AssignmentCreatorProps,
+  Question,
+} from "@/app/teams/components/assignment/assignmentTypes";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createAssignment } from "../assignment/assignmentUtils";
@@ -96,6 +99,9 @@ vi.mock("react-toastify", () => ({
   toast,
 }));
 
+// Regex constants for test queries
+const CLOSE_BUTTON_REGEX = /close/i;
+
 async function advanceToRosterStep() {
   fireEvent.click(screen.getByText("Next: Generate Questions"));
   await waitFor(() => {
@@ -158,7 +164,7 @@ describe("EnhancedAssignmentCreator", () => {
     it("renders close button", () => {
       render(<EnhancedAssignmentCreator {...mockProps} />);
 
-      const closeButton = screen.getByRole("button", { name: /close/i });
+      const closeButton = screen.getByRole("button", { name: CLOSE_BUTTON_REGEX });
       expect(closeButton).toBeInTheDocument();
     });
   });
@@ -348,14 +354,16 @@ describe("EnhancedAssignmentCreator", () => {
     it("applies dark mode classes when darkMode is true", () => {
       render(<EnhancedAssignmentCreator {...mockProps} darkMode={true} />);
 
-      const modal = screen.getByText("Create Assignment").closest("div")?.parentElement?.parentElement;
+      const modal = screen.getByText("Create Assignment").closest("div")
+        ?.parentElement?.parentElement;
       expect(modal).toHaveClass("bg-gray-800");
     });
 
     it("applies light mode classes when darkMode is false", () => {
       render(<EnhancedAssignmentCreator {...mockProps} darkMode={false} />);
 
-      const modal = screen.getByText("Create Assignment").closest("div")?.parentElement?.parentElement;
+      const modal = screen.getByText("Create Assignment").closest("div")
+        ?.parentElement?.parentElement;
       expect(modal).toHaveClass("bg-white");
     });
   });
@@ -364,7 +372,7 @@ describe("EnhancedAssignmentCreator", () => {
     it("calls onCancel when close button is clicked", () => {
       render(<EnhancedAssignmentCreator {...mockProps} />);
 
-      const closeButton = screen.getByRole("button", { name: /close/i });
+      const closeButton = screen.getByRole("button", { name: CLOSE_BUTTON_REGEX });
       fireEvent.click(closeButton);
 
       expect(mockProps.onCancel).toHaveBeenCalled();

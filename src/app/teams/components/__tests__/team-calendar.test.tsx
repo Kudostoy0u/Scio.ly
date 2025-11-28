@@ -383,7 +383,9 @@ describe("TeamCalendar", () => {
       // Fill in required fields only (title and date)
       const titleInput = screen.getByPlaceholderText("Event title");
       const dateInputs = screen.getAllByDisplayValue("");
-      const dateInput = dateInputs.find((input) => input.getAttribute("type") === "date") || screen.getAllByRole("textbox").find((input) => input.getAttribute("type") === "date");
+      const dateInput =
+        dateInputs.find((input) => input.getAttribute("type") === "date") ||
+        screen.getAllByRole("textbox").find((input) => input.getAttribute("type") === "date");
 
       if (!dateInput) {
         // If date input not found, skip this test
@@ -422,7 +424,9 @@ describe("TeamCalendar", () => {
       // Fill in only required fields
       const titleInput = screen.getByPlaceholderText("Event title");
       const dateInputs = screen.getAllByDisplayValue("");
-      const dateInput = dateInputs.find((input) => input.getAttribute("type") === "date") || screen.getAllByRole("textbox").find((input) => input.getAttribute("type") === "date");
+      const dateInput =
+        dateInputs.find((input) => input.getAttribute("type") === "date") ||
+        screen.getAllByRole("textbox").find((input) => input.getAttribute("type") === "date");
 
       if (!dateInput) {
         // If date input not found, skip this test

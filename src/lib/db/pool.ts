@@ -30,5 +30,3 @@ if (typeof process !== "undefined") {
     await pool.end();
   });
 }
-
-export default pool;

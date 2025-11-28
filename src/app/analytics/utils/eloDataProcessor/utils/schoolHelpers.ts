@@ -60,4 +60,3 @@ export const getAllEvents = (eloData: EloData): string[] => {
 
   return Array.from(events).sort();
 };
-

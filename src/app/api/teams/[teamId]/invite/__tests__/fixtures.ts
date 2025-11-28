@@ -68,4 +68,3 @@ export const mockSearchResults = [
     photo_url: null,
   },
 ];
-

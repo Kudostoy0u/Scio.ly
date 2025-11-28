@@ -10,7 +10,7 @@ import { supabase } from "@/lib/supabase";
 import Header from "@components/Header";
 import { ArrowRight, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
 interface Question {
@@ -314,8 +314,7 @@ export default function Content() {
       setBookmarkedQuestions({});
       setIsLoadingBookmarks(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, authLoading]);
+  }, [user, authLoading, loadBookmarks]);
 
   // Helper function to group bookmarks by event name
   const groupBookmarksByEvent = (
@@ -335,7 +334,7 @@ export default function Content() {
     );
   };
 
-  const loadBookmarks = async (userId: string) => {
+  const loadBookmarks = useCallback(async (userId: string) => {
     setIsLoadingBookmarks(true);
     try {
       const bookmarks = await loadBookmarksFromSupabase(userId);
@@ -351,7 +350,7 @@ export default function Content() {
     } finally {
       setIsLoadingBookmarks(false);
     }
-  };
+  }, []);
 
   const handleTakeTimedTest = (eventName: string, _questions: BookmarkedQuestion[]) => {
     (async () => {

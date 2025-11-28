@@ -1,4 +1,4 @@
-import type { Event } from "@/app/types";
+import type { Event } from "@/app/practice/types";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import EventList from "./EventList";

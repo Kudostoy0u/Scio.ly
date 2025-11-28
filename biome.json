@@ -48,7 +48,8 @@
       "all": true,
       "style": {
         "noDefaultExport": "off",
-        "useNamingConvention": "off"
+        "useNamingConvention": "off",
+        "useFilenamingConvention": "off"
       },
       "suspicious": {
         "useAwait": "off",

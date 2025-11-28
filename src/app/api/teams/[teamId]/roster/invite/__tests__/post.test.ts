@@ -27,7 +27,12 @@ import {
   createParams,
   createPostRequest,
 } from "./helpers";
-import { mockDbPg, mockGetServerUser, mockNotificationSyncService, mockResolveTeamSlugToUnits } from "./mocks";
+import {
+  mockDbPg,
+  mockGetServerUser,
+  mockNotificationSyncService,
+  mockResolveTeamSlugToUnits,
+} from "./mocks";
 import type { DrizzleMockChain } from "./mocks";
 
 describe("POST /api/teams/[teamId]/roster/invite", () => {
@@ -39,7 +44,7 @@ describe("POST /api/teams/[teamId]/roster/invite", () => {
     mockDbPg.select.mockReset();
     mockDbPg.insert.mockReset();
     mockDbPg.update.mockReset();
-    
+
     process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
     mockGetServerUser.mockResolvedValue(mockUser);
     mockResolveTeamSlugToUnits.mockResolvedValue(mockTeamInfo);
@@ -322,4 +327,3 @@ describe("POST /api/teams/[teamId]/roster/invite", () => {
     expect(data.message).toBe("Roster link invitation sent successfully");
   });
 });
-

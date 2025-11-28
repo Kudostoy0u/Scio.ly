@@ -40,7 +40,7 @@ describe("POST /api/teams/[teamId]/invite", () => {
     mockSyncNotificationToSupabase.mockReset();
     mockDbPg.select.mockReset();
     mockDbPg.insert.mockReset();
-    
+
     process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
     // Set up mocks
     mockGetServerUser.mockResolvedValue(mockUser);

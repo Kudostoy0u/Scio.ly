@@ -36,7 +36,7 @@ export function TeamHeaderBanner({
                 onClick={onInvitePerson}
                 className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 group shadow-lg ${
                   darkMode
-                    ? "bg-gray-700 bg-opacity-90 hover:bg-opacity-100"
+                    ? "bg-gray-900 bg-opacity-90 hover:bg-opacity-100"
                     : "bg-white bg-opacity-90 hover:bg-opacity-100"
                 }`}
                 title="Invite Person"
@@ -49,7 +49,7 @@ export function TeamHeaderBanner({
               onClick={onExitTeam}
               className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 group shadow-lg ${
                 darkMode
-                  ? "bg-gray-700 bg-opacity-90 hover:bg-opacity-100"
+                  ? "bg-gray-900 bg-opacity-90 hover:bg-opacity-100"
                   : "bg-white bg-opacity-90 hover:bg-opacity-100"
               }`}
               title="Exit Team"
@@ -62,7 +62,7 @@ export function TeamHeaderBanner({
                 onClick={onArchiveTeam}
                 className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 group shadow-lg ${
                   darkMode
-                    ? "bg-gray-700 bg-opacity-90 hover:bg-opacity-100"
+                    ? "bg-gray-900 bg-opacity-90 hover:bg-opacity-100"
                     : "bg-white bg-opacity-90 hover:bg-opacity-100"
                 }`}
                 title="Archive Team"

@@ -51,4 +51,3 @@ export const mockResolveTeamSlugToUnits = vi.mocked(resolveTeamSlugToUnits);
 export const mockSyncNotificationToSupabase = vi.mocked(
   NotificationSyncService.syncNotificationToSupabase
 );
-

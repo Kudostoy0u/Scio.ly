@@ -152,4 +152,3 @@ describe("GET /api/teams/calendar/recurring-meetings", () => {
     expect(data.meetings[0].exceptions).toEqual(["2024-01-15", "2024-01-22"]);
   });
 });
-

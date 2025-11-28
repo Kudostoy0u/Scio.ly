@@ -177,4 +177,3 @@ export function useLeaderboardData({ client, authUser, authLoading }: UseLeaderb
     loadUserAndLeaderboards,
   };
 }
-

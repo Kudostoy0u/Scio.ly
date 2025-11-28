@@ -144,4 +144,3 @@ export const compareSchools = (
 
   return { eventResults, overallResult };
 };
-

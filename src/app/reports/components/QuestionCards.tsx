@@ -1,5 +1,4 @@
 "use client";
-// biome-ignore lint/style/useFilenamingConvention: Component file follows PascalCase convention
 import { parseQuestion } from "@/app/reports/utils/parseQuestion";
 
 export const BlacklistedQuestionCard = ({

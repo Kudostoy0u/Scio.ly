@@ -64,4 +64,3 @@ export const mockSearchResults = [
 // Regex patterns for test validation
 export const SUBTEAM_ID_REGEX = /subteam id.*invalid|uuid/i;
 export const INVITATION_SENT_REGEX = /roster link invitation already sent/i;
-

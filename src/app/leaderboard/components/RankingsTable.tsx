@@ -118,4 +118,3 @@ export function RankingsTable({ members, user, onLeave, darkMode }: RankingsTabl
     </div>
   );
 }
-

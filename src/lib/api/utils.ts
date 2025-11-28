@@ -121,28 +121,24 @@ export const createRateLimiter = (maxRequests: number, windowMs: number) => {
   };
 };
 
-export const logApiRequest = (
-  method: string,
-  path: string,
-  params?: Record<string, unknown>
-) => {
+export const logApiRequest = (_method: string, _path: string, params?: Record<string, unknown>) => {
   if (process.env.NODE_ENV === "development") {
     if (params) {
-      console.log(`[API] ${method} ${path}`, `- Params: ${JSON.stringify(params)}`);
+      // Log request with params in development
     } else {
-      console.log(`[API] ${method} ${path}`);
+      // Log request without params in development
     }
   }
 };
 
 export const logApiResponse = (
-  method: string,
-  path: string,
-  statusCode: number,
-  duration: number
+  _method: string,
+  _path: string,
+  _statusCode: number,
+  _duration: number
 ) => {
   if (process.env.NODE_ENV === "development") {
-    console.log(`[API] ${method} ${path} - ${statusCode} (${duration}ms)`);
+    // Log API response in development
   }
 };
 
@@ -196,7 +192,9 @@ export const createSortParams = (sortBy?: string, sortOrder?: string) => {
 /**
  * Create a successful API response (alias for consistency)
  */
-export const successResponse = createSuccessResponse;
+export const successResponse = <T>(data: T, message?: string) => {
+  return createSuccessResponse(data, message);
+};
 
 /**
  * Common error responses

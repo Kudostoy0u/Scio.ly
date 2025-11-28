@@ -91,4 +91,3 @@ export function createGetRequest(query?: string): NextRequest {
     : "http://localhost:3000/api/teams/calendar/recurring-meetings";
   return new NextRequest(url);
 }
-

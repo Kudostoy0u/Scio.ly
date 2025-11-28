@@ -35,4 +35,3 @@ export const processChartData = (
     ? processEventBySeason(eloData, selectedSchools, selectedEvents)
     : processEventByTournament(eloData, selectedSchools, selectedEvents, metadata);
 };
-

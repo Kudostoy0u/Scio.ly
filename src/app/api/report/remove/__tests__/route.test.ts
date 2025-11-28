@@ -1,5 +1,5 @@
 import { POST, type RemoveRequest } from "@/app/api/report/remove/route";
-import { blacklists as blacklistsTable, questions as questionsTable } from "@/lib/db/schema";
+import { questions as questionsTable } from "@/lib/db/schema";
 import { geminiService } from "@/lib/services/gemini";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

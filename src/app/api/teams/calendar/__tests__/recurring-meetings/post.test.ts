@@ -231,4 +231,3 @@ describe("POST /api/teams/calendar/recurring-meetings", () => {
     expect(data.details).toBe("Database connection failed");
   });
 });
-

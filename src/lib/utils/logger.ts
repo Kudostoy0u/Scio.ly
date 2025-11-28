@@ -13,30 +13,35 @@ const getIsDeveloperMode = () => getIsDev() || process.env.DEVELOPER_MODE === "t
 const logger = {
   log: (...args: unknown[]) => {
     if (getIsDeveloperMode()) {
+      // biome-ignore lint/suspicious/noConsole lint/suspicious/noConsoleLog: Logger intentionally uses console
       console.log(...args);
     }
   },
 
   warn: (...args: unknown[]) => {
     if (!getIsTest()) {
+      // biome-ignore lint/suspicious/noConsole: Logger intentionally uses console
       console.warn(...args);
     }
   },
 
   error: (...args: unknown[]) => {
     if (!getIsTest()) {
+      // biome-ignore lint/suspicious/noConsole: Logger intentionally uses console
       console.error(...args);
     }
   },
 
   info: (...args: unknown[]) => {
     if (getIsDev()) {
+      // biome-ignore lint/suspicious/noConsole: Logger intentionally uses console
       console.info("[INFO]", ...args);
     }
   },
 
   debug: (...args: unknown[]) => {
     if (getIsDev()) {
+      // biome-ignore lint/suspicious/noConsole: Logger intentionally uses console
       console.debug(...args);
     }
   },
@@ -54,13 +59,18 @@ const logger = {
       }
 
       const prefix = `[DEV-${level.toUpperCase()}]`;
-      const logData = JSON.stringify({
-        timestamp: new Date().toISOString(),
-        level,
-        message,
-        context: context || {},
-        environment: process.env.NODE_ENV,
-      }, null, 2);
+      const logData = JSON.stringify(
+        {
+          timestamp: new Date().toISOString(),
+          level,
+          message,
+          context: context || {},
+          environment: process.env.NODE_ENV,
+        },
+        null,
+        2
+      );
+      // biome-ignore lint/suspicious/noConsole lint/suspicious/noConsoleLog: Logger intentionally uses console
       console.log(prefix, logData);
     },
 

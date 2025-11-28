@@ -54,4 +54,3 @@ export function setupConsoleMocks() {
     // Suppress console.error in tests
   });
 }
-

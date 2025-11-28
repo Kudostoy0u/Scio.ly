@@ -1,5 +1,5 @@
+import TeamsPageClient from "@/app/teams/components/TeamsPageClient";
 import { renderWithProviders, screen, waitFor } from "@/test-utils";
-import TeamsPageClient from "@components/TeamsPageClient";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 

@@ -98,7 +98,7 @@ describe("AssignmentDetailsStep", () => {
     });
 
     // Points field was removed from the component
-    it.skip("calls onDetailsChange when points are updated", () => {
+    it("calls onDetailsChange when points are updated", () => {
       render(<AssignmentDetailsStep {...mockProps} />);
 
       const pointsInput = screen.getByLabelText("Points");

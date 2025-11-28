@@ -20,4 +20,3 @@ vi.mock("@/lib/supabaseServer", () => ({
 
 export const mockDbPg = vi.mocked(dbPg);
 export const mockGetServerUser = vi.mocked(getServerUser);
-

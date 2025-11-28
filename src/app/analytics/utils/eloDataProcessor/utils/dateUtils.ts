@@ -74,4 +74,3 @@ export const getAllTournamentDates = (
 
   return allDataPoints.sort((a, b) => a.x.getTime() - b.x.getTime());
 };
-

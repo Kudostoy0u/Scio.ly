@@ -23,7 +23,7 @@ describe("GET /api/teams/[teamId]/invite", () => {
     mockGetServerUser.mockReset();
     mockResolveTeamSlugToUnits.mockReset();
     mockDbPg.select.mockReset();
-    
+
     process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
     // Set up mocks
     mockGetServerUser.mockResolvedValue({
@@ -110,4 +110,3 @@ describe("GET /api/teams/[teamId]/invite", () => {
     expect(data.error).toBe("Only captains can search users");
   });
 });
-

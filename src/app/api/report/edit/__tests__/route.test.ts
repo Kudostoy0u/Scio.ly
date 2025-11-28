@@ -1,5 +1,5 @@
 import { type EditRequest, POST } from "@/app/api/report/edit/route";
-import { edits as editsTable, questions as questionsTable } from "@/lib/db/schema";
+import { questions as questionsTable } from "@/lib/db/schema";
 import { geminiService } from "@/lib/services/gemini";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

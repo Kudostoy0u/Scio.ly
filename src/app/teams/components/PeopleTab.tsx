@@ -75,11 +75,16 @@ export default function PeopleTab({
   const [showNamePrompt, setShowNamePrompt] = useState(false);
 
   // Roster linking state
-  const [linkStatus, setLinkStatus] = useState<Record<string, {
-    isLinked: boolean;
-    userId?: string;
-    userEmail?: string;
-  }>>({});
+  const [linkStatus, setLinkStatus] = useState<
+    Record<
+      string,
+      {
+        isLinked: boolean;
+        userId?: string;
+        userEmail?: string;
+      }
+    >
+  >({});
   const [linkStatusLoading, setLinkStatusLoading] = useState(false);
 
   // Get processed members using utility function
@@ -94,41 +99,43 @@ export default function PeopleTab({
 
   // Get roster data from store
   const { getRoster } = useTeamStore();
-  const roster = getRoster?.(team.slug, selectedSubteam === 'all' ? undefined : selectedSubteam) || {};
+  const roster = getRoster?.(team.slug, selectedSubteam === "all" ? "" : selectedSubteam) || {};
 
   // Extract unique roster names from roster
   const rosterNames = useMemo(() => {
     const names = new Set<string>();
-    Object.values(roster).forEach((eventNames: unknown) => {
+    for (const eventNames of Object.values(roster)) {
       if (Array.isArray(eventNames)) {
-        eventNames.forEach(name => {
-          if (typeof name === 'string') {
+        for (const name of eventNames) {
+          if (typeof name === "string") {
             names.add(name);
           }
-        });
+        }
       }
-    });
+    }
     return Array.from(names).sort();
   }, [roster]);
 
   // Load link status when component mounts or subteam changes
   useEffect(() => {
     const loadLinkStatus = async () => {
-      if (!team.slug) return;
-      
+      if (!team.slug) {
+        return;
+      }
+
       try {
         setLinkStatusLoading(true);
         const url = `/api/teams/${team.slug}/roster/link-status${
-          selectedSubteam !== 'all' ? `?subteamId=${selectedSubteam}` : ''
+          selectedSubteam !== "all" ? `?subteamId=${selectedSubteam}` : ""
         }`;
         const response = await fetch(url);
-        
+
         if (response.ok) {
           const data = await response.json();
           setLinkStatus(data.linkStatus || {});
         }
-      } catch (error) {
-        console.error('Error loading link status:', error);
+      } catch (_error) {
+        // Silently handle errors - link status loading will be set to false in finally
       } finally {
         setLinkStatusLoading(false);
       }
@@ -315,42 +322,43 @@ export default function PeopleTab({
 
       {/* Roster Names Section */}
       {isCaptain && rosterNames.length > 0 && (
-        <div className={`p-6 rounded-lg border ${
-          darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-        }`}>
-          <h3 className={`text-xl font-bold mb-4 ${
-            darkMode ? 'text-white' : 'text-gray-900'
-          }`}>
+        <div
+          className={`p-6 rounded-lg border ${
+            darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+          }`}
+        >
+          <h3 className={`text-xl font-bold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}>
             Roster Names
           </h3>
-          <p className={`text-sm mb-4 ${
-            darkMode ? 'text-gray-400' : 'text-gray-600'
-          }`}>
+          <p className={`text-sm mb-4 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
             Link roster names to actual team members. Click the indicator to invite users.
           </p>
-          
+
           {linkStatusLoading ? (
             <div className="flex justify-center py-4">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
             </div>
           ) : (
             <div className="space-y-2">
-              {rosterNames.map(name => (
-                <div key={name} className={`flex items-center justify-between p-3 rounded-lg ${
-                  darkMode ? 'bg-gray-700' : 'bg-gray-50'
-                }`}>
-                  <span className={darkMode ? 'text-white' : 'text-gray-900'}>{name}</span>
+              {rosterNames.map((name) => (
+                <div
+                  key={name}
+                  className={`flex items-center justify-between p-3 rounded-lg ${
+                    darkMode ? "bg-gray-700" : "bg-gray-50"
+                  }`}
+                >
+                  <span className={darkMode ? "text-white" : "text-gray-900"}>{name}</span>
                   <RosterLinkIndicator
                     studentName={name}
-                    isLinked={linkStatus[name]?.isLinked || false}
+                    isLinked={linkStatus[name]?.isLinked ?? false}
                     userId={linkStatus[name]?.userId}
                     userEmail={linkStatus[name]?.userEmail}
                     teamSlug={team.slug}
-                    subteamId={selectedSubteam === 'all' ? '' : selectedSubteam}
+                    subteamId={selectedSubteam === "all" ? "" : selectedSubteam}
                     onLinkStatusChange={(studentName, isLinked) => {
-                      setLinkStatus(prev => ({
+                      setLinkStatus((prev) => ({
                         ...prev,
-                        [studentName]: { ...prev[studentName], isLinked }
+                        [studentName]: { ...prev[studentName], isLinked },
                       }));
                     }}
                     darkMode={darkMode}
@@ -364,50 +372,48 @@ export default function PeopleTab({
 
       {/* Team Members Section */}
       <div>
-        <h3 className={`text-xl font-bold mb-4 ${
-          darkMode ? 'text-white' : 'text-gray-900'
-        }`}>
+        <h3 className={`text-xl font-bold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}>
           Team Members
         </h3>
 
-      {/* Members Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
-        {filteredMembers.length === 0 ? (
-          <div
-            className={`col-span-full text-center py-12 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-          >
-            <p>No members found</p>
-          </div>
-        ) : (
-          filteredMembers.map((member, index) => (
-            <MemberCard
-              key={member.id || `member-${index}`}
-              member={member}
-              index={index}
-              isCaptain={isCaptain}
-              subteams={subteams}
-              showSubteamDropdown={showSubteamDropdown}
-              selectedMember={selectedMember}
-              onNameClick={handleNameClick}
-              onPromoteToCaptain={(m) => handlePromoteToCaptain(m)}
-              onRemoveMember={(m) => handleRemoveMember(m, user?.id)}
-              onRemoveFromSubteam={handleRemoveOtherFromSubteam}
-              onRemoveSelfFromSubteam={handleRemoveSelfFromSubteam}
-              onRemoveEvent={handleRemoveEvent}
-              onAddEvent={handleAddEventClick}
-              onSubteamAssign={handleSubteamAssign}
-              onSubteamDropdownToggle={handleSubteamDropdownToggle}
-              onSetSelectedMember={setSelectedMember}
-              linkInviteStates={linkInviteStates}
-              onLinkInvite={handleLinkInvite}
-              onLinkInviteClose={handleLinkInviteClose}
-              onLinkInviteSubmit={handleLinkInviteSubmitWrapper}
-              onCancelLinkInvite={handleCancelLinkInvite}
-              onCancelInvitation={handleCancelInvitation}
-            />
-          ))
-        )}
-      </div>
+        {/* Members Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
+          {filteredMembers.length === 0 ? (
+            <div
+              className={`col-span-full text-center py-12 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+            >
+              <p>No members found</p>
+            </div>
+          ) : (
+            filteredMembers.map((member, index) => (
+              <MemberCard
+                key={member.id || `member-${index}`}
+                member={member}
+                index={index}
+                isCaptain={isCaptain}
+                subteams={subteams}
+                showSubteamDropdown={showSubteamDropdown}
+                selectedMember={selectedMember}
+                onNameClick={handleNameClick}
+                onPromoteToCaptain={(m) => handlePromoteToCaptain(m)}
+                onRemoveMember={(m) => handleRemoveMember(m, user?.id)}
+                onRemoveFromSubteam={handleRemoveOtherFromSubteam}
+                onRemoveSelfFromSubteam={handleRemoveSelfFromSubteam}
+                onRemoveEvent={handleRemoveEvent}
+                onAddEvent={handleAddEventClick}
+                onSubteamAssign={handleSubteamAssign}
+                onSubteamDropdownToggle={handleSubteamDropdownToggle}
+                onSetSelectedMember={setSelectedMember}
+                linkInviteStates={linkInviteStates}
+                onLinkInvite={handleLinkInvite}
+                onLinkInviteClose={handleLinkInviteClose}
+                onLinkInviteSubmit={handleLinkInviteSubmitWrapper}
+                onCancelLinkInvite={handleCancelLinkInvite}
+                onCancelInvitation={handleCancelInvitation}
+              />
+            ))
+          )}
+        </div>
       </div>
 
       {/* Linked Members section could be added here if needed */}

@@ -47,7 +47,7 @@ export default function TeamLayout({
       {/* Top Navigation Bar */}
       {showTopBar && (
         <div
-          className={`fixed top-0 left-0 right-0 z-40 border-b ${darkMode ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-white"}`}
+          className={`fixed top-0 left-0 right-0 z-40 border-b ${darkMode ? "border-gray-700 bg-gray-900" : "border-gray-200 bg-white"}`}
         >
           <div className="w-full px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">

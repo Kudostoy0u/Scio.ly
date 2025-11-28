@@ -34,7 +34,7 @@ const mockTeamStore = {
   invalidateCache: vi.fn(),
   getRoster: vi.fn(() => ({
     "Anatomy and Physiology": ["John Doe", "Jane Smith"],
-    "Astronomy": ["Bob Johnson"],
+    Astronomy: ["Bob Johnson"],
   })),
   getMembers: vi.fn(() => []),
   loadMembers: vi.fn(() => Promise.resolve()),
@@ -50,12 +50,17 @@ vi.mock("@/app/hooks/useTeamStore", () => ({
 
 // Mock RosterLinkIndicator to avoid its complexity
 vi.mock("@/app/teams/components/RosterLinkIndicator", () => ({
-  default: ({ studentName, isLinked, onLinkStatusChange }: {
+  default: ({
+    studentName,
+    isLinked,
+    onLinkStatusChange,
+  }: {
     studentName: string;
     isLinked: boolean;
     onLinkStatusChange: (name: string, linked: boolean) => void;
   }) => (
     <button
+      type="button"
       data-testid={`link-indicator-${studentName}`}
       onClick={() => onLinkStatusChange(studentName, !isLinked)}
       aria-label={isLinked ? "Linked" : "Not linked"}
@@ -112,13 +117,14 @@ describe("PeopleTab - Roster Linking", () => {
     // Mock link status response
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({
-        linkStatus: {
-          "John Doe": { isLinked: true, userId: "user-456", userEmail: "john@example.com" },
-          "Jane Smith": { isLinked: false },
-          "Bob Johnson": { isLinked: false },
-        },
-      }),
+      json: () =>
+        Promise.resolve({
+          linkStatus: {
+            "John Doe": { isLinked: true, userId: "user-456", userEmail: "john@example.com" },
+            "Jane Smith": { isLinked: false },
+            "Bob Johnson": { isLinked: false },
+          },
+        }),
     } as Response);
 
     render(
@@ -148,13 +154,14 @@ describe("PeopleTab - Roster Linking", () => {
   it("should display link indicators for each roster name", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({
-        linkStatus: {
-          "John Doe": { isLinked: true, userId: "user-456", userEmail: "john@example.com" },
-          "Jane Smith": { isLinked: false },
-          "Bob Johnson": { isLinked: false },
-        },
-      }),
+      json: () =>
+        Promise.resolve({
+          linkStatus: {
+            "John Doe": { isLinked: true, userId: "user-456", userEmail: "john@example.com" },
+            "Jane Smith": { isLinked: false },
+            "Bob Johnson": { isLinked: false },
+          },
+        }),
     } as Response);
 
     render(
@@ -209,9 +216,7 @@ describe("PeopleTab - Roster Linking", () => {
     // Verify link status is reloaded for the new subteam
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledTimes(2);
-      expect(mockFetch).toHaveBeenLastCalledWith(
-        expect.stringContaining("?subteamId=subteam-1")
-      );
+      expect(mockFetch).toHaveBeenLastCalledWith(expect.stringContaining("?subteamId=subteam-1"));
     });
   });
 
@@ -233,7 +238,9 @@ describe("PeopleTab - Roster Linking", () => {
   });
 
   it("should handle errors when loading link status", async () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      // Mock implementation - intentionally empty
+    });
 
     // Mock a fetch error (not just ok: false, but actual error)
     mockFetch.mockRejectedValueOnce(new Error("Network error"));
@@ -250,10 +257,7 @@ describe("PeopleTab - Roster Linking", () => {
 
     // Error should be logged
     await waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Error loading link status:",
-        expect.any(Error)
-      );
+      expect(consoleSpy).toHaveBeenCalledWith("Error loading link status:", expect.any(Error));
     });
 
     consoleSpy.mockRestore();
@@ -278,11 +282,12 @@ describe("PeopleTab - Roster Linking", () => {
   it("should update link status when link indicator is clicked", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({
-        linkStatus: {
-          "John Doe": { isLinked: false },
-        },
-      }),
+      json: () =>
+        Promise.resolve({
+          linkStatus: {
+            "John Doe": { isLinked: false },
+          },
+        }),
     } as Response);
 
     render(

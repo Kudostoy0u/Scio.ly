@@ -162,8 +162,15 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
+// Regex constants for test queries
+const ASSIGNMENTS_REGEX = /assignments/i;
+const PEOPLE_REGEX = /people/i;
+
 describe("TeamDashboard", () => {
-  const mockUser = { id: "test-user-id", email: "test@example.com" } as any;
+  const mockUser = { id: "test-user-id", email: "test@example.com" } as {
+    id: string;
+    email: string;
+  };
 
   const defaultProps = {
     team: {
@@ -192,16 +199,24 @@ describe("TeamDashboard", () => {
       initialUser: mockUser,
     });
 
-    await waitFor(() => {
-      expect(screen.getByText("Test School")).toBeInTheDocument();
-    }, { timeout: 3000 });
-    
+    await waitFor(
+      () => {
+        expect(screen.getByText("Test School")).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
+
     // Division text might be split, so use a more flexible matcher
-    await waitFor(() => {
-      expect(screen.getByText((content, element) => {
-        return element?.textContent === "Division B" || content.includes("Division B");
-      })).toBeInTheDocument();
-    }, { timeout: 3000 });
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText((content, element) => {
+            return element?.textContent === "Division B" || content.includes("Division B");
+          })
+        ).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
     // Note: Tab navigation is now handled by separate routes, so we don't test for tab text here
   });
 
@@ -327,11 +342,11 @@ describe("TeamDashboard", () => {
 
     fireEvent.click(screen.getByText("Cancel"));
     await waitFor(() => {
-      expect(screen.queryByText("Are you sure you want to exit this team?")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Are you sure you want to exit this team?")
+      ).not.toBeInTheDocument();
     });
   });
-
-
 
   // Search functionality not implemented in current BannerInvite component
   it("should show invite codes when invite button is clicked", async () => {
@@ -370,9 +385,9 @@ describe("TeamDashboard", () => {
     });
 
     await waitFor(() => {
-      // With mocked HomeContent, verify it renders the correct tab      
+      // With mocked HomeContent, verify it renders the correct tab
       expect(screen.getByTestId("home-content")).toBeInTheDocument();
-      expect(screen.getByText(/assignments/i)).toBeInTheDocument();
+      expect(screen.getByText(ASSIGNMENTS_REGEX)).toBeInTheDocument();
     });
   });
 
@@ -383,12 +398,12 @@ describe("TeamDashboard", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Test School")).toBeInTheDocument();
-   });
+    });
 
     // With mocked HomeContent, verify it renders
-   await waitFor(() => {
+    await waitFor(() => {
       expect(screen.getByTestId("home-content")).toBeInTheDocument();
-      expect(screen.getByText(/people/i)).toBeInTheDocument();
+      expect(screen.getByText(PEOPLE_REGEX)).toBeInTheDocument();
     });
   });
 

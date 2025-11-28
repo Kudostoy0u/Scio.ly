@@ -1,5 +1,3 @@
-// biome-ignore lint/style/useFilenamingConvention: Test file follows .test.tsx convention
-// biome-ignore lint/correctness/noUndeclaredDependencies: TeamsLanding is imported via path alias
 import TeamsLanding from "@app/teams/components/TeamsLanding";
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
