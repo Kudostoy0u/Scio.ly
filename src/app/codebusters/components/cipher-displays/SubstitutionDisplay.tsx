@@ -19,7 +19,7 @@ interface SubstitutionDisplayProps {
   solution?: { [key: string]: string };
   isTestSubmitted: boolean;
   cipherType: string;
-  key?: string;
+  cipherKey?: string;
   caesarShift?: number;
   affineA?: number;
   affineB?: number;
@@ -36,7 +36,7 @@ export const SubstitutionDisplay = ({
   solution,
   isTestSubmitted,
   cipherType,
-  key: _key,
+  cipherKey: _cipherKey,
   caesarShift,
   affineA,
   affineB,

@@ -210,47 +210,17 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
     [cryptarithmData, isTestSubmitted, buildCorrectMapping]
   );
 
-  // Helper function to pad word
-  const padWord = useCallback((word: string, len: number): string => {
-    return word.padStart(len, " ");
-  }, []);
-
-  // Helper function to parse numeric example
-  const parseNumericExample = useCallback(
-    (
-      numericExample: string,
-      opSymbol: string
-    ): {
-      numLine1: string;
-      numLine2: string;
-      numLine3: string;
-      numSeparator: string;
-    } | null => {
-      const numParts = numericExample.split(EQUATION_SPLIT_REGEX).filter(Boolean);
-      if (numParts.length !== 3) {
-        return null;
-      }
-      const [n1, n2, n3] = numParts;
-      const numMaxLen = Math.max(n1?.length || 0, n2?.length || 0, (n3?.length || 0) - 1);
-      const numLine1 = padWord(n1 || "", numMaxLen);
-      const numLine2 = opSymbol + padWord(n2 || "", numMaxLen).slice(1);
-      const numSeparator = "-".repeat(numMaxLen + 1);
-      const numLine3 = padWord(n3 || "", numMaxLen + 1);
-      return { numLine1, numLine2, numLine3, numSeparator };
-    },
-    [padWord]
-  );
-
   // Helper function to build vertical display lines
   const buildVerticalLines = useCallback(
     (w1: string, w2: string, w3: string, maxLen: number, opSymbol: string) => {
-      const line1 = padWord(w1 || "", maxLen);
-      const line2 = opSymbol + padWord(w2 || "", maxLen).slice(1);
+      // Ensure proper padding without clipping the first letter
+      const line1 = w1.padStart(maxLen + 1, " ");
+      const line2 = opSymbol + w2.padStart(maxLen, " ");
       const separator = "-".repeat(maxLen + 1);
-      const line3 = padWord(w3 || "", maxLen + 1);
+      const line3 = w3.padStart(maxLen + 1, " ");
       return { line1, line2, line3, separator };
     },
-    [padWord]
+    []
   );
 
   // Parse equation for vertical display
@@ -275,12 +245,8 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
 
     const { line1, line2, line3, separator } = buildVerticalLines(w1, w2, w3, maxLen, opSymbol);
 
-    const numericVertical = cryptarithmData.numericExample
-      ? parseNumericExample(cryptarithmData.numericExample, opSymbol)
-      : null;
-
-    return { line1, line2, line3, separator, operation, numericVertical };
-  }, [cryptarithmData, buildVerticalLines, parseNumericExample]);
+    return { line1, line2, line3, separator, operation };
+  }, [cryptarithmData, buildVerticalLines]);
 
   return (
     <div className="space-y-4">
@@ -290,12 +256,9 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
           <h4 className={`font-semibold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}>
             Cryptarithm Problem
           </h4>
-          <div className="flex flex-col md:flex-row gap-6 justify-center items-start">
+          <div className="flex justify-center">
             {/* Letter Equation */}
-            <div className="flex-1">
-              <div className={`text-xs mb-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                Letter Equation:
-              </div>
+            <div>
               <div
                 className={`font-mono text-center space-y-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
               >
@@ -305,24 +268,6 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
                 <div className="text-lg font-semibold">{verticalDisplay.line3}</div>
               </div>
             </div>
-            {/* Numeric Example */}
-            {verticalDisplay.numericVertical && (
-              <div className="flex-1">
-                <div className={`text-xs mb-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                  Numeric Example:
-                </div>
-                <div
-                  className={`font-mono text-center space-y-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-                >
-                  <div className="text-lg">{verticalDisplay.numericVertical.numLine1}</div>
-                  <div className="text-lg">{verticalDisplay.numericVertical.numLine2}</div>
-                  <div className="text-lg">{verticalDisplay.numericVertical.numSeparator}</div>
-                  <div className="text-lg font-semibold">
-                    {verticalDisplay.numericVertical.numLine3}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}

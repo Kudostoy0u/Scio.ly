@@ -82,7 +82,7 @@ export const encryptFractionatedMorse = (text: string): FractionatedMorseResult 
     // Look up letter directly from triplet
     const letter = fractionationTable[triplet];
     if (letter) {
-        encrypted += letter;
+      encrypted += letter;
     }
   }
 

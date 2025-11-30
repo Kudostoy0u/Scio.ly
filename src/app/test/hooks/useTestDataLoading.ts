@@ -369,16 +369,7 @@ export function useTestDataLoading(
       setIsLoading(false);
       fetchCompletedRef.current = true;
     }
-  }, [
-    initialData,
-    initialRouterData,
-    stableRouterDataMemo,
-    isLoading,
-    setData,
-    setIsLoading,
-    setRouterData,
-    setFetchError,
-  ]);
+  }, [initialData, initialRouterData, stableRouterDataMemo, isLoading]);
 
   /**
    * Effect 2: initLoad fallback fetch
@@ -413,7 +404,7 @@ export function useTestDataLoading(
       },
       fetchCompletedRef,
     });
-  }, [initialData, stableRouterDataMemo, data.length, isLoading, setRouterData, setFetchError, setIsLoading, setData]);
+  }, [initialData, stableRouterDataMemo, data.length, isLoading]);
 
   /**
    * Effect 3: Preview mode auto-fill (optional, data-related)

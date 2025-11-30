@@ -103,7 +103,7 @@ class TeamCacheManager {
   /**
    * Execute a cache operation
    */
-  private async executeOperation(operation: CacheOperation): Promise<void> {
+  private executeOperation(operation: CacheOperation): Promise<void> {
     // const store = useTeamStore.getState();
 
     switch (operation.type) {
@@ -128,6 +128,7 @@ class TeamCacheManager {
         // Unknown operation type, ignore
         break;
     }
+    return Promise.resolve();
   }
 
   /**

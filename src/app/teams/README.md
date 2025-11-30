@@ -1,225 +1,206 @@
-# Teams Data Loading System
+# Teams Directory
 
-## Overview
+This directory contains the comprehensive team management system for the Scio.ly platform. Provides team creation, member management, assignments, calendar, leaderboards, and collaboration tools.
 
-This directory contains a centralized data loading system for Elo ratings that uses state-based JSON files for improved performance and scalability.
+## Files
 
-## Current Structure
+### `page.tsx`
+Server component that handles team page routing and auto-redirects to user's primary team.
 
-### Data Files
-- `public/statesB/` - Division B state-based files
-- `public/statesC/` - Division C state-based files
+**Key Features:**
+- Auto-detects user's primary team
+- Redirects to team slug if available
+- Supports `?view=all` parameter to view all teams
+- Handles team unlinking cookie
 
-### State-Based Structure
+**Example:**
+```60:109:src/app/teams/page.tsx
+export default async function TeamsPage(ctx: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const cookieStore = await cookies();
+  const justUnlinked = cookieStore.get("teamsJustUnlinked");
+  const auto = await getAutoLinkSelection();
+  const searchParams = await ctx.searchParams;
+  const viewAll = searchParams.view === "all";
 
-### Directory Structure
-```
-public/
-├── statesB/
-│   ├── meta.json          # Metadata mappings for Division B
-│   ├── CA.json            # California teams data
-│   ├── IL.json            # Illinois teams data
-│   ├── NY.json            # New York teams data
-│   └── ...                # Other state files
-└── statesC/
-    ├── meta.json          # Metadata mappings for Division C
-    ├── CA.json            # California teams data
-    ├── IL.json            # Illinois teams data
-    ├── NY.json            # New York teams data
-    └── ...                # Other state files
-```
+  // Only redirect if we have a valid team slug, user hasn't just unlinked, and user doesn't explicitly want to view all teams
+  if (!(justUnlinked || viewAll) && auto?.slug) {
+    // Double-check that the team actually exists in the new system
+    try {
+      const { dbPg } = await import("@/lib/db");
+      const { newTeamGroups } = await import("@/lib/db/schema");
+      const { eq } = await import("drizzle-orm");
 
-### Metadata Format (meta.json)
-```json
-{
-  "teams": {
-    "0": "School Name Varsity",
-    "1": "School Name JV",
-    "2": "Another School Varsity"
-  },
-  "events": {
-    "0": "Anatomy and Physiology",
-    "1": "Codebusters",
-    "2": "Crime Busters"
-  },
-  "tournaments": {
-    "0": "Tournament Name 1",
-    "1": "Tournament Name 2"
-  },
-  "states": {
-    "CA": "California",
-    "IL": "Illinois",
-    "NY": "New York"
-  },
-  "tournamentTimeline": {
-    "2025": [
-      {
-        "date": "2025-01-15",
-        "tournamentId": 0,
-        "tournamentName": "Tournament Name 1",
-        "link": "https://www.duosmium.org/results/...",
-        "season": "2025"
+      const groupResult = await dbPg
+        .select({ id: newTeamGroups.id })
+        .from(newTeamGroups)
+        .where(eq(newTeamGroups.slug, auto.slug));
+
+      if (groupResult.length > 0) {
+        redirect(`/teams/${auto.slug}`);
       }
-    ]
-  }
-}
-```
-
-### State Data Format (CA.json)
-```json
-{
-  "School Name Varsity": {
-    "seasons": {
-      "2025": {
-        "events": {
-          "__OVERALL__": {
-            "rating": 2052.38,
-            "history": [...]
-          }
-        }
-      }
-    },
-    "meta": {
-      "games": 26830,
-      "events": 28
+    } catch (error) {
+      // Handle redirect errors
     }
   }
+
+  return (
+    <TeamsPageClient
+      initialLinkedSelection={auto ? {...} : null}
+      initialGroupSlug={auto?.slug || null}
+    />
+  );
 }
 ```
 
-## Implementation Details
+**Important Notes:**
+- Uses Drizzle ORM to query team memberships
+- Finds user's primary team (most recent active membership)
+- Redirects to team page if found
+- Supports viewing all teams with `?view=all` parameter
 
-### Data Loading System (`utils/dataLoader.ts`)
+## Subdirectories
 
-The centralized data loader provides:
+### `[slug]/`
+Dynamic route for individual team pages.
 
-1. **State-Based Loading**: Loads from individual state JSON files
-2. **Metadata Integration**: Uses meta.json for efficient data mapping
-3. **Caching**: 5-minute cache for performance optimization
-4. **Error Handling**: Comprehensive error handling and retry logic
-5. **Progressive Loading**: Loads state data individually for better performance
+**Files:**
+- `page.tsx` - Team page server component
+- `TeamSlugClient.tsx` - Team page client component
+- `assignments/page.tsx` - Team assignments page
+- `people/page.tsx` - Team people/roster page
+- `stream/page.tsx` - Team activity stream page
 
-### Custom Hook (`hooks/useEloData.ts`)
+**Features:**
+- Team dashboard
+- Assignments management
+- People/roster management
+- Activity stream
+- Calendar integration
 
-Provides a React hook for managing data loading state:
-- Loading state management
-- Error handling
-- Refetch functionality
-- Automatic dependency tracking
+### `components/`
+Comprehensive team components directory.
 
-### Usage Example
+**Key Components:**
+- `TeamsPageClient.tsx` - Main teams page client
+- `TeamsLanding.tsx` - Teams landing page
+- `CreateTeamModal.tsx` - Team creation modal
+- `JoinTeamModal.tsx` - Join team modal
+- `TeamCard.tsx` - Team card display
+- `TeamDashboard.tsx` - Team dashboard component
+- `TeamLayout.tsx` - Team page layout
+- `PeopleTab.tsx` - People/roster tab
+- `RosterTab.tsx` - Roster management tab
+- `AssignmentsTab.tsx` - Assignments tab
+- `StreamTab.tsx` - Activity stream tab
+- `Leaderboard.tsx` - Team leaderboard
+- `TeamCalendar.tsx` - Team calendar component
+- `NotificationBell.tsx` - Notification bell component
 
-```typescript
-import { useEloData } from './hooks/useEloData';
+**Assignment Components:**
+- `EnhancedAssignmentCreator.tsx` - Assignment creation
+- `CodebustersAssignmentCreator.tsx` - Codebusters-specific creator
+- `AssignmentViewer.tsx` - Assignment viewing
+- `AssignmentDetailsStep.tsx` - Assignment details step
+- `QuestionGenerationStep.tsx` - Question generation step
+- `QuestionPreviewStep.tsx` - Question preview step
+- `RosterSelectionStep.tsx` - Roster selection step
 
-function MyComponent() {
-  const { data, loading, error, refetch } = useEloData({ 
-    division: 'c',
-    states: ['CA', 'IL'] // Future: load specific states
-  });
+**Calendar Components:**
+- `calendar/CalendarGrid.tsx` - Calendar grid display
+- `calendar/CalendarHeader.tsx` - Calendar header
+- `calendar/EventModal.tsx` - Event modal
+- `calendar/EventList.tsx` - Event list
+- `calendar/RecurringMeetingModal.tsx` - Recurring meetings
+- `calendar/SettingsModal.tsx` - Calendar settings
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-  
-  return <div>Data loaded: {data ? 'Yes' : 'No'}</div>;
-}
-```
+**Stream Components:**
+- `stream/StreamPosts.tsx` - Stream posts display
+- `stream/PostCreator.tsx` - Post creation
+- `stream/TimerManager.tsx` - Timer management
+- `stream/ActiveTimers.tsx` - Active timers display
 
-## Benefits
+**Leaderboard Components:**
+- `leaderboard/` - Leaderboard-specific components
 
-### Performance
-- **Reduced Initial Load**: Only load data for states being viewed
-- **Faster Page Loads**: Smaller individual files
-- **Better Caching**: Browser can cache individual state files
+**Roster Components:**
+- `roster/RosterHeader.tsx` - Roster header
+- `roster/EventInput.tsx` - Event input
+- `roster/SubteamSelector.tsx` - Subteam selection
+- `roster/ConflictBlock.tsx` - Conflict detection
 
-### Scalability
-- **Easier Updates**: Update individual state files instead of entire dataset
-- **Reduced Memory Usage**: Load only needed data
-- **Better CDN Performance**: Smaller files cache better
+### `assign/`
+Team assignment viewing page.
 
-### Development
-- **Easier Testing**: Test with individual state files
-- **Incremental Migration**: Migrate states one at a time
-- **Better Debugging**: Isolate issues to specific states
+**Files:**
+- `page.tsx` - Assignment page
 
-## Implementation Status
+### `invites/`
+Team invitation management.
 
-### Phase 1: Preparation ✅
-- ✅ Centralized data loading system
-- ✅ Caching infrastructure
-- ✅ Error handling
-- ✅ Documentation
+**Files:**
+- `page.tsx` - Invites page
+- `README.md` - Invites documentation
 
-### Phase 2: Data Generation ✅
-- ✅ Updated `script.js` to generate state-based files
-- ✅ Created metadata files
-- ✅ Validated data integrity
+### `calendar/`
+Team calendar page.
 
-### Phase 3: Implementation ✅
-- ✅ Updated data loader to use state-based files
-- ✅ Implemented progressive loading
-- ✅ Removed legacy format dependencies
+**Files:**
+- `page.tsx` - Calendar page
 
-### Phase 4: Optimization (Future)
-- Add state selection UI
-- Implement data compression
-- Optimize cache strategies
+### `archived/`
+Archived teams page.
 
-## Script.js Implementation
+**Files:**
+- `page.tsx` - Archived teams page
+- `ArchivedTeamsClient.tsx` - Archived teams client component
 
-The `script.js` file has been updated to:
+### `results/`
+Team results page.
 
-1. **Generate State-Based Files**: Split data by state ✅
-2. **Create Metadata Files**: Generate meta.json for each division ✅
-3. **Precalculate Tournament Timeline**: Generate tournament timeline data ✅
-4. **Add Validation**: Ensure data integrity across files ✅
+**Files:**
+- `page.tsx` - Results page
+- `README.md` - Results documentation
 
-### Script.js Implementation
+### `docs/`
+Team system documentation.
 
-```javascript
-// Generate state-based files
-function generateStateFiles(eloData, division, metadata) {
-  const statesDir = path.join(OUTPUT_DIR, `states${division}`);
-  
-  // Create states directory if it doesn't exist
-  if (!fs.existsSync(statesDir)) {
-    fs.mkdirSync(statesDir, { recursive: true });
-  }
-  
-  // Precalculate tournament timeline data
-  const tournamentTimeline = precalculateTournamentTimeline(eloData, metadata);
-  
-  // Create metadata file
-  const metadataFile = {
-    teams: metadata.teamIds,
-    events: metadata.eventIds,
-    tournaments: metadata.tournamentIds,
-    states: {},
-    tournamentTimeline: tournamentTimeline
-  };
-  
-  // Generate state files
-  for (const stateCode in eloData) {
-    const stateData = eloData[stateCode];
-    const stateFile = path.join(statesDir, `${stateCode}.json`);
-    
-    // Write state data
-    fs.writeFileSync(stateFile, JSON.stringify(stateData));
-    
-    // Add state info to metadata
-    metadataFile.states[stateCode] = getStateName(stateCode);
-  }
-  
-  // Write metadata file
-  const metaFile = path.join(statesDir, 'meta.json');
-  fs.writeFileSync(metaFile, JSON.stringify(metadataFile, null, 2));
-}
-```
+**Files:**
+- `API_ROUTES.md` - API routes documentation
+- `BUSINESS_LOGIC.md` - Business logic documentation
+- `FLOWCHARTS.md` - Flowchart documentation
+- `SCHEMA.md` - Database schema documentation
+- `TESTING.md` - Testing documentation
+- `README.md` - Documentation overview
 
-## Notes
+### `constants/`
+Team constants.
 
-- The system uses only state-based files for optimal performance
-- All data is loaded from individual state files with metadata
-- Progressive loading reduces initial page load times
-- Individual state files can be cached more efficiently by browsers and CDNs
-- Tournament timeline data is precalculated for efficient chart rendering
+**Files:**
+- `divisionGroups.ts` - Division group definitions
+
+### `types/`
+TypeScript type definitions.
+
+**Files:**
+- `index.ts` - Team type definitions
+
+### `utils/`
+Team utility functions.
+
+**Files:**
+- `displayNameUtils.ts` - Display name utilities
+
+## Important Notes
+
+1. **Team Structure**: Uses groups, units, and memberships structure
+2. **Auto-Redirect**: Automatically redirects to user's primary team
+3. **Slug-Based Routing**: Teams accessed via slug URLs
+4. **Assignment System**: Comprehensive assignment creation and management
+5. **Calendar Integration**: Full calendar system for team events
+6. **Activity Stream**: Real-time activity stream for team updates
+7. **Leaderboards**: Team-specific leaderboards
+8. **Roster Management**: Advanced roster management with conflict detection
+9. **Notifications**: Real-time notification system
+10. **Theme Support**: Dark/light mode support throughout

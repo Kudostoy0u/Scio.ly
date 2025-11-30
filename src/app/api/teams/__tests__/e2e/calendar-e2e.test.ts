@@ -32,28 +32,28 @@ describe("Calendar Event Management E2E", () => {
   const testUsers: TestUser[] = [];
   const testTeams: TestTeam[] = [];
 
-  beforeAll(async () => {
+  beforeAll(() => {
     // Create test users
-    testUsers.push(await createTestUser({ displayName: "Captain User" }));
-    testUsers.push(await createTestUser({ displayName: "Member User" }));
+    testUsers.push(createTestUser({ displayName: "Captain User" }));
+    testUsers.push(createTestUser({ displayName: "Member User" }));
 
     // Create test team
-    const team = await createTestTeam(testUsers[0].id);
+    const team = createTestTeam(testUsers[0].id);
     testTeams.push(team);
 
     // Add member
-    await addTeamMember(team.subteamId, testUsers[1].id, "member");
+    addTeamMember(team.subteamId, testUsers[1].id, "member");
   });
 
-  afterAll(async () => {
+  afterAll(() => {
     // Cleanup
     const userIds = testUsers.map((u) => u.id);
     const teamGroupIds = testTeams.map((t) => t.groupId);
-    await cleanupTestData(userIds, teamGroupIds);
+    cleanupTestData(userIds, teamGroupIds);
   });
 
   describe("Event Creation", () => {
-    it("should create a team event", async () => {
+    it("should create a team event", () => {
       const team = testTeams[0];
       const captain = testUsers[0];
 
@@ -81,7 +81,7 @@ describe("Calendar Event Management E2E", () => {
       expect(retrievedEvent?.createdBy).toBe(captain.id);
     });
 
-    it("should create a personal event (null teamId)", async () => {
+    it("should create a personal event (null teamId)", () => {
       const captain = testUsers[0];
 
       // Create personal event
@@ -106,7 +106,7 @@ describe("Calendar Event Management E2E", () => {
       expect(retrievedEvent?.title).toBe("Personal Practice");
     });
 
-    it("should create a recurring event", async () => {
+    it("should create a recurring event", () => {
       const team = testTeams[0];
       const captain = testUsers[0];
 
@@ -137,7 +137,7 @@ describe("Calendar Event Management E2E", () => {
   });
 
   describe("Event Retrieval", () => {
-    it("should retrieve events for a team", async () => {
+    it("should retrieve events for a team", () => {
       const team = testTeams[0];
       const captain = testUsers[0];
 
@@ -162,7 +162,7 @@ describe("Calendar Event Management E2E", () => {
       expect(events.length).toBeGreaterThanOrEqual(2);
     });
 
-    it("should filter events by date range", async () => {
+    it("should filter events by date range", () => {
       const team = testTeams[0];
       const captain = testUsers[0];
 
@@ -185,7 +185,7 @@ describe("Calendar Event Management E2E", () => {
   });
 
   describe("Event Updates", () => {
-    it("should update event details", async () => {
+    it("should update event details", () => {
       const team = testTeams[0];
       const captain = testUsers[0];
 
@@ -212,7 +212,7 @@ describe("Calendar Event Management E2E", () => {
   });
 
   describe("Event Deletion", () => {
-    it("should delete an event", async () => {
+    it("should delete an event", () => {
       const team = testTeams[0];
       const captain = testUsers[0];
 
@@ -232,7 +232,7 @@ describe("Calendar Event Management E2E", () => {
   });
 
   describe("Event Attendees", () => {
-    it("should add attendees to events", async () => {
+    it("should add attendees to events", () => {
       const team = testTeams[0];
       const captain = testUsers[0];
       const member = testUsers[1];
@@ -258,7 +258,7 @@ describe("Calendar Event Management E2E", () => {
   });
 
   describe("Authorization", () => {
-    it("should verify only creators and captains can modify events", async () => {
+    it("should verify only creators and captains can modify events", () => {
       const team = testTeams[0];
       const captain = testUsers[0];
       const member = testUsers[1];

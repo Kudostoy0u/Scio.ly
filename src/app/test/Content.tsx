@@ -170,7 +170,7 @@ export default function TestContent({
     }
   }, [isPreview]);
 
-  const handlePrintConfig = async () => {
+  const handlePrintConfig = () => {
     setPrintModalOpen(true);
   };
 

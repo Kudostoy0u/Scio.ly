@@ -245,15 +245,15 @@ export async function generateQuestionCodes(
   return codeMap;
 }
 
-export async function computeQuestionRank(
+export function computeQuestionRank(
   questionId: string,
   _createdAt: Date | null,
   _table: "questions" | "idEvents" = "questions"
-): Promise<number> {
+): number {
   return calculateQuestionHash(questionId);
 }
 
-export async function getQuestionByRank(
+export function getQuestionByRank(
   _targetRank: number,
   _table: "questions" | "idEvents" = "questions"
 ) {

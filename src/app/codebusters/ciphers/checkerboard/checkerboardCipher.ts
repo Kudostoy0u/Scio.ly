@@ -2,12 +2,12 @@
  * Checkerboard cipher encryption function
  */
 
+import { getUniqueWords, pickWord } from "@/app/codebusters/ciphers/transposition/utils/wordBank";
 import type { CheckerboardResult } from "@/app/codebusters/ciphers/types/cipherTypes";
 import {
   createPolybiusSquare,
   letterToCoordinates,
 } from "@/app/codebusters/ciphers/utils/cipherUtils";
-import { getUniqueWords, pickWord } from "@/app/codebusters/ciphers/transposition/utils/wordBank";
 
 // Regex for matching single letters (A-Z, a-z)
 const SINGLE_LETTER_REGEX = /^[A-Za-z]$/;
@@ -28,7 +28,7 @@ function getFiveLetterWords(): string[] {
 // Helper function to pick two different 5-letter words for row and column keys
 function pickRowAndColumnKeys(): { rowKey: string; colKey: string } {
   const fiveLetterWords = getFiveLetterWords();
-  
+
   // Fallback to random keys if no 5-letter words available
   if (fiveLetterWords.length === 0) {
     return {
@@ -36,14 +36,14 @@ function pickRowAndColumnKeys(): { rowKey: string; colKey: string } {
       colKey: generateRandomKey(5),
     };
   }
-  
+
   // Pick first word
   const rowKey = pickWord(fiveLetterWords);
-  
+
   // Pick second word, excluding the first one
   const excludeSet = new Set([rowKey]);
   const colKey = pickWord(fiveLetterWords, excludeSet);
-  
+
   return { rowKey, colKey };
 }
 

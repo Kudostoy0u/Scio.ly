@@ -1,5 +1,5 @@
-const { Pool } = require('pg');
-require('dotenv').config();
+const { Pool } = require("pg");
+require("dotenv").config();
 
 async function getSchema() {
   const pool = new Pool({
@@ -8,24 +8,21 @@ async function getSchema() {
   });
 
   try {
-    console.log('🔍 Querying CockroachDB for key tables...');
-    
     // Focus on key tables we need
     const keyTables = [
-      'users',
-      'new_team_groups', 
-      'new_team_units',
-      'new_team_memberships',
-      'new_team_roster_data',
-      'new_team_posts',
-      'new_team_assignments',
-      'new_team_events'
+      "users",
+      "new_team_groups",
+      "new_team_units",
+      "new_team_memberships",
+      "new_team_roster_data",
+      "new_team_posts",
+      "new_team_assignments",
+      "new_team_events",
     ];
-    
+
     for (const tableName of keyTables) {
-      console.log(`\n🔍 Schema for table: ${tableName}`);
-      
-      const columnsResult = await pool.query(`
+      const columnsResult = await pool.query(
+        `
         SELECT 
           column_name,
           data_type,
@@ -37,26 +34,23 @@ async function getSchema() {
         FROM information_schema.columns 
         WHERE table_name = $1 AND table_schema = 'public'
         ORDER BY ordinal_position;
-      `, [tableName]);
-      
+      `,
+        [tableName]
+      );
+
       if (columnsResult.rows.length === 0) {
-        console.log('  Table not found');
         continue;
       }
-      
-      console.log('  Columns:');
-      columnsResult.rows.forEach(col => {
-        const nullable = col.is_nullable === 'YES' ? 'NULL' : 'NOT NULL';
-        const defaultVal = col.column_default ? ` DEFAULT ${col.column_default}` : '';
-        const length = col.character_maximum_length ? `(${col.character_maximum_length})` : '';
-        const precision = col.numeric_precision ? `(${col.numeric_precision}${col.numeric_scale ? ',' + col.numeric_scale : ''})` : '';
-        
-        console.log(`    ${col.column_name}: ${col.data_type}${length}${precision} ${nullable}${defaultVal}`);
+      columnsResult.rows.forEach((col) => {
+        const _nullable = col.is_nullable === "YES" ? "NULL" : "NOT NULL";
+        const _defaultVal = col.column_default ? ` DEFAULT ${col.column_default}` : "";
+        const _length = col.character_maximum_length ? `(${col.character_maximum_length})` : "";
+        const _precision = col.numeric_precision
+          ? `(${col.numeric_precision}${col.numeric_scale ? `,${col.numeric_scale}` : ""})`
+          : "";
       });
     }
-    
-  } catch (error) {
-    console.error('❌ Error querying schema:', error);
+  } catch (_error) {
   } finally {
     await pool.end();
   }

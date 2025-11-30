@@ -90,7 +90,7 @@ describe("CreateTeamModal", () => {
     expect(divisionSelect).toHaveValue("B");
   });
 
-  it("should show validation errors for empty required fields", async () => {
+  it("should show validation errors for empty required fields", () => {
     render(<CreateTeamModal {...defaultProps} />);
 
     const createButton = screen.getByText("Create Team");
@@ -194,7 +194,7 @@ describe("CreateTeamModal", () => {
     expect(newSchoolInput).toHaveValue("");
   });
 
-  it("should prevent form submission with invalid data", async () => {
+  it("should prevent form submission with invalid data", () => {
     render(<CreateTeamModal {...defaultProps} />);
 
     const createButton = screen.getByText("Create Team");

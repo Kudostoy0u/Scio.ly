@@ -28,26 +28,26 @@ describe("Team Members E2E", () => {
   const testUsers: TestUser[] = [];
   const testTeams: TestTeam[] = [];
 
-  beforeAll(async () => {
+  beforeAll(() => {
     // Create test users
-    testUsers.push(await createTestUser({ displayName: "Captain User" }));
-    testUsers.push(await createTestUser({ displayName: "Member User" }));
-    testUsers.push(await createTestUser({ displayName: "Co-Captain User" }));
+    testUsers.push(createTestUser({ displayName: "Captain User" }));
+    testUsers.push(createTestUser({ displayName: "Member User" }));
+    testUsers.push(createTestUser({ displayName: "Co-Captain User" }));
 
     // Create test team
-    const team = await createTestTeam(testUsers[0].id);
+    const team = createTestTeam(testUsers[0].id);
     testTeams.push(team);
 
     // Add members
-    await addTeamMember(team.subteamId, testUsers[1].id, "member");
-    await addTeamMember(team.subteamId, testUsers[2].id, "co_captain");
+    addTeamMember(team.subteamId, testUsers[1].id, "member");
+    addTeamMember(team.subteamId, testUsers[2].id, "co_captain");
   });
 
-  afterAll(async () => {
+  afterAll(() => {
     // Cleanup
     const userIds = testUsers.map((u) => u.id);
     const teamGroupIds = testTeams.map((t) => t.groupId);
-    await cleanupTestData(userIds, teamGroupIds);
+    cleanupTestData(userIds, teamGroupIds);
   });
 
   describe("Member Retrieval", () => {
@@ -66,7 +66,7 @@ describe("Team Members E2E", () => {
       expect(roles).toContain("co_captain");
     });
 
-    it("should retrieve members for specific subteam", async () => {
+    it("should retrieve members for specific subteam", () => {
       const team = testTeams[0];
 
       // Get members for specific subteam
@@ -77,14 +77,14 @@ describe("Team Members E2E", () => {
   });
 
   describe("Member Roles", () => {
-    it("should have captain as team creator", async () => {
+    it("should have captain as team creator", () => {
       const team = testTeams[0];
       const captain = testUsers[0];
 
-      await assertUserIsMember(captain.id, team.subteamId, "captain");
+      assertUserIsMember(captain.id, team.subteamId, "captain");
     });
 
-    it("should allow multiple roles in same team", async () => {
+    it("should allow multiple roles in same team", () => {
       const team = testTeams[0];
 
       // Verify different roles exist
@@ -96,12 +96,12 @@ describe("Team Members E2E", () => {
   });
 
   describe("Linked Roster Entries", () => {
-    it("should link roster entries to team members", async () => {
+    it("should link roster entries to team members", () => {
       const team = testTeams[0];
       const member = testUsers[1];
 
       // Create linked roster entry
-      await createRosterEntry(team.subteamId, "Astronomy", 0, "Member User", member.id);
+      createRosterEntry(team.subteamId, "Astronomy", 0, "Member User", member.id);
 
       // Verify link
       const [rosterEntry] = getRosterEntries(team.subteamId);
@@ -115,7 +115,7 @@ describe("Team Members E2E", () => {
       const team = testTeams[0];
 
       // Create unlinked roster entry
-      await createRosterEntry(team.subteamId, "Biology", 1, "Unlinked Student");
+      createRosterEntry(team.subteamId, "Biology", 1, "Unlinked Student");
 
       // Verify entry exists without userId
       const rosterEntries = getRosterEntries(team.subteamId);
@@ -130,7 +130,7 @@ describe("Team Members E2E", () => {
   });
 
   describe("Member Display Information", () => {
-    it("should retrieve member display names correctly", async () => {
+    it("should retrieve member display names correctly", () => {
       const _team = testTeams[0];
       const member = testUsers[1];
 
@@ -144,7 +144,7 @@ describe("Team Members E2E", () => {
   });
 
   describe("Member Status", () => {
-    it("should only retrieve active members", async () => {
+    it("should only retrieve active members", () => {
       const team = testTeams[0];
 
       // Get only active memberships

@@ -350,7 +350,7 @@ export function useTestSubmission(
     await updateUserMetrics(routerData, mcqTotal, mcqScore);
     await submitEnhancedAssignment(routerData, data, userAnswers, mcqScore, mcqTotal, timeLeft);
     await submitLegacyAssignment(routerData, mcqScore, mcqTotal);
-  }, [data, userAnswers, gradingResults, routerData, timeLeft, setGradingFrQs]);
+  }, [data, userAnswers, gradingResults, routerData, timeLeft]);
 
   /**
    * Reload questions with the same parameters

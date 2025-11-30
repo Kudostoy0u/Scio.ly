@@ -204,6 +204,7 @@ interface QuestionCardProps {
     plainLetter: string
   ) => void;
   handleKeywordSolutionChange: (quoteIndex: number, keyword: string) => void;
+  handleReportQuote?: (quoteIndex: number) => void;
   hintedLetters: { [questionIndex: number]: { [letter: string]: boolean } };
   _hintCounts: { [questionIndex: number]: number };
   questionPoints?: { [key: number]: number };
@@ -229,6 +230,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   handleCheckerboardSolutionChange,
   handleCryptarithmSolutionChange,
   handleKeywordSolutionChange,
+  handleReportQuote,
   hintedLetters,
   _hintCounts,
   questionPoints = {},
@@ -365,7 +367,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       solution={item.solution}
       isTestSubmitted={isTestSubmitted}
       cipherType={item.cipherType}
-      key={item.key}
+      cipherKey={item.key}
       caesarShift={item.caesarShift}
       affineA={item.affineA}
       affineB={item.affineB}
@@ -600,6 +602,32 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               <path d="M12 8h.01" />
             </svg>
           </button>
+          {isTestSubmitted && handleReportQuote && (
+            <button
+              type="button"
+              onClick={() => handleReportQuote(index)}
+              className={`w-5 h-5 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center transition-all duration-200 hover:scale-110 ${
+                darkMode ? "bg-gray-600 border-gray-500 text-white" : "text-gray-600"
+              }`}
+              title="Report quote issue"
+            >
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-label="Report"
+              >
+                <title>Report</title>
+                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                <line x1="4" y1="22" x2="4" y2="15" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
       {item.cipherType !== "Cryptarithm" && (

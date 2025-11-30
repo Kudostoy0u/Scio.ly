@@ -2,6 +2,7 @@
 
 import { useTheme } from "@/app/contexts/themeContext";
 import SyncLocalStorage from "@/lib/database/localStorageReplacement";
+import logger from "@/lib/utils/logger";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -136,6 +137,67 @@ export default function CodeBusters() {
     handleCryptarithmSolutionChange,
   } = useSolutionHandlers(quotes, setQuotes);
   const { totalProgress, calculateQuoteProgress } = useProgressCalculation(quotes);
+
+  // Handle quote reporting
+  const handleReportQuote = useCallback(
+    async (quoteIndex: number) => {
+      const quote = quotes[quoteIndex];
+      if (!quote) {
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/quotes/report", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            quote: {
+              id: quote.id,
+              quote: quote.quote,
+              author: quote.author,
+              language: quote.language,
+            },
+            cipherType: quote.cipherType,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          if (data.data?.action === "removed") {
+            // Remove the quote from the quotes array
+            setQuotes((prevQuotes) => prevQuotes.filter((_, index) => index !== quoteIndex));
+            toast.success(`Quote removed: ${data.data.reason}`);
+          } else if (data.data?.action === "edited" && data.data.editedQuote) {
+            // Update the quote in the quotes array
+            setQuotes((prevQuotes) => {
+              const updatedQuotes = [...prevQuotes];
+              if (updatedQuotes[quoteIndex]) {
+                updatedQuotes[quoteIndex] = {
+                  ...updatedQuotes[quoteIndex],
+                  quote: data.data.editedQuote.quote || updatedQuotes[quoteIndex].quote,
+                  author: data.data.editedQuote.author || updatedQuotes[quoteIndex].author,
+                  language: data.data.editedQuote.language || updatedQuotes[quoteIndex].language,
+                };
+              }
+              return updatedQuotes;
+            });
+            toast.info(`Quote has been edited: ${data.data.reason}`);
+          } else {
+            toast.info(`Quote is appropriate: ${data.data.reason}`);
+          }
+        } else {
+          toast.error(`Failed to report quote: ${data.message || "Unknown error"}`);
+        }
+      } catch (error) {
+        logger.error("Error reporting quote:", error);
+        toast.error("Failed to report quote. Please try again.");
+      }
+    },
+    [quotes, setQuotes]
+  );
 
   // Use test submission hook
   const { handleSubmitTest } = useTestSubmission({
@@ -397,6 +459,7 @@ export default function CodeBusters() {
                 handleCheckerboardSolutionChange={handleCheckerboardSolutionChange}
                 handleCryptarithmSolutionChange={handleCryptarithmSolutionChange}
                 handleKeywordSolutionChange={handleKeywordSolutionChange}
+                handleReportQuote={handleReportQuote}
                 hintedLetters={hintedLetters}
                 _hintCounts={hintCounts}
               />

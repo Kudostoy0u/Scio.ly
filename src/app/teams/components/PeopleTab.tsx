@@ -99,10 +99,10 @@ export default function PeopleTab({
 
   // Get roster data from store
   const { getRoster } = useTeamStore();
-  const roster = getRoster?.(team.slug, selectedSubteam === "all" ? "" : selectedSubteam) || {};
 
   // Extract unique roster names from roster
   const rosterNames = useMemo(() => {
+    const roster = getRoster?.(team.slug, selectedSubteam === "all" ? "" : selectedSubteam) || {};
     const names = new Set<string>();
     for (const eventNames of Object.values(roster)) {
       if (Array.isArray(eventNames)) {
@@ -114,7 +114,7 @@ export default function PeopleTab({
       }
     }
     return Array.from(names).sort();
-  }, [roster]);
+  }, [getRoster, team.slug, selectedSubteam]);
 
   // Load link status when component mounts or subteam changes
   useEffect(() => {

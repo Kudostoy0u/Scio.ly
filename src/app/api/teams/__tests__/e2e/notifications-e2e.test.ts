@@ -27,24 +27,24 @@ describe("Notifications Management E2E", () => {
   const testUsers: TestUser[] = [];
   const testTeams: TestTeam[] = [];
 
-  beforeAll(async () => {
+  beforeAll(() => {
     // Create test users
-    testUsers.push(await createTestUser({ displayName: "Notification User" }));
+    testUsers.push(createTestUser({ displayName: "Notification User" }));
 
     // Create test team
-    const team = await createTestTeam(testUsers[0].id);
+    const team = createTestTeam(testUsers[0].id);
     testTeams.push(team);
   });
 
-  afterAll(async () => {
+  afterAll(() => {
     // Cleanup
     const userIds = testUsers.map((u) => u.id);
     const teamGroupIds = testTeams.map((t) => t.groupId);
-    await cleanupTestData(userIds, teamGroupIds);
+    cleanupTestData(userIds, teamGroupIds);
   });
 
   describe("Notification Creation", () => {
-    it("should create a notification", async () => {
+    it("should create a notification", () => {
       const team = testTeams[0];
       const user = testUsers[0];
 
@@ -69,7 +69,7 @@ describe("Notifications Management E2E", () => {
   });
 
   describe("Notification Retrieval", () => {
-    it("should retrieve notifications for a user", async () => {
+    it("should retrieve notifications for a user", () => {
       const team = testTeams[0];
       const user = testUsers[0];
 
@@ -119,7 +119,7 @@ describe("Notifications Management E2E", () => {
   });
 
   describe("Marking Notifications as Read", () => {
-    it("should mark a notification as read", async () => {
+    it("should mark a notification as read", () => {
       const team = testTeams[0];
       const user = testUsers[0];
 
@@ -143,7 +143,7 @@ describe("Notifications Management E2E", () => {
   });
 
   describe("Deleting Notifications", () => {
-    it("should delete a notification", async () => {
+    it("should delete a notification", () => {
       const team = testTeams[0];
       const user = testUsers[0];
 

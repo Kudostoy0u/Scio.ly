@@ -16,7 +16,6 @@ import {
 import { buildTripletsFromText } from "./FractionatedMorse/utils/tripletProcessing";
 
 // Top-level regex patterns
-const UPPERCASE_LETTER_REGEX = /^[A-Z]$/;
 const UPPERCASE_LETTER_TEST_REGEX = /[A-Z]/;
 
 interface FractionatedMorseDisplayProps {
@@ -72,19 +71,6 @@ export const FractionatedMorseDisplay = ({
     [fractionationTable]
   );
 
-  const validCipherLetters = useMemo(() => {
-    const set = new Set<string>();
-    if (fractionationTable) {
-      // fractionationTable is triplet -> letter, so values are the cipher letters
-      for (const letter of Object.values(fractionationTable)) {
-        if (letter && UPPERCASE_LETTER_REGEX.test(letter)) {
-          set.add(letter);
-        }
-      }
-    }
-    return set;
-  }, [fractionationTable]);
-
   const cipherToTriplet: { [key: string]: string } = {};
   if (fractionationTable) {
     // fractionationTable is triplet -> letter, so we need to reverse it
@@ -131,7 +117,7 @@ export const FractionatedMorseDisplay = ({
 
       // Update the replacement table entry
       onSolutionChange(quoteIndex, `replacement_${matchingTriplet}`, cipherLetter);
-      
+
       // Also sync all other instances of this cipher letter with the same triplet
       // This matches the behavior when entering a letter in the replacement table
       onSolutionChange(quoteIndex, cipherLetter.toUpperCase(), triplet);

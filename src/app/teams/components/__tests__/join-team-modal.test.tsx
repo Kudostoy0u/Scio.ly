@@ -92,7 +92,7 @@ describe("JoinTeamModal", () => {
     expect(codeInput.maxLength).toBe(10);
   });
 
-  it("should show validation error for empty team code", async () => {
+  it("should show validation error for empty team code", () => {
     renderWithProviders(<JoinTeamModal {...defaultProps} />);
 
     const joinButton = screen.getByText("Join Team");
@@ -191,7 +191,7 @@ describe("JoinTeamModal", () => {
     expect(newCodeInput).toHaveValue("");
   });
 
-  it("should prevent form submission with empty code", async () => {
+  it("should prevent form submission with empty code", () => {
     renderWithProviders(<JoinTeamModal {...defaultProps} />);
 
     const joinButton = screen.getByText("Join Team");

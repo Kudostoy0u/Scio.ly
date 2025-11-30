@@ -171,7 +171,14 @@ export function computeRankingChanges(
       selectedDate,
       fallbackToPreviousSeason
     );
-    let prev = getLeaderboard(eloData, selectedEvent || undefined, previousYear, 1000, undefined, fallbackToPreviousSeason);
+    let prev = getLeaderboard(
+      eloData,
+      selectedEvent || undefined,
+      previousYear,
+      1000,
+      undefined,
+      fallbackToPreviousSeason
+    );
     if (selectedState) {
       current = current.filter((e) => e.state === selectedState).sort((a, b) => b.elo - a.elo);
       prev = prev.filter((e) => e.state === selectedState).sort((a, b) => b.elo - a.elo);

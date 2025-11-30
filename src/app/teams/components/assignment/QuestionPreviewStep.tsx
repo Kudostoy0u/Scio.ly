@@ -2,6 +2,7 @@
 
 import { useTheme } from "@/app/contexts/themeContext";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import type { Question, QuestionPreviewStepProps } from "./assignmentTypes";
 
 export default function QuestionPreviewStep({
@@ -64,9 +65,11 @@ export default function QuestionPreviewStep({
         {question.question_text}
       </p>
       {question.imageData && (
-        <img
+        <Image
           src={question.imageData}
           alt="Question"
+          width={800}
+          height={400}
           className="max-h-48 max-w-full rounded-md border object-contain"
         />
       )}

@@ -1,365 +1,285 @@
-# Scio.ly Dashboard System Documentation
+# Dashboard Directory
 
-## Overview
+This directory contains the main user dashboard system for the Scio.ly platform. The dashboard provides comprehensive user analytics, performance tracking, and personalized content management.
 
-The `src/app/dashboard/` directory contains the main user dashboard system for the Scio.ly platform. This system provides comprehensive user analytics, performance tracking, and personalized content management.
+## Files
 
-## Directory Structure
+### `page.tsx`
+Server component that renders the dashboard page with metadata.
 
-### Core Dashboard Components
+**Example:**
+```1:13:src/app/dashboard/page.tsx
+import Content from "@/app/dashboard/dashboardContent";
+import type { Metadata } from "next";
 
-#### `Content.tsx`
-- **Purpose**: Main dashboard content component
-- **Features**:
-  - Dashboard layout management
-  - Component orchestration
-  - State management
-  - User interface coordination
-- **Dependencies**: Dashboard components, user data
-- **Props**: User authentication, dashboard configuration
-- **State Management**: Dashboard state, user state
+export const dynamic = "force-static";
 
-#### `page.tsx`
-- **Purpose**: Dashboard page component
-- **Features**:
-  - Page routing
-  - Authentication handling
-  - Dashboard initialization
-  - Error handling
-- **Dependencies**: Authentication, dashboard services
-- **Props**: Route parameters, user data
-- **State Management**: Page state, authentication state
-
-### Dashboard Components (`components/`)
-
-#### `ActionButtons.tsx`
-- **Purpose**: Dashboard action buttons
-- **Features**:
-  - Quick actions
-  - Navigation shortcuts
-  - User controls
-  - Action feedback
-- **Dependencies**: Navigation, user actions
-- **Props**: Action configuration, user permissions
-- **State Management**: Action state, user state
-
-#### `AnimatedAccuracy.tsx`
-- **Purpose**: Animated accuracy display
-- **Features**:
-  - Accuracy animation
-  - Performance visualization
-  - Smooth transitions
-  - Visual feedback
-- **Dependencies**: Animation library, performance data
-- **Props**: Accuracy data, animation configuration
-- **State Management**: Animation state, performance state
-
-#### `DashboardMain.tsx`
-- **Purpose**: Main dashboard interface
-- **Features**:
-  - Dashboard layout
-  - Component organization
-  - User interface
-  - Content management
-- **Dependencies**: Dashboard components, user data
-- **Props**: Dashboard configuration, user data
-- **State Management**: Dashboard state, user state
-
-#### `FavoriteConfigsCard.tsx`
-- **Purpose**: Favorite configurations display
-- **Features**:
-  - Favorite configurations
-  - Quick access
-  - Configuration management
-  - User preferences
-- **Dependencies**: Configuration system, user preferences
-- **Props**: Favorite data, configuration handlers
-- **State Management**: Favorite state, configuration state
-
-#### `HylasBanner.tsx`
-- **Purpose**: Hylas banner component
-- **Features**:
-  - Banner display
-  - Promotional content
-  - User engagement
-  - Banner management
-- **Dependencies**: Banner system, promotional content
-- **Props**: Banner data, banner handlers
-- **State Management**: Banner state, display state
-
-#### `MetricsCard.tsx`
-- **Purpose**: Performance metrics display
-- **Features**:
-  - Performance statistics
-  - Metrics visualization
-  - Progress tracking
-  - Achievement display
-- **Dependencies**: Metrics system, performance data
-- **Props**: Metrics data, performance configuration
-- **State Management**: Metrics state, performance state
-
-#### `NumberAnimation.tsx`
-- **Purpose**: Animated number display
-- **Features**:
-  - Number animation
-  - Smooth transitions
-  - Visual feedback
-  - Performance indicators
-- **Dependencies**: Animation library, number data
-- **Props**: Number data, animation configuration
-- **State Management**: Animation state, number state
-
-#### `QuestionsThisWeekChart.tsx`
-- **Purpose**: Weekly questions chart
-- **Features**:
-  - Chart visualization
-  - Weekly statistics
-  - Progress tracking
-  - Performance analysis
-- **Dependencies**: Chart library, statistics data
-- **Props**: Chart data, statistics configuration
-- **State Management**: Chart state, statistics state
-
-#### `WelcomeMessage.tsx`
-- **Purpose**: Welcome message component
-- **Features**:
-  - Personalized greeting
-  - User information
-  - Welcome content
-  - User engagement
-- **Dependencies**: User data, personalization
-- **Props**: User information, welcome configuration
-- **State Management**: Welcome state, user state
-
-### Dashboard Contexts (`contexts/`)
-
-#### `BannerContext.tsx`
-- **Purpose**: Banner management context
-- **Features**:
-  - Banner state management
-  - Banner display control
-  - Banner interactions
-  - Banner persistence
-- **Dependencies**: Banner system, state management
-- **Usage**: Banner state management across components
-- **State Management**: Banner state, display state
-
-### Dashboard Hooks (`hooks/`)
-
-#### `useBannerState.ts`
-- **Purpose**: Banner state management hook
-- **Features**:
-  - Banner state management
-  - Banner display control
-  - Banner interactions
-  - State persistence
-- **Dependencies**: Banner system, state management
-- **Returns**: Banner state, banner handlers
-- **Usage**: Banner state management
-
-#### `useDashboardData.ts`
-- **Purpose**: Dashboard data management hook
-- **Features**:
-  - Dashboard data fetching
-  - Data processing
-  - Performance optimization
-  - Error handling
-- **Dependencies**: Dashboard services, data processing
-- **Returns**: Dashboard data, loading state, error state
-- **Usage**: Dashboard data management
-
-### Dashboard Types (`types.ts`)
-- **Purpose**: Dashboard type definitions
-- **Features**:
-  - Dashboard interfaces
-  - Component prop types
-  - Data structure definitions
-  - Type safety for dashboard components
-- **Dependencies**: TypeScript type system
-- **Usage**: Dashboard type safety
-
-## Dashboard System Architecture
-
-### Data Management
-- **User Data**: Comprehensive user information management
-- **Performance Data**: User performance tracking and analysis
-- **Configuration Data**: User preferences and settings
-- **Analytics Data**: User analytics and statistics
-
-### Component Organization
-- **Layout Components**: Dashboard layout management
-- **Display Components**: Data visualization and display
-- **Interactive Components**: User interaction and controls
-- **State Components**: State management and coordination
-
-### Performance Optimization
-- **Data Caching**: Strategic data caching
-- **Lazy Loading**: On-demand component loading
-- **Animation Optimization**: Efficient animation rendering
-- **Memory Management**: Optimized memory usage
-
-## Key Features
-
-### 1. User Dashboard
-- **Personalized Content**: User-specific dashboard content
-- **Performance Tracking**: Comprehensive performance monitoring
-- **Progress Visualization**: Visual progress representation
-- **Achievement Display**: Progress and achievement tracking
-
-### 2. Performance Analytics
-- **Statistics Display**: Detailed performance statistics
-- **Progress Tracking**: Historical progress analysis
-- **Performance Metrics**: Comprehensive performance metrics
-- **Achievement System**: Progress and achievement recognition
-
-### 3. User Interface
-- **Responsive Design**: Mobile and desktop optimization
-- **Interactive Elements**: Dynamic user interactions
-- **Accessibility**: WCAG compliance and accessibility
-- **Performance**: Optimized rendering and interactions
-
-### 4. Content Management
-- **Personalized Content**: User-specific content delivery
-- **Configuration Management**: User preference management
-- **Content Organization**: Efficient content organization
-- **User Engagement**: Interactive content and engagement
-
-## Technical Implementation
-
-### Component Architecture
-- **Layout Components**: Dashboard layout management
-- **Display Components**: Data visualization and display
-- **Interactive Components**: User interaction and controls
-- **State Components**: State management and coordination
-
-### Data Flow
-- **Data Fetching**: Efficient data retrieval
-- **Data Processing**: Data transformation and processing
-- **Data Display**: Visual data representation
-- **User Interaction**: Interactive data manipulation
-
-### Performance
-- **Optimization**: Performance optimization techniques
-- **Caching**: Strategic data caching
-- **Lazy Loading**: Dynamic component loading
-- **Memory Management**: Efficient memory usage
-
-## Testing
-
-### Test Coverage
-- **Unit Tests**: Individual component testing
-- **Integration Tests**: Dashboard system integration testing
-- **User Experience Tests**: Dashboard usability testing
-- **Performance Tests**: Dashboard performance testing
-
-### Test Files
-- **Component Tests**: Individual component testing
-- **Integration Tests**: Cross-component testing
-- **User Experience Tests**: Dashboard usability testing
-- **Performance Tests**: Dashboard performance testing
-
-## Dependencies
-
-### Core Dependencies
-- **React**: Component framework
-- **TypeScript**: Type safety
-- **Next.js**: Framework integration
-- **Tailwind CSS**: Styling framework
-
-### Dashboard Dependencies
-- **Chart Library**: Data visualization
-- **Animation Library**: Animation and transitions
-- **State Management**: State management system
-- **API Services**: Dashboard data services
-
-### UI Dependencies
-- **React Icons**: Icon library
-- **Framer Motion**: Animation library
-- **React Hook Form**: Form management
-- **React Query**: Data fetching and caching
-
-## Usage Examples
-
-### Dashboard Data Management
-```typescript
-import { useDashboardData } from '@/app/dashboard/hooks/useDashboardData';
-
-function Dashboard() {
-  const { dashboardData, loading, error } = useDashboardData();
-  
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error.message}</div>;
-  
-  return (
-    <div>
-      <MetricsCard data={dashboardData.metrics} />
-      <QuestionsThisWeekChart data={dashboardData.weeklyStats} />
-    </div>
-  );
+export const metadata: Metadata = {
+  title: "Scio.ly | Dashboard",
+  description: "Track your Scioly test-taking performance across several statistics",
+};
+export default function Page() {
+  return <Content />;
 }
 ```
 
-### Banner Management
-```typescript
-import { useBannerState } from '@/app/dashboard/hooks/useBannerState';
+**Important Notes:**
+- Uses static generation for performance
+- Sets SEO metadata for the dashboard page
 
-function BannerComponent() {
-  const { bannerState, showBanner, hideBanner } = useBannerState();
-  
-  return (
-    <div>
-      {bannerState.visible && (
-        <HylasBanner 
-          onClose={hideBanner}
-          content={bannerState.content}
-        />
-      )}
-    </div>
-  );
+### `dashboardContent.tsx`
+Simple wrapper component that renders the main dashboard component.
+
+**Example:**
+```1:5:src/app/dashboard/dashboardContent.tsx
+import DashboardMain from "./components/DashboardMain";
+
+export default function DashboardContent() {
+  return <DashboardMain />;
 }
 ```
 
-### Performance Metrics
-```typescript
-import { MetricsCard } from '@/app/dashboard/components/MetricsCard';
+### `types.ts`
+TypeScript type definitions for dashboard components and data structures.
 
-function PerformanceDisplay() {
-  const metrics = {
-    accuracy: 85.5,
-    questionsAnswered: 150,
-    streak: 7,
-    achievements: 12
-  };
-  
-  return (
-    <MetricsCard 
-      data={metrics}
-      showAnimation={true}
-    />
-  );
+**Key Types:**
+- `ContactFormData` - Contact form submission data
+- `DailyData` - Daily activity metrics
+- `WeeklyData` - Weekly activity and accuracy
+- `HistoricalMetrics` - Historical performance data
+- `Metrics` - Current performance metrics
+- `WelcomeMessageProps` - Welcome message component props
+- `NumberAnimationProps` - Animated number display props
+- `AnimatedAccuracyProps` - Animated accuracy display props
+
+**Example:**
+```12:21:src/app/dashboard/types.ts
+export interface ContactFormData {
+  /** Contact person's name */
+  name: string;
+  /** Contact person's email */
+  email: string;
+  /** Contact topic/subject */
+  topic: string;
+  /** Contact message */
+  message: string;
 }
 ```
 
-## Development Guidelines
+## Components
 
-### Component Structure
-- **Single Responsibility**: Each component has a clear purpose
-- **Composition**: Components composed of smaller components
-- **Reusability**: Reusable dashboard components
-- **Maintainability**: Clear structure and documentation
+### `components/DashboardMain.tsx`
+Main dashboard interface component. Orchestrates all dashboard sections and manages state.
 
-### Performance
-- **Optimization**: Performance optimization techniques
-- **Caching**: Strategic data caching
-- **Lazy Loading**: Dynamic component loading
-- **Memory Management**: Efficient memory usage
+**Key Features:**
+- Displays welcome message with user greeting
+- Shows performance metrics (accuracy, questions answered)
+- Displays weekly questions chart
+- Shows favorite test configurations
+- Action buttons for quick navigation
+- Hylas banner display
+- Contact modal integration
 
-### User Experience
-- **Responsive Design**: Mobile and desktop optimization
-- **Accessibility**: WCAG compliance and accessibility
-- **Performance**: Optimized rendering and interactions
-- **Error Handling**: Graceful error management
+**Example:**
+```36:50:src/app/dashboard/components/DashboardMain.tsx
+function DashboardContent({ initialUser }: { initialUser?: User | null }) {
+  const controller = useDashboardController(initialUser);
+  const {
+    router,
+    darkMode,
+    setDarkMode,
+    metrics,
+    historyData,
+    greetingName,
+    isLoading,
+    contactModalOpen,
+    setContactModalOpen,
+    handleContact,
+    correctView,
+    setCorrectView,
+    // ... more state
+  } = controller;
+```
 
----
+**Important Notes:**
+- Uses `useDashboardData` hook for data fetching
+- Manages view modes: daily, weekly, all-time
+- Integrates with banner context for Hylas banner
+- Theme-aware (dark/light mode)
 
-*This documentation provides a comprehensive overview of the Scio.ly dashboard system and its functionality.*
+### `components/WelcomeMessage.tsx`
+Personalized welcome message component with user greeting.
+
+**Props:**
+- `darkMode: boolean` - Theme mode
+- `currentUser: User | null` - Authenticated user
+- `setDarkMode: (value: boolean) => void` - Theme toggle function
+- `greetingName?: string` - Optional greeting name
+- `isLoading?: boolean` - Loading state
+
+**Important Notes:**
+- Displays personalized greeting based on user name
+- Includes theme toggle button
+- Shows loading state when data is fetching
+
+### `components/MetricsCard.tsx`
+Performance metrics display card showing user statistics.
+
+**Key Features:**
+- Displays total questions attempted
+- Shows accuracy percentage
+- Displays correct answers count
+- Animated number displays
+- Theme-aware styling
+
+**Important Notes:**
+- Uses `NumberAnimation` component for animated numbers
+- Responsive design for mobile and desktop
+
+### `components/AnimatedAccuracy.tsx`
+Animated accuracy percentage display component.
+
+**Props:**
+- `value: number` - Accuracy percentage (0-100)
+- `darkMode: boolean` - Theme mode
+- `className?: string` - Optional CSS classes
+
+**Important Notes:**
+- Smooth animation when value changes
+- Color-coded based on accuracy level
+- Uses Framer Motion for animations
+
+### `components/NumberAnimation.tsx`
+Animated number display component for smooth number transitions.
+
+**Props:**
+- `value: number` - Number to display
+- `className: string` - CSS classes for styling
+
+**Important Notes:**
+- Animates number changes smoothly
+- Used throughout dashboard for metrics
+
+### `components/QuestionsThisWeekChart.tsx`
+Weekly questions chart showing daily question activity.
+
+**Key Features:**
+- Displays questions answered per day for the week
+- Bar chart visualization
+- Shows weekly accuracy
+- Theme-aware styling
+
+**Important Notes:**
+- Uses chart library for visualization
+- Aggregates daily data into weekly view
+
+### `components/FavoriteConfigsCard.tsx`
+Favorite test configurations card for quick access to saved test settings.
+
+**Key Features:**
+- Lists favorite test configurations
+- Quick navigation to favorite tests
+- Add/remove favorites
+- Displays event name and settings
+
+**Important Notes:**
+- Integrates with favorites utilities
+- Stores favorites in localStorage
+
+### `components/ActionButtons.tsx`
+Quick action buttons for dashboard navigation.
+
+**Key Features:**
+- Navigation to practice mode
+- Navigation to test mode
+- Navigation to unlimited practice
+- Other quick actions
+
+**Important Notes:**
+- Provides shortcuts to common actions
+- Theme-aware button styling
+
+### `components/HylasBanner.tsx`
+Hylas mascot banner component for promotional content.
+
+**Key Features:**
+- Displays promotional banner
+- Dismissible banner
+- Theme-aware styling
+
+**Important Notes:**
+- Managed by banner context
+- Can be hidden by user
+
+## Hooks
+
+### `hooks/useDashboardData.ts`
+Dashboard data management hook. Fetches and manages dashboard data including metrics, history, and user progress.
+
+**Returns:**
+- `metrics: DailyMetrics` - Daily metrics and statistics
+- `historyData: Record<string, HistoryRecord>` - Historical data records
+- `greetingName: string` - User's greeting name
+- `isLoading: boolean` - Loading state
+- `error: string | null` - Error message
+- `refreshData: () => Promise<void>` - Refresh function
+- `updateMetrics: (updates) => Promise<void>` - Update metrics function
+
+**Example:**
+```48:150:src/app/dashboard/hooks/useDashboardData.ts
+/**
+ * Dashboard data management hook
+ * Manages user dashboard data including metrics, history, and progress tracking
+ */
+export function useDashboardData(initialUser?: User | null): UseDashboardDataReturn {
+  const [metrics, setMetrics] = useState<DailyMetrics>(getInitialMetrics());
+  const [historyData, setHistoryData] = useState<Record<string, HistoryRecord>>({});
+  const [greetingName, setGreetingName] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // ... implementation
+}
+```
+
+**Important Notes:**
+- Syncs data from server using `syncDashboardData`
+- Manages local state for performance
+- Handles loading and error states
+- Updates metrics when user completes tests
+
+## Contexts
+
+### `contexts/bannerContext.tsx`
+Banner management context for Hylas banner display.
+
+**Features:**
+- Banner visibility state
+- Banner content management
+- Banner dismissal handling
+
+**Example:**
+```typescript
+export const BannerProvider = ({ children }: { children: ReactNode }) => {
+  // Banner state management
+};
+
+export const useBannerContext = () => {
+  // Banner context hook
+};
+```
+
+**Important Notes:**
+- Manages banner visibility across dashboard
+- Persists banner state in localStorage
+- Provides banner control functions
+
+## Important Notes
+
+1. **Data Synchronization**: Dashboard data syncs with server on load and after test completion
+2. **Local Storage**: Uses localStorage for caching dashboard state
+3. **Performance**: Optimized with lazy loading and data caching
+4. **Theme Support**: All components support dark/light mode
+5. **Responsive Design**: Mobile and desktop optimized layouts
+6. **Error Handling**: Graceful error handling with user-friendly messages
+7. **Loading States**: Loading indicators during data fetching

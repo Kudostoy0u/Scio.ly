@@ -258,7 +258,7 @@ describe("TeamDashboard", () => {
     });
   });
 
-  it("should show invite and exit buttons for captain", async () => {
+  it("should show invite and exit buttons for captain", () => {
     renderWithProviders(<TeamDashboard {...defaultProps} />, { initialUser: mockUser });
 
     const inviteButton = screen.getByTitle("Invite Person");

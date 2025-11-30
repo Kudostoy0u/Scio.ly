@@ -1,268 +1,256 @@
-# Scio.ly About Page Documentation
+# About Directory
 
-## Overview
+This directory contains the about page that provides information about Scio.ly, its mission, methodology, and team.
 
-The `src/app/about/` directory contains the about page system for the Scio.ly platform. This system provides comprehensive information about the platform, its features, mission, and team information for users and visitors.
+## Files
 
-## Directory Structure
+### `page.tsx`
+Server component wrapper that renders the client-side about page.
 
-### Core About Components
+**Example:**
+```1:5:src/app/about/page.tsx
+import AboutClientPage from "./about-client-page";
 
-#### `page.tsx`
-- **Purpose**: Main about page component
-- **Features**:
-  - About page routing
-  - Server-side rendering
-  - SEO optimization
-  - Page metadata
-- **Dependencies**: Next.js routing, SEO utilities
-- **Props**: Route parameters, page configuration
-- **State Management**: Page state, SEO state
-
-#### `ClientPage.tsx`
-- **Purpose**: Client-side about page component
-- **Features**:
-  - Client-side rendering optimization
-  - Interactive about content
-  - Dynamic content loading
-  - User interaction handling
-- **Dependencies**: React components, client-side utilities
-- **Props**: About content, user data
-- **State Management**: Client state, content state
-
-## About Page System Architecture
-
-### Content Management
-- **Platform Information**: Comprehensive platform overview
-- **Feature Descriptions**: Detailed feature explanations
-- **Mission Statement**: Platform mission and goals
-- **Team Information**: Team member information and bios
-
-### User Interface
-- **Responsive Design**: Mobile and desktop optimization
-- **Interactive Elements**: Dynamic user interactions
-- **Accessibility**: WCAG compliance and accessibility
-- **Performance**: Optimized rendering and interactions
-
-### SEO Optimization
-- **Meta Tags**: Comprehensive meta tag implementation
-- **Structured Data**: Structured data markup for search engines
-- **Content Optimization**: SEO-optimized content
-- **Performance**: Fast loading and rendering
-
-## Key Features
-
-### 1. Platform Overview
-- **Mission Statement**: Clear platform mission and goals
-- **Feature Highlights**: Key platform features and benefits
-- **User Benefits**: Value proposition for users
-- **Platform Statistics**: Usage statistics and achievements
-
-### 2. Team Information
-- **Team Bios**: Team member information and backgrounds
-- **Contact Information**: Ways to contact the team
-- **Social Media**: Social media links and presence
-- **Company Information**: Company details and history
-
-### 3. Technical Information
-- **Technology Stack**: Platform technology overview
-- **Architecture**: System architecture information
-- **Performance**: Platform performance metrics
-- **Security**: Security measures and compliance
-
-### 4. User Resources
-- **Help Documentation**: Links to help and documentation
-- **Support Information**: Support contact and resources
-- **Community**: Community links and resources
-- **Updates**: Platform updates and news
-
-## Technical Implementation
-
-### Component Architecture
-- **Layout Components**: About page layout management
-- **Content Components**: Content display and formatting
-- **Interactive Components**: User interaction and controls
-- **State Components**: State management and coordination
-
-### Data Flow
-- **Content Loading**: Efficient content loading
-- **Data Processing**: Content processing and formatting
-- **Data Display**: Visual content representation
-- **User Interaction**: Interactive content engagement
-
-### Performance
-- **Optimization**: Performance optimization techniques
-- **Caching**: Strategic content caching
-- **Lazy Loading**: Dynamic content loading
-- **Memory Management**: Efficient memory usage
-
-## Content Structure
-
-### Platform Information
-- **Overview**: Platform overview and introduction
-- **Features**: Detailed feature descriptions
-- **Benefits**: User benefits and value proposition
-- **Statistics**: Platform usage and achievement statistics
-
-### Team Information
-- **Team Members**: Individual team member information
-- **Backgrounds**: Team member backgrounds and expertise
-- **Contact**: Contact information and methods
-- **Social Media**: Social media presence and links
-
-### Technical Details
-- **Technology**: Technology stack and tools
-- **Architecture**: System architecture overview
-- **Performance**: Performance metrics and optimization
-- **Security**: Security measures and compliance
-
-### User Resources
-- **Documentation**: Help and documentation links
-- **Support**: Support resources and contact
-- **Community**: Community resources and engagement
-- **Updates**: Platform updates and announcements
-
-## SEO Optimization
-
-### Meta Tags
-- **Title Tags**: Optimized page titles
-- **Description Tags**: Meta descriptions
-- **Keywords**: Relevant keywords
-- **Open Graph**: Social media optimization
-
-### Structured Data
-- **Organization**: Organization structured data
-- **Person**: Team member structured data
-- **Website**: Website structured data
-- **Breadcrumbs**: Navigation breadcrumbs
-
-### Content Optimization
-- **Keyword Optimization**: Strategic keyword usage
-- **Content Quality**: High-quality, informative content
-- **Internal Linking**: Strategic internal linking
-- **External Linking**: Relevant external links
-
-## User Experience
-
-### Design
-- **Visual Design**: Attractive and professional design
-- **Branding**: Consistent brand identity
-- **Typography**: Readable and accessible typography
-- **Color Scheme**: Consistent color palette
-
-### Accessibility
-- **WCAG Compliance**: Web Content Accessibility Guidelines compliance
-- **Screen Reader Support**: Screen reader compatibility
-- **Keyboard Navigation**: Keyboard navigation support
-- **High Contrast**: High contrast mode support
-
-### Performance
-- **Fast Loading**: Optimized page loading times
-- **Smooth Interactions**: Smooth user interactions
-- **Responsive Design**: Mobile and desktop optimization
-- **Error Handling**: Graceful error management
-
-## Testing
-
-### Test Coverage
-- **Unit Tests**: Individual component testing
-- **Integration Tests**: About page integration testing
-- **User Experience Tests**: About page usability testing
-- **Performance Tests**: About page performance testing
-
-### Test Files
-- **Component Tests**: Individual component testing
-- **Integration Tests**: Cross-component testing
-- **User Experience Tests**: About page usability testing
-- **Performance Tests**: About page performance testing
-
-## Dependencies
-
-### Core Dependencies
-- **React**: Component framework
-- **TypeScript**: Type safety
-- **Next.js**: Framework integration
-- **Tailwind CSS**: Styling framework
-
-### About Dependencies
-- **Content Management**: About content management
-- **SEO Tools**: SEO optimization tools
-- **Analytics**: Page analytics and tracking
-- **Performance Tools**: Performance monitoring tools
-
-### UI Dependencies
-- **React Icons**: Icon library
-- **Framer Motion**: Animation library
-- **React Hook Form**: Form management
-- **React Query**: Data fetching and caching
-
-## Usage Examples
-
-### About Page Display
-```typescript
-import { AboutPage } from '@/app/about/page';
-
-function AboutComponent() {
-  return (
-    <AboutPage
-      showTeamInfo={true}
-      showFeatures={true}
-      showStatistics={true}
-    />
-  );
+export default function AboutPage() {
+  return <AboutClientPage />;
 }
 ```
 
-### Client-Side About
-```typescript
-import { ClientPage } from '@/app/about/ClientPage';
+**Important Notes:**
+- Simple server component wrapper for Next.js App Router
+- Delegates all rendering to the client component
 
-function AboutClient() {
-  return (
-    <ClientPage
-      content={aboutContent}
-      teamInfo={teamData}
-      statistics={platformStats}
-    />
-  );
-}
-```
+### `about-client-page.tsx`
+Main client-side about page component. Orchestrates all about page sections.
 
-### SEO Optimization
-```typescript
-import { generateMetadata } from '@/app/about/utils';
+**Key Features:**
+- Theme-aware dark/light mode support
+- Scrollbar styling based on theme
+- Header integration
+- Composes multiple section components
 
-function AboutSEO() {
-  const metadata = generateMetadata({
-    title: 'About Scio.ly - Science Olympiad Practice Platform',
-    description: 'Learn about Scio.ly, the comprehensive Science Olympiad practice platform',
-    keywords: ['Science Olympiad', 'Practice', 'Education', 'STEM']
+**Example:**
+```13:72:src/app/about/about-client-page.tsx
+export default function AboutClientPage() {
+  const { darkMode } = useTheme();
+  const [mounted] = useState(() => {
+    if (typeof window !== "undefined") {
+      return true;
+    }
+    return false;
   });
-  
-  return <div>{/* SEO optimized content */}</div>;
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark-scrollbar", darkMode);
+    document.documentElement.classList.toggle("light-scrollbar", !darkMode);
+  }, [darkMode]);
+
+  if (!mounted) {
+    return null;
+  }
+
+  return (
+    <div className="relative min-h-screen overflow-x-hidden">
+      <div className={`fixed inset-0 ${darkMode ? "bg-gray-900" : "bg-gray-50"}`} />
+      <Header />
+      <main className="relative z-10 pt-36 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+        {/* Sections */}
+      </main>
+    </div>
+  );
 }
 ```
 
-## Development Guidelines
+**Important Notes:**
+- Uses `mounted` state to prevent hydration mismatches
+- Applies theme-based scrollbar styling
+- Fixed background with relative content overlay
+- Responsive padding and max-width constraints
 
-### Component Structure
-- **Single Responsibility**: Each component has a clear purpose
-- **Composition**: Components composed of smaller components
-- **Reusability**: Reusable about page components
-- **Maintainability**: Clear structure and documentation
+## Components
 
-### Performance
-- **Optimization**: Performance optimization techniques
-- **Caching**: Strategic content caching
-- **Lazy Loading**: Dynamic content loading
-- **Memory Management**: Efficient memory usage
+### `components/AboutSection.tsx`
+Wrapper component that provides consistent styling for about page sections.
 
-### User Experience
-- **Responsive Design**: Mobile and desktop optimization
-- **Accessibility**: WCAG compliance and accessibility
-- **Performance**: Optimized rendering and interactions
-- **Error Handling**: Graceful error management
+**Props:**
+- `darkMode: boolean` - Theme mode
+- `children: React.ReactNode` - Section content
+- `className?: string` - Additional CSS classes
 
----
+**Example:**
+```3:17:src/app/about/components/AboutSection.tsx
+interface AboutSectionProps {
+  darkMode: boolean;
+  children: React.ReactNode;
+  className?: string;
+}
 
-*This documentation provides a comprehensive overview of the Scio.ly about page system and its functionality.*
+export function AboutSection({ darkMode, children, className = "" }: AboutSectionProps) {
+  return (
+    <section
+      className={`mb-16 p-6 rounded-xl max-w-4xl mx-auto ${darkMode ? "bg-gray-800/50 backdrop-blur-sm" : "bg-white/90 shadow-lg backdrop-blur-sm"} ${className}`}
+    >
+      {children}
+    </section>
+  );
+}
+```
+
+**Important Notes:**
+- Provides backdrop blur and theme-aware background
+- Consistent spacing and max-width across sections
+
+### `components/StorySection.tsx`
+Displays the story of Scio.ly founders and features the Hylas mascot image.
+
+**Features:**
+- Two-column layout (responsive)
+- Hover effect on mascot image
+- Founder introduction text
+
+**Example:**
+```7:47:src/app/about/components/StorySection.tsx
+export function StorySection({ darkMode }: StorySectionProps) {
+  return (
+    <div className="flex flex-col md:flex-row items-center gap-8">
+      <div className="md:w-1/2">
+        <h2 className={`text-3xl font-bold mb-6 ${darkMode ? "text-white" : "text-gray-900"}`}>
+          Our Story
+        </h2>
+        <div className={`${darkMode ? "text-gray-300" : "text-gray-700"} space-y-4`}>
+          <p>
+            Hey! We&apos;re Aiden and Kundan. We experienced firsthand the challenge of finding
+            high-quality, centralized practice materials for Science Olympiad. After spent countless
+            hours searching for past tests, we decided to build the platform we wished we had: a
+            comprehensive, accessible, and user-friendly test-taking platform that would empower
+            students to excel.
+          </p>
+        </div>
+      </div>
+      <div className="md:w-1/2 flex justify-center items-center">
+        <div className="relative group cursor-pointer overflow-hidden rounded-2xl">
+          <Image
+            src="/about/hylas.png"
+            alt="Hylas the Cat - Our mascot"
+            width={320}
+            height={320}
+            className="w-80 h-80 object-cover transition-transform duration-300 group-hover:scale-110"
+            style={{ objectPosition: "center 80%" }}
+          />
+          {/* Hover overlay */}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+**Important Notes:**
+- Uses Next.js Image component for optimization
+- Hover effect reveals mascot name overlay
+- Responsive layout stacks on mobile
+
+### `components/MethodologySection.tsx`
+Explains how Scio.ly processes and serves questions using AI and technology.
+
+**Features:**
+- Four-step methodology cards
+- Technology stack visualization
+- Icon-based cards for tools used
+
+**Example:**
+```8:84:src/app/about/components/MethodologySection.tsx
+export function MethodologySection({ darkMode }: MethodologySectionProps) {
+  return (
+    <>
+      <h2 className={`text-3xl font-bold mb-6 text-center ${darkMode ? "text-white" : "text-gray-900"}`}>
+        Our Methodology
+      </h2>
+      <div className="max-w-4xl mx-auto">
+        <p className={`text-center text-lg mb-8 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+          We sourced thousands of previous Science Olympiad tournament archives from associates in
+          test trading. Then, we ran PDF and .docx files through processing and the latest Gemini
+          2.5 models to extract questions and get answers, which are served through a custom API.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <MethodologyCard
+            darkMode={darkMode}
+            icon="/about/file.svg"
+            alt="PDF Files"
+            width={50}
+            height={50}
+            title="PDF Processing"
+            description="Extract questions from tournament archives"
+            className="filter invert"
+          />
+          {/* More cards */}
+        </div>
+      </div>
+    </>
+  );
+}
+```
+
+**Important Notes:**
+- Uses `MethodologyCard` and `MethodologyCardWithIcons` components
+- Responsive grid layout (1 col mobile, 2 tablet, 4 desktop)
+- Shows technology stack: PDF processing, Gemini AI, PostgreSQL, Vercel, Next.js
+
+### `components/PhilosophySection.tsx`
+Displays the philosophy and values behind Scio.ly.
+
+**Features:**
+- Mission statement
+- Core values
+- Theme-aware styling
+
+### `components/AcknowledgmentsSection.tsx`
+Shows acknowledgments and credits.
+
+**Features:**
+- Credits to contributors
+- Technology acknowledgments
+- Theme-aware styling
+
+### `components/ContactSection.tsx`
+Provides contact information and ways to reach the team.
+
+**Features:**
+- Contact form link
+- Social media links
+- Email information
+- Theme-aware styling
+
+### `components/MethodologyCard.tsx`
+Card component for displaying a single methodology step with an icon.
+
+**Props:**
+- `darkMode: boolean`
+- `icon: string` - Icon image path
+- `alt: string` - Alt text
+- `width: number` - Icon width
+- `height: number` - Icon height
+- `title: string` - Card title
+- `description: string` - Card description
+- `className?: string` - Additional CSS classes
+
+### `components/MethodologyCardWithIcons.tsx`
+Card component for displaying a methodology step with multiple icons.
+
+**Props:**
+- `darkMode: boolean`
+- `icons: Array<{ src: string, alt: string, width: number, height: number }>` - Array of icon objects
+- `title: string` - Card title
+- `description: string` - Card description
+
+**Important Notes:**
+- Used for steps that involve multiple technologies (e.g., Processing & Storage, Deployment & Frontend)
+
+## Important Notes
+
+1. **Theme Support**: All components support dark/light mode via `darkMode` prop from theme context
+2. **Responsive Design**: All sections use responsive Tailwind classes for mobile/tablet/desktop
+3. **Image Optimization**: Uses Next.js Image component for optimized image loading
+4. **Hydration Safety**: Client page uses mounted state to prevent hydration mismatches
+5. **Accessibility**: Proper semantic HTML and alt text for images
+6. **Performance**: Lazy loading and optimized images for fast page load

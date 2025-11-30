@@ -38,7 +38,7 @@ export function tryGenerateEquation(
   uniqueWords: string[]
 ): {
   equation: string;
-  numericExample: string;
+  numericExample: string | null;
   digitGroups: Array<{ digits: string; word: string }>;
   operation: "+" | "-";
 } | null {
@@ -59,20 +59,17 @@ export function tryGenerateEquation(
   const n3 = toNumber(w3);
 
   let equation: string | null = null;
-  let numericExample: string | null = null;
   let op: "+" | "-" = "+";
 
   if (operation === "-" && n1 > n2 && n1 - n2 === n3) {
     equation = `${w1} - ${w2} = ${w3}`;
-    numericExample = `${n1} - ${n2} = ${n3}`;
     op = "-";
   } else if (operation === "+" && n1 + n2 === n3) {
     equation = `${w1} + ${w2} = ${w3}`;
-    numericExample = `${n1} + ${n2} = ${n3}`;
     op = "+";
   }
 
-  if (!(equation && numericExample)) {
+  if (!equation) {
     return null;
   }
 
@@ -83,7 +80,7 @@ export function tryGenerateEquation(
   }
 
   const digitGroups = createDigitGroups(solutionWords, toNumber);
-  return { equation, numericExample, digitGroups, operation: op };
+  return { equation, numericExample: null, digitGroups, operation: op };
 }
 
 // Helper function to attempt generating cryptarithm with multiple tries
@@ -94,7 +91,7 @@ export function attemptGenerateCryptarithm(
   pickWord: (exclude?: Set<string>) => string
 ): {
   equation: string;
-  numericExample: string;
+  numericExample: string | null;
   digitGroups: Array<{ digits: string; word: string }>;
   operation: "+" | "-";
 } | null {

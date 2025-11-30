@@ -1,285 +1,103 @@
-# Scio.ly Offline System Documentation
+# Offline Directory
 
-## Overview
+This directory contains the offline functionality page for the Scio.ly platform. Allows users to download events for offline practice.
 
-The `src/app/offline/` directory contains the offline system for the Scio.ly platform. This system provides comprehensive offline functionality, allowing users to continue practicing Science Olympiad questions even when they don't have an internet connection.
+## Files
 
-## Directory Structure
+### `page.tsx`
+Client component for managing offline event downloads.
 
-### Core Offline Components
+**Key Features:**
+- Lists available events for download
+- Download event questions to IndexedDB
+- Track downloaded events
+- Special handling for Codebusters (quotes)
 
-#### `page.tsx`
-- **Purpose**: Main offline page component
-- **Features**:
-  - Offline page routing
-  - Server-side rendering
-  - SEO optimization
-  - Page metadata
-- **Dependencies**: Next.js routing, SEO utilities
-- **Props**: Route parameters, page configuration
-- **State Management**: Page state, SEO state
+**Example:**
+```15:165:src/app/offline/page.tsx
+export default function OfflinePage() {
+  const { darkMode } = useTheme();
+  const [events, setEvents] = useState<EventOption[]>([]);
+  const [downloading, setDownloading] = useState<Record<string, boolean>>({});
+  const [downloaded, setDownloaded] = useState<Record<string, boolean>>({});
+  const [status, setStatus] = useState<string>("");
 
-## Offline System Architecture
+  useEffect(() => {
+    const approvedEvents = [
+      "Anatomy - Nervous",
+      "Anatomy - Endocrine",
+      "Anatomy - Sense Organs",
+      "Astronomy",
+      "Chemistry Lab",
+      // ... more events
+    ];
+    const list: EventOption[] = approvedEvents.map((name) => ({
+      name,
+      slug: name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+    }));
+    setEvents(list);
 
-### Offline Functionality
-- **Offline Detection**: Network connectivity detection
-- **Offline Storage**: Local data storage for offline use
-- **Offline Sync**: Data synchronization when online
-- **Offline Practice**: Offline practice functionality
+    // Load downloaded events
+    (async () => {
+      try {
+        const keys = await listDownloadedEventSlugs();
+        const flags: Record<string, boolean> = {};
+        for (const k of keys) {
+          flags[String(k)] = true;
+        }
+        setDownloaded(flags);
+      } catch {
+        /* ignore errors */
+      }
+    })();
+  }, []);
 
-### User Interface
-- **Responsive Design**: Mobile and desktop optimization
-- **Interactive Elements**: Dynamic user interactions
-- **Accessibility**: WCAG compliance and accessibility
-- **Performance**: Optimized rendering and interactions
-
-### Data Management
-- **Offline Storage**: Persistent offline data storage
-- **Data Sync**: Online/offline data synchronization
-- **Cache Management**: Offline cache management
-- **Analytics**: Offline usage analytics
-
-## Key Features
-
-### 1. Offline Detection
-- **Network Monitoring**: Network connectivity monitoring
-- **Offline Indicators**: Visual offline indicators
-- **Connection Status**: Connection status display
-- **Reconnection**: Automatic reconnection handling
-
-### 2. Offline Storage
-- **Local Storage**: Local data storage for offline use
-- **Cache Management**: Offline cache management
-- **Data Persistence**: Persistent offline data
-- **Storage Optimization**: Storage space optimization
-
-### 3. Offline Practice
-- **Cached Questions**: Offline question access
-- **Practice Sessions**: Offline practice sessions
-- **Progress Tracking**: Offline progress tracking
-- **Results Storage**: Offline results storage
-
-### 4. Data Synchronization
-- **Online Sync**: Data synchronization when online
-- **Conflict Resolution**: Data conflict resolution
-- **Sync Status**: Synchronization status display
-- **Error Handling**: Sync error handling
-
-## Technical Implementation
-
-### Component Architecture
-- **Layout Components**: Offline layout management
-- **Display Components**: Offline content display
-- **Interactive Components**: User interaction and controls
-- **State Components**: State management and coordination
-
-### Data Flow
-- **Data Fetching**: Efficient offline data retrieval
-- **Data Processing**: Offline data processing
-- **Data Display**: Visual offline data representation
-- **User Interaction**: Interactive offline operations
-
-### Performance
-- **Optimization**: Performance optimization techniques
-- **Caching**: Strategic offline data caching
-- **Lazy Loading**: Dynamic component loading
-- **Memory Management**: Efficient memory usage
-
-## Offline Features
-
-### Network Detection
-- **Connectivity Monitoring**: Real-time connectivity monitoring
-- **Offline Indicators**: Visual offline indicators
-- **Connection Status**: Connection status display
-- **Reconnection**: Automatic reconnection handling
-
-### Offline Storage
-- **Local Storage**: Local data storage for offline use
-- **Cache Management**: Offline cache management
-- **Data Persistence**: Persistent offline data
-- **Storage Optimization**: Storage space optimization
-
-### Offline Practice
-- **Cached Questions**: Offline question access
-- **Practice Sessions**: Offline practice sessions
-- **Progress Tracking**: Offline progress tracking
-- **Results Storage**: Offline results storage
-
-### Data Synchronization
-- **Online Sync**: Data synchronization when online
-- **Conflict Resolution**: Data conflict resolution
-- **Sync Status**: Synchronization status display
-- **Error Handling**: Sync error handling
-
-## User Interface
-
-### Offline Display
-- **Offline Indicators**: Visual offline indicators
-- **Connection Status**: Connection status display
-- **Sync Status**: Synchronization status display
-- **Error Messages**: Offline error messages
-
-### Offline Controls
-- **Sync Controls**: Data synchronization controls
-- **Cache Controls**: Offline cache controls
-- **Storage Controls**: Offline storage controls
-- **Settings Controls**: Offline settings controls
-
-### Responsive Design
-- **Mobile Optimization**: Mobile-friendly design
-- **Desktop Optimization**: Desktop-optimized interface
-- **Tablet Support**: Tablet-friendly design
-- **Accessibility**: WCAG compliance and accessibility
-
-## Offline Workflow
-
-### Offline Detection
-1. **Network Monitoring**: Continuous network monitoring
-2. **Offline Detection**: Offline state detection
-3. **Status Display**: Offline status display
-4. **User Notification**: User notification of offline state
-
-### Offline Storage
-1. **Data Caching**: Important data caching
-2. **Storage Management**: Offline storage management
-3. **Cache Optimization**: Cache space optimization
-4. **Data Persistence**: Persistent offline data
-
-### Offline Practice
-1. **Question Access**: Offline question access
-2. **Practice Sessions**: Offline practice sessions
-3. **Progress Tracking**: Offline progress tracking
-4. **Results Storage**: Offline results storage
-
-### Data Synchronization
-1. **Online Detection**: Online state detection
-2. **Data Sync**: Data synchronization
-3. **Conflict Resolution**: Data conflict resolution
-4. **Sync Completion**: Synchronization completion
-
-## Performance Optimization
-
-### Data Loading
-- **Lazy Loading**: On-demand offline data loading
-- **Caching**: Strategic offline data caching
-- **Optimization**: Offline process optimization
-- **Compression**: Data compression for offline data
-
-### Rendering Optimization
-- **Component Optimization**: Optimized component rendering
-- **Memoization**: Strategic component memoization
-- **Bundle Optimization**: Optimized JavaScript bundles
-- **Image Optimization**: Optimized image loading
-
-### Network Optimization
-- **API Optimization**: Optimized offline API calls
-- **Data Compression**: Compressed data transmission
-- **CDN Integration**: Content delivery network integration
-- **Caching Strategy**: Strategic caching implementation
-
-## Testing
-
-### Test Coverage
-- **Unit Tests**: Individual component testing
-- **Integration Tests**: Offline system integration testing
-- **User Experience Tests**: Offline interface usability testing
-- **Performance Tests**: Offline performance testing
-
-### Test Files
-- **Component Tests**: Individual component testing
-- **Integration Tests**: Cross-component testing
-- **User Experience Tests**: Offline usability testing
-- **Performance Tests**: Offline performance testing
-
-## Dependencies
-
-### Core Dependencies
-- **React**: Component framework
-- **TypeScript**: Type safety
-- **Next.js**: Framework integration
-- **Tailwind CSS**: Styling framework
-
-### Offline Dependencies
-- **Service Worker**: Offline functionality
-- **Cache API**: Browser cache API
-- **IndexedDB**: Local database storage
-- **Analytics System**: Offline analytics and reporting
-
-### UI Dependencies
-- **React Icons**: Icon library
-- **Framer Motion**: Animation library
-- **React Hook Form**: Form management
-- **React Query**: Data fetching and caching
-
-## Usage Examples
-
-### Offline Page Display
-```typescript
-import { OfflinePage } from '@/app/offline/page';
-
-function OfflineComponent() {
-  return (
-    <OfflinePage
-      showOfflineStatus={true}
-      showSyncStatus={true}
-      showCacheInfo={true}
-    />
-  );
-}
+  const handleDownloadEvent = async (evt: EventOption) => {
+    setDownloading((prev) => ({ ...prev, [evt.slug]: true }));
+    setStatus(`Downloading ${evt.name}...`);
+    try {
+      if (evt.name === "Codebusters") {
+        // Special handling for Codebusters - download quotes
+        const enResp = await fetch("/api/quotes?language=en&limit=200");
+        const esResp = await fetch("/api/quotes?language=es&limit=200");
+        // ... process quotes
+      } else {
+        // Download questions for other events
+        const params = new URLSearchParams({ event: evt.name, limit: "1000" });
+        const res = await fetch(`${api.questions}?${params.toString()}`);
+        const data = await res.json();
+        const questions = data?.data ?? [];
+        await saveOfflineEvent(evt.slug, questions);
+      }
+      setDownloaded((prev) => ({ ...prev, [evt.slug]: true }));
+      setStatus(`Downloaded ${evt.name}.`);
+    } catch {
+      setStatus(`Failed to download ${evt.name}.`);
+    } finally {
+      setDownloading((prev) => ({ ...prev, [evt.slug]: false }));
+    }
+  };
 ```
 
-### Offline Detection
-```typescript
-import { useOfflineStatus } from '@/app/offline/hooks/useOfflineStatus';
+**Download Process:**
+1. Fetches questions/quotes from API
+2. Saves to IndexedDB using `saveOfflineEvent`
+3. Tracks download status
+4. Updates UI with download state
 
-function OfflineIndicator() {
-  const { isOffline, connectionStatus } = useOfflineStatus();
-  
-  return (
-    <div>
-      {isOffline ? 'Offline' : 'Online'}
-      <span>Status: {connectionStatus}</span>
-    </div>
-  );
-}
-```
+**Important Notes:**
+- **Approved Events**: Only specific events are available for download
+- **Codebusters Special**: Downloads quotes (English and Spanish) instead of questions
+- **Question Limit**: Downloads up to 1000 questions per event
+- **IndexedDB Storage**: Uses IndexedDB for offline storage
+- **Download Tracking**: Tracks which events are downloaded
+- **Status Updates**: Shows download progress and status
 
-### Offline Sync
-```typescript
-import { useOfflineSync } from '@/app/offline/hooks/useOfflineSync';
+## Important Notes
 
-function OfflineSync() {
-  const { syncData, syncStatus, startSync } = useOfflineSync();
-  
-  return (
-    <div>
-      <button onClick={startSync}>Sync Data</button>
-      <span>Status: {syncStatus}</span>
-    </div>
-  );
-}
-```
-
-## Development Guidelines
-
-### Component Structure
-- **Single Responsibility**: Each component has a clear purpose
-- **Composition**: Components composed of smaller components
-- **Reusability**: Reusable offline components
-- **Maintainability**: Clear structure and documentation
-
-### Performance
-- **Optimization**: Performance optimization techniques
-- **Caching**: Strategic data caching
-- **Lazy Loading**: Dynamic component loading
-- **Memory Management**: Efficient memory usage
-
-### User Experience
-- **Responsive Design**: Mobile and desktop optimization
-- **Accessibility**: WCAG compliance and accessibility
-- **Performance**: Optimized rendering and interactions
-- **Error Handling**: Graceful error management
-
----
-
-*This documentation provides a comprehensive overview of the Scio.ly offline system and its functionality.*
+1. **Offline Storage**: Uses IndexedDB via `saveOfflineEvent` utility
+2. **Event Approval**: Only approved events can be downloaded
+3. **Codebusters**: Special handling for Codebusters quotes
+4. **Storage Management**: Users can download multiple events
+5. **Offline Access**: Downloaded events available when offline
+6. **Theme Support**: Dark/light mode support

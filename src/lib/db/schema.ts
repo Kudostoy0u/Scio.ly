@@ -346,5 +346,5 @@ export {
   newTeamRemovedEvents,
 } from "./schema/teams";
 
-// Re-export longquotes from core.ts
-export { longquotes } from "./schema/core";
+// Re-export additional schemas from core.ts
+export { longquotes, quoteBlacklists, quoteEdits } from "./schema/core";

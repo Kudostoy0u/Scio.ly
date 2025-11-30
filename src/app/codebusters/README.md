@@ -1,482 +1,291 @@
-# Scio.ly Codebusters System Documentation
+# Codebusters Directory
 
-## Overview
+This directory contains the complete Codebusters event system for Science Olympiad. Provides comprehensive cipher practice, analysis tools, and educational resources.
 
-The `src/app/codebusters/` directory contains the complete Codebusters event system for Science Olympiad. This system provides comprehensive cipher practice, analysis tools, and educational resources for the Codebusters event.
+## Files
 
-## Directory Structure
+### `page.tsx`
+Main Codebusters practice page component.
 
-### Core Codebusters Components
+**Key Features:**
+- Cipher practice interface
+- Question management
+- Progress tracking
+- Timer management
+- Assignment support
+- Print functionality
+- Share functionality
 
-#### `page.tsx`
-- **Purpose**: Main Codebusters practice page
-- **Features**:
-  - Cipher practice interface
-  - Question management
-  - Progress tracking
-  - Educational resources
-- **Dependencies**: Codebusters components, cipher utilities
-- **Props**: User authentication, practice settings
-- **State Management**: Practice state, progress state
-
-#### `CipherInfoModal.tsx`
-- **Purpose**: Cipher information and help modal
-- **Features**:
-  - Cipher explanations
-  - Algorithm descriptions
-  - Example problems
-  - Educational content
-- **Dependencies**: Cipher utilities, educational content
-- **Props**: Cipher type, modal state
-- **State Management**: Modal state, content state
-
-### Cipher Implementations (`ciphers/`)
-
-#### Core Cipher Types
-- **`affine.ts`**: Affine cipher implementation
-- **`atbash.ts`**: Atbash cipher implementation
-- **`caesar.ts`**: Caesar cipher implementation
-- **`porta.ts`**: Porta cipher implementation
-- **`random-substitutions.ts`**: Random substitution ciphers
-- **`substitution-k-aristo.ts`**: Aristocrat substitution cipher
-- **`substitution-k-patri.ts`**: Patriotic substitution cipher
-- **`substitution-k-xeno.ts`**: Xenocrypt substitution cipher
-
-### Cipher Display Components (`components/cipher-displays/`)
-
-#### Display Components
-- **`AristocratDisplay.tsx`**: Aristocrat cipher display
-- **`BaconianDisplay.tsx`**: Baconian cipher display
-- **`CheckerboardDisplay.tsx`**: Checkerboard cipher display
-- **`ColumnarTranspositionDisplay.tsx`**: Columnar transposition display
-- **`CryptarithmDisplay.tsx`**: Cryptarithm display
-- **`FractionatedMorseDisplay.tsx`**: Fractionated Morse display
-- **`FrequencyTable.tsx`**: Frequency analysis table
-- **`HillDisplay.tsx`**: Hill cipher display
-- **`NihilistDisplay.tsx`**: Nihilist cipher display
-- **`PortaDisplay.tsx`**: Porta cipher display
-- **`ReplacementTable.tsx`**: Replacement table display
-- **`SubstitutionDisplay.tsx`**: Substitution cipher display
-
-### Core Components (`components/`)
-
-#### `CodebustersSummary.tsx`
-- **Purpose**: Practice session summary component
-- **Features**:
-  - Session statistics
-  - Performance metrics
-  - Progress tracking
-  - Achievement display
-- **Dependencies**: Practice data, statistics
-- **Props**: Session data, user progress
-- **State Management**: Summary state, metrics state
-
-#### `EmptyState.tsx`
-- **Purpose**: Empty state component for no questions
-- **Features**:
-  - Empty state messaging
-  - Action prompts
-  - Helpful guidance
-  - User onboarding
-- **Dependencies**: User state, practice configuration
-- **Props**: Empty state type, action handlers
-- **State Management**: Empty state, user guidance
-
-#### `FloatingButtons.tsx`
-- **Purpose**: Floating action buttons
-- **Features**:
-  - Quick actions
-  - Navigation shortcuts
-  - Practice controls
-  - User interface shortcuts
-- **Dependencies**: Navigation, practice controls
-- **Props**: Button configuration, action handlers
-- **State Management**: Button state, action state
-
-#### `Header.tsx`
-- **Purpose**: Codebusters practice header
-- **Features**:
-  - Practice title
-  - Progress indicators
-  - Navigation controls
-  - User information
-- **Dependencies**: User authentication, practice state
-- **Props**: Practice configuration, user data
-- **State Management**: Header state, navigation state
-
-#### `LoadingState.tsx`
-- **Purpose**: Loading state component
-- **Features**:
-  - Loading indicators
-  - Progress feedback
-  - User guidance
-  - Error handling
-- **Dependencies**: Loading state, error handling
-- **Props**: Loading type, error state
-- **State Management**: Loading state, error state
-
-#### `PDFModal.tsx`
-- **Purpose**: PDF viewer modal
-- **Features**:
-  - PDF document viewing
-  - Document navigation
-  - Print functionality
-  - Document sharing
-- **Dependencies**: PDF viewer library
-- **Props**: PDF document, modal state
-- **State Management**: PDF state, modal state
-
-#### `PrintConfigModal.tsx`
-- **Purpose**: Print configuration modal
-- **Features**:
-  - Print settings
-  - Layout options
-  - Format configuration
-  - Print preview
-- **Dependencies**: Print utilities, layout system
-- **Props**: Print configuration, modal state
-- **State Management**: Print state, configuration state
-
-#### `QuestionCard.tsx`
-- **Purpose**: Individual question display component
-- **Features**:
-  - Question rendering
-  - Answer input
-  - Hint system
-  - Progress tracking
-- **Dependencies**: Question data, answer system
-- **Props**: Question data, answer handlers
-- **State Management**: Question state, answer state
-
-#### `ShareButton.tsx`
-- **Purpose**: Question sharing functionality
-- **Features**:
-  - Share question links
-  - Social media sharing
-  - Copy to clipboard
-  - Share tracking
-- **Dependencies**: Sharing utilities, social media APIs
-- **Props**: Question data, share options
-- **State Management**: Share state, tracking state
-
-#### `SubmitButton.tsx`
-- **Purpose**: Answer submission component
-- **Features**:
-  - Answer submission
-  - Validation
-  - Progress tracking
-  - Feedback display
-- **Dependencies**: Answer validation, submission system
-- **Props**: Answer data, submission handlers
-- **State Management**: Submission state, validation state
-
-#### `VideoCarousel.tsx`
-- **Purpose**: Educational video carousel
-- **Features**:
-  - Video playback
-  - Video navigation
-  - Educational content
-  - Progress tracking
-- **Dependencies**: Video player, educational content
-- **Props**: Video data, navigation handlers
-- **State Management**: Video state, navigation state
-
-### Codebusters Hooks (`hooks/`)
-
-#### `useAnswerChecking.ts`
-- **Purpose**: Answer validation and checking
-- **Features**:
-  - Answer validation
-  - Correctness checking
-  - Feedback generation
-  - Progress tracking
-- **Dependencies**: Validation system, feedback generation
-- **Returns**: Validation state, feedback data
-- **Usage**: Answer checking and validation
-
-#### `useCodebustersState.ts`
-- **Purpose**: Codebusters practice state management
-- **Features**:
-  - Practice state management
-  - Progress tracking
-  - Session management
-  - State persistence
-- **Dependencies**: State management, persistence
-- **Returns**: Practice state, state handlers
-- **Usage**: Practice state management
-
-#### `useHintSystem.ts`
-- **Purpose**: Hint system management
-- **Features**:
-  - Hint generation
-  - Hint display
-  - Hint tracking
-  - Educational guidance
-- **Dependencies**: Hint generation, educational content
-- **Returns**: Hint state, hint handlers
-- **Usage**: Hint system implementation
-
-#### `useProgressCalculation.ts`
-- **Purpose**: Progress calculation and tracking
-- **Features**:
-  - Progress calculation
-  - Performance metrics
-  - Achievement tracking
-  - Statistical analysis
-- **Dependencies**: Progress algorithms, metrics calculation
-- **Returns**: Progress data, metrics
-- **Usage**: Progress tracking and analysis
-
-#### `useSolutionHandlers.ts`
-- **Purpose**: Solution handling and management
-- **Features**:
-  - Solution processing
-  - Answer handling
-  - Solution validation
-  - Progress updates
-- **Dependencies**: Solution processing, validation
-- **Returns**: Solution handlers, validation state
-- **Usage**: Solution management
-
-### Codebusters Services (`services/`)
-
-#### `questionLoader.ts`
-- **Purpose**: Question loading and management
-- **Features**:
-  - Question fetching
-  - Question caching
-  - Question processing
-  - Error handling
-- **Dependencies**: Question API, caching system
-- **Usage**: Question data management
-
-### Codebusters Utilities (`utils/`)
-
-#### Core Utilities
-- **`common.ts`**: Common utility functions
-- **`gradingUtils.ts`**: Grading and scoring utilities
-- **`preview.ts`**: Question preview utilities
-- **`previewParams.ts`**: Preview parameter handling
-- **`printUtils.ts`**: Print functionality utilities
-- **`quoteCleaner.ts`**: Text cleaning utilities
-- **`substitution.ts`**: Substitution cipher utilities
-- **`useOnlineStatus.ts`**: Online status management
-
-### Codebusters Schemes (`schemes/`)
-
-#### `baconian-schemes.ts`
-- **Purpose**: Baconian cipher schemes
-- **Features**:
-  - Baconian cipher implementations
-  - Scheme variations
-  - Algorithm variations
-  - Educational examples
-- **Dependencies**: Baconian cipher algorithms
-- **Usage**: Baconian cipher practice
-
-#### `display-renderer.ts`
-- **Purpose**: Cipher display rendering
-- **Features**:
-  - Cipher visualization
-  - Display formatting
-  - Rendering optimization
-  - Visual enhancements
-- **Dependencies**: Rendering system, display utilities
-- **Usage**: Cipher display management
-
-#### `pattern-converter.ts`
-- **Purpose**: Pattern conversion utilities
-- **Features**:
-  - Pattern recognition
-  - Pattern conversion
-  - Pattern analysis
-  - Pattern matching
-- **Dependencies**: Pattern recognition algorithms
-- **Usage**: Pattern processing
-
-### Codebusters Data (`data/`)
-
-#### `cipherVideos.ts`
-- **Purpose**: Educational video data
-- **Features**:
-  - Video metadata
-  - Educational content
-  - Video organization
-  - Content management
-- **Dependencies**: Video content, educational resources
-- **Usage**: Educational video management
-
-## Codebusters System Architecture
-
-### Cipher System
-- **Cipher Types**: Multiple cipher implementations
-- **Algorithm Support**: Various encryption algorithms
-- **Educational Content**: Comprehensive learning resources
-- **Practice System**: Interactive practice interface
-
-### Educational Features
-- **Video Content**: Educational video integration
-- **Hint System**: Progressive hint system
-- **Progress Tracking**: Comprehensive progress monitoring
-- **Achievement System**: Progress and achievement tracking
-
-### User Interface
-- **Responsive Design**: Mobile and desktop optimization
-- **Interactive Elements**: Dynamic user interactions
-- **Accessibility**: WCAG compliance and accessibility
-- **Performance**: Optimized rendering and interactions
-
-## Key Features
-
-### 1. Cipher Practice
-- **Multiple Cipher Types**: Support for various cipher types
-- **Interactive Practice**: Hands-on cipher practice
-- **Real-time Feedback**: Immediate answer validation
-- **Progress Tracking**: Comprehensive progress monitoring
-
-### 2. Educational Resources
-- **Video Content**: Educational video integration
-- **Algorithm Explanations**: Detailed cipher explanations
-- **Example Problems**: Practice problems and examples
-- **Educational Guidance**: Step-by-step learning
-
-### 3. Hint System
-- **Progressive Hints**: Gradual hint revelation
-- **Educational Guidance**: Learning-focused hints
-- **Adaptive Difficulty**: Difficulty adjustment based on performance
-- **Learning Support**: Educational hint content
-
-### 4. Progress Tracking
-- **Performance Metrics**: Detailed performance analysis
-- **Achievement System**: Progress and achievement tracking
-- **Statistical Analysis**: Performance statistics
-- **Goal Setting**: Learning goal management
-
-## Technical Implementation
-
-### Cipher Algorithms
-- **Mathematical Implementation**: Precise cipher algorithms
-- **Performance Optimization**: Efficient cipher processing
-- **Error Handling**: Robust error management
-- **Validation**: Comprehensive input validation
-
-### Educational Content
-- **Content Management**: Educational content organization
-- **Video Integration**: Video player integration
-- **Interactive Elements**: Dynamic educational content
-- **Progress Tracking**: Learning progress monitoring
-
-### User Experience
-- **Responsive Design**: Mobile and desktop optimization
-- **Accessibility**: WCAG compliance and accessibility
-- **Performance**: Optimized rendering and interactions
-- **Error Handling**: Graceful error management
-
-## Testing
-
-### Test Coverage
-- **Unit Tests**: Individual component testing
-- **Integration Tests**: Cipher system integration testing
-- **Algorithm Tests**: Cipher algorithm testing
-- **User Experience Tests**: Practice interface usability
-
-### Test Files
-- **`CipherInfoModal.test.tsx`**: Modal component testing
-- **Algorithm Tests**: Cipher algorithm testing
-- **Component Tests**: Individual component testing
-- **Integration Tests**: System integration testing
-
-## Dependencies
-
-### Core Dependencies
-- **React**: Component framework
-- **TypeScript**: Type safety
-- **Cipher Libraries**: Cipher algorithm libraries
-- **Video Player**: Video playback library
-
-### Educational Dependencies
-- **Educational Content**: Learning resource management
-- **Video Content**: Video player integration
-- **Progress Tracking**: Learning progress monitoring
-- **Achievement System**: Progress and achievement tracking
-
-## Usage Examples
-
-### Cipher Practice
-```typescript
-import { useCodebustersState } from '@/app/codebusters/hooks/useCodebustersState';
-
-function CodebustersPractice() {
-  const { practiceState, startPractice, submitAnswer } = useCodebustersState();
-  
-  return (
-    <div>
-      <QuestionCard 
-        question={practiceState.currentQuestion}
-        onSubmit={submitAnswer}
-      />
-    </div>
-  );
+**Example:**
+```49:50:src/app/codebusters/page.tsx
+export default function CodeBusters() {
+  const { darkMode } = useTheme();
+  // ... comprehensive state management and cipher practice logic
 }
 ```
 
-### Hint System
-```typescript
-import { useHintSystem } from '@/app/codebusters/hooks/useHintSystem';
+**Important Notes:**
+- Uses multiple hooks for state management
+- Supports all Codebusters cipher types
+- Integrates with timer system
+- Supports assignments and preview mode
 
-function HintComponent() {
-  const { hints, showHint, hintLevel } = useHintSystem();
-  
-  return (
-    <div>
-      <button onClick={showHint}>
-        Show Hint ({hintLevel})
-      </button>
-      {hints.map(hint => (
-        <div key={hint.id}>{hint.content}</div>
-      ))}
-    </div>
-  );
+### `CipherInfoModal.tsx`
+Cipher information and help modal component.
+
+**Features:**
+- Cipher explanations
+- Algorithm descriptions
+- Example problems
+- Educational content
+
+### `cipher-utils.ts`
+Cipher utility functions.
+
+**Features:**
+- Cipher processing utilities
+- Cipher validation
+- Cipher transformations
+
+### `config.ts`
+Codebusters configuration constants.
+
+**Example:**
+```1:13:src/app/codebusters/config.ts
+import type { QuoteData } from "./types";
+
+// Centralized disabled cipher list used by UI and generator
+export const DISABLED_CIPHERS: QuoteData["cipherType"][] = [
+  "K3 Patristocrat",
+  "Random Patristocrat",
+  "Random Xenocrypt",
+  "K3 Xenocrypt",
+];
+
+export const filterEnabledCiphers = (
+  ciphers: QuoteData["cipherType"][]
+): QuoteData["cipherType"][] => ciphers.filter((c) => !DISABLED_CIPHERS.includes(c));
+```
+
+**Important Notes:**
+- Defines disabled cipher types
+- Used by UI and question generator
+
+### `types.ts`
+TypeScript type definitions for Codebusters system.
+
+**Key Types:**
+- `QuoteData` - Quote data interface with cipher information
+- Cipher type definitions
+- Solution interfaces
+
+**Example:**
+```10:44:src/app/codebusters/types.ts
+export interface QuoteData {
+  /** Unique identifier for the quote */
+  id?: string;
+  /** Author of the original quote */
+  author: string;
+  /** Original plaintext quote */
+  quote: string;
+  /** Encrypted version of the quote */
+  encrypted: string;
+  /** Type of cipher used for encryption */
+  cipherType:
+    | "Random Aristocrat"
+    | "K1 Aristocrat"
+    | "K2 Aristocrat"
+    | "K3 Aristocrat"
+    | "Random Patristocrat"
+    | "K1 Patristocrat"
+    | "K2 Patristocrat"
+    | "K3 Patristocrat"
+    | "Caesar"
+    | "Atbash"
+    | "Affine"
+    | "Hill 2x2"
+    | "Hill 3x3"
+    | "Baconian"
+    | "Porta"
+    | "Nihilist"
+    | "Fractionated Morse"
+    | "Complete Columnar"
+    | "Random Xenocrypt"
+    | "K1 Xenocrypt"
+    | "K2 Xenocrypt"
+    | "K3 Xenocrypt"
+    | "Checkerboard"
+    | "Cryptarithm";
+  // ... more fields
 }
 ```
 
-### Progress Tracking
-```typescript
-import { useProgressCalculation } from '@/app/codebusters/hooks/useProgressCalculation';
+## Ciphers
 
-function ProgressDisplay() {
-  const { progress, metrics, achievements } = useProgressCalculation();
-  
-  return (
-    <div>
-      <div>Progress: {progress.percentage}%</div>
-      <div>Correct: {metrics.correct}</div>
-      <div>Achievements: {achievements.length}</div>
-    </div>
-  );
-}
-```
+### `ciphers/`
+Cipher implementation directory containing all cipher algorithms.
 
-## Development Guidelines
+**Cipher Files:**
+- `affine.ts` - Affine cipher
+- `atbash.ts` - Atbash cipher
+- `caesar.ts` - Caesar cipher
+- `porta.ts` - Porta cipher
+- `random-substitutions.ts` - Random substitution ciphers
+- `substitution-k-aristo.ts` - Aristocrat substitution
+- `substitution-k-patri.ts` - Patristocrat substitution
+- `substitution-k-xeno.ts` - Xenocrypt substitution
 
-### Component Structure
-- **Single Responsibility**: Each component has a clear purpose
-- **Composition**: Components composed of smaller components
-- **Reusability**: Reusable cipher components
-- **Maintainability**: Clear structure and documentation
+**Cipher Subdirectories:**
+- `baconian/` - Baconian cipher implementation
+- `checkerboard/` - Checkerboard cipher implementation
+- `fractionatedMorse/` - Fractionated Morse cipher
+- `hill/` - Hill cipher (2x2 and 3x3)
+- `nihilist/` - Nihilist cipher
+- `transposition/` - Transposition ciphers including cryptarithm
 
-### Cipher Implementation
-- **Algorithm Accuracy**: Precise cipher algorithm implementation
-- **Performance**: Efficient cipher processing
-- **Error Handling**: Robust error management
-- **Validation**: Comprehensive input validation
+**Important Notes:**
+- Each cipher has encryption/decryption functions
+- Supports multiple cipher variants
+- Includes utility functions for each cipher type
 
-### Educational Content
-- **Content Quality**: High-quality educational content
-- **User Experience**: Intuitive learning interface
-- **Progress Tracking**: Comprehensive progress monitoring
-- **Achievement System**: Meaningful progress recognition
+## Components
 
----
+### `components/`
+Main Codebusters components directory.
 
-*This documentation provides a comprehensive overview of the Scio.ly Codebusters system and its functionality.*
+**Core Components:**
+- `ActionButtons.tsx` - Action buttons for practice
+- `CodebustersSummary.tsx` - Practice session summary
+- `EmptyState.tsx` - Empty state display
+- `Header.tsx` - Practice header
+- `LoadingState.tsx` - Loading indicators
+- `PDFModal.tsx` - PDF viewer modal
+- `PrintConfigModal.tsx` - Print configuration
+- `QuestionCard.tsx` - Individual question display
+- `QuestionsList.tsx` - Questions list display
+- `ShareButton.tsx` - Share functionality
+- `SubmitButton.tsx` - Test submission button
+- `VideoCarousel.tsx` - Video tutorial carousel
+
+### `components/cipher-displays/`
+Cipher-specific display components.
+
+**Display Components:**
+- `AristocratDisplay.tsx` - Aristocrat cipher display
+- `BaconianDisplay.tsx` - Baconian cipher display
+- `CheckerboardDisplay.tsx` - Checkerboard cipher display (with subcomponents)
+- `ColumnarTranspositionDisplay.tsx` - Columnar transposition display
+- `CryptarithmDisplay.tsx` - Cryptarithm display
+- `FractionatedMorseDisplay.tsx` - Fractionated Morse display
+- `FrequencyTable.tsx` - Frequency analysis table
+- `HillDisplay.tsx` - Hill cipher display
+- `NihilistDisplay.tsx` - Nihilist cipher display
+- `PortaDisplay.tsx` - Porta cipher display
+- `ReplacementTable.tsx` - Replacement table display
+- `SubstitutionDisplay.tsx` - Substitution cipher display
+
+**Important Notes:**
+- Each cipher type has a specialized display component
+- Components handle cipher-specific UI interactions
+- Support for cipher solving interfaces
+
+## Hooks
+
+### `hooks/`
+Custom hooks for Codebusters state management.
+
+**Hooks:**
+- `useAnswerChecking.ts` - Answer validation and checking
+- `useAssignmentLoader.ts` - Assignment loading
+- `useCodebustersState.ts` - Main state management hook
+- `useHintSystem.ts` - Hint system management
+- `useProgressCalculation.ts` - Progress calculation
+- `useQuestionGeneration.ts` - Question generation
+- `useSolutionHandlers.ts` - Solution handling
+- `useTestReset.ts` - Test reset functionality
+- `useTestSubmission.ts` - Test submission
+- `useTimerManagement.ts` - Timer management
+
+## Services
+
+### `services/`
+Service layer for Codebusters functionality.
+
+**Services:**
+- `questionLoader.ts` - Question loading service
+
+**Utils:**
+- `cipherMapping.ts` - Cipher type mapping
+- `difficulty.ts` - Difficulty calculation
+- `encryptionMapping.ts` - Encryption mapping
+- `langGuards.ts` - Language guards
+- `questionCreation.ts` - Question creation utilities
+- `quoteLoading.ts` - Quote loading utilities
+
+## Utils
+
+### `utils/`
+Utility functions for Codebusters.
+
+**Grading Utils:**
+- `grading/checkerboardGrading.ts` - Checkerboard grading
+- `grading/cryptarithmGrading.ts` - Cryptarithm grading
+- `grading/fractionatedMorseGrading.ts` - Fractionated Morse grading
+- `grading/hillGrading.ts` - Hill cipher grading
+- `grading/keywordGrading.ts` - Keyword grading
+- `grading/otherCipherGrading.ts` - Other cipher grading
+- `grading/pointsUtils.ts` - Points calculation utilities
+- `grading/portaGrading.ts` - Porta grading
+- `grading/substitutionGrading.ts` - Substitution grading
+
+**Other Utils:**
+- `baconianRevealer.ts` - Baconian revealer
+- `cipherUtils.ts` - General cipher utilities
+- `common.ts` - Common utilities
+- `cryptarithmRevealer.ts` - Cryptarithm revealer
+- `gradingUtils.ts` - General grading utilities
+- `hillRevealer.ts` - Hill revealer
+- `hintContentGenerators.ts` - Hint content generation
+- `letterRevealers.ts` - Letter reveal utilities
+- `plainLetterCalculators.ts` - Plain letter calculation
+- `preview.ts` - Preview utilities
+- `previewParams.ts` - Preview parameter utilities
+- `printUtils.ts` - Print utilities
+- `quoteCleaner.ts` - Quote cleaning utilities
+- `substitution.ts` - Substitution utilities
+
+**Print Utils:**
+- `print/content.ts` - Print content generation
+- `print/formatQuestions.ts` - Question formatting for print
+- `print/setupWindow.ts` - Print window setup
+- `print/styles.ts` - Print styles
+
+## Schemes
+
+### `schemes/`
+Cipher scheme definitions and converters.
+
+**Files:**
+- `baconian-schemes.ts` - Baconian scheme definitions
+- `display-renderer.ts` - Display rendering utilities
+- `pattern-converter.ts` - Pattern conversion utilities
+
+## Data
+
+### `data/`
+Static data for Codebusters.
+
+**Files:**
+- `cipherVideos.ts` - Video tutorial data
+
+## Important Notes
+
+1. **Cipher Support**: Supports 20+ cipher types
+2. **Grading System**: Specialized grading for each cipher type
+3. **Display Components**: Custom display components for each cipher
+4. **Hint System**: Comprehensive hint system for learning
+5. **Print Support**: Full print functionality for tests
+6. **Video Tutorials**: Integrated video tutorial carousel
+7. **Assignment Support**: Supports team assignments
+8. **Timer Support**: Full timer integration
+9. **Theme Support**: Dark/light mode support throughout

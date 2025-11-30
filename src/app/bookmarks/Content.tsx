@@ -303,6 +303,46 @@ export default function Content() {
   const [isLoadingBookmarks, setIsLoadingBookmarks] = useState(true);
   const [isRemoving, setIsRemoving] = useState<Record<string, boolean>>({});
 
+  // Helper function to group bookmarks by event name
+  const groupBookmarksByEvent = useCallback(
+    (bookmarks: BookmarkedQuestion[]): Record<string, BookmarkedQuestion[]> => {
+      return bookmarks.reduce(
+        (acc, question) => {
+          if (!acc[question.eventName]) {
+            acc[question.eventName] = [];
+          }
+          if (question.eventName) {
+            acc[question.eventName]?.push(question);
+          }
+          return acc;
+        },
+        {} as Record<string, BookmarkedQuestion[]>
+      );
+    },
+    []
+  );
+
+  const loadBookmarks = useCallback(
+    async (userId: string) => {
+      setIsLoadingBookmarks(true);
+      try {
+        const bookmarks = await loadBookmarksFromSupabase(userId);
+        if (bookmarks && bookmarks.length > 0) {
+          const groupedQuestions = groupBookmarksByEvent(bookmarks);
+          setBookmarkedQuestions(groupedQuestions);
+        } else {
+          setBookmarkedQuestions({});
+        }
+      } catch (error) {
+        logger.error("Error loading bookmarks:", error);
+        toast.error("Failed to load bookmarks");
+      } finally {
+        setIsLoadingBookmarks(false);
+      }
+    },
+    [groupBookmarksByEvent]
+  );
+
   useEffect(() => {
     if (authLoading) {
       return;
@@ -315,42 +355,6 @@ export default function Content() {
       setIsLoadingBookmarks(false);
     }
   }, [user, authLoading, loadBookmarks]);
-
-  // Helper function to group bookmarks by event name
-  const groupBookmarksByEvent = (
-    bookmarks: BookmarkedQuestion[]
-  ): Record<string, BookmarkedQuestion[]> => {
-    return bookmarks.reduce(
-      (acc, question) => {
-        if (!acc[question.eventName]) {
-          acc[question.eventName] = [];
-        }
-        if (question.eventName) {
-          acc[question.eventName]?.push(question);
-        }
-        return acc;
-      },
-      {} as Record<string, BookmarkedQuestion[]>
-    );
-  };
-
-  const loadBookmarks = useCallback(async (userId: string) => {
-    setIsLoadingBookmarks(true);
-    try {
-      const bookmarks = await loadBookmarksFromSupabase(userId);
-      if (bookmarks && bookmarks.length > 0) {
-        const groupedQuestions = groupBookmarksByEvent(bookmarks);
-        setBookmarkedQuestions(groupedQuestions);
-      } else {
-        setBookmarkedQuestions({});
-      }
-    } catch (error) {
-      logger.error("Error loading bookmarks:", error);
-      toast.error("Failed to load bookmarks");
-    } finally {
-      setIsLoadingBookmarks(false);
-    }
-  }, []);
 
   const handleTakeTimedTest = (eventName: string, _questions: BookmarkedQuestion[]) => {
     (async () => {

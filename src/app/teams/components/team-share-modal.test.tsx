@@ -19,7 +19,7 @@ describe("TeamShareModal", () => {
   });
 
   it("generates codes on open for captain and user", async () => {
-    mkFetch(async (url, init) => {
+    mkFetch((url, init) => {
       const u = String(url);
       if (u.startsWith("/api/teams/units?") && (!init || init.method === "GET")) {
         return new Response(
@@ -47,7 +47,7 @@ describe("TeamShareModal", () => {
   });
 
   it("joins team with code", async () => {
-    mkFetch(async (url, init) => {
+    mkFetch((url, init) => {
       const u = String(url);
       if (u === "/api/teams/join-by-code" && init?.method === "POST") {
         const body = JSON.parse(String(init.body || "{}"));

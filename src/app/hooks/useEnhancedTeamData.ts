@@ -77,9 +77,9 @@ export function useEnhancedTeamData() {
   );
 
   // Fetch user teams
-  const fetchUserTeams = useCallback(async (): Promise<UserTeam[]> => {
+  const fetchUserTeams = useCallback((): Promise<UserTeam[]> => {
     if (!user?.id) {
-      return [];
+      return Promise.resolve([]);
     }
 
     const cacheKey = `user-teams-${user.id}`;
@@ -99,9 +99,9 @@ export function useEnhancedTeamData() {
 
   // Fetch subteams
   const fetchSubteams = useCallback(
-    async (teamSlug: string): Promise<Subteam[]> => {
+    (teamSlug: string): Promise<Subteam[]> => {
       if (!teamSlug) {
-        return [];
+        return Promise.resolve([]);
       }
 
       const cacheKey = `subteams-${teamSlug}`;
@@ -128,7 +128,7 @@ export function useEnhancedTeamData() {
 
   // Fetch roster data (includes both roster and removed events)
   const fetchRoster = useCallback(
-    async (
+    (
       teamSlug: string,
       subteamId: string
     ): Promise<{
@@ -136,7 +136,7 @@ export function useEnhancedTeamData() {
       removedEvents: string[];
     }> => {
       if (!(teamSlug && subteamId)) {
-        return { roster: {}, removedEvents: [] };
+        return Promise.resolve({ roster: {}, removedEvents: [] });
       }
 
       const cacheKey = `roster-${teamSlug}-${subteamId}`;
@@ -166,9 +166,9 @@ export function useEnhancedTeamData() {
 
   // Fetch members
   const fetchMembers = useCallback(
-    async (teamSlug: string, subteamId?: string): Promise<TeamMember[]> => {
+    (teamSlug: string, subteamId?: string): Promise<TeamMember[]> => {
       if (!teamSlug) {
-        return [];
+        return Promise.resolve([]);
       }
 
       const subteamParam = subteamId && subteamId !== "all" ? `?subteamId=${subteamId}` : "";
@@ -197,9 +197,9 @@ export function useEnhancedTeamData() {
 
   // Fetch stream data
   const fetchStream = useCallback(
-    async (teamSlug: string, subteamId: string): Promise<StreamPost[]> => {
+    (teamSlug: string, subteamId: string): Promise<StreamPost[]> => {
       if (!(teamSlug && subteamId)) {
-        return [];
+        return Promise.resolve([]);
       }
 
       const cacheKey = `stream-${teamSlug}-${subteamId}`;
@@ -226,9 +226,9 @@ export function useEnhancedTeamData() {
 
   // Fetch assignments
   const fetchAssignments = useCallback(
-    async (teamSlug: string): Promise<Assignment[]> => {
+    (teamSlug: string): Promise<Assignment[]> => {
       if (!teamSlug) {
-        return [];
+        return Promise.resolve([]);
       }
 
       const cacheKey = `assignments-${teamSlug}`;
@@ -255,9 +255,9 @@ export function useEnhancedTeamData() {
 
   // Fetch tournaments
   const fetchTournaments = useCallback(
-    async (teamSlug: string, subteamId: string): Promise<Tournament[]> => {
+    (teamSlug: string, subteamId: string): Promise<Tournament[]> => {
       if (!(teamSlug && subteamId)) {
-        return [];
+        return Promise.resolve([]);
       }
 
       const cacheKey = `tournaments-${teamSlug}-${subteamId}`;
@@ -284,9 +284,9 @@ export function useEnhancedTeamData() {
 
   // Fetch timers
   const fetchTimers = useCallback(
-    async (teamSlug: string, subteamId: string): Promise<Timer[]> => {
+    (teamSlug: string, subteamId: string): Promise<Timer[]> => {
       if (!(teamSlug && subteamId)) {
-        return [];
+        return Promise.resolve([]);
       }
 
       const cacheKey = `timers-${teamSlug}-${subteamId}`;

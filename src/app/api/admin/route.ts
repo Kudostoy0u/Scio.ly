@@ -419,7 +419,7 @@ export async function GET(request: NextRequest) {
 
     // Speed optimization: avoid per-row DB lookups. Treat presence of an id as "resolvable".
     const enrichedEdits = await Promise.all(
-      edits.map(async (row) => {
+      edits.map((row) => {
         const event = row.event;
         byEvent[event] = byEvent[event] || { edits: 0, removed: 0 };
         byEvent[event].edits += 1;
@@ -445,7 +445,7 @@ export async function GET(request: NextRequest) {
 
     // Speed optimization: avoid per-row DB lookups. Treat presence of an id as "exists".
     const enrichedBlacklists = await Promise.all(
-      blacklists.map(async (row) => {
+      blacklists.map((row) => {
         const event = row.event;
         byEvent[event] = byEvent[event] || { edits: 0, removed: 0 };
         byEvent[event].removed += 1;
@@ -524,7 +524,7 @@ export async function POST(request: NextRequest) {
             status: 400,
           });
         }
-        return handleUndoEdit(id);
+        return await handleUndoEdit(id);
       },
       applyEdit: async (id?: string) => {
         const error = requireId(id);
@@ -536,7 +536,7 @@ export async function POST(request: NextRequest) {
             status: 400,
           });
         }
-        return handleApplyEdit(id);
+        return await handleApplyEdit(id);
       },
       deleteEdit: async (id?: string) => {
         const error = requireId(id);
@@ -548,7 +548,7 @@ export async function POST(request: NextRequest) {
             status: 400,
           });
         }
-        return handleDeleteEdit(id);
+        return await handleDeleteEdit(id);
       },
       undoRemove: async (id?: string) => {
         const error = requireId(id);
@@ -560,7 +560,7 @@ export async function POST(request: NextRequest) {
             status: 400,
           });
         }
-        return handleUndoRemove(id);
+        return await handleUndoRemove(id);
       },
       applyRemoved: async (id?: string) => {
         const error = requireId(id);
@@ -572,7 +572,7 @@ export async function POST(request: NextRequest) {
             status: 400,
           });
         }
-        return handleApplyRemoved(id);
+        return await handleApplyRemoved(id);
       },
       deleteRemoved: async (id?: string) => {
         const error = requireId(id);
@@ -584,12 +584,12 @@ export async function POST(request: NextRequest) {
             status: 400,
           });
         }
-        return handleDeleteRemoved(id);
+        return await handleDeleteRemoved(id);
       },
-      applyAllEdits: async () => handleApplyAllEdits(),
-      undoAllEdits: async () => handleUndoAllEdits(),
-      applyAllRemoved: async () => handleApplyAllRemoved(),
-      restoreAllRemoved: async () => handleRestoreAllRemoved(),
+      applyAllEdits: async () => await handleApplyAllEdits(),
+      undoAllEdits: async () => await handleUndoAllEdits(),
+      applyAllRemoved: async () => await handleApplyAllRemoved(),
+      restoreAllRemoved: async () => await handleRestoreAllRemoved(),
     };
 
     const handler = handlers[action];

@@ -1,5 +1,5 @@
 import AboutClientPage from "./about-client-page";
 
-export default async function AboutPage() {
+export default function AboutPage() {
   return <AboutClientPage />;
 }

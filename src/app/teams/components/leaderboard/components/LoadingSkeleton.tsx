@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useMemo } from "react";
 
 interface LoadingSkeletonProps {
   count: number;
@@ -27,11 +27,10 @@ export function LoadingSkeleton({
   selectedEvent,
   getRankColor,
 }: LoadingSkeletonProps) {
-  const idCounterRef = useRef(0);
   const skeletonRows = useMemo(() => {
     const rows: Array<{ id: string; rank: number }> = [];
     for (let i = 0; i < count; i++) {
-      const id = `skeleton-${idCounterRef.current++}`;
+      const id = `skeleton-${i}`;
       const rank = i + 1;
       rows.push({ id, rank });
     }

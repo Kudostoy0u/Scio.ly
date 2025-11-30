@@ -86,7 +86,7 @@ const rosterKey = (teamUnitId: string, eventName: string, slotIndex: number) =>
 /**
  * Creates a test user in the in-memory database
  */
-async function createTestUser(overrides?: Partial<TestUser>): Promise<TestUser> {
+function createTestUser(overrides?: Partial<TestUser>): TestUser {
   const testUser: TestUser = {
     id: overrides?.id ?? nextId("user"),
     email: `test-${Date.now()}@example.com`,
@@ -103,7 +103,7 @@ async function createTestUser(overrides?: Partial<TestUser>): Promise<TestUser> 
 /**
  * Creates a test team with a default subteam
  */
-async function createTestTeam(creatorId: string): Promise<TestTeam> {
+function createTestTeam(creatorId: string): TestTeam {
   const creator = mockDb.users.get(creatorId);
   if (!creator) {
     throw new Error("Creator not found");
@@ -153,7 +153,7 @@ async function createTestTeam(creatorId: string): Promise<TestTeam> {
 /**
  * Cleans up test data
  */
-async function cleanupTestData(_userIds: string[], _teamIds: string[]) {
+function cleanupTestData(_userIds: string[], _teamIds: string[]) {
   mockDb.rosterData.clear();
   mockDb.streamPosts.clear();
   mockDb.memberships.clear();
@@ -166,17 +166,17 @@ describe("Teams E2E Tests", () => {
   const testUsers: TestUser[] = [];
   let testTeams: TestTeam[] = [];
 
-  beforeAll(async () => {
+  beforeAll(() => {
     // Setup: Create test users
-    testUsers.push(await createTestUser());
-    testUsers.push(await createTestUser());
+    testUsers.push(createTestUser());
+    testUsers.push(createTestUser());
   });
 
-  afterAll(async () => {
+  afterAll(() => {
     // Cleanup: Remove test data
     const userIds = testUsers.map((u) => u.id);
     const teamIds = testTeams.map((t) => t.subteamId);
-    await cleanupTestData(userIds, teamIds);
+    cleanupTestData(userIds, teamIds);
   });
 
   beforeEach(() => {
@@ -184,9 +184,9 @@ describe("Teams E2E Tests", () => {
   });
 
   describe("Team Creation Flow", () => {
-    it("should create a team with default subteam", async () => {
+    it("should create a team with default subteam", () => {
       const creator = testUsers[0];
-      const team = await createTestTeam(creator.id);
+      const team = createTestTeam(creator.id);
       testTeams.push(team);
 
       // Verify team group exists
@@ -210,10 +210,10 @@ describe("Teams E2E Tests", () => {
   });
 
   describe("Team Joining Flow", () => {
-    it("should allow user to join team with user code", async () => {
+    it("should allow user to join team with user code", () => {
       const creator = testUsers[0];
       const joiner = testUsers[1];
-      const team = await createTestTeam(creator.id);
+      const team = createTestTeam(creator.id);
       testTeams.push(team);
 
       // Join team using user code
@@ -232,9 +232,9 @@ describe("Teams E2E Tests", () => {
   });
 
   describe("Roster Management Flow", () => {
-    it("should create and update roster entries", async () => {
+    it("should create and update roster entries", () => {
       const creator = testUsers[0];
-      const team = await createTestTeam(creator.id);
+      const team = createTestTeam(creator.id);
       testTeams.push(team);
 
       // Create roster entry
@@ -267,9 +267,9 @@ describe("Teams E2E Tests", () => {
   });
 
   describe("Stream Post Flow", () => {
-    it("should create stream posts", async () => {
+    it("should create stream posts", () => {
       const creator = testUsers[0];
-      const team = await createTestTeam(creator.id);
+      const team = createTestTeam(creator.id);
       testTeams.push(team);
 
       // Create stream post
@@ -290,10 +290,10 @@ describe("Teams E2E Tests", () => {
   });
 
   describe("Authorization Checks", () => {
-    it("should enforce captain-only operations", async () => {
+    it("should enforce captain-only operations", () => {
       const creator = testUsers[0];
       const member = testUsers[1];
-      const team = await createTestTeam(creator.id);
+      const team = createTestTeam(creator.id);
       testTeams.push(team);
 
       // Add member

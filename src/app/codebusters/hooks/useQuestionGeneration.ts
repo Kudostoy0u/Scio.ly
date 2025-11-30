@@ -73,14 +73,14 @@ export function useQuestionGeneration() {
 
   const createQuestionFromQuote = useCallback(
     (
-      quote: { quote: string; author: string },
+      quote: { id?: string; quote: string; author: string },
       cipherType: string,
       cipherResult: CipherResult,
       index: number,
       division: string
     ): QuoteData => {
       return {
-        id: `assignment-${index}`,
+        id: quote.id || `assignment-${index}`,
         author: quote.author,
         quote: quote.quote,
         encrypted: cipherResult.encrypted,

@@ -31,6 +31,7 @@ interface QuestionsListProps {
     plainLetter: string
   ) => void;
   handleKeywordSolutionChange: (quoteIndex: number, keyword: string) => void;
+  handleReportQuote?: (quoteIndex: number) => void;
   hintedLetters: { [questionIndex: number]: { [letter: string]: boolean } };
   _hintCounts: { [questionIndex: number]: number };
 }
@@ -51,6 +52,7 @@ export default function QuestionsList({
   handleCheckerboardSolutionChange,
   handleCryptarithmSolutionChange,
   handleKeywordSolutionChange,
+  handleReportQuote,
   hintedLetters,
   _hintCounts,
 }: QuestionsListProps) {
@@ -77,6 +79,7 @@ export default function QuestionsList({
           handleCheckerboardSolutionChange={handleCheckerboardSolutionChange}
           handleCryptarithmSolutionChange={handleCryptarithmSolutionChange}
           handleKeywordSolutionChange={handleKeywordSolutionChange}
+          handleReportQuote={handleReportQuote}
           hintedLetters={hintedLetters}
           _hintCounts={_hintCounts}
         />

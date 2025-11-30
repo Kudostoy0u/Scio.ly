@@ -192,7 +192,7 @@ const rosterKey = (teamUnitId: string, eventName: string, slotIndex: number) =>
 
 // ============ Test Data Creation ============
 
-export async function createTestUser(overrides?: Partial<TestUser>): Promise<TestUser> {
+export function createTestUser(overrides?: Partial<TestUser>): TestUser {
   const uniqueSuffix = randomUUID();
   const testUser: TestUser = {
     id: overrides?.id ?? nextId(),
@@ -210,10 +210,7 @@ export async function createTestUser(overrides?: Partial<TestUser>): Promise<Tes
 /**
  * Creates a test team with a default subteam
  */
-export async function createTestTeam(
-  creatorId: string,
-  overrides?: Partial<TestTeam>
-): Promise<TestTeam> {
+export function createTestTeam(creatorId: string, overrides?: Partial<TestTeam>): TestTeam {
   const uniqueSuffix = randomUUID().slice(0, 8);
   const slug = overrides?.slug || `test-team-${uniqueSuffix}`;
   const captainCode = overrides?.captainCode || `CAP-${uniqueSuffix}`;
@@ -263,11 +260,11 @@ export async function createTestTeam(
 /**
  * Adds a member to a team
  */
-export async function addTeamMember(
+export function addTeamMember(
   teamId: string,
   userId: string,
   role: "captain" | "co_captain" | "member" = "member"
-): Promise<void> {
+): void {
   mockDb.memberships.set(`${userId}:${teamId}`, {
     userId,
     teamId,
@@ -279,13 +276,13 @@ export async function addTeamMember(
 /**
  * Creates a roster entry
  */
-export async function createRosterEntry(
+export function createRosterEntry(
   teamUnitId: string,
   eventName: string,
   slotIndex: number,
   studentName: string,
   userId?: string
-): Promise<void> {
+): void {
   mockDb.rosterEntries.set(rosterKey(teamUnitId, eventName, slotIndex), {
     teamUnitId,
     eventName,
@@ -298,11 +295,7 @@ export async function createRosterEntry(
 /**
  * Creates a stream post
  */
-export async function createStreamPost(
-  teamUnitId: string,
-  authorId: string,
-  content: string
-): Promise<string> {
+export function createStreamPost(teamUnitId: string, authorId: string, content: string): string {
   const postId = nextId("post");
   mockDb.streamPosts.set(postId, {
     id: postId,
@@ -318,7 +311,7 @@ export async function createStreamPost(
 /**
  * Cleans up test data
  */
-export async function cleanupTestData(_userIds: string[], _teamGroupIds: string[]): Promise<void> {
+export function cleanupTestData(_userIds: string[], _teamGroupIds: string[]): void {
   mockDb.rosterEntries.clear();
   mockDb.streamPosts.clear();
   mockDb.memberships.clear();
@@ -383,11 +376,11 @@ export function createAuthenticatedRequest(
 /**
  * Asserts that a user is a member of a team
  */
-export async function assertUserIsMember(
+export function assertUserIsMember(
   userId: string,
   teamId: string,
   expectedRole?: "captain" | "co_captain" | "member"
-): Promise<void> {
+): void {
   const membership = mockDb.memberships.get(`${userId}:${teamId}`);
   if (!membership || membership.status !== "active") {
     throw new Error(`User ${userId} is not a member of team ${teamId}`);
@@ -401,7 +394,7 @@ export async function assertUserIsMember(
 /**
  * Asserts that a user is NOT a member of a team
  */
-export async function assertUserIsNotMember(userId: string, teamId: string): Promise<void> {
+export function assertUserIsNotMember(userId: string, teamId: string): void {
   const membership = mockDb.memberships.get(`${userId}:${teamId}`);
   if (membership) {
     throw new Error(`User ${userId} is unexpectedly a member of team ${teamId}`);

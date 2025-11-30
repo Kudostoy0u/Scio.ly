@@ -79,7 +79,6 @@ export default function UnlimitedPracticePage({
   const batchSize = 20;
   const batchReloadingRef = useRef(false);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: fetchStartedRef is a ref and doesn't need to be in dependencies
   useEffect(() => {
     if (fetchStartedRef.current) {
       return;
@@ -105,7 +104,7 @@ export default function UnlimitedPracticePage({
     }
 
     loadBatch(routerParams);
-  }, [data.length, isLoading, initialRouterData, router, loadBatch, setData, setIsLoading]);
+  }, [data.length, isLoading, initialRouterData, router, loadBatch, setData, setIsLoading, fetchStartedRef]);
 
   // Ensure the current question index is valid/stable once data is loaded
   useEffect(() => {

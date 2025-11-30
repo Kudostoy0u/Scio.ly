@@ -58,3 +58,14 @@ export interface GeminiGenerationConfig {
   topP: number;
   maxOutputTokens: number;
 }
+
+export interface QuoteValidationResult {
+  action: "remove" | "edit" | "keep";
+  reason: string;
+  issues: string[];
+  editedQuote?: {
+    quote: string;
+    author: string;
+    language: string;
+  };
+}

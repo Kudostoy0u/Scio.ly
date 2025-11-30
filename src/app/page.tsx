@@ -38,6 +38,6 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function HomePage() {
+export default function HomePage() {
   return <HomeClient />;
 }

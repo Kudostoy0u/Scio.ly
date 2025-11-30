@@ -34,35 +34,35 @@ describe("Team Invitation E2E", () => {
   const testUsers: TestUser[] = [];
   const testTeams: TestTeam[] = [];
 
-  beforeAll(async () => {
+  beforeAll(() => {
     // Create test users
-    testUsers.push(await createTestUser({ displayName: "Captain User", username: "captain" }));
-    testUsers.push(await createTestUser({ displayName: "Member User", username: "member" }));
-    testUsers.push(await createTestUser({ displayName: "Invitee User", username: "invitee" }));
+    testUsers.push(createTestUser({ displayName: "Captain User", username: "captain" }));
+    testUsers.push(createTestUser({ displayName: "Member User", username: "member" }));
+    testUsers.push(createTestUser({ displayName: "Invitee User", username: "invitee" }));
 
     // Create test team
-    const team = await createTestTeam(testUsers[0].id);
+    const team = createTestTeam(testUsers[0].id);
     testTeams.push(team);
 
     // Add existing member
-    await addTeamMember(team.subteamId, testUsers[1].id, "member");
+    addTeamMember(team.subteamId, testUsers[1].id, "member");
   });
 
-  afterAll(async () => {
+  afterAll(() => {
     // Cleanup
     const userIds = testUsers.map((u) => u.id);
     const teamGroupIds = testTeams.map((t) => t.groupId);
-    await cleanupTestData(userIds, teamGroupIds);
+    cleanupTestData(userIds, teamGroupIds);
   });
 
   describe("User Search", () => {
-    it("should search users by username", async () => {
+    it("should search users by username", () => {
       const searchResults = findUsersByUsername("invitee");
       expect(searchResults.length).toBeGreaterThan(0);
       expect(searchResults[0]?.username).toBe("invitee");
     });
 
-    it("should search users by email", async () => {
+    it("should search users by email", () => {
       const invitee = testUsers[2];
       const searchResults = findUsersByEmail(invitee.email);
       expect(searchResults.length).toBeGreaterThan(0);
@@ -71,7 +71,7 @@ describe("Team Invitation E2E", () => {
   });
 
   describe("Invitation Creation", () => {
-    it("should create invitation for new user", async () => {
+    it("should create invitation for new user", () => {
       const team = testTeams[0];
       const invitee = testUsers[2];
 
@@ -94,7 +94,7 @@ describe("Team Invitation E2E", () => {
       expect(retrievedInvitation?.status).toBe("pending");
     });
 
-    it("should prevent duplicate invitations", async () => {
+    it("should prevent duplicate invitations", () => {
       const team = testTeams[0];
       const invitee = testUsers[2];
       if (!team) {
@@ -117,7 +117,7 @@ describe("Team Invitation E2E", () => {
   });
 
   describe("Notification Creation", () => {
-    it("should create notification for invited user", async () => {
+    it("should create notification for invited user", () => {
       const team = testTeams[0];
       const invitee = testUsers[2];
 
@@ -152,7 +152,7 @@ describe("Team Invitation E2E", () => {
       }
 
       // Verify captain membership
-      await assertUserIsMember(captain.id, team.subteamId, "captain");
+      assertUserIsMember(captain.id, team.subteamId, "captain");
 
       // Verify captain has permission to invite
       const membership = getMembershipsByTeamId(team.subteamId).find(
@@ -163,7 +163,7 @@ describe("Team Invitation E2E", () => {
       expect(["captain", "co_captain"]).toContain(membership.role);
     });
 
-    it("should prevent existing members from being invited", async () => {
+    it("should prevent existing members from being invited", () => {
       const team = testTeams[0];
       const existingMember = testUsers[1];
       if (!team) {
@@ -183,7 +183,7 @@ describe("Team Invitation E2E", () => {
   });
 
   describe("Team Code Retrieval", () => {
-    it("should retrieve team codes for invitation", async () => {
+    it("should retrieve team codes for invitation", () => {
       const team = testTeams[0];
 
       const teamUnit = getTeamUnit(team.subteamId);

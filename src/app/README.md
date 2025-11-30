@@ -1,449 +1,367 @@
-# Scio.ly App Directory Documentation
-
-## Overview
-
-The `src/app/` directory contains the main Next.js 15 App Router application structure. This directory follows Next.js conventions with route-based file organization, API routes, and component architecture.
-
-## Directory Structure
-
-### Core Application Files
-
-#### `layout.tsx`
-- **Purpose**: Root layout component for the entire application
-- **Features**: 
-  - Metadata configuration for SEO
-  - Theme provider setup
-  - Authentication context
-  - Google Analytics integration
-  - PWA manifest and icons
-- **Key Dependencies**: Next.js, Supabase Auth, Theme Context
-
-#### `page.tsx`
-- **Purpose**: Homepage route handler
-- **Features**: Dynamic rendering for home page content
-- **Dependencies**: HomeClient component
-
-#### `providers.tsx`
-- **Purpose**: Client-side providers wrapper
-- **Features**:
-  - Toast notifications setup
-  - Service worker registration
-  - Theme-aware toast styling
-  - Notifications context
-
-#### `globals.css`
-- **Purpose**: Global CSS styles and Tailwind imports
-- **Features**: Base styling, custom CSS variables, responsive design
-
-### Page Routes
-
-#### `/about/`
-- **Purpose**: About page for the platform
-- **Files**: `ClientPage.tsx`, `page.tsx`
-- **Features**: Company information, team details
-
-#### `/admin/`
-- **Purpose**: Administrative interface
-- **Files**: `page.tsx`, `PasswordAuth.tsx`
-- **Features**: Admin authentication, system management
-
-#### `/analytics/`
-- **Purpose**: User analytics and performance tracking
-- **Features**:
-  - ELO rating system visualization
-  - Performance charts and metrics
-  - Data processing utilities
-- **Components**: ChartConfig, EloViewer, CompareTool
-- **Hooks**: useEloData
-
-#### `/bookmarks/`
-- **Purpose**: User bookmarked questions management
-- **Files**: `Content.tsx`, `page.tsx`
-- **Features**: Bookmark CRUD operations, user favorites
-
-#### `/codebusters/`
-- **Purpose**: Codebusters event practice platform
-- **Features**:
-  - Cipher encryption/decryption tools
-  - Multiple cipher types support
-  - Interactive cipher practice
-  - Video tutorials integration
-- **Components**: 25+ specialized cipher components
-- **Services**: Cipher processing, pattern recognition
-- **Utils**: Cipher utilities, pattern converters
-
-#### `/contact/`
-- **Purpose**: Contact form and support
-- **Files**: `ClientPage.tsx`, `page.tsx`
-- **Features**: Contact form, support requests
-
-#### `/dashboard/`
-- **Purpose**: User dashboard and analytics
-- **Features**:
-  - User performance metrics
-  - Recent activity
-  - Progress tracking
-  - Quick access to features
-- **Components**: 11 dashboard-specific components
-- **Hooks**: Custom dashboard hooks
-- **Context**: Dashboard state management
-
-#### `/docs/`
-- **Purpose**: Documentation system for Science Olympiad events
-- **Features**:
-  - Event-specific documentation
-  - API documentation
-  - Content management system
-- **Content**: 71 markdown files with event rules
-- **Components**: Documentation renderers, navigation
-
-#### `/join/`
-- **Purpose**: User registration and onboarding
-- **Files**: `ClientPage.tsx`, `page.tsx`
-- **Features**: User registration flow
-
-#### `/leaderboard/`
-- **Purpose**: Team and individual leaderboards
-- **Features**:
-  - Team rankings
-  - Individual performance
-  - Competition tracking
-- **Dynamic Routes**: `[code]/` for specific leaderboards
-
-#### `/legal/`
-- **Purpose**: Legal pages
-- **Subdirectories**: `privacy/`, `terms/`
-- **Features**: Privacy policy, terms of service
-
-#### `/offline/`
-- **Purpose**: Offline functionality page
-- **Features**: PWA offline capabilities
-
-#### `/plagiarism/`
-- **Purpose**: Plagiarism detection and reporting
-- **Features**:
-  - Content similarity detection
-  - Reporting system
-  - Moderation tools
-- **Components**: 5 plagiarism-specific components
-- **Utils**: Similarity algorithms, content analysis
-
-#### `/practice/`
-- **Purpose**: Practice mode interface
-- **Features**:
-  - Question practice sessions
-  - Difficulty selection
-  - Progress tracking
-- **Components**: 15 practice-specific components
-- **Utils**: Practice session management
-
-#### `/profile/`
-- **Purpose**: User profile management
-- **Features**: User settings, preferences, account management
-
-#### `/reports/`
-- **Purpose**: Reporting system for issues and feedback
-- **Features**:
-  - Issue reporting
-  - Content moderation
-  - Feedback collection
-- **Components**: 4 reporting components
-- **Utils**: Report processing, moderation tools
-
-#### `/teams/`
-- **Purpose**: Team management and collaboration
-- **Features**:
-  - Team creation and management
-  - Member invitations
-  - Team assignments
-  - Collaboration tools
-- **Components**: 24 team-specific components
-- **Dynamic Routes**: `[slug]/` for team pages
-- **Subdirectories**: `assign/`, `invites/`, `teams-dashboard/`
-
-#### `/test/`
-- **Purpose**: Test taking interface
-- **Features**:
-  - Timed test sessions
-  - Question navigation
-  - Answer submission
-  - Results processing
-- **Components**: 8 test-specific components
-- **Hooks**: 15 test-related hooks
-- **Services**: Test session management
-
-#### `/unlimited/`
-- **Purpose**: Unlimited practice mode
-- **Features**:
-  - Endless practice sessions
-  - Custom difficulty
-  - Progress tracking
-- **Components**: 2 unlimited practice components
-- **Utils**: 9 practice utilities
-
-### API Routes (`/api/`)
-
-#### `/admin/`
-- **Purpose**: Administrative API endpoints
-- **Features**: System management, admin operations
-
-#### `/assignments/`
-- **Purpose**: Assignment management
-- **Features**: Assignment CRUD, submission handling
-- **Subdirectories**: `submit/` for assignment submissions
-
-#### `/blacklists/`
-- **Purpose**: Content blacklisting system
-- **Features**: Blacklist management, content filtering
-
-#### `/codebusters/`
-- **Purpose**: Codebusters-specific API
-- **Features**: Cipher processing, pattern analysis
-- **Subdirectories**: `share/` for sharing ciphers
-
-#### `/contact/`
-- **Purpose**: Contact form API
-- **Features**: Contact form processing, email notifications
-
-#### `/docs/`
-- **Purpose**: Documentation API
-- **Features**: Content management, documentation serving
-- **Subdirectories**: `codebusters/` for cipher documentation
-
-#### `/edits/`
-- **Purpose**: Content editing API
-- **Features**: Content modification, version control
-
-#### `/gemini/`
-- **Purpose**: AI integration with Google Gemini
-- **Features**:
-  - Question analysis
-  - Explanation generation
-  - Free response grading
-  - Content improvement suggestions
-- **Subdirectories**: 
-  - `analyze-question/` - Question analysis
-  - `explain/` - Explanation generation
-  - `extract-questions/` - Question extraction
-  - `grade-free-responses/` - FRQ grading
-  - `improve-reason/` - Reasoning improvement
-  - `suggest-edit/` - Edit suggestions
-  - `validate-edit/` - Edit validation
-
-#### `/health/`
-- **Purpose**: System health monitoring
-- **Features**: Health checks, service status monitoring
-- **Tests**: Health check test suite
-
-#### `/id-questions/`
-- **Purpose**: Question identification API
-- **Features**: Question metadata, identification
-
-#### `/invites/`
-- **Purpose**: Team invitation system
-- **Features**: Invitation management, acceptance/decline
-- **Subdirectories**: `accept/`, `create/`, `decline/`, `my/`
-
-#### `/join/`
-- **Purpose**: User registration API
-- **Features**: User onboarding, account creation
-
-#### `/meta/`
-- **Purpose**: Metadata API endpoints
-- **Features**: System metadata, statistics
-- **Subdirectories**: `events/`, `stats/`, `subtopics/`, `tournaments/`
-
-#### `/notifications/`
-- **Purpose**: Notification system
-- **Features**: Notification management, real-time updates
-- **Subdirectories**: `accept/` for notification acceptance
-
-#### `/questions/`
-- **Purpose**: Question management API
-- **Features**: Question CRUD, batch operations
-- **Subdirectories**: `base52/`, `batch/`
-- **Tests**: Question API test suite
-
-#### `/quotes/`
-- **Purpose**: Quote management API
-- **Features**: Quote CRUD, content management
-
-#### `/report/`
-- **Purpose**: Reporting system API
-- **Features**: Report processing, moderation
-- **Subdirectories**: `all/`, `edit/`, `meta/`, `remove/`
-
-#### `/share/`
-- **Purpose**: Content sharing API
-- **Features**: Share code generation, content sharing
-- **Subdirectories**: `generate/` for share code generation
-
-#### `/teams/`
-- **Purpose**: Team management API
-- **Features**: Team CRUD, member management, collaboration
-- **Subdirectories**: 
-  - `by-code/` - Team lookup by code
-  - `create/` - Team creation
-  - `group/` - Team grouping
-  - `invite/` - Team invitations
-  - `join-by-code/` - Join team by code
-  - `link-request/` - Team linking requests
-  - `links/` - Team links
-  - `share/` - Team sharing
-  - `units/` - Team units
-  - `unlink/` - Team unlinking
-  - `user-teams/` - User team management
-  - `v2/` - Version 2 team API (40 files)
-
-#### `/upload-image/`
-- **Purpose**: Image upload API
-- **Features**: Image processing, storage management
-
-### Components (`/components/`)
-
-#### Authentication Components
-- **AuthButton**: Main authentication button component
-- **Auth Components**: Login, signup, password reset components
-
-#### Core Components
-- **Header**: Main navigation header with responsive design
-- **BookmarkManager**: Bookmark management interface
-- **ContactModal**: Contact form modal
-- **EditQuestionModal**: Question editing interface
-- **FloatingActionButtons**: Floating action buttons
-- **LoadingState**: Loading state components
-- **PDFViewer**: PDF viewing component
-- **PrintConfigModal**: Print configuration modal
-- **ProfileSettings**: User profile settings
-- **QuestionActions**: Question action buttons
-- **ReportModal**: Reporting modal
-- **ShareModal**: Content sharing modal
-- **SummaryGrid**: Summary grid display
-- **ThemeColorMeta**: Theme color metadata
-- **ThemeSection**: Theme section component
-
-#### Home Components
-- **HomeClient**: Homepage client component
-
-### Contexts (`/contexts/`)
-
-#### AuthContext
-- **Purpose**: Authentication state management
-- **Features**: User session, authentication state, profile sync
-
-#### NotificationsContext
-- **Purpose**: Notification state management
-- **Features**: Real-time notifications, notification management
-
-#### ThemeContext
-- **Purpose**: Theme state management
-- **Features**: Dark/light mode, theme persistence
-
-### Utilities (`/utils/`)
-
-#### Core Utilities
-- **bookmarks.ts**: Bookmark management utilities
-- **careersUtils.ts**: Career-related utilities
-- **contactUtils.ts**: Contact form utilities
-- **dashboardData.ts**: Dashboard data processing
-- **db.ts**: Database utilities
-- **favorites.ts**: Favorites management
-- **gamepoints.ts**: Game points system
-- **geminiService.ts**: AI service integration
-- **leaderboardUtils.ts**: Leaderboard utilities
-- **MarkdownExplanation.tsx**: Markdown explanation component
-- **metrics.ts**: Metrics and analytics
-- **questionUtils.ts**: Question processing utilities
-- **shareCodeUtils.ts**: Share code generation
-- **storage.ts**: Local storage utilities
-- **testParams.ts**: Test parameter utilities
-- **textTransforms.ts**: Text transformation utilities
-- **timeManagement.ts**: Time management utilities
-- **userProfile.ts**: User profile utilities
-
-## Key Features
-
-### 1. Authentication System
-- Supabase Auth integration
-- Google OAuth support
-- Session management
-- Profile synchronization
-
-### 2. Question Management
-- Question bank with 4000+ questions
-- Multiple question types (MCQ, FRQ)
-- AI-powered explanations
-- Difficulty ratings
-
-### 3. Practice Modes
-- Timed tests
-- Unlimited practice
-- Shared tests
-- Adaptive difficulty
-
-### 4. Team Collaboration
+# App Directory
+
+This directory contains the main Next.js 15 App Router application structure for Scio.ly. It follows Next.js conventions with route-based file organization, API routes, and component architecture.
+
+## Core Application Files
+
+### `layout.tsx`
+Root layout component for the entire application. Sets up global providers, metadata, and authentication.
+
+**Key Features:**
+- Metadata configuration for SEO (title, description, icons, Open Graph, Twitter cards)
+- Theme provider setup (`ThemeProvider`)
+- Authentication context (`AuthProvider`)
+- Google Analytics integration (`@next/third-parties/google`)
+- PWA manifest and icons configuration
+- TRPC provider setup
+- Name prompt provider for user onboarding
+
+**Example:**
+```1:13:src/app/layout.tsx
+import { GoogleAnalytics } from "@next/third-parties/google";
+import type { Metadata, Viewport } from "next";
+import Script from "next/script";
+import type React from "react";
+import "./globals.css";
+import NamePromptProvider from "@/app/components/NamePromptProvider";
+import ThemeColorMeta from "@/app/components/ThemeColorMeta";
+import { ThemeProvider } from "@/app/contexts/themeContext";
+import { getServerUser } from "@/lib/supabaseServer";
+import { TRPCProvider } from "@/lib/trpc/provider";
+import { cookies } from "next/headers";
+import { AuthProvider } from "./contexts/authContext";
+import { Providers } from "./providers";
+```
+
+**Important Notes:**
+- Server component that wraps all pages
+- Fetches server-side user data for authentication
+- Configures PWA icons for iOS and Android
+- Sets up global CSS and theme support
+
+### `page.tsx`
+Homepage route handler. Renders the main landing page.
+
+**Example:**
+```1:43:src/app/page.tsx
+import type { Metadata } from "next";
+import HomeClient from "./components/home/HomeClient";
+
+// Static generation with aggressive caching
+export const dynamic = "force-static";
+export const revalidate = 86400; // 24 hours - main page rarely changes
+export const fetchCache = "force-cache";
+
+// Optimized metadata for better caching
+export const metadata: Metadata = {
+  title: "Scio.ly - Science Olympiad Practice Platform",
+  description:
+    "The ultimate Science Olympiad practice platform with comprehensive study materials, practice tests, and team collaboration tools.",
+  // ... more metadata
+};
+
+export default function HomePage() {
+  return <HomeClient />;
+}
+```
+
+**Important Notes:**
+- Uses static generation with 24-hour revalidation
+- Aggressive caching for performance
+- SEO-optimized metadata
+- Delegates rendering to `HomeClient` component
+
+### `providers.tsx`
+Client-side providers wrapper. Sets up toast notifications and service worker registration.
+
+**Example:**
+```11:63:src/app/providers.tsx
+export function Providers({ children }: { children: ReactNode }) {
+  const { darkMode } = useTheme();
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    if (!("serviceWorker" in navigator)) {
+      return;
+    }
+
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      ("standalone" in window.navigator &&
+        (window.navigator as { standalone?: boolean }).standalone === true);
+    const isOfflinePage = window.location.pathname === "/offline/";
+
+    if (!(isStandalone || isOfflinePage)) {
+      return;
+    }
+
+    const register = async () => {
+      try {
+        await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+      } catch {
+        // ignore
+      }
+    };
+
+    const id = setTimeout(register, 0);
+    return () => clearTimeout(id);
+  }, []);
+
+  return (
+    <>
+      {children}
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick={true}
+        rtl={false}
+        pauseOnFocusLoss={true}
+        draggable={true}
+        pauseOnHover={true}
+        theme={darkMode ? "dark" : "light"}
+      />
+    </>
+  );
+}
+```
+
+**Important Notes:**
+- Registers service worker only for PWA (standalone mode) or offline page
+- Theme-aware toast notifications
+- Client component that wraps app content
+
+### `globals.css`
+Global CSS styles and Tailwind imports. Contains base styling, custom CSS variables, and responsive design utilities.
+
+## Page Routes
+
+### `/about/`
+About page for the platform. See [about/README.md](./about/README.md) for details.
+
+**Files:**
+- `page.tsx` - Server component wrapper
+- `about-client-page.tsx` - Main client component
+- `components/` - Section components (Story, Methodology, Philosophy, etc.)
+
+### `/admin/`
+Administrative interface for managing question edits and blacklists. See [admin/README.md](./admin/README.md) for details.
+
+**Files:**
+- `page.tsx` - Admin dashboard with edit/blacklist management
+- `PasswordAuth.tsx` - Password authentication component
+
+### `/analytics/`
+User analytics and performance tracking with ELO rating system visualization.
+
+**Key Features:**
+- ELO rating charts and graphs
+- Performance metrics visualization
+- Data processing utilities
+- Comparison tools
+
+### `/bookmarks/`
+User bookmarked questions management interface.
+
+**Files:**
+- `page.tsx` - Bookmarks page
+- `Content.tsx` - Bookmarks content component
+
+### `/codebusters/`
+Codebusters event practice platform with cipher encryption/decryption tools.
+
+**Key Features:**
+- Multiple cipher types (Caesar, Vigenère, Bacon, etc.)
+- Interactive cipher practice
+- Video tutorials integration
+- Cipher sharing functionality
+
+### `/contact/`
+Contact form and support page.
+
+**Files:**
+- `page.tsx` - Contact page
+- `clientPage.tsx` - Client-side contact form
+
+### `/dashboard/`
+User dashboard with performance metrics and analytics.
+
+**Key Features:**
+- User performance metrics
+- Recent activity tracking
+- Progress visualization
+- Quick access to features
+
+**Files:**
+- `page.tsx` - Dashboard page
+- `dashboardContent.tsx` - Dashboard content wrapper
+- `components/` - Dashboard-specific components
+- `hooks/useDashboardData.ts` - Dashboard data fetching hook
+
+### `/docs/`
+Documentation system for Science Olympiad events.
+
+**Key Features:**
+- Event-specific documentation
+- API documentation
+- Markdown content rendering
+- Navigation system
+
+### `/join/`
+User registration and onboarding flow.
+
+**Files:**
+- `page.tsx` - Join page
+- `joinClientPage.tsx` - Client-side registration form
+
+### `/leaderboard/`
+Team and individual leaderboards.
+
+**Key Features:**
+- Team rankings
+- Individual performance tracking
+- Competition tracking
+- Dynamic routes: `[code]/` for specific leaderboards
+
+### `/legal/`
+Legal pages (Privacy Policy, Terms of Service).
+
+**Subdirectories:**
+- `privacy/` - Privacy policy page
+- `terms/` - Terms of service page
+
+### `/offline/`
+Offline functionality page for PWA.
+
+**Features:**
+- PWA offline capabilities
+- Service worker integration
+
+### `/plagiarism/`
+Plagiarism detection and reporting system.
+
+**Key Features:**
+- Content similarity detection
+- Reporting interface
+- Moderation tools
+
+### `/practice/`
+Practice mode interface for question practice sessions.
+
+**Key Features:**
+- Question practice sessions
+- Difficulty selection
+- Progress tracking
+
+### `/profile/`
+User profile management page.
+
+**Features:**
+- User settings
+- Preferences
+- Account management
+
+### `/reports/`
+Reporting system for issues and feedback.
+
+**Key Features:**
+- Issue reporting
+- Content moderation
+- Feedback collection
+
+### `/teams/`
+Team management and collaboration system.
+
+**Key Features:**
 - Team creation and management
 - Member invitations
 - Team assignments
-- Leaderboards
+- Collaboration tools
+- Dynamic routes: `[slug]/` for team pages
 
-### 5. Analytics and Reporting
-- User performance tracking
-- ELO rating system
-- Progress analytics
-- Content reporting
+**Subdirectories:**
+- `assign/` - Team assignment interface
+- `invites/` - Team invitation management
+- `components/` - Team-specific components
 
-### 6. AI Integration
-- Google Gemini 2.0 integration
-- Question analysis
-- Explanation generation
-- Free response grading
+### `/test/`
+Test taking interface for timed test sessions.
 
-## Technical Architecture
+**Key Features:**
+- Timed test sessions
+- Question navigation
+- Answer submission
+- Results processing
 
-### Next.js 15 App Router
-- Route-based file organization
-- Server and client components
-- API routes
-- Dynamic routes
+### `/unlimited/`
+Unlimited practice mode for endless practice sessions.
 
-### State Management
-- React Context API
-- Local state management
-- Server state synchronization
+**Key Features:**
+- Endless practice sessions
+- Custom difficulty selection
+- Progress tracking
 
-### Styling
-- Tailwind CSS
-- Responsive design
-- Dark/light mode support
-- Custom components
+## API Routes (`/api/`)
 
-### Performance
-- Code splitting
-- Lazy loading
-- Image optimization
-- Caching strategies
+All API routes are located in the `/api/` subdirectory. See [api/README.md](./api/README.md) for detailed documentation.
 
-## Development Guidelines
+**Key API Routes:**
+- `/admin/` - Administrative endpoints
+- `/assignments/` - Assignment management
+- `/blacklists/` - Content blacklisting
+- `/codebusters/` - Codebusters-specific API
+- `/contact/` - Contact form processing
+- `/gemini/` - AI integration with Google Gemini
+- `/questions/` - Question management
+- `/teams/` - Team management API
+- And many more...
 
-### File Organization
-- Route-based file structure
-- Component co-location
-- API route organization
-- Utility separation
+## Components (`/components/`)
 
-### Code Standards
-- TypeScript strict mode
-- ESLint configuration
-- Component composition
-- Error handling
+Shared components used across the application.
 
-### Testing
-- Unit tests for utilities
-- Component testing
-- API route testing
-- Integration tests
+**Key Components:**
+- `Header.tsx` - Main navigation header
+- `AuthButton.tsx` - Authentication button
+- `BookmarkManager.tsx` - Bookmark management
+- `ContactModal.tsx` - Contact form modal
+- `EditQuestionModal.tsx` - Question editing interface
+- `ShareModal.tsx` - Content sharing modal
+- `home/` - Homepage-specific components
 
----
+## Contexts (`/contexts/`)
 
-*This documentation provides a comprehensive overview of the Scio.ly application structure and functionality.*
+React context providers for global state management.
+
+**Contexts:**
+- `authContext.tsx` - Authentication state
+- `themeContext.tsx` - Theme (dark/light mode) state
+- `notificationsContext.tsx` - Notification state
+
+## Utilities (`/utils/`)
+
+Utility functions and helpers specific to the app.
+
+**Key Utilities:**
+- `bookmarks.ts` - Bookmark management
+- `db.ts` - Database utilities (IndexedDB for offline)
+- `geminiService.ts` - AI service integration
+- `leaderboardUtils.ts` - Leaderboard utilities
+- `questionUtils.ts` - Question processing
+- `shareCodeUtils.ts` - Share code generation
+- `storage.ts` - Local storage utilities
+- `testParams.ts` - Test parameter utilities
+
+See [utils/README.md](./utils/README.md) for detailed documentation.
+
+## Important Notes
+
+1. **Next.js 15 App Router**: Uses the latest App Router conventions with server and client components
+2. **Static Generation**: Many pages use static generation for performance
+3. **PWA Support**: Service worker registration for offline functionality
+4. **Theme Support**: Dark/light mode throughout the application
+5. **Authentication**: Supabase-based authentication with server-side user fetching
+6. **Type Safety**: Full TypeScript support with strict type checking

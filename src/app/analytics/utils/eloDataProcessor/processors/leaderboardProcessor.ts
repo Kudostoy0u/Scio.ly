@@ -66,7 +66,9 @@ function getEloRatingForEvent(
   if (historicalElo !== null && Number.isFinite(historicalElo)) {
     return historicalElo;
   }
-  return defaultRating;
+  // If no history entry exists before the target date, fall back to baseline 1500
+  // instead of the current rating, as the rating represents the current state
+  return 1500;
 }
 
 function processSchoolForLeaderboard(
@@ -158,7 +160,7 @@ export const getLeaderboard = (
       if (schoolEntries.length > 0) {
         entries.push(...schoolEntries);
       } else if (fallbackToPreviousSeason && season) {
-        const currentSeasonInt = parseInt(season, 10);
+        const currentSeasonInt = Number.parseInt(season, 10);
         const previousSeason = (currentSeasonInt - 1).toString();
 
         const previousSeasonEntries = processSchoolForLeaderboard(
@@ -177,13 +179,13 @@ export const getLeaderboard = (
           undefined // No specific date for previous season fallback
         );
 
-        previousSeasonEntries.forEach(entry => {
+        for (const entry of previousSeasonEntries) {
           entries.push({
             ...entry,
             isHistorical: true,
-            season: `${previousSeason} (historical)`
+            season: `${previousSeason} (historical)`,
           });
-        });
+        }
       }
     }
   }

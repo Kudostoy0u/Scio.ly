@@ -52,7 +52,7 @@ describe("TeamsPageClient", () => {
     expect(screen.getByText("Loading teams...")).toBeInTheDocument();
   });
 
-  it("shows sign in message when user is not authenticated", async () => {
+  it("shows sign in message when user is not authenticated", () => {
     renderWithProviders(<TeamsPageClient initialLinkedSelection={null} initialGroupSlug={null} />, {
       initialUser: null,
     });

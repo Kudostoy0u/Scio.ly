@@ -139,3 +139,19 @@ export const blacklists = pgTable("blacklists", {
   questionData: jsonb("question_data").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+export const quoteBlacklists = pgTable("quote_blacklists", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  quoteData: jsonb("quote_data").notNull(),
+  cipherType: text("cipher_type").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const quoteEdits = pgTable("quote_edits", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  originalQuote: jsonb("original_quote").notNull(),
+  editedQuote: jsonb("edited_quote").notNull(),
+  cipherType: text("cipher_type").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});

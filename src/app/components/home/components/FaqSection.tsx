@@ -29,13 +29,13 @@ const faqs = [
     id: "faq-ai-usage",
     question: "How is AI being used?",
     answer:
-      "AI is primarily used for grading free response, providing explanations, and processing reports. Excluding MatSci, all questions are from real Science Olympiad tests - AI isn't being used to generate them.",
+      "AI is primarily used for grading free response, providing explanations, and processing reports. With exceptions*, all questions are from real Science Olympiad tests - AI isn't being used to generate them.",
   },
   {
     id: "faq-official",
     question: "Is this an official practice platform?",
     answer:
-      "No, Scio.ly is not endorsed by Science Olympiad Inc. Our platform provides practice materials based on past exams but we do not make any guarantees about content on future exams.",
+      "No, Scio.ly is not endorsed by Science Olympiad Inc. We have a partnership with the Southern California Science Olympiad and take pride in being a community-driven platform",
   },
   {
     id: "faq-contribute",

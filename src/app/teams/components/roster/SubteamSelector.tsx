@@ -202,28 +202,20 @@ export default function SubteamSelector({
     <div className={`mb-6 p-4 rounded-lg ${darkMode ? "bg-gray-800/50" : "bg-gray-100/50"}`}>
       <div className="flex space-x-2 overflow-x-auto pb-2">
         {subteams.map((subteam) => (
-          <div
+          <button
             key={subteam.id}
-            role="button"
-            tabIndex={0}
+            type="button"
             className={getSubteamItemClasses(subteam.id)}
             onClick={() => onSubteamChange?.(subteam.id)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onSubteamChange?.(subteam.id);
-              }
-            }}
           >
             {renderSubteamContent(subteam)}
-          </div>
+          </button>
         ))}
 
         {/* Add Subteam Button */}
         {isCaptain && (
-          <div
-            role="button"
-            tabIndex={0}
+          <button
+            type="button"
             className={`flex items-center space-x-1 px-2 py-2 rounded-lg border-2 min-w-fit cursor-pointer transition-all ${
               showSubteamSelector
                 ? darkMode
@@ -234,12 +226,6 @@ export default function SubteamSelector({
                   : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
             }`}
             onClick={() => setShowSubteamSelector(!showSubteamSelector)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                setShowSubteamSelector(!showSubteamSelector);
-              }
-            }}
           >
             {showSubteamSelector ? (
               <div className="flex items-center space-x-1">
@@ -345,7 +331,7 @@ export default function SubteamSelector({
                 <span className="font-medium">Add Subteam</span>
               </>
             )}
-          </div>
+          </button>
         )}
       </div>
     </div>

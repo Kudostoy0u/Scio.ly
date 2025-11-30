@@ -166,13 +166,10 @@ export const compareSchools = (
   }
 
   const events = getAllEventsForComparison(school1Data, school2Data);
-  
+
   // Get the allowed events list based on division
-  const allowedEvents = division === "b" 
-    ? DIVISION_B_EVENTS_2026 
-    : division === "c" 
-    ? DIVISION_C_EVENTS_2026 
-    : null;
+  const allowedEvents =
+    division === "b" ? DIVISION_B_EVENTS_2026 : division === "c" ? DIVISION_C_EVENTS_2026 : null;
 
   for (const eventName of events) {
     // Only include events that are in the allowed list for the division

@@ -34,12 +34,7 @@ interface LeaderboardProps {
 
 // Whitelists moved to constants
 
-const Leaderboard: React.FC<LeaderboardProps> = ({
-  eloData,
-  division,
-  metadata,
-  externalDate,
-}) => {
+const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata, externalDate }) => {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<string>("");
   const [selectedState, setSelectedState] = useState<string>("");

@@ -1,6 +1,6 @@
 export function SliderStyles({ darkMode }: { darkMode: boolean }) {
   return (
-    <style jsx={true}>{`
+    <style>{`
       input[type="range"]::-webkit-slider-thumb {
         appearance: none;
         height: 20px;

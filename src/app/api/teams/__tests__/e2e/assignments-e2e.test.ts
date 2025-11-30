@@ -32,27 +32,27 @@ describe("Assignment Management E2E", () => {
   const testUsers: TestUser[] = [];
   const testTeams: TestTeam[] = [];
 
-  beforeAll(async () => {
+  beforeAll(() => {
     // Create test users
-    testUsers.push(await createTestUser({ displayName: "Captain User" }));
-    testUsers.push(await createTestUser({ displayName: "Member User" }));
+    testUsers.push(createTestUser({ displayName: "Captain User" }));
+    testUsers.push(createTestUser({ displayName: "Member User" }));
 
     // Create test team
-    const team = await createTestTeam(testUsers[0].id);
+    const team = createTestTeam(testUsers[0].id);
     testTeams.push(team);
 
     // Add member
-    await addTeamMember(team.subteamId, testUsers[1].id, "member");
+    addTeamMember(team.subteamId, testUsers[1].id, "member");
 
     // Create roster entry for member
-    await createRosterEntry(team.subteamId, "Astronomy", 0, "Member User", testUsers[1].id);
+    createRosterEntry(team.subteamId, "Astronomy", 0, "Member User", testUsers[1].id);
   });
 
-  afterAll(async () => {
+  afterAll(() => {
     // Cleanup
     const userIds = testUsers.map((u) => u.id);
     const teamGroupIds = testTeams.map((t) => t.groupId);
-    await cleanupTestData(userIds, teamGroupIds);
+    cleanupTestData(userIds, teamGroupIds);
   });
 
   describe("Assignment Creation", () => {
@@ -102,7 +102,7 @@ describe("Assignment Management E2E", () => {
       expect(retrievedAssignment?.title).toBe("Test Assignment");
     });
 
-    it("should create assignment with roster members", async () => {
+    it("should create assignment with roster members", () => {
       const team = testTeams[0];
       const captain = testUsers[0];
       const member = testUsers[1];
@@ -132,7 +132,7 @@ describe("Assignment Management E2E", () => {
   });
 
   describe("Assignment Retrieval", () => {
-    it("should retrieve assignments for a team", async () => {
+    it("should retrieve assignments for a team", () => {
       const team = testTeams[0];
 
       // Get all assignments
@@ -148,7 +148,7 @@ describe("Assignment Management E2E", () => {
       }
     });
 
-    it("should retrieve assignments with questions", async () => {
+    it("should retrieve assignments with questions", () => {
       const team = testTeams[0];
 
       // Get assignments
@@ -167,7 +167,7 @@ describe("Assignment Management E2E", () => {
   });
 
   describe("Assignment Submissions", () => {
-    it("should create assignment submission", async () => {
+    it("should create assignment submission", () => {
       const team = testTeams[0];
       const member = testUsers[1];
 
@@ -231,7 +231,7 @@ describe("Assignment Management E2E", () => {
   });
 
   describe("Assignment Validation", () => {
-    it("should require title for assignment", async () => {
+    it("should require title for assignment", () => {
       const _team = testTeams[0];
 
       // This should be handled by database constraints or validation
@@ -239,7 +239,7 @@ describe("Assignment Management E2E", () => {
       expect(true).toBe(true); // Placeholder - actual validation tested in API tests
     });
 
-    it("should validate question structure", async () => {
+    it("should validate question structure", () => {
       const team = testTeams[0];
       const captain = testUsers[0];
 

@@ -5,7 +5,7 @@
 import logger from "@/lib/utils/logger";
 import { Type } from "@google/genai";
 import type { ClientWithKey } from "./client";
-import type { EditValidationResult, ReportEditResult } from "./types";
+import type { EditValidationResult, QuoteValidationResult, ReportEditResult } from "./types";
 
 /**
  * Validation and utility service
@@ -90,6 +90,81 @@ Provide an improved version of the reason that will help the question editor mak
         improvedReason: { type: Type.STRING },
       },
       propertyOrdering: ["improvedReason"],
+    };
+
+    return await this.generateStructuredContent(prompt, schema);
+  }
+
+  /**
+   * Validates a quote for appropriateness and language
+   * @param {Record<string, unknown>} quote - Quote data
+   * @param {string} cipherType - Cipher type
+   * @returns {Promise<QuoteValidationResult>} Validation result
+   */
+  public async validateQuote(
+    quote: Record<string, unknown>,
+    cipherType: string
+  ): Promise<QuoteValidationResult> {
+    const expectedLanguage = cipherType.includes("Xenocrypt") ? "Spanish" : "English";
+
+    const prompt = `You are a quote validator for a Code Busters cipher competition. Analyze this quote for appropriateness and formatting.
+
+QUOTE: ${quote.quote}
+AUTHOR: ${quote.author}
+LANGUAGE: ${quote.language}
+CIPHER TYPE: ${cipherType}
+EXPECTED LANGUAGE: ${expectedLanguage}
+
+VALIDATION CRITERIA:
+1. Language Check:
+   - The quote MUST be in ${expectedLanguage}
+   - If it's in the wrong language, this is an automatic REMOVE
+
+2. Formatting Check:
+   - The quote should be properly formatted as a clean, readable sentence or phrase
+   - Should have proper capitalization and punctuation
+   - No garbled text, random characters, or nonsensical formatting
+   - If formatting is severely broken (cannot be fixed with simple edits), mark as REMOVE
+
+3. Content Check:
+   - Should be appropriate for educational use
+   - Should be a real quote or sensible phrase
+   - No offensive, inappropriate, or nonsensical content
+
+4. Author Check:
+   - Author should be properly formatted
+   - Should have a name (or "Unknown" if anonymous)
+
+DECISION MATRIX:
+- If the quote is in the WRONG LANGUAGE or has SEVERE formatting issues that cannot be fixed: action = "remove"
+- If the quote has minor formatting issues or needs small corrections: action = "edit" AND provide editedQuote with corrections
+- If the quote is fine as-is: action = "keep"
+
+Provide your analysis and decision.`;
+
+    const schema = {
+      type: Type.OBJECT,
+      properties: {
+        action: {
+          type: Type.STRING,
+          enum: ["remove", "edit", "keep"],
+        },
+        reason: { type: Type.STRING },
+        issues: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+        },
+        editedQuote: {
+          type: Type.OBJECT,
+          properties: {
+            quote: { type: Type.STRING },
+            author: { type: Type.STRING },
+            language: { type: Type.STRING },
+          },
+          nullable: true,
+        },
+      },
+      propertyOrdering: ["action", "reason", "issues", "editedQuote"],
     };
 
     return await this.generateStructuredContent(prompt, schema);

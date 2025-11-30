@@ -269,6 +269,16 @@ export class GeminiService {
     const result = await this.improveReportEditReason(reason, (question.event as string) || "");
     return { improvedReason: result.improvedReason };
   }
+
+  /**
+   * Validates a quote for appropriateness and language
+   */
+  public async validateQuote(quote: Record<string, unknown>, cipherType: string) {
+    return await this.retryWithDifferentKeys(async (clientWithKey) => {
+      const validationService = new GeminiValidationService(clientWithKey);
+      return await validationService.validateQuote(quote, cipherType);
+    });
+  }
 }
 
 // Export the singleton instance

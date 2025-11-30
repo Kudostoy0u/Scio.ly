@@ -28,24 +28,24 @@ describe("Timer Management E2E", () => {
   const testUsers: TestUser[] = [];
   const testTeams: TestTeam[] = [];
 
-  beforeAll(async () => {
+  beforeAll(() => {
     // Create test users
-    testUsers.push(await createTestUser({ displayName: "Captain User" }));
-    testUsers.push(await createTestUser({ displayName: "Member User" }));
+    testUsers.push(createTestUser({ displayName: "Captain User" }));
+    testUsers.push(createTestUser({ displayName: "Member User" }));
 
     // Create test team
-    const team = await createTestTeam(testUsers[0].id);
+    const team = createTestTeam(testUsers[0].id);
     testTeams.push(team);
 
     // Add member
-    await addTeamMember(team.subteamId, testUsers[1].id, "member");
+    addTeamMember(team.subteamId, testUsers[1].id, "member");
   });
 
-  afterAll(async () => {
+  afterAll(() => {
     // Cleanup
     const userIds = testUsers.map((u) => u.id);
     const teamGroupIds = testTeams.map((t) => t.groupId);
-    await cleanupTestData(userIds, teamGroupIds);
+    cleanupTestData(userIds, teamGroupIds);
   });
 
   describe("Timer Creation", () => {
@@ -110,7 +110,7 @@ describe("Timer Management E2E", () => {
   });
 
   describe("Timer Retrieval", () => {
-    it("should retrieve all timers for a subteam", async () => {
+    it("should retrieve all timers for a subteam", () => {
       const team = testTeams[0];
       const captain = testUsers[0];
 
@@ -175,7 +175,7 @@ describe("Timer Management E2E", () => {
   });
 
   describe("Authorization", () => {
-    it("should verify only captains can manage timers", async () => {
+    it("should verify only captains can manage timers", () => {
       const _team = testTeams[0];
       const captain = testUsers[0];
       const member = testUsers[1];

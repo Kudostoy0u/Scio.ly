@@ -1,5 +1,5 @@
 import ContactClientPage from "./clientPage";
 
-export default async function ContactPage() {
+export default function ContactPage() {
   return <ContactClientPage />;
 }

@@ -1,423 +1,486 @@
-# Scio.ly API Routes Documentation
-
-## Overview
-
-The `src/app/api/` directory contains all Next.js API routes for the Scio.ly platform. These routes handle backend functionality including authentication, question management, team operations, AI integration, and more.
-
-## Directory Structure
-
-### Core API Routes
-
-#### `/admin/`
-- **Purpose**: Administrative API endpoints
-- **Files**: `route.ts`
-- **Features**: System administration, admin operations
-- **Authentication**: Admin-level access required
-
-#### `/assignments/`
-- **Purpose**: Assignment management system
-- **Files**: `route.ts`, `submit/route.ts`
-- **Features**: Assignment CRUD, submission handling
-- **Dependencies**: Team system, user authentication
-
-#### `/blacklists/`
-- **Purpose**: Content blacklisting system
-- **Files**: `route.ts`
-- **Features**: Blacklist management, content filtering
-- **Usage**: Content moderation and quality control
-
-#### `/codebusters/`
-- **Purpose**: Codebusters event-specific API
-- **Files**: `share/generate/route.ts`, `share/route.ts`
-- **Features**: Cipher processing, pattern analysis, sharing
-- **Dependencies**: Codebusters cipher system
-
-#### `/contact/`
-- **Purpose**: Contact form API
-- **Files**: `route.ts`
-- **Features**: Contact form processing, email notifications
-- **Dependencies**: Email service integration
-
-#### `/docs/`
-- **Purpose**: Documentation API
-- **Files**: `route.ts`, `codebusters/[cipher]/route.ts`
-- **Features**: Content management, documentation serving
-- **Dependencies**: Markdown processing, content storage
-
-#### `/edits/`
-- **Purpose**: Content editing API
-- **Files**: `route.ts`
-- **Features**: Content modification, version control
-- **Dependencies**: Question management system
-
-### AI Integration Routes (`/gemini/`)
-
-#### `/analyze-question/`
-- **Purpose**: AI-powered question analysis
-- **Files**: `route.ts`, `__tests__/route.test.ts`
-- **Features**: Question quality analysis, content validation
-- **AI Model**: Google Gemini 2.0
-- **Dependencies**: Gemini service integration
-
-#### `/explain/`
-- **Purpose**: AI explanation generation
-- **Files**: `route.ts`
-- **Features**: Question explanation generation
-- **AI Model**: Google Gemini 2.0
-- **Usage**: Student learning support
-
-#### `/extract-questions/`
-- **Purpose**: Question extraction from text
-- **Files**: `route.ts`
-- **Features**: Automated question extraction
-- **AI Model**: Google Gemini 2.0
-- **Usage**: Content processing and import
-
-#### `/grade-free-responses/`
-- **Purpose**: AI grading of free response questions
-- **Files**: `route.ts`
-- **Features**: Automated grading and feedback
-- **AI Model**: Google Gemini 2.0
-- **Usage**: Assessment automation
-
-#### `/improve-reason/`
-- **Purpose**: AI improvement of user reasoning
-- **Files**: `route.ts`
-- **Features**: Reasoning enhancement suggestions
-- **AI Model**: Google Gemini 2.0
-- **Usage**: Content improvement
-
-#### `/suggest-edit/`
-- **Purpose**: AI-powered edit suggestions
-- **Files**: `route.ts`
-- **Features**: Content improvement suggestions
-- **AI Model**: Google Gemini 2.0
-- **Usage**: Content quality enhancement
-
-#### `/validate-edit/`
-- **Purpose**: AI validation of content edits
-- **Files**: `route.ts`
-- **Features**: Edit validation and approval
-- **AI Model**: Google Gemini 2.0
-- **Usage**: Content quality control
-
-### System Routes
-
-#### `/health/`
-- **Purpose**: System health monitoring
-- **Files**: `route.ts`, `__tests__/route.test.ts`
-- **Features**: Health checks, service status monitoring
-- **Dependencies**: Database, AI services
-- **Usage**: System monitoring and diagnostics
-
-#### `/id-questions/`
-- **Purpose**: Question identification API
-- **Files**: `route.ts`
-- **Features**: Question metadata, identification
-- **Dependencies**: Question database
-
-#### `/join/`
-- **Purpose**: User registration API
-- **Files**: `route.ts`
-- **Features**: User onboarding, account creation
-- **Dependencies**: Authentication system
-
-### Team Management Routes (`/teams/`)
-
-#### `/by-code/`
-- **Purpose**: Team lookup by code
-- **Files**: `route.ts`
-- **Features**: Team code validation, team retrieval
-- **Dependencies**: Team database
-
-#### `/calendar/`
-- **Purpose**: Team calendar management
-- **Files**: `events/route.ts`, `events/[eventId]/route.ts`, `personal/route.ts`, `recurring-meetings/route.ts`
-- **Features**: Event management, scheduling, recurring meetings
-- **Dependencies**: Team system, calendar integration
-- **Tests**: Comprehensive test suite for calendar functionality
-
-#### `/create/`
-- **Purpose**: Team creation API
-- **Files**: Multiple route files
-- **Features**: Team creation, validation, setup
-- **Dependencies**: Team database, user authentication
-
-#### `/group/`
-- **Purpose**: Team grouping system
-- **Files**: `[slug]/route.ts`
-- **Features**: Team group management, slug-based routing
-- **Dependencies**: Team database, slug system
-
-#### `/invite/`
-- **Purpose**: Team invitation system
-- **Files**: `route.ts`
-- **Features**: Team invitation management
-- **Dependencies**: Team system, notification system
-
-#### `/join-by-code/`
-- **Purpose**: Join team by code
-- **Files**: `route.ts`
-- **Features**: Team joining via code
-- **Dependencies**: Team system, code validation
-
-#### `/link-request/`
-- **Purpose**: Team linking requests
-- **Files**: `route.ts`
-- **Features**: Team linking, request management
-- **Dependencies**: Team system, notification system
-
-#### `/links/`
-- **Purpose**: Team links management
-- **Files**: `route.ts`
-- **Features**: Team link generation, management
-- **Dependencies**: Team system, link generation
-
-#### `/share/`
-- **Purpose**: Team sharing functionality
-- **Files**: `route.ts`
-- **Features**: Team content sharing
-- **Dependencies**: Team system, sharing system
-
-#### `/units/`
-- **Purpose**: Team units management
-- **Files**: `route.ts`, `[slug]/route.ts`
-- **Features**: Team unit operations, slug-based routing
-- **Dependencies**: Team system, unit management
-
-#### `/unlink/`
-- **Purpose**: Team unlinking
-- **Files**: `route.ts`
-- **Features**: Team relationship removal
-- **Dependencies**: Team system
-
-#### `/user-teams/`
-- **Purpose**: User team management
-- **Files**: Multiple route files
-- **Features**: User team operations, membership management
-- **Dependencies**: Team system, user authentication
-
-### Team V2 API (`/teams/v2/`)
-
-#### Core Team Operations
-- **`create/`**: Team creation with enhanced features
-- **`join/`**: Team joining with validation
-- **`user-teams/`**: User team management
-- **`archived/`**: Archived team management
-- **`health/`**: Team system health checks
-- **`notifications/`**: Team notification system
-- **`roster-notifications/`**: Roster-specific notifications
-
-#### Team-Specific Operations (`/[teamId]/`)
-- **`archive/`**: Team archiving functionality
-- **`assignments/`**: Team assignment management
-  - **`enhanced/`**: Enhanced assignment features
-  - **`generate-questions/`**: Question generation for assignments
-  - **`[assignmentId]/submit/`**: Assignment submission
-- **`codes/`**: Team code management
-- **`events/`**: Team event management
-- **`exit/`**: Team exit functionality
-- **`invite/`**: Team invitation management
-- **`materials/`**: Team material management
-- **`members/`**: Team member management
-- **`posts/`**: Team post management
-- **`roster/`**: Team roster management
-  - **`invite/`**: Roster invitation system
-  - **`link-status/`**: Roster linking status
-- **`subteams/`**: Subteam management
-
-### Question Management Routes (`/questions/`)
-
-#### `/base52/`
-- **Purpose**: Base52 encoding for questions
-- **Files**: `route.ts`
-- **Features**: Question ID encoding, URL generation
-- **Dependencies**: Base52 utility system
-
-#### `/batch/`
-- **Purpose**: Batch question operations
-- **Files**: `route.ts`
-- **Features**: Bulk question processing
-- **Dependencies**: Question database
-
-#### Main Route
-- **Files**: `route.ts`
-- **Features**: Question CRUD operations
-- **Dependencies**: Question database, AI services
-
-### Reporting Routes (`/report/`)
-
-#### `/all/`
-- **Purpose**: Report listing
-- **Files**: `route.ts`
-- **Features**: Report management, listing
-- **Dependencies**: Report system
-
-#### `/edit/`
-- **Purpose**: Report editing
-- **Files**: `route.ts`, `__tests__/route.test.ts`
-- **Features**: Report modification, validation
-- **Dependencies**: Report system, content validation
-
-#### `/meta/`
-- **Purpose**: Report metadata
-- **Files**: `route.ts`
-- **Features**: Report metadata management
-- **Dependencies**: Report system
-
-#### `/remove/`
-- **Purpose**: Report removal
-- **Files**: `route.ts`, `__tests__/route.test.ts`
-- **Features**: Report deletion, cleanup
-- **Dependencies**: Report system
-
-### Sharing Routes (`/share/`)
-
-#### `/generate/`
-- **Purpose**: Share code generation
-- **Files**: `route.ts`
-- **Features**: Share code creation, validation
-- **Dependencies**: Sharing system
-
-#### Main Route
-- **Files**: `route.ts`
-- **Features**: Content sharing, share management
-- **Dependencies**: Sharing system, content storage
-
-### Utility Routes
-
-#### `/meta/`
-- **Purpose**: Metadata API endpoints
-- **Files**: `events/route.ts`, `stats/route.ts`, `subtopics/route.ts`, `tournaments/route.ts`
-- **Features**: System metadata, statistics
-- **Dependencies**: Database, analytics system
-
-#### `/notifications/`
-- **Purpose**: Notification system
-- **Files**: `route.ts`, `accept/route.ts`
-- **Features**: Notification management, real-time updates
-- **Dependencies**: Notification system, real-time services
-
-#### `/quotes/`
-- **Purpose**: Quote management API
-- **Files**: `route.ts`
-- **Features**: Quote CRUD, content management
-- **Dependencies**: Quote database
-
-#### `/upload-image/`
-- **Purpose**: Image upload API
-- **Files**: `route.ts`
-- **Features**: Image processing, storage management
-- **Dependencies**: File storage, image processing
-
-## Key Features
-
-### 1. RESTful API Design
-- **HTTP Methods**: GET, POST, PUT, DELETE support
-- **Status Codes**: Proper HTTP status code usage
-- **Error Handling**: Comprehensive error responses
-- **Validation**: Input validation and sanitization
-
-### 2. Authentication & Authorization
-- **User Authentication**: Supabase Auth integration
-- **Role-Based Access**: Admin, team captain, member roles
-- **API Security**: Rate limiting, input validation
-- **Session Management**: Secure session handling
-
-### 3. AI Integration
-- **Gemini 2.0**: Advanced AI capabilities
-- **Question Analysis**: AI-powered question quality assessment
-- **Explanation Generation**: Automated explanations
-- **Content Processing**: AI content enhancement
-
-### 4. Team Management
-- **Team Operations**: CRUD operations for teams
-- **Member Management**: Team membership handling
-- **Collaboration**: Team sharing and collaboration
-- **Notifications**: Real-time team notifications
-
-### 5. Question System
-- **Question Bank**: 4000+ Science Olympiad questions
-- **Base52 Encoding**: URL-safe question identifiers
-- **AI Processing**: AI-powered question analysis
-- **Content Management**: Question editing and validation
-
-### 6. Real-time Features
-- **Notifications**: Real-time notification system
-- **Team Updates**: Live team updates
-- **Collaboration**: Real-time collaboration features
-- **Status Updates**: Live status monitoring
-
-## Technical Architecture
-
-### API Design Patterns
-- **Route Handlers**: Next.js App Router API routes
-- **Authentication**: Authentication and validation utilities
-- **Error Handling**: Centralized error handling
-- **Response Formatting**: Consistent response formats
-
-### Database Integration
-- **Supabase**: Primary database for users and questions
-- **CockroachDB**: Secondary database for teams
-- **Drizzle ORM**: Type-safe database operations
-- **Connection Pooling**: Efficient database connections
-
-### AI Integration
-- **Google Gemini**: AI service integration
-- **Structured Responses**: JSON schema validation
-- **Error Handling**: Graceful AI failures
-- **Performance**: Efficient AI operations
-
-### Testing
-- **Unit Tests**: Individual route testing
-- **Integration Tests**: API integration testing
-- **Mock Services**: External service mocking
-- **Coverage**: Comprehensive test coverage
-
-## Development Guidelines
-
-### Route Organization
-- **Logical Grouping**: Related routes grouped together
-- **Nested Routes**: Hierarchical route structure
-- **Dynamic Routes**: Parameter-based routing
-- **File Naming**: Consistent naming conventions
-
-### Error Handling
-- **HTTP Status Codes**: Proper status code usage
-- **Error Messages**: Clear error messages
-- **Logging**: Comprehensive request logging
-- **Validation**: Input validation and sanitization
-
-### Security
-- **Authentication**: Secure authentication
-- **Authorization**: Role-based access control
-- **Input Validation**: Comprehensive input validation
-- **Rate Limiting**: API rate limiting
-
-### Performance
-- **Caching**: Response caching strategies
-- **Database Optimization**: Efficient database queries
-- **AI Optimization**: Efficient AI operations
-- **Response Time**: Optimized response times
-
-## Dependencies
-
-### Core Dependencies
-- **Next.js**: API route framework
-- **TypeScript**: Type safety
-- **Supabase**: Authentication and database
-- **CockroachDB**: Team database
-
-### AI Dependencies
-- **Google Gemini**: AI service integration
-- **AI Processing**: Content analysis and generation
-- **Schema Validation**: Response validation
-
-### Testing Dependencies
-- **Vitest**: Testing framework
-- **Testing Library**: API testing utilities
-- **Mock Services**: External service mocking
-
----
-
-*This documentation provides a comprehensive overview of the Scio.ly API routes and their functionality.*
+# API Directory
+
+This directory contains all Next.js API routes for the Scio.ly platform. These routes handle backend functionality including authentication, question management, team operations, AI integration, and more.
+
+## Core API Routes
+
+### `/admin/`
+Administrative API endpoints. See [admin/README.md](./admin/README.md) for details.
+
+**Files:**
+- `route.ts` - Admin operations (GET for overview, POST for actions)
+
+**Features:**
+- Edit management (apply, undo, delete)
+- Blacklist management (apply, restore, delete)
+- Bulk operations
+- Admin password authentication
+
+### `/assignments/`
+Assignment management system.
+
+**Files:**
+- `route.ts` - Main assignments endpoint
+- `submit/route.ts` - Assignment submission
+- `[assignmentId]/route.ts` - Assignment by ID
+- `[assignmentId]/submit/route.ts` - Submit specific assignment
+- `find-team/route.ts` - Find team for assignment
+
+**Features:**
+- Assignment CRUD operations
+- Assignment submission handling
+- Team assignment management
+
+### `/blacklists/`
+Content blacklisting system.
+
+**Files:**
+- `route.ts` - Blacklist management
+
+**Features:**
+- Add questions to blacklist
+- Remove from blacklist
+- Blacklist querying
+
+### `/codebusters/`
+Codebusters event-specific API.
+
+**Files:**
+- `share/generate/route.ts` - Generate share code
+- `share/route.ts` - Share code operations
+
+**Features:**
+- Cipher sharing
+- Share code generation
+- Codebusters-specific operations
+
+### `/contact/`
+Contact form API.
+
+**Files:**
+- `route.ts` - Contact form submission
+
+**Example:**
+```44:50:src/app/api/contact/route.ts
+export async function POST(req: NextRequest) {
+  try {
+    // Apply rate limiting to prevent spam
+    const rateLimitError = applyRateLimit(req, RateLimitPresets.standard);
+    if (rateLimitError) {
+      return rateLimitError;
+    }
+```
+
+**Features:**
+- Contact form processing
+- Rate limiting
+- Discord webhook integration
+- Email notifications
+
+### `/docs/`
+Documentation API.
+
+**Files:**
+- `route.ts` - Documentation serving
+- `codebusters/[cipher]/route.ts` - Codebusters cipher documentation
+
+**Features:**
+- Markdown content serving
+- Cipher documentation
+- Content management
+
+### `/edits/`
+Content editing API.
+
+**Files:**
+- `route.ts` - Edit operations
+
+**Features:**
+- Question edit submission
+- Edit validation
+- Edit management
+
+## AI Integration Routes (`/gemini/`)
+
+All Gemini endpoints use Google Gemini 2.0 Flash for AI operations. See [gemini/README.md](./gemini/README.md) for detailed documentation.
+
+### `/gemini/explain/`
+AI explanation generation endpoint.
+
+**Example:**
+```15:49:src/app/api/gemini/explain/route.ts
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const validation = validateFields<ExplainRequest>(body, ["question", "event"]);
+
+    if (!validation.valid) {
+      return validation.error;
+    }
+
+    const { question, event, userAnswer } = validation.data;
+
+    logger.info(`Gemini explain request received for event: ${event}`);
+
+    if (!geminiService.isAvailable()) {
+      logger.warn("Gemini AI not available");
+      return ApiErrors.serverError("Gemini AI not available");
+    }
+
+    logger.info("Sending explain request to Gemini AI");
+
+    try {
+      const result = await geminiService.explain(question, userAnswer || "", event);
+
+      logger.info("Gemini AI explain response received");
+
+      return successResponse<ApiResponse["data"]>(result);
+    } catch (error) {
+      logger.error("Gemini AI explain error:", error);
+      return ApiErrors.serverError("Failed to generate explanation");
+    }
+  } catch (error) {
+    logger.error("POST /api/gemini/explain error:", error);
+    return handleApiError(error);
+  }
+}
+```
+
+**Features:**
+- Generates AI explanations for questions
+- Supports optional user answer context
+- Event-specific explanations
+- 60-second max duration
+
+### `/gemini/analyze-question/`
+AI-powered question analysis.
+
+**Features:**
+- Question quality analysis
+- Content validation
+- Difficulty assessment
+- Topic classification
+
+### `/gemini/extract-questions/`
+Question extraction from text.
+
+**Features:**
+- Automated question extraction
+- Text-to-question conversion
+- Format standardization
+
+### `/gemini/grade-free-responses/`
+AI grading of free response questions.
+
+**Features:**
+- Automated FRQ grading
+- Rubric-based scoring
+- Feedback generation
+
+### `/gemini/improve-reason/`
+AI improvement of user reasoning.
+
+**Features:**
+- Reasoning analysis
+- Improvement suggestions
+- Logic validation
+
+### `/gemini/suggest-edit/`
+AI-powered edit suggestions.
+
+**Features:**
+- Content improvement suggestions
+- Grammar correction
+- Style enhancement
+
+### `/gemini/validate-edit/`
+AI validation of content edits.
+
+**Features:**
+- Edit quality validation
+- Content accuracy checking
+- Validation scoring
+
+## System Routes
+
+### `/health/`
+System health monitoring.
+
+**Files:**
+- `route.ts` - Health check endpoint
+- `__tests__/route.test.ts` - Health check tests
+
+**Features:**
+- Database connectivity check
+- AI service status
+- System health indicators
+
+### `/id-questions/`
+Question identification API.
+
+**Files:**
+- `route.ts` - ID question operations
+
+**Features:**
+- Question metadata
+- ID question identification
+
+### `/join/`
+User registration API.
+
+**Files:**
+- `route.ts` - User registration
+
+**Features:**
+- User onboarding
+- Account creation
+- Profile setup
+
+## Question Management Routes
+
+### `/questions/`
+Question management API.
+
+**Files:**
+- `route.ts` - Main questions endpoint (GET, POST)
+- `base52/route.ts` - Base52 encoded question IDs
+- `batch/route.ts` - Batch question operations
+
+**Example:**
+```1:80:src/app/api/questions/route.ts
+// biome-ignore lint/correctness/noNodejsModules: Node.js crypto module is required for API routes
+import crypto from "node:crypto";
+import { ApiError, handleApiError, parseRequestBody } from "@/lib/api/utils";
+import { db } from "@/lib/db";
+import { questions } from "@/lib/db/schema";
+import type { Question } from "@/lib/types/api";
+import logger from "@/lib/utils/logger";
+import { type SQL, and, eq, gte, lt, lte, or, sql } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
+import { v4 as uuidv4 } from "uuid";
+import { z } from "zod";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+// Feature flag: when true, use efficient two-phase indexed random selection
+const trulyRandom = true;
+
+type DatabaseQuestion = {
+  id: string;
+  question: string;
+  tournament: string;
+  division: string;
+  event: string;
+  difficulty: string | null;
+  options: unknown;
+  answers: unknown;
+  subtopics: unknown;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+};
+
+const QuestionFiltersSchema = z.object({
+  event: z.string().optional(),
+  division: z.string().optional(),
+  tournament: z.string().optional(),
+  subtopic: z.string().optional(),
+  subtopics: z.string().optional(),
+  difficulty_min: z.string().optional(),
+  difficulty_max: z.string().optional(),
+  question_type: z.enum(["mcq", "frq"]).optional(),
+  limit: z.string().optional(),
+});
+
+const CreateQuestionSchema = z.object({
+  question: z.string().min(1, "Question is required"),
+  tournament: z.string().min(1, "Tournament is required"),
+  division: z.string().min(1, "Division is required"),
+  event: z.string().min(1, "Event is required"),
+  options: z.array(z.string()).optional().default([]),
+  answers: z
+    .array(z.union([z.string(), z.number()]))
+    .optional()
+    .default([]),
+  subtopics: z.array(z.string()).optional().default([]),
+  difficulty: z.number().min(0).max(1).optional().default(0.5),
+});
+```
+
+**Features:**
+- Question querying with filters (event, division, difficulty, type)
+- Question creation
+- Efficient random selection
+- Base52 encoding for question IDs
+- Batch operations
+
+## Team Management Routes (`/teams/`)
+
+Comprehensive team management API. See [teams/README.md](./teams/README.md) for detailed documentation.
+
+### `/teams/create/`
+Team creation API.
+
+**Features:**
+- Team creation
+- Validation
+- Initial setup
+
+### `/teams/by-code/`
+Team lookup by code.
+
+**Features:**
+- Team code validation
+- Team retrieval
+
+### `/teams/calendar/`
+Team calendar management.
+
+**Subdirectories:**
+- `events/route.ts` - Calendar events
+- `events/[eventId]/route.ts` - Event by ID
+- `personal/route.ts` - Personal calendar
+- `recurring-meetings/route.ts` - Recurring meetings
+
+**Features:**
+- Event creation and management
+- Personal calendar integration
+- Recurring meeting support
+- Comprehensive test suite
+
+### `/teams/[teamId]/`
+Team operations by ID.
+
+**Subdirectories:**
+- `assignments/` - Assignment management
+- `members/` - Member management
+- `roster/` - Roster management
+- `stream/` - Activity stream
+- `timers/` - Timer management
+- `subteams/` - Subteam management
+- `invite/` - Team invitations
+- `codes/` - Team codes
+- `archive/` - Team archiving
+- `delete/` - Team deletion
+- `exit/` - Exit team
+- `all-data/` - All team data
+
+**Features:**
+- Comprehensive team operations
+- Member management
+- Assignment system
+- Activity stream
+- Timer management
+
+### `/teams/v2/`
+Version 2 team API with enhanced features.
+
+**Features:**
+- Enhanced team operations
+- Improved performance
+- Additional features
+
+## Other Routes
+
+### `/invites/`
+Team invitation system.
+
+**Subdirectories:**
+- `accept/route.ts` - Accept invitation
+- `create/route.ts` - Create invitation
+- `decline/route.ts` - Decline invitation
+- `my/route.ts` - User's invitations
+
+### `/meta/`
+Metadata API endpoints.
+
+**Subdirectories:**
+- `events/route.ts` - Events metadata
+- `stats/route.ts` - Statistics
+- `subtopics/route.ts` - Subtopics metadata
+- `tournaments/route.ts` - Tournaments metadata
+
+### `/notifications/`
+Notification system.
+
+**Subdirectories:**
+- `accept/route.ts` - Accept notification
+- `decline/route.ts` - Decline notification
+- `route.ts` - Notification operations
+- `sync/` - Notification sync
+
+### `/profile/`
+Profile management API.
+
+**Subdirectories:**
+- `sync/route.ts` - Profile synchronization
+
+### `/quotes/`
+Quote management API.
+
+**Files:**
+- `route.ts` - Quote operations
+- `report/route.ts` - Quote reporting
+
+**Features:**
+- Quote CRUD operations
+- Quote reporting
+- Codebusters quote management
+
+### `/report/`
+Reporting system API.
+
+**Subdirectories:**
+- `all/route.ts` - All reports
+- `edit/route.ts` - Edit reports
+- `meta/route.ts` - Report metadata
+- `remove/route.ts` - Remove reports
+
+**Features:**
+- Report submission
+- Report management
+- Report moderation
+
+### `/share/`
+Content sharing API.
+
+**Subdirectories:**
+- `generate/route.ts` - Generate share code
+- `route.ts` - Share operations
+
+**Features:**
+- Share code generation
+- Content sharing
+- Share code validation
+
+### `/trpc/`
+TRPC API endpoint.
+
+**Files:**
+- `[trpc]/route.ts` - TRPC handler
+
+**Features:**
+- TRPC protocol support
+- Type-safe API calls
+
+### `/upload-image/`
+Image upload API.
+
+**Files:**
+- `route.ts` - Image upload handler
+
+**Features:**
+- Image processing
+- Storage management
+- Image validation
+
+## Important Notes
+
+1. **Rate Limiting**: Many endpoints use rate limiting to prevent abuse
+2. **Authentication**: Most endpoints require user authentication
+3. **Error Handling**: Comprehensive error handling with structured responses
+4. **Validation**: Request validation using Zod schemas
+5. **Logging**: All endpoints use structured logging
+6. **Type Safety**: Full TypeScript support with type-safe responses
+7. **Testing**: Many endpoints have comprehensive test suites

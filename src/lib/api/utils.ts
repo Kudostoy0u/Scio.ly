@@ -121,14 +121,12 @@ export const createRateLimiter = (maxRequests: number, windowMs: number) => {
   };
 };
 
-export const logApiRequest = (_method: string, _path: string, params?: Record<string, unknown>) => {
-  if (process.env.NODE_ENV === "development") {
-    if (params) {
-      // Log request with params in development
-    } else {
-      // Log request without params in development
-    }
-  }
+export const logApiRequest = (
+  _method: string,
+  _path: string,
+  _params?: Record<string, unknown>
+) => {
+  // Logging disabled
 };
 
 export const logApiResponse = (
@@ -137,9 +135,7 @@ export const logApiResponse = (
   _statusCode: number,
   _duration: number
 ) => {
-  if (process.env.NODE_ENV === "development") {
-    // Log API response in development
-  }
+  // Logging disabled
 };
 
 export const createCacheKey = (prefix: string, params: Record<string, unknown>) => {

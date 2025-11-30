@@ -8,14 +8,26 @@ import {
   getExplanation,
 } from "@/app/utils/questionUtils";
 import {
+  getCurrentTestSession,
   resetTestSession,
   resumeTestSession,
-  getCurrentTestSession,
 } from "@/app/utils/timeManagement";
 import logger from "@/lib/utils/logger";
 import { useRouter } from "next/navigation";
+import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
+import { loadAssignment, loadViewResultsData } from "../utils/assignmentLoader";
+import {
+  handleEditSubmit as handleEditSubmitUtil,
+  handleQuestionRemoved as handleQuestionRemovedUtil,
+} from "../utils/questionHandlers";
+import { handleTestSubmission } from "../utils/testSubmission";
+import { useTestAnswers } from "./useTestAnswers";
+import { useTestBookmarks } from "./useTestBookmarks";
+import { useTestEdit } from "./useTestEdit";
+import { useTestGrading } from "./useTestGrading";
+import { useTestTimer } from "./useTestTimer";
 import { fetchQuestionsForParams } from "./utils/fetchQuestions";
 import { initLoad } from "./utils/initLoad";
 import { normalizeQuestionsFull } from "./utils/normalize";
@@ -27,17 +39,6 @@ import {
   useResumeOnMount,
   useSetupVisibility,
 } from "./utils/timeHooks";
-import { useTestAnswers } from "./useTestAnswers";
-import { useTestBookmarks } from "./useTestBookmarks";
-import { useTestEdit } from "./useTestEdit";
-import { useTestGrading } from "./useTestGrading";
-import { useTestTimer } from "./useTestTimer";
-import { loadAssignment, loadViewResultsData } from "../utils/assignmentLoader";
-import { handleTestSubmission } from "../utils/testSubmission";
-import {
-  handleQuestionRemoved as handleQuestionRemovedUtil,
-  handleEditSubmit as handleEditSubmitUtil,
-} from "../utils/questionHandlers";
 
 /**
  * Test state management hook for Science Olympiad practice tests
@@ -127,6 +128,161 @@ export function useTestState({
     routerData
   );
 
+  // Helper function to clear assignment data
+  const clearAssignmentData = useCallback(
+    (currentAssignmentId: string | null, newAssignmentId: string) => {
+      localStorage.removeItem("testQuestions");
+      localStorage.removeItem("testUserAnswers");
+      localStorage.removeItem("testGradingResults");
+      localStorage.removeItem("testParams");
+
+      if (currentAssignmentId) {
+        const oldAssignmentKey = `assignment_${currentAssignmentId}`;
+        localStorage.removeItem(`${oldAssignmentKey}_questions`);
+        localStorage.removeItem(`${oldAssignmentKey}_answers`);
+        localStorage.removeItem(`${oldAssignmentKey}_grading`);
+        localStorage.removeItem(`${oldAssignmentKey}_session`);
+      }
+
+      localStorage.setItem("currentAssignmentId", String(newAssignmentId));
+    },
+    []
+  );
+
+  // Helper function to restore stored answers and grades
+  const restoreStoredAnswersAndGrades = useCallback(
+    (
+      routerData: RouterParams,
+      setUserAnswers: (answers: Record<number, (string | null)[] | null>) => void,
+      setGradingResults: (results: GradingResults) => void,
+      setIsSubmitted: (submitted: boolean) => void
+    ) => {
+      try {
+        const session = getCurrentTestSession();
+        if (session) {
+          setIsSubmitted(session.isSubmitted);
+        }
+        const isAssignmentMode = !!(
+          routerData.assignmentId ||
+          routerData.teamsAssign === "1" ||
+          routerData.teamsAssign === 1
+        );
+        const answersKey =
+          isAssignmentMode && routerData.assignmentId
+            ? `assignment_${routerData.assignmentId}_answers`
+            : "testUserAnswers";
+        const gradesKey =
+          isAssignmentMode && routerData.assignmentId
+            ? `assignment_${routerData.assignmentId}_grading`
+            : "testGradingResults";
+
+        const storedAnswers = localStorage.getItem(answersKey);
+        if (storedAnswers) {
+          try {
+            const parsed = JSON.parse(storedAnswers);
+            setUserAnswers(parsed);
+          } catch {
+            // Ignore errors
+          }
+        }
+        const storedGrades = localStorage.getItem(gradesKey);
+        if (storedGrades) {
+          try {
+            setGradingResults(JSON.parse(storedGrades));
+          } catch {
+            // Ignore errors
+          }
+        }
+      } catch {
+        // Ignore errors
+      }
+    },
+    []
+  );
+
+  // Helper function to handle localStorage restoration
+  const handleLocalStorageRestore = useCallback(
+    (
+      stableRouterData: Record<string, unknown>,
+      routerData: RouterParams,
+      setData: (data: Question[]) => void,
+      setUserAnswers: (answers: Record<number, (string | null)[] | null>) => void,
+      setGradingResults: (results: GradingResults) => void,
+      setIsSubmitted: (submitted: boolean) => void,
+      setIsLoading: (loading: boolean) => void,
+      fetchCompletedRef: React.MutableRefObject<boolean>
+    ) => {
+      const currentAssignmentId = localStorage.getItem("currentAssignmentId");
+      const isAssignmentMode = !!stableRouterData.assignmentId;
+      const newAssignmentId = stableRouterData.assignmentId;
+
+      if (isAssignmentMode && newAssignmentId && newAssignmentId !== currentAssignmentId) {
+        clearAssignmentData(currentAssignmentId, newAssignmentId as string);
+      }
+
+      const stored = localStorage.getItem("testQuestions");
+      if (stored && !isAssignmentMode) {
+        const parsed = JSON.parse(stored);
+        const hasQs = Array.isArray(parsed) && parsed.length > 0;
+        if (hasQs) {
+          const normalized = normalizeQuestionsFull(parsed as Question[]);
+          setData(normalized);
+          restoreStoredAnswersAndGrades(
+            routerData,
+            setUserAnswers,
+            setGradingResults,
+            setIsSubmitted
+          );
+          setIsLoading(false);
+          fetchCompletedRef.current = true;
+          logger.log("resume from localStorage before SSR", { count: normalized.length });
+          return true;
+        }
+      }
+      return false;
+    },
+    [clearAssignmentData, restoreStoredAnswersAndGrades]
+  );
+
+  // Helper function to validate and set user answers
+  const validateAndSetUserAnswers = useCallback(
+    (
+      restored: { userAnswers?: Record<string, unknown> },
+      setUserAnswers: (answers: Record<number, (string | null)[] | null>) => void
+    ) => {
+      if (restored.userAnswers) {
+        const validAnswers: Record<number, (string | null)[] | null> = {};
+        for (const [key, value] of Object.entries(restored.userAnswers)) {
+          const index = Number.parseInt(key, 10);
+          if (!Number.isNaN(index) && (Array.isArray(value) || value === null)) {
+            validAnswers[index] = value;
+          }
+        }
+        setUserAnswers(validAnswers);
+      }
+    },
+    []
+  );
+
+  // Helper function to validate and set grading results
+  const validateAndSetGradingResults = useCallback(
+    (
+      restored: { gradingResults?: Record<string, unknown> },
+      setGradingResults: (results: GradingResults) => void
+    ) => {
+      if (restored.gradingResults) {
+        const validGrading: GradingResults = {};
+        for (const [key, value] of Object.entries(restored.gradingResults)) {
+          const index = Number.parseInt(key, 10);
+          if (!Number.isNaN(index) && typeof value === "number" && value >= 0 && value <= 3) {
+            validGrading[index] = value;
+          }
+        }
+        setGradingResults(validGrading);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     // Handle view results mode
@@ -170,84 +326,18 @@ export function useTestState({
     // Prefer locally stored questions over SSR on reload to resume tests
     if (!ssrAppliedRef.current) {
       try {
-        // Only clear practice data when starting a new assignment (not when switching back to practice)
-        const currentAssignmentId = localStorage.getItem("currentAssignmentId");
-        const isAssignmentMode = !!stableRouterData.assignmentId;
-        const newAssignmentId = stableRouterData.assignmentId;
-
-        if (isAssignmentMode && newAssignmentId && newAssignmentId !== currentAssignmentId) {
-          // Starting a new assignment - clear practice data and previous assignment data
-          localStorage.removeItem("testQuestions");
-          localStorage.removeItem("testUserAnswers");
-          localStorage.removeItem("testGradingResults");
-          localStorage.removeItem("testParams");
-
-          // Clear previous assignment data if switching to a different assignment
-          if (currentAssignmentId) {
-            const oldAssignmentKey = `assignment_${currentAssignmentId}`;
-            localStorage.removeItem(`${oldAssignmentKey}_questions`);
-            localStorage.removeItem(`${oldAssignmentKey}_answers`);
-            localStorage.removeItem(`${oldAssignmentKey}_grading`);
-            localStorage.removeItem(`${oldAssignmentKey}_session`);
-          }
-
-          // Update current assignment ID
-          localStorage.setItem("currentAssignmentId", String(newAssignmentId));
-        }
-
-        const stored = localStorage.getItem("testQuestions");
-        if (stored && !isAssignmentMode) {
-          const parsed = JSON.parse(stored);
-          const hasQs = Array.isArray(parsed) && parsed.length > 0;
-          if (hasQs) {
-            const normalized = normalizeQuestionsFull(parsed as Question[]);
-            setData(normalized);
-            // Restore submitted state and grading/user answers if present
-            try {
-              const session = getCurrentTestSession();
-              if (session) {
-                setIsSubmitted(session.isSubmitted);
-              }
-              // Load answers using appropriate localStorage key based on assignment mode
-              const isAssignmentMode = !!(
-                routerData.assignmentId ||
-                routerData.teamsAssign === "1" ||
-                routerData.teamsAssign === 1
-              );
-              const answersKey =
-                isAssignmentMode && routerData.assignmentId
-                  ? `assignment_${routerData.assignmentId}_answers`
-                  : "testUserAnswers";
-              const gradesKey =
-                isAssignmentMode && routerData.assignmentId
-                  ? `assignment_${routerData.assignmentId}_grading`
-                  : "testGradingResults";
-
-              const storedAnswers = localStorage.getItem(answersKey);
-              if (storedAnswers) {
-                try {
-                  const parsed = JSON.parse(storedAnswers);
-                  setUserAnswers(parsed);
-                } catch (_e) {
-                  // Ignore errors
-                }
-              }
-              const storedGrades = localStorage.getItem(gradesKey);
-              if (storedGrades) {
-                try {
-                  setGradingResults(JSON.parse(storedGrades));
-                } catch {
-                  // Ignore errors
-                }
-              }
-            } catch {
-              // Ignore errors
-            }
-            setIsLoading(false);
-            fetchCompletedRef.current = true;
-            logger.log("resume from localStorage before SSR", { count: normalized.length });
-            return;
-          }
+        const restored = handleLocalStorageRestore(
+          stableRouterData,
+          routerData,
+          setData,
+          setUserAnswers,
+          setGradingResults,
+          setIsSubmitted,
+          setIsLoading,
+          fetchCompletedRef
+        );
+        if (restored) {
+          return;
         }
       } catch {
         // Ignore errors
@@ -280,14 +370,10 @@ export function useTestState({
     isSubmitted,
     isLoading,
     routerData,
-    setData,
     setUserAnswers,
     setGradingResults,
-    setRouterData,
-    setIsLoading,
     setTimeLeft,
-    setIsSubmitted,
-    setFetchError,
+    handleLocalStorageRestore,
   ]);
 
   useEffect(() => {
@@ -316,38 +402,24 @@ export function useTestState({
           routerData.teamsAssign === 1
         );
 
-        if (isAssignmentMode) {
-          // Assignment mode handling
-        } else {
+        if (!isAssignmentMode) {
           const restored = restoreStoredState();
-          if (restored.userAnswers) {
-            // Validate userAnswers structure
-            const validAnswers: Record<number, (string | null)[] | null> = {};
-            for (const [key, value] of Object.entries(restored.userAnswers)) {
-              const index = Number.parseInt(key, 10);
-              if (!Number.isNaN(index) && (Array.isArray(value) || value === null)) {
-                validAnswers[index] = value;
-              }
-            }
-            setUserAnswers(validAnswers);
-          }
-          if (restored.gradingResults) {
-            // Validate gradingResults structure and values
-            const validGrading: GradingResults = {};
-            for (const [key, value] of Object.entries(restored.gradingResults)) {
-              const index = Number.parseInt(key, 10);
-              if (!Number.isNaN(index) && typeof value === "number" && value >= 0 && value <= 3) {
-                validGrading[index] = value;
-              }
-            }
-            setGradingResults(validGrading);
-          }
+          validateAndSetUserAnswers(restored, setUserAnswers);
+          validateAndSetGradingResults(restored, setGradingResults);
         }
       })
       .catch(() => {
         // Ignore errors - fallback handling is already in place
       });
-  }, [initialData, initialRouterData, routerData, setUserAnswers, setGradingResults]);
+  }, [
+    initialData,
+    initialRouterData,
+    routerData,
+    setUserAnswers,
+    setGradingResults,
+    validateAndSetUserAnswers,
+    validateAndSetGradingResults,
+  ]);
 
   // If in preview mode, auto-fill answers with correct ones (all correct for multi-select) and mark submitted once data is loaded
   useEffect(() => {
@@ -370,7 +442,7 @@ export function useTestState({
     } catch {
       // Ignore errors
     }
-  }, [isPreviewMode, data, isSubmitted, setUserAnswers, setGradingResults, setIsSubmitted]);
+  }, [isPreviewMode, data, isSubmitted, setUserAnswers, setGradingResults]);
 
   // Ensure timer shows immediately by syncing from session when available
   useEffect(() => {
@@ -383,7 +455,7 @@ export function useTestState({
       // Ignore errors
     }
     // Re-run when router params are established (session is created in initLoad)
-  }, [routerData, setTimeLeft]);
+  }, [setTimeLeft]);
 
   useEffect(() => {
     // Skip initLoad if we're in assignment mode - assignment loading is handled separately
@@ -410,7 +482,7 @@ export function useTestState({
       setTimeLeft,
       fetchCompletedRef,
     });
-  }, [initialData, stableRouterData, data.length, isLoading, setRouterData, setFetchError, setIsLoading, setData, setTimeLeft]);
+  }, [initialData, stableRouterData, data.length, isLoading, setTimeLeft]);
 
   useEffect(() => {
     if (timeLeft === 30) {
@@ -428,19 +500,12 @@ export function useTestState({
   useSetupVisibility();
 
   const handleSubmit = useCallback(async () => {
-    await handleTestSubmission(
-      data,
-      userAnswers,
-      gradingResults,
-      routerData,
-      timeLeft,
-      {
-        setIsSubmitted,
-        setGradingResults,
-        setGradingFrQs,
-      }
-    );
-  }, [data, userAnswers, gradingResults, routerData, timeLeft, setIsSubmitted, setGradingResults, setGradingFrQs]);
+    await handleTestSubmission(data, userAnswers, gradingResults, routerData, timeLeft, {
+      setIsSubmitted,
+      setGradingResults,
+      setGradingFrQs,
+    });
+  }, [data, userAnswers, gradingResults, routerData, timeLeft, setGradingResults, setGradingFrQs]);
 
   const reloadQuestions = async () => {
     setIsResetting(true);
@@ -530,7 +595,7 @@ export function useTestState({
     );
   };
 
-  const handleEditSubmit = async (
+  const handleEditSubmit = (
     editedQuestion: Question,
     reason: string,
     originalQuestion: Question,

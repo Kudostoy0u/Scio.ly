@@ -122,6 +122,8 @@ export interface QuoteData {
   hint?: string;
   /** Optional crib word for hints */
   cribWord?: string;
+  /** Language of the quote (e.g., "en", "es") */
+  language?: string;
 }
 
 export interface CipherResult {

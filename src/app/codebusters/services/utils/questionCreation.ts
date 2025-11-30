@@ -113,6 +113,7 @@ export function createQuestionFromQuote(
   const askForKeyword = isK1K2K3Cipher && Math.random() < 0.15;
 
   const questionEntry = {
+    id: quoteData.id,
     author: quoteData.author,
     quote: cleanQuote(quoteData.quote),
     encrypted: cipherResult.encrypted,

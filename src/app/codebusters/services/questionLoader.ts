@@ -1,11 +1,14 @@
 import type { QuoteData } from "@/app/codebusters/types";
-import { getCustomWordBank, setCustomWordBank } from "@/app/codebusters/utils/common";
+import { setCustomWordBank } from "@/app/codebusters/utils/common";
 import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import logger from "@/lib/utils/logger";
 import { getAvailableCipherTypes, mapSubtopicsToCipherTypes } from "./utils/cipherMapping";
 import { encryptQuoteByType } from "./utils/encryptionMapping";
 import { createQuestionFromQuote, selectQuoteForCipher } from "./utils/questionCreation";
 import { loadQuotesForQuestions } from "./utils/quoteLoading";
+
+// Regex for splitting words from quotes
+const WORD_SPLIT_REGEX = /\s+/;
 
 // Extract restoration logic to reduce complexity
 function restoreSubmittedTest(
@@ -108,20 +111,34 @@ const processQuotesIntoQuestions = (
   return { processedQuotes, quoteUuiDs };
 };
 
-// Extract word bank loading to reduce complexity
-const loadWordBankIfNeeded = async (): Promise<void> => {
-  try {
-    if (!getCustomWordBank()) {
-      const resp = await fetch("/words.json");
-      if (resp.ok) {
-        const words = await resp.json();
-        if (Array.isArray(words) && words.length > 0) {
-          setCustomWordBank(words);
-        }
-      }
+// Extract words from quotes for cryptarithm generation
+const extractWordsFromQuotes = (quotes: Array<{ quote: string }>): string[] => {
+  const words = new Set<string>();
+  for (const quoteObj of quotes) {
+    const quoteWords = quoteObj.quote
+      .toUpperCase()
+      .replace(/[^A-Z\s]/g, "")
+      .split(WORD_SPLIT_REGEX)
+      .filter((w) => w.length >= 2 && w.length <= 8);
+    for (const word of quoteWords) {
+      words.add(word);
     }
-  } catch {
-    // Ignore errors when loading custom word bank
+  }
+  return Array.from(words);
+};
+
+// Extract word bank loading to reduce complexity
+const loadWordBankFromQuotes = (
+  englishQuotes: Array<{ quote: string }>,
+  spanishQuotes: Array<{ quote: string }>
+): void => {
+  const allWords = [
+    ...extractWordsFromQuotes(englishQuotes),
+    ...extractWordsFromQuotes(spanishQuotes),
+  ];
+  if (allWords.length > 0) {
+    setCustomWordBank(allWords);
+    logger.log(`🔍 Extracted ${allWords.length} words from quotes for cryptarithm generation`);
   }
 };
 
@@ -179,6 +196,9 @@ const processQuestions = async (
   logger.log(
     `🔍 Quote validation passed: ${englishQuotes.length} English, ${spanishQuotes.length} Spanish quotes available`
   );
+
+  // Extract words from quotes for cryptarithm generation
+  loadWordBankFromQuotes(englishQuotes, spanishQuotes);
 
   const { processedQuotes, quoteUuiDs } = processQuotesIntoQuestions(
     questionCipherTypes,
@@ -241,8 +261,6 @@ export const loadQuestionsFromDatabase = async (
 
   setIsLoading(true);
   setError(null);
-
-  await loadWordBankIfNeeded();
 
   try {
     const testParamsStr = SyncLocalStorage.getItem("testParams");

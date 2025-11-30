@@ -365,7 +365,7 @@ describe("NotificationBell", () => {
     expect(screen.getByText("View all notifications")).toBeInTheDocument();
   });
 
-  it("should handle fetch errors gracefully", async () => {
+  it("should handle fetch errors gracefully", () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("Network error"));
 
     render(<NotificationBell {...defaultProps} />);
