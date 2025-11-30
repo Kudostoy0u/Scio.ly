@@ -7,6 +7,7 @@ import {
   createPolybiusSquare,
   letterToCoordinates,
 } from "@/app/codebusters/ciphers/utils/cipherUtils";
+import { getUniqueWords, pickWord } from "@/app/codebusters/ciphers/transposition/utils/wordBank";
 
 // Regex for matching single letters (A-Z, a-z)
 const SINGLE_LETTER_REGEX = /^[A-Za-z]$/;
@@ -16,6 +17,34 @@ function generateRandomKey(length: number): string {
   return Array.from({ length }, () =>
     String.fromCharCode(65 + Math.floor(Math.random() * 26))
   ).join("");
+}
+
+// Helper function to get 5-letter words from word bank
+function getFiveLetterWords(): string[] {
+  const uniqueWords = getUniqueWords();
+  return uniqueWords.filter((word) => word.length === 5);
+}
+
+// Helper function to pick two different 5-letter words for row and column keys
+function pickRowAndColumnKeys(): { rowKey: string; colKey: string } {
+  const fiveLetterWords = getFiveLetterWords();
+  
+  // Fallback to random keys if no 5-letter words available
+  if (fiveLetterWords.length === 0) {
+    return {
+      rowKey: generateRandomKey(5),
+      colKey: generateRandomKey(5),
+    };
+  }
+  
+  // Pick first word
+  const rowKey = pickWord(fiveLetterWords);
+  
+  // Pick second word, excluding the first one
+  const excludeSet = new Set([rowKey]);
+  const colKey = pickWord(fiveLetterWords, excludeSet);
+  
+  return { rowKey, colKey };
 }
 
 // Helper function to convert text to positions
@@ -134,9 +163,9 @@ function encryptWithBlocking(tokens: string[], blockSize: number): string {
  * @returns {CheckerboardResult} Encrypted text and checkerboard configuration
  */
 export const encryptCheckerboard = (text: string): CheckerboardResult => {
-  // Generate random keys
-  const rowKey = generateRandomKey(5);
-  const colKey = generateRandomKey(5);
+  // Pick 5-letter words from word bank for row and column keys
+  const { rowKey, colKey } = pickRowAndColumnKeys();
+  // Generate random key for polybius (8 characters)
   const polybiusKeyRaw = generateRandomKey(8);
 
   // Create Polybius square

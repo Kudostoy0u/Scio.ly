@@ -81,6 +81,7 @@ export interface LeaderboardEntry {
   elo: number;
   season: string;
   event?: string;
+  isHistorical?: boolean;
 }
 
 export interface ComparisonResult {

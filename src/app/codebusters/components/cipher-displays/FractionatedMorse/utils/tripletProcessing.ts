@@ -18,7 +18,10 @@ export function createPlaceholderTriplet(triplet: string): string {
   if (triplet.length === 0) {
     return "xxx";
   }
-  return triplet + "x".repeat(3 - triplet.length);
+  // Truncate if longer than 3, pad if shorter than 3
+  const truncated = triplet.slice(0, 3);
+  const paddingNeeded = Math.max(0, 3 - truncated.length);
+  return truncated + "x".repeat(paddingNeeded);
 }
 
 // Helper function to process character for triplets

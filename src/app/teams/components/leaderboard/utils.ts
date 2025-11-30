@@ -155,7 +155,8 @@ export function computeRankingChanges(
   selectedEvent: string,
   selectedSeason: string,
   selectedState: string,
-  selectedDate: string
+  selectedDate: string,
+  fallbackToPreviousSeason: boolean
 ): Map<string, number> {
   const changes = new Map<string, number>();
   try {
@@ -167,9 +168,10 @@ export function computeRankingChanges(
       selectedEvent || undefined,
       selectedSeason,
       1000,
-      selectedDate
+      selectedDate,
+      fallbackToPreviousSeason
     );
-    let prev = getLeaderboard(eloData, selectedEvent || undefined, previousYear, 1000);
+    let prev = getLeaderboard(eloData, selectedEvent || undefined, previousYear, 1000, undefined, fallbackToPreviousSeason);
     if (selectedState) {
       current = current.filter((e) => e.state === selectedState).sort((a, b) => b.elo - a.elo);
       prev = prev.filter((e) => e.state === selectedState).sort((a, b) => b.elo - a.elo);

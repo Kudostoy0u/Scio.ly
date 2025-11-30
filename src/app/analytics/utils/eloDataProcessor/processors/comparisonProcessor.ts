@@ -5,13 +5,58 @@
 import type { ComparisonResult, EloData, EloSeason } from "@/app/analytics/types/elo";
 import { findSchool } from "../utils/schoolHelpers";
 
-const TRIAL_EVENTS_2025 = [
-  "Aerial Scramble",
-  "Agricultural Science",
-  "Botany",
-  "Engineering CAD",
+// 2026 Division B Events
+const DIVISION_B_EVENTS_2026 = [
+  "Anatomy and Physiology",
+  "Disease Detectives",
+  "Entomology",
+  "Heredity",
+  "Water Quality",
+  "Dynamic Planet",
+  "Meteorology",
+  "Remote Sensing",
+  "Rocks and Minerals",
+  "Solar System",
+  "Circuit Lab",
+  "Crime Busters",
   "Hovercraft",
-  "Protein Modeling",
+  "Machines",
+  "Potions and Poisons",
+  "Boomilever",
+  "Helicopter",
+  "Mission Possible",
+  "Scrambler",
+  "Codebusters",
+  "Experimental Design",
+  "Metric Mastery",
+  "Write It Do It",
+];
+
+// 2026 Division C Events
+const DIVISION_C_EVENTS_2026 = [
+  "Anatomy and Physiology",
+  "Designer Genes",
+  "Disease Detectives",
+  "Entomology",
+  "Water Quality",
+  "Astronomy",
+  "Dynamic Planet",
+  "Remote Sensing",
+  "Rocks and Minerals",
+  "Chemistry Lab",
+  "Circuit Lab",
+  "Forensics",
+  "Hovercraft",
+  "Machines",
+  "Materials Science",
+  "Boomilever",
+  "Electric Vehicle",
+  "Helicopter",
+  "Robot Tour",
+  "Bungee Drop",
+  "Codebusters",
+  "Engineering CAD",
+  "Experimental Design",
 ];
 
 export const calculateWinProbability = (elo1: number, elo2: number): number => {
@@ -93,7 +138,8 @@ export const compareSchools = (
   eloData: EloData,
   school1: string,
   school2: string,
-  season?: string
+  season?: string,
+  division?: "b" | "c"
 ): { eventResults: ComparisonResult[]; overallResult: ComparisonResult | null } => {
   const eventResults: ComparisonResult[] = [];
   let overallResult: ComparisonResult | null = null;
@@ -120,9 +166,17 @@ export const compareSchools = (
   }
 
   const events = getAllEventsForComparison(school1Data, school2Data);
+  
+  // Get the allowed events list based on division
+  const allowedEvents = division === "b" 
+    ? DIVISION_B_EVENTS_2026 
+    : division === "c" 
+    ? DIVISION_C_EVENTS_2026 
+    : null;
 
   for (const eventName of events) {
-    if (TRIAL_EVENTS_2025.includes(eventName)) {
+    // Only include events that are in the allowed list for the division
+    if (allowedEvents && !allowedEvents.includes(eventName)) {
       continue;
     }
 

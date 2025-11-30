@@ -75,6 +75,7 @@ export const FractionatedMorseDisplay = ({
   const validCipherLetters = useMemo(() => {
     const set = new Set<string>();
     if (fractionationTable) {
+      // fractionationTable is triplet -> letter, so values are the cipher letters
       for (const letter of Object.values(fractionationTable)) {
         if (letter && UPPERCASE_LETTER_REGEX.test(letter)) {
           set.add(letter);
@@ -86,6 +87,7 @@ export const FractionatedMorseDisplay = ({
 
   const cipherToTriplet: { [key: string]: string } = {};
   if (fractionationTable) {
+    // fractionationTable is triplet -> letter, so we need to reverse it
     for (const [triplet, letter] of Object.entries(fractionationTable)) {
       cipherToTriplet[letter] = triplet;
     }
@@ -93,9 +95,8 @@ export const FractionatedMorseDisplay = ({
 
   const tripletToCipher: { [key: string]: string } = {};
   if (fractionationTable) {
-    for (const [triplet, letter] of Object.entries(fractionationTable)) {
-      tripletToCipher[triplet] = letter;
-    }
+    // fractionationTable is already triplet -> letter
+    Object.assign(tripletToCipher, fractionationTable);
   }
 
   const handleReplacementTableChange = (triplet: string, newLetter: string) => {
@@ -128,7 +129,12 @@ export const FractionatedMorseDisplay = ({
     if (matchingTriplet) {
       logger.log("Found matching triplet:", matchingTriplet);
 
+      // Update the replacement table entry
       onSolutionChange(quoteIndex, `replacement_${matchingTriplet}`, cipherLetter);
+      
+      // Also sync all other instances of this cipher letter with the same triplet
+      // This matches the behavior when entering a letter in the replacement table
+      onSolutionChange(quoteIndex, cipherLetter.toUpperCase(), triplet);
     } else {
       logger.log("No matching triplet found for:", triplet);
       logger.log("Available triplets:", usedTriplets);
@@ -157,6 +163,20 @@ export const FractionatedMorseDisplay = ({
     }
   };
 
+  // Safety check: ensure we have text to display
+  if (!text || text.trim().length === 0) {
+    return (
+      <div className="font-mono">
+        <div className={`text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+          Fractionated Morse Cipher
+        </div>
+        <div className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+          No encrypted text available
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="font-mono">
       <div className={`text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
@@ -179,14 +199,8 @@ export const FractionatedMorseDisplay = ({
           const charsWithPositions = text.split("").map((char, i) => ({ char, position: i }));
           return charsWithPositions.map(({ char, position }) => {
             const isLetter = UPPERCASE_LETTER_TEST_REGEX.test(char);
-            if (isLetter && fractionationTable && !validCipherLetters.has(char)) {
-              return (
-                <div
-                  key={`fm-spacer-${char}-${position}`}
-                  className="w-5 h-12 sm:w-6 sm:h-14 mt-1"
-                />
-              );
-            }
+            // Don't hide cipher letters - display them even if not in validCipherLetters
+            // This ensures all encrypted letters are visible
             const value = solution?.[char] || "";
             const isCorrect = Boolean(
               isTestSubmitted &&

@@ -45,7 +45,7 @@ export const encryptFractionatedMorse = (text: string): FractionatedMorseResult 
     String.fromCharCode(65 + Math.floor(Math.random() * 26))
   ).join("");
 
-  // Create fractionation table
+  // Create fractionation table: triplet -> letter
   const fractionationTable: { [key: string]: string } = {};
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
@@ -55,7 +55,8 @@ export const encryptFractionatedMorse = (text: string): FractionatedMorseResult 
       if (morse !== undefined) {
         // Pad morse to 3 characters with X
         const paddedMorse = morse.padEnd(3, "X");
-        fractionationTable[letter] = paddedMorse;
+        // Store as triplet -> letter (matching display/grading expectations)
+        fractionationTable[paddedMorse] = letter;
       }
     }
   }
@@ -78,12 +79,10 @@ export const encryptFractionatedMorse = (text: string): FractionatedMorseResult 
   let encrypted = "";
   for (let i = 0; i < morseString.length; i += 3) {
     const triplet = morseString.slice(i, i + 3);
-    // Find letter with matching morse pattern
-    for (const [letter, morse] of Object.entries(fractionationTable)) {
-      if (morse === triplet) {
+    // Look up letter directly from triplet
+    const letter = fractionationTable[triplet];
+    if (letter) {
         encrypted += letter;
-        break;
-      }
     }
   }
 

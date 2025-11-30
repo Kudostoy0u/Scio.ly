@@ -40,11 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 results
-public/eloB.json
-public/eloC.json
-scripts/
-Peter - Peter.csv
-
 # IDE
 .cursor
 .vscode
+.claude

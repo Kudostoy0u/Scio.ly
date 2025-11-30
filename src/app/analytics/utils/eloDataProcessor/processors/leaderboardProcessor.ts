@@ -45,7 +45,7 @@ const findEloAtDate = (history: EloHistoryEntry[], targetDate: string): number |
 };
 
 function getEloRatingForEvent(
-  eventData: { rating: number; history?: Array<{ d: string; r: number }> },
+  eventData: { rating: number; history?: EloHistoryEntry[] },
   date?: string
 ): number {
   // Validate eventData.rating is a valid number
@@ -61,15 +61,7 @@ function getEloRatingForEvent(
     return dateA - dateB;
   });
 
-  const eloHistoryEntries: EloHistoryEntry[] = sortedHistory.map((entry) => ({
-    d: entry.d,
-    t: 0,
-    p: 0,
-    e: entry.r,
-    l: "",
-  }));
-
-  const historicalElo = findEloAtDate(eloHistoryEntries, date);
+  const historicalElo = findEloAtDate(sortedHistory, date);
   // Check for both null and NaN
   if (historicalElo !== null && Number.isFinite(historicalElo)) {
     return historicalElo;
@@ -83,7 +75,7 @@ function processSchoolForLeaderboard(
   school: {
     seasons: Record<
       string,
-      { events: Record<string, { rating: number; history?: Array<{ d: string; r: number }> }> }
+      { events: Record<string, { rating: number; history?: EloHistoryEntry[] }> }
     >;
   },
   event: string | undefined,
@@ -131,7 +123,8 @@ export const getLeaderboard = (
   event?: string,
   season?: string,
   limit = 50,
-  date?: string
+  date?: string,
+  fallbackToPreviousSeason = false
 ): LeaderboardEntry[] => {
   const entries: LeaderboardEntry[] = [];
 
@@ -153,7 +146,7 @@ export const getLeaderboard = (
           seasons: Record<
             string,
             {
-              events: Record<string, { rating: number; history?: Array<{ d: string; r: number }> }>;
+              events: Record<string, { rating: number; history?: EloHistoryEntry[] }>;
             }
           >;
         },
@@ -161,7 +154,37 @@ export const getLeaderboard = (
         season,
         date
       );
-      entries.push(...schoolEntries);
+
+      if (schoolEntries.length > 0) {
+        entries.push(...schoolEntries);
+      } else if (fallbackToPreviousSeason && season) {
+        const currentSeasonInt = parseInt(season, 10);
+        const previousSeason = (currentSeasonInt - 1).toString();
+
+        const previousSeasonEntries = processSchoolForLeaderboard(
+          schoolName,
+          stateCode,
+          school as unknown as {
+            seasons: Record<
+              string,
+              {
+                events: Record<string, { rating: number; history?: EloHistoryEntry[] }>;
+              }
+            >;
+          },
+          event,
+          previousSeason, // Try previous season
+          undefined // No specific date for previous season fallback
+        );
+
+        previousSeasonEntries.forEach(entry => {
+          entries.push({
+            ...entry,
+            isHistorical: true,
+            season: `${previousSeason} (historical)`
+          });
+        });
+      }
     }
   }
 

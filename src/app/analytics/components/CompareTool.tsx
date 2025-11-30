@@ -14,6 +14,7 @@ import { getMostRecentSeason } from "./CompareTool/utils";
 
 interface CompareToolProps {
   eloData: EloData;
+  division?: "b" | "c";
 }
 
 const SCHOOL_NAME_REGEX = /\s*\([^)]*\)$/;
@@ -181,7 +182,7 @@ const ComparisonResults: React.FC<ComparisonResultsProps> = ({
   );
 };
 
-const CompareTool: React.FC<CompareToolProps> = ({ eloData }) => {
+const CompareTool: React.FC<CompareToolProps> = ({ eloData, division }) => {
   const [school1, setSchool1] = useState<string>("");
   const [school2, setSchool2] = useState<string>("");
   const [school1Search, setSchool1Search] = useState<string>("");
@@ -234,7 +235,8 @@ const CompareTool: React.FC<CompareToolProps> = ({ eloData }) => {
         eloData,
         school1,
         school2,
-        mostRecentSeason
+        mostRecentSeason,
+        division
       );
       setComparisonResults(eventResults);
       setOverallResult(overallResult);

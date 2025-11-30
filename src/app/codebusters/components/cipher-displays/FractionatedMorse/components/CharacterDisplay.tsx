@@ -65,8 +65,13 @@ export function CharacterDisplay({
   darkMode,
   setFocusedCipherLetter,
 }: CharacterDisplayProps) {
+  // Display spaces and other non-letter characters as visible characters
   if (!isLetter) {
-    return <div key={i} className="w-5 h-12 sm:w-6 sm:h-14 mt-1" />;
+    return (
+      <span key={i} className={`inline-block mx-1 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+        {char === " " ? "\u00A0" : char}
+      </span>
+    );
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

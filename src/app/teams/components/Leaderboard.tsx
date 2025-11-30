@@ -27,13 +27,19 @@ interface LeaderboardProps {
   eloData: EloData;
   division: "b" | "c";
   metadata?: Record<string, unknown>;
+  externalDate?: string;
 }
 
 // TournamentDate moved to utils
 
 // Whitelists moved to constants
 
-const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }) => {
+const Leaderboard: React.FC<LeaderboardProps> = ({
+  eloData,
+  division,
+  metadata,
+  externalDate,
+}) => {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<string>("");
   const [selectedState, setSelectedState] = useState<string>("");
@@ -45,6 +51,8 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
   const itemsPerPage = 25;
   const { darkMode } = useTheme();
   const prevSearchTerm = useRef<string>("");
+  const prevExternalDate = useRef<string | undefined>(undefined);
+  const isManualChange = useRef<boolean>(false);
 
   const allSeasons = useMemo(() => collectSeasons(eloData), [eloData]);
 
@@ -74,6 +82,17 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
 
   const lastTournamentDate = tournamentDates[tournamentDates.length - 1]?.date || "";
 
+  // Update selectedDate when externalDate changes (from Charts tab timeline)
+  // Only sync when externalDate actually changes to a new value (not when selectedDate changes manually)
+  useEffect(() => {
+    // Only update if externalDate changed to a new value and we're not in the middle of a manual change
+    if (externalDate && externalDate !== prevExternalDate.current && !isManualChange.current) {
+      setSelectedDate(externalDate);
+      prevExternalDate.current = externalDate;
+    }
+  }, [externalDate]);
+
+  // Initialize selectedDate with last tournament date if not set
   useEffect(() => {
     if (!selectedDate && lastTournamentDate) {
       setSelectedDate(lastTournamentDate);
@@ -84,11 +103,18 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
     setSelectedEvent("");
   }, []);
 
-  const rankingChanges = useMemo(
-    () =>
-      computeRankingChanges(eloData, selectedEvent, selectedSeason, selectedState, selectedDate),
-    [eloData, selectedEvent, selectedSeason, selectedState, selectedDate]
-  );
+  const rankingChanges = useMemo(() => {
+    // Recalculate ranking changes to account for historical data
+    // Pass the fallbackToPreviousSeason flag to computeRankingChanges
+    return computeRankingChanges(
+      eloData,
+      selectedEvent,
+      selectedSeason,
+      selectedState,
+      selectedDate,
+      true
+    );
+  }, [eloData, selectedEvent, selectedSeason, selectedState, selectedDate]);
 
   const getRankingChange = (entry: LeaderboardEntry): number => {
     const key = `${entry.school}-${entry.state}`;
@@ -104,7 +130,8 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
         selectedEvent || undefined,
         selectedSeason,
         1000,
-        selectedDate
+        selectedDate,
+        true // Enable fallback to previous season
       );
 
       if (selectedState) {
@@ -207,7 +234,14 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ eloData, division, metadata }
           tournamentDates={tournamentDates}
           selectedDate={selectedDate}
           darkMode={darkMode}
-          onDateChange={setSelectedDate}
+          onDateChange={(date) => {
+            isManualChange.current = true;
+            setSelectedDate(date);
+            // Reset manual change flag after a short delay
+            setTimeout(() => {
+              isManualChange.current = false;
+            }, 100);
+          }}
         />
 
         <ResultsSummary

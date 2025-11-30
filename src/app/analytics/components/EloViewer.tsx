@@ -240,6 +240,21 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division, metadata }) =>
 
   const dataPointsForSlider = getDataPointsForSlider();
 
+  // Extract date from rangeFilter for leaderboard synchronization
+  // Only sync when in tournament view mode (rangeFilter is only set in tournament mode)
+  const getDateFromRangeFilter = (): string | undefined => {
+    if (viewMode === "tournament" && rangeFilter && dataPointsForSlider.length > 0) {
+      const sortedPoints = [...dataPointsForSlider].sort((a, b) => a.x.getTime() - b.x.getTime());
+      const endDate = sortedPoints[rangeFilter.endIndex]?.x;
+      if (endDate) {
+        return endDate.toISOString().split("T")[0];
+      }
+    }
+    return undefined;
+  };
+
+  const leaderboardDate = getDateFromRangeFilter();
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -340,9 +355,14 @@ const EloViewer: React.FC<EloViewerProps> = ({ eloData, division, metadata }) =>
           />
         )}
         {activeTab === "leaderboard" && (
-          <Leaderboard eloData={eloData} division={division} metadata={metadata} />
+          <Leaderboard
+            eloData={eloData}
+            division={division}
+            metadata={metadata}
+            externalDate={leaderboardDate}
+          />
         )}
-        {activeTab === "compare" && <CompareTool eloData={eloData} />}
+        {activeTab === "compare" && <CompareTool eloData={eloData} division={division} />}
       </div>
     </div>
   );
