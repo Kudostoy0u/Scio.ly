@@ -25,9 +25,10 @@ interface HomeContentProps {
   }>;
   onInvitePerson: () => void;
   onCreateAssignment: () => void;
-  onCreateSubteam: (name: string) => void;
+  onCreateSubteam: (name?: string) => void;
   onEditSubteam: (subteamId: string, newName: string) => void;
   onDeleteSubteam: (subteamId: string, subteamName: string) => void;
+  onReorderSubteams?: (subteamIds: string[]) => void;
   onSubteamChange: (subteamId: string) => void;
   getSubteams: (slug: string) => Array<{
     id: string;
@@ -58,6 +59,7 @@ export function HomeContent({
   onCreateSubteam,
   onEditSubteam,
   onDeleteSubteam,
+  onReorderSubteams,
   onSubteamChange,
   getSubteams,
 }: HomeContentProps) {
@@ -75,6 +77,7 @@ export function HomeContent({
             onCreateSubteam={onCreateSubteam}
             onEditSubteam={onEditSubteam}
             onDeleteSubteam={onDeleteSubteam}
+            onReorderSubteams={onReorderSubteams}
           />
         </Suspense>
       );

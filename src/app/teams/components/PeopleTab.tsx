@@ -4,14 +4,14 @@ import NamePromptModal from "@/app/components/NamePromptModal";
 import { useAuth } from "@/app/contexts/authContext";
 import { useTheme } from "@/app/contexts/themeContext";
 import { useTeamStore } from "@/app/hooks/useTeamStore";
+import { useTeamStore as teamStore } from "@/lib/stores/teamStore";
 import { generateDisplayName, needsNamePrompt } from "@/lib/utils/displayNameUtils";
 import { UserPlus } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Member } from "../types";
 import EventAssignmentModal from "./EventAssignmentModal";
 import InlineInvite from "./InlineInvite";
 import MemberCard from "./MemberCard";
-import RosterLinkIndicator from "./RosterLinkIndicator";
 import { useMemberActions } from "./hooks/useMemberActions";
 import { processMembers } from "./utils/processMembers";
 
@@ -53,12 +53,57 @@ export default function PeopleTab({
   // Load members data when component mounts or subteam changes
   useEffect(() => {
     if (team.slug) {
-      loadMembers(team.slug, selectedSubteam === "all" ? undefined : selectedSubteam);
+      loadMembers(team.slug, selectedSubteam);
     }
   }, [team.slug, selectedSubteam, loadMembers]);
 
+  // Subscribe to cache invalidation events to reload members data
+  // Use a ref to prevent infinite loops from recursive loadMembers calls
+  const isLoadingRef = useRef(false);
+  const lastInvalidatedRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (!team.slug) {
+      return;
+    }
+
+    const { getCacheKey } = teamStore.getState();
+    const cacheKey = getCacheKey("members", team.slug, selectedSubteam);
+
+    let prevTimestamp: number | undefined = teamStore.getState().cacheTimestamps[cacheKey];
+
+    // Subscribe to cache timestamp changes using subscribeWithSelector
+    const unsubscribe = teamStore.subscribe((state) => {
+      const currentTimestamp = state.cacheTimestamps[cacheKey];
+
+      // Only reload if:
+      // 1. Cache was invalidated (timestamp went from a number to undefined)
+      // 2. We're not already loading (prevent infinite loops)
+      // 3. This is a new invalidation (not the same one we just handled)
+      const wasInvalidated = prevTimestamp !== undefined && currentTimestamp === undefined;
+      const isNewInvalidation = lastInvalidatedRef.current !== prevTimestamp;
+
+      if (wasInvalidated && !isLoadingRef.current && isNewInvalidation) {
+        isLoadingRef.current = true;
+        lastInvalidatedRef.current = prevTimestamp;
+
+        loadMembers(team.slug, selectedSubteam)
+          .finally(() => {
+            // Reset loading flag after a short delay to allow cache update to complete
+            setTimeout(() => {
+              isLoadingRef.current = false;
+            }, 100);
+          });
+      }
+
+      prevTimestamp = currentTimestamp;
+    });
+
+    return unsubscribe;
+  }, [team.slug, selectedSubteam, loadMembers]);
+
   // Get members data from store
-  const membersData = getMembers(team.slug, selectedSubteam === "all" ? "all" : selectedSubteam);
+  const membersData = getMembers(team.slug, selectedSubteam);
   // const isLoading = isMembersLoading(team.slug, selectedSubteam === 'all' ? 'all' : selectedSubteam);
   // const error = getMembersError(team.slug, selectedSubteam === 'all' ? 'all' : selectedSubteam);
 
@@ -74,19 +119,6 @@ export default function PeopleTab({
   const [showSubteamDropdown, setShowSubteamDropdown] = useState<string | null>(null);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
 
-  // Roster linking state
-  const [linkStatus, setLinkStatus] = useState<
-    Record<
-      string,
-      {
-        isLinked: boolean;
-        userId?: string;
-        userEmail?: string;
-      }
-    >
-  >({});
-  const [linkStatusLoading, setLinkStatusLoading] = useState(false);
-
   // Get processed members using utility function
   const processedFilteredMembers = useMemo(() => {
     if (!membersData) {
@@ -96,53 +128,6 @@ export default function PeopleTab({
   }, [membersData, pendingLinkInvites, team.division]);
 
   const filteredMembers = processedFilteredMembers;
-
-  // Get roster data from store
-  const { getRoster } = useTeamStore();
-
-  // Extract unique roster names from roster
-  const rosterNames = useMemo(() => {
-    const roster = getRoster?.(team.slug, selectedSubteam === "all" ? "" : selectedSubteam) || {};
-    const names = new Set<string>();
-    for (const eventNames of Object.values(roster)) {
-      if (Array.isArray(eventNames)) {
-        for (const name of eventNames) {
-          if (typeof name === "string") {
-            names.add(name);
-          }
-        }
-      }
-    }
-    return Array.from(names).sort();
-  }, [getRoster, team.slug, selectedSubteam]);
-
-  // Load link status when component mounts or subteam changes
-  useEffect(() => {
-    const loadLinkStatus = async () => {
-      if (!team.slug) {
-        return;
-      }
-
-      try {
-        setLinkStatusLoading(true);
-        const url = `/api/teams/${team.slug}/roster/link-status${
-          selectedSubteam !== "all" ? `?subteamId=${selectedSubteam}` : ""
-        }`;
-        const response = await fetch(url);
-
-        if (response.ok) {
-          const data = await response.json();
-          setLinkStatus(data.linkStatus || {});
-        }
-      } catch (_error) {
-        // Silently handle errors - link status loading will be set to false in finally
-      } finally {
-        setLinkStatusLoading(false);
-      }
-    };
-
-    loadLinkStatus();
-  }, [team.slug, selectedSubteam]);
 
   // Use member actions hook
   const {
@@ -176,7 +161,7 @@ export default function PeopleTab({
 
   // Handle name update completion
   const handleNameUpdate = useCallback(() => {
-    loadMembers(team.slug, selectedSubteam === "all" ? undefined : selectedSubteam);
+    loadMembers(team.slug, selectedSubteam);
     setShowNamePrompt(false);
   }, [loadMembers, team.slug, selectedSubteam]);
 
@@ -187,7 +172,7 @@ export default function PeopleTab({
       if (!(newName && user?.id)) {
         return;
       }
-      loadMembers(team.slug, selectedSubteam === "all" ? undefined : selectedSubteam);
+      loadMembers(team.slug, selectedSubteam);
     };
     window.addEventListener("scio-display-name-updated", onDisplayNameUpdated as EventListener);
     return () => {
@@ -268,7 +253,7 @@ export default function PeopleTab({
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 h-full">
       <div className="flex items-center justify-between">
         <h2 className={`text-2xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
           People
@@ -317,56 +302,6 @@ export default function PeopleTab({
               </option>
             ))}
           </select>
-        </div>
-      )}
-
-      {/* Roster Names Section */}
-      {isCaptain && rosterNames.length > 0 && (
-        <div
-          className={`p-6 rounded-lg border ${
-            darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
-          }`}
-        >
-          <h3 className={`text-xl font-bold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}>
-            Roster Names
-          </h3>
-          <p className={`text-sm mb-4 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-            Link roster names to actual team members. Click the indicator to invite users.
-          </p>
-
-          {linkStatusLoading ? (
-            <div className="flex justify-center py-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {rosterNames.map((name) => (
-                <div
-                  key={name}
-                  className={`flex items-center justify-between p-3 rounded-lg ${
-                    darkMode ? "bg-gray-700" : "bg-gray-50"
-                  }`}
-                >
-                  <span className={darkMode ? "text-white" : "text-gray-900"}>{name}</span>
-                  <RosterLinkIndicator
-                    studentName={name}
-                    isLinked={linkStatus[name]?.isLinked ?? false}
-                    userId={linkStatus[name]?.userId}
-                    userEmail={linkStatus[name]?.userEmail}
-                    teamSlug={team.slug}
-                    subteamId={selectedSubteam === "all" ? "" : selectedSubteam}
-                    onLinkStatusChange={(studentName, isLinked) => {
-                      setLinkStatus((prev) => ({
-                        ...prev,
-                        [studentName]: { ...prev[studentName], isLinked },
-                      }));
-                    }}
-                    darkMode={darkMode}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
 

@@ -1,7 +1,8 @@
-import { invalidateCache } from "@/lib/cache/teamCacheManager";
+import { useTeamStore } from "@/app/hooks/useTeamStore";
+import { handleApiError } from "@/lib/stores/teams/utils";
 import { trpc } from "@/lib/trpc/client";
 import logger from "@/lib/utils/logger";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { toast } from "react-toastify";
 import type { Member } from "../../types";
 import { getDisplayName } from "../../utils/displayNameUtils";
@@ -23,31 +24,57 @@ export function useMemberActions({
   const removeRosterEntryMutation = trpc.teams.removeRosterEntry.useMutation();
   const exitSubteamMutation = trpc.teams.exitSubteam.useMutation();
 
+  // Use Zustand store's invalidateCache for synchronous cache clearing
+  const { invalidateCache } = useTeamStore();
+
+  // Memoize cache invalidation function
   const invalidateMemberCaches = useCallback(
     (subteamId: string) => {
-      invalidateCache("members", teamSlug, "all");
+      invalidateCache(`members-${teamSlug}-all`);
       if (selectedSubteam !== "all") {
-        invalidateCache("members", teamSlug, selectedSubteam);
+        invalidateCache(`members-${teamSlug}-${selectedSubteam}`);
       }
-      invalidateCache("members", teamSlug, subteamId);
+      invalidateCache(`members-${teamSlug}-${subteamId}`);
     },
-    [teamSlug, selectedSubteam]
+    [teamSlug, selectedSubteam, invalidateCache]
   );
 
+  // Use a ref to prevent infinite loops from recursive loadMembers calls
+  const isLoadingRef = useRef(false);
+
   const reloadMembersData = useCallback(async () => {
+    // Prevent recursive calls
+    if (isLoadingRef.current) {
+      return;
+    }
+    
+    isLoadingRef.current = true;
+    try {
     await loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
     await loadMembers(teamSlug, undefined);
+    } finally {
+      // Reset loading flag after a delay to allow cache updates to complete
+      setTimeout(() => {
+        isLoadingRef.current = false;
+      }, 100);
+    }
   }, [teamSlug, selectedSubteam, loadMembers]);
 
   const handleRemoveSelfFromSubteam = useCallback(
     async (subteamId: string) => {
-      await exitSubteamMutation.mutateAsync({
-        teamSlug,
-        subteamId,
-      });
-      toast.success("Removed yourself from subteam");
-      invalidateMemberCaches(subteamId);
-      await reloadMembersData();
+      try {
+        await exitSubteamMutation.mutateAsync({
+          teamSlug,
+          subteamId,
+        });
+        toast.success("Removed yourself from subteam");
+        invalidateMemberCaches(subteamId);
+        await reloadMembersData();
+      } catch (error) {
+        logger.error("Failed to exit subteam:", error);
+        const errorMessage = handleApiError(error, "exitSubteam");
+        toast.error(errorMessage);
+      }
     },
     [teamSlug, exitSubteamMutation, invalidateMemberCaches, reloadMembersData]
   );
@@ -89,18 +116,23 @@ export function useMemberActions({
 
         toast.success(`Removed ${getDisplayName(member)} from ${event} in ${subteamName}`);
 
-        setTimeout(() => {
-          invalidateCache("members", teamSlug, selectedSubteam === "all" ? "all" : selectedSubteam);
-          loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
-          invalidateCache("roster", teamSlug, subteamId);
-        }, 100);
+        // Invalidate all relevant caches immediately using proper cache keys
+        invalidateCache(`members-${teamSlug}-all`);
+        invalidateCache(`members-${teamSlug}-${subteamId}`);
+        if (selectedSubteam !== "all" && selectedSubteam !== subteamId) {
+          invalidateCache(`members-${teamSlug}-${selectedSubteam}`);
+        }
+        invalidateCache(`roster-${teamSlug}-${subteamId}`);
+
+        // Reload data
+        await loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
       } catch (e) {
         logger.error("Failed to remove event badge:", e);
         toast.error("Failed to remove event badge");
         throw e;
       }
     },
-    [teamSlug, selectedSubteam, removeRosterEntryMutation, loadMembers]
+    [teamSlug, selectedSubteam, removeRosterEntryMutation, loadMembers, invalidateCache]
   );
 
   const handleAddEvent = useCallback(
@@ -119,18 +151,23 @@ export function useMemberActions({
 
         toast.success(`Added ${getDisplayName(member)} to ${eventName}`);
 
-        setTimeout(() => {
-          invalidateCache("members", teamSlug, selectedSubteam === "all" ? "all" : selectedSubteam);
-          loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
-          invalidateCache("roster", teamSlug, subteamId);
-        }, 100);
+        // Invalidate all relevant caches immediately using proper cache keys
+        invalidateCache(`members-${teamSlug}-all`);
+        invalidateCache(`members-${teamSlug}-${subteamId}`);
+        if (selectedSubteam !== "all" && selectedSubteam !== subteamId) {
+          invalidateCache(`members-${teamSlug}-${selectedSubteam}`);
+        }
+        invalidateCache(`roster-${teamSlug}-${subteamId}`);
+
+        // Reload data
+        await loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
       } catch (error) {
         logger.error("Failed to add event:", error);
         toast.error("Failed to add event");
         throw error;
       }
     },
-    [teamSlug, selectedSubteam, updateRosterMutation, loadMembers]
+    [teamSlug, selectedSubteam, updateRosterMutation, loadMembers, invalidateCache]
   );
 
   const handleSubteamAssign = useCallback(
@@ -156,9 +193,7 @@ export function useMemberActions({
 
           setTimeout(() => {
             invalidateCache(
-              "members",
-              teamSlug,
-              selectedSubteam === "all" ? "all" : selectedSubteam
+              `members-${teamSlug}-${selectedSubteam === "all" ? "all" : selectedSubteam}`
             );
             loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
           }, 100);
@@ -172,7 +207,7 @@ export function useMemberActions({
         throw error;
       }
     },
-    [teamSlug, selectedSubteam, filteredMembers, loadMembers]
+    [teamSlug, selectedSubteam, filteredMembers, loadMembers, invalidateCache]
   );
 
   const handleInviteSubmit = useCallback(
@@ -329,17 +364,27 @@ export function useMemberActions({
 
       if (response.ok) {
         toast.success(`${member.name} has been removed from the team`);
-        const subteamParam = selectedSubteam === "all" ? "" : `?subteamId=${selectedSubteam}`;
-        const refreshResponse = await fetch(`/api/teams/${teamSlug}/members${subteamParam}`);
-        if (refreshResponse.ok) {
-          loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
+        // Invalidate ALL member caches to ensure fresh data is fetched
+        invalidateCache(`members-${teamSlug}-all`);
+        if (selectedSubteam !== "all") {
+          invalidateCache(`members-${teamSlug}-${selectedSubteam}`);
+        }
+        // Also invalidate roster caches for all subteams this member was on
+        if (member.subteamId) {
+          invalidateCache(`roster-${teamSlug}-${member.subteamId}`);
+        }
+        // Now reload members data
+        await loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
+        // Also reload 'all' view if we're filtering by subteam
+        if (selectedSubteam !== "all") {
+          await loadMembers(teamSlug, undefined);
         }
       } else {
         const error = await response.json();
         toast.error(error.error || "Failed to remove member");
       }
     },
-    [teamSlug, selectedSubteam, loadMembers]
+    [teamSlug, selectedSubteam, loadMembers, invalidateCache]
   );
 
   const removeUnlinkedMember = useCallback(
@@ -357,13 +402,23 @@ export function useMemberActions({
         toast.success(
           `${getDisplayName(member)} has been removed from the roster (${result.removedEntries} entries)`
         );
-        loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
+        // Invalidate ALL member caches to ensure fresh data is fetched
+        invalidateCache(`members-${teamSlug}-all`);
+        if (selectedSubteam !== "all") {
+          invalidateCache(`members-${teamSlug}-${selectedSubteam}`);
+        }
+        // Now reload members data
+        await loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
+        // Also reload 'all' view if we're filtering by subteam
+        if (selectedSubteam !== "all") {
+          await loadMembers(teamSlug, undefined);
+        }
       } else {
         const error = await response.json();
         toast.error(error.error || "Failed to remove roster entry");
       }
     },
-    [teamSlug, selectedSubteam, loadMembers]
+    [teamSlug, selectedSubteam, loadMembers, invalidateCache]
   );
 
   const handleRemoveMember = useCallback(

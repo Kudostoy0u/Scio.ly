@@ -66,14 +66,15 @@ export const dashboardQueriesRouter = router({
               teamId: newTeamUnits.teamId,
               description: newTeamUnits.description,
               createdAt: newTeamUnits.createdAt,
+              order: newTeamUnits.displayOrder,
             })
             .from(newTeamUnits)
             .where(and(eq(newTeamUnits.groupId, groupId), eq(newTeamUnits.status, "active")))
-            .orderBy(newTeamUnits.createdAt)
+            .orderBy(newTeamUnits.displayOrder, newTeamUnits.createdAt)
             .then((subteams) => ({
               subteams: subteams.map((s) => ({
                 id: s.id,
-                name: s.teamId,
+                name: s.description || `Team ${s.teamId}`,
                 team_id: groupId,
                 description: s.description || "",
                 created_at: s.createdAt?.toISOString() || new Date().toISOString(),
@@ -189,7 +190,7 @@ export const dashboardQueriesRouter = router({
         return {
           subteams: subteams.map((s) => ({
             id: s.id,
-            name: s.description || s.teamId,
+            name: s.description || `Team ${s.teamId}`,
             team_id: s.teamId,
             created_at: s.createdAt,
           })),
@@ -260,7 +261,7 @@ export const dashboardQueriesRouter = router({
           },
           subteams: subteams.map((s) => ({
             id: s.id,
-            name: s.teamId,
+            name: s.description || `Team ${s.teamId}`,
             team_id: groupId,
             description: s.description || "",
             created_at: s.createdAt?.toISOString() || new Date().toISOString(),

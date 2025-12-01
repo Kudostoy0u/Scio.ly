@@ -61,7 +61,11 @@
           "options": {
             "maxAllowedComplexity": 30
           }
-        }
+        },
+        "noExcessiveNestedTestSuites": "error"
+      },
+      "performance": {
+        "noAccumulatingSpread": "warn"
       }
     }
   },

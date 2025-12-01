@@ -14,6 +14,7 @@ import {
   validateRequest,
 } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
+import { syncPeopleFromRosterForSubteam } from "@/lib/trpc/routers/teams/helpers/people-sync";
 import {
   handleError,
   handleForbiddenError,
@@ -314,6 +315,9 @@ export async function POST(
           updatedAt: new Date(),
         },
       });
+
+    // Sync people table with roster changes
+    await syncPeopleFromRosterForSubteam(subteamId);
 
     return NextResponse.json({ message: "Roster data saved successfully" });
   } catch (error) {

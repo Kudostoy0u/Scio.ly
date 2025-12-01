@@ -104,7 +104,16 @@ export default function UnlimitedPracticePage({
     }
 
     loadBatch(routerParams);
-  }, [data.length, isLoading, initialRouterData, router, loadBatch, setData, setIsLoading, fetchStartedRef]);
+  }, [
+    data.length,
+    isLoading,
+    initialRouterData,
+    router,
+    loadBatch,
+    setData,
+    setIsLoading,
+    fetchStartedRef,
+  ]);
 
   // Ensure the current question index is valid/stable once data is loaded
   useEffect(() => {

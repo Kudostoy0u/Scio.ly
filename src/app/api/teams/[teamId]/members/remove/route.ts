@@ -7,6 +7,7 @@ import {
 } from "@/lib/db/schema/teams";
 import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
+import { syncPeopleFromRosterForSubteam } from "@/lib/trpc/routers/teams/helpers/people-sync";
 import {
   handleError,
   handleForbiddenError,
@@ -110,14 +111,21 @@ export async function POST(
       );
 
     // Purge their roster entries across the group using Drizzle ORM
-    await dbPg
+    const deletedRoster = await dbPg
       .delete(newTeamRosterData)
       .where(
         and(
           eq(newTeamRosterData.userId, userId),
           inArray(newTeamRosterData.teamUnitId, teamUnitIds)
         )
-      );
+      )
+      .returning({ teamUnitId: newTeamRosterData.teamUnitId });
+
+    // Sync people table for all affected subteams
+    const affectedSubteamIds = [...new Set(deletedRoster.map((r) => r.teamUnitId))];
+    for (const subteamIdToSync of affectedSubteamIds) {
+      await syncPeopleFromRosterForSubteam(subteamIdToSync);
+    }
 
     return NextResponse.json({ message: "Member removed successfully" });
   } catch (error) {

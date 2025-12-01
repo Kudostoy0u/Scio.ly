@@ -5,12 +5,12 @@ import { useTheme } from "@/app/contexts/themeContext";
 import logger from "@/lib/utils/logger";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Filters } from "./Leaderboard/components/Filters";
-import { LeaderboardTable } from "./Leaderboard/components/LeaderboardTable";
-import { Pagination } from "./Leaderboard/components/Pagination";
-import { ResultsSummary } from "./Leaderboard/components/ResultsSummary";
-import { SliderStyles } from "./Leaderboard/components/SliderStyles";
-import { TimelineSlider } from "./Leaderboard/components/TimelineSlider";
+import { Filters } from "./leaderboard/components/Filters";
+import { LeaderboardTable } from "./leaderboard/components/LeaderboardTable";
+import { Pagination } from "./leaderboard/components/Pagination";
+import { ResultsSummary } from "./leaderboard/components/ResultsSummary";
+import { SliderStyles } from "./leaderboard/components/SliderStyles";
+import { TimelineSlider } from "./leaderboard/components/TimelineSlider";
 import { EVENT_WHITELISTS } from "./leaderboard/constants";
 import {
   type TournamentDate,

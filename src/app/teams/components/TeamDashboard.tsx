@@ -73,9 +73,8 @@ export default function TeamDashboard({
   const { userTeams, getSubteams } = useTeamStore();
 
   // Use custom hooks for handlers
-  const { handleCreateSubteam, handleEditSubteam, handleDeleteSubteam } = useSubteamHandlers(
-    team.slug
-  );
+  const { handleCreateSubteam, handleEditSubteam, handleDeleteSubteam, handleReorderSubteams } =
+    useSubteamHandlers(team.slug);
   const { handleExitTeam, handleArchiveTeam } = useTeamActions(team.slug);
 
   // Set active subteam when subteams are available
@@ -182,8 +181,8 @@ export default function TeamDashboard({
     setShowArchiveModal(false);
   };
 
-  const handleCreateSubteamWrapper = async (name: string) => {
-    await handleCreateSubteam(name, setActiveSubteamId);
+  const handleCreateSubteamWrapper = async (name?: string) => {
+    await handleCreateSubteam(setActiveSubteamId, name);
   };
 
   const handleDeleteSubteamClick = (subteamId: string, subteamName: string) => {
@@ -271,6 +270,7 @@ export default function TeamDashboard({
               onCreateSubteam={handleCreateSubteamWrapper}
               onEditSubteam={handleEditSubteam}
               onDeleteSubteam={handleDeleteSubteamClick}
+              onReorderSubteams={handleReorderSubteams}
               onSubteamChange={setActiveSubteamId}
               getSubteams={getSubteams}
             />

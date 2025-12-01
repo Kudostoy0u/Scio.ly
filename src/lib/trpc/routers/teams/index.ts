@@ -3,6 +3,7 @@ import { basicQueriesRouter } from "./operations/basic-queries";
 import { dashboardQueriesRouter } from "./operations/dashboard-queries";
 import { memberOperationsRouter } from "./operations/member-operations";
 import { rosterOperationsRouter } from "./operations/roster-operations";
+import { streamOperationsRouter } from "./operations/stream-operations";
 import { subteamOperationsRouter } from "./operations/subteam-operations";
 import { teamMutationsRouter } from "./operations/team-mutations";
 
@@ -18,8 +19,9 @@ import { teamMutationsRouter } from "./operations/team-mutations";
  * - subteam-operations.ts: CRUD operations for subteams
  * - roster-operations.ts: Roster management operations (create, update, delete)
  * - member-operations.ts: Member and invitation management operations
+ * - stream-operations.ts: Stream posts, timers, and tournaments (batchable)
  *
- * Total endpoints: 24
+ * Total endpoints: 28
  * Largest file: 515 lines (all files are now under 600 lines)
  */
 export const teamsRouter = router({
@@ -36,6 +38,12 @@ export const teamsRouter = router({
   getTeamDashboard: dashboardQueriesRouter.getTeamDashboard,
   getTeamPageData: dashboardQueriesRouter.getTeamPageData,
 
+  // Stream operations (4 endpoints - batchable)
+  getStream: streamOperationsRouter.getStream,
+  getTimers: streamOperationsRouter.getTimers,
+  getTournaments: streamOperationsRouter.getTournaments,
+  getStreamData: streamOperationsRouter.getStreamData, // Batch endpoint for stream + timers + tournaments
+
   // Team mutation operations (5 endpoints)
   createTeam: teamMutationsRouter.createTeam,
   joinTeam: teamMutationsRouter.joinTeam,
@@ -43,10 +51,11 @@ export const teamsRouter = router({
   exitTeam: teamMutationsRouter.exitTeam,
   archiveTeam: teamMutationsRouter.archiveTeam,
 
-  // Subteam operations (3 endpoints)
+  // Subteam operations (4 endpoints)
   createSubteam: subteamOperationsRouter.createSubteam,
   updateSubteam: subteamOperationsRouter.updateSubteam,
   deleteSubteam: subteamOperationsRouter.deleteSubteam,
+  reorderSubteams: subteamOperationsRouter.reorderSubteams,
 
   // Roster operations (3 endpoints)
   updateRoster: rosterOperationsRouter.updateRoster,

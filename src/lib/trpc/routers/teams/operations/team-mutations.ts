@@ -194,25 +194,67 @@ export const teamMutationsRouter = router({
           throw new TRPCError({ code: "NOT_FOUND", message: "Subteam not found" });
         }
 
-        const membershipResult = await dbPg
+        // Get all active memberships for this user in this group
+        const allMembershipsResult = await dbPg
           .select({
             id: newTeamMemberships.id,
             role: newTeamMemberships.role,
+            teamId: newTeamMemberships.teamId,
           })
           .from(newTeamMemberships)
+          .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
           .where(
             and(
               eq(newTeamMemberships.userId, ctx.user.id),
-              eq(newTeamMemberships.teamId, input.subteamId),
+              eq(newTeamUnits.groupId, groupId),
               eq(newTeamMemberships.status, "active")
             )
-          )
-          .limit(1);
+          );
 
-        if (membershipResult.length === 0) {
+        const membershipToExit = allMembershipsResult.find((m) => m.teamId === input.subteamId);
+
+        if (!membershipToExit) {
+          // No membership to exit, just remove roster entries
+          await dbPg
+            .delete(newTeamRosterData)
+            .where(
+              and(
+                eq(newTeamRosterData.userId, ctx.user.id),
+                eq(newTeamRosterData.teamUnitId, input.subteamId)
+              )
+            );
+
+          // Sync people table
+          const { syncPeopleFromRosterForSubteam } = await import("../helpers/people-sync");
+          await syncPeopleFromRosterForSubteam(input.subteamId);
+
           return { message: "Successfully exited subteam" };
         }
 
+        // Check if user is a captain/co_captain and if this is their only membership
+        const isCaptain = ["captain", "co_captain"].includes(membershipToExit.role);
+        const hasOtherMemberships = allMembershipsResult.length > 1;
+
+        // CRITICAL: If captain/co_captain with only one membership, don't deactivate it
+        // Just remove roster entries - they stay as captain but not on roster
+        if (isCaptain && !hasOtherMemberships) {
+          await dbPg
+            .delete(newTeamRosterData)
+            .where(
+              and(
+                eq(newTeamRosterData.userId, ctx.user.id),
+                eq(newTeamRosterData.teamUnitId, input.subteamId)
+              )
+            );
+
+          // Sync people table
+          const { syncPeopleFromRosterForSubteam } = await import("../helpers/people-sync");
+          await syncPeopleFromRosterForSubteam(input.subteamId);
+
+          return { message: "Removed from roster, but kept captain status" };
+        }
+
+        // For regular members or captains with multiple memberships, deactivate the membership
         const updateResult = await dbPg
           .update(newTeamMemberships)
           .set({ status: "inactive" })
@@ -225,20 +267,22 @@ export const teamMutationsRouter = router({
           )
           .returning({ id: newTeamMemberships.id });
 
-        const deleteResult = await dbPg
+        await dbPg
           .delete(newTeamRosterData)
           .where(
             and(
               eq(newTeamRosterData.userId, ctx.user.id),
               eq(newTeamRosterData.teamUnitId, input.subteamId)
             )
-          )
-          .returning({ id: newTeamRosterData.id });
+          );
+
+        // Sync people table for affected subteam
+        const { syncPeopleFromRosterForSubteam } = await import("../helpers/people-sync");
+        await syncPeopleFromRosterForSubteam(input.subteamId);
 
         if (process.env.NODE_ENV === "development") {
           logger.info("exitSubteam completed", {
             membershipUpdated: updateResult.length,
-            rosterEntriesDeleted: deleteResult.length,
             subteamId: input.subteamId,
             userId: ctx.user.id,
           });
@@ -380,9 +424,13 @@ export const teamMutationsRouter = router({
         return validatedResult;
       } catch (error) {
         logger.error("Failed to exit team:", error);
+        if (error instanceof TRPCError) {
+          throw error;
+        }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to exit team",
+          message:
+            error instanceof Error ? error.message : "Failed to exit team. Please try again.",
         });
       }
     }),
@@ -506,9 +554,13 @@ export const teamMutationsRouter = router({
         return validatedResult;
       } catch (error) {
         logger.error("Failed to archive team:", error);
+        if (error instanceof TRPCError) {
+          throw error;
+        }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to archive team",
+          message:
+            error instanceof Error ? error.message : "Failed to archive team. Please try again.",
         });
       }
     }),

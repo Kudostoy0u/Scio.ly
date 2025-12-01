@@ -94,7 +94,7 @@ export function useTeamStore() {
       try {
         await fetchMembers(teamSlug, subteamId);
       } catch (_error) {
-        toast.error("Failed to load members");
+        toast.error("Failed to load members: " + _error);
       }
     },
     [fetchMembers]
@@ -407,6 +407,7 @@ export function useTeamStore() {
 
     // Cache management
     invalidateCache,
+    getCacheKey,
 
     // Optimistic roster updates
     addRosterEntry,

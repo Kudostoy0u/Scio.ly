@@ -306,10 +306,7 @@ export async function POST(request: NextRequest) {
 
             // Try longquotes table
             try {
-              await db
-                .update(longquotesTable)
-                .set(payload)
-                .where(eq(longquotesTable.id, quoteId));
+              await db.update(longquotesTable).set(payload).where(eq(longquotesTable.id, quoteId));
               logger.info("Applied edit to longquotes table by ID", {
                 quoteId,
                 originalQuote: originalQuoteText,
@@ -377,19 +374,19 @@ export async function POST(request: NextRequest) {
                     eq(longquotesTable.author, originalAuthor)
                   )
                 );
-            logger.info("Applied edit to longquotes table by content", {
-              originalQuote: originalQuoteText,
-              editedQuote: editedQuoteText,
-              originalAuthor,
-              editedAuthor,
-            });
-            logger.dev.structured("info", "Quote updated in longquotes table by content", {
-              cipherType,
-              originalQuote: originalQuoteText,
-              editedQuote: editedQuoteText,
-              originalAuthor,
-              editedAuthor,
-            });
+              logger.info("Applied edit to longquotes table by content", {
+                originalQuote: originalQuoteText,
+                editedQuote: editedQuoteText,
+                originalAuthor,
+                editedAuthor,
+              });
+              logger.dev.structured("info", "Quote updated in longquotes table by content", {
+                cipherType,
+                originalQuote: originalQuoteText,
+                editedQuote: editedQuoteText,
+                originalAuthor,
+                editedAuthor,
+              });
               updated = true;
             } catch (error2) {
               logger.error("Could not locate quote in either table by content:", error2);

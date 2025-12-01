@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown, ChevronRight, RotateCcw } from "lucide-react";
+import type React from "react";
 import EventInput from "./EventInput";
 import type { ConflictBlock as ConflictBlockType } from "./rosterUtils";
 import { getGroupColors } from "./rosterUtils";
@@ -46,6 +47,13 @@ export default function ConflictBlock({
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleGroupClick();
+    }
+  };
+
   if (isLastGroup) {
     return (
       <div className={`rounded-lg border-2 p-4 lg:col-span-2 ${colors.bg} ${colors.border}`}>
@@ -55,6 +63,7 @@ export default function ConflictBlock({
             "flex items-center justify-between mb-4 cursor-pointer md:cursor-default w-full text-left"
           }
           onClick={handleGroupClick}
+          onKeyDown={handleKeyDown}
         >
           <h3 className={`text-lg font-semibold ${colors.text}`}>{group.label}</h3>
           <div className="flex items-center gap-2">
@@ -133,6 +142,7 @@ export default function ConflictBlock({
           "flex items-center justify-between mb-4 cursor-pointer md:cursor-default w-full text-left"
         }
         onClick={handleGroupClick}
+        onKeyDown={handleKeyDown}
       >
         <h3 className={`text-lg font-semibold ${colors.text}`}>{group.label}</h3>
         <div className="flex items-center gap-2">

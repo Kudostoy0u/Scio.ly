@@ -54,6 +54,7 @@ export function supportsIdEvent(eventName?: string): boolean {
     "Astronomy",
     "Designer Genes",
     "Forensics",
+    "Machines",
     "Meteorology",
     "Potions and Poisons",
     "Solar System",

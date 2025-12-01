@@ -15,7 +15,10 @@ export function MethodologySection({ darkMode }: MethodologySectionProps) {
       </h2>
       <div className="max-w-4xl mx-auto">
         <p className={`text-center text-lg mb-8 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-          We obtained Science Olympiad tournament archives from the internet if public, or asked Tournament Directors for permission if private. Then, we ran PDF and .docx files of past tests through the latest Google Gemini model to filter these questions for quality into a machine-readable format, which are served through a custom API.
+          We obtained Science Olympiad tournament archives from the internet if public, or asked
+          Tournament Directors for permission if private. Then, we ran PDF and .docx files of past
+          tests through the latest Google Gemini model to filter these questions for quality into a
+          machine-readable format, which are served through a custom API.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <MethodologyCard

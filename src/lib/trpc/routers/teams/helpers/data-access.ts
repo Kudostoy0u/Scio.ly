@@ -88,7 +88,8 @@ export async function getMembersWithSubteamMemberships(whereCondition: ReturnTyp
       role: newTeamMemberships.role,
       joinedAt: newTeamMemberships.joinedAt,
       subteamId: newTeamMemberships.teamId,
-      subteamName: newTeamUnits.teamId,
+      // Use description for display name, fallback to "Team {teamId}"
+      subteamName: sql<string>`COALESCE(${newTeamUnits.description}, CONCAT('Team ', ${newTeamUnits.teamId}))`,
       email: users.email,
       displayName: users.displayName,
       firstName: users.firstName,
@@ -189,9 +190,11 @@ export async function getActiveSubteams(groupId: string) {
       teamId: newTeamUnits.teamId,
       description: newTeamUnits.description,
       createdAt: newTeamUnits.createdAt,
+      order: newTeamUnits.displayOrder,
     })
     .from(newTeamUnits)
-    .where(and(eq(newTeamUnits.groupId, groupId), eq(newTeamUnits.status, "active")));
+    .where(and(eq(newTeamUnits.groupId, groupId), eq(newTeamUnits.status, "active")))
+    .orderBy(newTeamUnits.displayOrder, newTeamUnits.createdAt);
 }
 
 export async function getAssignmentsForSubteams(subteamIds: string[]) {

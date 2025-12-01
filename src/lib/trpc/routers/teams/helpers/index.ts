@@ -36,3 +36,12 @@ export {
   buildSubteamWhereCondition,
   ensureUserDisplayName,
 } from "./validation";
+export {
+  syncPeopleFromRosterForSubteam,
+  syncPeopleFromRosterForGroup,
+  syncRosterFromPeopleEntry,
+  addEventToPerson,
+  removeEventFromPerson,
+  changePersonSubteam,
+  removePersonFromSubteam,
+} from "./people-sync";

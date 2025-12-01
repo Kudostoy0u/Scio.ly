@@ -1,12 +1,8 @@
 import { dbPg } from "@/lib/db";
-import {
-  newTeamGroups,
-  newTeamMemberships,
-  newTeamRosterData,
-  newTeamUnits,
-} from "@/lib/db/schema/teams";
+import { newTeamGroups, newTeamRosterData, newTeamUnits } from "@/lib/db/schema/teams";
 import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
+import { syncPeopleFromRosterForSubteam } from "@/lib/trpc/routers/teams/helpers/people-sync";
 import {
   handleError,
   handleForbiddenError,
@@ -121,10 +117,18 @@ export async function POST(
           )
           .returning({ teamUnitId: newTeamRosterData.teamUnitId });
 
+        // Sync people table for affected subteams
+        const affectedSubteamIds = [...new Set(deleteByUserEvent.map((r) => r.teamUnitId))];
+        for (const subteamIdToSync of affectedSubteamIds) {
+          await syncPeopleFromRosterForSubteam(subteamIdToSync);
+        }
+
         return NextResponse.json({ removedEntries: deleteByUserEvent.length });
       }
       if (subteamId) {
-        // Remove roster entries and team membership for this user from specific subteam only using Drizzle ORM
+        // Remove roster entries for this user from specific subteam only
+        // NOTE: Do NOT remove membership - membership is separate from roster!
+        // A captain can be on the team without being on any roster.
         const deleteByUserSubteam = await dbPg
           .delete(newTeamRosterData)
           .where(
@@ -132,16 +136,13 @@ export async function POST(
           )
           .returning({ teamUnitId: newTeamRosterData.teamUnitId });
 
-        // Also remove team membership for this user from the specific subteam
-        await dbPg
-          .delete(newTeamMemberships)
-          .where(
-            and(eq(newTeamMemberships.userId, userId), eq(newTeamMemberships.teamId, subteamId))
-          );
+        // Sync people table for this subteam
+        await syncPeopleFromRosterForSubteam(subteamId);
 
         return NextResponse.json({ removedEntries: deleteByUserSubteam.length });
       }
-      // Remove all roster entries AND team memberships for this user across the group using Drizzle ORM
+      // Remove all roster entries for this user across the group
+      // NOTE: Do NOT remove memberships - membership is separate from roster!
       const deleteByUser = await dbPg
         .delete(newTeamRosterData)
         .where(
@@ -152,15 +153,11 @@ export async function POST(
         )
         .returning({ teamUnitId: newTeamRosterData.teamUnitId });
 
-      // Also remove team memberships for this user within the group
-      await dbPg
-        .delete(newTeamMemberships)
-        .where(
-          and(
-            eq(newTeamMemberships.userId, userId),
-            inArray(newTeamMemberships.teamId, teamUnitIds)
-          )
-        );
+      // Sync people table for all affected subteams
+      const affectedSubteamIds = [...new Set(deleteByUser.map((r) => r.teamUnitId))];
+      for (const subteamIdToSync of affectedSubteamIds) {
+        await syncPeopleFromRosterForSubteam(subteamIdToSync);
+      }
 
       return NextResponse.json({ removedEntries: deleteByUser.length });
     }
@@ -186,7 +183,13 @@ export async function POST(
           sql`LOWER(COALESCE(${newTeamRosterData.studentName}, '')) = LOWER(${studentName.trim()})`
         )
       )
-      .returning({ id: newTeamRosterData.id });
+      .returning({ teamUnitId: newTeamRosterData.teamUnitId });
+
+    // Sync people table for all affected subteams
+    const affectedSubteamIds = [...new Set(deleteByName.map((r) => r.teamUnitId))];
+    for (const subteamIdToSync of affectedSubteamIds) {
+      await syncPeopleFromRosterForSubteam(subteamIdToSync);
+    }
 
     return NextResponse.json({ removedEntries: deleteByName.length });
   } catch (error) {

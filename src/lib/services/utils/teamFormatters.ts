@@ -23,7 +23,7 @@ export function formatTeamWithDetails(
 ): TeamWithDetails {
   return {
     id: team.id,
-    name: team.teamId,
+    name: team.description || `Team ${team.teamId}`,
     slug: team.slug,
     school: team.school,
     division: team.division,

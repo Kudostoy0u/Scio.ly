@@ -23,10 +23,150 @@ import {
   determineUserIdToLink,
   normalizeEventName,
   resolveTeamSlugToGroupId,
+  syncPeopleFromRosterForSubteam,
   validateSubteamBelongsToGroup,
 } from "../helpers";
 
 const InsertRosterDataSchema = createInsertSchema(newTeamRosterData);
+
+// Helper function to delete roster entries by userId
+async function deleteRosterByUserId(
+  userId: string,
+  eventName: string | undefined,
+  subteamId: string | undefined,
+  groupId: string
+): Promise<{ removedEntries: number; affectedSubteamIds: Set<string> }> {
+  const affectedSubteamIds = new Set<string>();
+  let removedEntries = 0;
+
+  if (eventName?.trim() && subteamId) {
+    // Remove specific event for user from specific subteam
+    const result = await dbPg
+      .delete(newTeamRosterData)
+      .where(
+        and(
+          eq(newTeamRosterData.userId, userId),
+          eq(newTeamRosterData.eventName, eventName.trim()),
+          eq(newTeamRosterData.teamUnitId, subteamId)
+        )
+      )
+      .returning({ teamUnitId: newTeamRosterData.teamUnitId });
+
+    removedEntries = result.length;
+    affectedSubteamIds.add(subteamId);
+  } else if (eventName?.trim()) {
+    // Remove specific event for user from ALL subteams in group
+    const result = await dbPg
+      .delete(newTeamRosterData)
+      .where(
+        and(
+          eq(newTeamRosterData.userId, userId),
+          eq(newTeamRosterData.eventName, eventName.trim()),
+          sql`${newTeamRosterData.teamUnitId} IN (
+            SELECT id FROM new_team_units WHERE group_id = ${groupId} AND status = 'active'
+          )`
+        )
+      )
+      .returning({ teamUnitId: newTeamRosterData.teamUnitId });
+
+    removedEntries = result.length;
+    for (const r of result) {
+      affectedSubteamIds.add(r.teamUnitId);
+    }
+  } else if (subteamId) {
+    // Remove roster entries for this user from specific subteam
+    const result = await dbPg
+      .delete(newTeamRosterData)
+      .where(and(eq(newTeamRosterData.userId, userId), eq(newTeamRosterData.teamUnitId, subteamId)))
+      .returning({ teamUnitId: newTeamRosterData.teamUnitId });
+
+    removedEntries = result.length;
+    affectedSubteamIds.add(subteamId);
+  } else {
+    // Remove all roster entries for this user
+    const result = await dbPg
+      .delete(newTeamRosterData)
+      .where(
+        and(
+          eq(newTeamRosterData.userId, userId),
+          sql`${newTeamRosterData.teamUnitId} IN (
+            SELECT id FROM new_team_units WHERE group_id = ${groupId} AND status = 'active'
+          )`
+        )
+      )
+      .returning({ teamUnitId: newTeamRosterData.teamUnitId });
+
+    removedEntries = result.length;
+    for (const r of result) {
+      affectedSubteamIds.add(r.teamUnitId);
+    }
+  }
+
+  return { removedEntries, affectedSubteamIds };
+}
+
+// Helper function to delete roster entries by studentName
+async function deleteRosterByStudentName(
+  studentName: string,
+  eventName: string | undefined,
+  subteamId: string | undefined,
+  groupId: string
+): Promise<{ removedEntries: number; affectedSubteamIds: Set<string> }> {
+  const affectedSubteamIds = new Set<string>();
+  let removedEntries = 0;
+  const trimmedName = studentName.trim();
+
+  if (eventName?.trim() && subteamId) {
+    // Remove specific event for unlinked person from specific subteam
+    const result = await dbPg
+      .delete(newTeamRosterData)
+      .where(
+        and(
+          sql`LOWER(COALESCE(${newTeamRosterData.studentName},'')) = LOWER(${trimmedName})`,
+          eq(newTeamRosterData.eventName, eventName.trim()),
+          eq(newTeamRosterData.teamUnitId, subteamId)
+        )
+      )
+      .returning({ teamUnitId: newTeamRosterData.teamUnitId });
+
+    removedEntries = result.length;
+    affectedSubteamIds.add(subteamId);
+  } else if (subteamId) {
+    // Remove all entries for unlinked person from specific subteam
+    const result = await dbPg
+      .delete(newTeamRosterData)
+      .where(
+        and(
+          sql`LOWER(COALESCE(${newTeamRosterData.studentName},'')) = LOWER(${trimmedName})`,
+          eq(newTeamRosterData.teamUnitId, subteamId)
+        )
+      )
+      .returning({ teamUnitId: newTeamRosterData.teamUnitId });
+
+    removedEntries = result.length;
+    affectedSubteamIds.add(subteamId);
+  } else {
+    // Remove all entries for unlinked person from ALL subteams
+    const result = await dbPg
+      .delete(newTeamRosterData)
+      .where(
+        and(
+          sql`LOWER(COALESCE(${newTeamRosterData.studentName},'')) = LOWER(${trimmedName})`,
+          sql`${newTeamRosterData.teamUnitId} IN (
+            SELECT id FROM new_team_units WHERE group_id = ${groupId} AND status = 'active'
+          )`
+        )
+      )
+      .returning({ teamUnitId: newTeamRosterData.teamUnitId });
+
+    removedEntries = result.length;
+    for (const r of result) {
+      affectedSubteamIds.add(r.teamUnitId);
+    }
+  }
+
+  return { removedEntries, affectedSubteamIds };
+}
 
 export const rosterOperationsRouter = router({
   // Update a single roster entry
@@ -74,6 +214,9 @@ export const rosterOperationsRouter = router({
               updatedAt: new Date(),
             },
           });
+
+        // Sync people table with roster changes
+        await syncPeopleFromRosterForSubteam(input.subteamId);
 
         const result = { message: "Roster data saved successfully" };
 
@@ -201,23 +344,19 @@ export const rosterOperationsRouter = router({
           };
         });
 
+        // CRITICAL: Delete all existing roster entries for this subteam first
+        // This ensures that cleared entries (empty slots) are actually removed
+        await dbPg
+          .delete(newTeamRosterData)
+          .where(eq(newTeamRosterData.teamUnitId, input.subteamId));
+
+        // Then insert only the new non-empty entries
         if (rosterEntriesToInsert.length > 0) {
-          await dbPg
-            .insert(newTeamRosterData)
-            .values(rosterEntriesToInsert)
-            .onConflictDoUpdate({
-              target: [
-                newTeamRosterData.teamUnitId,
-                newTeamRosterData.eventName,
-                newTeamRosterData.slotIndex,
-              ],
-              set: {
-                studentName: sql`excluded.student_name`,
-                userId: sql`excluded.user_id`,
-                updatedAt: new Date(),
-              },
-            });
+          await dbPg.insert(newTeamRosterData).values(rosterEntriesToInsert);
         }
+
+        // Sync people table with roster changes (this will remove orphaned people entries)
+        await syncPeopleFromRosterForSubteam(input.subteamId);
 
         return {
           message: `Bulk roster update completed for ${rosterEntriesToInsert.length} entries`,
@@ -272,79 +411,36 @@ export const rosterOperationsRouter = router({
         }
 
         let removedEntries = 0;
+        const affectedSubteamIds = new Set<string>();
 
         if (input.userId) {
-          if (input.eventName?.trim()) {
-            const deleteByUserEvent = await dbPg
-              .delete(newTeamRosterData)
-              .where(
-                and(
-                  eq(newTeamRosterData.userId, input.userId),
-                  eq(newTeamRosterData.eventName, input.eventName.trim()),
-                  sql`${newTeamRosterData.teamUnitId} IN (
-                    SELECT id FROM new_team_units WHERE group_id = ${groupId} AND status = 'active'
-                  )`
-                )
-              )
-              .returning({ teamUnitId: newTeamRosterData.teamUnitId });
-
-            removedEntries = deleteByUserEvent.length;
-          } else if (input.subteamId) {
-            const deleteByUserSubteam = await dbPg
-              .delete(newTeamRosterData)
-              .where(
-                and(
-                  eq(newTeamRosterData.userId, input.userId),
-                  eq(newTeamRosterData.teamUnitId, input.subteamId)
-                )
-              )
-              .returning({ teamUnitId: newTeamRosterData.teamUnitId });
-
-            removedEntries = deleteByUserSubteam.length;
-
-            await dbPg
-              .delete(newTeamMemberships)
-              .where(
-                and(
-                  eq(newTeamMemberships.userId, input.userId),
-                  eq(newTeamMemberships.teamId, input.subteamId)
-                )
-              );
-          } else {
-            const deleteByUser = await dbPg
-              .delete(newTeamRosterData)
-              .where(
-                and(
-                  eq(newTeamRosterData.userId, input.userId),
-                  sql`${newTeamRosterData.teamUnitId} IN (
-                      SELECT id FROM new_team_units WHERE group_id = ${groupId} AND status = 'active'
-                    )`
-                )
-              )
-              .returning({ teamUnitId: newTeamRosterData.teamUnitId });
-
-            removedEntries = deleteByUser.length;
-
-            await dbPg.delete(newTeamMemberships).where(
-              sql`${newTeamMemberships.teamId} IN (
-                    SELECT id FROM new_team_units WHERE group_id = ${groupId}
-                  )`
-            );
+          // NOTE: Do NOT remove membership - membership is separate from roster!
+          const result = await deleteRosterByUserId(
+            input.userId,
+            input.eventName,
+            input.subteamId,
+            groupId
+          );
+          removedEntries = result.removedEntries;
+          for (const id of result.affectedSubteamIds) {
+            affectedSubteamIds.add(id);
           }
         } else if (input.studentName?.trim()) {
-          const deleteByName = await dbPg
-            .delete(newTeamRosterData)
-            .where(
-              and(
-                sql`LOWER(COALESCE(${newTeamRosterData.studentName},'')) = LOWER(${input.studentName.trim()})`,
-                sql`${newTeamRosterData.teamUnitId} IN (
-                  SELECT id FROM new_team_units WHERE group_id = ${groupId} AND status = 'active'
-                )`
-              )
-            )
-            .returning({ teamUnitId: newTeamRosterData.teamUnitId });
+          const result = await deleteRosterByStudentName(
+            input.studentName,
+            input.eventName,
+            input.subteamId,
+            groupId
+          );
+          removedEntries = result.removedEntries;
+          for (const id of result.affectedSubteamIds) {
+            affectedSubteamIds.add(id);
+          }
+        }
 
-          removedEntries = deleteByName.length;
+        // Sync people table for all affected subteams
+        for (const subteamId of Array.from(affectedSubteamIds)) {
+          await syncPeopleFromRosterForSubteam(subteamId);
         }
 
         return { removedEntries };

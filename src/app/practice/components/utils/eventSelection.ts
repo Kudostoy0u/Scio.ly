@@ -18,6 +18,7 @@ const PICTURE_QUESTION_EVENTS = [
   "Astronomy",
   "Designer Genes",
   "Forensics",
+  "Machines",
   "Meteorology",
   "Potions and Poisons",
   "Solar System",

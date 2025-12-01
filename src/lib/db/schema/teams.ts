@@ -46,6 +46,7 @@ export const newTeamUnits = pgTable("new_team_units", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   settings: jsonb("settings").default("{}"),
   status: text("status").default("active"),
+  displayOrder: bigint("display_order", { mode: "number" }).default(0),
 });
 
 // ==================== TEAM MEMBERSHIPS ====================

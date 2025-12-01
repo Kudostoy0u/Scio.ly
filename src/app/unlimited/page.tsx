@@ -1,4 +1,4 @@
-import Content from "@/app/unlimited/Content";
+import Content from "@/app/unlimited/content";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 

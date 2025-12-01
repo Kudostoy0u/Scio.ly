@@ -28,9 +28,10 @@ interface RosterTabProps {
   activeSubteamId?: string | null;
   subteams?: Subteam[];
   onSubteamChange?: (subteamId: string) => void;
-  onCreateSubteam?: (name: string) => void;
+  onCreateSubteam?: (name?: string) => void;
   onEditSubteam?: (subteamId: string, newName: string) => void;
   onDeleteSubteam?: (subteamId: string, subteamName: string) => void;
+  onReorderSubteams?: (subteamIds: string[]) => void;
 }
 
 export default function RosterTab({
@@ -43,6 +44,7 @@ export default function RosterTab({
   onCreateSubteam,
   onEditSubteam,
   onDeleteSubteam,
+  onReorderSubteams,
 }: RosterTabProps) {
   const { darkMode } = useTheme();
   const { invalidateCache } = useTeamStore();
@@ -214,20 +216,14 @@ export default function RosterTab({
         }
       }
 
-      // Single bulk API call instead of multiple individual calls
-      if (rosterEntries.length > 0) {
+      // Single bulk API call - ALWAYS call even with empty entries to delete cleared slots
         await updateRosterBulkMutation.mutateAsync({
           teamSlug: team.slug,
           subteamId: activeSubteamId,
           rosterEntries,
         });
-      }
 
       // Invalidate members cache so PeopleTab shows new unlinked members
-      // Only log in development
-      if (process.env.NODE_ENV === "development") {
-        // Development-only code can go here
-      }
       invalidateCache(`members-${team.slug}-all`);
       invalidateCache(`members-${team.slug}-${activeSubteamId}`);
 
@@ -414,9 +410,10 @@ export default function RosterTab({
         activeSubteamId={activeSubteamId}
         isCaptain={isCaptain}
         onSubteamChange={onSubteamChange}
-        onCreateSubteam={onCreateSubteam}
+        onCreateSubteam={onCreateSubteam ? () => onCreateSubteam() : undefined}
         onEditSubteam={onEditSubteam}
         onDeleteSubteam={onDeleteSubteam}
+        onReorderSubteams={onReorderSubteams}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -69,7 +69,6 @@ export function ThemeProvider({
     if (storedTheme === "dark" || storedTheme === "light") {
       const prefersDark = storedTheme === "dark";
       if (prefersDark !== darkMode) {
-         
         setDarkModeState(prefersDark);
 
         document.cookie = `theme=${prefersDark ? "dark" : "light"}; path=/; max-age=31536000; samesite=lax`;
@@ -79,7 +78,6 @@ export function ThemeProvider({
 
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const listener = (e: MediaQueryListEvent) => {
-       
       setDarkModeState(e.matches);
     };
     media.addEventListener?.("change", listener);
