@@ -148,6 +148,14 @@ export function getSettingsForEvent(event: Event): Partial<Settings> {
   const savedIdPercentage = supportsPicture ? getStoredNumber("defaultIdPercentage", 0) : 0;
   const savedPureIdOnly = supportsIdOnly && getStoredValue("defaultPureIdOnly", "false") === "true";
 
+  // Load rm_type filter for Rocks and Minerals
+  const isRocksAndMinerals = event.name === "Rocks and Minerals";
+  const savedRmType = getStoredValue("rocksRmTypeFilter", "");
+  const rmTypeFilter =
+    isRocksAndMinerals && (savedRmType === "rock" || savedRmType === "mineral")
+      ? (savedRmType as "rock" | "mineral")
+      : undefined;
+
   const availableDivisions = event.divisions || ["B", "C"];
   const divisionForEvent = getDivisionForEvent(validDivision, availableDivisions);
 
@@ -160,5 +168,6 @@ export function getSettingsForEvent(event: Event): Partial<Settings> {
     subtopics: [],
     idPercentage: savedIdPercentage,
     pureIdOnly: savedPureIdOnly,
+    rmTypeFilter,
   };
 }

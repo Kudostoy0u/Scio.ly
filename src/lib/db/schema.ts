@@ -67,6 +67,7 @@ export const idEvents = pgTable("id_events", {
   randomF: doublePrecision("random_f").notNull().default(sql`random()`),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  rmType: text("rm_type"), // 'rock' or 'mineral' for Rocks and Minerals event
 });
 
 /**

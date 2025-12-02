@@ -96,3 +96,13 @@ export function saveCharLengthRange(min: number, max: number): void {
     SyncLocalStorage.setItem("codebustersCharLengthMax", max.toString());
   }
 }
+
+export function saveRmTypeFilter(rmType: "rock" | "mineral" | undefined): void {
+  if (typeof window !== "undefined") {
+    if (rmType) {
+      SyncLocalStorage.setItem("rocksRmTypeFilter", rmType);
+    } else {
+      SyncLocalStorage.removeItem("rocksRmTypeFilter");
+    }
+  }
+}

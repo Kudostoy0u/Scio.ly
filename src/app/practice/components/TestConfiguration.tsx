@@ -25,6 +25,7 @@ import {
   saveIdPercentage,
   savePureIdOnly,
   saveQuestionTypes,
+  saveRmTypeFilter,
   validateTimeLimit,
 } from "./utils/settingsHandlers";
 import { persistDivisionAndTypes } from "./utils/settingsPersistence";
@@ -84,6 +85,7 @@ export default function TestConfiguration({
   const eventName = selectedEvent?.name || "";
   const supportsPicture = supportsPictureQuestions(eventName);
   const supportsIdOnly = supportsIdentificationOnly(eventName);
+  const isRocksAndMinerals = eventName === "Rocks and Minerals";
 
   return (
     <div
@@ -308,6 +310,37 @@ export default function TestConfiguration({
                   >
                     Identification Only
                   </label>
+                </div>
+              )}
+
+              {/* Rocks and Minerals type filter */}
+              {isRocksAndMinerals && (
+                <div className="mt-3">
+                  <label
+                    htmlFor="rmTypeFilter"
+                    className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+                  >
+                    Specimen Type
+                  </label>
+                  <select
+                    id="rmTypeFilter"
+                    value={settings.rmTypeFilter || "both"}
+                    onChange={(e) => {
+                      const value = e.target.value as "rock" | "mineral" | "both";
+                      const rmTypeFilter = value === "both" ? undefined : value;
+                      onSettingsChange({ ...settings, rmTypeFilter });
+                      saveRmTypeFilter(rmTypeFilter);
+                    }}
+                    className={`block w-full rounded-md border-0 py-1.5 px-3 ${
+                      darkMode
+                        ? "bg-gray-700 text-white focus:ring-blue-500"
+                        : "bg-gray-50 text-gray-900 focus:ring-blue-600"
+                    } shadow-sm focus:ring-1 focus:outline-none`}
+                  >
+                    <option value="both">Rocks & Minerals</option>
+                    <option value="rock">Rocks Only</option>
+                    <option value="mineral">Minerals Only</option>
+                  </select>
                 </div>
               )}
             </div>
