@@ -267,64 +267,68 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 				<div
 					className={`${bannerBg} border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}
 				>
-				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-					<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-						<div>
-							<p
-								className={`text-xs uppercase tracking-wide ${darkMode ? "text-blue-200" : "text-blue-700"}`}
-							>
-								Team
-							</p>
-							<h1
-								className={`text-3xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}
-							>
-								{teamData.meta.name || teamData.meta.school}
-							</h1>
-							<p
-								className={`mt-1 text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-							>
-								Division {teamData.meta.division} •{" "}
-								{isCaptain ? "Captain" : "Member"}{" "}
-								{teamData.meta.status === "archived" && (
-									<span className="ml-2 inline-flex items-center rounded-full bg-yellow-200 px-2 py-0.5 text-xs font-semibold text-yellow-900">
-										Archived
-									</span>
+					<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+						<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+							<div>
+								<p
+									className={`text-xs uppercase tracking-wide ${darkMode ? "text-blue-200" : "text-blue-700"}`}
+								>
+									Team
+								</p>
+								<h1
+									className={`text-3xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}
+								>
+									{teamData.meta.name || teamData.meta.school}
+								</h1>
+								<p
+									className={`mt-1 text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+								>
+									Division {teamData.meta.division} •{" "}
+									{isCaptain ? "Captain" : "Member"}{" "}
+									{teamData.meta.status === "archived" && (
+										<span className="ml-2 inline-flex items-center rounded-full bg-yellow-200 px-2 py-0.5 text-xs font-semibold text-yellow-900">
+											Archived
+										</span>
+									)}
+								</p>
+							</div>
+							<div className="flex flex-col sm:flex-row lg:flex-col gap-2 w-full lg:w-auto">
+								{isCaptain && (
+									<button
+										type="button"
+										onClick={() => setShowCodes(true)}
+										className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
+									>
+										<ShieldCheck className="mr-2 h-4 w-4" />
+										View join codes
+									</button>
 								)}
-							</p>
-						</div>
-						<div className="flex flex-col sm:flex-row lg:flex-col gap-2 w-full lg:w-auto">
-							{isCaptain && (
 								<button
 									type="button"
-									onClick={() => setShowCodes(true)}
-									className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
+									onClick={() => setConfirmAction("leave")}
+									className="inline-flex items-center justify-center rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-amber-700"
 								>
-									<ShieldCheck className="mr-2 h-4 w-4" />
-									View join codes
+									<LogOut className="mr-2 h-4 w-4" />
+									Leave team
 								</button>
-							)}
-							<button
-								type="button"
-								onClick={() => setConfirmAction("leave")}
-								className="inline-flex items-center justify-center rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-amber-700"
-							>
-								<LogOut className="mr-2 h-4 w-4" />
-								Leave team
-							</button>
-							{isCaptain && (
-								<button
-									type="button"
-									onClick={() => setConfirmAction("delete")}
-									className="inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-red-700"
-								>
-									<Trash2 className="mr-2 h-4 w-4" />
-									Delete team
-								</button>
-							)}
+								{isCaptain && (
+									<button
+										type="button"
+										onClick={() => setConfirmAction("delete")}
+										className="inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-red-700"
+									>
+										<Trash2 className="mr-2 h-4 w-4" />
+										Delete team
+									</button>
+								)}
+							</div>
 						</div>
-					</div>
-					<div className="mt-6">
-						<TabNavigation activeTab={activeTab} onTabChange={navigateToTab} />
+						<div className="mt-6">
+							<TabNavigation
+								activeTab={activeTab}
+								onTabChange={navigateToTab}
+							/>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -604,7 +608,6 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 					</div>
 				</div>
 			)}
-			</div>
 		</TeamLayout>
 	);
 }

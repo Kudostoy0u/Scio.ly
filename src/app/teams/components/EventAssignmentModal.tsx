@@ -98,7 +98,8 @@ export default function EventAssignmentModal({
 	}
 
 	// Get the appropriate conflict groups based on division
-	const conflictGroups = division === "B" ? DIVISION_B_GROUPS : DIVISION_C_GROUPS;
+	const conflictGroups =
+		division === "B" ? DIVISION_B_GROUPS : DIVISION_C_GROUPS;
 
 	// Build a map of event -> conflict block
 	const eventToConflictBlock = new Map<string, string>();

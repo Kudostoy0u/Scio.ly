@@ -84,8 +84,12 @@ export default function LinkInviteModal({
 					}`}
 				>
 					<div className="flex items-center space-x-3">
-						<Link2 className={`w-6 h-6 ${darkMode ? "text-blue-400" : "text-blue-600"}`} />
-						<h2 className={`text-xl font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>
+						<Link2
+							className={`w-6 h-6 ${darkMode ? "text-blue-400" : "text-blue-600"}`}
+						/>
+						<h2
+							className={`text-xl font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}
+						>
 							Link Roster Invitations
 						</h2>
 					</div>

@@ -2,28 +2,5 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": ["src/app/**/*.{ts,tsx}", "src/lib/**/*.{ts,tsx}"],
   "project": ["src/**/*.{ts,tsx}", "*.{ts,tsx,mjs,js}"],
-  "ignore": [
-    "src/app/teams/components/leaderboard/components/**",
-    "src/app/test/components/PreviewAssignmentSection.tsx",
-    "src/app/test/components/TestActionButtons.tsx",
-    "src/app/test/components/TestContentWrapper.tsx",
-    "src/app/test/hooks/usePreviewToasts.ts",
-    "src/app/test/hooks/useTestDataLoading.ts",
-    "src/app/test/hooks/useTestSubmission.ts",
-    "src/app/test/utils/printUtils.ts",
-    "src/app/unlimited/content.tsx",
-    "src/lib/constants/plagiarism.ts",
-    "src/lib/constants/testParams.ts",
-    "src/test-utils/index.tsx",
-    "src/app/utils/bookmarks.ts"
-  ],
-  "ignoreDependencies": [
-    "@eslint/compat",
-    "@typescript-eslint/eslint-plugin",
-    "@typescript-eslint/parser",
-    "@vitest/coverage-v8",
-    "eslint-config-next",
-    "tailwindcss"
-  ],
   "ignoreExportsUsedInFile": true
 }

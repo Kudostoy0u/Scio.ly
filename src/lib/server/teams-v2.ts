@@ -1310,9 +1310,11 @@ export async function createInvitation(input: {
 		throw new Error(`Failed to look up user: ${error.message}`);
 	}
 
-	const invitedUser = data as
-		| { id?: string; username?: string; email?: string }
-		| null;
+	const invitedUser = data as {
+		id?: string;
+		username?: string;
+		email?: string;
+	} | null;
 
 	if (!invitedUser?.id) {
 		throw new Error("User not found");
@@ -1466,8 +1468,7 @@ export async function listPendingLinkInvitesForUser(userId: string) {
 		return [];
 	}
 
-	const username =
-		userProfile.supabaseUsername || userProfile.username || null;
+	const username = userProfile.supabaseUsername || userProfile.username || null;
 	if (!username) {
 		return [];
 	}
@@ -1503,7 +1504,10 @@ export async function listPendingLinkInvitesForUser(userId: string) {
 	}));
 }
 
-export async function acceptLinkInvitation(linkInviteId: string, userId: string) {
+export async function acceptLinkInvitation(
+	linkInviteId: string,
+	userId: string,
+) {
 	const [linkInvite] = await dbPg
 		.select({
 			id: teamsLinkInvitation.id,

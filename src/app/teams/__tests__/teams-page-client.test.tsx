@@ -32,7 +32,10 @@ vi.mock("@/lib/trpc/client", () => {
 		) => {
 			state.listUserTeamsReturn = value;
 		},
-		setPendingInvitesReturn: (value: { invites: unknown[]; isLoading: boolean }) => {
+		setPendingInvitesReturn: (value: {
+			invites: unknown[];
+			isLoading: boolean;
+		}) => {
 			state.pendingInvitesReturn = value;
 		},
 	};
@@ -147,9 +150,7 @@ describe("TeamsPageClient", () => {
 			initialUser: null,
 		});
 
-		expect(
-			screen.getByText("Sign in to see your teams."),
-		).toBeInTheDocument();
+		expect(screen.getByText("Sign in to see your teams.")).toBeInTheDocument();
 	});
 
 	it("shows landing page when user has no teams", async () => {

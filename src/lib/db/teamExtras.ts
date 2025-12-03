@@ -1,69 +1,11 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { dbPg } from "./index";
-import { pool } from "./pool";
+
 import {
 	assignmentResults,
 	assignments,
 	invitesV2,
 } from "./schema/assignments";
-
-export async function initExtrasDatabase() {
-	const client = await pool.connect();
-	try {
-		// Ensure extras tables exist (do not drop unrelated tables)
-
-		await client.query(`
-      CREATE TABLE IF NOT EXISTS assignments (
-        id SERIAL PRIMARY KEY,
-        school VARCHAR(255) NOT NULL,
-        division CHAR(1) NOT NULL CHECK (division IN ('B','C')),
-        team_id VARCHAR(10) NOT NULL,
-        event_name VARCHAR(255) NOT NULL,
-        assignees JSONB NOT NULL,
-        params JSONB NOT NULL,
-        questions JSONB NOT NULL,
-        created_by VARCHAR(255) NOT NULL,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-      CREATE INDEX IF NOT EXISTS idx_assignments_team ON assignments(school, division, team_id);
-    `);
-
-		await client.query(`
-      CREATE TABLE IF NOT EXISTS assignment_results (
-        id SERIAL PRIMARY KEY,
-        assignment_id INT NOT NULL,
-        user_id VARCHAR(255),
-        name VARCHAR(255),
-        event_name VARCHAR(255),
-        score NUMERIC,
-        submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        detail JSONB,
-        CONSTRAINT fk_assignment FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE CASCADE
-      );
-    `);
-
-		// New invites v2 table
-		await client.query(`
-      CREATE TABLE IF NOT EXISTS invites_v2 (
-        id SERIAL PRIMARY KEY,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        inviter_user_id VARCHAR(255) NOT NULL,
-        invitee_username VARCHAR(255) NOT NULL,
-        invitee_user_id VARCHAR(255),
-        school VARCHAR(255) NOT NULL,
-        division CHAR(1) NOT NULL CHECK (division IN ('B','C')),
-        team_id VARCHAR(10) NOT NULL,
-        code UUID NOT NULL DEFAULT gen_random_uuid(),
-        status VARCHAR(16) NOT NULL DEFAULT 'pending',
-        CONSTRAINT uq_pending_invite UNIQUE (invitee_username, school, division, team_id, status)
-      );
-      CREATE INDEX IF NOT EXISTS idx_invites_v2_invitee ON invites_v2(invitee_username, status);
-      CREATE INDEX IF NOT EXISTS idx_invites_v2_team ON invites_v2(school, division, team_id);
-    `);
-	} finally {
-		client.release();
-	}
-}
 
 // Purged legacy notifications/linking helpers
 
@@ -77,7 +19,6 @@ export async function createAssignment(data: {
 	questions: unknown;
 	createdBy: string;
 }) {
-	await initExtrasDatabase();
 	const [assignment] = await dbPg
 		.insert(assignments)
 		.values({
@@ -101,7 +42,6 @@ export async function listRecentAssignments(
 	school: string,
 	division: "B" | "C",
 ) {
-	await initExtrasDatabase();
 	const rows = await dbPg
 		.select({
 			id: assignments.id,
@@ -119,7 +59,6 @@ export async function listRecentAssignments(
 }
 
 export async function listRecentResults(school: string, division: "B" | "C") {
-	await initExtrasDatabase();
 	const rows = await dbPg
 		.select({
 			id: assignmentResults.id,
@@ -142,7 +81,6 @@ export async function listRecentResults(school: string, division: "B" | "C") {
 }
 
 export async function deleteAssignmentResult(id: number | string) {
-	await initExtrasDatabase();
 	await dbPg
 		.delete(assignmentResults)
 		.where(eq(assignmentResults.id, Number(id)));
@@ -150,13 +88,11 @@ export async function deleteAssignmentResult(id: number | string) {
 }
 
 export async function deleteAssignment(id: number | string) {
-	await initExtrasDatabase();
 	await dbPg.delete(assignments).where(eq(assignments.id, Number(id)));
 	return true;
 }
 
 export async function getAssignmentById(id: number | string) {
-	await initExtrasDatabase();
 	const [assignment] = await dbPg
 		.select()
 		.from(assignments)
@@ -173,7 +109,6 @@ export async function createInvite(
 	division: "B" | "C",
 	teamId: string,
 ) {
-	await initExtrasDatabase();
 	// If a pending exists, return it; else insert
 	const [existing] = await dbPg
 		.select()
@@ -205,7 +140,6 @@ export async function createInvite(
 }
 
 export async function listInvitesByUsername(inviteeUsername: string) {
-	await initExtrasDatabase();
 	const rows = await dbPg
 		.select()
 		.from(invitesV2)
@@ -220,7 +154,6 @@ export async function listInvitesByUsername(inviteeUsername: string) {
 }
 
 export async function acceptInvite(inviteId: number) {
-	await initExtrasDatabase();
 	return await dbPg.transaction(async (tx) => {
 		// Use FOR UPDATE to lock the row - using raw SQL for FOR UPDATE clause
 		const result = await tx.execute(
@@ -280,7 +213,6 @@ export async function acceptInvite(inviteId: number) {
 }
 
 export async function declineInvite(inviteId: number) {
-	await initExtrasDatabase();
 	await dbPg
 		.update(invitesV2)
 		.set({ status: "declined" })

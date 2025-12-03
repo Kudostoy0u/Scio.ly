@@ -103,7 +103,6 @@ export default function LinkInvite({
 									placeholder="Enter username..."
 									value={username}
 									onChange={(e) => setUsername(e.target.value)}
-									autoFocus
 									className={`w-full px-3 py-2 rounded-lg border text-sm transition-colors ${
 										darkMode
 											? "bg-gray-700 text-white border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"

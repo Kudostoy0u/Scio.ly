@@ -53,6 +53,8 @@
 		"vitest.config.ts",
 		"vitest.setup.ts",
 		"src/**/*.test.ts",
-		"src/**/*.test.tsx"
+		"src/**/*.test.tsx",
+		"src/lib/db/generated/**/*",
+		"drizzle/**/*"
 	]
 }
