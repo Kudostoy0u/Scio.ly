@@ -68,6 +68,26 @@ export default function LinkStatus({
 		);
 	}
 
+	if (member.isUnlinked) {
+		return (
+			<div className="flex items-center space-x-2">
+				<div className="flex items-center space-x-1 text-red-500">
+					<Link2Off className="w-4 h-4" />
+					<span className="text-xs">Unlinked</span>
+				</div>
+				{isCaptain && (
+					<button
+						type="button"
+						onClick={() => onLinkInvite(getDisplayName(member))}
+						className="text-blue-600 hover:text-blue-700 text-xs font-medium transition-colors"
+					>
+						Link?
+					</button>
+				)}
+			</div>
+		);
+	}
+
 	if (member.id) {
 		return (
 			<div className="flex items-center space-x-1 text-green-600">
@@ -77,21 +97,5 @@ export default function LinkStatus({
 		);
 	}
 
-	return (
-		<div className="flex items-center space-x-2">
-			<div className="flex items-center space-x-1 text-red-500">
-				<Link2Off className="w-4 h-4" />
-				<span className="text-xs">Unlinked</span>
-			</div>
-			{isCaptain && (
-				<button
-					type="button"
-					onClick={() => onLinkInvite(getDisplayName(member))}
-					className="text-blue-600 hover:text-blue-700 text-xs font-medium transition-colors"
-				>
-					Link?
-				</button>
-			)}
-		</div>
-	);
+	return null;
 }

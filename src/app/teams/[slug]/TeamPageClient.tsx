@@ -21,6 +21,7 @@ import { toast } from "react-toastify";
 import PeopleTabUnified from "../components/PeopleTabUnified";
 import RosterTabUnified from "../components/RosterTabUnified";
 import TabNavigation from "../components/TabNavigation";
+import TeamLayout from "../components/TeamLayout";
 
 interface TeamPageClientProps {
 	teamSlug: string;
@@ -37,10 +38,14 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 	const [confirmAction, setConfirmAction] = useState<"leave" | "delete" | null>(
 		null,
 	);
+	const [layoutTab, setLayoutTab] = useState<"home" | "upcoming" | "settings">(
+		"home",
+	);
 
 	const { data: teamData, isLoading, error } = useTeamFull(teamSlug);
 	const { data: subteams } = useTeamSubteams(teamSlug);
 	const { invalidateTeam } = useInvalidateTeam();
+	const { data: userTeamsData } = trpc.teams.listUserTeams.useQuery();
 
 	const createSubteamMutation = trpc.teams.createSubteam.useMutation();
 	const renameSubteamMutation = trpc.teams.renameSubteam.useMutation();
@@ -80,6 +85,41 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 				: "bg-gradient-to-r from-blue-50 via-white to-blue-50",
 		[darkMode],
 	);
+
+	const userTeams = useMemo(
+		() =>
+			userTeamsData?.teams.map((team) => ({
+				id: team.id,
+				name: team.name || `${team.school} ${team.division}`,
+				slug: team.slug,
+				school: team.school,
+				division: team.division as "B" | "C",
+			})) ?? [],
+		[userTeamsData],
+	);
+
+	const handleLayoutTabChange = (tab: "home" | "upcoming" | "settings") => {
+		setLayoutTab(tab);
+		if (tab === "upcoming") {
+			router.push("/teams/calendar");
+		} else if (tab === "settings") {
+			// Handle settings navigation
+		}
+	};
+
+	const handleTeamSelect = (team: {
+		id: string;
+		name: string;
+		slug: string;
+		school: string;
+		division: "B" | "C";
+	}) => {
+		router.push(`/teams/${team.slug}`);
+	};
+
+	const handleNavigateToMainDashboard = () => {
+		router.push("/teams?view=all");
+	};
 
 	if (isLoading) {
 		return (
@@ -215,10 +255,18 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 	};
 
 	return (
-		<div className={`min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
-			<div
-				className={`${bannerBg} border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}
-			>
+		<TeamLayout
+			activeTab={layoutTab}
+			onTabChangeAction={handleLayoutTabChange}
+			userTeams={userTeams}
+			currentTeamSlug={teamSlug}
+			onTeamSelect={handleTeamSelect}
+			onNavigateToMainDashboard={handleNavigateToMainDashboard}
+		>
+			<div>
+				<div
+					className={`${bannerBg} border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}
+				>
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 					<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
 						<div>
@@ -556,6 +604,7 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 					</div>
 				</div>
 			)}
-		</div>
+			</div>
+		</TeamLayout>
 	);
 }

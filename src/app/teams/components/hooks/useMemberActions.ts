@@ -16,6 +16,9 @@ export function useMemberActions({
 	const { invalidateTeam } = useInvalidateTeam();
 	const upsertRosterEntry = trpc.teams.upsertRosterEntry.useMutation();
 	const deleteRosterEntry = trpc.teams.removeRosterEntry.useMutation();
+	const inviteMember = trpc.teams.inviteMember.useMutation();
+	const promoteToRole = trpc.teams.promoteToRole.useMutation();
+	const createLinkInvitation = trpc.teams.createLinkInvitation.useMutation();
 
 	const refresh = async () => {
 		await invalidateTeam(teamSlug);
@@ -28,14 +31,22 @@ export function useMemberActions({
 		},
 
 		handleRemoveOtherFromSubteam: async (member: Member, subteamId: string) => {
-			await deleteRosterEntry.mutateAsync({
-				teamSlug,
-				subteamId,
-				eventName: "General",
-				slotIndex: 0,
-			});
-			toast.success(`Removed ${getDisplayName(member)} from subteam`);
-			await refresh();
+			try {
+				await deleteRosterEntry.mutateAsync({
+					teamSlug,
+					subteamId,
+					eventName: "General",
+					slotIndex: 0,
+				});
+				toast.success(`Removed ${getDisplayName(member)} from subteam`);
+				await refresh();
+			} catch (error) {
+				toast.error(
+					error instanceof Error
+						? error.message
+						: "Failed to remove from subteam",
+				);
+			}
 		},
 
 		handleRemoveEvent: async (
@@ -43,14 +54,20 @@ export function useMemberActions({
 			event: string,
 			subteamId: string,
 		) => {
-			await deleteRosterEntry.mutateAsync({
-				teamSlug,
-				subteamId,
-				eventName: event,
-				slotIndex: 0,
-			});
-			toast.success(`Removed ${getDisplayName(member)} from ${event}`);
-			await refresh();
+			try {
+				await deleteRosterEntry.mutateAsync({
+					teamSlug,
+					subteamId,
+					eventName: event,
+					slotIndex: 0,
+				});
+				toast.success(`Removed ${getDisplayName(member)} from ${event}`);
+				await refresh();
+			} catch (error) {
+				toast.error(
+					error instanceof Error ? error.message : "Failed to remove event",
+				);
+			}
 		},
 
 		handleAddEvent: async (
@@ -62,41 +79,98 @@ export function useMemberActions({
 				toast.info(`${getDisplayName(member)} is already on ${eventName}`);
 				return;
 			}
-			await upsertRosterEntry.mutateAsync({
-				teamSlug,
-				subteamId,
-				entry: {
+			try {
+				const entry: {
+					eventName: string;
+					displayName: string;
+					userId?: string;
+				} = {
 					eventName,
 					displayName: getDisplayName(member),
-					userId: member.id || undefined,
-				},
-			});
-			toast.success(`Added ${getDisplayName(member)} to ${eventName}`);
-			await refresh();
+				};
+
+				// Only include userId if member has a valid ID (not empty string or unlinked)
+				if (member.id && !member.isUnlinked) {
+					entry.userId = member.id;
+				}
+
+				await upsertRosterEntry.mutateAsync({
+					teamSlug,
+					subteamId,
+					entry,
+				});
+				toast.success(`Added ${getDisplayName(member)} to ${eventName}`);
+				await refresh();
+			} catch (error) {
+				toast.error(
+					error instanceof Error ? error.message : "Failed to add event",
+				);
+			}
 		},
 
 		handleSubteamAssign: async (member: Member, subteamId: string) => {
-			await upsertRosterEntry.mutateAsync({
-				teamSlug,
-				subteamId,
-				entry: {
+			try {
+				const entry: {
+					eventName: string;
+					slotIndex: number;
+					displayName: string;
+					userId?: string;
+				} = {
 					eventName: "General",
 					slotIndex: 0,
 					displayName: getDisplayName(member),
-					userId: member.id || undefined,
-				},
-			});
-			toast.success(`Assigned ${getDisplayName(member)} to subteam`);
-			await refresh();
+				};
+
+				// Only include userId if member has a valid ID (not empty string or unlinked)
+				if (member.id && !member.isUnlinked) {
+					entry.userId = member.id;
+				}
+
+				await upsertRosterEntry.mutateAsync({
+					teamSlug,
+					subteamId,
+					entry,
+				});
+				toast.success(`Assigned ${getDisplayName(member)} to subteam`);
+				await refresh();
+			} catch (error) {
+				toast.error(
+					error instanceof Error ? error.message : "Failed to assign subteam",
+				);
+			}
 		},
 
-		handleInviteSubmit: async (_username: string) => {
-			toast.info("Invites will be rebuilt on the new backend soon.");
+		handleInviteSubmit: async (username: string) => {
+			try {
+				await inviteMember.mutateAsync({
+					teamSlug,
+					invitedUsername: username,
+					role: "member",
+				});
+				toast.success(`Invited ${username} to the team`);
+				await refresh();
+			} catch (error) {
+				toast.error(
+					error instanceof Error ? error.message : "Failed to invite user",
+				);
+			}
 		},
 
-		handleLinkInviteSubmit: async (_memberName: string, _username: string) => {
-			toast.info("Link invites will be rebuilt on the new backend soon.");
-			return true as const;
+		handleLinkInviteSubmit: async (memberName: string, username: string) => {
+			try {
+				await createLinkInvitation.mutateAsync({
+					teamSlug,
+					rosterDisplayName: memberName,
+					invitedUsername: username,
+				});
+				toast.success(`Link invite sent to ${username}`);
+				await refresh();
+			} catch (error) {
+				toast.error(
+					error instanceof Error ? error.message : "Failed to send link invite",
+				);
+				throw error;
+			}
 		},
 
 		handleCancelLinkInvite: async (_memberName: string) => {
@@ -112,18 +186,36 @@ export function useMemberActions({
 		},
 
 		handleRemoveMember: async (member: Member) => {
-			await deleteRosterEntry.mutateAsync({
-				teamSlug,
-				subteamId: member.subteam?.id ?? member.subteamId ?? null,
-				eventName: "General",
-				slotIndex: 0,
-			});
-			toast.success(`Removed ${getDisplayName(member)} from team roster`);
-			await refresh();
+			try {
+				await deleteRosterEntry.mutateAsync({
+					teamSlug,
+					subteamId: member.subteam?.id ?? member.subteamId ?? null,
+					eventName: "General",
+					slotIndex: 0,
+				});
+				toast.success(`Removed ${getDisplayName(member)} from team roster`);
+				await refresh();
+			} catch (error) {
+				toast.error(
+					error instanceof Error ? error.message : "Failed to remove member",
+				);
+			}
 		},
 
-		handlePromoteToCaptain: () => {
-			toast.info("Role changes will be rebuilt on the new backend soon.");
+		handlePromoteToCaptain: async (member: Member) => {
+			try {
+				await promoteToRole.mutateAsync({
+					teamSlug,
+					userId: member.id,
+					newRole: "captain",
+				});
+				toast.success(`Promoted ${getDisplayName(member)} to captain`);
+				await refresh();
+			} catch (error) {
+				toast.error(
+					error instanceof Error ? error.message : "Failed to promote member",
+				);
+			}
 		},
 	};
 }

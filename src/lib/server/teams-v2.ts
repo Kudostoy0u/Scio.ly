@@ -3,6 +3,7 @@ import { users } from "@/lib/db/schema/core";
 import {
 	teamsAssignment,
 	teamsInvitation,
+	teamsLinkInvitation,
 	teamsMembership,
 	teamsRoster,
 	teamsSubteam,
@@ -10,7 +11,7 @@ import {
 } from "@/lib/db/schema/teams_v2";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
-import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
 export interface TeamMeta {
 	teamId: string;
@@ -852,75 +853,125 @@ export async function upsertRosterEntry(
 	},
 	actorId: string,
 ) {
-	const membership = await getMembershipForUser(teamId, actorId);
-	if (!membership || membership.role !== "captain") {
-		throw new Error("Only captains can edit roster");
-	}
+	try {
+		console.log("[upsertRosterEntry] Starting with:", {
+			teamId,
+			subteamId,
+			payload,
+			actorId,
+		});
 
-	const existingEntries = await dbPg
-		.select({
-			id: teamsRoster.id,
-			slotIndex: teamsRoster.slotIndex,
-			displayName: teamsRoster.displayName,
-			userId: teamsRoster.userId,
-		})
-		.from(teamsRoster)
-		.where(
-			and(
-				eq(teamsRoster.teamId, teamId),
-				subteamId
-					? eq(teamsRoster.subteamId, subteamId)
-					: isNull(teamsRoster.subteamId),
-				eq(teamsRoster.eventName, payload.eventName),
-			),
-		)
-		.orderBy(teamsRoster.slotIndex);
+		const membership = await getMembershipForUser(teamId, actorId);
+		console.log("[upsertRosterEntry] Membership check:", {
+			found: !!membership,
+			role: membership?.role,
+		});
 
-	const alreadyAssigned = existingEntries.find(
-		(e) =>
-			e.displayName.toLowerCase() === payload.displayName.toLowerCase() ||
-			(payload.userId && e.userId === payload.userId),
-	);
-	if (alreadyAssigned) {
-		throw new Error("Member is already assigned to this event");
-	}
-
-	let slotIndex = payload.slotIndex;
-	if (slotIndex === undefined || slotIndex === null) {
-		const usedSlots = new Set(existingEntries.map((e) => Number(e.slotIndex)));
-		let candidate = 0;
-		while (usedSlots.has(candidate)) {
-			candidate += 1;
+		if (!membership || membership.role !== "captain") {
+			throw new Error("Only captains can edit roster");
 		}
-		slotIndex = candidate;
-	}
 
-	await dbPg.transaction(async (tx) => {
-		await tx
-			.insert(teamsRoster)
-			.values({
-				id: crypto.randomUUID(),
-				teamId,
-				subteamId,
-				eventName: payload.eventName,
-				slotIndex,
-				displayName: payload.displayName,
-				userId: payload.userId ?? null,
+		const existingEntries = await dbPg
+			.select({
+				id: teamsRoster.id,
+				slotIndex: teamsRoster.slotIndex,
+				displayName: teamsRoster.displayName,
+				userId: teamsRoster.userId,
 			})
-			.onConflictDoUpdate({
-				target: [
-					teamsRoster.teamId,
-					teamsRoster.subteamId,
-					teamsRoster.eventName,
-					teamsRoster.slotIndex,
-				],
-				set: {
+			.from(teamsRoster)
+			.where(
+				and(
+					eq(teamsRoster.teamId, teamId),
+					subteamId
+						? eq(teamsRoster.subteamId, subteamId)
+						: isNull(teamsRoster.subteamId),
+					eq(teamsRoster.eventName, payload.eventName),
+				),
+			)
+			.orderBy(teamsRoster.slotIndex);
+
+		console.log("[upsertRosterEntry] Existing entries:", {
+			count: existingEntries.length,
+			entries: existingEntries,
+		});
+
+		let slotIndex = payload.slotIndex;
+		if (slotIndex === undefined || slotIndex === null) {
+			const usedSlots = new Set(
+				existingEntries.map((e) => Number(e.slotIndex)),
+			);
+			let candidate = 0;
+			while (usedSlots.has(candidate)) {
+				candidate += 1;
+			}
+			slotIndex = candidate;
+			console.log("[upsertRosterEntry] Auto-assigned slot:", slotIndex);
+		}
+
+		// Check if the member is already assigned to this specific slot
+		const alreadyAssignedToSlot = existingEntries.find(
+			(e) =>
+				Number(e.slotIndex) === slotIndex &&
+				(e.displayName.toLowerCase() === payload.displayName.toLowerCase() ||
+					(payload.userId && e.userId === payload.userId)),
+		);
+		if (alreadyAssignedToSlot) {
+			const error = new Error(
+				`${payload.displayName} is already assigned to ${payload.eventName}`,
+			);
+			console.error("[upsertRosterEntry] Duplicate assignment:", {
+				payload,
+				slotIndex,
+				alreadyAssignedToSlot,
+			});
+			throw error;
+		}
+
+		console.log("[upsertRosterEntry] Inserting/updating entry:", {
+			teamId,
+			subteamId,
+			eventName: payload.eventName,
+			slotIndex,
+			displayName: payload.displayName,
+			userId: payload.userId,
+		});
+
+		await dbPg.transaction(async (tx) => {
+			await tx
+				.insert(teamsRoster)
+				.values({
+					id: crypto.randomUUID(),
+					teamId,
+					subteamId,
+					eventName: payload.eventName,
+					slotIndex,
 					displayName: payload.displayName,
 					userId: payload.userId ?? null,
-					updatedAt: sql`now()`,
-				},
-			});
-	});
+				})
+				.onConflictDoUpdate({
+					target: [
+						teamsRoster.teamId,
+						teamsRoster.subteamId,
+						teamsRoster.eventName,
+						teamsRoster.slotIndex,
+					],
+					set: {
+						displayName: payload.displayName,
+						userId: payload.userId ?? null,
+						updatedAt: sql`now()`,
+					},
+				});
+		});
+
+		console.log("[upsertRosterEntry] Success");
+	} catch (error) {
+		console.error("[upsertRosterEntry] Error:", {
+			error,
+			message: error instanceof Error ? error.message : String(error),
+			stack: error instanceof Error ? error.stack : undefined,
+		});
+		throw error;
+	}
 }
 
 export async function removeRosterEntry(
@@ -1233,6 +1284,361 @@ export async function declineInvite(teamSlug: string, userId: string) {
 			);
 
 		await bumpTeamVersion(team.id);
+	});
+
+	return { ok: true };
+}
+
+export async function createInvitation(input: {
+	teamSlug: string;
+	invitedUsername: string;
+	role?: "captain" | "member";
+	invitedBy: string;
+}) {
+	const { team } = await assertCaptainAccess(input.teamSlug, input.invitedBy);
+
+	// Look up the invited user by username
+	const supabase = await createSupabaseServerClient();
+	const { data, error } = await supabase
+		.from("users")
+		.select("id, username, email")
+		.ilike("username", input.invitedUsername.trim())
+		.limit(1)
+		.maybeSingle();
+
+	if (error) {
+		throw new Error(`Failed to look up user: ${error.message}`);
+	}
+
+	const invitedUser = data as
+		| { id?: string; username?: string; email?: string }
+		| null;
+
+	if (!invitedUser?.id) {
+		throw new Error("User not found");
+	}
+
+	// Check if user is already a member
+	const existing = await dbPg
+		.select({ id: teamsMembership.id })
+		.from(teamsMembership)
+		.where(
+			and(
+				eq(teamsMembership.teamId, team.id),
+				eq(teamsMembership.userId, invitedUser.id),
+				or(
+					eq(teamsMembership.status, "active"),
+					eq(teamsMembership.status, "pending"),
+				),
+			),
+		)
+		.limit(1);
+
+	if (existing.length > 0) {
+		throw new Error("User is already a member or has a pending invitation");
+	}
+
+	// Generate a unique token
+	const token = crypto.randomUUID();
+
+	await dbPg.transaction(async (tx) => {
+		// Create the invitation
+		await tx.insert(teamsInvitation).values({
+			id: crypto.randomUUID(),
+			teamId: team.id,
+			invitedUserId: invitedUser.id,
+			invitedEmail: invitedUser.email ?? null,
+			role: input.role ?? "member",
+			invitedBy: input.invitedBy,
+			status: "pending",
+			token,
+			expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+		});
+
+		// Create a pending membership
+		await tx.insert(teamsMembership).values({
+			id: crypto.randomUUID(),
+			teamId: team.id,
+			userId: invitedUser.id,
+			role: input.role ?? "member",
+			status: "pending",
+			invitedBy: input.invitedBy,
+		});
+
+		await bumpTeamVersion(team.id);
+	});
+
+	return {
+		ok: true,
+		invitedUserId: invitedUser.id,
+		invitedUsername: invitedUser.username ?? null,
+	};
+}
+
+export async function promoteToRole(input: {
+	teamSlug: string;
+	userId: string;
+	newRole: "captain" | "member";
+	actorId: string;
+}) {
+	const { team } = await assertCaptainAccess(input.teamSlug, input.actorId);
+
+	// Check if user is a member
+	const membership = await getMembershipForUser(team.id, input.userId);
+	if (!membership || membership.status !== "active") {
+		throw new Error("User is not an active member of this team");
+	}
+
+	if (membership.role === input.newRole) {
+		throw new Error(`User is already a ${input.newRole}`);
+	}
+
+	await dbPg.transaction(async (tx) => {
+		await tx
+			.update(teamsMembership)
+			.set({ role: input.newRole, updatedAt: new Date() })
+			.where(
+				and(
+					eq(teamsMembership.teamId, team.id),
+					eq(teamsMembership.userId, input.userId),
+				),
+			);
+
+		await bumpTeamVersion(team.id);
+	});
+
+	return { ok: true, newRole: input.newRole };
+}
+
+export async function createLinkInvitation(input: {
+	teamSlug: string;
+	rosterDisplayName: string;
+	invitedUsername: string;
+	invitedBy: string;
+}) {
+	const { team } = await assertCaptainAccess(input.teamSlug, input.invitedBy);
+
+	// Check if there's already a pending link invite for this roster member
+	const existingInvite = await dbPg
+		.select({ id: teamsLinkInvitation.id })
+		.from(teamsLinkInvitation)
+		.where(
+			and(
+				eq(teamsLinkInvitation.teamId, team.id),
+				eq(teamsLinkInvitation.rosterDisplayName, input.rosterDisplayName),
+				eq(teamsLinkInvitation.status, "pending"),
+			),
+		)
+		.limit(1);
+
+	if (existingInvite.length > 0) {
+		throw new Error(
+			"There is already a pending link invitation for this roster member",
+		);
+	}
+
+	await dbPg.insert(teamsLinkInvitation).values({
+		id: crypto.randomUUID(),
+		teamId: team.id,
+		rosterDisplayName: input.rosterDisplayName,
+		invitedUsername: input.invitedUsername,
+		invitedBy: input.invitedBy,
+		status: "pending",
+	});
+
+	await bumpTeamVersion(team.id);
+
+	return { ok: true };
+}
+
+export async function listPendingLinkInvitesForUser(userId: string) {
+	// Get user's username from the users table
+	const [userProfile] = await dbPg
+		.select({
+			username: users.username,
+			supabaseUsername: users.supabaseUsername,
+		})
+		.from(users)
+		.where(eq(users.id, userId))
+		.limit(1);
+
+	if (!userProfile) {
+		return [];
+	}
+
+	const username =
+		userProfile.supabaseUsername || userProfile.username || null;
+	if (!username) {
+		return [];
+	}
+
+	// Find all pending link invitations for this username
+	const linkInvites = await dbPg
+		.select({
+			id: teamsLinkInvitation.id,
+			teamId: teamsTeam.id,
+			slug: teamsTeam.slug,
+			teamName: teamsTeam.name,
+			school: teamsTeam.school,
+			division: teamsTeam.division,
+			rosterDisplayName: teamsLinkInvitation.rosterDisplayName,
+		})
+		.from(teamsLinkInvitation)
+		.innerJoin(teamsTeam, eq(teamsLinkInvitation.teamId, teamsTeam.id))
+		.where(
+			and(
+				ilike(teamsLinkInvitation.invitedUsername, username),
+				eq(teamsLinkInvitation.status, "pending"),
+			),
+		);
+
+	return linkInvites.map((invite) => ({
+		id: invite.id,
+		teamId: invite.teamId,
+		slug: invite.slug,
+		teamName: invite.teamName,
+		school: invite.school,
+		division: invite.division,
+		rosterDisplayName: invite.rosterDisplayName,
+	}));
+}
+
+export async function acceptLinkInvitation(linkInviteId: string, userId: string) {
+	const [linkInvite] = await dbPg
+		.select({
+			id: teamsLinkInvitation.id,
+			teamId: teamsLinkInvitation.teamId,
+			rosterDisplayName: teamsLinkInvitation.rosterDisplayName,
+			invitedUsername: teamsLinkInvitation.invitedUsername,
+		})
+		.from(teamsLinkInvitation)
+		.where(
+			and(
+				eq(teamsLinkInvitation.id, linkInviteId),
+				eq(teamsLinkInvitation.status, "pending"),
+			),
+		)
+		.limit(1);
+
+	if (!linkInvite) {
+		throw new Error("Link invitation not found or already processed");
+	}
+
+	// Verify the user's username matches
+	const [userProfile] = await dbPg
+		.select({
+			username: users.username,
+			supabaseUsername: users.supabaseUsername,
+		})
+		.from(users)
+		.where(eq(users.id, userId))
+		.limit(1);
+
+	const username =
+		userProfile?.supabaseUsername || userProfile?.username || null;
+	if (
+		!username ||
+		username.toLowerCase() !== linkInvite.invitedUsername.toLowerCase()
+	) {
+		throw new Error("This link invitation is not for your account");
+	}
+
+	await dbPg.transaction(async (tx) => {
+		// Update all roster entries with this display name to link to the user
+		await tx
+			.update(teamsRoster)
+			.set({ userId, updatedAt: new Date() })
+			.where(
+				and(
+					eq(teamsRoster.teamId, linkInvite.teamId),
+					eq(teamsRoster.displayName, linkInvite.rosterDisplayName),
+					isNull(teamsRoster.userId),
+				),
+			);
+
+		// Create membership if doesn't exist
+		const existingMembership = await tx
+			.select({ id: teamsMembership.id })
+			.from(teamsMembership)
+			.where(
+				and(
+					eq(teamsMembership.teamId, linkInvite.teamId),
+					eq(teamsMembership.userId, userId),
+				),
+			)
+			.limit(1);
+
+		if (existingMembership.length === 0) {
+			await tx.insert(teamsMembership).values({
+				id: crypto.randomUUID(),
+				teamId: linkInvite.teamId,
+				userId,
+				role: "member",
+				status: "active",
+			});
+		}
+
+		// Mark link invitation as accepted
+		await tx
+			.update(teamsLinkInvitation)
+			.set({ status: "accepted", updatedAt: new Date() })
+			.where(eq(teamsLinkInvitation.id, linkInviteId));
+
+		await bumpTeamVersion(linkInvite.teamId);
+	});
+
+	return { ok: true };
+}
+
+export async function declineLinkInvitation(
+	linkInviteId: string,
+	userId: string,
+) {
+	const [linkInvite] = await dbPg
+		.select({
+			id: teamsLinkInvitation.id,
+			invitedUsername: teamsLinkInvitation.invitedUsername,
+			teamId: teamsLinkInvitation.teamId,
+		})
+		.from(teamsLinkInvitation)
+		.where(
+			and(
+				eq(teamsLinkInvitation.id, linkInviteId),
+				eq(teamsLinkInvitation.status, "pending"),
+			),
+		)
+		.limit(1);
+
+	if (!linkInvite) {
+		throw new Error("Link invitation not found or already processed");
+	}
+
+	// Verify the user's username matches
+	const [userProfile] = await dbPg
+		.select({
+			username: users.username,
+			supabaseUsername: users.supabaseUsername,
+		})
+		.from(users)
+		.where(eq(users.id, userId))
+		.limit(1);
+
+	const username =
+		userProfile?.supabaseUsername || userProfile?.username || null;
+	if (
+		!username ||
+		username.toLowerCase() !== linkInvite.invitedUsername.toLowerCase()
+	) {
+		throw new Error("This link invitation is not for your account");
+	}
+
+	await dbPg.transaction(async (tx) => {
+		await tx
+			.update(teamsLinkInvitation)
+			.set({ status: "declined", updatedAt: new Date() })
+			.where(eq(teamsLinkInvitation.id, linkInviteId));
+
+		await bumpTeamVersion(linkInvite.teamId);
 	});
 
 	return { ok: true };

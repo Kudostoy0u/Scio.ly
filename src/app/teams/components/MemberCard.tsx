@@ -81,6 +81,8 @@ export default function MemberCard({
 	const { darkMode } = useTheme();
 	const { user } = useAuth();
 
+	const isShowingLinkInvite = linkInviteStates[getDisplayName(member)] === true;
+
 	return (
 		<div
 			key={member.id || `member-${index}`}
@@ -90,6 +92,18 @@ export default function MemberCard({
 					: "bg-white border-gray-200 hover:bg-gray-50"
 			} transition-colors`}
 		>
+			{/* Link Invitation Form - Replaces entire card */}
+			{isShowingLinkInvite ? (
+				<LinkInvite
+					isOpen={true}
+					onClose={() => onLinkInviteClose(getDisplayName(member))}
+					onSubmit={(username) =>
+						onLinkInviteSubmit(getDisplayName(member), username)
+					}
+					studentName={getDisplayName(member)}
+				/>
+			) : (
+				<>
 			{/* Action buttons for captains */}
 			{isCaptain && member.id !== user?.id && (
 				<div className="absolute top-2 right-2 flex items-center space-x-1">
@@ -291,19 +305,8 @@ export default function MemberCard({
 					onCancelLinkInvite={onCancelLinkInvite}
 					onCancelInvitation={onCancelInvitation}
 				/>
-
-				{/* Link Invitation */}
-				{linkInviteStates[getDisplayName(member)] === true && (
-					<LinkInvite
-						isOpen={linkInviteStates[getDisplayName(member)] === true}
-						onClose={() => onLinkInviteClose(getDisplayName(member))}
-						onSubmit={(username) =>
-							onLinkInviteSubmit(getDisplayName(member), username)
-						}
-						studentName={getDisplayName(member)}
-					/>
-				)}
-			</div>
+			</>
+			)}
 		</div>
 	);
 }

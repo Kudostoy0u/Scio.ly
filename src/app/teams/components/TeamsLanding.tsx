@@ -1,10 +1,12 @@
 "use client";
 
 import { useTheme } from "@/app/contexts/themeContext";
+import { trpc } from "@/lib/trpc/client";
 import { motion } from "framer-motion";
 import { Calendar, Settings, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import LinkInviteModal from "./LinkInviteModal";
 import { TeamActionSection } from "./TeamActionSection";
 import TeamCalendar from "./TeamCalendar";
 import { TeamCard } from "./TeamCard";
@@ -45,6 +47,25 @@ export default function TeamsLanding({
 	const [activeTab, setActiveTab] = useState<"home" | "upcoming" | "settings">(
 		"home",
 	);
+	const [showLinkInviteModal, setShowLinkInviteModal] = useState(false);
+
+	// Fetch pending link invitations
+	const { data: linkInvitesData } = trpc.teams.pendingLinkInvites.useQuery(
+		undefined,
+		{
+			enabled: !isPreviewMode,
+		},
+	);
+
+	// Show modal if there are pending link invites
+	useEffect(() => {
+		if (
+			linkInvitesData?.linkInvites &&
+			linkInvitesData.linkInvites.length > 0
+		) {
+			setShowLinkInviteModal(true);
+		}
+	}, [linkInvitesData]);
 
 	// Check if user is a captain of any team
 	const isCaptain = userTeams.some((team) =>
@@ -371,6 +392,16 @@ export default function TeamsLanding({
 					</div>
 				</div>
 			)}
+
+			{/* Link Invite Modal */}
+			{showLinkInviteModal &&
+				linkInvitesData?.linkInvites &&
+				linkInvitesData.linkInvites.length > 0 && (
+					<LinkInviteModal
+						linkInvites={linkInvitesData.linkInvites}
+						onClose={() => setShowLinkInviteModal(false)}
+					/>
+				)}
 		</TeamLayout>
 	);
 }

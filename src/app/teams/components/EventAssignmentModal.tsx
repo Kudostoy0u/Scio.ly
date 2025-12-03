@@ -1,7 +1,9 @@
 "use client";
 
 import { useTheme } from "@/app/contexts/themeContext";
+import { AlertTriangle } from "lucide-react";
 import type { Member } from "../types";
+import { DIVISION_B_GROUPS, DIVISION_C_GROUPS } from "./roster/rosterUtils";
 
 /**
  * Science Olympiad Division C events
@@ -48,6 +50,8 @@ interface EventAssignmentModalProps {
 	selectedMember: Member | null;
 	/** The ID of the subteam for the member */
 	subteamId: string;
+	/** Division (B or C) for conflict detection */
+	division?: "B" | "C";
 }
 
 /**
@@ -84,6 +88,7 @@ export default function EventAssignmentModal({
 	events = DIVISION_C_EVENTS,
 	selectedMember,
 	subteamId,
+	division = "C",
 }: EventAssignmentModalProps) {
 	const { darkMode } = useTheme();
 
@@ -91,6 +96,41 @@ export default function EventAssignmentModal({
 	if (!(isOpen && selectedMember)) {
 		return null;
 	}
+
+	// Get the appropriate conflict groups based on division
+	const conflictGroups = division === "B" ? DIVISION_B_GROUPS : DIVISION_C_GROUPS;
+
+	// Build a map of event -> conflict block
+	const eventToConflictBlock = new Map<string, string>();
+	for (const group of conflictGroups) {
+		for (const event of group.events) {
+			eventToConflictBlock.set(event, group.label);
+		}
+	}
+
+	// Check if adding an event would create a conflict
+	const getConflictWarning = (eventName: string): string | null => {
+		if (!selectedMember.events || selectedMember.events.length === 0) {
+			return null;
+		}
+
+		const eventBlock = eventToConflictBlock.get(eventName);
+		if (!eventBlock) {
+			return null;
+		}
+
+		// Find if member has any events in the same conflict block
+		const conflictingEvents = selectedMember.events.filter((memberEvent) => {
+			const memberEventBlock = eventToConflictBlock.get(memberEvent);
+			return memberEventBlock === eventBlock;
+		});
+
+		if (conflictingEvents.length > 0) {
+			return `${selectedMember.name} is already assigned to ${conflictingEvents.join(", ")} in ${eventBlock}`;
+		}
+
+		return null;
+	};
 
 	/**
 	 * Handles event selection
@@ -148,20 +188,45 @@ export default function EventAssignmentModal({
 						</p>
 
 						{/* Event buttons */}
-						{events.map((event) => (
-							<button
-								type="button"
-								key={event}
-								onClick={() => handleEventClick(event)}
-								className={`w-full text-left px-4 py-2 border ${
-									darkMode
-										? "border-gray-600 hover:bg-gray-700 text-white"
-										: "border-gray-300 hover:bg-gray-50 text-gray-900"
-								} rounded-md transition-colors`}
-							>
-								{event}
-							</button>
-						))}
+						{events.map((event) => {
+							const conflictWarning = getConflictWarning(event);
+							const hasConflict = !!conflictWarning;
+
+							return (
+								<div key={event} className="relative group">
+									<button
+										type="button"
+										onClick={() => handleEventClick(event)}
+										disabled={hasConflict}
+										className={`w-full text-left px-4 py-2 pr-10 border ${
+											hasConflict
+												? darkMode
+													? "border-gray-700 bg-gray-800/50 text-gray-500 cursor-not-allowed"
+													: "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
+												: darkMode
+													? "border-gray-600 hover:bg-gray-700 text-white"
+													: "border-gray-300 hover:bg-gray-50 text-gray-900"
+										} rounded-md transition-colors relative`}
+									>
+										{event}
+										{hasConflict && (
+											<AlertTriangle className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-orange-500" />
+										)}
+									</button>
+									{hasConflict && conflictWarning && (
+										<div
+											className={`absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-2 rounded-lg text-sm whitespace-nowrap z-10 ${
+												darkMode
+													? "bg-gray-800 text-white border border-gray-700"
+													: "bg-white text-gray-900 border border-gray-200 shadow-lg"
+											} opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none`}
+										>
+											{conflictWarning}
+										</div>
+									)}
+								</div>
+							);
+						})}
 					</div>
 				</div>
 

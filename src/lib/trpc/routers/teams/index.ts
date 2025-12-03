@@ -1,9 +1,13 @@
 import {
+	acceptLinkInvitation,
 	acceptPendingInvite,
 	archiveTeam,
+	createInvitation,
+	createLinkInvitation,
 	createSubteam,
 	createTeamWithDefaultSubteam,
 	declineInvite,
+	declineLinkInvitation,
 	deleteSubteam,
 	getTeamFullBySlug,
 	getTeamMetaBySlug,
@@ -11,7 +15,9 @@ import {
 	leaveTeam,
 	linkSupabaseAccount,
 	listPendingInvitesForUser,
+	listPendingLinkInvitesForUser,
 	listTeamsForUser,
+	promoteToRole,
 	removeRosterEntry,
 	renameSubteam,
 	replaceRosterEntries,
@@ -30,21 +36,42 @@ const rosterEntrySchema = z.object({
 
 export const teamsRouter = router({
 	listUserTeams: protectedProcedure.query(async ({ ctx }) => {
-		const teams = await listTeamsForUser(ctx.user.id);
-		return { teams };
+		try {
+			console.log("[TRPC listUserTeams] Request:", { userId: ctx.user.id });
+			const teams = await listTeamsForUser(ctx.user.id);
+			console.log("[TRPC listUserTeams] Success:", { count: teams.length });
+			return { teams };
+		} catch (error) {
+			console.error("[TRPC listUserTeams] Error:", error);
+			throw error;
+		}
 	}),
 
 	pendingInvites: protectedProcedure.query(async ({ ctx }) => {
-		const invites = await listPendingInvitesForUser(ctx.user.id);
-		return { invites };
+		try {
+			console.log("[TRPC pendingInvites] Request:", { userId: ctx.user.id });
+			const invites = await listPendingInvitesForUser(ctx.user.id);
+			console.log("[TRPC pendingInvites] Success:", { count: invites.length });
+			return { invites };
+		} catch (error) {
+			console.error("[TRPC pendingInvites] Error:", error);
+			throw error;
+		}
 	}),
 
 	meta: protectedProcedure
 		.input(z.object({ teamSlug: z.string().min(1) }))
 		.query(async ({ ctx, input }) => {
 			try {
-				return await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
+				console.log("[TRPC meta] Request:", {
+					teamSlug: input.teamSlug,
+					userId: ctx.user.id,
+				});
+				const result = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
+				console.log("[TRPC meta] Success:", { teamId: result.teamId });
+				return result;
 			} catch (error) {
+				console.error("[TRPC meta] Error:", error);
 				throw new TRPCError({
 					code: "FORBIDDEN",
 					message:
@@ -57,8 +84,19 @@ export const teamsRouter = router({
 		.input(z.object({ teamSlug: z.string().min(1) }))
 		.query(async ({ ctx, input }) => {
 			try {
-				return await getTeamFullBySlug(input.teamSlug, ctx.user.id);
+				console.log("[TRPC full] Request:", {
+					teamSlug: input.teamSlug,
+					userId: ctx.user.id,
+				});
+				const result = await getTeamFullBySlug(input.teamSlug, ctx.user.id);
+				console.log("[TRPC full] Success:", {
+					teamId: result.meta.teamId,
+					memberCount: result.members.length,
+					rosterEntryCount: result.rosterEntries.length,
+				});
+				return result;
 			} catch (error) {
+				console.error("[TRPC full] Error:", error);
 				throw new TRPCError({
 					code: "FORBIDDEN",
 					message:
@@ -205,19 +243,39 @@ export const teamsRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
-			await upsertRosterEntry(
-				meta.teamId,
-				input.subteamId,
-				{
-					eventName: input.entry.eventName,
-					slotIndex: input.entry.slotIndex,
-					displayName: input.entry.displayName,
-					userId: input.entry.userId,
-				},
-				ctx.user.id,
-			);
-			return { ok: true, updatedAt: new Date().toISOString() };
+			try {
+				console.log("[TRPC upsertRosterEntry] Request:", {
+					teamSlug: input.teamSlug,
+					subteamId: input.subteamId,
+					entry: input.entry,
+					userId: ctx.user.id,
+				});
+
+				const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
+				console.log("[TRPC upsertRosterEntry] Team meta:", meta);
+
+				await upsertRosterEntry(
+					meta.teamId,
+					input.subteamId,
+					{
+						eventName: input.entry.eventName,
+						slotIndex: input.entry.slotIndex,
+						displayName: input.entry.displayName,
+						userId: input.entry.userId,
+					},
+					ctx.user.id,
+				);
+
+				console.log("[TRPC upsertRosterEntry] Success");
+				return { ok: true, updatedAt: new Date().toISOString() };
+			} catch (error) {
+				console.error("[TRPC upsertRosterEntry] Error:", {
+					error,
+					message: error instanceof Error ? error.message : String(error),
+					stack: error instanceof Error ? error.stack : undefined,
+				});
+				throw error;
+			}
 		}),
 
 	removeRosterEntry: protectedProcedure
@@ -230,14 +288,164 @@ export const teamsRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
-			await removeRosterEntry(
-				meta.teamId,
-				input.subteamId,
-				input.eventName,
-				input.slotIndex,
-				ctx.user.id,
-			);
-			return { ok: true, updatedAt: new Date().toISOString() };
+			try {
+				console.log("[TRPC removeRosterEntry] Request:", {
+					input,
+					userId: ctx.user.id,
+				});
+				const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
+				await removeRosterEntry(
+					meta.teamId,
+					input.subteamId,
+					input.eventName,
+					input.slotIndex,
+					ctx.user.id,
+				);
+				console.log("[TRPC removeRosterEntry] Success");
+				return { ok: true, updatedAt: new Date().toISOString() };
+			} catch (error) {
+				console.error("[TRPC removeRosterEntry] Error:", error);
+				throw error;
+			}
+		}),
+
+	inviteMember: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				invitedUsername: z.string().min(1),
+				role: z.enum(["captain", "member"]).optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			try {
+				console.log("[TRPC inviteMember] Request:", {
+					input,
+					invitedBy: ctx.user.id,
+				});
+				const result = await createInvitation({
+					teamSlug: input.teamSlug,
+					invitedUsername: input.invitedUsername,
+					role: input.role,
+					invitedBy: ctx.user.id,
+				});
+				console.log("[TRPC inviteMember] Success:", result);
+				return result;
+			} catch (error) {
+				console.error("[TRPC inviteMember] Error:", error);
+				throw error;
+			}
+		}),
+
+	promoteToRole: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				userId: z.string().uuid(),
+				newRole: z.enum(["captain", "member"]),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			try {
+				console.log("[TRPC promoteToRole] Request:", {
+					input,
+					actorId: ctx.user.id,
+				});
+				const result = await promoteToRole({
+					teamSlug: input.teamSlug,
+					userId: input.userId,
+					newRole: input.newRole,
+					actorId: ctx.user.id,
+				});
+				console.log("[TRPC promoteToRole] Success:", result);
+				return result;
+			} catch (error) {
+				console.error("[TRPC promoteToRole] Error:", error);
+				throw error;
+			}
+		}),
+
+	createLinkInvitation: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				rosterDisplayName: z.string().min(1),
+				invitedUsername: z.string().min(1),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			try {
+				console.log("[TRPC createLinkInvitation] Request:", {
+					input,
+					invitedBy: ctx.user.id,
+				});
+				const result = await createLinkInvitation({
+					teamSlug: input.teamSlug,
+					rosterDisplayName: input.rosterDisplayName,
+					invitedUsername: input.invitedUsername,
+					invitedBy: ctx.user.id,
+				});
+				console.log("[TRPC createLinkInvitation] Success:", result);
+				return result;
+			} catch (error) {
+				console.error("[TRPC createLinkInvitation] Error:", error);
+				throw error;
+			}
+		}),
+
+	pendingLinkInvites: protectedProcedure.query(async ({ ctx }) => {
+		try {
+			console.log("[TRPC pendingLinkInvites] Request:", {
+				userId: ctx.user.id,
+			});
+			const linkInvites = await listPendingLinkInvitesForUser(ctx.user.id);
+			console.log("[TRPC pendingLinkInvites] Success:", {
+				count: linkInvites.length,
+			});
+			return { linkInvites };
+		} catch (error) {
+			console.error("[TRPC pendingLinkInvites] Error:", error);
+			throw error;
+		}
+	}),
+
+	acceptLinkInvite: protectedProcedure
+		.input(z.object({ linkInviteId: z.string().uuid() }))
+		.mutation(async ({ ctx, input }) => {
+			try {
+				console.log("[TRPC acceptLinkInvite] Request:", {
+					linkInviteId: input.linkInviteId,
+					userId: ctx.user.id,
+				});
+				const result = await acceptLinkInvitation(
+					input.linkInviteId,
+					ctx.user.id,
+				);
+				console.log("[TRPC acceptLinkInvite] Success:", result);
+				return result;
+			} catch (error) {
+				console.error("[TRPC acceptLinkInvite] Error:", error);
+				throw error;
+			}
+		}),
+
+	declineLinkInvite: protectedProcedure
+		.input(z.object({ linkInviteId: z.string().uuid() }))
+		.mutation(async ({ ctx, input }) => {
+			try {
+				console.log("[TRPC declineLinkInvite] Request:", {
+					linkInviteId: input.linkInviteId,
+					userId: ctx.user.id,
+				});
+				const result = await declineLinkInvitation(
+					input.linkInviteId,
+					ctx.user.id,
+				);
+				console.log("[TRPC declineLinkInvite] Success:", result);
+				return result;
+			} catch (error) {
+				console.error("[TRPC declineLinkInvite] Error:", error);
+				throw error;
+			}
 		}),
 });

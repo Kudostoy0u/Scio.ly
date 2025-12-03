@@ -408,6 +408,7 @@ export default function PeopleTabUnified({
 						setSelectedMember(null);
 					}}
 					onSelectEvent={handleEventSelect}
+					division={team.division}
 				/>
 			)}
 

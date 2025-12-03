@@ -161,3 +161,22 @@ export const teamsInvitation = pgTable("teams_invitation", {
 		.notNull()
 		.defaultNow(),
 });
+
+export const teamsLinkInvitation = pgTable("teams_link_invitation", {
+	id: uuid("id").primaryKey().defaultRandom(),
+	teamId: uuid("team_id")
+		.notNull()
+		.references(() => teamsTeam.id, { onDelete: "cascade" }),
+	rosterDisplayName: text("roster_display_name").notNull(),
+	invitedUsername: text("invited_username").notNull(),
+	invitedBy: uuid("invited_by")
+		.notNull()
+		.references(() => users.id),
+	status: text("status").notNull().default("pending"),
+	createdAt: timestamp("created_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
+	updatedAt: timestamp("updated_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
+});
