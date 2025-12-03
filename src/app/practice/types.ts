@@ -47,6 +47,8 @@ export interface Settings {
   charLengthMax?: number;
   /** Optional flag for pure ID questions only */
   pureIdOnly?: boolean;
+  /** Optional filter for Rocks and Minerals: 'rock', 'mineral', or undefined for both */
+  rmTypeFilter?: "rock" | "mineral";
 }
 
 /**

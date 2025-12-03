@@ -32,6 +32,8 @@ export type TestParams = {
   charLengthMax?: number;
   /** Optional flag for pure ID questions only */
   pureIdOnly?: boolean;
+  /** Optional filter for Rocks and Minerals: 'rock' or 'mineral' */
+  rmTypeFilter?: "rock" | "mineral";
 };
 
 /**
@@ -94,6 +96,12 @@ export function buildTestParams(eventName: string, settings: Settings): TestPara
       ? Math.max(10, Math.min(200, settings.charLengthMax))
       : undefined;
 
+  // Normalize rmTypeFilter for Rocks and Minerals
+  const normalizedRmTypeFilter =
+    settings.rmTypeFilter === "rock" || settings.rmTypeFilter === "mineral"
+      ? settings.rmTypeFilter
+      : undefined;
+
   const params = {
     eventName,
     questionCount: normalizedQuestionCount,
@@ -107,6 +115,7 @@ export function buildTestParams(eventName: string, settings: Settings): TestPara
     charLengthMin: normalizedCharLengthMin,
     charLengthMax: normalizedCharLengthMax,
     pureIdOnly: settings.pureIdOnly,
+    rmTypeFilter: normalizedRmTypeFilter,
   };
 
   return params;

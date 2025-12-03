@@ -54,6 +54,7 @@ export function proceedWithUnlimited(
         subtopics: settings.subtopics,
         idPercentage: settings.idPercentage,
         pureIdOnly: settings.pureIdOnly,
+        rmTypeFilter: settings.rmTypeFilter,
       })
     );
     document.cookie = `scio_unlimited_params=${cookiePayload}; Path=/; Max-Age=600; SameSite=Lax`;

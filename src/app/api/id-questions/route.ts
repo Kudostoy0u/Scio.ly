@@ -20,6 +20,7 @@ const Filters = z.object({
   limit: z.string().optional(),
   question_type: z.string().optional(),
   pure_id_only: z.string().optional(),
+  rm_type: z.string().optional(), // 'rock', 'mineral', or undefined for both
 });
 
 const toArray = (v: unknown) => (Array.isArray(v) ? v : []);
@@ -51,6 +52,11 @@ export async function GET(request: NextRequest) {
     }
     if (p.difficulty_max) {
       conds.push(lt(idEvents.difficulty, String(Number.parseFloat(p.difficulty_max))));
+    }
+
+    // Filter by rm_type for Rocks and Minerals event
+    if (p.rm_type && (p.rm_type === "rock" || p.rm_type === "mineral")) {
+      conds.push(sql`${idEvents.rmType} = ${p.rm_type}`);
     }
 
     // Filter by question type if provided (mcq | frq | both)

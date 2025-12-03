@@ -178,6 +178,13 @@ export async function fetchIdQuestions(
       if (routerParams.pureIdOnly === true) {
         params.set("pure_id_only", "true");
       }
+      // Pass rm_type filter for Rocks and Minerals
+      if (
+        routerParams.rmTypeFilter &&
+        (routerParams.rmTypeFilter === "rock" || routerParams.rmTypeFilter === "mineral")
+      ) {
+        params.set("rm_type", routerParams.rmTypeFilter as string);
+      }
       const resp = await fetch(`${api.idQuestions}?${params.toString()}`);
       const json = await resp.json();
       source = Array.isArray(json?.data) ? json.data : [];
