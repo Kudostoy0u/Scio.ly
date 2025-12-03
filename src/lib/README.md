@@ -75,13 +75,6 @@ Extended team functionality.
 - Team analytics
 - Advanced team operations
 
-### `notifications.ts`
-Notification system database operations.
-
-**Features:**
-- Notification CRUD
-- User notifications
-
 ### `utils.ts`
 Database utility functions.
 

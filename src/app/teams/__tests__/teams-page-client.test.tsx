@@ -3,6 +3,90 @@ import { renderWithProviders, screen, waitFor } from "@/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 
+vi.mock("@/lib/trpc/client", () => {
+	const utilsMock = {
+		teams: {
+			listUserTeams: { invalidate: vi.fn() },
+			pendingInvites: { invalidate: vi.fn() },
+		},
+	};
+
+	const state = {
+		listUserTeamsReturn: {
+			data: { teams: [] as unknown[] },
+			isLoading: false,
+		} as
+			| { data: { teams: unknown[] }; isLoading: boolean; error?: Error }
+			| { data?: undefined; isLoading: boolean; error?: Error },
+		pendingInvitesReturn: {
+			invites: [] as unknown[],
+			isLoading: false,
+		},
+	};
+
+	const __mock = {
+		setListUserTeamsReturn: (
+			value:
+				| { data: { teams: unknown[] }; isLoading: boolean; error?: Error }
+				| { data?: undefined; isLoading: boolean; error?: Error },
+		) => {
+			state.listUserTeamsReturn = value;
+		},
+		setPendingInvitesReturn: (value: { invites: unknown[]; isLoading: boolean }) => {
+			state.pendingInvitesReturn = value;
+		},
+	};
+
+	return {
+		__esModule: true,
+		trpc: {
+			useUtils: () => utilsMock,
+			teams: {
+				listUserTeams: {
+					useQuery: vi.fn(() => state.listUserTeamsReturn),
+				},
+				pendingInvites: {
+					useQuery: vi.fn(() => state.pendingInvitesReturn),
+				},
+				createTeam: {
+					useMutation: ({ onSuccess }: { onSuccess?: () => void } = {}) => ({
+						mutateAsync: async () => {
+							onSuccess?.();
+							return { slug: "new-team" };
+						},
+						isLoading: false,
+					}),
+				},
+				joinTeam: {
+					useMutation: ({ onSuccess }: { onSuccess?: () => void } = {}) => ({
+						mutateAsync: async () => {
+							onSuccess?.();
+							return { slug: "joined-team" };
+						},
+						isLoading: false,
+					}),
+				},
+				acceptInvite: {
+					useMutation: () => ({
+						mutate: vi.fn(),
+						mutateAsync: vi.fn(),
+						isLoading: false,
+					}),
+				},
+				declineInvite: {
+					useMutation: () => ({
+						mutate: vi.fn(),
+						isLoading: false,
+					}),
+				},
+			},
+		},
+		__mock,
+	};
+});
+
+import { __mock as trpcMock } from "@/lib/trpc/client";
+
 // Mock the auth context
 vi.mock("@/app/contexts/authContext", () => ({
 	useAuth: () => ({
@@ -35,54 +119,46 @@ describe("TeamsPageClient", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		(global.fetch as unknown as { mockClear: () => void }).mockClear();
+		trpcMock.setListUserTeamsReturn({
+			data: { teams: [] },
+			isLoading: false,
+		});
+		trpcMock.setPendingInvitesReturn({
+			invites: [],
+			isLoading: false,
+		});
 	});
 
 	it("shows loading state initially", () => {
-		(
-			global.fetch as unknown as {
-				mockImplementation: (fn: () => Promise<unknown>) => void;
-			}
-		).mockImplementation(
-			() =>
-				new Promise(() => {
-					// Intentionally empty - never resolves to test loading state
-				}),
-		); // Never resolves
+		trpcMock.setListUserTeamsReturn({
+			data: undefined,
+			isLoading: true,
+		});
 
-		renderWithProviders(
-			<TeamsPageClient initialLinkedSelection={null} initialGroupSlug={null} />,
-		);
+		renderWithProviders(<TeamsPageClient />);
 
-		expect(screen.getByText("Loading teams...")).toBeInTheDocument();
+		expect(
+			document.querySelector(".animate-spin.rounded-full"),
+		).toBeInTheDocument();
 	});
 
 	it("shows sign in message when user is not authenticated", () => {
-		renderWithProviders(
-			<TeamsPageClient initialLinkedSelection={null} initialGroupSlug={null} />,
-			{
-				initialUser: null,
-			},
-		);
+		renderWithProviders(<TeamsPageClient />, {
+			initialUser: null,
+		});
 
-		// The component shows loading state initially, which is correct behavior
-		// In a real app, once auth loads and confirms no user, it would show sign-in message
-		// For testing purposes, we verify the loading state appears
-		expect(screen.getByText("Loading teams...")).toBeInTheDocument();
+		expect(
+			screen.getByText("Sign in to see your teams."),
+		).toBeInTheDocument();
 	});
 
 	it("shows landing page when user has no teams", async () => {
-		(
-			global.fetch as unknown as {
-				mockResolvedValueOnce: (value: unknown) => void;
-			}
-		).mockResolvedValueOnce({
-			ok: true,
-			json: () => Promise.resolve({ teams: [] }),
+		trpcMock.setListUserTeamsReturn({
+			data: { teams: [] },
+			isLoading: false,
 		});
 
-		renderWithProviders(
-			<TeamsPageClient initialLinkedSelection={null} initialGroupSlug={null} />,
-		);
+		renderWithProviders(<TeamsPageClient />);
 
 		await waitFor(() => {
 			expect(screen.getByText("Add a team to get started")).toBeInTheDocument();
@@ -102,18 +178,12 @@ describe("TeamsPageClient", () => {
 			},
 		];
 
-		(
-			global.fetch as unknown as {
-				mockResolvedValueOnce: (value: unknown) => void;
-			}
-		).mockResolvedValueOnce({
-			ok: true,
-			json: () => Promise.resolve({ teams: mockTeams }),
+		trpcMock.setListUserTeamsReturn({
+			data: { teams: mockTeams },
+			isLoading: false,
 		});
 
-		renderWithProviders(
-			<TeamsPageClient initialLinkedSelection={null} initialGroupSlug={null} />,
-		);
+		renderWithProviders(<TeamsPageClient />);
 
 		await waitFor(() => {
 			expect(screen.getByText("Test School")).toBeInTheDocument();
@@ -121,15 +191,13 @@ describe("TeamsPageClient", () => {
 	});
 
 	it("handles API errors gracefully", async () => {
-		(
-			global.fetch as unknown as {
-				mockRejectedValueOnce: (error: Error) => void;
-			}
-		).mockRejectedValueOnce(new Error("API Error"));
+		trpcMock.setListUserTeamsReturn({
+			data: undefined,
+			isLoading: false,
+			error: new Error("API Error"),
+		});
 
-		renderWithProviders(
-			<TeamsPageClient initialLinkedSelection={null} initialGroupSlug={null} />,
-		);
+		renderWithProviders(<TeamsPageClient />);
 
 		await waitFor(() => {
 			expect(screen.getByText("Add a team to get started")).toBeInTheDocument();
@@ -137,33 +205,7 @@ describe("TeamsPageClient", () => {
 	});
 
 	it("creates team successfully", async () => {
-		(
-			global.fetch as unknown as {
-				mockResolvedValueOnce: (value: unknown) => {
-					mockResolvedValueOnce: (value: unknown) => void;
-				};
-			}
-		)
-			.mockResolvedValueOnce({
-				ok: true,
-				json: () => Promise.resolve({ teams: [] }),
-			})
-			.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						id: "new-team",
-						name: "New Team",
-						slug: "new-team",
-						school: "New School",
-						division: "C",
-						members: [],
-					}),
-			});
-
-		renderWithProviders(
-			<TeamsPageClient initialLinkedSelection={null} initialGroupSlug={null} />,
-		);
+		renderWithProviders(<TeamsPageClient />);
 
 		await waitFor(() => {
 			expect(screen.getByText("Add a team to get started")).toBeInTheDocument();
@@ -178,33 +220,7 @@ describe("TeamsPageClient", () => {
 	});
 
 	it("joins team successfully", async () => {
-		(
-			global.fetch as unknown as {
-				mockResolvedValueOnce: (value: unknown) => {
-					mockResolvedValueOnce: (value: unknown) => void;
-				};
-			}
-		)
-			.mockResolvedValueOnce({
-				ok: true,
-				json: () => Promise.resolve({ teams: [] }),
-			})
-			.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						id: "joined-team",
-						name: "Joined Team",
-						slug: "joined-team",
-						school: "Joined School",
-						division: "C",
-						members: [],
-					}),
-			});
-
-		renderWithProviders(
-			<TeamsPageClient initialLinkedSelection={null} initialGroupSlug={null} />,
-		);
+		renderWithProviders(<TeamsPageClient />);
 
 		await waitFor(() => {
 			expect(screen.getByText("Add a team to get started")).toBeInTheDocument();

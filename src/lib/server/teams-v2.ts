@@ -2,11 +2,14 @@ import { dbPg } from "@/lib/db";
 import { users } from "@/lib/db/schema/core";
 import {
 	teamsAssignment,
+	teamsInvitation,
 	teamsMembership,
 	teamsRoster,
 	teamsSubteam,
 	teamsTeam,
 } from "@/lib/db/schema/teams_v2";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 
 export interface TeamMeta {
@@ -150,6 +153,84 @@ async function assertCaptainAccess(teamSlug: string, userId: string) {
 		throw new Error("Only captains can perform this action");
 	}
 	return { team, membership };
+}
+
+async function ensureSupabaseLink(user: SupabaseUser | null) {
+	if (!user?.id) return null;
+	const preferredUsername =
+		(user.user_metadata?.username as string | undefined) ??
+		(user.user_metadata?.user_name as string | undefined) ??
+		(user.email ? user.email.split("@")[0] : null);
+	const supabaseClient = await createSupabaseServerClient();
+	const { data: profile } = await supabaseClient
+		.from("users")
+		.select("id, username, email")
+		.eq("id", user.id)
+		.maybeSingle();
+
+	const supabaseUsername =
+		(profile as { username?: string | null } | null)?.username ??
+		(preferredUsername ? preferredUsername.trim() : null) ??
+		null;
+
+	await dbPg
+		.insert(users)
+		.values({
+			id: user.id,
+			email: user.email ?? "",
+			username: supabaseUsername ?? user.email ?? user.id,
+			supabaseUserId: user.id,
+			supabaseUsername,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		})
+		.onConflictDoNothing();
+
+	await dbPg
+		.update(users)
+		.set({
+			email: user.email ?? sql`COALESCE(${users.email}, '')`,
+			username: supabaseUsername ?? users.username,
+			supabaseUserId: user.id,
+			supabaseUsername,
+			updatedAt: new Date(),
+		})
+		.where(eq(users.id, user.id));
+
+	return supabaseUsername;
+}
+
+export async function linkSupabaseAccount(username: string, userId: string) {
+	const normalized = username.trim();
+	if (!normalized) throw new Error("Username is required");
+	const supabase = await createSupabaseServerClient();
+	const { data, error } = await supabase
+		.from("users")
+		.select("id, username, email")
+		.ilike("username", normalized)
+		.limit(1)
+		.maybeSingle();
+	if (error) {
+		throw new Error(`Supabase lookup failed: ${error.message}`);
+	}
+	const supUser = data as { id?: string; username?: string | null } | null;
+	if (!supUser?.id) {
+		throw new Error("Supabase user not found");
+	}
+
+	await dbPg
+		.update(users)
+		.set({
+			supabaseUserId: supUser.id,
+			supabaseUsername: supUser.username ?? normalized,
+			updatedAt: new Date(),
+		})
+		.where(eq(users.id, userId));
+
+	return {
+		supabaseUserId: supUser.id,
+		supabaseUsername: supUser.username ?? normalized,
+	};
 }
 
 export async function getTeamMetaBySlug(
@@ -468,6 +549,7 @@ export async function createTeamWithDefaultSubteam(input: {
 	school: string;
 	division: "B" | "C";
 	createdBy: string;
+	supabaseUser?: SupabaseUser | null;
 }) {
 	const baseSlug = slugifySchool(input.school);
 
@@ -506,7 +588,7 @@ export async function createTeamWithDefaultSubteam(input: {
 		await tx.insert(teamsSubteam).values({
 			id: subteamId,
 			teamId,
-			name: "Main",
+			name: "Team A",
 			description: "Default subteam",
 			displayOrder: 0,
 			createdBy: input.createdBy,
@@ -520,6 +602,11 @@ export async function createTeamWithDefaultSubteam(input: {
 			status: "active",
 		});
 	});
+
+	// Link creator to Supabase if possible
+	if (input.supabaseUser) {
+		await ensureSupabaseLink(input.supabaseUser);
+	}
 
 	return {
 		id: teamId,
@@ -601,6 +688,13 @@ export async function joinTeamByCode(code: string, userId: string) {
 			.where(eq(teamsMembership.id, membershipRow.id));
 	}
 
+	// Link joining user to Supabase profile
+	const supabase = await createSupabaseServerClient();
+	const { data: supabaseUser } = await supabase.auth.getUser();
+	if (supabaseUser?.user) {
+		await ensureSupabaseLink(supabaseUser.user);
+	}
+
 	return {
 		id: team.id,
 		slug: team.slug,
@@ -611,7 +705,7 @@ export async function joinTeamByCode(code: string, userId: string) {
 
 export async function createSubteam(input: {
 	teamSlug: string;
-	name: string;
+	name?: string | null;
 	description?: string | null;
 	userId: string;
 }) {
@@ -626,11 +720,21 @@ export async function createSubteam(input: {
 
 	const subteamId = crypto.randomUUID();
 	const displayOrder = Number(maxOrder?.max ?? 0) + 1;
+	let finalName = input.name?.trim();
+	if (!finalName) {
+		const existingCount = await dbPg
+			.select({ count: sql<number>`COUNT(*)` })
+			.from(teamsSubteam)
+			.where(eq(teamsSubteam.teamId, team.id));
+		const countValue = Number(existingCount[0]?.count ?? 0);
+		const letter = String.fromCharCode("A".charCodeAt(0) + countValue);
+		finalName = `Team ${letter}`;
+	}
 
 	await dbPg.insert(teamsSubteam).values({
 		id: subteamId,
 		teamId: team.id,
-		name: input.name,
+		name: finalName,
 		description: input.description ?? null,
 		displayOrder,
 		createdBy: input.userId,
@@ -639,10 +743,27 @@ export async function createSubteam(input: {
 	return {
 		id: subteamId,
 		teamId: team.id,
-		name: input.name,
+		name: finalName,
 		description: input.description ?? null,
 		displayOrder,
 	};
+}
+
+export async function deleteSubteam(input: {
+	teamSlug: string;
+	subteamId: string;
+	userId: string;
+}) {
+	const { team } = await assertCaptainAccess(input.teamSlug, input.userId);
+	await dbPg
+		.delete(teamsSubteam)
+		.where(
+			and(
+				eq(teamsSubteam.id, input.subteamId),
+				eq(teamsSubteam.teamId, team.id),
+			),
+		);
+	return { ok: true };
 }
 
 export async function renameSubteam(input: {
@@ -736,7 +857,43 @@ export async function upsertRosterEntry(
 		throw new Error("Only captains can edit roster");
 	}
 
-	const slotIndex = payload.slotIndex ?? 0;
+	const existingEntries = await dbPg
+		.select({
+			id: teamsRoster.id,
+			slotIndex: teamsRoster.slotIndex,
+			displayName: teamsRoster.displayName,
+			userId: teamsRoster.userId,
+		})
+		.from(teamsRoster)
+		.where(
+			and(
+				eq(teamsRoster.teamId, teamId),
+				subteamId
+					? eq(teamsRoster.subteamId, subteamId)
+					: isNull(teamsRoster.subteamId),
+				eq(teamsRoster.eventName, payload.eventName),
+			),
+		)
+		.orderBy(teamsRoster.slotIndex);
+
+	const alreadyAssigned = existingEntries.find(
+		(e) =>
+			e.displayName.toLowerCase() === payload.displayName.toLowerCase() ||
+			(payload.userId && e.userId === payload.userId),
+	);
+	if (alreadyAssigned) {
+		throw new Error("Member is already assigned to this event");
+	}
+
+	let slotIndex = payload.slotIndex;
+	if (slotIndex === undefined || slotIndex === null) {
+		const usedSlots = new Set(existingEntries.map((e) => Number(e.slotIndex)));
+		let candidate = 0;
+		while (usedSlots.has(candidate)) {
+			candidate += 1;
+		}
+		slotIndex = candidate;
+	}
 
 	await dbPg.transaction(async (tx) => {
 		await tx
@@ -790,4 +947,293 @@ export async function removeRosterEntry(
 				eq(teamsRoster.slotIndex, slotIndex),
 			),
 		);
+}
+
+export interface PendingInvite {
+	teamId: string;
+	slug: string;
+	name: string;
+	school: string;
+	division: string;
+	role: "captain" | "member";
+}
+
+function buildInviteMatchFilters(
+	userId: string,
+	userEmail?: string | null,
+	username?: string | null,
+) {
+	const filters = [eq(teamsInvitation.invitedUserId, userId)];
+	if (userEmail) {
+		filters.push(eq(teamsInvitation.invitedEmail, userEmail));
+	}
+	if (username) {
+		filters.push(eq(teamsInvitation.invitedEmail, username));
+	}
+
+	if (filters.length === 1) return filters[0];
+	return or(...filters);
+}
+
+async function bumpTeamVersion(teamId: string) {
+	await dbPg
+		.update(teamsTeam)
+		.set({
+			updatedAt: sql`now()`,
+			version: sql`${teamsTeam.version} + 1`,
+		})
+		.where(eq(teamsTeam.id, teamId));
+}
+
+export async function listPendingInvitesForUser(
+	userId: string,
+): Promise<PendingInvite[]> {
+	const [profile] = await dbPg
+		.select({
+			email: users.email,
+			username: users.supabaseUsername,
+		})
+		.from(users)
+		.where(eq(users.id, userId))
+		.limit(1);
+
+	const inviteMatch = buildInviteMatchFilters(
+		userId,
+		profile?.email ?? null,
+		profile?.username ?? null,
+	);
+
+	const invites =
+		profile || userId
+			? await dbPg
+					.select({
+						invitationId: teamsInvitation.id,
+						teamId: teamsTeam.id,
+						slug: teamsTeam.slug,
+						name: teamsTeam.name,
+						school: teamsTeam.school,
+						division: teamsTeam.division,
+						role: teamsInvitation.role,
+					})
+					.from(teamsInvitation)
+					.innerJoin(teamsTeam, eq(teamsInvitation.teamId, teamsTeam.id))
+					.where(and(eq(teamsInvitation.status, "pending"), inviteMatch))
+			: [];
+
+	const pendingMemberships = await dbPg
+		.select({
+			teamId: teamsTeam.id,
+			slug: teamsTeam.slug,
+			name: teamsTeam.name,
+			school: teamsTeam.school,
+			division: teamsTeam.division,
+			role: teamsMembership.role,
+		})
+		.from(teamsMembership)
+		.innerJoin(teamsTeam, eq(teamsMembership.teamId, teamsTeam.id))
+		.where(
+			and(
+				eq(teamsMembership.userId, userId),
+				eq(teamsMembership.status, "pending"),
+			),
+		);
+
+	const combined = new Map<string, PendingInvite>();
+
+	for (const invite of invites) {
+		combined.set(invite.teamId, {
+			teamId: invite.teamId,
+			slug: invite.slug,
+			name: invite.name,
+			school: invite.school,
+			division: invite.division,
+			role: (invite.role as "captain" | "member") ?? "member",
+		});
+	}
+
+	for (const membership of pendingMemberships) {
+		if (combined.has(membership.teamId)) continue;
+		combined.set(membership.teamId, {
+			teamId: membership.teamId,
+			slug: membership.slug,
+			name: membership.name,
+			school: membership.school,
+			division: membership.division,
+			role: (membership.role as "captain" | "member") ?? "member",
+		});
+	}
+
+	return Array.from(combined.values());
+}
+
+export async function acceptPendingInvite(teamSlug: string, userId: string) {
+	const [team] = await dbPg
+		.select({
+			id: teamsTeam.id,
+			slug: teamsTeam.slug,
+		})
+		.from(teamsTeam)
+		.where(eq(teamsTeam.slug, teamSlug))
+		.limit(1);
+
+	if (!team) {
+		throw new Error("Team not found");
+	}
+
+	const supabase = await createSupabaseServerClient();
+	const { data: supabaseUser } = await supabase.auth.getUser();
+	if (supabaseUser?.user) {
+		await ensureSupabaseLink(supabaseUser.user);
+	}
+
+	await dbPg.transaction(async (tx) => {
+		const [profile] = await tx
+			.select({
+				email: users.email,
+				username: users.supabaseUsername,
+			})
+			.from(users)
+			.where(eq(users.id, userId))
+			.limit(1);
+
+		const inviteMatch = buildInviteMatchFilters(
+			userId,
+			profile?.email ?? null,
+			profile?.username ?? null,
+		);
+
+		const [invite] = await tx
+			.select({
+				id: teamsInvitation.id,
+				role: teamsInvitation.role,
+			})
+			.from(teamsInvitation)
+			.where(
+				and(
+					eq(teamsInvitation.teamId, team.id),
+					eq(teamsInvitation.status, "pending"),
+					inviteMatch,
+				),
+			)
+			.limit(1);
+
+		const [existingMembership] = await tx
+			.select({
+				id: teamsMembership.id,
+				role: teamsMembership.role,
+				status: teamsMembership.status,
+			})
+			.from(teamsMembership)
+			.where(
+				and(
+					eq(teamsMembership.teamId, team.id),
+					eq(teamsMembership.userId, userId),
+				),
+			)
+			.limit(1);
+
+		if (existingMembership) {
+			await tx
+				.update(teamsMembership)
+				.set({
+					status: "active",
+					role: existingMembership.role ?? invite?.role ?? "member",
+					updatedAt: new Date(),
+				})
+				.where(eq(teamsMembership.id, existingMembership.id));
+		} else {
+			await tx.insert(teamsMembership).values({
+				id: crypto.randomUUID(),
+				teamId: team.id,
+				userId,
+				role: invite?.role ?? "member",
+				status: "active",
+				invitedBy: null,
+				joinedAt: new Date(),
+			});
+		}
+
+		if (invite) {
+			await tx
+				.update(teamsInvitation)
+				.set({
+					status: "accepted",
+					invitedUserId: userId,
+					updatedAt: new Date(),
+				})
+				.where(eq(teamsInvitation.id, invite.id));
+		}
+
+		await bumpTeamVersion(team.id);
+	});
+
+	return { slug: team.slug };
+}
+
+export async function declineInvite(teamSlug: string, userId: string) {
+	const [team] = await dbPg
+		.select({
+			id: teamsTeam.id,
+			slug: teamsTeam.slug,
+		})
+		.from(teamsTeam)
+		.where(eq(teamsTeam.slug, teamSlug))
+		.limit(1);
+
+	if (!team) {
+		throw new Error("Team not found");
+	}
+
+	const supabase = await createSupabaseServerClient();
+	const { data: supabaseUser } = await supabase.auth.getUser();
+	if (supabaseUser?.user) {
+		await ensureSupabaseLink(supabaseUser.user);
+	}
+
+	await dbPg.transaction(async (tx) => {
+		const [profile] = await tx
+			.select({
+				email: users.email,
+				username: users.supabaseUsername,
+			})
+			.from(users)
+			.where(eq(users.id, userId))
+			.limit(1);
+
+		const inviteMatch = buildInviteMatchFilters(
+			userId,
+			profile?.email ?? null,
+			profile?.username ?? null,
+		);
+
+		await tx
+			.update(teamsInvitation)
+			.set({
+				status: "declined",
+				invitedUserId: userId,
+				updatedAt: new Date(),
+			})
+			.where(
+				and(
+					eq(teamsInvitation.teamId, team.id),
+					eq(teamsInvitation.status, "pending"),
+					inviteMatch,
+				),
+			);
+
+		await tx
+			.update(teamsMembership)
+			.set({ status: "inactive", updatedAt: new Date() })
+			.where(
+				and(
+					eq(teamsMembership.teamId, team.id),
+					eq(teamsMembership.userId, userId),
+					eq(teamsMembership.status, "pending"),
+				),
+			);
+
+		await bumpTeamVersion(team.id);
+	});
+
+	return { ok: true };
 }

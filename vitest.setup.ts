@@ -20,10 +20,16 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-// Mock Next.js Image component
-vi.mock("next/image", () => ({
-  default: vi.fn(),
-}));
+// Mock Next.js Image component with a simple img shim so accessibility queries work
+vi.mock("next/image", () => {
+  const React = require("react");
+  const MockImage = ({ alt, src, ...rest }: { alt: string; src: string }) =>
+    React.createElement("img", { alt, src: typeof src === "string" ? src : "", ...rest });
+  return {
+    __esModule: true,
+    default: MockImage,
+  };
+});
 
 // Mock Next.js Link component
 vi.mock("next/link", () => ({

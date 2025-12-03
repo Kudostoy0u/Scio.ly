@@ -136,6 +136,32 @@ export default function AssignmentDetailsStep({
 
 				<div>
 					<label
+						htmlFor="assignment-points"
+						className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+					>
+						Points
+					</label>
+					<input
+						id="assignment-points"
+						type="number"
+						value={Number.isFinite(details.points) ? details.points : 0}
+						onChange={(e) =>
+							onDetailsChange({
+								points: Number.parseInt(e.target.value, 10) || 0,
+							})
+						}
+						className={`w-full px-3 py-2 border rounded-lg ${
+							darkMode
+								? "bg-gray-700 border-gray-600 text-white"
+								: "bg-white border-gray-300 text-gray-900"
+						}`}
+						placeholder="Enter point value"
+						min={0}
+					/>
+				</div>
+
+				<div>
+					<label
 						htmlFor="assignment-due-date"
 						className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
 					>

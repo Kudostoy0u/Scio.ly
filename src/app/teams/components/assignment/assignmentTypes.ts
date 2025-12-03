@@ -32,6 +32,7 @@ export interface AssignmentDetails {
 	description: string;
 	assignmentType: "homework" | "project" | "study" | "other";
 	dueDate: string;
+	points: number;
 	timeLimitMinutes: number;
 	eventName: string;
 }

@@ -38,7 +38,6 @@ export default defineConfig({
         "src/app/api/teams/**/*.ts",
         "src/app/teams/components/**/*.tsx",
         "src/lib/services/team-data.ts",
-        "src/lib/services/notification-sync.ts",
       ],
       all: true,
       lines: 100,

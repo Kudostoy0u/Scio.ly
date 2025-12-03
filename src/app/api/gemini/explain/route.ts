@@ -1,5 +1,6 @@
 import { ApiErrors, handleApiError, successResponse, validateFields } from "@/lib/api/utils";
 import { geminiService } from "@/lib/services/gemini";
+import { getCachedExplanation, cacheExplanation } from "@/lib/services/gemini/cache";
 import type { ApiResponse } from "@/lib/types/api";
 import logger from "@/lib/utils/logger";
 import type { NextRequest } from "next/server";
@@ -25,6 +26,15 @@ export async function POST(request: NextRequest) {
 
     logger.info(`Gemini explain request received for event: ${event}`);
 
+    // Check cache first
+    const cachedExplanation = await getCachedExplanation(question, event, userAnswer);
+    if (cachedExplanation) {
+      logger.info("Returning cached explanation");
+      return successResponse<ApiResponse["data"]>({
+        explanation: cachedExplanation,
+      });
+    }
+
     if (!geminiService.isAvailable()) {
       logger.warn("Gemini AI not available");
       return ApiErrors.serverError("Gemini AI not available");
@@ -36,6 +46,9 @@ export async function POST(request: NextRequest) {
       const result = await geminiService.explain(question, userAnswer || "", event);
 
       logger.info("Gemini AI explain response received");
+
+      // Cache the explanation for future use
+      void cacheExplanation(question, event, result.explanation, userAnswer);
 
       return successResponse<ApiResponse["data"]>(result);
     } catch (error) {

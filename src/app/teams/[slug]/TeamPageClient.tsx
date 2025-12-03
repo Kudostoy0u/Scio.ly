@@ -14,7 +14,7 @@ import {
 	useTeamSubteams,
 } from "@/lib/hooks/useTeam";
 import { trpc } from "@/lib/trpc/client";
-import { Clipboard, ShieldCheck, Trash2, X } from "lucide-react";
+import { Clipboard, LogOut, ShieldCheck, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
@@ -44,6 +44,7 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 
 	const createSubteamMutation = trpc.teams.createSubteam.useMutation();
 	const renameSubteamMutation = trpc.teams.renameSubteam.useMutation();
+	const deleteSubteamMutation = trpc.teams.deleteSubteam.useMutation();
 	const leaveTeamMutation = trpc.teams.leaveTeam.useMutation();
 	const archiveTeamMutation = trpc.teams.archiveTeam.useMutation();
 
@@ -114,14 +115,12 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 	};
 
 	const handleCreateSubteam = async () => {
-		const name = window.prompt("Subteam name?");
-		if (!name || !name.trim()) {
-			return;
-		}
+		const name =
+			window.prompt("Subteam name? Leave blank for default") ?? undefined;
 		try {
 			const created = await createSubteamMutation.mutateAsync({
 				teamSlug,
-				name: name.trim(),
+				name,
 			});
 			toast.success("Subteam created");
 			setActiveSubteamId(created.id);
@@ -152,6 +151,35 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 				mutationError instanceof Error
 					? mutationError.message
 					: "Failed to rename subteam",
+			);
+		}
+	};
+
+	const handleDeleteSubteam = async (
+		subteamId: string,
+		subteamName: string,
+	) => {
+		if (
+			!window.confirm(
+				`Delete ${subteamName || "this subteam"}? This will remove its roster entries.`,
+			)
+		) {
+			return;
+		}
+		try {
+			await deleteSubteamMutation.mutateAsync({ teamSlug, subteamId });
+			toast.success("Subteam deleted");
+			await invalidateTeam(teamSlug);
+			if (activeSubteamId === subteamId) {
+				setActiveSubteamId(
+					subteams?.find((s) => s.id !== subteamId)?.id ?? null,
+				);
+			}
+		} catch (mutationError) {
+			toast.error(
+				mutationError instanceof Error
+					? mutationError.message
+					: "Failed to delete subteam",
 			);
 		}
 	};
@@ -230,8 +258,9 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 							<button
 								type="button"
 								onClick={() => setConfirmAction("leave")}
-								className="inline-flex items-center justify-center rounded-md bg-gray-700 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-gray-800"
+								className="inline-flex items-center justify-center rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-amber-700"
 							>
+								<LogOut className="mr-2 h-4 w-4" />
 								Leave team
 							</button>
 							{isCaptain && (
@@ -395,6 +424,7 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 						onSubteamChange={setActiveSubteamId}
 						onCreateSubteam={handleCreateSubteam}
 						onEditSubteam={handleRenameSubteam}
+						onDeleteSubteam={handleDeleteSubteam}
 					/>
 				)}
 

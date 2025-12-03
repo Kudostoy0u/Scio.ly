@@ -109,7 +109,8 @@ export default function EventAssignmentModal({
 		<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
 			{/* Backdrop overlay */}
 			<div
-				className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+				className="fixed inset-0 transition-opacity"
+				style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
 				onClick={onClose}
 				onKeyDown={(e) => {
 					if (e.key === "Escape") {

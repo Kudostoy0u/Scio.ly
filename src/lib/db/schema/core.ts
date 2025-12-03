@@ -17,6 +17,8 @@ export const users = pgTable("users", {
 	id: uuid("id").primaryKey(),
 	email: text("email").notNull().unique(),
 	username: text("username").notNull().unique(),
+	supabaseUserId: uuid("supabase_user_id").unique(),
+	supabaseUsername: text("supabase_username").unique(),
 	firstName: text("first_name"),
 	lastName: text("last_name"),
 	displayName: text("display_name"),
@@ -36,26 +38,6 @@ export const apiKeyGenerations = pgTable("api_key_generations", {
 	userId: uuid("user_id").references(() => users.id),
 	generatedAt: timestamp("generated_at", { withTimezone: true }).defaultNow(),
 	createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
-
-// ==================== CORE NOTIFICATIONS ====================
-
-export const notifications = pgTable("notifications", {
-	id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-	userId: uuid("user_id")
-		.notNull()
-		.references(() => users.id),
-	type: text("type").notNull(),
-	title: text("title").notNull(),
-	body: text("body"),
-	data: jsonb("data").notNull().default("{}"),
-	isRead: boolean("is_read").notNull().default(false),
-	createdAt: timestamp("created_at", { withTimezone: true })
-		.notNull()
-		.defaultNow(),
-	updatedAt: timestamp("updated_at", { withTimezone: true })
-		.notNull()
-		.defaultNow(),
 });
 
 // ==================== CORE QUESTIONS & CONTENT ====================

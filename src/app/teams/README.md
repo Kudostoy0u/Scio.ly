@@ -202,5 +202,4 @@ Team utility functions.
 6. **Activity Stream**: Real-time activity stream for team updates
 7. **Leaderboards**: Team-specific leaderboards
 8. **Roster Management**: Advanced roster management with conflict detection
-9. **Notifications**: Real-time notification system
-10. **Theme Support**: Dark/light mode support throughout
+9. **Theme Support**: Dark/light mode support throughout

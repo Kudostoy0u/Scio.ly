@@ -40,7 +40,6 @@ export default function AuthButton() {
     ? "text-blue-300 hover:text-blue-200"
     : "text-blue-500 hover:text-blue-600";
   const [username, setUsername] = useState<string | null>(null);
-  const [clearingAll, setClearingAll] = useState(false);
 
   useEffect(() => {
     setUser(ctxUser ?? null);
@@ -487,8 +486,6 @@ export default function AuthButton() {
         displayName={displayName}
         username={username}
         handleSignOut={handleSignOut}
-        clearingAll={clearingAll}
-        setClearingAll={setClearingAll}
         isDropdownOpen={isDropdownOpen}
         setIsDropdownOpen={setIsDropdownOpen}
         dropdownRef={dropdownRef}

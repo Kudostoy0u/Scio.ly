@@ -13,12 +13,14 @@ import { useTheme } from "@/app/contexts/themeContext";
 import { useInvalidateTeam, useTeamMembers } from "@/lib/hooks/useTeam";
 import type { TeamMember as TeamMemberV2 } from "@/lib/server/teams-v2";
 import type { TeamMember as StoreTeamMember } from "@/lib/stores/teams/types";
+import { trpc } from "@/lib/trpc/client";
 import {
 	generateDisplayName,
 	needsNamePrompt,
 } from "@/lib/utils/displayNameUtils";
 import { UserPlus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "react-toastify";
 import type { Member } from "../types";
 import EventAssignmentModal from "./EventAssignmentModal";
 import InlineInvite from "./InlineInvite";
@@ -53,11 +55,14 @@ export default function PeopleTabUnified({
 	const { darkMode } = useTheme();
 	const { user } = useAuth();
 	const [selectedSubteam, setSelectedSubteam] = useState<string>("all");
+	const [linkingMemberId, setLinkingMemberId] = useState<string | null>(null);
+	const [linkInput, setLinkInput] = useState("");
 
 	const { data: members, isLoading } = useTeamMembers(
 		team.slug,
 		selectedSubteam === "all" ? undefined : selectedSubteam,
 	);
+	const linkAccountMutation = trpc.teams.linkAccount.useMutation();
 
 	const { invalidateTeam } = useInvalidateTeam();
 
@@ -208,6 +213,28 @@ export default function PeopleTabUnified({
 		setSelectedMember(null);
 	};
 
+	const handleLinkAccount = async () => {
+		if (!linkingMemberId || !user?.id || linkingMemberId !== user.id) {
+			toast.error("You can only link your own account");
+			return;
+		}
+		if (!linkInput.trim()) {
+			toast.error("Enter a username to link");
+			return;
+		}
+		try {
+			await linkAccountMutation.mutateAsync({ username: linkInput.trim() });
+			toast.success("Account linked");
+			setLinkingMemberId(null);
+			setLinkInput("");
+			await handleRefresh();
+		} catch (error) {
+			toast.error(
+				error instanceof Error ? error.message : "Failed to link account",
+			);
+		}
+	};
+
 	const handleAddEventClick = (member: Member) => {
 		setSelectedMember(member);
 		setShowEventModal(true);
@@ -259,6 +286,55 @@ export default function PeopleTabUnified({
 							</option>
 						))}
 					</select>
+				</div>
+			)}
+
+			{filteredMembers.find((m) => m.id === user?.id && m.isUnlinked) && (
+				<div
+					className={`rounded-lg border p-4 ${
+						darkMode
+							? "border-gray-700 bg-gray-800"
+							: "border-gray-200 bg-white"
+					}`}
+				>
+					<p className="text-sm font-medium">
+						Account not linked. Set your Supabase username to link:
+					</p>
+					<div className="mt-2 flex flex-col sm:flex-row gap-2">
+						<input
+							type="text"
+							value={linkInput}
+							onChange={(e) => setLinkInput(e.target.value)}
+							placeholder="Supabase username"
+							className={`flex-1 rounded-md border px-3 py-2 text-sm ${
+								darkMode
+									? "bg-gray-700 border-gray-600 text-white"
+									: "bg-white border-gray-300 text-gray-900"
+							}`}
+						/>
+						<div className="flex gap-2">
+							<button
+								type="button"
+								onClick={() => {
+									setLinkingMemberId(user?.id ?? null);
+									handleLinkAccount();
+								}}
+								className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+							>
+								Link
+							</button>
+							<button
+								type="button"
+								onClick={() => {
+									setLinkingMemberId(null);
+									setLinkInput("");
+								}}
+								className="rounded-md bg-gray-200 px-3 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+							>
+								Cancel
+							</button>
+						</div>
+					</div>
 				</div>
 			)}
 

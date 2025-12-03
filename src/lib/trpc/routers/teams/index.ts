@@ -1,11 +1,16 @@
 import {
+	acceptPendingInvite,
 	archiveTeam,
 	createSubteam,
 	createTeamWithDefaultSubteam,
+	declineInvite,
+	deleteSubteam,
 	getTeamFullBySlug,
 	getTeamMetaBySlug,
 	joinTeamByCode,
 	leaveTeam,
+	linkSupabaseAccount,
+	listPendingInvitesForUser,
 	listTeamsForUser,
 	removeRosterEntry,
 	renameSubteam,
@@ -18,7 +23,7 @@ import { z } from "zod";
 
 const rosterEntrySchema = z.object({
 	eventName: z.string().min(1),
-	slotIndex: z.number().int().nonnegative().default(0),
+	slotIndex: z.number().int().nonnegative().optional(),
 	displayName: z.string().min(1),
 	userId: z.string().uuid().optional().nullable(),
 });
@@ -27,6 +32,11 @@ export const teamsRouter = router({
 	listUserTeams: protectedProcedure.query(async ({ ctx }) => {
 		const teams = await listTeamsForUser(ctx.user.id);
 		return { teams };
+	}),
+
+	pendingInvites: protectedProcedure.query(async ({ ctx }) => {
+		const invites = await listPendingInvitesForUser(ctx.user.id);
+		return { invites };
 	}),
 
 	meta: protectedProcedure
@@ -69,6 +79,7 @@ export const teamsRouter = router({
 				school: input.school,
 				division: input.division,
 				createdBy: ctx.user.id,
+				supabaseUser: ctx.user,
 			});
 			return created;
 		}),
@@ -80,11 +91,23 @@ export const teamsRouter = router({
 			return joined;
 		}),
 
+	acceptInvite: protectedProcedure
+		.input(z.object({ teamSlug: z.string().min(1) }))
+		.mutation(async ({ ctx, input }) => {
+			return acceptPendingInvite(input.teamSlug, ctx.user.id);
+		}),
+
+	declineInvite: protectedProcedure
+		.input(z.object({ teamSlug: z.string().min(1) }))
+		.mutation(async ({ ctx, input }) => {
+			return declineInvite(input.teamSlug, ctx.user.id);
+		}),
+
 	createSubteam: protectedProcedure
 		.input(
 			z.object({
 				teamSlug: z.string().min(1),
-				name: z.string().min(1),
+				name: z.string().optional(),
 				description: z.string().optional(),
 			}),
 		)
@@ -96,6 +119,28 @@ export const teamsRouter = router({
 				userId: ctx.user.id,
 			});
 			return subteam;
+		}),
+
+	deleteSubteam: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				subteamId: z.string().uuid(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			return deleteSubteam({
+				teamSlug: input.teamSlug,
+				subteamId: input.subteamId,
+				userId: ctx.user.id,
+			});
+		}),
+
+	linkAccount: protectedProcedure
+		.input(z.object({ username: z.string().min(2) }))
+		.mutation(async ({ ctx, input }) => {
+			const result = await linkSupabaseAccount(input.username, ctx.user.id);
+			return result;
 		}),
 
 	renameSubteam: protectedProcedure
@@ -142,7 +187,7 @@ export const teamsRouter = router({
 				input.subteamId,
 				input.entries.map((entry) => ({
 					eventName: entry.eventName,
-					slotIndex: entry.slotIndex,
+					slotIndex: entry.slotIndex ?? 0,
 					displayName: entry.displayName,
 					userId: entry.userId,
 				})),

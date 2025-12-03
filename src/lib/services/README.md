@@ -29,9 +29,7 @@ The `src/lib/services/` directory contains core business logic services for the 
 - **Configuration**: Multiple API key support for load balancing
 
 #### `__tests__/roster-notifications.test.ts`
-- **Purpose**: Roster notification service testing
-- **Features**: Comprehensive test coverage for notification system
-- **Dependencies**: Testing framework, mock services
+Legacy notification tests have been removed in the new teams stack.
 
 ### Team Management Services
 
@@ -64,16 +62,6 @@ The `src/lib/services/` directory contains core business logic services for the 
   - Data transformation and processing
 - **Dependencies**: Team database, analytics system
 - **Usage**: Team analytics and reporting
-
-#### `roster-notifications.ts`
-- **Purpose**: Team roster notification system
-- **Features**:
-  - Roster change notifications
-  - Member update notifications
-  - Real-time notification delivery
-  - Notification management and tracking
-- **Dependencies**: Notification system, team database
-- **Usage**: Team communication and updates
 
 ## Service Architecture
 
@@ -110,7 +98,6 @@ The `src/lib/services/` directory contains core business logic services for the 
 - **Member Management**: Team membership and roles
 - **Collaboration**: Team sharing and collaboration features
 - **Analytics**: Team performance and analytics
-- **Notifications**: Real-time team notifications
 
 ### 3. Database Integration
 - **Multi-Database Support**: Supabase and CockroachDB
@@ -120,7 +107,6 @@ The `src/lib/services/` directory contains core business logic services for the 
 
 ### 4. Real-time Features
 - **Live Updates**: Real-time data synchronization
-- **Notifications**: Push notification system
 - **Collaboration**: Real-time collaboration features
 - **Status Updates**: Live status monitoring
 
@@ -175,7 +161,6 @@ The `src/lib/services/` directory contains core business logic services for the 
 ### Service Dependencies
 - **Database Clients**: Database connection clients
 - **API Clients**: External API integration
-- **Notification Services**: Real-time notification system
 - **Analytics Services**: Data analytics and reporting
 
 ### Development Dependencies

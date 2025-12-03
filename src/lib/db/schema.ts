@@ -278,23 +278,6 @@ export const newTeamAssignmentQuestions = pgTable(
 );
 
 /**
- * Team Notifications table schema
- * Notifications for team members
- */
-export const newTeamNotifications = pgTable("new_team_notifications", {
-	id: uuid("id").primaryKey().defaultRandom(),
-	teamId: uuid("team_id")
-		.notNull()
-		.references(() => newTeamUnits.id, { onDelete: "cascade" }),
-	userId: uuid("user_id").notNull(),
-	type: text("type").notNull(),
-	title: text("title").notNull(),
-	message: text("message").notNull(),
-	isRead: boolean("is_read").default(false),
-	createdAt: timestamp("created_at").defaultNow(),
-});
-
-/**
  * Team Roster Data table schema
  * Student roster information for teams
  */
@@ -335,6 +318,8 @@ export const users = pgTable("users", {
 	id: uuid("id").primaryKey(),
 	email: text("email").notNull().unique(),
 	username: text("username").notNull().unique(),
+	supabaseUserId: uuid("supabase_user_id").unique(),
+	supabaseUsername: text("supabase_username").unique(),
 	displayName: text("display_name"),
 	firstName: text("first_name"),
 	lastName: text("last_name"),
@@ -361,6 +346,22 @@ export {
 	teamsSubteam,
 	teamsTeam,
 } from "./schema/teams_v2";
+
+/**
+ * Gemini Explanations Cache table schema
+ * Stores cached AI-generated explanations for questions
+ */
+export const geminiExplanationsCache = pgTable("gemini_explanations_cache", {
+	id: uuid("id").primaryKey().defaultRandom(),
+	questionId: text("question_id"),
+	questionHash: text("question_hash"),
+	event: text("event").notNull(),
+	userAnswer: text("user_answer"),
+	explanation: text("explanation").notNull(),
+	createdAt: timestamp("created_at").defaultNow(),
+	updatedAt: timestamp("updated_at").defaultNow(),
+	hitCount: integer("hit_count").notNull().default(1),
+});
 
 // Re-export additional schemas from core.ts
 export { longquotes, quoteBlacklists, quoteEdits } from "./schema/core";

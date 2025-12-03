@@ -58,12 +58,15 @@ export function useMemberActions({
 			eventName: string,
 			subteamId: string,
 		) => {
+			if (member.events?.includes(eventName)) {
+				toast.info(`${getDisplayName(member)} is already on ${eventName}`);
+				return;
+			}
 			await upsertRosterEntry.mutateAsync({
 				teamSlug,
 				subteamId,
 				entry: {
 					eventName,
-					slotIndex: 0,
 					displayName: getDisplayName(member),
 					userId: member.id || undefined,
 				},
