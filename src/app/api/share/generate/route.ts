@@ -74,8 +74,8 @@ export async function POST(request: NextRequest) {
       code: shareCode,
       indices: [],
       testParamsRaw: dataToStore,
-      expiresAt,
-    });
+      expiresAt: expiresAt.toISOString(),
+    } as typeof shareLinks.$inferInsert);
 
     logger.info(`Generated share code: ${shareCode}, expires: ${expiresAt.toISOString()}`);
 

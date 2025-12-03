@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
         expiresAt: shareLinks.expiresAt,
       })
       .from(shareLinks)
-      .where(and(eq(shareLinks.code, code), gt(shareLinks.expiresAt, new Date())));
+      .where(and(eq(shareLinks.code, code), gt(shareLinks.expiresAt, new Date().toISOString())));
 
     if (result.length === 0) {
       logger.warn(`Share code not found or expired: ${code}`);
@@ -104,7 +104,7 @@ export async function DELETE() {
   try {
     logger.info("Starting cleanup of expired share codes");
 
-    await db.delete(shareLinks).where(lte(shareLinks.expiresAt, new Date()));
+    await db.delete(shareLinks).where(lte(shareLinks.expiresAt, new Date().toISOString()));
 
     logger.info("Share codes cleanup completed");
 

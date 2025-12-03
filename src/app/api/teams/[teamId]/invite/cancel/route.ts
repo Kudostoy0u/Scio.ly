@@ -124,7 +124,7 @@ export async function POST(
       .update(newTeamInvitations)
       .set({
         status: "declined",
-        acceptedAt: new Date(),
+        acceptedAt: new Date().toISOString(),
       })
       .where(eq(newTeamInvitations.id, invitationResult.id));
 

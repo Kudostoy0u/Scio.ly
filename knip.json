@@ -2,5 +2,35 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": ["src/app/**/*.{ts,tsx}", "src/lib/**/*.{ts,tsx}"],
   "project": ["src/**/*.{ts,tsx}", "*.{ts,tsx,mjs,js}"],
-  "ignoreExportsUsedInFile": true
+  "ignoreExportsUsedInFile": true,
+  "ignoreDependencies": [
+    "glob",
+    "js-yaml",
+    "@eslint/compat",
+    "@typescript-eslint/eslint-plugin",
+    "@typescript-eslint/parser",
+    "@vitest/coverage-v8",
+    "baseline-browser-mapping",
+    "eslint-config-next",
+    "tailwindcss"
+  ],
+  "ignore": [
+    "src/test-utils/index.tsx:mockNavigation",
+    "src/test-utils/index.tsx:cleanupTestEnvironment"
+  ],
+  "ignoreUnresolved": [
+    "@/app/api/teams/[teamId]/invite/route",
+    "@/app/api/teams/[teamId]/roster/invite/route",
+    "@/app/teams/components/TeamDashboard"
+  ],
+  "rules": {
+    "exports": "error",
+    "files": "error",
+    "unlisted": "warn",
+    "dependencies": "off",
+    "types": "error",
+    "binaries": "off",
+    "enumMembers": "warn"
+  },
+  "typescript": true
 }

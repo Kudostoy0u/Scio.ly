@@ -301,7 +301,7 @@ export async function POST(
         slotIndex: slotIndex,
         studentName: studentName || null,
         userId: userIdToLink,
-        updatedAt: new Date(),
+        updatedAt: new Date().toISOString(),
       })
       .onConflictDoUpdate({
         target: [
@@ -312,7 +312,7 @@ export async function POST(
         set: {
           studentName: studentName || null,
           userId: userIdToLink,
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         },
       });
 

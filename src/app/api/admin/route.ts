@@ -140,7 +140,7 @@ async function handleUndoEdit(id: string): Promise<NextResponse> {
   const payload = buildQuestionPayload(event, original);
   await db
     .update(questionsTable)
-    .set({ ...payload, updatedAt: new Date() })
+    .set({ ...payload, updatedAt: new Date().toISOString() })
     .where(eq(questionsTable.id, targetId));
   await db.delete(editsTable).where(eq(editsTable.id, id));
 
@@ -172,7 +172,7 @@ async function handleApplyEdit(id: string): Promise<NextResponse> {
   const payload = buildQuestionPayload(event, edited);
   await db
     .update(questionsTable)
-    .set({ ...payload, updatedAt: new Date() })
+    .set({ ...payload, updatedAt: new Date().toISOString() })
     .where(eq(questionsTable.id, targetId));
   const response: ApiResponse = { success: true, message: "Edit applied to database" };
   return NextResponse.json(response);
@@ -222,7 +222,7 @@ async function handleUndoRemove(id: string): Promise<NextResponse> {
         answers: values.answers,
         subtopics: values.subtopics,
         difficulty: values.difficulty,
-        updatedAt: new Date(),
+        updatedAt: new Date().toISOString(),
       })
       .where(eq(questionsTable.id, values.id as string));
   }
@@ -287,7 +287,7 @@ async function handleApplyAllEdits(): Promise<NextResponse> {
     const payload = buildQuestionPayload(event, edited);
     await db
       .update(questionsTable)
-      .set({ ...payload, updatedAt: new Date() })
+      .set({ ...payload, updatedAt: new Date().toISOString() })
       .where(eq(questionsTable.id, targetId));
     applied++;
   }
@@ -314,7 +314,7 @@ async function handleUndoAllEdits(): Promise<NextResponse> {
     const payload = buildQuestionPayload(event, original);
     await db
       .update(questionsTable)
-      .set({ ...payload, updatedAt: new Date() })
+      .set({ ...payload, updatedAt: new Date().toISOString() })
       .where(eq(questionsTable.id, targetId));
 
     await db.delete(editsTable).where(eq(editsTable.id, row.id));
@@ -384,7 +384,7 @@ async function handleRestoreAllRemoved(): Promise<NextResponse> {
             answers: values.answers,
             subtopics: values.subtopics,
             difficulty: values.difficulty,
-            updatedAt: new Date(),
+            updatedAt: new Date().toISOString(),
           })
           .where(eq(questionsTable.id, values.id as string));
         updated++;

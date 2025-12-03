@@ -45,7 +45,7 @@ async function upsertPeopleEntries(
 					name: person.name,
 					userId: person.userId,
 					events: JSON.stringify(person.events),
-					updatedAt: new Date(),
+					updatedAt: new Date().toISOString(),
 				})
 				.where(eq(newTeamPeople.id, existingId));
 
@@ -59,8 +59,8 @@ async function upsertPeopleEntries(
 				userId: person.userId,
 				events: JSON.stringify(person.events),
 				isAdmin: person.isAdmin ? "true" : "false",
-				createdAt: new Date(),
-				updatedAt: new Date(),
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString(),
 			});
 		}
 	}
@@ -273,7 +273,7 @@ export async function syncRosterFromPeopleEntry(
 					studentName: newName,
 					userId: newUserId,
 					createdAt: new Date(),
-					updatedAt: new Date(),
+					updatedAt: new Date().toISOString(),
 				});
 			}
 
@@ -339,7 +339,7 @@ export async function syncRosterFromPeopleEntry(
 					.set({
 						studentName: newName,
 						userId: newUserId,
-						updatedAt: new Date(),
+						updatedAt: new Date().toISOString(),
 					})
 					.where(eq(newTeamRosterData.id, entry.id));
 			}
@@ -352,7 +352,7 @@ export async function syncRosterFromPeopleEntry(
 				name: newName,
 				userId: newUserId,
 				events: JSON.stringify(newEvents || currentEvents),
-				updatedAt: new Date(),
+				updatedAt: new Date().toISOString(),
 			})
 			.where(eq(newTeamPeople.id, personId));
 
@@ -402,8 +402,8 @@ export async function addEventToPerson(
 			slotIndex: nextSlot,
 			studentName: personName,
 			userId: personUserId,
-			createdAt: new Date(),
-			updatedAt: new Date(),
+					createdAt: new Date().toISOString(),
+					updatedAt: new Date().toISOString(),
 		});
 
 		// Sync people table
@@ -481,8 +481,8 @@ export async function changePersonSubteam(
 				slotIndex: number;
 				studentName: string | null;
 				userId: string | null;
-				createdAt: Date | null;
-				updatedAt: Date | null;
+				createdAt: string | null;
+				updatedAt: string | null;
 			}> = [];
 			if (personUserId) {
 				entries = await dbPg
@@ -533,7 +533,7 @@ export async function changePersonSubteam(
 					studentName: personName,
 					userId: personUserId,
 					createdAt: new Date(),
-					updatedAt: new Date(),
+					updatedAt: new Date().toISOString(),
 				});
 
 				// Remove from old subteam

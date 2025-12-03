@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
         if (existing.length > 0) {
           await db
             .update(editsTable)
-            .set({ editedQuestion: JSON.parse(editedJson), updatedAt: new Date() })
+            .set({ editedQuestion: JSON.parse(editedJson), updatedAt: new Date().toISOString() })
             .where(eq(editsTable.id, existing[0]?.id ?? ""));
           logger.info("Updated existing edit in database");
         } else {
@@ -234,7 +234,7 @@ export async function POST(request: NextRequest) {
           };
           await db
             .update(questionsTable)
-            .set({ ...payload, updatedAt: new Date() })
+            .set({ ...payload, updatedAt: new Date().toISOString() })
             .where(eq(questionsTable.id, targetId));
           logger.info("Applied edit to questions table", { targetId });
         } else {

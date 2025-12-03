@@ -15,7 +15,7 @@ interface TestParamsRaw {
 interface ShareDataResult {
   testParamsRaw: TestParamsRaw;
   indices: unknown;
-  expiresAt: Date;
+  expiresAt: string;
 }
 
 export async function GET(request: NextRequest) {
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
         expiresAt: shareLinks.expiresAt,
       })
       .from(shareLinks)
-      .where(and(eq(shareLinks.code, code), gt(shareLinks.expiresAt, new Date())));
+      .where(and(eq(shareLinks.code, code), gt(shareLinks.expiresAt, new Date().toISOString())));
 
     if (result.length === 0) {
       return NextResponse.json(

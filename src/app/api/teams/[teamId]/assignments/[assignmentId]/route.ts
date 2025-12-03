@@ -129,7 +129,7 @@ export async function GET(
           status: string | null;
           grade: number | null;
           attempt_number: number | null;
-          submitted_at: Date | null;
+          submitted_at: string | null;
         } | null = null;
         let analytics: {
           total_questions: number;
@@ -137,7 +137,7 @@ export async function GET(
           total_points: number;
           earned_points: number;
           completion_time_seconds: number | null;
-          submitted_at: Date | null;
+          submitted_at: string | null;
         } | null = null;
 
         if (rosterMember.user_id) {
@@ -211,7 +211,7 @@ export async function GET(
       response_text: string | null;
       is_correct: boolean | null;
       points_earned: number | null;
-      graded_at: Date | null;
+      graded_at: string | null;
       question_text: string;
       question_type: string;
       question_points: number | null;

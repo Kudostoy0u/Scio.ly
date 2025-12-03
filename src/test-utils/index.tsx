@@ -197,6 +197,7 @@ export const mockRouter = {
 };
 
 // Mock Next.js navigation
+// knip-ignore - exported for potential future use in tests
 export const mockNavigation = {
   useRouter: () => mockRouter,
   usePathname: () => "/",
@@ -330,6 +331,7 @@ export function setupTestEnvironment() {
 }
 
 // Cleanup function for tests
+// knip-ignore - exported for potential future use in tests
 export function cleanupTestEnvironment() {
   vi.clearAllMocks();
   if (mockLocalStorage && typeof mockLocalStorage.clear === "function") {

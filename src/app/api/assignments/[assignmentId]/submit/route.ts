@@ -232,8 +232,8 @@ export async function POST(
         status: "submitted",
         grade: score,
         attemptNumber,
-        submittedAt: submittedAt ? new Date(submittedAt) : new Date(),
-      })
+        submittedAt: submittedAt ? new Date(submittedAt).toISOString() : new Date().toISOString(),
+      } as typeof newTeamAssignmentSubmissions.$inferInsert)
       .returning({
         id: newTeamAssignmentSubmissions.id,
         submittedAt: newTeamAssignmentSubmissions.submittedAt,

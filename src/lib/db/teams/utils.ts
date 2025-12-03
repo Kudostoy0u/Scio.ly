@@ -63,10 +63,10 @@ export async function upsertUserProfile(params: {
 		};
 
 		// Prepare update set only for provided (non-undefined) fields to avoid overwriting with nulls
-		const updateSet: Partial<typeof users.$inferInsert> & { updatedAt?: Date } =
+		const updateSet: Partial<typeof users.$inferInsert> & { updatedAt?: string } =
 			{
 				email: params.email,
-				updatedAt: new Date(),
+				updatedAt: new Date().toISOString(),
 			};
 		if (
 			params.username !== undefined &&

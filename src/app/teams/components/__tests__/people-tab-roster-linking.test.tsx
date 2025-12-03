@@ -8,7 +8,7 @@ import {
 import type React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import PeopleTab from "@/app/teams/components/PeopleTab";
+import PeopleTabUnified from "@/app/teams/components/PeopleTabUnified";
 import { TestProviders } from "@/test-utils/test-providers";
 
 // Global fetch mock
@@ -143,7 +143,7 @@ describe("PeopleTab - Roster Linking", () => {
 
 		render(
 			<TestProviders>
-				<PeopleTab {...defaultProps} />
+				<PeopleTabUnified {...defaultProps} />
 			</TestProviders>,
 		);
 
@@ -184,7 +184,7 @@ describe("PeopleTab - Roster Linking", () => {
 
 		render(
 			<TestProviders>
-				<PeopleTab {...defaultProps} />
+				<PeopleTabUnified {...defaultProps} />
 			</TestProviders>,
 		);
 
@@ -262,7 +262,7 @@ describe("PeopleTab - Roster Linking", () => {
 
 		render(
 			<TestProviders>
-				<PeopleTab {...defaultProps} />
+				<PeopleTabUnified {...defaultProps} />
 			</TestProviders>,
 		);
 
@@ -281,7 +281,7 @@ describe("PeopleTab - Roster Linking", () => {
 
 		render(
 			<TestProviders>
-				<PeopleTab {...defaultProps} />
+				<PeopleTabUnified {...defaultProps} />
 			</TestProviders>,
 		);
 
@@ -329,7 +329,7 @@ describe("PeopleTab - Roster Linking", () => {
 
 		render(
 			<TestProviders>
-				<PeopleTab {...defaultProps} />
+				<PeopleTabUnified {...defaultProps} />
 			</TestProviders>,
 		);
 

@@ -237,7 +237,7 @@ export async function POST(
         set: {
           conflictBlock,
           removedBy: user.id,
-          removedAt: new Date(),
+          removedAt: new Date().toISOString(),
         },
       });
 

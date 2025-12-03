@@ -1,6 +1,5 @@
 import { dbPg } from "@/lib/db/index";
 import { assignmentResults } from "@/lib/db/schema/assignments";
-import { initExtrasDatabase } from "@/lib/db/teamExtras";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -17,8 +16,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-
-    await initExtrasDatabase();
     const [result] = await dbPg
       .insert(assignmentResults)
       .values({
@@ -26,9 +23,9 @@ export async function POST(req: NextRequest) {
         userId: userId || null,
         name: name || null,
         eventName: eventName || null,
-        score: typeof score === "number" ? score : null,
+        score: typeof score === "number" ? String(score) : null,
         detail: detail || null,
-      })
+      } as typeof assignmentResults.$inferInsert)
       .returning();
     return NextResponse.json({ success: true, data: result });
   } catch (e) {

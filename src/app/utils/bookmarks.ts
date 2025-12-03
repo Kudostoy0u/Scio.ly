@@ -87,7 +87,7 @@ export const loadBookmarksFromSupabase = async (userId: string): Promise<Bookmar
  * Alias for loadBookmarksFromSupabase for backward compatibility
  * @deprecated Use loadBookmarksFromSupabase instead
  */
-export const loadBookmarksFromFirebase = loadBookmarksFromSupabase;
+export { loadBookmarksFromSupabase as loadBookmarksFromFirebase };
 
 /**
  * Adds a bookmark to the user's bookmark collection

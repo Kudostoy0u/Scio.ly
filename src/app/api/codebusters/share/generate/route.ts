@@ -70,8 +70,8 @@ export async function POST(request: NextRequest) {
       code: shareCode,
       indices: sanitizedShareData,
       testParamsRaw: dataToStore,
-      expiresAt: expiresAt,
-    });
+      expiresAt: expiresAt.toISOString(),
+    } as typeof shareLinks.$inferInsert);
 
     return NextResponse.json({
       success: true,

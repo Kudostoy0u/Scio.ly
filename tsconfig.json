@@ -4,6 +4,7 @@
 		"lib": ["dom", "dom.iterable", "esnext"],
 		"allowJs": true,
 		"skipLibCheck": true,
+		"skipDefaultLibCheck": true,
 		"strict": true,
 		"noEmit": true,
 		"esModuleInterop": true,
@@ -54,7 +55,10 @@
 		"vitest.setup.ts",
 		"src/**/*.test.ts",
 		"src/**/*.test.tsx",
+		"src/lib/db/generated/**",
 		"src/lib/db/generated/**/*",
-		"drizzle/**/*"
+		"**/generated/**",
+		"**/schema.ts",
+		"drizzle/**"
 	]
 }

@@ -235,7 +235,7 @@ export async function POST(request: NextRequest) {
         if (existing.length > 0 && existing[0]) {
           await db
             .update(editsTable)
-            .set({ editedQuestion: JSON.parse(editedJson), updatedAt: new Date() })
+            .set({ editedQuestion: JSON.parse(editedJson), updatedAt: new Date().toISOString() })
             .where(eq(editsTable.id, existing[0].id));
         } else {
           await db.insert(editsTable).values({

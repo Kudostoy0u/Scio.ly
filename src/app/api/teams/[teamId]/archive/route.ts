@@ -88,7 +88,7 @@ export async function POST(
         .update(newTeamGroups)
         .set({
           status: "archived",
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         })
         .where(eq(newTeamGroups.id, groupId));
 
@@ -97,7 +97,7 @@ export async function POST(
         .update(newTeamUnits)
         .set({
           status: "archived",
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         })
         .where(eq(newTeamUnits.groupId, groupId));
 

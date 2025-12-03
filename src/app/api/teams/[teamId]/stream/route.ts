@@ -447,7 +447,7 @@ export async function PUT(
         content,
         attachmentUrl: attachmentUrl || null,
         attachmentTitle: attachmentTitle || null,
-        updatedAt: new Date(),
+        updatedAt: new Date().toISOString(),
       })
       .where(eq(newTeamStreamPosts.id, postId));
 

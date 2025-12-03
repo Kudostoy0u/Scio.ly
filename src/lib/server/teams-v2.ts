@@ -182,8 +182,8 @@ async function ensureSupabaseLink(user: SupabaseUser | null) {
 			username: supabaseUsername ?? user.email ?? user.id,
 			supabaseUserId: user.id,
 			supabaseUsername,
-			createdAt: new Date(),
-			updatedAt: new Date(),
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
 		})
 		.onConflictDoNothing();
 
@@ -194,7 +194,7 @@ async function ensureSupabaseLink(user: SupabaseUser | null) {
 			username: supabaseUsername ?? users.username,
 			supabaseUserId: user.id,
 			supabaseUsername,
-			updatedAt: new Date(),
+			updatedAt: new Date().toISOString(),
 		})
 		.where(eq(users.id, user.id));
 
@@ -224,7 +224,7 @@ export async function linkSupabaseAccount(username: string, userId: string) {
 		.set({
 			supabaseUserId: supUser.id,
 			supabaseUsername: supUser.username ?? normalized,
-			updatedAt: new Date(),
+			updatedAt: new Date().toISOString(),
 		})
 		.where(eq(users.id, userId));
 
@@ -246,7 +246,7 @@ export async function getTeamMetaBySlug(
 		name: team.name,
 		school: team.school,
 		division: team.division,
-		updatedAt: (team.updatedAt || new Date()).toISOString(),
+		updatedAt: team.updatedAt ? String(team.updatedAt) : new Date().toISOString(),
 		version: Number(team.version ?? 1),
 		userRole: (membership.role as "captain" | "member") ?? "member",
 		status: team.status,
@@ -372,7 +372,7 @@ export async function getTeamFullBySlug(
 				: null,
 			isUnlinked: false,
 			username: m.username ?? null,
-			joinedAt: m.joinedAt ? m.joinedAt.toISOString() : null,
+			joinedAt: m.joinedAt ? String(m.joinedAt) : null,
 			isPendingInvitation: m.status === "pending",
 		};
 	});
@@ -424,7 +424,7 @@ export async function getTeamFullBySlug(
 			name: team.name,
 			school: team.school,
 			division: team.division,
-			updatedAt: (team.updatedAt || new Date()).toISOString(),
+			updatedAt: team.updatedAt ? String(team.updatedAt) : new Date().toISOString(),
 			version: Number(team.version ?? 1),
 			userRole: (membership.role as "captain" | "member") ?? "member",
 			status: team.status,
@@ -438,7 +438,7 @@ export async function getTeamFullBySlug(
 			description: s.description,
 			displayOrder: Number(s.displayOrder ?? 0),
 			createdAt: s.createdAt
-				? s.createdAt.toISOString()
+				? String(s.createdAt)
 				: new Date().toISOString(),
 		})),
 		members,
@@ -457,14 +457,14 @@ export async function getTeamFullBySlug(
 			subteamId: a.subteamId,
 			title: a.title,
 			description: a.description ?? null,
-			dueDate: a.dueDate ? a.dueDate.toISOString() : null,
+			dueDate: a.dueDate ? String(a.dueDate) : null,
 			status: a.status,
 			createdBy: a.createdBy,
 			createdAt: a.createdAt
-				? a.createdAt.toISOString()
+				? String(a.createdAt)
 				: new Date().toISOString(),
 			updatedAt: a.updatedAt
-				? a.updatedAt.toISOString()
+				? String(a.updatedAt)
 				: new Date().toISOString(),
 		})),
 	};
@@ -678,7 +678,7 @@ export async function joinTeamByCode(code: string, userId: string) {
 		}
 		const updateData: Partial<typeof teamsMembership.$inferInsert> = {
 			status: "active",
-			updatedAt: new Date(),
+			updatedAt: new Date().toISOString(),
 		};
 		if (isCaptainCode && membershipRow?.role !== "captain") {
 			updateData.role = "captain";
@@ -794,7 +794,7 @@ export async function renameSubteam(input: {
 
 	await dbPg
 		.update(teamsSubteam)
-		.set({ name: input.newName, updatedAt: new Date() })
+		.set({ name: input.newName, updatedAt: new Date().toISOString() })
 		.where(eq(teamsSubteam.id, input.subteamId));
 
 	return { id: input.subteamId, name: input.newName };
@@ -1189,7 +1189,7 @@ export async function acceptPendingInvite(teamSlug: string, userId: string) {
 				.set({
 					status: "active",
 					role: existingMembership.role ?? invite?.role ?? "member",
-					updatedAt: new Date(),
+					updatedAt: new Date().toISOString(),
 				})
 				.where(eq(teamsMembership.id, existingMembership.id));
 		} else {
@@ -1210,7 +1210,7 @@ export async function acceptPendingInvite(teamSlug: string, userId: string) {
 				.set({
 					status: "accepted",
 					invitedUserId: userId,
-					updatedAt: new Date(),
+					updatedAt: new Date().toISOString(),
 				})
 				.where(eq(teamsInvitation.id, invite.id));
 		}
@@ -1262,7 +1262,7 @@ export async function declineInvite(teamSlug: string, userId: string) {
 			.set({
 				status: "declined",
 				invitedUserId: userId,
-				updatedAt: new Date(),
+				updatedAt: new Date().toISOString(),
 			})
 			.where(
 				and(
@@ -1274,7 +1274,7 @@ export async function declineInvite(teamSlug: string, userId: string) {
 
 		await tx
 			.update(teamsMembership)
-			.set({ status: "inactive", updatedAt: new Date() })
+			.set({ status: "inactive", updatedAt: new Date().toISOString() })
 			.where(
 				and(
 					eq(teamsMembership.teamId, team.id),

@@ -104,7 +104,7 @@ export async function PUT(
       .update(newTeamUnits)
       .set({
         description: name.trim(),
-        updatedAt: new Date(),
+        updatedAt: new Date().toISOString(),
       })
       .where(eq(newTeamUnits.id, subteamId))
       .returning({

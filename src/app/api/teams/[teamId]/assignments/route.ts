@@ -142,20 +142,20 @@ export async function GET(
           title: assignment.title,
           description: assignment.description,
           assignment_type: assignment.assignmentType,
-          due_date: assignment.dueDate?.toISOString(),
+          due_date: assignment.dueDate ? String(assignment.dueDate) : null,
           points: assignment.points,
           is_required: assignment.isRequired,
           max_attempts: assignment.maxAttempts,
           time_limit_minutes: assignment.timeLimitMinutes,
-          created_at: assignment.createdAt?.toISOString() || new Date().toISOString(),
-          updated_at: assignment.updatedAt?.toISOString() || new Date().toISOString(),
+          created_at: assignment.createdAt ? String(assignment.createdAt) : new Date().toISOString(),
+          updated_at: assignment.updatedAt ? String(assignment.updatedAt) : new Date().toISOString(),
           creator_email: assignment.creatorEmail,
           creator_name: assignment.creatorName,
           user_submission: submissionResult[0]
             ? {
                 status: submissionResult[0].status,
                 submitted_at:
-                  submissionResult[0].submittedAt?.toISOString() || new Date().toISOString(),
+                  submissionResult[0].submittedAt ? String(submissionResult[0].submittedAt) : new Date().toISOString(),
                 grade: submissionResult[0].grade,
                 attempt_number: submissionResult[0].attemptNumber,
               }
@@ -253,13 +253,13 @@ export async function POST(
       .values({
         teamId: targetTeamId,
         assignmentType: assignmentType,
-        dueDate: dueDate ? new Date(dueDate) : null,
+        dueDate: dueDate ? new Date(dueDate).toISOString() : null,
         isRequired: isRequired,
         maxAttempts: maxAttempts || null,
         createdBy: user.id,
         title,
         description,
-      })
+      } as typeof newTeamAssignments.$inferInsert)
       .returning();
 
     /**
@@ -379,7 +379,7 @@ export async function POST(
           points: q.points || 1,
           orderIndex: q.order_index ?? index,
           imageData: q.imageData ?? null,
-          difficulty: parseDifficulty(q.difficulty), // Strict validation - keep as number for database
+          difficulty: String(parseDifficulty(q.difficulty)), // Convert to string for decimal type
         };
 
         // Debug logging for database insert

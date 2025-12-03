@@ -91,9 +91,9 @@ const CalendarEventUpdateSchema = z.object({
 // Helper function to build update data from validated body
 function buildUpdateData(
   validatedBody: z.infer<typeof CalendarEventUpdateSchema>
-): Partial<typeof newTeamEvents.$inferInsert> & { updatedAt?: Date } {
-  const updateData: Partial<typeof newTeamEvents.$inferInsert> & { updatedAt?: Date } = {
-    updatedAt: new Date(),
+): Partial<typeof newTeamEvents.$inferInsert> {
+  const updateData: Partial<typeof newTeamEvents.$inferInsert> = {
+    updatedAt: new Date().toISOString(),
   };
 
   if (validatedBody.title !== undefined) {
@@ -104,11 +104,11 @@ function buildUpdateData(
   }
   if (validatedBody.start_time !== undefined) {
     updateData.startTime = validatedBody.start_time
-      ? new Date(validatedBody.start_time)
-      : undefined;
+      ? new Date(validatedBody.start_time).toISOString()
+      : null;
   }
   if (validatedBody.end_time !== undefined) {
-    updateData.endTime = validatedBody.end_time ? new Date(validatedBody.end_time) : undefined;
+    updateData.endTime = validatedBody.end_time ? new Date(validatedBody.end_time).toISOString() : null;
   }
   if (validatedBody.location !== undefined) {
     updateData.location = validatedBody.location;

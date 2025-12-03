@@ -363,15 +363,15 @@ export async function GET(
         school: group.school,
         division: group.division,
         description: group.description,
-        createdAt: group.createdAt?.toISOString(),
-        updatedAt: group.updatedAt?.toISOString(),
+        createdAt: group.createdAt ? String(group.createdAt) : undefined,
+        updatedAt: group.updatedAt ? String(group.updatedAt) : undefined,
       },
       subteams: unitsResult.map((unit) => ({
         id: unit.id,
         name: unit.description || unit.teamId, // Use description as name, fallback to teamId
         description: unit.description,
         teamId: unit.teamId,
-        createdAt: unit.createdAt?.toISOString(),
+        createdAt: unit.createdAt ? String(unit.createdAt) : undefined,
       })),
       members: membershipsResult.map((membership) => {
         // Generate display name from available user data
@@ -398,7 +398,7 @@ export async function GET(
           email: membership.userEmail || null,
           username: membership.userUsername || null,
           role: membership.role,
-          joinedAt: membership.joinedAt?.toISOString() || null,
+          joinedAt: membership.joinedAt ? String(membership.joinedAt) : null,
           subteamId: membership.teamId,
           subteam: subteamInfo
             ? {
@@ -461,8 +461,8 @@ export async function GET(
           priority: post.priority || null,
           isPinned: post.isPinned || null,
           isPublic: post.isPublic || null,
-          createdAt: post.createdAt?.toISOString() || null,
-          updatedAt: post.updatedAt?.toISOString() || null,
+          createdAt: post.createdAt ? String(post.createdAt) : null,
+          updatedAt: post.updatedAt ? String(post.updatedAt) : null,
         };
       }),
       assignments: assignmentsResult.map((assignment) => ({
@@ -470,14 +470,14 @@ export async function GET(
         title: assignment.title,
         description: assignment.description || null,
         assignmentType: assignment.assignmentType || null,
-        dueDate: assignment.dueDate?.toISOString() || null,
+        dueDate: assignment.dueDate ? String(assignment.dueDate) : null,
         points: assignment.points || null,
         isRequired: assignment.isRequired || null,
         maxAttempts: assignment.maxAttempts || null,
         timeLimitMinutes: assignment.timeLimitMinutes || null,
         eventName: assignment.eventName || null,
-        createdAt: assignment.createdAt?.toISOString() || null,
-        updatedAt: assignment.updatedAt?.toISOString() || null,
+        createdAt: assignment.createdAt ? String(assignment.createdAt) : null,
+        updatedAt: assignment.updatedAt ? String(assignment.updatedAt) : null,
         createdBy: assignment.createdBy,
       })),
       tournaments: tournamentsResult.map((tournament) => ({
@@ -485,13 +485,13 @@ export async function GET(
         title: tournament.title,
         description: tournament.description || null,
         eventType: tournament.eventType || null,
-        startTime: tournament.startTime?.toISOString() || null,
-        endTime: tournament.endTime?.toISOString() || null,
+        startTime: tournament.startTime ? String(tournament.startTime) : null,
+        endTime: tournament.endTime ? String(tournament.endTime) : null,
         location: tournament.location || null,
         isAllDay: tournament.isAllDay || null,
         isRecurring: tournament.isRecurring || null,
-        createdAt: tournament.createdAt?.toISOString() || null,
-        updatedAt: tournament.updatedAt?.toISOString() || null,
+        createdAt: tournament.createdAt ? String(tournament.createdAt) : null,
+        updatedAt: tournament.updatedAt ? String(tournament.updatedAt) : null,
       })),
       timers: [], // Timers would need separate implementation
       userTeams: userTeamsResult.map((userTeam) => ({
@@ -502,7 +502,7 @@ export async function GET(
         division: userTeam.division,
         description: userTeam.description || null,
         role: userTeam.role,
-        joinedAt: userTeam.joinedAt?.toISOString() || null,
+        joinedAt: userTeam.joinedAt ? String(userTeam.joinedAt) : null,
       })),
     };
 

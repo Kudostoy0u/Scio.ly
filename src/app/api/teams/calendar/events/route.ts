@@ -154,13 +154,13 @@ export async function POST(request: NextRequest) {
         title,
         description: description || null,
         eventType: event_type,
-        startTime: new Date(start_time),
-        endTime: end_time ? new Date(end_time) : null,
+        startTime: new Date(start_time).toISOString(),
+        endTime: end_time ? new Date(end_time).toISOString() : null,
         location: location || null,
         isAllDay: is_all_day,
         isRecurring: is_recurring,
         recurrencePattern: recurrence_pattern || null,
-      })
+      } as typeof newTeamEvents.$inferInsert)
       .returning({ id: newTeamEvents.id });
 
     if (!result) {
