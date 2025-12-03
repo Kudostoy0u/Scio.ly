@@ -1,85 +1,56 @@
-import { dbPg } from "@/lib/db";
-import { newTeamGroups, newTeamMemberships, newTeamUnits } from "@/lib/db/schema/teams";
-import { getServerUser } from "@/lib/supabaseServer";
-import { and, eq } from "drizzle-orm";
+import { createContext } from "@/lib/trpc/context";
+import { appRouter } from "@/lib/trpc/routers/_app";
+import { HydrationBoundary } from "@tanstack/react-query";
+import { createServerSideHelpers } from "@trpc/react-query/server";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import TeamSlugClient from "./TeamSlugClient";
+import superjson from "superjson";
+import TeamPageClient from "./TeamPageClient";
 
-export default async function TeamSlugPage(ctx: { params: Promise<{ slug: string }> }) {
-  const { slug } = await ctx.params;
-  const user = await getServerUser();
-  if (!user?.id) {
-    redirect("/auth");
-  }
+interface PageProps {
+	params: Promise<{ slug: string }>;
+}
 
-  try {
-    // Get team group by slug using Drizzle ORM
-    const groupResult = await dbPg
-      .select({
-        id: newTeamGroups.id,
-        school: newTeamGroups.school,
-        division: newTeamGroups.division,
-        slug: newTeamGroups.slug,
-      })
-      .from(newTeamGroups)
-      .where(eq(newTeamGroups.slug, slug));
+export async function generateMetadata({
+	params,
+}: PageProps): Promise<Metadata> {
+	const { slug } = await params;
+	try {
+		const ctx = await createContext();
+		const caller = appRouter.createCaller(ctx);
+		const meta = await caller.teams.meta({ teamSlug: slug });
+		return {
+			title: `${meta?.name ?? meta?.school ?? "Team"} | Scio.ly`,
+			description: `Team page for ${meta?.name ?? meta?.school ?? slug}`,
+		};
+	} catch {
+		return {
+			title: "Team | Scio.ly",
+			description: "Team page",
+		};
+	}
+}
 
-    if (groupResult.length === 0) {
-      // Team not found - redirect to teams page with error message
-      redirect("/teams?error=team_not_found");
-    }
+export default async function TeamSlugPage({ params }: PageProps) {
+	const { slug } = await params;
+	const helpers = createServerSideHelpers({
+		router: appRouter,
+		ctx: await createContext(),
+		transformer: superjson,
+	});
 
-    const group = groupResult[0];
-    if (!group) {
-      redirect("/teams?error=team_not_found");
-    }
+	try {
+		await helpers.teams.full.prefetch({ teamSlug: slug });
+	} catch (_error) {
+		// If unauthorized, send to auth flow
+		redirect("/auth");
+	}
 
-    // Get team units for this group using Drizzle ORM
-    const unitsResult = await dbPg
-      .select({
-        id: newTeamUnits.id,
-        team_id: newTeamUnits.teamId,
-        captain_code: newTeamUnits.captainCode,
-        user_code: newTeamUnits.userCode,
-      })
-      .from(newTeamUnits)
-      .where(eq(newTeamUnits.groupId, group.id));
+	const dehydratedState = helpers.dehydrate();
 
-    if (unitsResult.length === 0) {
-      // No team units found - redirect to teams page with error message
-      redirect("/teams?error=no_team_units");
-    }
-
-    // Get user's team memberships using Drizzle ORM
-    const membershipResult = await dbPg
-      .select({
-        team_id: newTeamMemberships.teamId,
-        role: newTeamMemberships.role,
-      })
-      .from(newTeamMemberships)
-      .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
-      .where(
-        and(
-          eq(newTeamMemberships.userId, user.id),
-          eq(newTeamUnits.groupId, group.id),
-          eq(newTeamMemberships.status, "active")
-        )
-      );
-
-    // Select the first team unit (or preferred one if user is a member)
-    // const _selectedUnit = unitsResult[0];
-    const membership = membershipResult[0];
-    const isCaptain = membership?.role === "captain";
-
-    return (
-      <TeamSlugClient
-        teamSlug={group.slug}
-        school={group.school}
-        division={group.division as "B" | "C"}
-        isCaptain={isCaptain}
-      />
-    );
-  } catch (_error) {
-    redirect("/teams?error=server_error");
-  }
+	return (
+		<HydrationBoundary state={dehydratedState}>
+			<TeamPageClient teamSlug={slug} />
+		</HydrationBoundary>
+	);
 }

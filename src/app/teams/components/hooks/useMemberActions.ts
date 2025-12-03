@@ -1,506 +1,126 @@
-import { useTeamStore } from "@/app/hooks/useTeamStore";
-import { handleApiError } from "@/lib/stores/teams/utils";
+import { useInvalidateTeam } from "@/lib/hooks/useTeam";
 import { trpc } from "@/lib/trpc/client";
-import logger from "@/lib/utils/logger";
-import { useCallback, useRef } from "react";
 import { toast } from "react-toastify";
 import type { Member } from "../../types";
 import { getDisplayName } from "../../utils/displayNameUtils";
 
 interface UseMemberActionsProps {
-  teamSlug: string;
-  selectedSubteam: string;
-  loadMembers: (slug: string, subteamId?: string) => Promise<void>;
-  filteredMembers: Member[];
+	teamSlug: string;
+	selectedSubteam: string;
 }
 
 export function useMemberActions({
-  teamSlug,
-  selectedSubteam,
-  loadMembers,
-  filteredMembers,
+	teamSlug,
+	selectedSubteam: _selectedSubteam,
 }: UseMemberActionsProps) {
-  const updateRosterMutation = trpc.teams.updateRoster.useMutation();
-  const removeRosterEntryMutation = trpc.teams.removeRosterEntry.useMutation();
-  const exitSubteamMutation = trpc.teams.exitSubteam.useMutation();
+	const { invalidateTeam } = useInvalidateTeam();
+	const upsertRosterEntry = trpc.teams.upsertRosterEntry.useMutation();
+	const deleteRosterEntry = trpc.teams.removeRosterEntry.useMutation();
 
-  // Use Zustand store's invalidateCache for synchronous cache clearing
-  const { invalidateCache } = useTeamStore();
+	const refresh = async () => {
+		await invalidateTeam(teamSlug);
+	};
 
-  // Memoize cache invalidation function
-  const invalidateMemberCaches = useCallback(
-    (subteamId: string) => {
-      invalidateCache(`members-${teamSlug}-all`);
-      if (selectedSubteam !== "all") {
-        invalidateCache(`members-${teamSlug}-${selectedSubteam}`);
-      }
-      invalidateCache(`members-${teamSlug}-${subteamId}`);
-    },
-    [teamSlug, selectedSubteam, invalidateCache]
-  );
+	return {
+		handleRemoveSelfFromSubteam: async (_subteamId: string) => {
+			toast.info("Leaving subteams via the new flow is coming soon.");
+			await refresh();
+		},
 
-  // Use a ref to prevent infinite loops from recursive loadMembers calls
-  const isLoadingRef = useRef(false);
+		handleRemoveOtherFromSubteam: async (member: Member, subteamId: string) => {
+			await deleteRosterEntry.mutateAsync({
+				teamSlug,
+				subteamId,
+				eventName: "General",
+				slotIndex: 0,
+			});
+			toast.success(`Removed ${getDisplayName(member)} from subteam`);
+			await refresh();
+		},
 
-  const reloadMembersData = useCallback(async () => {
-    // Prevent recursive calls
-    if (isLoadingRef.current) {
-      return;
-    }
-    
-    isLoadingRef.current = true;
-    try {
-    await loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
-    await loadMembers(teamSlug, undefined);
-    } finally {
-      // Reset loading flag after a delay to allow cache updates to complete
-      setTimeout(() => {
-        isLoadingRef.current = false;
-      }, 100);
-    }
-  }, [teamSlug, selectedSubteam, loadMembers]);
+		handleRemoveEvent: async (
+			member: Member,
+			event: string,
+			subteamId: string,
+		) => {
+			await deleteRosterEntry.mutateAsync({
+				teamSlug,
+				subteamId,
+				eventName: event,
+				slotIndex: 0,
+			});
+			toast.success(`Removed ${getDisplayName(member)} from ${event}`);
+			await refresh();
+		},
 
-  const handleRemoveSelfFromSubteam = useCallback(
-    async (subteamId: string) => {
-      try {
-        await exitSubteamMutation.mutateAsync({
-          teamSlug,
-          subteamId,
-        });
-        toast.success("Removed yourself from subteam");
-        invalidateMemberCaches(subteamId);
-        await reloadMembersData();
-      } catch (error) {
-        logger.error("Failed to exit subteam:", error);
-        const errorMessage = handleApiError(error, "exitSubteam");
-        toast.error(errorMessage);
-      }
-    },
-    [teamSlug, exitSubteamMutation, invalidateMemberCaches, reloadMembersData]
-  );
+		handleAddEvent: async (
+			member: Member,
+			eventName: string,
+			subteamId: string,
+		) => {
+			await upsertRosterEntry.mutateAsync({
+				teamSlug,
+				subteamId,
+				entry: {
+					eventName,
+					slotIndex: 0,
+					displayName: getDisplayName(member),
+					userId: member.id || undefined,
+				},
+			});
+			toast.success(`Added ${getDisplayName(member)} to ${eventName}`);
+			await refresh();
+		},
 
-  const handleRemoveOtherFromSubteam = useCallback(
-    async (member: Member, subteamId: string, _subteamName: string) => {
-      const response = await fetch(`/api/teams/${teamSlug}/roster/remove`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: member.id,
-          subteamId,
-        }),
-      });
+		handleSubteamAssign: async (member: Member, subteamId: string) => {
+			await upsertRosterEntry.mutateAsync({
+				teamSlug,
+				subteamId,
+				entry: {
+					eventName: "General",
+					slotIndex: 0,
+					displayName: getDisplayName(member),
+					userId: member.id || undefined,
+				},
+			});
+			toast.success(`Assigned ${getDisplayName(member)} to subteam`);
+			await refresh();
+		},
 
-      if (response.ok) {
-        toast.success(`Removed ${member.name} from subteam`);
-        invalidateMemberCaches(subteamId);
-        await reloadMembersData();
-      } else {
-        const err = await response.json();
-        toast.error(err.error || "Failed to remove subteam badge");
-        throw new Error("Failed to remove from subteam");
-      }
-    },
-    [teamSlug, invalidateMemberCaches, reloadMembersData]
-  );
+		handleInviteSubmit: async (_username: string) => {
+			toast.info("Invites will be rebuilt on the new backend soon.");
+		},
 
-  const handleRemoveEvent = useCallback(
-    async (member: Member, event: string, subteamId: string, subteamName: string) => {
-      try {
-        await removeRosterEntryMutation.mutateAsync({
-          teamSlug,
-          subteamId,
-          eventName: event,
-          userId: member.id || undefined,
-          studentName: getDisplayName(member),
-        });
+		handleLinkInviteSubmit: async (_memberName: string, _username: string) => {
+			toast.info("Link invites will be rebuilt on the new backend soon.");
+			return true as const;
+		},
 
-        toast.success(`Removed ${getDisplayName(member)} from ${event} in ${subteamName}`);
+		handleCancelLinkInvite: async (_memberName: string) => {
+			toast.info(
+				"Link invite cancellation will be rebuilt on the new backend soon.",
+			);
+		},
 
-        // Invalidate all relevant caches immediately using proper cache keys
-        invalidateCache(`members-${teamSlug}-all`);
-        invalidateCache(`members-${teamSlug}-${subteamId}`);
-        if (selectedSubteam !== "all" && selectedSubteam !== subteamId) {
-          invalidateCache(`members-${teamSlug}-${selectedSubteam}`);
-        }
-        invalidateCache(`roster-${teamSlug}-${subteamId}`);
+		handleCancelInvitation: async (_member: Member) => {
+			toast.info(
+				"Invitation cancellation will be rebuilt on the new backend soon.",
+			);
+		},
 
-        // Reload data
-        await loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
-      } catch (e) {
-        logger.error("Failed to remove event badge:", e);
-        toast.error("Failed to remove event badge");
-        throw e;
-      }
-    },
-    [teamSlug, selectedSubteam, removeRosterEntryMutation, loadMembers, invalidateCache]
-  );
+		handleRemoveMember: async (member: Member) => {
+			await deleteRosterEntry.mutateAsync({
+				teamSlug,
+				subteamId: member.subteam?.id ?? member.subteamId ?? null,
+				eventName: "General",
+				slotIndex: 0,
+			});
+			toast.success(`Removed ${getDisplayName(member)} from team roster`);
+			await refresh();
+		},
 
-  const handleAddEvent = useCallback(
-    async (member: Member, eventName: string, subteamId: string) => {
-      try {
-        const studentName = getDisplayName(member);
-
-        await updateRosterMutation.mutateAsync({
-          teamSlug,
-          subteamId,
-          eventName,
-          slotIndex: 0,
-          studentName,
-          userId: member.id || undefined,
-        });
-
-        toast.success(`Added ${getDisplayName(member)} to ${eventName}`);
-
-        // Invalidate all relevant caches immediately using proper cache keys
-        invalidateCache(`members-${teamSlug}-all`);
-        invalidateCache(`members-${teamSlug}-${subteamId}`);
-        if (selectedSubteam !== "all" && selectedSubteam !== subteamId) {
-          invalidateCache(`members-${teamSlug}-${selectedSubteam}`);
-        }
-        invalidateCache(`roster-${teamSlug}-${subteamId}`);
-
-        // Reload data
-        await loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
-      } catch (error) {
-        logger.error("Failed to add event:", error);
-        toast.error("Failed to add event");
-        throw error;
-      }
-    },
-    [teamSlug, selectedSubteam, updateRosterMutation, loadMembers, invalidateCache]
-  );
-
-  const handleSubteamAssign = useCallback(
-    async (member: Member, subteamId: string) => {
-      try {
-        const response = await fetch(`/api/teams/${teamSlug}/roster`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            subteamId,
-            eventName: "General",
-            slotIndex: 0,
-            studentName: member.name,
-            userId: member.id,
-          }),
-        });
-
-        if (response.ok) {
-          const subteam = filteredMembers
-            .find((m) => m.id === member.id)
-            ?.subteams?.find((s) => s.id === subteamId);
-          toast.success(`Assigned ${member.name} to ${subteam?.name || "subteam"}`);
-
-          setTimeout(() => {
-            invalidateCache(
-              `members-${teamSlug}-${selectedSubteam === "all" ? "all" : selectedSubteam}`
-            );
-            loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
-          }, 100);
-        } else {
-          await response.json();
-          toast.error("Failed to assign subteam");
-          throw new Error("Failed to assign subteam");
-        }
-      } catch (error) {
-        logger.error("Failed to assign subteam:", error);
-        throw error;
-      }
-    },
-    [teamSlug, selectedSubteam, filteredMembers, loadMembers, invalidateCache]
-  );
-
-  const handleInviteSubmit = useCallback(
-    async (username: string) => {
-      try {
-        const response = await fetch(`/api/teams/${teamSlug}/invite`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            username,
-            role: "member",
-          }),
-        });
-
-        if (response.ok) {
-          toast.success(`Invitation sent to ${username}`);
-          loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
-        } else {
-          const error = await response.json();
-          toast.error(error.error || "Failed to send invitation");
-        }
-      } catch (_error) {
-        toast.error("Failed to send invitation");
-      }
-    },
-    [teamSlug, selectedSubteam, loadMembers]
-  );
-
-  const handleLinkInviteSubmit = useCallback(
-    async (memberName: string, username: string) => {
-      try {
-        const member = filteredMembers.find((m) => m.name === memberName);
-        if (!member) {
-          toast.error("Member not found");
-          return;
-        }
-
-        const subteamId =
-          (member as Member).subteam?.id ||
-          member.subteamId ||
-          (selectedSubteam !== "all" ? selectedSubteam : null);
-        if (!subteamId) {
-          toast.error("Unable to determine subteam for this member");
-          return;
-        }
-
-        const response = await fetch(`/api/teams/${teamSlug}/roster/invite`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            subteamId,
-            studentName: memberName,
-            username,
-            message: `You've been invited to link your account to the roster entry "${memberName}"`,
-          }),
-        });
-
-        if (response.ok) {
-          toast.success(`Link invitation sent to ${username}`);
-          loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
-          return true;
-        }
-        const error = await response.json();
-        toast.error(error.error || "Failed to send link invitation");
-        return false;
-      } catch (_error) {
-        toast.error("Failed to send link invitation");
-        return false;
-      }
-    },
-    [teamSlug, selectedSubteam, filteredMembers, loadMembers]
-  );
-
-  const handleCancelLinkInvite = useCallback(
-    async (memberName: string) => {
-      try {
-        const member = filteredMembers.find((m) => m.name === memberName);
-        if (!member) {
-          toast.error("Member not found");
-          return;
-        }
-
-        const subteamId =
-          (member as Member).subteam?.id ||
-          member.subteamId ||
-          (selectedSubteam !== "all" ? selectedSubteam : null);
-        if (!subteamId) {
-          toast.error("Unable to determine subteam for this member");
-          return;
-        }
-
-        const response = await fetch(`/api/teams/${teamSlug}/roster/invite/cancel`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            subteamId,
-            studentName: memberName,
-          }),
-        });
-
-        if (response.ok) {
-          toast.success("Link invitation cancelled");
-          loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
-        } else {
-          const error = await response.json();
-          toast.error(error.error || "Failed to cancel link invitation");
-        }
-      } catch (_error) {
-        toast.error("Failed to cancel link invitation");
-      }
-    },
-    [teamSlug, selectedSubteam, filteredMembers, loadMembers]
-  );
-
-  const handleCancelInvitation = useCallback(
-    async (member: Member) => {
-      if (!member.invitationCode) {
-        toast.error("No invitation code found");
-        return;
-      }
-
-      try {
-        const response = await fetch(`/api/teams/${teamSlug}/invite/cancel`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            invitationCode: member.invitationCode,
-          }),
-        });
-
-        if (response.ok) {
-          toast.success(`Invitation cancelled for ${getDisplayName(member)}`);
-          loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
-        } else {
-          const error = await response.json();
-          toast.error(error.error || "Failed to cancel invitation");
-        }
-      } catch (_error) {
-        toast.error("Failed to cancel invitation");
-      }
-    },
-    [teamSlug, selectedSubteam, loadMembers]
-  );
-
-  const removeLinkedMember = useCallback(
-    async (member: Member) => {
-      const response = await fetch(`/api/teams/${teamSlug}/members/remove`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: member.id,
-        }),
-      });
-
-      if (response.ok) {
-        toast.success(`${member.name} has been removed from the team`);
-        // Invalidate ALL member caches to ensure fresh data is fetched
-        invalidateCache(`members-${teamSlug}-all`);
-        if (selectedSubteam !== "all") {
-          invalidateCache(`members-${teamSlug}-${selectedSubteam}`);
-        }
-        // Also invalidate roster caches for all subteams this member was on
-        if (member.subteamId) {
-          invalidateCache(`roster-${teamSlug}-${member.subteamId}`);
-        }
-        // Now reload members data
-        await loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
-        // Also reload 'all' view if we're filtering by subteam
-        if (selectedSubteam !== "all") {
-          await loadMembers(teamSlug, undefined);
-        }
-      } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to remove member");
-      }
-    },
-    [teamSlug, selectedSubteam, loadMembers, invalidateCache]
-  );
-
-  const removeUnlinkedMember = useCallback(
-    async (member: Member) => {
-      const response = await fetch(`/api/teams/${teamSlug}/roster/remove`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          studentName: getDisplayName(member),
-        }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        toast.success(
-          `${getDisplayName(member)} has been removed from the roster (${result.removedEntries} entries)`
-        );
-        // Invalidate ALL member caches to ensure fresh data is fetched
-        invalidateCache(`members-${teamSlug}-all`);
-        if (selectedSubteam !== "all") {
-          invalidateCache(`members-${teamSlug}-${selectedSubteam}`);
-        }
-        // Now reload members data
-        await loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
-        // Also reload 'all' view if we're filtering by subteam
-        if (selectedSubteam !== "all") {
-          await loadMembers(teamSlug, undefined);
-        }
-      } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to remove roster entry");
-      }
-    },
-    [teamSlug, selectedSubteam, loadMembers, invalidateCache]
-  );
-
-  const handleRemoveMember = useCallback(
-    async (member: Member, userId: string | undefined) => {
-      if (member.role === "captain") {
-        toast.error("Cannot remove team captain");
-        return;
-      }
-
-      if (member.id === userId) {
-        toast.error("Cannot remove yourself");
-        return;
-      }
-
-      if (!confirm(`Are you sure you want to remove ${getDisplayName(member)} from the team?`)) {
-        return;
-      }
-
-      try {
-        if (member.id) {
-          await removeLinkedMember(member);
-        } else {
-          await removeUnlinkedMember(member);
-        }
-      } catch (_error) {
-        toast.error("Failed to remove member");
-      }
-    },
-    [removeLinkedMember, removeUnlinkedMember]
-  );
-
-  const handlePromoteToCaptain = useCallback(
-    async (member: Member) => {
-      if (member.role === "captain") {
-        toast.error("User is already a captain");
-        return;
-      }
-
-      if (!member.id) {
-        toast.error("Cannot promote unlinked members to captain");
-        return;
-      }
-
-      if (!confirm(`Are you sure you want to promote ${member.name} to captain?`)) {
-        return;
-      }
-
-      try {
-        const response = await fetch(`/api/teams/${teamSlug}/members/promote`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: member.id,
-            newRole: "captain",
-          }),
-        });
-
-        if (response.ok) {
-          toast.success(`${member.name} has been promoted to captain`);
-          loadMembers(teamSlug, selectedSubteam === "all" ? undefined : selectedSubteam);
-        } else {
-          const error = await response.json();
-          toast.error(error.error || "Failed to promote member");
-        }
-      } catch (_error) {
-        toast.error("Failed to promote member");
-      }
-    },
-    [teamSlug, selectedSubteam, loadMembers]
-  );
-
-  return {
-    handleRemoveSelfFromSubteam,
-    handleRemoveOtherFromSubteam,
-    handleRemoveEvent,
-    handleAddEvent,
-    handleSubteamAssign,
-    handleInviteSubmit,
-    handleLinkInviteSubmit,
-    handleCancelLinkInvite,
-    handleCancelInvitation,
-    handleRemoveMember,
-    handlePromoteToCaptain,
-  };
+		handlePromoteToCaptain: () => {
+			toast.info("Role changes will be rebuilt on the new backend soon.");
+		},
+	};
 }

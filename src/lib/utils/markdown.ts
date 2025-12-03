@@ -21,9 +21,15 @@ const HEADER_REGEX = /^(#{1,6})\s+(.+)$/;
  * ```
  */
 export function normalizeMath(input: string): string {
-  let output = input.replace(/\\\[([\s\S]*?)\\\]/g, (_match, inner: string) => `$$${inner}$$`);
-  output = output.replace(/\\\(([\s\S]*?)\\\)/g, (_match, inner: string) => `$${inner}$`);
-  return output;
+	let output = input.replace(
+		/\\\[([\s\S]*?)\\\]/g,
+		(_match, inner: string) => `$$${inner}$$`,
+	);
+	output = output.replace(
+		/\\\(([\s\S]*?)\\\)/g,
+		(_match, inner: string) => `$${inner}$`,
+	);
+	return output;
 }
 
 /**
@@ -39,23 +45,23 @@ export function normalizeMath(input: string): string {
  * ```
  */
 export function slugifyText(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-");
+	return text
+		.toLowerCase()
+		.replace(/[^a-z0-9\s-]/g, "")
+		.trim()
+		.replace(/\s+/g, "-");
 }
 
 /**
  * Table of contents item interface
  */
 export type TocItem = {
-  /** Heading level (1-6) */
-  level: number;
-  /** Heading text content */
-  text: string;
-  /** Unique identifier for the heading */
-  id: string;
+	/** Heading level (1-6) */
+	level: number;
+	/** Heading text content */
+	text: string;
+	/** Unique identifier for the heading */
+	id: string;
 };
 
 /**
@@ -76,21 +82,21 @@ export type TocItem = {
  * ```
  */
 export function extractToc(content: string | null): TocItem[] {
-  if (!content) {
-    return [];
-  }
-  const normalized = normalizeMath(content);
-  const lines = normalized.split("\n");
-  const items: TocItem[] = [];
-  const slugger = new GithubSlugger();
-  for (const line of lines) {
-    const match = HEADER_REGEX.exec(line.trim());
-    if (match?.[1] && match[2]) {
-      const level = match[1].length;
-      const text = match[2].replace(/[#*`_]/g, "").trim();
-      const id = slugger.slug(text);
-      items.push({ level, text, id });
-    }
-  }
-  return items;
+	if (!content) {
+		return [];
+	}
+	const normalized = normalizeMath(content);
+	const lines = normalized.split("\n");
+	const items: TocItem[] = [];
+	const slugger = new GithubSlugger();
+	for (const line of lines) {
+		const match = HEADER_REGEX.exec(line.trim());
+		if (match?.[1] && match[2]) {
+			const level = match[1].length;
+			const text = match[2].replace(/[#*`_]/g, "").trim();
+			const id = slugger.slug(text);
+			items.push({ level, text, id });
+		}
+	}
+	return items;
 }

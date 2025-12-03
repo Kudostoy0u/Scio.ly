@@ -21,17 +21,20 @@ const inflightRequests = new Map<string, Promise<Response>>();
  * const data = await response.json();
  * ```
  */
-export async function fetchOnce(input: string, init?: RequestInit): Promise<Response> {
-  const key = init ? `${input}::${JSON.stringify(init)}` : input;
-  const existing = inflightRequests.get(key);
-  if (existing) {
-    return existing;
-  }
-  const p = fetch(input, init).finally(() => {
-    inflightRequests.delete(key);
-  });
-  inflightRequests.set(key, p);
-  return p;
+export async function fetchOnce(
+	input: string,
+	init?: RequestInit,
+): Promise<Response> {
+	const key = init ? `${input}::${JSON.stringify(init)}` : input;
+	const existing = inflightRequests.get(key);
+	if (existing) {
+		return existing;
+	}
+	const p = fetch(input, init).finally(() => {
+		inflightRequests.delete(key);
+	});
+	inflightRequests.set(key, p);
+	return p;
 }
 
 // Removed unused export: getJsonOnce

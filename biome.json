@@ -1,97 +1,27 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
-  "vcs": {
-    "enabled": true,
-    "clientKind": "git",
-    "useIgnoreFile": true
-  },
-  "files": {
-    "ignoreUnknown": false,
-    "ignore": [
-      ".next/**",
-      "node_modules/**",
-      "out/**",
-      "dist/**",
-      "build/**",
-      "coverage/**",
-      "*.config.js",
-      "*.config.mjs",
-      "*.config.ts",
-      "src/.next/**",
-      "pnpm-lock.yaml",
-      "drizzle/**",
-      "migrations/**",
-      "results/**",
-      "public/statesB/**",
-      "public/statesC/**",
-      "scripts/**"
-    ],
-    "maxSize": 10485760
-  },
-  "formatter": {
-    "enabled": true,
-    "indentStyle": "space",
-    "indentWidth": 2,
-    "lineEnding": "lf",
-    "lineWidth": 100,
-    "formatWithErrors": false
-  },
-  "organizeImports": {
-    "enabled": true
-  },
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "all": true,
-      "style": {
-        "noDefaultExport": "off",
-        "useNamingConvention": "off",
-        "useFilenamingConvention": "off"
-      },
-      "suspicious": {
-        "noReactSpecificProps": "off"
-      },
-      "correctness": {
-        "useImportExtensions": "off",
-        "noUndeclaredDependencies": "off"
-      },
-      "complexity": {
-        "noExcessiveCognitiveComplexity": {
-          "level": "error",
-          "options": {
-            "maxAllowedComplexity": 30
-          }
-        },
-        "noExcessiveNestedTestSuites": "error"
-      },
-      "performance": {
-        "noAccumulatingSpread": "warn"
-      }
-    }
-  },
-  "javascript": {
-    "formatter": {
-      "quoteStyle": "double",
-      "jsxQuoteStyle": "double",
-      "trailingCommas": "es5",
-      "semicolons": "always",
-      "arrowParentheses": "always"
-    },
-    "globals": [
-      "describe",
-      "it",
-      "expect",
-      "beforeEach",
-      "afterEach",
-      "beforeAll",
-      "afterAll",
-      "vi",
-      "Mock"
-    ]
-  },
-  "json": {
-    "formatter": {
-      "enabled": true
-    }
-  }
+	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+	"files": {
+		"include": [
+			"src/app/teams/**",
+			"src/lib/**",
+			"tsconfig.json",
+			"package.json",
+			"biome.json"
+		],
+		"ignore": [
+			".vercel/**",
+			".next/**",
+			".claude/**",
+			".vscode/**",
+			"public/**",
+			"drizzle/meta/**",
+			"drizzle/meta",
+			"drizzle/meta/**",
+			"knip.json",
+			".vscode/**",
+			"src/lib/trpc/routers/teams/operations/**",
+			"src/lib/actions/teams.ts",
+			"src/lib/db/dexie-teams.ts"
+		]
+	}
 }

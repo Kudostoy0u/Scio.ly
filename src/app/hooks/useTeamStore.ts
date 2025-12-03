@@ -94,7 +94,7 @@ export function useTeamStore() {
       try {
         await fetchMembers(teamSlug, subteamId);
       } catch (_error) {
-        toast.error("Failed to load members: " + _error);
+        toast.error(`Failed to load members: ${_error}`);
       }
     },
     [fetchMembers]

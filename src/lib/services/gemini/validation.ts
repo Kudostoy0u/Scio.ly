@@ -5,33 +5,37 @@
 import logger from "@/lib/utils/logger";
 import { Type } from "@google/genai";
 import type { ClientWithKey } from "./client";
-import type { EditValidationResult, QuoteValidationResult, ReportEditResult } from "./types";
+import type {
+	EditValidationResult,
+	QuoteValidationResult,
+	ReportEditResult,
+} from "./types";
 
 /**
  * Validation and utility service
  */
 export class GeminiValidationService {
-  private clientWithKey: ClientWithKey;
+	private clientWithKey: ClientWithKey;
 
-  constructor(clientWithKey: ClientWithKey) {
-    this.clientWithKey = clientWithKey;
-  }
+	constructor(clientWithKey: ClientWithKey) {
+		this.clientWithKey = clientWithKey;
+	}
 
-  /**
-   * Validates an edit to a question
-   * @param {Record<string, unknown>} originalQuestion - Original question
-   * @param {Record<string, unknown>} editedQuestion - Edited question
-   * @param {string} event - Event name
-   * @param {string} reason - Reason for edit
-   * @returns {Promise<EditValidationResult>} Validation result
-   */
-  public async validateEdit(
-    originalQuestion: Record<string, unknown>,
-    editedQuestion: Record<string, unknown>,
-    event: string,
-    reason: string
-  ): Promise<EditValidationResult> {
-    const prompt = `You are a Science Olympiad question validator. Validate this edit to ensure it maintains scientific accuracy and educational value.
+	/**
+	 * Validates an edit to a question
+	 * @param {Record<string, unknown>} originalQuestion - Original question
+	 * @param {Record<string, unknown>} editedQuestion - Edited question
+	 * @param {string} event - Event name
+	 * @param {string} reason - Reason for edit
+	 * @returns {Promise<EditValidationResult>} Validation result
+	 */
+	public async validateEdit(
+		originalQuestion: Record<string, unknown>,
+		editedQuestion: Record<string, unknown>,
+		event: string,
+		reason: string,
+	): Promise<EditValidationResult> {
+		const prompt = `You are a Science Olympiad question validator. Validate this edit to ensure it maintains scientific accuracy and educational value.
 
 ORIGINAL QUESTION: ${JSON.stringify(originalQuestion, null, 2)}
 EDITED QUESTION: ${JSON.stringify(editedQuestion, null, 2)}
@@ -47,30 +51,30 @@ VALIDATION CRITERIA:
 
 Provide feedback on the validity of the edit and any suggestions for improvement.`;
 
-    const schema = {
-      type: Type.OBJECT,
-      properties: {
-        isValid: { type: Type.BOOLEAN },
-        feedback: { type: Type.STRING },
-        suggestions: { type: Type.ARRAY, items: { type: Type.STRING } },
-      },
-      propertyOrdering: ["isValid", "feedback", "suggestions"],
-    };
+		const schema = {
+			type: Type.OBJECT,
+			properties: {
+				isValid: { type: Type.BOOLEAN },
+				feedback: { type: Type.STRING },
+				suggestions: { type: Type.ARRAY, items: { type: Type.STRING } },
+			},
+			propertyOrdering: ["isValid", "feedback", "suggestions"],
+		};
 
-    return await this.generateStructuredContent(prompt, schema);
-  }
+		return await this.generateStructuredContent(prompt, schema);
+	}
 
-  /**
-   * Improves a report edit reason
-   * @param {string} originalReason - Original reason
-   * @param {string} event - Event name
-   * @returns {Promise<ReportEditResult>} Improved reason
-   */
-  public async improveReportEditReason(
-    originalReason: string,
-    event: string
-  ): Promise<ReportEditResult> {
-    const prompt = `You are a Science Olympiad question reviewer. Improve this report edit reason to be more specific and helpful.
+	/**
+	 * Improves a report edit reason
+	 * @param {string} originalReason - Original reason
+	 * @param {string} event - Event name
+	 * @returns {Promise<ReportEditResult>} Improved reason
+	 */
+	public async improveReportEditReason(
+		originalReason: string,
+		event: string,
+	): Promise<ReportEditResult> {
+		const prompt = `You are a Science Olympiad question reviewer. Improve this report edit reason to be more specific and helpful.
 
 ORIGINAL REASON: ${originalReason}
 EVENT: ${event}
@@ -84,30 +88,32 @@ IMPROVEMENT REQUIREMENTS:
 
 Provide an improved version of the reason that will help the question editor make better changes.`;
 
-    const schema = {
-      type: Type.OBJECT,
-      properties: {
-        improvedReason: { type: Type.STRING },
-      },
-      propertyOrdering: ["improvedReason"],
-    };
+		const schema = {
+			type: Type.OBJECT,
+			properties: {
+				improvedReason: { type: Type.STRING },
+			},
+			propertyOrdering: ["improvedReason"],
+		};
 
-    return await this.generateStructuredContent(prompt, schema);
-  }
+		return await this.generateStructuredContent(prompt, schema);
+	}
 
-  /**
-   * Validates a quote for appropriateness and language
-   * @param {Record<string, unknown>} quote - Quote data
-   * @param {string} cipherType - Cipher type
-   * @returns {Promise<QuoteValidationResult>} Validation result
-   */
-  public async validateQuote(
-    quote: Record<string, unknown>,
-    cipherType: string
-  ): Promise<QuoteValidationResult> {
-    const expectedLanguage = cipherType.includes("Xenocrypt") ? "Spanish" : "English";
+	/**
+	 * Validates a quote for appropriateness and language
+	 * @param {Record<string, unknown>} quote - Quote data
+	 * @param {string} cipherType - Cipher type
+	 * @returns {Promise<QuoteValidationResult>} Validation result
+	 */
+	public async validateQuote(
+		quote: Record<string, unknown>,
+		cipherType: string,
+	): Promise<QuoteValidationResult> {
+		const expectedLanguage = cipherType.includes("Xenocrypt")
+			? "Spanish"
+			: "English";
 
-    const prompt = `You are a quote validator for a Code Busters cipher competition. Analyze this quote for appropriateness and formatting.
+		const prompt = `You are a quote validator for a Code Busters cipher competition. Analyze this quote for appropriateness and formatting.
 
 QUOTE: ${quote.quote}
 AUTHOR: ${quote.author}
@@ -142,86 +148,89 @@ DECISION MATRIX:
 
 Provide your analysis and decision.`;
 
-    const schema = {
-      type: Type.OBJECT,
-      properties: {
-        action: {
-          type: Type.STRING,
-          enum: ["remove", "edit", "keep"],
-        },
-        reason: { type: Type.STRING },
-        issues: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING },
-        },
-        editedQuote: {
-          type: Type.OBJECT,
-          properties: {
-            quote: { type: Type.STRING },
-            author: { type: Type.STRING },
-            language: { type: Type.STRING },
-          },
-          nullable: true,
-        },
-      },
-      propertyOrdering: ["action", "reason", "issues", "editedQuote"],
-    };
+		const schema = {
+			type: Type.OBJECT,
+			properties: {
+				action: {
+					type: Type.STRING,
+					enum: ["remove", "edit", "keep"],
+				},
+				reason: { type: Type.STRING },
+				issues: {
+					type: Type.ARRAY,
+					items: { type: Type.STRING },
+				},
+				editedQuote: {
+					type: Type.OBJECT,
+					properties: {
+						quote: { type: Type.STRING },
+						author: { type: Type.STRING },
+						language: { type: Type.STRING },
+					},
+					nullable: true,
+				},
+			},
+			propertyOrdering: ["action", "reason", "issues", "editedQuote"],
+		};
 
-    return await this.generateStructuredContent(prompt, schema);
-  }
+		return await this.generateStructuredContent(prompt, schema);
+	}
 
-  /**
-   * Generates structured content using Gemini
-   * @param {string} prompt - Prompt text
-   * @param {object} schema - Response schema
-   * @returns {Promise<T>} Structured response
-   */
-  private async generateStructuredContent<T>(prompt: string, schema: object): Promise<T> {
-    try {
-      const response = await this.clientWithKey.client.models.generateContent({
-        model: "gemini-flash-lite-latest",
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: schema,
-          thinkingConfig: {
-            thinkingBudget: 1000,
-          },
-          temperature: 0.1,
-          topP: 0.8,
-          topK: 40,
-        },
-      });
+	/**
+	 * Generates structured content using Gemini
+	 * @param {string} prompt - Prompt text
+	 * @param {object} schema - Response schema
+	 * @returns {Promise<T>} Structured response
+	 */
+	private async generateStructuredContent<T>(
+		prompt: string,
+		schema: object,
+	): Promise<T> {
+		try {
+			const response = await this.clientWithKey.client.models.generateContent({
+				model: "gemini-flash-lite-latest",
+				contents: prompt,
+				config: {
+					responseMimeType: "application/json",
+					responseSchema: schema,
+					thinkingConfig: {
+						thinkingBudget: 1000,
+					},
+					temperature: 0.1,
+					topP: 0.8,
+					topK: 40,
+				},
+			});
 
-      const text = response.text || "{}";
+			const text = response.text || "{}";
 
-      try {
-        return JSON.parse(text) as T;
-      } catch (error) {
-        const maskedKey =
-          this.clientWithKey.apiKey.length > 12
-            ? `${this.clientWithKey.apiKey.substring(0, 8)}...${this.clientWithKey.apiKey.substring(this.clientWithKey.apiKey.length - 4)}`
-            : "***";
-        logger.error("Failed to parse Gemini response", error as Error, {
-          apiKeyIndex: this.clientWithKey.keyIndex,
-          apiKey: maskedKey,
-        });
-        throw new Error(
-          `Invalid response format from Gemini (API key index: ${this.clientWithKey.keyIndex})`
-        );
-      }
-    } catch (error) {
-      const maskedKey =
-        this.clientWithKey.apiKey.length > 12
-          ? `${this.clientWithKey.apiKey.substring(0, 8)}...${this.clientWithKey.apiKey.substring(this.clientWithKey.apiKey.length - 4)}`
-          : "***";
-      logger.error("Gemini API error", error as Error, {
-        apiKeyIndex: this.clientWithKey.keyIndex,
-        apiKey: maskedKey,
-      });
-      throw new Error(
-        `Gemini API error (API key index: ${this.clientWithKey.keyIndex}, key: ${maskedKey}): ${(error as Error).message}`
-      );
-    }
-  }
+			try {
+				return JSON.parse(text) as T;
+			} catch (error) {
+				const maskedKey =
+					this.clientWithKey.apiKey.length > 12
+						? `${this.clientWithKey.apiKey.substring(0, 8)}...${this.clientWithKey.apiKey.substring(this.clientWithKey.apiKey.length - 4)}`
+						: "***";
+				logger.error("Failed to parse Gemini response", error as Error, {
+					apiKeyIndex: this.clientWithKey.keyIndex,
+					apiKey: maskedKey,
+				});
+				throw new Error(
+					`Invalid response format from Gemini (API key index: ${this.clientWithKey.keyIndex})`,
+				);
+			}
+		} catch (error) {
+			const maskedKey =
+				this.clientWithKey.apiKey.length > 12
+					? `${this.clientWithKey.apiKey.substring(0, 8)}...${this.clientWithKey.apiKey.substring(this.clientWithKey.apiKey.length - 4)}`
+					: "***";
+			logger.error("Gemini API error", error as Error, {
+				apiKeyIndex: this.clientWithKey.keyIndex,
+				apiKey: maskedKey,
+			});
+			throw new Error(
+				`Gemini API error (API key index: ${this.clientWithKey.keyIndex}, key: ${maskedKey}): ${(error as Error).message}`,
+			);
+		}
+	}
 }

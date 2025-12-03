@@ -19,8 +19,8 @@
 const TRAILING_PARENTHESES_REGEX = /\s*\([^)]*\)\s*$/;
 
 export function stripTrailingParenthetical(input: unknown): string {
-  if (typeof input !== "string") {
-    return input as unknown as string;
-  }
-  return input.replace(TRAILING_PARENTHESES_REGEX, "").trimEnd();
+	if (typeof input !== "string") {
+		return input as unknown as string;
+	}
+	return input.replace(TRAILING_PARENTHESES_REGEX, "").trimEnd();
 }

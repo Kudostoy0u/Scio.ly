@@ -1,8 +1,8 @@
 "use client";
 
 export function SliderStyles() {
-  return (
-    <style>{`
+	return (
+		<style>{`
       .slider-dark::-webkit-slider-thumb {
         appearance: none;
         height: 20px;
@@ -41,5 +41,5 @@ export function SliderStyles() {
         border: 2px solid #FFFFFF;
       }
     `}</style>
-  );
+	);
 }

@@ -16,25 +16,25 @@ let pool: Pool | null = null;
  * ```
  */
 export function getCockroachDBPool(): Pool {
-  if (!pool) {
-    const connectionString = process.env.DATABASE_URL;
+	if (!pool) {
+		const connectionString = process.env.DATABASE_URL;
 
-    if (!connectionString) {
-      throw new Error("DATABASE_URL environment variable is required");
-    }
+		if (!connectionString) {
+			throw new Error("DATABASE_URL environment variable is required");
+		}
 
-    pool = new Pool({
-      connectionString,
-      ssl: {
-        rejectUnauthorized: false,
-      },
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-    });
-  }
+		pool = new Pool({
+			connectionString,
+			ssl: {
+				rejectUnauthorized: false,
+			},
+			max: 20,
+			idleTimeoutMillis: 30000,
+			connectionTimeoutMillis: 2000,
+		});
+	}
 
-  return pool;
+	return pool;
 }
 
 /**
@@ -53,21 +53,21 @@ export function getCockroachDBPool(): Pool {
  * ```
  */
 export async function queryCockroachDB<T = unknown>(
-  text: string,
-  params?: unknown[]
+	text: string,
+	params?: unknown[],
 ): Promise<{ rows: T[]; rowCount: number }> {
-  const pool = getCockroachDBPool();
-  const client = await pool.connect();
+	const pool = getCockroachDBPool();
+	const client = await pool.connect();
 
-  try {
-    const result = await client.query(text, params);
-    return {
-      rows: result.rows,
-      rowCount: result.rowCount || 0,
-    };
-  } finally {
-    client.release();
-  }
+	try {
+		const result = await client.query(text, params);
+		return {
+			rows: result.rows,
+			rowCount: result.rowCount || 0,
+		};
+	} finally {
+		client.release();
+	}
 }
 
 /**
@@ -82,8 +82,8 @@ export async function queryCockroachDB<T = unknown>(
  * ```
  */
 export async function closeCockroachDBPool(): Promise<void> {
-  if (pool) {
-    await pool.end();
-    pool = null;
-  }
+	if (pool) {
+		await pool.end();
+		pool = null;
+	}
 }

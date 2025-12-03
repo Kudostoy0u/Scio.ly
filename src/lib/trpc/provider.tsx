@@ -1,28 +1,28 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/query/client";
+import { queryPersister } from "@/lib/query/persister";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { getTRPCClient, trpc } from "./client";
 
 export function TRPCProvider({ children }: { children: ReactNode }) {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: 5 * 60 * 1000, // 5 minutes
-            refetchOnWindowFocus: false,
-          },
-        },
-      })
-  );
+	const [client] = useState(() => queryClient);
+	const [trpcClient] = useState(() => getTRPCClient());
 
-  const [trpcClient] = useState(() => getTRPCClient());
-
-  return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </trpc.Provider>
-  );
+	return (
+		<PersistQueryClientProvider
+			client={client}
+			persistOptions={{
+				persister: queryPersister,
+				maxAge: 1000 * 60 * 60 * 24, // 24 hours
+				buster: "teams-v2",
+			}}
+		>
+			<trpc.Provider client={trpcClient} queryClient={client}>
+				{children}
+			</trpc.Provider>
+		</PersistQueryClientProvider>
+	);
 }

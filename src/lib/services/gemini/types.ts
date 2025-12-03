@@ -3,69 +3,69 @@
  */
 
 export interface GeminiStreamChunk {
-  type: "text" | "final";
-  chunk?: string;
-  data?: Record<string, unknown>;
+	type: "text" | "final";
+	chunk?: string;
+	data?: Record<string, unknown>;
 }
 
 export interface QuestionAnalysisResult {
-  analysis: string;
-  correctness: string;
-  suggestions: string;
+	analysis: string;
+	correctness: string;
+	suggestions: string;
 }
 
 export interface QuestionRemovalAnalysis {
-  shouldRemove: boolean;
-  reason: string;
-  issues: string[];
-  confidence: number;
+	shouldRemove: boolean;
+	reason: string;
+	issues: string[];
+	confidence: number;
 }
 
 export interface ExplanationResult {
-  explanation: string;
+	explanation: string;
 }
 
 export interface GradingResult {
-  scores: number[];
+	scores: number[];
 }
 
 export interface EditSuggestionResult {
-  suggestedQuestion: string;
-  suggestedOptions: string[];
-  suggestedAnswers: string[];
-  suggestedDifficulty: number;
-  reasoning: string;
+	suggestedQuestion: string;
+	suggestedOptions: string[];
+	suggestedAnswers: string[];
+	suggestedDifficulty: number;
+	reasoning: string;
 }
 
 export interface EditValidationResult {
-  isValid: boolean;
-  feedback: string;
-  suggestions: string[];
-  reason?: string;
+	isValid: boolean;
+	feedback: string;
+	suggestions: string[];
+	reason?: string;
 }
 
 export interface ReportEditResult {
-  improvedReason: string;
+	improvedReason: string;
 }
 
 export interface GeminiClientConfig {
-  apiKey: string;
+	apiKey: string;
 }
 
 export interface GeminiGenerationConfig {
-  temperature: number;
-  topK: number;
-  topP: number;
-  maxOutputTokens: number;
+	temperature: number;
+	topK: number;
+	topP: number;
+	maxOutputTokens: number;
 }
 
 export interface QuoteValidationResult {
-  action: "remove" | "edit" | "keep";
-  reason: string;
-  issues: string[];
-  editedQuote?: {
-    quote: string;
-    author: string;
-    language: string;
-  };
+	action: "remove" | "edit" | "keep";
+	reason: string;
+	issues: string[];
+	editedQuote?: {
+		quote: string;
+		author: string;
+		language: string;
+	};
 }

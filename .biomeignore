@@ -1,0 +1,3 @@
+src/lib/trpc/routers/teams/operations/**
+src/lib/actions/teams.ts
+src/lib/db/dexie-teams.ts

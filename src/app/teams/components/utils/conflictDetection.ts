@@ -1,4 +1,7 @@
-import { DIVISION_B_GROUPS, DIVISION_C_GROUPS } from "../../constants/divisionGroups";
+import {
+	DIVISION_B_GROUPS,
+	DIVISION_C_GROUPS,
+} from "../../constants/divisionGroups";
 import type { Member } from "../../types";
 import { getDisplayName } from "../../utils/displayNameUtils";
 
@@ -12,60 +15,62 @@ import { getDisplayName } from "../../utils/displayNameUtils";
  *          the conflicting events, conflict block label, and a unique conflict block number
  */
 export function detectMemberConflicts(
-  members: Member[],
-  division: "B" | "C"
+	members: Member[],
+	division: "B" | "C",
 ): Record<
-  string,
-  Array<{
-    events: string[];
-    conflictBlock: string;
-    conflictBlockNumber: number;
-  }>
+	string,
+	Array<{
+		events: string[];
+		conflictBlock: string;
+		conflictBlockNumber: number;
+	}>
 > {
-  const conflicts: Record<
-    string,
-    Array<{
-      events: string[];
-      conflictBlock: string;
-      conflictBlockNumber: number;
-    }>
-  > = {};
+	const conflicts: Record<
+		string,
+		Array<{
+			events: string[];
+			conflictBlock: string;
+			conflictBlockNumber: number;
+		}>
+	> = {};
 
-  const groups = division === "B" ? DIVISION_B_GROUPS : DIVISION_C_GROUPS;
-  const conflictBlocks: Record<string, number> = {};
-  let nextConflictBlock = 1;
+	const groups = division === "B" ? DIVISION_B_GROUPS : DIVISION_C_GROUPS;
+	const conflictBlocks: Record<string, number> = {};
+	let nextConflictBlock = 1;
 
-  // Check each member for conflicts
-  for (const member of members) {
-    if (!member.events || member.events.length === 0) {
-      continue;
-    }
+	// Check each member for conflicts
+	for (const member of members) {
+		if (!member.events || member.events.length === 0) {
+			continue;
+		}
 
-    // Check each conflict block for conflicts
-    for (const group of groups) {
-      const groupEvents = group.events;
-      const memberEventsInBlock = member.events.filter((event) => groupEvents.includes(event));
+		// Check each conflict block for conflicts
+		for (const group of groups) {
+			const groupEvents = group.events;
+			const memberEventsInBlock = member.events.filter((event) =>
+				groupEvents.includes(event),
+			);
 
-      // If member has multiple events in the same conflict block, it's a conflict
-      if (memberEventsInBlock.length > 1) {
-        const memberName = getDisplayName(member);
-        const conflictKey = `${memberName}-${group.label}`;
-        if (!conflictBlocks[conflictKey]) {
-          conflictBlocks[conflictKey] = nextConflictBlock++;
-        }
+			// If member has multiple events in the same conflict block, it's a conflict
+			if (memberEventsInBlock.length > 1) {
+				const memberName = getDisplayName(member);
+				const conflictKey = `${memberName}-${group.label}`;
+				if (!conflictBlocks[conflictKey]) {
+					conflictBlocks[conflictKey] = nextConflictBlock++;
+				}
 
-        if (!conflicts[memberName]) {
-          conflicts[memberName] = [];
-        }
+				if (!conflicts[memberName]) {
+					conflicts[memberName] = [];
+				}
 
-        conflicts[memberName].push({
-          events: memberEventsInBlock,
-          conflictBlock: group.label,
-          conflictBlockNumber: conflictBlocks[conflictKey],
-        });
-      }
-    }
-  }
+				conflicts[memberName].push({
+					events: memberEventsInBlock,
+					conflictBlock: group.label,
+					conflictBlockNumber: conflictBlocks[conflictKey],
+				});
+			}
+		}
+	}
 
-  return conflicts;
+	return conflicts;
 }

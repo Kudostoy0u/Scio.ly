@@ -22,13 +22,13 @@ const CORE_LENGTH = 4; // 4 letters for the core identifier
  * ```
  */
 export function encodeBase52(index: number): string {
-  let n = index;
-  let out = "";
-  for (let i = 0; i < CORE_LENGTH; i++) {
-    out = ALPHABET[n % BASE] + out;
-    n = Math.floor(n / BASE);
-  }
-  return out;
+	let n = index;
+	let out = "";
+	for (let i = 0; i < CORE_LENGTH; i++) {
+		out = ALPHABET[n % BASE] + out;
+		n = Math.floor(n / BASE);
+	}
+	return out;
 }
 
 /**
@@ -45,21 +45,21 @@ export function encodeBase52(index: number): string {
  * ```
  */
 export function decodeBase52(core: string): number {
-  if (typeof core !== "string" || core.length !== CORE_LENGTH) {
-    throw new Error("Code core must be 4 characters");
-  }
-  let value = 0;
-  for (const c of core) {
-    if (c === undefined) {
-      throw new Error("Invalid base52 character");
-    }
-    const digit = ALPHABET.indexOf(c);
-    if (digit === -1) {
-      throw new Error("Invalid base52 character");
-    }
-    value = value * BASE + digit;
-  }
-  return value;
+	if (typeof core !== "string" || core.length !== CORE_LENGTH) {
+		throw new Error("Code core must be 4 characters");
+	}
+	let value = 0;
+	for (const c of core) {
+		if (c === undefined) {
+			throw new Error("Invalid base52 character");
+		}
+		const digit = ALPHABET.indexOf(c);
+		if (digit === -1) {
+			throw new Error("Invalid base52 character");
+		}
+		value = value * BASE + digit;
+	}
+	return value;
 }
 
 /**
@@ -77,77 +77,82 @@ export function decodeBase52(core: string): number {
  * ```
  */
 export async function generateQuestionCode(
-  questionId: string,
-  table: "questions" | "idEvents" = "questions"
+	questionId: string,
+	table: "questions" | "idEvents" = "questions",
 ): Promise<string> {
-  const baseTable = table === "idEvents" ? idEvents : questions;
+	const baseTable = table === "idEvents" ? idEvents : questions;
 
-  const result = await db
-    .select({ id: baseTable.id })
-    .from(baseTable)
-    .where(eq(baseTable.id, questionId))
-    .limit(1);
+	const result = await db
+		.select({ id: baseTable.id })
+		.from(baseTable)
+		.where(eq(baseTable.id, questionId))
+		.limit(1);
 
-  if (result.length === 0) {
-    throw new Error(`Question not found: ${questionId}`);
-  }
+	if (result.length === 0) {
+		throw new Error(`Question not found: ${questionId}`);
+	}
 
-  const existingCode = await db
-    .select({ code: base52Codes.code })
-    .from(base52Codes)
-    .where(and(eq(base52Codes.questionId, questionId), eq(base52Codes.tableName, table)))
-    .limit(1);
+	const existingCode = await db
+		.select({ code: base52Codes.code })
+		.from(base52Codes)
+		.where(
+			and(
+				eq(base52Codes.questionId, questionId),
+				eq(base52Codes.tableName, table),
+			),
+		)
+		.limit(1);
 
-  if (existingCode.length > 0 && existingCode[0]) {
-    return existingCode[0].code;
-  }
+	if (existingCode.length > 0 && existingCode[0]) {
+		return existingCode[0].code;
+	}
 
-  let attempts = 0;
-  const maxAttempts = 100;
+	let attempts = 0;
+	const maxAttempts = 100;
 
-  while (attempts < maxAttempts) {
-    const questionHash = calculateQuestionHash(questionId);
-    const hashWithAttempt = (questionHash + attempts) % 1000000000;
-    const base52Core = encodeBase52(hashWithAttempt);
-    const typeSuffix = table === "idEvents" ? "P" : "S";
-    const code = base52Core + typeSuffix;
+	while (attempts < maxAttempts) {
+		const questionHash = calculateQuestionHash(questionId);
+		const hashWithAttempt = (questionHash + attempts) % 1000000000;
+		const base52Core = encodeBase52(hashWithAttempt);
+		const typeSuffix = table === "idEvents" ? "P" : "S";
+		const code = base52Core + typeSuffix;
 
-    const existingCodeCheck = await db
-      .select({ id: base52Codes.id })
-      .from(base52Codes)
-      .where(eq(base52Codes.code, code))
-      .limit(1);
+		const existingCodeCheck = await db
+			.select({ id: base52Codes.id })
+			.from(base52Codes)
+			.where(eq(base52Codes.code, code))
+			.limit(1);
 
-    if (existingCodeCheck.length === 0) {
-      try {
-        await db.insert(base52Codes).values({
-          code,
-          questionId,
-          tableName: table,
-        });
-        return code;
-      } catch {
-        attempts++;
-        continue;
-      }
-    }
+		if (existingCodeCheck.length === 0) {
+			try {
+				await db.insert(base52Codes).values({
+					code,
+					questionId,
+					tableName: table,
+				});
+				return code;
+			} catch {
+				attempts++;
+				continue;
+			}
+		}
 
-    attempts++;
-  }
+		attempts++;
+	}
 
-  throw new Error(
-    `Failed to generate unique code for question ${questionId} after ${maxAttempts} attempts`
-  );
+	throw new Error(
+		`Failed to generate unique code for question ${questionId} after ${maxAttempts} attempts`,
+	);
 }
 
 function calculateQuestionHash(questionId: string): number {
-  let hash = 0;
-  for (let i = 0; i < questionId.length; i++) {
-    const char = questionId.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash &= hash;
-  }
-  return Math.abs(hash) % 1000000000;
+	let hash = 0;
+	for (let i = 0; i < questionId.length; i++) {
+		const char = questionId.charCodeAt(i);
+		hash = (hash << 5) - hash + char;
+		hash &= hash;
+	}
+	return Math.abs(hash) % 1000000000;
 }
 
 /**
@@ -164,98 +169,115 @@ function calculateQuestionHash(questionId: string): number {
  * console.log(result.table); // 'questions' or 'idEvents'
  * ```
  */
-export async function getQuestionByCode(
-  code: string
-): Promise<{ question: Record<string, unknown>; table: "questions" | "idEvents" }> {
-  const suffix = validateCodeSuffix(code);
-  const mapping = await getCodeMapping(code);
-  const resolvedTable = normalizeTableName(mapping.tableName, suffix);
-  const question = await fetchQuestionRow(resolvedTable, mapping.questionId, code);
-  return { question, table: resolvedTable };
+export async function getQuestionByCode(code: string): Promise<{
+	question: Record<string, unknown>;
+	table: "questions" | "idEvents";
+}> {
+	const suffix = validateCodeSuffix(code);
+	const mapping = await getCodeMapping(code);
+	const resolvedTable = normalizeTableName(mapping.tableName, suffix);
+	const question = await fetchQuestionRow(
+		resolvedTable,
+		mapping.questionId,
+		code,
+	);
+	return { question, table: resolvedTable };
 }
 
 function validateCodeSuffix(code: string): "S" | "P" {
-  if (code.length !== 5) {
-    throw new Error("Invalid code length. Expected 5 characters.");
-  }
-  const suffix = code.slice(4, 5);
-  if (suffix !== "S" && suffix !== "P") {
-    throw new Error("Invalid type suffix. Expected S or P.");
-  }
-  return suffix;
+	if (code.length !== 5) {
+		throw new Error("Invalid code length. Expected 5 characters.");
+	}
+	const suffix = code.slice(4, 5);
+	if (suffix !== "S" && suffix !== "P") {
+		throw new Error("Invalid type suffix. Expected S or P.");
+	}
+	return suffix;
 }
 
 async function getCodeMapping(
-  code: string
+	code: string,
 ): Promise<{ questionId: string; tableName: string | null }> {
-  const mapping = await db
-    .select({ questionId: base52Codes.questionId, tableName: base52Codes.tableName })
-    .from(base52Codes)
-    .where(eq(base52Codes.code, code))
-    .limit(1);
+	const mapping = await db
+		.select({
+			questionId: base52Codes.questionId,
+			tableName: base52Codes.tableName,
+		})
+		.from(base52Codes)
+		.where(eq(base52Codes.code, code))
+		.limit(1);
 
-  if (!mapping[0]) {
-    throw new Error(`Question not found for code: ${code}`);
-  }
+	if (!mapping[0]) {
+		throw new Error(`Question not found for code: ${code}`);
+	}
 
-  return {
-    questionId: mapping[0].questionId,
-    tableName: mapping[0].tableName,
-  };
+	return {
+		questionId: mapping[0].questionId,
+		tableName: mapping[0].tableName,
+	};
 }
 
-function normalizeTableName(tableName: string | null, suffix: "S" | "P"): "questions" | "idEvents" {
-  if (tableName === "questions" || tableName === "idEvents") {
-    return tableName;
-  }
-  return suffix === "P" ? "idEvents" : "questions";
+function normalizeTableName(
+	tableName: string | null,
+	suffix: "S" | "P",
+): "questions" | "idEvents" {
+	if (tableName === "questions" || tableName === "idEvents") {
+		return tableName;
+	}
+	return suffix === "P" ? "idEvents" : "questions";
 }
 
 async function fetchQuestionRow(
-  tableName: "questions" | "idEvents",
-  questionId: string,
-  code: string
+	tableName: "questions" | "idEvents",
+	questionId: string,
+	code: string,
 ): Promise<Record<string, unknown>> {
-  const table = tableName === "questions" ? questions : idEvents;
-  const row = await db.select().from(table).where(eq(table.id, questionId)).limit(1);
-  if (!row[0]) {
-    throw new Error(`Question not found for code: ${code}`);
-  }
-  return row[0] as Record<string, unknown>;
+	const table = tableName === "questions" ? questions : idEvents;
+	const row = await db
+		.select()
+		.from(table)
+		.where(eq(table.id, questionId))
+		.limit(1);
+	if (!row[0]) {
+		throw new Error(`Question not found for code: ${code}`);
+	}
+	return row[0] as Record<string, unknown>;
 }
 
 export async function generateQuestionCodes(
-  questionIds: string[],
-  table: "questions" | "idEvents" = "questions"
+	questionIds: string[],
+	table: "questions" | "idEvents" = "questions",
 ): Promise<Map<string, string>> {
-  const baseTable = table === "idEvents" ? idEvents : questions;
+	const baseTable = table === "idEvents" ? idEvents : questions;
 
-  const results = await db
-    .select({ id: baseTable.id })
-    .from(baseTable)
-    .where(inArray(baseTable.id, questionIds));
+	const results = await db
+		.select({ id: baseTable.id })
+		.from(baseTable)
+		.where(inArray(baseTable.id, questionIds));
 
-  const codeMap = new Map<string, string>();
+	const codeMap = new Map<string, string>();
 
-  for (const result of results) {
-    const code = await generateQuestionCode(result.id, table);
-    codeMap.set(result.id, code);
-  }
+	for (const result of results) {
+		const code = await generateQuestionCode(result.id, table);
+		codeMap.set(result.id, code);
+	}
 
-  return codeMap;
+	return codeMap;
 }
 
 export function computeQuestionRank(
-  questionId: string,
-  _createdAt: Date | null,
-  _table: "questions" | "idEvents" = "questions"
+	questionId: string,
+	_createdAt: Date | null,
+	_table: "questions" | "idEvents" = "questions",
 ): number {
-  return calculateQuestionHash(questionId);
+	return calculateQuestionHash(questionId);
 }
 
 export function getQuestionByRank(
-  _targetRank: number,
-  _table: "questions" | "idEvents" = "questions"
+	_targetRank: number,
+	_table: "questions" | "idEvents" = "questions",
 ) {
-  throw new Error("getQuestionByRank is deprecated. Use getQuestionByCode instead.");
+	throw new Error(
+		"getQuestionByRank is deprecated. Use getQuestionByCode instead.",
+	);
 }

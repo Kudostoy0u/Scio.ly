@@ -20,68 +20,68 @@ import type { TeamStoreActions, TeamStoreState } from "./types";
 type StoreSlice = TeamStoreState & TeamStoreActions;
 
 export const useTeamStore = create<StoreSlice>()(
-  subscribeWithSelector((set, get) => {
-    const fetchActions = createFetchActions(get, set);
-    const updateActions = createUpdateActions(get, set);
-    const optimisticActions = createOptimisticActions(get, set);
-    const cacheActions = createCacheActions(get, set);
+	subscribeWithSelector((set, get) => {
+		const fetchActions = createFetchActions(get, set);
+		const updateActions = createUpdateActions(get, set);
+		const optimisticActions = createOptimisticActions(get, set);
+		const cacheActions = createCacheActions(get, set);
 
-    return {
-      // Initial state
-      userTeams: [],
-      subteams: {},
-      roster: {},
-      members: {},
-      stream: {},
-      assignments: {},
-      tournaments: {},
-      timers: {},
+		return {
+			// Initial state
+			userTeams: [],
+			subteams: {},
+			roster: {},
+			members: {},
+			stream: {},
+			assignments: {},
+			tournaments: {},
+			timers: {},
 
-      loading: {
-        userTeams: false,
-        subteams: {},
-        roster: {},
-        members: {},
-        stream: {},
-        assignments: {},
-        tournaments: {},
-        timers: {},
-      },
+			loading: {
+				userTeams: false,
+				subteams: {},
+				roster: {},
+				members: {},
+				stream: {},
+				assignments: {},
+				tournaments: {},
+				timers: {},
+			},
 
-      errors: {
-        userTeams: null,
-        subteams: {},
-        roster: {},
-        members: {},
-        stream: {},
-        assignments: {},
-        tournaments: {},
-        timers: {},
-      },
+			errors: {
+				userTeams: null,
+				subteams: {},
+				roster: {},
+				members: {},
+				stream: {},
+				assignments: {},
+				tournaments: {},
+				timers: {},
+			},
 
-      inflightRequests: new Set(),
-      cacheTimestamps: {},
+			inflightRequests: new Set(),
+			cacheTimestamps: {},
 
-      // Combine all actions - ensure all required actions are present
-      ...fetchActions,
-      ...updateActions,
-      ...optimisticActions,
-      ...cacheActions,
-    } as StoreSlice;
-  })
+			// Combine all actions - ensure all required actions are present
+			...fetchActions,
+			...updateActions,
+			...optimisticActions,
+			...cacheActions,
+		} as StoreSlice;
+	}),
 );
 
 // Re-export types for convenience
 export type {
-  UserTeam as TeamUserTeam,
-  Subteam as TeamSubteam,
-  TeamMember as TeamMemberType,
-  RosterData as TeamRosterData,
-  StreamPost as TeamStreamPost,
-  StreamComment as TeamStreamComment,
-  Assignment as TeamAssignment,
-  Tournament as TeamTournament,
-  Timer as TeamTimer,
+	UserTeam as TeamUserTeam,
+	Subteam as TeamSubteam,
+	TeamMember as TeamMemberType,
+	RosterData as TeamRosterData,
+	StreamPost as TeamStreamPost,
+	StreamComment as TeamStreamComment,
+	Assignment as TeamAssignment,
+	Tournament as TeamTournament,
+	Timer as TeamTimer,
 } from "./types";
 
 export type { TeamStoreState, TeamStoreActions } from "./types";

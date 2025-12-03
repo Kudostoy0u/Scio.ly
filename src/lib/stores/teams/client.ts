@@ -7,19 +7,19 @@ import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import superjson from "superjson";
 
 export const trpcClient = createTRPCProxyClient<AppRouter>({
-  links: [
-    httpBatchLink({
-      url: "/api/trpc",
-      transformer: superjson,
-      headers: () => ({
-        "Content-Type": "application/json",
-      }),
-      fetch: (url, options) => {
-        return fetch(url, {
-          ...options,
-          credentials: "include",
-        });
-      },
-    }),
-  ],
+	links: [
+		httpBatchLink({
+			url: "/api/trpc",
+			transformer: superjson,
+			headers: () => ({
+				"Content-Type": "application/json",
+			}),
+			fetch: (url, options) => {
+				return fetch(url, {
+					...options,
+					credentials: "include",
+				});
+			},
+		}),
+	],
 });

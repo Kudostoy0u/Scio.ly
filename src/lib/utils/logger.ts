@@ -1,7 +1,8 @@
 // Dynamic environment detection for better testability
 const getIsDev = () => process.env.NODE_ENV === "development";
 const getIsTest = () => process.env.NODE_ENV === "test";
-const getIsDeveloperMode = () => getIsDev() || process.env.DEVELOPER_MODE === "true";
+const getIsDeveloperMode = () =>
+	getIsDev() || process.env.DEVELOPER_MODE === "true";
 
 /**
  * Centralized logger utility with enhanced developer mode support
@@ -11,178 +12,190 @@ const getIsDeveloperMode = () => getIsDev() || process.env.DEVELOPER_MODE === "t
  * - In test: suppresses all logs
  */
 const logger = {
-  log: (...args: unknown[]) => {
-    if (getIsDeveloperMode()) {
-      // biome-ignore lint/suspicious/noConsole lint/suspicious/noConsoleLog: Logger intentionally uses console
-      console.log(...args);
-    }
-  },
+	log: (...args: unknown[]) => {
+		if (getIsDeveloperMode()) {
+			console.log(...args);
+		}
+	},
 
-  warn: (...args: unknown[]) => {
-    if (!getIsTest()) {
-      // biome-ignore lint/suspicious/noConsole: Logger intentionally uses console
-      console.warn(...args);
-    }
-  },
+	warn: (...args: unknown[]) => {
+		if (!getIsTest()) {
+			console.warn(...args);
+		}
+	},
 
-  error: (...args: unknown[]) => {
-    if (!getIsTest()) {
-      // biome-ignore lint/suspicious/noConsole: Logger intentionally uses console
-      console.error(...args);
-    }
-  },
+	error: (...args: unknown[]) => {
+		if (!getIsTest()) {
+			console.error(...args);
+		}
+	},
 
-  info: (...args: unknown[]) => {
-    if (getIsDev()) {
-      // biome-ignore lint/suspicious/noConsole: Logger intentionally uses console
-      console.info("[INFO]", ...args);
-    }
-  },
+	info: (...args: unknown[]) => {
+		if (getIsDev()) {
+			console.info("[INFO]", ...args);
+		}
+	},
 
-  debug: (...args: unknown[]) => {
-    if (getIsDev()) {
-      // biome-ignore lint/suspicious/noConsole: Logger intentionally uses console
-      console.debug(...args);
-    }
-  },
+	debug: (...args: unknown[]) => {
+		if (getIsDev()) {
+			console.debug(...args);
+		}
+	},
 
-  // Enhanced developer mode logging
-  dev: {
-    // Structured logging with context
-    structured: (
-      level: "info" | "warn" | "error" | "debug",
-      message: string,
-      context?: Record<string, unknown>
-    ) => {
-      if (!getIsDeveloperMode()) {
-        return;
-      }
+	// Enhanced developer mode logging
+	dev: {
+		// Structured logging with context
+		structured: (
+			level: "info" | "warn" | "error" | "debug",
+			message: string,
+			context?: Record<string, unknown>,
+		) => {
+			if (!getIsDeveloperMode()) {
+				return;
+			}
 
-      const prefix = `[DEV-${level.toUpperCase()}]`;
-      const logData = JSON.stringify(
-        {
-          timestamp: new Date().toISOString(),
-          level,
-          message,
-          context: context || {},
-          environment: process.env.NODE_ENV,
-        },
-        null,
-        2
-      );
-      // biome-ignore lint/suspicious/noConsole lint/suspicious/noConsoleLog: Logger intentionally uses console
-      console.log(prefix, logData);
-    },
+			const prefix = `[DEV-${level.toUpperCase()}]`;
+			const logData = JSON.stringify(
+				{
+					timestamp: new Date().toISOString(),
+					level,
+					message,
+					context: context || {},
+					environment: process.env.NODE_ENV,
+				},
+				null,
+				2,
+			);
+			console.log(prefix, logData);
+		},
 
-    // Request/Response logging
-    request: (method: string, url: string, body?: unknown, headers?: Record<string, string>) => {
-      if (!getIsDeveloperMode()) {
-        return;
-      }
+		// Request/Response logging
+		request: (
+			method: string,
+			url: string,
+			body?: unknown,
+			headers?: Record<string, string>,
+		) => {
+			if (!getIsDeveloperMode()) {
+				return;
+			}
 
-      const maskedHeaders = headers
-        ? Object.keys(headers).reduce(
-            (acc, key) => {
-              // Mask sensitive headers
-              if (
-                key.toLowerCase().includes("authorization") ||
-                key.toLowerCase().includes("token")
-              ) {
-                acc[key] = "[REDACTED]";
-              } else {
-                acc[key] = headers[key] || "";
-              }
-              return acc;
-            },
-            {} as Record<string, string>
-          )
-        : undefined;
+			const maskedHeaders = headers
+				? Object.keys(headers).reduce(
+						(acc, key) => {
+							// Mask sensitive headers
+							if (
+								key.toLowerCase().includes("authorization") ||
+								key.toLowerCase().includes("token")
+							) {
+								acc[key] = "[REDACTED]";
+							} else {
+								acc[key] = headers[key] || "";
+							}
+							return acc;
+						},
+						{} as Record<string, string>,
+					)
+				: undefined;
 
-      logger.dev.structured("info", `API Request: ${method} ${url}`, {
-        method,
-        url,
-        body: body ? JSON.stringify(body, null, 2) : undefined,
-        headers: maskedHeaders,
-      });
-    },
+			logger.dev.structured("info", `API Request: ${method} ${url}`, {
+				method,
+				url,
+				body: body ? JSON.stringify(body, null, 2) : undefined,
+				headers: maskedHeaders,
+			});
+		},
 
-    response: (status: number, body?: unknown, timing?: number) => {
-      if (!getIsDeveloperMode()) {
-        return;
-      }
+		response: (status: number, body?: unknown, timing?: number) => {
+			if (!getIsDeveloperMode()) {
+				return;
+			}
 
-      logger.dev.structured("info", `API Response: ${status}`, {
-        status,
-        body: body ? JSON.stringify(body, null, 2) : undefined,
-        timing: timing ? `${timing}ms` : undefined,
-      });
-    },
+			logger.dev.structured("info", `API Response: ${status}`, {
+				status,
+				body: body ? JSON.stringify(body, null, 2) : undefined,
+				timing: timing ? `${timing}ms` : undefined,
+			});
+		},
 
-    // Performance timing
-    timing: (operation: string, startTime: number, context?: Record<string, unknown>) => {
-      if (!getIsDeveloperMode()) {
-        return;
-      }
+		// Performance timing
+		timing: (
+			operation: string,
+			startTime: number,
+			context?: Record<string, unknown>,
+		) => {
+			if (!getIsDeveloperMode()) {
+				return;
+			}
 
-      const duration = Date.now() - startTime;
-      logger.dev.structured("debug", `Timing: ${operation}`, {
-        operation,
-        duration: `${duration}ms`,
-        ...context,
-      });
-    },
+			const duration = Date.now() - startTime;
+			logger.dev.structured("debug", `Timing: ${operation}`, {
+				operation,
+				duration: `${duration}ms`,
+				...context,
+			});
+		},
 
-    // Error with full context
-    error: (message: string, error: Error, context?: Record<string, unknown>) => {
-      if (!getIsDeveloperMode()) {
-        return;
-      }
+		// Error with full context
+		error: (
+			message: string,
+			error: Error,
+			context?: Record<string, unknown>,
+		) => {
+			if (!getIsDeveloperMode()) {
+				return;
+			}
 
-      logger.dev.structured("error", message, {
-        error: {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-        },
-        ...context,
-      });
-    },
+			logger.dev.structured("error", message, {
+				error: {
+					name: error.name,
+					message: error.message,
+					stack: error.stack,
+				},
+				...context,
+			});
+		},
 
-    // Database operation logging
-    db: (operation: string, table: string, query?: string, params?: unknown[]) => {
-      if (!getIsDeveloperMode()) {
-        return;
-      }
+		// Database operation logging
+		db: (
+			operation: string,
+			table: string,
+			query?: string,
+			params?: unknown[],
+		) => {
+			if (!getIsDeveloperMode()) {
+				return;
+			}
 
-      logger.dev.structured("debug", `DB ${operation}: ${table}`, {
-        operation,
-        table,
-        query,
-        params,
-      });
-    },
+			logger.dev.structured("debug", `DB ${operation}: ${table}`, {
+				operation,
+				table,
+				query,
+				params,
+			});
+		},
 
-    // AI service logging
-    ai: (
-      service: string,
-      operation: string,
-      request?: unknown,
-      response?: unknown,
-      timing?: number
-    ) => {
-      if (!getIsDeveloperMode()) {
-        return;
-      }
+		// AI service logging
+		ai: (
+			service: string,
+			operation: string,
+			request?: unknown,
+			response?: unknown,
+			timing?: number,
+		) => {
+			if (!getIsDeveloperMode()) {
+				return;
+			}
 
-      logger.dev.structured("info", `AI ${service}: ${operation}`, {
-        service,
-        operation,
-        request: request ? JSON.stringify(request, null, 2) : undefined,
-        response: response ? JSON.stringify(response, null, 2) : undefined,
-        timing: timing ? `${timing}ms` : undefined,
-      });
-    },
-  },
+			logger.dev.structured("info", `AI ${service}: ${operation}`, {
+				service,
+				operation,
+				request: request ? JSON.stringify(request, null, 2) : undefined,
+				response: response ? JSON.stringify(response, null, 2) : undefined,
+				timing: timing ? `${timing}ms` : undefined,
+			});
+		},
+	},
 };
 
 export default logger;

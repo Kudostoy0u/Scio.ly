@@ -1,5 +1,9 @@
 import { dbPg } from "@/lib/db";
-import { newTeamGroups, newTeamMemberships, newTeamUnits } from "@/lib/db/schema";
+import {
+	newTeamGroups,
+	newTeamMemberships,
+	newTeamUnits,
+} from "@/lib/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 
 /**
@@ -7,10 +11,10 @@ import { and, eq, inArray } from "drizzle-orm";
  * Contains identifiers for team groups and their associated units
  */
 export interface TeamGroupInfo {
-  /** Unique identifier for the team group */
-  groupId: string;
-  /** Array of team unit IDs belonging to this group */
-  teamUnitIds: string[];
+	/** Unique identifier for the team group */
+	groupId: string;
+	/** Array of team unit IDs belonging to this group */
+	teamUnitIds: string[];
 }
 
 /**
@@ -27,38 +31,40 @@ export interface TeamGroupInfo {
  * console.log(info.teamUnitIds); // Array of team unit IDs
  * ```
  */
-export async function resolveTeamSlugToUnits(slug: string): Promise<TeamGroupInfo> {
-  // First, resolve the slug to team group using Drizzle ORM
-  const groupResult = await dbPg
-    .select({ id: newTeamGroups.id })
-    .from(newTeamGroups)
-    .where(eq(newTeamGroups.slug, slug));
+export async function resolveTeamSlugToUnits(
+	slug: string,
+): Promise<TeamGroupInfo> {
+	// First, resolve the slug to team group using Drizzle ORM
+	const groupResult = await dbPg
+		.select({ id: newTeamGroups.id })
+		.from(newTeamGroups)
+		.where(eq(newTeamGroups.slug, slug));
 
-  if (groupResult.length === 0) {
-    throw new Error("Team group not found");
-  }
+	if (groupResult.length === 0) {
+		throw new Error("Team group not found");
+	}
 
-  const groupId = groupResult[0]?.id;
-  if (!groupId) {
-    throw new Error("Team group ID not found");
-  }
+	const groupId = groupResult[0]?.id;
+	if (!groupId) {
+		throw new Error("Team group ID not found");
+	}
 
-  // Get team units for this group using Drizzle ORM
-  const unitsResult = await dbPg
-    .select({ id: newTeamUnits.id })
-    .from(newTeamUnits)
-    .where(eq(newTeamUnits.groupId, groupId));
+	// Get team units for this group using Drizzle ORM
+	const unitsResult = await dbPg
+		.select({ id: newTeamUnits.id })
+		.from(newTeamUnits)
+		.where(eq(newTeamUnits.groupId, groupId));
 
-  if (unitsResult.length === 0) {
-    throw new Error("No team units found for this group");
-  }
+	if (unitsResult.length === 0) {
+		throw new Error("No team units found for this group");
+	}
 
-  const teamUnitIds = unitsResult.map((row) => row.id);
+	const teamUnitIds = unitsResult.map((row) => row.id);
 
-  return {
-    groupId,
-    teamUnitIds,
-  };
+	return {
+		groupId,
+		teamUnitIds,
+	};
 }
 
 /**
@@ -75,24 +81,27 @@ export async function resolveTeamSlugToUnits(slug: string): Promise<TeamGroupInf
  * console.log(memberships.length); // Number of team memberships
  * ```
  */
-export async function getUserTeamMemberships(userId: string, teamUnitIds: string[]) {
-  // Using Drizzle ORM to get user team memberships
-  const membershipResult = await dbPg
-    .select({
-      id: newTeamMemberships.id,
-      role: newTeamMemberships.role,
-      team_id: newTeamMemberships.teamId,
-    })
-    .from(newTeamMemberships)
-    .where(
-      and(
-        eq(newTeamMemberships.userId, userId),
-        inArray(newTeamMemberships.teamId, teamUnitIds),
-        eq(newTeamMemberships.status, "active")
-      )
-    );
+export async function getUserTeamMemberships(
+	userId: string,
+	teamUnitIds: string[],
+) {
+	// Using Drizzle ORM to get user team memberships
+	const membershipResult = await dbPg
+		.select({
+			id: newTeamMemberships.id,
+			role: newTeamMemberships.role,
+			team_id: newTeamMemberships.teamId,
+		})
+		.from(newTeamMemberships)
+		.where(
+			and(
+				eq(newTeamMemberships.userId, userId),
+				inArray(newTeamMemberships.teamId, teamUnitIds),
+				eq(newTeamMemberships.status, "active"),
+			),
+		);
 
-  return membershipResult;
+	return membershipResult;
 }
 
 /**
@@ -101,7 +110,10 @@ export async function getUserTeamMemberships(userId: string, teamUnitIds: string
  * @param teamUnitIds Array of team unit IDs
  * @returns True if user is a captain of any team unit
  */
-export async function isUserCaptain(userId: string, teamUnitIds: string[]): Promise<boolean> {
-  const memberships = await getUserTeamMemberships(userId, teamUnitIds);
-  return memberships.some((m) => ["captain", "co_captain"].includes(m.role));
+export async function isUserCaptain(
+	userId: string,
+	teamUnitIds: string[],
+): Promise<boolean> {
+	const memberships = await getUserTeamMemberships(userId, teamUnitIds);
+	return memberships.some((m) => ["captain", "co_captain"].includes(m.role));
 }
