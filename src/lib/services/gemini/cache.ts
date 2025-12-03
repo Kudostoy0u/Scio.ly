@@ -131,7 +131,7 @@ async function updateHitCount(cacheId: string): Promise<void> {
 			.update(geminiExplanationsCache)
 			.set({
 				hitCount: sql`${geminiExplanationsCache.hitCount} + 1`,
-				updatedAt: new Date(),
+				updatedAt: new Date().toISOString(),
 			})
 			.where(eq(geminiExplanationsCache.id, cacheId));
 	} catch (error) {

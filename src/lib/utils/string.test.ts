@@ -12,7 +12,6 @@ describe("stripTrailingParenthetical", () => {
 	});
 
 	it("handles non-strings gracefully", () => {
-		// @ts-expect-error testing runtime behavior
 		expect(stripTrailingParenthetical(null)).toBe(null);
 	});
 });

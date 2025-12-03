@@ -489,12 +489,13 @@ export const updateDashboardMetrics = async (
     const currentStats = parseCurrentStatsFromRow(currentDataRecord);
     const updatedStats = buildUpdatedStats(userId, today, currentStats, updates, attemptedDelta);
 
-    let { data, error } = await supabase
+    const { data: initialData, error } = await supabase
       .from("user_stats")
       .upsert(updatedStats as never, { onConflict: "user_id,date" })
       .select()
       .single();
 
+    let data = initialData;
     if (error) {
       data = await handleUpsertError(error, updatedStats);
       if (!data) {

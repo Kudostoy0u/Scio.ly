@@ -249,7 +249,7 @@ export class CockroachDBTeamsService {
 				user_id: member.userId,
 				team_id: member.teamId,
 				role: member.role as "captain" | "co_captain" | "member" | "observer",
-				joined_at: member.joinedAt?.toISOString() || new Date().toISOString(),
+				joined_at: member.joinedAt || new Date().toISOString(),
 				invited_by: member.invitedBy || undefined,
 				status: member.status as "active" | "inactive" | "pending" | "banned",
 				permissions: member.permissions as Record<string, unknown> | undefined,
@@ -298,8 +298,8 @@ export class CockroachDBTeamsService {
 			division: result.division,
 			slug: result.slug,
 			created_by: result.createdBy,
-			created_at: result.createdAt?.toISOString() || new Date().toISOString(),
-			updated_at: result.updatedAt?.toISOString() || new Date().toISOString(),
+			created_at: result.createdAt || new Date().toISOString(),
+			updated_at: result.updatedAt || new Date().toISOString(),
 		};
 	}
 
@@ -323,7 +323,7 @@ export class CockroachDBTeamsService {
 				.update(newTeamGroups)
 				.set({
 					status: "active",
-					updatedAt: new Date(),
+					updatedAt: new Date().toISOString(),
 				})
 				.where(eq(newTeamGroups.id, data.groupId));
 		}
@@ -356,8 +356,8 @@ export class CockroachDBTeamsService {
 			captain_code: result.captainCode,
 			user_code: result.userCode,
 			created_by: result.createdBy,
-			created_at: result.createdAt?.toISOString() || new Date().toISOString(),
-			updated_at: result.updatedAt?.toISOString() || new Date().toISOString(),
+			created_at: result.createdAt || new Date().toISOString(),
+			updated_at: result.updatedAt || new Date().toISOString(),
 		};
 	}
 
@@ -385,7 +385,7 @@ export class CockroachDBTeamsService {
 				.set({
 					role: data.role,
 					status: data.status,
-					joinedAt: new Date(), // Update joined_at to reflect the new join
+					joinedAt: new Date().toISOString(), // Update joined_at to reflect the new join
 				})
 				.where(
 					and(
@@ -408,8 +408,7 @@ export class CockroachDBTeamsService {
 					| "co_captain"
 					| "member"
 					| "observer",
-				joined_at:
-					updatedMembership.joinedAt?.toISOString() || new Date().toISOString(),
+				joined_at: updatedMembership.joinedAt || new Date().toISOString(),
 				invited_by: updatedMembership.invitedBy || undefined,
 				status: updatedMembership.status as
 					| "active"
@@ -442,7 +441,7 @@ export class CockroachDBTeamsService {
 			user_id: result.userId,
 			team_id: result.teamId,
 			role: result.role as "captain" | "co_captain" | "member" | "observer",
-			joined_at: result.joinedAt?.toISOString() || new Date().toISOString(),
+			joined_at: result.joinedAt || new Date().toISOString(),
 			invited_by: result.invitedBy || undefined,
 			status: result.status as "active" | "inactive" | "pending" | "banned",
 			permissions: result.permissions as Record<string, unknown> | undefined,
@@ -496,7 +495,7 @@ export class CockroachDBTeamsService {
 					.set({
 						name: displayName,
 						isAdmin: isAdmin ? "true" : "false",
-						updatedAt: new Date(),
+						updatedAt: new Date().toISOString(),
 					})
 					.where(
 						and(

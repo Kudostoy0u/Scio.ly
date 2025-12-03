@@ -236,11 +236,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (startDate) {
-      whereConditions.push(gte(newTeamEvents.startTime, new Date(startDate)));
+      whereConditions.push(gte(newTeamEvents.startTime, new Date(startDate).toISOString()));
     }
 
     if (endDate) {
-      whereConditions.push(lte(newTeamEvents.startTime, new Date(endDate)));
+      whereConditions.push(lte(newTeamEvents.startTime, new Date(endDate).toISOString()));
     }
 
     // Get events with creator information using Drizzle ORM

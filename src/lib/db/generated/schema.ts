@@ -1,4 +1,4 @@
-import { cockroachSchema, cockroachTable, uuid, int8, varchar, string, timestamp, jsonb, char, decimal, bool, float, time, date, index, uniqueIndex, foreignKey, primaryKey, check, cockroachView, customType, text } from "drizzle-orm/cockroach-core"
+import { cockroachSchema, cockroachTable, uuid, int8, string, varchar, timestamp, char, jsonb, decimal, bool, float, time, date, index, uniqueIndex, foreignKey, check, cockroachView, customType } from "drizzle-orm/cockroach-core";
 import { sql } from "drizzle-orm"
 
 export const drizzle = cockroachSchema("drizzle");
@@ -25,7 +25,7 @@ export const apiKeyGenerations = cockroachTable("api_key_generations", {
 
 export const assignmentResults = cockroachTable("assignment_results", {
 	id: int8({ mode: 'number' }).default(sql`unique_rowid()`).primaryKey(),
-	assignmentId: int8("assignment_id", { mode: 'number' }).notNull().references(() => assignments.id, { onDelete: "CASCADE" } ),
+	assignmentId: int8("assignment_id", { mode: 'number' }).notNull().references(() => assignments.id, { onDelete: "cascade" } ),
 	userId: varchar("user_id", { length: 255 }),
 	name: varchar({ length: 255 }),
 	eventName: varchar("event_name", { length: 255 }),
@@ -110,7 +110,7 @@ export const idEvents = cockroachTable("id_events", {
 	difficulty: decimal().default("0.5"),
 	event: string().notNull(),
 	images: jsonb().default([]).notNull(),
-	randomF: float("random_f").default(random()),
+	randomF: float("random_f").default(sql`random()`),
 	createdAt: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow(),
 	updatedAt: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow(),
 	questionType: string("question_type").generatedAlwaysAs(sql`CASE WHEN (jsonb_typeof(options) = 'array') AND (jsonb_array_length(options) >= 2) THEN 'mcq' ELSE 'frq' END`),
@@ -143,7 +143,7 @@ export const longquotes = cockroachTable("longquotes", {
 	quote: string().notNull(),
 	language: string().notNull(),
 	charLength: int8("char_length", { mode: 'number' }).notNull(),
-	randomF: float("random_f").default(random()).notNull(),
+	randomF: float("random_f").default(sql`random()`).notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 }, (table) => [
 	index("idx_longquotes_char_length").using("btree", table.charLength.asc()),
@@ -154,8 +154,8 @@ export const longquotes = cockroachTable("longquotes", {
 
 export const newTeamActiveTimers = cockroachTable("new_team_active_timers", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamUnitId: uuid("team_unit_id").notNull().references(() => newTeamUnits.id, { onDelete: "CASCADE" } ),
-	eventId: uuid("event_id").notNull().references(() => newTeamEvents.id, { onDelete: "CASCADE" } ),
+	teamUnitId: uuid("team_unit_id").notNull().references(() => newTeamUnits.id, { onDelete: "cascade" } ),
+	eventId: uuid("event_id").notNull().references(() => newTeamEvents.id, { onDelete: "cascade" } ),
 	addedBy: uuid("added_by").notNull(),
 	addedAt: timestamp("added_at", { mode: 'string', withTimezone: true }).defaultNow(),
 }, (table) => [
@@ -167,7 +167,7 @@ export const newTeamActiveTimers = cockroachTable("new_team_active_timers", {
 
 export const newTeamAnalytics = cockroachTable("new_team_analytics", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "CASCADE" } ),
+	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "cascade" } ),
 	metricName: varchar("metric_name", { length: 100 }).notNull(),
 	metricValue: decimal("metric_value"),
 	metricData: jsonb("metric_data").default({}),
@@ -178,7 +178,7 @@ export const newTeamAnalytics = cockroachTable("new_team_analytics", {
 
 export const newTeamAssignmentAnalytics = cockroachTable("new_team_assignment_analytics", {
 	id: uuid().defaultRandom().primaryKey(),
-	assignmentId: uuid("assignment_id").notNull().references(() => newTeamAssignments.id, { onDelete: "CASCADE" } ),
+	assignmentId: uuid("assignment_id").notNull().references(() => newTeamAssignments.id, { onDelete: "cascade" } ),
 	studentName: varchar("student_name", { length: 255 }).notNull(),
 	userId: uuid("user_id"),
 	totalQuestions: int8("total_questions", { mode: 'number' }).notNull(),
@@ -195,8 +195,8 @@ export const newTeamAssignmentAnalytics = cockroachTable("new_team_assignment_an
 
 export const newTeamAssignmentQuestionResponses = cockroachTable("new_team_assignment_question_responses", {
 	id: uuid().defaultRandom().primaryKey(),
-	submissionId: uuid("submission_id").notNull().references(() => newTeamAssignmentSubmissions.id, { onDelete: "CASCADE" } ),
-	questionId: uuid("question_id").notNull().references(() => newTeamAssignmentQuestions.id, { onDelete: "CASCADE" } ),
+	submissionId: uuid("submission_id").notNull().references(() => newTeamAssignmentSubmissions.id, { onDelete: "cascade" } ),
+	questionId: uuid("question_id").notNull().references(() => newTeamAssignmentQuestions.id, { onDelete: "cascade" } ),
 	responseText: string("response_text"),
 	responseData: jsonb("response_data"),
 	isCorrect: bool("is_correct"),
@@ -211,7 +211,7 @@ export const newTeamAssignmentQuestionResponses = cockroachTable("new_team_assig
 
 export const newTeamAssignmentQuestions = cockroachTable.withRLS("new_team_assignment_questions", {
 	id: uuid().defaultRandom().primaryKey(),
-	assignmentId: uuid("assignment_id").notNull().references(() => newTeamAssignments.id, { onDelete: "CASCADE" } ),
+	assignmentId: uuid("assignment_id").notNull().references(() => newTeamAssignments.id, { onDelete: "cascade" } ),
 	questionText: string("question_text").notNull(),
 	questionType: varchar("question_type", { length: 20 }).notNull(),
 	options: jsonb(),
@@ -228,10 +228,10 @@ check("check_question_type", sql`CHECK ((question_type IN ('multiple_choice'::ST
 
 export const newTeamAssignmentRoster = cockroachTable("new_team_assignment_roster", {
 	id: uuid().defaultRandom().primaryKey(),
-	assignmentId: uuid("assignment_id").notNull().references(() => newTeamAssignments.id, { onDelete: "CASCADE" } ),
+	assignmentId: uuid("assignment_id").notNull().references(() => newTeamAssignments.id, { onDelete: "cascade" } ),
 	studentName: varchar("student_name", { length: 255 }).notNull(),
 	userId: uuid("user_id"),
-	subteamId: uuid("subteam_id").references(() => newTeamUnits.id, { onDelete: "CASCADE" } ),
+	subteamId: uuid("subteam_id").references(() => newTeamUnits.id, { onDelete: "cascade" } ),
 	assignedAt: timestamp("assigned_at", { mode: 'string', withTimezone: true }).defaultNow(),
 }, (table) => [
 	index("idx_assignment_roster_assignment_id").using("btree", table.assignmentId.asc()),
@@ -242,7 +242,7 @@ export const newTeamAssignmentRoster = cockroachTable("new_team_assignment_roste
 
 export const newTeamAssignmentSubmissions = cockroachTable("new_team_assignment_submissions", {
 	id: uuid().defaultRandom().primaryKey(),
-	assignmentId: uuid("assignment_id").notNull().references(() => newTeamAssignments.id, { onDelete: "CASCADE" } ),
+	assignmentId: uuid("assignment_id").notNull().references(() => newTeamAssignments.id, { onDelete: "cascade" } ),
 	userId: uuid("user_id").notNull(),
 	content: string(),
 	attachments: jsonb().default([]),
@@ -257,7 +257,7 @@ check("new_team_assignment_submissions_check_status", sql`CHECK ((status IN ('dr
 
 export const newTeamAssignmentTemplates = cockroachTable("new_team_assignment_templates", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "CASCADE" } ),
+	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "cascade" } ),
 	createdBy: uuid("created_by").notNull(),
 	name: varchar({ length: 255 }).notNull(),
 	description: string(),
@@ -277,7 +277,7 @@ check("new_team_assignment_templates_check_division", sql`CHECK ((division IN ('
 
 export const newTeamAssignments = cockroachTable("new_team_assignments", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "CASCADE" } ),
+	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "cascade" } ),
 	createdBy: uuid("created_by").notNull(),
 	title: varchar({ length: 255 }).notNull(),
 	description: string(),
@@ -298,7 +298,7 @@ check("check_assignment_type", sql`CHECK ((assignment_type IN ('task'::STRING, '
 
 export const newTeamEventAttendees = cockroachTable("new_team_event_attendees", {
 	id: uuid().defaultRandom().primaryKey(),
-	eventId: uuid("event_id").notNull().references(() => newTeamEvents.id, { onDelete: "CASCADE" } ),
+	eventId: uuid("event_id").notNull().references(() => newTeamEvents.id, { onDelete: "cascade" } ),
 	userId: uuid("user_id").notNull(),
 	status: varchar({ length: 20 }).default("pending"),
 	respondedAt: timestamp("responded_at", { mode: 'string', withTimezone: true }),
@@ -309,7 +309,7 @@ check("new_team_event_attendees_check_status", sql`CHECK ((status IN ('pending':
 
 export const newTeamEvents = cockroachTable("new_team_events", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid("team_id").references(() => newTeamUnits.id, { onDelete: "CASCADE" } ),
+	teamId: uuid("team_id").references(() => newTeamUnits.id, { onDelete: "cascade" } ),
 	createdBy: uuid("created_by").notNull(),
 	title: varchar({ length: 255 }).notNull(),
 	description: string(),
@@ -349,7 +349,7 @@ check("new_team_groups_check_division", sql`CHECK ((division IN ('B'::STRING, 'C
 
 export const newTeamInvitations = cockroachTable("new_team_invitations", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "CASCADE" } ),
+	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "cascade" } ),
 	invitedBy: uuid("invited_by").notNull(),
 	email: varchar({ length: 255 }).notNull(),
 	role: varchar({ length: 20 }).notNull(),
@@ -367,7 +367,7 @@ check("check_status", sql`CHECK ((status IN ('pending'::STRING, 'accepted'::STRI
 
 export const newTeamMaterials = cockroachTable("new_team_materials", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "CASCADE" } ),
+	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "cascade" } ),
 	uploadedBy: uuid("uploaded_by").notNull(),
 	title: varchar({ length: 255 }).notNull(),
 	description: string(),
@@ -389,7 +389,7 @@ export const newTeamMaterials = cockroachTable("new_team_materials", {
 export const newTeamMemberships = cockroachTable("new_team_memberships", {
 	id: uuid().defaultRandom().primaryKey(),
 	userId: uuid("user_id").notNull(),
-	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "CASCADE" } ),
+	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "cascade" } ),
 	role: varchar({ length: 20 }).notNull(),
 	joinedAt: timestamp("joined_at", { mode: 'string', withTimezone: true }).defaultNow(),
 	invitedBy: uuid("invited_by"),
@@ -407,7 +407,7 @@ check("new_team_memberships_check_role", sql`CHECK (("role" IN ('captain'::STRIN
 
 export const newTeamMessages = cockroachTable("new_team_messages", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "CASCADE" } ),
+	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "cascade" } ),
 	senderId: uuid("sender_id").notNull(),
 	content: string().notNull(),
 	messageType: varchar("message_type", { length: 20 }).default("text"),
@@ -420,7 +420,7 @@ export const newTeamMessages = cockroachTable("new_team_messages", {
 		columns: [table.replyTo],
 		foreignColumns: [table.id],
 		name: "new_team_messages_reply_to_fkey"
-	}).onDelete("SET NULL"),
+	}).onDelete("set null"),
 	index("idx_new_team_messages_created_at").using("btree", table.createdAt.desc()),
 	index("idx_new_team_messages_team_id").using("btree", table.teamId.asc()),
 check("check_message_type", sql`CHECK ((message_type IN ('text'::STRING, 'image'::STRING, 'file'::STRING, 'system'::STRING)))`),]);
@@ -428,7 +428,7 @@ check("check_message_type", sql`CHECK ((message_type IN ('text'::STRING, 'image'
 export const newTeamNotifications = cockroachTable("new_team_notifications", {
 	id: uuid().defaultRandom().primaryKey(),
 	userId: uuid("user_id").notNull(),
-	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "CASCADE" } ),
+	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "cascade" } ),
 	notificationType: varchar("notification_type", { length: 50 }).notNull(),
 	title: varchar({ length: 255 }).notNull(),
 	message: string().notNull(),
@@ -454,7 +454,7 @@ export const newTeamPeople = cockroachTable("new_team_people", {
 
 export const newTeamPollVotes = cockroachTable("new_team_poll_votes", {
 	id: uuid().defaultRandom().primaryKey(),
-	pollId: uuid("poll_id").notNull().references(() => newTeamPolls.id, { onDelete: "CASCADE" } ),
+	pollId: uuid("poll_id").notNull().references(() => newTeamPolls.id, { onDelete: "cascade" } ),
 	userId: uuid("user_id").notNull(),
 	selectedOptions: jsonb("selected_options").notNull(),
 	votedAt: timestamp("voted_at", { mode: 'string', withTimezone: true }).defaultNow(),
@@ -464,7 +464,7 @@ export const newTeamPollVotes = cockroachTable("new_team_poll_votes", {
 
 export const newTeamPolls = cockroachTable("new_team_polls", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "CASCADE" } ),
+	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "cascade" } ),
 	createdBy: uuid("created_by").notNull(),
 	question: string().notNull(),
 	options: jsonb().notNull(),
@@ -477,7 +477,7 @@ export const newTeamPolls = cockroachTable("new_team_polls", {
 
 export const newTeamPostAttachments = cockroachTable("new_team_post_attachments", {
 	id: uuid().defaultRandom().primaryKey(),
-	postId: uuid("post_id").notNull().references(() => newTeamPosts.id, { onDelete: "CASCADE" } ),
+	postId: uuid("post_id").notNull().references(() => newTeamPosts.id, { onDelete: "cascade" } ),
 	fileName: varchar("file_name", { length: 255 }).notNull(),
 	fileUrl: string("file_url").notNull(),
 	fileType: varchar("file_type", { length: 50 }),
@@ -488,7 +488,7 @@ export const newTeamPostAttachments = cockroachTable("new_team_post_attachments"
 
 export const newTeamPosts = cockroachTable("new_team_posts", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "CASCADE" } ),
+	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "cascade" } ),
 	authorId: uuid("author_id").notNull(),
 	title: varchar({ length: 255 }),
 	content: string().notNull(),
@@ -507,7 +507,7 @@ check("check_post_type", sql`CHECK ((post_type IN ('announcement'::STRING, 'assi
 
 export const newTeamRecurringMeetings = cockroachTable.withRLS("new_team_recurring_meetings", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "CASCADE" } ),
+	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "cascade" } ),
 	createdBy: uuid("created_by").notNull(),
 	title: varchar({ length: 255 }).notNull(),
 	description: string(),
@@ -529,7 +529,7 @@ export const newTeamRecurringMeetings = cockroachTable.withRLS("new_team_recurri
 
 export const newTeamRemovedEvents = cockroachTable("new_team_removed_events", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamUnitId: uuid("team_unit_id").notNull().references(() => newTeamUnits.id, { onDelete: "CASCADE" } ),
+	teamUnitId: uuid("team_unit_id").notNull().references(() => newTeamUnits.id, { onDelete: "cascade" } ),
 	eventName: varchar("event_name", { length: 255 }).notNull(),
 	conflictBlock: varchar("conflict_block", { length: 255 }).notNull(),
 	removedBy: uuid("removed_by").notNull(),
@@ -543,7 +543,7 @@ export const newTeamRemovedEvents = cockroachTable("new_team_removed_events", {
 
 export const newTeamRosterData = cockroachTable("new_team_roster_data", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamUnitId: uuid("team_unit_id").notNull().references(() => newTeamUnits.id, { onDelete: "CASCADE" } ),
+	teamUnitId: uuid("team_unit_id").notNull().references(() => newTeamUnits.id, { onDelete: "cascade" } ),
 	eventName: varchar("event_name", { length: 255 }).notNull(),
 	slotIndex: int8("slot_index", { mode: 'number' }).notNull(),
 	studentName: varchar("student_name", { length: 255 }),
@@ -562,7 +562,7 @@ export const newTeamRosterData = cockroachTable("new_team_roster_data", {
 
 export const newTeamStreamComments = cockroachTable("new_team_stream_comments", {
 	id: uuid().defaultRandom().primaryKey(),
-	postId: uuid("post_id").notNull().references(() => newTeamStreamPosts.id, { onDelete: "CASCADE" } ),
+	postId: uuid("post_id").notNull().references(() => newTeamStreamPosts.id, { onDelete: "cascade" } ),
 	authorId: uuid("author_id").notNull(),
 	content: string().notNull(),
 	createdAt: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow(),
@@ -574,11 +574,11 @@ export const newTeamStreamComments = cockroachTable("new_team_stream_comments", 
 
 export const newTeamStreamPosts = cockroachTable("new_team_stream_posts", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamUnitId: uuid("team_unit_id").notNull().references(() => newTeamUnits.id, { onDelete: "CASCADE" } ),
+	teamUnitId: uuid("team_unit_id").notNull().references(() => newTeamUnits.id, { onDelete: "cascade" } ),
 	authorId: uuid("author_id").notNull(),
 	content: string().notNull(),
 	showTournamentTimer: bool("show_tournament_timer").default(false),
-	tournamentId: uuid("tournament_id").references(() => newTeamEvents.id, { onDelete: "SET NULL" } ),
+	tournamentId: uuid("tournament_id").references(() => newTeamEvents.id, { onDelete: "set null" } ),
 	createdAt: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow(),
 	updatedAt: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow(),
 	attachmentUrl: string("attachment_url"),
@@ -592,7 +592,7 @@ export const newTeamStreamPosts = cockroachTable("new_team_stream_posts", {
 
 export const newTeamUnits = cockroachTable("new_team_units", {
 	id: uuid().defaultRandom().primaryKey(),
-	groupId: uuid("group_id").notNull().references(() => newTeamGroups.id, { onDelete: "CASCADE" } ),
+	groupId: uuid("group_id").notNull().references(() => newTeamGroups.id, { onDelete: "cascade" } ),
 	teamId: varchar("team_id", { length: 50 }).notNull(),
 	description: string(),
 	captainCode: varchar("captain_code", { length: 20 }).notNull(),
@@ -643,7 +643,7 @@ export const questions = cockroachTable("questions", {
 	event: varchar({ length: 255 }).notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
-	randomF: float("random_f").default(random()).notNull(),
+	randomF: float("random_f").default(sql`random()`).notNull(),
 }, (table) => [
 	index("idx_questions_difficulty").using("btree", table.difficulty.asc()),
 	index("idx_questions_division").using("btree", table.division.asc()),
@@ -664,7 +664,7 @@ export const quotes = cockroachTable("quotes", {
 	quote: string().notNull(),
 	language: varchar({ length: 10 }).notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-	randomF: float("random_f").default(random()).notNull(),
+	randomF: float("random_f").default(sql`random()`).notNull(),
 	charLength: int8("char_length", { mode: 'number' }),
 }, (table) => [
 	index("idx_quotes_author").using("btree", table.author.asc()),
@@ -677,7 +677,7 @@ check("quotes_char_length_check", sql`CHECK ((char_length <= 100))`),]);
 
 export const rosterLinkInvitations = cockroachTable("roster_link_invitations", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "CASCADE" } ),
+	teamId: uuid("team_id").notNull().references(() => newTeamUnits.id, { onDelete: "cascade" } ),
 	studentName: varchar("student_name", { length: 255 }).notNull(),
 	invitedUserId: uuid("invited_user_id").notNull(),
 	invitedBy: uuid("invited_by").notNull(),
@@ -742,8 +742,8 @@ check("team_links_check_division", sql`CHECK ((division IN ('B'::STRING, 'C'::ST
 
 export const teamMemberships = cockroachTable("team_memberships", {
 	id: int8({ mode: 'number' }).default(sql`unique_rowid()`).primaryKey(),
-	userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "CASCADE" } ),
-	teamUnitId: int8("team_unit_id", { mode: 'number' }).notNull().references(() => teamUnits.id, { onDelete: "CASCADE" } ),
+	userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" } ),
+	teamUnitId: int8("team_unit_id", { mode: 'number' }).notNull().references(() => teamUnits.id, { onDelete: "cascade" } ),
 	role: varchar({ length: 10 }).notNull(),
 	createdAt: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow(),
 	updatedAt: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow(),
@@ -763,7 +763,7 @@ export const teamUnits = cockroachTable("team_units", {
 	captainCode: varchar("captain_code", { length: 255 }).notNull(),
 	userCode: varchar("user_code", { length: 255 }).notNull(),
 	slug: varchar({ length: 32 }).notNull(),
-	groupId: int8("group_id", { mode: 'number' }).references(() => teamGroups.id, { onDelete: "SET NULL" } ),
+	groupId: int8("group_id", { mode: 'number' }).references(() => teamGroups.id, { onDelete: "set null" } ),
 	createdAt: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow(),
 	updatedAt: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow(),
 }, (table) => [
@@ -796,8 +796,8 @@ check("check_division", sql`CHECK ((division IN ('B'::STRING, 'C'::STRING)))`),]
 
 export const teamsAssignment = cockroachTable("teams_assignment", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid("team_id").notNull().references(() => teamsTeam.id, { onDelete: "CASCADE" } ),
-	subteamId: uuid("subteam_id").references(() => teamsSubteam.id, { onDelete: "SET NULL" } ),
+	teamId: uuid("team_id").notNull().references(() => teamsTeam.id, { onDelete: "cascade" } ),
+	subteamId: uuid("subteam_id").references(() => teamsSubteam.id, { onDelete: "set null" } ),
 	title: string().notNull(),
 	description: string(),
 	dueDate: timestamp("due_date", { mode: 'string', withTimezone: true }),
@@ -811,7 +811,7 @@ export const teamsAssignment = cockroachTable("teams_assignment", {
 
 export const teamsInvitation = cockroachTable("teams_invitation", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid("team_id").notNull().references(() => teamsTeam.id, { onDelete: "CASCADE" } ),
+	teamId: uuid("team_id").notNull().references(() => teamsTeam.id, { onDelete: "cascade" } ),
 	invitedUserId: uuid("invited_user_id").references(() => users.id),
 	invitedEmail: string("invited_email"),
 	role: string().default("member").notNull(),
@@ -828,7 +828,7 @@ export const teamsInvitation = cockroachTable("teams_invitation", {
 
 export const teamsLinkInvitation = cockroachTable("teams_link_invitation", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid("team_id").notNull().references(() => teamsTeam.id, { onDelete: "CASCADE" } ),
+	teamId: uuid("team_id").notNull().references(() => teamsTeam.id, { onDelete: "cascade" } ),
 	rosterDisplayName: string("roster_display_name").notNull(),
 	invitedUsername: string("invited_username").notNull(),
 	invitedBy: uuid("invited_by").notNull().references(() => users.id),
@@ -839,7 +839,7 @@ export const teamsLinkInvitation = cockroachTable("teams_link_invitation", {
 
 export const teamsMembership = cockroachTable("teams_membership", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid("team_id").notNull().references(() => teamsTeam.id, { onDelete: "CASCADE" } ),
+	teamId: uuid("team_id").notNull().references(() => teamsTeam.id, { onDelete: "cascade" } ),
 	userId: uuid("user_id").notNull().references(() => users.id),
 	role: string().default("member").notNull(),
 	status: string().default("active").notNull(),
@@ -855,8 +855,8 @@ export const teamsMembership = cockroachTable("teams_membership", {
 
 export const teamsRoster = cockroachTable("teams_roster", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid("team_id").notNull().references(() => teamsTeam.id, { onDelete: "CASCADE" } ),
-	subteamId: uuid("subteam_id").references(() => teamsSubteam.id, { onDelete: "CASCADE" } ),
+	teamId: uuid("team_id").notNull().references(() => teamsTeam.id, { onDelete: "cascade" } ),
+	subteamId: uuid("subteam_id").references(() => teamsSubteam.id, { onDelete: "cascade" } ),
 	userId: uuid("user_id").references(() => users.id),
 	displayName: string("display_name").notNull(),
 	eventName: string("event_name").notNull(),
@@ -872,7 +872,7 @@ export const teamsRoster = cockroachTable("teams_roster", {
 
 export const teamsSubmission = cockroachTable("teams_submission", {
 	id: uuid().defaultRandom().primaryKey(),
-	assignmentId: uuid("assignment_id").notNull().references(() => teamsAssignment.id, { onDelete: "CASCADE" } ),
+	assignmentId: uuid("assignment_id").notNull().references(() => teamsAssignment.id, { onDelete: "cascade" } ),
 	userId: uuid("user_id").notNull().references(() => users.id),
 	content: jsonb().default({}).notNull(),
 	status: string().default("draft").notNull(),
@@ -887,7 +887,7 @@ export const teamsSubmission = cockroachTable("teams_submission", {
 
 export const teamsSubteam = cockroachTable("teams_subteam", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid("team_id").notNull().references(() => teamsTeam.id, { onDelete: "CASCADE" } ),
+	teamId: uuid("team_id").notNull().references(() => teamsTeam.id, { onDelete: "cascade" } ),
 	name: string().notNull(),
 	description: string(),
 	displayOrder: int8("display_order", { mode: 'number' }).default(0).notNull(),

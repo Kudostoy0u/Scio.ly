@@ -181,10 +181,12 @@ export default function PeopleTabUnified({
 		memberName: string,
 		username: string,
 	) => {
-		const result = await handleLinkInviteSubmit(memberName, username);
-		if (result) {
+		try {
+			await handleLinkInviteSubmit(memberName, username);
 			setPendingLinkInvites((prev) => ({ ...prev, [memberName]: true }));
 			setLinkInviteStates((prev) => ({ ...prev, [memberName]: false }));
+		} catch {
+			// Error is already handled in handleLinkInviteSubmit
 		}
 	};
 

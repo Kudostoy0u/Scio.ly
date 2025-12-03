@@ -38,9 +38,7 @@ describe("fetchQuestionsForParams", () => {
       }
       return Promise.resolve({ ok: false, json: async () => ({}) });
     });
-    // @ts-expect-error override global
-    global.fetch = fetchMock as typeof global.fetch;
-    // @ts-expect-error add navigator for online
+    global.fetch = fetchMock as unknown as typeof global.fetch;
     (global as { navigator: { onLine: boolean } }).navigator = { onLine: true };
   });
 

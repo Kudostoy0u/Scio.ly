@@ -246,7 +246,9 @@ export async function getTeamMetaBySlug(
 		name: team.name,
 		school: team.school,
 		division: team.division,
-		updatedAt: team.updatedAt ? String(team.updatedAt) : new Date().toISOString(),
+		updatedAt: team.updatedAt
+			? String(team.updatedAt)
+			: new Date().toISOString(),
 		version: Number(team.version ?? 1),
 		userRole: (membership.role as "captain" | "member") ?? "member",
 		status: team.status,
@@ -424,7 +426,9 @@ export async function getTeamFullBySlug(
 			name: team.name,
 			school: team.school,
 			division: team.division,
-			updatedAt: team.updatedAt ? String(team.updatedAt) : new Date().toISOString(),
+			updatedAt: team.updatedAt
+				? String(team.updatedAt)
+				: new Date().toISOString(),
 			version: Number(team.version ?? 1),
 			userRole: (membership.role as "captain" | "member") ?? "member",
 			status: team.status,
@@ -437,9 +441,7 @@ export async function getTeamFullBySlug(
 			name: s.name,
 			description: s.description,
 			displayOrder: Number(s.displayOrder ?? 0),
-			createdAt: s.createdAt
-				? String(s.createdAt)
-				: new Date().toISOString(),
+			createdAt: s.createdAt ? String(s.createdAt) : new Date().toISOString(),
 		})),
 		members,
 		rosterEntries: rosterRows.map((r) => ({
@@ -460,12 +462,8 @@ export async function getTeamFullBySlug(
 			dueDate: a.dueDate ? String(a.dueDate) : null,
 			status: a.status,
 			createdBy: a.createdBy,
-			createdAt: a.createdAt
-				? String(a.createdAt)
-				: new Date().toISOString(),
-			updatedAt: a.updatedAt
-				? String(a.updatedAt)
-				: new Date().toISOString(),
+			createdAt: a.createdAt ? String(a.createdAt) : new Date().toISOString(),
+			updatedAt: a.updatedAt ? String(a.updatedAt) : new Date().toISOString(),
 		})),
 	};
 }
@@ -557,7 +555,6 @@ export async function createTeamWithDefaultSubteam(input: {
 	let slugCandidate = baseSlug;
 	let counter = 1;
 	// Find unique slug
-	// eslint-disable-next-line no-constant-condition
 	while (true) {
 		const existing = await dbPg
 			.select({ id: teamsTeam.id })
@@ -1200,7 +1197,7 @@ export async function acceptPendingInvite(teamSlug: string, userId: string) {
 				role: invite?.role ?? "member",
 				status: "active",
 				invitedBy: null,
-				joinedAt: new Date(),
+				joinedAt: new Date().toISOString(),
 			});
 		}
 
@@ -1320,6 +1317,8 @@ export async function createInvitation(input: {
 		throw new Error("User not found");
 	}
 
+	const invitedUserId = invitedUser.id;
+
 	// Check if user is already a member
 	const existing = await dbPg
 		.select({ id: teamsMembership.id })
@@ -1327,7 +1326,7 @@ export async function createInvitation(input: {
 		.where(
 			and(
 				eq(teamsMembership.teamId, team.id),
-				eq(teamsMembership.userId, invitedUser.id),
+				eq(teamsMembership.userId, invitedUserId),
 				or(
 					eq(teamsMembership.status, "active"),
 					eq(teamsMembership.status, "pending"),
@@ -1348,20 +1347,20 @@ export async function createInvitation(input: {
 		await tx.insert(teamsInvitation).values({
 			id: crypto.randomUUID(),
 			teamId: team.id,
-			invitedUserId: invitedUser.id,
+			invitedUserId,
 			invitedEmail: invitedUser.email ?? null,
 			role: input.role ?? "member",
 			invitedBy: input.invitedBy,
 			status: "pending",
 			token,
-			expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+			expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
 		});
 
 		// Create a pending membership
 		await tx.insert(teamsMembership).values({
 			id: crypto.randomUUID(),
 			teamId: team.id,
-			userId: invitedUser.id,
+			userId: invitedUserId,
 			role: input.role ?? "member",
 			status: "pending",
 			invitedBy: input.invitedBy,
@@ -1398,7 +1397,7 @@ export async function promoteToRole(input: {
 	await dbPg.transaction(async (tx) => {
 		await tx
 			.update(teamsMembership)
-			.set({ role: input.newRole, updatedAt: new Date() })
+			.set({ role: input.newRole, updatedAt: new Date().toISOString() })
 			.where(
 				and(
 					eq(teamsMembership.teamId, team.id),
@@ -1551,7 +1550,7 @@ export async function acceptLinkInvitation(
 		// Update all roster entries with this display name to link to the user
 		await tx
 			.update(teamsRoster)
-			.set({ userId, updatedAt: new Date() })
+			.set({ userId, updatedAt: new Date().toISOString() })
 			.where(
 				and(
 					eq(teamsRoster.teamId, linkInvite.teamId),
@@ -1585,7 +1584,7 @@ export async function acceptLinkInvitation(
 		// Mark link invitation as accepted
 		await tx
 			.update(teamsLinkInvitation)
-			.set({ status: "accepted", updatedAt: new Date() })
+			.set({ status: "accepted", updatedAt: new Date().toISOString() })
 			.where(eq(teamsLinkInvitation.id, linkInviteId));
 
 		await bumpTeamVersion(linkInvite.teamId);
@@ -1639,7 +1638,7 @@ export async function declineLinkInvitation(
 	await dbPg.transaction(async (tx) => {
 		await tx
 			.update(teamsLinkInvitation)
-			.set({ status: "declined", updatedAt: new Date() })
+			.set({ status: "declined", updatedAt: new Date().toISOString() })
 			.where(eq(teamsLinkInvitation.id, linkInviteId));
 
 		await bumpTeamVersion(linkInvite.teamId);

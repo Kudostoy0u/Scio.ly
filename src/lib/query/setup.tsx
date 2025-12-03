@@ -50,7 +50,7 @@ const createDexieStorage = () => {
 			for (const item of items) {
 				memCache.set(item.key, item.value);
 			}
-		} catch (error) {
+		} catch {
 			// ignore load failures
 		}
 	})();

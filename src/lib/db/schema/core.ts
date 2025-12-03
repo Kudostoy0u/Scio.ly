@@ -16,6 +16,4 @@ export {
 	base52Codes,
 	edits,
 	blacklists,
-	quoteBlacklists,
-	quoteEdits,
 } from "../generated/schema";

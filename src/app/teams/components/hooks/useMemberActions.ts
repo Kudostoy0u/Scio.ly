@@ -204,6 +204,10 @@ export function useMemberActions({
 
 		handlePromoteToCaptain: async (member: Member) => {
 			try {
+				if (!member.id) {
+					toast.error("Cannot promote unlinked member");
+					return;
+				}
 				await promoteToRole.mutateAsync({
 					teamSlug,
 					userId: member.id,

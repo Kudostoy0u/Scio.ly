@@ -272,7 +272,7 @@ export async function syncRosterFromPeopleEntry(
 					slotIndex: nextSlot,
 					studentName: newName,
 					userId: newUserId,
-					createdAt: new Date(),
+					createdAt: new Date().toISOString(),
 					updatedAt: new Date().toISOString(),
 				});
 			}
@@ -402,8 +402,8 @@ export async function addEventToPerson(
 			slotIndex: nextSlot,
 			studentName: personName,
 			userId: personUserId,
-					createdAt: new Date().toISOString(),
-					updatedAt: new Date().toISOString(),
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
 		});
 
 		// Sync people table
@@ -532,7 +532,7 @@ export async function changePersonSubteam(
 					slotIndex: nextSlot,
 					studentName: personName,
 					userId: personUserId,
-					createdAt: new Date(),
+					createdAt: new Date().toISOString(),
 					updatedAt: new Date().toISOString(),
 				});
 

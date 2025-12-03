@@ -253,8 +253,8 @@ async function createRecurringMeetings(
         daysOfWeek: days_of_week,
         startTime: start_time || "00:00:00",
         endTime: end_time || "23:59:59",
-        startDate: start_date ? new Date(start_date) : null,
-        endDate: end_date ? new Date(end_date) : null,
+        startDate: start_date ? new Date(start_date).toISOString() : null,
+        endDate: end_date ? new Date(end_date).toISOString() : null,
         exceptions: exceptions || [],
       })
       .returning({ id: newTeamRecurringMeetings.id });

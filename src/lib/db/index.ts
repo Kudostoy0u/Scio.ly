@@ -10,7 +10,7 @@ if (!connectionString) {
 }
 
 declare global {
-	var __pgClient__: ReturnType<typeof postgres> | undefined;
+	var __pgClient__: postgres.Sql | undefined;
 	var __drizzleDb__: ReturnType<typeof drizzle<typeof schema>> | undefined;
 	var __pgPool__: Pool | undefined;
 	var __drizzleDbPg__: ReturnType<typeof drizzlePg<typeof schema>> | undefined;
@@ -59,8 +59,9 @@ if (!globalThis.__pgPool__) {
 }
 
 // Drizzle instances
-export const db = globalThis.__drizzleDb__ ?? drizzle(client, { schema });
-export const dbPg = globalThis.__drizzleDbPg__ ?? drizzlePg(pool, { schema });
+export const db = globalThis.__drizzleDb__ ?? drizzle({ client, schema });
+export const dbPg =
+	globalThis.__drizzleDbPg__ ?? drizzlePg({ client: pool, schema });
 
 if (!globalThis.__drizzleDb__) {
 	globalThis.__drizzleDb__ = db;

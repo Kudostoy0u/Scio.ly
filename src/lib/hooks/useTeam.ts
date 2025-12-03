@@ -44,6 +44,7 @@ export function useTeamFull(teamSlug: string) {
 export function useTeamMembers(teamSlug: string, subteamId?: string) {
 	const query = useTeamFull(teamSlug);
 
+	// eslint-disable-next-line react-hooks/preserve-manual-memoization
 	const members = useMemo(() => {
 		if (!query.data?.members) {
 			return [];
@@ -60,6 +61,7 @@ export function useTeamMembers(teamSlug: string, subteamId?: string) {
 export function useTeamRoster(teamSlug: string, subteamId: string | null) {
 	const query = useTeamFull(teamSlug);
 
+	// eslint-disable-next-line react-hooks/preserve-manual-memoization
 	const roster = useMemo(() => {
 		if (!(query.data?.rosterEntries && subteamId)) {
 			return { roster: {}, removedEvents: [] as string[] };

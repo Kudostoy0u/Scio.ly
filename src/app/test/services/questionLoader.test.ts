@@ -28,7 +28,6 @@ type MockFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<MockR
 describe("questionLoader service", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    // @ts-expect-error override navigator for online
     (global as { navigator: { onLine: boolean } }).navigator = { onLine: true };
   });
 
@@ -60,7 +59,6 @@ describe("questionLoader service", () => {
         return Promise.resolve({ ok: false, json: async () => ({}) });
       }
     );
-    // @ts-expect-error override global fetch
     (global as { fetch: MockFetch }).fetch = fetchMock;
 
     const out = await fetchIdQuestions(
@@ -96,7 +94,6 @@ describe("questionLoader service", () => {
         return Promise.resolve({ ok: false, json: async () => ({}) });
       }
     );
-    // @ts-expect-error override global fetch
     (global as { fetch: MockFetch }).fetch = fetchMock;
 
     const out = await fetchBaseQuestions(

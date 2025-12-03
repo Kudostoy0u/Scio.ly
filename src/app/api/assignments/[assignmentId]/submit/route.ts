@@ -278,7 +278,7 @@ export async function POST(
       totalPoints: calculatedTotalPoints,
       earnedPoints: calculatedEarnedPoints,
       completionTimeSeconds: timeSpent || 0,
-      submittedAt: submittedAt ? new Date(submittedAt) : new Date(),
+      submittedAt: submittedAt ? new Date(submittedAt).toISOString() : new Date().toISOString(),
     });
 
     return NextResponse.json({

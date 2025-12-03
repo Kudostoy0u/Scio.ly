@@ -5,7 +5,6 @@ describe("fetchOnce", () => {
 	it("deduplicates concurrent requests", async () => {
 		const original = global.fetch;
 		let calls = 0;
-		// @ts-expect-error override
 		global.fetch = vi.fn(() => {
 			calls++;
 			return new Response(JSON.stringify({ ok: true }), { status: 200 });
