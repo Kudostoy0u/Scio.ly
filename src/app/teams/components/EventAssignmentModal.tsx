@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/themeContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import { AlertTriangle } from "lucide-react";
 import type { Member } from "../types";
 import { DIVISION_B_GROUPS, DIVISION_C_GROUPS } from "./roster/rosterUtils";

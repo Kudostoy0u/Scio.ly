@@ -12,12 +12,12 @@ import Dexie, { type Table } from "dexie";
  * Represents cached questions for a specific event
  */
 export interface QuestionEntry {
-  /** URL-friendly event identifier */
-  eventSlug: string;
-  /** Array of cached questions */
-  questions: unknown[];
-  /** Timestamp when questions were last updated */
-  updatedAt: number;
+	/** URL-friendly event identifier */
+	eventSlug: string;
+	/** Array of cached questions */
+	questions: unknown[];
+	/** Timestamp when questions were last updated */
+	updatedAt: number;
 }
 
 /**
@@ -25,21 +25,21 @@ export interface QuestionEntry {
  * Extends Dexie to provide offline question access
  */
 export class ScioDatabase extends Dexie {
-  /** Questions table for offline storage */
-  questions!: Table<QuestionEntry, string>;
+	/** Questions table for offline storage */
+	questions!: Table<QuestionEntry, string>;
 
-  /**
-   * Initialize the offline database
-   * Sets up IndexedDB schema for question caching
-   */
-  constructor() {
-    super("scio-offline");
+	/**
+	 * Initialize the offline database
+	 * Sets up IndexedDB schema for question caching
+	 */
+	constructor() {
+		super("scio-offline");
 
-    // Define database schema
-    this.version(1).stores({
-      questions: "&eventSlug, updatedAt",
-    });
-  }
+		// Define database schema
+		this.version(1).stores({
+			questions: "&eventSlug, updatedAt",
+		});
+	}
 }
 
 /** Default database instance for offline storage */

@@ -4,42 +4,46 @@ import type { AnimatedAccuracyProps } from "@/app/dashboard/types";
 import { motion } from "framer-motion";
 import { useState } from "react";
 
-export default function AnimatedAccuracy({ value, darkMode, className }: AnimatedAccuracyProps) {
-  const [isMounted] = useState(() => {
-    if (typeof window !== "undefined") {
-      return true;
-    }
-    return false;
-  });
+export default function AnimatedAccuracy({
+	value,
+	darkMode,
+	className,
+}: AnimatedAccuracyProps) {
+	const [isMounted] = useState(() => {
+		if (typeof window !== "undefined") {
+			return true;
+		}
+		return false;
+	});
 
-  const content = `${value}%`;
+	const content = `${value}%`;
 
-  if (!isMounted) {
-    return (
-      <text
-        x="50"
-        y="50"
-        className={className}
-        textAnchor="middle"
-        fill={darkMode ? "#fff" : "#000"}
-      >
-        {content}
-      </text>
-    );
-  }
+	if (!isMounted) {
+		return (
+			<text
+				x="50"
+				y="50"
+				className={className}
+				textAnchor="middle"
+				fill={darkMode ? "#fff" : "#000"}
+			>
+				{content}
+			</text>
+		);
+	}
 
-  return (
-    <motion.text
-      x="50"
-      y="50"
-      className={className}
-      textAnchor="middle"
-      fill={darkMode ? "#fff" : "#000"}
-      initial={{ opacity: 0, scale: 0.5 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      {content}
-    </motion.text>
-  );
+	return (
+		<motion.text
+			x="50"
+			y="50"
+			className={className}
+			textAnchor="middle"
+			fill={darkMode ? "#fff" : "#000"}
+			initial={{ opacity: 0, scale: 0.5 }}
+			animate={{ opacity: 1, scale: 1 }}
+			transition={{ duration: 0.5 }}
+		>
+			{content}
+		</motion.text>
+	);
 }

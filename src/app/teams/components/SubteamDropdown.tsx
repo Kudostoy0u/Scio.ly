@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/themeContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import type { Member } from "../types";
 
 interface SubteamDropdownProps {

@@ -1,7 +1,7 @@
 "use client";
 
-import { useAuth } from "@/app/contexts/authContext";
-import { useTheme } from "@/app/contexts/themeContext";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import TeamCalendar from "@/app/teams/components/TeamCalendar";
 import TeamLayout from "@/app/teams/components/TeamLayout";
 import { globalApiCache } from "@/lib/utils/globalApiCache";

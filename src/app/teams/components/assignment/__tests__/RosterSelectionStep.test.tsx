@@ -1,7 +1,7 @@
 import RosterSelectionStep from "@/app/teams/components/assignment/RosterSelectionStep";
 import type { RosterMember } from "@/app/teams/components/assignment/assignmentTypes";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("RosterSelectionStep", () => {
 	const mockRosterMembers: RosterMember[] = [
@@ -126,7 +126,7 @@ describe("RosterSelectionStep", () => {
 			render(<RosterSelectionStep {...mockProps} />);
 
 			const johnCheckbox = screen.getAllByRole("checkbox")[0];
-			fireEvent.click(johnCheckbox);
+			fireEvent.click(johnCheckbox!);
 
 			expect(mockProps.onRosterChange).toHaveBeenCalledWith(["John Doe"]);
 		});
@@ -144,7 +144,7 @@ describe("RosterSelectionStep", () => {
 			render(<RosterSelectionStep {...mockProps} />);
 
 			const bobCheckbox = screen.getAllByRole("checkbox")[2]; // Bob is the third checkbox
-			fireEvent.click(bobCheckbox);
+			fireEvent.click(bobCheckbox!);
 
 			expect(mockProps.onRosterChange).not.toHaveBeenCalled();
 		});

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/themeContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import { trpc } from "@/lib/trpc/client";
 import { motion } from "framer-motion";
 import { Calendar, Settings, Users } from "lucide-react";

@@ -1,6 +1,6 @@
 export function SliderStyles({ darkMode }: { darkMode: boolean }) {
-  return (
-    <style>{`
+	return (
+		<style>{`
       input[type="range"]::-webkit-slider-thumb {
         appearance: none;
         height: 20px;
@@ -65,5 +65,5 @@ export function SliderStyles({ darkMode }: { darkMode: boolean }) {
         border: none;
       }
     `}</style>
-  );
+	);
 }

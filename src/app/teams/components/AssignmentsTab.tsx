@@ -1,7 +1,7 @@
 "use client";
 
-import { useAuth } from "@/app/contexts/authContext";
-import { useTheme } from "@/app/contexts/themeContext";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import { useEnhancedTeamData } from "@/app/hooks/useEnhancedTeamData";
 import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import {

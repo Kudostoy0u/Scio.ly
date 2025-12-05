@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/themeContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import Endpoint from "@/app/docs/api/components/Endpoint";
 import Example from "@/app/docs/api/components/Example";
 import Param from "@/app/docs/api/components/Param";
@@ -8,39 +8,45 @@ import { Users } from "lucide-react";
 import SectionHeader from "./SectionHeader";
 
 export default function SharingSection() {
-  const { darkMode } = useTheme();
-  return (
-    <div id="sharing">
-      <SectionHeader icon={<Users className="w-6 h-6" />} title="Sharing & Codes" id="sharing" />
+	const { darkMode } = useTheme();
+	return (
+		<div id="sharing">
+			<SectionHeader
+				icon={<Users className="w-6 h-6" />}
+				title="Sharing & Codes"
+				id="sharing"
+			/>
 
-      <div className="space-y-6">
-        <Endpoint
-          method="GET"
-          url="/api/share"
-          description="Retrieve shared test data by code for collaborative testing."
-          features={["Sharing"]}
-        >
-          <div className="space-y-4">
-            <div>
-              <h4 className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
-                Query Parameters
-              </h4>
-              <div className="space-y-2">
-                <Param
-                  name="code"
-                  type="string"
-                  required={true}
-                  description="6-character share code"
-                />
-              </div>
-            </div>
+			<div className="space-y-6">
+				<Endpoint
+					method="GET"
+					url="/api/share"
+					description="Retrieve shared test data by code for collaborative testing."
+					features={["Sharing"]}
+				>
+					<div className="space-y-4">
+						<div>
+							<h4
+								className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+							>
+								Query Parameters
+							</h4>
+							<div className="space-y-2">
+								<Param
+									name="code"
+									type="string"
+									required={true}
+									description="6-character share code"
+								/>
+							</div>
+						</div>
 
-            <Example title="Request" variant="request">
-              GET /api/share?code=ABC123
-            </Example>
+						<Example title="Request" variant="request">
+							GET /api/share?code=ABC123
+						</Example>
 
-            <Example title="Response" variant="response">
-              {`{
+						<Example title="Response" variant="response">
+							{`{
   "success": true,
   "data": {
     "questions": [...],
@@ -51,38 +57,40 @@ export default function SharingSection() {
     }
   }
 }`}
-            </Example>
-          </div>
-        </Endpoint>
+						</Example>
+					</div>
+				</Endpoint>
 
-        <Endpoint
-          method="POST"
-          url="/api/share/generate"
-          description="Generate a shareable code for test data."
-          features={["Sharing", "Code Generation"]}
-        >
-          <div className="space-y-4">
-            <div>
-              <h4 className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
-                Request Body Schema
-              </h4>
-              <div className="space-y-2">
-                <Param
-                  name="questions"
-                  type="array"
-                  required={true}
-                  description="Array of question objects to share"
-                />
-                <Param
-                  name="metadata"
-                  type="object"
-                  description="Optional metadata about the test"
-                />
-              </div>
-            </div>
+				<Endpoint
+					method="POST"
+					url="/api/share/generate"
+					description="Generate a shareable code for test data."
+					features={["Sharing", "Code Generation"]}
+				>
+					<div className="space-y-4">
+						<div>
+							<h4
+								className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+							>
+								Request Body Schema
+							</h4>
+							<div className="space-y-2">
+								<Param
+									name="questions"
+									type="array"
+									required={true}
+									description="Array of question objects to share"
+								/>
+								<Param
+									name="metadata"
+									type="object"
+									description="Optional metadata about the test"
+								/>
+							</div>
+						</div>
 
-            <Example title="Request" variant="request">
-              {`{
+						<Example title="Request" variant="request">
+							{`{
   "questions": [
     {
       "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -96,43 +104,45 @@ export default function SharingSection() {
     "division": "C"
   }
 }`}
-            </Example>
+						</Example>
 
-            <Example title="Response" variant="response">
-              {`{
+						<Example title="Response" variant="response">
+							{`{
   "success": true,
   "data": {
     "code": "ABC123",
     "expiresAt": "2024-01-16T10:30:00Z"
   }
 }`}
-            </Example>
-          </div>
-        </Endpoint>
+						</Example>
+					</div>
+				</Endpoint>
 
-        <Endpoint
-          method="GET"
-          url="/api/codebusters/share"
-          description="Retrieve Codebusters-specific shared content."
-          features={["Sharing", "Codebusters"]}
-        >
-          <div className="space-y-4">
-            <div>
-              <h4 className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
-                Query Parameters
-              </h4>
-              <div className="space-y-2">
-                <Param
-                  name="code"
-                  type="string"
-                  required={true}
-                  description="Share code for Codebusters content"
-                />
-              </div>
-            </div>
+				<Endpoint
+					method="GET"
+					url="/api/codebusters/share"
+					description="Retrieve Codebusters-specific shared content."
+					features={["Sharing", "Codebusters"]}
+				>
+					<div className="space-y-4">
+						<div>
+							<h4
+								className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+							>
+								Query Parameters
+							</h4>
+							<div className="space-y-2">
+								<Param
+									name="code"
+									type="string"
+									required={true}
+									description="Share code for Codebusters content"
+								/>
+							</div>
+						</div>
 
-            <Example title="Response" variant="response">
-              {`{
+						<Example title="Response" variant="response">
+							{`{
   "success": true,
   "data": {
     "cipher": "Caesar",
@@ -140,80 +150,89 @@ export default function SharingSection() {
     "key": "3"
   }
 }`}
-            </Example>
-          </div>
-        </Endpoint>
+						</Example>
+					</div>
+				</Endpoint>
 
-        <Endpoint
-          method="POST"
-          url="/api/codebusters/share/generate"
-          description="Generate Codebusters-specific share codes."
-          features={["Sharing", "Codebusters", "Code Generation"]}
-        >
-          <div className="space-y-4">
-            <div>
-              <h4 className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
-                Request Body Schema
-              </h4>
-              <div className="space-y-2">
-                <Param
-                  name="cipher"
-                  type="string"
-                  required={true}
-                  description="Type of cipher (Caesar, Vigenere, etc.)"
-                />
-                <Param name="text" type="string" required={true} description="Encrypted text" />
-                <Param name="key" type="string" description="Encryption key" />
-              </div>
-            </div>
+				<Endpoint
+					method="POST"
+					url="/api/codebusters/share/generate"
+					description="Generate Codebusters-specific share codes."
+					features={["Sharing", "Codebusters", "Code Generation"]}
+				>
+					<div className="space-y-4">
+						<div>
+							<h4
+								className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+							>
+								Request Body Schema
+							</h4>
+							<div className="space-y-2">
+								<Param
+									name="cipher"
+									type="string"
+									required={true}
+									description="Type of cipher (Caesar, Vigenere, etc.)"
+								/>
+								<Param
+									name="text"
+									type="string"
+									required={true}
+									description="Encrypted text"
+								/>
+								<Param name="key" type="string" description="Encryption key" />
+							</div>
+						</div>
 
-            <Example title="Request" variant="request">
-              {`{
+						<Example title="Request" variant="request">
+							{`{
   "cipher": "Caesar",
   "text": "Khoor Zruog",
   "key": "3"
 }`}
-            </Example>
+						</Example>
 
-            <Example title="Response" variant="response">
-              {`{
+						<Example title="Response" variant="response">
+							{`{
   "success": true,
   "data": {
     "code": "XYZ789",
     "expiresAt": "2024-01-16T10:30:00Z"
   }
 }`}
-            </Example>
-          </div>
-        </Endpoint>
+						</Example>
+					</div>
+				</Endpoint>
 
-        <Endpoint
-          method="GET"
-          url="/api/questions/base52"
-          description="Retrieve a question by its base52 code."
-          features={["Sharing", "Base52"]}
-        >
-          <div className="space-y-4">
-            <div>
-              <h4 className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
-                Query Parameters
-              </h4>
-              <div className="space-y-2">
-                <Param
-                  name="code"
-                  type="string"
-                  required={true}
-                  description="5-character base52 code"
-                />
-              </div>
-            </div>
+				<Endpoint
+					method="GET"
+					url="/api/questions/base52"
+					description="Retrieve a question by its base52 code."
+					features={["Sharing", "Base52"]}
+				>
+					<div className="space-y-4">
+						<div>
+							<h4
+								className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+							>
+								Query Parameters
+							</h4>
+							<div className="space-y-2">
+								<Param
+									name="code"
+									type="string"
+									required={true}
+									description="5-character base52 code"
+								/>
+							</div>
+						</div>
 
-            <Example title="Request" variant="request">
-              GET /api/questions/base52?code=ABC12
-            </Example>
+						<Example title="Request" variant="request">
+							GET /api/questions/base52?code=ABC12
+						</Example>
 
-            <Example title="Response" variant="response">
-              {`{
+						<Example title="Response" variant="response">
+							{`{
   "success": true,
   "data": {
     "question": {
@@ -232,45 +251,47 @@ export default function SharingSection() {
     "table": "questions"
   }
 }`}
-            </Example>
-          </div>
-        </Endpoint>
+						</Example>
+					</div>
+				</Endpoint>
 
-        <Endpoint
-          method="POST"
-          url="/api/questions/base52"
-          description="Generate base52 codes for multiple questions."
-          features={["Sharing", "Base52", "Code Generation"]}
-        >
-          <div className="space-y-4">
-            <div>
-              <h4 className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
-                Request Body Schema
-              </h4>
-              <div className="space-y-2">
-                <Param
-                  name="questionIds"
-                  type="string[]"
-                  required={true}
-                  description="Array of question UUIDs"
-                />
-                <Param
-                  name="table"
-                  type="string"
-                  description="Table name: 'questions' or 'idEvents' (default: 'questions')"
-                />
-              </div>
-            </div>
+				<Endpoint
+					method="POST"
+					url="/api/questions/base52"
+					description="Generate base52 codes for multiple questions."
+					features={["Sharing", "Base52", "Code Generation"]}
+				>
+					<div className="space-y-4">
+						<div>
+							<h4
+								className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+							>
+								Request Body Schema
+							</h4>
+							<div className="space-y-2">
+								<Param
+									name="questionIds"
+									type="string[]"
+									required={true}
+									description="Array of question UUIDs"
+								/>
+								<Param
+									name="table"
+									type="string"
+									description="Table name: 'questions' or 'idEvents' (default: 'questions')"
+								/>
+							</div>
+						</div>
 
-            <Example title="Request" variant="request">
-              {`{
+						<Example title="Request" variant="request">
+							{`{
   "questionIds": ["550e8400-e29b-41d4-a716-446655440000", "550e8400-e29b-41d4-a716-446655440001"],
   "table": "questions"
 }`}
-            </Example>
+						</Example>
 
-            <Example title="Response" variant="response">
-              {`{
+						<Example title="Response" variant="response">
+							{`{
   "success": true,
   "data": {
     "codes": {
@@ -280,10 +301,10 @@ export default function SharingSection() {
     "table": "questions"
   }
 }`}
-            </Example>
-          </div>
-        </Endpoint>
-      </div>
-    </div>
-  );
+						</Example>
+					</div>
+				</Endpoint>
+			</div>
+		</div>
+	);
 }

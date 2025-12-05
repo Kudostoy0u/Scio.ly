@@ -1,7 +1,7 @@
 "use client";
 
 import AuthButton from "@/app/components/AuthButton";
-import { useTheme } from "@/app/contexts/themeContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import Image from "next/image";

@@ -1,7 +1,7 @@
 "use client";
 import logger from "@/lib/utils/logger";
 
-import { useTheme } from "@/app/contexts/themeContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import { Copy, Crown, Share2, Users, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";

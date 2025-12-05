@@ -1,29 +1,38 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/themeContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import CollapsibleExample from "@/app/docs/api/components/CollapsibleExample";
 
 export default function QuestionManagementGuide() {
-  const { darkMode } = useTheme();
-  return (
-    <div
-      className={`${darkMode ? "bg-gray-800" : "bg-white"} rounded-lg shadow-sm border ${darkMode ? "border-gray-700" : "border-gray-200"} p-6 mb-6`}
-    >
-      <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
-        📚 Question Management APIs
-      </h3>
+	const { darkMode } = useTheme();
+	return (
+		<div
+			className={`${darkMode ? "bg-gray-800" : "bg-white"} rounded-lg shadow-sm border ${darkMode ? "border-gray-700" : "border-gray-200"} p-6 mb-6`}
+		>
+			<h3
+				className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+			>
+				📚 Question Management APIs
+			</h3>
 
-      <div className="space-y-6">
-        <div>
-          <h4 className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
-            Fetching Questions
-          </h4>
-          <p className={`text-sm mb-4 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-            Use the <code>/api/questions</code> endpoint to retrieve filtered questions with
-            pagination:
-          </p>
-          <CollapsibleExample title="Question Fetching Service" variant="request">
-            {`// Service for fetching questions with filters
+			<div className="space-y-6">
+				<div>
+					<h4
+						className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+					>
+						Fetching Questions
+					</h4>
+					<p
+						className={`text-sm mb-4 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+					>
+						Use the <code>/api/questions</code> endpoint to retrieve filtered
+						questions with pagination:
+					</p>
+					<CollapsibleExample
+						title="Question Fetching Service"
+						variant="request"
+					>
+						{`// Service for fetching questions with filters
 class QuestionService {
   constructor(apiKey) {
     this.apiKey = apiKey;
@@ -53,18 +62,22 @@ class QuestionService {
   }
 }
 `}
-          </CollapsibleExample>
-        </div>
+					</CollapsibleExample>
+				</div>
 
-        <div>
-          <h4 className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
-            React Hook for Questions
-          </h4>
-          <p className={`text-sm mb-4 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-            Custom React hook for managing question state and fetching:
-          </p>
-          <CollapsibleExample title="useQuestions Hook" variant="request">
-            {`import { useState, useEffect, useCallback } from 'react';
+				<div>
+					<h4
+						className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+					>
+						React Hook for Questions
+					</h4>
+					<p
+						className={`text-sm mb-4 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+					>
+						Custom React hook for managing question state and fetching:
+					</p>
+					<CollapsibleExample title="useQuestions Hook" variant="request">
+						{`import { useState, useEffect, useCallback } from 'react';
 
 export function useQuestions(apiKey, initialFilters = {}) {
   const [questions, setQuestions] = useState([]);
@@ -96,9 +109,9 @@ export function useQuestions(apiKey, initialFilters = {}) {
   return { questions, loading, error, filters, updateFilters: (nf) => fetchQuestions(nf), refetch: () => fetchQuestions(filters) };
 }
 `}
-          </CollapsibleExample>
-        </div>
-      </div>
-    </div>
-  );
+					</CollapsibleExample>
+				</div>
+			</div>
+		</div>
+	);
 }

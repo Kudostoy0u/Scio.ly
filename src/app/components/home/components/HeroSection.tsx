@@ -8,139 +8,100 @@ import { FaBook } from "react-icons/fa";
 import { FiArrowRight } from "react-icons/fi";
 
 interface HeroSectionProps {
-  darkMode: boolean;
-  bannerVisible: boolean;
-  buttonRef: React.RefObject<HTMLButtonElement>;
+	darkMode: boolean;
+	bannerVisible: boolean;
+	buttonRef: React.RefObject<HTMLButtonElement>;
 }
 
-function HeroStatBadge({
-  value,
-  label,
-  colorClass,
-  position,
-  delay,
-  darkMode,
-}: {
-  value: string;
-  label: string;
-  colorClass: string;
-  position: "top-left" | "bottom-right";
-  delay: number;
-  darkMode: boolean;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay, duration: 0.5 }}
-      className={`absolute ${position === "top-left" ? "-top-4 -left-4" : "-bottom-4 -right-4"} p-4 rounded-2xl shadow-lg ${darkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"}`}
-    >
-      <div className="text-center">
-        <div className={`text-2xl font-bold ${colorClass}`}>{value}</div>
-        <div className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>{label}</div>
-      </div>
-    </motion.div>
-  );
-}
-
-export function HeroSection({ darkMode, bannerVisible, buttonRef }: HeroSectionProps) {
-  return (
-    <section className={`relative ${bannerVisible ? "pt-28" : "pt-24"} md:min-h-screen`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-4rem)] flex items-start lg:items-center">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center w-full lg:-mt-10">
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className={`text-5xl lg:text-6xl font-bold mb-6 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
-            >
-              Learn by <span className="text-blue-500">doing</span>
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className={`text-xl lg:text-2xl mb-8 leading-relaxed ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-            >
-              Study for Science Olympiad with{" "}
-              <span className="font-semibold text-blue-500">thousands</span> of practice questions
-              from real competitions.
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="flex flex-col sm:flex-row gap-4 items-start sm:items-center"
-            >
-              <Link href="/dashboard">
-                <motion.button
-                  ref={buttonRef}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="group flex items-center gap-2 px-8 py-4 rounded-lg font-semibold text-lg transition-all border-2 bg-blue-600 border-blue-600 text-white hover:bg-blue-700 hover:border-blue-700"
-                >
-                  <FaPen className="w-5 h-5" />
-                  Practice Now
-                  <FiArrowRight className="transition-transform group-hover:translate-x-1" />
-                </motion.button>
-              </Link>
-              <Link href="/about">
-                <motion.button
-                  whileHover={{ scale: 1.08 }}
-                  whileTap={{ scale: 0.95 }}
-                  initial={{ scale: 1.04 }}
-                  className={`group flex items-center gap-2 px-8 py-4 rounded-lg font-semibold text-lg transition-all border-2 ${
-                    darkMode
-                      ? "border-gray-600 text-gray-300 hover:border-gray-500 hover:text-white"
-                      : "border-gray-300 text-gray-700 hover:border-gray-400 hover:text-gray-900"
-                  }`}
-                >
-                  <FaBook className="w-5 h-5" />
-                  Learn More
-                </motion.button>
-              </Link>
-            </motion.div>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, x: 50, scale: 0.8 }}
-            animate={{ opacity: 1, x: 0, scale: 0.8 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="relative"
-          >
-            <div className="relative">
-              <Image
-                src="/frontpage.jpg"
-                alt="Students taking Science Olympiad test"
-                width={600}
-                height={1000}
-                className="rounded-2xl shadow-2xl"
-                priority={true}
-              />
-              <HeroStatBadge
-                value="450k"
-                label="Practice Questions"
-                colorClass={darkMode ? "text-blue-400" : "text-blue-600"}
-                position="top-left"
-                delay={1}
-                darkMode={darkMode}
-              />
-              <HeroStatBadge
-                value="1.1k"
-                label="tournaments covered"
-                colorClass={darkMode ? "text-green-400" : "text-green-600"}
-                position="bottom-right"
-                delay={1.2}
-                darkMode={darkMode}
-              />
-            </div>
-          </motion.div>
-        </div>
-      </div>
-    </section>
-  );
+export function HeroSection({
+	darkMode,
+	// bannerVisible,
+	buttonRef,
+}: HeroSectionProps) {
+	// const bannerVisible = false;
+	return (
+		<section
+			className={`relative ${/* bannerVisible ? "pt-28" : */ "pt-24"} md:min-h-screen`}
+		>
+			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-4rem)] flex items-start lg:items-center">
+				<div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center w-full lg:-mt-10">
+					<motion.div
+						initial={{ opacity: 0, x: -50 }}
+						animate={{ opacity: 1, x: 0 }}
+						transition={{ duration: 0.8 }}
+					>
+						<motion.h1
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: 0.2 }}
+							className={`text-5xl lg:text-6xl font-bold mb-6 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+						>
+							Learn by <span className="text-blue-500">doing</span>
+						</motion.h1>
+						<motion.p
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: 0.3 }}
+							className={`text-xl lg:text-2xl mb-8 leading-relaxed ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+						>
+							Study for Science Olympiad with{" "}
+							<span className="font-semibold text-blue-500">thousands</span> of
+							practice questions from real competitions.
+						</motion.p>
+						<motion.div
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: 0.4 }}
+							className="flex flex-col sm:flex-row gap-4 items-start sm:items-center"
+						>
+							<Link href="/dashboard">
+								<motion.button
+									ref={buttonRef}
+									whileHover={{ scale: 1.05 }}
+									whileTap={{ scale: 0.95 }}
+									className="group flex items-center gap-2 px-8 py-4 rounded-lg font-semibold text-lg transition-all border-2 bg-blue-600 border-blue-600 text-white hover:bg-blue-700 hover:border-blue-700"
+								>
+									<FaPen className="w-5 h-5" />
+									Practice Now
+									<FiArrowRight className="transition-transform group-hover:translate-x-1" />
+								</motion.button>
+							</Link>
+							<Link href="/about">
+								<motion.button
+									whileHover={{ scale: 1.08 }}
+									whileTap={{ scale: 0.95 }}
+									initial={{ scale: 1.04 }}
+									className={`group flex items-center gap-2 px-8 py-4 rounded-lg font-semibold text-lg transition-all border-2 ${
+										darkMode
+											? "border-gray-600 text-gray-300 hover:border-gray-500 hover:text-white"
+											: "border-gray-300 text-gray-700 hover:border-gray-400 hover:text-gray-900"
+									}`}
+								>
+									<FaBook className="w-5 h-5" />
+									Learn More
+								</motion.button>
+							</Link>
+						</motion.div>
+					</motion.div>
+					<motion.div
+						initial={{ opacity: 0, x: 50, scale: 0.8 }}
+						animate={{ opacity: 1, x: 0, scale: 0.8 }}
+						transition={{ duration: 0.8, delay: 0.2 }}
+						className="relative"
+					>
+						<div className="relative">
+							<Image
+								src="/frontpage.jpg"
+								alt="Students taking Science Olympiad test"
+								width={600}
+								height={1000}
+								className="rounded-2xl shadow-2xl"
+								priority={true}
+							/>
+						</div>
+					</motion.div>
+				</div>
+			</div>
+		</section>
+	);
 }

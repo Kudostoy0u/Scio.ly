@@ -1,7 +1,7 @@
 "use client";
 import type { EloData, LeaderboardEntry } from "@/app/analytics/types/elo";
 import { getLeaderboard } from "@/app/analytics/utils/eloDataProcessor";
-import { useTheme } from "@/app/contexts/themeContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import logger from "@/lib/utils/logger";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

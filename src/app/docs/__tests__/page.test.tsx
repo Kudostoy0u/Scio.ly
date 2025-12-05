@@ -4,23 +4,27 @@ import DocsHome, { metadata } from "../page";
 
 // Mock the components
 vi.mock("../components/EventCatalogue", () => ({
-  EventCatalogue: () => <div data-testid="event-catalogue">Event Catalogue</div>,
+	EventCatalogue: () => (
+		<div data-testid="event-catalogue">Event Catalogue</div>
+	),
 }));
 
 vi.mock("../components/DocsHomeClient", () => ({
-  DocsHomeClient: () => <div data-testid="docs-home-client">Docs Home Client</div>,
+	DocsHomeClient: () => (
+		<div data-testid="docs-home-client">Docs Home Client</div>
+	),
 }));
 
 describe("DocsHome", () => {
-  it("renders DocsHomeClient and EventCatalogue", () => {
-    render(<DocsHome />);
+	it("renders DocsHomeClient and EventCatalogue", () => {
+		render(<DocsHome />);
 
-    expect(screen.getByTestId("docs-home-client")).toBeInTheDocument();
-    expect(screen.getByTestId("event-catalogue")).toBeInTheDocument();
-  });
+		expect(screen.getByTestId("docs-home-client")).toBeInTheDocument();
+		expect(screen.getByTestId("event-catalogue")).toBeInTheDocument();
+	});
 
-  it("has correct metadata", () => {
-    expect(metadata.title).toContain("Scio.ly Docs");
-    expect(metadata.description).toBeDefined();
-  });
+	it("has correct metadata", () => {
+		expect(metadata.title).toContain("Scio.ly Docs");
+		expect(metadata.description).toBeDefined();
+	});
 });

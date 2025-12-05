@@ -8,20 +8,20 @@
  * Contains all fields for career application submissions
  */
 interface CareersFormData {
-  /** Applicant's full name */
-  name: string;
-  /** Applicant's email address */
-  email: string;
-  /** Applicant's Discord ID */
-  discordId: string;
-  /** Position being applied for */
-  position: string;
-  /** Hours per week availability */
-  hoursPerWeek: string;
-  /** Relevant experience */
-  experience: string;
-  /** Additional message */
-  message: string;
+	/** Applicant's full name */
+	name: string;
+	/** Applicant's email address */
+	email: string;
+	/** Applicant's Discord ID */
+	discordId: string;
+	/** Position being applied for */
+	position: string;
+	/** Hours per week availability */
+	hoursPerWeek: string;
+	/** Relevant experience */
+	experience: string;
+	/** Additional message */
+	message: string;
 }
 
 /**
@@ -44,24 +44,28 @@ interface CareersFormData {
  * ```
  */
 export const handleCareersSubmission = async (
-  data: CareersFormData
+	data: CareersFormData,
 ): Promise<{ success: boolean; message: string }> => {
-  try {
-    const response = await fetch("/api/join", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+	try {
+		const response = await fetch("/api/join", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(data),
+		});
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
 
-    return {
-      success: true,
-      message: "Application submitted successfully! We'll get back to you soon.",
-    };
-  } catch (_error) {
-    return { success: false, message: "Failed to submit application. Please try again." };
-  }
+		return {
+			success: true,
+			message:
+				"Application submitted successfully! We'll get back to you soon.",
+		};
+	} catch (_error) {
+		return {
+			success: false,
+			message: "Failed to submit application. Please try again.",
+		};
+	}
 };

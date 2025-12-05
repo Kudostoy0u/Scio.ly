@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/themeContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import { trpc } from "@/lib/trpc/client";
 import { CheckCircle2, Link2, UserPlus, X, XCircle } from "lucide-react";
 import { useState } from "react";

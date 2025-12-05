@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useTheme } from "@/app/contexts/themeContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import { useInvalidateTeam, useTeamRoster } from "@/lib/hooks/useTeam";
 import { trpc } from "@/lib/trpc/client";
 import { useEffect, useRef, useState } from "react";

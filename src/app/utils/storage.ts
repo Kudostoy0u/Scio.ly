@@ -21,9 +21,9 @@ import { db } from "./db";
  * ```
  */
 export function slugifyEventName(name: string): string {
-  return String(name)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-");
+	return String(name)
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-");
 }
 
 /** Cached downloads broadcast channel */
@@ -36,21 +36,23 @@ let downloadsChannel: BroadcastChannel | null = null;
  * @returns {BroadcastChannel | null} Downloads broadcast channel or null if unavailable
  */
 function getDownloadsChannel(): BroadcastChannel | null {
-  try {
-    if (typeof window === "undefined") {
-      return null;
-    }
-    const bc = (window as Window & { BroadcastChannel?: typeof BroadcastChannel }).BroadcastChannel;
-    if (!bc) {
-      return null;
-    }
-    if (!downloadsChannel) {
-      downloadsChannel = new bc("scio-downloads");
-    }
-    return downloadsChannel;
-  } catch {
-    return null;
-  }
+	try {
+		if (typeof window === "undefined") {
+			return null;
+		}
+		const bc = (
+			window as Window & { BroadcastChannel?: typeof BroadcastChannel }
+		).BroadcastChannel;
+		if (!bc) {
+			return null;
+		}
+		if (!downloadsChannel) {
+			downloadsChannel = new bc("scio-downloads");
+		}
+		return downloadsChannel;
+	} catch {
+		return null;
+	}
 }
 
 /**
@@ -68,182 +70,194 @@ function getDownloadsChannel(): BroadcastChannel | null {
  * ```
  */
 export function subscribeToDownloads(onUpdate: () => void): () => void {
-  try {
-    const ch = getDownloadsChannel();
-    const handler = (e: MessageEvent) => {
-      const payload = e.data ?? e;
-      if (
-        payload &&
-        typeof payload === "object" &&
-        "type" in payload &&
-        payload.type === "updated"
-      ) {
-        onUpdate();
-      }
-    };
+	try {
+		const ch = getDownloadsChannel();
+		const handler = (e: MessageEvent) => {
+			const payload = e.data ?? e;
+			if (
+				payload &&
+				typeof payload === "object" &&
+				"type" in payload &&
+				payload.type === "updated"
+			) {
+				onUpdate();
+			}
+		};
 
-    if (ch) {
-      try {
-        ch.addEventListener("message", handler);
-      } catch {
-        (ch as { onmessage: ((e: MessageEvent) => void) | null }).onmessage = handler;
-      }
+		if (ch) {
+			try {
+				ch.addEventListener("message", handler);
+			} catch {
+				(ch as { onmessage: ((e: MessageEvent) => void) | null }).onmessage =
+					handler;
+			}
 
-      const winHandler = (ev: Event) => {
-        try {
-          const detail = (ev as CustomEvent).detail;
-          if (
-            detail &&
-            typeof detail === "object" &&
-            "type" in detail &&
-            detail.type === "updated"
-          ) {
-            onUpdate();
-          }
-        } catch {
-          // Ignore message handler errors
-        }
-      };
-      window.addEventListener("scio-downloads-updated", winHandler);
+			const winHandler = (ev: Event) => {
+				try {
+					const detail = (ev as CustomEvent).detail;
+					if (
+						detail &&
+						typeof detail === "object" &&
+						"type" in detail &&
+						detail.type === "updated"
+					) {
+						onUpdate();
+					}
+				} catch {
+					// Ignore message handler errors
+				}
+			};
+			window.addEventListener("scio-downloads-updated", winHandler);
 
-      return () => {
-        try {
-          ch.removeEventListener("message", handler);
-        } catch {
-          try {
-            (ch as { onmessage: ((e: MessageEvent) => void) | null }).onmessage = null;
-          } catch {
-            // Ignore cleanup errors
-          }
-        }
-        try {
-          window.removeEventListener("scio-downloads-updated", winHandler as EventListener);
-        } catch {
-          // Ignore removeEventListener errors
-        }
-      };
-    }
+			return () => {
+				try {
+					ch.removeEventListener("message", handler);
+				} catch {
+					try {
+						(
+							ch as { onmessage: ((e: MessageEvent) => void) | null }
+						).onmessage = null;
+					} catch {
+						// Ignore cleanup errors
+					}
+				}
+				try {
+					window.removeEventListener(
+						"scio-downloads-updated",
+						winHandler as EventListener,
+					);
+				} catch {
+					// Ignore removeEventListener errors
+				}
+			};
+		}
 
-    const winHandlerOnly = () => onUpdate();
-    window.addEventListener("scio-downloads-updated", winHandlerOnly as EventListener);
-    return () =>
-      window.removeEventListener("scio-downloads-updated", winHandlerOnly as EventListener);
-  } catch {
-    return () => {
-      // Intentionally empty - no-op cleanup function when event listener setup fails
-    };
-  }
+		const winHandlerOnly = () => onUpdate();
+		window.addEventListener(
+			"scio-downloads-updated",
+			winHandlerOnly as EventListener,
+		);
+		return () =>
+			window.removeEventListener(
+				"scio-downloads-updated",
+				winHandlerOnly as EventListener,
+			);
+	} catch {
+		return () => {
+			// Intentionally empty - no-op cleanup function when event listener setup fails
+		};
+	}
 }
 
 // --- database helpers ---
 async function ensureDbOpen() {
-  try {
-    await db.open();
-  } catch {
-    // Ignore database open errors
-  }
+	try {
+		await db.open();
+	} catch {
+		// Ignore database open errors
+	}
 }
 
 function broadcastDownloadUpdate(eventSlug: string) {
-  try {
-    const ch = getDownloadsChannel();
-    if (ch) {
-      ch.postMessage({ type: "updated", eventSlug });
-    }
-  } catch {
-    // Ignore BroadcastChannel errors
-  }
-  try {
-    // same-window fallback
-    const ev = new CustomEvent("scio-downloads-updated", {
-      detail: { type: "updated", eventSlug },
-    });
-    window.dispatchEvent(ev);
-  } catch {
-    // Ignore event dispatch errors
-  }
+	try {
+		const ch = getDownloadsChannel();
+		if (ch) {
+			ch.postMessage({ type: "updated", eventSlug });
+		}
+	} catch {
+		// Ignore BroadcastChannel errors
+	}
+	try {
+		// same-window fallback
+		const ev = new CustomEvent("scio-downloads-updated", {
+			detail: { type: "updated", eventSlug },
+		});
+		window.dispatchEvent(ev);
+	} catch {
+		// Ignore event dispatch errors
+	}
 }
 
 export async function listDownloadedEventSlugs(): Promise<string[]> {
-  try {
-    await ensureDbOpen();
-    const entries = await db.questions.toArray();
-    return entries.map((entry) => entry.eventSlug);
-  } catch {
-    return [];
-  }
+	try {
+		await ensureDbOpen();
+		const entries = await db.questions.toArray();
+		return entries.map((entry) => entry.eventSlug);
+	} catch {
+		return [];
+	}
 }
 
 export async function hasOfflineEvent(eventSlug: string): Promise<boolean> {
-  try {
-    await ensureDbOpen();
-    const entry = await db.questions.get(eventSlug);
-    return !!entry;
-  } catch {
-    return false;
-  }
+	try {
+		await ensureDbOpen();
+		const entry = await db.questions.get(eventSlug);
+		return !!entry;
+	} catch {
+		return false;
+	}
 }
 
 export async function getEventOfflineQuestions(eventSlug: string): Promise<
-  | Array<{ id: string; author: string; quote: string }>
-  | {
-      en: Array<{ id: string; author: string; quote: string }>;
-      es: Array<{ id: string; author: string; quote: string }>;
-    }
-  | []
+	| Array<{ id: string; author: string; quote: string }>
+	| {
+			en: Array<{ id: string; author: string; quote: string }>;
+			es: Array<{ id: string; author: string; quote: string }>;
+	  }
+	| []
 > {
-  try {
-    await ensureDbOpen();
-    const entry = await db.questions.get(eventSlug);
-    const questions = entry?.questions;
-    if (Array.isArray(questions)) {
-      return questions as
-        | Array<{ id: string; author: string; quote: string }>
-        | {
-            en: Array<{ id: string; author: string; quote: string }>;
-            es: Array<{ id: string; author: string; quote: string }>;
-          };
-    }
-    return [];
-  } catch {
-    return [];
-  }
+	try {
+		await ensureDbOpen();
+		const entry = await db.questions.get(eventSlug);
+		const questions = entry?.questions;
+		if (Array.isArray(questions)) {
+			return questions as
+				| Array<{ id: string; author: string; quote: string }>
+				| {
+						en: Array<{ id: string; author: string; quote: string }>;
+						es: Array<{ id: string; author: string; quote: string }>;
+				  };
+		}
+		return [];
+	} catch {
+		return [];
+	}
 }
 
 export async function saveOfflineEvent(
-  eventSlug: string,
-  questions:
-    | Array<{ id: string; author: string; quote: string }>
-    | {
-        en: Array<{ id: string; author: string; quote: string }>;
-        es: Array<{ id: string; author: string; quote: string }>;
-      }
+	eventSlug: string,
+	questions:
+		| Array<{ id: string; author: string; quote: string }>
+		| {
+				en: Array<{ id: string; author: string; quote: string }>;
+				es: Array<{ id: string; author: string; quote: string }>;
+		  },
 ): Promise<boolean> {
-  try {
-    await ensureDbOpen();
-    await db.questions.put({
-      eventSlug,
-      questions: Array.isArray(questions) ? questions : [],
-      updatedAt: Date.now(),
-    });
-    broadcastDownloadUpdate(eventSlug);
-    return true;
-  } catch (error) {
-    logger.error("Failed to save offline event:", error);
-    return false;
-  }
+	try {
+		await ensureDbOpen();
+		await db.questions.put({
+			eventSlug,
+			questions: Array.isArray(questions) ? questions : [],
+			updatedAt: Date.now(),
+		});
+		broadcastDownloadUpdate(eventSlug);
+		return true;
+	} catch (error) {
+		logger.error("Failed to save offline event:", error);
+		return false;
+	}
 }
 
 export async function removeOfflineEvent(eventSlug: string): Promise<void> {
-  try {
-    await ensureDbOpen();
-    await db.questions.delete(eventSlug);
-    broadcastDownloadUpdate(eventSlug);
-  } catch {
-    // ignore errors
-  }
+	try {
+		await ensureDbOpen();
+		await db.questions.delete(eventSlug);
+		broadcastDownloadUpdate(eventSlug);
+	} catch {
+		// ignore errors
+	}
 }
 
 export async function syncOfflineDownloads(): Promise<void> {
-  // TODO: Implement offline downloads synchronization
+	// TODO: Implement offline downloads synchronization
 }

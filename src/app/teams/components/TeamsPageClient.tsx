@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/app/contexts/authContext";
+import { useAuth } from "@/app/contexts/AuthContext";
 import { trpc } from "@/lib/trpc/client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";

@@ -8,480 +8,537 @@ import type { ComponentType, KeyboardEvent, MouseEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 interface HeatmapCellProps {
-  cell: { date: Date; key: string; value: number; isFuture: boolean };
-  cellSizePx: number;
-  darkMode: boolean;
-  getCellColor: (v: number) => string;
-  heatmapPalette: { empty: string; border: string; levels: string[] };
-  tooltipAlignClass: string;
-  tooltipId: string;
-  isTooltipActive: boolean;
-  setActiveTooltip: (id: string | null) => void;
+	cell: { date: Date; key: string; value: number; isFuture: boolean };
+	cellSizePx: number;
+	darkMode: boolean;
+	getCellColor: (v: number) => string;
+	heatmapPalette: { empty: string; border: string; levels: string[] };
+	tooltipAlignClass: string;
+	tooltipId: string;
+	isTooltipActive: boolean;
+	setActiveTooltip: (id: string | null) => void;
 }
 
 function HeatmapCell({
-  cell,
-  cellSizePx,
-  darkMode,
-  getCellColor,
-  heatmapPalette,
-  tooltipAlignClass,
-  tooltipId,
-  isTooltipActive,
-  setActiveTooltip,
+	cell,
+	cellSizePx,
+	darkMode,
+	getCellColor,
+	heatmapPalette,
+	tooltipAlignClass,
+	tooltipId,
+	isTooltipActive,
+	setActiveTooltip,
 }: HeatmapCellProps) {
-  const label = `${cell.date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}: ${cell.value} answered`;
-  const isFuture = cell.isFuture;
+	const label = `${cell.date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}: ${cell.value} answered`;
+	const isFuture = cell.isFuture;
 
-  const handleClick = (e: MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    if (!isFuture) {
-      setActiveTooltip(isTooltipActive ? null : tooltipId);
-    }
-  };
+	const handleClick = (e: MouseEvent<HTMLDivElement>) => {
+		e.stopPropagation();
+		if (!isFuture) {
+			setActiveTooltip(isTooltipActive ? null : tooltipId);
+		}
+	};
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if ((e.key === "Enter" || e.key === " ") && !isFuture) {
-      e.preventDefault();
-      e.stopPropagation();
-      setActiveTooltip(isTooltipActive ? null : tooltipId);
-    }
-  };
+	const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+		if ((e.key === "Enter" || e.key === " ") && !isFuture) {
+			e.preventDefault();
+			e.stopPropagation();
+			setActiveTooltip(isTooltipActive ? null : tooltipId);
+		}
+	};
 
-  return (
-    <div className="relative group">
-      <div
-        aria-label={isFuture ? undefined : label}
-        style={{
-          width: `${cellSizePx}px`,
-          height: `${cellSizePx}px`,
-          backgroundColor: isFuture ? "transparent" : getCellColor(cell.value),
-          border: isFuture
-            ? "none"
-            : `1px solid ${isTooltipActive ? (darkMode ? "#60a5fa" : "#2563eb") : heatmapPalette.border}`,
-          borderRadius: 3,
-          transform: isTooltipActive ? "scale(1.1)" : "scale(1)",
-          transition: "transform 0.1s ease-in-out, border-color 0.1s ease-in-out",
-        }}
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
-        role={isFuture ? undefined : "button"}
-        tabIndex={isFuture ? undefined : 0}
-        className={isFuture ? "" : "cursor-pointer heatmap-cell"}
-      />
-      {!isFuture && (
-        <div
-          className={`pointer-events-none absolute -top-8 ${tooltipAlignClass} whitespace-nowrap rounded px-2 py-1 text-xs border shadow transition-opacity ${
-            darkMode
-              ? "bg-gray-800 text-white border-gray-700"
-              : "bg-white text-gray-900 border-gray-200"
-          } ${isTooltipActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
-        >
-          {label}
-        </div>
-      )}
-    </div>
-  );
+	return (
+		<div className="relative group">
+			<div
+				aria-label={isFuture ? undefined : label}
+				style={{
+					width: `${cellSizePx}px`,
+					height: `${cellSizePx}px`,
+					backgroundColor: isFuture ? "transparent" : getCellColor(cell.value),
+					border: isFuture
+						? "none"
+						: `1px solid ${isTooltipActive ? (darkMode ? "#60a5fa" : "#2563eb") : heatmapPalette.border}`,
+					borderRadius: 3,
+					transform: isTooltipActive ? "scale(1.1)" : "scale(1)",
+					transition:
+						"transform 0.1s ease-in-out, border-color 0.1s ease-in-out",
+				}}
+				onClick={handleClick}
+				onKeyDown={handleKeyDown}
+				role={isFuture ? undefined : "button"}
+				tabIndex={isFuture ? undefined : 0}
+				className={isFuture ? "" : "cursor-pointer heatmap-cell"}
+			/>
+			{!isFuture && (
+				<div
+					className={`pointer-events-none absolute -top-8 ${tooltipAlignClass} whitespace-nowrap rounded px-2 py-1 text-xs border shadow transition-opacity ${
+						darkMode
+							? "bg-gray-800 text-white border-gray-700"
+							: "bg-white text-gray-900 border-gray-200"
+					} ${isTooltipActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+				>
+					{label}
+				</div>
+			)}
+		</div>
+	);
 }
 
-const ReactApexChart = dynamic(() => import("react-apexcharts"), { ssr: false }) as ComponentType<
-  Record<string, unknown>
->;
+const ReactApexChart = dynamic(() => import("react-apexcharts"), {
+	ssr: false,
+}) as ComponentType<Record<string, unknown>>;
 
 export default function QuestionsThisWeekChart({
-  historyData,
-  darkMode,
+	historyData,
+	darkMode,
 }: {
-  historyData: Record<string, HistoryRecord>;
-  darkMode: boolean;
+	historyData: Record<string, HistoryRecord>;
+	darkMode: boolean;
 }) {
-  const [chartType, setChartType] = useState<"line" | "heatmap">(() => {
-    try {
-      const saved =
-        typeof window !== "undefined" ? SyncLocalStorage.getItem("scio_chart_type") : null;
-      return saved === "line" || saved === "heatmap" ? saved : "heatmap";
-    } catch {
-      return "heatmap";
-    }
-  });
+	const [chartType, setChartType] = useState<"line" | "heatmap">(() => {
+		try {
+			const saved =
+				typeof window !== "undefined"
+					? SyncLocalStorage.getItem("scio_chart_type")
+					: null;
+			return saved === "line" || saved === "heatmap" ? saved : "heatmap";
+		} catch {
+			return "heatmap";
+		}
+	});
 
-  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+	const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (event: Event) => {
-      const target = event.target as Element;
-      if (!target.closest(".heatmap-cell")) {
-        setActiveTooltip(null);
-      }
-    };
+	useEffect(() => {
+		const handleClickOutside = (event: Event) => {
+			const target = event.target as Element;
+			if (!target.closest(".heatmap-cell")) {
+				setActiveTooltip(null);
+			}
+		};
 
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
+		document.addEventListener("click", handleClickOutside);
+		return () => document.removeEventListener("click", handleClickOutside);
+	}, []);
 
-  useEffect(() => {
-    try {
-      SyncLocalStorage.setItem("scio_chart_type", chartType);
-    } catch {
-      /* ignore localStorage errors */
-    }
-  }, [chartType]);
+	useEffect(() => {
+		try {
+			SyncLocalStorage.setItem("scio_chart_type", chartType);
+		} catch {
+			/* ignore localStorage errors */
+		}
+	}, [chartType]);
 
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
-  const chartAreaRef = useRef<HTMLDivElement | null>(null);
-  const [containerWidth, setContainerWidth] = useState<number>(0);
-  const [chartAreaHeight, setChartAreaHeight] = useState<number>(0);
+	const wrapperRef = useRef<HTMLDivElement | null>(null);
+	const chartAreaRef = useRef<HTMLDivElement | null>(null);
+	const [containerWidth, setContainerWidth] = useState<number>(0);
+	const [chartAreaHeight, setChartAreaHeight] = useState<number>(0);
 
-  const targetCellSizePx = 22; // desired square size
-  const gapPx = 2; // space between squares
-  const minCols = 10;
+	const targetCellSizePx = 22; // desired square size
+	const gapPx = 2; // space between squares
+	const minCols = 10;
 
-  const weeksCount = useMemo(() => {
-    if (containerWidth <= 0) {
-      return 5;
-    }
-    const cols = Math.floor((containerWidth + gapPx) / (targetCellSizePx + gapPx));
-    return Math.max(minCols, cols);
-  }, [containerWidth]);
+	const weeksCount = useMemo(() => {
+		if (containerWidth <= 0) {
+			return 5;
+		}
+		const cols = Math.floor(
+			(containerWidth + gapPx) / (targetCellSizePx + gapPx),
+		);
+		return Math.max(minCols, cols);
+	}, [containerWidth]);
 
-  const cellSizePx = useMemo(() => {
-    if (containerWidth <= 0) {
-      return targetCellSizePx;
-    }
-    const widthConstrained = Math.floor((containerWidth - (weeksCount - 1) * gapPx) / weeksCount);
-    const heightConstrained =
-      chartAreaHeight > 0 ? Math.floor((chartAreaHeight - (7 - 1) * gapPx) / 7) : widthConstrained;
-    return Math.max(6, Math.min(widthConstrained, heightConstrained));
-  }, [containerWidth, weeksCount, chartAreaHeight]);
+	const cellSizePx = useMemo(() => {
+		if (containerWidth <= 0) {
+			return targetCellSizePx;
+		}
+		const widthConstrained = Math.floor(
+			(containerWidth - (weeksCount - 1) * gapPx) / weeksCount,
+		);
+		const heightConstrained =
+			chartAreaHeight > 0
+				? Math.floor((chartAreaHeight - (7 - 1) * gapPx) / 7)
+				: widthConstrained;
+		return Math.max(6, Math.min(widthConstrained, heightConstrained));
+	}, [containerWidth, weeksCount, chartAreaHeight]);
 
-  const last7Days = useMemo(() => {
-    const days: { label: string; key: string; value: number }[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const key = d.toISOString().split("T")[0];
-      if (!key) {
-        continue;
-      }
-      const label = d.toLocaleDateString("en-US", { weekday: "short" });
-      const value = historyData[key]?.questionsAttempted ?? 0;
-      days.push({ label, key, value });
-    }
-    return days;
-  }, [historyData]);
+	const last7Days = useMemo(() => {
+		const days: { label: string; key: string; value: number }[] = [];
+		for (let i = 6; i >= 0; i--) {
+			const d = new Date();
+			d.setDate(d.getDate() - i);
+			const key = d.toISOString().split("T")[0];
+			if (!key) {
+				continue;
+			}
+			const label = d.toLocaleDateString("en-US", { weekday: "short" });
+			const value = historyData[key]?.questionsAttempted ?? 0;
+			days.push({ label, key, value });
+		}
+		return days;
+	}, [historyData]);
 
-  const weeklyTotals = useMemo(() => {
-    const now = new Date();
-    let current = 0;
-    let previous = 0;
-    for (let i = 0; i < 7; i++) {
-      const d1 = new Date(now);
-      d1.setDate(now.getDate() - i);
-      const d2 = new Date(now);
-      d2.setDate(now.getDate() - 7 - i);
-      const k1 = d1.toISOString().split("T")[0];
-      const k2 = d2.toISOString().split("T")[0];
-      if (k1 && k2) {
-        current += historyData[k1]?.questionsAttempted ?? 0;
-        previous += historyData[k2]?.questionsAttempted ?? 0;
-      }
-    }
-    return { current, previous };
-  }, [historyData]);
+	const weeklyTotals = useMemo(() => {
+		const now = new Date();
+		let current = 0;
+		let previous = 0;
+		for (let i = 0; i < 7; i++) {
+			const d1 = new Date(now);
+			d1.setDate(now.getDate() - i);
+			const d2 = new Date(now);
+			d2.setDate(now.getDate() - 7 - i);
+			const k1 = d1.toISOString().split("T")[0];
+			const k2 = d2.toISOString().split("T")[0];
+			if (k1 && k2) {
+				current += historyData[k1]?.questionsAttempted ?? 0;
+				previous += historyData[k2]?.questionsAttempted ?? 0;
+			}
+		}
+		return { current, previous };
+	}, [historyData]);
 
-  const todayTotals = useMemo(() => {
-    const now = new Date();
-    const todayKey = now.toISOString().split("T")[0];
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    const yKey = yesterday.toISOString().split("T")[0];
-    if (!(todayKey && yKey)) {
-      return { today: 0, yesterday: 0 };
-    }
-    const today = historyData[todayKey]?.questionsAttempted ?? 0;
-    const y = historyData[yKey]?.questionsAttempted ?? 0;
-    return { today, yesterday: y };
-  }, [historyData]);
+	const todayTotals = useMemo(() => {
+		const now = new Date();
+		const todayKey = now.toISOString().split("T")[0];
+		const yesterday = new Date(now);
+		yesterday.setDate(now.getDate() - 1);
+		const yKey = yesterday.toISOString().split("T")[0];
+		if (!(todayKey && yKey)) {
+			return { today: 0, yesterday: 0 };
+		}
+		const today = historyData[todayKey]?.questionsAttempted ?? 0;
+		const y = historyData[yKey]?.questionsAttempted ?? 0;
+		return { today, yesterday: y };
+	}, [historyData]);
 
-  const monthTotals = useMemo(() => {
-    const now = new Date();
-    const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-    const startOfPrevMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
-    const endOfPrevMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0));
+	const monthTotals = useMemo(() => {
+		const now = new Date();
+		const startOfMonth = new Date(
+			Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+		);
+		const startOfPrevMonth = new Date(
+			Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1),
+		);
+		const endOfPrevMonth = new Date(
+			Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0),
+		);
 
-    let currentMonth = 0;
-    let previousMonth = 0;
+		let currentMonth = 0;
+		let previousMonth = 0;
 
-    for (
-      let d = new Date(startOfMonth);
-      d <= now;
-      d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1))
-    ) {
-      const key = new Date(d).toISOString().split("T")[0];
-      if (key) {
-        currentMonth += historyData[key]?.questionsAttempted ?? 0;
-      }
-    }
+		for (
+			let d = new Date(startOfMonth);
+			d <= now;
+			d = new Date(
+				Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1),
+			)
+		) {
+			const key = new Date(d).toISOString().split("T")[0];
+			if (key) {
+				currentMonth += historyData[key]?.questionsAttempted ?? 0;
+			}
+		}
 
-    for (
-      let d = new Date(startOfPrevMonth);
-      d <= endOfPrevMonth;
-      d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1))
-    ) {
-      const key = new Date(d).toISOString().split("T")[0];
-      if (key) {
-        previousMonth += historyData[key]?.questionsAttempted ?? 0;
-      }
-    }
-    return { currentMonth, previousMonth };
-  }, [historyData]);
+		for (
+			let d = new Date(startOfPrevMonth);
+			d <= endOfPrevMonth;
+			d = new Date(
+				Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1),
+			)
+		) {
+			const key = new Date(d).toISOString().split("T")[0];
+			if (key) {
+				previousMonth += historyData[key]?.questionsAttempted ?? 0;
+			}
+		}
+		return { currentMonth, previousMonth };
+	}, [historyData]);
 
-  const getDelta = (current: number, previous: number) => {
-    if (current === 0 && previous === 0) {
-      return 0;
-    }
-    if (previous === 0) {
-      return 100; // treat as full increase from zero
-    }
-    return ((current - previous) / previous) * 100;
-  };
+	const getDelta = (current: number, previous: number) => {
+		if (current === 0 && previous === 0) {
+			return 0;
+		}
+		if (previous === 0) {
+			return 100; // treat as full increase from zero
+		}
+		return ((current - previous) / previous) * 100;
+	};
 
-  const weeklyDelta = getDelta(weeklyTotals.current, weeklyTotals.previous);
-  const todayDelta = getDelta(todayTotals.today, todayTotals.yesterday);
-  const monthDelta = getDelta(monthTotals.currentMonth, monthTotals.previousMonth);
+	const weeklyDelta = getDelta(weeklyTotals.current, weeklyTotals.previous);
+	const todayDelta = getDelta(todayTotals.today, todayTotals.yesterday);
+	const monthDelta = getDelta(
+		monthTotals.currentMonth,
+		monthTotals.previousMonth,
+	);
 
-  const sharedTheme = {
-    foreColor: darkMode ? "#e5e7eb" : "#111827",
-  } as const;
+	const sharedTheme = {
+		foreColor: darkMode ? "#e5e7eb" : "#111827",
+	} as const;
 
-  const lineOptions = useMemo(
-    () => ({
-      chart: { type: "area", toolbar: { show: false }, foreColor: sharedTheme.foreColor },
-      dataLabels: { enabled: false },
-      stroke: { curve: "smooth", width: 3 },
-      fill: {
-        type: "gradient",
-        gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] },
-      },
-      xaxis: { categories: last7Days.map((d) => d.label) },
-      yaxis: { decimalsInFloat: 0 },
-      grid: { borderColor: darkMode ? "#374151" : "#e5e7eb" },
-      colors: [darkMode ? "#60a5fa" : "#2563eb"],
-      tooltip: { theme: darkMode ? "dark" : "light" },
-    }),
-    [darkMode, last7Days, sharedTheme.foreColor]
-  );
+	const lineOptions = useMemo(
+		() => ({
+			chart: {
+				type: "area",
+				toolbar: { show: false },
+				foreColor: sharedTheme.foreColor,
+			},
+			dataLabels: { enabled: false },
+			stroke: { curve: "smooth", width: 3 },
+			fill: {
+				type: "gradient",
+				gradient: {
+					shadeIntensity: 1,
+					opacityFrom: 0.4,
+					opacityTo: 0.05,
+					stops: [0, 90, 100],
+				},
+			},
+			xaxis: { categories: last7Days.map((d) => d.label) },
+			yaxis: { decimalsInFloat: 0 },
+			grid: { borderColor: darkMode ? "#374151" : "#e5e7eb" },
+			colors: [darkMode ? "#60a5fa" : "#2563eb"],
+			tooltip: { theme: darkMode ? "dark" : "light" },
+		}),
+		[darkMode, last7Days, sharedTheme.foreColor],
+	);
 
-  const lineSeries = useMemo(
-    () => [{ name: "Answered", data: last7Days.map((d) => d.value) }],
-    [last7Days]
-  );
+	const lineSeries = useMemo(
+		() => [{ name: "Answered", data: last7Days.map((d) => d.value) }],
+		[last7Days],
+	);
 
-  const gridData = useMemo(() => {
-    const today = new Date();
-    const endWeekday = today.getDay();
-    const rows = 7;
-    const cols = weeksCount;
-    const matrix: Array<Array<{ date: Date; key: string; value: number; isFuture: boolean }>> = [];
+	const gridData = useMemo(() => {
+		const today = new Date();
+		const endWeekday = today.getDay();
+		const rows = 7;
+		const cols = weeksCount;
+		const matrix: Array<
+			Array<{ date: Date; key: string; value: number; isFuture: boolean }>
+		> = [];
 
-    for (let r = 0; r < rows; r++) {
-      const row: Array<{ date: Date; key: string; value: number; isFuture: boolean }> = [];
-      for (let c = 0; c < cols; c++) {
-        const colShiftDays = (cols - 1 - c) * 7 + (endWeekday - r);
-        const cellDate = new Date(today);
-        cellDate.setDate(today.getDate() - colShiftDays);
-        const key = cellDate.toISOString().split("T")[0];
-        if (!key) {
-          continue;
-        }
-        const isFuture = colShiftDays < 0;
-        const value = isFuture ? 0 : (historyData[key]?.questionsAttempted ?? 0);
-        row.push({ date: cellDate, key, value, isFuture });
-      }
-      matrix.push(row);
-    }
-    return matrix;
-  }, [historyData, weeksCount]);
+		for (let r = 0; r < rows; r++) {
+			const row: Array<{
+				date: Date;
+				key: string;
+				value: number;
+				isFuture: boolean;
+			}> = [];
+			for (let c = 0; c < cols; c++) {
+				const colShiftDays = (cols - 1 - c) * 7 + (endWeekday - r);
+				const cellDate = new Date(today);
+				cellDate.setDate(today.getDate() - colShiftDays);
+				const key = cellDate.toISOString().split("T")[0];
+				if (!key) {
+					continue;
+				}
+				const isFuture = colShiftDays < 0;
+				const value = isFuture
+					? 0
+					: (historyData[key]?.questionsAttempted ?? 0);
+				row.push({ date: cellDate, key, value, isFuture });
+			}
+			matrix.push(row);
+		}
+		return matrix;
+	}, [historyData, weeksCount]);
 
-  const maxValueInGrid = useMemo(() => {
-    let max = 0;
-    for (const row of gridData) {
-      for (const cell of row) {
-        max = Math.max(max, cell.value);
-      }
-    }
-    return max;
-  }, [gridData]);
+	const maxValueInGrid = useMemo(() => {
+		let max = 0;
+		for (const row of gridData) {
+			for (const cell of row) {
+				max = Math.max(max, cell.value);
+			}
+		}
+		return max;
+	}, [gridData]);
 
-  const heatmapPalette = useMemo(
-    () => ({
-      empty: darkMode ? "#374151" : "#e5e7eb", // gray-700 vs gray-200
-      border: darkMode ? "#4b5563" : "#d1d5db", // gray-600 vs gray-300
-      levels: darkMode
-        ? // lighter shades for more questions in dark mode
-          ["#14532d", "#166534", "#22c55e", "#86efac"]
-        : // light mode retains existing scheme
-          ["#bbf7d0", "#86efac", "#22c55e", "#166534"],
-    }),
-    [darkMode]
-  );
+	const heatmapPalette = useMemo(
+		() => ({
+			empty: darkMode ? "#374151" : "#e5e7eb", // gray-700 vs gray-200
+			border: darkMode ? "#4b5563" : "#d1d5db", // gray-600 vs gray-300
+			levels: darkMode
+				? // lighter shades for more questions in dark mode
+					["#14532d", "#166534", "#22c55e", "#86efac"]
+				: // light mode retains existing scheme
+					["#bbf7d0", "#86efac", "#22c55e", "#166534"],
+		}),
+		[darkMode],
+	);
 
-  const getCellColor = (v: number) => {
-    if (v <= 0) {
-      return heatmapPalette.empty;
-    }
-    if (maxValueInGrid <= 1) {
-      return "#22c55e";
-    }
-    const level = Math.min(4, Math.ceil((v / maxValueInGrid) * 4));
-    return heatmapPalette.levels[level - 1] ?? "#22c55e";
-  };
+	const getCellColor = (v: number) => {
+		if (v <= 0) {
+			return heatmapPalette.empty;
+		}
+		if (maxValueInGrid <= 1) {
+			return "#22c55e";
+		}
+		const level = Math.min(4, Math.ceil((v / maxValueInGrid) * 4));
+		return heatmapPalette.levels[level - 1] ?? "#22c55e";
+	};
 
-  useEffect(() => {
-    const RO =
-      typeof ResizeObserver !== "undefined"
-        ? ResizeObserver
-        : typeof window !== "undefined" && "ResizeObserver" in window
-          ? window.ResizeObserver
-          : undefined;
-    if (wrapperRef.current && RO) {
-      const el = wrapperRef.current;
-      const ro = new RO((entries: ResizeObserverEntry[]) => {
-        for (const entry of entries) {
-          const cw = entry.contentRect?.width ?? el.clientWidth;
-          setContainerWidth(Math.max(0, cw));
-        }
-      });
-      ro.observe(el);
-      setContainerWidth(el.clientWidth);
+	useEffect(() => {
+		const RO =
+			typeof ResizeObserver !== "undefined"
+				? ResizeObserver
+				: typeof window !== "undefined" && "ResizeObserver" in window
+					? window.ResizeObserver
+					: undefined;
+		if (wrapperRef.current && RO) {
+			const el = wrapperRef.current;
+			const ro = new RO((entries: ResizeObserverEntry[]) => {
+				for (const entry of entries) {
+					const cw = entry.contentRect?.width ?? el.clientWidth;
+					setContainerWidth(Math.max(0, cw));
+				}
+			});
+			ro.observe(el);
+			setContainerWidth(el.clientWidth);
 
-      const cleanup1 = () => ro.disconnect();
+			const cleanup1 = () => ro.disconnect();
 
-      // also observe chart area height
-      if (chartAreaRef.current && RO) {
-        const ca = chartAreaRef.current;
-        const ro2 = new RO((entries2: ResizeObserverEntry[]) => {
-          for (const entry of entries2) {
-            const ch = entry.contentRect?.height ?? ca.clientHeight;
-            setChartAreaHeight(Math.max(0, ch));
-          }
-        });
-        ro2.observe(ca);
-        setChartAreaHeight(ca.clientHeight);
-        return () => {
-          cleanup1();
-          ro2.disconnect();
-        };
-      }
-      return cleanup1;
-    }
-    return undefined;
-  }, []);
+			// also observe chart area height
+			if (chartAreaRef.current && RO) {
+				const ca = chartAreaRef.current;
+				const ro2 = new RO((entries2: ResizeObserverEntry[]) => {
+					for (const entry of entries2) {
+						const ch = entry.contentRect?.height ?? ca.clientHeight;
+						setChartAreaHeight(Math.max(0, ch));
+					}
+				});
+				ro2.observe(ca);
+				setChartAreaHeight(ca.clientHeight);
+				return () => {
+					cleanup1();
+					ro2.disconnect();
+				};
+			}
+			return cleanup1;
+		}
+		return undefined;
+	}, []);
 
-  const chip = (
-    label: string,
-    delta: number,
-    Icon: typeof ArrowUpRight | typeof ArrowDownRight
-  ) => (
-    <div
-      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${darkMode ? "bg-gray-800/60 text-gray-100 border-gray-700" : "bg-white text-gray-900 border-gray-200"}`}
-    >
-      <Icon size={14} className={delta >= 0 ? "text-green-500" : "text-red-500"} />
-      <span>
-        {label} {Math.abs(delta).toFixed(1)}%
-      </span>
-    </div>
-  );
+	const chip = (
+		label: string,
+		delta: number,
+		Icon: typeof ArrowUpRight | typeof ArrowDownRight,
+	) => (
+		<div
+			className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${darkMode ? "bg-gray-800/60 text-gray-100 border-gray-700" : "bg-white text-gray-900 border-gray-200"}`}
+		>
+			<Icon
+				size={14}
+				className={delta >= 0 ? "text-green-500" : "text-red-500"}
+			/>
+			<span>
+				{label} {Math.abs(delta).toFixed(1)}%
+			</span>
+		</div>
+	);
 
-  return (
-    <div
-      className={`p-6 rounded-lg ${darkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"} flex flex-col h-[360px] md:h-[300px]`}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <h2 className={`text-xl font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>
-          Questions Answered
-        </h2>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setChartType("line")}
-            className={`px-2.5 py-1 rounded-md text-sm font-medium border ${chartType === "line" ? (darkMode ? "bg-blue-600 text-white border-blue-600" : "bg-blue-600 text-white border-blue-600") : darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-800 border-gray-200"}`}
-          >
-            Line
-          </button>
-          <button
-            type="button"
-            onClick={() => setChartType("heatmap")}
-            className={`px-2.5 py-1 rounded-md text-sm font-medium border ${chartType === "heatmap" ? (darkMode ? "bg-blue-600 text-white border-blue-600" : "bg-blue-600 text-white border-blue-600") : darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-800 border-gray-200"}`}
-          >
-            Heatmap
-          </button>
-        </div>
-      </div>
+	return (
+		<div
+			className={`p-6 rounded-lg ${darkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"} flex flex-col h-[360px] md:h-[300px]`}
+		>
+			<div className="flex items-center justify-between mb-2">
+				<h2
+					className={`text-xl font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}
+				>
+					Questions Answered
+				</h2>
+				<div className="flex items-center gap-2">
+					<button
+						type="button"
+						onClick={() => setChartType("line")}
+						className={`px-2.5 py-1 rounded-md text-sm font-medium border ${chartType === "line" ? (darkMode ? "bg-blue-600 text-white border-blue-600" : "bg-blue-600 text-white border-blue-600") : darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-800 border-gray-200"}`}
+					>
+						Line
+					</button>
+					<button
+						type="button"
+						onClick={() => setChartType("heatmap")}
+						className={`px-2.5 py-1 rounded-md text-sm font-medium border ${chartType === "heatmap" ? (darkMode ? "bg-blue-600 text-white border-blue-600" : "bg-blue-600 text-white border-blue-600") : darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-800 border-gray-200"}`}
+					>
+						Heatmap
+					</button>
+				</div>
+			</div>
 
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        {chip("Today", todayDelta, todayDelta >= 0 ? ArrowUpRight : ArrowDownRight)}
-        {chip("This week", weeklyDelta, weeklyDelta >= 0 ? ArrowUpRight : ArrowDownRight)}
-        {chip("This month", monthDelta, monthDelta >= 0 ? ArrowUpRight : ArrowDownRight)}
-      </div>
+			<div className="mb-2 flex flex-wrap items-center gap-2">
+				{chip(
+					"Today",
+					todayDelta,
+					todayDelta >= 0 ? ArrowUpRight : ArrowDownRight,
+				)}
+				{chip(
+					"This week",
+					weeklyDelta,
+					weeklyDelta >= 0 ? ArrowUpRight : ArrowDownRight,
+				)}
+				{chip(
+					"This month",
+					monthDelta,
+					monthDelta >= 0 ? ArrowUpRight : ArrowDownRight,
+				)}
+			</div>
 
-      <div className="w-full flex-1 min-h-0" ref={wrapperRef}>
-        <div
-          className={`w-full h-full ${chartType === "heatmap" ? "overflow-visible" : "overflow-hidden"}`}
-          ref={chartAreaRef}
-        >
-          {chartType === "line" ? (
-            <ReactApexChart
-              options={lineOptions}
-              series={lineSeries}
-              type="area"
-              height={"100%"}
-              width={"100%"}
-            />
-          ) : (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: `repeat(${weeksCount}, ${cellSizePx}px)`,
-                gridTemplateRows: `repeat(7, ${cellSizePx}px)`,
-                gap: `${gapPx}px`,
-                width: "100%",
-                height: "100%",
-                alignContent: "start",
-                justifyContent: "space-between",
-              }}
-            >
-              {gridData.flatMap((row, rIdx) =>
-                row.map((cell, cIdx) => {
-                  const tooltipAlignClass =
-                    cIdx >= weeksCount - 1
-                      ? "right-0 translate-x-0"
-                      : cIdx === 0
-                        ? "left-0 translate-x-0"
-                        : "left-1/2 -translate-x-1/2";
-                  const tooltipId = `${rIdx}-${cIdx}`;
-                  const isTooltipActive = activeTooltip === tooltipId;
+			<div className="w-full flex-1 min-h-0" ref={wrapperRef}>
+				<div
+					className={`w-full h-full ${chartType === "heatmap" ? "overflow-visible" : "overflow-hidden"}`}
+					ref={chartAreaRef}
+				>
+					{chartType === "line" ? (
+						<ReactApexChart
+							options={lineOptions}
+							series={lineSeries}
+							type="area"
+							height={"100%"}
+							width={"100%"}
+						/>
+					) : (
+						<div
+							style={{
+								display: "grid",
+								gridTemplateColumns: `repeat(${weeksCount}, ${cellSizePx}px)`,
+								gridTemplateRows: `repeat(7, ${cellSizePx}px)`,
+								gap: `${gapPx}px`,
+								width: "100%",
+								height: "100%",
+								alignContent: "start",
+								justifyContent: "space-between",
+							}}
+						>
+							{gridData.flatMap((row, rIdx) =>
+								row.map((cell, cIdx) => {
+									const tooltipAlignClass =
+										cIdx >= weeksCount - 1
+											? "right-0 translate-x-0"
+											: cIdx === 0
+												? "left-0 translate-x-0"
+												: "left-1/2 -translate-x-1/2";
+									const tooltipId = `${rIdx}-${cIdx}`;
+									const isTooltipActive = activeTooltip === tooltipId;
 
-                  return (
-                    <HeatmapCell
-                      key={tooltipId}
-                      cell={cell}
-                      cellSizePx={cellSizePx}
-                      darkMode={darkMode}
-                      getCellColor={getCellColor}
-                      heatmapPalette={heatmapPalette}
-                      tooltipAlignClass={tooltipAlignClass}
-                      tooltipId={tooltipId}
-                      isTooltipActive={isTooltipActive}
-                      setActiveTooltip={setActiveTooltip}
-                    />
-                  );
-                })
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+									return (
+										<HeatmapCell
+											key={tooltipId}
+											cell={cell}
+											cellSizePx={cellSizePx}
+											darkMode={darkMode}
+											getCellColor={getCellColor}
+											heatmapPalette={heatmapPalette}
+											tooltipAlignClass={tooltipAlignClass}
+											tooltipId={tooltipId}
+											isTooltipActive={isTooltipActive}
+											setActiveTooltip={setActiveTooltip}
+										/>
+									);
+								}),
+							)}
+						</div>
+					)}
+				</div>
+			</div>
+		</div>
+	);
 }

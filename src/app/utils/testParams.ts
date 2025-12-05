@@ -8,32 +8,32 @@ import SyncLocalStorage from "@/lib/database/localStorageReplacement";
  * Defines all parameters needed to configure a practice test
  */
 export type TestParams = {
-  /** Science Olympiad event name */
-  eventName: string;
-  /** Number of questions in the test */
-  questionCount: number;
-  /** Time limit in minutes */
-  timeLimit: number;
-  /** Array of difficulty levels */
-  difficulties: string[];
-  /** Question type configuration */
-  types: "multiple-choice" | "free-response" | "both";
-  /** Division (B, C, or any) */
-  division: "B" | "C" | "any";
-  /** Tournament name */
-  tournament: string;
-  /** Array of subtopics to include */
-  subtopics: string[];
-  /** Optional percentage of ID questions */
-  idPercentage?: number;
-  /** Optional minimum character length for quotes */
-  charLengthMin?: number;
-  /** Optional maximum character length for quotes */
-  charLengthMax?: number;
-  /** Optional flag for pure ID questions only */
-  pureIdOnly?: boolean;
-  /** Optional filter for Rocks and Minerals: 'rock' or 'mineral' */
-  rmTypeFilter?: "rock" | "mineral";
+	/** Science Olympiad event name */
+	eventName: string;
+	/** Number of questions in the test */
+	questionCount: number;
+	/** Time limit in minutes */
+	timeLimit: number;
+	/** Array of difficulty levels */
+	difficulties: string[];
+	/** Question type configuration */
+	types: "multiple-choice" | "free-response" | "both";
+	/** Division (B, C, or any) */
+	division: "B" | "C" | "any";
+	/** Tournament name */
+	tournament: string;
+	/** Array of subtopics to include */
+	subtopics: string[];
+	/** Optional percentage of ID questions */
+	idPercentage?: number;
+	/** Optional minimum character length for quotes */
+	charLengthMin?: number;
+	/** Optional maximum character length for quotes */
+	charLengthMax?: number;
+	/** Optional flag for pure ID questions only */
+	pureIdOnly?: boolean;
+	/** Optional filter for Rocks and Minerals: 'rock' or 'mineral' */
+	rmTypeFilter?: "rock" | "mineral";
 };
 
 /**
@@ -44,10 +44,10 @@ export type TestParams = {
  * @returns {string[]} Normalized array of non-empty strings
  */
 function normalizeArray(values: string[] | undefined): string[] {
-  if (!values || values.length === 0) {
-    return [];
-  }
-  return [...values].map((v) => (v || "").toString()).filter(Boolean);
+	if (!values || values.length === 0) {
+		return [];
+	}
+	return [...values].map((v) => (v || "").toString()).filter(Boolean);
 }
 
 /**
@@ -70,69 +70,78 @@ function normalizeArray(values: string[] | undefined): string[] {
  * });
  * ```
  */
-export function buildTestParams(eventName: string, settings: Settings): TestParams {
-  const normalizedQuestionCount = Math.max(1, Math.min(200, Number(settings.questionCount || 0)));
-  const normalizedTimeLimit = Math.max(1, Math.min(120, Number(settings.timeLimit || 0)));
-  const normalizedTypes = (["multiple-choice", "both", "free-response"] as const).includes(
-    settings.types as TestParams["types"]
-  )
-    ? (settings.types as TestParams["types"])
-    : "multiple-choice";
-  const normalizedDivision = (["B", "C", "any"] as const).includes(
-    settings.division as TestParams["division"]
-  )
-    ? (settings.division as TestParams["division"])
-    : "any";
-  const normalizedIdPct =
-    typeof settings.idPercentage === "number"
-      ? Math.max(0, Math.min(100, settings.idPercentage))
-      : undefined;
-  const normalizedCharLengthMin =
-    typeof settings.charLengthMin === "number"
-      ? Math.max(10, Math.min(200, settings.charLengthMin))
-      : undefined;
-  const normalizedCharLengthMax =
-    typeof settings.charLengthMax === "number"
-      ? Math.max(10, Math.min(200, settings.charLengthMax))
-      : undefined;
+export function buildTestParams(
+	eventName: string,
+	settings: Settings,
+): TestParams {
+	const normalizedQuestionCount = Math.max(
+		1,
+		Math.min(200, Number(settings.questionCount || 0)),
+	);
+	const normalizedTimeLimit = Math.max(
+		1,
+		Math.min(120, Number(settings.timeLimit || 0)),
+	);
+	const normalizedTypes = (
+		["multiple-choice", "both", "free-response"] as const
+	).includes(settings.types as TestParams["types"])
+		? (settings.types as TestParams["types"])
+		: "multiple-choice";
+	const normalizedDivision = (["B", "C", "any"] as const).includes(
+		settings.division as TestParams["division"],
+	)
+		? (settings.division as TestParams["division"])
+		: "any";
+	const normalizedIdPct =
+		typeof settings.idPercentage === "number"
+			? Math.max(0, Math.min(100, settings.idPercentage))
+			: undefined;
+	const normalizedCharLengthMin =
+		typeof settings.charLengthMin === "number"
+			? Math.max(10, Math.min(200, settings.charLengthMin))
+			: undefined;
+	const normalizedCharLengthMax =
+		typeof settings.charLengthMax === "number"
+			? Math.max(10, Math.min(200, settings.charLengthMax))
+			: undefined;
 
-  // Normalize rmTypeFilter for Rocks and Minerals
-  const normalizedRmTypeFilter =
-    settings.rmTypeFilter === "rock" || settings.rmTypeFilter === "mineral"
-      ? settings.rmTypeFilter
-      : undefined;
+	// Normalize rmTypeFilter for Rocks and Minerals
+	const normalizedRmTypeFilter =
+		settings.rmTypeFilter === "rock" || settings.rmTypeFilter === "mineral"
+			? settings.rmTypeFilter
+			: undefined;
 
-  const params = {
-    eventName,
-    questionCount: normalizedQuestionCount,
-    timeLimit: normalizedTimeLimit,
-    difficulties: normalizeArray(settings.difficulties),
-    types: normalizedTypes,
-    division: normalizedDivision,
-    tournament: settings.tournament || "any",
-    subtopics: normalizeArray(settings.subtopics),
-    idPercentage: normalizedIdPct,
-    charLengthMin: normalizedCharLengthMin,
-    charLengthMax: normalizedCharLengthMax,
-    pureIdOnly: settings.pureIdOnly,
-    rmTypeFilter: normalizedRmTypeFilter,
-  };
+	const params = {
+		eventName,
+		questionCount: normalizedQuestionCount,
+		timeLimit: normalizedTimeLimit,
+		difficulties: normalizeArray(settings.difficulties),
+		types: normalizedTypes,
+		division: normalizedDivision,
+		tournament: settings.tournament || "any",
+		subtopics: normalizeArray(settings.subtopics),
+		idPercentage: normalizedIdPct,
+		charLengthMin: normalizedCharLengthMin,
+		charLengthMax: normalizedCharLengthMax,
+		pureIdOnly: settings.pureIdOnly,
+		rmTypeFilter: normalizedRmTypeFilter,
+	};
 
-  return params;
+	return params;
 }
 
 export function saveTestParams(params: TestParams) {
-  try {
-    SyncLocalStorage.setItem("testParams", JSON.stringify(params));
-    SyncLocalStorage.removeItem("testQuestions");
-    SyncLocalStorage.removeItem("testUserAnswers");
-  } catch {
-    // Ignore localStorage errors
-  }
-  try {
-    const cookiePayload = encodeURIComponent(JSON.stringify(params));
-    document.cookie = `scio_test_params=${cookiePayload}; Path=/; Max-Age=600; SameSite=Lax`;
-  } catch {
-    // Ignore cookie errors
-  }
+	try {
+		SyncLocalStorage.setItem("testParams", JSON.stringify(params));
+		SyncLocalStorage.removeItem("testQuestions");
+		SyncLocalStorage.removeItem("testUserAnswers");
+	} catch {
+		// Ignore localStorage errors
+	}
+	try {
+		const cookiePayload = encodeURIComponent(JSON.stringify(params));
+		document.cookie = `scio_test_params=${cookiePayload}; Path=/; Max-Age=600; SameSite=Lax`;
+	} catch {
+		// Ignore cookie errors
+	}
 }

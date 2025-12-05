@@ -8,20 +8,22 @@ import { EventDocsClient } from "./EventDocsClient";
 export const revalidate = 3600;
 
 export function generateStaticParams() {
-  const slugs = getEventBySlug.allSlugs?.() || [];
-  return slugs.map((event) => ({ event }));
+	const slugs = getEventBySlug.allSlugs?.() || [];
+	return slugs.map((event) => ({ event }));
 }
 
-export default async function EventDocsPage({ params }: { params: Promise<{ event: string }> }) {
-  const { event } = await params;
-  const evt = getEventBySlug(event);
-  if (!evt) {
-    return notFound();
-  }
-  const md = await getAnyEventMarkdown(evt.slug);
-  const meta = getEventMeta(evt);
+export default async function EventDocsPage({
+	params,
+}: { params: Promise<{ event: string }> }) {
+	const { event } = await params;
+	const evt = getEventBySlug(event);
+	if (!evt) {
+		return notFound();
+	}
+	const md = await getAnyEventMarkdown(evt.slug);
+	const meta = getEventMeta(evt);
 
-  const toc = extractToc(md);
+	const toc = extractToc(md);
 
-  return <EventDocsClient evt={evt} md={md} meta={meta} toc={toc} />;
+	return <EventDocsClient evt={evt} md={md} meta={meta} toc={toc} />;
 }

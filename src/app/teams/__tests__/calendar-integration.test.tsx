@@ -12,13 +12,13 @@ const PREV_MONTH_REGEX = /December|January/;
 const DAY_NUMBER_REGEX = /^\d+$/;
 
 // Mock all the required modules
-vi.mock("@/app/contexts/themeContext", () => ({
+vi.mock("@/app/contexts/ThemeContext", () => ({
 	useTheme: () => ({
 		darkMode: false,
 	}),
 }));
 
-vi.mock("@/app/contexts/authContext", () => ({
+vi.mock("@/app/contexts/AuthContext", () => ({
 	useAuth: () => ({
 		user: {
 			id: "test-user-id",
@@ -336,7 +336,7 @@ describe("Calendar Integration Tests", () => {
 					slug: "test-team",
 					members: [],
 				},
-			];
+			] as any;
 
 			mockFetch
 				.mockResolvedValueOnce({
@@ -384,7 +384,7 @@ describe("Calendar Integration Tests", () => {
 					slug: "test-team",
 					members: [],
 				},
-			];
+			] as any;
 
 			render(
 				<TeamsLanding

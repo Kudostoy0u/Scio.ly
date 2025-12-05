@@ -8,8 +8,8 @@
 "use client";
 
 import NamePromptModal from "@/app/components/NamePromptModal";
-import { useAuth } from "@/app/contexts/authContext";
-import { useTheme } from "@/app/contexts/themeContext";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import { useInvalidateTeam, useTeamMembers } from "@/lib/hooks/useTeam";
 import type { TeamMember as TeamMemberV2 } from "@/lib/server/teams-v2";
 import type { TeamMember as StoreTeamMember } from "@/lib/stores/teams/types";

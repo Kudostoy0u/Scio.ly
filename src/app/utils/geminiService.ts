@@ -10,32 +10,32 @@ import api from "@/app/api";
  * Represents a Science Olympiad question with all metadata
  */
 export interface Question {
-  /** Optional question identifier */
-  id?: string;
-  /** Question text content */
-  question: string;
-  /** Optional answer choices for multiple choice questions */
-  options?: string[];
-  /** Correct answers (indices for MCQ, text for FRQ) */
-  answers: (number | string)[];
-  /** Question difficulty level (0-1) */
-  difficulty: number;
-  /** Tournament name */
-  tournament?: string;
-  /** Division (B or C) */
-  division?: string;
-  /** Subject/category */
-  subject?: string;
-  /** Single subtopic */
-  subtopic?: string;
-  /** Array of subtopics */
-  subtopics?: string[];
-  /** Science Olympiad event name */
-  event?: string;
-  /** Optional Cloudinary URL for ID questions (legacy) */
-  imageUrl?: string;
-  /** Optional CDN URL for ID questions (new) */
-  imageData?: string;
+	/** Optional question identifier */
+	id?: string;
+	/** Question text content */
+	question: string;
+	/** Optional answer choices for multiple choice questions */
+	options?: string[];
+	/** Correct answers (indices for MCQ, text for FRQ) */
+	answers: (number | string)[];
+	/** Question difficulty level (0-1) */
+	difficulty: number;
+	/** Tournament name */
+	tournament?: string;
+	/** Division (B or C) */
+	division?: string;
+	/** Subject/category */
+	subject?: string;
+	/** Single subtopic */
+	subtopic?: string;
+	/** Array of subtopics */
+	subtopics?: string[];
+	/** Science Olympiad event name */
+	event?: string;
+	/** Optional Cloudinary URL for ID questions (legacy) */
+	imageUrl?: string;
+	/** Optional CDN URL for ID questions (new) */
+	imageData?: string;
 }
 
 /**
@@ -43,14 +43,14 @@ export interface Question {
  * Contains AI-generated suggestions for improving a question
  */
 export interface EditSuggestion {
-  /** Suggested improved question text */
-  suggestedQuestion: string;
-  /** Optional suggested answer choices */
-  suggestedOptions?: string[];
-  /** Suggested correct answers */
-  suggestedAnswers: (number | string)[];
-  /** Optional suggested difficulty level */
-  suggestedDifficulty?: number;
+	/** Suggested improved question text */
+	suggestedQuestion: string;
+	/** Optional suggested answer choices */
+	suggestedOptions?: string[];
+	/** Suggested correct answers */
+	suggestedAnswers: (number | string)[];
+	/** Optional suggested difficulty level */
+	suggestedDifficulty?: number;
 }
 
 /**
@@ -58,139 +58,151 @@ export interface EditSuggestion {
  * Contains AI analysis of a reported question
  */
 export interface ReportAnalysis {
-  /** Category of the issue */
-  category: "accuracy" | "clarity" | "formatting" | "duplicate" | "inappropriate" | "other";
-  /** Severity level of the issue */
-  severity: "low" | "medium" | "high";
-  /** Array of specific issues found */
-  issues: string[];
-  /** Recommended action */
-  suggestedAction: "edit" | "remove";
-  /** AI reasoning for the analysis */
-  reasoning: string;
+	/** Category of the issue */
+	category:
+		| "accuracy"
+		| "clarity"
+		| "formatting"
+		| "duplicate"
+		| "inappropriate"
+		| "other";
+	/** Severity level of the issue */
+	severity: "low" | "medium" | "high";
+	/** Array of specific issues found */
+	issues: string[];
+	/** Recommended action */
+	suggestedAction: "edit" | "remove";
+	/** AI reasoning for the analysis */
+	reasoning: string;
 }
 
 class GeminiService {
-  async suggestQuestionEdit(question: Question, userReason?: string): Promise<EditSuggestion> {
-    try {
-      const requestBody: {
-        question: Question;
-        userReason?: string;
-      } = {
-        question,
-        userReason,
-      };
+	async suggestQuestionEdit(
+		question: Question,
+		userReason?: string,
+	): Promise<EditSuggestion> {
+		try {
+			const requestBody: {
+				question: Question;
+				userReason?: string;
+			} = {
+				question,
+				userReason,
+			};
 
-      if (question.imageData || question.imageUrl) {
-        requestBody.question = {
-          ...question,
-          imageData: question.imageData || question.imageUrl,
-        };
-      }
+			if (question.imageData || question.imageUrl) {
+				requestBody.question = {
+					...question,
+					imageData: question.imageData || question.imageUrl,
+				};
+			}
 
-      const response = await fetch(api.geminiSuggestEdit, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
+			const response = await fetch(api.geminiSuggestEdit, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(requestBody),
+			});
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
+			if (!response.ok) {
+				throw new Error(`API error: ${response.status}`);
+			}
 
-      const data = await response.json();
-      if (data.success && data.data) {
-        return data.data;
-      }
-      throw new Error("Invalid API response");
-    } catch (_error) {
-      return {
-        suggestedQuestion: question.question,
-        suggestedOptions: question.options,
-        suggestedAnswers: question.answers,
-        suggestedDifficulty: question.difficulty,
-      };
-    }
-  }
+			const data = await response.json();
+			if (data.success && data.data) {
+				return data.data;
+			}
+			throw new Error("Invalid API response");
+		} catch (_error) {
+			return {
+				suggestedQuestion: question.question,
+				suggestedOptions: question.options,
+				suggestedAnswers: question.answers,
+				suggestedDifficulty: question.difficulty,
+			};
+		}
+	}
 
-  async analyzeQuestionForReport(question: Question): Promise<ReportAnalysis> {
-    try {
-      const response = await fetch(api.geminiAnalyzeQuestion, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
-      });
+	async analyzeQuestionForReport(question: Question): Promise<ReportAnalysis> {
+		try {
+			const response = await fetch(api.geminiAnalyzeQuestion, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ question }),
+			});
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
+			if (!response.ok) {
+				throw new Error(`API error: ${response.status}`);
+			}
 
-      const data = await response.json();
-      if (data.success && data.data) {
-        return data.data;
-      }
-      throw new Error("Invalid API response");
-    } catch (_error) {
-      return {
-        category: "other",
-        severity: "low",
-        issues: ["Unable to analyze question at this time"],
-        suggestedAction: "edit",
-        reasoning: "Analysis failed. Please manually review the question.",
-      };
-    }
-  }
+			const data = await response.json();
+			if (data.success && data.data) {
+				return data.data;
+			}
+			throw new Error("Invalid API response");
+		} catch (_error) {
+			return {
+				category: "other",
+				severity: "low",
+				issues: ["Unable to analyze question at this time"],
+				suggestedAction: "edit",
+				reasoning: "Analysis failed. Please manually review the question.",
+			};
+		}
+	}
 
-  async improveReportReason(originalReason: string, analysis: ReportAnalysis): Promise<string> {
-    try {
-      const response = await fetch(api.geminiImproveReason, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ originalReason, analysis }),
-      });
+	async improveReportReason(
+		originalReason: string,
+		analysis: ReportAnalysis,
+	): Promise<string> {
+		try {
+			const response = await fetch(api.geminiImproveReason, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ originalReason, analysis }),
+			});
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
+			if (!response.ok) {
+				throw new Error(`API error: ${response.status}`);
+			}
 
-      const data = await response.json();
-      if (data.success && data.data && data.data.improvedReason) {
-        return data.data.improvedReason;
-      }
-      throw new Error("Invalid API response");
-    } catch (_error) {
-      return originalReason;
-    }
-  }
+			const data = await response.json();
+			if (data.success && data.data && data.data.improvedReason) {
+				return data.data.improvedReason;
+			}
+			throw new Error("Invalid API response");
+		} catch (_error) {
+			return originalReason;
+		}
+	}
 
-  async validateQuestionEdit(
-    original: Question,
-    edited: Question
-  ): Promise<{ isValid: boolean; issues: string[]; suggestions: string[] }> {
-    try {
-      const response = await fetch(api.geminiValidateEdit, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ original, edited }),
-      });
+	async validateQuestionEdit(
+		original: Question,
+		edited: Question,
+	): Promise<{ isValid: boolean; issues: string[]; suggestions: string[] }> {
+		try {
+			const response = await fetch(api.geminiValidateEdit, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ original, edited }),
+			});
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
+			if (!response.ok) {
+				throw new Error(`API error: ${response.status}`);
+			}
 
-      const data = await response.json();
-      if (data.success && data.data) {
-        return data.data;
-      }
-      throw new Error("Invalid API response");
-    } catch (_error) {
-      return {
-        isValid: true,
-        issues: ["Unable to validate edit at this time"],
-        suggestions: ["Please manually review the changes"],
-      };
-    }
-  }
+			const data = await response.json();
+			if (data.success && data.data) {
+				return data.data;
+			}
+			throw new Error("Invalid API response");
+		} catch (_error) {
+			return {
+				isValid: true,
+				issues: ["Unable to validate edit at this time"],
+				suggestions: ["Please manually review the changes"],
+			};
+		}
+	}
 }
 
 export const geminiService = new GeminiService();

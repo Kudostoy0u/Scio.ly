@@ -1,8 +1,8 @@
 import {
-  createErrorResponse,
-  createSuccessResponse,
-  logApiRequest,
-  logApiResponse,
+	createErrorResponse,
+	createSuccessResponse,
+	logApiRequest,
+	logApiResponse,
 } from "@/lib/api/utils";
 import { testConnection } from "@/lib/db";
 import { geminiService } from "@/lib/services/gemini";
@@ -16,31 +16,31 @@ import { geminiService } from "@/lib/services/gemini";
  * Health data interface for system status reporting
  */
 interface HealthData {
-  /** Overall system health status */
-  status: "healthy" | "unhealthy" | "error";
-  /** Timestamp of health check */
-  timestamp: string;
-  /** Service status information */
-  services: {
-    /** Database service status */
-    database: {
-      /** Database connection status */
-      status: "connected" | "disconnected";
-      /** Database provider name */
-      provider: string;
-    };
-    /** AI service status */
-    ai: {
-      /** AI service availability status */
-      status: "available" | "unavailable";
-      /** AI service provider name */
-      provider: string;
-    };
-  };
-  /** Application version */
-  version: string;
-  /** Environment name */
-  environment: string;
+	/** Overall system health status */
+	status: "healthy" | "unhealthy" | "error";
+	/** Timestamp of health check */
+	timestamp: string;
+	/** Service status information */
+	services: {
+		/** Database service status */
+		database: {
+			/** Database connection status */
+			status: "connected" | "disconnected";
+			/** Database provider name */
+			provider: string;
+		};
+		/** AI service status */
+		ai: {
+			/** AI service availability status */
+			status: "available" | "unavailable";
+			/** AI service provider name */
+			provider: string;
+		};
+	};
+	/** Application version */
+	version: string;
+	/** Environment name */
+	environment: string;
 }
 
 /**
@@ -56,33 +56,33 @@ interface HealthData {
  * ```
  */
 const performHealthCheck = async (): Promise<HealthData> => {
-  // Test database connectivity
-  const dbHealthy = await testConnection();
+	// Test database connectivity
+	const dbHealthy = await testConnection();
 
-  // Check AI service availability
-  const aiHealthy = geminiService.isAvailable();
+	// Check AI service availability
+	const aiHealthy = geminiService.isAvailable();
 
-  const healthData: HealthData = {
-    status: dbHealthy ? "healthy" : "unhealthy",
-    timestamp: new Date().toISOString(),
-    services: {
-      database: {
-        status: dbHealthy ? "connected" : "disconnected",
-        provider: "PostgreSQL",
-      },
-      ai: {
-        status: aiHealthy ? "available" : "unavailable",
-        provider: "Gemini 2.5 Flash Lite",
-      },
-    },
-    version: "2.0.0-typescript",
-    environment: process.env.NODE_ENV || "development",
-  };
+	const healthData: HealthData = {
+		status: dbHealthy ? "healthy" : "unhealthy",
+		timestamp: new Date().toISOString(),
+		services: {
+			database: {
+				status: dbHealthy ? "connected" : "disconnected",
+				provider: "PostgreSQL",
+			},
+			ai: {
+				status: aiHealthy ? "available" : "unavailable",
+				provider: "Gemini 2.5 Flash Lite",
+			},
+		},
+		version: "2.0.0-typescript",
+		environment: process.env.NODE_ENV || "development",
+	};
 
-  const overallHealthy = dbHealthy && aiHealthy;
-  healthData.status = overallHealthy ? "healthy" : "unhealthy";
+	const overallHealthy = dbHealthy && aiHealthy;
+	healthData.status = overallHealthy ? "healthy" : "unhealthy";
 
-  return healthData;
+	return healthData;
 };
 
 /**
@@ -99,20 +99,20 @@ const performHealthCheck = async (): Promise<HealthData> => {
  * ```
  */
 export async function GET() {
-  const startTime = Date.now();
-  logApiRequest("GET", "/api/health");
+	const startTime = Date.now();
+	logApiRequest("GET", "/api/health");
 
-  try {
-    const healthData = await performHealthCheck();
+	try {
+		const healthData = await performHealthCheck();
 
-    const statusCode = healthData.status === "healthy" ? 200 : 503;
-    const response = createSuccessResponse(healthData);
+		const statusCode = healthData.status === "healthy" ? 200 : 503;
+		const response = createSuccessResponse(healthData);
 
-    logApiResponse("GET", "/api/health", statusCode, Date.now() - startTime);
-    return response;
-  } catch (_error) {
-    const response = createErrorResponse("Health check failed", 500);
-    logApiResponse("GET", "/api/health", 500, Date.now() - startTime);
-    return response;
-  }
+		logApiResponse("GET", "/api/health", statusCode, Date.now() - startTime);
+		return response;
+	} catch (_error) {
+		const response = createErrorResponse("Health check failed", 500);
+		logApiResponse("GET", "/api/health", 500, Date.now() - startTime);
+		return response;
+	}
 }

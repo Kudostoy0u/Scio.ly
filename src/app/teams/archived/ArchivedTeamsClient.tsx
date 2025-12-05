@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/themeContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import TeamLayout from "@/app/teams/components/TeamLayout";
 import { motion } from "framer-motion";
 import { Archive, ArrowLeft, RefreshCw, Users } from "lucide-react";

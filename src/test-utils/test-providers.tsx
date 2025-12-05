@@ -1,27 +1,27 @@
-import { AuthProvider } from "@/app/contexts/authContext";
+import { AuthProvider } from "@/app/contexts/AuthContext";
 import { NotificationsProvider } from "@/app/contexts/notificationsContext";
-import { ThemeProvider } from "@/app/contexts/themeContext";
+import { ThemeProvider } from "@/app/contexts/ThemeContext";
 import type { User } from "@supabase/supabase-js";
 import type React from "react";
 
 interface TestProvidersProps {
-  children: React.ReactNode;
-  initialDarkMode?: boolean;
-  initialUser?: User | null;
+	children: React.ReactNode;
+	initialDarkMode?: boolean;
+	initialUser?: User | null;
 }
 
 export function TestProviders({
-  children,
-  initialDarkMode = false,
-  initialUser = null,
+	children,
+	initialDarkMode = false,
+	initialUser = null,
 }: TestProvidersProps) {
-  return (
-    <ThemeProvider initialDarkMode={initialDarkMode}>
-      <AuthProvider initialUser={initialUser}>
-        <NotificationsProvider>{children}</NotificationsProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  );
+	return (
+		<ThemeProvider initialDarkMode={initialDarkMode}>
+			<AuthProvider initialUser={initialUser}>
+				<NotificationsProvider>{children}</NotificationsProvider>
+			</AuthProvider>
+		</ThemeProvider>
+	);
 }
 
 // Removed unused exports: MockThemeProvider, MockAuthProvider

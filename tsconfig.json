@@ -53,8 +53,6 @@
 		".next",
 		"vitest.config.ts",
 		"vitest.setup.ts",
-		"src/**/*.test.ts",
-		"src/**/*.test.tsx",
 		"src/lib/db/generated/**",
 		"src/lib/db/generated/**/*",
 		"**/generated/**",

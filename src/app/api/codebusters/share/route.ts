@@ -4,185 +4,191 @@ import { and, eq, gt } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 
 interface TestParamsRaw {
-  eventName?: string;
-  encryptedQuotes?: unknown[];
-  quoteUuids?: string[];
-  testParams?: Record<string, unknown>;
-  timeRemainingSeconds?: number | null;
-  createdAtMs?: number;
+	eventName?: string;
+	encryptedQuotes?: unknown[];
+	quoteUuids?: string[];
+	testParams?: Record<string, unknown>;
+	timeRemainingSeconds?: number | null;
+	createdAtMs?: number;
 }
 
 interface ShareDataResult {
-  testParamsRaw: TestParamsRaw;
-  indices: unknown;
-  expiresAt: string;
+	testParamsRaw: TestParamsRaw;
+	indices: unknown;
+	expiresAt: string;
 }
 
 export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams;
-    const code = searchParams.get("code");
+	try {
+		const searchParams = request.nextUrl.searchParams;
+		const code = searchParams.get("code");
 
-    if (!code) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Missing share code",
-        },
-        { status: 400 }
-      );
-    }
+		if (!code) {
+			return NextResponse.json(
+				{
+					success: false,
+					error: "Missing share code",
+				},
+				{ status: 400 },
+			);
+		}
 
-    const result = await db
-      .select({
-        testParamsRaw: shareLinks.testParamsRaw,
-        indices: shareLinks.indices,
-        expiresAt: shareLinks.expiresAt,
-      })
-      .from(shareLinks)
-      .where(and(eq(shareLinks.code, code), gt(shareLinks.expiresAt, new Date().toISOString())));
+		const result = await db
+			.select({
+				testParamsRaw: shareLinks.testParamsRaw,
+				indices: shareLinks.indices,
+				expiresAt: shareLinks.expiresAt,
+			})
+			.from(shareLinks)
+			.where(
+				and(
+					eq(shareLinks.code, code),
+					gt(shareLinks.expiresAt, new Date().toISOString()),
+				),
+			);
 
-    if (result.length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Share code not found or expired",
-        },
-        { status: 404 }
-      );
-    }
+		if (result.length === 0) {
+			return NextResponse.json(
+				{
+					success: false,
+					error: "Share code not found or expired",
+				},
+				{ status: 404 },
+			);
+		}
 
-    const shareData = result[0] as ShareDataResult;
+		const shareData = result[0] as ShareDataResult;
 
-    try {
-      // testparamsraw is already a json object (jsonb column)
-      const testParamsRaw = shareData.testParamsRaw;
+		try {
+			// testparamsraw is already a json object (jsonb column)
+			const testParamsRaw = shareData.testParamsRaw;
 
-      if (!testParamsRaw) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "Invalid share data format",
-          },
-          { status: 500 }
-        );
-      }
+			if (!testParamsRaw) {
+				return NextResponse.json(
+					{
+						success: false,
+						error: "Invalid share data format",
+					},
+					{ status: 500 },
+				);
+			}
 
-      if (testParamsRaw.eventName !== "Codebusters") {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "This share code is not for a Codebusters test",
-          },
-          { status: 400 }
-        );
-      }
+			if (testParamsRaw.eventName !== "Codebusters") {
+				return NextResponse.json(
+					{
+						success: false,
+						error: "This share code is not for a Codebusters test",
+					},
+					{ status: 400 },
+				);
+			}
 
-      let shareDataComplete: Record<string, unknown> | null = null;
+			let shareDataComplete: Record<string, unknown> | null = null;
 
-      if (
-        shareData.indices &&
-        typeof shareData.indices === "object" &&
-        shareData.indices !== null
-      ) {
-        shareDataComplete = shareData.indices as Record<string, unknown>;
-      } else {
-        shareDataComplete = null;
-      }
+			if (
+				shareData.indices &&
+				typeof shareData.indices === "object" &&
+				shareData.indices !== null
+			) {
+				shareDataComplete = shareData.indices as Record<string, unknown>;
+			} else {
+				shareDataComplete = null;
+			}
 
-      const testParams = testParamsRaw.testParams || {};
+			const testParams = testParamsRaw.testParams || {};
 
-      if (
-        !shareDataComplete?.processedQuotes ||
-        (shareDataComplete.processedQuotes as unknown[]).length === 0
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "No complete share data found",
-          },
-          { status: 400 }
-        );
-      }
+			if (
+				!shareDataComplete?.processedQuotes ||
+				(shareDataComplete.processedQuotes as unknown[]).length === 0
+			) {
+				return NextResponse.json(
+					{
+						success: false,
+						error: "No complete share data found",
+					},
+					{ status: 400 },
+				);
+			}
 
-      const processedQuotes = shareDataComplete.processedQuotes as Array<{
-        author: string;
-        quote: string;
-        encrypted: string;
-        cipherType: string;
-        key?: string;
-        matrix?: number[][];
-        decryptionMatrix?: number[][];
-        portaKeyword?: string;
-        nihilistPolybiusKey?: string;
-        nihilistCipherKey?: string;
-        checkerboardRowKey?: string;
-        checkerboardColKey?: string;
-        checkerboardPolybiusKey?: string;
-        checkerboardUsesIj?: boolean;
-        checkerboardUsesIJ?: boolean;
-        blockSize?: number;
-        columnarKey?: string;
-        fractionationTable?: { [key: string]: string };
-        caesarShift?: number;
-        affineA?: number;
-        affineB?: number;
-        baconianBinaryType?: string;
-        cryptarithmData?: unknown;
-        difficulty: number;
-      }>;
+			const processedQuotes = shareDataComplete.processedQuotes as Array<{
+				author: string;
+				quote: string;
+				encrypted: string;
+				cipherType: string;
+				key?: string;
+				matrix?: number[][];
+				decryptionMatrix?: number[][];
+				portaKeyword?: string;
+				nihilistPolybiusKey?: string;
+				nihilistCipherKey?: string;
+				checkerboardRowKey?: string;
+				checkerboardColKey?: string;
+				checkerboardPolybiusKey?: string;
+				checkerboardUsesIj?: boolean;
+				checkerboardUsesIJ?: boolean;
+				blockSize?: number;
+				columnarKey?: string;
+				fractionationTable?: { [key: string]: string };
+				caesarShift?: number;
+				affineA?: number;
+				affineB?: number;
+				baconianBinaryType?: string;
+				cryptarithmData?: unknown;
+				difficulty: number;
+			}>;
 
-      const finalProcessedQuotes = processedQuotes.map((quote) => ({
-        author: quote.author,
-        quote: quote.quote,
-        encrypted: quote.encrypted,
-        cipherType: quote.cipherType,
-        key: quote.key,
-        matrix: quote.matrix,
-        decryptionMatrix: quote.decryptionMatrix,
-        portaKeyword: quote.portaKeyword,
-        nihilistPolybiusKey: quote.nihilistPolybiusKey,
-        nihilistCipherKey: quote.nihilistCipherKey,
-        checkerboardRowKey: quote.checkerboardRowKey,
-        checkerboardColKey: quote.checkerboardColKey,
-        checkerboardPolybiusKey: quote.checkerboardPolybiusKey,
-        checkerboardUsesIj: quote.checkerboardUsesIj ?? quote.checkerboardUsesIJ,
-        blockSize: quote.blockSize,
-        columnarKey: quote.columnarKey,
-        fractionationTable: quote.fractionationTable,
-        caesarShift: quote.caesarShift,
-        affineA: quote.affineA,
-        affineB: quote.affineB,
-        baconianBinaryType: quote.baconianBinaryType,
-        cryptarithmData: quote.cryptarithmData,
-        difficulty: quote.difficulty || Math.random() * 0.8 + 0.2,
-      }));
+			const finalProcessedQuotes = processedQuotes.map((quote) => ({
+				author: quote.author,
+				quote: quote.quote,
+				encrypted: quote.encrypted,
+				cipherType: quote.cipherType,
+				key: quote.key,
+				matrix: quote.matrix,
+				decryptionMatrix: quote.decryptionMatrix,
+				portaKeyword: quote.portaKeyword,
+				nihilistPolybiusKey: quote.nihilistPolybiusKey,
+				nihilistCipherKey: quote.nihilistCipherKey,
+				checkerboardRowKey: quote.checkerboardRowKey,
+				checkerboardColKey: quote.checkerboardColKey,
+				checkerboardPolybiusKey: quote.checkerboardPolybiusKey,
+				checkerboardUsesIj:
+					quote.checkerboardUsesIj ?? quote.checkerboardUsesIJ,
+				blockSize: quote.blockSize,
+				columnarKey: quote.columnarKey,
+				fractionationTable: quote.fractionationTable,
+				caesarShift: quote.caesarShift,
+				affineA: quote.affineA,
+				affineB: quote.affineB,
+				baconianBinaryType: quote.baconianBinaryType,
+				cryptarithmData: quote.cryptarithmData,
+				difficulty: quote.difficulty || Math.random() * 0.8 + 0.2,
+			}));
 
-      return NextResponse.json({
-        success: true,
-        data: {
-          quotes: finalProcessedQuotes,
-          testParams: testParams,
-          timeRemainingSeconds: testParamsRaw.timeRemainingSeconds,
-          createdAtMs: testParamsRaw.createdAtMs || Date.now(),
-        },
-      });
-    } catch (_error) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Failed to process share data",
-        },
-        { status: 500 }
-      );
-    }
-  } catch (_error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to retrieve share code",
-      },
-      { status: 500 }
-    );
-  }
+			return NextResponse.json({
+				success: true,
+				data: {
+					quotes: finalProcessedQuotes,
+					testParams: testParams,
+					timeRemainingSeconds: testParamsRaw.timeRemainingSeconds,
+					createdAtMs: testParamsRaw.createdAtMs || Date.now(),
+				},
+			});
+		} catch (_error) {
+			return NextResponse.json(
+				{
+					success: false,
+					error: "Failed to process share data",
+				},
+				{ status: 500 },
+			);
+		}
+	} catch (_error) {
+		return NextResponse.json(
+			{
+				success: false,
+				error: "Failed to retrieve share code",
+			},
+			{ status: 500 },
+		);
+	}
 }

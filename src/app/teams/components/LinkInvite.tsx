@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/themeContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import { AnimatePresence, motion } from "framer-motion";
 import { Send, User, X } from "lucide-react";
 import type React from "react";

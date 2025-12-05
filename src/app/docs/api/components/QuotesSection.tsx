@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/themeContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import Endpoint from "@/app/docs/api/components/Endpoint";
 import Example from "@/app/docs/api/components/Example";
 import Param from "@/app/docs/api/components/Param";
@@ -8,41 +8,60 @@ import { MessageSquare } from "lucide-react";
 import SectionHeader from "./SectionHeader";
 
 export default function QuotesSection() {
-  const { darkMode } = useTheme();
-  return (
-    <div id="quotes">
-      <SectionHeader
-        icon={<MessageSquare className="w-6 h-6" />}
-        title="Quotes Management"
-        id="quotes"
-      />
+	const { darkMode } = useTheme();
+	return (
+		<div id="quotes">
+			<SectionHeader
+				icon={<MessageSquare className="w-6 h-6" />}
+				title="Quotes Management"
+				id="quotes"
+			/>
 
-      <div className="space-y-6">
-        <Endpoint
-          method="GET"
-          url="/api/quotes"
-          description="Retrieve inspirational quotes with filtering options."
-          features={["Quotes"]}
-        >
-          <div className="space-y-4">
-            <div>
-              <h4 className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
-                Query Parameters
-              </h4>
-              <div className="space-y-2">
-                <Param name="language" type="string" description="Language filter (default: en)" />
-                <Param name="limit" type="integer" description="Maximum quotes to return" />
-                <Param name="charLengthMin" type="integer" description="Minimum character length" />
-                <Param name="charLengthMax" type="integer" description="Maximum character length" />
-              </div>
-            </div>
+			<div className="space-y-6">
+				<Endpoint
+					method="GET"
+					url="/api/quotes"
+					description="Retrieve inspirational quotes with filtering options."
+					features={["Quotes"]}
+				>
+					<div className="space-y-4">
+						<div>
+							<h4
+								className={`font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+							>
+								Query Parameters
+							</h4>
+							<div className="space-y-2">
+								<Param
+									name="language"
+									type="string"
+									description="Language filter (default: en)"
+								/>
+								<Param
+									name="limit"
+									type="integer"
+									description="Maximum quotes to return"
+								/>
+								<Param
+									name="charLengthMin"
+									type="integer"
+									description="Minimum character length"
+								/>
+								<Param
+									name="charLengthMax"
+									type="integer"
+									description="Maximum character length"
+								/>
+							</div>
+						</div>
 
-            <Example title="Request" variant="request">
-              GET /api/quotes?language=en&limit=5&charLengthMin=50&charLengthMax=200
-            </Example>
+						<Example title="Request" variant="request">
+							GET
+							/api/quotes?language=en&limit=5&charLengthMin=50&charLengthMax=200
+						</Example>
 
-            <Example title="Response" variant="response">
-              {`{
+						<Example title="Response" variant="response">
+							{`{
   "success": true,
   "data": {
     "quotes": [
@@ -51,10 +70,10 @@ export default function QuotesSection() {
     ]
   }
 }`}
-            </Example>
-          </div>
-        </Endpoint>
-      </div>
-    </div>
-  );
+						</Example>
+					</div>
+				</Endpoint>
+			</div>
+		</div>
+	);
 }

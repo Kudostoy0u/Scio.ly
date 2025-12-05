@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/themeContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import { ClipboardList, Home, UserPlus, Users } from "lucide-react";
 
 type TabName = "home" | "people" | "roster" | "assignments";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/contexts/themeContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import type { Question, QuestionPreviewStepProps } from "./assignmentTypes";

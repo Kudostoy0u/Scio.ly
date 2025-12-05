@@ -10,12 +10,12 @@
  * Represents a question extracted from user input
  */
 export interface ExtractedQuestion {
-  /** Question text content */
-  question: string;
-  /** Optional answer choices for multiple choice questions */
-  options: string[] | null;
-  /** Question type (multiple choice or free response) */
-  type: "mcq" | "frq";
+	/** Question text content */
+	question: string;
+	/** Optional answer choices for multiple choice questions */
+	options: string[] | null;
+	/** Question type (multiple choice or free response) */
+	type: "mcq" | "frq";
 }
 
 /**
@@ -23,8 +23,8 @@ export interface ExtractedQuestion {
  * Contains array of extracted questions
  */
 export interface ProcessedQuestions {
-  /** Array of extracted questions */
-  questions: ExtractedQuestion[];
+	/** Array of extracted questions */
+	questions: ExtractedQuestion[];
 }
 
 /**
@@ -32,24 +32,24 @@ export interface ProcessedQuestions {
  * Represents a question from the official database
  */
 export interface OfficialQuestion {
-  /** Unique question identifier */
-  id: string;
-  /** Question text content */
-  question: string;
-  /** Answer choices for multiple choice questions */
-  options: string[];
-  /** Correct answers */
-  answers: string[];
-  /** Tournament name */
-  tournament: string;
-  /** Division (B or C) */
-  division: string;
-  /** Science Olympiad event name */
-  event: string;
-  /** Array of subtopics */
-  subtopics: string[];
-  /** Question difficulty level */
-  difficulty: number | string;
+	/** Unique question identifier */
+	id: string;
+	/** Question text content */
+	question: string;
+	/** Answer choices for multiple choice questions */
+	options: string[];
+	/** Correct answers */
+	answers: string[];
+	/** Tournament name */
+	tournament: string;
+	/** Division (B or C) */
+	division: string;
+	/** Science Olympiad event name */
+	event: string;
+	/** Array of subtopics */
+	subtopics: string[];
+	/** Question difficulty level */
+	difficulty: number | string;
 }
 
 /**
@@ -57,14 +57,14 @@ export interface OfficialQuestion {
  * Represents a match between input and official questions
  */
 export interface PlagiarismMatch {
-  /** The input question that was matched */
-  inputQuestion: ExtractedQuestion;
-  /** The official question that was matched */
-  matchedQuestion: OfficialQuestion;
-  /** Similarity score (0-1) */
-  similarity: number;
-  /** Type of match (question text or options) */
-  matchType: "question" | "options";
+	/** The input question that was matched */
+	inputQuestion: ExtractedQuestion;
+	/** The official question that was matched */
+	matchedQuestion: OfficialQuestion;
+	/** Similarity score (0-1) */
+	similarity: number;
+	/** Type of match (question text or options) */
+	matchType: "question" | "options";
 }
 
 /**
@@ -72,22 +72,22 @@ export interface PlagiarismMatch {
  * Contains comprehensive plagiarism analysis for a question
  */
 export interface QuestionPlagiarismSummary {
-  /** The question being analyzed */
-  question: ExtractedQuestion;
-  /** Index of the question in the input */
-  questionIndex: number;
-  /** All matches found */
-  matches: PlagiarismMatch[];
-  /** High-risk matches (high similarity) */
-  highRiskMatches: PlagiarismMatch[];
-  /** Medium-risk matches (medium similarity) */
-  mediumRiskMatches: PlagiarismMatch[];
-  /** Low-risk matches (low similarity) */
-  lowRiskMatches: PlagiarismMatch[];
-  /** Total number of matches */
-  totalMatches: number;
-  /** Highest similarity score found */
-  highestSimilarity: number;
+	/** The question being analyzed */
+	question: ExtractedQuestion;
+	/** Index of the question in the input */
+	questionIndex: number;
+	/** All matches found */
+	matches: PlagiarismMatch[];
+	/** High-risk matches (high similarity) */
+	highRiskMatches: PlagiarismMatch[];
+	/** Medium-risk matches (medium similarity) */
+	mediumRiskMatches: PlagiarismMatch[];
+	/** Low-risk matches (low similarity) */
+	lowRiskMatches: PlagiarismMatch[];
+	/** Total number of matches */
+	totalMatches: number;
+	/** Highest similarity score found */
+	highestSimilarity: number;
 }
 
 /**
@@ -95,10 +95,10 @@ export interface QuestionPlagiarismSummary {
  * Props for plagiarism detection modal components
  */
 export interface ModalProps {
-  /** Whether the modal is open */
-  isOpen: boolean;
-  /** Function to close the modal */
-  onClose: () => void;
-  /** Plagiarism summary to display */
-  summary: QuestionPlagiarismSummary | null;
+	/** Whether the modal is open */
+	isOpen: boolean;
+	/** Function to close the modal */
+	onClose: () => void;
+	/** Plagiarism summary to display */
+	summary: QuestionPlagiarismSummary | null;
 }

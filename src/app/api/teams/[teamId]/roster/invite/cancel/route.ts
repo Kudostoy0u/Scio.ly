@@ -1,19 +1,19 @@
 import { dbPg } from "@/lib/db";
 import {
-  newTeamGroups,
-  newTeamMemberships,
-  newTeamUnits,
-  rosterLinkInvitations,
+	newTeamGroups,
+	newTeamMemberships,
+	newTeamUnits,
+	rosterLinkInvitations,
 } from "@/lib/db/schema/teams";
 import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
 import {
-  handleError,
-  handleForbiddenError,
-  handleNotFoundError,
-  handleUnauthorizedError,
-  handleValidationError,
-  validateEnvironment,
+	handleError,
+	handleForbiddenError,
+	handleNotFoundError,
+	handleUnauthorizedError,
+	handleValidationError,
+	validateEnvironment,
 } from "@/lib/utils/error-handler";
 import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
@@ -21,143 +21,148 @@ import { z } from "zod";
 
 // POST /api/teams/[teamId]/roster/invite/cancel - Cancel roster link invitation
 export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ teamId: string }> }
+	request: NextRequest,
+	{ params }: { params: Promise<{ teamId: string }> },
 ) {
-  try {
-    const envError = validateEnvironment();
-    if (envError) {
-      return envError;
-    }
+	try {
+		const envError = validateEnvironment();
+		if (envError) {
+			return envError;
+		}
 
-    const user = await getServerUser();
-    if (!user?.id) {
-      return handleUnauthorizedError();
-    }
+		const user = await getServerUser();
+		if (!user?.id) {
+			return handleUnauthorizedError();
+		}
 
-    const { teamId } = await params;
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch (_error) {
-      return handleValidationError(
-        new z.ZodError([
-          {
-            code: z.ZodIssueCode.custom,
-            message: "Invalid JSON in request body",
-            path: [],
-          },
-        ])
-      );
-    }
+		const { teamId } = await params;
+		let body: unknown;
+		try {
+			body = await request.json();
+		} catch (_error) {
+			return handleValidationError(
+				new z.ZodError([
+					{
+						code: z.ZodIssueCode.custom,
+						message: "Invalid JSON in request body",
+						path: [],
+					},
+				]),
+			);
+		}
 
-    // Validate request body
-    const CancelRosterInviteSchema = z.object({
-      subteamId: UUIDSchema,
-      studentName: z.string().min(1, "Student name is required"),
-    });
+		// Validate request body
+		const CancelRosterInviteSchema = z.object({
+			subteamId: UUIDSchema,
+			studentName: z.string().min(1, "Student name is required"),
+		});
 
-    let validatedBody: z.infer<typeof CancelRosterInviteSchema>;
-    try {
-      validatedBody = validateRequest(CancelRosterInviteSchema, body);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return handleValidationError(error);
-      }
-      return handleError(error, "POST /api/teams/[teamId]/roster/invite/cancel - validation");
-    }
+		let validatedBody: z.infer<typeof CancelRosterInviteSchema>;
+		try {
+			validatedBody = validateRequest(CancelRosterInviteSchema, body);
+		} catch (error) {
+			if (error instanceof z.ZodError) {
+				return handleValidationError(error);
+			}
+			return handleError(
+				error,
+				"POST /api/teams/[teamId]/roster/invite/cancel - validation",
+			);
+		}
 
-    const { subteamId, studentName } = validatedBody;
+		const { subteamId, studentName } = validatedBody;
 
-    // Resolve the slug to team group using Drizzle ORM
-    const [groupResult] = await dbPg
-      .select({ id: newTeamGroups.id })
-      .from(newTeamGroups)
-      .where(eq(newTeamGroups.slug, teamId))
-      .limit(1);
+		// Resolve the slug to team group using Drizzle ORM
+		const [groupResult] = await dbPg
+			.select({ id: newTeamGroups.id })
+			.from(newTeamGroups)
+			.where(eq(newTeamGroups.slug, teamId))
+			.limit(1);
 
-    if (!groupResult) {
-      return handleNotFoundError("Team group");
-    }
+		if (!groupResult) {
+			return handleNotFoundError("Team group");
+		}
 
-    const groupId = groupResult.id;
+		const groupId = groupResult.id;
 
-    // Check if user is a member of this team group using Drizzle ORM
-    const membershipResult = await dbPg
-      .select({ role: newTeamMemberships.role })
-      .from(newTeamMemberships)
-      .innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
-      .where(
-        and(
-          eq(newTeamMemberships.userId, user.id),
-          eq(newTeamUnits.groupId, groupId),
-          eq(newTeamMemberships.status, "active")
-        )
-      );
+		// Check if user is a member of this team group using Drizzle ORM
+		const membershipResult = await dbPg
+			.select({ role: newTeamMemberships.role })
+			.from(newTeamMemberships)
+			.innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+			.where(
+				and(
+					eq(newTeamMemberships.userId, user.id),
+					eq(newTeamUnits.groupId, groupId),
+					eq(newTeamMemberships.status, "active"),
+				),
+			);
 
-    if (membershipResult.length === 0) {
-      return handleForbiddenError("Not a team member");
-    }
+		if (membershipResult.length === 0) {
+			return handleForbiddenError("Not a team member");
+		}
 
-    // Check if user has captain or co-captain role in any team unit
-    const hasCaptainRole = membershipResult.some((membership) =>
-      ["captain", "co_captain"].includes(membership.role)
-    );
+		// Check if user has captain or co-captain role in any team unit
+		const hasCaptainRole = membershipResult.some((membership) =>
+			["captain", "co_captain"].includes(membership.role),
+		);
 
-    if (!hasCaptainRole) {
-      return handleForbiddenError("Only captains can cancel roster invitations");
-    }
+		if (!hasCaptainRole) {
+			return handleForbiddenError(
+				"Only captains can cancel roster invitations",
+			);
+		}
 
-    // Check if the subteam belongs to this group using Drizzle ORM
-    const [subteamResult] = await dbPg
-      .select({ id: newTeamUnits.id })
-      .from(newTeamUnits)
-      .where(
-        and(
-          eq(newTeamUnits.id, subteamId),
-          eq(newTeamUnits.groupId, groupId),
-          eq(newTeamUnits.status, "active")
-        )
-      )
-      .limit(1);
+		// Check if the subteam belongs to this group using Drizzle ORM
+		const [subteamResult] = await dbPg
+			.select({ id: newTeamUnits.id })
+			.from(newTeamUnits)
+			.where(
+				and(
+					eq(newTeamUnits.id, subteamId),
+					eq(newTeamUnits.groupId, groupId),
+					eq(newTeamUnits.status, "active"),
+				),
+			)
+			.limit(1);
 
-    if (!subteamResult) {
-      return handleNotFoundError("Subteam");
-    }
+		if (!subteamResult) {
+			return handleNotFoundError("Subteam");
+		}
 
-    // Find and cancel the pending roster link invitation using Drizzle ORM
-    const [invitationResult] = await dbPg
-      .select({ id: rosterLinkInvitations.id })
-      .from(rosterLinkInvitations)
-      .where(
-        and(
-          eq(rosterLinkInvitations.teamId, subteamId),
-          eq(rosterLinkInvitations.studentName, studentName),
-          eq(rosterLinkInvitations.status, "pending")
-        )
-      )
-      .limit(1);
+		// Find and cancel the pending roster link invitation using Drizzle ORM
+		const [invitationResult] = await dbPg
+			.select({ id: rosterLinkInvitations.id })
+			.from(rosterLinkInvitations)
+			.where(
+				and(
+					eq(rosterLinkInvitations.teamId, subteamId),
+					eq(rosterLinkInvitations.studentName, studentName),
+					eq(rosterLinkInvitations.status, "pending"),
+				),
+			)
+			.limit(1);
 
-    if (!invitationResult) {
-      return handleNotFoundError("No pending invitation found");
-    }
+		if (!invitationResult) {
+			return handleNotFoundError("No pending invitation found");
+		}
 
-    // Cancel the invitation using Drizzle ORM
-    await dbPg
-      .update(rosterLinkInvitations)
-      .set({ status: "declined" })
-      .where(
-        and(
-          eq(rosterLinkInvitations.teamId, subteamId),
-          eq(rosterLinkInvitations.studentName, studentName),
-          eq(rosterLinkInvitations.status, "pending")
-        )
-      );
+		// Cancel the invitation using Drizzle ORM
+		await dbPg
+			.update(rosterLinkInvitations)
+			.set({ status: "declined" })
+			.where(
+				and(
+					eq(rosterLinkInvitations.teamId, subteamId),
+					eq(rosterLinkInvitations.studentName, studentName),
+					eq(rosterLinkInvitations.status, "pending"),
+				),
+			);
 
-    return NextResponse.json({
-      message: "Roster link invitation cancelled successfully",
-    });
-  } catch (error) {
-    return handleError(error, "POST /api/teams/[teamId]/roster/invite/cancel");
-  }
+		return NextResponse.json({
+			message: "Roster link invitation cancelled successfully",
+		});
+	} catch (error) {
+		return handleError(error, "POST /api/teams/[teamId]/roster/invite/cancel");
+	}
 }

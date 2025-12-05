@@ -1,29 +1,6 @@
 {
 	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
 	"files": {
-		"include": [
-			"src/app/teams/**",
-			"src/lib/**",
-			"tsconfig.json",
-			"package.json",
-			"biome.json"
-		],
-		"ignore": [
-			".vercel/**",
-			".next/**",
-			".claude/**",
-			".vscode/**",
-			"public/**",
-			"drizzle/**",
-			"**/generated/**",
-			"**/schema.ts",
-			"**/core.ts",
-			"src/lib/db/generated/**",
-			"src/lib/db/schema/core.ts",
-			"knip.json",
-			"src/lib/trpc/routers/teams/operations/**",
-			"src/lib/actions/teams.ts",
-			"src/lib/db/dexie-teams.ts"
-		]
+		"include": ["src/**"]
 	}
 }

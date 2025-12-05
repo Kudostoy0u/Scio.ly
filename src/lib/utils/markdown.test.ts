@@ -24,10 +24,10 @@ describe("extractToc", () => {
 			"Section One",
 			"Sub Three",
 		]);
-		expect(toc[0].level).toBe(1);
-		expect(toc[1].level).toBe(2);
-		expect(toc[2].level).toBe(3);
-		expect(toc[1].id).toBeTypeOf("string");
+		expect(toc[0]?.level).toBe(1);
+		expect(toc[1]?.level).toBe(2);
+		expect(toc[2]?.level).toBe(3);
+		expect(toc[1]?.id).toBeTypeOf("string");
 	});
 
 	it("handles null input", () => {

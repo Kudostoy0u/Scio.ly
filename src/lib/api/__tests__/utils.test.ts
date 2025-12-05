@@ -259,8 +259,7 @@ describe("API Utilities", () => {
 			const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {
 				// Intentionally empty - suppress console.log for this test
 			});
-			const originalEnv = process.env.NODE_ENV;
-			process.env.NODE_ENV = "development";
+			vi.stubEnv("NODE_ENV", "development");
 
 			logApiRequest("GET", "/api/users", { id: "123" });
 
@@ -269,7 +268,6 @@ describe("API Utilities", () => {
 				'- Params: {"id":"123"}',
 			);
 
-			process.env.NODE_ENV = originalEnv;
 			consoleSpy.mockRestore();
 		});
 
@@ -277,8 +275,7 @@ describe("API Utilities", () => {
 			const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {
 				// Intentionally empty - suppress console.log for this test
 			});
-			const originalEnv = process.env.NODE_ENV;
-			process.env.NODE_ENV = "development";
+			vi.stubEnv("NODE_ENV", "development");
 
 			logApiResponse("GET", "/api/users", 200, 150);
 
@@ -286,7 +283,6 @@ describe("API Utilities", () => {
 				"[API] GET /api/users - 200 (150ms)",
 			);
 
-			process.env.NODE_ENV = originalEnv;
 			consoleSpy.mockRestore();
 		});
 	});

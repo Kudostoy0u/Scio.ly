@@ -3,279 +3,304 @@ import logger from "@/lib/utils/logger";
 import type React from "react";
 
 import Header from "@/app/components/Header";
-import { useTheme } from "@/app/contexts/themeContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import { handleContactSubmission } from "@/app/utils/contactUtils";
 import { Mail, MessageCircle, Send, User } from "lucide-react";
 import { useState } from "react";
 import { toast } from "react-toastify";
 
 interface ContactFormData {
-  name: string;
-  email: string;
-  topic: string;
-  message: string;
+	name: string;
+	email: string;
+	topic: string;
+	message: string;
 }
 
 // Helper function to validate form data
 function validateFormData(formData: ContactFormData): boolean {
-  return !!(
-    formData.name.trim() &&
-    formData.email.trim() &&
-    formData.topic.trim() &&
-    formData.message.trim()
-  );
+	return !!(
+		formData.name.trim() &&
+		formData.email.trim() &&
+		formData.topic.trim() &&
+		formData.message.trim()
+	);
 }
 
 // Helper function to handle form submission
 async function submitContactForm(
-  formData: ContactFormData,
-  setFormData: React.Dispatch<React.SetStateAction<ContactFormData>>,
-  setLoading: React.Dispatch<React.SetStateAction<boolean>>
+	formData: ContactFormData,
+	setFormData: React.Dispatch<React.SetStateAction<ContactFormData>>,
+	setLoading: React.Dispatch<React.SetStateAction<boolean>>,
 ) {
-  if (!validateFormData(formData)) {
-    toast.error("Please fill in all fields");
-    return;
-  }
-  setLoading(true);
-  try {
-    const result = await handleContactSubmission(formData);
-    if (result.success) {
-      toast.success(result.message);
-      setFormData({ name: "", email: "", topic: "", message: "" });
-    } else {
-      toast.error(result.message);
-    }
-  } catch (error) {
-    logger.error("Contact form error:", error);
-    toast.error("An unexpected error occurred. Please try again.");
-  } finally {
-    setLoading(false);
-  }
+	if (!validateFormData(formData)) {
+		toast.error("Please fill in all fields");
+		return;
+	}
+	setLoading(true);
+	try {
+		const result = await handleContactSubmission(formData);
+		if (result.success) {
+			toast.success(result.message);
+			setFormData({ name: "", email: "", topic: "", message: "" });
+		} else {
+			toast.error(result.message);
+		}
+	} catch (error) {
+		logger.error("Contact form error:", error);
+		toast.error("An unexpected error occurred. Please try again.");
+	} finally {
+		setLoading(false);
+	}
 }
 
 // Helper function to render form input field
 function renderFormInput(
-  label: string,
-  icon: React.ReactNode,
-  type: string,
-  value: string,
-  onChange: (value: string) => void,
-  placeholder: string,
-  darkMode: boolean,
-  required = false
+	label: string,
+	icon: React.ReactNode,
+	type: string,
+	value: string,
+	onChange: (value: string) => void,
+	placeholder: string,
+	darkMode: boolean,
+	required = false,
 ) {
-  const inputId = `contact-${label.toLowerCase().replace(/\s+/g, "-")}`;
-  return (
-    <div>
-      <label
-        htmlFor={inputId}
-        className={`flex items-center gap-2 text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-      >
-        {icon}
-        {label}
-      </label>
-      <input
-        id={inputId}
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
-        required={required}
-      />
-    </div>
-  );
+	const inputId = `contact-${label.toLowerCase().replace(/\s+/g, "-")}`;
+	return (
+		<div>
+			<label
+				htmlFor={inputId}
+				className={`flex items-center gap-2 text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+			>
+				{icon}
+				{label}
+			</label>
+			<input
+				id={inputId}
+				type={type}
+				value={value}
+				onChange={(e) => onChange(e.target.value)}
+				placeholder={placeholder}
+				className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
+				required={required}
+			/>
+		</div>
+	);
 }
 
 // Helper function to render contact form
 function renderContactForm(
-  formData: ContactFormData,
-  handleInputChange: (field: keyof ContactFormData, value: string) => void,
-  handleSubmit: (e: React.FormEvent) => void,
-  loading: boolean,
-  darkMode: boolean
+	formData: ContactFormData,
+	handleInputChange: (field: keyof ContactFormData, value: string) => void,
+	handleSubmit: (e: React.FormEvent) => void,
+	loading: boolean,
+	darkMode: boolean,
 ) {
-  return (
-    <div
-      className={`${darkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"} rounded-lg p-6`}
-    >
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {renderFormInput(
-          "Name",
-          <User className="w-4 h-4" />,
-          "text",
-          formData.name,
-          (value) => handleInputChange("name", value),
-          "Your full name",
-          darkMode,
-          true
-        )}
-        {renderFormInput(
-          "Email",
-          <Mail className="w-4 h-4" />,
-          "email",
-          formData.email,
-          (value) => handleInputChange("email", value),
-          "your.email@example.com",
-          darkMode,
-          true
-        )}
-        <div>
-          <label
-            htmlFor="contact-topic"
-            className={`flex items-center gap-2 text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-          >
-            <MessageCircle className="w-4 h-4" />
-            Topic
-          </label>
-          <select
-            id="contact-topic"
-            value={formData.topic}
-            onChange={(e) => handleInputChange("topic", e.target.value)}
-            className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`}
-            required={true}
-          >
-            <option value="">Select a topic</option>
-            <option value="Bug Report">Bug Report</option>
-            <option value="Feature Request">Feature Request</option>
-            <option value="Question Content">Question Content</option>
-            <option value="Account Issues">Account Issues</option>
-            <option value="General Inquiry">General Inquiry</option>
-            <option value="Partnership">Partnership</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div>
-          <label
-            htmlFor="contact-message"
-            className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-          >
-            Message
-          </label>
-          <textarea
-            id="contact-message"
-            value={formData.message}
-            onChange={(e) => handleInputChange("message", e.target.value)}
-            placeholder="Please describe your inquiry in detail..."
-            rows={6}
-            className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
-            required={true}
-          />
-          <p className={`text-xs mt-1 ${darkMode ? "text-gray-500" : "text-gray-400"}`}>
-            Please be as detailed as possible to help us assist you better
-          </p>
-        </div>
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-lg transition-colors duration-200"
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                Sending...
-              </>
-            ) : (
-              <>
-                <Send className="w-4 h-4" />
-                Send Message
-              </>
-            )}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
+	return (
+		<div
+			className={`${darkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"} rounded-lg p-6`}
+		>
+			<form onSubmit={handleSubmit} className="space-y-6">
+				{renderFormInput(
+					"Name",
+					<User className="w-4 h-4" />,
+					"text",
+					formData.name,
+					(value) => handleInputChange("name", value),
+					"Your full name",
+					darkMode,
+					true,
+				)}
+				{renderFormInput(
+					"Email",
+					<Mail className="w-4 h-4" />,
+					"email",
+					formData.email,
+					(value) => handleInputChange("email", value),
+					"your.email@example.com",
+					darkMode,
+					true,
+				)}
+				<div>
+					<label
+						htmlFor="contact-topic"
+						className={`flex items-center gap-2 text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+					>
+						<MessageCircle className="w-4 h-4" />
+						Topic
+					</label>
+					<select
+						id="contact-topic"
+						value={formData.topic}
+						onChange={(e) => handleInputChange("topic", e.target.value)}
+						className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`}
+						required={true}
+					>
+						<option value="">Select a topic</option>
+						<option value="Bug Report">Bug Report</option>
+						<option value="Feature Request">Feature Request</option>
+						<option value="Question Content">Question Content</option>
+						<option value="Account Issues">Account Issues</option>
+						<option value="General Inquiry">General Inquiry</option>
+						<option value="Partnership">Partnership</option>
+						<option value="Other">Other</option>
+					</select>
+				</div>
+				<div>
+					<label
+						htmlFor="contact-message"
+						className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+					>
+						Message
+					</label>
+					<textarea
+						id="contact-message"
+						value={formData.message}
+						onChange={(e) => handleInputChange("message", e.target.value)}
+						placeholder="Please describe your inquiry in detail..."
+						rows={6}
+						className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
+						required={true}
+					/>
+					<p
+						className={`text-xs mt-1 ${darkMode ? "text-gray-500" : "text-gray-400"}`}
+					>
+						Please be as detailed as possible to help us assist you better
+					</p>
+				</div>
+				<div className="flex justify-end">
+					<button
+						type="submit"
+						disabled={loading}
+						className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-lg transition-colors duration-200"
+					>
+						{loading ? (
+							<>
+								<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+								Sending...
+							</>
+						) : (
+							<>
+								<Send className="w-4 h-4" />
+								Send Message
+							</>
+						)}
+					</button>
+				</div>
+			</form>
+		</div>
+	);
 }
 
 // Helper function to render other ways to reach us section
 function renderOtherWaysToReachUs(darkMode: boolean) {
-  return (
-    <div
-      className={`${darkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"} mt-6 rounded-lg p-6`}
-    >
-      <h3 className={`text-lg font-medium mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}>
-        Other Ways to Reach Us
-      </h3>
-      <div className="space-y-3">
-        <div className="flex items-center gap-3">
-          <Mail className={`${darkMode ? "text-gray-400" : "text-gray-600"} w-5 h-5`} />
-          <div>
-            <p className={`text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-              <a
-                href="mailto:team.scio.ly@gmail.com"
-                className={`underline transition-colors ${darkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-700"}`}
-              >
-                Email Support
-              </a>
-            </p>
-            <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-              We typically respond within 24 hours
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <MessageCircle className={`${darkMode ? "text-gray-400" : "text-gray-600"} w-5 h-5`} />
-          <div>
-            <p className={`text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-              <a
-                href="https://discord.gg/hXSkrD33gu"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`underline transition-colors ${darkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-700"}`}
-              >
-                Community Support
-              </a>
-            </p>
-            <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-              Join our Discord server for community help and discussions
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+	return (
+		<div
+			className={`${darkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"} mt-6 rounded-lg p-6`}
+		>
+			<h3
+				className={`text-lg font-medium mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}
+			>
+				Other Ways to Reach Us
+			</h3>
+			<div className="space-y-3">
+				<div className="flex items-center gap-3">
+					<Mail
+						className={`${darkMode ? "text-gray-400" : "text-gray-600"} w-5 h-5`}
+					/>
+					<div>
+						<p
+							className={`text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+						>
+							<a
+								href="mailto:team.scio.ly@gmail.com"
+								className={`underline transition-colors ${darkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-700"}`}
+							>
+								Email Support
+							</a>
+						</p>
+						<p
+							className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+						>
+							We typically respond within 24 hours
+						</p>
+					</div>
+				</div>
+				<div className="flex items-center gap-3">
+					<MessageCircle
+						className={`${darkMode ? "text-gray-400" : "text-gray-600"} w-5 h-5`}
+					/>
+					<div>
+						<p
+							className={`text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+						>
+							<a
+								href="https://discord.gg/hXSkrD33gu"
+								target="_blank"
+								rel="noopener noreferrer"
+								className={`underline transition-colors ${darkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-700"}`}
+							>
+								Community Support
+							</a>
+						</p>
+						<p
+							className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+						>
+							Join our Discord server for community help and discussions
+						</p>
+					</div>
+				</div>
+			</div>
+		</div>
+	);
 }
 
 export default function ContactClientPage() {
-  const { darkMode } = useTheme();
-  const [formData, setFormData] = useState<ContactFormData>({
-    name: "",
-    email: "",
-    topic: "",
-    message: "",
-  });
-  const [loading, setLoading] = useState(false);
+	const { darkMode } = useTheme();
+	const [formData, setFormData] = useState<ContactFormData>({
+		name: "",
+		email: "",
+		topic: "",
+		message: "",
+	});
+	const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await submitContactForm(formData, setFormData, setLoading);
-  };
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		await submitContactForm(formData, setFormData, setLoading);
+	};
 
-  const handleInputChange = (field: keyof ContactFormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+	const handleInputChange = (field: keyof ContactFormData, value: string) => {
+		setFormData((prev) => ({ ...prev, [field]: value }));
+	};
 
-  return (
-    <div className={`min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
-      <Header />
-      {/* Global ToastContainer handles notifications */}
-      <div className="pt-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="mb-8">
-            <h1 className={`text-3xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
-              Contact Us
-            </h1>
-            <p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-              Have a question, suggestion, or need help? We&apos;d love to hear from you!
-            </p>
-          </div>
-          {renderContactForm(formData, handleInputChange, handleSubmit, loading, darkMode)}
-          {renderOtherWaysToReachUs(darkMode)}
-        </div>
-      </div>
-      <div className="pb-8" />
-    </div>
-  );
+	return (
+		<div className={`min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
+			<Header />
+			{/* Global ToastContainer handles notifications */}
+			<div className="pt-20 px-4 sm:px-6 lg:px-8">
+				<div className="max-w-2xl mx-auto">
+					<div className="mb-8">
+						<h1
+							className={`text-3xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}
+						>
+							Contact Us
+						</h1>
+						<p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+							Have a question, suggestion, or need help? We&apos;d love to hear
+							from you!
+						</p>
+					</div>
+					{renderContactForm(
+						formData,
+						handleInputChange,
+						handleSubmit,
+						loading,
+						darkMode,
+					)}
+					{renderOtherWaysToReachUs(darkMode)}
+				</div>
+			</div>
+			<div className="pb-8" />
+		</div>
+	);
 }

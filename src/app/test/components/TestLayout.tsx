@@ -2,20 +2,24 @@
 import type React from "react";
 
 interface TestLayoutProps {
-  children: React.ReactNode;
-  darkMode: boolean;
+	children: React.ReactNode;
+	darkMode: boolean;
 }
 
 export default function TestLayout({ children, darkMode }: TestLayoutProps) {
-  return (
-    <div className="relative min-h-screen">
-      {/* Background */}
-      <div className={`absolute inset-0 ${darkMode ? "bg-gray-900" : "bg-gray-50"}`} />
+	return (
+		<div className="relative min-h-screen">
+			{/* Background */}
+			<div
+				className={`absolute inset-0 ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}
+			/>
 
-      {/* Global scrollbar theme is centralized in globals.css */}
+			{/* Global scrollbar theme is centralized in globals.css */}
 
-      {/* Page Content */}
-      <div className="relative flex flex-col items-center p-3 md:p-6">{children}</div>
-    </div>
-  );
+			{/* Page Content */}
+			<div className="relative flex flex-col items-center p-3 md:p-6">
+				{children}
+			</div>
+		</div>
+	);
 }

@@ -1,110 +1,110 @@
 export interface EloHistoryEntry {
-  d: string; // date
-  t: number; // tournament id
-  p: number; // place
-  e: number; // elo
-  l: string; // duosmiumlink
+	d: string; // date
+	t: number; // tournament id
+	p: number; // place
+	e: number; // elo
+	l: string; // duosmiumlink
 }
 
 export interface EloEvent {
-  rating: number;
-  history: EloHistoryEntry[];
+	rating: number;
+	history: EloHistoryEntry[];
 }
 
 export interface EloSeason {
-  events: Record<string, EloEvent>;
+	events: Record<string, EloEvent>;
 }
 
 export interface EloSchool {
-  seasons: Record<string, EloSeason>;
-  meta: {
-    games: number;
-    events: number;
-  };
+	seasons: Record<string, EloSeason>;
+	meta: {
+		games: number;
+		events: number;
+	};
 }
 
 export interface EloData {
-  [stateCode: string]: {
-    [schoolName: string]: EloSchool;
-  };
+	[stateCode: string]: {
+		[schoolName: string]: EloSchool;
+	};
 }
 
 export type ChartType = "overall" | "event";
 
 export type OverallSeasonData = {
-  [schoolName: string]: {
-    [season: string]: number;
-  };
+	[schoolName: string]: {
+		[season: string]: number;
+	};
 };
 
 export type OverallTournamentData = {
-  [schoolName: string]: Array<{
-    date: string;
-    tournament: string;
-    elo: number;
-    place: number;
-    season?: string;
-    duosmiumLink: string;
-  }>;
+	[schoolName: string]: Array<{
+		date: string;
+		tournament: string;
+		elo: number;
+		place: number;
+		season?: string;
+		duosmiumLink: string;
+	}>;
 };
 
 export type EventSeasonData = {
-  [schoolName: string]: {
-    [event: string]: {
-      [season: string]: number;
-    };
-  };
+	[schoolName: string]: {
+		[event: string]: {
+			[season: string]: number;
+		};
+	};
 };
 
 export type EventTournamentData = {
-  [schoolName: string]: {
-    [event: string]: Array<{
-      date: string;
-      tournament: string;
-      elo: number;
-      place: number;
-      season?: string;
-      duosmiumLink: string;
-    }>;
-  };
+	[schoolName: string]: {
+		[event: string]: Array<{
+			date: string;
+			tournament: string;
+			elo: number;
+			place: number;
+			season?: string;
+			duosmiumLink: string;
+		}>;
+	};
 };
 
 export type ChartData =
-  | OverallSeasonData
-  | OverallTournamentData
-  | EventSeasonData
-  | EventTournamentData;
+	| OverallSeasonData
+	| OverallTournamentData
+	| EventSeasonData
+	| EventTournamentData;
 
 export interface LeaderboardEntry {
-  school: string;
-  state: string;
-  elo: number;
-  season: string;
-  event?: string;
-  isHistorical?: boolean;
+	school: string;
+	state: string;
+	elo: number;
+	season: string;
+	event?: string;
+	isHistorical?: boolean;
 }
 
 export interface ComparisonResult {
-  event: string;
-  school1WinPercentage: number;
-  school1Elo: number;
-  school2Elo: number;
-  tournament?: string;
-  date?: string;
+	event: string;
+	school1WinPercentage: number;
+	school1Elo: number;
+	school2Elo: number;
+	tournament?: string;
+	date?: string;
 }
 
 export interface TournamentTimelineEntry {
-  date: string;
-  tournamentName: string;
-  link?: string;
-  season?: string;
-  tournamentId?: number;
+	date: string;
+	tournamentName: string;
+	link?: string;
+	season?: string;
+	tournamentId?: number;
 }
 
 export interface EloMetadata {
-  tournaments?: Record<string, string>;
-  tournamentTimeline?: Record<string, TournamentTimelineEntry[]>;
-  states?: Record<string, string>;
-  lastUpdated?: string;
-  [key: string]: unknown;
+	tournaments?: Record<string, string>;
+	tournamentTimeline?: Record<string, TournamentTimelineEntry[]>;
+	states?: Record<string, string>;
+	lastUpdated?: string;
+	[key: string]: unknown;
 }

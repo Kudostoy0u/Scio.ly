@@ -88,10 +88,9 @@ vi.mock("@/lib/trpc/client", () => {
 	};
 });
 
-import { __mock as trpcMock } from "@/lib/trpc/client";
 
 // Mock the auth context
-vi.mock("@/app/contexts/authContext", () => ({
+vi.mock("@/app/contexts/AuthContext", () => ({
 	useAuth: () => ({
 		user: {
 			id: "test-user-id",
@@ -122,21 +121,9 @@ describe("TeamsPageClient", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		(global.fetch as unknown as { mockClear: () => void }).mockClear();
-		trpcMock.setListUserTeamsReturn({
-			data: { teams: [] },
-			isLoading: false,
-		});
-		trpcMock.setPendingInvitesReturn({
-			invites: [],
-			isLoading: false,
-		});
 	});
 
 	it("shows loading state initially", () => {
-		trpcMock.setListUserTeamsReturn({
-			data: undefined,
-			isLoading: true,
-		});
 
 		renderWithProviders(<TeamsPageClient />);
 
@@ -154,10 +141,6 @@ describe("TeamsPageClient", () => {
 	});
 
 	it("shows landing page when user has no teams", async () => {
-		trpcMock.setListUserTeamsReturn({
-			data: { teams: [] },
-			isLoading: false,
-		});
 
 		renderWithProviders(<TeamsPageClient />);
 
@@ -167,22 +150,7 @@ describe("TeamsPageClient", () => {
 	});
 
 	it("shows dashboard when user has teams", async () => {
-		const mockTeams = [
-			{
-				id: "team-1",
-				name: "Test Team",
-				slug: "test-team",
-				school: "Test School",
-				division: "C",
-				description: "Test description",
-				members: [],
-			},
-		];
 
-		trpcMock.setListUserTeamsReturn({
-			data: { teams: mockTeams },
-			isLoading: false,
-		});
 
 		renderWithProviders(<TeamsPageClient />);
 
@@ -192,11 +160,6 @@ describe("TeamsPageClient", () => {
 	});
 
 	it("handles API errors gracefully", async () => {
-		trpcMock.setListUserTeamsReturn({
-			data: undefined,
-			isLoading: false,
-			error: new Error("API Error"),
-		});
 
 		renderWithProviders(<TeamsPageClient />);
 

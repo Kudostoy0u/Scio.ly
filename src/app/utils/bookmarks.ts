@@ -9,32 +9,32 @@ import { supabase } from "@/lib/supabase";
  * Question interface for bookmark operations
  */
 interface Question {
-  /** Optional question ID */
-  id?: string;
-  /** Question text content */
-  question: string;
-  /** Optional answer options */
-  options?: string[];
-  /** Correct answers */
-  answers: (string | number)[];
-  /** Question difficulty level */
-  difficulty: number;
-  /** Optional image URL */
-  imageUrl?: string;
+	/** Optional question ID */
+	id?: string;
+	/** Question text content */
+	question: string;
+	/** Optional answer options */
+	options?: string[];
+	/** Correct answers */
+	answers: (string | number)[];
+	/** Question difficulty level */
+	difficulty: number;
+	/** Optional image URL */
+	imageUrl?: string;
 }
 
 /**
  * Bookmarked question interface
  */
 interface BookmarkedQuestion {
-  /** The bookmarked question */
-  question: Question;
-  /** Science Olympiad event name */
-  eventName: string;
-  /** Source of the question */
-  source: string;
-  /** Bookmark creation timestamp */
-  timestamp: number;
+	/** The bookmarked question */
+	question: Question;
+	/** Science Olympiad event name */
+	eventName: string;
+	/** Source of the question */
+	source: string;
+	/** Bookmark creation timestamp */
+	timestamp: number;
 }
 
 /**
@@ -50,37 +50,41 @@ interface BookmarkedQuestion {
  * console.log(bookmarks); // [{ question: {...}, eventName: 'Anatomy & Physiology', ... }]
  * ```
  */
-export const loadBookmarksFromSupabase = async (userId: string): Promise<BookmarkedQuestion[]> => {
-  if (!userId) {
-    return [];
-  }
+export const loadBookmarksFromSupabase = async (
+	userId: string,
+): Promise<BookmarkedQuestion[]> => {
+	if (!userId) {
+		return [];
+	}
 
-  try {
-    const { data, error } = await supabase
-      .from("bookmarks")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+	try {
+		const { data, error } = await supabase
+			.from("bookmarks")
+			.select("*")
+			.eq("user_id", userId)
+			.order("created_at", { ascending: false });
 
-    if (error) {
-      return [];
-    }
+		if (error) {
+			return [];
+		}
 
-    return data.map((bookmark) => {
-      const bookmarkRecord = bookmark as Record<string, unknown>;
-      const created_at = bookmarkRecord.created_at;
-      const eventName = bookmarkRecord.event_name;
-      const source = bookmarkRecord.source;
-      return {
-        question: bookmarkRecord.question_data as Question,
-        eventName: typeof eventName === "string" ? eventName : "",
-        source: typeof source === "string" ? source : "",
-        timestamp: created_at ? new Date(String(created_at)).getTime() : Date.now(),
-      };
-    });
-  } catch (_error) {
-    return [];
-  }
+		return data.map((bookmark) => {
+			const bookmarkRecord = bookmark as Record<string, unknown>;
+			const created_at = bookmarkRecord.created_at;
+			const eventName = bookmarkRecord.event_name;
+			const source = bookmarkRecord.source;
+			return {
+				question: bookmarkRecord.question_data as Question,
+				eventName: typeof eventName === "string" ? eventName : "",
+				source: typeof source === "string" ? source : "",
+				timestamp: created_at
+					? new Date(String(created_at)).getTime()
+					: Date.now(),
+			};
+		});
+	} catch (_error) {
+		return [];
+	}
 };
 
 /**
@@ -105,66 +109,66 @@ export { loadBookmarksFromSupabase as loadBookmarksFromFirebase };
  * ```
  */
 export const addBookmark = async (
-  userId: string | null,
-  question: Question,
-  eventName: string,
-  source: string
+	userId: string | null,
+	question: Question,
+	eventName: string,
+	source: string,
 ) => {
-  if (!userId) {
-    return;
-  }
+	if (!userId) {
+		return;
+	}
 
-  try {
-    let exists = false;
+	try {
+		let exists = false;
 
-    if (question.id) {
-      const { data, error } = await supabase
-        .from("bookmarks")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("event_name", eventName)
-        .eq("source", source)
-        .eq("question_data->>id", question.id);
-      if (error) {
-        throw error;
-      }
-      exists = !!(data && data.length > 0);
-    } else {
-      let query = supabase
-        .from("bookmarks")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("event_name", eventName)
-        .eq("source", source)
-        .eq("question_data->>question", question.question);
-      if (question.imageUrl) {
-        query = query.eq("question_data->>imageUrl", question.imageUrl);
-      }
-      const { data, error } = await query;
-      if (error) {
-        throw error;
-      }
-      exists = !!(data && data.length > 0);
-    }
+		if (question.id) {
+			const { data, error } = await supabase
+				.from("bookmarks")
+				.select("id")
+				.eq("user_id", userId)
+				.eq("event_name", eventName)
+				.eq("source", source)
+				.eq("question_data->>id", question.id);
+			if (error) {
+				throw error;
+			}
+			exists = !!(data && data.length > 0);
+		} else {
+			let query = supabase
+				.from("bookmarks")
+				.select("id")
+				.eq("user_id", userId)
+				.eq("event_name", eventName)
+				.eq("source", source)
+				.eq("question_data->>question", question.question);
+			if (question.imageUrl) {
+				query = query.eq("question_data->>imageUrl", question.imageUrl);
+			}
+			const { data, error } = await query;
+			if (error) {
+				throw error;
+			}
+			exists = !!(data && data.length > 0);
+		}
 
-    if (exists) {
-      return;
-    }
+		if (exists) {
+			return;
+		}
 
-    const { error } = await supabase.from("bookmarks").insert({
-      user_id: userId,
-      question_data: question as unknown,
-      event_name: eventName,
-      source: source,
-      timestamp: Date.now(),
-    } as never);
+		const { error } = await supabase.from("bookmarks").insert({
+			user_id: userId,
+			question_data: question as unknown,
+			event_name: eventName,
+			source: source,
+			timestamp: Date.now(),
+		} as never);
 
-    if (error) {
-      // Error handling can go here if needed
-    }
-  } catch (_error) {
-    // Ignore errors
-  }
+		if (error) {
+			// Error handling can go here if needed
+		}
+	} catch (_error) {
+		// Ignore errors
+	}
 };
 
 /**
@@ -181,38 +185,42 @@ export const addBookmark = async (
  * await removeBookmark('user-123', question, 'practice');
  * ```
  */
-export const removeBookmark = async (userId: string | null, question: Question, source: string) => {
-  if (!userId) {
-    return;
-  }
+export const removeBookmark = async (
+	userId: string | null,
+	question: Question,
+	source: string,
+) => {
+	if (!userId) {
+		return;
+	}
 
-  try {
-    if (question.id) {
-      const { error } = await supabase
-        .from("bookmarks")
-        .delete()
-        .eq("user_id", userId)
-        .eq("source", source)
-        .eq("question_data->>id", question.id);
-      if (error) {
-        throw error;
-      }
-    } else {
-      let query = supabase
-        .from("bookmarks")
-        .delete()
-        .eq("user_id", userId)
-        .eq("source", source)
-        .eq("question_data->>question", question.question);
-      if (question.imageUrl) {
-        query = query.eq("question_data->>imageUrl", question.imageUrl);
-      }
-      const { error } = await query;
-      if (error) {
-        throw error;
-      }
-    }
-  } catch (_error) {
-    // Ignore errors
-  }
+	try {
+		if (question.id) {
+			const { error } = await supabase
+				.from("bookmarks")
+				.delete()
+				.eq("user_id", userId)
+				.eq("source", source)
+				.eq("question_data->>id", question.id);
+			if (error) {
+				throw error;
+			}
+		} else {
+			let query = supabase
+				.from("bookmarks")
+				.delete()
+				.eq("user_id", userId)
+				.eq("source", source)
+				.eq("question_data->>question", question.question);
+			if (question.imageUrl) {
+				query = query.eq("question_data->>imageUrl", question.imageUrl);
+			}
+			const { error } = await query;
+			if (error) {
+				throw error;
+			}
+		}
+	} catch (_error) {
+		// Ignore errors
+	}
 };

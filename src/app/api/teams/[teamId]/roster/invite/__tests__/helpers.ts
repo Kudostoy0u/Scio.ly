@@ -4,10 +4,11 @@
 
 import { NextRequest } from "next/server";
 import { vi } from "vitest";
-import type { DrizzleMockChain } from "./mocks";
 
-export function createMockDrizzleChain(result: unknown): DrizzleMockChain {
-	const whereMock = vi.fn().mockResolvedValue(Array.isArray(result) ? result : [result]);
+export function createMockDrizzleChain(result: unknown): any {
+	const whereMock = vi
+		.fn()
+		.mockResolvedValue(Array.isArray(result) ? result : [result]);
 	const fromChain = { where: whereMock };
 	const fromMock = vi.fn().mockReturnValue(fromChain);
 	return { from: fromMock };
@@ -15,10 +16,12 @@ export function createMockDrizzleChain(result: unknown): DrizzleMockChain {
 
 export function createMockDrizzleChainWithJoin(
 	result: unknown,
-	hasLimit = false
-): DrizzleMockChain {
+	hasLimit = false,
+): any {
 	if (hasLimit) {
-		const limitMock = vi.fn().mockResolvedValue(Array.isArray(result) ? result : [result]);
+		const limitMock = vi
+			.fn()
+			.mockResolvedValue(Array.isArray(result) ? result : [result]);
 		const whereChain = { limit: limitMock };
 		const whereMock = vi.fn().mockReturnValue(whereChain);
 		const innerJoinChain = { where: whereMock };
@@ -28,7 +31,9 @@ export function createMockDrizzleChainWithJoin(
 		return { from: fromMock };
 	}
 
-	const whereMock = vi.fn().mockResolvedValue(Array.isArray(result) ? result : [result]);
+	const whereMock = vi
+		.fn()
+		.mockResolvedValue(Array.isArray(result) ? result : [result]);
 	const innerJoinChain = { where: whereMock };
 	const innerJoinMock = vi.fn().mockReturnValue(innerJoinChain);
 	const fromChain = { innerJoin: innerJoinMock };
@@ -36,16 +41,20 @@ export function createMockDrizzleChainWithJoin(
 	return { from: fromMock };
 }
 
-export function createMockDrizzleInsert(result: unknown): DrizzleMockChain {
-	const returningMock = vi.fn().mockResolvedValue(Array.isArray(result) ? result : [result]);
+export function createMockDrizzleInsert(result: unknown): any {
+	const returningMock = vi
+		.fn()
+		.mockResolvedValue(Array.isArray(result) ? result : [result]);
 	const valuesChain = { returning: returningMock };
 	const valuesMock = vi.fn().mockReturnValue(valuesChain);
 	const fromMock = vi.fn().mockReturnValue({ values: valuesMock });
 	return { from: fromMock, values: valuesMock };
 }
 
-export function createMockDrizzleUpdate(result: unknown): DrizzleMockChain {
-	const returningMock = vi.fn().mockResolvedValue(Array.isArray(result) ? result : [result]);
+export function createMockDrizzleUpdate(result: unknown): any {
+	const returningMock = vi
+		.fn()
+		.mockResolvedValue(Array.isArray(result) ? result : [result]);
 	const whereChain = { returning: returningMock };
 	const whereMock = vi.fn().mockReturnValue(whereChain);
 	const setChain = { where: whereMock };
@@ -61,7 +70,10 @@ export function createGetRequest(teamId: string, query?: string): NextRequest {
 	return new NextRequest(url);
 }
 
-export function createPostRequest(teamId: string, body: Record<string, unknown>): NextRequest {
+export function createPostRequest(
+	teamId: string,
+	body: Record<string, unknown>,
+): NextRequest {
 	const url = `http://localhost:3000/api/teams/${teamId}/roster/invite`;
 	return new NextRequest(url, {
 		method: "POST",
@@ -75,4 +87,3 @@ export function createPostRequest(teamId: string, body: Record<string, unknown>)
 export function createParams(teamId: string) {
 	return { params: Promise.resolve({ teamId }) };
 }
-

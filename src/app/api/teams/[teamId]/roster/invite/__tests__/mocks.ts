@@ -39,5 +39,15 @@ export type DrizzleMockChain = {
 	values?: ReturnType<typeof vi.fn>;
 	returning?: ReturnType<typeof vi.fn>;
 	set?: ReturnType<typeof vi.fn>;
+	// Required Drizzle properties that we mock
+	fields?: any;
+	session?: any;
+	dialect?: any;
+	withList?: any;
+	distinct?: any;
+	table?: any;
+	overridingSystemValue?: any;
+	select?: any;
+	_?: any;
+	setToken?: any;
 };
-

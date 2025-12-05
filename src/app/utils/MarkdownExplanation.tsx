@@ -6,18 +6,18 @@ import "katex/dist/katex.min.css";
 import { normalizeMath } from "@/lib/utils/markdown";
 
 interface MarkdownExplanationProps {
-  text: string;
+	text: string;
 }
 
 const MarkdownExplanation: React.FC<MarkdownExplanationProps> = ({ text }) => {
-  const processed = normalizeMath(text);
-  return (
-    <div className="markdown-explanation text-sm">
-      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-        {processed}
-      </ReactMarkdown>
-    </div>
-  );
+	const processed = normalizeMath(text);
+	return (
+		<div className="markdown-explanation text-sm">
+			<ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+				{processed}
+			</ReactMarkdown>
+		</div>
+	);
 };
 
 export default MarkdownExplanation;

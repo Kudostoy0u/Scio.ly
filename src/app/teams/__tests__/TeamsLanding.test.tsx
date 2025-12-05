@@ -4,14 +4,14 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the theme context
-vi.mock("@/app/contexts/themeContext", () => ({
+vi.mock("@/app/contexts/ThemeContext", () => ({
 	useTheme: () => ({
 		darkMode: false,
 	}),
 }));
 
 // Mock the auth context
-vi.mock("@/app/contexts/authContext", () => ({
+vi.mock("@/app/contexts/AuthContext", () => ({
 	useAuth: () => ({
 		user: {
 			id: "test-user-id",

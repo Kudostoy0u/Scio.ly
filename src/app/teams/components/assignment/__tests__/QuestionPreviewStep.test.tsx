@@ -1,10 +1,10 @@
 import QuestionPreviewStep from "@/app/teams/components/assignment/QuestionPreviewStep";
 import type { Question } from "@/app/teams/components/assignment/assignmentTypes";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the useTheme hook
-vi.mock("@/app/contexts/themeContext", () => ({
+vi.mock("@/app/contexts/ThemeContext", () => ({
 	useTheme: () => ({ darkMode: false }),
 }));
 
@@ -20,7 +20,6 @@ describe("QuestionPreviewStep", () => {
 				{ id: "4", text: "Madrid", isCorrect: false },
 			],
 			correct_answer: "Paris",
-			points: 10,
 			order_index: 1,
 		},
 		{
@@ -31,7 +30,6 @@ describe("QuestionPreviewStep", () => {
 			answers: [
 				"Photosynthesis is the process by which plants convert light energy into chemical energy.",
 			],
-			points: 15,
 			order_index: 2,
 		},
 		{
@@ -39,7 +37,6 @@ describe("QuestionPreviewStep", () => {
 			question_type: "codebusters",
 			correct_answer: "Water",
 			answers: ["Water"],
-			points: 5,
 			order_index: 3,
 			imageData: "data:image/jpeg;base64,test-image-data",
 		},
@@ -230,7 +227,7 @@ describe("QuestionPreviewStep", () => {
 			render(<QuestionPreviewStep {...mockProps} />);
 
 			const replaceButtons = screen.getAllByText("Replace");
-			fireEvent.click(replaceButtons[0]);
+			fireEvent.click(replaceButtons[0]!);
 
 			expect(mockProps.onReplaceQuestion).toHaveBeenCalledWith(0);
 		});
@@ -240,10 +237,10 @@ describe("QuestionPreviewStep", () => {
 
 			const replaceButtons = screen.getAllByText("Replace");
 
-			fireEvent.click(replaceButtons[1]);
+			fireEvent.click(replaceButtons[1]!);
 			expect(mockProps.onReplaceQuestion).toHaveBeenCalledWith(1);
 
-			fireEvent.click(replaceButtons[2]);
+			fireEvent.click(replaceButtons[2]!);
 			expect(mockProps.onReplaceQuestion).toHaveBeenCalledWith(2);
 		});
 	});

@@ -1,8 +1,8 @@
 import type { CodebustersPrintConfig } from "../printUtils";
 
 export const createCodebustersPrintContent = (
-  config: CodebustersPrintConfig,
-  printStyles: string
+	config: CodebustersPrintConfig,
+	printStyles: string,
 ) => `
   <!DOCTYPE html>
   <html>

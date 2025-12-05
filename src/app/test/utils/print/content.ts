@@ -1,10 +1,13 @@
 export interface TestPrintConfig {
-  tournamentName: string;
-  questionsHtml: string;
-  questionPoints: { [key: number]: number };
+	tournamentName: string;
+	questionsHtml: string;
+	questionPoints: { [key: number]: number };
 }
 
-export const createTestPrintContent = (_config: TestPrintConfig, _printStyles: string) => `
+export const createTestPrintContent = (
+	_config: TestPrintConfig,
+	_printStyles: string,
+) => `
 <!DOCTYPE html>
 <html>
 <head>

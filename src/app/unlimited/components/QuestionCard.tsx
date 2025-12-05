@@ -5,269 +5,302 @@ import type { Question } from "@/app/utils/geminiService";
 import { isMultiSelectQuestion } from "@/app/utils/questionUtils";
 
 type Props = {
-  question: Question;
-  questionIndex: number;
-  darkMode: boolean;
-  isSubmitted: boolean;
-  gradingScore: number | undefined;
-  currentAnswers: (string | null)[];
-  isLoadingId: boolean;
-  showIdSpinner: boolean;
-  onAnswerToggle: (answer: string | null, multiselect: boolean) => void;
-  onGetExplanation: () => void;
-  explanation?: string;
-  loadingExplanation: boolean;
-  // Actions
-  isBookmarked: boolean;
-  eventName: string;
-  onBookmarkChange: (key: string, isBookmarked: boolean) => void;
-  isSubmittedReport: boolean;
-  isSubmittedEdit: boolean;
-  onEdit: () => void;
-  onQuestionRemoved: (questionIndex: number) => void;
+	question: Question;
+	questionIndex: number;
+	darkMode: boolean;
+	isSubmitted: boolean;
+	gradingScore: number | undefined;
+	currentAnswers: (string | null)[];
+	isLoadingId: boolean;
+	showIdSpinner: boolean;
+	onAnswerToggle: (answer: string | null, multiselect: boolean) => void;
+	onGetExplanation: () => void;
+	explanation?: string;
+	loadingExplanation: boolean;
+	// Actions
+	isBookmarked: boolean;
+	eventName: string;
+	onBookmarkChange: (key: string, isBookmarked: boolean) => void;
+	isSubmittedReport: boolean;
+	isSubmittedEdit: boolean;
+	onEdit: () => void;
+	onQuestionRemoved: (questionIndex: number) => void;
 };
 
 // Helper functions to reduce complexity
 function getQuestionBackgroundClass(
-  isSubmitted: boolean,
-  isUserSelected: boolean,
-  isCorrectAnswer: boolean,
-  gradingScore: number | null,
-  darkMode: boolean
+	isSubmitted: boolean,
+	isUserSelected: boolean,
+	isCorrectAnswer: boolean,
+	gradingScore: number | null,
+	darkMode: boolean,
 ) {
-  if (isSubmitted && isUserSelected) {
-    return gradingScore && gradingScore >= 1
-      ? darkMode
-        ? "bg-green-800"
-        : "bg-green-200"
-      : isCorrectAnswer
-        ? darkMode
-          ? "bg-green-800"
-          : "bg-green-200"
-        : darkMode
-          ? "bg-red-900"
-          : "bg-red-200";
-  }
-  if (isSubmitted && isCorrectAnswer && !isUserSelected) {
-    return darkMode ? "bg-green-800" : "bg-green-200";
-  }
-  return darkMode ? "bg-gray-700" : "bg-gray-200";
+	if (isSubmitted && isUserSelected) {
+		return gradingScore && gradingScore >= 1
+			? darkMode
+				? "bg-green-800"
+				: "bg-green-200"
+			: isCorrectAnswer
+				? darkMode
+					? "bg-green-800"
+					: "bg-green-200"
+				: darkMode
+					? "bg-red-900"
+					: "bg-red-200";
+	}
+	if (isSubmitted && isCorrectAnswer && !isUserSelected) {
+		return darkMode ? "bg-green-800" : "bg-green-200";
+	}
+	return darkMode ? "bg-gray-700" : "bg-gray-200";
 }
 
 function getTextareaBackgroundClass(
-  isSubmitted: boolean,
-  gradingScore: number | null,
-  darkMode: boolean
+	isSubmitted: boolean,
+	gradingScore: number | null,
+	darkMode: boolean,
 ) {
-  if (isSubmitted) {
-    if (gradingScore === 1) {
-      return darkMode ? "bg-green-800 border-green-700" : "bg-green-200 border-green-300";
-    }
-    if (gradingScore === 0) {
-      return darkMode ? "bg-red-900 border-red-800" : "bg-red-200 border-red-300";
-    }
-    return darkMode ? "bg-amber-400 border-amber-500" : "bg-amber-400 border-amber-500";
-  }
-  return darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300";
+	if (isSubmitted) {
+		if (gradingScore === 1) {
+			return darkMode
+				? "bg-green-800 border-green-700"
+				: "bg-green-200 border-green-300";
+		}
+		if (gradingScore === 0) {
+			return darkMode
+				? "bg-red-900 border-red-800"
+				: "bg-red-200 border-red-300";
+		}
+		return darkMode
+			? "bg-amber-400 border-amber-500"
+			: "bg-amber-400 border-amber-500";
+	}
+	return darkMode
+		? "bg-gray-700 border-gray-600 text-white"
+		: "bg-white border-gray-300";
 }
 
 function getResultText(gradingScore: number | null, hasAnswer: boolean) {
-  if (!hasAnswer) {
-    return { text: "Skipped", color: "text-blue-500" };
-  }
-  if (gradingScore === 1 || gradingScore === 2 || gradingScore === 3) {
-    return { text: "Correct!", color: "text-green-600" };
-  }
-  if (gradingScore === 0) {
-    return { text: "Wrong!", color: "text-red-600" };
-  }
-  return { text: "Partial Credit", color: "text-amber-400" };
+	if (!hasAnswer) {
+		return { text: "Skipped", color: "text-blue-500" };
+	}
+	if (gradingScore === 1 || gradingScore === 2 || gradingScore === 3) {
+		return { text: "Correct!", color: "text-green-600" };
+	}
+	if (gradingScore === 0) {
+		return { text: "Wrong!", color: "text-red-600" };
+	}
+	return { text: "Partial Credit", color: "text-amber-400" };
 }
 
 export default function QuestionCard(props: Props) {
-  const {
-    question,
-    questionIndex,
-    darkMode,
-    isSubmitted,
-    gradingScore,
-    currentAnswers,
-    isLoadingId,
-    showIdSpinner,
-    onAnswerToggle,
-    onGetExplanation,
-    explanation,
-    loadingExplanation,
-    isBookmarked,
-    eventName,
-    onBookmarkChange,
-    isSubmittedReport,
-    isSubmittedEdit,
-    onEdit,
-    onQuestionRemoved,
-  } = props;
+	const {
+		question,
+		questionIndex,
+		darkMode,
+		isSubmitted,
+		gradingScore,
+		currentAnswers,
+		isLoadingId,
+		showIdSpinner,
+		onAnswerToggle,
+		onGetExplanation,
+		explanation,
+		loadingExplanation,
+		isBookmarked,
+		eventName,
+		onBookmarkChange,
+		isSubmittedReport,
+		isSubmittedEdit,
+		onEdit,
+		onQuestionRemoved,
+	} = props;
 
-  const isMultiSelect = isMultiSelectQuestion(question.question, question.answers);
-  const correctAnswersText =
-    question.options && question.options.length > 0
-      ? question.answers.map((ans) => question.options?.[ans as number]).join(", ")
-      : question.answers.join(", ");
+	const isMultiSelect = isMultiSelectQuestion(
+		question.question,
+		question.answers,
+	);
+	const correctAnswersText =
+		question.options && question.options.length > 0
+			? question.answers
+					.map((ans) => question.options?.[ans as number])
+					.join(", ")
+			: question.answers.join(", ");
 
-  return (
-    <div
-      className={`relative border p-4 rounded-lg shadow-sm transition-all duration-500 ease-in-out ${
-        darkMode
-          ? "bg-gray-700 border-gray-600 text-white"
-          : "bg-gray-50 border-gray-300 text-black"
-      }`}
-    >
-      <div className="flex justify-between items-start">
-        <h3 className="font-semibold text-lg">Question</h3>
-        <QuestionActions
-          question={question}
-          questionIndex={questionIndex}
-          isBookmarked={isBookmarked}
-          eventName={eventName}
-          source="unlimited"
-          onBookmarkChange={onBookmarkChange}
-          darkMode={darkMode}
-          compact={true}
-          isSubmittedReport={isSubmittedReport}
-          isSubmittedEdit={isSubmittedEdit}
-          onReportSubmitted={() => {
-            // Intentionally empty - placeholder callback
-          }}
-          _isSubmitted={isSubmitted}
-          onEdit={onEdit}
-          onQuestionRemoved={onQuestionRemoved}
-        />
-      </div>
+	return (
+		<div
+			className={`relative border p-4 rounded-lg shadow-sm transition-all duration-500 ease-in-out ${
+				darkMode
+					? "bg-gray-700 border-gray-600 text-white"
+					: "bg-gray-50 border-gray-300 text-black"
+			}`}
+		>
+			<div className="flex justify-between items-start">
+				<h3 className="font-semibold text-lg">Question</h3>
+				<QuestionActions
+					question={question}
+					questionIndex={questionIndex}
+					isBookmarked={isBookmarked}
+					eventName={eventName}
+					source="unlimited"
+					onBookmarkChange={onBookmarkChange}
+					darkMode={darkMode}
+					compact={true}
+					isSubmittedReport={isSubmittedReport}
+					isSubmittedEdit={isSubmittedEdit}
+					onReportSubmitted={() => {
+						// Intentionally empty - placeholder callback
+					}}
+					_isSubmitted={isSubmitted}
+					onEdit={onEdit}
+					onQuestionRemoved={onQuestionRemoved}
+				/>
+			</div>
 
-      {isLoadingId && showIdSpinner ? (
-        <div className="flex items-center justify-center h-32 mb-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent" />
-        </div>
-      ) : (
-        <>
-          {question.imageData && (
-            <div className="mb-4 w-full flex justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={question.imageData} alt="Question" className="max-h-64 rounded-md border" />
-            </div>
-          )}
-          <p className="mb-4 break-words whitespace-normal overflow-x-auto">{question.question}</p>
-        </>
-      )}
+			{isLoadingId && showIdSpinner ? (
+				<div className="flex items-center justify-center h-32 mb-4">
+					<div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent" />
+				</div>
+			) : (
+				<>
+					{question.imageData && (
+						<div className="mb-4 w-full flex justify-center">
+							{/* eslint-disable-next-line @next/next/no-img-element */}
+							<img
+								src={question.imageData}
+								alt="Question"
+								className="max-h-64 rounded-md border"
+							/>
+						</div>
+					)}
+					<p className="mb-4 break-words whitespace-normal overflow-x-auto">
+						{question.question}
+					</p>
+				</>
+			)}
 
-      {question.options && question.options.length > 0 ? (
-        <div className="space-y-2">
-          {question.options.map((option) => {
-            const correctAnswers = question.answers
-              .map((ans) => (typeof ans === "number" ? question.options?.[ans] : ans))
-              .filter((text): text is string => !!text && text !== "");
-            const isCorrectAnswer = correctAnswers.includes(option);
-            const isUserSelected = currentAnswers.includes(option);
+			{question.options && question.options.length > 0 ? (
+				<div className="space-y-2">
+					{question.options.map((option) => {
+						const correctAnswers = question.answers
+							.map((ans) =>
+								typeof ans === "number" ? question.options?.[ans] : ans,
+							)
+							.filter((text): text is string => !!text && text !== "");
+						const isCorrectAnswer = correctAnswers.includes(option);
+						const isUserSelected = currentAnswers.includes(option);
 
-            const bgClass = getQuestionBackgroundClass(
-              isSubmitted,
-              isUserSelected,
-              isCorrectAnswer,
-              gradingScore ?? null,
-              darkMode
-            );
+						const bgClass = getQuestionBackgroundClass(
+							isSubmitted,
+							isUserSelected,
+							isCorrectAnswer,
+							gradingScore ?? null,
+							darkMode,
+						);
 
-            return (
-              <label
-                key={`${questionIndex}-${option}`}
-                className={`block p-2 rounded-md ${bgClass} ${!isSubmitted && (darkMode ? "hover:bg-gray-600" : "hover:bg-gray-300")}`}
-              >
-                <input
-                  type={isMultiSelect ? "checkbox" : "radio"}
-                  name={`question-${questionIndex}`}
-                  value={option}
-                  checked={isUserSelected}
-                  onChange={() => onAnswerToggle(option, isMultiSelect)}
-                  disabled={isSubmitted}
-                  className="mr-2"
-                />
-                {option}
-              </label>
-            );
-          })}
-        </div>
-      ) : (
-        <textarea
-          value={currentAnswers[0] || ""}
-          onChange={(e) => onAnswerToggle(e.target.value, false)}
-          disabled={isSubmitted}
-          className={`w-full p-2 border rounded-md ${getTextareaBackgroundClass(
-            isSubmitted,
-            gradingScore ?? null,
-            darkMode
-          )}`}
-          rows={3}
-          placeholder="Type your answer here..."
-        />
-      )}
+						return (
+							<label
+								key={`${questionIndex}-${option}`}
+								className={`block p-2 rounded-md ${bgClass} ${!isSubmitted && (darkMode ? "hover:bg-gray-600" : "hover:bg-gray-300")}`}
+							>
+								<input
+									type={isMultiSelect ? "checkbox" : "radio"}
+									name={`question-${questionIndex}`}
+									value={option}
+									checked={isUserSelected}
+									onChange={() => onAnswerToggle(option, isMultiSelect)}
+									disabled={isSubmitted}
+									className="mr-2"
+								/>
+								{option}
+							</label>
+						);
+					})}
+				</div>
+			) : (
+				<textarea
+					value={currentAnswers[0] || ""}
+					onChange={(e) => onAnswerToggle(e.target.value, false)}
+					disabled={isSubmitted}
+					className={`w-full p-2 border rounded-md ${getTextareaBackgroundClass(
+						isSubmitted,
+						gradingScore ?? null,
+						darkMode,
+					)}`}
+					rows={3}
+					placeholder="Type your answer here..."
+				/>
+			)}
 
-      {isSubmitted && (
-        <>
-          {(() => {
-            const result = getResultText(gradingScore ?? null, !!currentAnswers[0]);
-            return <p className={`mt-2 font-semibold ${result.color}`}>{result.text}</p>;
-          })()}
-          <p className="text-sm mt-1">
-            <strong>Correct Answer(s):</strong> {correctAnswersText}
-          </p>
-          <div className="mt-2">
-            {explanation ? (
-              <MarkdownExplanation text={explanation} />
-            ) : (
-              <button
-                type="button"
-                onClick={onGetExplanation}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-300 ${
-                  darkMode
-                    ? "bg-gray-700 hover:bg-gray-600 text-blue-400"
-                    : "bg-blue-50 hover:bg-blue-100 text-blue-600"
-                }`}
-                disabled={loadingExplanation}
-              >
-                {loadingExplanation ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent" />
-                ) : (
-                  <>
-                    <span>Explain</span>
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <title>Information</title>
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-        </>
-      )}
+			{isSubmitted && (
+				<>
+					{(() => {
+						const result = getResultText(
+							gradingScore ?? null,
+							!!currentAnswers[0],
+						);
+						return (
+							<p className={`mt-2 font-semibold ${result.color}`}>
+								{result.text}
+							</p>
+						);
+					})()}
+					<p className="text-sm mt-1">
+						<strong>Correct Answer(s):</strong> {correctAnswersText}
+					</p>
+					<div className="mt-2">
+						{explanation ? (
+							<MarkdownExplanation text={explanation} />
+						) : (
+							<button
+								type="button"
+								onClick={onGetExplanation}
+								className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-300 ${
+									darkMode
+										? "bg-gray-700 hover:bg-gray-600 text-blue-400"
+										: "bg-blue-50 hover:bg-blue-100 text-blue-600"
+								}`}
+								disabled={loadingExplanation}
+							>
+								{loadingExplanation ? (
+									<div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent" />
+								) : (
+									<>
+										<span>Explain</span>
+										<svg
+											className="w-4 h-4"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor"
+										>
+											<title>Information</title>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+											/>
+										</svg>
+									</>
+								)}
+							</button>
+						)}
+					</div>
+				</>
+			)}
 
-      <br />
-      <div className="absolute bottom-2 right-2 w-20 h-2 rounded-full bg-gray-300 ">
-        <div
-          className={`h-full rounded-full  ${
-            question.difficulty >= 0.66
-              ? "bg-red-500"
-              : question.difficulty >= 0.33
-                ? "bg-yellow-500"
-                : "bg-green-500"
-          }`}
-          style={{ width: `${question.difficulty * 100}%` }}
-        />
-      </div>
-    </div>
-  );
+			<br />
+			<div className="absolute bottom-2 right-2 w-20 h-2 rounded-full bg-gray-300 ">
+				<div
+					className={`h-full rounded-full  ${
+						question.difficulty >= 0.66
+							? "bg-red-500"
+							: question.difficulty >= 0.33
+								? "bg-yellow-500"
+								: "bg-green-500"
+					}`}
+					style={{ width: `${question.difficulty * 100}%` }}
+				/>
+			</div>
+		</div>
+	);
 }

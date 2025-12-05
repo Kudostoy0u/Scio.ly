@@ -1,5 +1,5 @@
 export const createFuzzyMatchingWorker = (): Worker => {
-  const workerCode = `
+	const workerCode = `
     function stringSimilarity(str1, str2) {
       if (str1 === str2) return 1;
       if (str1.length === 0 || str2.length === 0) return 0;
@@ -96,6 +96,6 @@ export const createFuzzyMatchingWorker = (): Worker => {
     };
   `;
 
-  const blob = new Blob([workerCode], { type: "application/javascript" });
-  return new Worker(URL.createObjectURL(blob));
+	const blob = new Blob([workerCode], { type: "application/javascript" });
+	return new Worker(URL.createObjectURL(blob));
 };

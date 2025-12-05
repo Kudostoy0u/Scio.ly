@@ -1,4 +1,4 @@
-import { useTheme } from "@/app/contexts/themeContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 
 interface TeamActionSectionProps {
 	onCreateTeam: () => void;

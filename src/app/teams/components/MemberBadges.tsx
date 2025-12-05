@@ -1,7 +1,7 @@
 "use client";
 
-import { useAuth } from "@/app/contexts/authContext";
-import { useTheme } from "@/app/contexts/themeContext";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import logger from "@/lib/utils/logger";
 import { X } from "lucide-react";
 import { toast } from "react-toastify";
