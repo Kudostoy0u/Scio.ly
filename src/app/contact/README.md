@@ -9,14 +9,14 @@ Server component wrapper that renders the contact client page.
 
 **Example:**
 ```1:5:src/app/contact/page.tsx
-import ContactClientPage from "./clientPage";
+import ContactClientPage from "./ClientPage";
 
 export default function ContactPage() {
   return <ContactClientPage />;
 }
 ```
 
-### `clientPage.tsx`
+### `ClientPage.tsx`
 Client-side contact page component with contact form.
 
 **Key Features:**
