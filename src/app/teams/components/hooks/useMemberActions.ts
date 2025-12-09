@@ -205,7 +205,9 @@ export function useMemberActions({
 		handlePromoteToCaptain: async (member: Member) => {
 			try {
 				if (!member.id || member.isUnlinked) {
-					toast.error("User must be linked to an account before they can be promoted to captain");
+					toast.error(
+						"User must be linked to an account before they can be promoted to captain",
+					);
 					return;
 				}
 				await promoteToRole.mutateAsync({

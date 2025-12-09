@@ -1,6 +1,5 @@
 import { AuthProvider } from "@/app/contexts/AuthContext";
 import { ThemeProvider } from "@/app/contexts/ThemeContext";
-import { NotificationsProvider } from "@/app/contexts/notificationsContext";
 import type { User } from "@supabase/supabase-js";
 import type React from "react";
 
@@ -17,9 +16,7 @@ export function TestProviders({
 }: TestProvidersProps) {
 	return (
 		<ThemeProvider initialDarkMode={initialDarkMode}>
-			<AuthProvider initialUser={initialUser}>
-				<NotificationsProvider>{children}</NotificationsProvider>
-			</AuthProvider>
+			<AuthProvider initialUser={initialUser}>{children}</AuthProvider>
 		</ThemeProvider>
 	);
 }

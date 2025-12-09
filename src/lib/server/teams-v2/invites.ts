@@ -386,7 +386,9 @@ export async function promoteToRole(input: {
 
 	const [currentMembership] = membership;
 	if (!currentMembership || currentMembership.status !== "active") {
-		throw new Error("User must be linked to an account before they can be promoted to captain");
+		throw new Error(
+			"User must be linked to an account before they can be promoted to captain",
+		);
 	}
 
 	if (currentMembership.role === input.newRole) {

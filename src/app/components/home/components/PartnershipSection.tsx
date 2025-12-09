@@ -16,7 +16,9 @@ export function PartnershipSection({ darkMode }: PartnershipSectionProps) {
 			className={`pt-8 pb-12 px-4 ${darkMode ? "bg-[#020617]" : "bg-white"}`}
 		>
 			<div className="max-w-7xl mx-auto text-center">
-				<h1 className={`text-4xl font-bold mb-6 ${darkMode ? "text-white" : "text-gray-900"}`}>
+				<h1
+					className={`text-4xl font-bold mb-6 ${darkMode ? "text-white" : "text-gray-900"}`}
+				>
 					Partnered with
 				</h1>
 				<div className="flex justify-center">
