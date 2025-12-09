@@ -87,7 +87,7 @@ vi.mock("lucide-react", () => ({
 }));
 
 // Mock NotificationsContext
-vi.mock("@/app/contexts/notificationsContext", () => ({
+vi.mock("@/app/contexts/NotificationsContext", () => ({
 	useNotifications: () => ({
 		unread: 0,
 		notifs: [],

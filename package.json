@@ -36,7 +36,7 @@
 	},
 	"dependencies": {
 		"@google/genai": "^1.30.0",
-		"@next/third-parties": "^16.0.6",
+		"@next/third-parties": "^16.0.7",
 		"@react-pdf/renderer": "4.3.0",
 		"@supabase/ssr": "^0.7.0",
 		"@supabase/supabase-js": "^2.86.0",
@@ -63,7 +63,7 @@
 		"glob": "^13.0.0",
 		"js-yaml": "^4.1.1",
 		"lucide-react": "0.539.0",
-		"next": "^16.0.6",
+		"next": "^16.0.7",
 		"pg": "^8.16.3",
 		"postgres": "3.4.7",
 		"react": "^19.2.0",
