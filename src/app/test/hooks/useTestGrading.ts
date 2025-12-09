@@ -6,7 +6,7 @@ import {
 	type RouterParams,
 	calculateMCQScore,
 } from "@/app/utils/questionUtils";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import type React from "react";
 import { useEffect, useState } from "react";
 

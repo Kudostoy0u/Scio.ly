@@ -1,7 +1,7 @@
 import { upsertUserProfile } from "@/lib/db/teams/utils";
 import { cockroachDBTeamsService } from "@/lib/services/cockroachdb-teams";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { type NextRequest, NextResponse } from "next/server";
 
 // Helper function to derive display name from user profile

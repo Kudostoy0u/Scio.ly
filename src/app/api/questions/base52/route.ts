@@ -1,4 +1,4 @@
-import { generateQuestionCodes } from "@/lib/utils/base52";
+import { generateQuestionCodes } from "@/lib/utils/assessments/base52";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -69,7 +69,9 @@ export async function GET(request: NextRequest) {
 			);
 		}
 
-		const { getQuestionByCode } = await import("@/lib/utils/base52");
+		const { getQuestionByCode } = await import(
+			"@/lib/utils/assessments/base52"
+		);
 
 		const result = await getQuestionByCode(code);
 

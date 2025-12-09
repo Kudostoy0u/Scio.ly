@@ -1,5 +1,5 @@
 "use client";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 
 import type { ComparisonResult, EloData } from "@/app/analytics/types/elo";
 import {
@@ -7,7 +7,7 @@ import {
 	getAllSchools,
 } from "@/app/analytics/utils/eloDataProcessor";
 import { useTheme } from "@/app/contexts/ThemeContext";
-import { stripTrailingParenthetical } from "@/lib/utils/string";
+import { stripTrailingParenthetical } from "@/lib/utils/content/string";
 import type React from "react";
 import { useMemo, useState } from "react";
 import { MobileComparisonView } from "./CompareTool/MobileComparisonView";

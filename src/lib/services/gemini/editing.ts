@@ -2,7 +2,7 @@
  * Question editing and improvement methods for Gemini service
  */
 
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { Type } from "@google/genai";
 import type { ClientWithKey } from "./client";
 import type { EditSuggestionResult } from "./types";

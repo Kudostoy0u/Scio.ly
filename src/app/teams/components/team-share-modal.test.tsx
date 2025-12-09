@@ -10,8 +10,10 @@ const onClose = vi.fn();
 function mkFetch(
 	handler: (input: RequestInfo | URL, init?: RequestInit) => Response,
 ) {
-	(globalThis as unknown as { fetch: typeof fetch }).fetch =
-		((input: RequestInfo | URL, init?: RequestInit) => Promise.resolve(handler(input, init))) as any;
+	(globalThis as unknown as { fetch: typeof fetch }).fetch = ((
+		input: RequestInfo | URL,
+		init?: RequestInit,
+	) => Promise.resolve(handler(input, init))) as unknown as typeof fetch;
 }
 
 describe("TeamShareModal", () => {
@@ -82,7 +84,8 @@ describe("TeamShareModal", () => {
 		);
 		// Switch to Join tab (first button in tab header)
 		const tabJoinBtn = screen.getAllByRole("button", { name: "Join Team" })[0];
-		fireEvent.click(tabJoinBtn!);
+		if (!tabJoinBtn) throw new Error("Tab join button not found");
+		fireEvent.click(tabJoinBtn);
 		// Submit button (it's the second 'Join Team' button)
 		const buttons = screen.getAllByRole("button", { name: "Join Team" });
 		const joinBtn = buttons[buttons.length - 1] as HTMLButtonElement;

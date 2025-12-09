@@ -88,7 +88,6 @@ vi.mock("@/lib/trpc/client", () => {
 	};
 });
 
-
 // Mock the auth context
 vi.mock("@/app/contexts/AuthContext", () => ({
 	useAuth: () => ({
@@ -124,7 +123,6 @@ describe("TeamsPageClient", () => {
 	});
 
 	it("shows loading state initially", () => {
-
 		renderWithProviders(<TeamsPageClient />);
 
 		expect(
@@ -141,7 +139,6 @@ describe("TeamsPageClient", () => {
 	});
 
 	it("shows landing page when user has no teams", async () => {
-
 		renderWithProviders(<TeamsPageClient />);
 
 		await waitFor(() => {
@@ -150,8 +147,6 @@ describe("TeamsPageClient", () => {
 	});
 
 	it("shows dashboard when user has teams", async () => {
-
-
 		renderWithProviders(<TeamsPageClient />);
 
 		await waitFor(() => {
@@ -160,7 +155,6 @@ describe("TeamsPageClient", () => {
 	});
 
 	it("handles API errors gracefully", async () => {
-
 		renderWithProviders(<TeamsPageClient />);
 
 		await waitFor(() => {

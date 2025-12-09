@@ -8,7 +8,7 @@ import {
 } from "@/app/test/services/questionLoader";
 import type { Question } from "@/app/utils/geminiService";
 import { shuffleArray } from "@/app/utils/questionUtils";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 
 // Helper function to calculate ID percentage
 function calculateIdPercentage(routerParams: RouterParams): number {

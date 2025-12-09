@@ -2,16 +2,15 @@ import { POST } from "@/app/api/teams/create/route";
 import { cockroachDBTeamsService } from "@/lib/services/cockroachdb-teams";
 import { getServerUser } from "@/lib/supabaseServer";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { User } from "@supabase/supabase-js";
 
 // Mock dependencies
 vi.mock("@/lib/supabaseServer", () => ({
 	getServerUser: vi.fn(),
 	createSupabaseServerClient: vi.fn(),
 }));
-
 
 vi.mock("@/lib/services/cockroachdb-teams", () => ({
 	cockroachDBTeamsService: {
@@ -62,7 +61,7 @@ describe("/api/teams/create", () => {
 			}),
 		};
 		mockCreateSupabaseServerClient.mockResolvedValue(
-			mockSupabaseClient as any,
+			mockSupabaseClient as unknown as SupabaseClient<unknown>,
 		);
 
 		// Set DATABASE_URL for tests
@@ -137,8 +136,12 @@ describe("/api/teams/create", () => {
 			mockGetServerUser.mockResolvedValue(mockUser);
 
 			// Mock service methods
-			mockService.createTeamGroup.mockResolvedValue({ id: mockGroupId } as any);
-			mockService.createTeamUnit.mockResolvedValue({ id: "unit-123" } as any);
+			mockService.createTeamGroup.mockResolvedValue({
+				id: mockGroupId,
+			} as any);
+			mockService.createTeamUnit.mockResolvedValue({
+				id: "unit-123",
+			} as any);
 			mockService.createTeamMembership.mockResolvedValue({
 				id: "membership-123",
 			} as any);
@@ -212,7 +215,7 @@ describe("/api/teams/create", () => {
 					user_id: mockUserId,
 					role: "captain",
 				},
-			] as any);
+			] as any[]);
 
 			const request = new NextRequest(
 				"http://localhost:3000/api/teams/create",
@@ -263,7 +266,7 @@ describe("/api/teams/create", () => {
 					user_id: mockUserId,
 					role: "captain",
 				},
-			] as any);
+			] as any[]);
 
 			const request = new NextRequest(
 				"http://localhost:3000/api/teams/create",

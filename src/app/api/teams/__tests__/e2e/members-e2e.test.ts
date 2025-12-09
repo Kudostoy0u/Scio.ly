@@ -35,12 +35,12 @@ describe("Team Members E2E", () => {
 		testUsers.push(createTestUser({ displayName: "Co-Captain User" }));
 
 		// Create test team
-		const team = createTestTeam(testUsers[0]!.id);
+		const team = createTestTeam(testUsers[0]?.id ?? "");
 		testTeams.push(team);
 
 		// Add members
-		addTeamMember(team.subteamId, testUsers[1]!.id, "member");
-		addTeamMember(team.subteamId, testUsers[2]!.id, "co_captain");
+		addTeamMember(team.subteamId, testUsers[1]?.id ?? "", "member");
+		addTeamMember(team.subteamId, testUsers[2]?.id ?? "", "co_captain");
 	});
 
 	afterAll(() => {
@@ -52,7 +52,8 @@ describe("Team Members E2E", () => {
 
 	describe("Member Retrieval", () => {
 		it("should retrieve all team members with correct roles", async () => {
-			const team = testTeams[0]!;
+			const team = testTeams[0];
+			if (!team) throw new Error("Test setup failed");
 
 			// Get all memberships
 			const memberships = getMembershipsByGroupId(team.groupId);
@@ -67,7 +68,8 @@ describe("Team Members E2E", () => {
 		});
 
 		it("should retrieve members for specific subteam", () => {
-			const team = testTeams[0]!;
+			const team = testTeams[0];
+			if (!team) throw new Error("Test setup failed");
 
 			// Get members for specific subteam
 			const memberships = getMembershipsByTeamId(team.subteamId);
@@ -78,14 +80,16 @@ describe("Team Members E2E", () => {
 
 	describe("Member Roles", () => {
 		it("should have captain as team creator", () => {
-			const team = testTeams[0]!;
-			const captain = testUsers[0]!;
+			const team = testTeams[0];
+			const captain = testUsers[0];
+			if (!team || !captain) throw new Error("Test setup failed");
 
 			assertUserIsMember(captain.id, team.subteamId, "captain");
 		});
 
 		it("should allow multiple roles in same team", () => {
-			const team = testTeams[0]!;
+			const team = testTeams[0];
+			if (!team) throw new Error("Test setup failed");
 
 			// Verify different roles exist
 			const memberships = getMembershipsByTeamId(team.subteamId);
@@ -97,8 +101,9 @@ describe("Team Members E2E", () => {
 
 	describe("Linked Roster Entries", () => {
 		it("should link roster entries to team members", () => {
-			const team = testTeams[0]!;
-			const member = testUsers[1]!;
+			const team = testTeams[0];
+			const member = testUsers[1];
+			if (!team || !member) throw new Error("Test setup failed");
 
 			// Create linked roster entry
 			createRosterEntry(
@@ -118,7 +123,8 @@ describe("Team Members E2E", () => {
 		});
 
 		it("should handle unlinked roster entries", async () => {
-			const team = testTeams[0]!;
+			const team = testTeams[0];
+			if (!team) throw new Error("Test setup failed");
 
 			// Create unlinked roster entry
 			createRosterEntry(team.subteamId, "Biology", 1, "Unlinked Student");
@@ -137,7 +143,8 @@ describe("Team Members E2E", () => {
 
 	describe("Member Display Information", () => {
 		it("should retrieve member display names correctly", () => {
-			const member = testUsers[1]!;
+			const member = testUsers[1];
+			if (!member) throw new Error("Test setup failed");
 
 			// Get member with user profile
 			const membership = getMembershipsByUser(member.id)[0];
@@ -150,7 +157,8 @@ describe("Team Members E2E", () => {
 
 	describe("Member Status", () => {
 		it("should only retrieve active members", () => {
-			const team = testTeams[0]!;
+			const team = testTeams[0];
+			if (!team) throw new Error("Test setup failed");
 
 			// Get only active memberships
 			const activeMemberships = getMembershipsByTeamId(team.subteamId);

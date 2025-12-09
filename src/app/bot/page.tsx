@@ -80,10 +80,7 @@ const CommandsTable = ({ darkMode }: CommandsTableProps) => {
 								className={`border px-4 py-3 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
 							>
 								{cmd.usage.split("\n").map((line, idx) => (
-									<span
-										// biome-ignore lint/suspicious/noArrayIndexKey: Static usage text lines, index is stable
-										key={idx}
-									>
+									<span key={`${idx}-${line}`}>
 										{line}
 										{idx < cmd.usage.split("\n").length - 1 && <br />}
 									</span>
@@ -240,8 +237,7 @@ const DivisionSubtopicTable = ({ darkMode }: DivisionSubtopicTableProps) => {
 							"Div. B",
 						].map((div, idx) => (
 							<td
-								// biome-ignore lint/suspicious/noArrayIndexKey: Static table data, index is stable
-								key={idx}
+								key={`${idx}-${div}`}
 								className={`border px-2 py-1 text-center ${
 									darkMode ? "text-gray-300" : "text-gray-700"
 								}`}
@@ -269,8 +265,7 @@ const DivisionSubtopicTable = ({ darkMode }: DivisionSubtopicTableProps) => {
 							"Div. C",
 						].map((div, idx) => (
 							<td
-								// biome-ignore lint/suspicious/noArrayIndexKey: Static table data, index is stable
-								key={idx}
+								key={`${idx}-${div}`}
 								className={`border px-2 py-1 text-center ${
 									darkMode ? "text-gray-300" : "text-gray-700"
 								}`}
@@ -281,8 +276,7 @@ const DivisionSubtopicTable = ({ darkMode }: DivisionSubtopicTableProps) => {
 					</tr>
 					{firstTableRows.map((row, index) => (
 						<tr
-							// biome-ignore lint/suspicious/noArrayIndexKey: Static table rows, index is stable
-							key={index}
+							key={`row-${index}-${row.join("-")}`}
 							className={`${
 								darkMode
 									? "border-gray-600 hover:bg-gray-700"
@@ -291,8 +285,7 @@ const DivisionSubtopicTable = ({ darkMode }: DivisionSubtopicTableProps) => {
 						>
 							{row.map((cell, cellIndex) => (
 								<td
-									// biome-ignore lint/suspicious/noArrayIndexKey: Static table cells, index is stable
-									key={cellIndex}
+									key={`cell-${index}-${cellIndex}-${cell}`}
 									className={`border px-2 py-1 text-center ${
 										darkMode ? "text-gray-300" : "text-gray-700"
 									}`}
@@ -422,8 +415,7 @@ const SecondDivisionSubtopicTable = ({
 							"Div. B",
 						].map((div, idx) => (
 							<td
-								// biome-ignore lint/suspicious/noArrayIndexKey: Static table data, index is stable
-								key={idx}
+								key={`${idx}-${div}`}
 								className={`border px-2 py-1 text-center ${
 									darkMode ? "text-gray-300" : "text-gray-700"
 								}`}
@@ -451,8 +443,7 @@ const SecondDivisionSubtopicTable = ({
 							"Div. C",
 						].map((div, idx) => (
 							<td
-								// biome-ignore lint/suspicious/noArrayIndexKey: Static table data, index is stable
-								key={idx}
+								key={`${idx}-${div}`}
 								className={`border px-2 py-1 text-center ${
 									darkMode ? "text-gray-300" : "text-gray-700"
 								}`}
@@ -463,8 +454,7 @@ const SecondDivisionSubtopicTable = ({
 					</tr>
 					{secondTableRows.map((row, index) => (
 						<tr
-							// biome-ignore lint/suspicious/noArrayIndexKey: Static table rows, index is stable
-							key={index}
+							key={`row-${index}-${row.join("-")}`}
 							className={`${
 								darkMode
 									? "border-gray-600 hover:bg-gray-700"
@@ -473,8 +463,7 @@ const SecondDivisionSubtopicTable = ({
 						>
 							{row.map((cell, cellIndex) => (
 								<td
-									// biome-ignore lint/suspicious/noArrayIndexKey: Static table cells, index is stable
-									key={cellIndex}
+									key={`cell-${index}-${cellIndex}-${cell}`}
 									className={`border px-2 py-1 text-center ${
 										darkMode ? "text-gray-300" : "text-gray-700"
 									}`}

@@ -2,7 +2,7 @@ import type { TeamMember } from "@/lib/stores/teams/types";
 import {
 	generateDisplayName,
 	needsNamePrompt,
-} from "@/lib/utils/displayNameUtils";
+} from "@/lib/utils/content/displayNameUtils";
 import type { Member } from "../../types";
 import { getDisplayName } from "../../utils/displayNameUtils";
 import { detectMemberConflicts } from "./conflictDetection";

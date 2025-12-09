@@ -26,7 +26,7 @@ export const setupCodebustersPrintWindow = (
 						printWindow.focus();
 						printWindow.print();
 					} catch (e) {
-						import("@/lib/utils/logger")
+						import("@/lib/utils/logging/logger")
 							.then((m) => m.default.warn("Immediate auto-print failed", e))
 							.catch(() => {
 								// Ignore logger import errors
@@ -99,7 +99,7 @@ export const setupCodebustersPrintWindow = (
 						cbtn.addEventListener("click", () => printWindow.close());
 					}
 				} catch (e) {
-					import("@/lib/utils/logger")
+					import("@/lib/utils/logging/logger")
 						.then((m) =>
 							m.default.error("Failed to inject banner into print window", e),
 						)

@@ -1,7 +1,7 @@
 import { dbPg } from "@/lib/db";
 import { newTeamGroups, newTeamUnits } from "@/lib/db/schema/teams";
 import { getServerUser } from "@/lib/supabaseServer";
-import { getTeamAccessCockroach } from "@/lib/utils/team-auth-v2";
+import { getTeamAccessCockroach } from "@/lib/utils/teams/access";
 import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 

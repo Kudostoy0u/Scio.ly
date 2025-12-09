@@ -15,6 +15,7 @@ export default function SubtopicDropdown({
 	onToggleSubtopic,
 	displayText,
 	dropdownRef,
+	id,
 }: {
 	darkMode: boolean;
 	isCodebusters: boolean;
@@ -25,6 +26,7 @@ export default function SubtopicDropdown({
 	onToggleSubtopic: (subtopic: string) => void;
 	displayText: string;
 	dropdownRef: MutableRefObject<HTMLDivElement | null>;
+	id?: string;
 }) {
 	const renderCodebusters = () => {
 		const divisionBOnlyCiphers = ["Affine", "Atbash", "Caesar"];
@@ -117,6 +119,7 @@ export default function SubtopicDropdown({
 		<div className="relative" ref={dropdownRef}>
 			<button
 				type="button"
+				id={id}
 				onClick={onToggleOpen}
 				className={`w-full flex justify-between items-center px-3 py-2.5 rounded-md border-0 text-sm ${darkMode ? "bg-gray-700 text-white focus:ring-blue-500" : "bg-gray-50 text-gray-900 focus:ring-blue-600"} shadow-sm focus:ring-1 focus:outline-none`}
 			>

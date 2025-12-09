@@ -1,6 +1,6 @@
 import { AuthProvider } from "@/app/contexts/AuthContext";
-import { NotificationsProvider } from "@/app/contexts/notificationsContext";
 import { ThemeProvider } from "@/app/contexts/ThemeContext";
+import { NotificationsProvider } from "@/app/contexts/notificationsContext";
 import type { User } from "@supabase/supabase-js";
 import type React from "react";
 

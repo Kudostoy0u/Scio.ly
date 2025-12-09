@@ -1,4 +1,4 @@
-import { slugifyText } from "@/lib/utils/markdown";
+import { slugifyText } from "@/lib/utils/content/markdown";
 
 export function eventSlug(name: string): string {
 	return slugifyText(name);

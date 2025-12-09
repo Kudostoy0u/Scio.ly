@@ -129,13 +129,14 @@ export default function RecurringMeetingModal({
 
 							<div className="space-y-4">
 								<div>
-									{/* biome-ignore lint/a11y/noLabelWithoutControl: Label is properly associated with input below */}
 									<label
+										htmlFor="recurring-meeting-title"
 										className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
 									>
 										Meeting Title <span className="text-red-500">*</span>
 									</label>
 									<input
+										id="recurring-meeting-title"
 										type="text"
 										value={recurringForm.title}
 										onChange={(e) => onFormChange({ title: e.target.value })}
@@ -148,13 +149,12 @@ export default function RecurringMeetingModal({
 									/>
 								</div>
 
-								<div>
-									{/* biome-ignore lint/a11y/noLabelWithoutControl: Label groups related checkboxes */}
-									<label
+								<fieldset>
+									<legend
 										className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
 									>
 										Days of Week <span className="text-red-500">*</span>
-									</label>
+									</legend>
 									<div className="grid grid-cols-7 gap-2">
 										{dayNames.map((day, index) => (
 											<label key={day} className="flex flex-col items-center">
@@ -174,17 +174,18 @@ export default function RecurringMeetingModal({
 											</label>
 										))}
 									</div>
-								</div>
+								</fieldset>
 
 								<div className="grid grid-cols-2 gap-4">
 									<div>
-										{/* biome-ignore lint/a11y/noLabelWithoutControl: Label is properly associated with input below */}
 										<label
+											htmlFor="recurring-start-date"
 											className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
 										>
 											Start Date <span className="text-red-500">*</span>
 										</label>
 										<input
+											id="recurring-start-date"
 											type="date"
 											value={recurringForm.start_date}
 											onChange={(e) =>
@@ -199,13 +200,14 @@ export default function RecurringMeetingModal({
 									</div>
 
 									<div>
-										{/* biome-ignore lint/a11y/noLabelWithoutControl: Label is properly associated with input below */}
 										<label
+											htmlFor="recurring-end-date"
 											className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
 										>
 											End Date <span className="text-red-500">*</span>
 										</label>
 										<input
+											id="recurring-end-date"
 											type="date"
 											value={recurringForm.end_date}
 											onChange={(e) =>
@@ -222,13 +224,14 @@ export default function RecurringMeetingModal({
 
 								<div className="grid grid-cols-2 gap-4">
 									<div>
-										{/* biome-ignore lint/a11y/noLabelWithoutControl: Label is properly associated with input below */}
 										<label
+											htmlFor="recurring-start-time"
 											className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
 										>
 											Start Time (Optional)
 										</label>
 										<input
+											id="recurring-start-time"
 											type="time"
 											value={recurringForm.start_time}
 											onChange={(e) =>
@@ -244,13 +247,14 @@ export default function RecurringMeetingModal({
 									</div>
 
 									<div>
-										{/* biome-ignore lint/a11y/noLabelWithoutControl: Label is properly associated with input below */}
 										<label
+											htmlFor="recurring-end-time"
 											className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
 										>
 											End Time (Optional)
 										</label>
 										<input
+											id="recurring-end-time"
 											type="time"
 											value={recurringForm.end_time}
 											onChange={(e) =>
@@ -267,13 +271,14 @@ export default function RecurringMeetingModal({
 								</div>
 
 								<div>
-									{/* biome-ignore lint/a11y/noLabelWithoutControl: Label is properly associated with select below */}
 									<label
+										htmlFor="recurring-meeting-type"
 										className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
 									>
 										Meeting Type <span className="text-red-500">*</span>
 									</label>
 									<select
+										id="recurring-meeting-type"
 										value={
 											recurringForm.meeting_type === "personal"
 												? "personal"
@@ -301,13 +306,14 @@ export default function RecurringMeetingModal({
 								</div>
 
 								<div>
-									{/* biome-ignore lint/a11y/noLabelWithoutControl: Label is properly associated with input below */}
 									<label
+										htmlFor="recurring-location"
 										className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
 									>
 										Location
 									</label>
 									<input
+										id="recurring-location"
 										type="text"
 										value={recurringForm.location}
 										onChange={(e) => onFormChange({ location: e.target.value })}

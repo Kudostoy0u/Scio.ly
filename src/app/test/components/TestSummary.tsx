@@ -1,7 +1,7 @@
 "use client";
 import SummaryGrid, { type SummaryItem } from "@/app/components/SummaryGrid";
 import type { Question } from "@/app/utils/geminiService";
-import { getLetterGradeFromPercentage } from "@/lib/utils/grade";
+import { getLetterGradeFromPercentage } from "@/lib/utils/assessments/grade";
 import { CheckCircle, MessageCircle, Target, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -158,7 +158,7 @@ export default function TestSummary({
 
 	useEffect(() => {
 		if (data.length > 0 && subtopics.length === 0) {
-			import("@/lib/utils/logger")
+			import("@/lib/utils/logging/logger")
 				.then((m) => {
 					const logger = m.default;
 					logger.log("Debug: First question structure:", data[0]);

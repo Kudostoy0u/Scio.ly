@@ -75,8 +75,7 @@ describe("EventCatalogue", () => {
 	};
 
 	it("renders events for both divisions", () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	render(<EventCatalogue eventsByDivision={mockEvents as any} />);
+		render(<EventCatalogue eventsByDivision={mockEvents} />);
 
 		expect(screen.getByText("Division B")).toBeInTheDocument();
 		expect(screen.getByText("Division C")).toBeInTheDocument();
@@ -117,7 +116,6 @@ describe("EventCatalogue", () => {
 			C: [],
 		};
 
-		// @ts-nocheck
 		render(<EventCatalogue eventsByDivision={unsortedEvents} />);
 
 		const links = screen.getAllByRole("link");
@@ -168,7 +166,6 @@ describe("EventCatalogue", () => {
 			C: [],
 		};
 
-		// @ts-nocheck
 		render(<EventCatalogue eventsByDivision={eventsWithNulls} />);
 		expect(
 			screen.getAllByText("Anatomy and Physiology").length,
@@ -176,8 +173,7 @@ describe("EventCatalogue", () => {
 	});
 
 	it("disables prefetch on event links", () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	render(<EventCatalogue eventsByDivision={mockEvents as any} />);
+		render(<EventCatalogue eventsByDivision={mockEvents} />);
 		const links = screen.getAllByRole("link");
 		expect(links.length).toBeGreaterThan(0);
 		for (const link of links) {

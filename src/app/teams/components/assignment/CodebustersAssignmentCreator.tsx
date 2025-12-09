@@ -271,12 +271,16 @@ export default function CodebustersAssignmentCreator({
 			}}
 			tabIndex={-1}
 		>
-			{/* biome-ignore lint/a11y/useKeyWithClickEvents: This div prevents event propagation and is not keyboard interactive */}
 			<div
 				className={`max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto rounded-lg ${
 					darkMode ? "bg-gray-800" : "bg-white"
 				}`}
 				onClick={(e) => e.stopPropagation()}
+				onKeyDown={(e) => {
+					if (e.key === "Enter" || e.key === " ") {
+						e.stopPropagation();
+					}
+				}}
 				role="presentation"
 			>
 				<div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">

@@ -6,7 +6,7 @@ import {
 } from "@/lib/api/utils";
 import { geminiService } from "@/lib/services/gemini";
 import type { ApiResponse } from "@/lib/types/api";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import type { NextRequest } from "next/server";
 
 export const maxDuration = 60;

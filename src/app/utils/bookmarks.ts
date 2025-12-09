@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import type { Database } from "@/lib/types/database";
 
 /**
  * Bookmark management utilities for Science Olympiad questions
@@ -36,6 +37,11 @@ interface BookmarkedQuestion {
 	/** Bookmark creation timestamp */
 	timestamp: number;
 }
+
+/**
+ * Bookmark insert type from database schema
+ */
+type BookmarkInsert = Database["public"]["Tables"]["bookmarks"]["Insert"];
 
 /**
  * Loads user bookmarks from Supabase database
@@ -155,13 +161,16 @@ export const addBookmark = async (
 			return;
 		}
 
-		const { error } = await supabase.from("bookmarks").insert({
+		const bookmarkData: BookmarkInsert = {
 			user_id: userId,
-			question_data: question as unknown,
+			question_data: question as unknown as Record<string, unknown>,
 			event_name: eventName,
 			source: source,
-			timestamp: Date.now(),
-		} as never);
+		};
+
+		const { error } = (await supabase
+			.from("bookmarks")
+			.insert([bookmarkData] as unknown as never[])) as { error: Error | null };
 
 		if (error) {
 			// Error handling can go here if needed

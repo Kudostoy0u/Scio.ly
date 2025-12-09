@@ -1,6 +1,6 @@
 import api from "@/app/api";
 import SyncLocalStorage from "@/lib/database/localStorageReplacement";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { toast } from "react-toastify";
 import { clearTestSession, initializeTestSession } from "./timeManagement";
 

@@ -2,7 +2,6 @@
 export type { DocsEvent, EventBadgeKind, EventBadge } from "./types/eventTypes";
 
 // Re-export constants
-// biome-ignore lint/performance/noBarrelFile: Centralized event exports for consistency
 export {
 	MISC_EVENT_NAMES,
 	BINDER_EVENT_NAMES,

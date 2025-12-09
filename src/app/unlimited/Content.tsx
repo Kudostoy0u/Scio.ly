@@ -1,6 +1,6 @@
 "use client";
 import SyncLocalStorage from "@/lib/database/localStorageReplacement";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -34,7 +34,6 @@ import { useUnlimitedPractice } from "./hooks/useUnlimitedPractice";
 //
 import { buildEditPayload } from "./utils/editPayload";
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex state management and event handlers required for unlimited practice functionality
 export default function UnlimitedPracticePage({
 	initialRouterData,
 }: { initialRouterData?: Record<string, unknown> }) {

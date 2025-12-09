@@ -1,4 +1,4 @@
-import { validateEventName } from "@/lib/utils/eventConfig";
+import { validateEventName } from "@/lib/utils/assessments/eventConfig";
 
 const EVENT_NAME_MAPPING: Record<string, string> = {
 	"Dynamic Planet": "Dynamic Planet - Oceanography",

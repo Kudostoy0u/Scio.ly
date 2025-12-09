@@ -50,7 +50,9 @@ const faqs = [
 				>
 					Join our team
 				</Link>{" "}
-				to see how you can help improve the platform, suggest features, or report issues. You can also help by sending feedback through our contact form.
+				to see how you can help improve the platform, suggest features, or
+				report issues. You can also help by sending feedback through our contact
+				form.
 			</>
 		),
 	},

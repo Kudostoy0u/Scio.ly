@@ -1,6 +1,6 @@
 import type { EloData } from "@/app/analytics/types/elo";
 import { getLeaderboard } from "@/app/analytics/utils/eloDataProcessor";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 
 /**
  * Collect all available seasons from ELO data

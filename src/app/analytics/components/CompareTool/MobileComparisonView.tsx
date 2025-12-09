@@ -1,5 +1,5 @@
 import type { ComparisonResult } from "@/app/analytics/types/elo";
-import { stripTrailingParenthetical } from "@/lib/utils/string";
+import { stripTrailingParenthetical } from "@/lib/utils/content/string";
 
 interface MobileComparisonViewProps {
 	results: ComparisonResult[];

@@ -1,7 +1,8 @@
 import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { supabase } from "@/lib/supabase";
-import logger from "@/lib/utils/logger";
-import { withAuthRetry } from "@/lib/utils/supabaseRetry";
+import type { Database } from "@/lib/types/database";
+import { withAuthRetry } from "@/lib/utils/auth/supabaseRetry";
+import logger from "@/lib/utils/logging/logger";
 import { updateLeaderboardStats } from "./leaderboardUtils";
 
 /**
@@ -356,12 +357,15 @@ export const updateMetrics = async (
 		};
 
 		const { data, error } = await withAuthRetry(async () => {
-			const query = supabase
+			const query = (await supabase
 				.from("user_stats")
-				.upsert(updatedStats as never, { onConflict: "user_id,date" })
+				.upsert([updatedStats] as unknown as never[])
 				.select()
-				.single();
-			return await query;
+				.single()) as {
+				data: Database["public"]["Tables"]["user_stats"]["Row"] | null;
+				error: Error | null;
+			};
+			return query;
 		}, "updateMetrics");
 
 		if (error || !data) {

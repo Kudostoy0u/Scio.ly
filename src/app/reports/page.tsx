@@ -13,7 +13,6 @@ import {
 } from "./components/QuestionCards";
 import { ScrollBarAlwaysVisible } from "./components/ScrollBarAlwaysVisible";
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex reports page with multiple data sources and filtering
 export default function ReportsPage() {
 	const { darkMode } = useTheme();
 	// Lazy-loaded per-event data caches
@@ -598,18 +597,6 @@ export default function ReportsPage() {
 					</p>
 				</div>
 			</div>
-
-			{/* Global styles for scrollbar */}
-			{/* eslint-disable-next-line react/no-unknown-property */}
-			<style jsx={true} global={true}>{`
-        .native-scroll-hidden {
-          scrollbar-width: none; /* Firefox */
-          -ms-overflow-style: none; /* Internet Explorer 10+ */
-        }
-        .native-scroll-hidden::-webkit-scrollbar {
-          display: none; /* Safari and Chrome */
-        }
-      `}</style>
 		</div>
 	);
 }

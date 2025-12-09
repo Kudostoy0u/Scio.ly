@@ -3,7 +3,7 @@
 import { useTheme } from "@/app/contexts/ThemeContext";
 // import HylasBanner from "@/app/dashboard/components/HylasBanner";
 // import SyncLocalStorage from "@/lib/database/localStorageReplacement";
-// import logger from "@/lib/utils/logger";
+// import logger from "@/lib/utils/logging/logger";
 import Header from "@components/Header";
 import { useRouter } from "next/navigation";
 import type React from "react";

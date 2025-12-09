@@ -4,7 +4,7 @@
 
 import { dbPg } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 
 // Removed unused function: generateCode
 
@@ -27,6 +27,7 @@ export async function upsertUserProfile(params: {
 	displayName?: string | null;
 	photoUrl?: string | null;
 }): Promise<void> {
+	logger.debug("upsertUserProfile", params);
 	const startedAt = Date.now();
 	try {
 		const id = params.id || params.userId || "";

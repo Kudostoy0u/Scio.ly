@@ -258,7 +258,8 @@ function formatAssignmentQuestion(
 	const correctAnswerIndices = extractCorrectAnswerIndices(originalQuestion);
 
 	const formattedQuestion: FormattedQuestion = {
-		question_text: originalQuestion.question || originalQuestion.question_text || "",
+		question_text:
+			originalQuestion.question || originalQuestion.question_text || "",
 		question_type: isMcq ? "multiple_choice" : "free_response",
 		options: isMcq ? originalQuestion.options : undefined,
 		answers: isMcq

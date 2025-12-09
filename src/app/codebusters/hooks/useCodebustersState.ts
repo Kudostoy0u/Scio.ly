@@ -1,5 +1,5 @@
 import type { QuoteData } from "@/app/codebusters/types";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { useCallback, useEffect, useState } from "react";
 
 // import { toast } from 'react-toastify';

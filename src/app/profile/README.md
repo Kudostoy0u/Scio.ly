@@ -116,7 +116,7 @@ const handleSave = async () => {
         display_name: displayName || null,
         photo_url: photoUrl || null,
         created_at: new Date().toISOString(),
-      } as never,
+      } as any,
       { onConflict: "id" }
     );
     // ... handle save

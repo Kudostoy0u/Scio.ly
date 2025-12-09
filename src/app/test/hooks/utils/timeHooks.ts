@@ -42,7 +42,7 @@ export function useSetupVisibility(): void {
 export function useCountdown(
 	timeLeft: number | null,
 	isSubmitted: boolean,
-	setTimeLeft: (n: number) => void,
+	setTimeLeft: (n: number | null) => void,
 	onTimeout: () => void,
 ): void {
 	useEffect(() => {

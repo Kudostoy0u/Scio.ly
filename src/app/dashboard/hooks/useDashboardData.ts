@@ -1,5 +1,5 @@
 "use client";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 
 // import { supabase } from '@/lib/supabase';
 import {

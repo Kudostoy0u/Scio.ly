@@ -20,8 +20,9 @@ export default function CertifiedPage() {
 							className={`${darkMode ? "text-gray-300" : "text-gray-700"} mb-2`}
 						>
 							Here are the certified tournaments from which we pull test
-							questions. They have been vetted by our team for quality and upserted into our
-							the Scio.ly database without any additional modifications.
+							questions. They have been vetted by our team for quality and
+							upserted into our the Scio.ly database without any additional
+							modifications.
 						</p>
 						<p
 							className={`${darkMode ? "text-gray-300" : "text-gray-700"} mb-2`}

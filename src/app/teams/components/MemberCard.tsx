@@ -5,7 +5,7 @@ import { useTheme } from "@/app/contexts/ThemeContext";
 import {
 	generateDisplayName,
 	needsNamePrompt,
-} from "@/lib/utils/displayNameUtils";
+} from "@/lib/utils/content/displayNameUtils";
 import { AlertTriangle, ArrowUpCircle, Crown, Edit3, X } from "lucide-react";
 import type { Member } from "../types";
 import { getDisplayName } from "../utils/displayNameUtils";

@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { X } from "lucide-react";
 import { toast } from "react-toastify";
 import type { Member } from "../types";

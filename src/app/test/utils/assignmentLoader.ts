@@ -1,6 +1,6 @@
 import type { Question } from "@/app/utils/geminiService";
 import type { RouterParams } from "@/app/utils/questionUtils";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import type React from "react";
 import { normalizeQuestionsFull } from "../hooks/utils/normalize";
 

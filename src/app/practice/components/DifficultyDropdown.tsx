@@ -12,6 +12,7 @@ export default function DifficultyDropdown({
 	onToggleDifficulty,
 	displayText,
 	dropdownRef,
+	id,
 }: {
 	darkMode: boolean;
 	isCodebusters: boolean;
@@ -21,6 +22,7 @@ export default function DifficultyDropdown({
 	onToggleDifficulty: (id: string) => void;
 	displayText: string;
 	dropdownRef: MutableRefObject<HTMLDivElement | null>;
+	id?: string;
 }) {
 	const standardDifficulties = [
 		{ id: "very-easy", label: "Very Easy (0-19%)" },
@@ -35,6 +37,7 @@ export default function DifficultyDropdown({
 		<div className="relative" ref={dropdownRef}>
 			<button
 				type="button"
+				id={id}
 				onClick={onToggleOpen}
 				disabled={isCodebusters}
 				className={`w-full flex justify-between items-center px-3 py-2.5 rounded-md border-0 text-sm ${

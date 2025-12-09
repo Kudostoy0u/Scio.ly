@@ -13,7 +13,6 @@ import {
 	getTeamMetaBySlug,
 	joinTeamByCode,
 	leaveTeam,
-	linkSupabaseAccount,
 	listPendingInvitesForUser,
 	listPendingLinkInvitesForUser,
 	listTeamsForUser,
@@ -174,12 +173,13 @@ export const teamsRouter = router({
 			});
 		}),
 
-	linkAccount: protectedProcedure
-		.input(z.object({ username: z.string().min(2) }))
-		.mutation(async ({ ctx, input }) => {
-			const result = await linkSupabaseAccount(input.username, ctx.user.id);
-			return result;
-		}),
+	// TODO: Re-implement linkAccount when linkSupabaseAccount is available
+	// linkAccount: protectedProcedure
+	// 	.input(z.object({ username: z.string().min(2) }))
+	// 	.mutation(async ({ ctx, input }) => {
+	// 		const result = await linkSupabaseAccount(input.username, ctx.user.id);
+	// 		return result;
+	// 	}),
 
 	renameSubteam: protectedProcedure
 		.input(

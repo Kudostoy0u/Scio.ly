@@ -2,10 +2,12 @@
  * Test fixtures for roster invite route tests
  */
 
+import type { User } from "@supabase/supabase-js";
+
 export const mockUser = {
 	id: "user-123",
 	email: "test@example.com",
-} as any;
+} as User;
 
 export const mockInvitedUser = {
 	id: "invited-user-123",
@@ -14,7 +16,7 @@ export const mockInvitedUser = {
 	first_name: "Invited",
 	last_name: "User",
 	username: "inviteduser",
-} as any;
+} as unknown;
 
 export const mockMembership = {
 	role: "captain",
@@ -28,10 +30,12 @@ export const mockSubteam = {
 	id: "123e4567-e89b-12d3-a456-426614174000",
 };
 
-export const mockTeamInfo = {
+import type { TeamGroupInfo } from "@/lib/utils/teams/resolver";
+
+export const mockTeamInfo: TeamGroupInfo = {
 	groupId: "group-123",
 	teamUnitIds: ["unit-123"],
-} as any;
+};
 
 export const mockInvitation = {
 	id: "invitation-123",

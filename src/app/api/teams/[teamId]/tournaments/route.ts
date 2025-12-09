@@ -8,6 +8,8 @@ import {
 } from "@/lib/db/schema/teams";
 import { UUIDSchema } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
+import logger from "@/lib/utils/logging/logger";
+import { getTeamAccessCockroach } from "@/lib/utils/teams/access";
 import {
 	handleError,
 	handleForbiddenError,
@@ -15,9 +17,7 @@ import {
 	handleUnauthorizedError,
 	handleValidationError,
 	validateEnvironment,
-} from "@/lib/utils/error-handler";
-import logger from "@/lib/utils/logger";
-import { checkTeamGroupAccessCockroach } from "@/lib/utils/team-auth";
+} from "@/lib/utils/teams/errors";
 import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -26,7 +26,6 @@ import { z } from "zod";
 // Frontend Usage:
 // - src/lib/stores/teamStore.ts (fetchTournaments, fetchStreamData)
 // - src/app/hooks/useEnhancedTeamData.ts (fetchTournaments)
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex tournament retrieval with filtering and date logic
 export async function GET(
 	request: NextRequest,
 	{ params }: { params: Promise<{ teamId: string }> },
@@ -81,8 +80,8 @@ export async function GET(
 		const groupId = groupResult.id;
 
 		// Check if user has access to this team group (membership OR roster entry)
-		const authResult = await checkTeamGroupAccessCockroach(user.id, groupId);
-		if (!authResult.isAuthorized) {
+		const access = await getTeamAccessCockroach(user.id, groupId);
+		if (!access.hasAccess) {
 			return handleForbiddenError("Not authorized to access this team");
 		}
 

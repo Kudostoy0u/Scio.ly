@@ -1,5 +1,5 @@
 "use client";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import type React from "react";
 
 import api from "@/app/api";
@@ -375,7 +375,6 @@ export const getExplanation = async (
 	setGradingResults: React.Dispatch<React.SetStateAction<GradingResults>>,
 	userAnswers?: Record<number, (string | null)[] | null>,
 	rateLimitDelay = 2000,
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex logic required for explanation generation with rate limiting and error handling
 ) => {
 	if (explanations[index]) {
 		return;

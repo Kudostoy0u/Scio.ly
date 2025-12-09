@@ -261,6 +261,18 @@ body {
 }
 
 /* New Border Streak Animation */
+@keyframes scio-loading {
+	0% {
+		transform: translateX(-100%);
+	}
+	50% {
+		transform: translateX(100%);
+	}
+	100% {
+		transform: translateX(100%);
+	}
+}
+
 @keyframes border-streak {
 	0% {
 		transform: rotate(0deg);

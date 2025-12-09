@@ -28,6 +28,16 @@ import {
 	getAssignmentsByTeamId,
 } from "../utils/test-helpers";
 
+type AssignmentRecord = {
+	id: string;
+	teamId: string;
+	createdBy: string;
+	title: string;
+	description?: string;
+	assignmentType: string;
+	isRequired?: boolean;
+};
+
 describe("Assignment Management E2E", () => {
 	const testUsers: TestUser[] = [];
 	const testTeams: TestTeam[] = [];
@@ -38,11 +48,11 @@ describe("Assignment Management E2E", () => {
 		testUsers.push(createTestUser({ displayName: "Member User" }));
 
 		// Create test team
-		const team = createTestTeam(testUsers[0]!.id);
+		const team = createTestTeam(testUsers[0]?.id ?? "");
 		testTeams.push(team);
 
 		// Add member
-		addTeamMember(team.subteamId, testUsers[1]!.id, "member");
+		addTeamMember(team.subteamId, testUsers[1]?.id ?? "", "member");
 
 		// Create roster entry for member
 		createRosterEntry(
@@ -50,7 +60,7 @@ describe("Assignment Management E2E", () => {
 			"Astronomy",
 			0,
 			"Member User",
-			testUsers[1]!.id,
+			testUsers[1]?.id ?? "",
 		);
 	});
 
@@ -63,8 +73,9 @@ describe("Assignment Management E2E", () => {
 
 	describe("Assignment Creation", () => {
 		it("should create an assignment with questions", async () => {
-			const team = testTeams[0]!;
-			const captain = testUsers[0]!;
+			const team = testTeams[0];
+			const captain = testUsers[0];
+			if (!team || !captain) throw new Error("Test setup failed");
 
 			// Create assignment
 			const assignment = createAssignment({
@@ -109,9 +120,10 @@ describe("Assignment Management E2E", () => {
 		});
 
 		it("should create assignment with roster members", () => {
-			const team = testTeams[0]!;
-			const captain = testUsers[0]!;
-			const member = testUsers[1]!;
+			const team = testTeams[0];
+			const captain = testUsers[0];
+			const member = testUsers[1];
+			if (!team || !captain || !member) throw new Error("Test setup failed");
 
 			// Create assignment
 			const assignment = createAssignment({
@@ -139,7 +151,8 @@ describe("Assignment Management E2E", () => {
 
 	describe("Assignment Retrieval", () => {
 		it("should retrieve assignments for a team", () => {
-			const team = testTeams[0]!;
+			const team = testTeams[0];
+			if (!team) throw new Error("Test setup failed");
 
 			// Get all assignments
 			const assignments = getAssignmentsByTeamId(team.subteamId);
@@ -155,7 +168,8 @@ describe("Assignment Management E2E", () => {
 		});
 
 		it("should retrieve assignments with questions", () => {
-			const team = testTeams[0]!;
+			const team = testTeams[0];
+			if (!team) throw new Error("Test setup failed");
 
 			// Get assignments
 			const assignments = getAssignmentsByTeamId(team.subteamId);
@@ -174,8 +188,9 @@ describe("Assignment Management E2E", () => {
 
 	describe("Assignment Submissions", () => {
 		it("should create assignment submission", () => {
-			const team = testTeams[0]!;
-			const member = testUsers[1]!;
+			const team = testTeams[0];
+			const member = testUsers[1];
+			if (!team || !member) throw new Error("Test setup failed");
 
 			// Get an assignment
 			const assignments = getAssignmentsByTeamId(team.subteamId);
@@ -184,14 +199,15 @@ describe("Assignment Management E2E", () => {
 			if (!assignment) {
 				assignment = createAssignment({
 					teamId: team.subteamId,
-					createdBy: testUsers[0]!.id,
+					createdBy: testUsers[0]?.id ?? "",
 					title: "Submission Test Assignment",
 					assignmentType: "task",
-				}) as any;
+				}) as AssignmentRecord | undefined;
 			}
 
 			// At this point assignment is guaranteed to exist
-			const guaranteedAssignment = assignment!;
+			if (!assignment) throw new Error("Assignment creation failed");
+			const guaranteedAssignment = assignment;
 
 			const submission = createAssignmentSubmission({
 				assignmentId: guaranteedAssignment.id,
@@ -202,14 +218,17 @@ describe("Assignment Management E2E", () => {
 			});
 
 			expect(submission).toBeDefined();
-			const [retrievedSubmission] = getAssignmentSubmissions(guaranteedAssignment.id);
+			const [retrievedSubmission] = getAssignmentSubmissions(
+				guaranteedAssignment.id,
+			);
 			expect(retrievedSubmission?.userId).toBe(member.id);
 			expect(retrievedSubmission?.status).toBe("submitted");
 		});
 
 		it("should track submission attempts", async () => {
-			const team = testTeams[0]!;
-			const member = testUsers[1]!;
+			const team = testTeams[0];
+			const member = testUsers[1];
+			if (!team || !member) throw new Error("Test setup failed");
 
 			// Get an assignment
 			const assignment = getAssignmentsByTeamId(team.subteamId)[0];
@@ -247,8 +266,9 @@ describe("Assignment Management E2E", () => {
 		});
 
 		it("should validate question structure", () => {
-			const team = testTeams[0]!;
-			const captain = testUsers[0]!;
+			const team = testTeams[0];
+			const captain = testUsers[0];
+			if (!team || !captain) throw new Error("Test setup failed");
 
 			// Create assignment
 			const assignment = createAssignment({

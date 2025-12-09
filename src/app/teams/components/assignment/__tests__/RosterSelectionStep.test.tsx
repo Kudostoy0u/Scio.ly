@@ -126,7 +126,8 @@ describe("RosterSelectionStep", () => {
 			render(<RosterSelectionStep {...mockProps} />);
 
 			const johnCheckbox = screen.getAllByRole("checkbox")[0];
-			fireEvent.click(johnCheckbox!);
+			if (!johnCheckbox) throw new Error("John checkbox not found");
+			fireEvent.click(johnCheckbox);
 
 			expect(mockProps.onRosterChange).toHaveBeenCalledWith(["John Doe"]);
 		});
@@ -144,7 +145,8 @@ describe("RosterSelectionStep", () => {
 			render(<RosterSelectionStep {...mockProps} />);
 
 			const bobCheckbox = screen.getAllByRole("checkbox")[2]; // Bob is the third checkbox
-			fireEvent.click(bobCheckbox!);
+			if (!bobCheckbox) throw new Error("Bob checkbox not found");
+			fireEvent.click(bobCheckbox);
 
 			expect(mockProps.onRosterChange).not.toHaveBeenCalled();
 		});

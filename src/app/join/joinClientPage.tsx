@@ -1,5 +1,5 @@
 "use client";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 
 import Header from "@/app/components/Header";
 import { useTheme } from "@/app/contexts/ThemeContext";
@@ -176,7 +176,8 @@ export default function JoinClientPage() {
 								<p
 									className={`text-xs mt-1 ${darkMode ? "text-gray-500" : "text-gray-400"}`}
 								>
-									How should we communicate with you day-to-day? A Discord handle is preferred but not required!
+									How should we communicate with you day-to-day? A Discord
+									handle is preferred but not required!
 								</p>
 							</div>
 							<div>

@@ -24,7 +24,6 @@ export function useNamePrompt(): NamePromptState {
 	});
 
 	useEffect(() => {
-		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex name prompt logic with async checks and state management
 		const checkNamePrompt = async () => {
 			if (!user?.id) {
 				setState({

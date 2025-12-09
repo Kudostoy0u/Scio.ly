@@ -8,9 +8,10 @@ import {
 	rosterLinkInvitations,
 } from "@/lib/db/schema/teams";
 import { UUIDSchema } from "@/lib/schemas/teams-validation";
-// import logger from "@/lib/utils/logger";
+// import logger from "@/lib/utils/logging/logger";
 import { getServerUser } from "@/lib/supabaseServer";
-import { generateDisplayName } from "@/lib/utils/displayNameUtils";
+import { generateDisplayName } from "@/lib/utils/content/displayNameUtils";
+import { getTeamAccess, getUserDisplayInfo } from "@/lib/utils/teams/access";
 import {
 	// handleError,
 	handleForbiddenError,
@@ -18,8 +19,7 @@ import {
 	handleUnauthorizedError,
 	handleValidationError,
 	validateEnvironment,
-} from "@/lib/utils/error-handler";
-import { getTeamAccess, getUserDisplayInfo } from "@/lib/utils/team-auth-v2";
+} from "@/lib/utils/teams/errors";
 import { and, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -56,7 +56,6 @@ interface TeamMember {
 // - src/app/hooks/useEnhancedTeamData.ts (fetchMembers)
 // - src/app/hooks/useTeamData.ts (fetchMembers)
 // - src/app/teams/components/PeopleTab.tsx (loadMembers)
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex member retrieval logic with multiple data sources
 export async function GET(
 	request: NextRequest,
 	{ params }: { params: Promise<{ teamId: string }> },

@@ -1,7 +1,7 @@
 import type { QuoteData } from "@/app/codebusters/types";
 import { setCustomWordBank } from "@/app/codebusters/utils/common";
 import SyncLocalStorage from "@/lib/database/localStorageReplacement";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import {
 	getAvailableCipherTypes,
 	mapSubtopicsToCipherTypes,

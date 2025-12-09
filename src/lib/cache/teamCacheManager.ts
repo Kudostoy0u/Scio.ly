@@ -10,7 +10,7 @@
 
 import { useTeamStore } from "@/lib/stores/teamStore";
 import type { RosterData, Subteam, TeamMember } from "@/lib/stores/teamStore";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 
 export interface CacheUpdateResult {
 	success: boolean;

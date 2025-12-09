@@ -16,11 +16,11 @@ import {
 	handleNotFoundError,
 	handleUnauthorizedError,
 	validateEnvironment,
-} from "@/lib/utils/error-handler";
+} from "@/lib/utils/teams/errors";
 import {
 	getUserTeamMemberships,
 	resolveTeamSlugToUnits,
-} from "@/lib/utils/team-resolver";
+} from "@/lib/utils/teams/resolver";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 

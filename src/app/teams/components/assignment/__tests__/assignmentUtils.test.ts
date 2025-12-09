@@ -12,7 +12,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the external dependencies
-vi.mock("@/lib/utils/eventConfig", () => ({
+vi.mock("@/lib/utils/assessments/eventConfig", () => ({
 	getEventCapabilities: vi.fn(() => ({
 		supportsPictureQuestions: false,
 		supportsIdentificationOnly: false,

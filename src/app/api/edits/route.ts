@@ -30,13 +30,12 @@ export async function GET(request: NextRequest) {
 		const searchParams = request.nextUrl.searchParams;
 		const event = searchParams.get("event");
 
-		const result = await db
-			.select()
-			.from(editsTable)
-			.where(
-				event ? eq(editsTable.event, event) : (undefined as unknown as never),
-			)
-			.orderBy(desc(editsTable.updatedAt));
+		const baseQuery = db.select().from(editsTable);
+		const result = event
+			? await baseQuery
+					.where(eq(editsTable.event, event))
+					.orderBy(desc(editsTable.updatedAt))
+			: await baseQuery.orderBy(desc(editsTable.updatedAt));
 
 		if (event) {
 			const edits: Array<{
@@ -103,7 +102,6 @@ export async function GET(request: NextRequest) {
 	}
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex edit validation and processing logic
 export async function POST(request: NextRequest) {
 	try {
 		const body: EditRequest = await request.json();

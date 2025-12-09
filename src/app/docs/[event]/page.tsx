@@ -1,7 +1,7 @@
 import { getEventMeta } from "@/app/docs/utils/eventMeta";
 import { getEventBySlug } from "@/app/docs/utils/events2026";
 import { getAnyEventMarkdown } from "@/app/docs/utils/storage";
-import { extractToc } from "@/lib/utils/markdown";
+import { extractToc } from "@/lib/utils/content/markdown";
 import { notFound } from "next/navigation";
 import { EventDocsClient } from "./EventDocsClient";
 

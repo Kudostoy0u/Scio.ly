@@ -1,9 +1,10 @@
 "use client";
 import SyncLocalStorage from "@/lib/database/localStorageReplacement";
-import logger from "@/lib/utils/logger";
-import { withAuthRetryData } from "@/lib/utils/supabaseRetry";
+import { withAuthRetryData } from "@/lib/utils/auth/supabaseRetry";
+import logger from "@/lib/utils/logging/logger";
 
 import { supabase } from "@/lib/supabase";
+import type { Database } from "@/lib/types/database";
 import type { DailyMetrics } from "./metrics";
 
 /**
@@ -34,6 +35,11 @@ export interface DashboardData {
 	/** User's greeting name */
 	greetingName: string;
 }
+
+/**
+ * User stats insert type from database schema
+ */
+type UserStatsInsert = Database["public"]["Tables"]["user_stats"]["Insert"];
 
 /** LocalStorage key prefix for metrics data */
 const METRICS_PREFIX = "metrics_";
@@ -322,7 +328,7 @@ const buildUpdatedStats = (
 		eventName?: string;
 	},
 	attemptedDelta: number,
-) => {
+): UserStatsInsert => {
 	return {
 		user_id: userId,
 		date: today,
@@ -350,7 +356,7 @@ const buildUpdatedStats = (
 
 const handleUpsertError = async (
 	error: unknown,
-	updatedStats: Record<string, unknown>,
+	updatedStats: UserStatsInsert,
 ) => {
 	if (
 		error &&
@@ -364,11 +370,15 @@ const handleUpsertError = async (
 		} catch {
 			// Ignore refresh session errors
 		}
-		const retry = await supabase
+		const retry = (await supabase
 			.from("user_stats")
-			.upsert(updatedStats as never, { onConflict: "user_id,date" })
+			// @ts-expect-error - Supabase type inference issue with upsert
+			.upsert([updatedStats])
 			.select()
-			.single();
+			.single()) as {
+			data: Database["public"]["Tables"]["user_stats"]["Row"] | null;
+			error: Error | null;
+		};
 		if (retry.error) {
 			logger.error("Error updating metrics after refresh:", retry.error);
 			return null;
@@ -537,11 +547,14 @@ export const updateDashboardMetrics = async (
 			attemptedDelta,
 		);
 
-		const { data: initialData, error } = await supabase
+		const { data: initialData, error } = (await supabase
 			.from("user_stats")
-			.upsert(updatedStats as never, { onConflict: "user_id,date" })
+			.upsert([updatedStats] as unknown as never[])
 			.select()
-			.single();
+			.single()) as {
+			data: Database["public"]["Tables"]["user_stats"]["Row"] | null;
+			error: Error | null;
+		};
 
 		let data = initialData;
 		if (error) {

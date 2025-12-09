@@ -8,7 +8,7 @@ import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import "katex/dist/katex.min.css";
-import { slugifyText } from "@/lib/utils/markdown";
+import { slugifyText } from "@/lib/utils/content/markdown";
 import { VideoCarousel } from "./components/VideoCarousel";
 import { getVideosForCipher } from "./data/cipherVideos";
 
@@ -474,13 +474,13 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
 		}
 	};
 
-	const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+	const handleBackdropClick = (e: React.MouseEvent<HTMLDialogElement>) => {
 		if (e.target === e.currentTarget) {
 			onClose();
 		}
 	};
 
-	const handleBackdropKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+	const handleBackdropKeyDown = (e: React.KeyboardEvent<HTMLDialogElement>) => {
 		if (e.key === "Escape") {
 			onClose();
 		}
@@ -488,15 +488,12 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
 
 	return (
 		<>
-			<div
-				className="fixed inset-0 z-50 flex items-center justify-center"
-				style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+			<dialog
+				className="fixed inset-0 z-50 flex items-center justify-center border-0 bg-transparent p-0 backdrop:bg-black/50"
 				onClick={handleBackdropClick}
-				// biome-ignore lint/a11y/useSemanticElements: Using div for modal backdrop with custom styling
 				onKeyDown={handleBackdropKeyDown}
-				role="dialog"
 				aria-modal="true"
-				tabIndex={-1}
+				open
 			>
 				<div
 					className={`relative w-11/12 h-5/6 max-w-4xl rounded-lg shadow-2xl flex flex-col ${
@@ -534,7 +531,7 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
 						contentRef={contentRef}
 					/>
 				</div>
-			</div>
+			</dialog>
 		</>
 	);
 };

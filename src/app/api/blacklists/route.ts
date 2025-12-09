@@ -30,15 +30,12 @@ export async function GET(request: NextRequest) {
 		const searchParams = request.nextUrl.searchParams;
 		const event = searchParams.get("event");
 
-		const result = await db
-			.select()
-			.from(blacklistsTable)
-			.where(
-				event
-					? eq(blacklistsTable.event, event)
-					: (undefined as unknown as never),
-			)
-			.orderBy(desc(blacklistsTable.createdAt));
+		const baseQuery = db.select().from(blacklistsTable);
+		const result = event
+			? await baseQuery
+					.where(eq(blacklistsTable.event, event))
+					.orderBy(desc(blacklistsTable.createdAt))
+			: await baseQuery.orderBy(desc(blacklistsTable.createdAt));
 
 		if (event) {
 			const blacklist: unknown[] = [];

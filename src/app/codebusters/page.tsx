@@ -2,7 +2,7 @@
 
 import { useTheme } from "@/app/contexts/ThemeContext";
 import SyncLocalStorage from "@/lib/database/localStorageReplacement";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";

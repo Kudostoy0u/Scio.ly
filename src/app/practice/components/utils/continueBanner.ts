@@ -1,5 +1,5 @@
 import SyncLocalStorage from "@/lib/database/localStorageReplacement";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 
 export type ContinueInfo = {
 	eventName: string;

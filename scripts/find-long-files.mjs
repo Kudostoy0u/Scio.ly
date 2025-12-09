@@ -5,7 +5,7 @@ import path from "node:path";
 
 const ROOT = process.cwd();
 const SRC_DIR = path.join(ROOT, "src");
-const THRESHOLD = Number.parseInt(process.env.LINES || "720", 10);
+const THRESHOLD = Number.parseInt(process.env.LINES || "500", 10);
 
 async function listFiles(dir) {
   const entries = await fs.readdir(dir, { withFileTypes: true });

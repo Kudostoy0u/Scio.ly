@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { shareLinks } from "@/lib/db/schema/core";
 import type { ShareCodeData } from "@/lib/types/api";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { and, eq, gt, lte } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 

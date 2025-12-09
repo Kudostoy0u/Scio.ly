@@ -6,6 +6,22 @@ import { supabase } from "@/lib/supabase";
  */
 
 /**
+ * Parameters for update_leaderboard_stats RPC call
+ */
+interface UpdateLeaderboardStatsParams {
+	p_user_id: string;
+	p_questions_attempted: number;
+	p_correct_answers: number;
+}
+
+/**
+ * Parameters for join_leaderboard_by_code RPC call
+ */
+interface JoinLeaderboardByCodeParams {
+	p_join_code: string;
+}
+
+/**
  * Updates leaderboard statistics for a user
  * Updates the user's leaderboard stats with questions attempted and correct answers
  *
@@ -30,11 +46,16 @@ export async function updateLeaderboardStats(
 		return;
 	}
 
-	await supabase.rpc("update_leaderboard_stats", {
+	const params: UpdateLeaderboardStatsParams = {
 		p_user_id: user.id,
 		p_questions_attempted: questionsAttempted,
 		p_correct_answers: correctAnswers,
-	} as never);
+	};
+
+	await supabase.rpc(
+		"update_leaderboard_stats" as never,
+		params as unknown as never,
+	);
 }
 
 /**
@@ -58,9 +79,14 @@ export async function checkAndJoinFromUrl() {
 		} = await supabase.auth.getUser();
 
 		if (user) {
-			await supabase.rpc("join_leaderboard_by_code", {
+			const params: JoinLeaderboardByCodeParams = {
 				p_join_code: joinCode.toUpperCase(),
-			} as never);
+			};
+
+			await supabase.rpc(
+				"join_leaderboard_by_code" as never,
+				params as unknown as never,
+			);
 
 			urlParams.delete("join");
 			const newUrl =

@@ -33,16 +33,8 @@ export default function Loading() {
 				Loading…
 			</div>
 			<div className="mt-4 h-1.5 w-40 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-				<div className="h-full w-1/3 rounded-full bg-blue-600 animate-[scio-loading_1.2s_ease-in-out_infinite]" />
+				<div className="h-full w-1/3 rounded-full bg-blue-600 animate-scio-loading" />
 			</div>
-			{/* eslint-disable-next-line react/no-unknown-property */}
-			<style jsx={true}>{`
-        @keyframes scio-loading {
-          0% { transform: translateX(-100%); }
-          50% { transform: translateX(100%); }
-          100% { transform: translateX(100%); }
-        }
-      `}</style>
 		</div>
 	);
 }

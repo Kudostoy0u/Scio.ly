@@ -11,21 +11,21 @@ import {
 	PostAssignmentRequestSchema,
 	validateRequest,
 } from "@/lib/schemas/teams-validation";
-// import logger from "@/lib/utils/logger";
+// import logger from "@/lib/utils/logging/logger";
 import { getServerUser } from "@/lib/supabaseServer";
 import { parseDifficulty } from "@/lib/types/difficulty";
+import { hasLeadershipAccessCockroach } from "@/lib/utils/teams/access";
 import {
 	handleError,
 	handleForbiddenError,
 	handleUnauthorizedError,
 	handleValidationError,
 	validateEnvironment,
-} from "@/lib/utils/error-handler";
-import { hasLeadershipAccessCockroach } from "@/lib/utils/team-auth-v2";
+} from "@/lib/utils/teams/errors";
 import {
 	getUserTeamMemberships,
 	resolveTeamSlugToUnits,
-} from "@/lib/utils/team-resolver";
+} from "@/lib/utils/teams/resolver";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -369,7 +369,6 @@ export async function POST(
 					q.answers.length === 0
 				) {
 					// Error details for debugging (unused but kept for potential logging)
-					// biome-ignore lint/complexity/noVoid: Intentional void for debugging info
 					void {
 						questionNumber: index + 1,
 						questionText: q.question_text?.substring(0, 100),

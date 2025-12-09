@@ -10,6 +10,7 @@ interface QuoteLengthSliderProps {
 	value: [number, number];
 	onValueChange: (value: [number, number]) => void;
 	disabled?: boolean;
+	id?: string;
 }
 
 const QuoteLengthSlider: React.FC<QuoteLengthSliderProps> = ({
@@ -18,6 +19,7 @@ const QuoteLengthSlider: React.FC<QuoteLengthSliderProps> = ({
 	value,
 	onValueChange,
 	disabled = false,
+	id,
 }) => {
 	const [isDragging, setIsDragging] = useState<"start" | "end" | null>(null);
 	const sliderRef = useRef<HTMLDivElement>(null);
@@ -123,7 +125,7 @@ const QuoteLengthSlider: React.FC<QuoteLengthSliderProps> = ({
 	const endPercentage = ((value[1] - min) / (max - min)) * 100;
 
 	return (
-		<div className="space-y-3">
+		<div className="space-y-3" id={id}>
 			{/* Value display */}
 			<div className="flex items-center justify-between text-sm">
 				<span className={darkMode ? "text-gray-300" : "text-gray-700"}>

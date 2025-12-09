@@ -15,12 +15,11 @@ import {
 	handleUnauthorizedError,
 	handleValidationError,
 	validateEnvironment,
-} from "@/lib/utils/error-handler";
+} from "@/lib/utils/teams/errors";
 import { and, eq, inArray } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex roster link status logic with multiple queries
 export async function GET(
 	request: NextRequest,
 	{ params }: { params: Promise<{ teamId: string }> },

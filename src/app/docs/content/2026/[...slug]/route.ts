@@ -1,6 +1,4 @@
-// biome-ignore lint/correctness/noNodejsModules: This is a Next.js route handler (server-side), Node.js modules are valid
 import { promises as fs } from "node:fs";
-// biome-ignore lint/correctness/noNodejsModules: This is a Next.js route handler (server-side), Node.js modules are valid
 import path from "node:path";
 import { NextResponse } from "next/server";
 

@@ -6,6 +6,7 @@
 import "./mocks";
 
 import { POST } from "@/app/api/teams/calendar/recurring-meetings/route";
+import type { User } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	mockGroupId,
@@ -42,7 +43,7 @@ describe("POST /api/teams/calendar/recurring-meetings", () => {
 
 	it("creates recurring meeting successfully for captain", async () => {
 		mockGetServerUser.mockReset();
-		mockGetServerUser.mockResolvedValue(mockUser as any);
+		mockGetServerUser.mockResolvedValue(mockUser as User);
 
 		mockDbPg.select
 			.mockReturnValueOnce(
@@ -56,7 +57,9 @@ describe("POST /api/teams/calendar/recurring-meetings", () => {
 
 		mockDbPg.insert = vi
 			.fn()
-			.mockReturnValue(createDrizzleInsertChain([{ id: mockMeetingId }]));
+			.mockReturnValue(
+				createDrizzleInsertChain([{ id: mockMeetingId }]) as any,
+			);
 
 		const request = createPostRequest({
 			team_slug: mockTeamSlug,
@@ -84,7 +87,7 @@ describe("POST /api/teams/calendar/recurring-meetings", () => {
 	});
 
 	it("creates recurring meeting successfully for co-captain", async () => {
-		mockGetServerUser.mockResolvedValue(mockUser as any);
+		mockGetServerUser.mockResolvedValue(mockUser as User);
 
 		mockDbPg.select
 			.mockReturnValueOnce(
@@ -93,12 +96,16 @@ describe("POST /api/teams/calendar/recurring-meetings", () => {
 			.mockReturnValueOnce(
 				createDrizzleSelectChainWithLimit([{ id: mockGroupId }]),
 			)
-			.mockReturnValueOnce(createDrizzleSelectChain([{ id: mockTeamId }]))
+			.mockReturnValueOnce(
+				createDrizzleSelectChain([{ id: mockTeamId }]) as any,
+			)
 			.mockReturnValueOnce(createDrizzleSelectChain([mockMembershipCoCaptain]));
 
 		mockDbPg.insert = vi
 			.fn()
-			.mockReturnValue(createDrizzleInsertChain([{ id: mockMeetingId }]));
+			.mockReturnValue(
+				createDrizzleInsertChain([{ id: mockMeetingId }]) as any,
+			);
 
 		const request = createPostRequest({
 			team_slug: mockTeamSlug,
@@ -139,7 +146,7 @@ describe("POST /api/teams/calendar/recurring-meetings", () => {
 	});
 
 	it("returns 400 for missing required fields", async () => {
-		mockGetServerUser.mockResolvedValue({ id: "user-123" } as any);
+		mockGetServerUser.mockResolvedValue({ id: "user-123" } as User);
 
 		const request = createPostRequest({
 			team_slug: mockTeamSlug,
@@ -155,7 +162,7 @@ describe("POST /api/teams/calendar/recurring-meetings", () => {
 	});
 
 	it("returns 403 for non-captain users when creating team meeting", async () => {
-		mockGetServerUser.mockResolvedValue(mockUser as any);
+		mockGetServerUser.mockResolvedValue(mockUser as User);
 
 		mockDbPg.select
 			.mockReturnValueOnce(
@@ -183,18 +190,22 @@ describe("POST /api/teams/calendar/recurring-meetings", () => {
 	});
 
 	it("allows member to create personal recurring meeting", async () => {
-		mockGetServerUser.mockResolvedValue(mockUser as any);
+		mockGetServerUser.mockResolvedValue(mockUser as User);
 
 		mockDbPg.select
 			.mockReturnValueOnce(
 				createDrizzleSelectChainWithLimit([{ id: mockGroupId }]),
 			)
-			.mockReturnValueOnce(createDrizzleSelectChain([{ id: mockTeamId }]))
+			.mockReturnValueOnce(
+				createDrizzleSelectChain([{ id: mockTeamId }]) as any,
+			)
 			.mockReturnValueOnce(createDrizzleSelectChain([mockMembershipMember]));
 
 		mockDbPg.insert = vi
 			.fn()
-			.mockReturnValue(createDrizzleInsertChain([{ id: mockMeetingId }]));
+			.mockReturnValue(
+				createDrizzleInsertChain([{ id: mockMeetingId }]) as any,
+			);
 
 		const request = createPostRequest({
 			team_slug: mockTeamSlug,
@@ -217,7 +228,7 @@ describe("POST /api/teams/calendar/recurring-meetings", () => {
 	});
 
 	it("handles database errors gracefully", async () => {
-		mockGetServerUser.mockResolvedValue(mockUser as any);
+		mockGetServerUser.mockResolvedValue(mockUser as User);
 
 		mockDbPg.select
 			.mockReturnValueOnce(

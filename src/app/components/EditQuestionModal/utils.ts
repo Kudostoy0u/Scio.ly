@@ -1,4 +1,4 @@
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 
 const DIGIT_REGEX = /^\d+$/;
 

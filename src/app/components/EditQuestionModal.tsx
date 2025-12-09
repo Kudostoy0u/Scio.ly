@@ -4,7 +4,7 @@ import {
 	type Question,
 	geminiService,
 } from "@/app/utils/geminiService";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";

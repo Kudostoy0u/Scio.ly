@@ -5,7 +5,7 @@
 import { NextRequest } from "next/server";
 import { vi } from "vitest";
 
-export function createMockDrizzleChain(result: unknown): any {
+export function createMockDrizzleChain(result: unknown): unknown {
 	const whereMock = vi
 		.fn()
 		.mockResolvedValue(Array.isArray(result) ? result : [result]);
@@ -17,7 +17,7 @@ export function createMockDrizzleChain(result: unknown): any {
 export function createMockDrizzleChainWithJoin(
 	result: unknown,
 	hasLimit = false,
-): any {
+): unknown {
 	if (hasLimit) {
 		const limitMock = vi
 			.fn()
@@ -41,7 +41,7 @@ export function createMockDrizzleChainWithJoin(
 	return { from: fromMock };
 }
 
-export function createMockDrizzleInsert(result: unknown): any {
+export function createMockDrizzleInsert(result: unknown): unknown {
 	const returningMock = vi
 		.fn()
 		.mockResolvedValue(Array.isArray(result) ? result : [result]);
@@ -51,7 +51,7 @@ export function createMockDrizzleInsert(result: unknown): any {
 	return { from: fromMock, values: valuesMock };
 }
 
-export function createMockDrizzleUpdate(result: unknown): any {
+export function createMockDrizzleUpdate(result: unknown): unknown {
 	const returningMock = vi
 		.fn()
 		.mockResolvedValue(Array.isArray(result) ? result : [result]);

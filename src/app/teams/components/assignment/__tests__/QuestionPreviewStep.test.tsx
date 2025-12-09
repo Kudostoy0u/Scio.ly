@@ -227,7 +227,8 @@ describe("QuestionPreviewStep", () => {
 			render(<QuestionPreviewStep {...mockProps} />);
 
 			const replaceButtons = screen.getAllByText("Replace");
-			fireEvent.click(replaceButtons[0]!);
+			if (!replaceButtons[0]) throw new Error("Replace button not found");
+			fireEvent.click(replaceButtons[0]);
 
 			expect(mockProps.onReplaceQuestion).toHaveBeenCalledWith(0);
 		});
@@ -237,10 +238,12 @@ describe("QuestionPreviewStep", () => {
 
 			const replaceButtons = screen.getAllByText("Replace");
 
-			fireEvent.click(replaceButtons[1]!);
+			if (!replaceButtons[1]) throw new Error("Replace button 1 not found");
+			fireEvent.click(replaceButtons[1]);
 			expect(mockProps.onReplaceQuestion).toHaveBeenCalledWith(1);
 
-			fireEvent.click(replaceButtons[2]!);
+			if (!replaceButtons[2]) throw new Error("Replace button 2 not found");
+			fireEvent.click(replaceButtons[2]);
 			expect(mockProps.onReplaceQuestion).toHaveBeenCalledWith(2);
 		});
 	});

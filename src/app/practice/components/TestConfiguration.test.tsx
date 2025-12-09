@@ -185,7 +185,7 @@ describe("TestConfiguration", () => {
 		const codebustersEvent: Event = {
 			...mockEvent,
 			name: "Codebusters",
-		} as any;
+		};
 
 		render(
 			<TestConfiguration

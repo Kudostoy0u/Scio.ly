@@ -1,6 +1,33 @@
 {
 	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
 	"files": {
-		"include": ["src/**"]
-	}
+		"include": ["src/**"],
+		"ignoreUnknown": false
+	},
+	"formatter": {
+		"enabled": true
+	},
+	"organizeImports": {
+		"enabled": true
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"suspicious": {
+				"noExplicitAny": "error"
+			}
+		}
+	},
+	"overrides": [
+		{
+			"include": ["**/*.test.ts", "**/*.test.tsx", "**/__tests__/**"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noExplicitAny": "off"
+					}
+				}
+			}
+		}
+	]
 }

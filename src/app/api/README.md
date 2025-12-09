@@ -248,7 +248,6 @@ Question management API.
 
 **Example:**
 ```1:80:src/app/api/questions/route.ts
-// biome-ignore lint/correctness/noNodejsModules: Node.js crypto module is required for API routes
 import crypto from "node:crypto";
 import { ApiError, handleApiError, parseRequestBody } from "@/lib/api/utils";
 import { db } from "@/lib/db";

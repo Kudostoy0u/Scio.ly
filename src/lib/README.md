@@ -220,35 +220,30 @@ Logging utilities.
 const logger = {
   log: (...args: unknown[]) => {
     if (getIsDeveloperMode()) {
-      // biome-ignore lint/suspicious/noConsole lint/suspicious/noConsoleLog: Logger intentionally uses console
       console.log(...args);
     }
   },
 
   warn: (...args: unknown[]) => {
     if (!getIsTest()) {
-      // biome-ignore lint/suspicious/noConsole: Logger intentionally uses console
       console.warn(...args);
     }
   },
 
   error: (...args: unknown[]) => {
     if (!getIsTest()) {
-      // biome-ignore lint/suspicious/noConsole: Logger intentionally uses console
       console.error(...args);
     }
   },
 
   info: (...args: unknown[]) => {
     if (getIsDev()) {
-      // biome-ignore lint/suspicious/noConsole: Logger intentionally uses console
       console.info("[INFO]", ...args);
     }
   },
 
   debug: (...args: unknown[]) => {
     if (getIsDev()) {
-      // biome-ignore lint/suspicious/noConsole: Logger intentionally uses console
       console.debug(...args);
     }
   },
@@ -300,15 +295,15 @@ Image preloading utilities.
 - Preloading
 - Performance optimization
 
-### `storage.ts`
-Browser storage utilities.
+### `storage/storage.ts`
+Browser storage utilities (client-side persistence).
 
 **Features:**
 - LocalStorage management
 - SessionStorage management
 - Cross-tab synchronization
 
-### `string.ts`
+### `content/string.ts`
 String manipulation utilities.
 
 **Features:**
@@ -316,7 +311,7 @@ String manipulation utilities.
 - Formatting
 - Validation
 
-### `team-resolver.ts`
+### `teams/resolver.ts`
 Team resolution utilities.
 
 **Features:**

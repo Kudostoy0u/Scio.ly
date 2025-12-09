@@ -26,7 +26,13 @@ export function MethodologyCard({
 			className={`${darkMode ? "bg-gray-700/50" : "bg-gray-100/50"} p-4 rounded-lg text-center`}
 		>
 			<div className="flex justify-center mb-3">
-				<Image src={icon} alt={alt} width={width} height={height} className={className} />
+				<Image
+					src={icon}
+					alt={alt}
+					width={width}
+					height={height}
+					className={className}
+				/>
 			</div>
 			<h3
 				className={`font-semibold mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}

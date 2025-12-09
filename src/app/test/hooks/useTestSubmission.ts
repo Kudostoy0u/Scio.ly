@@ -10,7 +10,7 @@ import {
 	markTestSubmitted,
 } from "@/app/utils/timeManagement";
 import { supabase } from "@/lib/supabase";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { useCallback, useState } from "react";
 import { toast } from "react-toastify";
 import { fetchQuestionsForParams } from "./utils/fetchQuestions";

@@ -2,7 +2,6 @@ import api from "@/app/api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchQuestionsForParams } from "./fetchQuestions";
 
-
 describe("fetchQuestionsForParams", () => {
 	const fakeBaseQuestions = Array.from({ length: 20 }).map((_, i) => ({
 		id: `q${i}`,
@@ -27,25 +26,22 @@ describe("fetchQuestionsForParams", () => {
 
 	beforeEach(() => {
 		vi.resetAllMocks();
-		const fetchMock = vi.fn(
-			(input: any) => {
-				const url =
-					typeof input === "string" ? input : input?.toString?.() || "";
-				if (url.startsWith(api.idQuestions)) {
-					return Promise.resolve({
-						ok: true,
-						json: async () => ({ data: fakeIdRows }),
-					});
-				}
-				if (url.startsWith(api.questions)) {
-					return Promise.resolve({
-						ok: true,
-						json: async () => ({ data: fakeBaseQuestions }),
-					});
-				}
-				return Promise.resolve({ ok: false, json: async () => ({}) });
-			},
-		);
+		const fetchMock = vi.fn((input: unknown) => {
+			const url = typeof input === "string" ? input : input?.toString?.() || "";
+			if (url.startsWith(api.idQuestions)) {
+				return Promise.resolve({
+					ok: true,
+					json: async () => ({ data: fakeIdRows }),
+				});
+			}
+			if (url.startsWith(api.questions)) {
+				return Promise.resolve({
+					ok: true,
+					json: async () => ({ data: fakeBaseQuestions }),
+				});
+			}
+			return Promise.resolve({ ok: false, json: async () => ({}) });
+		});
 		global.fetch = fetchMock as unknown as typeof global.fetch;
 		(global as { navigator: { onLine: boolean } }).navigator = { onLine: true };
 	});

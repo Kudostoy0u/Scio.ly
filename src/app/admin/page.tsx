@@ -1,5 +1,5 @@
 "use client";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 
 import api from "@/app/api";
 import { useTheme } from "@/app/contexts/ThemeContext";

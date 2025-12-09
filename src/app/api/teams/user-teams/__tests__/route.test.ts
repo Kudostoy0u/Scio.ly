@@ -1,9 +1,9 @@
 import { GET } from "@/app/api/teams/user-teams/route";
 import { cockroachDBTeamsService } from "@/lib/services/cockroachdb-teams";
 import { getServerUser } from "@/lib/supabaseServer";
+import type { User } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { User } from "@supabase/supabase-js";
 
 // Mock dependencies
 vi.mock("@/lib/supabaseServer", () => ({

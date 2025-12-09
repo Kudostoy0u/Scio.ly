@@ -10,7 +10,7 @@ import {
 } from "@/app/utils/timeManagement";
 import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { supabase } from "@/lib/supabase";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { fetchQuestionsForParams } from "./fetchQuestions";
 
 type SetState<T> = (value: T) => void;

@@ -454,8 +454,9 @@ describe("/api/report/edit", () => {
 				}),
 			});
 
-			const questionWithoutId = { ...mockOriginalQuestion };
-			delete (questionWithoutId as any).id;
+			const questionWithoutId: Omit<typeof mockOriginalQuestion, "id"> & {
+				id?: undefined;
+			} = { ...mockOriginalQuestion, id: undefined };
 
 			const request = mockRequest({
 				originalQuestion: questionWithoutId,

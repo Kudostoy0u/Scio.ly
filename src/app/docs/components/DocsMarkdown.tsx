@@ -8,7 +8,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import "katex/dist/katex.min.css";
 import { useTheme } from "@/app/contexts/ThemeContext";
-import { normalizeMath } from "@/lib/utils/markdown";
+import { normalizeMath } from "@/lib/utils/content/markdown";
 
 type DocsMarkdownProps = {
 	content: string;

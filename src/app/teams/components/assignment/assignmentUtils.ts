@@ -1,5 +1,5 @@
 import { EVENTS_2026 } from "@/lib/constants/events2026";
-import { getEventCapabilities } from "@/lib/utils/eventConfig";
+import { getEventCapabilities } from "@/lib/utils/assessments/eventConfig";
 import type { Question, RosterMember } from "./assignmentTypes";
 
 // Event name mapping for special cases (same as backend)

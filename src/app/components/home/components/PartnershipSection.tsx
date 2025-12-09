@@ -16,9 +16,7 @@ export function PartnershipSection({ darkMode }: PartnershipSectionProps) {
 			className={`pt-8 pb-12 px-4 ${darkMode ? "bg-[#020617]" : "bg-white"}`}
 		>
 			<div className="max-w-7xl mx-auto text-center">
-				<h1 className="text-4xl font-bold mb-6 text-white">
-					Partnered with
-				</h1>
+				<h1 className="text-4xl font-bold mb-6 text-white">Partnered with</h1>
 				<div className="flex justify-center">
 					<div className="relative overflow-hidden rounded-2xl group cursor-pointer">
 						<Image
@@ -29,13 +27,10 @@ export function PartnershipSection({ darkMode }: PartnershipSectionProps) {
 							className="max-w-full h-auto transition-transform duration-300 group-hover:scale-110"
 							unoptimized
 						/>
-						<div
-							className="absolute inset-0 bg-black opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-2xl"
-						/>
+						<div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-2xl" />
 					</div>
 				</div>
 			</div>
 		</motion.section>
 	);
 }
-

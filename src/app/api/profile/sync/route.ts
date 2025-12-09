@@ -1,5 +1,5 @@
 import { upsertUserProfile } from "@/lib/db/teams/utils";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {

@@ -13,11 +13,10 @@ import { useTheme } from "@/app/contexts/ThemeContext";
 import { useInvalidateTeam, useTeamMembers } from "@/lib/hooks/useTeam";
 import type { TeamMember as TeamMemberV2 } from "@/lib/server/teams-v2";
 import type { TeamMember as StoreTeamMember } from "@/lib/stores/teams/types";
-import { trpc } from "@/lib/trpc/client";
 import {
 	generateDisplayName,
 	needsNamePrompt,
-} from "@/lib/utils/displayNameUtils";
+} from "@/lib/utils/content/displayNameUtils";
 import { UserPlus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
@@ -62,7 +61,8 @@ export default function PeopleTabUnified({
 		team.slug,
 		selectedSubteam === "all" ? undefined : selectedSubteam,
 	);
-	const linkAccountMutation = trpc.teams.linkAccount.useMutation();
+	// TODO: Re-enable when linkAccount is implemented
+	// const linkAccountMutation = trpc.teams.linkAccount.useMutation();
 
 	const { invalidateTeam } = useInvalidateTeam();
 
@@ -225,11 +225,12 @@ export default function PeopleTabUnified({
 			return;
 		}
 		try {
-			await linkAccountMutation.mutateAsync({ username: linkInput.trim() });
-			toast.success("Account linked");
+			// TODO: Re-enable when linkAccount is implemented
+			// await linkAccountMutation.mutateAsync({ username: linkInput.trim() });
+			toast.error("Account linking is temporarily disabled");
 			setLinkingMemberId(null);
 			setLinkInput("");
-			await handleRefresh();
+			// await handleRefresh();
 		} catch (error) {
 			toast.error(
 				error instanceof Error ? error.message : "Failed to link account",

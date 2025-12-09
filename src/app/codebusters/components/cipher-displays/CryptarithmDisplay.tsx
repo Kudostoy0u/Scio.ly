@@ -348,8 +348,7 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
 
 							return (
 								<DigitInput
-									// biome-ignore lint/suspicious/noArrayIndexKey: Static digit inputs, index is stable
-									key={`${digit}-${i}`}
+									key={`${digit}-${i}-${position}`}
 									digit={digit}
 									position={position}
 									value={solution?.[position] || ""}

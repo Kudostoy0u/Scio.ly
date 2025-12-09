@@ -69,12 +69,9 @@ function NonCompactCodebustersSummary({
 							Cipher Types ({cipherTypes.length})
 						</h3>
 						<div className="flex flex-wrap gap-2">
-							{cipherTypes.map((cipherType, index) => (
+							{cipherTypes.map((cipherType) => (
 								<span
-									key={
-										// biome-ignore lint/suspicious/noArrayIndexKey: Static cipher types list, index is stable
-										index
-									}
+									key={cipherType}
 									className={`px-2 py-1 text-xs rounded-full ${darkMode ? "bg-gray-600 text-gray-200" : "bg-gray-200 text-gray-700"}`}
 								>
 									{cipherType.toLowerCase() === "unknown"

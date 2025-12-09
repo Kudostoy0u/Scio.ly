@@ -11,7 +11,7 @@ import {
 	handleNotFoundError,
 	handleUnauthorizedError,
 	validateEnvironment,
-} from "@/lib/utils/error-handler";
+} from "@/lib/utils/teams/errors";
 import { and, eq, inArray } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 

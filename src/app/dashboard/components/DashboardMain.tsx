@@ -1,6 +1,6 @@
 "use client";
 import SyncLocalStorage from "@/lib/database/localStorageReplacement";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 
 import ContactModal from "@/app/components/ContactModal";
 import Header from "@/app/components/Header";

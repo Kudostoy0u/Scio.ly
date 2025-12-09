@@ -43,30 +43,32 @@ export function useTeamFull(teamSlug: string) {
 
 export function useTeamMembers(teamSlug: string, subteamId?: string) {
 	const query = useTeamFull(teamSlug);
+	const membersData = query.data?.members;
 
 	const members = useMemo(() => {
-		if (!query.data?.members) {
+		if (!membersData) {
 			return [];
 		}
 		if (!subteamId || subteamId === "all") {
-			return query.data.members;
+			return membersData;
 		}
-		return query.data.members.filter((m) => m.subteamId === subteamId);
-	}, [query.data?.members, subteamId]);
+		return membersData.filter((m) => m.subteamId === subteamId);
+	}, [membersData, subteamId]);
 
 	return { ...query, data: members };
 }
 
 export function useTeamRoster(teamSlug: string, subteamId: string | null) {
 	const query = useTeamFull(teamSlug);
+	const rosterEntriesData = query.data?.rosterEntries;
 
 	const roster = useMemo(() => {
-		if (!(query.data?.rosterEntries && subteamId)) {
+		if (!(rosterEntriesData && subteamId)) {
 			return { roster: {}, removedEvents: [] as string[] };
 		}
 
 		const rosterObj: Record<string, string[]> = {};
-		for (const entry of query.data.rosterEntries) {
+		for (const entry of rosterEntriesData) {
 			if (entry.subteamId !== subteamId) {
 				continue;
 			}
@@ -79,7 +81,7 @@ export function useTeamRoster(teamSlug: string, subteamId: string | null) {
 		}
 
 		return { roster: rosterObj, removedEvents: [] as string[] };
-	}, [query.data?.rosterEntries, subteamId]);
+	}, [rosterEntriesData, subteamId]);
 
 	return { ...query, data: roster };
 }

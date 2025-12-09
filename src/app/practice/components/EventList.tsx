@@ -157,7 +157,6 @@ export default function EventList({
 				) : (
 					<ScrollBarAlwaysVisible>
 						<ul className="space-y-2">
-							{/* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex event rendering logic with conditional states */}
 							{sortedEvents.map((event) => {
 								const slug = event.name
 									.toLowerCase()

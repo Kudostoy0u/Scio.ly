@@ -8,7 +8,9 @@ interface ByStudentsSectionProps {
 
 export function ByStudentsSection({ darkMode }: ByStudentsSectionProps) {
 	return (
-		<section className={`py-20 px-4 sm:px-6 lg:px-8 ${darkMode ? "bg-[#020617]" : "bg-white"}`}>
+		<section
+			className={`py-20 px-4 sm:px-6 lg:px-8 ${darkMode ? "bg-[#020617]" : "bg-white"}`}
+		>
 			<div className="max-w-7xl mx-auto">
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 					<motion.div
@@ -26,10 +28,11 @@ export function ByStudentsSection({ darkMode }: ByStudentsSectionProps) {
 						<p
 							className={`text-lg lg:text-xl leading-relaxed ${darkMode ? "text-gray-300" : "text-gray-700"}`}
 						>
-							Brought to you by a team of Science Olympiad competitors and alumni across the USA. We understand the challenges of finding quality
-							practice materials because we&apos;ve been there. Our platform is
-							built from the student perspective, designed to help you succeed
-							in competition.
+							Brought to you by a team of Science Olympiad competitors and
+							alumni across the USA. We understand the challenges of finding
+							quality practice materials because we&apos;ve been there. Our
+							platform is built from the student perspective, designed to help
+							you succeed in competition.
 						</p>
 						<p
 							className={`text-base lg:text-lg ${darkMode ? "text-gray-400" : "text-gray-600"}`}

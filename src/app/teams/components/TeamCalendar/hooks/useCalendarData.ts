@@ -2,7 +2,7 @@
  * Hook for loading and managing calendar events data
  */
 
-import { globalApiCache } from "@/lib/utils/globalApiCache";
+import { globalApiCache } from "@/lib/utils/storage/globalApiCache";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";

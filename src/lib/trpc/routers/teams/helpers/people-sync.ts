@@ -12,7 +12,7 @@ import {
 	newTeamRosterData,
 	newTeamUnits,
 } from "@/lib/db/schema/teams";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { and, eq, inArray, sql } from "drizzle-orm";
 
 interface PersonData {

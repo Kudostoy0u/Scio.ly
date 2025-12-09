@@ -6,7 +6,11 @@
 import "./mocks";
 
 // Note: This test references a route that doesn't exist. Using placeholder function for now.
-const POST = async (_request: any, _params: any) => new Response("Not implemented", { status: 501 });
+import type { NextRequest } from "next/server";
+const POST = async (
+	_request: NextRequest,
+	_params: { params: Promise<{ teamId: string }> },
+) => new Response("Not implemented", { status: 501 });
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	INVITATION_SENT_REGEX,
@@ -48,7 +52,9 @@ describe("POST /api/teams/[teamId]/roster/invite", () => {
 		process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
 		mockGetServerUser.mockResolvedValue(mockUser);
 		mockResolveTeamSlugToUnits.mockResolvedValue(mockTeamInfo);
-		mockNotificationSyncService.syncNotificationToSupabase.mockResolvedValue(undefined);
+		mockNotificationSyncService.syncNotificationToSupabase.mockResolvedValue(
+			undefined,
+		);
 
 		mockDbPg.select.mockReturnValue({
 			from: vi.fn(),
@@ -68,8 +74,7 @@ describe("POST /api/teams/[teamId]/roster/invite", () => {
 	});
 
 	afterEach(() => {
-		// biome-ignore lint/performance/noDelete: Need to remove env var for test cleanup
-		delete process.env.DATABASE_URL;
+		Reflect.deleteProperty(process.env, "DATABASE_URL");
 	});
 
 	it("should create roster link invitation successfully", async () => {

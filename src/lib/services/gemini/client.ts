@@ -2,7 +2,7 @@
  * Gemini client management and initialization
  */
 
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { GoogleGenAI } from "@google/genai";
 
 /**

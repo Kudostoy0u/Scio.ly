@@ -31,7 +31,7 @@ describe("Roster Management E2E", () => {
 		testUsers.push(createTestUser({ displayName: "Jane Smith" }));
 
 		// Create test team
-		const team = createTestTeam(testUsers[0]!.id);
+		const team = createTestTeam(testUsers[0]?.id ?? "");
 		testTeams.push(team);
 	});
 
@@ -44,7 +44,8 @@ describe("Roster Management E2E", () => {
 
 	describe("Roster Entry Creation", () => {
 		it("should create a roster entry for an event", () => {
-			const team = testTeams[0]!;
+			const team = testTeams[0];
+			if (!team || !testUsers[0]) throw new Error("Test setup failed");
 			const eventName = "Astronomy";
 			const slotIndex = 0;
 			const studentName = "John Doe";
@@ -54,7 +55,7 @@ describe("Roster Management E2E", () => {
 				eventName,
 				slotIndex,
 				studentName,
-				testUsers[0]!.id,
+				testUsers[0].id,
 			);
 
 			// Verify roster entry exists
@@ -64,11 +65,12 @@ describe("Roster Management E2E", () => {
 			expect(rosterEntry?.eventName).toBe(eventName);
 			expect(rosterEntry?.slotIndex).toBe(slotIndex);
 			expect(rosterEntry?.studentName).toBe(studentName);
-			expect(rosterEntry?.userId).toBe(testUsers[0]!.id);
+			expect(rosterEntry?.userId).toBe(testUsers[0].id);
 		});
 
 		it("should create multiple roster entries for different events", () => {
-			const team = testTeams[0]!;
+			const team = testTeams[0];
+			if (!team || !testUsers[0]) throw new Error("Test setup failed");
 			const events = [
 				{ name: "Astronomy", slot: 0 },
 				{ name: "Biology", slot: 1 },
@@ -81,7 +83,7 @@ describe("Roster Management E2E", () => {
 					event.name,
 					event.slot,
 					`Student ${event.slot}`,
-					testUsers[0]!.id,
+					testUsers[0].id,
 				);
 			}
 
@@ -92,7 +94,8 @@ describe("Roster Management E2E", () => {
 		});
 
 		it("should create unlinked roster entry (no userId)", () => {
-			const team = testTeams[0]!;
+			const team = testTeams[0];
+			if (!team) throw new Error("Test setup failed");
 			const eventName = "Physics";
 			const slotIndex = 3;
 			const studentName = "Unlinked Student";
@@ -110,7 +113,8 @@ describe("Roster Management E2E", () => {
 
 	describe("Roster Entry Updates", () => {
 		it("should update roster entry student name", () => {
-			const team = testTeams[0]!;
+			const team = testTeams[0];
+			if (!team) throw new Error("Test setup failed");
 			const eventName = "Test Event";
 			const slotIndex = 4;
 			const originalName = "Original Name";
@@ -131,7 +135,8 @@ describe("Roster Management E2E", () => {
 		});
 
 		it("should link user to roster entry", () => {
-			const team = testTeams[0]!;
+			const team = testTeams[0];
+			if (!team || !testUsers[1]) throw new Error("Test setup failed");
 			const eventName = "Link Test Event";
 			const slotIndex = 5;
 
@@ -140,19 +145,20 @@ describe("Roster Management E2E", () => {
 
 			// Link user
 			updateRosterEntry(team.subteamId, eventName, slotIndex, {
-				userId: testUsers[1]!.id,
+				userId: testUsers[1].id,
 			});
 
 			// Verify link
 			const rosterEntry = getRosterEntry(team.subteamId, eventName, slotIndex);
 
-			expect(rosterEntry?.userId).toBe(testUsers[1]!.id);
+			expect(rosterEntry?.userId).toBe(testUsers[1].id);
 		});
 	});
 
 	describe("Roster Data Retrieval", () => {
 		it("should retrieve all roster entries for a subteam", () => {
-			const team = testTeams[0]!;
+			const team = testTeams[0];
+			if (!team) throw new Error("Test setup failed");
 
 			// Create multiple entries
 			createRosterEntry(team.subteamId, "Event1", 0, "Student1");
@@ -174,7 +180,8 @@ describe("Roster Management E2E", () => {
 		});
 
 		it("should retrieve roster entries with user information", () => {
-			const team = testTeams[0]!;
+			const team = testTeams[0];
+			if (!team || !testUsers[0]) throw new Error("Test setup failed");
 			const eventName = "User Link Event";
 			const slotIndex = 6;
 
@@ -184,7 +191,7 @@ describe("Roster Management E2E", () => {
 				eventName,
 				slotIndex,
 				"Linked Student",
-				testUsers[0]!.id,
+				testUsers[0].id,
 			);
 
 			// Retrieve with user join
@@ -195,13 +202,14 @@ describe("Roster Management E2E", () => {
 			);
 
 			expect(linkedEntry).toBeDefined();
-			expect(linkedEntry?.userId).toBe(testUsers[0]!.id);
+			expect(linkedEntry?.userId).toBe(testUsers[0].id);
 		});
 	});
 
 	describe("Roster Validation", () => {
 		it("should enforce slot index range (0-10)", () => {
-			const team = testTeams[0]!;
+			const team = testTeams[0];
+			if (!team) throw new Error("Test setup failed");
 
 			// Valid slot indices
 			createRosterEntry(team.subteamId, "Event", 0, "Student");
@@ -216,7 +224,8 @@ describe("Roster Management E2E", () => {
 		});
 
 		it("should handle event name normalization", () => {
-			const team = testTeams[0]!;
+			const team = testTeams[0];
+			if (!team) throw new Error("Test setup failed");
 			const eventNameWithAnd = "Design & Build";
 			const normalizedName = eventNameWithAnd.replace(/&/g, "and");
 

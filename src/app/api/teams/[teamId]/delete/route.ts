@@ -12,7 +12,7 @@ import {
 	handleUnauthorizedError,
 	handleValidationError,
 	validateEnvironment,
-} from "@/lib/utils/error-handler";
+} from "@/lib/utils/teams/errors";
 import { eq, inArray } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";

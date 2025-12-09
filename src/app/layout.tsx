@@ -5,11 +5,11 @@ import type React from "react";
 import "./globals.css";
 import NamePromptProvider from "@/app/components/NamePromptProvider";
 import ThemeColorMeta from "@/app/components/ThemeColorMeta";
+import { AuthProvider } from "@/app/contexts/AuthContext";
 import { ThemeProvider } from "@/app/contexts/ThemeContext";
 import { getServerUser } from "@/lib/supabaseServer";
 import { TRPCProvider } from "@/lib/trpc/Provider";
 import { cookies } from "next/headers";
-import { AuthProvider } from "@/app/contexts/AuthContext";
 import { Providers } from "./providers";
 // import { createsupabaseserverclient } from '@/lib/supabaseserver';
 

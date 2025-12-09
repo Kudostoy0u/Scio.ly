@@ -1,6 +1,6 @@
 "use client";
 import SyncLocalStorage from "@/lib/database/localStorageReplacement";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 
 import api from "@/app/api";
 import type { QuoteData as CodebustersQuoteData } from "@/app/codebusters/types";

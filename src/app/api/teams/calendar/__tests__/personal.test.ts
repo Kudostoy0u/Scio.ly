@@ -1,4 +1,5 @@
 import { GET } from "@/app/api/teams/calendar/personal/route";
+import type { User } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -31,7 +32,7 @@ describe("/api/teams/calendar/personal", () => {
 	describe("GET /api/teams/calendar/personal", () => {
 		it("fetches personal events successfully", async () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock Drizzle ORM query (select().from().where().orderBy())
 			mockDbPg.select.mockReturnValueOnce({
@@ -87,7 +88,7 @@ describe("/api/teams/calendar/personal", () => {
 
 		it("fetches personal events with date range", async () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock Drizzle ORM query (select().from().where().orderBy())
 			mockDbPg.select.mockReturnValueOnce({
@@ -127,7 +128,7 @@ describe("/api/teams/calendar/personal", () => {
 		it("returns 403 for accessing another user's personal events", async () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
 			const otherUserId = "123e4567-e89b-12d3-a456-426614174001";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/calendar/personal?userId=${otherUserId}`,
@@ -142,7 +143,7 @@ describe("/api/teams/calendar/personal", () => {
 
 		it("handles empty personal events", async () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock Drizzle ORM query (select().from().where().orderBy())
 			mockDbPg.select.mockReturnValueOnce({
@@ -167,7 +168,7 @@ describe("/api/teams/calendar/personal", () => {
 
 		it("handles database errors", async () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock Drizzle ORM query to reject (select().from().where().orderBy())
 			mockDbPg.select.mockReturnValueOnce({
@@ -194,7 +195,7 @@ describe("/api/teams/calendar/personal", () => {
 
 		it("filters events by start date", async () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock Drizzle ORM query (select().from().where().orderBy())
 			mockDbPg.select.mockReturnValueOnce({
@@ -219,7 +220,7 @@ describe("/api/teams/calendar/personal", () => {
 
 		it("filters events by end date", async () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock Drizzle ORM query (select().from().where().orderBy())
 			mockDbPg.select.mockReturnValueOnce({
@@ -244,7 +245,7 @@ describe("/api/teams/calendar/personal", () => {
 
 		it("orders events by start time", async () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock Drizzle ORM query (select().from().where().orderBy())
 			mockDbPg.select.mockReturnValueOnce({

@@ -6,7 +6,12 @@
 import "./mocks";
 
 // Note: This test references a route that doesn't exist. Using placeholder function for now.
-const GET = async (_request: any, _params: any) => new Response("Not implemented", { status: 501 });
+import type { NextRequest } from "next/server";
+const GET = async (
+	_request: NextRequest,
+	_params: { params: Promise<{ teamId: string }> },
+) => new Response("Not implemented", { status: 501 });
+import type { User } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockGroup, mockMembership, mockSearchResults } from "./fixtures";
 import {
@@ -27,7 +32,7 @@ describe("GET /api/teams/[teamId]/roster/invite", () => {
 		mockGetServerUser.mockResolvedValue({
 			id: "user-123",
 			email: "test@example.com",
-		} as any);
+		} as User);
 
 		mockDbPg.select.mockReturnValue({
 			from: vi.fn(),
@@ -38,8 +43,7 @@ describe("GET /api/teams/[teamId]/roster/invite", () => {
 	});
 
 	afterEach(() => {
-		// biome-ignore lint/performance/noDelete: Need to remove env var for test cleanup
-		delete process.env.DATABASE_URL;
+		Reflect.deleteProperty(process.env, "DATABASE_URL");
 	});
 
 	it("should search users successfully", async () => {

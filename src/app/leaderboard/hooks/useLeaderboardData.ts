@@ -2,7 +2,7 @@
  * Hook for loading leaderboard data
  */
 
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Leaderboard, LeaderboardMember, UserProfile } from "../types";

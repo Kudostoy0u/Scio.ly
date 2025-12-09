@@ -7,6 +7,7 @@ import {
 import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
 import { syncPeopleFromRosterForSubteam } from "@/lib/trpc/routers/teams/helpers/people-sync";
+import { hasLeadershipAccessCockroach } from "@/lib/utils/teams/access";
 import {
 	handleError,
 	handleForbiddenError,
@@ -14,8 +15,7 @@ import {
 	handleUnauthorizedError,
 	handleValidationError,
 	validateEnvironment,
-} from "@/lib/utils/error-handler";
-import { checkTeamGroupLeadershipCockroach } from "@/lib/utils/team-auth";
+} from "@/lib/utils/teams/errors";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -96,11 +96,8 @@ export async function POST(
 		const groupId = groupResult.id;
 
 		// Ensure user has leadership privileges in this group
-		const leadershipResult = await checkTeamGroupLeadershipCockroach(
-			user.id,
-			groupId,
-		);
-		if (!leadershipResult.hasLeadership) {
+		const hasLeadership = await hasLeadershipAccessCockroach(user.id, groupId);
+		if (!hasLeadership) {
 			return handleForbiddenError(
 				"Only captains and co-captains can modify roster",
 			);

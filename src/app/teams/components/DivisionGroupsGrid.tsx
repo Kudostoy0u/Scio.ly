@@ -262,8 +262,7 @@ export default function DivisionGroupsGrid({
 													<div className="grid grid-cols-3 gap-2">
 														{[...new Array(max)].map((_, i) => (
 															<input
-																// biome-ignore lint/suspicious/noArrayIndexKey: Array is dynamically created, index is appropriate for key
-																key={`slot-${division}-${evt}-${i}`}
+																key={`slot-${division}-${evt}-${i}-${slots[i] || ""}`}
 																value={slots[i] || ""}
 																onChange={(e) =>
 																	setName(division, evt, i, e.target.value)
@@ -319,8 +318,7 @@ export default function DivisionGroupsGrid({
 													<div className="grid grid-cols-3 gap-2">
 														{[...new Array(max)].map((_, i) => (
 															<input
-																// biome-ignore lint/suspicious/noArrayIndexKey: Array is dynamically created, index is appropriate for key
-																key={`slot-${division}-${evt}-${i}`}
+																key={`slot-${division}-${evt}-${i}-${slots[i] || ""}`}
 																value={slots[i] || ""}
 																onChange={(e) =>
 																	setName(division, evt, i, e.target.value)
@@ -385,8 +383,7 @@ export default function DivisionGroupsGrid({
 										<div className="grid grid-cols-3 gap-2">
 											{[...new Array(max)].map((_, i) => (
 												<input
-													// biome-ignore lint/suspicious/noArrayIndexKey: Array is dynamically created, index is appropriate for key
-													key={`slot-${division}-${evt}-${i}`}
+													key={`slot-${division}-${evt}-${i}-${slots[i] || ""}`}
 													value={slots[i] || ""}
 													onChange={(e) =>
 														setName(division, evt, i, e.target.value)

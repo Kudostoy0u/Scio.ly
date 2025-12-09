@@ -103,6 +103,8 @@
 // }
 
 // Placeholder to prevent import errors
-export default function HylasBanner({ onClose: _onClose }: { onClose: () => void }) {
+export default function HylasBanner({
+	onClose: _onClose,
+}: { onClose: () => void }) {
 	return null;
 }

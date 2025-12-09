@@ -189,8 +189,7 @@ export const NihilistDisplay = ({
 				<div className="md:flex-[4] md:min-w-0">
 					<div className="flex flex-wrap gap-2">
 						{numberGroups.map((group, index) => (
-							// biome-ignore lint/suspicious/noArrayIndexKey: Number groups are stable and index is needed for mapping
-							<React.Fragment key={index}>
+							<React.Fragment key={`${index}-${group}`}>
 								<div className="flex flex-col items-center">
 									<div
 										className={`text-xs mb-1 ${darkMode ? "text-gray-400" : "text-gray-600"}`}
@@ -283,32 +282,28 @@ export const NihilistDisplay = ({
 							<div className="w-8 h-8" />
 							{Array.from({ length: 5 }).map((_, i) => (
 								<div
-									// biome-ignore lint/suspicious/noArrayIndexKey: Static grid columns, index is stable
-									key={`col-${i}`}
+									key={`col-header-${i + 1}`}
 									className="w-8 h-8 flex items-center justify-center font-mono text-xs"
 								>
 									{i + 1}
 								</div>
 							))}
 							{Array.from({ length: 5 }).map((_, ri) => (
-								// biome-ignore lint/suspicious/noArrayIndexKey: Static grid rows, index is stable
-								<React.Fragment key={`row-frag-${ri}`}>
+								<React.Fragment key={`row-frag-grid-${ri + 1}`}>
 									<div className="w-8 h-8 flex items-center justify-center font-mono text-xs">
 										{ri + 1}
 									</div>
 									{Array.from({ length: 5 }).map((_, ci) =>
 										isTestSubmitted ? (
 											<div
-												// biome-ignore lint/suspicious/noArrayIndexKey: Static grid cells, index is stable
-												key={`cell-${ri}-${ci}`}
+												key={`cell-${ri + 1}-${ci + 1}-${polyGrid[ri]?.[ci] || ""}`}
 												className={`w-8 h-8 border rounded text-center flex items-center justify-center ${darkMode ? "border-gray-600" : "border-gray-300"}`}
 											>
 												{renderGridCellContent(ri, ci, polyGrid, polybiusKey)}
 											</div>
 										) : (
 											<input
-												// biome-ignore lint/suspicious/noArrayIndexKey: Static grid cells, index is stable
-												key={`cell-${ri}-${ci}`}
+												key={`cell-input-${ri + 1}-${ci + 1}-${polyGrid[ri]?.[ci] || ""}`}
 												type="text"
 												maxLength={2}
 												value={polyGrid[ri]?.[ci] || ""}

@@ -32,7 +32,7 @@ describe("Notifications Management E2E", () => {
 		testUsers.push(createTestUser({ displayName: "Notification User" }));
 
 		// Create test team
-		const team = createTestTeam(testUsers[0]!.id);
+		const team = createTestTeam(testUsers[0]?.id ?? "");
 		testTeams.push(team);
 	});
 
@@ -45,8 +45,9 @@ describe("Notifications Management E2E", () => {
 
 	describe("Notification Creation", () => {
 		it("should create a notification", () => {
-			const team = testTeams[0]!;
-			const user = testUsers[0]!;
+			const team = testTeams[0];
+			const user = testUsers[0];
+			if (!team || !user) throw new Error("Test setup failed");
 
 			const notification = createTeamNotification({
 				userId: user.id,
@@ -70,8 +71,9 @@ describe("Notifications Management E2E", () => {
 
 	describe("Notification Retrieval", () => {
 		it("should retrieve notifications for a user", () => {
-			const team = testTeams[0]!;
-			const user = testUsers[0]!;
+			const team = testTeams[0];
+			const user = testUsers[0];
+			if (!team || !user) throw new Error("Test setup failed");
 
 			// Create multiple notifications
 			createTeamNotification({
@@ -98,8 +100,9 @@ describe("Notifications Management E2E", () => {
 		});
 
 		it("should filter unread notifications", async () => {
-			const team = testTeams[0]!;
-			const user = testUsers[0]!;
+			const team = testTeams[0];
+			const user = testUsers[0];
+			if (!team || !user) throw new Error("Test setup failed");
 
 			// Create read and unread notifications
 			createTeamNotification({
@@ -120,8 +123,9 @@ describe("Notifications Management E2E", () => {
 
 	describe("Marking Notifications as Read", () => {
 		it("should mark a notification as read", () => {
-			const team = testTeams[0]!;
-			const user = testUsers[0]!;
+			const team = testTeams[0];
+			const user = testUsers[0];
+			if (!team || !user) throw new Error("Test setup failed");
 
 			// Create unread notification
 			const notification = createTeamNotification({
@@ -147,8 +151,9 @@ describe("Notifications Management E2E", () => {
 
 	describe("Deleting Notifications", () => {
 		it("should delete a notification", () => {
-			const team = testTeams[0]!;
-			const user = testUsers[0]!;
+			const team = testTeams[0];
+			const user = testUsers[0];
+			if (!team || !user) throw new Error("Test setup failed");
 
 			// Create notification
 			const notification = createTeamNotification({

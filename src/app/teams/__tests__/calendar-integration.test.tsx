@@ -4,6 +4,21 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+interface Team {
+	id: string;
+	name: string;
+	slug: string;
+	school: string;
+	division: "B" | "C";
+	description?: string;
+	members: Array<{
+		id: string;
+		name: string;
+		email: string;
+		role: "captain" | "member";
+	}>;
+}
+
 // Top-level regex patterns for test matching
 const NEXT_BUTTON_REGEX = /next/i;
 const PREV_BUTTON_REGEX = /previous/i;
@@ -329,14 +344,16 @@ describe("Calendar Integration Tests", () => {
 
 	describe("TeamsLanding Integration", () => {
 		it("switches to upcoming tab and shows calendar", async () => {
-			const mockUserTeams = [
+			const mockUserTeams: Team[] = [
 				{
 					id: "team-1",
 					name: "Test Team",
 					slug: "test-team",
+					school: "Test School",
+					division: "B",
 					members: [],
 				},
-			] as any;
+			];
 
 			mockFetch
 				.mockResolvedValueOnce({
@@ -377,14 +394,16 @@ describe("Calendar Integration Tests", () => {
 		});
 
 		it("shows different content for different tabs", async () => {
-			const mockUserTeams = [
+			const mockUserTeams: Team[] = [
 				{
 					id: "team-1",
 					name: "Test Team",
 					slug: "test-team",
+					school: "Test School",
+					division: "B",
 					members: [],
 				},
-			] as any;
+			];
 
 			render(
 				<TeamsLanding

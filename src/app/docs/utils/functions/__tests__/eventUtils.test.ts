@@ -25,13 +25,19 @@ describe("eventUtils", () => {
 		});
 
 		it("returns build badge for build events", () => {
-			const buildEvent = { ...baseEvent, eventType: "build" as const } as DocsEvent;
+			const buildEvent = {
+				...baseEvent,
+				eventType: "build" as const,
+			} as DocsEvent;
 			const result = getPrimaryBadgeForEvent(buildEvent);
 			expect(result).toEqual({ kind: "build", label: "Build Event" });
 		});
 
 		it("returns notesheet badge for events with notesheet allowed", () => {
-			const notesheetEvent = { ...baseEvent, notesheetAllowed: true } as DocsEvent;
+			const notesheetEvent = {
+				...baseEvent,
+				notesheetAllowed: true,
+			} as DocsEvent;
 			const result = getPrimaryBadgeForEvent(notesheetEvent);
 			expect(result).toEqual({ kind: "notesheet", label: "Notesheet" });
 		});

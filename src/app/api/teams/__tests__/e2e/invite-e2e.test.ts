@@ -47,11 +47,11 @@ describe("Team Invitation E2E", () => {
 		);
 
 		// Create test team
-		const team = createTestTeam(testUsers[0]!.id);
+		const team = createTestTeam(testUsers[0]?.id ?? "");
 		testTeams.push(team);
 
 		// Add existing member
-		addTeamMember(team.subteamId, testUsers[1]!.id, "member");
+		addTeamMember(team.subteamId, testUsers[1]?.id ?? "", "member");
 	});
 
 	afterAll(() => {
@@ -69,7 +69,8 @@ describe("Team Invitation E2E", () => {
 		});
 
 		it("should search users by email", () => {
-			const invitee = testUsers[2]!;
+			const invitee = testUsers[2];
+			if (!invitee) throw new Error("Test setup failed");
 			const searchResults = findUsersByEmail(invitee.email);
 			expect(searchResults.length).toBeGreaterThan(0);
 			expect(searchResults[0]?.email).toBe(invitee.email);
@@ -78,12 +79,14 @@ describe("Team Invitation E2E", () => {
 
 	describe("Invitation Creation", () => {
 		it("should create invitation for new user", () => {
-			const team = testTeams[0]!;
-			const invitee = testUsers[2]!;
+			const team = testTeams[0];
+			const invitee = testUsers[2];
+			if (!team || !invitee || !testUsers[0])
+				throw new Error("Test setup failed");
 
 			const invitation = createTeamInvitation({
 				teamId: team.subteamId,
-				invitedBy: testUsers[0]!.id,
+				invitedBy: testUsers[0].id,
 				email: invitee.email,
 				role: "member",
 				invitationCode: "TEST-CODE-123",
@@ -124,8 +127,9 @@ describe("Team Invitation E2E", () => {
 
 	describe("Notification Creation", () => {
 		it("should create notification for invited user", () => {
-			const team = testTeams[0]!;
-			const invitee = testUsers[2]!;
+			const team = testTeams[0];
+			const invitee = testUsers[2];
+			if (!team || !invitee) throw new Error("Test setup failed");
 
 			const notification = createTeamNotification({
 				userId: invitee.id,
@@ -166,7 +170,8 @@ describe("Team Invitation E2E", () => {
 			);
 
 			expect(membership).toBeDefined();
-			expect(["captain", "co_captain"]).toContain(membership!.role);
+			expect(membership?.role).toBeDefined();
+			expect(["captain", "co_captain"]).toContain(membership?.role);
 		});
 
 		it("should prevent existing members from being invited", () => {
@@ -190,7 +195,8 @@ describe("Team Invitation E2E", () => {
 
 	describe("Team Code Retrieval", () => {
 		it("should retrieve team codes for invitation", () => {
-			const team = testTeams[0]!;
+			const team = testTeams[0];
+			if (!team) throw new Error("Test setup failed");
 
 			const teamUnit = getTeamUnit(team.subteamId);
 

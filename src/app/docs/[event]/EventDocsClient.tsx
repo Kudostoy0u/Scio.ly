@@ -20,7 +20,6 @@ interface EventDocsClientProps {
 	toc: Array<{ level: number; text: string; id: string }>;
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex event docs rendering with multiple interactive features
 export function EventDocsClient({ evt, md, meta, toc }: EventDocsClientProps) {
 	const { darkMode } = useTheme();
 	// Prefer a Google Docs notesheet link if one exists in evt.links

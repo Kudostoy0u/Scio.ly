@@ -8,18 +8,18 @@ import {
 import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
 import {
+	getTeamAccessCockroach,
+	hasLeadershipAccessCockroach,
+} from "@/lib/utils/teams/access";
+import {
 	handleError,
 	handleForbiddenError,
 	handleNotFoundError,
 	handleUnauthorizedError,
 	handleValidationError,
 	validateEnvironment,
-} from "@/lib/utils/error-handler";
-import {
-	checkTeamGroupAccessCockroach,
-	checkTeamGroupLeadershipCockroach,
-} from "@/lib/utils/team-auth";
-import { resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
+} from "@/lib/utils/teams/errors";
+import { resolveTeamSlugToUnits } from "@/lib/utils/teams/resolver";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -81,11 +81,8 @@ export async function GET(
 		}
 
 		// Check if user has access to this team group (membership OR roster entry)
-		const authResult = await checkTeamGroupAccessCockroach(
-			user.id,
-			teamInfo.groupId,
-		);
-		if (!authResult.isAuthorized) {
+		const access = await getTeamAccessCockroach(user.id, teamInfo.groupId);
+		if (!access.hasAccess) {
 			return handleForbiddenError("Not authorized to view this team");
 		}
 
@@ -196,11 +193,11 @@ export async function POST(
 		}
 
 		// Check if the user has leadership privileges in the team group
-		const leadershipResult = await checkTeamGroupLeadershipCockroach(
+		const hasLeadership = await hasLeadershipAccessCockroach(
 			user.id,
 			teamInfo.groupId,
 		);
-		if (!leadershipResult.hasLeadership) {
+		if (!hasLeadership) {
 			return handleForbiddenError(
 				"Only captains and co-captains can manage timers",
 			);
@@ -379,11 +376,11 @@ export async function DELETE(
 		}
 
 		// Check if the user has leadership privileges in the team group
-		const leadershipResult = await checkTeamGroupLeadershipCockroach(
+		const hasLeadership = await hasLeadershipAccessCockroach(
 			user.id,
 			teamInfo.groupId,
 		);
-		if (!leadershipResult.hasLeadership) {
+		if (!hasLeadership) {
 			return handleForbiddenError(
 				"Only captains and co-captains can manage timers",
 			);

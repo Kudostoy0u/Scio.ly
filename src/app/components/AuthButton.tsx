@@ -1,11 +1,11 @@
 "use client";
 import SyncLocalStorage from "@/lib/database/localStorageReplacement";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 
 // Image and Link are used within UserDropdown/AuthModal
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
-import { preloadImage } from "@/lib/utils/preloadImage";
+import { preloadImage } from "@/lib/utils/media/preloadImage";
 import type { User } from "@supabase/supabase-js";
 import {} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -120,7 +120,7 @@ export default function AuthButton() {
 		};
 	}, []);
 
-	// moved to '@/lib/utils/preloadImage'
+	// moved to '@/lib/utils/media/preloadImage'
 
 	useEffect(() => {
 		let active = true;

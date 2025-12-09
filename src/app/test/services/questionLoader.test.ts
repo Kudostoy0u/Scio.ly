@@ -57,19 +57,16 @@ describe("questionLoader service", () => {
 				images: ["/id/img.png"],
 			},
 		];
-		const fetchMock = vi.fn(
-			(input: RequestInfo | URL) => {
-				const url =
-					typeof input === "string" ? input : input?.toString?.() || "";
-				if (url.startsWith(api.idQuestions)) {
-					return Promise.resolve({
-						ok: true,
-						json: async () => ({ data: idRows }),
-					});
-				}
-				return Promise.resolve({ ok: false, json: async () => ({}) });
-			},
-		);
+		const fetchMock = vi.fn((input: RequestInfo | URL) => {
+			const url = typeof input === "string" ? input : input?.toString?.() || "";
+			if (url.startsWith(api.idQuestions)) {
+				return Promise.resolve({
+					ok: true,
+					json: async () => ({ data: idRows }),
+				});
+			}
+			return Promise.resolve({ ok: false, json: async () => ({}) });
+		});
 		(global as unknown as { fetch: MockFetch }).fetch = fetchMock;
 
 		const out = await fetchIdQuestions(
@@ -94,21 +91,18 @@ describe("questionLoader service", () => {
 				difficulty: 0.5,
 			},
 		];
-		const fetchMock = vi.fn(
-			(input: RequestInfo | URL) => {
-				const url =
-					typeof input === "string" ? input : input?.toString?.() || "";
-				if (url.startsWith(api.questions)) {
-					expect(url).toContain("limit=3");
-					expect(url).toContain("event=Water%20Quality"); // base part extracted
-					return Promise.resolve({
-						ok: true,
-						json: async () => ({ data: base }),
-					});
-				}
-				return Promise.resolve({ ok: false, json: async () => ({}) });
-			},
-		);
+		const fetchMock = vi.fn((input: RequestInfo | URL) => {
+			const url = typeof input === "string" ? input : input?.toString?.() || "";
+			if (url.startsWith(api.questions)) {
+				expect(url).toContain("limit=3");
+				expect(url).toContain("event=Water%20Quality"); // base part extracted
+				return Promise.resolve({
+					ok: true,
+					json: async () => ({ data: base }),
+				});
+			}
+			return Promise.resolve({ ok: false, json: async () => ({}) });
+		});
 		(global as unknown as { fetch: MockFetch }).fetch = fetchMock;
 
 		const out = await fetchBaseQuestions(

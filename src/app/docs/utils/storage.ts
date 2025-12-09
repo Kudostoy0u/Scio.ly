@@ -76,11 +76,8 @@ export async function getLocalEventMarkdown(
 		// First try reading from the filesystem (works at build time / SSG)
 		try {
 			const parts = slug.split("/");
-			// biome-ignore lint/correctness/noNodejsModules: This is a server-only file, Node.js modules are valid
 			const pathMod = await import("node:path");
-			// biome-ignore lint/correctness/noNodejsModules: This is a server-only file, Node.js modules are valid
 			const { readFile, access } = await import("node:fs/promises");
-			// biome-ignore lint/correctness/noNodejsModules: This is a server-only file, Node.js modules are valid
 			const { constants } = await import("node:fs");
 
 			const candidatePaths: string[] = [];

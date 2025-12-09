@@ -2,7 +2,7 @@
  * Event filtering utilities
  */
 
-import { globalApiCache } from "@/lib/utils/globalApiCache";
+import { globalApiCache } from "@/lib/utils/storage/globalApiCache";
 import type {
 	CalendarEvent,
 	RecurringMeeting,

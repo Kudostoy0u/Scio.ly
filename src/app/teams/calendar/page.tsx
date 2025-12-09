@@ -4,7 +4,7 @@ import { useAuth } from "@/app/contexts/AuthContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import TeamCalendar from "@/app/teams/components/TeamCalendar";
 import TeamLayout from "@/app/teams/components/TeamLayout";
-import { globalApiCache } from "@/lib/utils/globalApiCache";
+import { globalApiCache } from "@/lib/utils/storage/globalApiCache";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 

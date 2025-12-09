@@ -356,7 +356,6 @@ export function cleanupTestEnvironment() {
 }
 
 // Re-export specific items from testing library to avoid barrel file performance issues
-// biome-ignore lint/performance/noBarrelFile: This is a test utilities file that intentionally re-exports testing library functions
 export {
 	render,
 	screen,

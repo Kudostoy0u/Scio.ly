@@ -2,7 +2,7 @@
 
 import type { Question } from "@/app/utils/geminiService";
 import type { RouterParams } from "@/app/utils/questionUtils";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchQuestionsForParams } from "./utils/fetchQuestions";
 import { initLoad } from "./utils/initLoad";
@@ -123,7 +123,6 @@ export function useTestDataLoading(
 	 * - SSR data application
 	 * This complexity is intentional to centralize all data loading logic.
 	 */
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This effect consolidates multiple data loading paths
 	useEffect(() => {
 		// Handle view results mode - set submitted state and load stored data
 		if (stableRouterDataMemo.viewResults === "true") {
@@ -165,7 +164,6 @@ export function useTestDataLoading(
 		);
 
 		if (isAssignmentMode && !fetchCompletedRef.current) {
-			// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This function handles multiple assignment loading scenarios
 			const loadAssignment = async () => {
 				try {
 					const assignmentId = stableRouterDataMemo.assignmentId;

@@ -9,7 +9,7 @@ import { questions as questionsTable } from "@/lib/db/schema";
 import { blacklists as blacklistsTable } from "@/lib/db/schema/core";
 import { geminiService } from "@/lib/services/gemini";
 import type { ApiResponse } from "@/lib/types/api";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { type SQL, and, eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 
@@ -20,7 +20,6 @@ export interface RemoveRequest extends Record<string, unknown> {
 	event: string;
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex report removal logic with validation and database operations
 export async function POST(request: NextRequest) {
 	const startTime = Date.now();
 

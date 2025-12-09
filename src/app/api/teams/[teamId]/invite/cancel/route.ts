@@ -9,8 +9,8 @@ import {
 	handleUnauthorizedError,
 	handleValidationError,
 	validateEnvironment,
-} from "@/lib/utils/error-handler";
-import { resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
+} from "@/lib/utils/teams/errors";
+import { resolveTeamSlugToUnits } from "@/lib/utils/teams/resolver";
 import { and, eq, inArray } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";

@@ -32,6 +32,8 @@ describe("questionMedia utils", () => {
 			options: string[];
 			answers: unknown[];
 			images: string[];
+			imageData?: string;
+			imageUrl?: string;
 		}> = [
 			{
 				id: "1",
@@ -41,7 +43,7 @@ describe("questionMedia utils", () => {
 				images: ["https://cdn/img1.png", "https://cdn/img2.png"],
 			},
 		];
-		const out = normalizeQuestionMedia(input as any);
+		const out = normalizeQuestionMedia(input);
 		expect(out[0]?.imageData).toBe("https://cdn/img1.png");
 		expect(out[0]?.imageUrl).toBe("https://cdn/img1.png");
 	});

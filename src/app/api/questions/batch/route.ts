@@ -129,7 +129,9 @@ export async function POST(request: NextRequest) {
 
 		const allQuestions: Question[] = [];
 
-		const { generateQuestionCodes } = await import("@/lib/utils/base52");
+		const { generateQuestionCodes } = await import(
+			"@/lib/utils/assessments/base52"
+		);
 
 		const regularQuestionCodes =
 			questionRows.length > 0

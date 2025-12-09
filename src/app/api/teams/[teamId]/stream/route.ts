@@ -19,6 +19,8 @@ import {
 	validateRequest,
 } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
+import logger from "@/lib/utils/logging/logger";
+import { getTeamAccessCockroach } from "@/lib/utils/teams/access";
 import {
 	// handleError,
 	handleForbiddenError,
@@ -26,9 +28,7 @@ import {
 	handleUnauthorizedError,
 	handleValidationError,
 	validateEnvironment,
-} from "@/lib/utils/error-handler";
-import logger from "@/lib/utils/logger";
-import { checkTeamGroupAccessCockroach } from "@/lib/utils/team-auth";
+} from "@/lib/utils/teams/errors";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -104,8 +104,8 @@ export async function GET(
 		}
 
 		// Check if user has access to this team group (membership OR roster entry)
-		const authResult = await checkTeamGroupAccessCockroach(user.id, groupId);
-		if (!authResult.isAuthorized) {
+		const access = await getTeamAccessCockroach(user.id, groupId);
+		if (!access.hasAccess) {
 			return handleForbiddenError("Not authorized to access this team");
 		}
 

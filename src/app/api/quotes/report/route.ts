@@ -11,7 +11,7 @@ import {
 } from "@/lib/db/schema";
 import { geminiService } from "@/lib/services/gemini";
 import type { ApiResponse } from "@/lib/types/api";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { and, eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 
@@ -22,7 +22,6 @@ export interface QuoteReportRequest extends Record<string, unknown> {
 	cipherType: string;
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex quote report processing with AI validation
 export async function POST(request: NextRequest) {
 	const startTime = Date.now();
 

@@ -6,7 +6,7 @@ import type {
 	Timer,
 	Tournament,
 } from "@/lib/stores/teamStore";
-import { globalApiCache } from "@/lib/utils/globalApiCache";
+import { globalApiCache } from "@/lib/utils/storage/globalApiCache";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";

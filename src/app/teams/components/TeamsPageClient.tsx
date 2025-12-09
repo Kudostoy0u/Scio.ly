@@ -204,9 +204,13 @@ export default function TeamsPageClient() {
 
 	if (!user?.id) {
 		return (
-			<div className="p-6 text-center text-gray-600">
-				Sign in to see your teams.
-			</div>
+			<TeamsLanding
+				userTeams={[]}
+				onCreateTeam={() => router.push("/login?redirect=/teams")}
+				onJoinTeam={() => router.push("/login?redirect=/teams")}
+				onTeamSelect={() => router.push("/login?redirect=/teams")}
+				isPreviewMode
+			/>
 		);
 	}
 

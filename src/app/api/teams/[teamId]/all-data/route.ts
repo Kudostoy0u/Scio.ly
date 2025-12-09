@@ -10,14 +10,14 @@ import {
 	newTeamUnits,
 } from "@/lib/db/schema/teams";
 import { getServerUser } from "@/lib/supabaseServer";
+import logger from "@/lib/utils/logging/logger";
 import {
 	handleError,
 	handleNotFoundError,
 	handleUnauthorizedError,
 	handleValidationError,
 	validateEnvironment,
-} from "@/lib/utils/error-handler";
-import logger from "@/lib/utils/logger";
+} from "@/lib/utils/teams/errors";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";

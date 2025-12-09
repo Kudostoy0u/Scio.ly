@@ -1,5 +1,5 @@
 "use client";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { Copy, Crown, Share2, Users, X } from "lucide-react";

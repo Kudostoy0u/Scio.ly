@@ -68,14 +68,13 @@ export const ColumnarTranspositionDisplay = ({
 		[findNextLetter],
 	);
 
-	// eslint-disable-next-line react-hooks/preserve-manual-memoization
 	const correctMapping = useMemo(() => {
 		if (!(isTestSubmitted && quote?.quote)) {
 			return {};
 		}
 		const originalQuote = quote.quote.toUpperCase();
 		return buildCorrectMapping(text, originalQuote);
-	}, [isTestSubmitted, quote?.quote, text, buildCorrectMapping]);
+	}, [isTestSubmitted, quote, text, buildCorrectMapping]);
 
 	// Helper function to find cipher letter indices
 	const findCipherLetterIndices = useCallback((text: string): number[] => {
@@ -336,8 +335,7 @@ export const ColumnarTranspositionDisplay = ({
 
 					return (
 						<CharacterDisplay
-							// biome-ignore lint/suspicious/noArrayIndexKey: Display characters are stable and index is needed for mapping
-							key={displayIndex}
+							key={`${displayIndex}-${char}-${charData.originalIndex}`}
 							char={char}
 							displayIndex={displayIndex}
 							originalIndex={charData.originalIndex}

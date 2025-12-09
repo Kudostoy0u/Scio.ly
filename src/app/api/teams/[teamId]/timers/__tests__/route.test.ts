@@ -2,10 +2,12 @@ import { DELETE, GET, POST } from "@/app/api/teams/[teamId]/timers/route";
 import { dbPg } from "@/lib/db";
 import { getServerUser } from "@/lib/supabaseServer";
 import {
-	checkTeamGroupAccessCockroach,
-	checkTeamGroupLeadershipCockroach,
-} from "@/lib/utils/team-auth";
-import { resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
+	type TeamAccessResult,
+	getTeamAccessCockroach,
+	hasLeadershipAccessCockroach,
+} from "@/lib/utils/teams/access";
+import { resolveTeamSlugToUnits } from "@/lib/utils/teams/resolver";
+import type { User } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -17,9 +19,9 @@ vi.mock("@/lib/supabaseServer", () => ({
 	getServerUser: vi.fn(),
 }));
 
-vi.mock("@/lib/utils/team-auth", () => ({
-	checkTeamGroupAccessCockroach: vi.fn(),
-	checkTeamGroupLeadershipCockroach: vi.fn(),
+vi.mock("@/lib/utils/teams/access", () => ({
+	getTeamAccessCockroach: vi.fn(),
+	hasLeadershipAccessCockroach: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -37,18 +39,20 @@ vi.mock("@/lib/db", () => ({
 	},
 }));
 
-vi.mock("@/lib/utils/team-resolver", () => ({
+vi.mock("@/lib/utils/teams/resolver", () => ({
 	resolveTeamSlugToUnits: vi.fn(),
 }));
 
 const mockGetServerUser = vi.mocked(getServerUser);
-const mockCheckTeamGroupAccessCockroach = vi.mocked(
-	checkTeamGroupAccessCockroach,
+const mockGetTeamAccessCockroach = vi.mocked(getTeamAccessCockroach);
+const mockHasLeadershipAccessCockroach = vi.mocked(
+	hasLeadershipAccessCockroach,
 );
-const mockCheckTeamGroupLeadershipCockroach = vi.mocked(
-	checkTeamGroupLeadershipCockroach,
-);
-const mockDbPg = vi.mocked(dbPg);
+const mockDbPg = vi.mocked(dbPg) as typeof dbPg & {
+	select: ReturnType<typeof vi.fn>;
+	insert: ReturnType<typeof vi.fn>;
+	delete: ReturnType<typeof vi.fn>;
+};
 const mockResolveTeamSlugToUnits = vi.mocked(resolveTeamSlugToUnits);
 
 describe("/api/teams/[teamId]/timers", () => {
@@ -83,15 +87,15 @@ describe("/api/teams/[teamId]/timers", () => {
 			limit: vi.fn(),
 			orderBy: vi.fn(),
 			leftJoin: vi.fn(),
-		} as any);
+		} as unknown);
 		mockDbPg.insert.mockReturnValue({
 			values: vi.fn(),
 			returning: vi.fn(),
-		} as any);
+		} as unknown);
 		mockDbPg.delete.mockReturnValue({
 			where: vi.fn(),
 			returning: vi.fn(),
-		} as any);
+		} as unknown);
 	});
 
 	afterEach(() => {
@@ -107,7 +111,7 @@ describe("/api/teams/[teamId]/timers", () => {
 			);
 			const response = await GET(request, {
 				params: Promise.resolve({ teamId: mockTeamId }),
-			} as any);
+			});
 
 			expect(response.status).toBe(401);
 			const body = await response.json();
@@ -115,14 +119,14 @@ describe("/api/teams/[teamId]/timers", () => {
 		});
 
 		it("should return 400 when subteamId is missing", async () => {
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/timers`,
 			);
 			const response = await GET(request, {
 				params: Promise.resolve({ teamId: mockTeamId }),
-			} as any);
+			});
 
 			expect(response.status).toBe(400);
 			const body = await response.json();
@@ -137,20 +141,22 @@ describe("/api/teams/[teamId]/timers", () => {
 		});
 
 		it("should return 403 when user has no access", async () => {
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-			mockCheckTeamGroupAccessCockroach.mockResolvedValue({
-				isAuthorized: false,
-				hasMembership: false,
-				hasRosterEntry: false,
-				role: undefined,
-			} as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
+			mockGetTeamAccessCockroach.mockResolvedValue({
+				hasAccess: false,
+				isCreator: false,
+				hasSubteamMembership: false,
+				hasRosterEntries: false,
+				subteamMemberships: [],
+				rosterSubteams: [],
+			} as TeamAccessResult);
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/timers?subteamId=${mockSubteamId}`,
 			);
 			const response = await GET(request, {
 				params: Promise.resolve({ teamId: mockTeamId }),
-			} as any);
+			});
 
 			expect(response.status).toBe(403);
 			const body = await response.json();
@@ -158,13 +164,16 @@ describe("/api/teams/[teamId]/timers", () => {
 		});
 
 		it("should return timers when user has access", async () => {
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-			mockCheckTeamGroupAccessCockroach.mockResolvedValue({
-				isAuthorized: true,
-				hasMembership: true,
-				hasRosterEntry: false,
-				role: "captain",
-			} as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
+			mockGetTeamAccessCockroach.mockResolvedValue({
+				hasAccess: true,
+				isCreator: false,
+				hasSubteamMembership: true,
+				hasRosterEntries: false,
+				subteamRole: "captain",
+				subteamMemberships: [],
+				rosterSubteams: [],
+			});
 
 			// Mock Drizzle ORM chain for timers query
 			const mockTimersResult = [
@@ -188,14 +197,14 @@ describe("/api/teams/[teamId]/timers", () => {
 						}),
 					}),
 				}),
-			} as any);
+			});
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/timers?subteamId=${mockSubteamId}`,
 			);
 			const response = await GET(request, {
 				params: Promise.resolve({ teamId: mockTeamId }),
-			} as any);
+			});
 
 			expect(response.status).toBe(200);
 			const body = await response.json();
@@ -205,13 +214,16 @@ describe("/api/teams/[teamId]/timers", () => {
 		});
 
 		it("should return empty array when no timers exist", async () => {
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-			mockCheckTeamGroupAccessCockroach.mockResolvedValue({
-				isAuthorized: true,
-				hasMembership: true,
-				hasRosterEntry: false,
-				role: "captain",
-			} as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
+			mockGetTeamAccessCockroach.mockResolvedValue({
+				hasAccess: true,
+				isCreator: false,
+				hasSubteamMembership: true,
+				hasRosterEntries: false,
+				subteamRole: "captain",
+				subteamMemberships: [],
+				rosterSubteams: [],
+			});
 
 			// Mock empty timers query
 			mockDbPg.select.mockReturnValue({
@@ -224,14 +236,14 @@ describe("/api/teams/[teamId]/timers", () => {
 						}),
 					}),
 				}),
-			} as any);
+			});
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/timers?subteamId=${mockSubteamId}`,
 			);
 			const response = await GET(request, {
 				params: Promise.resolve({ teamId: mockTeamId }),
-			} as any);
+			});
 
 			expect(response.status).toBe(200);
 			const body = await response.json();
@@ -255,7 +267,7 @@ describe("/api/teams/[teamId]/timers", () => {
 			);
 			const response = await POST(request, {
 				params: Promise.resolve({ teamId: mockTeamId }),
-			} as any);
+			});
 
 			expect(response.status).toBe(401);
 			const body = await response.json();
@@ -263,14 +275,8 @@ describe("/api/teams/[teamId]/timers", () => {
 		});
 
 		it("should return 403 when user has no leadership access", async () => {
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-			mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
-				hasLeadership: false,
-				isAuthorized: false,
-				hasMembership: false,
-				hasRosterEntry: false,
-				role: "member",
-			} as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
+			mockHasLeadershipAccessCockroach.mockResolvedValue(false);
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/timers`,
@@ -284,7 +290,7 @@ describe("/api/teams/[teamId]/timers", () => {
 			);
 			const response = await POST(request, {
 				params: Promise.resolve({ teamId: mockTeamId }),
-			} as any);
+			});
 
 			expect(response.status).toBe(403);
 			const body = await response.json();
@@ -294,14 +300,8 @@ describe("/api/teams/[teamId]/timers", () => {
 		});
 
 		it("should create timer when user has leadership access", async () => {
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-			mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
-				hasLeadership: true,
-				isAuthorized: true,
-				hasMembership: true,
-				hasRosterEntry: false,
-				role: "captain",
-			} as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
+			mockHasLeadershipAccessCockroach.mockResolvedValue(true);
 
 			// Mock Drizzle ORM queries in sequence:
 			// 1. Subteam lookup
@@ -313,7 +313,7 @@ describe("/api/teams/[teamId]/timers", () => {
 								limit: vi.fn().mockResolvedValue([{ groupId: mockGroupId }]),
 							}),
 						}),
-					}) as any,
+					}) as unknown,
 			);
 
 			// 2. Group team units
@@ -323,7 +323,7 @@ describe("/api/teams/[teamId]/timers", () => {
 						from: vi.fn().mockReturnValue({
 							where: vi.fn().mockResolvedValue([{ id: mockSubteamId }]),
 						}),
-					}) as any,
+					}) as unknown,
 			);
 
 			// 3. Event existence check
@@ -335,7 +335,7 @@ describe("/api/teams/[teamId]/timers", () => {
 								limit: vi.fn().mockResolvedValue([{ id: mockEventId }]),
 							}),
 						}),
-					}) as any,
+					}) as unknown,
 			);
 
 			// 4. Existing timer check
@@ -347,7 +347,7 @@ describe("/api/teams/[teamId]/timers", () => {
 								limit: vi.fn().mockResolvedValue([]),
 							}),
 						}),
-					}) as any,
+					}) as unknown,
 			);
 
 			// 5. Timer creation
@@ -355,7 +355,7 @@ describe("/api/teams/[teamId]/timers", () => {
 				values: vi.fn().mockReturnValue({
 					returning: vi.fn().mockResolvedValue([{ id: mockTimerId }]),
 				}),
-			} as any);
+			});
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/timers`,
@@ -369,7 +369,7 @@ describe("/api/teams/[teamId]/timers", () => {
 			);
 			const response = await POST(request, {
 				params: Promise.resolve({ teamId: mockTeamId }),
-			} as any);
+			});
 
 			expect(response.status).toBe(200);
 			const body = await response.json();
@@ -378,14 +378,8 @@ describe("/api/teams/[teamId]/timers", () => {
 		});
 
 		it("should handle missing required fields", async () => {
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-			mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
-				hasLeadership: true,
-				isAuthorized: true,
-				hasMembership: true,
-				hasRosterEntry: false,
-				role: "captain",
-			} as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
+			mockHasLeadershipAccessCockroach.mockResolvedValue(true);
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/timers`,
@@ -398,7 +392,7 @@ describe("/api/teams/[teamId]/timers", () => {
 			);
 			const response = await POST(request, {
 				params: Promise.resolve({ teamId: mockTeamId }),
-			} as any);
+			});
 
 			expect(response.status).toBe(400);
 			const body = await response.json();
@@ -430,7 +424,7 @@ describe("/api/teams/[teamId]/timers", () => {
 			);
 			const response = await DELETE(request, {
 				params: Promise.resolve({ teamId: mockTeamId }),
-			} as any);
+			});
 
 			expect(response.status).toBe(401);
 			const body = await response.json();
@@ -438,14 +432,8 @@ describe("/api/teams/[teamId]/timers", () => {
 		});
 
 		it("should return 403 when user has no leadership access", async () => {
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-			mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
-				hasLeadership: false,
-				isAuthorized: false,
-				hasMembership: false,
-				hasRosterEntry: false,
-				role: "member",
-			} as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
+			mockHasLeadershipAccessCockroach.mockResolvedValue(false);
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/timers`,
@@ -459,7 +447,7 @@ describe("/api/teams/[teamId]/timers", () => {
 			);
 			const response = await DELETE(request, {
 				params: Promise.resolve({ teamId: mockTeamId }),
-			} as any);
+			});
 
 			expect(response.status).toBe(403);
 			const body = await response.json();
@@ -469,21 +457,15 @@ describe("/api/teams/[teamId]/timers", () => {
 		});
 
 		it("should delete timer when user has leadership access", async () => {
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-			mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
-				hasLeadership: true,
-				isAuthorized: true,
-				hasMembership: true,
-				hasRosterEntry: false,
-				role: "captain",
-			} as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
+			mockHasLeadershipAccessCockroach.mockResolvedValue(true);
 
 			// Mock Drizzle ORM delete query
 			mockDbPg.delete.mockReturnValue({
 				where: vi.fn().mockReturnValue({
 					returning: vi.fn().mockResolvedValue([{ id: mockTimerId }]),
 				}),
-			} as any);
+			});
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/timers`,
@@ -497,7 +479,7 @@ describe("/api/teams/[teamId]/timers", () => {
 			);
 			const response = await DELETE(request, {
 				params: Promise.resolve({ teamId: mockTeamId }),
-			} as any);
+			});
 
 			expect(response.status).toBe(200);
 			const body = await response.json();
@@ -505,14 +487,8 @@ describe("/api/teams/[teamId]/timers", () => {
 		});
 
 		it("should handle missing required fields", async () => {
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
-			mockCheckTeamGroupLeadershipCockroach.mockResolvedValue({
-				hasLeadership: true,
-				isAuthorized: true,
-				hasMembership: true,
-				hasRosterEntry: false,
-				role: "captain",
-			} as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
+			mockHasLeadershipAccessCockroach.mockResolvedValue(true);
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/timers`,
@@ -523,7 +499,7 @@ describe("/api/teams/[teamId]/timers", () => {
 			);
 			const response = await DELETE(request, {
 				params: Promise.resolve({ teamId: mockTeamId }),
-			} as any);
+			});
 
 			expect(response.status).toBe(400);
 			const body = await response.json();

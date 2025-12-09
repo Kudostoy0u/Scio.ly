@@ -166,8 +166,7 @@ export const AristocratDisplay = ({
 
 							return (
 								<div
-									// biome-ignore lint/suspicious/noArrayIndexKey: Keyword input fields are stable and index is needed for mapping
-									key={i}
+									key={`keyword-${quoteIndex}-${i}-${currentValue || expectedValue || i}`}
 									className="flex flex-col items-center"
 								>
 									<input
@@ -220,8 +219,7 @@ export const AristocratDisplay = ({
 
 					return (
 						<CharacterDisplay
-							// biome-ignore lint/suspicious/noArrayIndexKey: Text characters are stable and index is needed for mapping
-							key={i}
+							key={`char-${quoteIndex}-${i}-${char}`}
 							char={char}
 							index={i}
 							quoteIndex={quoteIndex}

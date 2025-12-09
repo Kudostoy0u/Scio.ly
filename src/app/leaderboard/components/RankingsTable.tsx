@@ -2,7 +2,7 @@
  * Component for displaying leaderboard rankings
  */
 
-import { getAvatarInitial } from "@/lib/utils/displayNameUtils";
+import { getAvatarInitial } from "@/lib/utils/content/displayNameUtils";
 import { LogOut } from "lucide-react";
 import Image from "next/image";
 import type { LeaderboardMember, UserProfile } from "../types";

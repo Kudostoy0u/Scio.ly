@@ -1,19 +1,20 @@
 "use client";
 import SyncLocalStorage from "@/lib/database/localStorageReplacement";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 
 import Header from "@/app/components/Header";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
-import { generateDisplayName } from "@/lib/utils/displayNameUtils";
+import type { Database } from "@/lib/types/database";
+import { generateDisplayName } from "@/lib/utils/content/displayNameUtils";
 import type { User } from "@supabase/supabase-js";
 import { Save, User as UserIcon } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { ChangeEvent } from "react";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex profile page with multiple form fields and state management
 export default function ProfilePage() {
 	const { darkMode } = useTheme();
 	const router = useRouter();
@@ -77,7 +78,6 @@ export default function ProfilePage() {
 		})();
 	}, [router, ctxUser, client]);
 
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex save handler with validation and state management
 	const handleSave = async () => {
 		if (!user) {
 			return;
@@ -91,19 +91,22 @@ export default function ProfilePage() {
 		setSaving(true);
 
 		try {
-			const { error } = await client.from("users").upsert(
-				{
-					id: user.id,
-					email: user.email || "",
-					username: username || user.email?.split("@")[0] || "user",
-					first_name: firstName || null,
-					last_name: lastName || null,
-					display_name: displayName || null,
-					photo_url: photoUrl || null,
-					created_at: new Date().toISOString(),
-				} as never,
-				{ onConflict: "id" },
-			);
+			const userData: Database["public"]["Tables"]["users"]["Insert"] = {
+				id: user.id,
+				email: user.email || "",
+				username: username || user.email?.split("@")[0] || "user",
+				first_name: firstName || null,
+				last_name: lastName || null,
+				display_name: displayName || null,
+				photo_url: photoUrl || null,
+				created_at: new Date().toISOString(),
+			};
+
+			const { error } = (await client
+				.from("users")
+				.upsert([userData] as unknown as never[])) as {
+				error: { code?: string; message?: string } | null;
+			};
 
 			if (error) {
 				if (error.code === "23505") {
@@ -260,11 +263,13 @@ export default function ProfilePage() {
 						{/* Profile Picture */}
 						<div className="flex items-center mb-6">
 							{photoUrl ? (
-								/* eslint-disable-next-line @next/next/no-img-element */
-								<img
+								<Image
 									src={photoUrl}
 									alt="Profile"
-									className="w-16 h-16 rounded-full"
+									width={64}
+									height={64}
+									className="w-16 h-16 rounded-full object-cover"
+									unoptimized
 								/>
 							) : (
 								<div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center">

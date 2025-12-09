@@ -34,11 +34,11 @@ describe("Timer Management E2E", () => {
 		testUsers.push(createTestUser({ displayName: "Member User" }));
 
 		// Create test team
-		const team = createTestTeam(testUsers[0]!.id);
+		const team = createTestTeam(testUsers[0]?.id ?? "");
 		testTeams.push(team);
 
 		// Add member
-		addTeamMember(team.subteamId, testUsers[1]!.id, "member");
+		addTeamMember(team.subteamId, testUsers[1]?.id ?? "", "member");
 	});
 
 	afterAll(() => {
@@ -50,8 +50,9 @@ describe("Timer Management E2E", () => {
 
 	describe("Timer Creation", () => {
 		it("should create a timer for an event", async () => {
-			const team = testTeams[0]!;
-			const captain = testUsers[0]!;
+			const team = testTeams[0];
+			const captain = testUsers[0];
+			if (!team || !captain) throw new Error("Test setup failed");
 
 			const event = createEvent({
 				teamId: team.subteamId,
@@ -84,8 +85,9 @@ describe("Timer Management E2E", () => {
 		});
 
 		it("should prevent duplicate timers for same event", async () => {
-			const team = testTeams[0]!;
-			const captain = testUsers[0]!;
+			const team = testTeams[0];
+			const captain = testUsers[0];
+			if (!team || !captain) throw new Error("Test setup failed");
 
 			const event = createEvent({
 				teamId: team.subteamId,
@@ -113,8 +115,9 @@ describe("Timer Management E2E", () => {
 
 	describe("Timer Retrieval", () => {
 		it("should retrieve all timers for a subteam", () => {
-			const team = testTeams[0]!;
-			const captain = testUsers[0]!;
+			const team = testTeams[0];
+			const captain = testUsers[0];
+			if (!team || !captain) throw new Error("Test setup failed");
 
 			const event1 = createEvent({
 				teamId: team.subteamId,
@@ -152,8 +155,9 @@ describe("Timer Management E2E", () => {
 
 	describe("Timer Deletion", () => {
 		it("should delete a timer", async () => {
-			const team = testTeams[0]!;
-			const captain = testUsers[0]!;
+			const team = testTeams[0];
+			const captain = testUsers[0];
+			if (!team || !captain) throw new Error("Test setup failed");
 
 			const event = createEvent({
 				teamId: team.subteamId,
@@ -180,8 +184,9 @@ describe("Timer Management E2E", () => {
 
 	describe("Authorization", () => {
 		it("should verify only captains can manage timers", () => {
-			const captain = testUsers[0]!;
-			const member = testUsers[1]!;
+			const captain = testUsers[0];
+			const member = testUsers[1];
+			if (!captain || !member) throw new Error("Test setup failed");
 
 			// Verify captain membership
 			const captainMembership = getMembershipsByUser(captain.id)[0];

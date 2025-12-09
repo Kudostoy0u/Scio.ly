@@ -4,7 +4,7 @@
 
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { useState } from "react";
 
 interface CreateLeaderboardModalProps {

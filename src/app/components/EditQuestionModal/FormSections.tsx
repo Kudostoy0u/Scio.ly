@@ -1,5 +1,6 @@
 "use client";
 import type { Question } from "@/app/utils/geminiService";
+import Image from "next/image";
 
 interface FormSectionsProps {
 	darkMode: boolean;
@@ -98,14 +99,23 @@ export function FormSections({
 						}`}
 					>
 						<div className="mb-2">
-							{/* eslint-disable-next-line @next/next/no-img-element */}
-							<img
-								src={
-									currentImageUrl || question?.imageData || question?.imageUrl
-								}
-								alt="Question"
-								className="max-h-64 rounded-md mx-auto"
-							/>
+							{(currentImageUrl ||
+								question?.imageData ||
+								question?.imageUrl) && (
+								<Image
+									src={
+										currentImageUrl ||
+										question?.imageData ||
+										question?.imageUrl ||
+										""
+									}
+									alt="Question"
+									width={512}
+									height={256}
+									className="max-h-64 rounded-md mx-auto object-contain"
+									unoptimized
+								/>
+							)}
 						</div>
 						<p className="text-xs text-gray-500 text-center">
 							Image is permanent and cannot be changed

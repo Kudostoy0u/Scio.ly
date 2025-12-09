@@ -185,7 +185,8 @@ describe("Teams E2E Tests", () => {
 
 	describe("Team Creation Flow", () => {
 		it("should create a team with default subteam", () => {
-			const creator = testUsers[0]!;
+			const creator = testUsers[0];
+			if (!creator) throw new Error("Test setup failed");
 			const team = createTestTeam(creator.id);
 			testTeams.push(team);
 
@@ -213,8 +214,9 @@ describe("Teams E2E Tests", () => {
 
 	describe("Team Joining Flow", () => {
 		it("should allow user to join team with user code", () => {
-			const creator = testUsers[0]!;
-			const joiner = testUsers[1]!;
+			const creator = testUsers[0];
+			const joiner = testUsers[1];
+			if (!creator || !joiner) throw new Error("Test setup failed");
 			const team = createTestTeam(creator.id);
 			testTeams.push(team);
 
@@ -237,7 +239,8 @@ describe("Teams E2E Tests", () => {
 
 	describe("Roster Management Flow", () => {
 		it("should create and update roster entries", () => {
-			const creator = testUsers[0]!;
+			const creator = testUsers[0];
+			if (!creator) throw new Error("Test setup failed");
 			const team = createTestTeam(creator.id);
 			testTeams.push(team);
 
@@ -272,7 +275,8 @@ describe("Teams E2E Tests", () => {
 
 	describe("Stream Post Flow", () => {
 		it("should create stream posts", () => {
-			const creator = testUsers[0]!;
+			const creator = testUsers[0];
+			if (!creator) throw new Error("Test setup failed");
 			const team = createTestTeam(creator.id);
 			testTeams.push(team);
 
@@ -295,8 +299,9 @@ describe("Teams E2E Tests", () => {
 
 	describe("Authorization Checks", () => {
 		it("should enforce captain-only operations", () => {
-			const creator = testUsers[0]!;
-			const member = testUsers[1]!;
+			const creator = testUsers[0];
+			const member = testUsers[1];
+			if (!creator || !member) throw new Error("Test setup failed");
 			const team = createTestTeam(creator.id);
 			testTeams.push(team);
 

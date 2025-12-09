@@ -65,12 +65,18 @@ function EventSidebar({
 		if (!el) {
 			return;
 		}
+		el.scrollIntoView({ behavior: "smooth", block: "start" });
+		// Use history.replaceState instead of directly modifying window.location.hash
+		// to avoid React Compiler immutability error
 		try {
-			window.location.hash = id;
+			window.history.replaceState(
+				null,
+				"",
+				`${window.location.pathname}${window.location.search}#${id}`,
+			);
 		} catch {
 			/* ignore hash update errors */
 		}
-		el.scrollIntoView({ behavior: "smooth", block: "start" });
 	};
 
 	return (

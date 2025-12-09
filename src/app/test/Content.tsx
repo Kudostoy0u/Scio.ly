@@ -81,7 +81,6 @@ const createAnswerKey = (data: Question[]) => {
 	return answerKeyHtml;
 };
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex state management required for test functionality
 export default function TestContent({
 	initialData,
 	initialRouterData,

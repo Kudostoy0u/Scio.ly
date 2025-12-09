@@ -38,11 +38,11 @@ describe("Calendar Event Management E2E", () => {
 		testUsers.push(createTestUser({ displayName: "Member User" }));
 
 		// Create test team
-		const team = createTestTeam(testUsers[0]!.id);
+		const team = createTestTeam(testUsers[0]?.id ?? "");
 		testTeams.push(team);
 
 		// Add member
-		addTeamMember(team.subteamId, testUsers[1]!.id, "member");
+		addTeamMember(team.subteamId, testUsers[1]?.id ?? "", "member");
 	});
 
 	afterAll(() => {
@@ -54,8 +54,9 @@ describe("Calendar Event Management E2E", () => {
 
 	describe("Event Creation", () => {
 		it("should create a team event", () => {
-			const team = testTeams[0]!;
-			const captain = testUsers[0]!;
+			const team = testTeams[0];
+			const captain = testUsers[0];
+			if (!team || !captain) throw new Error("Test setup failed");
 
 			const event = createEvent({
 				teamId: team.subteamId,
@@ -84,7 +85,8 @@ describe("Calendar Event Management E2E", () => {
 		});
 
 		it("should create a personal event (null teamId)", () => {
-			const captain = testUsers[0]!;
+			const captain = testUsers[0];
+			if (!captain) throw new Error("Test setup failed");
 
 			// Create personal event
 			const event = createEvent({
@@ -109,8 +111,9 @@ describe("Calendar Event Management E2E", () => {
 		});
 
 		it("should create a recurring event", () => {
-			const team = testTeams[0]!;
-			const captain = testUsers[0]!;
+			const team = testTeams[0];
+			const captain = testUsers[0];
+			if (!team || !captain) throw new Error("Test setup failed");
 
 			// Create recurring event
 			const event = createEvent({
@@ -140,8 +143,9 @@ describe("Calendar Event Management E2E", () => {
 
 	describe("Event Retrieval", () => {
 		it("should retrieve events for a team", () => {
-			const team = testTeams[0]!;
-			const captain = testUsers[0]!;
+			const team = testTeams[0];
+			const captain = testUsers[0];
+			if (!team || !captain) throw new Error("Test setup failed");
 
 			// Create multiple events
 			createEvent({
@@ -165,9 +169,9 @@ describe("Calendar Event Management E2E", () => {
 		});
 
 		it("should filter events by date range", () => {
-			const team = testTeams[0]!;
-			const captain = testUsers[0]!;
-
+			const team = testTeams[0];
+			const captain = testUsers[0];
+			if (!team || !captain) throw new Error("Test setup failed");
 
 			// Create event in range
 			createEvent({
@@ -186,8 +190,9 @@ describe("Calendar Event Management E2E", () => {
 
 	describe("Event Updates", () => {
 		it("should update event details", () => {
-			const team = testTeams[0]!;
-			const captain = testUsers[0]!;
+			const team = testTeams[0];
+			const captain = testUsers[0];
+			if (!team || !captain) throw new Error("Test setup failed");
 
 			// Create event
 			const event = createEvent({
@@ -213,8 +218,9 @@ describe("Calendar Event Management E2E", () => {
 
 	describe("Event Deletion", () => {
 		it("should delete an event", () => {
-			const team = testTeams[0]!;
-			const captain = testUsers[0]!;
+			const team = testTeams[0];
+			const captain = testUsers[0];
+			if (!team || !captain) throw new Error("Test setup failed");
 
 			// Create event
 			const event = createEvent({
@@ -233,9 +239,10 @@ describe("Calendar Event Management E2E", () => {
 
 	describe("Event Attendees", () => {
 		it("should add attendees to events", () => {
-			const team = testTeams[0]!;
-			const captain = testUsers[0]!;
-			const member = testUsers[1]!;
+			const team = testTeams[0];
+			const captain = testUsers[0];
+			const member = testUsers[1];
+			if (!team || !captain || !member) throw new Error("Test setup failed");
 
 			// Create event
 			const event = createEvent({
@@ -259,9 +266,10 @@ describe("Calendar Event Management E2E", () => {
 
 	describe("Authorization", () => {
 		it("should verify only creators and captains can modify events", () => {
-			const team = testTeams[0]!;
-			const captain = testUsers[0]!;
-			const member = testUsers[1]!;
+			const team = testTeams[0];
+			const captain = testUsers[0];
+			const member = testUsers[1];
+			if (!team || !captain || !member) throw new Error("Test setup failed");
 
 			// Create event
 			const event = createEvent({

@@ -20,6 +20,9 @@ export default {
       fontFamily: {
         poppins: "var(--font-custom)",
       },
+      animation: {
+        "scio-loading": "scio-loading 1.2s ease-in-out infinite",
+      },
     },
   },
   plugins: [],

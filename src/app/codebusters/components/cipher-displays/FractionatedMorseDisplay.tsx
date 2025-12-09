@@ -1,7 +1,7 @@
 "use client";
 import type { QuoteData } from "@/app/codebusters/types";
 import { useTheme } from "@/app/contexts/ThemeContext";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { useMemo, useState } from "react";
 import { CharacterDisplay } from "./FractionatedMorse/components/CharacterDisplay";
 import { ReplacementTable } from "./FractionatedMorse/components/ReplacementTable";

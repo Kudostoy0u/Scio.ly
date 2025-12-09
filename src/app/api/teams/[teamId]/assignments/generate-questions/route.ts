@@ -1,10 +1,10 @@
 import { QuestionGenerationRequestSchema } from "@/lib/schemas/question";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
-import { getEventCapabilities } from "@/lib/utils/eventConfig";
+import { getEventCapabilities } from "@/lib/utils/assessments/eventConfig";
 import {
 	isUserCaptain,
 	resolveTeamSlugToUnits,
-} from "@/lib/utils/team-resolver";
+} from "@/lib/utils/teams/resolver";
 import { type NextRequest, NextResponse } from "next/server";
 import { shuffleArray } from "./utils/arrayUtils";
 import { resolveEventName } from "./utils/eventUtils";

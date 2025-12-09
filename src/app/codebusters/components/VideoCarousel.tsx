@@ -149,11 +149,10 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
 			{/* Video Thumbnails/Dots */}
 			{videos.length > 1 && (
 				<div className="flex justify-center space-x-2">
-					{videos.map((_video, index) => (
+					{videos.map((video, index) => (
 						<button
 							type="button"
-							// biome-ignore lint/suspicious/noArrayIndexKey: Video thumbnails are stable and index is needed for navigation
-							key={index}
+							key={video.url}
 							onClick={() => goToVideo(index)}
 							className={`w-3 h-3 rounded-full transition-colors ${
 								index === currentVideoIndex
@@ -182,8 +181,7 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
 						{videos.map((video, index) => (
 							<button
 								type="button"
-								// biome-ignore lint/suspicious/noArrayIndexKey: Video list items are stable and index is needed for navigation
-								key={index}
+								key={video.url}
 								onClick={() => goToVideo(index)}
 								className={`w-full text-left p-2 rounded transition-colors ${
 									index === currentVideoIndex

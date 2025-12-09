@@ -6,7 +6,7 @@ import {
 	newTeamPeople,
 	newTeamUnits,
 } from "@/lib/db/schema/teams";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { formatMember } from "./utils/memberFormatters";
 import { generateUniqueSlug } from "./utils/slugGenerator";

@@ -1,7 +1,8 @@
 import { GET, POST } from "@/app/api/teams/[teamId]/subteams/route";
 import { dbPg } from "@/lib/db";
 import { getServerUser } from "@/lib/supabaseServer";
-import { getTeamAccessCockroach } from "@/lib/utils/team-auth-v2";
+import { getTeamAccessCockroach } from "@/lib/utils/teams/access";
+import type { User } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -10,14 +11,14 @@ vi.mock("@/lib/supabaseServer", () => ({
 	getServerUser: vi.fn(),
 }));
 
-vi.mock("@/lib/utils/team-auth-v2", () => ({
+vi.mock("@/lib/utils/teams/access", () => ({
 	getTeamAccessCockroach: vi.fn(),
 }));
 
 // Create a proper Drizzle ORM chain mock
 // Handles both: select().from().where() -> result
 // and: select().from().where().orderBy() -> result
-const createDrizzleChain = (result: unknown[], hasOrderBy = false): any => {
+const createDrizzleChain = (result: unknown[], hasOrderBy = false): unknown => {
 	const chain = {
 		select: vi.fn().mockReturnThis(),
 		from: vi.fn().mockReturnThis(),
@@ -47,7 +48,10 @@ vi.mock("@/lib/db", () => ({
 
 const mockGetServerUser = vi.mocked(getServerUser);
 const mockGetTeamAccessCockroach = vi.mocked(getTeamAccessCockroach);
-const mockDbPg = vi.mocked(dbPg);
+const mockDbPg = vi.mocked(dbPg) as typeof dbPg & {
+	select: ReturnType<typeof vi.fn>;
+	insert: ReturnType<typeof vi.fn>;
+};
 
 describe("/api/teams/[teamId]/subteams", () => {
 	// Use proper UUID format for better type safety
@@ -92,7 +96,7 @@ describe("/api/teams/[teamId]/subteams", () => {
 		});
 
 		it("should return 404 when team group is not found", async () => {
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock the database chain to return empty result for team group lookup
 			mockDbPg.select.mockReturnValue(createDrizzleChain([]));
@@ -110,7 +114,7 @@ describe("/api/teams/[teamId]/subteams", () => {
 		});
 
 		it("should return 403 when user has no access", async () => {
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock team group lookup (no orderBy, so where resolves directly)
 			mockDbPg.select.mockReturnValueOnce(
@@ -139,7 +143,7 @@ describe("/api/teams/[teamId]/subteams", () => {
 		});
 
 		it("should return subteams when user has access", async () => {
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock team group lookup (no orderBy)
 			mockDbPg.select.mockReturnValueOnce(
@@ -209,7 +213,7 @@ describe("/api/teams/[teamId]/subteams", () => {
 		});
 
 		it("should return 400 when name is missing", async () => {
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/subteams`,
@@ -228,7 +232,7 @@ describe("/api/teams/[teamId]/subteams", () => {
 		});
 
 		it("should return 404 when team group is not found", async () => {
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock the database chain to return empty result for team group lookup
 			mockDbPg.select.mockReturnValue(createDrizzleChain([]));
@@ -253,7 +257,7 @@ describe("/api/teams/[teamId]/subteams", () => {
 		});
 
 		it("should return 403 when user has no leadership access", async () => {
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock team group lookup
 			mockDbPg.select.mockReturnValueOnce(
@@ -265,7 +269,9 @@ describe("/api/teams/[teamId]/subteams", () => {
 				isCreator: false,
 				hasSubteamMembership: true,
 				hasRosterEntries: false,
-				subteamMemberships: [{ subteamId: mockSubteamId, teamId: mockTeamId, role: "member" }], // Not a leader
+				subteamMemberships: [
+					{ subteamId: mockSubteamId, teamId: mockTeamId, role: "member" },
+				], // Not a leader
 				rosterSubteams: [],
 			});
 
@@ -288,7 +294,7 @@ describe("/api/teams/[teamId]/subteams", () => {
 		});
 
 		it("should create subteam when user has leadership access", async () => {
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock team group lookup
 			mockDbPg.select.mockReturnValueOnce(
@@ -319,9 +325,7 @@ describe("/api/teams/[teamId]/subteams", () => {
 					},
 				]),
 			};
-			mockDbPg.insert.mockReturnValue(
-				mockInsert as any,
-			);
+			mockDbPg.insert.mockReturnValue(mockInsert as any);
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/subteams`,

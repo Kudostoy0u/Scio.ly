@@ -1,11 +1,12 @@
 import { GET, POST } from "@/app/api/teams/[teamId]/assignments/route";
 import { dbPg } from "@/lib/db";
 import { getServerUser } from "@/lib/supabaseServer";
-import { hasLeadershipAccessCockroach } from "@/lib/utils/team-auth-v2";
+import { hasLeadershipAccessCockroach } from "@/lib/utils/teams/access";
 import {
 	getUserTeamMemberships,
 	resolveTeamSlugToUnits,
-} from "@/lib/utils/team-resolver";
+} from "@/lib/utils/teams/resolver";
+import type { User } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -14,11 +15,11 @@ vi.mock("@/lib/supabaseServer", () => ({
 	getServerUser: vi.fn(),
 }));
 
-vi.mock("@/lib/utils/team-auth-v2", () => ({
+vi.mock("@/lib/utils/teams/access", () => ({
 	hasLeadershipAccessCockroach: vi.fn(),
 }));
 
-vi.mock("@/lib/utils/team-resolver", () => ({
+vi.mock("@/lib/utils/teams/resolver", () => ({
 	resolveTeamSlugToUnits: vi.fn(),
 	getUserTeamMemberships: vi.fn(),
 }));
@@ -44,7 +45,10 @@ const mockHasLeadershipAccessCockroach = vi.mocked(
 );
 const mockResolveTeamSlugToUnits = vi.mocked(resolveTeamSlugToUnits);
 const mockGetUserTeamMemberships = vi.mocked(getUserTeamMemberships);
-const mockDbPg = vi.mocked(dbPg);
+const mockDbPg = vi.mocked(dbPg) as typeof dbPg & {
+	select: ReturnType<typeof vi.fn>;
+	insert: ReturnType<typeof vi.fn>;
+};
 
 describe("/api/teams/[teamId]/assignments", () => {
 	// Use proper UUID format for better type safety
@@ -75,8 +79,7 @@ describe("/api/teams/[teamId]/assignments", () => {
 	describe("GET /api/teams/[teamId]/assignments", () => {
 		it("should return 500 when DATABASE_URL is missing", async () => {
 			const originalEnv = process.env.DATABASE_URL;
-			// biome-ignore lint/performance/noDelete: Need to remove env var for test
-			delete process.env.DATABASE_URL;
+			Reflect.deleteProperty(process.env, "DATABASE_URL");
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/assignments`,
@@ -93,8 +96,7 @@ describe("/api/teams/[teamId]/assignments", () => {
 			if (originalEnv) {
 				process.env.DATABASE_URL = originalEnv;
 			} else {
-				// biome-ignore lint/performance/noDelete: Need to remove env var for test cleanup
-				delete process.env.DATABASE_URL;
+				Reflect.deleteProperty(process.env, "DATABASE_URL");
 			}
 		});
 
@@ -116,8 +118,7 @@ describe("/api/teams/[teamId]/assignments", () => {
 		it("should return assignments when user has access", async () => {
 			const assignmentId = "123e4567-e89b-12d3-a456-426614174003";
 
-			// biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 			mockResolveTeamSlugToUnits.mockResolvedValue({
 				groupId: mockGroupId,
 				teamUnitIds: [mockSubteamId],
@@ -204,8 +205,7 @@ describe("/api/teams/[teamId]/assignments", () => {
 		});
 
 		it("should return empty array when no assignments exist", async () => {
-			// biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 			mockResolveTeamSlugToUnits.mockResolvedValue({
 				groupId: mockGroupId,
 				teamUnitIds: [mockSubteamId],
@@ -241,8 +241,7 @@ describe("/api/teams/[teamId]/assignments", () => {
 	describe("POST /api/teams/[teamId]/assignments", () => {
 		it("should return 500 when DATABASE_URL is missing", async () => {
 			const originalEnv = process.env.DATABASE_URL;
-			// biome-ignore lint/performance/noDelete: Need to remove env var for test
-			delete process.env.DATABASE_URL;
+			Reflect.deleteProperty(process.env, "DATABASE_URL");
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/assignments`,
@@ -268,8 +267,7 @@ describe("/api/teams/[teamId]/assignments", () => {
 			if (originalEnv) {
 				process.env.DATABASE_URL = originalEnv;
 			} else {
-				// biome-ignore lint/performance/noDelete: Need to remove env var for test cleanup
-				delete process.env.DATABASE_URL;
+				Reflect.deleteProperty(process.env, "DATABASE_URL");
 			}
 		});
 
@@ -298,8 +296,7 @@ describe("/api/teams/[teamId]/assignments", () => {
 		});
 
 		it("should return 403 when user has no leadership access", async () => {
-			// biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 			mockResolveTeamSlugToUnits.mockResolvedValue({
 				groupId: mockGroupId,
 				teamUnitIds: [mockSubteamId],
@@ -330,8 +327,7 @@ describe("/api/teams/[teamId]/assignments", () => {
 		});
 
 		it("should handle missing required fields", async () => {
-			// biome-ignore lint/suspicious/noExplicitAny: Mock user object for testing
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/assignments`,

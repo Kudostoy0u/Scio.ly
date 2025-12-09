@@ -3,6 +3,7 @@ import QuestionActions from "@/app/components/QuestionActions";
 import MarkdownExplanation from "@/app/utils/MarkdownExplanation";
 import type { Question } from "@/app/utils/geminiService";
 import { isMultiSelectQuestion } from "@/app/utils/questionUtils";
+import Image from "next/image";
 
 type Props = {
 	question: Question;
@@ -164,11 +165,13 @@ export default function QuestionCard(props: Props) {
 				<>
 					{question.imageData && (
 						<div className="mb-4 w-full flex justify-center">
-							{/* eslint-disable-next-line @next/next/no-img-element */}
-							<img
+							<Image
 								src={question.imageData}
 								alt="Question"
-								className="max-h-64 rounded-md border"
+								width={512}
+								height={256}
+								className="max-h-64 rounded-md border object-contain"
+								unoptimized
 							/>
 						</div>
 					)}

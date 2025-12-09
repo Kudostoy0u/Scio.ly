@@ -292,9 +292,9 @@ describe("Roster API Validation", () => {
 			expect(result.success).toBe(false);
 
 			if (!result.success) {
-				expect(result.error!.issues).toHaveLength(2); // event_name and slot_index errors
-				expect(result.error!.issues[0]?.path).toEqual(["event_name"]);
-				expect(result.error!.issues[1]?.path).toEqual(["slot_index"]);
+				expect(result.error?.issues).toHaveLength(2); // event_name and slot_index errors
+				expect(result.error?.issues[0]?.path).toEqual(["event_name"]);
+				expect(result.error?.issues[1]?.path).toEqual(["slot_index"]);
 			}
 		});
 
@@ -315,8 +315,8 @@ describe("Roster API Validation", () => {
 			} else {
 				// If it fails, check the error details
 				expect(result.success).toBe(false);
-				expect(result.error!.issues.length).toBeGreaterThan(0);
-				expect(result.error!.issues[0]?.message).toBeDefined();
+				expect(result.error?.issues.length).toBeGreaterThan(0);
+				expect(result.error?.issues[0]?.message).toBeDefined();
 			}
 		});
 	});

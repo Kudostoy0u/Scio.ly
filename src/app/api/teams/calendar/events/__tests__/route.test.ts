@@ -1,4 +1,5 @@
 import { GET, POST } from "@/app/api/teams/calendar/events/route";
+import type { User } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -14,13 +15,13 @@ vi.mock("@/lib/db", () => ({
 	},
 }));
 
-vi.mock("@/lib/utils/team-resolver", () => ({
+vi.mock("@/lib/utils/teams/resolver", () => ({
 	resolveTeamSlugToUnits: vi.fn(),
 }));
 
 import { dbPg } from "@/lib/db";
 import { getServerUser } from "@/lib/supabaseServer";
-import { resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
+import { resolveTeamSlugToUnits } from "@/lib/utils/teams/resolver";
 
 const mockGetServerUser = vi.mocked(getServerUser);
 const mockDbPg = vi.mocked(dbPg);
@@ -33,7 +34,7 @@ describe("/api/teams/calendar/events", () => {
 
 	describe("GET", () => {
 		it("should resolve team slug to team unit IDs and fetch events", async () => {
-			const mockUser = { id: "user-123" } as any;
+			const mockUser = { id: "user-123" } as User;
 			const mockTeamInfo = {
 				groupId: "group-123",
 				teamUnitIds: ["unit-1", "unit-2"],
@@ -86,7 +87,7 @@ describe("/api/teams/calendar/events", () => {
 		});
 
 		it("should return 404 when team slug is not found", async () => {
-			const mockUser = { id: "user-123" } as any;
+			const mockUser = { id: "user-123" } as User;
 
 			mockGetServerUser.mockResolvedValue(mockUser);
 			mockResolveTeamSlugToUnits.mockRejectedValue(
@@ -104,7 +105,7 @@ describe("/api/teams/calendar/events", () => {
 		});
 
 		it("should return empty events when no team units found", async () => {
-			const mockUser = { id: "user-123" } as any;
+			const mockUser = { id: "user-123" } as User;
 			const mockTeamInfo = {
 				groupId: "group-123",
 				teamUnitIds: [],
@@ -140,7 +141,7 @@ describe("/api/teams/calendar/events", () => {
 
 	describe("POST", () => {
 		it("should resolve team slug to UUID when creating event", async () => {
-			const mockUser = { id: "user-123" } as any;
+			const mockUser = { id: "user-123" } as User;
 			const mockTeamInfo = {
 				groupId: "group-123",
 				teamUnitIds: ["unit-1", "unit-2"],
@@ -181,7 +182,7 @@ describe("/api/teams/calendar/events", () => {
 		});
 
 		it("should handle UUID team_id without resolving", async () => {
-			const mockUser = { id: "user-123" } as any;
+			const mockUser = { id: "user-123" } as User;
 			const uuidTeamId = "123e4567-e89b-12d3-a456-426614174000";
 
 			mockGetServerUser.mockResolvedValue(mockUser);

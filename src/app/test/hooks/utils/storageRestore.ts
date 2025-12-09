@@ -1,5 +1,5 @@
 import type { GradingResults } from "@/app/utils/questionUtils";
-import { StorageKeys, StorageService } from "@/lib/utils/storage";
+import { StorageKeys, StorageService } from "@/lib/utils/storage/storage";
 
 export function restoreStoredState(): {
 	userAnswers: Record<number, (string | null)[] | null>;

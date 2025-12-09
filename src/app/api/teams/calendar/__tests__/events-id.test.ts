@@ -1,4 +1,5 @@
 import { DELETE, PUT } from "@/app/api/teams/calendar/events/[eventId]/route";
+import type { User } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -18,7 +19,15 @@ vi.mock("@/lib/supabaseServer", () => ({
 import { dbPg } from "@/lib/db";
 import { getServerUser } from "@/lib/supabaseServer";
 
-const mockDbPg = vi.mocked(dbPg);
+const mockDbPg = vi.mocked(dbPg) as unknown as {
+	select: ReturnType<typeof vi.fn>;
+	update: ReturnType<typeof vi.fn> & {
+		mockReturnValue: ReturnType<typeof vi.fn>;
+	};
+	delete: ReturnType<typeof vi.fn> & {
+		mockReturnValue: ReturnType<typeof vi.fn>;
+	};
+};
 const mockGetServerUser = vi.mocked(getServerUser);
 
 describe("/api/teams/calendar/events/[eventId]", () => {
@@ -34,7 +43,7 @@ describe("/api/teams/calendar/events/[eventId]", () => {
 		it("deletes event successfully when user is creator", async () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
 			const mockEventId = "123e4567-e89b-12d3-a456-426614174001";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock event lookup (select().from().where().limit())
 			mockDbPg.select.mockReturnValueOnce({
@@ -51,7 +60,7 @@ describe("/api/teams/calendar/events/[eventId]", () => {
 			} as any);
 
 			// Mock delete (delete().where())
-			mockDbPg.delete = vi.fn().mockReturnValue({
+			(mockDbPg.delete as ReturnType<typeof vi.fn>) = vi.fn().mockReturnValue({
 				where: vi.fn().mockResolvedValue(undefined),
 			} as any);
 
@@ -76,7 +85,7 @@ describe("/api/teams/calendar/events/[eventId]", () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174001";
 			const mockEventId = "123e4567-e89b-12d3-a456-426614174002";
 			const mockTeamId = "123e4567-e89b-12d3-a456-426614174003";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock event lookup (select().from().where().limit())
 			mockDbPg.select.mockReturnValueOnce({
@@ -101,7 +110,7 @@ describe("/api/teams/calendar/events/[eventId]", () => {
 			} as any);
 
 			// Mock delete (delete().where())
-			mockDbPg.delete = vi.fn().mockReturnValue({
+			(mockDbPg.delete as ReturnType<typeof vi.fn>) = vi.fn().mockReturnValue({
 				where: vi.fn().mockResolvedValue(undefined),
 			} as any);
 
@@ -124,7 +133,7 @@ describe("/api/teams/calendar/events/[eventId]", () => {
 		it("returns 404 for non-existent event", async () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
 			const mockEventId = "123e4567-e89b-12d3-a456-426614174001";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock event lookup returns empty (select().from().where().limit())
 			mockDbPg.select.mockReturnValueOnce({
@@ -156,7 +165,7 @@ describe("/api/teams/calendar/events/[eventId]", () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174001";
 			const mockEventId = "123e4567-e89b-12d3-a456-426614174002";
 			const mockTeamId = "123e4567-e89b-12d3-a456-426614174003";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock event lookup (select().from().where().limit())
 			mockDbPg.select.mockReturnValueOnce({
@@ -218,7 +227,7 @@ describe("/api/teams/calendar/events/[eventId]", () => {
 		it("handles database errors", async () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
 			const mockEventId = "123e4567-e89b-12d3-a456-426614174001";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock event lookup to reject (select().from().where().limit())
 			mockDbPg.select.mockReturnValueOnce({
@@ -252,7 +261,7 @@ describe("/api/teams/calendar/events/[eventId]", () => {
 		it("updates event successfully when user is creator", async () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
 			const mockEventId = "123e4567-e89b-12d3-a456-426614174001";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock event lookup (select().from().where().limit())
 			mockDbPg.select.mockReturnValueOnce({
@@ -269,7 +278,7 @@ describe("/api/teams/calendar/events/[eventId]", () => {
 			} as any);
 
 			// Mock update (update().set().where())
-			mockDbPg.update = vi.fn().mockReturnValue({
+			(mockDbPg.update as ReturnType<typeof vi.fn>) = vi.fn().mockReturnValue({
 				set: vi.fn().mockReturnValue({
 					where: vi.fn().mockResolvedValue(undefined),
 				}),
@@ -303,7 +312,7 @@ describe("/api/teams/calendar/events/[eventId]", () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174001";
 			const mockEventId = "123e4567-e89b-12d3-a456-426614174002";
 			const mockTeamId = "123e4567-e89b-12d3-a456-426614174003";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock event lookup (select().from().where().limit())
 			mockDbPg.select.mockReturnValueOnce({
@@ -328,7 +337,7 @@ describe("/api/teams/calendar/events/[eventId]", () => {
 			} as any);
 
 			// Mock update (update().set().where())
-			mockDbPg.update = vi.fn().mockReturnValue({
+			(mockDbPg.update as ReturnType<typeof vi.fn>) = vi.fn().mockReturnValue({
 				set: vi.fn().mockReturnValue({
 					where: vi.fn().mockResolvedValue(undefined),
 				}),
@@ -359,7 +368,7 @@ describe("/api/teams/calendar/events/[eventId]", () => {
 		it("returns 404 for non-existent event", async () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
 			const mockEventId = "123e4567-e89b-12d3-a456-426614174001";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock event lookup returns empty (select().from().where().limit())
 			mockDbPg.select.mockReturnValueOnce({
@@ -397,7 +406,7 @@ describe("/api/teams/calendar/events/[eventId]", () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174001";
 			const mockEventId = "123e4567-e89b-12d3-a456-426614174002";
 			const mockTeamId = "123e4567-e89b-12d3-a456-426614174003";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock event lookup (select().from().where().limit())
 			mockDbPg.select.mockReturnValueOnce({
@@ -446,7 +455,7 @@ describe("/api/teams/calendar/events/[eventId]", () => {
 		it("returns 400 for no fields to update", async () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
 			const mockEventId = "123e4567-e89b-12d3-a456-426614174001";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock event lookup (select().from().where().limit())
 			mockDbPg.select.mockReturnValueOnce({
@@ -486,7 +495,7 @@ describe("/api/teams/calendar/events/[eventId]", () => {
 		it("handles recurrence pattern updates", async () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
 			const mockEventId = "123e4567-e89b-12d3-a456-426614174001";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock event lookup (select().from().where().limit())
 			mockDbPg.select.mockReturnValueOnce({
@@ -503,7 +512,7 @@ describe("/api/teams/calendar/events/[eventId]", () => {
 			} as any);
 
 			// Mock update (update().set().where())
-			mockDbPg.update = vi.fn().mockReturnValue({
+			(mockDbPg.update as ReturnType<typeof vi.fn>) = vi.fn().mockReturnValue({
 				set: vi.fn().mockReturnValue({
 					where: vi.fn().mockResolvedValue(undefined),
 				}),
@@ -536,7 +545,7 @@ describe("/api/teams/calendar/events/[eventId]", () => {
 		it("handles database errors", async () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
 			const mockEventId = "123e4567-e89b-12d3-a456-426614174001";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock event lookup to reject (select().from().where().limit())
 			mockDbPg.select.mockReturnValueOnce({

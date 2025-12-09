@@ -24,7 +24,7 @@ export const setupTestPrintWindow = (printContent: string): Promise<Window> => {
 						printWindow.focus();
 						printWindow.print();
 					} catch (e) {
-						import("@/lib/utils/logger")
+						import("@/lib/utils/logging/logger")
 							.then((m) => m.default.warn("Immediate auto-print failed", e))
 							.catch(() => {
 								// Ignore import errors - logger is optional for printing
@@ -97,7 +97,7 @@ export const setupTestPrintWindow = (printContent: string): Promise<Window> => {
 						cbtn.addEventListener("click", () => printWindow.close());
 					}
 				} catch (e) {
-					import("@/lib/utils/logger")
+					import("@/lib/utils/logging/logger")
 						.then((m) =>
 							m.default.error("Failed to inject banner into print window", e),
 						)

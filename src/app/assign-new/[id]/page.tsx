@@ -1,6 +1,6 @@
 "use client";
 import SyncLocalStorage from "@/lib/database/localStorageReplacement";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";

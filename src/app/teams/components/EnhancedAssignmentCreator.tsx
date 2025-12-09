@@ -1,6 +1,6 @@
 "use client";
 
-import { isCodebustersEvent } from "@/lib/utils/eventConfig";
+import { isCodebustersEvent } from "@/lib/utils/assessments/eventConfig";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import AssignmentDetailsStep from "./assignment/AssignmentDetailsStep";

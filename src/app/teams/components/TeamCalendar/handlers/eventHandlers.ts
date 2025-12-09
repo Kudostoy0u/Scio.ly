@@ -2,7 +2,7 @@
  * Event creation and deletion handlers
  */
 
-import { globalApiCache } from "@/lib/utils/globalApiCache";
+import { globalApiCache } from "@/lib/utils/storage/globalApiCache";
 import type React from "react";
 import { toast } from "react-toastify";
 import type {

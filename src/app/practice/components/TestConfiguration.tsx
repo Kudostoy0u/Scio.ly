@@ -47,7 +47,6 @@ interface TestConfigurationProps {
 	forceBothDivision?: boolean;
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex configuration component with multiple state management
 export default function TestConfiguration({
 	selectedEvent,
 	settings,
@@ -180,15 +179,14 @@ export default function TestConfiguration({
 					</div>
 
 					{/* Question Types Toggle */}
-					<div>
-						{/* biome-ignore lint/a11y/noLabelWithoutControl: Label is for custom button group component */}
-						<label
+					<fieldset>
+						<legend
 							className={`block text-sm font-medium mb-2 ${
 								darkMode ? "text-gray-300" : "text-gray-700"
 							}`}
 						>
 							Question Types
-						</label>
+						</legend>
 						<div
 							className={`flex rounded-md border ${darkMode ? "border-gray-600" : "border-gray-300"}`}
 						>
@@ -265,7 +263,7 @@ export default function TestConfiguration({
 								FRQ only
 							</button>
 						</div>
-					</div>
+					</fieldset>
 
 					{/* Identification slider for events with image ID */}
 					{supportsPicture && (
@@ -384,13 +382,14 @@ export default function TestConfiguration({
 					{/* Character Length Range - Only for Codebusters */}
 					{selectedEvent?.name === "Codebusters" && (
 						<div>
-							{/* biome-ignore lint/a11y/noLabelWithoutControl: Label is for custom slider component */}
 							<label
+								htmlFor="quote-length-slider"
 								className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
 							>
 								Quote Character Length Range
 							</label>
 							<QuoteLengthSlider
+								id="quote-length-slider"
 								min={1}
 								max={200}
 								value={[
@@ -420,8 +419,8 @@ export default function TestConfiguration({
 					{/* Difficulty and Subtopic on same line */}
 					<div className="grid grid-cols-2 gap-3">
 						<div>
-							{/* biome-ignore lint/a11y/noLabelWithoutControl: Label is for custom dropdown component */}
 							<label
+								htmlFor="difficulty-dropdown"
 								className={`block text-sm font-medium mb-2 ${
 									darkMode ? "text-gray-300" : "text-gray-700"
 								}`}
@@ -429,6 +428,7 @@ export default function TestConfiguration({
 								Difficulty
 							</label>
 							<DifficultyDropdown
+								id="difficulty-dropdown"
 								darkMode={!!darkMode}
 								isCodebusters={!!isCodebusters}
 								settings={settings}
@@ -443,8 +443,8 @@ export default function TestConfiguration({
 						</div>
 
 						<div>
-							{/* biome-ignore lint/a11y/noLabelWithoutControl: Label is for custom dropdown component */}
 							<label
+								htmlFor="subtopic-dropdown"
 								className={`block text-sm font-medium mb-2 ${
 									darkMode ? "text-gray-300" : "text-gray-700"
 								}`}
@@ -452,6 +452,7 @@ export default function TestConfiguration({
 								{isCodebusters ? "Cipher Types" : "Subtopics"}
 							</label>
 							<SubtopicDropdown
+								id="subtopic-dropdown"
 								darkMode={!!darkMode}
 								isCodebusters={!!isCodebusters}
 								selectedEvent={selectedEvent}

@@ -3,7 +3,7 @@
  * Provides functionality for question analysis, explanation generation, and content processing
  */
 
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { GeminiAnalysisService } from "./gemini/analysis";
 // import { GoogleGenAI, Type } from "@google/genai";
 import { GeminiClientManager } from "./gemini/client";

@@ -6,6 +6,7 @@
 import "./mocks";
 
 import { GET } from "@/app/api/teams/calendar/recurring-meetings/route";
+import type { User } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	mockGroupId,
@@ -37,7 +38,7 @@ describe("GET /api/teams/calendar/recurring-meetings", () => {
 
 	it("fetches recurring meetings successfully", async () => {
 		mockGetServerUser.mockReset();
-		mockGetServerUser.mockResolvedValue(mockUser as any);
+		mockGetServerUser.mockResolvedValue(mockUser as User);
 
 		mockDbPg.select
 			.mockReturnValueOnce(
@@ -63,7 +64,7 @@ describe("GET /api/teams/calendar/recurring-meetings", () => {
 	});
 
 	it("returns 400 for missing team ID", async () => {
-		mockGetServerUser.mockResolvedValue({ id: "user-123" } as any);
+		mockGetServerUser.mockResolvedValue({ id: "user-123" } as User);
 
 		const request = createGetRequest();
 
@@ -88,7 +89,7 @@ describe("GET /api/teams/calendar/recurring-meetings", () => {
 	});
 
 	it("returns 403 for non-team members", async () => {
-		mockGetServerUser.mockResolvedValue(mockUser as any);
+		mockGetServerUser.mockResolvedValue(mockUser as User);
 
 		mockDbPg.select
 			.mockReturnValueOnce(
@@ -107,7 +108,7 @@ describe("GET /api/teams/calendar/recurring-meetings", () => {
 	});
 
 	it("handles database errors", async () => {
-		mockGetServerUser.mockResolvedValue(mockUser as any);
+		mockGetServerUser.mockResolvedValue(mockUser as User);
 
 		mockDbPg.select
 			.mockReturnValueOnce(
@@ -141,7 +142,7 @@ describe("GET /api/teams/calendar/recurring-meetings", () => {
 	});
 
 	it("parses JSON fields correctly", async () => {
-		mockGetServerUser.mockResolvedValue(mockUser as any);
+		mockGetServerUser.mockResolvedValue(mockUser as User);
 
 		mockDbPg.select
 			.mockReturnValueOnce(

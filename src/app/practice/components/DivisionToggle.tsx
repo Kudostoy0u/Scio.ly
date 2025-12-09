@@ -26,7 +26,6 @@ export default function DivisionToggle({
 			<div
 				className={`flex rounded-md border ${darkMode ? "border-gray-600" : "border-gray-300"}`}
 			>
-				{/* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex division toggle logic with conditional rendering */}
 				{(() => {
 					const availableDivisions = selectedEvent?.divisions || ["B", "C"];
 					const canShowB = forceBothDivision

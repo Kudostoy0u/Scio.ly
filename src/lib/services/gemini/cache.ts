@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { dbPg, geminiExplanationsCache } from "@/lib/db";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { and, eq, sql } from "drizzle-orm";
 
 /**

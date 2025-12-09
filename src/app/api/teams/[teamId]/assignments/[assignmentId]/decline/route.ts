@@ -9,7 +9,7 @@ import { getServerUser } from "@/lib/supabaseServer";
 import {
 	getUserTeamMemberships,
 	resolveTeamSlugToUnits,
-} from "@/lib/utils/team-resolver";
+} from "@/lib/utils/teams/resolver";
 import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 

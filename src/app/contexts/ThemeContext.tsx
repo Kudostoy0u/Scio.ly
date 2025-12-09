@@ -1,17 +1,23 @@
 "use client";
 
 import SyncLocalStorage from "@/lib/database/localStorageReplacement";
-import { type ReactNode, createContext, useContext, useEffect, useState } from "react";
+import {
+	type ReactNode,
+	createContext,
+	useContext,
+	useEffect,
+	useState,
+} from "react";
 
 /**
  * Theme context type definition
  * Provides theme state and management functionality
  */
 interface ThemeContextType {
-  /** Current dark mode state */
-  darkMode: boolean;
-  /** Function to set dark mode state */
-  setDarkMode: (value: boolean) => void;
+	/** Current dark mode state */
+	darkMode: boolean;
+	/** Function to set dark mode state */
+	setDarkMode: (value: boolean) => void;
 }
 
 /**
@@ -39,64 +45,66 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
  * ```
  */
 export function ThemeProvider({
-  children,
-  initialDarkMode,
+	children,
+	initialDarkMode,
 }: { children: ReactNode; initialDarkMode?: boolean }) {
-  // initialdarkmode (from cookie) to guarantee ssr/csr match and avoid hydration errors.
-  const getInitialDarkMode = (): boolean => {
-    // to guarantee markup parity and avoid hydration mismatches.
+	// initialdarkmode (from cookie) to guarantee ssr/csr match and avoid hydration errors.
+	const getInitialDarkMode = (): boolean => {
+		// to guarantee markup parity and avoid hydration mismatches.
 
-    return initialDarkMode ?? false;
-  };
+		return initialDarkMode ?? false;
+	};
 
-  const [darkMode, setDarkModeState] = useState<boolean>(getInitialDarkMode);
+	const [darkMode, setDarkModeState] = useState<boolean>(getInitialDarkMode);
 
-  const setDarkMode = (value: boolean) => {
-    setDarkModeState(value);
-    if (typeof document !== "undefined") {
-      document.cookie = `theme=${value ? "dark" : "light"}; path=/; max-age=31536000; samesite=lax`;
-    }
-    if (typeof localStorage !== "undefined") {
-      SyncLocalStorage.setItem("theme", value ? "dark" : "light");
-    }
-  };
+	const setDarkMode = (value: boolean) => {
+		setDarkModeState(value);
+		if (typeof document !== "undefined") {
+			document.cookie = `theme=${value ? "dark" : "light"}; path=/; max-age=31536000; samesite=lax`;
+		}
+		if (typeof localStorage !== "undefined") {
+			SyncLocalStorage.setItem("theme", value ? "dark" : "light");
+		}
+	};
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    const storedTheme = SyncLocalStorage.getItem("theme");
-    if (storedTheme === "dark" || storedTheme === "light") {
-      const prefersDark = storedTheme === "dark";
-      if (prefersDark !== darkMode) {
-        setDarkModeState(prefersDark);
+	useEffect(() => {
+		if (typeof window === "undefined") {
+			return;
+		}
+		const storedTheme = SyncLocalStorage.getItem("theme");
+		if (storedTheme === "dark" || storedTheme === "light") {
+			const prefersDark = storedTheme === "dark";
+			if (prefersDark !== darkMode) {
+				setDarkModeState(prefersDark);
 
-        document.cookie = `theme=${prefersDark ? "dark" : "light"}; path=/; max-age=31536000; samesite=lax`;
-      }
-      return;
-    }
+				document.cookie = `theme=${prefersDark ? "dark" : "light"}; path=/; max-age=31536000; samesite=lax`;
+			}
+			return;
+		}
 
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const listener = (e: MediaQueryListEvent) => {
-      setDarkModeState(e.matches);
-    };
-    media.addEventListener?.("change", listener);
-    return () => media.removeEventListener?.("change", listener);
-  }, [darkMode]);
+		const media = window.matchMedia("(prefers-color-scheme: dark)");
+		const listener = (e: MediaQueryListEvent) => {
+			setDarkModeState(e.matches);
+		};
+		media.addEventListener?.("change", listener);
+		return () => media.removeEventListener?.("change", listener);
+	}, [darkMode]);
 
-  useEffect(() => {
-    if (typeof document === "undefined") {
-      return;
-    }
-    const root = document.documentElement;
-    root.classList.toggle("dark", darkMode);
-    root.classList.toggle("dark-scrollbar", darkMode);
-    root.classList.toggle("light-scrollbar", !darkMode);
-  }, [darkMode]);
+	useEffect(() => {
+		if (typeof document === "undefined") {
+			return;
+		}
+		const root = document.documentElement;
+		root.classList.toggle("dark", darkMode);
+		root.classList.toggle("dark-scrollbar", darkMode);
+		root.classList.toggle("light-scrollbar", !darkMode);
+	}, [darkMode]);
 
-  return (
-    <ThemeContext.Provider value={{ darkMode, setDarkMode }}>{children}</ThemeContext.Provider>
-  );
+	return (
+		<ThemeContext.Provider value={{ darkMode, setDarkMode }}>
+			{children}
+		</ThemeContext.Provider>
+	);
 }
 
 /**
@@ -119,9 +127,9 @@ export function ThemeProvider({
  * ```
  */
 export function useTheme() {
-  const context = useContext(ThemeContext);
-  if (context === undefined || context == null) {
-    throw new Error("useTheme must be used within a ThemeProvider");
-  }
-  return context;
+	const context = useContext(ThemeContext);
+	if (context === undefined || context == null) {
+		throw new Error("useTheme must be used within a ThemeProvider");
+	}
+	return context;
 }

@@ -1,4 +1,5 @@
 import { GET, POST } from "@/app/api/teams/calendar/events/route";
+import type { User } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -14,15 +15,18 @@ vi.mock("@/lib/supabaseServer", () => ({
 	getServerUser: vi.fn(),
 }));
 
-vi.mock("@/lib/utils/team-resolver", () => ({
+vi.mock("@/lib/utils/teams/resolver", () => ({
 	resolveTeamSlugToUnits: vi.fn(),
 }));
 
 import { dbPg } from "@/lib/db";
 import { getServerUser } from "@/lib/supabaseServer";
-import { resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
+import { resolveTeamSlugToUnits } from "@/lib/utils/teams/resolver";
 
-const mockDbPg = vi.mocked(dbPg);
+const mockDbPg = vi.mocked(dbPg) as typeof dbPg & {
+	select: ReturnType<typeof vi.fn>;
+	insert: ReturnType<typeof vi.fn>;
+};
 const mockGetServerUser = vi.mocked(getServerUser);
 const mockResolveTeamSlugToUnits = vi.mocked(resolveTeamSlugToUnits);
 
@@ -38,7 +42,7 @@ describe("/api/teams/calendar/events", () => {
 	describe("POST /api/teams/calendar/events", () => {
 		it("creates event successfully", async () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 			mockResolveTeamSlugToUnits.mockResolvedValue({
 				groupId: "123e4567-e89b-12d3-a456-426614174001",
 				teamUnitIds: ["123e4567-e89b-12d3-a456-426614174002"],
@@ -110,7 +114,7 @@ describe("/api/teams/calendar/events", () => {
 		});
 
 		it("returns 400 for missing required fields", async () => {
-			mockGetServerUser.mockResolvedValue({ id: "user-123" } as any);
+			mockGetServerUser.mockResolvedValue({ id: "user-123" } as User);
 
 			const request = new NextRequest(
 				"http://localhost:3000/api/teams/calendar/events",
@@ -138,7 +142,7 @@ describe("/api/teams/calendar/events", () => {
 		});
 
 		it("handles database errors", async () => {
-			mockGetServerUser.mockResolvedValue({ id: "user-123" } as any);
+			mockGetServerUser.mockResolvedValue({ id: "user-123" } as User);
 
 			// Mock insert event to reject
 			mockDbPg.insert = vi.fn().mockReturnValue({
@@ -174,7 +178,7 @@ describe("/api/teams/calendar/events", () => {
 	describe("GET /api/teams/calendar/events", () => {
 		it("fetches events successfully", async () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 			mockResolveTeamSlugToUnits.mockResolvedValue({
 				groupId: "123e4567-e89b-12d3-a456-426614174001",
 				teamUnitIds: ["123e4567-e89b-12d3-a456-426614174002"],
@@ -276,7 +280,7 @@ describe("/api/teams/calendar/events", () => {
 
 		it("fetches personal events", async () => {
 			const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
-			mockGetServerUser.mockResolvedValue({ id: mockUserId } as any);
+			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 
 			// Mock events query (select().from().leftJoin().where().orderBy()) - empty
 			mockDbPg.select.mockReturnValueOnce({

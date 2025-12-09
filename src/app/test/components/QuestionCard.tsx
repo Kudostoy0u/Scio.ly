@@ -6,6 +6,7 @@ import {
 	calculateMCQScore,
 	isMultiSelectQuestion,
 } from "@/app/utils/questionUtils";
+import Image from "next/image";
 import { useMemo } from "react";
 
 // Helper function to calculate option className
@@ -295,11 +296,13 @@ export default function QuestionCard({
 
 			{(question.imageUrl || question.imageData) && (
 				<div className="mb-4 w-full flex justify-center">
-					{/* eslint-disable-next-line @next/next/no-img-element */}
-					<img
-						src={question.imageData || question.imageUrl}
+					<Image
+						src={question.imageData || question.imageUrl || ""}
 						alt="Mineral"
-						className="max-h-64 rounded-md border"
+						width={512}
+						height={256}
+						className="max-h-64 rounded-md border object-contain"
+						unoptimized
 					/>
 				</div>
 			)}

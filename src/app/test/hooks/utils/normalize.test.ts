@@ -32,7 +32,7 @@ describe("normalizeQuestionsFull", () => {
 				},
 			];
 
-			const result = normalizeQuestionsFull(questions as any);
+			const result = normalizeQuestionsFull(questions as Question[]);
 
 			expect(result).toHaveLength(1);
 			expect(result[0]?.answers).toEqual([1]);
@@ -49,7 +49,7 @@ describe("normalizeQuestionsFull", () => {
 				},
 			];
 
-			const result = normalizeQuestionsFull(questions as any);
+			const result = normalizeQuestionsFull(questions as Question[]);
 
 			expect(result).toHaveLength(1);
 			expect(result[0]?.answers).toEqual([1, 2]);
@@ -64,7 +64,7 @@ describe("normalizeQuestionsFull", () => {
 				},
 			];
 
-			const result = normalizeQuestionsFull(questions as any);
+			const result = normalizeQuestionsFull(questions as Question[]);
 
 			expect(result).toHaveLength(1);
 			expect(result[0]?.answers).toEqual(["Paris"]);
@@ -80,7 +80,7 @@ describe("normalizeQuestionsFull", () => {
 				},
 			];
 
-			const result = normalizeQuestionsFull(questions as any);
+			const result = normalizeQuestionsFull(questions as Question[]);
 
 			// Answers should be the exact same reference
 			expect(result[0]?.answers).toEqual([0]);
@@ -96,10 +96,10 @@ describe("normalizeQuestionsFull", () => {
 				{
 					question: "Invalid question",
 					options: ["A", "B"],
-					answers: undefined,
+					answers: undefined as unknown as (string | number)[],
 					difficulty: 1,
-				} as any,
-			];
+				},
+			] as Question[];
 
 			normalizeQuestionsFull(questions);
 
@@ -136,10 +136,10 @@ describe("normalizeQuestionsFull", () => {
 				{
 					question: "Invalid question",
 					options: ["A", "B"],
-					answers: null,
+					answers: null as unknown as (string | number)[],
 					difficulty: 1,
-				} as any,
-			];
+				},
+			] as Question[];
 
 			normalizeQuestionsFull(questions);
 
@@ -161,7 +161,7 @@ describe("normalizeQuestionsFull", () => {
 				},
 			];
 
-			const result = normalizeQuestionsFull(questions as any);
+			const result = normalizeQuestionsFull(questions as Question[]);
 
 			expect(result[0]?.question).toBe("What is 2+2?");
 			expect(result[0]?.answers).toEqual([1]);
@@ -177,7 +177,7 @@ describe("normalizeQuestionsFull", () => {
 				},
 			];
 
-			const result = normalizeQuestionsFull(questions as any);
+			const result = normalizeQuestionsFull(questions as Question[]);
 
 			expect(result[0]?.options).toEqual(["Option A", "Option B"]);
 			expect(result[0]?.answers).toEqual([0]);
@@ -188,6 +188,7 @@ describe("normalizeQuestionsFull", () => {
 		it("should handle non-array input gracefully", () => {
 			const consoleErrorSpy = vi.spyOn(console, "error");
 
+			// Intentionally passing invalid input to test error handling
 			const result = normalizeQuestionsFull(null as unknown as Question[]);
 
 			expect(result).toEqual([]);
@@ -224,7 +225,7 @@ describe("normalizeQuestionsFull", () => {
 				},
 			];
 
-			const result = normalizeQuestionsFull(questions as any);
+			const result = normalizeQuestionsFull(questions as Question[]);
 
 			expect(result).toHaveLength(3);
 			expect(result[0]?.answers).toEqual([0]);
@@ -247,7 +248,7 @@ describe("normalizeQuestionsFull", () => {
 				},
 			];
 
-			const result = normalizeQuestionsFull(questions as any);
+			const result = normalizeQuestionsFull(questions as Question[]);
 
 			expect(result[0]?.id).toBe("test-id");
 			expect(result[0]?.difficulty).toBe(0.5);
@@ -296,7 +297,7 @@ describe("normalizeQuestionsFull", () => {
 				},
 			];
 
-			const result = normalizeQuestionsFull(questions as any);
+			const result = normalizeQuestionsFull(questions as Question[]);
 
 			expect(result).toHaveLength(1);
 			expect(result[0]?.answers).toEqual([3]);

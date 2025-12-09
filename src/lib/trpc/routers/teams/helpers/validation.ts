@@ -2,9 +2,11 @@ import { dbPg } from "@/lib/db";
 import { newTeamMemberships, newTeamUnits } from "@/lib/db/schema/teams";
 import { upsertUserProfile } from "@/lib/db/teams/utils";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
-import logger from "@/lib/utils/logger";
-import { checkTeamGroupAccessCockroach } from "@/lib/utils/team-auth";
-import { getTeamAccess } from "@/lib/utils/team-auth-v2";
+import logger from "@/lib/utils/logging/logger";
+import {
+	getTeamAccess,
+	getTeamAccessCockroach,
+} from "@/lib/utils/teams/access";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import { getTeamMembersForGroup } from "./data-access";
@@ -24,8 +26,8 @@ export async function checkTeamGroupAccessOrThrow(
 	userId: string,
 	groupId: string,
 ) {
-	const authResult = await checkTeamGroupAccessCockroach(userId, groupId);
-	if (!authResult.isAuthorized) {
+	const access = await getTeamAccessCockroach(userId, groupId);
+	if (!access.hasAccess) {
 		throw new TRPCError({
 			code: "FORBIDDEN",
 			message: "Not authorized to access this team",

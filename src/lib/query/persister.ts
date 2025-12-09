@@ -5,8 +5,12 @@
  * and instant page loads.
  */
 
-import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import Dexie from "dexie";
+
+import type {
+	PersistedClient,
+	Persister,
+} from "@tanstack/query-persist-client-core";
 
 // Create a Dexie database for React Query cache
 class QueryCacheDB extends Dexie {
@@ -22,32 +26,25 @@ class QueryCacheDB extends Dexie {
 
 const db = new QueryCacheDB();
 
-// For sync persister, we need synchronous storage
-// We'll use a simple in-memory cache as fallback
-const memoryStorage = (() => {
-	const cache = new Map<string, string>();
-	return {
-		getItem: (key: string) => cache.get(key) ?? null,
-		setItem: (key: string, value: string) => {
-			cache.set(key, value);
-			// Async persist to Dexie in background
-			db.queryCache.put({ key, value }).catch(() => {
-				// Ignore errors
-			});
-		},
-		removeItem: (key: string) => {
-			cache.delete(key);
-			db.queryCache.delete(key).catch(() => {
-				// Ignore errors
-			});
-		},
-	};
-})();
+const PERSIST_KEY = "REACT_QUERY_OFFLINE_CACHE";
 
-export const queryPersister = createSyncStoragePersister({
-	storage: memoryStorage,
-	key: "REACT_QUERY_OFFLINE_CACHE",
-});
+// Async persister backed by Dexie, implementing TanStack Persister interface
+export const queryPersister: Persister = {
+	persistClient: async (client: PersistedClient) => {
+		const serialized = JSON.stringify(client);
+		await db.queryCache.put({ key: PERSIST_KEY, value: serialized });
+	},
+	restoreClient: async () => {
+		const record = await db.queryCache.get(PERSIST_KEY);
+		if (!record?.value) {
+			return undefined;
+		}
+		return JSON.parse(record.value) as PersistedClient;
+	},
+	removeClient: async () => {
+		await db.queryCache.delete(PERSIST_KEY);
+	},
+};
 
 /**
  * Clear all persisted query cache

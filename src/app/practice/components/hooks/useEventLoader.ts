@@ -1,6 +1,6 @@
 import type { Event } from "@/app/practice/types";
 import { EVENTS_2026 } from "@/lib/constants/events2026";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { useEffect, useState } from "react";
 
 export function useEventLoader(viewMode: "current" | "all") {

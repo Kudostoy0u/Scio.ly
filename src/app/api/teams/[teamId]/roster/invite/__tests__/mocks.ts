@@ -4,7 +4,7 @@
 
 import { dbPg } from "@/lib/db";
 import { getServerUser } from "@/lib/supabaseServer";
-import { resolveTeamSlugToUnits } from "@/lib/utils/team-resolver";
+import { resolveTeamSlugToUnits } from "@/lib/utils/teams/resolver";
 import { vi } from "vitest";
 
 // Mock dependencies
@@ -12,7 +12,7 @@ vi.mock("@/lib/supabaseServer", () => ({
 	getServerUser: vi.fn(),
 }));
 
-vi.mock("@/lib/utils/team-resolver", () => ({
+vi.mock("@/lib/utils/teams/resolver", () => ({
 	resolveTeamSlugToUnits: vi.fn(),
 }));
 
@@ -21,6 +21,11 @@ vi.mock("@/lib/db", () => ({
 		select: vi.fn(),
 		insert: vi.fn(),
 		update: vi.fn(),
+		delete: vi.fn(),
+		where: vi.fn(),
+		innerJoin: vi.fn(),
+		orderBy: vi.fn(),
+		returning: vi.fn(),
 	},
 }));
 
@@ -29,7 +34,11 @@ export const mockResolveTeamSlugToUnits = vi.mocked(resolveTeamSlugToUnits);
 export const mockNotificationSyncService = {
 	syncNotificationToSupabase: vi.fn(),
 };
-export const mockDbPg = vi.mocked(dbPg);
+export const mockDbPg = vi.mocked(dbPg) as typeof dbPg & {
+	select: ReturnType<typeof vi.fn>;
+	insert: ReturnType<typeof vi.fn>;
+	update: ReturnType<typeof vi.fn>;
+};
 
 export type DrizzleMockChain = {
 	from: ReturnType<typeof vi.fn>;
@@ -40,14 +49,14 @@ export type DrizzleMockChain = {
 	returning?: ReturnType<typeof vi.fn>;
 	set?: ReturnType<typeof vi.fn>;
 	// Required Drizzle properties that we mock
-	fields?: any;
-	session?: any;
-	dialect?: any;
-	withList?: any;
-	distinct?: any;
-	table?: any;
-	overridingSystemValue?: any;
-	select?: any;
-	_?: any;
-	setToken?: any;
+	fields?: unknown;
+	session?: unknown;
+	dialect?: unknown;
+	withList?: unknown;
+	distinct?: unknown;
+	table?: unknown;
+	overridingSystemValue?: unknown;
+	select?: unknown;
+	_?: unknown;
+	setToken?: unknown;
 };

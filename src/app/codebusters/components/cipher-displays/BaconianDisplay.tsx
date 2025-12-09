@@ -74,8 +74,7 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
 
 					return (
 						<span
-							// biome-ignore lint/suspicious/noArrayIndexKey: Binary group characters are stable and index is needed for mapping
-							key={j}
+							key={position}
 							className={`mx-0.5 ${cssClass}`}
 							style={inlineStyle}
 						>
@@ -84,11 +83,7 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
 					);
 				}
 				return (
-					<span
-						// biome-ignore lint/suspicious/noArrayIndexKey: Binary group characters are stable and index is needed for mapping
-						key={j}
-						className="mx-0.5"
-					>
+					<span key={`${groupIndex}-${j}-${char}`} className="mx-0.5">
 						{char}
 					</span>
 				);
@@ -442,8 +437,7 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
 
 					return (
 						<BinaryGroupDisplay
-							// biome-ignore lint/suspicious/noArrayIndexKey: Binary groups are stable and index is needed for mapping
-							key={i}
+							key={`${i}-${group}`}
 							group={group}
 							groupIndex={i}
 							value={value}

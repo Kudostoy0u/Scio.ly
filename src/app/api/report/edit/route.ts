@@ -9,7 +9,7 @@ import { questions as questionsTable } from "@/lib/db/schema";
 import { edits as editsTable } from "@/lib/db/schema/core";
 import { geminiService } from "@/lib/services/gemini";
 import type { ApiResponse } from "@/lib/types/api";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 import { type SQL, and, eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 
@@ -24,7 +24,6 @@ export interface EditRequest extends Record<string, unknown> {
 	aiSuggestion?: Record<string, unknown>;
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex edit report processing with validation and AI suggestions
 export async function POST(request: NextRequest) {
 	try {
 		const body = await request.json();

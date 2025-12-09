@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
-import logger from "@/lib/utils/logger";
+import logger from "@/lib/utils/logging/logger";
 
 export interface UserProfile {
 	id: string;

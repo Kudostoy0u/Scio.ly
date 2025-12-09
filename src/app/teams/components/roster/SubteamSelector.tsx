@@ -152,6 +152,21 @@ export default function SubteamSelector({
 							if (e.key === "Escape") {
 								setEditingSubteamId(null);
 								setEditingSubteamName("");
+								return;
+							}
+
+							// Prevent parent key handlers from blocking spaces or enter while editing
+							if (e.key === " " || e.key === "Enter") {
+								e.stopPropagation();
+							}
+
+							if (e.key === "Enter") {
+								e.preventDefault();
+								if (editingSubteamName.trim() && onEditSubteam) {
+									onEditSubteam(editingSubteamId, editingSubteamName.trim());
+									setEditingSubteamId(null);
+									setEditingSubteamName("");
+								}
 							}
 						}}
 						className={getInputClasses(subteam.id)}
