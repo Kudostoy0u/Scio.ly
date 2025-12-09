@@ -2,7 +2,7 @@
 import type { ChartData, ChartType } from "@/app/analytics/types/elo";
 import { Line } from "react-chartjs-2";
 import ChartRangeSlider from "../ChartRangeSlider";
-import { getChartConfig } from "../chartConfig";
+import { getChartConfig } from "../ChartConfig";
 import ChartControls from "./ChartControls";
 import EventSelector from "./EventSelector";
 import SchoolSelector from "./SchoolSelector";

@@ -339,7 +339,7 @@ React context providers for global state management.
 **Contexts:**
 - `authContext.tsx` - Authentication state
 - `themeContext.tsx` - Theme (dark/light mode) state
-- `notificationsContext.tsx` - Notification state
+- `NotificationsContext.tsx` - Notification state
 
 ## Utilities (`/utils/`)
 
