@@ -1,9 +1,9 @@
 "use client";
 
 import { useTheme } from "@/app/contexts/ThemeContext";
-import { ClipboardList, Home, UserPlus, Users } from "lucide-react";
+import { Activity, ClipboardList, UserPlus, Users } from "lucide-react";
 
-type TabName = "home" | "people" | "roster" | "assignments";
+type TabName = "roster" | "people" | "stream" | "assignments";
 
 interface TabNavigationProps {
 	activeTab: TabName;
@@ -17,9 +17,9 @@ export default function TabNavigation({
 	const { darkMode } = useTheme();
 
 	const tabs: Array<{ id: TabName; label: string; icon: typeof Users }> = [
-		{ id: "home", label: "Home", icon: Home },
-		{ id: "people", label: "People", icon: UserPlus },
 		{ id: "roster", label: "Roster", icon: Users },
+		{ id: "people", label: "People", icon: UserPlus },
+		{ id: "stream", label: "Stream", icon: Activity },
 		{ id: "assignments", label: "Assignments", icon: ClipboardList },
 	];
 
@@ -32,33 +32,31 @@ export default function TabNavigation({
 
 	return (
 		<>
-			{/* Desktop Navigation - Sticky */}
+			{/* Desktop Navigation - Connected to content */}
 			<div
-				className={`hidden md:block sticky top-0 z-20 border-b ${darkMode ? "border-gray-700 bg-gray-900" : "border-gray-200 bg-white"}`}
+				className={`hidden md:block border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}
 			>
-				<div className="w-full px-4 sm:px-6 lg:px-8">
-					<nav className="flex space-x-6">
-						{tabs.map((tab) => (
-							<button
-								key={tab.id}
-								type="button"
-								onClick={() => handleClick(tab.id)}
-								className={`${baseClasses} ${
-									activeTab === tab.id
-										? darkMode
-											? "border-blue-500 text-blue-400"
-											: "border-blue-600 text-blue-600"
-										: darkMode
-											? "border-transparent text-gray-400 hover:text-gray-300"
-											: "border-transparent text-gray-500 hover:text-gray-700"
-								}`}
-							>
-								<tab.icon className="w-4 h-4" />
-								<span>{tab.label}</span>
-							</button>
-						))}
-					</nav>
-				</div>
+				<nav className="flex space-x-6">
+					{tabs.map((tab) => (
+						<button
+							key={tab.id}
+							type="button"
+							onClick={() => handleClick(tab.id)}
+							className={`${baseClasses} ${
+								activeTab === tab.id
+									? darkMode
+										? "border-blue-500 text-blue-400"
+										: "border-blue-600 text-blue-600"
+									: darkMode
+										? "border-transparent text-gray-400 hover:text-gray-300"
+										: "border-transparent text-gray-500 hover:text-gray-700"
+							}`}
+						>
+							<tab.icon className="w-4 h-4" />
+							<span>{tab.label}</span>
+						</button>
+					))}
+				</nav>
 			</div>
 
 			{/* Mobile Bottom Navigation */}

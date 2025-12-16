@@ -41,6 +41,7 @@ export interface TeamMember {
 	username: string | null;
 	joinedAt: string | null;
 	isPendingInvitation: boolean;
+	hasPendingLinkInvite: boolean;
 }
 
 export interface TeamFullData {

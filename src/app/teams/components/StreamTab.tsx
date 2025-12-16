@@ -1,5 +1,6 @@
 "use client";
 
+import ConfirmModal from "@/app/components/ConfirmModal";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -48,6 +49,8 @@ export default function StreamTab({
 		new Set(),
 	);
 	const [newComments, setNewComments] = useState<Record<string, string>>({});
+	const [deletePostConfirm, setDeletePostConfirm] = useState<string | null>(null);
+	const [deleteCommentConfirm, setDeleteCommentConfirm] = useState<string | null>(null);
 
 	// Load stream data using combined endpoint
 	const loadData = useCallback(async () => {
@@ -215,14 +218,15 @@ export default function StreamTab({
 	};
 
 	// Delete a post
-	const handleDeletePost = async (postId: string) => {
-		if (
-			!confirm(
-				"Are you sure you want to delete this post? This action cannot be undone.",
-			)
-		) {
-			return;
-		}
+	const handleDeletePost = (postId: string) => {
+		setDeletePostConfirm(postId);
+	};
+
+	const confirmDeletePost = async () => {
+		if (!deletePostConfirm) return;
+
+		const postId = deletePostConfirm;
+		setDeletePostConfirm(null);
 
 		try {
 			const response = await fetch(
@@ -280,14 +284,15 @@ export default function StreamTab({
 	};
 
 	// Delete a comment
-	const handleDeleteComment = async (commentId: string) => {
-		if (
-			!confirm(
-				"Are you sure you want to delete this comment? This action cannot be undone.",
-			)
-		) {
-			return;
-		}
+	const handleDeleteComment = (commentId: string) => {
+		setDeleteCommentConfirm(commentId);
+	};
+
+	const confirmDeleteComment = async () => {
+		if (!deleteCommentConfirm) return;
+
+		const commentId = deleteCommentConfirm;
+		setDeleteCommentConfirm(null);
 
 		try {
 			const response = await fetch(
@@ -449,6 +454,26 @@ export default function StreamTab({
 					onDeleteComment={handleDeleteComment}
 				/>
 			</div>
+
+			{/* Confirm modals */}
+			<ConfirmModal
+				isOpen={deletePostConfirm !== null}
+				onClose={() => setDeletePostConfirm(null)}
+				onConfirm={confirmDeletePost}
+				title="Delete post?"
+				message="Are you sure you want to delete this post? This action cannot be undone."
+				confirmText="Delete"
+				confirmVariant="danger"
+			/>
+			<ConfirmModal
+				isOpen={deleteCommentConfirm !== null}
+				onClose={() => setDeleteCommentConfirm(null)}
+				onConfirm={confirmDeleteComment}
+				title="Delete comment?"
+				message="Are you sure you want to delete this comment? This action cannot be undone."
+				confirmText="Delete"
+				confirmVariant="danger"
+			/>
 		</div>
 	);
 }

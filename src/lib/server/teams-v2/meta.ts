@@ -2,11 +2,12 @@ import { dbPg } from "@/lib/db";
 import { users } from "@/lib/db/schema/core";
 import {
 	teamsAssignment,
+	teamsLinkInvitation,
 	teamsMembership,
 	teamsRoster,
 	teamsSubteam,
 } from "@/lib/db/schema/teams_v2";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import {
 	type TeamFullData,
 	type TeamMember,
@@ -56,7 +57,8 @@ export async function getTeamFullBySlug(
 		.where(eq(teamsSubteam.teamId, team.id))
 		.orderBy(teamsSubteam.displayOrder, desc(teamsSubteam.createdAt));
 
-	const [membershipRows, rosterRows, assignmentRows] = await Promise.all([
+	const [membershipRows, rosterRows, assignmentRows, pendingLinkInvites] =
+		await Promise.all([
 		dbPg
 			.select({
 				id: teamsMembership.id,
@@ -101,7 +103,22 @@ export async function getTeamFullBySlug(
 			.from(teamsAssignment)
 			.where(eq(teamsAssignment.teamId, team.id))
 			.orderBy(desc(teamsAssignment.createdAt)),
+		dbPg
+			.select({
+				displayName: teamsLinkInvitation.rosterDisplayName,
+			})
+			.from(teamsLinkInvitation)
+			.where(
+				and(
+					eq(teamsLinkInvitation.teamId, team.id),
+					eq(teamsLinkInvitation.status, "pending"),
+				),
+			),
 	]);
+
+	const pendingLinkInviteNames = new Set(
+		pendingLinkInvites.map((i) => i.displayName.toLowerCase()),
+	);
 
 	const subteamNameMap = new Map(subteams.map((s) => [s.id, s.name]));
 	const userEventsMap = new Map<string, Set<string>>();
@@ -155,6 +172,9 @@ export async function getTeamFullBySlug(
 			username: m.username ?? null,
 			joinedAt: m.joinedAt ? String(m.joinedAt) : null,
 			isPendingInvitation: m.status === "pending",
+			hasPendingLinkInvite: pendingLinkInviteNames.has(
+				displayName.toLowerCase(),
+			),
 		};
 	});
 
@@ -194,6 +214,9 @@ export async function getTeamFullBySlug(
 			username: null,
 			joinedAt: null,
 			isPendingInvitation: false,
+			hasPendingLinkInvite: pendingLinkInviteNames.has(
+				row.displayName.toLowerCase(),
+			),
 		});
 	}
 

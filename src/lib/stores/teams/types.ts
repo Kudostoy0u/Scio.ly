@@ -29,6 +29,7 @@ export interface TeamMember {
 	subteamId?: string;
 	isUnlinked?: boolean;
 	username?: string | null;
+	hasPendingLinkInvite?: boolean;
 	subteam?: {
 		id: string;
 		name: string;

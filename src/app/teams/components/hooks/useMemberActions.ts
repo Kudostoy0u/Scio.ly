@@ -35,8 +35,9 @@ export function useMemberActions({
 				await deleteRosterEntry.mutateAsync({
 					teamSlug,
 					subteamId,
-					eventName: "General",
-					slotIndex: 0,
+					removeAllOccurrences: true,
+					displayName: getDisplayName(member),
+					userId: member.isUnlinked ? undefined : member.id,
 				});
 				toast.success(`Removed ${getDisplayName(member)} from subteam`);
 				await refresh();
@@ -190,8 +191,9 @@ export function useMemberActions({
 				await deleteRosterEntry.mutateAsync({
 					teamSlug,
 					subteamId: member.subteam?.id ?? member.subteamId ?? null,
-					eventName: "General",
-					slotIndex: 0,
+					removeAllOccurrences: true,
+					displayName: getDisplayName(member),
+					userId: member.isUnlinked ? undefined : member.id,
 				});
 				toast.success(`Removed ${getDisplayName(member)} from team roster`);
 				await refresh();

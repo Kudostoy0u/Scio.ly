@@ -278,33 +278,55 @@ export const teamsRouter = router({
 			}
 		}),
 
-	removeRosterEntry: protectedProcedure
-		.input(
-			z.object({
-				teamSlug: z.string().min(1),
-				subteamId: z.string().uuid().nullable(),
-				eventName: z.string().min(1),
-				slotIndex: z.number().int().nonnegative().default(0),
-			}),
-		)
-		.mutation(async ({ ctx, input }) => {
-			try {
-				console.log("[TRPC removeRosterEntry] Request:", {
+removeRosterEntry: protectedProcedure
+	.input(
+		z.object({
+			teamSlug: z.string().min(1),
+			subteamId: z.string().uuid().nullable(),
+			eventName: z.string().min(1).optional(),
+			slotIndex: z.number().int().nonnegative().default(0),
+			removeAllOccurrences: z.boolean().optional(),
+			displayName: z.string().min(1).optional(),
+			userId: z.string().uuid().optional(),
+		}),
+	)
+	.mutation(async ({ ctx, input }) => {
+		try {
+			console.log("[TRPC removeRosterEntry] Request:", {
 					input,
 					userId: ctx.user.id,
 				});
-				const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
-				await removeRosterEntry(
-					meta.teamId,
-					input.subteamId,
-					input.eventName,
-					input.slotIndex,
-					ctx.user.id,
-				);
-				console.log("[TRPC removeRosterEntry] Success");
-				return { ok: true, updatedAt: new Date().toISOString() };
-			} catch (error) {
-				console.error("[TRPC removeRosterEntry] Error:", error);
+			if (input.removeAllOccurrences && !input.displayName && !input.userId) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: "displayName or userId is required to remove a member",
+				});
+			}
+
+			if (!input.removeAllOccurrences && !input.eventName) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: "eventName is required when not removing all occurrences",
+				});
+			}
+
+			const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
+			await removeRosterEntry(
+				meta.teamId,
+				ctx.user.id,
+				{
+					subteamId: input.subteamId,
+					eventName: input.eventName,
+					slotIndex: input.slotIndex,
+					deleteAllForMember: input.removeAllOccurrences,
+					displayName: input.displayName,
+					userId: input.userId,
+				},
+			);
+			console.log("[TRPC removeRosterEntry] Success");
+			return { ok: true, updatedAt: new Date().toISOString() };
+		} catch (error) {
+			console.error("[TRPC removeRosterEntry] Error:", error);
 				throw error;
 			}
 		}),

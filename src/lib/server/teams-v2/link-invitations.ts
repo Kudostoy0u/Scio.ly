@@ -54,6 +54,10 @@ export async function listPendingLinkInvitesForUser(userId: string) {
 		.select({
 			username: users.username,
 			supabaseUsername: users.supabaseUsername,
+			displayName: users.displayName,
+			firstName: users.firstName,
+			lastName: users.lastName,
+			email: users.email,
 		})
 		.from(users)
 		.where(eq(users.id, userId))
@@ -140,10 +144,24 @@ export async function acceptLinkInvitation(
 		throw new Error("This link invitation is not for your account");
 	}
 
+	const linkedDisplayName =
+		userProfile?.displayName ||
+		(userProfile?.firstName && userProfile?.lastName
+			? `${userProfile.firstName} ${userProfile.lastName}`
+			: userProfile?.firstName ||
+				userProfile?.lastName ||
+				userProfile?.username ||
+				userProfile?.email ||
+				`User ${userId.slice(0, 8)}`);
+
 	await dbPg.transaction(async (tx) => {
 		await tx
 			.update(teamsRoster)
-			.set({ userId, updatedAt: new Date().toISOString() })
+			.set({
+				userId,
+				displayName: linkedDisplayName,
+				updatedAt: new Date().toISOString(),
+			})
 			.where(
 				and(
 					eq(teamsRoster.teamId, linkInvite.teamId),

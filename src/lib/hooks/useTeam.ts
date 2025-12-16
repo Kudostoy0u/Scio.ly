@@ -8,6 +8,7 @@
 "use client";
 
 import type { TeamFullData } from "@/lib/server/teams-v2";
+import { globalApiCache } from "@/lib/utils/storage/globalApiCache";
 import { trpc } from "@/lib/trpc/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -101,12 +102,34 @@ export function useInvalidateTeam() {
 	const utils = trpc.useUtils();
 
 	return {
-		invalidateTeam: async (teamSlug: string) => {
-			await Promise.all([
+		invalidateTeam: async (teamSlug: string, options?: { invalidateUserTeams?: boolean }) => {
+			const invalidations = [
 				utils.teams.full.invalidate({ teamSlug }),
 				utils.teams.meta.invalidate({ teamSlug }),
 				queryClient.invalidateQueries({ queryKey: teamKeys.full(teamSlug) }),
 				queryClient.invalidateQueries({ queryKey: teamKeys.meta(teamSlug) }),
+			];
+
+			// If team is deleted, also invalidate user teams list
+			if (options?.invalidateUserTeams) {
+				invalidations.push(utils.teams.listUserTeams.invalidate());
+			}
+
+			await Promise.all(invalidations);
+		},
+		invalidateTeamAndUserTeams: async (teamSlug: string) => {
+			// Invalidate globalApiCache for all user-teams (affects all users)
+			globalApiCache.invalidateAllUserTeams();
+			// Invalidate all team-specific caches in globalApiCache
+			globalApiCache.invalidateTeamCaches(teamSlug);
+			
+			await Promise.all([
+				utils.teams.full.invalidate({ teamSlug }),
+				utils.teams.meta.invalidate({ teamSlug }),
+				utils.teams.listUserTeams.invalidate(),
+				queryClient.invalidateQueries({ queryKey: teamKeys.full(teamSlug) }),
+				queryClient.invalidateQueries({ queryKey: teamKeys.meta(teamSlug) }),
+				queryClient.invalidateQueries({ queryKey: [["teams", "listUserTeams"]] }),
 			]);
 		},
 		updateTeamData: (

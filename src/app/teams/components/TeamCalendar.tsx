@@ -1,5 +1,6 @@
 "use client";
 
+import ConfirmModal from "@/app/components/ConfirmModal";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { useState } from "react";
@@ -61,6 +62,7 @@ export default function TeamCalendar({
 	const [recurringForm, setRecurringForm] = useState<RecurringForm>(
 		getDefaultRecurringForm(),
 	);
+	const [deleteEventConfirm, setDeleteEventConfirm] = useState<string | null>(null);
 
 	const {
 		events,
@@ -73,18 +75,25 @@ export default function TeamCalendar({
 	} = useCalendarData(user?.id, teamSlug);
 
 	const handleDeleteEvent = (eventId: string) => {
-		if (window.confirm("Are you sure you want to delete this event?")) {
-			deleteEvent(
-				eventId,
-				user?.id,
-				teamSlug,
-				setEvents,
-				setRecurringMeetings,
-				loadEvents,
-			).catch(() => {
-				// Error handling is done in the deleteEvent function
-			});
-		}
+		setDeleteEventConfirm(eventId);
+	};
+
+	const confirmDeleteEvent = () => {
+		if (!deleteEventConfirm) return;
+
+		const eventId = deleteEventConfirm;
+		setDeleteEventConfirm(null);
+
+		deleteEvent(
+			eventId,
+			user?.id,
+			teamSlug,
+			setEvents,
+			setRecurringMeetings,
+			loadEvents,
+		).catch(() => {
+			// Error handling is done in the deleteEvent function
+		});
 	};
 
 	const handleEventClick = (event: CalendarEvent) => {
@@ -285,6 +294,16 @@ export default function TeamCalendar({
 				darkMode={darkMode}
 				showModal={showSettingsModal}
 				onClose={() => setShowSettingsModal(false)}
+			/>
+
+			<ConfirmModal
+				isOpen={deleteEventConfirm !== null}
+				onClose={() => setDeleteEventConfirm(null)}
+				onConfirm={confirmDeleteEvent}
+				title="Delete event?"
+				message="Are you sure you want to delete this event?"
+				confirmText="Delete"
+				confirmVariant="danger"
 			/>
 		</div>
 	);

@@ -179,26 +179,67 @@ export async function upsertRosterEntry(
 
 export async function removeRosterEntry(
 	teamId: string,
-	subteamId: string | null,
-	eventName: string,
-	slotIndex: number,
 	actorId: string,
+	options: {
+		subteamId?: string | null;
+		eventName?: string;
+		slotIndex?: number;
+		deleteAllForMember?: boolean;
+		displayName?: string;
+		userId?: string;
+	},
 ) {
 	const membership = await getMembershipForUser(teamId, actorId);
 	if (!membership || membership.role !== "captain") {
 		throw new Error("Only captains can edit roster");
 	}
 
-	await dbPg
-		.delete(teamsRoster)
-		.where(
-			and(
-				eq(teamsRoster.teamId, teamId),
-				subteamId
-					? eq(teamsRoster.subteamId, subteamId)
-					: isNull(teamsRoster.subteamId),
-				eq(teamsRoster.eventName, eventName),
-				eq(teamsRoster.slotIndex, slotIndex),
-			),
-		);
+	if (options.deleteAllForMember) {
+		const deletions: Promise<unknown>[] = [];
+
+		if (options.userId) {
+			deletions.push(
+				dbPg
+					.delete(teamsRoster)
+					.where(
+						and(
+							eq(teamsRoster.teamId, teamId),
+							eq(teamsRoster.userId, options.userId),
+						),
+					),
+			);
+		}
+
+		if (options.displayName) {
+			deletions.push(
+				dbPg
+					.delete(teamsRoster)
+					.where(
+						and(
+							eq(teamsRoster.teamId, teamId),
+							isNull(teamsRoster.userId),
+							eq(teamsRoster.displayName, options.displayName),
+						),
+					),
+			);
+		}
+
+		await Promise.all(deletions);
+		return;
+	}
+
+	if (!options.eventName) {
+		throw new Error("Event name is required when not deleting all occurrences");
+	}
+
+	await dbPg.delete(teamsRoster).where(
+		and(
+			eq(teamsRoster.teamId, teamId),
+			options.subteamId
+				? eq(teamsRoster.subteamId, options.subteamId)
+				: isNull(teamsRoster.subteamId),
+			eq(teamsRoster.eventName, options.eventName),
+			eq(teamsRoster.slotIndex, options.slotIndex ?? 0),
+		),
+	);
 }
