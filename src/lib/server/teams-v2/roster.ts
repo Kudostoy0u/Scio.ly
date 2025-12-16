@@ -90,7 +90,7 @@ export async function replaceRosterEntries(
 			let resolvedDisplayName = name;
 
 			const candidates = displayNameMap.get(lowerName);
-			if (candidates && candidates.length === 1) {
+			if (candidates && candidates.length === 1 && candidates[0]) {
 				userId = candidates[0].userId;
 				resolvedDisplayName = candidates[0].displayName;
 			}
@@ -291,6 +291,9 @@ export async function removeRosterEntry(
 						and(
 							eq(teamsRoster.teamId, teamId),
 							eq(teamsRoster.userId, options.userId),
+							options.subteamId
+								? eq(teamsRoster.subteamId, options.subteamId)
+								: sql`TRUE`,
 						),
 					),
 			);
@@ -305,6 +308,9 @@ export async function removeRosterEntry(
 							eq(teamsRoster.teamId, teamId),
 							isNull(teamsRoster.userId),
 							eq(teamsRoster.displayName, options.displayName),
+							options.subteamId
+								? eq(teamsRoster.subteamId, options.subteamId)
+								: sql`TRUE`,
 						),
 					),
 			);
@@ -345,10 +351,9 @@ export async function removeRosterEntry(
 	}
 
 	// Fallback: delete specific slot (legacy behavior)
-	await dbPg.delete(teamsRoster).where(
-		and(
-			...predicates,
-			eq(teamsRoster.slotIndex, options.slotIndex ?? 0),
-		),
-	);
+	await dbPg
+		.delete(teamsRoster)
+		.where(
+			and(...predicates, eq(teamsRoster.slotIndex, options.slotIndex ?? 0)),
+		);
 }

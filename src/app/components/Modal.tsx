@@ -2,7 +2,7 @@
 
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { X } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 interface ModalProps {
 	isOpen: boolean;
@@ -22,34 +22,24 @@ export default function Modal({
 	showCloseButton = true,
 }: ModalProps) {
 	const { darkMode } = useTheme();
+	const dialogRef = useRef<HTMLDialogElement>(null);
 
-	// Handle Escape key
+	// Handle dialog open/close
 	useEffect(() => {
-		if (!isOpen) return;
+		if (!dialogRef.current) return;
 
-		const handleEscape = (e: KeyboardEvent) => {
-			if (e.key === "Escape") {
-				onClose();
-			}
-		};
-
-		document.addEventListener("keydown", handleEscape);
-		return () => document.removeEventListener("keydown", handleEscape);
-	}, [isOpen, onClose]);
-
-	// Prevent body scroll when modal is open
-	useEffect(() => {
 		if (isOpen) {
+			dialogRef.current.showModal();
 			document.body.style.overflow = "hidden";
 		} else {
+			dialogRef.current.close();
 			document.body.style.overflow = "";
 		}
+
 		return () => {
 			document.body.style.overflow = "";
 		};
 	}, [isOpen]);
-
-	if (!isOpen) return null;
 
 	const maxWidthClasses = {
 		sm: "max-w-sm",
@@ -59,22 +49,39 @@ export default function Modal({
 		"2xl": "max-w-2xl",
 	};
 
+	const handleDialogClick = (e: React.MouseEvent<HTMLDialogElement>) => {
+		// Close dialog when clicking on the backdrop (the dialog element itself)
+		if (e.target === dialogRef.current) {
+			onClose();
+		}
+	};
+
+	const handleDialogKeyDown = (e: React.KeyboardEvent<HTMLDialogElement>) => {
+		// Close dialog when pressing Enter or Space on the backdrop
+		if (
+			e.target === dialogRef.current &&
+			(e.key === "Enter" || e.key === " ")
+		) {
+			e.preventDefault();
+			onClose();
+		}
+	};
+
 	return (
-		<div
-			className="fixed inset-0 z-50 flex items-center justify-center p-4"
+		<dialog
+			ref={dialogRef}
+			className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-transparent"
 			style={{
-				backgroundColor: darkMode
-					? "rgba(0, 0, 0, 0.75)"
-					: "rgba(0, 0, 0, 0.5)",
+				backgroundColor: "transparent",
 			}}
-			onClick={onClose}
-			role="dialog"
-			aria-modal="true"
+			onClick={handleDialogClick}
+			onKeyDown={handleDialogKeyDown}
 			aria-labelledby={title ? "modal-title" : undefined}
 		>
 			<div
 				className={`relative w-full ${maxWidthClasses[maxWidth]} rounded-xl shadow-2xl border ${darkMode ? "bg-gray-800 text-white border-gray-700" : "bg-white text-gray-900 border-gray-200"}`}
 				onClick={(e) => e.stopPropagation()}
+				onKeyDown={(e) => e.stopPropagation()}
 			>
 				{(title || showCloseButton) && (
 					<div
@@ -102,6 +109,6 @@ export default function Modal({
 				)}
 				<div className="px-6 py-4">{children}</div>
 			</div>
-		</div>
+		</dialog>
 	);
 }

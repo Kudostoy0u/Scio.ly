@@ -8,8 +8,8 @@
 "use client";
 
 import type { TeamFullData } from "@/lib/server/teams-v2";
-import { globalApiCache } from "@/lib/utils/storage/globalApiCache";
 import { trpc } from "@/lib/trpc/client";
+import { globalApiCache } from "@/lib/utils/storage/globalApiCache";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 

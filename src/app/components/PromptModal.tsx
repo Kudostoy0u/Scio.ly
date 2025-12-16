@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "@/app/contexts/ThemeContext";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Modal from "./Modal";
 
 interface PromptModalProps {
@@ -75,7 +75,6 @@ export default function PromptModal({
 							? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
 							: "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
 					}`}
-					autoFocus
 				/>
 				<div className="flex justify-end gap-3">
 					<button

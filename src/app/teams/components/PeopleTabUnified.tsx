@@ -102,7 +102,7 @@ export default function PeopleTabUnified({
 			const serverPendingInvites: Record<string, boolean> = {};
 			// Process members temporarily to get the correct display names
 			// (same logic as processMembers uses)
-			normalizedMembers.forEach((member) => {
+			for (const member of normalizedMembers) {
 				if (member.hasPendingLinkInvite) {
 					let displayName = member.name;
 					// Handle name transformation same way processMembers does
@@ -145,7 +145,7 @@ export default function PeopleTabUnified({
 						"Unknown";
 					serverPendingInvites[finalName] = true;
 				}
-			});
+			}
 			// Merge with existing state to preserve optimistic updates
 			setPendingLinkInvites((prev) => ({ ...serverPendingInvites, ...prev }));
 		}

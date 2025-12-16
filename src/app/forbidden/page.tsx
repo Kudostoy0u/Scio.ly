@@ -4,8 +4,8 @@ import Header from "@/app/components/Header";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function ForbiddenPage() {
 	const { darkMode } = useTheme();

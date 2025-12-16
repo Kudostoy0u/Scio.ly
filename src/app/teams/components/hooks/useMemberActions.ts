@@ -1,3 +1,4 @@
+import { useAuth } from "@/app/contexts/AuthContext";
 import { useInvalidateTeam } from "@/lib/hooks/useTeam";
 import { trpc } from "@/lib/trpc/client";
 import { toast } from "react-toastify";
@@ -13,6 +14,7 @@ export function useMemberActions({
 	teamSlug,
 	selectedSubteam: _selectedSubteam,
 }: UseMemberActionsProps) {
+	const { user } = useAuth();
 	const { invalidateTeam } = useInvalidateTeam();
 	const upsertRosterEntry = trpc.teams.upsertRosterEntry.useMutation();
 	const deleteRosterEntry = trpc.teams.removeRosterEntry.useMutation();
@@ -26,9 +28,27 @@ export function useMemberActions({
 	};
 
 	return {
-		handleRemoveSelfFromSubteam: async (_subteamId: string) => {
-			toast.info("Leaving subteams via the new flow is coming soon.");
-			await refresh();
+		handleRemoveSelfFromSubteam: async (subteamId: string) => {
+			if (!user?.id) {
+				toast.error("You need to be signed in to leave a subteam");
+				return;
+			}
+			try {
+				await deleteRosterEntry.mutateAsync({
+					teamSlug,
+					subteamId,
+					removeAllOccurrences: true,
+					userId: user.id,
+				});
+				toast.success("Removed from subteam");
+				await refresh();
+			} catch (error) {
+				toast.error(
+					error instanceof Error
+						? error.message
+						: "Failed to remove from subteam",
+				);
+			}
 		},
 
 		handleRemoveOtherFromSubteam: async (member: Member, subteamId: string) => {
@@ -62,7 +82,7 @@ export function useMemberActions({
 					subteamId,
 					eventName: event,
 					displayName: getDisplayName(member),
-					userId: member.isUnlinked ? undefined : member.id ?? undefined,
+					userId: member.isUnlinked ? undefined : (member.id ?? undefined),
 				});
 				toast.success(`Removed ${getDisplayName(member)} from ${event}`);
 				await refresh();
