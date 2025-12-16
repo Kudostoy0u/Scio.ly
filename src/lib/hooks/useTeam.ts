@@ -102,7 +102,10 @@ export function useInvalidateTeam() {
 	const utils = trpc.useUtils();
 
 	return {
-		invalidateTeam: async (teamSlug: string, options?: { invalidateUserTeams?: boolean }) => {
+		invalidateTeam: async (
+			teamSlug: string,
+			options?: { invalidateUserTeams?: boolean },
+		) => {
 			const invalidations = [
 				utils.teams.full.invalidate({ teamSlug }),
 				utils.teams.meta.invalidate({ teamSlug }),
@@ -122,14 +125,16 @@ export function useInvalidateTeam() {
 			globalApiCache.invalidateAllUserTeams();
 			// Invalidate all team-specific caches in globalApiCache
 			globalApiCache.invalidateTeamCaches(teamSlug);
-			
+
 			await Promise.all([
 				utils.teams.full.invalidate({ teamSlug }),
 				utils.teams.meta.invalidate({ teamSlug }),
 				utils.teams.listUserTeams.invalidate(),
 				queryClient.invalidateQueries({ queryKey: teamKeys.full(teamSlug) }),
 				queryClient.invalidateQueries({ queryKey: teamKeys.meta(teamSlug) }),
-				queryClient.invalidateQueries({ queryKey: [["teams", "listUserTeams"]] }),
+				queryClient.invalidateQueries({
+					queryKey: [["teams", "listUserTeams"]],
+				}),
 			]);
 		},
 		updateTeamData: (

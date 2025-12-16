@@ -50,7 +50,8 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 
 	const { data: teamData, isLoading, error } = useTeamFull(teamSlug);
 	const { data: subteams } = useTeamSubteams(teamSlug);
-	const { invalidateTeam, invalidateTeamAndUserTeams, refetchTeam } = useInvalidateTeam();
+	const { invalidateTeam, invalidateTeamAndUserTeams, refetchTeam } =
+		useInvalidateTeam();
 	const { data: userTeamsData } = trpc.teams.listUserTeams.useQuery();
 
 	const createSubteamMutation = trpc.teams.createSubteam.useMutation();
@@ -65,7 +66,12 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 		}
 		const getTabFromHash = (): TabName => {
 			const hash = window.location.hash.replace("#", "");
-			if (hash === "people" || hash === "roster" || hash === "stream" || hash === "assignments") {
+			if (
+				hash === "people" ||
+				hash === "roster" ||
+				hash === "stream" ||
+				hash === "assignments"
+			) {
 				return hash as TabName;
 			}
 			return "roster";
@@ -204,10 +210,7 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 		}
 	};
 
-	const handleDeleteSubteam = (
-		subteamId: string,
-		subteamName: string,
-	) => {
+	const handleDeleteSubteam = (subteamId: string, subteamName: string) => {
 		setDeleteSubteamConfirm({ subteamId, subteamName });
 	};
 
@@ -299,7 +302,9 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 									Division {teamData.meta.division} •{" "}
 									{isCaptain ? "Captain" : "Member"}{" "}
 									{teamData.meta.status === "archived" && (
-										<span className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${darkMode ? "bg-yellow-900 text-yellow-200" : "bg-yellow-200 text-yellow-900"}`}>
+										<span
+											className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${darkMode ? "bg-yellow-900 text-yellow-200" : "bg-yellow-200 text-yellow-900"}`}
+										>
 											Archived
 										</span>
 									)}
@@ -340,15 +345,64 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 				</div>
 			</div>
 
-			<div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${darkMode ? "bg-gray-900" : "bg-white"} min-h-[calc(100vh-200px)]`}>
-				<TabNavigation
-					activeTab={activeTab}
-					onTabChange={navigateToTab}
-				/>
+			<div
+				className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${darkMode ? "bg-gray-900" : "bg-white"} min-h-[calc(100vh-200px)]`}
+			>
+				<TabNavigation activeTab={activeTab} onTabChange={navigateToTab} />
 				<div className="py-8 min-h-[calc(100vh-300px)]">
-				{activeTab === "roster" && (
-					activeSubteamId ? (
-						<RosterTabUnified
+					{activeTab === "roster" &&
+						(activeSubteamId ? (
+							<RosterTabUnified
+								team={{
+									id: teamData.meta.teamId,
+									school: teamData.meta.school,
+									division: teamData.meta.division as "B" | "C",
+									slug: teamData.meta.slug,
+								}}
+								isCaptain={isCaptain}
+								activeSubteamId={activeSubteamId}
+								subteams={
+									subteams?.map((s) => ({
+										id: s.id,
+										name: s.name,
+										team_id: teamData.meta.teamId,
+										description: s.description ?? "",
+										created_at: s.createdAt,
+									})) ?? []
+								}
+								onSubteamChange={setActiveSubteamId}
+								onCreateSubteam={handleCreateSubteam}
+								onEditSubteam={handleRenameSubteam}
+								onDeleteSubteam={handleDeleteSubteam}
+							/>
+						) : (
+							<div
+								className={`rounded-xl p-8 text-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
+							>
+								<p
+									className={`text-lg font-semibold mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}
+								>
+									No subteams yet
+								</p>
+								<p
+									className={`text-sm mb-4 ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+								>
+									Create a subteam to start managing your roster.
+								</p>
+								{isCaptain && (
+									<button
+										type="button"
+										onClick={handleCreateSubteam}
+										className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors ${darkMode ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-600 hover:bg-blue-700"}`}
+									>
+										Create subteam
+									</button>
+								)}
+							</div>
+						))}
+
+					{activeTab === "people" && (
+						<PeopleTabUnified
 							team={{
 								id: teamData.meta.teamId,
 								school: teamData.meta.school,
@@ -367,103 +421,74 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 								})) ?? []
 							}
 							onSubteamChange={setActiveSubteamId}
-							onCreateSubteam={handleCreateSubteam}
-							onEditSubteam={handleRenameSubteam}
-							onDeleteSubteam={handleDeleteSubteam}
 						/>
-					) : (
-						<div className={`rounded-xl p-8 text-center ${darkMode ? "bg-gray-800" : "bg-white"}`}>
-							<p className={`text-lg font-semibold mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}>
-								No subteams yet
-							</p>
-							<p className={`text-sm mb-4 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-								Create a subteam to start managing your roster.
-							</p>
-							{isCaptain && (
-								<button
-									type="button"
-									onClick={handleCreateSubteam}
-									className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors ${darkMode ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-600 hover:bg-blue-700"}`}
+					)}
+
+					{activeTab === "stream" &&
+						(activeSubteamId ? (
+							<StreamTab
+								team={{
+									id: teamData.meta.teamId,
+									school: teamData.meta.school,
+									division: teamData.meta.division as "B" | "C",
+									slug: teamData.meta.slug,
+								}}
+								isCaptain={isCaptain}
+								activeSubteamId={activeSubteamId}
+							/>
+						) : (
+							<div
+								className={`rounded-xl p-8 text-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
+							>
+								<p
+									className={`text-lg font-semibold mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}
 								>
-									Create subteam
-								</button>
-							)}
-						</div>
-					)
-				)}
-
-				{activeTab === "people" && (
-					<PeopleTabUnified
-						team={{
-							id: teamData.meta.teamId,
-							school: teamData.meta.school,
-							division: teamData.meta.division as "B" | "C",
-							slug: teamData.meta.slug,
-						}}
-						isCaptain={isCaptain}
-						activeSubteamId={activeSubteamId}
-						subteams={
-							subteams?.map((s) => ({
-								id: s.id,
-								name: s.name,
-								team_id: teamData.meta.teamId,
-								description: s.description ?? "",
-								created_at: s.createdAt,
-							})) ?? []
-						}
-						onSubteamChange={setActiveSubteamId}
-					/>
-				)}
-
-				{activeTab === "stream" && (
-					activeSubteamId ? (
-						<StreamTab
-							team={{
-								id: teamData.meta.teamId,
-								school: teamData.meta.school,
-								division: teamData.meta.division as "B" | "C",
-								slug: teamData.meta.slug,
-							}}
-							isCaptain={isCaptain}
-							activeSubteamId={activeSubteamId}
-						/>
-					) : (
-						<div className={`rounded-xl p-8 text-center ${darkMode ? "bg-gray-800" : "bg-white"}`}>
-							<p className={`text-lg font-semibold mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}>
-								No subteams yet
-							</p>
-							<p className={`text-sm mb-4 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-								Create a subteam to start using the stream.
-							</p>
-							{isCaptain && (
-								<button
-									type="button"
-									onClick={handleCreateSubteam}
-									className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors ${darkMode ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-600 hover:bg-blue-700"}`}
+									No subteams yet
+								</p>
+								<p
+									className={`text-sm mb-4 ${darkMode ? "text-gray-400" : "text-gray-600"}`}
 								>
-									Create subteam
-								</button>
-							)}
-						</div>
-					)
-				)}
+									Create a subteam to start using the stream.
+								</p>
+								{isCaptain && (
+									<button
+										type="button"
+										onClick={handleCreateSubteam}
+										className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors ${darkMode ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-600 hover:bg-blue-700"}`}
+									>
+										Create subteam
+									</button>
+								)}
+							</div>
+						))}
 
-				{activeTab === "assignments" && (
-					<div className={darkMode ? "text-white" : "text-gray-900"}>
-						Assignments tab - TODO
-					</div>
-				)}
+					{activeTab === "assignments" && (
+						<div className={darkMode ? "text-white" : "text-gray-900"}>
+							Assignments tab - TODO
+						</div>
+					)}
 				</div>
 			</div>
 
 			{/* Join codes modal */}
 			{showCodes && (
-				<div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: darkMode ? 'rgba(0, 0, 0, 0.75)' : 'rgba(0, 0, 0, 0.5)' }}>
+				<div
+					className="fixed inset-0 z-50 flex items-center justify-center"
+					style={{
+						backgroundColor: darkMode
+							? "rgba(0, 0, 0, 0.75)"
+							: "rgba(0, 0, 0, 0.5)",
+					}}
+				>
 					<div
 						className={`w-full max-w-lg rounded-xl p-6 shadow-2xl border ${darkMode ? "bg-gray-800 text-white border-gray-700" : "bg-white text-gray-900 border-gray-200"}`}
 					>
 						<div className="flex items-center justify-between mb-6">
-							<h3 className={`text-xl font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>Join codes</h3>
+							<h3
+								className={`text-xl font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}
+							>
+								Join codes
+							</h3>
 							<button
 								type="button"
 								onClick={() => setShowCodes(false)}
@@ -478,8 +503,14 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 							>
 								<div className="flex items-center justify-between mb-3">
 									<div>
-										<p className={`text-sm font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>Member code</p>
-										<p className={`text-xs mt-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+										<p
+											className={`text-sm font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}
+										>
+											Member code
+										</p>
+										<p
+											className={`text-xs mt-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+										>
 											Share with members to join.
 										</p>
 									</div>
@@ -494,7 +525,9 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 										Copy
 									</button>
 								</div>
-								<p className={`mt-2 font-mono text-sm break-all ${darkMode ? "text-blue-400" : "text-blue-600"}`}>
+								<p
+									className={`mt-2 font-mono text-sm break-all ${darkMode ? "text-blue-400" : "text-blue-600"}`}
+								>
 									{teamData.meta.memberCode}
 								</p>
 							</div>
@@ -504,8 +537,14 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 								>
 									<div className="flex items-center justify-between mb-3">
 										<div>
-											<p className={`text-sm font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>Captain code</p>
-											<p className={`text-xs mt-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+											<p
+												className={`text-sm font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}
+											>
+												Captain code
+											</p>
+											<p
+												className={`text-xs mt-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+											>
 												Only share with captains.
 											</p>
 										</div>
@@ -522,7 +561,9 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 											Copy
 										</button>
 									</div>
-									<p className={`mt-2 font-mono text-sm break-all ${darkMode ? "text-blue-400" : "text-blue-600"}`}>
+									<p
+										className={`mt-2 font-mono text-sm break-all ${darkMode ? "text-blue-400" : "text-blue-600"}`}
+									>
 										{teamData.meta.captainCode}
 									</p>
 								</div>

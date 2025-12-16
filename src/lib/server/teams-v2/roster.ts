@@ -1,5 +1,6 @@
 import { dbPg } from "@/lib/db";
-import { teamsRoster } from "@/lib/db/schema/teams_v2";
+import { users } from "@/lib/db/schema/core";
+import { teamsMembership, teamsRoster } from "@/lib/db/schema/teams_v2";
 import logger from "@/lib/utils/logging/logger";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { getMembershipForUser } from "./shared";
@@ -20,6 +21,52 @@ export async function replaceRosterEntries(
 		throw new Error("Only captains can edit roster");
 	}
 
+	// Map display names to users already on the team so new entries link instead of duplicating
+	const memberships = await dbPg
+		.select({
+			userId: teamsMembership.userId,
+			displayName: users.displayName,
+			firstName: users.firstName,
+			lastName: users.lastName,
+			username: users.username,
+			email: users.email,
+		})
+		.from(teamsMembership)
+		.innerJoin(users, eq(users.id, teamsMembership.userId))
+		.where(eq(teamsMembership.teamId, teamId));
+
+	const displayNameMap = new Map<
+		string,
+		{ userId: string; displayName: string }[]
+	>();
+	for (const member of memberships) {
+		const displayName =
+			member.displayName ||
+			(member.firstName && member.lastName
+				? `${member.firstName} ${member.lastName}`
+				: member.firstName ||
+					member.lastName ||
+					member.username ||
+					member.email ||
+					`User ${member.userId.slice(0, 8)}`);
+		const key = displayName.toLowerCase();
+		const existing = displayNameMap.get(key) ?? [];
+		existing.push({ userId: member.userId, displayName });
+		displayNameMap.set(key, existing);
+	}
+
+	// Snapshot current roster to catch cross-subteam conflicts
+	const existingTeamRoster = await dbPg
+		.select({
+			subteamId: teamsRoster.subteamId,
+			userId: teamsRoster.userId,
+			displayName: teamsRoster.displayName,
+		})
+		.from(teamsRoster)
+		.where(eq(teamsRoster.teamId, teamId));
+
+	const conflicts = new Set<string>();
+
 	await dbPg.transaction(async (tx) => {
 		await tx
 			.delete(teamsRoster)
@@ -32,18 +79,57 @@ export async function replaceRosterEntries(
 
 		if (entries.length === 0) return;
 
-		await tx.insert(teamsRoster).values(
-			entries.map((entry) => ({
-				id: crypto.randomUUID(),
-				teamId,
-				subteamId,
-				eventName: entry.eventName,
-				slotIndex: entry.slotIndex,
-				displayName: entry.displayName,
-				userId: entry.userId ?? null,
-			})),
-		);
+		const resolvedEntries = entries.flatMap((entry) => {
+			const name = entry.displayName.trim();
+			if (!name) {
+				return [];
+			}
+			const lowerName = name.toLowerCase();
+
+			let userId: string | null | undefined = entry.userId ?? null;
+			let resolvedDisplayName = name;
+
+			const candidates = displayNameMap.get(lowerName);
+			if (candidates && candidates.length === 1) {
+				userId = candidates[0].userId;
+				resolvedDisplayName = candidates[0].displayName;
+			}
+
+			// Prevent the same member/name from living on multiple subteams
+			const assignedElsewhere = existingTeamRoster.find(
+				(row) =>
+					row.subteamId !== subteamId &&
+					((userId && row.userId === userId) ||
+						(!userId &&
+							!row.userId &&
+							row.displayName.toLowerCase() === lowerName)),
+			);
+			if (assignedElsewhere) {
+				conflicts.add(resolvedDisplayName);
+				return [];
+			}
+
+			return [
+				{
+					id: crypto.randomUUID(),
+					teamId,
+					subteamId,
+					eventName: entry.eventName,
+					slotIndex: entry.slotIndex,
+					displayName: resolvedDisplayName,
+					userId: userId ?? null,
+				},
+			];
+		});
+
+		if (resolvedEntries.length === 0) {
+			return;
+		}
+
+		await tx.insert(teamsRoster).values(resolvedEntries);
 	});
+
+	return { conflicts: Array.from(conflicts) };
 }
 
 export async function upsertRosterEntry(
@@ -232,13 +318,36 @@ export async function removeRosterEntry(
 		throw new Error("Event name is required when not deleting all occurrences");
 	}
 
+	const predicates = [
+		eq(teamsRoster.teamId, teamId),
+		options.subteamId
+			? eq(teamsRoster.subteamId, options.subteamId)
+			: isNull(teamsRoster.subteamId),
+		eq(teamsRoster.eventName, options.eventName),
+	] as const;
+
+	// If we know which member to remove, delete any slots they occupy for this event
+	if (options.userId || options.displayName) {
+		await dbPg
+			.delete(teamsRoster)
+			.where(
+				and(
+					...predicates,
+					options.userId
+						? eq(teamsRoster.userId, options.userId)
+						: isNull(teamsRoster.userId),
+					options.displayName
+						? eq(teamsRoster.displayName, options.displayName)
+						: sql`TRUE`,
+				),
+			);
+		return;
+	}
+
+	// Fallback: delete specific slot (legacy behavior)
 	await dbPg.delete(teamsRoster).where(
 		and(
-			eq(teamsRoster.teamId, teamId),
-			options.subteamId
-				? eq(teamsRoster.subteamId, options.subteamId)
-				: isNull(teamsRoster.subteamId),
-			eq(teamsRoster.eventName, options.eventName),
+			...predicates,
 			eq(teamsRoster.slotIndex, options.slotIndex ?? 0),
 		),
 	);

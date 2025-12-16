@@ -175,11 +175,15 @@ export function detectConflicts(
 		for (const eventName of groupEvents) {
 			const eventRoster = rosterData[eventName] || [];
 			for (const person of eventRoster) {
-				if (person.trim()) {
-					if (!personToEvents[person]) {
-						personToEvents[person] = [];
+				if (typeof person !== "string") {
+					continue;
+				}
+				const normalized = person.trim();
+				if (normalized) {
+					if (!personToEvents[normalized]) {
+						personToEvents[normalized] = [];
 					}
-					personToEvents[person].push(eventName);
+					personToEvents[normalized].push(eventName);
 				}
 			}
 		}

@@ -78,9 +78,15 @@ export default function RosterTabUnified({
 	// Update local roster when query data changes
 	useEffect(() => {
 		if (rosterData?.roster) {
-			setRoster(rosterData.roster);
-			if (Object.keys(rosterData.roster).length > 0) {
-				const detectedConflicts = detectConflicts(rosterData.roster, groups);
+			const sanitized: Record<string, string[]> = {};
+			for (const [eventName, students] of Object.entries(rosterData.roster)) {
+				sanitized[eventName] = (students || []).map((s) =>
+					typeof s === "string" ? s : "",
+				);
+			}
+			setRoster(sanitized);
+			if (Object.keys(sanitized).length > 0) {
+				const detectedConflicts = detectConflicts(sanitized, groups);
 				setConflicts(detectedConflicts);
 			}
 		}
@@ -119,11 +125,25 @@ export default function RosterTabUnified({
 				}
 			}
 
-			await saveRosterMutation.mutateAsync({
+			const result = await saveRosterMutation.mutateAsync({
 				teamSlug: team.slug,
 				subteamId: activeSubteamId,
 				entries: rosterEntries,
 			});
+
+			if (result?.conflicts?.length) {
+				const cleanedRoster = { ...rosterRef.current };
+				for (const [eventName, students] of Object.entries(cleanedRoster)) {
+					cleanedRoster[eventName] = students.map((student) =>
+						result.conflicts.includes(student) ? "" : student,
+					);
+				}
+				setRoster(cleanedRoster);
+				rosterRef.current = cleanedRoster;
+				toast.error(
+					`${result.conflicts.join(", ")} cannot be on multiple subteams; removed from this subteam.`,
+				);
+			}
 
 			// Invalidate shared cache
 			invalidateTeam(team.slug);

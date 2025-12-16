@@ -62,7 +62,9 @@ export default function TeamCalendar({
 	const [recurringForm, setRecurringForm] = useState<RecurringForm>(
 		getDefaultRecurringForm(),
 	);
-	const [deleteEventConfirm, setDeleteEventConfirm] = useState<string | null>(null);
+	const [deleteEventConfirm, setDeleteEventConfirm] = useState<string | null>(
+		null,
+	);
 
 	const {
 		events,

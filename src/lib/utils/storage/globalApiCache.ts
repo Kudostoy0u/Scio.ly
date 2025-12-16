@@ -353,7 +353,7 @@ class GlobalApiCache {
 	 */
 	invalidateAllUserTeams(): void {
 		const keysToDelete: string[] = [];
-		
+
 		// Find all user-teams cache keys in memory
 		for (const [key] of this.memoryCache.entries()) {
 			if (key.includes("user-teams-")) {
@@ -391,7 +391,7 @@ class GlobalApiCache {
 	 */
 	invalidateTeamCaches(teamSlug: string): void {
 		const keysToDelete: string[] = [];
-		
+
 		// Find all team-related cache keys in memory
 		for (const [key] of this.memoryCache.entries()) {
 			if (

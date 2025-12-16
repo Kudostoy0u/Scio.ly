@@ -63,7 +63,9 @@ export default function Modal({
 		<div
 			className="fixed inset-0 z-50 flex items-center justify-center p-4"
 			style={{
-				backgroundColor: darkMode ? "rgba(0, 0, 0, 0.75)" : "rgba(0, 0, 0, 0.5)",
+				backgroundColor: darkMode
+					? "rgba(0, 0, 0, 0.75)"
+					: "rgba(0, 0, 0, 0.5)",
 			}}
 			onClick={onClose}
 			role="dialog"
@@ -103,4 +105,3 @@ export default function Modal({
 		</div>
 	);
 }
-

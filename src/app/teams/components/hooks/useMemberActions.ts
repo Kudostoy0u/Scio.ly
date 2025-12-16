@@ -19,6 +19,7 @@ export function useMemberActions({
 	const inviteMember = trpc.teams.inviteMember.useMutation();
 	const promoteToRole = trpc.teams.promoteToRole.useMutation();
 	const createLinkInvitation = trpc.teams.createLinkInvitation.useMutation();
+	const cancelLinkInvite = trpc.teams.cancelLinkInvite.useMutation();
 
 	const refresh = async () => {
 		await invalidateTeam(teamSlug);
@@ -37,7 +38,7 @@ export function useMemberActions({
 					subteamId,
 					removeAllOccurrences: true,
 					displayName: getDisplayName(member),
-					userId: member.isUnlinked ? undefined : member.id,
+					userId: member.isUnlinked ? undefined : (member.id ?? undefined),
 				});
 				toast.success(`Removed ${getDisplayName(member)} from subteam`);
 				await refresh();
@@ -60,7 +61,8 @@ export function useMemberActions({
 					teamSlug,
 					subteamId,
 					eventName: event,
-					slotIndex: 0,
+					displayName: getDisplayName(member),
+					userId: member.isUnlinked ? undefined : member.id ?? undefined,
 				});
 				toast.success(`Removed ${getDisplayName(member)} from ${event}`);
 				await refresh();
@@ -174,10 +176,21 @@ export function useMemberActions({
 			}
 		},
 
-		handleCancelLinkInvite: async (_memberName: string) => {
-			toast.info(
-				"Link invite cancellation will be rebuilt on the new backend soon.",
-			);
+		handleCancelLinkInvite: async (memberName: string) => {
+			try {
+				await cancelLinkInvite.mutateAsync({
+					teamSlug,
+					rosterDisplayName: memberName,
+				});
+				toast.success(`Link invitation cancelled for ${memberName}`);
+				await refresh();
+			} catch (error) {
+				toast.error(
+					error instanceof Error
+						? error.message
+						: "Failed to cancel link invitation",
+				);
+			}
 		},
 
 		handleCancelInvitation: async (_member: Member) => {
@@ -193,7 +206,7 @@ export function useMemberActions({
 					subteamId: member.subteam?.id ?? member.subteamId ?? null,
 					removeAllOccurrences: true,
 					displayName: getDisplayName(member),
-					userId: member.isUnlinked ? undefined : member.id,
+					userId: member.isUnlinked ? undefined : (member.id ?? undefined),
 				});
 				toast.success(`Removed ${getDisplayName(member)} from team roster`);
 				await refresh();

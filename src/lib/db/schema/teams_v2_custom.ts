@@ -34,15 +34,15 @@ export const teamsLinkInvitationWithIndexes = cockroachTable(
 			.defaultNow()
 			.notNull(),
 	},
-	(table) => ({
-		statusUsernameIdx: index("idx_teams_link_invitation_status_username").on(
+	(table) => [
+		index("idx_teams_link_invitation_status_username").on(
 			table.status,
 			table.invitedUsername,
 		),
-		teamStatusIdx: index("idx_teams_link_invitation_team_status").on(
+		index("idx_teams_link_invitation_team_status").on(
 			table.teamId,
 			table.status,
 			table.rosterDisplayName,
 		),
-	}),
+	],
 );

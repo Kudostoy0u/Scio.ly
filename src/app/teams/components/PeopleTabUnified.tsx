@@ -95,6 +95,62 @@ export default function PeopleTabUnified({
 		}));
 	}, [members]);
 
+	// Initialize pendingLinkInvites from server data when members change
+	// This ensures pending link invites persist across tab navigation
+	useEffect(() => {
+		if (normalizedMembers.length > 0) {
+			const serverPendingInvites: Record<string, boolean> = {};
+			// Process members temporarily to get the correct display names
+			// (same logic as processMembers uses)
+			normalizedMembers.forEach((member) => {
+				if (member.hasPendingLinkInvite) {
+					let displayName = member.name;
+					// Handle name transformation same way processMembers does
+					if (!displayName || typeof displayName !== "string") {
+						displayName = null;
+					}
+					if (needsNamePrompt(displayName)) {
+						const emailLocal =
+							member.email &&
+							typeof member.email === "string" &&
+							member.email.includes("@")
+								? member.email.split("@")[0]
+								: "";
+						const { name: robust } = generateDisplayName(
+							{
+								displayName: null,
+								firstName: null,
+								lastName: null,
+								username:
+									member.username &&
+									typeof member.username === "string" &&
+									member.username.trim()
+										? member.username.trim()
+										: emailLocal && emailLocal.length > 2
+											? emailLocal
+											: null,
+								email: member.email,
+							},
+							member.id || "",
+						);
+						if (robust?.trim()) {
+							displayName = robust.trim();
+						}
+					}
+					// Use the final display name
+					const finalName =
+						displayName ||
+						member.email?.split("@")[0] ||
+						member.username ||
+						"Unknown";
+					serverPendingInvites[finalName] = true;
+				}
+			});
+			// Merge with existing state to preserve optimistic updates
+			setPendingLinkInvites((prev) => ({ ...serverPendingInvites, ...prev }));
+		}
+	}, [normalizedMembers]);
+
 	const filteredMembers = useMemo(() => {
 		if (normalizedMembers.length === 0) {
 			return [];
@@ -114,7 +170,7 @@ export default function PeopleTabUnified({
 		handleSubteamAssign,
 		handleInviteSubmit,
 		handleLinkInviteSubmit,
-		handleCancelLinkInvite,
+		handleCancelLinkInvite: originalHandleCancelLinkInvite,
 		handleCancelInvitation,
 		handleRemoveMember,
 		handlePromoteToCaptain,
@@ -122,6 +178,20 @@ export default function PeopleTabUnified({
 		teamSlug: team.slug,
 		selectedSubteam,
 	});
+
+	// Wrap handleCancelLinkInvite to also clear the pending state
+	const handleCancelLinkInvite = useCallback(
+		async (memberName: string) => {
+			// Clear from local state immediately for optimistic update
+			setPendingLinkInvites((prev) => {
+				const updated = { ...prev };
+				delete updated[memberName];
+				return updated;
+			});
+			await originalHandleCancelLinkInvite(memberName);
+		},
+		[originalHandleCancelLinkInvite],
+	);
 
 	const handleNameClick = useCallback(
 		(member: Member) => {

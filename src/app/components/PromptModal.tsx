@@ -58,7 +58,9 @@ export default function PromptModal({
 		<Modal isOpen={isOpen} onClose={onClose} title={title} maxWidth="md">
 			<div className="space-y-6">
 				{message && (
-					<p className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+					<p
+						className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+					>
 						{message}
 					</p>
 				)}
@@ -100,4 +102,3 @@ export default function PromptModal({
 		</Modal>
 	);
 }
-

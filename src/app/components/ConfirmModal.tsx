@@ -46,7 +46,9 @@ export default function ConfirmModal({
 	return (
 		<Modal isOpen={isOpen} onClose={onClose} title={title} maxWidth="md">
 			<div className="space-y-6">
-				<p className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+				<p
+					className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+				>
 					{message}
 				</p>
 				<div className="flex justify-end gap-3">
@@ -69,4 +71,3 @@ export default function ConfirmModal({
 		</Modal>
 	);
 }
-

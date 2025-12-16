@@ -130,6 +130,10 @@ export async function acceptLinkInvitation(
 		.select({
 			username: users.username,
 			supabaseUsername: users.supabaseUsername,
+			displayName: users.displayName,
+			firstName: users.firstName,
+			lastName: users.lastName,
+			email: users.email,
 		})
 		.from(users)
 		.where(eq(users.id, userId))
@@ -229,6 +233,10 @@ export async function declineLinkInvitation(
 		.select({
 			username: users.username,
 			supabaseUsername: users.supabaseUsername,
+			displayName: users.displayName,
+			firstName: users.firstName,
+			lastName: users.lastName,
+			email: users.email,
 		})
 		.from(users)
 		.where(eq(users.id, userId))
@@ -248,6 +256,44 @@ export async function declineLinkInvitation(
 			.update(teamsLinkInvitation)
 			.set({ status: "declined", updatedAt: new Date().toISOString() })
 			.where(eq(teamsLinkInvitation.id, linkInviteId));
+
+		await bumpTeamVersion(linkInvite.teamId);
+	});
+
+	return { ok: true };
+}
+
+export async function cancelLinkInvitation(input: {
+	teamSlug: string;
+	rosterDisplayName: string;
+	userId: string;
+}) {
+	const { team } = await assertCaptainAccess(input.teamSlug, input.userId);
+
+	const [linkInvite] = await dbPg
+		.select({
+			id: teamsLinkInvitation.id,
+			teamId: teamsLinkInvitation.teamId,
+		})
+		.from(teamsLinkInvitation)
+		.where(
+			and(
+				eq(teamsLinkInvitation.teamId, team.id),
+				eq(teamsLinkInvitation.rosterDisplayName, input.rosterDisplayName),
+				eq(teamsLinkInvitation.status, "pending"),
+			),
+		)
+		.limit(1);
+
+	if (!linkInvite) {
+		throw new Error("No pending link invitation found for this roster member");
+	}
+
+	await dbPg.transaction(async (tx) => {
+		await tx
+			.update(teamsLinkInvitation)
+			.set({ status: "cancelled", updatedAt: new Date().toISOString() })
+			.where(eq(teamsLinkInvitation.id, linkInvite.id));
 
 		await bumpTeamVersion(linkInvite.teamId);
 	});

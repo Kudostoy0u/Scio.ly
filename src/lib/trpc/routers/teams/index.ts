@@ -2,6 +2,7 @@ import {
 	acceptLinkInvitation,
 	acceptPendingInvite,
 	archiveTeam,
+	cancelLinkInvitation,
 	createInvitation,
 	createLinkInvitation,
 	createSubteam,
@@ -220,7 +221,7 @@ export const teamsRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
-			await replaceRosterEntries(
+			const result = await replaceRosterEntries(
 				meta.teamId,
 				input.subteamId,
 				input.entries.map((entry) => ({
@@ -231,7 +232,7 @@ export const teamsRouter = router({
 				})),
 				ctx.user.id,
 			);
-			return { ok: true, updatedAt: new Date().toISOString() };
+			return { ok: true, updatedAt: new Date().toISOString(), ...result };
 		}),
 
 	upsertRosterEntry: protectedProcedure
@@ -278,55 +279,51 @@ export const teamsRouter = router({
 			}
 		}),
 
-removeRosterEntry: protectedProcedure
-	.input(
-		z.object({
-			teamSlug: z.string().min(1),
-			subteamId: z.string().uuid().nullable(),
-			eventName: z.string().min(1).optional(),
-			slotIndex: z.number().int().nonnegative().default(0),
-			removeAllOccurrences: z.boolean().optional(),
-			displayName: z.string().min(1).optional(),
-			userId: z.string().uuid().optional(),
-		}),
-	)
-	.mutation(async ({ ctx, input }) => {
-		try {
-			console.log("[TRPC removeRosterEntry] Request:", {
+	removeRosterEntry: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				subteamId: z.string().uuid().nullable(),
+				eventName: z.string().min(1).optional(),
+				slotIndex: z.number().int().nonnegative().default(0),
+				removeAllOccurrences: z.boolean().optional(),
+				displayName: z.string().min(1).optional(),
+				userId: z.string().uuid().optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			try {
+				console.log("[TRPC removeRosterEntry] Request:", {
 					input,
 					userId: ctx.user.id,
 				});
-			if (input.removeAllOccurrences && !input.displayName && !input.userId) {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: "displayName or userId is required to remove a member",
-				});
-			}
+				if (input.removeAllOccurrences && !input.displayName && !input.userId) {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: "displayName or userId is required to remove a member",
+					});
+				}
 
-			if (!input.removeAllOccurrences && !input.eventName) {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: "eventName is required when not removing all occurrences",
-				});
-			}
+				if (!input.removeAllOccurrences && !input.eventName) {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: "eventName is required when not removing all occurrences",
+					});
+				}
 
-			const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
-			await removeRosterEntry(
-				meta.teamId,
-				ctx.user.id,
-				{
+				const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
+				await removeRosterEntry(meta.teamId, ctx.user.id, {
 					subteamId: input.subteamId,
 					eventName: input.eventName,
 					slotIndex: input.slotIndex,
 					deleteAllForMember: input.removeAllOccurrences,
 					displayName: input.displayName,
 					userId: input.userId,
-				},
-			);
-			console.log("[TRPC removeRosterEntry] Success");
-			return { ok: true, updatedAt: new Date().toISOString() };
-		} catch (error) {
-			console.error("[TRPC removeRosterEntry] Error:", error);
+				});
+				console.log("[TRPC removeRosterEntry] Success");
+				return { ok: true, updatedAt: new Date().toISOString() };
+			} catch (error) {
+				console.error("[TRPC removeRosterEntry] Error:", error);
 				throw error;
 			}
 		}),
@@ -467,6 +464,33 @@ removeRosterEntry: protectedProcedure
 				return result;
 			} catch (error) {
 				console.error("[TRPC declineLinkInvite] Error:", error);
+				throw error;
+			}
+		}),
+
+	cancelLinkInvite: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				rosterDisplayName: z.string().min(1),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			try {
+				console.log("[TRPC cancelLinkInvite] Request:", {
+					teamSlug: input.teamSlug,
+					rosterDisplayName: input.rosterDisplayName,
+					userId: ctx.user.id,
+				});
+				const result = await cancelLinkInvitation({
+					teamSlug: input.teamSlug,
+					rosterDisplayName: input.rosterDisplayName,
+					userId: ctx.user.id,
+				});
+				console.log("[TRPC cancelLinkInvite] Success:", result);
+				return result;
+			} catch (error) {
+				console.error("[TRPC cancelLinkInvite] Error:", error);
 				throw error;
 			}
 		}),

@@ -49,8 +49,12 @@ export default function StreamTab({
 		new Set(),
 	);
 	const [newComments, setNewComments] = useState<Record<string, string>>({});
-	const [deletePostConfirm, setDeletePostConfirm] = useState<string | null>(null);
-	const [deleteCommentConfirm, setDeleteCommentConfirm] = useState<string | null>(null);
+	const [deletePostConfirm, setDeletePostConfirm] = useState<string | null>(
+		null,
+	);
+	const [deleteCommentConfirm, setDeleteCommentConfirm] = useState<
+		string | null
+	>(null);
 
 	// Load stream data using combined endpoint
 	const loadData = useCallback(async () => {
