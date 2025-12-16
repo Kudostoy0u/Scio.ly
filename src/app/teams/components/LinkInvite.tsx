@@ -126,7 +126,7 @@ export default function LinkInvite({
 									) : (
 										<>
 											<Send className="w-4 h-4" />
-											<span>Send Link Invite</span>
+											<span>Invite</span>
 										</>
 									)}
 								</button>

@@ -7,6 +7,10 @@ import { redirect } from "next/navigation";
 import superjson from "superjson";
 import TeamPageClient from "./TeamPageClient";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
+
 interface PageProps {
 	params: Promise<{ slug: string }>;
 }
@@ -33,14 +37,20 @@ export async function generateMetadata({
 
 export default async function TeamSlugPage({ params }: PageProps) {
 	const { slug } = await params;
+	const ctx = await createContext();
+
+	if (!ctx.user) {
+		redirect("/auth");
+	}
+
 	const helpers = createServerSideHelpers({
 		router: appRouter,
-		ctx: await createContext(),
+		ctx,
 		transformer: superjson,
 	});
 
 	try {
-		await helpers.teams.full.prefetch({ teamSlug: slug });
+		await helpers.teams.full.fetch({ teamSlug: slug });
 	} catch (_error) {
 		// If unauthorized, send to auth flow
 		redirect("/auth");
