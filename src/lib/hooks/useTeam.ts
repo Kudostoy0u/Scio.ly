@@ -139,8 +139,12 @@ export function useInvalidateTeam() {
 		},
 		updateTeamData: (
 			teamSlug: string,
-			updater: (prev?: TeamFullData) => TeamFullData,
+			updater: (prev?: TeamFullData) => TeamFullData | undefined,
 		) => {
+			// Keep both caches in sync:
+			// - tRPC's internal query key (used by `trpc.teams.full.useQuery`)
+			// - our explicit `teamKeys.full` key (used by some manual invalidations)
+			utils.teams.full.setData({ teamSlug }, updater);
 			queryClient.setQueryData(teamKeys.full(teamSlug), updater);
 		},
 		refetchTeam: async (teamSlug: string) => {

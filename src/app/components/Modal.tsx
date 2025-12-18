@@ -3,6 +3,7 @@
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { X } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 
 interface ModalProps {
 	isOpen: boolean;
@@ -22,24 +23,31 @@ export default function Modal({
 	showCloseButton = true,
 }: ModalProps) {
 	const { darkMode } = useTheme();
-	const dialogRef = useRef<HTMLDialogElement>(null);
+	const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
-	// Handle dialog open/close
 	useEffect(() => {
-		if (!dialogRef.current) return;
-
-		if (isOpen) {
-			dialogRef.current.showModal();
-			document.body.style.overflow = "hidden";
-		} else {
-			dialogRef.current.close();
-			document.body.style.overflow = "";
-		}
+		if (!isOpen) return;
+		previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+		document.body.style.overflow = "hidden";
 
 		return () => {
 			document.body.style.overflow = "";
+			previouslyFocusedRef.current?.focus?.();
+			previouslyFocusedRef.current = null;
 		};
 	}, [isOpen]);
+
+	useEffect(() => {
+		if (!isOpen) return;
+		const onKeyDown = (e: KeyboardEvent) => {
+			if (e.key === "Escape") {
+				e.preventDefault();
+				onClose();
+			}
+		};
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, [isOpen, onClose]);
 
 	const maxWidthClasses = {
 		sm: "max-w-sm",
@@ -49,39 +57,24 @@ export default function Modal({
 		"2xl": "max-w-2xl",
 	};
 
-	const handleDialogClick = (e: React.MouseEvent<HTMLDialogElement>) => {
-		// Close dialog when clicking on the backdrop (the dialog element itself)
-		if (e.target === dialogRef.current) {
-			onClose();
-		}
-	};
+	if (!isOpen || typeof document === "undefined") {
+		return null;
+	}
 
-	const handleDialogKeyDown = (e: React.KeyboardEvent<HTMLDialogElement>) => {
-		// Close dialog when pressing Enter or Space on the backdrop
-		if (
-			e.target === dialogRef.current &&
-			(e.key === "Enter" || e.key === " ")
-		) {
-			e.preventDefault();
-			onClose();
-		}
-	};
-
-	return (
-		<dialog
-			ref={dialogRef}
-			className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-transparent"
-			style={{
-				backgroundColor: "transparent",
-			}}
-			onClick={handleDialogClick}
-			onKeyDown={handleDialogKeyDown}
-			aria-labelledby={title ? "modal-title" : undefined}
-		>
-			<div
+	return createPortal(
+		<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+			<button
+				type="button"
+				className="absolute inset-0 bg-black/50"
+				aria-label="Close modal"
+				onClick={onClose}
+			/>
+			<dialog
+				open
 				className={`relative w-full ${maxWidthClasses[maxWidth]} rounded-xl shadow-2xl border ${darkMode ? "bg-gray-800 text-white border-gray-700" : "bg-white text-gray-900 border-gray-200"}`}
-				onClick={(e) => e.stopPropagation()}
-				onKeyDown={(e) => e.stopPropagation()}
+				style={{ margin: 0, padding: 0, border: "none" }}
+				aria-modal="true"
+				aria-labelledby={title ? "modal-title" : undefined}
 			>
 				{(title || showCloseButton) && (
 					<div
@@ -108,7 +101,8 @@ export default function Modal({
 					</div>
 				)}
 				<div className="px-6 py-4">{children}</div>
-			</div>
-		</dialog>
+			</dialog>
+		</div>,
+		document.body,
 	);
 }

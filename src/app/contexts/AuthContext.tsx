@@ -1,6 +1,7 @@
 "use client";
 import logger from "@/lib/utils/logging/logger";
 
+import { resetTeamsClientCache } from "@/lib/query/resetTeamsClientCache";
 import { supabase } from "@/lib/supabase";
 import type { Database } from "@/lib/types/database";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
@@ -469,9 +470,31 @@ export function AuthProvider({
 	const [user, setUser] = useState<User | null>(initialUser ?? null);
 	const [loading, setLoading] = useState<boolean>(true);
 	const hasSyncedRef = useRef<string | null>(null);
+	const lastAuthUserIdRef = useRef<string | null>(initialUser?.id ?? null);
 
 	useEffect(() => {
 		let isMounted = true;
+
+		const applyIncomingUser = (incoming: User | null) => {
+			const prevId = lastAuthUserIdRef.current;
+			const nextId = incoming?.id ?? null;
+
+			if (prevId !== nextId) {
+				hasSyncedRef.current = null;
+				resetTeamsClientCache().catch((error) => {
+					logger.warn("Failed to reset teams cache on auth change:", error);
+				});
+			}
+
+			lastAuthUserIdRef.current = nextId;
+			setUser((prev) => {
+				const prevStateId = prev?.id ?? null;
+				if (prevStateId === nextId) {
+					return prev;
+				}
+				return incoming;
+			});
+		};
 
 		const init = async () => {
 			try {
@@ -480,14 +503,7 @@ export function AuthProvider({
 					return;
 				}
 				const incoming = data.session?.user ?? null;
-				setUser((prev) => {
-					const prevId = prev?.id ?? null;
-					const nextId = incoming?.id ?? null;
-					if (prevId === nextId) {
-						return prev;
-					}
-					return incoming;
-				});
+				applyIncomingUser(incoming);
 			} catch {
 				// ignore
 			} finally {
@@ -505,14 +521,7 @@ export function AuthProvider({
 					return;
 				}
 				const incoming = session?.user ?? null;
-				setUser((prev) => {
-					const prevId = prev?.id ?? null;
-					const nextId = incoming?.id ?? null;
-					if (prevId === nextId) {
-						return prev;
-					}
-					return incoming;
-				});
+				applyIncomingUser(incoming);
 			},
 		);
 
@@ -523,14 +532,7 @@ export function AuthProvider({
 					return;
 				}
 				const incoming = data.session?.user ?? null;
-				setUser((prev) => {
-					const prevId = prev?.id ?? null;
-					const nextId = incoming?.id ?? null;
-					if (prevId === nextId) {
-						return prev;
-					}
-					return incoming;
-				});
+				applyIncomingUser(incoming);
 			} catch {
 				/* noop */
 			}

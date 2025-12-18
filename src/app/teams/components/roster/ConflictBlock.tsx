@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronRight, RotateCcw } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, RotateCcw } from "lucide-react";
 import type React from "react";
 import EventInput from "./EventInput";
 import type { ConflictBlock as ConflictBlockType } from "./rosterUtils";
@@ -11,14 +11,15 @@ interface ConflictBlockProps {
 	group: ConflictBlockType;
 	roster: Record<string, string[]>;
 	isCaptain: boolean;
-	removedEvents: Set<string>;
 	collapsedGroups: Set<string>;
 	isLastGroup: boolean;
 	onToggleGroupCollapse: (groupLabel: string) => void;
 	onUpdateRoster: (eventName: string, index: number, value: string) => void;
 	onCreateAssignment: (eventName: string) => void;
 	onRemoveEvent: (eventName: string, conflictBlock: string) => void;
-	onRestoreEvents: (conflictBlock: string) => void;
+	onResetBlock: (conflictBlock: string) => void;
+	onAddEvent: (conflictBlock: string) => void;
+	showReset: boolean;
 }
 
 export default function ConflictBlock({
@@ -26,14 +27,15 @@ export default function ConflictBlock({
 	group,
 	roster,
 	isCaptain,
-	removedEvents,
 	collapsedGroups,
 	isLastGroup,
 	onToggleGroupCollapse,
 	onUpdateRoster,
 	onCreateAssignment,
 	onRemoveEvent,
-	onRestoreEvents,
+	onResetBlock,
+	onAddEvent,
+	showReset,
 }: ConflictBlockProps) {
 	// Removed verbose logging - not needed for business logic
 
@@ -59,33 +61,16 @@ export default function ConflictBlock({
 			<div
 				className={`rounded-lg border-2 p-4 lg:col-span-2 ${colors.bg} ${colors.border}`}
 			>
-				<button
-					type="button"
-					className={
-						"flex items-center justify-between mb-4 cursor-pointer md:cursor-default w-full text-left"
-					}
-					onClick={handleGroupClick}
-					onKeyDown={handleKeyDown}
-				>
-					<h3 className={`text-lg font-semibold ${colors.text}`}>
-						{group.label}
-					</h3>
-					<div className="flex items-center gap-2">
-						{isCaptain &&
-							group.events.some((evt) => removedEvents.has(evt)) && (
-								<button
-									type="button"
-									onClick={(e) => {
-										e.stopPropagation();
-										onRestoreEvents(group.label);
-									}}
-									className="flex items-center gap-1 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors"
-									title="Restore removed events"
-								>
-									<RotateCcw className="w-3 h-3" />
-									Reset
-								</button>
-							)}
+				<div className="flex items-center justify-between mb-4">
+					<button
+						type="button"
+						className="flex items-center gap-2 cursor-pointer md:cursor-default text-left"
+						onClick={handleGroupClick}
+						onKeyDown={handleKeyDown}
+					>
+						<h3 className={`text-lg font-semibold ${colors.text}`}>
+							{group.label}
+						</h3>
 						<div className="md:hidden">
 							{isCollapsed ? (
 								<ChevronRight className="w-5 h-5 text-gray-400" />
@@ -93,8 +78,38 @@ export default function ConflictBlock({
 								<ChevronDown className="w-5 h-5 text-gray-400" />
 							)}
 						</div>
+					</button>
+					<div className="flex items-center gap-2">
+						{isCaptain && (
+							<>
+								<button
+									type="button"
+									onClick={(e) => {
+										e.stopPropagation();
+										onAddEvent(group.label);
+									}}
+									className="p-1.5 rounded bg-white/70 hover:bg-white text-gray-700 transition-colors"
+									title="Add event"
+								>
+									<Plus className="w-4 h-4" />
+								</button>
+								{showReset && (
+									<button
+										type="button"
+										onClick={(e) => {
+											e.stopPropagation();
+											onResetBlock(group.label);
+										}}
+										className="p-1.5 rounded bg-white/70 hover:bg-white text-gray-700 transition-colors"
+										title="Reset block to default events"
+									>
+										<RotateCcw className="w-4 h-4" />
+									</button>
+								)}
+							</>
+						)}
 					</div>
-				</button>
+				</div>
 				<div
 					className={`grid grid-cols-1 lg:grid-cols-2 gap-6 ${isCollapsed ? "hidden md:grid" : ""}`}
 				>
@@ -108,7 +123,6 @@ export default function ConflictBlock({
 									eventName={evt}
 									roster={roster}
 									isCaptain={isCaptain}
-									isRemoved={removedEvents.has(evt)}
 									colorKey={group.colorKey}
 									colors={colors}
 									onUpdateRoster={onUpdateRoster}
@@ -128,7 +142,6 @@ export default function ConflictBlock({
 									eventName={evt}
 									roster={roster}
 									isCaptain={isCaptain}
-									isRemoved={removedEvents.has(evt)}
 									colorKey={group.colorKey}
 									colors={colors}
 									onUpdateRoster={onUpdateRoster}
@@ -145,32 +158,16 @@ export default function ConflictBlock({
 
 	return (
 		<div className={`rounded-lg border-2 p-4 ${colors.bg} ${colors.border}`}>
-			<button
-				type="button"
-				className={
-					"flex items-center justify-between mb-4 cursor-pointer md:cursor-default w-full text-left"
-				}
-				onClick={handleGroupClick}
-				onKeyDown={handleKeyDown}
-			>
-				<h3 className={`text-lg font-semibold ${colors.text}`}>
-					{group.label}
-				</h3>
-				<div className="flex items-center gap-2">
-					{isCaptain && group.events.some((evt) => removedEvents.has(evt)) && (
-						<button
-							type="button"
-							onClick={(e) => {
-								e.stopPropagation();
-								onRestoreEvents(group.label);
-							}}
-							className="flex items-center gap-1 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors"
-							title="Restore removed events"
-						>
-							<RotateCcw className="w-3 h-3" />
-							Reset
-						</button>
-					)}
+			<div className="flex items-center justify-between mb-4">
+				<button
+					type="button"
+					className="flex items-center gap-2 cursor-pointer md:cursor-default text-left"
+					onClick={handleGroupClick}
+					onKeyDown={handleKeyDown}
+				>
+					<h3 className={`text-lg font-semibold ${colors.text}`}>
+						{group.label}
+					</h3>
 					<div className="md:hidden">
 						{isCollapsed ? (
 							<ChevronRight className="w-5 h-5 text-gray-400" />
@@ -178,8 +175,38 @@ export default function ConflictBlock({
 							<ChevronDown className="w-5 h-5 text-gray-400" />
 						)}
 					</div>
+				</button>
+				<div className="flex items-center gap-2">
+					{isCaptain && (
+						<>
+							<button
+								type="button"
+								onClick={(e) => {
+									e.stopPropagation();
+									onAddEvent(group.label);
+								}}
+								className="p-1.5 rounded bg-white/70 hover:bg-white text-gray-700 transition-colors"
+								title="Add event"
+							>
+								<Plus className="w-4 h-4" />
+							</button>
+							{showReset && (
+								<button
+									type="button"
+									onClick={(e) => {
+										e.stopPropagation();
+										onResetBlock(group.label);
+									}}
+									className="p-1.5 rounded bg-white/70 hover:bg-white text-gray-700 transition-colors"
+									title="Reset block to default events"
+								>
+									<RotateCcw className="w-4 h-4" />
+								</button>
+							)}
+						</>
+					)}
 				</div>
-			</button>
+			</div>
 			<div className={`space-y-3 ${isCollapsed ? "hidden md:block" : ""}`}>
 				{group.events.map((evt) => (
 					<EventInput
@@ -188,7 +215,6 @@ export default function ConflictBlock({
 						eventName={evt}
 						roster={roster}
 						isCaptain={isCaptain}
-						isRemoved={removedEvents.has(evt)}
 						colorKey={group.colorKey}
 						colors={colors}
 						onUpdateRoster={onUpdateRoster}

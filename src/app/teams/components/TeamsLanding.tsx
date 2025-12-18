@@ -6,10 +6,14 @@ import { motion } from "framer-motion";
 import { Calendar, Settings, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import LinkInviteModal from "./LinkInviteModal";
+import { toast } from "react-toastify";
+import NotImplemented from "./NotImplemented";
 import { TeamActionSection } from "./TeamActionSection";
 import TeamCalendar from "./TeamCalendar";
 import { TeamCard } from "./TeamCard";
+import TeamInvitationModal, {
+	type TeamInvitationModalInvite,
+} from "./TeamInvitationModal";
 import TeamLayout from "./TeamLayout";
 
 interface Team {
@@ -48,6 +52,9 @@ export default function TeamsLanding({
 		"home",
 	);
 	const [showLinkInviteModal, setShowLinkInviteModal] = useState(false);
+	const acceptLinkInvite = trpc.teams.acceptLinkInvite.useMutation();
+	const declineLinkInvite = trpc.teams.declineLinkInvite.useMutation();
+	const utils = trpc.useUtils();
 
 	// Fetch pending link invitations
 	const { data: linkInvitesData } = trpc.teams.pendingLinkInvites.useQuery(
@@ -367,39 +374,43 @@ export default function TeamsLanding({
 			)}
 
 			{activeTab === "settings" && (
-				<div className="p-8">
-					<div className="max-w-4xl mx-auto">
-						<h2
-							className={`text-2xl font-bold mb-6 ${darkMode ? "text-white" : "text-gray-900"}`}
-						>
-							Settings
-						</h2>
-						<div
-							className={`p-8 text-center rounded-lg ${darkMode ? "bg-gray-800" : "bg-gray-50"}`}
-						>
-							<Settings
-								className={`w-16 h-16 mx-auto mb-4 ${darkMode ? "text-gray-600" : "text-gray-400"}`}
-							/>
-							<h3
-								className={`text-lg font-semibold mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}
-							>
-								Settings
-							</h3>
-							<p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-								Team and account settings will appear here.
-							</p>
-						</div>
-					</div>
-				</div>
+				<NotImplemented
+					title="Under Construction"
+					description="We're currently building out the team settings page. Check back soon for management features!"
+				/>
 			)}
 
 			{/* Link Invite Modal */}
 			{showLinkInviteModal &&
 				linkInvitesData?.linkInvites &&
 				linkInvitesData.linkInvites.length > 0 && (
-					<LinkInviteModal
-						linkInvites={linkInvitesData.linkInvites}
+					<TeamInvitationModal
+						invites={linkInvitesData.linkInvites.map(
+							(invite): TeamInvitationModalInvite => ({
+								id: invite.id,
+								teamSlug: invite.slug,
+								teamName: invite.teamName,
+								school: invite.school,
+								division: invite.division,
+								rosterDisplayName: invite.rosterDisplayName,
+							}),
+						)}
 						onClose={() => setShowLinkInviteModal(false)}
+						onAccept={async (invite) => {
+							await acceptLinkInvite.mutateAsync({ linkInviteId: invite.id });
+							toast.success("Joined team");
+							await Promise.all([
+								utils.teams.pendingLinkInvites.invalidate(),
+								utils.teams.listUserTeams.invalidate(),
+							]);
+							setShowLinkInviteModal(false);
+						}}
+						onDecline={async (invite) => {
+							await declineLinkInvite.mutateAsync({ linkInviteId: invite.id });
+							toast.info("Invite dismissed");
+							await utils.teams.pendingLinkInvites.invalidate();
+							setShowLinkInviteModal(false);
+						}}
 					/>
 				)}
 		</TeamLayout>

@@ -202,7 +202,7 @@ export async function acceptPendingInvite(teamSlug: string, userId: string) {
 				.where(eq(teamsInvitation.id, invite.id));
 		}
 
-		await bumpTeamVersion(team.id);
+		await bumpTeamVersion(team.id, tx);
 	});
 
 	return { slug: team.slug };
@@ -270,7 +270,7 @@ export async function declineInvite(teamSlug: string, userId: string) {
 				),
 			);
 
-		await bumpTeamVersion(team.id);
+		await bumpTeamVersion(team.id, tx);
 	});
 
 	return { ok: true };
@@ -351,7 +351,7 @@ export async function createInvitation(input: {
 			invitedBy: input.invitedBy,
 		});
 
-		await bumpTeamVersion(team.id);
+		await bumpTeamVersion(team.id, tx);
 	});
 
 	return {
@@ -406,7 +406,7 @@ export async function promoteToRole(input: {
 				),
 			);
 
-		await bumpTeamVersion(team.id);
+		await bumpTeamVersion(team.id, tx);
 	});
 
 	return { ok: true, newRole: input.newRole };

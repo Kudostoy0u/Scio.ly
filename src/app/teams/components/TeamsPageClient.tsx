@@ -7,91 +7,16 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import CreateTeamModal from "./CreateTeamModal";
 import JoinTeamModal from "./JoinTeamModal";
+import TeamInvitationModal, {
+	type TeamInvitationModalInvite,
+} from "./TeamInvitationModal";
 import TeamsLanding from "./TeamsLanding";
-
-function PendingInviteModal({
-	invite,
-	onAccept,
-	onDecline,
-	onClose,
-}: {
-	invite: {
-		slug: string;
-		name: string;
-		school: string;
-		division: string;
-		role: "captain" | "member";
-	};
-	onAccept: () => void;
-	onDecline: () => void;
-	onClose: () => void;
-}) {
-	return (
-		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-			<div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl dark:bg-gray-800">
-				<div className="flex items-start justify-between gap-4">
-					<div>
-						<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-							Join {invite.name || invite.school}
-						</h3>
-						<p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-							We found an invite for your Supabase account to the{" "}
-							{invite.school} ({invite.division}) team.
-						</p>
-					</div>
-					<button
-						type="button"
-						onClick={onClose}
-						className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
-						aria-label="Close invite prompt"
-					>
-						×
-					</button>
-				</div>
-				<div className="mt-4 flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
-					<div>
-						<div className="font-semibold">{invite.school}</div>
-						<div className="text-xs text-gray-500 dark:text-gray-400">
-							Role: {invite.role === "captain" ? "Captain" : "Member"}
-						</div>
-					</div>
-					<span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800 dark:bg-blue-800 dark:text-blue-100">
-						Invite
-					</span>
-				</div>
-				<div className="mt-6 flex justify-end gap-2">
-					<button
-						type="button"
-						onClick={onDecline}
-						className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
-					>
-						Skip
-					</button>
-					<button
-						type="button"
-						onClick={onAccept}
-						className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-					>
-						Join team
-					</button>
-				</div>
-			</div>
-		</div>
-	);
-}
 
 export default function TeamsPageClient() {
 	const { user } = useAuth();
 	const router = useRouter();
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 	const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
-	const [activeInvite, setActiveInvite] = useState<{
-		slug: string;
-		name: string;
-		school: string;
-		division: string;
-		role: "captain" | "member";
-	} | null>(null);
 	const [showInviteModal, setShowInviteModal] = useState(false);
 
 	const utils = trpc.useUtils();
@@ -133,14 +58,11 @@ export default function TeamsPageClient() {
 	});
 
 	useEffect(() => {
-		const nextInvite = pendingInvites?.invites?.[0];
-		if (nextInvite) {
-			setActiveInvite(nextInvite);
+		if (pendingInvites?.invites && pendingInvites.invites.length > 0) {
 			setShowInviteModal(true);
-		} else {
-			setActiveInvite(null);
-			setShowInviteModal(false);
+			return;
 		}
+		setShowInviteModal(false);
 	}, [pendingInvites?.invites]);
 
 	const createTeamMutation = trpc.teams.createTeam.useMutation({
@@ -235,19 +157,31 @@ export default function TeamsPageClient() {
 				onClose={() => setIsCreateModalOpen(false)}
 				onCreateTeam={handleCreateTeam}
 			/>
-			{showInviteModal && activeInvite && (
-				<PendingInviteModal
-					invite={activeInvite}
+			{showInviteModal && pendingInvites?.invites?.length ? (
+				<TeamInvitationModal
+					invites={pendingInvites.invites.map(
+						(invite): TeamInvitationModalInvite => ({
+							id: invite.slug,
+							teamSlug: invite.slug,
+							teamName: invite.name || invite.school,
+							school: invite.school,
+							division: invite.division,
+							role: invite.role,
+						}),
+					)}
 					onClose={() => setShowInviteModal(false)}
-					onDecline={() => {
-						setShowInviteModal(false);
-						declineInviteMutation.mutate({ teamSlug: activeInvite.slug });
+					onAccept={async (invite) => {
+						await acceptInviteMutation.mutateAsync({
+							teamSlug: invite.teamSlug,
+						});
 					}}
-					onAccept={() => {
-						acceptInviteMutation.mutate({ teamSlug: activeInvite.slug });
+					onDecline={async (invite) => {
+						await declineInviteMutation.mutateAsync({
+							teamSlug: invite.teamSlug,
+						});
 					}}
 				/>
-			)}
+			) : null}
 			<JoinTeamModal
 				isOpen={isJoinModalOpen}
 				onClose={() => setIsJoinModalOpen(false)}

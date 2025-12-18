@@ -112,9 +112,10 @@ export default function MobileCalendar({
 			<div
 				className={`${darkMode ? "bg-gray-800" : "bg-gray-50"} grid grid-cols-7`}
 			>
-				{dayNamesShort.map((d, _i) => (
+				{dayNamesShort.map((d, i) => (
 					<div
-						key={d}
+						// biome-ignore lint/suspicious/noArrayIndexKey: Static array
+						key={`${d}-${i}`}
 						className={`p-2 text-center text-xs ${darkMode ? "text-gray-300" : "text-gray-600"}`}
 					>
 						{d}
@@ -203,9 +204,10 @@ export default function MobileCalendar({
 								</span>
 							</div>
 							<div className="mt-1 flex flex-wrap gap-1">
-								{dotTypes.map((t, _i) => (
+								{dotTypes.map((t, i) => (
 									<span
-										key={t}
+										// biome-ignore lint/suspicious/noArrayIndexKey: Order doesn't change
+										key={`${t}-${i}`}
 										className={`w-1.5 h-1.5 rounded-full ${getEventColor(t, darkMode)}`}
 									/>
 								))}

@@ -11,6 +11,7 @@ import { and, eq, or, sql } from "drizzle-orm";
 import {
 	assertCaptainAccess,
 	assertTeamAccess,
+	bumpTeamVersion,
 	ensureSupabaseLink,
 	generateJoinCode,
 	slugifySchool,
@@ -59,6 +60,61 @@ export async function archiveTeam(teamSlug: string, userId: string) {
 		await tx.delete(teamsTeam).where(eq(teamsTeam.id, team.id));
 	});
 	return { ok: true, deleted: true };
+}
+
+export async function kickMemberFromTeam(input: {
+	teamSlug: string;
+	userId: string;
+	actorId: string;
+}) {
+	if (input.userId === input.actorId) {
+		throw new Error("You cannot remove yourself from the team");
+	}
+
+	const { team } = await assertCaptainAccess(input.teamSlug, input.actorId);
+
+	const [targetMembership] = await dbPg
+		.select({ role: teamsMembership.role })
+		.from(teamsMembership)
+		.where(
+			and(
+				eq(teamsMembership.teamId, team.id),
+				eq(teamsMembership.userId, input.userId),
+			),
+		)
+		.limit(1);
+
+	if (!targetMembership) {
+		return { ok: true };
+	}
+
+	if ((targetMembership.role as string) === "captain") {
+		throw new Error("You cannot remove a captain from the team");
+	}
+
+	await dbPg.transaction(async (tx) => {
+		await tx
+			.delete(teamsRoster)
+			.where(
+				and(
+					eq(teamsRoster.teamId, team.id),
+					eq(teamsRoster.userId, input.userId),
+				),
+			);
+
+		await tx
+			.delete(teamsMembership)
+			.where(
+				and(
+					eq(teamsMembership.teamId, team.id),
+					eq(teamsMembership.userId, input.userId),
+				),
+			);
+
+		await bumpTeamVersion(team.id, tx);
+	});
+
+	return { ok: true };
 }
 
 export async function listTeamsForUser(userId: string) {

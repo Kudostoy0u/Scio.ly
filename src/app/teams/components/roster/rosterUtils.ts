@@ -168,6 +168,9 @@ export function detectConflicts(
 
 	// Check each conflict block for conflicts
 	for (const group of groups) {
+		if (group.label === "Conflict Block 7") {
+			continue;
+		}
 		const groupEvents = group.events;
 		const personToEvents: Record<string, string[]> = {};
 
@@ -220,13 +223,11 @@ export function shouldShowAssignOption(
 	isCaptain: boolean,
 	colorKey: string,
 	eventName: string,
-	isRemoved: boolean,
 ): boolean {
 	return (
 		isCaptain &&
 		colorKey !== "orange" &&
 		eventName !== "Engineering CAD" &&
-		eventName !== "Experimental Design" &&
-		!isRemoved
+		eventName !== "Experimental Design"
 	);
 }

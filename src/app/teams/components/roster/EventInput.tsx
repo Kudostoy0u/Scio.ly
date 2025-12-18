@@ -6,7 +6,6 @@ interface EventInputProps {
 	eventName: string;
 	roster: Record<string, string[]>;
 	isCaptain: boolean;
-	isRemoved: boolean;
 	colorKey: string;
 	colors: {
 		bg: string;
@@ -24,7 +23,6 @@ export default function EventInput({
 	eventName,
 	roster,
 	isCaptain,
-	isRemoved,
 	colorKey,
 	colors,
 	onUpdateRoster,
@@ -45,7 +43,6 @@ export default function EventInput({
 		isCaptain,
 		colorKey,
 		eventName,
-		isRemoved,
 	);
 
 	return (
@@ -53,9 +50,7 @@ export default function EventInput({
 			<div
 				className={`text-sm font-medium ${colors.text} flex items-center gap-2`}
 			>
-				<span className={isRemoved ? "line-through opacity-50" : ""}>
-					{eventName}
-				</span>
+				<span>{eventName}</span>
 				{shouldShowAssign && (
 					<button
 						type="button"
@@ -65,7 +60,7 @@ export default function EventInput({
 						Assign?
 					</button>
 				)}
-				{isCaptain && !isRemoved && (
+				{isCaptain && (
 					<button
 						type="button"
 						onClick={() => onRemoveEvent(eventName, conflictBlock)}
@@ -79,31 +74,20 @@ export default function EventInput({
 				{[...new Array(max)].map((_, i) => (
 					<input
 						key={i.toString()}
-						value={isRemoved ? "" : slots[i] || ""}
+						value={slots[i] || ""}
 						onChange={(e) => {
-							if (isRemoved) {
-								return;
-							}
 							onUpdateRoster(eventName, i, e.target.value);
 						}}
-						disabled={!isCaptain || isRemoved}
+						disabled={!isCaptain}
 						placeholder="Name"
 						className={`w-full rounded px-2 py-1 text-sm ${
-							isRemoved
+							isCaptain
 								? darkMode
-									? "bg-gray-800 text-gray-500 border border-gray-600 cursor-not-allowed opacity-50"
-									: "bg-gray-100 text-gray-500 border border-gray-300 cursor-not-allowed opacity-50"
-								: isCaptain
-									? (
-											darkMode
-												? "bg-gray-900 text-white border border-gray-700"
-												: "bg-white text-gray-900 border border-gray-300"
-										)
-									: (
-											darkMode
-												? "bg-gray-800 text-gray-500 border border-gray-600 cursor-not-allowed"
-												: "bg-gray-100 text-gray-500 border border-gray-300 cursor-not-allowed"
-										)
+									? "bg-gray-900 text-white border border-gray-700"
+									: "bg-white text-gray-900 border border-gray-300"
+								: darkMode
+									? "bg-gray-800 text-gray-500 border border-gray-600 cursor-not-allowed"
+									: "bg-gray-100 text-gray-500 border border-gray-300 cursor-not-allowed"
 						}`}
 					/>
 				))}

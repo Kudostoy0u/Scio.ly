@@ -215,8 +215,13 @@ export function buildInviteMatchFilters(
 	return or(...filters);
 }
 
-export async function bumpTeamVersion(teamId: string) {
-	await dbPg
+type TeamVersionDb = Pick<typeof dbPg, "update">;
+
+export async function bumpTeamVersion(
+	teamId: string,
+	db: TeamVersionDb = dbPg,
+) {
+	await db
 		.update(teamsTeam)
 		.set({
 			updatedAt: sql`now()`,

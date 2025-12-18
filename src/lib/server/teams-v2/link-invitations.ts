@@ -200,7 +200,7 @@ export async function acceptLinkInvitation(
 			.set({ status: "accepted", updatedAt: new Date().toISOString() })
 			.where(eq(teamsLinkInvitation.id, linkInviteId));
 
-		await bumpTeamVersion(linkInvite.teamId);
+		await bumpTeamVersion(linkInvite.teamId, tx);
 	});
 
 	return { ok: true };
@@ -257,7 +257,7 @@ export async function declineLinkInvitation(
 			.set({ status: "declined", updatedAt: new Date().toISOString() })
 			.where(eq(teamsLinkInvitation.id, linkInviteId));
 
-		await bumpTeamVersion(linkInvite.teamId);
+		await bumpTeamVersion(linkInvite.teamId, tx);
 	});
 
 	return { ok: true };
@@ -295,7 +295,7 @@ export async function cancelLinkInvitation(input: {
 			.set({ status: "cancelled", updatedAt: new Date().toISOString() })
 			.where(eq(teamsLinkInvitation.id, linkInvite.id));
 
-		await bumpTeamVersion(linkInvite.teamId);
+		await bumpTeamVersion(linkInvite.teamId, tx);
 	});
 
 	return { ok: true };

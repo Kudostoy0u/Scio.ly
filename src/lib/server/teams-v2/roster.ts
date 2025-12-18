@@ -66,6 +66,15 @@ export async function replaceRosterEntries(
 		.where(eq(teamsRoster.teamId, teamId));
 
 	const conflicts = new Set<string>();
+	let insertedEntries: Array<{
+		id: string;
+		teamId: string;
+		subteamId: string;
+		eventName: string;
+		slotIndex: number;
+		displayName: string;
+		userId: string | null;
+	}> = [];
 
 	await dbPg.transaction(async (tx) => {
 		await tx
@@ -126,10 +135,11 @@ export async function replaceRosterEntries(
 			return;
 		}
 
+		insertedEntries = resolvedEntries;
 		await tx.insert(teamsRoster).values(resolvedEntries);
 	});
 
-	return { conflicts: Array.from(conflicts) };
+	return { conflicts: Array.from(conflicts), rosterEntries: insertedEntries };
 }
 
 export async function upsertRosterEntry(

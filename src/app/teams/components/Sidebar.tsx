@@ -1,15 +1,7 @@
 "use client";
 
 import { useTheme } from "@/app/contexts/ThemeContext";
-import {
-	Archive,
-	Calendar,
-	ChevronRight,
-	Home,
-	Settings,
-	Users,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Calendar, ChevronRight, Home, Settings, Users } from "lucide-react";
 
 interface Team {
 	id: string;
@@ -37,7 +29,6 @@ export default function Sidebar({
 	onNavigateToMainDashboard,
 }: SidebarProps) {
 	const { darkMode } = useTheme();
-	const router = useRouter();
 
 	const sidebarItems = [
 		{
@@ -53,10 +44,6 @@ export default function Sidebar({
 			tab: "settings" as const,
 		},
 	];
-
-	const handleArchivedClick = () => {
-		router.push("/teams/archived");
-	};
 
 	return (
 		<div
@@ -115,23 +102,6 @@ export default function Sidebar({
 							{item.active && <ChevronRight className="w-4 h-4" />}
 						</button>
 					))}
-
-					{/* Archived Teams Button */}
-					<button
-						type="button"
-						onClick={handleArchivedClick}
-						className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group ${
-							darkMode
-								? "text-gray-300 hover:bg-gray-800 hover:text-white"
-								: "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-						}`}
-					>
-						<div className="flex items-center space-x-3">
-							<Archive className="w-4 h-4" />
-							<span>Archived</span>
-						</div>
-						<ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-					</button>
 
 					{/* Teams Section - Right below navigation items */}
 					{userTeams.length > 0 && (

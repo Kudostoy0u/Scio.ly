@@ -23,13 +23,15 @@ export function processMembers(
 		username: person.username || null,
 		role: person.role,
 		joinedAt: person.joinedAt || null,
-		subteam: {
-			id: person.subteamId || "",
-			name: person.subteam?.name || "Unknown",
-			description: person.subteam?.description || "",
-		},
+		subteam: person.subteamId
+			? {
+					id: person.subteamId,
+					name: person.subteam?.name || "Unknown",
+					description: person.subteam?.description || "",
+				}
+			: undefined,
 		subteams: [],
-		subteamId: person.subteamId || "",
+		subteamId: person.subteamId || undefined,
 		events: person.events || [],
 		eventCount: person.events?.length || 0,
 		avatar: undefined,

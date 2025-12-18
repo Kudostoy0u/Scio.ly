@@ -13,6 +13,7 @@ import {
 	getTeamFullBySlug,
 	getTeamMetaBySlug,
 	joinTeamByCode,
+	kickMemberFromTeam,
 	leaveTeam,
 	listPendingInvitesForUser,
 	listPendingLinkInvitesForUser,
@@ -205,6 +206,28 @@ export const teamsRouter = router({
 			return leaveTeam(input.teamSlug, ctx.user.id);
 		}),
 
+	kickMember: protectedProcedure
+		.input(z.object({ teamSlug: z.string().min(1), userId: z.string().uuid() }))
+		.mutation(async ({ ctx, input }) => {
+			try {
+				console.log("[TRPC kickMember] Request:", {
+					teamSlug: input.teamSlug,
+					userId: input.userId,
+					actorId: ctx.user.id,
+				});
+				const result = await kickMemberFromTeam({
+					teamSlug: input.teamSlug,
+					userId: input.userId,
+					actorId: ctx.user.id,
+				});
+				console.log("[TRPC kickMember] Success:", result);
+				return result;
+			} catch (error) {
+				console.error("[TRPC kickMember] Error:", error);
+				throw error;
+			}
+		}),
+
 	archiveTeam: protectedProcedure
 		.input(z.object({ teamSlug: z.string().min(1) }))
 		.mutation(async ({ ctx, input }) => {
@@ -220,19 +243,34 @@ export const teamsRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
-			const result = await replaceRosterEntries(
-				meta.teamId,
-				input.subteamId,
-				input.entries.map((entry) => ({
-					eventName: entry.eventName,
-					slotIndex: entry.slotIndex ?? 0,
-					displayName: entry.displayName,
-					userId: entry.userId,
-				})),
-				ctx.user.id,
-			);
-			return { ok: true, updatedAt: new Date().toISOString(), ...result };
+			try {
+				console.log("[TRPC saveRoster] Request:", {
+					teamSlug: input.teamSlug,
+					subteamId: input.subteamId,
+					entryCount: input.entries.length,
+					userId: ctx.user.id,
+				});
+				const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
+				const result = await replaceRosterEntries(
+					meta.teamId,
+					input.subteamId,
+					input.entries.map((entry) => ({
+						eventName: entry.eventName,
+						slotIndex: entry.slotIndex ?? 0,
+						displayName: entry.displayName,
+						userId: entry.userId,
+					})),
+					ctx.user.id,
+				);
+				console.log("[TRPC saveRoster] Success:", {
+					conflicts: result.conflicts?.length ?? 0,
+					rosterEntries: result.rosterEntries?.length ?? 0,
+				});
+				return { ok: true, updatedAt: new Date().toISOString(), ...result };
+			} catch (error) {
+				console.error("[TRPC saveRoster] Error:", error);
+				throw error;
+			}
 		}),
 
 	upsertRosterEntry: protectedProcedure
