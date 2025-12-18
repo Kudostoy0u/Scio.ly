@@ -423,7 +423,7 @@ describe("Team Authentication v2", () => {
 			expect(result).toBe(true);
 		});
 
-		it("should grant leadership to co-captain", async () => {
+		it("should grant leadership to captain", async () => {
 			const mockWhereCreator = vi.fn().mockResolvedValue([]);
 			const mockFromCreator = vi
 				.fn()
@@ -436,7 +436,7 @@ describe("Team Authentication v2", () => {
 				{
 					subteamId: mockSubteamId,
 					teamId: mockSubteamId,
-					role: "co_captain",
+					role: "captain",
 				},
 			]);
 			const mockInnerJoinMembership = vi

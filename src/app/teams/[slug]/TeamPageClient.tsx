@@ -155,7 +155,8 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 		);
 	}
 
-	const isCaptain = teamData.meta.userRole === "captain";
+	const isAdmin = teamData.meta.userRole === "admin";
+	const isCaptain = teamData.meta.userRole === "captain" || isAdmin;
 
 	const navigateToTab = (tab: TabName) => {
 		if (typeof window !== "undefined") {
@@ -333,7 +334,7 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 										>
 											<LogOut className="h-5 w-5" />
 										</button>
-										{isCaptain && (
+										{isAdmin && (
 											<button
 												type="button"
 												onClick={() => setConfirmAction("delete")}
@@ -416,6 +417,7 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 										slug: teamData.meta.slug,
 									}}
 									isCaptain={isCaptain}
+									isAdmin={isAdmin}
 									activeSubteamId={activeSubteamId}
 									subteams={
 										subteams?.map((s) => ({

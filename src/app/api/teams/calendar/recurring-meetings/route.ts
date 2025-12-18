@@ -368,7 +368,7 @@ async function resolveTeamAndValidateMembership(
 	}
 
 	const isMember = membershipResult.some((m) =>
-		["member", "captain", "co_captain"].includes(m.role),
+		["member", "captain"].includes(m.role),
 	);
 
 	if (!isMember && meetingType === "team") {

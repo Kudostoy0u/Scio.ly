@@ -27,7 +27,7 @@ interface Team {
 		id: string;
 		name: string;
 		email: string;
-		role: "captain" | "member";
+		role: "admin" | "captain" | "member";
 	}>;
 }
 
@@ -76,7 +76,9 @@ export default function TeamsLanding({
 
 	// Check if user is a captain of any team
 	const isCaptain = userTeams.some((team) =>
-		team.members.some((member) => member.role === "captain"),
+		team.members.some(
+			(member) => member.role === "captain" || member.role === "admin",
+		),
 	);
 
 	const handleTabChange = (tab: "home" | "upcoming" | "settings") => {

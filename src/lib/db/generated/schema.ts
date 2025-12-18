@@ -768,7 +768,7 @@ export const newTeamInvitations = cockroachTable(
 		),
 		check(
 			"new_team_invitations_check_role",
-			sql`CHECK (("role" IN ('captain'::STRING, 'co_captain'::STRING, 'member'::STRING, 'observer'::STRING)))`,
+			sql`CHECK (("role" IN ('captain'::STRING, 'member'::STRING, 'observer'::STRING)))`,
 		),
 	],
 );
@@ -850,7 +850,7 @@ export const newTeamMemberships = cockroachTable(
 		),
 		check(
 			"new_team_memberships_check_role",
-			sql`CHECK (("role" IN ('captain'::STRING, 'co_captain'::STRING, 'member'::STRING, 'observer'::STRING)))`,
+			sql`CHECK (("role" IN ('captain'::STRING, 'member'::STRING, 'observer'::STRING)))`,
 		),
 		check(
 			"new_team_memberships_status_check",

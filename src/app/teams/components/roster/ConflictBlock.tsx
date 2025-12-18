@@ -88,10 +88,12 @@ export default function ConflictBlock({
 										e.stopPropagation();
 										onAddEvent(group.label);
 									}}
-									className="p-1.5 rounded bg-white/70 hover:bg-white text-gray-700 transition-colors"
+									className={`p-1.5 rounded border-2 bg-transparent transition-colors ${colors.border} hover:bg-black/5 dark:hover:bg-white/5`}
 									title="Add event"
 								>
-									<Plus className="w-4 h-4" />
+									<Plus
+										className={`w-4 h-4 ${colors.border.replace("border-", "text-")}`}
+									/>
 								</button>
 								{showReset && (
 									<button
@@ -100,10 +102,12 @@ export default function ConflictBlock({
 											e.stopPropagation();
 											onResetBlock(group.label);
 										}}
-										className="p-1.5 rounded bg-white/70 hover:bg-white text-gray-700 transition-colors"
+										className={`p-1.5 rounded border-2 bg-transparent transition-colors ${colors.border} hover:bg-black/5 dark:hover:bg-white/5`}
 										title="Reset block to default events"
 									>
-										<RotateCcw className="w-4 h-4" />
+										<RotateCcw
+											className={`w-4 h-4 ${colors.border.replace("border-", "text-")}`}
+										/>
 									</button>
 								)}
 							</>
@@ -185,10 +189,12 @@ export default function ConflictBlock({
 									e.stopPropagation();
 									onAddEvent(group.label);
 								}}
-								className="p-1.5 rounded bg-white/70 hover:bg-white text-gray-700 transition-colors"
+								className={`p-1.5 rounded border-2 bg-transparent transition-colors ${colors.border} hover:bg-black/5 dark:hover:bg-white/5`}
 								title="Add event"
 							>
-								<Plus className="w-4 h-4" />
+								<Plus
+									className={`w-4 h-4 ${colors.border.replace("border-", "text-")}`}
+								/>
 							</button>
 							{showReset && (
 								<button
@@ -197,10 +203,12 @@ export default function ConflictBlock({
 										e.stopPropagation();
 										onResetBlock(group.label);
 									}}
-									className="p-1.5 rounded bg-white/70 hover:bg-white text-gray-700 transition-colors"
+									className={`p-1.5 rounded border-2 bg-transparent transition-colors ${colors.border} hover:bg-black/5 dark:hover:bg-white/5`}
 									title="Reset block to default events"
 								>
-									<RotateCcw className="w-4 h-4" />
+									<RotateCcw
+										className={`w-4 h-4 ${colors.border.replace("border-", "text-")}`}
+									/>
 								</button>
 							)}
 						</>

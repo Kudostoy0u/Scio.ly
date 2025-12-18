@@ -282,9 +282,9 @@ export async function POST(
 		if (!userRole) {
 			return NextResponse.json({ error: "Not a team member" }, { status: 403 });
 		}
-		if (!["captain", "co_captain"].includes(userRole)) {
+		if (userRole !== "captain") {
 			return NextResponse.json(
-				{ error: "Only captains and co-captains can post to the stream" },
+				{ error: "Only captains can post to the stream" },
 				{ status: 403 },
 			);
 		}
@@ -454,9 +454,9 @@ export async function PUT(
 		if (!userRole) {
 			return NextResponse.json({ error: "Not a team member" }, { status: 403 });
 		}
-		if (!["captain", "co_captain"].includes(userRole)) {
+		if (userRole !== "captain") {
 			return NextResponse.json(
-				{ error: "Only captains and co-captains can edit posts" },
+				{ error: "Only captains can edit posts" },
 				{ status: 403 },
 			);
 		}
@@ -599,9 +599,9 @@ export async function DELETE(
 		if (!userRole) {
 			return NextResponse.json({ error: "Not a team member" }, { status: 403 });
 		}
-		if (!["captain", "co_captain"].includes(userRole)) {
+		if (userRole !== "captain") {
 			return NextResponse.json(
-				{ error: "Only captains and co-captains can delete posts" },
+				{ error: "Only captains can delete posts" },
 				{ status: 403 },
 			);
 		}

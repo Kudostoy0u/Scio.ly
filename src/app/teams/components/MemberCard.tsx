@@ -6,7 +6,15 @@ import {
 	generateDisplayName,
 	needsNamePrompt,
 } from "@/lib/utils/content/displayNameUtils";
-import { AlertTriangle, ArrowUpCircle, Crown, Edit3, X } from "lucide-react";
+import {
+	AlertTriangle,
+	ArrowDownCircle,
+	ArrowUpCircle,
+	Crown,
+	Edit3,
+	UserStar,
+	X,
+} from "lucide-react";
 import type { Member } from "../types";
 import { getDisplayName } from "../utils/displayNameUtils";
 import LinkInvite from "./LinkInvite";
@@ -18,6 +26,7 @@ interface MemberCardProps {
 	member: Member;
 	index: number;
 	isCaptain: boolean;
+	isAdmin: boolean;
 	subteams: Array<{
 		id: string;
 		name: string;
@@ -29,6 +38,8 @@ interface MemberCardProps {
 	selectedMember: Member | null;
 	onNameClick: (member: Member) => void;
 	onPromoteToCaptain: (member: Member) => void;
+	onPromoteToAdmin: (member: Member) => void;
+	onDemoteCaptainToMember: (member: Member) => void;
 	onRemoveMember: (member: Member) => void;
 	onRemoveFromSubteam: (
 		member: Member,
@@ -58,11 +69,14 @@ export default function MemberCard({
 	member,
 	index,
 	isCaptain,
+	isAdmin,
 	subteams,
 	showSubteamDropdown,
 	selectedMember,
 	onNameClick,
 	onPromoteToCaptain,
+	onPromoteToAdmin,
+	onDemoteCaptainToMember,
 	onRemoveMember,
 	onRemoveFromSubteam,
 	onRemoveSelfFromSubteam,
@@ -82,6 +96,42 @@ export default function MemberCard({
 	const { user } = useAuth();
 
 	const isShowingLinkInvite = linkInviteStates[getDisplayName(member)] === true;
+
+	const RoleIcon = ({
+		label,
+		children,
+	}: {
+		label: string;
+		children: React.ReactNode;
+	}) => (
+		<div className="relative group">
+			<span
+				className={`inline-flex items-center justify-center p-1 rounded-md transition-all duration-200 ${
+					darkMode
+						? "hover:bg-gray-700 text-gray-300"
+						: "hover:bg-gray-100 text-gray-600"
+				}`}
+				aria-label={label}
+				title={label}
+			>
+				{children}
+			</span>
+			<div
+				className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${
+					darkMode
+						? "bg-gray-800 text-white border border-gray-700"
+						: "bg-white text-gray-900 border border-gray-200 shadow-lg"
+				}`}
+			>
+				{label}
+				<div
+					className={`absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent ${
+						darkMode ? "border-t-gray-800" : "border-t-white"
+					}`}
+				/>
+			</div>
+		</div>
+	);
 
 	return (
 		<div
@@ -108,7 +158,7 @@ export default function MemberCard({
 					{isCaptain && member.id !== user?.id && (
 						<div className="absolute top-2 right-2 flex items-center space-x-1">
 							{/* Promote to captain button */}
-							{member.role !== "captain" && member.id && (
+							{isAdmin && member.role === "member" && member.id && (
 								<button
 									type="button"
 									onClick={() => onPromoteToCaptain(member)}
@@ -123,8 +173,41 @@ export default function MemberCard({
 								</button>
 							)}
 
+							{/* Demote captain to member */}
+							{isAdmin && member.role === "captain" && member.id && (
+								<button
+									type="button"
+									onClick={() => onDemoteCaptainToMember(member)}
+									className={`p-1 rounded transition-colors ${
+										darkMode
+											? "text-gray-400 hover:text-orange-300 hover:bg-gray-700"
+											: "text-gray-500 hover:text-orange-500 hover:bg-gray-100"
+									}`}
+									title={`Demote ${member.name} to member`}
+								>
+									<ArrowDownCircle className="w-5 h-5" />
+								</button>
+							)}
+
+							{/* Promote captain to admin */}
+							{isAdmin && member.role === "captain" && member.id && (
+								<button
+									type="button"
+									onClick={() => onPromoteToAdmin(member)}
+									className={`p-1 rounded transition-colors ${
+										darkMode
+											? "text-gray-400 hover:text-orange-300 hover:bg-gray-700"
+											: "text-gray-500 hover:text-orange-500 hover:bg-gray-100"
+									}`}
+									title={`Promote ${member.name} to admin`}
+								>
+									<UserStar className="w-5 h-5" />
+								</button>
+							)}
+
 							{/* Remove button */}
-							{member.role !== "captain" && (
+							{(member.role === "member" ||
+								(isAdmin && member.role === "captain")) && (
 								<button
 									type="button"
 									onClick={() => onRemoveMember(member)}
@@ -234,9 +317,15 @@ export default function MemberCard({
 										</button>
 									)}
 								</div>
-								{member.role === "captain" && (
-									<Crown className="w-4 h-4 text-yellow-500 ml-1" />
-								)}
+								{member.role === "admin" ? (
+									<RoleIcon label="Admin">
+										<UserStar className="w-4 h-4 text-orange-400" />
+									</RoleIcon>
+								) : member.role === "captain" ? (
+									<RoleIcon label="Captain">
+										<Crown className="w-4 h-4 text-yellow-500" />
+									</RoleIcon>
+								) : null}
 								{member.conflicts && member.conflicts.length > 0 && (
 									<div className="relative group">
 										<AlertTriangle className="w-4 h-4 text-orange-500" />

@@ -221,7 +221,7 @@ describe("/api/teams/user-teams", () => {
 							id: mockUserId,
 							name: "John Doe",
 							email: "john@example.com",
-							role: "co_captain",
+							role: "captain",
 							joined_at: "2023-01-01T00:00:00.000Z",
 						},
 					],
@@ -257,7 +257,7 @@ describe("/api/teams/user-teams", () => {
 			const body = await response.json();
 			expect(body.teams).toHaveLength(3);
 			expect(body.teams[0].members[0].role).toBe("captain");
-			expect(body.teams[1].members[0].role).toBe("co_captain");
+			expect(body.teams[1].members[0].role).toBe("captain");
 			expect(body.teams[2].members[0].role).toBe("member");
 		});
 

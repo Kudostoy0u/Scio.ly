@@ -65,7 +65,7 @@ async function checkEventPermission(
 			if (
 				membershipResult.length === 0 ||
 				!memberRole ||
-				!["captain", "co_captain"].includes(memberRole)
+				memberRole !== "captain"
 			) {
 				return handleForbiddenError("Insufficient permissions");
 			}

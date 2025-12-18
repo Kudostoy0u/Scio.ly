@@ -313,7 +313,7 @@ CREATE TABLE "new_team_invitations" (
 	"message" string,
 	CONSTRAINT "new_team_invitations_invitation_code_key" UNIQUE("invitation_code"),
 	CONSTRAINT "check_status" CHECK (CHECK ((status IN ('pending'::STRING, 'accepted'::STRING, 'declined'::STRING, 'expired'::STRING)))),
-	CONSTRAINT "new_team_invitations_check_role" CHECK (CHECK (("role" IN ('captain'::STRING, 'co_captain'::STRING, 'member'::STRING, 'observer'::STRING))))
+	CONSTRAINT "new_team_invitations_check_role" CHECK (CHECK (("role" IN ('captain'::STRING, 'member'::STRING, 'observer'::STRING))))
 );
 --> statement-breakpoint
 CREATE TABLE "new_team_materials" (
@@ -344,7 +344,7 @@ CREATE TABLE "new_team_memberships" (
 	"status" varchar(20) DEFAULT 'active',
 	"permissions" jsonb DEFAULT '{}',
 	CONSTRAINT "new_team_memberships_user_id_team_id_key" UNIQUE("user_id","team_id"),
-	CONSTRAINT "new_team_memberships_check_role" CHECK (CHECK (("role" IN ('captain'::STRING, 'co_captain'::STRING, 'member'::STRING, 'observer'::STRING)))),
+	CONSTRAINT "new_team_memberships_check_role" CHECK (CHECK (("role" IN ('captain'::STRING, 'member'::STRING, 'observer'::STRING)))),
 	CONSTRAINT "new_team_memberships_status_check" CHECK (CHECK ((status IN ('active'::STRING, 'inactive'::STRING, 'pending'::STRING, 'banned'::STRING, 'archived'::STRING))))
 );
 --> statement-breakpoint

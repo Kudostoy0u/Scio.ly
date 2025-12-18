@@ -40,7 +40,7 @@ describe("Team Members E2E", () => {
 
 		// Add members
 		addTeamMember(team.subteamId, testUsers[1]?.id ?? "", "member");
-		addTeamMember(team.subteamId, testUsers[2]?.id ?? "", "co_captain");
+		addTeamMember(team.subteamId, testUsers[2]?.id ?? "", "captain");
 	});
 
 	afterAll(() => {
@@ -64,7 +64,7 @@ describe("Team Members E2E", () => {
 			const roles = memberships.map((m) => m.role);
 			expect(roles).toContain("captain");
 			expect(roles).toContain("member");
-			expect(roles).toContain("co_captain");
+			expect(roles).toContain("captain");
 		});
 
 		it("should retrieve members for specific subteam", () => {

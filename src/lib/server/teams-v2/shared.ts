@@ -17,7 +17,7 @@ export interface TeamMeta {
 	division: string;
 	updatedAt: string;
 	version: number;
-	userRole: "captain" | "member";
+	userRole: "admin" | "captain" | "member";
 	status: string;
 	memberCode: string;
 	captainCode: string | null;
@@ -27,7 +27,7 @@ export interface TeamMember {
 	id: string;
 	name: string;
 	email: string | null;
-	role: "captain" | "member";
+	role: "admin" | "captain" | "member";
 	status: "active" | "pending" | "inactive";
 	events: string[];
 	subteamId: string | null;
@@ -147,8 +147,19 @@ export async function assertTeamAccess(teamSlug: string, userId: string) {
 
 export async function assertCaptainAccess(teamSlug: string, userId: string) {
 	const { team, membership } = await assertTeamAccess(teamSlug, userId);
-	if ((membership.role as string) !== "captain") {
+	if (
+		(membership.role as string) !== "captain" &&
+		(membership.role as string) !== "admin"
+	) {
 		throw new Error("Only captains can perform this action");
+	}
+	return { team, membership };
+}
+
+export async function assertAdminAccess(teamSlug: string, userId: string) {
+	const { team, membership } = await assertTeamAccess(teamSlug, userId);
+	if ((membership.role as string) !== "admin") {
+		throw new Error("Only admins can perform this action");
 	}
 	return { team, membership };
 }

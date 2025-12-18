@@ -231,9 +231,9 @@ export async function DELETE(
 		if (!userRole) {
 			return NextResponse.json({ error: "Not a team member" }, { status: 403 });
 		}
-		if (!["captain", "co_captain"].includes(userRole)) {
+		if (userRole !== "captain") {
 			return NextResponse.json(
-				{ error: "Only captains and co-captains can delete comments" },
+				{ error: "Only captains can delete comments" },
 				{ status: 403 },
 			);
 		}

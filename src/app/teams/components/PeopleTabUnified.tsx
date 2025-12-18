@@ -35,6 +35,7 @@ interface PeopleTabProps {
 		slug: string;
 	};
 	isCaptain: boolean;
+	isAdmin?: boolean;
 	activeSubteamId?: string | null;
 	subteams?: Array<{
 		id: string;
@@ -49,6 +50,7 @@ interface PeopleTabProps {
 export default function PeopleTabUnified({
 	team,
 	isCaptain,
+	isAdmin = false,
 	subteams = [],
 }: PeopleTabProps) {
 	const { darkMode } = useTheme();
@@ -64,7 +66,7 @@ export default function PeopleTabUnified({
 	// TODO: Re-enable when linkAccount is implemented
 	// const linkAccountMutation = trpc.teams.linkAccount.useMutation();
 
-	const { invalidateTeam } = useInvalidateTeam();
+	const { updateTeamData } = useInvalidateTeam();
 
 	const [showInlineInvite, setShowInlineInvite] = useState(false);
 	const [linkInviteStates, setLinkInviteStates] = useState<
@@ -158,10 +160,6 @@ export default function PeopleTabUnified({
 		return processMembers(normalizedMembers, pendingLinkInvites, team.division);
 	}, [normalizedMembers, pendingLinkInvites, team.division]);
 
-	const handleRefresh = useCallback(async () => {
-		await invalidateTeam(team.slug);
-	}, [invalidateTeam, team.slug]);
-
 	const {
 		handleRemoveSelfFromSubteam,
 		handleRemoveOtherFromSubteam,
@@ -174,6 +172,8 @@ export default function PeopleTabUnified({
 		handleCancelInvitation,
 		handleRemoveMember,
 		handlePromoteToCaptain,
+		handlePromoteToAdmin,
+		handleDemoteCaptainToMember,
 	} = useMemberActions({
 		teamSlug: team.slug,
 		selectedSubteam,
@@ -203,9 +203,8 @@ export default function PeopleTabUnified({
 	);
 
 	const handleNameUpdate = useCallback(() => {
-		handleRefresh();
 		setShowNamePrompt(false);
-	}, [handleRefresh]);
+	}, []);
 
 	useEffect(() => {
 		const onDisplayNameUpdated = (e: Event) => {
@@ -213,7 +212,19 @@ export default function PeopleTabUnified({
 			if (!(newName && user?.id)) {
 				return;
 			}
-			handleRefresh();
+			updateTeamData(team.slug, (prev) => {
+				if (!prev) return prev;
+				return {
+					...prev,
+					members: (prev.members ?? []).map((m) =>
+						m.id === user.id ? { ...m, name: newName } : m,
+					),
+					rosterEntries: (prev.rosterEntries ?? []).map((r) =>
+						r.userId === user.id ? { ...r, displayName: newName } : r,
+					),
+				};
+			});
+			setShowNamePrompt(false);
 		};
 		window.addEventListener(
 			"scio-display-name-updated",
@@ -225,7 +236,7 @@ export default function PeopleTabUnified({
 				onDisplayNameUpdated as EventListener,
 			);
 		};
-	}, [user?.id, handleRefresh]);
+	}, [team.slug, updateTeamData, user?.id]);
 
 	useEffect(() => {
 		if (!(user?.id && filteredMembers.length > 0)) {
@@ -437,6 +448,7 @@ export default function PeopleTabUnified({
 									member={member}
 									index={index}
 									isCaptain={isCaptain}
+									isAdmin={isAdmin}
 									subteams={subteams}
 									selectedMember={selectedMember}
 									onNameClick={handleNameClick}
@@ -450,6 +462,8 @@ export default function PeopleTabUnified({
 									}
 									onAddEvent={handleAddEventClick}
 									onPromoteToCaptain={handlePromoteToCaptain}
+									onPromoteToAdmin={handlePromoteToAdmin}
+									onDemoteCaptainToMember={handleDemoteCaptainToMember}
 									onSubteamAssign={handleSubteamAssign}
 									showSubteamDropdown={showSubteamDropdown}
 									onSubteamDropdownToggle={setShowSubteamDropdown}

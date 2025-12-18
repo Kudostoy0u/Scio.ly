@@ -82,7 +82,7 @@ export async function POST(
 			}
 
 			const userRole = captainCheckResult[0]?.role;
-			if (!(userRole && ["captain", "co_captain"].includes(userRole))) {
+			if (!(userRole && userRole === "captain")) {
 				return handleForbiddenError(
 					"Only the team creator or captains can archive the team",
 				);

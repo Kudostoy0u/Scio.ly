@@ -211,9 +211,7 @@ export async function GET(
 		);
 
 		// Get question responses for detailed analysis (if user is captain) using Drizzle ORM
-		const isCaptain = memberships.some((m) =>
-			["captain", "co_captain"].includes(m.role),
-		);
+		const isCaptain = memberships.some((m) => m.role === "captain");
 		let questionResponses: Array<{
 			submission_id: string;
 			question_id: string;
@@ -327,7 +325,7 @@ export async function DELETE(
 		// Resolve team slug to team units
 		const teamInfo = await resolveTeamSlugToUnits(teamId);
 
-		// Check if user is captain or co-captain of any team unit in this group
+		// Check if user is captain of any team unit in this group
 		const memberships = await getUserTeamMemberships(
 			user.id,
 			teamInfo.teamUnitIds,
@@ -337,9 +335,7 @@ export async function DELETE(
 			return NextResponse.json({ error: "Not a team member" }, { status: 403 });
 		}
 
-		const isCaptain = memberships.some((m) =>
-			["captain", "co_captain"].includes(m.role),
-		);
+		const isCaptain = memberships.some((m) => m.role === "captain");
 		if (!isCaptain) {
 			return NextResponse.json(
 				{ error: "Only captains can delete assignments" },

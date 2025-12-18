@@ -272,9 +272,7 @@ export async function POST(
 			user.id,
 			teamInfo.teamUnitIds,
 		);
-		const captainMembership = memberships.find((m) =>
-			["captain", "co_captain"].includes(m.role),
-		);
+		const captainMembership = memberships.find((m) => m.role === "captain");
 		const targetTeamId = captainMembership?.team_id || teamInfo.teamUnitIds[0];
 		if (!targetTeamId) {
 			return NextResponse.json(

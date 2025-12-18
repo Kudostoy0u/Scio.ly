@@ -55,8 +55,8 @@ export async function POST(
 		// Validate request body
 		const PromoteMemberSchema = z.object({
 			userId: UUIDSchema,
-			newRole: z.enum(["captain", "co_captain"], {
-				message: "Only captain or co_captain promotion is supported",
+			newRole: z.enum(["captain"], {
+				message: "Only captain promotion is supported",
 			}),
 		});
 

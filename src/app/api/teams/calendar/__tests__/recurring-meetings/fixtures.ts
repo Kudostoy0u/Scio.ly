@@ -39,7 +39,7 @@ export const mockMembershipCaptain = {
 };
 
 export const mockMembershipCoCaptain = {
-	role: "co_captain",
+	role: "captain",
 	teamId: mockTeamId,
 };
 

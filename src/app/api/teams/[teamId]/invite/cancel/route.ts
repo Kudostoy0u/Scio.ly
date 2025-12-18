@@ -97,8 +97,8 @@ export async function POST(
 		}
 
 		// Check if user has captain or co-captain role in any team unit
-		const hasCaptainRole = membershipResult.some((membership) =>
-			["captain", "co_captain"].includes(membership.role),
+		const hasCaptainRole = membershipResult.some(
+			(membership) => membership.role === "captain",
 		);
 
 		if (!hasCaptainRole) {

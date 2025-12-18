@@ -78,8 +78,8 @@ export async function GET(
 			return handleForbiddenError("Not a team member");
 		}
 
-		const captainMemberships = membershipResult.filter((m) =>
-			["captain", "co_captain"].includes(m.role),
+		const captainMemberships = membershipResult.filter(
+			(m) => m.role === "captain",
 		);
 
 		if (captainMemberships.length === 0) {

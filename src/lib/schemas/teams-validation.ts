@@ -27,8 +27,8 @@ export const DivisionSchema = z.enum(["B", "C"], {
 });
 
 /** Team role validator - validates team membership roles */
-export const TeamRoleSchema = z.enum(["captain", "co_captain", "member"], {
-	message: "Role must be 'captain', 'co_captain', or 'member'",
+export const TeamRoleSchema = z.enum(["captain", "member"], {
+	message: "Role must be 'captain' or 'member'",
 });
 
 /** Team status validator */

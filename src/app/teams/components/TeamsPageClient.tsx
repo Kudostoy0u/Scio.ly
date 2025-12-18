@@ -88,7 +88,7 @@ export default function TeamsPageClient() {
 					id: user?.id || "me",
 					name: user?.email || "You",
 					email: user?.email || "",
-					role: (team.role as "captain" | "member") ?? "member",
+					role: (team.role as "admin" | "captain" | "member") ?? "member",
 				},
 			],
 		})) ?? [];

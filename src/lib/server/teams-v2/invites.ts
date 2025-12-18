@@ -8,6 +8,7 @@ import {
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { and, eq, or } from "drizzle-orm";
 import {
+	assertAdminAccess,
 	assertCaptainAccess,
 	buildInviteMatchFilters,
 	bumpTeamVersion,
@@ -282,7 +283,10 @@ export async function createInvitation(input: {
 	role?: "captain" | "member";
 	invitedBy: string;
 }) {
-	const { team } = await assertCaptainAccess(input.teamSlug, input.invitedBy);
+	const { team } =
+		input.role === "captain"
+			? await assertAdminAccess(input.teamSlug, input.invitedBy)
+			: await assertCaptainAccess(input.teamSlug, input.invitedBy);
 
 	const supabase = await createSupabaseServerClient();
 	const { data, error } = await supabase
@@ -364,10 +368,10 @@ export async function createInvitation(input: {
 export async function promoteToRole(input: {
 	teamSlug: string;
 	userId: string;
-	newRole: "captain" | "member";
+	newRole: "admin" | "captain" | "member";
 	actorId: string;
 }) {
-	const { team } = await assertCaptainAccess(input.teamSlug, input.actorId);
+	const { team } = await assertAdminAccess(input.teamSlug, input.actorId);
 
 	const membership = await dbPg
 		.select({
@@ -393,6 +397,31 @@ export async function promoteToRole(input: {
 
 	if (currentMembership.role === input.newRole) {
 		throw new Error(`User is already a ${input.newRole}`);
+	}
+
+	if ((currentMembership.role as string) === "admin") {
+		throw new Error("Admins cannot be demoted");
+	}
+
+	// Enforce a strict progression:
+	// member <-> captain, and captain -> admin (admins are immutable)
+	if (
+		input.newRole === "admin" &&
+		(currentMembership.role as string) !== "captain"
+	) {
+		throw new Error("Only captains can be promoted to admin");
+	}
+	if (
+		input.newRole === "captain" &&
+		(currentMembership.role as string) !== "member"
+	) {
+		throw new Error("Only members can be promoted to captain");
+	}
+	if (
+		input.newRole === "member" &&
+		(currentMembership.role as string) !== "captain"
+	) {
+		throw new Error("Only captains can be demoted to member");
 	}
 
 	await dbPg.transaction(async (tx) => {

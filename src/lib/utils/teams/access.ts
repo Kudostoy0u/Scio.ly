@@ -161,9 +161,7 @@ export async function hasLeadershipAccess(
 	// - Captain/co-captain in any subteam
 	return (
 		access.isCreator ||
-		access.subteamMemberships.some((m) =>
-			["captain", "co_captain"].includes(m.role),
-		)
+		access.subteamMemberships.some((m) => m.role === "captain")
 	);
 }
 
@@ -362,8 +360,6 @@ export async function hasLeadershipAccessCockroach(
 	const access = await getTeamAccessCockroach(userId, groupId);
 	return (
 		access.isCreator ||
-		access.subteamMemberships.some((m) =>
-			["captain", "co_captain"].includes(m.role),
-		)
+		access.subteamMemberships.some((m) => m.role === "captain")
 	);
 }

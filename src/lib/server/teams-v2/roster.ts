@@ -17,7 +17,10 @@ export async function replaceRosterEntries(
 	actorId: string,
 ) {
 	const membership = await getMembershipForUser(teamId, actorId);
-	if (!membership || membership.role !== "captain") {
+	if (
+		!membership ||
+		(membership.role !== "captain" && membership.role !== "admin")
+	) {
 		throw new Error("Only captains can edit roster");
 	}
 
@@ -167,7 +170,10 @@ export async function upsertRosterEntry(
 			role: membership?.role,
 		});
 
-		if (!membership || membership.role !== "captain") {
+		if (
+			!membership ||
+			(membership.role !== "captain" && membership.role !== "admin")
+		) {
 			throw new Error("Only captains can edit roster");
 		}
 
@@ -286,7 +292,10 @@ export async function removeRosterEntry(
 	},
 ) {
 	const membership = await getMembershipForUser(teamId, actorId);
-	if (!membership || membership.role !== "captain") {
+	if (
+		!membership ||
+		(membership.role !== "captain" && membership.role !== "admin")
+	) {
 		throw new Error("Only captains can edit roster");
 	}
 

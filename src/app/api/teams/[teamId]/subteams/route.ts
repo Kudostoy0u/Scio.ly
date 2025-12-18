@@ -144,9 +144,7 @@ export async function POST(
 		const teamAccess = await getTeamAccessCockroach(userId, groupId);
 		const hasLeadership =
 			teamAccess.isCreator ||
-			teamAccess.subteamMemberships.some((m) =>
-				["captain", "co_captain"].includes(m.role),
-			);
+			teamAccess.subteamMemberships.some((m) => m.role === "captain");
 
 		if (!hasLeadership) {
 			return NextResponse.json(

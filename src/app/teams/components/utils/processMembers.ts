@@ -100,10 +100,16 @@ export function processMembers(
 
 	// Sort: captains first, then alphabetical
 	filtered.sort((a, b) => {
-		if (a.role === "captain" && b.role !== "captain") {
+		if (a.role === "admin" && b.role !== "admin") {
 			return -1;
 		}
-		if (b.role === "captain" && a.role !== "captain") {
+		if (b.role === "admin" && a.role !== "admin") {
+			return 1;
+		}
+		if (a.role === "captain" && b.role !== "captain" && b.role !== "admin") {
+			return -1;
+		}
+		if (b.role === "captain" && a.role !== "captain" && a.role !== "admin") {
 			return 1;
 		}
 		return getDisplayName(a).localeCompare(getDisplayName(b));

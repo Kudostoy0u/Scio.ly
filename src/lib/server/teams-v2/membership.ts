@@ -9,6 +9,7 @@ import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { and, eq, or, sql } from "drizzle-orm";
 import {
+	assertAdminAccess,
 	assertCaptainAccess,
 	assertTeamAccess,
 	bumpTeamVersion,
@@ -19,18 +20,30 @@ import {
 
 export async function leaveTeam(teamSlug: string, userId: string) {
 	const { team, membership } = await assertTeamAccess(teamSlug, userId);
-	const captains = await dbPg
-		.select({ id: teamsMembership.id })
+	const elevatedMembers = await dbPg
+		.select({ id: teamsMembership.id, role: teamsMembership.role })
 		.from(teamsMembership)
 		.where(
 			and(
 				eq(teamsMembership.teamId, team.id),
-				eq(teamsMembership.role, "captain"),
 				eq(teamsMembership.status, "active"),
+				or(
+					eq(teamsMembership.role, "admin"),
+					eq(teamsMembership.role, "captain"),
+				),
 			),
 		);
 
-	if (membership.role === "captain" && captains.length <= 1) {
+	const adminCount = elevatedMembers.filter((m) => m.role === "admin").length;
+	const elevatedCount = elevatedMembers.length;
+
+	if (membership.role === "admin" && adminCount <= 1) {
+		throw new Error("You cannot leave as the sole admin");
+	}
+	if (
+		(membership.role === "admin" || membership.role === "captain") &&
+		elevatedCount <= 1
+	) {
 		throw new Error("You cannot leave as the sole captain");
 	}
 
@@ -55,7 +68,7 @@ export async function leaveTeam(teamSlug: string, userId: string) {
 }
 
 export async function archiveTeam(teamSlug: string, userId: string) {
-	const { team } = await assertCaptainAccess(teamSlug, userId);
+	const { team } = await assertAdminAccess(teamSlug, userId);
 	await dbPg.transaction(async (tx) => {
 		await tx.delete(teamsTeam).where(eq(teamsTeam.id, team.id));
 	});
@@ -71,7 +84,10 @@ export async function kickMemberFromTeam(input: {
 		throw new Error("You cannot remove yourself from the team");
 	}
 
-	const { team } = await assertCaptainAccess(input.teamSlug, input.actorId);
+	const { team, membership: actorMembership } = await assertCaptainAccess(
+		input.teamSlug,
+		input.actorId,
+	);
 
 	const [targetMembership] = await dbPg
 		.select({ role: teamsMembership.role })
@@ -88,8 +104,29 @@ export async function kickMemberFromTeam(input: {
 		return { ok: true };
 	}
 
+	if ((targetMembership.role as string) === "admin") {
+		if ((actorMembership.role as string) !== "admin") {
+			throw new Error("Only admins can remove an admin from the team");
+		}
+		const admins = await dbPg
+			.select({ id: teamsMembership.id })
+			.from(teamsMembership)
+			.where(
+				and(
+					eq(teamsMembership.teamId, team.id),
+					eq(teamsMembership.role, "admin"),
+					eq(teamsMembership.status, "active"),
+				),
+			);
+		if (admins.length <= 1) {
+			throw new Error("You cannot remove the sole admin from the team");
+		}
+	}
+
 	if ((targetMembership.role as string) === "captain") {
-		throw new Error("You cannot remove a captain from the team");
+		if ((actorMembership.role as string) !== "admin") {
+			throw new Error("Only admins can remove a captain from the team");
+		}
 	}
 
 	await dbPg.transaction(async (tx) => {
@@ -144,7 +181,7 @@ export async function listTeamsForUser(userId: string) {
 		school: t.school,
 		division: t.division,
 		status: t.status,
-		role: t.role as "captain" | "member",
+		role: t.role as "admin" | "captain" | "member",
 	}));
 }
 
@@ -199,7 +236,7 @@ export async function createTeamWithDefaultSubteam(input: {
 			id: membershipId,
 			teamId,
 			userId: input.createdBy,
-			role: "captain",
+			role: "admin",
 			status: "active",
 		});
 	});

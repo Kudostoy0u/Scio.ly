@@ -75,7 +75,7 @@ export function createTestTeam(
 export function addTeamMember(
 	teamId: string,
 	userId: string,
-	role: "captain" | "co_captain" | "member" = "member",
+	role: "captain" | "member" = "member",
 ): void {
 	mockDb.memberships.set(`${userId}:${teamId}`, {
 		userId,

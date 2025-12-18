@@ -332,5 +332,45 @@ export function useMemberActions({
 				);
 			}
 		},
+
+		handleDemoteCaptainToMember: async (member: Member) => {
+			try {
+				if (!member.id || member.isUnlinked) {
+					toast.error("User must be linked to an account");
+					return;
+				}
+				await promoteToRole.mutateAsync({
+					teamSlug,
+					userId: member.id,
+					newRole: "member",
+				});
+				toast.success(`Demoted ${getDisplayName(member)} to member`);
+				await refresh();
+			} catch (error) {
+				toast.error(
+					error instanceof Error ? error.message : "Failed to demote member",
+				);
+			}
+		},
+
+		handlePromoteToAdmin: async (member: Member) => {
+			try {
+				if (!member.id || member.isUnlinked) {
+					toast.error("User must be linked to an account");
+					return;
+				}
+				await promoteToRole.mutateAsync({
+					teamSlug,
+					userId: member.id,
+					newRole: "admin",
+				});
+				toast.success(`Promoted ${getDisplayName(member)} to admin`);
+				await refresh();
+			} catch (error) {
+				toast.error(
+					error instanceof Error ? error.message : "Failed to promote member",
+				);
+			}
+		},
 	};
 }

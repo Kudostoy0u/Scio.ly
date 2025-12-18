@@ -122,7 +122,7 @@ export default function Sidebar({
 										key={team.id}
 										onClick={() => onTeamSelect?.(team)}
 										className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group ${
-											currentTeamSlug === team.slug
+											currentTeamSlug === team.slug && activeTab === "home"
 												? darkMode
 													? "bg-blue-900/20 text-blue-300 border border-blue-800"
 													: "bg-blue-50 text-blue-700 border border-blue-200"

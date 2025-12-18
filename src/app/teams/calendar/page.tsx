@@ -4,60 +4,31 @@ import { useAuth } from "@/app/contexts/AuthContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import TeamCalendar from "@/app/teams/components/TeamCalendar";
 import TeamLayout from "@/app/teams/components/TeamLayout";
-import { globalApiCache } from "@/lib/utils/storage/globalApiCache";
+import { trpc } from "@/lib/trpc/client";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 
 export default function CalendarPage() {
 	const { darkMode } = useTheme();
 	const { user } = useAuth();
 	const router = useRouter();
-	const [userTeams, setUserTeams] = useState<
-		Array<{
-			id: string;
-			name: string;
-			slug: string;
-			user_role: string;
-			school: string;
-			division: "B" | "C";
-		}>
-	>([]);
-	const [loading, setLoading] = useState(true);
 
-	useEffect(() => {
-		const loadUserTeams = async () => {
-			if (!user?.id) {
-				return;
-			}
+	const { data, isLoading } = trpc.teams.listUserTeams.useQuery(undefined, {
+		enabled: !!user?.id,
+	});
 
-			try {
-				setLoading(true);
+	const userTeams =
+		data?.teams.map((team) => ({
+			id: team.id,
+			slug: team.slug,
+			name: team.name || `${team.school} ${team.division}`,
+			school: team.school,
+			division: (team.division ?? "C") as "B" | "C",
+			user_role: team.role || "member",
+		})) ?? [];
 
-				// Use global cache to avoid duplicate requests
-				const cacheKey = `user-teams-${user.id}`;
-				const teams = await globalApiCache.fetchWithCache(
-					cacheKey,
-					async () => {
-						const response = await fetch("/api/teams/user-teams");
-						if (!response.ok) {
-							throw new Error("Failed to fetch user teams");
-						}
-						const result = await response.json();
-						return result.teams || [];
-					},
-					"user-teams",
-				);
-
-				setUserTeams(teams);
-			} catch (_error) {
-				// Ignore errors
-			} finally {
-				setLoading(false);
-			}
-		};
-
-		loadUserTeams();
-	}, [user?.id]);
+	const isCaptain = userTeams.some(
+		(team) => team.user_role === "captain" || team.user_role === "admin",
+	);
 
 	const handleTabChange = (tab: "home" | "upcoming" | "settings") => {
 		if (tab === "home") {
@@ -83,7 +54,7 @@ export default function CalendarPage() {
 		router.push("/teams?view=all");
 	};
 
-	if (loading) {
+	if (isLoading) {
 		return (
 			<div
 				className={`min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}
@@ -113,10 +84,7 @@ export default function CalendarPage() {
 			<div className="max-w-7xl mx-auto">
 				<TeamCalendar
 					teamId={undefined}
-					isCaptain={userTeams.some(
-						(team) =>
-							team.user_role === "captain" || team.user_role === "co_captain",
-					)}
+					isCaptain={isCaptain}
 					teamSlug={userTeams[0]?.slug || undefined}
 				/>
 			</div>

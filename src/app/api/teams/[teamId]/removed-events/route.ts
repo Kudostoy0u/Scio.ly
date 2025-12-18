@@ -217,7 +217,10 @@ export async function POST(
 	if (!membership || membership.status !== "active") {
 		return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 	}
-	if ((membership.role as string) !== "captain") {
+	if (
+		(membership.role as string) !== "captain" &&
+		(membership.role as string) !== "admin"
+	) {
 		return NextResponse.json(
 			{ error: "Only captains can modify events" },
 			{ status: 403 },
@@ -321,9 +324,12 @@ export async function DELETE(
 	if (!membership || membership.status !== "active") {
 		return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 	}
-	if ((membership.role as string) !== "captain") {
+	if (
+		(membership.role as string) !== "captain" &&
+		(membership.role as string) !== "admin"
+	) {
 		return NextResponse.json(
-			{ error: "Only captains can modify events" },
+			{ error: "Only captains and admins can modify events" },
 			{ status: 403 },
 		);
 	}

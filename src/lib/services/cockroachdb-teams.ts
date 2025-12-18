@@ -18,7 +18,7 @@ export interface TeamMembership {
 	id: string;
 	user_id: string;
 	team_id: string;
-	role: "captain" | "co_captain" | "member" | "observer";
+	role: "captain" | "member" | "observer";
 	joined_at: string;
 	invited_by?: string;
 	status: "active" | "inactive" | "pending" | "banned";
@@ -248,7 +248,7 @@ export class CockroachDBTeamsService {
 				id: member.id,
 				user_id: member.userId,
 				team_id: member.teamId,
-				role: member.role as "captain" | "co_captain" | "member" | "observer",
+				role: member.role as "captain" | "member" | "observer",
 				joined_at: member.joinedAt || new Date().toISOString(),
 				invited_by: member.invitedBy || undefined,
 				status: member.status as "active" | "inactive" | "pending" | "banned",
@@ -403,11 +403,7 @@ export class CockroachDBTeamsService {
 				id: updatedMembership.id,
 				user_id: updatedMembership.userId,
 				team_id: updatedMembership.teamId,
-				role: updatedMembership.role as
-					| "captain"
-					| "co_captain"
-					| "member"
-					| "observer",
+				role: updatedMembership.role as "captain" | "member" | "observer",
 				joined_at: updatedMembership.joinedAt || new Date().toISOString(),
 				invited_by: updatedMembership.invitedBy || undefined,
 				status: updatedMembership.status as
@@ -440,7 +436,7 @@ export class CockroachDBTeamsService {
 			id: result.id,
 			user_id: result.userId,
 			team_id: result.teamId,
-			role: result.role as "captain" | "co_captain" | "member" | "observer",
+			role: result.role as "captain" | "member" | "observer",
 			joined_at: result.joinedAt || new Date().toISOString(),
 			invited_by: result.invitedBy || undefined,
 			status: result.status as "active" | "inactive" | "pending" | "banned",
@@ -477,7 +473,7 @@ export class CockroachDBTeamsService {
 				userInfo.username ||
 				userInfo.email?.split("@")[0] ||
 				"Unknown User";
-			const isAdmin = role === "captain" || role === "co_captain";
+			const isAdmin = role === "captain";
 			const [existingEntry] = await dbPg
 				.select({ id: newTeamPeople.id })
 				.from(newTeamPeople)

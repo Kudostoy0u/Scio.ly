@@ -15,7 +15,7 @@ interface Team {
 		id: string;
 		name: string;
 		email: string;
-		role: "captain" | "member";
+		role: "admin" | "captain" | "member";
 	}>;
 }
 

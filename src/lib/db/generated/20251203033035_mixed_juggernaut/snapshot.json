@@ -11749,7 +11749,7 @@
 			"table": "new_team_units"
 		},
 		{
-			"value": "CHECK ((\"role\" IN ('captain'::STRING, 'co_captain'::STRING, 'member'::STRING, 'observer'::STRING)))",
+			"value": "CHECK ((\"role\" IN ('captain'::STRING, 'member'::STRING, 'observer'::STRING)))",
 			"name": "new_team_memberships_check_role",
 			"entityType": "checks",
 			"schema": "public",
@@ -11770,7 +11770,7 @@
 			"table": "new_team_invitations"
 		},
 		{
-			"value": "CHECK ((\"role\" IN ('captain'::STRING, 'co_captain'::STRING, 'member'::STRING, 'observer'::STRING)))",
+			"value": "CHECK ((\"role\" IN ('captain'::STRING, 'member'::STRING, 'observer'::STRING)))",
 			"name": "new_team_invitations_check_role",
 			"entityType": "checks",
 			"schema": "public",

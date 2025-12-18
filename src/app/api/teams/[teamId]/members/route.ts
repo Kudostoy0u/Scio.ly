@@ -198,8 +198,8 @@ export async function GET(
 			if (allMembers.has(member.userId)) {
 				const existingMember = allMembers.get(member.userId);
 				if (existingMember) {
-					// Update the main role to reflect their subteam role (captain/co_captain takes precedence over creator)
-					if (["captain", "co_captain"].includes(member.role)) {
+					// Update the main role to reflect their subteam role (captain takes precedence over creator)
+					if (member.role === "captain") {
 						existingMember.role = member.role;
 					}
 

@@ -50,7 +50,7 @@ function loadCachedData(
 	}
 	if (cachedTeams) {
 		const captainTeams = cachedTeams.filter(
-			(team) => team.user_role === "captain" || team.user_role === "co_captain",
+			(team) => team.user_role === "captain",
 		);
 		setUserTeams(captainTeams);
 	}
@@ -141,8 +141,7 @@ async function loadUserTeams(
 	);
 
 	const captainTeams = allTeams.filter(
-		(team: UserTeam) =>
-			team.user_role === "captain" || team.user_role === "co_captain",
+		(team: UserTeam) => team.user_role === "captain",
 	);
 	setUserTeams(captainTeams);
 }

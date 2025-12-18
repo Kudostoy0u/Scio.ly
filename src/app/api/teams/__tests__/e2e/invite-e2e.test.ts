@@ -171,7 +171,7 @@ describe("Team Invitation E2E", () => {
 
 			expect(membership).toBeDefined();
 			expect(membership?.role).toBeDefined();
-			expect(["captain", "co_captain"]).toContain(membership?.role);
+			expect(["captain"]).toContain(membership?.role);
 		});
 
 		it("should prevent existing members from being invited", () => {

@@ -31,10 +31,13 @@ export async function getTeamMetaBySlug(
 			? String(team.updatedAt)
 			: new Date().toISOString(),
 		version: Number(team.version ?? 1),
-		userRole: (membership.role as "captain" | "member") ?? "member",
+		userRole: (membership.role as "admin" | "captain" | "member") ?? "member",
 		status: team.status,
 		memberCode: team.memberCode,
-		captainCode: membership.role === "captain" ? team.captainCode : null,
+		captainCode:
+			membership.role === "captain" || membership.role === "admin"
+				? team.captainCode
+				: null,
 	};
 }
 
@@ -231,10 +234,13 @@ export async function getTeamFullBySlug(
 				? String(team.updatedAt)
 				: new Date().toISOString(),
 			version: Number(team.version ?? 1),
-			userRole: (membership.role as "captain" | "member") ?? "member",
+			userRole: (membership.role as "admin" | "captain" | "member") ?? "member",
 			status: team.status,
 			memberCode: team.memberCode,
-			captainCode: membership.role === "captain" ? team.captainCode : null,
+			captainCode:
+				membership.role === "captain" || membership.role === "admin"
+					? team.captainCode
+					: null,
 		},
 		subteams: subteams.map((s) => ({
 			id: s.id,

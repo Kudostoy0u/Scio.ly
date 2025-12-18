@@ -109,7 +109,7 @@ export async function PUT(
 		if (!membership) {
 			return NextResponse.json({ error: "Not a team member" }, { status: 403 });
 		}
-		if (!["captain", "co_captain"].includes(membership.role)) {
+		if (membership.role !== "captain") {
 			return NextResponse.json(
 				{ error: "Only captains can update subteams" },
 				{ status: 403 },
@@ -236,7 +236,7 @@ export async function DELETE(
 		if (!membership) {
 			return NextResponse.json({ error: "Not a team member" }, { status: 403 });
 		}
-		if (!["captain", "co_captain"].includes(membership.role)) {
+		if (membership.role !== "captain") {
 			return NextResponse.json(
 				{ error: "Only captains can delete subteams" },
 				{ status: 403 },

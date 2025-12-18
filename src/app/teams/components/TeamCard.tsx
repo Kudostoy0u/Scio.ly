@@ -73,12 +73,16 @@ export function TeamCard({ team, onClick }: TeamCardProps) {
 					<span
 						className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}
 					>
-						Captains
+						Leaders
 					</span>
 					<span
 						className={`text-sm font-medium ${darkMode ? "text-white" : "text-gray-900"}`}
 					>
-						{team.members.filter((m) => m.role === "captain").length}
+						{
+							team.members.filter(
+								(m) => m.role === "captain" || m.role === "admin",
+							).length
+						}
 					</span>
 				</div>
 			</div>

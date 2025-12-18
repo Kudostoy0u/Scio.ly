@@ -592,7 +592,7 @@ PUT /api/teams/v2/[teamId]
 POST /api/teams/v2/[teamId]/members
 {
   "userId": "string",
-  "role": "member" | "captain" | "co_captain"
+  "role": "member" | "captain"
 }
 
 // Remove member
@@ -601,7 +601,7 @@ DELETE /api/teams/v2/[teamId]/members/[userId]
 // Update member role
 PUT /api/teams/v2/[teamId]/members/[userId]
 {
-  "role": "member" | "captain" | "co_captain"
+  "role": "member" | "captain"
 }
 ```
 

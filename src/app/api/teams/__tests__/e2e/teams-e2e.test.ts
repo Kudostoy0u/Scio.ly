@@ -46,7 +46,7 @@ type TeamUnitRecord = {
 type TeamMembershipRecord = {
 	userId: string;
 	teamId: string;
-	role: "captain" | "co_captain" | "member";
+	role: "captain" | "member";
 	status: "active" | "inactive";
 };
 

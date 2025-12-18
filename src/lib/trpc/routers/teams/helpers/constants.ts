@@ -8,11 +8,6 @@ export const TEAM_STATUS = {
 	PENDING: "pending",
 } as const;
 
-export const MEMBER_ROLES = [
-	"captain",
-	"co_captain",
-	"member",
-	"observer",
-] as const;
+export const MEMBER_ROLES = ["captain", "member", "observer"] as const;
 
 export const DIVISIONS = ["B", "C"] as const;

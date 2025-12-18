@@ -399,7 +399,7 @@ export const teamsRouter = router({
 			z.object({
 				teamSlug: z.string().min(1),
 				userId: z.string().uuid(),
-				newRole: z.enum(["captain", "member"]),
+				newRole: z.enum(["admin", "captain", "member"]),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {

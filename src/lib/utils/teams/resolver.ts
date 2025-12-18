@@ -115,5 +115,5 @@ export async function isUserCaptain(
 	teamUnitIds: string[],
 ): Promise<boolean> {
 	const memberships = await getUserTeamMemberships(userId, teamUnitIds);
-	return memberships.some((m) => ["captain", "co_captain"].includes(m.role));
+	return memberships.some((m) => m.role === "captain");
 }
