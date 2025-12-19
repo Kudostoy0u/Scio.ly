@@ -64,6 +64,7 @@ export function buildIdQuestionQueryParams(
 	subtopics?: string[],
 	difficulties?: string[],
 	pureIdOnly = false,
+	rmTypeFilter?: "rock" | "mineral",
 ): URLSearchParams {
 	const queryParams = buildQuestionQueryParams(
 		event,
@@ -75,6 +76,10 @@ export function buildIdQuestionQueryParams(
 	);
 	if (pureIdOnly) {
 		queryParams.set("pure_id_only", "true");
+	}
+	// Add rm_type filter for Rocks and Minerals if specified
+	if (rmTypeFilter && (rmTypeFilter === "rock" || rmTypeFilter === "mineral")) {
+		queryParams.set("rm_type", rmTypeFilter);
 	}
 	return queryParams;
 }

@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import type { QuestionGenerationStepProps } from "./assignmentTypes";
+import { getEventSubtopics } from "../assignment/assignmentUtils";
+import { getEventCapabilities } from "@/lib/utils/assessments/eventConfig";
 
 export default function QuestionGenerationStep({
 	darkMode,
@@ -10,12 +13,33 @@ export default function QuestionGenerationStep({
 	onError,
 	settings,
 	onSettingsChange,
-	availableSubtopics,
 	supportsPictureQuestions,
 	supportsIdentificationOnly,
 	onGenerateQuestions: _onGenerateQuestions,
 	generatingQuestions,
+	eventName,
 }: QuestionGenerationStepProps) {
+	const [availableSubtopics, setAvailableSubtopics] = useState<string[]>([]);
+	const [loadingSubtopics, setLoadingSubtopics] = useState(false);
+	const isRocksAndMinerals = eventName === "Rocks and Minerals" || eventName?.split(" - ")[0] === "Rocks and Minerals";
+
+	// Load subtopics when event name changes
+	useEffect(() => {
+		if (eventName) {
+			setLoadingSubtopics(true);
+			getEventSubtopics(eventName)
+				.then((subtopics) => {
+					setAvailableSubtopics(subtopics);
+					setLoadingSubtopics(false);
+				})
+				.catch(() => {
+					setAvailableSubtopics([]);
+					setLoadingSubtopics(false);
+				});
+		} else {
+			setAvailableSubtopics([]);
+		}
+	}, [eventName]);
 	const handleNext = () => {
 		const error = validateSettings();
 		if (error) {
@@ -74,6 +98,32 @@ export default function QuestionGenerationStep({
 						min="1"
 						max="50"
 					/>
+				</div>
+				<div>
+					<label
+						htmlFor="division"
+						className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+					>
+						Division
+					</label>
+					<select
+						id="division"
+						value={settings.division || "any"}
+						onChange={(e) =>
+							onSettingsChange({
+								division: e.target.value as "B" | "C" | "any",
+							})
+						}
+						className={`w-full px-3 py-2 border rounded-lg ${
+							darkMode
+								? "bg-gray-700 border-gray-600 text-white"
+								: "bg-white border-gray-300 text-gray-900"
+						}`}
+					>
+						<option value="any">Any</option>
+						<option value="B">Division B</option>
+						<option value="C">Division C</option>
+					</select>
 				</div>
 			</div>
 
@@ -173,53 +223,6 @@ export default function QuestionGenerationStep({
 				)}
 			</div>
 
-			<div>
-				<h4
-					className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-				>
-					Subtopics (optional)
-				</h4>
-				<div className="max-h-48 overflow-y-auto border rounded-lg p-3">
-					{availableSubtopics.length > 0 ? (
-						<div className="grid grid-cols-2 gap-2">
-							{availableSubtopics.map((subtopic) => (
-								<label key={subtopic} className="flex items-center">
-									<input
-										type="checkbox"
-										checked={settings.selectedSubtopics.includes(subtopic)}
-										onChange={(e) => {
-											if (e.target.checked) {
-												onSettingsChange({
-													selectedSubtopics: [
-														...settings.selectedSubtopics,
-														subtopic,
-													],
-												});
-											} else {
-												onSettingsChange({
-													selectedSubtopics: settings.selectedSubtopics.filter(
-														(s) => s !== subtopic,
-													),
-												});
-											}
-										}}
-										className="mr-2"
-									/>
-									<span className={darkMode ? "text-white" : "text-gray-900"}>
-										{subtopic}
-									</span>
-								</label>
-							))}
-						</div>
-					) : (
-						<div
-							className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-						>
-							No subtopics available for this event
-						</div>
-					)}
-				</div>
-			</div>
 
 			{/* Picture Questions slider for events with image ID */}
 			{supportsPictureQuestions && (
@@ -269,6 +272,74 @@ export default function QuestionGenerationStep({
 					>
 						Identification Only Mode
 					</label>
+				</div>
+			)}
+
+			{/* Rocks and Minerals filter */}
+			{isRocksAndMinerals && (
+				<div>
+					<label
+						htmlFor="rmTypeFilter"
+						className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+					>
+						Rock/Mineral Filter
+					</label>
+					<select
+						id="rmTypeFilter"
+						value={settings.rmTypeFilter || ""}
+						onChange={(e) =>
+							onSettingsChange({
+								rmTypeFilter: e.target.value ? (e.target.value as "rock" | "mineral") : undefined,
+							})
+						}
+						className={`w-full px-3 py-2 border rounded-lg ${
+							darkMode
+								? "bg-gray-700 border-gray-600 text-white"
+								: "bg-white border-gray-300 text-gray-900"
+						}`}
+					>
+						<option value="">Any</option>
+						<option value="rock">Rock</option>
+						<option value="mineral">Mineral</option>
+					</select>
+				</div>
+			)}
+
+			{/* Subtopics selection */}
+			{availableSubtopics.length > 0 && (
+				<div>
+					<label
+						htmlFor="subtopics"
+						className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+					>
+						Subtopics {loadingSubtopics && "(Loading...)"}
+					</label>
+					<div className="max-h-40 overflow-y-auto border rounded-lg p-2 space-y-1">
+						{availableSubtopics.map((subtopic) => (
+							<label key={subtopic} className="flex items-center">
+								<input
+									type="checkbox"
+									checked={settings.subtopics?.includes(subtopic) || false}
+									onChange={(e) => {
+										const currentSubtopics = settings.subtopics || [];
+										if (e.target.checked) {
+											onSettingsChange({
+												subtopics: [...currentSubtopics, subtopic],
+											});
+										} else {
+											onSettingsChange({
+												subtopics: currentSubtopics.filter((s) => s !== subtopic),
+											});
+										}
+									}}
+									className="mr-2"
+								/>
+								<span className={`text-sm ${darkMode ? "text-white" : "text-gray-900"}`}>
+									{subtopic}
+								</span>
+							</label>
+						))}
+					</div>
 				</div>
 			)}
 

@@ -31,7 +31,8 @@ export interface Assignment {
 }
 
 export interface AssignmentsTabProps {
-	teamId: string;
+	teamSlug: string;
 	isCaptain: boolean;
 	onCreateAssignment: () => void;
+	activeSubteamId?: string | null;
 }

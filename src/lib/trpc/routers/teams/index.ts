@@ -18,6 +18,8 @@ import {
 	deleteStreamPost,
 	deleteSubteam,
 	getActiveTimers,
+	getAssignmentAnalytics,
+	getAssignmentDetails,
 	getStreamPosts,
 	getTeamFullBySlug,
 	getTeamMetaBySlug,
@@ -92,6 +94,18 @@ export const teamsRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			return deleteAssignment(input.teamSlug, input.assignmentId, ctx.user.id);
+		}),
+
+	getAssignmentDetails: protectedProcedure
+		.input(z.object({ assignmentId: z.string().uuid() }))
+		.query(async ({ ctx, input }) => {
+			return getAssignmentDetails(input.assignmentId, ctx.user.id);
+		}),
+
+	getAssignmentAnalytics: protectedProcedure
+		.input(z.object({ assignmentId: z.string().uuid() }))
+		.query(async ({ ctx, input }) => {
+			return getAssignmentAnalytics(input.assignmentId, ctx.user.id);
 		}),
 
 	listUserTeams: protectedProcedure.query(async ({ ctx }) => {

@@ -1,5 +1,7 @@
 "use client";
 
+import { useTeamFull } from "@/lib/hooks/useTeam";
+import { useMemo } from "react";
 import { type ReactElement, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { Step1Details } from "./CodebustersAssignmentCreator/components/Step1Details";
@@ -13,7 +15,7 @@ import type {
 	QuestionGenerationSettings,
 	RosterMember,
 } from "./assignmentTypes";
-import { createAssignment, fetchRosterMembers } from "./assignmentUtils";
+import { createAssignment } from "./assignmentUtils";
 
 interface CodebustersAssignmentCreatorProps extends AssignmentCreatorProps {
 	darkMode?: boolean;
@@ -46,7 +48,6 @@ export default function CodebustersAssignmentCreator({
 	const [settings, setSettings] = useState<QuestionGenerationSettings>({
 		questionCount: 3,
 		questionType: "frq",
-		selectedSubtopics: [],
 		idPercentage: 0,
 		pureIdOnly: false,
 		difficulties: ["any"], // Default to any difficulty
@@ -57,9 +58,78 @@ export default function CodebustersAssignmentCreator({
 	});
 
 	// Roster data
-	const [rosterMembers, setRosterMembers] = useState<RosterMember[]>([]);
 	const [selectedRoster, setSelectedRoster] = useState<string[]>([]);
-	const [loadingRoster, setLoadingRoster] = useState(false);
+
+	// Get roster and members from tRPC cache
+	const { data: teamData, isLoading: loadingRoster } = useTeamFull(teamId);
+
+	// Transform cached data into RosterMember format
+	const rosterMembers = useMemo<RosterMember[]>(() => {
+		if (!teamData || !subteamId) {
+			return [];
+		}
+
+		const members: RosterMember[] = [];
+		const memberMap = new Map<
+			string,
+			{
+				id: string;
+				email: string | null;
+				name: string;
+				username: string | null;
+			}
+		>();
+
+		// Build member map from team members
+		for (const member of teamData.members) {
+			if (member.subteamId === subteamId) {
+				memberMap.set(member.id, {
+					id: member.id,
+					email: member.email,
+					name: member.name,
+					username: member.username,
+				});
+			}
+		}
+
+		// Add roster entries
+		for (const rosterEntry of teamData.rosterEntries) {
+			if (rosterEntry.subteamId === subteamId) {
+				const member = rosterEntry.userId
+					? memberMap.get(rosterEntry.userId)
+					: null;
+				const displayName = rosterEntry.displayName || "";
+
+				members.push({
+					student_name: displayName,
+					user_id: rosterEntry.userId || undefined,
+					subteam_id: subteamId,
+					isLinked: !!rosterEntry.userId,
+					userEmail: member?.email || undefined,
+					username: member?.username || undefined,
+				});
+			}
+		}
+
+		// Add team members who aren't in roster yet
+		for (const member of teamData.members) {
+			if (member.subteamId === subteamId) {
+				// Check if already added from roster
+				if (!members.some((m) => m.user_id === member.id)) {
+					members.push({
+						student_name: member.name,
+						user_id: member.id,
+						subteam_id: subteamId,
+						isLinked: true,
+						userEmail: member.email || undefined,
+						username: member.username || undefined,
+					});
+				}
+			}
+		}
+
+		return members;
+	}, [teamData, subteamId]);
 
 	// Dropdown state
 	const [cipherDropdownOpen, setCipherDropdownOpen] = useState(false);
@@ -91,22 +161,7 @@ export default function CodebustersAssignmentCreator({
 
 	// Available events
 
-	// Load roster members when component mounts
-	useEffect(() => {
-		const loadRosterMembers = async () => {
-			setLoadingRoster(true);
-			try {
-				const members = await fetchRosterMembers(teamId, subteamId);
-				setRosterMembers(members);
-			} catch (_error) {
-				setError("Failed to load roster members");
-			} finally {
-				setLoadingRoster(false);
-			}
-		};
-
-		loadRosterMembers();
-	}, [teamId, subteamId]);
+	// Roster members are now loaded from tRPC cache via useTeamFull hook above
 
 	// Close dropdown when clicking outside
 	useEffect(() => {

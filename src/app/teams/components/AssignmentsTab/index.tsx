@@ -1,24 +1,25 @@
 "use client";
 
 import { useTheme } from "@/app/contexts/ThemeContext";
-import { useEnhancedTeamData } from "@/app/hooks/useEnhancedTeamData";
 import SyncLocalStorage from "@/lib/database/localStorageReplacement";
+import { trpc } from "@/lib/trpc/client";
 import { Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "react-toastify";
 import AssignmentViewerModal from "../AssignmentViewerModal";
+import CreateAssignmentModal from "./CreateAssignmentModal";
 import { AssignmentCard } from "./AssignmentCard";
 import type { Assignment, AssignmentsTabProps } from "./types";
 import { clearAssignmentData, hasAssignmentProgress } from "./utils";
 
 export default function AssignmentsTab({
-	teamId,
+	teamSlug,
 	isCaptain,
-	onCreateAssignment,
+	onCreateAssignment: _onCreateAssignment,
+	activeSubteamId,
 }: AssignmentsTabProps) {
 	const { darkMode } = useTheme();
-	const { assignments, loading, error, loadAssignments, invalidateCache } =
-		useEnhancedTeamData();
+	const utils = trpc.useUtils();
 	const [selectedAssignmentId, setSelectedAssignmentId] = useState<
 		string | null
 	>(null);
@@ -28,34 +29,29 @@ export default function AssignmentsTab({
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(
 		null,
 	);
+	const [showCreateModal, setShowCreateModal] = useState(false);
 
-	useEffect(() => {
-		invalidateCache(`assignments-${teamId}`);
-		loadAssignments(teamId);
-	}, [teamId, loadAssignments, invalidateCache]);
+	const {
+		data: assignments = [],
+		isLoading: loading,
+		error,
+	} = trpc.teams.assignments.useQuery({ teamSlug });
+
+	const deleteAssignmentMutation = trpc.teams.deleteAssignment.useMutation();
 
 	const handleDeleteAssignment = async (assignmentId: string) => {
 		try {
 			setDeletingAssignmentId(assignmentId);
-			const response = await fetch(
-				`/api/teams/${teamId}/assignments/${assignmentId}`,
-				{
-					method: "DELETE",
-				},
-			);
-
-			if (response.ok) {
-				invalidateCache(`assignments-${teamId}`);
-				await loadAssignments(teamId);
-				setShowDeleteConfirm(null);
-				toast.success("Assignment deleted successfully");
-			} else {
-				const errorData = await response.json();
-				const errorMessage = errorData.error || "Failed to delete assignment";
-				toast.error(errorMessage);
-			}
-		} catch {
-			const errorMessage = "Failed to delete assignment";
+			await deleteAssignmentMutation.mutateAsync({
+				teamSlug,
+				assignmentId,
+			});
+			utils.teams.assignments.invalidate({ teamSlug });
+			setShowDeleteConfirm(null);
+			toast.success("Assignment deleted successfully");
+		} catch (error) {
+			const errorMessage =
+				error instanceof Error ? error.message : "Failed to delete assignment";
 			toast.error(errorMessage);
 		} finally {
 			setDeletingAssignmentId(null);
@@ -72,8 +68,9 @@ export default function AssignmentsTab({
 
 	const handleDeclineAssignment = async (assignmentId: string) => {
 		try {
+			// TODO: Add decline assignment tRPC procedure
 			const response = await fetch(
-				`/api/teams/${teamId}/assignments/${assignmentId}/decline`,
+				`/api/teams/${teamSlug}/assignments/${assignmentId}/decline`,
 				{
 					method: "POST",
 				},
@@ -89,9 +86,7 @@ export default function AssignmentsTab({
 					SyncLocalStorage.removeItem("currentAssignmentId");
 				}
 
-				invalidateCache(`assignments-${teamId}`);
-				await loadAssignments(teamId);
-
+				utils.teams.assignments.invalidate({ teamSlug });
 				toast.success("Assignment declined");
 			} else {
 				const errorData = await response.json();
@@ -128,7 +123,7 @@ export default function AssignmentsTab({
 						Error loading assignments
 					</h3>
 					<p className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-						{error}
+						{error instanceof Error ? error.message : String(error)}
 					</p>
 				</div>
 			</div>
@@ -146,7 +141,7 @@ export default function AssignmentsTab({
 				{isCaptain && (
 					<button
 						type="button"
-						onClick={onCreateAssignment}
+						onClick={() => setShowCreateModal(true)}
 						className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
 					>
 						<span>Create</span>
@@ -211,10 +206,19 @@ export default function AssignmentsTab({
 			{selectedAssignmentId && (
 				<AssignmentViewerModal
 					assignmentId={selectedAssignmentId}
-					teamId={teamId}
+					teamSlug={teamSlug}
 					isCaptain={isCaptain}
 					onClose={() => setSelectedAssignmentId(null)}
 					darkMode={darkMode}
+				/>
+			)}
+
+			{showCreateModal && (
+				<CreateAssignmentModal
+					isOpen={showCreateModal}
+					onClose={() => setShowCreateModal(false)}
+					teamSlug={teamSlug}
+					activeSubteamId={activeSubteamId}
 				/>
 			)}
 		</div>

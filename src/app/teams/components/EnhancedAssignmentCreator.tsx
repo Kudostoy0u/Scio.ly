@@ -1,6 +1,8 @@
 "use client";
 
-import { isCodebustersEvent } from "@/lib/utils/assessments/eventConfig";
+import { useTeamFull } from "@/lib/hooks/useTeam";
+import { getEventCapabilities, isCodebustersEvent } from "@/lib/utils/assessments/eventConfig";
+import { useMemo } from "react";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import AssignmentDetailsStep from "./assignment/AssignmentDetailsStep";
@@ -17,11 +19,9 @@ import type {
 } from "./assignment/assignmentTypes";
 import {
 	createAssignment,
-	fetchRosterMembers,
 	generateQuestions,
 	getAvailableEvents,
 	getEventCapabilitiesForEvent,
-	getEventSubtopics,
 } from "./assignment/assignmentUtils";
 
 export default function EnhancedAssignmentCreator({
@@ -51,26 +51,100 @@ export default function EnhancedAssignmentCreator({
 	const [settings, setSettings] = useState<QuestionGenerationSettings>({
 		questionCount: 10,
 		questionType: "mcq",
-		selectedSubtopics: [],
 		idPercentage: 0,
 		pureIdOnly: false,
 		difficulties: ["any"], // Default to any difficulty
+		division: "any",
+		subtopics: [],
+		rmTypeFilter: undefined,
 	});
+	
+	// Store the calculated ID percentage for replace operations
+	const [idPercentageForReplace, setIdPercentageForReplace] = useState<number>(0);
 
 	// Generated questions and roster
 	const [generatedQuestions, setGeneratedQuestions] = useState<Question[]>([]);
 	const [generatingQuestions, setGeneratingQuestions] = useState(false);
-	const [rosterMembers, setRosterMembers] = useState<RosterMember[]>([]);
 	const [selectedRoster, setSelectedRoster] = useState<string[]>([]);
-	const [loadingRoster, setLoadingRoster] = useState(false);
 	const [showAnswers, setShowAnswers] = useState(false);
 
-	// Available events and subtopics
+	// Get roster and members from tRPC cache
+	const { data: teamData, isLoading: loadingRoster } = useTeamFull(teamId);
+
+	// Transform cached data into RosterMember format
+	const rosterMembers = useMemo<RosterMember[]>(() => {
+		if (!teamData || !subteamId) {
+			return [];
+		}
+
+		const members: RosterMember[] = [];
+		const memberMap = new Map<
+			string,
+			{
+				id: string;
+				email: string | null;
+				name: string;
+				username: string | null;
+			}
+		>();
+
+		// Build member map from team members
+		for (const member of teamData.members) {
+			if (member.subteamId === subteamId) {
+				memberMap.set(member.id, {
+					id: member.id,
+					email: member.email,
+					name: member.name,
+					username: member.username,
+				});
+			}
+		}
+
+		// Add roster entries
+		for (const rosterEntry of teamData.rosterEntries) {
+			if (rosterEntry.subteamId === subteamId) {
+				const member = rosterEntry.userId
+					? memberMap.get(rosterEntry.userId)
+					: null;
+				const displayName = rosterEntry.displayName || "";
+
+				members.push({
+					student_name: displayName,
+					user_id: rosterEntry.userId || undefined,
+					subteam_id: subteamId,
+					isLinked: !!rosterEntry.userId,
+					userEmail: member?.email || undefined,
+					username: member?.username || undefined,
+				});
+			}
+		}
+
+		// Add team members who aren't in roster yet
+		for (const member of teamData.members) {
+			if (member.subteamId === subteamId) {
+				// Check if already added from roster
+				if (!members.some((m) => m.user_id === member.id)) {
+					members.push({
+						student_name: member.name,
+						user_id: member.id,
+						subteam_id: subteamId,
+						isLinked: true,
+						userEmail: member.email || undefined,
+						username: member.username || undefined,
+					});
+				}
+			}
+		}
+
+		return members;
+	}, [teamData, subteamId]);
+
+	// Available events
 	const [availableEvents] = useState<string[]>(getAvailableEvents());
-	const [availableSubtopics, setAvailableSubtopics] = useState<string[]>([]);
 	const [eventCapabilities, setEventCapabilities] = useState({
 		supportsPictureQuestions: false,
 		supportsIdentificationOnly: false,
+		supportsIdQuestions: false,
 	});
 
 	// Update event name when prefillEventName changes
@@ -80,39 +154,18 @@ export default function EnhancedAssignmentCreator({
 		}
 	}, [prefillEventName, details.eventName]);
 
-	// Load roster members when component mounts
+	// Roster members are now loaded from tRPC cache via useTeamFull hook above
+
+	// Update capabilities when event changes - use shared eventConfig
 	useEffect(() => {
-		const loadRosterMembers = async () => {
-			setLoadingRoster(true);
-			try {
-				const members = await fetchRosterMembers(teamId, subteamId);
-				setRosterMembers(members);
-			} catch (_error) {
-				setError("Failed to load roster members");
-			} finally {
-				setLoadingRoster(false);
-			}
-		};
-
-		loadRosterMembers();
-	}, [teamId, subteamId]);
-
-	// Update subtopics and capabilities when event changes
-	useEffect(() => {
-		const updateSubtopicsAndCapabilities = async () => {
-			if (details.eventName) {
-				try {
-					const subtopics = await getEventSubtopics(details.eventName);
-					const capabilities = getEventCapabilitiesForEvent(details.eventName);
-					setAvailableSubtopics(subtopics);
-					setEventCapabilities(capabilities);
-				} catch (_error) {
-					setAvailableSubtopics([]);
-				}
-			}
-		};
-
-		updateSubtopicsAndCapabilities();
+		if (details.eventName) {
+			const capabilities = getEventCapabilities(details.eventName);
+			setEventCapabilities({
+				supportsPictureQuestions: capabilities.supportsPictureQuestions,
+				supportsIdentificationOnly: capabilities.supportsIdentificationOnly,
+				supportsIdQuestions: capabilities.supportsIdQuestions,
+			});
+		}
 	}, [details.eventName]);
 
 	// Check if this is a Codebusters assignment and render accordingly
@@ -134,15 +187,25 @@ export default function EnhancedAssignmentCreator({
 		setError(null);
 
 		try {
+			// Calculate the ID percentage for this generation
+			const calculatedIdPercentage = settings.questionCount > 0
+				? Math.round((settings.idPercentage / settings.questionCount) * 100)
+				: 0;
+			
+			// Store it for replace operations
+			setIdPercentageForReplace(calculatedIdPercentage);
+
 			const questions = await generateQuestions(
 				details.eventName,
 				settings.questionCount,
 				settings.questionType,
-				settings.selectedSubtopics,
 				settings.idPercentage,
 				settings.pureIdOnly,
 				teamId,
 				settings.difficulties,
+				settings.division,
+				settings.subtopics,
+				settings.rmTypeFilter,
 			);
 
 			setGeneratedQuestions(questions);
@@ -156,14 +219,28 @@ export default function EnhancedAssignmentCreator({
 
 	const replaceQuestion = async (index: number) => {
 		try {
+			// When replacing, use the stored percentage instead of recalculating from raw count
+			// This prevents the percentage from being > 100 when questionCount is 1
+			const idPercentageToUse = idPercentageForReplace > 0 
+				? idPercentageForReplace 
+				: (settings.questionCount > 0 
+					? Math.round((settings.idPercentage / settings.questionCount) * 100) 
+					: 0);
+			
+			// Convert percentage back to raw count for 1 question
+			const idCountForOne = Math.round((idPercentageToUse / 100) * 1);
+			
 			const newQuestion = await generateQuestions(
 				details.eventName,
 				1,
 				settings.questionType,
-				settings.selectedSubtopics,
-				settings.idPercentage,
+				idCountForOne, // Use calculated count for 1 question
 				settings.pureIdOnly,
 				teamId,
+				settings.difficulties,
+				settings.division,
+				settings.subtopics,
+				settings.rmTypeFilter,
 			);
 
 			if (newQuestion.length > 0 && newQuestion[0]) {
@@ -358,7 +435,6 @@ export default function EnhancedAssignmentCreator({
 							onError={handleError}
 							settings={settings}
 							onSettingsChange={handleSettingsChange}
-							availableSubtopics={availableSubtopics}
 							supportsPictureQuestions={
 								eventCapabilities.supportsPictureQuestions
 							}
@@ -367,6 +443,7 @@ export default function EnhancedAssignmentCreator({
 							}
 							onGenerateQuestions={handleGenerateQuestions}
 							generatingQuestions={generatingQuestions}
+							eventName={details.eventName}
 						/>
 					)}
 

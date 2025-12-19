@@ -20,6 +20,7 @@ import { Clipboard, LogOut, Trash2, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
+import AssignmentsTab from "../components/AssignmentsTab";
 import NotImplemented from "../components/NotImplemented";
 import PeopleTabUnified from "../components/PeopleTabUnified";
 import RosterTabUnified from "../components/RosterTabUnified";
@@ -485,9 +486,14 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 								))}
 
 							{activeTab === "assignments" && (
-								<div className={darkMode ? "text-white" : "text-gray-900"}>
-									Assignments tab - TODO
-								</div>
+								<AssignmentsTab
+									teamSlug={teamSlug}
+									isCaptain={isCaptain}
+									activeSubteamId={activeSubteamId}
+									onCreateAssignment={() => {
+										// Handled internally by AssignmentsTab
+									}}
+								/>
 							)}
 						</div>
 					</div>

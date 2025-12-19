@@ -348,13 +348,22 @@ export default function TestConfiguration({
 								<div className="mt-3">
 									<label
 										htmlFor="rmTypeFilter"
-										className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+										className={`block text-sm font-medium mb-2 ${
+											calculateIdPercentageValue(settings) === 0
+												? darkMode
+													? "text-gray-500"
+													: "text-gray-400"
+												: darkMode
+													? "text-gray-300"
+													: "text-gray-700"
+										}`}
 									>
 										Specimen Type
 									</label>
 									<select
 										id="rmTypeFilter"
 										value={settings.rmTypeFilter || "both"}
+										disabled={calculateIdPercentageValue(settings) === 0}
 										onChange={(e) => {
 											const value = e.target.value as
 												| "rock"
@@ -365,9 +374,13 @@ export default function TestConfiguration({
 											saveRmTypeFilter(rmTypeFilter);
 										}}
 										className={`block w-full rounded-md border-0 py-1.5 px-3 ${
-											darkMode
-												? "bg-gray-700 text-white focus:ring-blue-500"
-												: "bg-gray-50 text-gray-900 focus:ring-blue-600"
+											calculateIdPercentageValue(settings) === 0
+												? darkMode
+													? "bg-gray-800 text-gray-500 cursor-not-allowed opacity-50"
+													: "bg-gray-100 text-gray-400 cursor-not-allowed opacity-50"
+												: darkMode
+													? "bg-gray-700 text-white focus:ring-blue-500"
+													: "bg-gray-50 text-gray-900 focus:ring-blue-600"
 										} shadow-sm focus:ring-1 focus:outline-none`}
 									>
 										<option value="both">Rocks & Minerals</option>

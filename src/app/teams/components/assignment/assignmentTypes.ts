@@ -40,7 +40,6 @@ export interface AssignmentDetails {
 export interface QuestionGenerationSettings {
 	questionCount: number;
 	questionType: "mcq" | "both" | "frq";
-	selectedSubtopics: string[];
 	idPercentage: number;
 	pureIdOnly: boolean;
 	// Difficulty settings
@@ -50,6 +49,10 @@ export interface QuestionGenerationSettings {
 	division?: "B" | "C" | "any";
 	charLengthMin?: number;
 	charLengthMax?: number;
+	// Subtopics
+	subtopics?: string[];
+	// Rocks and Minerals filter
+	rmTypeFilter?: "rock" | "mineral";
 }
 
 export interface AssignmentStepProps {
@@ -69,11 +72,11 @@ export interface AssignmentDetailsStepProps extends AssignmentStepProps {
 export interface QuestionGenerationStepProps extends AssignmentStepProps {
 	settings: QuestionGenerationSettings;
 	onSettingsChange: (settings: Partial<QuestionGenerationSettings>) => void;
-	availableSubtopics: string[];
 	supportsPictureQuestions: boolean;
 	supportsIdentificationOnly: boolean;
 	onGenerateQuestions: () => Promise<void>;
 	generatingQuestions: boolean;
+	eventName?: string; // For loading subtopics and determining if Rocks and Minerals
 }
 
 export interface QuestionPreviewStepProps {

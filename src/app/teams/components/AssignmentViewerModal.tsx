@@ -9,7 +9,8 @@ import {
 	Target,
 	X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { trpc } from "@/lib/trpc/client";
 
 interface Question {
 	id: string;
@@ -46,46 +47,11 @@ interface RosterMember {
 	};
 }
 
-interface Assignment {
-	id: string;
-	title: string;
-	description: string;
-	assignment_type: string;
-	due_date: string;
-	points: number;
-	is_required: boolean;
-	max_attempts: number;
-	created_at: string;
-	updated_at: string;
-	creator_email: string;
-	creator_name: string;
-	event_name?: string;
-	questions: Question[];
-	roster: RosterMember[];
-	question_responses?: Array<{
-		submission_id: string;
-		question_id: string;
-		response_text: string;
-		is_correct: boolean;
-		points_earned: number;
-		graded_at: string | null;
-		question_text: string;
-		question_type: string;
-		question_points: number;
-		user_id: string;
-		email: string;
-		student_name: string;
-	}>;
-	questions_count: number;
-	roster_count: number;
-	submitted_count: number;
-	graded_count: number;
-	time_limit_minutes?: number;
-}
+// Assignment type is now inferred from tRPC response
 
 interface AssignmentViewerModalProps {
 	assignmentId: string;
-	teamId: string;
+	teamSlug: string;
 	isCaptain: boolean;
 	onClose: () => void;
 	darkMode?: boolean;
@@ -93,41 +59,26 @@ interface AssignmentViewerModalProps {
 
 export default function AssignmentViewerModal({
 	assignmentId,
-	teamId,
-	isCaptain: _isCaptain,
+	teamSlug: _teamSlug,
+	isCaptain,
 	onClose,
 	darkMode = false,
 }: AssignmentViewerModalProps) {
-	const [assignment, setAssignment] = useState<Assignment | null>(null);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
 	const [collapsedSections, setCollapsedSections] = useState({
 		studentResults: false,
 		assignmentDetails: false,
 	});
 
-	useEffect(() => {
-		const loadAssignment = async () => {
-			try {
-				setLoading(true);
-				const response = await fetch(
-					`/api/teams/${teamId}/assignments/${assignmentId}`,
-				);
-				if (response.ok) {
-					const data = await response.json();
-					setAssignment(data.assignment);
-				} else {
-					setError("Failed to load assignment");
-				}
-			} catch {
-				setError("Failed to load assignment");
-			} finally {
-				setLoading(false);
-			}
-		};
+	const {
+		data: assignment,
+		isLoading: loading,
+		error: queryError,
+	} = trpc.teams.getAssignmentAnalytics.useQuery(
+		{ assignmentId },
+		{ enabled: isCaptain },
+	);
 
-		loadAssignment();
-	}, [assignmentId, teamId]);
+	const error = queryError ? queryError.message : null;
 
 	const formatDate = (dateString: string) => {
 		return new Date(dateString).toLocaleDateString("en-US", {
@@ -197,7 +148,7 @@ export default function AssignmentViewerModal({
 	}
 
 	const isOverdue =
-		assignment.due_date && new Date() > new Date(assignment.due_date);
+		assignment.dueDate && new Date() > new Date(assignment.dueDate);
 
 	// derive counts from roster to ensure metrics reflect actual roster data
 	const rosterList = assignment.roster || [];
@@ -208,16 +159,31 @@ export default function AssignmentViewerModal({
 	// const _computedPendingCount = (assignment.roster_count || rosterList.length) - computedSubmittedCount;
 
 	// Calculate average accuracy from submitted assignments
+	type RosterMember = {
+		submission?: { status: string } | null;
+		analytics?: {
+			correct_answers: number | null;
+			total_questions: number | null;
+		} | null;
+	};
 	const submittedWithAnalytics = rosterList.filter(
-		(m) => m.submission && m.analytics,
-	);
+		(m: RosterMember) => m.submission && m.analytics,
+	) as Array<
+		RosterMember & {
+			submission: { status: string };
+			analytics: {
+				correct_answers: number | null;
+				total_questions: number | null;
+			};
+		}
+	>;
 	const averageAccuracy =
 		submittedWithAnalytics.length > 0
 			? Math.round(
-					submittedWithAnalytics.reduce((sum, m) => {
-						const correct = m.analytics?.correct_answers ?? 0;
-						const total = m.analytics?.total_questions ?? 1;
-						return sum + (correct / total) * 100;
+					submittedWithAnalytics.reduce((sum: number, m) => {
+						const correct = m.analytics.correct_answers ?? 0;
+						const total = m.analytics.total_questions ?? 1;
+						return sum + (Number(correct) / Number(total)) * 100;
 					}, 0) / submittedWithAnalytics.length,
 				)
 			: 0;
@@ -242,7 +208,7 @@ export default function AssignmentViewerModal({
 							className={`text-lg md:text-2xl font-bold pr-4 ${darkMode ? "text-white" : "text-gray-900"}`}
 						>
 							{assignment.title}
-							{assignment.event_name ? ` - ${assignment.event_name}` : ""}
+							{assignment.eventName ? ` - ${assignment.eventName}` : ""}
 						</h2>
 						<button
 							type="button"
@@ -263,7 +229,7 @@ export default function AssignmentViewerModal({
 								<span
 									className={`text-xs md:text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
 								>
-									{assignment.time_limit_minutes} min
+									{assignment.timeLimitMinutes} min
 								</span>
 							</div>
 							<div className="flex items-center space-x-2">
@@ -271,7 +237,10 @@ export default function AssignmentViewerModal({
 								<span
 									className={`text-xs md:text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
 								>
-									{assignment.questions_count} questions
+									{assignment.questionsCount ||
+										assignment.questions?.length ||
+										0}{" "}
+									questions
 								</span>
 							</div>
 							<div className="flex items-center space-x-2">
@@ -290,12 +259,12 @@ export default function AssignmentViewerModal({
 									{submissionPercentage}% submitted
 								</span>
 							</div>
-							{assignment.due_date && (
+							{assignment.dueDate && (
 								<div className="flex items-center space-x-2 col-span-2 md:col-span-1 justify-center md:justify-start">
 									<span
 										className={`text-xs md:text-sm ${isOverdue ? "text-red-500" : darkMode ? "text-gray-300" : "text-gray-600"}`}
 									>
-										Due: {formatDate(assignment.due_date)}
+										Due: {formatDate(assignment.dueDate)}
 									</span>
 								</div>
 							)}
@@ -481,10 +450,10 @@ export default function AssignmentViewerModal({
 										<span
 											className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}
 										>
-											{assignment.assignment_type}
+											{assignment.assignmentType || "standard"}
 										</span>
 									</div>
-									{assignment.due_date && (
+									{assignment.dueDate && (
 										<div className="flex flex-col md:flex-row md:justify-between space-y-1 md:space-y-0">
 											<span
 												className={`${darkMode ? "text-gray-300" : "text-gray-600"}`}
@@ -494,7 +463,7 @@ export default function AssignmentViewerModal({
 											<span
 												className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}
 											>
-												{formatDate(assignment.due_date)}
+												{formatDate(assignment.dueDate)}
 											</span>
 										</div>
 									)}
@@ -507,7 +476,7 @@ export default function AssignmentViewerModal({
 										<span
 											className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}
 										>
-											{formatDate(assignment.created_at)}
+											{formatDate(assignment.createdAt)}
 										</span>
 									</div>
 									<div className="flex flex-col md:flex-row md:justify-between space-y-1 md:space-y-0">
@@ -519,7 +488,7 @@ export default function AssignmentViewerModal({
 										<span
 											className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}
 										>
-											{assignment.creator_name}
+											{assignment.creatorName}
 										</span>
 									</div>
 								</div>

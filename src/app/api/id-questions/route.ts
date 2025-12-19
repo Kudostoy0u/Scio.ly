@@ -67,18 +67,16 @@ export async function GET(request: NextRequest) {
 			conds.push(sql`${idEvents.rmType} = ${p.rm_type}`);
 		}
 
-		// Filter by question type if provided (mcq | frq | both)
-		// Note: idEvents table doesn't have questionType or pureId columns
-		// These filters are disabled as the schema doesn't support them
-		// const qt = (p.question_type || "").toLowerCase();
-		// if (qt === "mcq" || qt === "frq") {
-		//   conds.push(sql`${idEvents.type} = ${qt}`);
-		// }
+		// Filter by question type if provided (mcq | frq)
+		const qt = (p.question_type || "").toLowerCase();
+		if (qt === "mcq" || qt === "frq") {
+			conds.push(sql`${idEvents.questionType} = ${qt}`);
+		}
 
 		// Filter by pure_id if requested
-		// if (p.pure_id_only === "true") {
-		//   conds.push(sql`${idEvents.pureId} = true`);
-		// }
+		if (p.pure_id_only === "true") {
+			conds.push(sql`${idEvents.pureId} = true`);
+		}
 
 		const where =
 			conds.length === 0
