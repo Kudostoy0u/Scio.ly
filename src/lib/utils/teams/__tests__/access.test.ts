@@ -1,7 +1,4 @@
-import {
-	getTeamAccessCockroach,
-	hasLeadershipAccessCockroach,
-} from "@/lib/utils/teams/access";
+import { getTeamAccess, hasLeadershipAccess } from "@/lib/utils/teams/access";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock Drizzle ORM
@@ -28,7 +25,7 @@ describe("Team Authentication v2", () => {
 		vi.resetAllMocks();
 	});
 
-	describe("getTeamAccessCockroach", () => {
+	describe("getTeamAccess", () => {
 		it("should grant access to team creator", async () => {
 			// Mock team creator check
 			const mockWhereCreator = vi
@@ -70,16 +67,15 @@ describe("Team Authentication v2", () => {
 				.mockReturnValueOnce(mockSelectMembership())
 				.mockReturnValueOnce(mockSelectRoster());
 
-			const result = await getTeamAccessCockroach(mockUserId, mockGroupId);
+			const result = await getTeamAccess(mockUserId, mockGroupId);
 
 			expect(result).toEqual({
 				hasAccess: true,
 				isCreator: true,
-				hasSubteamMembership: false,
+				hasMembership: false,
 				hasRosterEntries: false,
-				subteamRole: undefined,
-				subteamMemberships: [],
-				rosterSubteams: [],
+				role: undefined,
+				memberships: [],
 			});
 		});
 
@@ -96,7 +92,6 @@ describe("Team Authentication v2", () => {
 			// Mock subteam membership
 			const mockWhereMembership = vi.fn().mockResolvedValue([
 				{
-					subteamId: mockSubteamId,
 					teamId: mockSubteamId,
 					role: "captain",
 				},
@@ -128,22 +123,20 @@ describe("Team Authentication v2", () => {
 				.mockReturnValueOnce(mockSelectMembership())
 				.mockReturnValueOnce(mockSelectRoster());
 
-			const result = await getTeamAccessCockroach(mockUserId, mockGroupId);
+			const result = await getTeamAccess(mockUserId, mockGroupId);
 
 			expect(result).toEqual({
 				hasAccess: true,
 				isCreator: false,
-				hasSubteamMembership: true,
+				hasMembership: true,
 				hasRosterEntries: false,
-				subteamRole: "captain",
-				subteamMemberships: [
+				role: "captain",
+				memberships: [
 					{
-						subteamId: mockSubteamId,
 						teamId: mockSubteamId,
 						role: "captain",
 					},
 				],
-				rosterSubteams: [],
 			});
 		});
 
@@ -172,9 +165,7 @@ describe("Team Authentication v2", () => {
 			// Mock roster entries
 			const mockWhereRoster = vi.fn().mockResolvedValue([
 				{
-					subteamId: mockSubteamId,
-					teamId: mockSubteamId,
-					studentName: "John Doe",
+					id: "roster-1",
 				},
 			]);
 			const mockInnerJoinRoster = vi
@@ -192,22 +183,15 @@ describe("Team Authentication v2", () => {
 				.mockReturnValueOnce(mockSelectMembership())
 				.mockReturnValueOnce(mockSelectRoster());
 
-			const result = await getTeamAccessCockroach(mockUserId, mockGroupId);
+			const result = await getTeamAccess(mockUserId, mockGroupId);
 
 			expect(result).toEqual({
 				hasAccess: true,
 				isCreator: false,
-				hasSubteamMembership: false,
+				hasMembership: false,
 				hasRosterEntries: true,
-				subteamRole: undefined,
-				subteamMemberships: [],
-				rosterSubteams: [
-					{
-						subteamId: mockSubteamId,
-						teamId: mockSubteamId,
-						studentName: "John Doe",
-					},
-				],
+				role: undefined,
+				memberships: [],
 			});
 		});
 
@@ -248,16 +232,15 @@ describe("Team Authentication v2", () => {
 				.mockReturnValueOnce(mockSelectMembership())
 				.mockReturnValueOnce(mockSelectRoster());
 
-			const result = await getTeamAccessCockroach(mockUserId, mockGroupId);
+			const result = await getTeamAccess(mockUserId, mockGroupId);
 
 			expect(result).toEqual({
 				hasAccess: false,
 				isCreator: false,
-				hasSubteamMembership: false,
+				hasMembership: false,
 				hasRosterEntries: false,
-				subteamRole: undefined,
-				subteamMemberships: [],
-				rosterSubteams: [],
+				role: undefined,
+				memberships: [],
 			});
 		});
 
@@ -274,12 +257,10 @@ describe("Team Authentication v2", () => {
 
 			const mockWhereMembership = vi.fn().mockResolvedValue([
 				{
-					subteamId: mockSubteamId,
 					teamId: mockSubteamId,
 					role: "captain",
 				},
 				{
-					subteamId: subteamId2,
 					teamId: subteamId2,
 					role: "member",
 				},
@@ -310,23 +291,21 @@ describe("Team Authentication v2", () => {
 				.mockReturnValueOnce(mockSelectMembership())
 				.mockReturnValueOnce(mockSelectRoster());
 
-			const result = await getTeamAccessCockroach(mockUserId, mockGroupId);
+			const result = await getTeamAccess(mockUserId, mockGroupId);
 
-			expect(result.subteamMemberships).toHaveLength(2);
-			expect(result.subteamMemberships[0]).toEqual({
-				subteamId: mockSubteamId,
+			expect(result.memberships).toHaveLength(2);
+			expect(result.memberships?.[0]).toEqual({
 				teamId: mockSubteamId,
 				role: "captain",
 			});
-			expect(result.subteamMemberships[1]).toEqual({
-				subteamId: subteamId2,
+			expect(result.memberships?.[1]).toEqual({
 				teamId: subteamId2,
 				role: "member",
 			});
 		});
 	});
 
-	describe("hasLeadershipAccessCockroach", () => {
+	describe("hasLeadershipAccess", () => {
 		it("should grant leadership to team creator", async () => {
 			const mockWhereCreator = vi
 				.fn()
@@ -365,10 +344,7 @@ describe("Team Authentication v2", () => {
 				.mockReturnValueOnce(mockSelectMembership())
 				.mockReturnValueOnce(mockSelectRoster());
 
-			const result = await hasLeadershipAccessCockroach(
-				mockUserId,
-				mockGroupId,
-			);
+			const result = await hasLeadershipAccess(mockUserId, mockGroupId);
 
 			expect(result).toBe(true);
 		});
@@ -384,7 +360,6 @@ describe("Team Authentication v2", () => {
 
 			const mockWhereMembership = vi.fn().mockResolvedValue([
 				{
-					subteamId: mockSubteamId,
 					teamId: mockSubteamId,
 					role: "captain",
 				},
@@ -415,60 +390,7 @@ describe("Team Authentication v2", () => {
 				.mockReturnValueOnce(mockSelectMembership())
 				.mockReturnValueOnce(mockSelectRoster());
 
-			const result = await hasLeadershipAccessCockroach(
-				mockUserId,
-				mockGroupId,
-			);
-
-			expect(result).toBe(true);
-		});
-
-		it("should grant leadership to captain", async () => {
-			const mockWhereCreator = vi.fn().mockResolvedValue([]);
-			const mockFromCreator = vi
-				.fn()
-				.mockReturnValue({ where: mockWhereCreator });
-			const mockSelectCreator = vi
-				.fn()
-				.mockReturnValue({ from: mockFromCreator });
-
-			const mockWhereMembership = vi.fn().mockResolvedValue([
-				{
-					subteamId: mockSubteamId,
-					teamId: mockSubteamId,
-					role: "captain",
-				},
-			]);
-			const mockInnerJoinMembership = vi
-				.fn()
-				.mockReturnValue({ where: mockWhereMembership });
-			const mockFromMembership = vi
-				.fn()
-				.mockReturnValue({ innerJoin: mockInnerJoinMembership });
-			const mockSelectMembership = vi
-				.fn()
-				.mockReturnValue({ from: mockFromMembership });
-
-			const mockWhereRoster = vi.fn().mockResolvedValue([]);
-			const mockInnerJoinRoster = vi
-				.fn()
-				.mockReturnValue({ where: mockWhereRoster });
-			const mockFromRoster = vi
-				.fn()
-				.mockReturnValue({ innerJoin: mockInnerJoinRoster });
-			const mockSelectRoster = vi
-				.fn()
-				.mockReturnValue({ from: mockFromRoster });
-
-			mockDbPg.select
-				.mockReturnValueOnce(mockSelectCreator())
-				.mockReturnValueOnce(mockSelectMembership())
-				.mockReturnValueOnce(mockSelectRoster());
-
-			const result = await hasLeadershipAccessCockroach(
-				mockUserId,
-				mockGroupId,
-			);
+			const result = await hasLeadershipAccess(mockUserId, mockGroupId);
 
 			expect(result).toBe(true);
 		});
@@ -484,7 +406,6 @@ describe("Team Authentication v2", () => {
 
 			const mockWhereMembership = vi.fn().mockResolvedValue([
 				{
-					subteamId: mockSubteamId,
 					teamId: mockSubteamId,
 					role: "member",
 				},
@@ -515,10 +436,7 @@ describe("Team Authentication v2", () => {
 				.mockReturnValueOnce(mockSelectMembership())
 				.mockReturnValueOnce(mockSelectRoster());
 
-			const result = await hasLeadershipAccessCockroach(
-				mockUserId,
-				mockGroupId,
-			);
+			const result = await hasLeadershipAccess(mockUserId, mockGroupId);
 
 			expect(result).toBe(false);
 		});
@@ -559,10 +477,7 @@ describe("Team Authentication v2", () => {
 				.mockReturnValueOnce(mockSelectMembership())
 				.mockReturnValueOnce(mockSelectRoster());
 
-			const result = await hasLeadershipAccessCockroach(
-				mockUserId,
-				mockGroupId,
-			);
+			const result = await hasLeadershipAccess(mockUserId, mockGroupId);
 
 			expect(result).toBe(false);
 		});
@@ -583,16 +498,14 @@ describe("Team Authentication v2", () => {
 			mockDbPg.select.mockReturnValueOnce(mockSelectCreator());
 
 			// The function should handle errors and return a default result
-			const result = await getTeamAccessCockroach(mockUserId, mockGroupId);
+			const result = await getTeamAccess(mockUserId, mockGroupId);
 
 			expect(result).toEqual({
 				hasAccess: false,
 				isCreator: false,
-				hasSubteamMembership: false,
+				hasMembership: false,
 				hasRosterEntries: false,
-				subteamRole: undefined,
-				subteamMemberships: [],
-				rosterSubteams: [],
+				memberships: [],
 			});
 		});
 
@@ -632,7 +545,7 @@ describe("Team Authentication v2", () => {
 				.mockReturnValueOnce(mockSelectMembership())
 				.mockReturnValueOnce(mockSelectRoster());
 
-			const result = await getTeamAccessCockroach(mockUserId, mockGroupId);
+			const result = await getTeamAccess(mockUserId, mockGroupId);
 
 			expect(result.hasAccess).toBe(false);
 		});

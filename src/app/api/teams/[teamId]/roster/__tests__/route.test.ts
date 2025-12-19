@@ -1,10 +1,7 @@
 import { GET, POST } from "@/app/api/teams/[teamId]/roster/route";
 import { dbPg } from "@/lib/db";
 import { getServerUser } from "@/lib/supabaseServer";
-import {
-	getTeamAccessCockroach,
-	hasLeadershipAccessCockroach,
-} from "@/lib/utils/teams/access";
+import { getTeamAccess, hasLeadershipAccess } from "@/lib/utils/teams/access";
 import type { User } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,12 +12,8 @@ vi.mock("@/lib/supabaseServer", () => ({
 }));
 
 vi.mock("@/lib/utils/teams/access", () => ({
-	getTeamAccessCockroach: vi.fn(),
-	hasLeadershipAccessCockroach: vi.fn(),
-}));
-
-vi.mock("@/lib/cockroachdb", () => ({
-	queryCockroachDB: vi.fn(),
+	getTeamAccess: vi.fn(),
+	hasLeadershipAccess: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -31,10 +24,8 @@ vi.mock("@/lib/db", () => ({
 }));
 
 const mockGetServerUser = vi.mocked(getServerUser);
-const mockGetTeamAccessCockroach = vi.mocked(getTeamAccessCockroach);
-const mockHasLeadershipAccessCockroach = vi.mocked(
-	hasLeadershipAccessCockroach,
-);
+const mockGetTeamAccess = vi.mocked(getTeamAccess);
+const mockHasLeadershipAccess = vi.mocked(hasLeadershipAccess);
 const mockDbPg = vi.mocked(dbPg);
 
 describe("/api/teams/[teamId]/roster", () => {
@@ -133,13 +124,10 @@ describe("/api/teams/[teamId]/roster", () => {
 					}),
 				}),
 			} as any);
-			mockGetTeamAccessCockroach.mockResolvedValue({
+			mockGetTeamAccess.mockResolvedValue({
 				hasAccess: false,
 				isCreator: false,
-				hasSubteamMembership: false,
 				hasRosterEntries: false,
-				subteamMemberships: [],
-				rosterSubteams: [],
 			} as any);
 
 			const request = new NextRequest(
@@ -166,14 +154,10 @@ describe("/api/teams/[teamId]/roster", () => {
 				}),
 			} as any);
 
-			mockGetTeamAccessCockroach.mockResolvedValue({
+			mockGetTeamAccess.mockResolvedValue({
 				hasAccess: true,
 				isCreator: false,
-				hasSubteamMembership: true,
 				hasRosterEntries: false,
-				subteamRole: "captain",
-				subteamMemberships: [],
-				rosterSubteams: [],
 			} as any);
 
 			// Mock roster data query using Drizzle ORM (select().from().leftJoin().where().orderBy())
@@ -244,14 +228,10 @@ describe("/api/teams/[teamId]/roster", () => {
 				}),
 			} as any);
 
-			mockGetTeamAccessCockroach.mockResolvedValue({
+			mockGetTeamAccess.mockResolvedValue({
 				hasAccess: true,
 				isCreator: false,
-				hasSubteamMembership: true,
 				hasRosterEntries: false,
-				subteamRole: "captain",
-				subteamMemberships: [],
-				rosterSubteams: [],
 			} as any);
 
 			// Mock empty roster data query (select().from().leftJoin().where().orderBy())
@@ -300,14 +280,10 @@ describe("/api/teams/[teamId]/roster", () => {
 				}),
 			} as any);
 
-			mockGetTeamAccessCockroach.mockResolvedValue({
+			mockGetTeamAccess.mockResolvedValue({
 				hasAccess: true,
 				isCreator: false,
-				hasSubteamMembership: true,
 				hasRosterEntries: false,
-				subteamRole: "captain",
-				subteamMemberships: [],
-				rosterSubteams: [],
 			} as any);
 
 			// Mock empty roster data query (select().from().leftJoin().where().orderBy())
@@ -403,17 +379,13 @@ describe("/api/teams/[teamId]/roster", () => {
 				}),
 			} as any);
 
-			mockGetTeamAccessCockroach.mockResolvedValue({
+			mockGetTeamAccess.mockResolvedValue({
 				hasAccess: true,
 				isCreator: false,
-				hasSubteamMembership: true,
 				hasRosterEntries: false,
-				subteamRole: "member",
-				subteamMemberships: [],
-				rosterSubteams: [],
 			} as any);
 
-			mockHasLeadershipAccessCockroach.mockResolvedValue(false);
+			mockHasLeadershipAccess.mockResolvedValue(false);
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/roster`,
@@ -450,17 +422,13 @@ describe("/api/teams/[teamId]/roster", () => {
 				}),
 			} as any);
 
-			mockGetTeamAccessCockroach.mockResolvedValue({
+			mockGetTeamAccess.mockResolvedValue({
 				hasAccess: true,
 				isCreator: false,
-				hasSubteamMembership: true,
 				hasRosterEntries: false,
-				subteamRole: "captain",
-				subteamMemberships: [],
-				rosterSubteams: [],
 			} as any);
 
-			mockHasLeadershipAccessCockroach.mockResolvedValue(true);
+			mockHasLeadershipAccess.mockResolvedValue(true);
 
 			// Mock subteam validation
 			mockDbPg.select.mockReturnValueOnce({
@@ -523,17 +491,13 @@ describe("/api/teams/[teamId]/roster", () => {
 				}),
 			} as any);
 
-			mockGetTeamAccessCockroach.mockResolvedValue({
+			mockGetTeamAccess.mockResolvedValue({
 				hasAccess: true,
 				isCreator: false,
-				hasSubteamMembership: true,
 				hasRosterEntries: false,
-				subteamRole: "captain",
-				subteamMemberships: [],
-				rosterSubteams: [],
 			} as any);
 
-			mockHasLeadershipAccessCockroach.mockResolvedValue(true);
+			mockHasLeadershipAccess.mockResolvedValue(true);
 
 			// Mock subteam validation
 			mockDbPg.select.mockReturnValueOnce({
@@ -595,17 +559,13 @@ describe("/api/teams/[teamId]/roster", () => {
 				}),
 			} as any);
 
-			mockGetTeamAccessCockroach.mockResolvedValue({
+			mockGetTeamAccess.mockResolvedValue({
 				hasAccess: true,
 				isCreator: false,
-				hasSubteamMembership: true,
 				hasRosterEntries: false,
-				subteamRole: "captain",
-				subteamMemberships: [],
-				rosterSubteams: [],
 			} as any);
 
-			mockHasLeadershipAccessCockroach.mockResolvedValue(true);
+			mockHasLeadershipAccess.mockResolvedValue(true);
 
 			// Mock database error on subteam validation
 			mockDbPg.select.mockReturnValueOnce({

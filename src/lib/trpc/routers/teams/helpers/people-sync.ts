@@ -1,24 +1,20 @@
 /**
  * People Sync Helper
  *
- * This module provides functions to synchronize the new_team_people table
+ * This module provides functions to synchronize the team_people table
  * with roster data. It ensures that the people tab always reflects the
  * current state of the roster.
  */
 
 import { dbPg } from "@/lib/db";
-import {
-	newTeamPeople,
-	newTeamRosterData,
-	newTeamUnits,
-} from "@/lib/db/schema/teams";
+import { teamPeople, teamRoster, teamSubteams } from "@/lib/db/schema";
 import logger from "@/lib/utils/logging/logger";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 
 interface PersonData {
 	name: string;
 	userId: string | null;
-	teamUnitId: string;
+	subteamId: string;
 	events: string[];
 	isAdmin: boolean;
 }
@@ -32,36 +28,46 @@ async function upsertPeopleEntries(
 ): Promise<void> {
 	for (const person of peopleToUpsert) {
 		const key = person.userId
-			? `user:${person.userId}:${person.teamUnitId}`
-			: `name:${person.name.toLowerCase().trim()}:${person.teamUnitId}`;
+			? `user:${person.userId}:${person.subteamId}`
+			: `name:${person.name.toLowerCase().trim()}:${person.subteamId}`;
 
 		const existingId = existingPeopleMap.get(key);
 
 		if (existingId) {
 			// Update existing entry
 			await dbPg
-				.update(newTeamPeople)
+				.update(teamPeople)
 				.set({
 					name: person.name,
 					userId: person.userId,
-					events: JSON.stringify(person.events),
+					events: person.events,
 					updatedAt: new Date().toISOString(),
 				})
-				.where(eq(newTeamPeople.id, existingId));
+				.where(eq(teamPeople.id, existingId));
 
 			// Remove from map to track what's been processed
 			existingPeopleMap.delete(key);
 		} else {
 			// Insert new entry
-			await dbPg.insert(newTeamPeople).values({
-				teamUnitId: person.teamUnitId,
-				name: person.name,
-				userId: person.userId,
-				events: JSON.stringify(person.events),
-				isAdmin: person.isAdmin ? "true" : "false",
-				createdAt: new Date().toISOString(),
-				updatedAt: new Date().toISOString(),
-			});
+			// Get group team ID first
+			const [subteamInfo] = await dbPg
+				.select({ teamId: teamSubteams.teamId })
+				.from(teamSubteams)
+				.where(eq(teamSubteams.id, person.subteamId))
+				.limit(1);
+
+			if (subteamInfo) {
+				await dbPg.insert(teamPeople).values({
+					subteamId: person.subteamId,
+					teamId: subteamInfo.teamId,
+					name: person.name,
+					userId: person.userId,
+					events: person.events,
+					isAdmin: person.isAdmin,
+					createdAt: new Date().toISOString(),
+					updatedAt: new Date().toISOString(),
+				});
+			}
 		}
 	}
 }
@@ -72,7 +78,7 @@ async function upsertPeopleEntries(
  * This function:
  * 1. Fetches all roster entries for the subteam
  * 2. Aggregates entries by person (name + userId + subteam)
- * 3. Upserts into new_team_people table
+ * 3. Upserts into team_people table
  * 4. Removes orphaned entries (people no longer in roster)
  */
 export async function syncPeopleFromRosterForSubteam(
@@ -82,26 +88,30 @@ export async function syncPeopleFromRosterForSubteam(
 		// Get all roster entries for this subteam
 		const rosterEntries = await dbPg
 			.select({
-				studentName: newTeamRosterData.studentName,
-				userId: newTeamRosterData.userId,
-				eventName: newTeamRosterData.eventName,
-				teamUnitId: newTeamRosterData.teamUnitId,
+				studentName: teamRoster.studentName,
+				displayName: teamRoster.displayName,
+				userId: teamRoster.userId,
+				eventName: teamRoster.eventName,
+				subteamId: teamRoster.subteamId,
 			})
-			.from(newTeamRosterData)
-			.where(eq(newTeamRosterData.teamUnitId, subteamId));
+			.from(teamRoster)
+			.where(eq(teamRoster.subteamId, subteamId));
 
 		// Aggregate by person (using name as key for unlinked, userId for linked)
 		const peopleMap = new Map<string, PersonData>();
 
 		for (const entry of rosterEntries) {
-			if (!(entry.studentName || entry.userId)) {
+			const personName = entry.studentName || entry.displayName;
+			if (!(personName || entry.userId)) {
 				continue;
 			}
 
+			if (!entry.subteamId) continue;
+
 			// Create a unique key: userId if linked, otherwise name
 			const key = entry.userId
-				? `user:${entry.userId}:${entry.teamUnitId}`
-				: `name:${entry.studentName?.toLowerCase().trim()}:${entry.teamUnitId}`;
+				? `user:${entry.userId}:${entry.subteamId}`
+				: `name:${personName?.toLowerCase().trim()}:${entry.subteamId}`;
 
 			const existing = peopleMap.get(key);
 			if (existing) {
@@ -112,9 +122,9 @@ export async function syncPeopleFromRosterForSubteam(
 			} else {
 				// Create new person entry
 				peopleMap.set(key, {
-					name: entry.studentName || "Unknown",
+					name: personName || "Unknown",
 					userId: entry.userId,
-					teamUnitId: entry.teamUnitId,
+					subteamId: entry.subteamId,
 					events: entry.eventName ? [entry.eventName] : [],
 					isAdmin: false,
 				});
@@ -124,20 +134,21 @@ export async function syncPeopleFromRosterForSubteam(
 		// Get existing people entries for this subteam
 		const existingPeople = await dbPg
 			.select({
-				id: newTeamPeople.id,
-				name: newTeamPeople.name,
-				userId: newTeamPeople.userId,
-				teamUnitId: newTeamPeople.teamUnitId,
+				id: teamPeople.id,
+				name: teamPeople.name,
+				userId: teamPeople.userId,
+				subteamId: teamPeople.subteamId,
 			})
-			.from(newTeamPeople)
-			.where(eq(newTeamPeople.teamUnitId, subteamId));
+			.from(teamPeople)
+			.where(eq(teamPeople.subteamId, subteamId));
 
 		// Build lookup for existing people
 		const existingPeopleMap = new Map<string, string>(); // key -> id
 		for (const person of existingPeople) {
+			if (!person.subteamId) continue;
 			const key = person.userId
-				? `user:${person.userId}:${person.teamUnitId}`
-				: `name:${person.name.toLowerCase().trim()}:${person.teamUnitId}`;
+				? `user:${person.userId}:${person.subteamId}`
+				: `name:${person.name.toLowerCase().trim()}:${person.subteamId}`;
 			existingPeopleMap.set(key, person.id);
 		}
 
@@ -148,9 +159,7 @@ export async function syncPeopleFromRosterForSubteam(
 		// Remove orphaned entries (people no longer in roster)
 		const orphanedIds = Array.from(existingPeopleMap.values());
 		if (orphanedIds.length > 0) {
-			await dbPg
-				.delete(newTeamPeople)
-				.where(inArray(newTeamPeople.id, orphanedIds));
+			await dbPg.delete(teamPeople).where(inArray(teamPeople.id, orphanedIds));
 			logger.dev.structured("info", "Removed orphaned people entries", {
 				subteamId,
 				removedCount: orphanedIds.length,
@@ -177,12 +186,12 @@ export async function syncPeopleFromRosterForGroup(
 	try {
 		// Get all active subteams in the group
 		const subteams = await dbPg
-			.select({ id: newTeamUnits.id })
-			.from(newTeamUnits)
+			.select({ id: teamSubteams.id })
+			.from(teamSubteams)
 			.where(
 				and(
-					eq(newTeamUnits.groupId, groupId),
-					eq(newTeamUnits.status, "active"),
+					eq(teamSubteams.teamId, groupId),
+					eq(teamSubteams.status, "active"),
 				),
 			);
 
@@ -215,15 +224,15 @@ export async function syncRosterFromPeopleEntry(
 		name?: string;
 		userId?: string | null;
 		events?: string[];
-		teamUnitId?: string;
+		subteamId?: string;
 	},
 ): Promise<void> {
 	try {
 		// Get current person data
 		const [person] = await dbPg
 			.select()
-			.from(newTeamPeople)
-			.where(eq(newTeamPeople.id, personId));
+			.from(teamPeople)
+			.where(eq(teamPeople.id, personId));
 
 		if (!person) {
 			logger.warn("Person not found for roster sync:", { personId });
@@ -231,13 +240,15 @@ export async function syncRosterFromPeopleEntry(
 		}
 
 		const currentEvents = Array.isArray(person.events)
-			? person.events
+			? (person.events as string[])
 			: JSON.parse(String(person.events || "[]"));
 		const newEvents = updates.events;
-		const teamUnitId = updates.teamUnitId || person.teamUnitId;
+		const subteamId = updates.subteamId || person.subteamId;
 		const newName = updates.name || person.name;
 		const newUserId =
 			updates.userId !== undefined ? updates.userId : person.userId;
+
+		if (!subteamId) return;
 
 		// If events changed, update roster entries
 		if (newEvents) {
@@ -252,25 +263,27 @@ export async function syncRosterFromPeopleEntry(
 			for (const eventName of eventsToAdd) {
 				// Find the next available slot for this event
 				const existingSlots = await dbPg
-					.select({ slotIndex: newTeamRosterData.slotIndex })
-					.from(newTeamRosterData)
+					.select({ slotIndex: teamRoster.slotIndex })
+					.from(teamRoster)
 					.where(
 						and(
-							eq(newTeamRosterData.teamUnitId, teamUnitId),
-							eq(newTeamRosterData.eventName, eventName),
+							eq(teamRoster.subteamId, subteamId),
+							eq(teamRoster.eventName, eventName),
 						),
 					)
-					.orderBy(sql`${newTeamRosterData.slotIndex} DESC`)
+					.orderBy(desc(teamRoster.slotIndex))
 					.limit(1);
 
 				const nextSlot =
 					existingSlots.length > 0 ? (existingSlots[0]?.slotIndex || 0) + 1 : 0;
 
-				await dbPg.insert(newTeamRosterData).values({
-					teamUnitId,
+				await dbPg.insert(teamRoster).values({
+					subteamId,
+					teamId: subteamId, // Placeholder
 					eventName,
 					slotIndex: nextSlot,
 					studentName: newName,
+					displayName: newName,
 					userId: newUserId,
 					createdAt: new Date().toISOString(),
 					updatedAt: new Date().toISOString(),
@@ -281,22 +294,22 @@ export async function syncRosterFromPeopleEntry(
 			for (const eventName of eventsToRemove) {
 				if (person.userId) {
 					await dbPg
-						.delete(newTeamRosterData)
+						.delete(teamRoster)
 						.where(
 							and(
-								eq(newTeamRosterData.teamUnitId, teamUnitId),
-								eq(newTeamRosterData.eventName, eventName),
-								eq(newTeamRosterData.userId, person.userId),
+								eq(teamRoster.subteamId, subteamId),
+								eq(teamRoster.eventName, eventName),
+								eq(teamRoster.userId, person.userId),
 							),
 						);
 				} else {
 					await dbPg
-						.delete(newTeamRosterData)
+						.delete(teamRoster)
 						.where(
 							and(
-								eq(newTeamRosterData.teamUnitId, teamUnitId),
-								eq(newTeamRosterData.eventName, eventName),
-								sql`LOWER(${newTeamRosterData.studentName}) = LOWER(${person.name})`,
+								eq(teamRoster.subteamId, subteamId),
+								eq(teamRoster.eventName, eventName),
+								sql`LOWER(${teamRoster.displayName}) = LOWER(${person.name})`,
 							),
 						);
 				}
@@ -312,22 +325,22 @@ export async function syncRosterFromPeopleEntry(
 			let rosterEntries: Array<{ id: string }>;
 			if (oldUserId) {
 				rosterEntries = await dbPg
-					.select({ id: newTeamRosterData.id })
-					.from(newTeamRosterData)
+					.select({ id: teamRoster.id })
+					.from(teamRoster)
 					.where(
 						and(
-							eq(newTeamRosterData.teamUnitId, teamUnitId),
-							eq(newTeamRosterData.userId, oldUserId),
+							eq(teamRoster.subteamId, subteamId),
+							eq(teamRoster.userId, oldUserId),
 						),
 					);
 			} else {
 				rosterEntries = await dbPg
-					.select({ id: newTeamRosterData.id })
-					.from(newTeamRosterData)
+					.select({ id: teamRoster.id })
+					.from(teamRoster)
 					.where(
 						and(
-							eq(newTeamRosterData.teamUnitId, teamUnitId),
-							sql`LOWER(${newTeamRosterData.studentName}) = LOWER(${oldName})`,
+							eq(teamRoster.subteamId, subteamId),
+							sql`LOWER(${teamRoster.displayName}) = LOWER(${oldName})`,
 						),
 					);
 			}
@@ -335,26 +348,27 @@ export async function syncRosterFromPeopleEntry(
 			// Update each roster entry
 			for (const entry of rosterEntries) {
 				await dbPg
-					.update(newTeamRosterData)
+					.update(teamRoster)
 					.set({
 						studentName: newName,
+						displayName: newName,
 						userId: newUserId,
 						updatedAt: new Date().toISOString(),
 					})
-					.where(eq(newTeamRosterData.id, entry.id));
+					.where(eq(teamRoster.id, entry.id));
 			}
 		}
 
 		// Update the people entry itself
 		await dbPg
-			.update(newTeamPeople)
+			.update(teamPeople)
 			.set({
 				name: newName,
 				userId: newUserId,
-				events: JSON.stringify(newEvents || currentEvents),
+				events: newEvents || currentEvents,
 				updatedAt: new Date().toISOString(),
 			})
-			.where(eq(newTeamPeople.id, personId));
+			.where(eq(teamPeople.id, personId));
 
 		logger.dev.structured("info", "Synced roster from people entry", {
 			personId,
@@ -370,7 +384,7 @@ export async function syncRosterFromPeopleEntry(
  * Add an event to a person and sync with roster
  */
 export async function addEventToPerson(
-	teamUnitId: string,
+	subteamId: string,
 	personName: string,
 	personUserId: string | null,
 	eventName: string,
@@ -381,33 +395,35 @@ export async function addEventToPerson(
 
 		// Find the next available slot for this event
 		const existingSlots = await dbPg
-			.select({ slotIndex: newTeamRosterData.slotIndex })
-			.from(newTeamRosterData)
+			.select({ slotIndex: teamRoster.slotIndex })
+			.from(teamRoster)
 			.where(
 				and(
-					eq(newTeamRosterData.teamUnitId, teamUnitId),
-					eq(newTeamRosterData.eventName, normalizedEventName),
+					eq(teamRoster.subteamId, subteamId),
+					eq(teamRoster.eventName, normalizedEventName),
 				),
 			)
-			.orderBy(sql`${newTeamRosterData.slotIndex} DESC`)
+			.orderBy(desc(teamRoster.slotIndex))
 			.limit(1);
 
 		const nextSlot =
 			existingSlots.length > 0 ? (existingSlots[0]?.slotIndex || 0) + 1 : 0;
 
 		// Add to roster
-		await dbPg.insert(newTeamRosterData).values({
-			teamUnitId,
+		await dbPg.insert(teamRoster).values({
+			subteamId,
+			teamId: subteamId, // Placeholder
 			eventName: normalizedEventName,
 			slotIndex: nextSlot,
 			studentName: personName,
+			displayName: personName,
 			userId: personUserId,
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString(),
 		});
 
 		// Sync people table
-		await syncPeopleFromRosterForSubteam(teamUnitId);
+		await syncPeopleFromRosterForSubteam(subteamId);
 	} catch (error) {
 		logger.error("Failed to add event to person:", error);
 		throw error;
@@ -418,7 +434,7 @@ export async function addEventToPerson(
  * Remove an event from a person and sync with roster
  */
 export async function removeEventFromPerson(
-	teamUnitId: string,
+	subteamId: string,
 	personName: string,
 	personUserId: string | null,
 	eventName: string,
@@ -430,28 +446,28 @@ export async function removeEventFromPerson(
 		// Remove from roster
 		if (personUserId) {
 			await dbPg
-				.delete(newTeamRosterData)
+				.delete(teamRoster)
 				.where(
 					and(
-						eq(newTeamRosterData.teamUnitId, teamUnitId),
-						eq(newTeamRosterData.eventName, normalizedEventName),
-						eq(newTeamRosterData.userId, personUserId),
+						eq(teamRoster.subteamId, subteamId),
+						eq(teamRoster.eventName, normalizedEventName),
+						eq(teamRoster.userId, personUserId),
 					),
 				);
 		} else {
 			await dbPg
-				.delete(newTeamRosterData)
+				.delete(teamRoster)
 				.where(
 					and(
-						eq(newTeamRosterData.teamUnitId, teamUnitId),
-						eq(newTeamRosterData.eventName, normalizedEventName),
-						sql`LOWER(${newTeamRosterData.studentName}) = LOWER(${personName})`,
+						eq(teamRoster.subteamId, subteamId),
+						eq(teamRoster.eventName, normalizedEventName),
+						sql`LOWER(${teamRoster.displayName}) = LOWER(${personName})`,
 					),
 				);
 		}
 
 		// Sync people table
-		await syncPeopleFromRosterForSubteam(teamUnitId);
+		await syncPeopleFromRosterForSubteam(subteamId);
 	} catch (error) {
 		logger.error("Failed to remove event from person:", error);
 		throw error;
@@ -476,34 +492,34 @@ export async function changePersonSubteam(
 			// Find existing entries in old subteam
 			let entries: Array<{
 				id: string;
-				teamUnitId: string;
+				subteamId: string | null;
 				eventName: string;
 				slotIndex: number;
 				studentName: string | null;
 				userId: string | null;
-				createdAt: string | null;
-				updatedAt: string | null;
+				createdAt: string;
+				updatedAt: string;
 			}> = [];
 			if (personUserId) {
 				entries = await dbPg
 					.select()
-					.from(newTeamRosterData)
+					.from(teamRoster)
 					.where(
 						and(
-							eq(newTeamRosterData.teamUnitId, oldSubteamId),
-							eq(newTeamRosterData.eventName, normalizedEventName),
-							eq(newTeamRosterData.userId, personUserId),
+							eq(teamRoster.subteamId, oldSubteamId),
+							eq(teamRoster.eventName, normalizedEventName),
+							eq(teamRoster.userId, personUserId),
 						),
 					);
 			} else {
 				entries = await dbPg
 					.select()
-					.from(newTeamRosterData)
+					.from(teamRoster)
 					.where(
 						and(
-							eq(newTeamRosterData.teamUnitId, oldSubteamId),
-							eq(newTeamRosterData.eventName, normalizedEventName),
-							sql`LOWER(${newTeamRosterData.studentName}) = LOWER(${personName})`,
+							eq(teamRoster.subteamId, oldSubteamId),
+							eq(teamRoster.eventName, normalizedEventName),
+							sql`LOWER(${teamRoster.displayName}) = LOWER(${personName})`,
 						),
 					);
 			}
@@ -512,34 +528,34 @@ export async function changePersonSubteam(
 			for (const entry of entries) {
 				// Find next available slot in new subteam
 				const existingSlots = await dbPg
-					.select({ slotIndex: newTeamRosterData.slotIndex })
-					.from(newTeamRosterData)
+					.select({ slotIndex: teamRoster.slotIndex })
+					.from(teamRoster)
 					.where(
 						and(
-							eq(newTeamRosterData.teamUnitId, newSubteamId),
-							eq(newTeamRosterData.eventName, normalizedEventName),
+							eq(teamRoster.subteamId, newSubteamId),
+							eq(teamRoster.eventName, normalizedEventName),
 						),
 					)
-					.orderBy(sql`${newTeamRosterData.slotIndex} DESC`)
+					.orderBy(desc(teamRoster.slotIndex))
 					.limit(1);
 
 				const nextSlot =
 					existingSlots.length > 0 ? (existingSlots[0]?.slotIndex || 0) + 1 : 0;
 
-				await dbPg.insert(newTeamRosterData).values({
-					teamUnitId: newSubteamId,
+				await dbPg.insert(teamRoster).values({
+					subteamId: newSubteamId,
+					teamId: newSubteamId, // Placeholder
 					eventName: normalizedEventName,
 					slotIndex: nextSlot,
 					studentName: personName,
+					displayName: personName,
 					userId: personUserId,
 					createdAt: new Date().toISOString(),
 					updatedAt: new Date().toISOString(),
 				});
 
 				// Remove from old subteam
-				await dbPg
-					.delete(newTeamRosterData)
-					.where(eq(newTeamRosterData.id, entry.id));
+				await dbPg.delete(teamRoster).where(eq(teamRoster.id, entry.id));
 			}
 		}
 
@@ -556,7 +572,7 @@ export async function changePersonSubteam(
  * Remove a person completely from a subteam (removes all their roster entries)
  */
 export async function removePersonFromSubteam(
-	teamUnitId: string,
+	subteamId: string,
 	personName: string,
 	personUserId: string | null,
 ): Promise<number> {
@@ -565,28 +581,28 @@ export async function removePersonFromSubteam(
 
 		if (personUserId) {
 			result = await dbPg
-				.delete(newTeamRosterData)
+				.delete(teamRoster)
 				.where(
 					and(
-						eq(newTeamRosterData.teamUnitId, teamUnitId),
-						eq(newTeamRosterData.userId, personUserId),
+						eq(teamRoster.subteamId, subteamId),
+						eq(teamRoster.userId, personUserId),
 					),
 				)
-				.returning({ id: newTeamRosterData.id });
+				.returning({ id: teamRoster.id });
 		} else {
 			result = await dbPg
-				.delete(newTeamRosterData)
+				.delete(teamRoster)
 				.where(
 					and(
-						eq(newTeamRosterData.teamUnitId, teamUnitId),
-						sql`LOWER(${newTeamRosterData.studentName}) = LOWER(${personName})`,
+						eq(teamRoster.subteamId, subteamId),
+						sql`LOWER(${teamRoster.displayName}) = LOWER(${personName})`,
 					),
 				)
-				.returning({ id: newTeamRosterData.id });
+				.returning({ id: teamRoster.id });
 		}
 
 		// Sync people table
-		await syncPeopleFromRosterForSubteam(teamUnitId);
+		await syncPeopleFromRosterForSubteam(subteamId);
 
 		return result.length;
 	} catch (error) {

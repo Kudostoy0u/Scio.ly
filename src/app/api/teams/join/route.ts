@@ -1,5 +1,5 @@
 import { upsertUserProfile } from "@/lib/db/teams/utils";
-import { cockroachDBTeamsService } from "@/lib/services/cockroachdb-teams";
+import { teamsService } from "@/lib/services/teams";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import logger from "@/lib/utils/logging/logger";
 import { type NextRequest, NextResponse } from "next/server";
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
 			// Before joining team, ensure user has a meaningful display name
 			await ensureDisplayName(userId, user.email);
 
-			const team = await cockroachDBTeamsService.joinTeamByCode(userId, code);
+			const team = await teamsService.joinTeamByCode(userId, code);
 
 			if (!team) {
 				return NextResponse.json(

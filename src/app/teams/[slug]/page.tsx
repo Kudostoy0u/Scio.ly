@@ -50,7 +50,26 @@ export default async function TeamSlugPage({ params }: PageProps) {
 	});
 
 	try {
-		await helpers.teams.full.fetch({ teamSlug: slug });
+		const fullData = await helpers.teams.full.fetch({ teamSlug: slug });
+		if (fullData?.subteams && fullData.subteams.length > 0) {
+			const firstSubteamId = fullData.subteams[0]?.id;
+			if (firstSubteamId) {
+				await Promise.all([
+					helpers.teams.getStream.prefetch({
+						teamSlug: slug,
+						subteamId: firstSubteamId,
+					}),
+					helpers.teams.getTimers.prefetch({
+						teamSlug: slug,
+						subteamId: firstSubteamId,
+					}),
+					helpers.teams.getTournaments.prefetch({
+						teamSlug: slug,
+						subteamId: firstSubteamId,
+					}),
+				]);
+			}
+		}
 	} catch (_error) {
 		// If unauthorized, send to auth flow
 		redirect("/auth");

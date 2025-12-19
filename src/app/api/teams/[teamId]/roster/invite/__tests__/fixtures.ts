@@ -33,8 +33,8 @@ export const mockSubteam = {
 import type { TeamGroupInfo } from "@/lib/utils/teams/resolver";
 
 export const mockTeamInfo: TeamGroupInfo = {
-	groupId: "group-123",
-	teamUnitIds: ["unit-123"],
+	teamId: "group-123",
+	subteamIds: ["unit-123"],
 };
 
 export const mockInvitation = {

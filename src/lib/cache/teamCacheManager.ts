@@ -176,12 +176,12 @@ class TeamCacheManager {
 				break;
 			case "subteams": {
 				// Update subteams cache
-				const subteamsTeamSlug = this.extractTeamSlug(key);
+				const subteamsSlug = this.extractTeamSlug(key);
 				useTeamStore.setState((state) => ({
 					...state,
 					subteams: {
 						...state.subteams,
-						[subteamsTeamSlug]: data as Subteam[],
+						[subteamsSlug]: data as Subteam[],
 					},
 					cacheTimestamps: { ...state.cacheTimestamps, [key]: updateTimestamp },
 				}));

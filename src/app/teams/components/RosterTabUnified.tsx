@@ -10,6 +10,7 @@
 import Modal from "@/app/components/Modal";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { useInvalidateTeam, useTeamRoster } from "@/lib/hooks/useTeam";
+import type { TeamFullData, TeamMember } from "@/lib/server/teams/shared";
 import { trpc } from "@/lib/trpc/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
@@ -240,13 +241,17 @@ export default function RosterTabUnified({
 
 				const rosterEntries = [
 					...existingRosterEntries.filter(
-						(e) => e.subteamId !== activeSubteamId,
+						(e: TeamFullData["rosterEntries"][0]) =>
+							e.subteamId !== activeSubteamId,
 					),
 					...insertedRosterEntries,
 				];
 
-				const subteamNameMap = new Map(
-					(prev.subteams ?? []).map((s) => [s.id, s.name]),
+				const subteamNameMap = new Map<string, string>(
+					(prev.subteams ?? []).map(
+						(s: TeamFullData["subteams"][0]) =>
+							[s.id, s.name] as [string, string],
+					),
 				);
 
 				const userEventsMap = new Map<string, Set<string>>();
@@ -271,8 +276,8 @@ export default function RosterTabUnified({
 				}
 
 				const linkedMembers = (prev.members ?? [])
-					.filter((m) => !m.isUnlinked)
-					.map((m) => {
+					.filter((m: TeamMember) => !m.isUnlinked)
+					.map((m: TeamMember) => {
 						const subteamId = userSubteamMap.get(m.id) || null;
 						const subteamName = subteamId
 							? subteamNameMap.get(subteamId) || null

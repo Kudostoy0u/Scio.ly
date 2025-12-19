@@ -1,5 +1,5 @@
 import { GET } from "@/app/api/teams/user-teams/route";
-import { cockroachDBTeamsService } from "@/lib/services/cockroachdb-teams";
+import { teamsService } from "@/lib/services/teams";
 import { getServerUser } from "@/lib/supabaseServer";
 import type { User } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
@@ -10,14 +10,14 @@ vi.mock("@/lib/supabaseServer", () => ({
 	getServerUser: vi.fn(),
 }));
 
-vi.mock("@/lib/services/cockroachdb-teams", () => ({
-	cockroachDBTeamsService: {
+vi.mock("@/lib/services/teams", () => ({
+	teamsService: {
 		getUserTeams: vi.fn(),
 	},
 }));
 
 const mockGetServerUser = vi.mocked(getServerUser);
-const mockService = vi.mocked(cockroachDBTeamsService);
+const mockService = vi.mocked(teamsService);
 
 describe("/api/teams/user-teams", () => {
 	const mockUserId = "user-123";

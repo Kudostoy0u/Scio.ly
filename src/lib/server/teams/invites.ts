@@ -1,10 +1,6 @@
 import { dbPg } from "@/lib/db";
-import { users } from "@/lib/db/schema/core";
-import {
-	teamsInvitation,
-	teamsMembership,
-	teamsTeam,
-} from "@/lib/db/schema/teams_v2";
+import { users } from "@/lib/db/schema";
+import { teamInvitations, teamMemberships, teams } from "@/lib/db/schema";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { and, eq, or } from "drizzle-orm";
 import {
@@ -46,34 +42,34 @@ export async function listPendingInvitesForUser(
 		profile || userId
 			? await dbPg
 					.select({
-						invitationId: teamsInvitation.id,
-						teamId: teamsTeam.id,
-						slug: teamsTeam.slug,
-						name: teamsTeam.name,
-						school: teamsTeam.school,
-						division: teamsTeam.division,
-						role: teamsInvitation.role,
+						invitationId: teamInvitations.id,
+						teamId: teams.id,
+						slug: teams.slug,
+						name: teams.name,
+						school: teams.school,
+						division: teams.division,
+						role: teamInvitations.role,
 					})
-					.from(teamsInvitation)
-					.innerJoin(teamsTeam, eq(teamsInvitation.teamId, teamsTeam.id))
-					.where(and(eq(teamsInvitation.status, "pending"), inviteMatch))
+					.from(teamInvitations)
+					.innerJoin(teams, eq(teamInvitations.teamId, teams.id))
+					.where(and(eq(teamInvitations.status, "pending"), inviteMatch))
 			: [];
 
 	const pendingMemberships = await dbPg
 		.select({
-			teamId: teamsTeam.id,
-			slug: teamsTeam.slug,
-			name: teamsTeam.name,
-			school: teamsTeam.school,
-			division: teamsTeam.division,
-			role: teamsMembership.role,
+			teamId: teams.id,
+			slug: teams.slug,
+			name: teams.name,
+			school: teams.school,
+			division: teams.division,
+			role: teamMemberships.role,
 		})
-		.from(teamsMembership)
-		.innerJoin(teamsTeam, eq(teamsMembership.teamId, teamsTeam.id))
+		.from(teamMemberships)
+		.innerJoin(teams, eq(teamMemberships.teamId, teams.id))
 		.where(
 			and(
-				eq(teamsMembership.userId, userId),
-				eq(teamsMembership.status, "pending"),
+				eq(teamMemberships.userId, userId),
+				eq(teamMemberships.status, "pending"),
 			),
 		);
 
@@ -108,11 +104,11 @@ export async function listPendingInvitesForUser(
 export async function acceptPendingInvite(teamSlug: string, userId: string) {
 	const [team] = await dbPg
 		.select({
-			id: teamsTeam.id,
-			slug: teamsTeam.slug,
+			id: teams.id,
+			slug: teams.slug,
 		})
-		.from(teamsTeam)
-		.where(eq(teamsTeam.slug, teamSlug))
+		.from(teams)
+		.where(eq(teams.slug, teamSlug))
 		.limit(1);
 
 	if (!team) {
@@ -143,14 +139,14 @@ export async function acceptPendingInvite(teamSlug: string, userId: string) {
 
 		const [invite] = await tx
 			.select({
-				id: teamsInvitation.id,
-				role: teamsInvitation.role,
+				id: teamInvitations.id,
+				role: teamInvitations.role,
 			})
-			.from(teamsInvitation)
+			.from(teamInvitations)
 			.where(
 				and(
-					eq(teamsInvitation.teamId, team.id),
-					eq(teamsInvitation.status, "pending"),
+					eq(teamInvitations.teamId, team.id),
+					eq(teamInvitations.status, "pending"),
 					inviteMatch,
 				),
 			)
@@ -158,30 +154,30 @@ export async function acceptPendingInvite(teamSlug: string, userId: string) {
 
 		const [existingMembership] = await tx
 			.select({
-				id: teamsMembership.id,
-				role: teamsMembership.role,
-				status: teamsMembership.status,
+				id: teamMemberships.id,
+				role: teamMemberships.role,
+				status: teamMemberships.status,
 			})
-			.from(teamsMembership)
+			.from(teamMemberships)
 			.where(
 				and(
-					eq(teamsMembership.teamId, team.id),
-					eq(teamsMembership.userId, userId),
+					eq(teamMemberships.teamId, team.id),
+					eq(teamMemberships.userId, userId),
 				),
 			)
 			.limit(1);
 
 		if (existingMembership) {
 			await tx
-				.update(teamsMembership)
+				.update(teamMemberships)
 				.set({
 					status: "active",
 					role: existingMembership.role ?? invite?.role ?? "member",
 					updatedAt: new Date().toISOString(),
 				})
-				.where(eq(teamsMembership.id, existingMembership.id));
+				.where(eq(teamMemberships.id, existingMembership.id));
 		} else {
-			await tx.insert(teamsMembership).values({
+			await tx.insert(teamMemberships).values({
 				id: crypto.randomUUID(),
 				teamId: team.id,
 				userId,
@@ -194,13 +190,13 @@ export async function acceptPendingInvite(teamSlug: string, userId: string) {
 
 		if (invite) {
 			await tx
-				.update(teamsInvitation)
+				.update(teamInvitations)
 				.set({
 					status: "accepted",
 					invitedUserId: userId,
 					updatedAt: new Date().toISOString(),
 				})
-				.where(eq(teamsInvitation.id, invite.id));
+				.where(eq(teamInvitations.id, invite.id));
 		}
 
 		await bumpTeamVersion(team.id, tx);
@@ -212,11 +208,11 @@ export async function acceptPendingInvite(teamSlug: string, userId: string) {
 export async function declineInvite(teamSlug: string, userId: string) {
 	const [team] = await dbPg
 		.select({
-			id: teamsTeam.id,
-			slug: teamsTeam.slug,
+			id: teams.id,
+			slug: teams.slug,
 		})
-		.from(teamsTeam)
-		.where(eq(teamsTeam.slug, teamSlug))
+		.from(teams)
+		.where(eq(teams.slug, teamSlug))
 		.limit(1);
 
 	if (!team) {
@@ -246,7 +242,7 @@ export async function declineInvite(teamSlug: string, userId: string) {
 		);
 
 		await tx
-			.update(teamsInvitation)
+			.update(teamInvitations)
 			.set({
 				status: "declined",
 				invitedUserId: userId,
@@ -254,20 +250,20 @@ export async function declineInvite(teamSlug: string, userId: string) {
 			})
 			.where(
 				and(
-					eq(teamsInvitation.teamId, team.id),
-					eq(teamsInvitation.status, "pending"),
+					eq(teamInvitations.teamId, team.id),
+					eq(teamInvitations.status, "pending"),
 					inviteMatch,
 				),
 			);
 
 		await tx
-			.update(teamsMembership)
+			.update(teamMemberships)
 			.set({ status: "inactive", updatedAt: new Date().toISOString() })
 			.where(
 				and(
-					eq(teamsMembership.teamId, team.id),
-					eq(teamsMembership.userId, userId),
-					eq(teamsMembership.status, "pending"),
+					eq(teamMemberships.teamId, team.id),
+					eq(teamMemberships.userId, userId),
+					eq(teamMemberships.status, "pending"),
 				),
 			);
 
@@ -313,15 +309,15 @@ export async function createInvitation(input: {
 	const invitedUserId = invitedUser.id;
 
 	const existing = await dbPg
-		.select({ id: teamsMembership.id })
-		.from(teamsMembership)
+		.select({ id: teamMemberships.id })
+		.from(teamMemberships)
 		.where(
 			and(
-				eq(teamsMembership.teamId, team.id),
-				eq(teamsMembership.userId, invitedUserId),
+				eq(teamMemberships.teamId, team.id),
+				eq(teamMemberships.userId, invitedUserId),
 				or(
-					eq(teamsMembership.status, "active"),
-					eq(teamsMembership.status, "pending"),
+					eq(teamMemberships.status, "active"),
+					eq(teamMemberships.status, "pending"),
 				),
 			),
 		)
@@ -334,9 +330,9 @@ export async function createInvitation(input: {
 	const token = crypto.randomUUID();
 
 	await dbPg.transaction(async (tx) => {
-		await tx.insert(teamsInvitation).values({
-			id: crypto.randomUUID(),
+		await tx.insert(teamInvitations).values({
 			teamId: team.id,
+			email: invitedUser.email ?? "",
 			invitedUserId,
 			invitedEmail: invitedUser.email ?? null,
 			role: input.role ?? "member",
@@ -346,8 +342,7 @@ export async function createInvitation(input: {
 			expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
 		});
 
-		await tx.insert(teamsMembership).values({
-			id: crypto.randomUUID(),
+		await tx.insert(teamMemberships).values({
 			teamId: team.id,
 			userId: invitedUserId,
 			role: input.role ?? "member",
@@ -375,15 +370,15 @@ export async function promoteToRole(input: {
 
 	const membership = await dbPg
 		.select({
-			id: teamsMembership.id,
-			role: teamsMembership.role,
-			status: teamsMembership.status,
+			id: teamMemberships.id,
+			role: teamMemberships.role,
+			status: teamMemberships.status,
 		})
-		.from(teamsMembership)
+		.from(teamMemberships)
 		.where(
 			and(
-				eq(teamsMembership.teamId, team.id),
-				eq(teamsMembership.userId, input.userId),
+				eq(teamMemberships.teamId, team.id),
+				eq(teamMemberships.userId, input.userId),
 			),
 		)
 		.limit(1);
@@ -426,12 +421,12 @@ export async function promoteToRole(input: {
 
 	await dbPg.transaction(async (tx) => {
 		await tx
-			.update(teamsMembership)
+			.update(teamMemberships)
 			.set({ role: input.newRole, updatedAt: new Date().toISOString() })
 			.where(
 				and(
-					eq(teamsMembership.teamId, team.id),
-					eq(teamsMembership.userId, input.userId),
+					eq(teamMemberships.teamId, team.id),
+					eq(teamMemberships.userId, input.userId),
 				),
 			);
 

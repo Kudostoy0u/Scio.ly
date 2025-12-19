@@ -19,6 +19,7 @@ interface TestUser {
 
 interface TestTeam {
 	groupId: string;
+	teamId: string;
 	subteamId: string;
 	slug: string;
 	captainCode: string;
@@ -35,8 +36,8 @@ type TeamGroupRecord = {
 
 type TeamUnitRecord = {
 	id: string;
-	groupId: string;
 	teamId: string;
+	name: string;
 	description: string;
 	captainCode: string;
 	userCode: string;
@@ -51,16 +52,20 @@ type TeamMembershipRecord = {
 };
 
 type TeamRosterRecord = {
-	teamUnitId: string;
+	id: string;
+	teamId: string;
+	subteamId: string;
 	eventName: string;
 	slotIndex: number;
 	studentName: string;
+	displayName: string;
 	userId: string;
 };
 
 type TeamStreamPostRecord = {
 	id: string;
-	teamUnitId: string;
+	teamId: string;
+	subteamId: string;
 	authorId: string;
 	content: string;
 };
@@ -126,8 +131,8 @@ function createTestTeam(creatorId: string): TestTeam {
 
 	mockDb.teamUnits.set(subteamId, {
 		id: subteamId,
-		groupId,
-		teamId: "Team 1",
+		teamId: groupId,
+		name: "A",
 		description: "Test Subteam",
 		captainCode,
 		userCode,
@@ -143,6 +148,7 @@ function createTestTeam(creatorId: string): TestTeam {
 
 	return {
 		groupId,
+		teamId: groupId,
 		subteamId,
 		slug,
 		captainCode,
@@ -191,7 +197,7 @@ describe("Teams E2E Tests", () => {
 			testTeams.push(team);
 
 			// Verify team group exists
-			const group = mockDb.teamGroups.get(team.groupId);
+			const group = mockDb.teamGroups.get(team.teamId);
 			expect(group).toBeDefined();
 			expect(group?.slug).toBe(team.slug);
 			expect(group?.school).toBe("Test School");
@@ -199,7 +205,7 @@ describe("Teams E2E Tests", () => {
 
 			const subteam = mockDb.teamUnits.get(team.subteamId);
 			expect(subteam).toBeDefined();
-			expect(subteam?.groupId).toBe(team.groupId);
+			expect(subteam?.teamId).toBe(team.teamId);
 			expect(subteam?.captainCode).toBe(team.captainCode);
 			expect(subteam?.userCode).toBe(team.userCode);
 
@@ -247,10 +253,13 @@ describe("Teams E2E Tests", () => {
 			// Create roster entry
 			const key = rosterKey(team.subteamId, "Astronomy", 0);
 			mockDb.rosterData.set(key, {
-				teamUnitId: team.subteamId,
+				id: nextId("roster"),
+				teamId: team.teamId,
+				subteamId: team.subteamId,
 				eventName: "Astronomy",
 				slotIndex: 0,
 				studentName: "John Doe",
+				displayName: "John Doe",
 				userId: creator.id,
 			});
 
@@ -266,6 +275,7 @@ describe("Teams E2E Tests", () => {
 				mockDb.rosterData.set(key, {
 					...existing,
 					studentName: "Jane Doe",
+					displayName: "Jane Doe",
 				});
 			}
 
@@ -284,7 +294,8 @@ describe("Teams E2E Tests", () => {
 			const postId = nextId("post");
 			mockDb.streamPosts.set(postId, {
 				id: postId,
-				teamUnitId: team.subteamId,
+				teamId: team.teamId,
+				subteamId: team.subteamId,
 				authorId: creator.id,
 				content: "Test stream post",
 			});
@@ -292,7 +303,7 @@ describe("Teams E2E Tests", () => {
 			const retrievedPost = mockDb.streamPosts.get(postId);
 			expect(retrievedPost).toBeDefined();
 			expect(retrievedPost?.content).toBe("Test stream post");
-			expect(retrievedPost?.teamUnitId).toBe(team.subteamId);
+			expect(retrievedPost?.subteamId).toBe(team.subteamId);
 			expect(retrievedPost?.authorId).toBe(creator.id);
 		});
 	});

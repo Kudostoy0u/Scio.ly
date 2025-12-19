@@ -17,7 +17,7 @@ export function TRPCProvider({ children }: { children: ReactNode }) {
 			persistOptions={{
 				persister: queryPersister,
 				maxAge: 1000 * 60 * 60 * 24, // 24 hours
-				buster: "teams-v2",
+				buster: "teams",
 			}}
 		>
 			<trpc.Provider client={trpcClient} queryClient={client}>

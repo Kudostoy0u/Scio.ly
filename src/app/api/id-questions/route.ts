@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 		// These filters are disabled as the schema doesn't support them
 		// const qt = (p.question_type || "").toLowerCase();
 		// if (qt === "mcq" || qt === "frq") {
-		//   conds.push(sql`${idEvents.questionType} = ${qt}`);
+		//   conds.push(sql`${idEvents.type} = ${qt}`);
 		// }
 
 		// Filter by pure_id if requested

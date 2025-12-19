@@ -7,7 +7,7 @@
 
 "use client";
 
-import type { TeamFullData } from "@/lib/server/teams-v2";
+import type { TeamFullData } from "@/lib/server/teams";
 import { trpc } from "@/lib/trpc/client";
 import { globalApiCache } from "@/lib/utils/storage/globalApiCache";
 import { useQueryClient } from "@tanstack/react-query";
@@ -53,7 +53,9 @@ export function useTeamMembers(teamSlug: string, subteamId?: string) {
 		if (!subteamId || subteamId === "all") {
 			return membersData;
 		}
-		return membersData.filter((m) => m.subteamId === subteamId);
+		return membersData.filter(
+			(m: TeamFullData["members"][0]) => m.subteamId === subteamId,
+		);
 	}, [membersData, subteamId]);
 
 	return { ...query, data: members };

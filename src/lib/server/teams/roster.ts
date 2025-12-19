@@ -1,6 +1,6 @@
 import { dbPg } from "@/lib/db";
-import { users } from "@/lib/db/schema/core";
-import { teamsMembership, teamsRoster } from "@/lib/db/schema/teams_v2";
+import { users } from "@/lib/db/schema";
+import { teamMemberships, teamRoster } from "@/lib/db/schema";
 import logger from "@/lib/utils/logging/logger";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { getMembershipForUser } from "./shared";
@@ -27,16 +27,16 @@ export async function replaceRosterEntries(
 	// Map display names to users already on the team so new entries link instead of duplicating
 	const memberships = await dbPg
 		.select({
-			userId: teamsMembership.userId,
+			userId: teamMemberships.userId,
 			displayName: users.displayName,
 			firstName: users.firstName,
 			lastName: users.lastName,
 			username: users.username,
 			email: users.email,
 		})
-		.from(teamsMembership)
-		.innerJoin(users, eq(users.id, teamsMembership.userId))
-		.where(eq(teamsMembership.teamId, teamId));
+		.from(teamMemberships)
+		.innerJoin(users, eq(users.id, teamMemberships.userId))
+		.where(eq(teamMemberships.teamId, teamId));
 
 	const displayNameMap = new Map<
 		string,
@@ -61,12 +61,12 @@ export async function replaceRosterEntries(
 	// Snapshot current roster to catch cross-subteam conflicts
 	const existingTeamRoster = await dbPg
 		.select({
-			subteamId: teamsRoster.subteamId,
-			userId: teamsRoster.userId,
-			displayName: teamsRoster.displayName,
+			subteamId: teamRoster.subteamId,
+			userId: teamRoster.userId,
+			displayName: teamRoster.displayName,
 		})
-		.from(teamsRoster)
-		.where(eq(teamsRoster.teamId, teamId));
+		.from(teamRoster)
+		.where(eq(teamRoster.teamId, teamId));
 
 	const conflicts = new Set<string>();
 	let insertedEntries: Array<{
@@ -81,12 +81,9 @@ export async function replaceRosterEntries(
 
 	await dbPg.transaction(async (tx) => {
 		await tx
-			.delete(teamsRoster)
+			.delete(teamRoster)
 			.where(
-				and(
-					eq(teamsRoster.teamId, teamId),
-					eq(teamsRoster.subteamId, subteamId),
-				),
+				and(eq(teamRoster.teamId, teamId), eq(teamRoster.subteamId, subteamId)),
 			);
 
 		if (entries.length === 0) return;
@@ -139,7 +136,7 @@ export async function replaceRosterEntries(
 		}
 
 		insertedEntries = resolvedEntries;
-		await tx.insert(teamsRoster).values(resolvedEntries);
+		await tx.insert(teamRoster).values(resolvedEntries);
 	});
 
 	return { conflicts: Array.from(conflicts), rosterEntries: insertedEntries };
@@ -179,22 +176,22 @@ export async function upsertRosterEntry(
 
 		const existingEntries = await dbPg
 			.select({
-				id: teamsRoster.id,
-				slotIndex: teamsRoster.slotIndex,
-				displayName: teamsRoster.displayName,
-				userId: teamsRoster.userId,
+				id: teamRoster.id,
+				slotIndex: teamRoster.slotIndex,
+				displayName: teamRoster.displayName,
+				userId: teamRoster.userId,
 			})
-			.from(teamsRoster)
+			.from(teamRoster)
 			.where(
 				and(
-					eq(teamsRoster.teamId, teamId),
+					eq(teamRoster.teamId, teamId),
 					subteamId
-						? eq(teamsRoster.subteamId, subteamId)
-						: isNull(teamsRoster.subteamId),
-					eq(teamsRoster.eventName, payload.eventName),
+						? eq(teamRoster.subteamId, subteamId)
+						: isNull(teamRoster.subteamId),
+					eq(teamRoster.eventName, payload.eventName),
 				),
 			)
-			.orderBy(teamsRoster.slotIndex);
+			.orderBy(teamRoster.slotIndex);
 
 		logger.info("[upsertRosterEntry] Existing entries", {
 			count: existingEntries.length,
@@ -243,7 +240,7 @@ export async function upsertRosterEntry(
 
 		await dbPg.transaction(async (tx) => {
 			await tx
-				.insert(teamsRoster)
+				.insert(teamRoster)
 				.values({
 					id: crypto.randomUUID(),
 					teamId,
@@ -255,10 +252,10 @@ export async function upsertRosterEntry(
 				})
 				.onConflictDoUpdate({
 					target: [
-						teamsRoster.teamId,
-						teamsRoster.subteamId,
-						teamsRoster.eventName,
-						teamsRoster.slotIndex,
+						teamRoster.teamId,
+						teamRoster.subteamId,
+						teamRoster.eventName,
+						teamRoster.slotIndex,
 					],
 					set: {
 						displayName: payload.displayName,
@@ -305,13 +302,13 @@ export async function removeRosterEntry(
 		if (options.userId) {
 			deletions.push(
 				dbPg
-					.delete(teamsRoster)
+					.delete(teamRoster)
 					.where(
 						and(
-							eq(teamsRoster.teamId, teamId),
-							eq(teamsRoster.userId, options.userId),
+							eq(teamRoster.teamId, teamId),
+							eq(teamRoster.userId, options.userId),
 							options.subteamId
-								? eq(teamsRoster.subteamId, options.subteamId)
+								? eq(teamRoster.subteamId, options.subteamId)
 								: sql`TRUE`,
 						),
 					),
@@ -321,14 +318,14 @@ export async function removeRosterEntry(
 		if (options.displayName) {
 			deletions.push(
 				dbPg
-					.delete(teamsRoster)
+					.delete(teamRoster)
 					.where(
 						and(
-							eq(teamsRoster.teamId, teamId),
-							isNull(teamsRoster.userId),
-							eq(teamsRoster.displayName, options.displayName),
+							eq(teamRoster.teamId, teamId),
+							isNull(teamRoster.userId),
+							eq(teamRoster.displayName, options.displayName),
 							options.subteamId
-								? eq(teamsRoster.subteamId, options.subteamId)
+								? eq(teamRoster.subteamId, options.subteamId)
 								: sql`TRUE`,
 						),
 					),
@@ -344,25 +341,25 @@ export async function removeRosterEntry(
 	}
 
 	const predicates = [
-		eq(teamsRoster.teamId, teamId),
+		eq(teamRoster.teamId, teamId),
 		options.subteamId
-			? eq(teamsRoster.subteamId, options.subteamId)
-			: isNull(teamsRoster.subteamId),
-		eq(teamsRoster.eventName, options.eventName),
+			? eq(teamRoster.subteamId, options.subteamId)
+			: isNull(teamRoster.subteamId),
+		eq(teamRoster.eventName, options.eventName),
 	] as const;
 
 	// If we know which member to remove, delete any slots they occupy for this event
 	if (options.userId || options.displayName) {
 		await dbPg
-			.delete(teamsRoster)
+			.delete(teamRoster)
 			.where(
 				and(
 					...predicates,
 					options.userId
-						? eq(teamsRoster.userId, options.userId)
-						: isNull(teamsRoster.userId),
+						? eq(teamRoster.userId, options.userId)
+						: isNull(teamRoster.userId),
 					options.displayName
-						? eq(teamsRoster.displayName, options.displayName)
+						? eq(teamRoster.displayName, options.displayName)
 						: sql`TRUE`,
 				),
 			);
@@ -371,8 +368,8 @@ export async function removeRosterEntry(
 
 	// Fallback: delete specific slot (legacy behavior)
 	await dbPg
-		.delete(teamsRoster)
+		.delete(teamRoster)
 		.where(
-			and(...predicates, eq(teamsRoster.slotIndex, options.slotIndex ?? 0)),
+			and(...predicates, eq(teamRoster.slotIndex, options.slotIndex ?? 0)),
 		);
 }

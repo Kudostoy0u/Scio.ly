@@ -1,12 +1,12 @@
 import { dbPg } from "@/lib/db";
-import { users } from "@/lib/db/schema/core";
+import { users } from "@/lib/db/schema";
 import {
-	teamsAssignment,
-	teamsLinkInvitation,
-	teamsMembership,
-	teamsRoster,
-	teamsSubteam,
-} from "@/lib/db/schema/teams_v2";
+	teamAssignments,
+	teamLinkInvitations,
+	teamMemberships,
+	teamRoster,
+	teamSubteams,
+} from "@/lib/db/schema";
 import { and, desc, eq } from "drizzle-orm";
 import {
 	type TeamFullData,
@@ -49,72 +49,72 @@ export async function getTeamFullBySlug(
 
 	const subteams = await dbPg
 		.select({
-			id: teamsSubteam.id,
-			teamId: teamsSubteam.teamId,
-			name: teamsSubteam.name,
-			description: teamsSubteam.description,
-			displayOrder: teamsSubteam.displayOrder,
-			createdAt: teamsSubteam.createdAt,
+			id: teamSubteams.id,
+			teamId: teamSubteams.teamId,
+			name: teamSubteams.name,
+			description: teamSubteams.description,
+			displayOrder: teamSubteams.displayOrder,
+			createdAt: teamSubteams.createdAt,
 		})
-		.from(teamsSubteam)
-		.where(eq(teamsSubteam.teamId, team.id))
-		.orderBy(teamsSubteam.displayOrder, desc(teamsSubteam.createdAt));
+		.from(teamSubteams)
+		.where(eq(teamSubteams.teamId, team.id))
+		.orderBy(teamSubteams.displayOrder, desc(teamSubteams.createdAt));
 
 	const [membershipRows, rosterRows, assignmentRows, pendingLinkInvites] =
 		await Promise.all([
 			dbPg
 				.select({
-					id: teamsMembership.id,
-					userId: teamsMembership.userId,
-					role: teamsMembership.role,
-					status: teamsMembership.status,
-					joinedAt: teamsMembership.joinedAt,
+					id: teamMemberships.id,
+					userId: teamMemberships.userId,
+					role: teamMemberships.role,
+					status: teamMemberships.status,
+					joinedAt: teamMemberships.joinedAt,
 					email: users.email,
 					username: users.username,
 					displayName: users.displayName,
 					firstName: users.firstName,
 					lastName: users.lastName,
 				})
-				.from(teamsMembership)
-				.innerJoin(users, eq(users.id, teamsMembership.userId))
-				.where(eq(teamsMembership.teamId, team.id)),
+				.from(teamMemberships)
+				.innerJoin(users, eq(users.id, teamMemberships.userId))
+				.where(eq(teamMemberships.teamId, team.id)),
 			dbPg
 				.select({
-					id: teamsRoster.id,
-					teamId: teamsRoster.teamId,
-					subteamId: teamsRoster.subteamId,
-					userId: teamsRoster.userId,
-					displayName: teamsRoster.displayName,
-					eventName: teamsRoster.eventName,
-					slotIndex: teamsRoster.slotIndex,
+					id: teamRoster.id,
+					teamId: teamRoster.teamId,
+					subteamId: teamRoster.subteamId,
+					userId: teamRoster.userId,
+					displayName: teamRoster.displayName,
+					eventName: teamRoster.eventName,
+					slotIndex: teamRoster.slotIndex,
 				})
-				.from(teamsRoster)
-				.where(eq(teamsRoster.teamId, team.id)),
+				.from(teamRoster)
+				.where(eq(teamRoster.teamId, team.id)),
 			dbPg
 				.select({
-					id: teamsAssignment.id,
-					teamId: teamsAssignment.teamId,
-					subteamId: teamsAssignment.subteamId,
-					title: teamsAssignment.title,
-					description: teamsAssignment.description,
-					dueDate: teamsAssignment.dueDate,
-					status: teamsAssignment.status,
-					createdBy: teamsAssignment.createdBy,
-					createdAt: teamsAssignment.createdAt,
-					updatedAt: teamsAssignment.updatedAt,
+					id: teamAssignments.id,
+					teamId: teamAssignments.teamId,
+					subteamId: teamAssignments.subteamId,
+					title: teamAssignments.title,
+					description: teamAssignments.description,
+					dueDate: teamAssignments.dueDate,
+					status: teamAssignments.status,
+					createdBy: teamAssignments.createdBy,
+					createdAt: teamAssignments.createdAt,
+					updatedAt: teamAssignments.updatedAt,
 				})
-				.from(teamsAssignment)
-				.where(eq(teamsAssignment.teamId, team.id))
-				.orderBy(desc(teamsAssignment.createdAt)),
+				.from(teamAssignments)
+				.where(eq(teamAssignments.teamId, team.id))
+				.orderBy(desc(teamAssignments.createdAt)),
 			dbPg
 				.select({
-					displayName: teamsLinkInvitation.rosterDisplayName,
+					displayName: teamLinkInvitations.rosterDisplayName,
 				})
-				.from(teamsLinkInvitation)
+				.from(teamLinkInvitations)
 				.where(
 					and(
-						eq(teamsLinkInvitation.teamId, team.id),
-						eq(teamsLinkInvitation.status, "pending"),
+						eq(teamLinkInvitations.teamId, team.id),
+						eq(teamLinkInvitations.status, "pending"),
 					),
 				),
 		]);

@@ -10,7 +10,10 @@ import {
 	User,
 	X,
 } from "lucide-react";
+import Image from "next/image";
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { StreamPost } from "./streamTypes";
 
 interface StreamPostsProps {
@@ -35,9 +38,9 @@ interface StreamPostsProps {
 export default function StreamPosts({
 	darkMode,
 	posts,
-	expandedComments,
+	expandedComments: _expandedComments,
 	newComments,
-	onToggleComments,
+	onToggleComments: _onToggleComments,
 	onCommentChange,
 	onAddComment,
 	isCaptain,
@@ -85,6 +88,78 @@ export default function StreamPosts({
 			</div>
 		);
 	}
+
+	// Helper function to format date/time
+	const formatDateTime = (dateString: string) => {
+		const date = new Date(dateString);
+		const now = new Date();
+		const isToday =
+			date.getDate() === now.getDate() &&
+			date.getMonth() === now.getMonth() &&
+			date.getFullYear() === now.getFullYear();
+
+		if (isToday) {
+			return date.toLocaleTimeString([], {
+				hour: "2-digit",
+				minute: "2-digit",
+			});
+		}
+		return date.toLocaleDateString([], {
+			month: "short",
+			day: "numeric",
+			year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+		});
+	};
+
+	// Helper function to render profile picture for posts (40x40px)
+	const renderProfilePicture = (photoUrl: string | null | undefined) => {
+		if (photoUrl) {
+			return (
+				<Image
+					src={photoUrl}
+					alt="Profile"
+					width={40}
+					height={40}
+					className="w-10 h-10 rounded-full object-cover"
+					unoptimized={true}
+					onError={(e) => {
+						const target = e.target as HTMLImageElement;
+						target.style.display = "none";
+						const fallback = target.nextElementSibling as HTMLElement;
+						if (fallback) {
+							fallback.style.display = "flex";
+						}
+					}}
+				/>
+			);
+		}
+		return null;
+	};
+
+	// Helper function to render profile picture for comments (32x32px - smaller than posts)
+	const renderCommentProfilePicture = (photoUrl: string | null | undefined) => {
+		if (photoUrl) {
+			return (
+				<Image
+					src={photoUrl}
+					alt="Profile"
+					width={32}
+					height={32}
+					className="w-8 h-8 rounded-full object-cover"
+					unoptimized={true}
+					onError={(e) => {
+						const target = e.target as HTMLImageElement;
+						target.style.display = "none";
+						const fallback = target.nextElementSibling as HTMLElement;
+						if (fallback) {
+							fallback.style.display = "flex";
+						}
+					}}
+				/>
+			);
+		}
+		return null;
+	};
 
 	// Helper function to render post content
 	const renderPostContent = (post: StreamPost) => {
@@ -150,62 +225,132 @@ export default function StreamPosts({
 		}
 
 		return (
-			<div>
-				<p className="text-sm whitespace-pre-wrap mb-2">{post.content}</p>
-				{post.attachment_url && (
-					<div className="mt-2 p-2 rounded border bg-gray-50 dark:bg-gray-800">
-						<a
-							href={post.attachment_url}
-							target="_blank"
-							rel="noopener noreferrer"
-							className="text-blue-500 hover:text-blue-600 underline"
-						>
-							{post.attachment_title || "Attachment"}
-						</a>
-					</div>
-				)}
+			<div
+				className={`prose max-w-none text-base ${darkMode ? "prose-invert" : ""}`}
+			>
+				<ReactMarkdown
+					remarkPlugins={[remarkGfm]}
+					components={{
+						p: ({ children }) => (
+							<p
+								className={`text-base mb-2 ${darkMode ? "text-gray-200" : "text-gray-800"}`}
+							>
+								{children}
+							</p>
+						),
+						a: ({ href, children }) => (
+							<a
+								href={href}
+								target="_blank"
+								rel="noopener noreferrer"
+								className={`underline ${darkMode ? "text-blue-400" : "text-blue-600"}`}
+							>
+								{children}
+							</a>
+						),
+						code: (props) => {
+							const { className, children, ...rest } = props;
+							const isInline = !className?.includes("language-");
+							return isInline ? (
+								<code
+									className={`px-1.5 py-0.5 rounded ${
+										darkMode
+											? "bg-gray-700 text-gray-100"
+											: "bg-gray-100 text-gray-800"
+									}`}
+									{...rest}
+								>
+									{children}
+								</code>
+							) : (
+								<code
+									className={`block p-2 rounded ${className || ""} ${
+										darkMode
+											? "bg-gray-700 text-gray-100"
+											: "bg-gray-100 text-gray-800"
+									}`}
+									{...rest}
+								>
+									{children}
+								</code>
+							);
+						},
+					}}
+				>
+					{post.content}
+				</ReactMarkdown>
 			</div>
 		);
 	};
 
-	// Helper function to render post actions
-	const renderPostActions = (post: StreamPost) => {
+	// Helper function to render post header
+	const renderPostHeader = (post: StreamPost) => {
 		return (
-			<div className="flex items-center justify-between">
-				<div className="flex items-center space-x-2 text-xs text-gray-500">
-					<span>{post.author_name}</span>
-					<span>•</span>
-					<span>{new Date(post.created_at).toLocaleString()}</span>
-				</div>
-				{/* Captain Controls */}
-				{isCaptain && !editingPost && (
-					<div className="flex items-center space-x-1 ml-4">
-						<button
-							type="button"
-							onClick={() => handleStartEdit(post)}
-							className={`p-1 rounded hover:bg-gray-600 transition-colors ${
-								darkMode
-									? "text-gray-400 hover:text-white"
-									: "text-gray-500 hover:text-gray-700"
-							}`}
-							title="Edit post"
-						>
-							<Edit className="w-4 h-4" />
-						</button>
-						<button
-							type="button"
-							onClick={() => onDeletePost(post.id)}
-							className={`p-1 rounded hover:bg-red-600 transition-colors ${
-								darkMode
-									? "text-gray-400 hover:text-white"
-									: "text-gray-500 hover:text-white"
-							}`}
-							title="Delete post"
-						>
-							<Trash2 className="w-4 h-4" />
-						</button>
+			<div className="flex items-start space-x-3 mb-3">
+				{/* Profile Picture */}
+				<div className="flex-shrink-0">
+					{renderProfilePicture(post.author_photo_url)}
+					<div
+						className={`w-10 h-10 rounded-full flex items-center justify-center ${
+							darkMode ? "bg-gray-700" : "bg-gray-200"
+						}`}
+						style={{
+							display: post.author_photo_url ? "none" : "flex",
+						}}
+					>
+						<User
+							className={`w-5 h-5 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+						/>
 					</div>
-				)}
+				</div>
+				{/* Name and Date */}
+				<div className="flex-1 min-w-0">
+					<div className="flex items-center justify-between">
+						<div className="flex-1 min-w-0">
+							<div className="flex items-center space-x-2">
+								<span
+									className={`font-medium text-base ${darkMode ? "text-white" : "text-gray-900"}`}
+								>
+									{post.author_name}
+								</span>
+								{/* Captain Controls */}
+								{isCaptain && !editingPost && (
+									<div className="flex items-center space-x-1">
+										<button
+											type="button"
+											onClick={() => handleStartEdit(post)}
+											className={`p-1 rounded hover:bg-gray-600 transition-colors ${
+												darkMode
+													? "text-gray-400 hover:text-white"
+													: "text-gray-500 hover:text-gray-700"
+											}`}
+											title="Edit post"
+										>
+											<Edit className="w-4 h-4" />
+										</button>
+										<button
+											type="button"
+											onClick={() => onDeletePost(post.id)}
+											className={`p-1 rounded hover:bg-red-600 transition-colors ${
+												darkMode
+													? "text-gray-400 hover:text-white"
+													: "text-gray-500 hover:text-white"
+											}`}
+											title="Delete post"
+										>
+											<Trash2 className="w-4 h-4" />
+										</button>
+									</div>
+								)}
+							</div>
+							<div
+								className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+							>
+								{formatDateTime(post.created_at)}
+							</div>
+						</div>
+					</div>
+				</div>
 			</div>
 		);
 	};
@@ -215,14 +360,21 @@ export default function StreamPosts({
 			{posts.map((post) => (
 				<div
 					key={post.id}
-					className={`p-4 rounded-lg border ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}
+					className={`p-6 rounded-lg border ${
+						darkMode
+							? "bg-gray-800 border-gray-700"
+							: "bg-gray-50 border-gray-200"
+					}`}
 				>
+					{/* Post Header with Profile Picture */}
+					{renderPostHeader(post)}
+
 					{/* Post Content */}
-					<div className="mb-3">{renderPostContent(post)}</div>
+					<div className="mb-4">{renderPostContent(post)}</div>
 
 					{/* Attachment */}
 					{post.attachment_url && !editingPost && (
-						<div className="mb-3">
+						<div className="mb-4">
 							<a
 								href={post.attachment_url}
 								target="_blank"
@@ -230,7 +382,7 @@ export default function StreamPosts({
 								className={`inline-flex items-center space-x-2 p-3 rounded-lg border transition-colors ${
 									darkMode
 										? "bg-gray-700 border-gray-600 hover:bg-gray-600"
-										: "bg-gray-50 border-gray-300 hover:bg-gray-100"
+										: "bg-white border-gray-300 hover:bg-gray-100"
 								}`}
 							>
 								<FileText className="w-4 h-4 text-blue-500" />
@@ -243,102 +395,124 @@ export default function StreamPosts({
 						</div>
 					)}
 
-					{/* Post Meta */}
-					<div className="mb-3">{renderPostActions(post)}</div>
-
-					{/* Comments Section */}
-					<div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+					{/* Comments Section - Always Visible */}
+					<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
 						<div className="flex items-center justify-between mb-3">
-							<button
-								type="button"
-								onClick={() => onToggleComments(post.id)}
-								className="flex items-center space-x-2 text-sm text-blue-500 hover:text-blue-600 transition-colors"
-							>
+							<div className="flex items-center space-x-2 text-sm text-blue-500">
 								<MessageCircle className="w-4 h-4" />
 								<span>
 									{post.comments?.length || 0} comment
 									{(post.comments?.length || 0) !== 1 ? "s" : ""}
 								</span>
-							</button>
+							</div>
 						</div>
 
-						{/* Comments List */}
-						{expandedComments.has(post.id) && (
-							<div className="space-y-3 mb-3">
-								{post.comments?.map((comment) => (
+						{/* Comments List - Always Visible with Scrollbar */}
+						{post.comments && post.comments.length > 0 && (
+							<div
+								className={`space-y-3 mb-3 max-h-96 overflow-y-auto ${
+									darkMode ? "scrollbar-thin scrollbar-thumb-gray-600" : ""
+								}`}
+								style={{
+									scrollbarWidth: "thin",
+									scrollbarColor: darkMode
+										? "#4B5563 transparent"
+										: "#9CA3AF transparent",
+								}}
+							>
+								{post.comments.map((comment) => (
 									<div
 										key={comment.id}
-										className={`p-3 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}
+										className={`p-3 rounded-lg ${darkMode ? "bg-gray-700" : "bg-white"}`}
 									>
-										<div className="flex items-center justify-between mb-1">
-											<div className="flex items-center space-x-2">
-												<User className="w-3 h-3 text-gray-400" />
-												<span
-													className={`text-xs font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-												>
-													{comment.author_name}
-												</span>
-												<span
-													className={`text-xs ${darkMode ? "text-gray-500" : "text-gray-400"}`}
-												>
-													{new Date(comment.created_at).toLocaleString()}
-												</span>
-											</div>
-											{/* Captain Controls for Comments */}
-											{isCaptain && (
-												<button
-													type="button"
-													onClick={() => onDeleteComment(comment.id)}
-													className={`p-1 rounded hover:bg-red-600 transition-colors ${
-														darkMode
-															? "text-gray-400 hover:text-white"
-															: "text-gray-500 hover:text-white"
+										<div className="flex items-start space-x-2 mb-2">
+											{/* Comment Author Profile Picture */}
+											<div className="flex-shrink-0">
+												{renderCommentProfilePicture(comment.author_photo_url)}
+												<div
+													className={`w-8 h-8 rounded-full flex items-center justify-center ${
+														darkMode ? "bg-gray-600" : "bg-gray-200"
 													}`}
-													title="Delete comment"
+													style={{
+														display: comment.author_photo_url ? "none" : "flex",
+													}}
 												>
-													<Trash2 className="w-3 h-3" />
-												</button>
-											)}
+													<User
+														className={`w-4 h-4 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+													/>
+												</div>
+											</div>
+											<div className="flex-1 min-w-0">
+												<div className="flex items-center justify-between mb-1">
+													<div className="flex items-center space-x-2">
+														<span
+															className={`text-sm font-medium ${
+																darkMode ? "text-gray-300" : "text-gray-700"
+															}`}
+														>
+															{comment.author_name}
+														</span>
+														<span
+															className={`text-xs ${darkMode ? "text-gray-500" : "text-gray-400"}`}
+														>
+															{formatDateTime(comment.created_at)}
+														</span>
+													</div>
+													{/* Captain Controls for Comments */}
+													{isCaptain && (
+														<button
+															type="button"
+															onClick={() => onDeleteComment(comment.id)}
+															className={`p-1 rounded hover:bg-red-600 transition-colors ${
+																darkMode
+																	? "text-gray-400 hover:text-white"
+																	: "text-gray-500 hover:text-white"
+															}`}
+															title="Delete comment"
+														>
+															<Trash2 className="w-3 h-3" />
+														</button>
+													)}
+												</div>
+												<p
+													className={`text-sm ${darkMode ? "text-gray-200" : "text-gray-800"}`}
+												>
+													{comment.content}
+												</p>
+											</div>
 										</div>
-										<p
-											className={`text-sm ${darkMode ? "text-gray-200" : "text-gray-800"}`}
-										>
-											{comment.content}
-										</p>
 									</div>
 								))}
 							</div>
 						)}
 
-						{/* Add Comment Form */}
-						{expandedComments.has(post.id) && (
-							<div className="flex space-x-2">
-								<input
-									type="text"
-									value={newComments[post.id] || ""}
-									onChange={(e) => onCommentChange(post.id, e.target.value)}
-									placeholder="Add a comment..."
-									className={`flex-1 p-2 rounded-lg border text-sm ${
-										darkMode
-											? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-											: "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-									}`}
-									onKeyPress={(e) => {
-										if (e.key === "Enter") {
-											onAddComment(post.id);
-										}
-									}}
-								/>
-								<button
-									type="button"
-									onClick={() => onAddComment(post.id)}
-									disabled={!newComments[post.id]?.trim()}
-									className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-								>
-									<Send className="w-4 h-4" />
-								</button>
-							</div>
-						)}
+						{/* Add Comment Form - Always Visible */}
+						<div className="flex space-x-2">
+							<input
+								type="text"
+								value={newComments[post.id] || ""}
+								onChange={(e) => onCommentChange(post.id, e.target.value)}
+								placeholder="Add a comment..."
+								className={`flex-1 p-2 rounded-lg border text-sm ${
+									darkMode
+										? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+										: "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+								}`}
+								onKeyPress={(e) => {
+									if (e.key === "Enter") {
+										onAddComment(post.id);
+									}
+								}}
+							/>
+							<button
+								type="button"
+								onClick={() => onAddComment(post.id)}
+								disabled={!newComments[post.id]?.trim()}
+								className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+							>
+								<Send className="w-4 h-4" />
+							</button>
+						</div>
 					</div>
 				</div>
 			))}

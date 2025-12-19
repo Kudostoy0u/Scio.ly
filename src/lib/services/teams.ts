@@ -1,11 +1,11 @@
 import { dbPg } from "@/lib/db";
-import { users } from "@/lib/db/schema/core";
+import { users } from "@/lib/db/schema";
 import {
-	newTeamGroups,
-	newTeamMemberships,
-	newTeamPeople,
-	newTeamUnits,
-} from "@/lib/db/schema/teams";
+	teamMemberships,
+	teamPeople,
+	teamSubteams,
+	teams,
+} from "@/lib/db/schema";
 import logger from "@/lib/utils/logging/logger";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { formatMember } from "./utils/memberFormatters";
@@ -67,19 +67,19 @@ export interface TeamWithDetails {
 	}>;
 }
 
-export class CockroachDBTeamsService {
+export class TeamsService {
 	async getUserTeams(userId: string): Promise<TeamWithDetails[]> {
 		// Get user's team memberships using Drizzle ORM
 		const memberships = await dbPg
 			.select()
-			.from(newTeamMemberships)
+			.from(teamMemberships)
 			.where(
 				and(
-					eq(newTeamMemberships.userId, userId),
-					eq(newTeamMemberships.status, "active"),
+					eq(teamMemberships.userId, userId),
+					eq(teamMemberships.status, "active"),
 				),
 			)
-			.orderBy(newTeamMemberships.joinedAt);
+			.orderBy(teamMemberships.joinedAt);
 
 		if (memberships.length === 0) {
 			return [];
@@ -87,32 +87,32 @@ export class CockroachDBTeamsService {
 
 		// Get team details for each membership using Drizzle ORM
 		const teamIds = memberships.map((m) => m.teamId);
-		const teams = await dbPg
+		const teamResults = await dbPg
 			.select({
-				id: newTeamUnits.id,
-				teamId: newTeamUnits.teamId,
-				description: newTeamUnits.description,
-				captainCode: newTeamUnits.captainCode,
-				userCode: newTeamUnits.userCode,
-				school: newTeamGroups.school,
-				division: newTeamGroups.division,
-				slug: newTeamGroups.slug,
-				groupCreatedAt: newTeamGroups.createdAt,
+				id: teamSubteams.id,
+				teamId: teamSubteams.teamId,
+				description: teamSubteams.description,
+				captainCode: teamSubteams.captainCode,
+				userCode: teamSubteams.userCode,
+				school: teams.school,
+				division: teams.division,
+				slug: teams.slug,
+				groupCreatedAt: teams.createdAt,
 			})
-			.from(newTeamUnits)
-			.innerJoin(newTeamGroups, eq(newTeamUnits.groupId, newTeamGroups.id))
+			.from(teamSubteams)
+			.innerJoin(teams, eq(teamSubteams.teamId, teams.id))
 			.where(
 				and(
-					inArray(newTeamUnits.id, teamIds),
-					eq(newTeamUnits.status, "active"),
-					eq(newTeamGroups.status, "active"),
+					inArray(teamSubteams.id, teamIds),
+					eq(teamSubteams.status, "active"),
+					eq(teams.status, "active"),
 				),
 			);
 
 		// Format teams with members
 		const formattedTeams = await Promise.all(
 			memberships.map(async (membership) => {
-				const team = teams.find((t) => t.id === membership.teamId);
+				const team = teamResults.find((t) => t.id === membership.teamId);
 				if (!team) {
 					return null;
 				}
@@ -130,12 +130,12 @@ export class CockroachDBTeamsService {
 					{
 						id: team.id,
 						teamId: team.teamId,
-						description: team.description,
-						captainCode: team.captainCode,
-						userCode: team.userCode,
-						school: team.school,
-						division: team.division,
-						slug: team.slug,
+						description: team.description || undefined,
+						captainCode: team.captainCode || "",
+						userCode: team.userCode || "",
+						school: team.school || "",
+						division: team.division || "",
+						slug: team.slug || "",
 					},
 					{ role: membership.role },
 					formattedMembers,
@@ -150,14 +150,14 @@ export class CockroachDBTeamsService {
 		// Get user's archived team memberships
 		const membershipsResult = await dbPg
 			.select()
-			.from(newTeamMemberships)
+			.from(teamMemberships)
 			.where(
 				and(
-					eq(newTeamMemberships.userId, userId),
-					eq(newTeamMemberships.status, "archived"),
+					eq(teamMemberships.userId, userId),
+					eq(teamMemberships.status, "archived"),
 				),
 			)
-			.orderBy(newTeamMemberships.joinedAt);
+			.orderBy(teamMemberships.joinedAt);
 
 		if (membershipsResult.length === 0) {
 			return [];
@@ -167,28 +167,28 @@ export class CockroachDBTeamsService {
 		const teamIds = membershipsResult.map((m) => m.teamId);
 		const teamsResult = await dbPg
 			.select({
-				id: newTeamUnits.id,
-				group_id: newTeamUnits.groupId,
-				team_id: newTeamUnits.teamId,
-				description: newTeamUnits.description,
-				captain_code: newTeamUnits.captainCode,
-				user_code: newTeamUnits.userCode,
-				created_by: newTeamUnits.createdBy,
-				created_at: newTeamUnits.createdAt,
-				updated_at: newTeamUnits.updatedAt,
-				status: newTeamUnits.status,
-				school: newTeamGroups.school,
-				division: newTeamGroups.division,
-				slug: newTeamGroups.slug,
-				group_created_at: newTeamGroups.createdAt,
+				id: teamSubteams.id,
+				group_id: teamSubteams.teamId,
+				team_id: teamSubteams.teamId,
+				description: teamSubteams.description,
+				captain_code: teamSubteams.captainCode,
+				user_code: teamSubteams.userCode,
+				created_by: teamSubteams.createdBy,
+				created_at: teamSubteams.createdAt,
+				updated_at: teamSubteams.updatedAt,
+				status: teamSubteams.status,
+				school: teams.school,
+				division: teams.division,
+				slug: teams.slug,
+				group_created_at: teams.createdAt,
 			})
-			.from(newTeamUnits)
-			.innerJoin(newTeamGroups, eq(newTeamUnits.groupId, newTeamGroups.id))
+			.from(teamSubteams)
+			.innerJoin(teams, eq(teamSubteams.teamId, teams.id))
 			.where(
 				and(
-					inArray(newTeamUnits.id, teamIds),
-					eq(newTeamUnits.status, "archived"),
-					eq(newTeamGroups.status, "archived"),
+					inArray(teamSubteams.id, teamIds),
+					eq(teamSubteams.status, "archived"),
+					eq(teams.status, "archived"),
 				),
 			);
 
@@ -213,12 +213,12 @@ export class CockroachDBTeamsService {
 					{
 						id: team.id,
 						teamId: team.team_id,
-						description: team.description,
-						captainCode: team.captain_code,
-						userCode: team.user_code,
-						school: team.school,
-						division: team.division,
-						slug: team.slug,
+						description: team.description || undefined,
+						captainCode: team.captain_code || "",
+						userCode: team.user_code || "",
+						school: team.school || "",
+						division: team.division || "",
+						slug: team.slug || "",
 					},
 					{ role: membership.role },
 					formattedMembers,
@@ -234,14 +234,14 @@ export class CockroachDBTeamsService {
 			// Using Drizzle ORM to get team members
 			const members = await dbPg
 				.select()
-				.from(newTeamMemberships)
+				.from(teamMemberships)
 				.where(
 					and(
-						eq(newTeamMemberships.teamId, teamId),
-						eq(newTeamMemberships.status, "active"),
+						eq(teamMemberships.teamId, teamId),
+						eq(teamMemberships.status, "active"),
 					),
 				)
-				.orderBy(newTeamMemberships.joinedAt);
+				.orderBy(teamMemberships.joinedAt);
 
 			// Convert to the expected format
 			return members.map((member) => ({
@@ -281,8 +281,9 @@ export class CockroachDBTeamsService {
 
 		// Create the team group with the final slug
 		const [result] = await dbPg
-			.insert(newTeamGroups)
+			.insert(teams)
 			.values({
+				name: data.school, // Use school as name
 				school: data.school,
 				division: data.division,
 				slug: finalSlug,
@@ -304,7 +305,6 @@ export class CockroachDBTeamsService {
 	}
 
 	async createTeamUnit(data: {
-		groupId: string;
 		teamId: string;
 		captainCode: string;
 		userCode: string;
@@ -312,35 +312,34 @@ export class CockroachDBTeamsService {
 		createdBy: string;
 	}): Promise<TeamUnit> {
 		const groupStatusResult = await dbPg
-			.select({ status: newTeamGroups.status })
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.id, data.groupId))
+			.select({ status: teams.status })
+			.from(teams)
+			.where(eq(teams.id, data.teamId))
 			.limit(1);
 
 		const firstResult = groupStatusResult[0];
 		if (firstResult && firstResult.status === "archived") {
 			await dbPg
-				.update(newTeamGroups)
+				.update(teams)
 				.set({
 					status: "active",
 					updatedAt: new Date().toISOString(),
 				})
-				.where(eq(newTeamGroups.id, data.groupId));
+				.where(eq(teams.id, data.teamId));
 		}
 
 		// Generate next available team ID
-		const nextTeamId = await generateNextTeamId(data.groupId);
+		const nextTeamName = await generateNextTeamId(data.teamId);
 
 		const [result] = await dbPg
-			.insert(newTeamUnits)
+			.insert(teamSubteams)
 			.values({
-				groupId: data.groupId,
-				teamId: nextTeamId,
+				teamId: data.teamId,
+				name: nextTeamName,
 				captainCode: data.captainCode,
 				userCode: data.userCode,
-				description: data.description || `Team ${nextTeamId}`,
+				description: data.description || `Team ${nextTeamName}`,
 				createdBy: data.createdBy,
-				status: "active", // Explicitly set status to active
 			})
 			.returning();
 
@@ -349,13 +348,13 @@ export class CockroachDBTeamsService {
 		}
 		return {
 			id: result.id,
-			group_id: result.groupId,
+			group_id: result.teamId,
 			team_id: result.teamId,
 			name: result.description || `Team ${result.teamId}`,
 			description: result.description || undefined,
-			captain_code: result.captainCode,
-			user_code: result.userCode,
-			created_by: result.createdBy,
+			captain_code: result.captainCode || "",
+			user_code: result.userCode || "",
+			created_by: result.createdBy || "",
 			created_at: result.createdAt || new Date().toISOString(),
 			updated_at: result.updatedAt || new Date().toISOString(),
 		};
@@ -370,18 +369,18 @@ export class CockroachDBTeamsService {
 	}): Promise<TeamMembership> {
 		const existingMembership = await dbPg
 			.select()
-			.from(newTeamMemberships)
+			.from(teamMemberships)
 			.where(
 				and(
-					eq(newTeamMemberships.userId, data.userId),
-					eq(newTeamMemberships.teamId, data.teamId),
+					eq(teamMemberships.userId, data.userId),
+					eq(teamMemberships.teamId, data.teamId),
 				),
 			)
 			.limit(1);
 
 		if (existingMembership.length > 0) {
 			const [updatedMembership] = await dbPg
-				.update(newTeamMemberships)
+				.update(teamMemberships)
 				.set({
 					role: data.role,
 					status: data.status,
@@ -389,8 +388,8 @@ export class CockroachDBTeamsService {
 				})
 				.where(
 					and(
-						eq(newTeamMemberships.userId, data.userId),
-						eq(newTeamMemberships.teamId, data.teamId),
+						eq(teamMemberships.userId, data.userId),
+						eq(teamMemberships.teamId, data.teamId),
 					),
 				)
 				.returning();
@@ -418,7 +417,7 @@ export class CockroachDBTeamsService {
 			return result;
 		}
 		const [result] = await dbPg
-			.insert(newTeamMemberships)
+			.insert(teamMemberships)
 			.values({
 				userId: data.userId,
 				teamId: data.teamId,
@@ -475,38 +474,40 @@ export class CockroachDBTeamsService {
 				"Unknown User";
 			const isAdmin = role === "captain";
 			const [existingEntry] = await dbPg
-				.select({ id: newTeamPeople.id })
-				.from(newTeamPeople)
+				.select({ id: teamPeople.id })
+				.from(teamPeople)
 				.where(
-					and(
-						eq(newTeamPeople.userId, userId),
-						eq(newTeamPeople.teamUnitId, teamId),
-					),
+					and(eq(teamPeople.userId, userId), eq(teamPeople.subteamId, teamId)),
 				)
 				.limit(1);
 
 			if (existingEntry) {
 				await dbPg
-					.update(newTeamPeople)
+					.update(teamPeople)
 					.set({
 						name: displayName,
-						isAdmin: isAdmin ? "true" : "false",
+						isAdmin: isAdmin,
 						updatedAt: new Date().toISOString(),
 					})
-					.where(
-						and(
-							eq(newTeamPeople.userId, userId),
-							eq(newTeamPeople.teamUnitId, teamId),
-						),
-					);
+					.where(eq(teamPeople.id, existingEntry.id));
 			} else {
-				await dbPg.insert(newTeamPeople).values({
-					teamUnitId: teamId,
-					name: displayName,
-					userId,
-					isAdmin: isAdmin ? "true" : "false",
-					events: [],
-				});
+				// We need the group team ID. For now, let's try to get it from the subteam
+				const [subteamInfo] = await dbPg
+					.select({ teamId: teamSubteams.teamId })
+					.from(teamSubteams)
+					.where(eq(teamSubteams.id, teamId))
+					.limit(1);
+
+				if (subteamInfo) {
+					await dbPg.insert(teamPeople).values({
+						subteamId: teamId,
+						teamId: subteamInfo.teamId,
+						name: displayName,
+						userId,
+						isAdmin: isAdmin,
+						events: [],
+					});
+				}
 			}
 		} catch (error) {
 			logger.error(
@@ -524,38 +525,38 @@ export class CockroachDBTeamsService {
 		userId: string,
 		code: string,
 	): Promise<TeamWithDetails | null> {
-		const teams = await dbPg
+		const teamResults = await dbPg
 			.select({
-				id: newTeamUnits.id,
-				teamId: newTeamUnits.teamId,
-				description: newTeamUnits.description,
-				captainCode: newTeamUnits.captainCode,
-				userCode: newTeamUnits.userCode,
-				school: newTeamGroups.school,
-				division: newTeamGroups.division,
-				slug: newTeamGroups.slug,
+				id: teamSubteams.id,
+				teamId: teamSubteams.teamId,
+				description: teamSubteams.description,
+				captainCode: teamSubteams.captainCode,
+				userCode: teamSubteams.userCode,
+				school: teams.school,
+				division: teams.division,
+				slug: teams.slug,
 			})
-			.from(newTeamUnits)
-			.innerJoin(newTeamGroups, eq(newTeamUnits.groupId, newTeamGroups.id))
+			.from(teamSubteams)
+			.innerJoin(teams, eq(teamSubteams.teamId, teams.id))
 			.where(
-				or(eq(newTeamUnits.captainCode, code), eq(newTeamUnits.userCode, code)),
+				or(eq(teamSubteams.captainCode, code), eq(teamSubteams.userCode, code)),
 			);
 
-		if (teams.length === 0) {
+		if (teamResults.length === 0) {
 			return null;
 		}
 
-		const team = teams[0];
+		const team = teamResults[0];
 		if (!team) {
 			throw new Error("Team not found");
 		}
 		const existingMemberships = await dbPg
 			.select()
-			.from(newTeamMemberships)
+			.from(teamMemberships)
 			.where(
 				and(
-					eq(newTeamMemberships.userId, userId),
-					eq(newTeamMemberships.teamId, team.id),
+					eq(teamMemberships.userId, userId),
+					eq(teamMemberships.teamId, team.id),
 				),
 			);
 
@@ -576,12 +577,12 @@ export class CockroachDBTeamsService {
 				{
 					id: team.id,
 					teamId: team.teamId,
-					description: team.description,
-					captainCode: team.captainCode,
-					userCode: team.userCode,
-					school: team.school,
-					division: team.division,
-					slug: team.slug,
+					description: team.description || undefined,
+					captainCode: team.captainCode || "",
+					userCode: team.userCode || "",
+					school: team.school || "",
+					division: team.division || "",
+					slug: team.slug || "",
 				},
 				{ role: firstMembership.role },
 				formattedMembers,
@@ -608,12 +609,12 @@ export class CockroachDBTeamsService {
 			{
 				id: team.id,
 				teamId: team.teamId,
-				description: team.description,
-				captainCode: team.captainCode,
-				userCode: team.userCode,
-				school: team.school,
-				division: team.division,
-				slug: team.slug,
+				description: team.description || undefined,
+				captainCode: team.captainCode || "",
+				userCode: team.userCode || "",
+				school: team.school || "",
+				division: team.division || "",
+				slug: team.slug || "",
 			},
 			{ role: membership.role },
 			formattedMembers,
@@ -621,4 +622,4 @@ export class CockroachDBTeamsService {
 	}
 }
 
-export const cockroachDBTeamsService = new CockroachDBTeamsService();
+export const teamsService = new TeamsService();

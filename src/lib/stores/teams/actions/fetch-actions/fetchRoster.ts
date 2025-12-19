@@ -1,4 +1,4 @@
-import type { TeamFullData } from "@/lib/server/teams-v2";
+import type { TeamFullData } from "@/lib/server/teams";
 import type { RosterData, TeamStoreActions, TeamStoreState } from "../../types";
 import { CACHE_DURATIONS } from "../../types";
 import { fetchWithDeduplication, handleApiError } from "../../utils";

@@ -1,5 +1,6 @@
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useInvalidateTeam } from "@/lib/hooks/useTeam";
+import type { TeamFullData, TeamMember } from "@/lib/server/teams/shared";
 import { trpc } from "@/lib/trpc/client";
 import { toast } from "react-toastify";
 import type { Member } from "../../types";
@@ -272,9 +273,11 @@ export function useMemberActions({
 						return {
 							...prev,
 							rosterEntries: (prev.rosterEntries ?? []).filter(
-								(e) => e.userId !== member.id,
+								(e: TeamFullData["rosterEntries"][0]) => e.userId !== member.id,
 							),
-							members: (prev.members ?? []).filter((m) => m.id !== member.id),
+							members: (prev.members ?? []).filter(
+								(m: TeamMember) => m.id !== member.id,
+							),
 						};
 					});
 					toast.success(`Removed ${getDisplayName(member)} from team`);
@@ -291,9 +294,10 @@ export function useMemberActions({
 						return {
 							...prev,
 							rosterEntries: (prev.rosterEntries ?? []).filter(
-								(e) => !(e.userId === null && e.displayName === displayName),
+								(e: TeamFullData["rosterEntries"][0]) =>
+									!(e.userId === null && e.displayName === displayName),
 							),
-							members: (prev.members ?? []).filter((m) => {
+							members: (prev.members ?? []).filter((m: TeamMember) => {
 								if (!m.isUnlinked) return true;
 								return !(
 									m.name?.toLowerCase() === displayName.toLowerCase() &&

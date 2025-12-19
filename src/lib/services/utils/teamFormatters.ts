@@ -1,4 +1,4 @@
-import type { TeamWithDetails } from "../cockroachdb-teams";
+import type { TeamWithDetails } from "../teams";
 import type { FormattedMember } from "./memberFormatters";
 
 interface TeamData {

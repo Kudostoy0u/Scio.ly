@@ -1,11 +1,11 @@
 import { dbPg } from "@/lib/db";
-import { users } from "@/lib/db/schema/core";
+import { users } from "@/lib/db/schema";
 import {
-	teamsLinkInvitation,
-	teamsMembership,
-	teamsRoster,
-	teamsTeam,
-} from "@/lib/db/schema/teams_v2";
+	teamLinkInvitations,
+	teamMemberships,
+	teamRoster,
+	teams,
+} from "@/lib/db/schema";
 import { and, eq, ilike, isNull } from "drizzle-orm";
 import { assertCaptainAccess, bumpTeamVersion } from "./shared";
 
@@ -18,13 +18,13 @@ export async function createLinkInvitation(input: {
 	const { team } = await assertCaptainAccess(input.teamSlug, input.invitedBy);
 
 	const existingInvite = await dbPg
-		.select({ id: teamsLinkInvitation.id })
-		.from(teamsLinkInvitation)
+		.select({ id: teamLinkInvitations.id })
+		.from(teamLinkInvitations)
 		.where(
 			and(
-				eq(teamsLinkInvitation.teamId, team.id),
-				eq(teamsLinkInvitation.rosterDisplayName, input.rosterDisplayName),
-				eq(teamsLinkInvitation.status, "pending"),
+				eq(teamLinkInvitations.teamId, team.id),
+				eq(teamLinkInvitations.rosterDisplayName, input.rosterDisplayName),
+				eq(teamLinkInvitations.status, "pending"),
 			),
 		)
 		.limit(1);
@@ -35,7 +35,7 @@ export async function createLinkInvitation(input: {
 		);
 	}
 
-	await dbPg.insert(teamsLinkInvitation).values({
+	await dbPg.insert(teamLinkInvitations).values({
 		id: crypto.randomUUID(),
 		teamId: team.id,
 		rosterDisplayName: input.rosterDisplayName,
@@ -74,20 +74,20 @@ export async function listPendingLinkInvitesForUser(userId: string) {
 
 	const linkInvites = await dbPg
 		.select({
-			id: teamsLinkInvitation.id,
-			teamId: teamsTeam.id,
-			slug: teamsTeam.slug,
-			teamName: teamsTeam.name,
-			school: teamsTeam.school,
-			division: teamsTeam.division,
-			rosterDisplayName: teamsLinkInvitation.rosterDisplayName,
+			id: teamLinkInvitations.id,
+			teamId: teams.id,
+			slug: teams.slug,
+			teamName: teams.name,
+			school: teams.school,
+			division: teams.division,
+			rosterDisplayName: teamLinkInvitations.rosterDisplayName,
 		})
-		.from(teamsLinkInvitation)
-		.innerJoin(teamsTeam, eq(teamsLinkInvitation.teamId, teamsTeam.id))
+		.from(teamLinkInvitations)
+		.innerJoin(teams, eq(teamLinkInvitations.teamId, teams.id))
 		.where(
 			and(
-				ilike(teamsLinkInvitation.invitedUsername, username),
-				eq(teamsLinkInvitation.status, "pending"),
+				ilike(teamLinkInvitations.invitedUsername, username),
+				eq(teamLinkInvitations.status, "pending"),
 			),
 		);
 
@@ -108,16 +108,16 @@ export async function acceptLinkInvitation(
 ) {
 	const [linkInvite] = await dbPg
 		.select({
-			id: teamsLinkInvitation.id,
-			teamId: teamsLinkInvitation.teamId,
-			rosterDisplayName: teamsLinkInvitation.rosterDisplayName,
-			invitedUsername: teamsLinkInvitation.invitedUsername,
+			id: teamLinkInvitations.id,
+			teamId: teamLinkInvitations.teamId,
+			rosterDisplayName: teamLinkInvitations.rosterDisplayName,
+			invitedUsername: teamLinkInvitations.invitedUsername,
 		})
-		.from(teamsLinkInvitation)
+		.from(teamLinkInvitations)
 		.where(
 			and(
-				eq(teamsLinkInvitation.id, linkInviteId),
-				eq(teamsLinkInvitation.status, "pending"),
+				eq(teamLinkInvitations.id, linkInviteId),
+				eq(teamLinkInvitations.status, "pending"),
 			),
 		)
 		.limit(1);
@@ -160,7 +160,7 @@ export async function acceptLinkInvitation(
 
 	await dbPg.transaction(async (tx) => {
 		await tx
-			.update(teamsRoster)
+			.update(teamRoster)
 			.set({
 				userId,
 				displayName: linkedDisplayName,
@@ -168,25 +168,25 @@ export async function acceptLinkInvitation(
 			})
 			.where(
 				and(
-					eq(teamsRoster.teamId, linkInvite.teamId),
-					eq(teamsRoster.displayName, linkInvite.rosterDisplayName),
-					isNull(teamsRoster.userId),
+					eq(teamRoster.teamId, linkInvite.teamId),
+					eq(teamRoster.displayName, linkInvite.rosterDisplayName),
+					isNull(teamRoster.userId),
 				),
 			);
 
 		const existingMembership = await tx
-			.select({ id: teamsMembership.id })
-			.from(teamsMembership)
+			.select({ id: teamMemberships.id })
+			.from(teamMemberships)
 			.where(
 				and(
-					eq(teamsMembership.teamId, linkInvite.teamId),
-					eq(teamsMembership.userId, userId),
+					eq(teamMemberships.teamId, linkInvite.teamId),
+					eq(teamMemberships.userId, userId),
 				),
 			)
 			.limit(1);
 
 		if (existingMembership.length === 0) {
-			await tx.insert(teamsMembership).values({
+			await tx.insert(teamMemberships).values({
 				id: crypto.randomUUID(),
 				teamId: linkInvite.teamId,
 				userId,
@@ -196,9 +196,9 @@ export async function acceptLinkInvitation(
 		}
 
 		await tx
-			.update(teamsLinkInvitation)
+			.update(teamLinkInvitations)
 			.set({ status: "accepted", updatedAt: new Date().toISOString() })
-			.where(eq(teamsLinkInvitation.id, linkInviteId));
+			.where(eq(teamLinkInvitations.id, linkInviteId));
 
 		await bumpTeamVersion(linkInvite.teamId, tx);
 	});
@@ -212,15 +212,15 @@ export async function declineLinkInvitation(
 ) {
 	const [linkInvite] = await dbPg
 		.select({
-			id: teamsLinkInvitation.id,
-			invitedUsername: teamsLinkInvitation.invitedUsername,
-			teamId: teamsLinkInvitation.teamId,
+			id: teamLinkInvitations.id,
+			invitedUsername: teamLinkInvitations.invitedUsername,
+			teamId: teamLinkInvitations.teamId,
 		})
-		.from(teamsLinkInvitation)
+		.from(teamLinkInvitations)
 		.where(
 			and(
-				eq(teamsLinkInvitation.id, linkInviteId),
-				eq(teamsLinkInvitation.status, "pending"),
+				eq(teamLinkInvitations.id, linkInviteId),
+				eq(teamLinkInvitations.status, "pending"),
 			),
 		)
 		.limit(1);
@@ -253,9 +253,9 @@ export async function declineLinkInvitation(
 
 	await dbPg.transaction(async (tx) => {
 		await tx
-			.update(teamsLinkInvitation)
+			.update(teamLinkInvitations)
 			.set({ status: "declined", updatedAt: new Date().toISOString() })
-			.where(eq(teamsLinkInvitation.id, linkInviteId));
+			.where(eq(teamLinkInvitations.id, linkInviteId));
 
 		await bumpTeamVersion(linkInvite.teamId, tx);
 	});
@@ -272,15 +272,15 @@ export async function cancelLinkInvitation(input: {
 
 	const [linkInvite] = await dbPg
 		.select({
-			id: teamsLinkInvitation.id,
-			teamId: teamsLinkInvitation.teamId,
+			id: teamLinkInvitations.id,
+			teamId: teamLinkInvitations.teamId,
 		})
-		.from(teamsLinkInvitation)
+		.from(teamLinkInvitations)
 		.where(
 			and(
-				eq(teamsLinkInvitation.teamId, team.id),
-				eq(teamsLinkInvitation.rosterDisplayName, input.rosterDisplayName),
-				eq(teamsLinkInvitation.status, "pending"),
+				eq(teamLinkInvitations.teamId, team.id),
+				eq(teamLinkInvitations.rosterDisplayName, input.rosterDisplayName),
+				eq(teamLinkInvitations.status, "pending"),
 			),
 		)
 		.limit(1);
@@ -291,9 +291,9 @@ export async function cancelLinkInvitation(input: {
 
 	await dbPg.transaction(async (tx) => {
 		await tx
-			.update(teamsLinkInvitation)
+			.update(teamLinkInvitations)
 			.set({ status: "cancelled", updatedAt: new Date().toISOString() })
-			.where(eq(teamsLinkInvitation.id, linkInvite.id));
+			.where(eq(teamLinkInvitations.id, linkInvite.id));
 
 		await bumpTeamVersion(linkInvite.teamId, tx);
 	});

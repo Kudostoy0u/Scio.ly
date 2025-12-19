@@ -1,4 +1,4 @@
-import type { TeamFullData } from "@/lib/server/teams-v2";
+import type { TeamFullData } from "@/lib/server/teams";
 import { trpcClient } from "../../client";
 import { fetchWithDeduplication } from "../../utils";
 

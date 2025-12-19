@@ -55,7 +55,7 @@ export async function POST(
 		const teamInfo = await resolveTeamSlugToUnits(teamId);
 
 		// Check if user is captain or co-captain of any team unit in this group
-		const isCaptain = await isUserCaptain(user.id, teamInfo.teamUnitIds);
+		const isCaptain = await isUserCaptain(user.id, teamInfo.subteamIds);
 
 		if (!isCaptain) {
 			return NextResponse.json(

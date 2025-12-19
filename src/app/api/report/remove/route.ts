@@ -6,7 +6,7 @@ import {
 } from "@/lib/api/utils";
 import { db } from "@/lib/db";
 import { questions as questionsTable } from "@/lib/db/schema";
-import { blacklists as blacklistsTable } from "@/lib/db/schema/core";
+import { blacklists as blacklistsTable } from "@/lib/db/schema";
 import { geminiService } from "@/lib/services/gemini";
 import type { ApiResponse } from "@/lib/types/api";
 import logger from "@/lib/utils/logging/logger";

@@ -1,10 +1,10 @@
 import { dbPg } from "@/lib/db/index";
 import {
-	newTeamAssignmentQuestions,
-	newTeamAssignmentRoster,
-	newTeamAssignments,
-} from "@/lib/db/schema/assignments";
-import { users } from "@/lib/db/schema/core";
+	teamAssignmentQuestions,
+	teamAssignmentRoster,
+	teamAssignments,
+} from "@/lib/db/schema";
+import { users } from "@/lib/db/schema";
 import { FrontendQuestionSchema } from "@/lib/schemas/question";
 import { getServerUser } from "@/lib/supabaseServer";
 import { parseDifficulty } from "@/lib/types/difficulty";
@@ -278,22 +278,22 @@ export async function GET(
 		// Get assignment details with creator information
 		const assignmentResult = await dbPg
 			.select({
-				id: newTeamAssignments.id,
-				title: newTeamAssignments.title,
-				description: newTeamAssignments.description,
-				assignmentType: newTeamAssignments.assignmentType,
-				dueDate: newTeamAssignments.dueDate,
-				points: newTeamAssignments.points,
-				isRequired: newTeamAssignments.isRequired,
-				maxAttempts: newTeamAssignments.maxAttempts,
-				createdAt: newTeamAssignments.createdAt,
-				updatedAt: newTeamAssignments.updatedAt,
+				id: teamAssignments.id,
+				title: teamAssignments.title,
+				description: teamAssignments.description,
+				assignmentType: teamAssignments.assignmentType,
+				dueDate: teamAssignments.dueDate,
+				points: teamAssignments.points,
+				isRequired: teamAssignments.isRequired,
+				maxAttempts: teamAssignments.maxAttempts,
+				createdAt: teamAssignments.createdAt,
+				updatedAt: teamAssignments.updatedAt,
 				creatorEmail: users.email,
 				creatorName: sql<string>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}))`,
 			})
-			.from(newTeamAssignments)
-			.innerJoin(users, eq(newTeamAssignments.createdBy, users.id))
-			.where(eq(newTeamAssignments.id, assignmentId))
+			.from(teamAssignments)
+			.innerJoin(users, eq(teamAssignments.createdBy, users.id))
+			.where(eq(teamAssignments.id, assignmentId))
 			.limit(1);
 
 		if (assignmentResult.length === 0) {
@@ -332,17 +332,17 @@ export async function GET(
 		// Check if user is assigned to this assignment
 		const rosterResult = await dbPg
 			.select({
-				studentName: newTeamAssignmentRoster.studentName,
-				userId: newTeamAssignmentRoster.userId,
-				subteamId: newTeamAssignmentRoster.subteamId,
+				studentName: teamAssignmentRoster.displayName,
+				userId: teamAssignmentRoster.userId,
+				subteamId: teamAssignmentRoster.subteamId,
 			})
-			.from(newTeamAssignmentRoster)
+			.from(teamAssignmentRoster)
 			.where(
 				and(
-					eq(newTeamAssignmentRoster.assignmentId, assignmentId),
+					eq(teamAssignmentRoster.assignmentId, assignmentId),
 					or(
-						eq(newTeamAssignmentRoster.userId, user.id),
-						eq(newTeamAssignmentRoster.studentName, user.email ?? ""),
+						eq(teamAssignmentRoster.userId, user.id),
+						eq(teamAssignmentRoster.displayName, user.email ?? ""),
 					),
 				),
 			)
@@ -369,19 +369,19 @@ export async function GET(
 		 */
 		const questionsResult = await dbPg
 			.select({
-				id: newTeamAssignmentQuestions.id,
-				questionText: newTeamAssignmentQuestions.questionText,
-				questionType: newTeamAssignmentQuestions.questionType,
-				options: newTeamAssignmentQuestions.options,
-				correctAnswer: newTeamAssignmentQuestions.correctAnswer,
-				points: newTeamAssignmentQuestions.points,
-				orderIndex: newTeamAssignmentQuestions.orderIndex,
-				imageData: newTeamAssignmentQuestions.imageData,
-				difficulty: newTeamAssignmentQuestions.difficulty,
+				id: teamAssignmentQuestions.id,
+				questionText: teamAssignmentQuestions.questionText,
+				questionType: teamAssignmentQuestions.questionType,
+				options: teamAssignmentQuestions.options,
+				correctAnswer: teamAssignmentQuestions.correctAnswer,
+				points: teamAssignmentQuestions.points,
+				orderIndex: teamAssignmentQuestions.orderIndex,
+				imageData: teamAssignmentQuestions.imageData,
+				difficulty: teamAssignmentQuestions.difficulty,
 			})
-			.from(newTeamAssignmentQuestions)
-			.where(eq(newTeamAssignmentQuestions.assignmentId, assignmentId))
-			.orderBy(asc(newTeamAssignmentQuestions.orderIndex));
+			.from(teamAssignmentQuestions)
+			.where(eq(teamAssignmentQuestions.assignmentId, assignmentId))
+			.orderBy(asc(teamAssignmentQuestions.orderIndex));
 
 		/**
 		 * Format questions for the frontend test system

@@ -1,11 +1,11 @@
 import { dbPg } from "@/lib/db";
-import { users } from "@/lib/db/schema/core";
+import { users } from "@/lib/db/schema";
 import {
-	newTeamGroups,
-	newTeamMemberships,
-	newTeamRecurringMeetings,
-	newTeamUnits,
-} from "@/lib/db/schema/teams";
+	teamMemberships,
+	teamRecurringMeetings,
+	teamSubteams,
+	teams,
+} from "@/lib/db/schema";
 import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
 import {
@@ -82,9 +82,9 @@ async function determineTargetTeamSlug(
 		if (selectedTeamId.startsWith("all-")) {
 			const schoolName = selectedTeamId.replace("all-", "");
 			const teamGroupResult = await dbPg
-				.select({ slug: newTeamGroups.slug })
-				.from(newTeamGroups)
-				.where(eq(newTeamGroups.school, schoolName))
+				.select({ slug: teams.slug })
+				.from(teams)
+				.where(eq(teams.school, schoolName))
 				.limit(1);
 
 			if (teamGroupResult.length > 0 && teamGroupResult[0]) {
@@ -92,10 +92,10 @@ async function determineTargetTeamSlug(
 			}
 		} else {
 			const selectedTeamResult = await dbPg
-				.select({ slug: newTeamGroups.slug })
-				.from(newTeamGroups)
-				.innerJoin(newTeamUnits, eq(newTeamGroups.id, newTeamUnits.groupId))
-				.where(eq(newTeamUnits.id, selectedTeamId))
+				.select({ slug: teams.slug })
+				.from(teams)
+				.innerJoin(teamSubteams, eq(teams.id, teamSubteams.teamId))
+				.where(eq(teamSubteams.id, selectedTeamId))
 				.limit(1);
 
 			if (selectedTeamResult.length > 0 && selectedTeamResult[0]) {
@@ -109,9 +109,9 @@ async function determineTargetTeamSlug(
 // Helper function to resolve team group and units
 async function resolveTeamGroupAndUnits(targetTeamSlug: string) {
 	const [groupResult] = await dbPg
-		.select({ id: newTeamGroups.id })
-		.from(newTeamGroups)
-		.where(eq(newTeamGroups.slug, targetTeamSlug))
+		.select({ id: teams.id })
+		.from(teams)
+		.where(eq(teams.slug, targetTeamSlug))
 		.limit(1);
 
 	if (!groupResult) {
@@ -120,9 +120,9 @@ async function resolveTeamGroupAndUnits(targetTeamSlug: string) {
 
 	const groupId = groupResult.id;
 	const unitsResult = await dbPg
-		.select({ id: newTeamUnits.id })
-		.from(newTeamUnits)
-		.where(eq(newTeamUnits.groupId, groupId));
+		.select({ id: teamSubteams.id })
+		.from(teamSubteams)
+		.where(eq(teamSubteams.teamId, groupId));
 
 	return { groupId, unitsResult };
 }
@@ -136,15 +136,15 @@ async function checkTeamMembership(
 ) {
 	const membershipResult = await dbPg
 		.select({
-			role: newTeamMemberships.role,
-			teamId: newTeamMemberships.teamId,
+			role: teamMemberships.role,
+			teamId: teamMemberships.teamId,
 		})
-		.from(newTeamMemberships)
+		.from(teamMemberships)
 		.where(
 			and(
-				eq(newTeamMemberships.userId, userId),
-				inArray(newTeamMemberships.teamId, teamUnitIds),
-				eq(newTeamMemberships.status, "active"),
+				eq(teamMemberships.userId, userId),
+				inArray(teamMemberships.teamId, teamUnitIds),
+				eq(teamMemberships.status, "active"),
 			),
 		);
 
@@ -157,17 +157,17 @@ async function checkTeamMembership(
 			const schoolName = selectedTeamId.replace("all-", "");
 			const schoolMembershipResult = await dbPg
 				.select({
-					role: newTeamMemberships.role,
-					teamId: newTeamMemberships.teamId,
+					role: teamMemberships.role,
+					teamId: teamMemberships.teamId,
 				})
-				.from(newTeamMemberships)
-				.innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
-				.innerJoin(newTeamGroups, eq(newTeamUnits.groupId, newTeamGroups.id))
+				.from(teamMemberships)
+				.innerJoin(teamSubteams, eq(teamMemberships.teamId, teamSubteams.id))
+				.innerJoin(teams, eq(teamSubteams.teamId, teams.id))
 				.where(
 					and(
-						eq(newTeamMemberships.userId, userId),
-						eq(newTeamGroups.school, schoolName),
-						eq(newTeamMemberships.status, "active"),
+						eq(teamMemberships.userId, userId),
+						eq(teams.school, schoolName),
+						eq(teamMemberships.status, "active"),
 					),
 				);
 
@@ -255,7 +255,7 @@ async function createRecurringMeetings(
 	const meetingIds: string[] = [];
 	for (const teamId of targetTeamIds) {
 		const [result] = await dbPg
-			.insert(newTeamRecurringMeetings)
+			.insert(teamRecurringMeetings)
 			.values({
 				teamId,
 				createdBy: created_by || userId,
@@ -269,7 +269,7 @@ async function createRecurringMeetings(
 				endDate: end_date ? new Date(end_date).toISOString() : null,
 				exceptions: exceptions || [],
 			})
-			.returning({ id: newTeamRecurringMeetings.id });
+			.returning({ id: teamRecurringMeetings.id });
 
 		if (result?.id) {
 			meetingIds.push(result.id);
@@ -477,9 +477,9 @@ export async function GET(request: NextRequest) {
 
 		// Resolve the team slug to get the team group and units using Drizzle ORM
 		const [groupResult] = await dbPg
-			.select({ id: newTeamGroups.id })
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamSlug))
+			.select({ id: teams.id })
+			.from(teams)
+			.where(eq(teams.slug, teamSlug))
 			.limit(1);
 
 		if (!groupResult) {
@@ -490,9 +490,9 @@ export async function GET(request: NextRequest) {
 
 		// Get team units for this group using Drizzle ORM
 		const unitsResult = await dbPg
-			.select({ id: newTeamUnits.id })
-			.from(newTeamUnits)
-			.where(eq(newTeamUnits.groupId, groupId));
+			.select({ id: teamSubteams.id })
+			.from(teamSubteams)
+			.where(eq(teamSubteams.teamId, groupId));
 
 		if (unitsResult.length === 0) {
 			return handleNotFoundError("No team units found for this group");
@@ -501,13 +501,13 @@ export async function GET(request: NextRequest) {
 		// Check if user is a member of any team unit in this group using Drizzle ORM
 		const teamUnitIds = unitsResult.map((row) => row.id);
 		const membershipResult = await dbPg
-			.select({ role: newTeamMemberships.role })
-			.from(newTeamMemberships)
+			.select({ role: teamMemberships.role })
+			.from(teamMemberships)
 			.where(
 				and(
-					eq(newTeamMemberships.userId, user.id),
-					inArray(newTeamMemberships.teamId, teamUnitIds),
-					eq(newTeamMemberships.status, "active"),
+					eq(teamMemberships.userId, user.id),
+					inArray(teamMemberships.teamId, teamUnitIds),
+					eq(teamMemberships.status, "active"),
 				),
 			);
 
@@ -518,26 +518,26 @@ export async function GET(request: NextRequest) {
 		// Get recurring meetings for all team units in this group using Drizzle ORM
 		const meetingsResult = await dbPg
 			.select({
-				id: newTeamRecurringMeetings.id,
-				team_id: newTeamRecurringMeetings.teamId,
-				created_by: newTeamRecurringMeetings.createdBy,
-				title: newTeamRecurringMeetings.title,
-				description: newTeamRecurringMeetings.description,
-				location: newTeamRecurringMeetings.location,
-				days_of_week: newTeamRecurringMeetings.daysOfWeek,
-				start_time: newTeamRecurringMeetings.startTime,
-				end_time: newTeamRecurringMeetings.endTime,
-				start_date: newTeamRecurringMeetings.startDate,
-				end_date: newTeamRecurringMeetings.endDate,
-				exceptions: newTeamRecurringMeetings.exceptions,
-				created_at: newTeamRecurringMeetings.createdAt,
+				id: teamRecurringMeetings.id,
+				team_id: teamRecurringMeetings.teamId,
+				created_by: teamRecurringMeetings.createdBy,
+				title: teamRecurringMeetings.title,
+				description: teamRecurringMeetings.description,
+				location: teamRecurringMeetings.location,
+				days_of_week: teamRecurringMeetings.daysOfWeek,
+				start_time: teamRecurringMeetings.startTime,
+				end_time: teamRecurringMeetings.endTime,
+				start_date: teamRecurringMeetings.startDate,
+				end_date: teamRecurringMeetings.endDate,
+				exceptions: teamRecurringMeetings.exceptions,
+				created_at: teamRecurringMeetings.createdAt,
 				creator_email: users.email,
 				creator_name: sql<string>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}), ${users.email})`,
 			})
-			.from(newTeamRecurringMeetings)
-			.leftJoin(users, eq(newTeamRecurringMeetings.createdBy, users.id))
-			.where(inArray(newTeamRecurringMeetings.teamId, teamUnitIds))
-			.orderBy(desc(newTeamRecurringMeetings.createdAt));
+			.from(teamRecurringMeetings)
+			.leftJoin(users, eq(teamRecurringMeetings.createdBy, users.id))
+			.where(inArray(teamRecurringMeetings.teamId, teamUnitIds))
+			.orderBy(desc(teamRecurringMeetings.createdAt));
 
 		// Parse JSON fields safely with utility function
 		const meetings = meetingsResult.map((meeting) => ({

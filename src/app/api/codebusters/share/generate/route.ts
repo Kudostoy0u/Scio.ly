@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { shareLinks } from "@/lib/db/schema/core";
+import { shareLinks } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 

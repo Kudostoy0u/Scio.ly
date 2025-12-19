@@ -105,7 +105,7 @@ export function formatQuestion(
 
 	const formattedQuestion = {
 		question_text:
-			question.question || question.question_text || question.questionText,
+			question.question || question.question_text || question.question,
 		question_type: isMcq ? "multiple_choice" : "free_response",
 		options: isMcq ? optionList : undefined,
 		answers: answers,

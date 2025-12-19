@@ -39,7 +39,7 @@ describe("Notifications Management E2E", () => {
 	afterAll(() => {
 		// Cleanup
 		const userIds = testUsers.map((u) => u.id);
-		const teamGroupIds = testTeams.map((t) => t.groupId);
+		const teamGroupIds = testTeams.map((t) => t.teamId);
 		cleanupTestData(userIds, teamGroupIds);
 	});
 
@@ -52,9 +52,9 @@ describe("Notifications Management E2E", () => {
 			const notification = createTeamNotification({
 				userId: user.id,
 				teamId: team.subteamId,
-				notificationType: "invitation",
+				type: "invitation",
 				title: "Test Notification",
-				message: "You have been invited to join a team",
+				content: "You have been invited to join a team",
 				isRead: false,
 			});
 
@@ -79,18 +79,18 @@ describe("Notifications Management E2E", () => {
 			createTeamNotification({
 				userId: user.id,
 				teamId: team.subteamId,
-				notificationType: "assignment",
+				type: "assignment",
 				title: "New Assignment",
-				message: "A new assignment has been created",
+				content: "A new assignment has been created",
 				isRead: false,
 			});
 
 			createTeamNotification({
 				userId: user.id,
 				teamId: team.subteamId,
-				notificationType: "event",
+				type: "event",
 				title: "Upcoming Event",
-				message: "You have an event coming up",
+				content: "You have an event coming up",
 				isRead: true,
 			});
 
@@ -108,9 +108,9 @@ describe("Notifications Management E2E", () => {
 			createTeamNotification({
 				userId: user.id,
 				teamId: team.subteamId,
-				notificationType: "message",
+				type: "message",
 				title: "Unread Message",
-				message: "This is unread",
+				content: "This is unread",
 				isRead: false,
 			});
 
@@ -131,21 +131,19 @@ describe("Notifications Management E2E", () => {
 			const notification = createTeamNotification({
 				userId: user.id,
 				teamId: team.subteamId,
-				notificationType: "invitation",
+				type: "invitation",
 				title: "Mark as Read Test",
-				message: "This should be marked as read",
+				content: "This should be marked as read",
 				isRead: false,
 			});
 
 			updateTeamNotification(notification.id, {
 				isRead: true,
-				readAt: new Date(),
 			});
 
 			const updatedNotification = getTeamNotificationById(notification.id);
 
 			expect(updatedNotification?.isRead).toBe(true);
-			expect(updatedNotification?.readAt).toBeDefined();
 		});
 	});
 
@@ -159,9 +157,9 @@ describe("Notifications Management E2E", () => {
 			const notification = createTeamNotification({
 				userId: user.id,
 				teamId: team.subteamId,
-				notificationType: "invitation",
+				type: "invitation",
 				title: "Delete Test",
-				message: "This should be deleted",
+				content: "This should be deleted",
 				isRead: false,
 			});
 

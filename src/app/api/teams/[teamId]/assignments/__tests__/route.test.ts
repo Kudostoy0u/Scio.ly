@@ -1,7 +1,7 @@
 import { GET, POST } from "@/app/api/teams/[teamId]/assignments/route";
 import { dbPg } from "@/lib/db";
 import { getServerUser } from "@/lib/supabaseServer";
-import { hasLeadershipAccessCockroach } from "@/lib/utils/teams/access";
+import { hasLeadershipAccess } from "@/lib/utils/teams/access";
 import {
 	getUserTeamMemberships,
 	resolveTeamSlugToUnits,
@@ -16,7 +16,7 @@ vi.mock("@/lib/supabaseServer", () => ({
 }));
 
 vi.mock("@/lib/utils/teams/access", () => ({
-	hasLeadershipAccessCockroach: vi.fn(),
+	hasLeadershipAccess: vi.fn(),
 }));
 
 vi.mock("@/lib/utils/teams/resolver", () => ({
@@ -40,9 +40,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 const mockGetServerUser = vi.mocked(getServerUser);
-const mockHasLeadershipAccessCockroach = vi.mocked(
-	hasLeadershipAccessCockroach,
-);
+const mockHasLeadershipAccess = vi.mocked(hasLeadershipAccess);
 const mockResolveTeamSlugToUnits = vi.mocked(resolveTeamSlugToUnits);
 const mockGetUserTeamMemberships = vi.mocked(getUserTeamMemberships);
 const mockDbPg = vi.mocked(dbPg) as typeof dbPg & {
@@ -120,8 +118,8 @@ describe("/api/teams/[teamId]/assignments", () => {
 
 			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 			mockResolveTeamSlugToUnits.mockResolvedValue({
-				groupId: mockGroupId,
-				teamUnitIds: [mockSubteamId],
+				teamId: mockGroupId,
+				subteamIds: [mockSubteamId],
 			});
 			mockGetUserTeamMemberships.mockResolvedValue([
 				{ id: "membership-1", team_id: mockSubteamId, role: "member" },
@@ -207,8 +205,8 @@ describe("/api/teams/[teamId]/assignments", () => {
 		it("should return empty array when no assignments exist", async () => {
 			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 			mockResolveTeamSlugToUnits.mockResolvedValue({
-				groupId: mockGroupId,
-				teamUnitIds: [mockSubteamId],
+				teamId: mockGroupId,
+				subteamIds: [mockSubteamId],
 			});
 			mockGetUserTeamMemberships.mockResolvedValue([
 				{ id: "membership-1", team_id: mockSubteamId, role: "member" },
@@ -298,10 +296,10 @@ describe("/api/teams/[teamId]/assignments", () => {
 		it("should return 403 when user has no leadership access", async () => {
 			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
 			mockResolveTeamSlugToUnits.mockResolvedValue({
-				groupId: mockGroupId,
-				teamUnitIds: [mockSubteamId],
+				teamId: mockGroupId,
+				subteamIds: [mockSubteamId],
 			});
-			mockHasLeadershipAccessCockroach.mockResolvedValue(false);
+			mockHasLeadershipAccess.mockResolvedValue(false);
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/assignments`,

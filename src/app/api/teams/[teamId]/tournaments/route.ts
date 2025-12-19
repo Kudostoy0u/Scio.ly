@@ -1,15 +1,15 @@
 import { dbPg } from "@/lib/db";
 import {
-	newTeamActiveTimers,
-	newTeamEvents,
-	newTeamGroups,
-	newTeamRecurringMeetings,
-	newTeamUnits,
-} from "@/lib/db/schema/teams";
+	teamActiveTimers,
+	teamEvents,
+	teamRecurringMeetings,
+	teamSubteams,
+	teams,
+} from "@/lib/db/schema";
 import { UUIDSchema } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
 import logger from "@/lib/utils/logging/logger";
-import { getTeamAccessCockroach } from "@/lib/utils/teams/access";
+import { getTeamAccess } from "@/lib/utils/teams/access";
 import {
 	handleError,
 	handleForbiddenError,
@@ -68,9 +68,9 @@ export async function GET(
 
 		// Resolve the slug to team group using Drizzle ORM
 		const [groupResult] = await dbPg
-			.select({ id: newTeamGroups.id })
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamId))
+			.select({ id: teams.id })
+			.from(teams)
+			.where(eq(teams.slug, teamId))
 			.limit(1);
 
 		if (!groupResult) {
@@ -80,16 +80,16 @@ export async function GET(
 		const groupId = groupResult.id;
 
 		// Check if user has access to this team group (membership OR roster entry)
-		const access = await getTeamAccessCockroach(user.id, groupId);
+		const access = await getTeamAccess(user.id, groupId);
 		if (!access.hasAccess) {
 			return handleForbiddenError("Not authorized to access this team");
 		}
 
 		// Get team unit IDs for this group using Drizzle ORM
 		const teamUnits = await dbPg
-			.select({ id: newTeamUnits.id })
-			.from(newTeamUnits)
-			.where(eq(newTeamUnits.groupId, groupId));
+			.select({ id: teamSubteams.id })
+			.from(teamSubteams)
+			.where(eq(teamSubteams.teamId, groupId));
 
 		const teamUnitIds = teamUnits.map((u) => u.id);
 
@@ -100,50 +100,50 @@ export async function GET(
 		// Get upcoming events for the team group with timer information using Drizzle ORM
 		const eventsResult = await dbPg
 			.select({
-				id: newTeamEvents.id,
-				title: newTeamEvents.title,
-				start_time: sql<string>`${newTeamEvents.startTime}::text`,
-				location: newTeamEvents.location,
-				event_type: newTeamEvents.eventType,
-				has_timer: sql<boolean>`CASE WHEN ${newTeamActiveTimers.id} IS NOT NULL THEN true ELSE false END`,
+				id: teamEvents.id,
+				title: teamEvents.title,
+				start_time: sql<string>`${teamEvents.startTime}::text`,
+				location: teamEvents.location,
+				event_type: teamEvents.eventType,
+				has_timer: sql<boolean>`CASE WHEN ${teamActiveTimers.id} IS NOT NULL THEN true ELSE false END`,
 			})
-			.from(newTeamEvents)
+			.from(teamEvents)
 			.leftJoin(
-				newTeamActiveTimers,
+				teamActiveTimers,
 				and(
-					eq(newTeamEvents.id, newTeamActiveTimers.eventId),
-					eq(newTeamActiveTimers.teamUnitId, subteamId),
+					eq(teamEvents.id, teamActiveTimers.eventId),
+					eq(teamActiveTimers.subteamId, subteamId),
 				),
 			)
 			.where(
 				and(
-					inArray(newTeamEvents.teamId, teamUnitIds),
-					gt(newTeamEvents.startTime, sql`NOW()`),
+					inArray(teamEvents.teamId, teamUnitIds),
+					gt(teamEvents.startTime, sql`NOW()`),
 				),
 			)
-			.orderBy(asc(newTeamEvents.startTime))
+			.orderBy(asc(teamEvents.startTime))
 			.limit(50);
 
 		// Get recurring meetings for the team group using Drizzle ORM
 		const recurringMeetingsResult = await dbPg
 			.select({
-				id: newTeamRecurringMeetings.id,
-				title: newTeamRecurringMeetings.title,
-				description: newTeamRecurringMeetings.description,
-				location: newTeamRecurringMeetings.location,
-				days_of_week: newTeamRecurringMeetings.daysOfWeek,
-				start_time: newTeamRecurringMeetings.startTime,
-				end_time: newTeamRecurringMeetings.endTime,
+				id: teamRecurringMeetings.id,
+				title: teamRecurringMeetings.title,
+				description: teamRecurringMeetings.description,
+				location: teamRecurringMeetings.location,
+				days_of_week: teamRecurringMeetings.daysOfWeek,
+				start_time: teamRecurringMeetings.startTime,
+				end_time: teamRecurringMeetings.endTime,
 				start_date: sql<
 					string | null
-				>`${newTeamRecurringMeetings.startDate}::text`,
-				end_date: sql<string | null>`${newTeamRecurringMeetings.endDate}::text`,
-				exceptions: newTeamRecurringMeetings.exceptions,
-				team_id: newTeamRecurringMeetings.teamId,
+				>`${teamRecurringMeetings.startDate}::text`,
+				end_date: sql<string | null>`${teamRecurringMeetings.endDate}::text`,
+				exceptions: teamRecurringMeetings.exceptions,
+				team_id: teamRecurringMeetings.teamId,
 			})
-			.from(newTeamRecurringMeetings)
-			.where(inArray(newTeamRecurringMeetings.teamId, teamUnitIds))
-			.orderBy(sql`${newTeamRecurringMeetings.createdAt} DESC`);
+			.from(teamRecurringMeetings)
+			.where(inArray(teamRecurringMeetings.teamId, teamUnitIds))
+			.orderBy(sql`${teamRecurringMeetings.createdAt} DESC`);
 
 		// Generate recurring events from recurring meetings
 		const recurringEvents: Array<{
@@ -198,12 +198,12 @@ export async function GET(
 
 						// Check if this recurring event already has a timer using Drizzle ORM
 						const hasTimerResult = await dbPg
-							.select({ id: newTeamActiveTimers.id })
-							.from(newTeamActiveTimers)
+							.select({ id: teamActiveTimers.id })
+							.from(teamActiveTimers)
 							.where(
 								and(
-									eq(newTeamActiveTimers.eventId, eventId),
-									eq(newTeamActiveTimers.teamUnitId, subteamId),
+									eq(teamActiveTimers.eventId, eventId),
+									eq(teamActiveTimers.subteamId, subteamId),
 								),
 							)
 							.limit(1);

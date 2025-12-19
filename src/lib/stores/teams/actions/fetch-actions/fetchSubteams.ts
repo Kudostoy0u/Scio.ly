@@ -1,4 +1,4 @@
-import type { TeamFullData } from "@/lib/server/teams-v2";
+import type { TeamFullData } from "@/lib/server/teams";
 import type { Subteam, TeamStoreActions, TeamStoreState } from "../../types";
 import { CACHE_DURATIONS } from "../../types";
 import { fetchWithDeduplication, handleApiError } from "../../utils";
@@ -37,7 +37,7 @@ export const createFetchSubteamsAction = (
 			const subteams = (await fetchWithDeduplication(key, async () => {
 				const full = (await loadFullTeam(teamSlug)) as TeamFullData;
 				return full.subteams.map(
-					(subteam) =>
+					(subteam: TeamFullData["subteams"][0]) =>
 						({
 							id: subteam.id,
 							name: subteam.name,

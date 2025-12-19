@@ -1,14 +1,15 @@
 import { dbPg } from "@/lib/db";
-import { newTeamAssignments } from "@/lib/db/schema/assignments";
-import { users } from "@/lib/db/schema/core";
+import { teamAssignments } from "@/lib/db/schema";
+import { users } from "@/lib/db/schema";
 import {
-	newTeamEvents,
-	newTeamGroups,
-	newTeamMemberships,
-	newTeamRosterData,
-	newTeamStreamPosts,
-	newTeamUnits,
-} from "@/lib/db/schema/teams";
+	teamActiveTimers,
+	teamEvents,
+	teamMemberships,
+	teamRoster,
+	teamStreamPosts,
+	teamSubteams,
+	teams,
+} from "@/lib/db/schema";
 import { getServerUser } from "@/lib/supabaseServer";
 import logger from "@/lib/utils/logging/logger";
 import {
@@ -18,7 +19,7 @@ import {
 	handleValidationError,
 	validateEnvironment,
 } from "@/lib/utils/teams/errors";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -129,7 +130,7 @@ const TeamDataResponseSchema = z.object({
 	timers: z.array(
 		z.object({
 			id: z.string(),
-			teamUnitId: z.string(),
+			subteamId: z.string(),
 			eventId: z.string(),
 			addedBy: z.string(),
 			startTime: z.string().nullable().optional(),
@@ -184,19 +185,19 @@ export async function GET(
 		// Get team group by slug
 		const groupResult = await dbPg
 			.select({
-				id: newTeamGroups.id,
-				school: newTeamGroups.school,
-				division: newTeamGroups.division,
-				slug: newTeamGroups.slug,
-				description: newTeamGroups.description,
-				createdBy: newTeamGroups.createdBy,
-				createdAt: newTeamGroups.createdAt,
-				updatedAt: newTeamGroups.updatedAt,
-				settings: newTeamGroups.settings,
-				status: newTeamGroups.status,
+				id: teams.id,
+				school: teams.school,
+				division: teams.division,
+				slug: teams.slug,
+				description: teams.description,
+				createdBy: teams.createdBy,
+				createdAt: teams.createdAt,
+				updatedAt: teams.updatedAt,
+				settings: teams.settings,
+				status: teams.status,
 			})
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamId))
+			.from(teams)
+			.where(eq(teams.slug, teamId))
 			.limit(1);
 
 		if (groupResult.length === 0 || !groupResult[0]) {
@@ -208,31 +209,31 @@ export async function GET(
 		// Get team units (subteams)
 		const unitsResult = await dbPg
 			.select({
-				id: newTeamUnits.id,
-				teamId: newTeamUnits.teamId,
-				description: newTeamUnits.description,
-				captainCode: newTeamUnits.captainCode,
-				userCode: newTeamUnits.userCode,
-				createdBy: newTeamUnits.createdBy,
-				createdAt: newTeamUnits.createdAt,
-				updatedAt: newTeamUnits.updatedAt,
-				settings: newTeamUnits.settings,
-				status: newTeamUnits.status,
+				id: teamSubteams.id,
+				teamId: teamSubteams.teamId,
+				description: teamSubteams.description,
+				captainCode: teamSubteams.captainCode,
+				userCode: teamSubteams.userCode,
+				createdBy: teamSubteams.createdBy,
+				createdAt: teamSubteams.createdAt,
+				updatedAt: teamSubteams.updatedAt,
+				settings: teamSubteams.settings,
+				status: teamSubteams.status,
 			})
-			.from(newTeamUnits)
-			.where(eq(newTeamUnits.groupId, group.id));
+			.from(teamSubteams)
+			.where(eq(teamSubteams.teamId, group.id));
 
 		// Get team memberships with user data
 		const membershipsResult = await dbPg
 			.select({
-				id: newTeamMemberships.id,
-				userId: newTeamMemberships.userId,
-				teamId: newTeamMemberships.teamId,
-				role: newTeamMemberships.role,
-				joinedAt: newTeamMemberships.joinedAt,
-				invitedBy: newTeamMemberships.invitedBy,
-				status: newTeamMemberships.status,
-				permissions: newTeamMemberships.permissions,
+				id: teamMemberships.id,
+				userId: teamMemberships.userId,
+				teamId: teamMemberships.teamId,
+				role: teamMemberships.role,
+				joinedAt: teamMemberships.joinedAt,
+				invitedBy: teamMemberships.invitedBy,
+				status: teamMemberships.status,
+				permissions: teamMemberships.permissions,
 				// User data
 				userEmail: users.email,
 				userUsername: users.username,
@@ -241,47 +242,44 @@ export async function GET(
 				userDisplayName: users.displayName,
 				userPhotoUrl: users.photoUrl,
 			})
-			.from(newTeamMemberships)
-			.innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
-			.innerJoin(users, eq(newTeamMemberships.userId, users.id))
+			.from(teamMemberships)
+			.innerJoin(teamSubteams, eq(teamMemberships.teamId, teamSubteams.id))
+			.innerJoin(users, eq(teamMemberships.userId, users.id))
 			.where(
 				and(
-					eq(newTeamUnits.groupId, group.id),
-					eq(newTeamMemberships.status, "active"),
+					eq(teamSubteams.teamId, group.id),
+					eq(teamMemberships.status, "active"),
 				),
 			);
 
 		// Get roster data
 		const rosterResult = await dbPg
 			.select({
-				teamUnitId: newTeamRosterData.teamUnitId,
-				eventName: newTeamRosterData.eventName,
-				studentName: newTeamRosterData.studentName,
-				userId: newTeamRosterData.userId,
-				createdAt: newTeamRosterData.createdAt,
-				updatedAt: newTeamRosterData.updatedAt,
+				subteamId: teamRoster.subteamId,
+				eventName: teamRoster.eventName,
+				displayName: teamRoster.displayName,
+				userId: teamRoster.userId,
+				createdAt: teamRoster.createdAt,
+				updatedAt: teamRoster.updatedAt,
 			})
-			.from(newTeamRosterData)
-			.innerJoin(
-				newTeamUnits,
-				eq(newTeamRosterData.teamUnitId, newTeamUnits.id),
-			)
-			.where(eq(newTeamUnits.groupId, group.id));
+			.from(teamRoster)
+			.innerJoin(teamSubteams, eq(teamRoster.subteamId, teamSubteams.id))
+			.where(eq(teamSubteams.teamId, group.id));
 
 		// Get stream posts with author data
 		const postsResult = await dbPg
 			.select({
-				id: newTeamStreamPosts.id,
-				teamId: newTeamStreamPosts.teamUnitId,
-				content: newTeamStreamPosts.content,
-				authorId: newTeamStreamPosts.authorId,
-				title: newTeamStreamPosts.attachmentTitle,
-				postType: sql<string | null>`NULL`,
-				priority: sql<string | null>`NULL`,
-				isPinned: sql<boolean | null>`NULL`,
-				isPublic: sql<boolean | null>`NULL`,
-				createdAt: newTeamStreamPosts.createdAt,
-				updatedAt: newTeamStreamPosts.updatedAt,
+				id: teamStreamPosts.id,
+				subteamId: teamStreamPosts.subteamId,
+				content: teamStreamPosts.content,
+				authorId: teamStreamPosts.authorId,
+				title: teamStreamPosts.title,
+				postType: teamStreamPosts.postType,
+				priority: teamStreamPosts.priority,
+				isPinned: teamStreamPosts.isPinned,
+				isPublic: teamStreamPosts.isPublic,
+				createdAt: teamStreamPosts.createdAt,
+				updatedAt: teamStreamPosts.updatedAt,
 				// Author data
 				authorEmail: users.email,
 				authorUsername: users.username,
@@ -290,93 +288,103 @@ export async function GET(
 				authorDisplayName: users.displayName,
 				authorPhotoUrl: users.photoUrl,
 			})
-			.from(newTeamStreamPosts)
-			.innerJoin(
-				newTeamUnits,
-				eq(newTeamStreamPosts.teamUnitId, newTeamUnits.id),
-			)
-			.innerJoin(users, eq(newTeamStreamPosts.authorId, users.id))
+			.from(teamStreamPosts)
+			.innerJoin(teamSubteams, eq(teamStreamPosts.subteamId, teamSubteams.id))
+			.innerJoin(users, eq(teamStreamPosts.authorId, users.id))
 			.where(
 				and(
-					eq(newTeamUnits.groupId, group.id),
-					subteamId ? eq(newTeamStreamPosts.teamUnitId, subteamId) : undefined,
+					eq(teamSubteams.teamId, group.id),
+					subteamId ? eq(teamStreamPosts.subteamId, subteamId) : undefined,
 				),
 			)
-			.orderBy(desc(newTeamStreamPosts.createdAt))
+			.orderBy(desc(teamStreamPosts.createdAt))
 			.limit(50);
 
 		// Get assignments
 		const assignmentsResult = await dbPg
 			.select({
-				id: newTeamAssignments.id,
-				teamId: newTeamAssignments.teamId,
-				title: newTeamAssignments.title,
-				description: newTeamAssignments.description,
-				assignmentType: newTeamAssignments.assignmentType,
-				dueDate: newTeamAssignments.dueDate,
-				points: newTeamAssignments.points,
-				isRequired: newTeamAssignments.isRequired,
-				maxAttempts: newTeamAssignments.maxAttempts,
-				timeLimitMinutes: newTeamAssignments.timeLimitMinutes,
-				eventName: newTeamAssignments.eventName,
-				createdAt: newTeamAssignments.createdAt,
-				updatedAt: newTeamAssignments.updatedAt,
-				createdBy: newTeamAssignments.createdBy,
+				id: teamAssignments.id,
+				teamId: teamAssignments.teamId,
+				subteamId: teamAssignments.subteamId,
+				title: teamAssignments.title,
+				description: teamAssignments.description,
+				assignmentType: teamAssignments.assignmentType,
+				dueDate: teamAssignments.dueDate,
+				points: teamAssignments.points,
+				isRequired: teamAssignments.isRequired,
+				maxAttempts: teamAssignments.maxAttempts,
+				timeLimitMinutes: teamAssignments.timeLimitMinutes,
+				eventName: teamAssignments.eventName,
+				createdAt: teamAssignments.createdAt,
+				updatedAt: teamAssignments.updatedAt,
+				createdBy: teamAssignments.createdBy,
 			})
-			.from(newTeamAssignments)
-			.innerJoin(newTeamUnits, eq(newTeamAssignments.teamId, newTeamUnits.id))
-			.where(eq(newTeamUnits.groupId, group.id))
-			.orderBy(desc(newTeamAssignments.createdAt));
+			.from(teamAssignments)
+			.where(eq(teamAssignments.teamId, group.id))
+			.orderBy(desc(teamAssignments.createdAt));
 
 		// Get tournaments
 		const tournamentsResult = await dbPg
 			.select({
-				id: newTeamEvents.id,
-				teamId: newTeamEvents.teamId,
-				title: newTeamEvents.title,
-				description: newTeamEvents.description,
-				eventType: newTeamEvents.eventType,
-				startTime: newTeamEvents.startTime,
-				endTime: newTeamEvents.endTime,
-				location: newTeamEvents.location,
-				isAllDay: newTeamEvents.isAllDay,
-				isRecurring: newTeamEvents.isRecurring,
-				createdAt: newTeamEvents.createdAt,
-				updatedAt: newTeamEvents.updatedAt,
+				id: teamEvents.id,
+				teamId: teamEvents.teamId,
+				title: teamEvents.title,
+				description: teamEvents.description,
+				eventType: teamEvents.eventType,
+				startTime: teamEvents.startTime,
+				endTime: teamEvents.endTime,
+				location: teamEvents.location,
+				allDay: teamEvents.allDay,
+				isRecurring: teamEvents.isRecurring,
+				createdAt: teamEvents.createdAt,
+				updatedAt: teamEvents.updatedAt,
 			})
-			.from(newTeamEvents)
-			.innerJoin(newTeamUnits, eq(newTeamEvents.teamId, newTeamUnits.id))
+			.from(teamEvents)
 			.where(
 				and(
-					eq(newTeamUnits.groupId, group.id),
-					eq(newTeamEvents.eventType, "tournament"),
+					eq(teamEvents.teamId, group.id),
+					eq(teamEvents.eventType, "tournament"),
 				),
 			)
-			.orderBy(desc(newTeamEvents.startTime));
+			.orderBy(desc(teamEvents.startTime));
 
 		// Get user teams for the current user
 		const userTeamsResult = await dbPg
 			.select({
-				id: newTeamGroups.id,
-				school: newTeamGroups.school,
-				division: newTeamGroups.division,
-				slug: newTeamGroups.slug,
-				description: newTeamGroups.description,
-				role: newTeamMemberships.role,
-				joinedAt: newTeamMemberships.joinedAt,
+				id: teams.id,
+				school: teams.school,
+				division: teams.division,
+				slug: teams.slug,
+				description: teams.description,
+				role: teamMemberships.role,
+				joinedAt: teamMemberships.joinedAt,
 			})
-			.from(newTeamGroups)
-			.innerJoin(newTeamUnits, eq(newTeamGroups.id, newTeamUnits.groupId))
-			.innerJoin(
-				newTeamMemberships,
-				eq(newTeamUnits.id, newTeamMemberships.teamId),
-			)
+			.from(teams)
+			.innerJoin(teamSubteams, eq(teams.id, teamSubteams.teamId))
+			.innerJoin(teamMemberships, eq(teamSubteams.id, teamMemberships.teamId))
 			.where(
 				and(
-					eq(newTeamMemberships.userId, user.id),
-					eq(newTeamMemberships.status, "active"),
+					eq(teamMemberships.userId, user.id),
+					eq(teamMemberships.status, "active"),
 				),
 			);
+
+		const teamUnitIds = unitsResult.map((u) => u.id);
+
+		// Get active timers using Drizzle ORM
+		const timersResult =
+			teamUnitIds.length > 0
+				? await dbPg
+						.select({
+							id: teamActiveTimers.id,
+							subteamId: teamActiveTimers.subteamId,
+							eventId: teamActiveTimers.eventId,
+							addedBy: teamActiveTimers.addedBy,
+							addedAt: teamActiveTimers.addedAt,
+						})
+						.from(teamActiveTimers)
+						.where(inArray(teamActiveTimers.subteamId, teamUnitIds))
+				: [];
 
 		// Transform data to match expected format
 		const data = {
@@ -448,19 +456,19 @@ export async function GET(
 			}),
 			roster: rosterResult.reduce(
 				(acc, entry) => {
-					if (!(entry.teamUnitId && entry.eventName && entry.studentName)) {
+					if (!(entry.subteamId && entry.eventName && entry.displayName)) {
 						return acc;
 					}
-					if (!acc[entry.teamUnitId]) {
-						acc[entry.teamUnitId] = {};
+					if (!acc[entry.subteamId]) {
+						acc[entry.subteamId] = {};
 					}
-					const teamUnit = acc[entry.teamUnitId];
+					const teamUnit = acc[entry.subteamId];
 					if (teamUnit && !teamUnit[entry.eventName]) {
 						teamUnit[entry.eventName] = [];
 					}
 					const eventArray = teamUnit?.[entry.eventName];
 					if (eventArray) {
-						eventArray.push(entry.studentName);
+						eventArray.push(entry.displayName);
 					}
 					return acc;
 				},
@@ -517,12 +525,19 @@ export async function GET(
 				startTime: tournament.startTime ? String(tournament.startTime) : null,
 				endTime: tournament.endTime ? String(tournament.endTime) : null,
 				location: tournament.location || null,
-				isAllDay: tournament.isAllDay || null,
+				isAllDay: tournament.allDay || null,
 				isRecurring: tournament.isRecurring || null,
 				createdAt: tournament.createdAt ? String(tournament.createdAt) : null,
 				updatedAt: tournament.updatedAt ? String(tournament.updatedAt) : null,
 			})),
-			timers: [], // Timers would need separate implementation
+			timers: timersResult.map((t) => ({
+				id: t.id,
+				subteamId: t.subteamId || "",
+				eventId: t.eventId,
+				addedBy: t.addedBy || "",
+				startTime: null,
+				createdAt: String(t.addedAt),
+			})),
 			userTeams: userTeamsResult.map((userTeam) => ({
 				id: userTeam.id,
 				name: userTeam.school,

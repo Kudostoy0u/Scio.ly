@@ -24,7 +24,7 @@ Database schema definitions using Drizzle ORM.
 - `blacklists` - Content blacklisting system
 - `idEvents` - Event identification data
 - `base52Codes` - Base52 encoding for question IDs
-- `newTeamGroups` - Team groups (school + division)
+- `teams` - Team groups (school + division)
 - `newTeamUnits` - Individual team instances
 - `newTeamMemberships` - Team membership records
 

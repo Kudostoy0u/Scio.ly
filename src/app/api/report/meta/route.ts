@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import {
 	blacklists as blacklistsTable,
 	edits as editsTable,
-} from "@/lib/db/schema/core";
+} from "@/lib/db/schema";
 import type { ApiResponse } from "@/lib/types/api";
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";

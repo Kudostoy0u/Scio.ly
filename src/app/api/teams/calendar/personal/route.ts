@@ -1,5 +1,5 @@
 import { dbPg } from "@/lib/db";
-import { newTeamEvents } from "@/lib/db/schema/teams";
+import { teamEvents } from "@/lib/db/schema";
 import {
 	GetCalendarEventsQuerySchema,
 	validateRequest,
@@ -57,37 +57,37 @@ export async function GET(request: NextRequest) {
 
 		// Build where conditions using Drizzle ORM
 		const whereConditions = [
-			eq(newTeamEvents.createdBy, user.id),
-			isNull(newTeamEvents.teamId),
+			eq(teamEvents.createdBy, user.id),
+			isNull(teamEvents.teamId),
 		];
 
 		if (startDate) {
-			whereConditions.push(sql`${newTeamEvents.startTime} >= ${startDate}`);
+			whereConditions.push(sql`${teamEvents.startTime} >= ${startDate}`);
 		}
 
 		if (endDate) {
-			whereConditions.push(sql`${newTeamEvents.startTime} <= ${endDate}`);
+			whereConditions.push(sql`${teamEvents.startTime} <= ${endDate}`);
 		}
 
 		// Get personal events using Drizzle ORM
 		const events = await dbPg
 			.select({
-				id: newTeamEvents.id,
-				title: newTeamEvents.title,
-				description: newTeamEvents.description,
-				start_time: newTeamEvents.startTime,
-				end_time: newTeamEvents.endTime,
-				location: newTeamEvents.location,
-				event_type: newTeamEvents.eventType,
-				is_all_day: newTeamEvents.isAllDay,
-				is_recurring: newTeamEvents.isRecurring,
-				recurrence_pattern: newTeamEvents.recurrencePattern,
-				created_by: newTeamEvents.createdBy,
-				team_id: newTeamEvents.teamId,
+				id: teamEvents.id,
+				title: teamEvents.title,
+				description: teamEvents.description,
+				start_time: teamEvents.startTime,
+				end_time: teamEvents.endTime,
+				location: teamEvents.location,
+				event_type: teamEvents.eventType,
+				is_all_day: teamEvents.allDay,
+				is_recurring: teamEvents.isRecurring,
+				recurrence_pattern: teamEvents.recurrencePattern,
+				created_by: teamEvents.createdBy,
+				team_id: teamEvents.teamId,
 			})
-			.from(newTeamEvents)
+			.from(teamEvents)
 			.where(and(...whereConditions))
-			.orderBy(asc(newTeamEvents.startTime));
+			.orderBy(asc(teamEvents.startTime));
 
 		return NextResponse.json({
 			success: true,

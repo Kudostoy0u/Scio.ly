@@ -1,12 +1,12 @@
 import { dbPg } from "@/lib/db/index";
 import {
-	newTeamAssignmentAnalytics,
-	newTeamAssignmentQuestionResponses,
-	newTeamAssignmentQuestions,
-	newTeamAssignmentRoster,
-	newTeamAssignmentSubmissions,
-	newTeamAssignments,
-} from "@/lib/db/schema/assignments";
+	teamAssignmentAnalytics,
+	teamAssignmentQuestionResponses,
+	teamAssignmentQuestions,
+	teamAssignmentRoster,
+	teamAssignments,
+	teamSubmissions,
+} from "@/lib/db/schema";
 import { getServerUser } from "@/lib/supabaseServer";
 import { and, desc, eq, or } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
@@ -38,11 +38,11 @@ async function processQuestionResponses(
 
 		const [questionRow] = await dbPg
 			.select({
-				correctAnswer: newTeamAssignmentQuestions.correctAnswer,
-				points: newTeamAssignmentQuestions.points,
+				correctAnswer: teamAssignmentQuestions.correctAnswer,
+				points: teamAssignmentQuestions.points,
 			})
-			.from(newTeamAssignmentQuestions)
-			.where(eq(newTeamAssignmentQuestions.id, questionId))
+			.from(teamAssignmentQuestions)
+			.where(eq(teamAssignmentQuestions.id, questionId))
 			.limit(1);
 
 		if (!questionRow) {
@@ -57,10 +57,11 @@ async function processQuestionResponses(
 		const pointsEarned = isCorrect ? question.points : 0;
 
 		await dbPg
-			.insert(newTeamAssignmentQuestionResponses)
+			.insert(teamAssignmentQuestionResponses)
 			.values({
 				submissionId,
 				questionId,
+				response: typeof answer === "string" ? answer : JSON.stringify(answer),
 				responseText:
 					typeof answer === "string" ? answer : JSON.stringify(answer),
 				isCorrect,
@@ -68,10 +69,12 @@ async function processQuestionResponses(
 			})
 			.onConflictDoUpdate({
 				target: [
-					newTeamAssignmentQuestionResponses.submissionId,
-					newTeamAssignmentQuestionResponses.questionId,
+					teamAssignmentQuestionResponses.submissionId,
+					teamAssignmentQuestionResponses.questionId,
 				],
 				set: {
+					response:
+						typeof answer === "string" ? answer : JSON.stringify(answer),
 					responseText:
 						typeof answer === "string" ? answer : JSON.stringify(answer),
 					isCorrect,
@@ -166,21 +169,21 @@ export async function POST(
 		// Verify assignment exists and user is assigned
 		const assignmentResult = await dbPg
 			.select({
-				id: newTeamAssignments.id,
-				title: newTeamAssignments.title,
-				maxPoints: newTeamAssignments.points,
+				id: teamAssignments.id,
+				title: teamAssignments.title,
+				maxPoints: teamAssignments.points,
 			})
-			.from(newTeamAssignments)
+			.from(teamAssignments)
 			.innerJoin(
-				newTeamAssignmentRoster,
-				eq(newTeamAssignments.id, newTeamAssignmentRoster.assignmentId),
+				teamAssignmentRoster,
+				eq(teamAssignments.id, teamAssignmentRoster.assignmentId),
 			)
 			.where(
 				and(
-					eq(newTeamAssignments.id, assignmentId),
+					eq(teamAssignments.id, assignmentId),
 					or(
-						eq(newTeamAssignmentRoster.userId, user.id),
-						eq(newTeamAssignmentRoster.studentName, user.email ?? ""),
+						eq(teamAssignmentRoster.userId, user.id),
+						eq(teamAssignmentRoster.displayName, user.email ?? ""),
 					),
 				),
 			)
@@ -210,18 +213,18 @@ export async function POST(
 		// Check if user has already submitted - prevent multiple submissions
 		const existingSubmissionResult = await dbPg
 			.select({
-				id: newTeamAssignmentSubmissions.id,
-				attemptNumber: newTeamAssignmentSubmissions.attemptNumber,
-				status: newTeamAssignmentSubmissions.status,
+				id: teamSubmissions.id,
+				attemptNumber: teamSubmissions.attemptNumber,
+				status: teamSubmissions.status,
 			})
-			.from(newTeamAssignmentSubmissions)
+			.from(teamSubmissions)
 			.where(
 				and(
-					eq(newTeamAssignmentSubmissions.assignmentId, assignmentId),
-					eq(newTeamAssignmentSubmissions.userId, user.id),
+					eq(teamSubmissions.assignmentId, assignmentId),
+					eq(teamSubmissions.userId, user.id),
 				),
 			)
-			.orderBy(desc(newTeamAssignmentSubmissions.attemptNumber))
+			.orderBy(desc(teamSubmissions.attemptNumber))
 			.limit(1);
 
 		const existingSubmission = existingSubmissionResult[0];
@@ -242,7 +245,7 @@ export async function POST(
 
 		// Create submission record
 		const [submissionRow] = await dbPg
-			.insert(newTeamAssignmentSubmissions)
+			.insert(teamSubmissions)
 			.values({
 				assignmentId,
 				userId: user.id,
@@ -252,10 +255,10 @@ export async function POST(
 				submittedAt: submittedAt
 					? new Date(submittedAt).toISOString()
 					: new Date().toISOString(),
-			} as typeof newTeamAssignmentSubmissions.$inferInsert)
+			} as typeof teamSubmissions.$inferInsert)
 			.returning({
-				id: newTeamAssignmentSubmissions.id,
-				submittedAt: newTeamAssignmentSubmissions.submittedAt,
+				id: teamSubmissions.id,
+				submittedAt: teamSubmissions.submittedAt,
 			});
 
 		if (!submissionRow) {
@@ -292,15 +295,15 @@ export async function POST(
 
 		// Create analytics record (delete existing first, then insert)
 		await dbPg
-			.delete(newTeamAssignmentAnalytics)
+			.delete(teamAssignmentAnalytics)
 			.where(
 				and(
-					eq(newTeamAssignmentAnalytics.assignmentId, assignmentId),
-					eq(newTeamAssignmentAnalytics.userId, user.id),
+					eq(teamAssignmentAnalytics.assignmentId, assignmentId),
+					eq(teamAssignmentAnalytics.userId, user.id),
 				),
 			);
 
-		await dbPg.insert(newTeamAssignmentAnalytics).values({
+		await dbPg.insert(teamAssignmentAnalytics).values({
 			assignmentId,
 			studentName: user.email || user.id,
 			userId: user.id,

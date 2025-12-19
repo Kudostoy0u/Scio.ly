@@ -1,16 +1,13 @@
 import { dbPg } from "@/lib/db";
 import {
-	newTeamActiveTimers,
-	newTeamEvents,
-	newTeamRecurringMeetings,
-	newTeamUnits,
-} from "@/lib/db/schema/teams";
+	teamActiveTimers,
+	teamEvents,
+	teamRecurringMeetings,
+	teamSubteams,
+} from "@/lib/db/schema";
 import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
-import {
-	getTeamAccessCockroach,
-	hasLeadershipAccessCockroach,
-} from "@/lib/utils/teams/access";
+import { getTeamAccess, hasLeadershipAccess } from "@/lib/utils/teams/access";
 import {
 	handleError,
 	handleForbiddenError,
@@ -75,13 +72,13 @@ export async function GET(
 		}
 
 		// Validate that requested subteam belongs to this team group
-		const subteamBelongsToGroup = teamInfo.teamUnitIds.includes(subteamId);
+		const subteamBelongsToGroup = teamInfo.subteamIds.includes(subteamId);
 		if (!subteamBelongsToGroup) {
 			return handleNotFoundError("Subteam");
 		}
 
 		// Check if user has access to this team group (membership OR roster entry)
-		const access = await getTeamAccessCockroach(user.id, teamInfo.groupId);
+		const access = await getTeamAccess(user.id, teamInfo.teamId);
 		if (!access.hasAccess) {
 			return handleForbiddenError("Not authorized to view this team");
 		}
@@ -90,34 +87,34 @@ export async function GET(
 		// Note: Complex COALESCE and string manipulation requires sql template for now
 		const timersResult = await dbPg
 			.select({
-				id: sql<string>`${newTeamActiveTimers.eventId}`,
-				title: sql<string>`COALESCE(${newTeamEvents.title}, ${newTeamRecurringMeetings.title})`,
+				id: sql<string>`${teamActiveTimers.eventId}`,
+				title: sql<string>`COALESCE(${teamEvents.title}, ${teamRecurringMeetings.title})`,
 				start_time: sql<string>`COALESCE(
-          ${newTeamEvents.startTime}::text,
+          ${teamEvents.startTime}::text,
           CASE 
-            WHEN ${newTeamRecurringMeetings.startTime} IS NOT NULL THEN 
-              CONCAT(SUBSTRING(${newTeamActiveTimers.eventId}::text FROM 'recurring-[^-]+-(.+)'), 'T', ${newTeamRecurringMeetings.startTime})::timestamptz::text
+            WHEN ${teamRecurringMeetings.startTime} IS NOT NULL THEN 
+              CONCAT(SUBSTRING(${teamActiveTimers.eventId}::text FROM 'recurring-[^-]+-(.+)'), 'T', ${teamRecurringMeetings.startTime})::timestamptz::text
             ELSE 
-              CONCAT(SUBSTRING(${newTeamActiveTimers.eventId}::text FROM 'recurring-[^-]+-(.+)'), 'T00:00:00')::timestamptz::text
+              CONCAT(SUBSTRING(${teamActiveTimers.eventId}::text FROM 'recurring-[^-]+-(.+)'), 'T00:00:00')::timestamptz::text
           END
         )`,
 				location: sql<
 					string | null
-				>`COALESCE(${newTeamEvents.location}, ${newTeamRecurringMeetings.location})`,
-				event_type: sql<string>`COALESCE(${newTeamEvents.eventType}, 'meeting')`,
-				added_at: sql<string>`${newTeamActiveTimers.addedAt}::text`,
+				>`COALESCE(${teamEvents.location}, ${teamRecurringMeetings.location})`,
+				event_type: sql<string>`COALESCE(${teamEvents.eventType}, 'meeting')`,
+				added_at: sql<string>`${teamActiveTimers.addedAt}::text`,
 			})
-			.from(newTeamActiveTimers)
+			.from(teamActiveTimers)
 			.leftJoin(
-				newTeamEvents,
-				sql`${newTeamActiveTimers.eventId}::text = ${newTeamEvents.id}::text`,
+				teamEvents,
+				sql`${teamActiveTimers.eventId}::text = ${teamEvents.id}::text`,
 			)
 			.leftJoin(
-				newTeamRecurringMeetings,
-				sql`${newTeamActiveTimers.eventId}::text LIKE CONCAT('recurring-', ${newTeamRecurringMeetings.id}::text, '-%')`,
+				teamRecurringMeetings,
+				sql`${teamActiveTimers.eventId}::text LIKE CONCAT('recurring-', ${teamRecurringMeetings.id}::text, '-%')`,
 			)
-			.where(eq(newTeamActiveTimers.teamUnitId, subteamId))
-			.orderBy(asc(newTeamActiveTimers.addedAt));
+			.where(eq(teamActiveTimers.subteamId, subteamId))
+			.orderBy(asc(teamActiveTimers.addedAt));
 
 		return NextResponse.json({
 			timers: timersResult,
@@ -187,16 +184,13 @@ export async function POST(
 		}
 
 		// Validate subteam belongs to this team group
-		const subteamBelongsToGroup = teamInfo.teamUnitIds.includes(subteamId);
+		const subteamBelongsToGroup = teamInfo.subteamIds.includes(subteamId);
 		if (!subteamBelongsToGroup) {
 			return handleNotFoundError("Subteam");
 		}
 
 		// Check if the user has leadership privileges in the team group
-		const hasLeadership = await hasLeadershipAccessCockroach(
-			user.id,
-			teamInfo.groupId,
-		);
+		const hasLeadership = await hasLeadershipAccess(user.id, teamInfo.teamId);
 		if (!hasLeadership) {
 			return handleForbiddenError(
 				"Only captains and co-captains can manage timers",
@@ -205,9 +199,9 @@ export async function POST(
 
 		// Get subteam's group ID for event verification
 		const [subteam] = await dbPg
-			.select({ groupId: newTeamUnits.groupId })
-			.from(newTeamUnits)
-			.where(eq(newTeamUnits.id, subteamId))
+			.select({ teamId: teamSubteams.teamId })
+			.from(teamSubteams)
+			.where(eq(teamSubteams.id, subteamId))
 			.limit(1);
 
 		if (!subteam) {
@@ -216,9 +210,9 @@ export async function POST(
 
 		// Get all team unit IDs in this group
 		const groupTeamUnits = await dbPg
-			.select({ id: newTeamUnits.id })
-			.from(newTeamUnits)
-			.where(eq(newTeamUnits.groupId, subteam.groupId));
+			.select({ id: teamSubteams.id })
+			.from(teamSubteams)
+			.where(eq(teamSubteams.teamId, subteam.teamId));
 
 		const groupTeamUnitIds = groupTeamUnits.map((u) => u.id);
 
@@ -232,12 +226,12 @@ export async function POST(
 				return handleNotFoundError("Invalid recurring event ID format");
 			}
 			const recurringEventResult = await dbPg
-				.select({ id: newTeamRecurringMeetings.id })
-				.from(newTeamRecurringMeetings)
+				.select({ id: teamRecurringMeetings.id })
+				.from(teamRecurringMeetings)
 				.where(
 					and(
-						eq(newTeamRecurringMeetings.id, meetingId),
-						inArray(newTeamRecurringMeetings.teamId, groupTeamUnitIds),
+						eq(teamRecurringMeetings.id, meetingId),
+						inArray(teamRecurringMeetings.teamId, groupTeamUnitIds),
 					),
 				)
 				.limit(1);
@@ -245,12 +239,12 @@ export async function POST(
 		} else {
 			// For regular events
 			const eventResult = await dbPg
-				.select({ id: newTeamEvents.id })
-				.from(newTeamEvents)
+				.select({ id: teamEvents.id })
+				.from(teamEvents)
 				.where(
 					and(
-						eq(newTeamEvents.id, eventId),
-						inArray(newTeamEvents.teamId, groupTeamUnitIds),
+						eq(teamEvents.id, eventId),
+						inArray(teamEvents.teamId, groupTeamUnitIds),
 					),
 				)
 				.limit(1);
@@ -265,12 +259,12 @@ export async function POST(
 
 		// Check if timer already exists
 		const existingTimer = await dbPg
-			.select({ id: newTeamActiveTimers.id })
-			.from(newTeamActiveTimers)
+			.select({ id: teamActiveTimers.id })
+			.from(teamActiveTimers)
 			.where(
 				and(
-					eq(newTeamActiveTimers.teamUnitId, subteamId),
-					eq(newTeamActiveTimers.eventId, eventId),
+					eq(teamActiveTimers.subteamId, subteamId),
+					eq(teamActiveTimers.eventId, eventId),
 				),
 			)
 			.limit(1);
@@ -284,13 +278,14 @@ export async function POST(
 
 		// Add the timer using Drizzle ORM
 		const [timerResult] = await dbPg
-			.insert(newTeamActiveTimers)
+			.insert(teamActiveTimers)
 			.values({
-				teamUnitId: subteamId,
+				teamId: teamInfo.teamId,
+				subteamId: subteamId,
 				eventId: eventId,
 				addedBy: user.id,
 			})
-			.returning({ id: newTeamActiveTimers.id });
+			.returning({ id: teamActiveTimers.id });
 
 		if (!timerResult) {
 			return handleError(
@@ -370,16 +365,13 @@ export async function DELETE(
 		}
 
 		// Validate subteam belongs to this team group
-		const subteamBelongsToGroup = teamInfo.teamUnitIds.includes(subteamId);
+		const subteamBelongsToGroup = teamInfo.subteamIds.includes(subteamId);
 		if (!subteamBelongsToGroup) {
 			return handleNotFoundError("Subteam");
 		}
 
 		// Check if the user has leadership privileges in the team group
-		const hasLeadership = await hasLeadershipAccessCockroach(
-			user.id,
-			teamInfo.groupId,
-		);
+		const hasLeadership = await hasLeadershipAccess(user.id, teamInfo.teamId);
 		if (!hasLeadership) {
 			return handleForbiddenError(
 				"Only captains and co-captains can manage timers",
@@ -388,14 +380,14 @@ export async function DELETE(
 
 		// Remove the timer using Drizzle ORM
 		const deleteResult = await dbPg
-			.delete(newTeamActiveTimers)
+			.delete(teamActiveTimers)
 			.where(
 				and(
-					eq(newTeamActiveTimers.teamUnitId, subteamId),
-					eq(newTeamActiveTimers.eventId, eventId),
+					eq(teamActiveTimers.subteamId, subteamId),
+					eq(teamActiveTimers.eventId, eventId),
 				),
 			)
-			.returning({ id: newTeamActiveTimers.id });
+			.returning({ id: teamActiveTimers.id });
 
 		if (deleteResult.length === 0) {
 			return handleNotFoundError("Timer");

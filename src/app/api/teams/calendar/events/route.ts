@@ -1,6 +1,6 @@
 import { dbPg } from "@/lib/db";
-import { users } from "@/lib/db/schema/core";
-import { newTeamEventAttendees, newTeamEvents } from "@/lib/db/schema/teams";
+import { users } from "@/lib/db/schema";
+import { teamEventAttendees, teamEvents } from "@/lib/db/schema";
 import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
 import {
@@ -60,8 +60,8 @@ async function resolveTeamId(
 		// It's a slug, resolve it
 		try {
 			const teamInfo = await resolveTeamSlugToUnits(teamId);
-			if (teamInfo.teamUnitIds.length > 0) {
-				return teamInfo.teamUnitIds[0] ?? null;
+			if (teamInfo.subteamIds.length > 0) {
+				return teamInfo.subteamIds[0] ?? null;
 			}
 			return handleNotFoundError("No team units found");
 		} catch {
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
 
 		// Insert the event using Drizzle ORM
 		const [result] = await dbPg
-			.insert(newTeamEvents)
+			.insert(teamEvents)
 			.values({
 				teamId: resolvedTeamId,
 				createdBy: created_by || user.id,
@@ -160,8 +160,8 @@ export async function POST(request: NextRequest) {
 				isAllDay: is_all_day,
 				isRecurring: is_recurring,
 				recurrencePattern: recurrence_pattern || null,
-			} as typeof newTeamEvents.$inferInsert)
-			.returning({ id: newTeamEvents.id });
+			} as typeof teamEvents.$inferInsert)
+			.returning({ id: teamEvents.id });
 
 		if (!result) {
 			return handleError(
@@ -204,10 +204,8 @@ export async function GET(request: NextRequest) {
 			// Resolve team slug to team unit IDs
 			try {
 				const teamInfo = await resolveTeamSlugToUnits(teamId);
-				if (teamInfo.teamUnitIds.length > 0) {
-					whereConditions.push(
-						inArray(newTeamEvents.teamId, teamInfo.teamUnitIds),
-					);
+				if (teamInfo.subteamIds.length > 0) {
+					whereConditions.push(inArray(teamEvents.teamId, teamInfo.subteamIds));
 				} else {
 					// No team units found, return empty result
 					return NextResponse.json({
@@ -223,7 +221,7 @@ export async function GET(request: NextRequest) {
 		if (userId) {
 			try {
 				UUIDSchema.parse(userId);
-				whereConditions.push(eq(newTeamEvents.createdBy, userId));
+				whereConditions.push(eq(teamEvents.createdBy, userId));
 			} catch {
 				return handleValidationError(
 					new z.ZodError([
@@ -239,54 +237,54 @@ export async function GET(request: NextRequest) {
 
 		if (startDate) {
 			whereConditions.push(
-				gte(newTeamEvents.startTime, new Date(startDate).toISOString()),
+				gte(teamEvents.startTime, new Date(startDate).toISOString()),
 			);
 		}
 
 		if (endDate) {
 			whereConditions.push(
-				lte(newTeamEvents.startTime, new Date(endDate).toISOString()),
+				lte(teamEvents.startTime, new Date(endDate).toISOString()),
 			);
 		}
 
 		// Get events with creator information using Drizzle ORM
 		const eventsResult = await dbPg
 			.select({
-				id: newTeamEvents.id,
-				title: newTeamEvents.title,
-				description: newTeamEvents.description,
-				start_time: newTeamEvents.startTime,
-				end_time: newTeamEvents.endTime,
-				location: newTeamEvents.location,
-				event_type: newTeamEvents.eventType,
-				is_all_day: newTeamEvents.isAllDay,
-				is_recurring: newTeamEvents.isRecurring,
-				recurrence_pattern: newTeamEvents.recurrencePattern,
-				created_by: newTeamEvents.createdBy,
-				team_id: newTeamEvents.teamId,
+				id: teamEvents.id,
+				title: teamEvents.title,
+				description: teamEvents.description,
+				start_time: teamEvents.startTime,
+				end_time: teamEvents.endTime,
+				location: teamEvents.location,
+				event_type: teamEvents.eventType,
+				is_all_day: teamEvents.allDay,
+				is_recurring: teamEvents.isRecurring,
+				recurrence_pattern: teamEvents.recurrencePattern,
+				created_by: teamEvents.createdBy,
+				team_id: teamEvents.teamId,
 				creator_email: users.email,
 				creator_name: sql<string>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}), ${users.email})`,
 			})
-			.from(newTeamEvents)
-			.leftJoin(users, eq(newTeamEvents.createdBy, users.id))
+			.from(teamEvents)
+			.leftJoin(users, eq(teamEvents.createdBy, users.id))
 			.where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-			.orderBy(asc(newTeamEvents.startTime));
+			.orderBy(asc(teamEvents.startTime));
 
 		// Get attendees for each event using Drizzle ORM
 		const eventsWithAttendees = await Promise.all(
 			eventsResult.map(async (event) => {
 				const attendeesResult = await dbPg
 					.select({
-						user_id: newTeamEventAttendees.userId,
-						status: newTeamEventAttendees.status,
-						responded_at: newTeamEventAttendees.respondedAt,
-						notes: newTeamEventAttendees.notes,
+						user_id: teamEventAttendees.userId,
+						status: teamEventAttendees.status,
+						responded_at: teamEventAttendees.respondedAt,
+						notes: teamEventAttendees.notes,
 						email: users.email,
 						name: sql<string>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}), ${users.email})`,
 					})
-					.from(newTeamEventAttendees)
-					.leftJoin(users, eq(newTeamEventAttendees.userId, users.id))
-					.where(eq(newTeamEventAttendees.eventId, event.id));
+					.from(teamEventAttendees)
+					.leftJoin(users, eq(teamEventAttendees.userId, users.id))
+					.where(eq(teamEventAttendees.eventId, event.id));
 
 				return {
 					...event,

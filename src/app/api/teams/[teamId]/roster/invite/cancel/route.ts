@@ -1,10 +1,10 @@
 import { dbPg } from "@/lib/db";
 import {
-	newTeamGroups,
-	newTeamMemberships,
-	newTeamUnits,
-	rosterLinkInvitations,
-} from "@/lib/db/schema/teams";
+	teamLinkInvitations,
+	teamMemberships,
+	teamSubteams,
+	teams,
+} from "@/lib/db/schema";
 import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
 import {
@@ -74,9 +74,9 @@ export async function POST(
 
 		// Resolve the slug to team group using Drizzle ORM
 		const [groupResult] = await dbPg
-			.select({ id: newTeamGroups.id })
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamId))
+			.select({ id: teams.id })
+			.from(teams)
+			.where(eq(teams.slug, teamId))
 			.limit(1);
 
 		if (!groupResult) {
@@ -87,14 +87,14 @@ export async function POST(
 
 		// Check if user is a member of this team group using Drizzle ORM
 		const membershipResult = await dbPg
-			.select({ role: newTeamMemberships.role })
-			.from(newTeamMemberships)
-			.innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+			.select({ role: teamMemberships.role })
+			.from(teamMemberships)
+			.innerJoin(teamSubteams, eq(teamMemberships.teamId, teamSubteams.id))
 			.where(
 				and(
-					eq(newTeamMemberships.userId, user.id),
-					eq(newTeamUnits.groupId, groupId),
-					eq(newTeamMemberships.status, "active"),
+					eq(teamMemberships.userId, user.id),
+					eq(teamSubteams.teamId, groupId),
+					eq(teamMemberships.status, "active"),
 				),
 			);
 
@@ -115,13 +115,13 @@ export async function POST(
 
 		// Check if the subteam belongs to this group using Drizzle ORM
 		const [subteamResult] = await dbPg
-			.select({ id: newTeamUnits.id })
-			.from(newTeamUnits)
+			.select({ id: teamSubteams.id })
+			.from(teamSubteams)
 			.where(
 				and(
-					eq(newTeamUnits.id, subteamId),
-					eq(newTeamUnits.groupId, groupId),
-					eq(newTeamUnits.status, "active"),
+					eq(teamSubteams.id, subteamId),
+					eq(teamSubteams.teamId, groupId),
+					eq(teamSubteams.status, "active"),
 				),
 			)
 			.limit(1);
@@ -132,13 +132,13 @@ export async function POST(
 
 		// Find and cancel the pending roster link invitation using Drizzle ORM
 		const [invitationResult] = await dbPg
-			.select({ id: rosterLinkInvitations.id })
-			.from(rosterLinkInvitations)
+			.select({ id: teamLinkInvitations.id })
+			.from(teamLinkInvitations)
 			.where(
 				and(
-					eq(rosterLinkInvitations.teamId, subteamId),
-					eq(rosterLinkInvitations.studentName, studentName),
-					eq(rosterLinkInvitations.status, "pending"),
+					eq(teamLinkInvitations.teamId, subteamId),
+					eq(teamLinkInvitations.rosterDisplayName, studentName),
+					eq(teamLinkInvitations.status, "pending"),
 				),
 			)
 			.limit(1);
@@ -149,13 +149,13 @@ export async function POST(
 
 		// Cancel the invitation using Drizzle ORM
 		await dbPg
-			.update(rosterLinkInvitations)
+			.update(teamLinkInvitations)
 			.set({ status: "declined" })
 			.where(
 				and(
-					eq(rosterLinkInvitations.teamId, subteamId),
-					eq(rosterLinkInvitations.studentName, studentName),
-					eq(rosterLinkInvitations.status, "pending"),
+					eq(teamLinkInvitations.teamId, subteamId),
+					eq(teamLinkInvitations.rosterDisplayName, studentName),
+					eq(teamLinkInvitations.status, "pending"),
 				),
 			);
 

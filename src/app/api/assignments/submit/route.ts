@@ -1,5 +1,5 @@
 import { dbPg } from "@/lib/db/index";
-import { assignmentResults } from "@/lib/db/schema/assignments";
+import { assignmentResults } from "@/lib/db/schema";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {

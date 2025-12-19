@@ -1,11 +1,11 @@
 import { dbPg } from "@/lib/db";
 import {
-	teamsMembership,
-	teamsRoster,
-	teamsSubteam,
-	teamsTeam,
-} from "@/lib/db/schema/teams_v2";
-import { bumpTeamVersion } from "@/lib/server/teams-v2/shared";
+	teamMemberships,
+	teamRoster,
+	teamSubteams,
+	teams,
+} from "@/lib/db/schema";
+import { bumpTeamVersion } from "@/lib/server/teams/shared";
 import { getServerUser } from "@/lib/supabaseServer";
 import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
@@ -96,21 +96,21 @@ async function requireUserId() {
 
 async function getTeamBySlug(teamSlug: string) {
 	const [team] = await dbPg
-		.select({ id: teamsTeam.id })
-		.from(teamsTeam)
-		.where(eq(teamsTeam.slug, teamSlug))
+		.select({ id: teams.id })
+		.from(teams)
+		.where(eq(teams.slug, teamSlug))
 		.limit(1);
 	return team ?? null;
 }
 
 async function getMembership(teamId: string, userId: string) {
 	const [membership] = await dbPg
-		.select({ role: teamsMembership.role, status: teamsMembership.status })
-		.from(teamsMembership)
+		.select({ role: teamMemberships.role, status: teamMemberships.status })
+		.from(teamMemberships)
 		.where(
 			and(
-				eq(teamsMembership.teamId, teamId),
-				eq(teamsMembership.userId, userId),
+				eq(teamMemberships.teamId, teamId),
+				eq(teamMemberships.userId, userId),
 			),
 		)
 		.limit(1);
@@ -120,11 +120,11 @@ async function getMembership(teamId: string, userId: string) {
 async function assertSubteamBelongsToTeam(teamId: string, subteamId: string) {
 	const [subteam] = await dbPg
 		.select({
-			id: teamsSubteam.id,
-			description: teamsSubteam.description,
+			id: teamSubteams.id,
+			description: teamSubteams.description,
 		})
-		.from(teamsSubteam)
-		.where(and(eq(teamsSubteam.teamId, teamId), eq(teamsSubteam.id, subteamId)))
+		.from(teamSubteams)
+		.where(and(eq(teamSubteams.teamId, teamId), eq(teamSubteams.id, subteamId)))
 		.limit(1);
 	return subteam ?? null;
 }
@@ -258,21 +258,21 @@ export async function POST(
 
 	await dbPg.transaction(async (tx) => {
 		await tx
-			.update(teamsSubteam)
+			.update(teamSubteams)
 			.set({
 				description: stringifySubteamConfig({ ...config, blocks }),
 				updatedAt: new Date().toISOString(),
 			})
-			.where(eq(teamsSubteam.id, subteamId));
+			.where(eq(teamSubteams.id, subteamId));
 
 		if (mode === "remove") {
 			await tx
-				.delete(teamsRoster)
+				.delete(teamRoster)
 				.where(
 					and(
-						eq(teamsRoster.teamId, team.id),
-						eq(teamsRoster.subteamId, subteamId),
-						eq(teamsRoster.eventName, eventName),
+						eq(teamRoster.teamId, team.id),
+						eq(teamRoster.subteamId, subteamId),
+						eq(teamRoster.eventName, eventName),
 					),
 				);
 		}
@@ -358,22 +358,22 @@ export async function DELETE(
 
 	await dbPg.transaction(async (tx) => {
 		await tx
-			.update(teamsSubteam)
+			.update(teamSubteams)
 			.set({
 				description: stringifySubteamConfig({ ...config, blocks }),
 				updatedAt: new Date().toISOString(),
 			})
-			.where(eq(teamsSubteam.id, subteamId));
+			.where(eq(teamSubteams.id, subteamId));
 
 		if (rosterCleanupEvents.length) {
 			for (const eventName of rosterCleanupEvents) {
 				await tx
-					.delete(teamsRoster)
+					.delete(teamRoster)
 					.where(
 						and(
-							eq(teamsRoster.teamId, team.id),
-							eq(teamsRoster.subteamId, subteamId),
-							eq(teamsRoster.eventName, eventName),
+							eq(teamRoster.teamId, team.id),
+							eq(teamRoster.subteamId, subteamId),
+							eq(teamRoster.eventName, eventName),
 						),
 					);
 			}

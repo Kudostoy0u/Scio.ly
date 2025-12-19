@@ -224,7 +224,7 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 			await invalidateTeam(teamSlug);
 			if (activeSubteamId === subteamId) {
 				setActiveSubteamId(
-					subteams?.find((s) => s.id !== subteamId)?.id ?? null,
+					subteams?.find((s: { id: string }) => s.id !== subteamId)?.id ?? null,
 				);
 			}
 		} catch (mutationError) {
@@ -367,13 +367,20 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 										isCaptain={isCaptain}
 										activeSubteamId={activeSubteamId}
 										subteams={
-											subteams?.map((s) => ({
-												id: s.id,
-												name: s.name,
-												team_id: teamData.meta.teamId,
-												description: s.description ?? "",
-												created_at: s.createdAt,
-											})) ?? []
+											subteams?.map(
+												(s: {
+													id: string;
+													name: string;
+													createdAt: string;
+													description: string | null;
+												}) => ({
+													id: s.id,
+													name: s.name,
+													team_id: teamData.meta.teamId,
+													description: s.description ?? "",
+													created_at: s.createdAt,
+												}),
+											) ?? []
 										}
 										onSubteamChange={setActiveSubteamId}
 										onCreateSubteam={handleCreateSubteam}
@@ -420,13 +427,20 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 									isAdmin={isAdmin}
 									activeSubteamId={activeSubteamId}
 									subteams={
-										subteams?.map((s) => ({
-											id: s.id,
-											name: s.name,
-											team_id: teamData.meta.teamId,
-											description: s.description ?? "",
-											created_at: s.createdAt,
-										})) ?? []
+										subteams?.map(
+											(s: {
+												id: string;
+												name: string;
+												createdAt: string;
+												description: string | null;
+											}) => ({
+												id: s.id,
+												name: s.name,
+												team_id: teamData.meta.teamId,
+												description: s.description ?? "",
+												created_at: s.createdAt,
+											}),
+										) ?? []
 									}
 									onSubteamChange={setActiveSubteamId}
 								/>
@@ -504,9 +518,16 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 									</div>
 									<button
 										type="button"
-										onClick={() =>
-											navigator.clipboard.writeText(teamData.meta.memberCode)
-										}
+										onClick={async () => {
+											try {
+												await navigator.clipboard.writeText(
+													teamData.meta.memberCode,
+												);
+												toast.success("Member code copied to clipboard!");
+											} catch (error) {
+												toast.error("Failed to copy code");
+											}
+										}}
 										className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
 									>
 										<Clipboard className="mr-1.5 h-4 w-4" />
@@ -538,11 +559,16 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 										</div>
 										<button
 											type="button"
-											onClick={() =>
-												navigator.clipboard.writeText(
-													teamData.meta.captainCode ?? "",
-												)
-											}
+											onClick={async () => {
+												try {
+													await navigator.clipboard.writeText(
+														teamData.meta.captainCode ?? "",
+													);
+													toast.success("Captain code copied to clipboard!");
+												} catch (error) {
+													toast.error("Failed to copy code");
+												}
+											}}
 											className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
 										>
 											<Clipboard className="mr-1.5 h-4 w-4" />

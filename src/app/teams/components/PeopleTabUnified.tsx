@@ -11,7 +11,7 @@ import NamePromptModal from "@/app/components/NamePromptModal";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { useInvalidateTeam, useTeamMembers } from "@/lib/hooks/useTeam";
-import type { TeamMember as TeamMemberV2 } from "@/lib/server/teams-v2";
+import type { TeamMember as TeamMemberV2 } from "@/lib/server/teams";
 import type { TeamMember as StoreTeamMember } from "@/lib/stores/teams/types";
 import {
 	generateDisplayName,
@@ -216,7 +216,7 @@ export default function PeopleTabUnified({
 				if (!prev) return prev;
 				return {
 					...prev,
-					members: (prev.members ?? []).map((m) =>
+					members: (prev.members ?? []).map((m: TeamMemberV2) =>
 						m.id === user.id ? { ...m, name: newName } : m,
 					),
 					rosterEntries: (prev.rosterEntries ?? []).map((r) =>

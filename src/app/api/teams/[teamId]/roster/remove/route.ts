@@ -1,13 +1,9 @@
 import { dbPg } from "@/lib/db";
-import {
-	newTeamGroups,
-	newTeamRosterData,
-	newTeamUnits,
-} from "@/lib/db/schema/teams";
+import { teamRoster, teamSubteams, teams } from "@/lib/db/schema";
 import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
 import { syncPeopleFromRosterForSubteam } from "@/lib/trpc/routers/teams/helpers/people-sync";
-import { hasLeadershipAccessCockroach } from "@/lib/utils/teams/access";
+import { hasLeadershipAccess } from "@/lib/utils/teams/access";
 import {
 	handleError,
 	handleForbiddenError,
@@ -84,9 +80,9 @@ export async function POST(
 
 		// Resolve slug to group id using Drizzle ORM
 		const [groupResult] = await dbPg
-			.select({ id: newTeamGroups.id })
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamId))
+			.select({ id: teams.id })
+			.from(teams)
+			.where(eq(teams.slug, teamId))
 			.limit(1);
 
 		if (!groupResult) {
@@ -96,7 +92,7 @@ export async function POST(
 		const groupId = groupResult.id;
 
 		// Ensure user has leadership privileges in this group
-		const hasLeadership = await hasLeadershipAccessCockroach(user.id, groupId);
+		const hasLeadership = await hasLeadershipAccess(user.id, groupId);
 		if (!hasLeadership) {
 			return handleForbiddenError(
 				"Only captains and co-captains can modify roster",
@@ -105,12 +101,12 @@ export async function POST(
 
 		// Get team units for this group using Drizzle ORM
 		const teamUnits = await dbPg
-			.select({ id: newTeamUnits.id })
-			.from(newTeamUnits)
+			.select({ id: teamSubteams.id })
+			.from(teamSubteams)
 			.where(
 				and(
-					eq(newTeamUnits.groupId, groupId),
-					eq(newTeamUnits.status, "active"),
+					eq(teamSubteams.teamId, groupId),
+					eq(teamSubteams.status, "active"),
 				),
 			);
 
@@ -121,19 +117,23 @@ export async function POST(
 			if (eventName?.trim()) {
 				// Remove specific event entries for this user using Drizzle ORM
 				const deleteByUserEvent = await dbPg
-					.delete(newTeamRosterData)
+					.delete(teamRoster)
 					.where(
 						and(
-							eq(newTeamRosterData.userId, userId),
-							sql`LOWER(${newTeamRosterData.eventName}) = LOWER(${eventName.trim()})`,
-							inArray(newTeamRosterData.teamUnitId, teamUnitIds),
+							eq(teamRoster.userId, userId),
+							sql`LOWER(${teamRoster.eventName}) = LOWER(${eventName.trim()})`,
+							inArray(teamRoster.subteamId, teamUnitIds),
 						),
 					)
-					.returning({ teamUnitId: newTeamRosterData.teamUnitId });
+					.returning({ subteamId: teamRoster.subteamId });
 
 				// Sync people table for affected subteams
 				const affectedSubteamIds = [
-					...new Set(deleteByUserEvent.map((r) => r.teamUnitId)),
+					...new Set(
+						deleteByUserEvent
+							.map((r) => r.subteamId)
+							.filter((id): id is string => id !== null),
+					),
 				];
 				for (const subteamIdToSync of affectedSubteamIds) {
 					await syncPeopleFromRosterForSubteam(subteamIdToSync);
@@ -146,14 +146,14 @@ export async function POST(
 				// NOTE: Do NOT remove membership - membership is separate from roster!
 				// A captain can be on the team without being on any roster.
 				const deleteByUserSubteam = await dbPg
-					.delete(newTeamRosterData)
+					.delete(teamRoster)
 					.where(
 						and(
-							eq(newTeamRosterData.userId, userId),
-							eq(newTeamRosterData.teamUnitId, subteamId),
+							eq(teamRoster.userId, userId),
+							eq(teamRoster.subteamId, subteamId),
 						),
 					)
-					.returning({ teamUnitId: newTeamRosterData.teamUnitId });
+					.returning({ subteamId: teamRoster.subteamId });
 
 				// Sync people table for this subteam
 				await syncPeopleFromRosterForSubteam(subteamId);
@@ -165,18 +165,22 @@ export async function POST(
 			// Remove all roster entries for this user across the group
 			// NOTE: Do NOT remove memberships - membership is separate from roster!
 			const deleteByUser = await dbPg
-				.delete(newTeamRosterData)
+				.delete(teamRoster)
 				.where(
 					and(
-						eq(newTeamRosterData.userId, userId),
-						inArray(newTeamRosterData.teamUnitId, teamUnitIds),
+						eq(teamRoster.userId, userId),
+						inArray(teamRoster.subteamId, teamUnitIds),
 					),
 				)
-				.returning({ teamUnitId: newTeamRosterData.teamUnitId });
+				.returning({ subteamId: teamRoster.subteamId });
 
 			// Sync people table for all affected subteams
 			const affectedSubteamIds = [
-				...new Set(deleteByUser.map((r) => r.teamUnitId)),
+				...new Set(
+					deleteByUser
+						.map((r) => r.subteamId)
+						.filter((id): id is string => id !== null),
+				),
 			];
 			for (const subteamIdToSync of affectedSubteamIds) {
 				await syncPeopleFromRosterForSubteam(subteamIdToSync);
@@ -199,18 +203,22 @@ export async function POST(
 		}
 
 		const deleteByName = await dbPg
-			.delete(newTeamRosterData)
+			.delete(teamRoster)
 			.where(
 				and(
-					inArray(newTeamRosterData.teamUnitId, teamUnitIds),
-					sql`LOWER(COALESCE(${newTeamRosterData.studentName}, '')) = LOWER(${studentName.trim()})`,
+					inArray(teamRoster.subteamId, teamUnitIds),
+					sql`LOWER(COALESCE(${teamRoster.displayName}, '')) = LOWER(${studentName.trim()})`,
 				),
 			)
-			.returning({ teamUnitId: newTeamRosterData.teamUnitId });
+			.returning({ subteamId: teamRoster.subteamId });
 
 		// Sync people table for all affected subteams
 		const affectedSubteamIds = [
-			...new Set(deleteByName.map((r) => r.teamUnitId)),
+			...new Set(
+				deleteByName
+					.map((r) => r.subteamId)
+					.filter((id): id is string => id !== null),
+			),
 		];
 		for (const subteamIdToSync of affectedSubteamIds) {
 			await syncPeopleFromRosterForSubteam(subteamIdToSync);

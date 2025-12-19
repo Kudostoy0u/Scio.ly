@@ -107,10 +107,9 @@ export default function TeamShareModal({
 	const copyToClipboard = async (text: string, type: string) => {
 		try {
 			await navigator.clipboard.writeText(text);
-			setSuccess(`${type} code copied to clipboard!`);
-			setTimeout(() => setSuccess(""), 2000);
+			toast.success(`${type} code copied to clipboard!`);
 		} catch {
-			setError("Failed to copy to clipboard");
+			toast.error("Failed to copy to clipboard");
 		}
 	};
 

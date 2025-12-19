@@ -1,5 +1,5 @@
 import { dbPg } from "@/lib/db";
-import { newTeamEvents, newTeamMemberships } from "@/lib/db/schema/teams";
+import { teamEvents, teamMemberships } from "@/lib/db/schema";
 import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
 import {
@@ -33,11 +33,11 @@ async function checkEventPermission(
 > {
 	const eventResult = await dbPg
 		.select({
-			createdBy: newTeamEvents.createdBy,
-			teamId: newTeamEvents.teamId,
+			createdBy: teamEvents.createdBy,
+			teamId: teamEvents.teamId,
 		})
-		.from(newTeamEvents)
-		.where(eq(newTeamEvents.id, eventId))
+		.from(teamEvents)
+		.where(eq(teamEvents.id, eventId))
 		.limit(1);
 
 	if (eventResult.length === 0 || !eventResult[0]) {
@@ -50,13 +50,13 @@ async function checkEventPermission(
 	if (event.createdBy !== userId) {
 		if (event.teamId) {
 			const membershipResult = await dbPg
-				.select({ role: newTeamMemberships.role })
-				.from(newTeamMemberships)
+				.select({ role: teamMemberships.role })
+				.from(teamMemberships)
 				.where(
 					and(
-						eq(newTeamMemberships.userId, userId),
-						eq(newTeamMemberships.teamId, event.teamId),
-						eq(newTeamMemberships.status, "active"),
+						eq(teamMemberships.userId, userId),
+						eq(teamMemberships.teamId, event.teamId),
+						eq(teamMemberships.status, "active"),
 					),
 				)
 				.limit(1);
@@ -95,8 +95,8 @@ const CalendarEventUpdateSchema = z.object({
 // Helper function to build update data from validated body
 function buildUpdateData(
 	validatedBody: z.infer<typeof CalendarEventUpdateSchema>,
-): Partial<typeof newTeamEvents.$inferInsert> {
-	const updateData: Partial<typeof newTeamEvents.$inferInsert> = {
+): Partial<typeof teamEvents.$inferInsert> {
+	const updateData: Partial<typeof teamEvents.$inferInsert> = {
 		updatedAt: new Date().toISOString(),
 	};
 
@@ -106,15 +106,14 @@ function buildUpdateData(
 	if (validatedBody.description !== undefined) {
 		updateData.description = validatedBody.description;
 	}
-	if (validatedBody.start_time !== undefined) {
-		updateData.startTime = validatedBody.start_time
-			? new Date(validatedBody.start_time).toISOString()
-			: null;
+	if (
+		validatedBody.start_time !== undefined &&
+		validatedBody.start_time !== null
+	) {
+		updateData.startTime = new Date(validatedBody.start_time).toISOString();
 	}
-	if (validatedBody.end_time !== undefined) {
-		updateData.endTime = validatedBody.end_time
-			? new Date(validatedBody.end_time).toISOString()
-			: null;
+	if (validatedBody.end_time !== undefined && validatedBody.end_time !== null) {
+		updateData.endTime = new Date(validatedBody.end_time).toISOString();
 	}
 	if (validatedBody.location !== undefined) {
 		updateData.location = validatedBody.location;
@@ -123,7 +122,7 @@ function buildUpdateData(
 		updateData.eventType = validatedBody.event_type;
 	}
 	if (validatedBody.is_all_day !== undefined) {
-		updateData.isAllDay = validatedBody.is_all_day;
+		updateData.allDay = validatedBody.is_all_day;
 	}
 	if (validatedBody.is_recurring !== undefined) {
 		updateData.isRecurring = validatedBody.is_recurring;
@@ -168,7 +167,7 @@ export async function DELETE(
 		}
 
 		// Delete the event using Drizzle ORM
-		await dbPg.delete(newTeamEvents).where(eq(newTeamEvents.id, eventId));
+		await dbPg.delete(teamEvents).where(eq(teamEvents.id, eventId));
 
 		return NextResponse.json({ success: true });
 	} catch (error) {
@@ -255,9 +254,9 @@ export async function PUT(
 
 		// Update the event using Drizzle ORM
 		await dbPg
-			.update(newTeamEvents)
+			.update(teamEvents)
 			.set(updateData)
-			.where(eq(newTeamEvents.id, eventId));
+			.where(eq(teamEvents.id, eventId));
 
 		return NextResponse.json({ success: true });
 	} catch (error) {

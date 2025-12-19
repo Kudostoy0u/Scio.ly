@@ -1,30 +1,44 @@
 import {
 	acceptLinkInvitation,
 	acceptPendingInvite,
+	addComment,
+	addTimer,
 	archiveTeam,
 	cancelLinkInvitation,
+	createAssignment,
 	createInvitation,
 	createLinkInvitation,
+	createStreamPost,
 	createSubteam,
 	createTeamWithDefaultSubteam,
 	declineInvite,
 	declineLinkInvitation,
+	deleteAssignment,
+	deleteComment,
+	deleteStreamPost,
 	deleteSubteam,
+	getActiveTimers,
+	getStreamPosts,
 	getTeamFullBySlug,
 	getTeamMetaBySlug,
+	getUpcomingTournaments,
 	joinTeamByCode,
 	kickMemberFromTeam,
 	leaveTeam,
+	listAssignments,
 	listPendingInvitesForUser,
 	listPendingLinkInvitesForUser,
 	listTeamsForUser,
 	promoteToRole,
 	removeRosterEntry,
+	removeTimer,
 	renameSubteam,
 	replaceRosterEntries,
+	updateStreamPost,
 	upsertRosterEntry,
-} from "@/lib/server/teams-v2";
+} from "@/lib/server/teams";
 import { protectedProcedure, router } from "@/lib/trpc/server";
+import logger from "@/lib/utils/logging/logger";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
@@ -35,7 +49,51 @@ const rosterEntrySchema = z.object({
 	userId: z.string().uuid().optional().nullable(),
 });
 
+const assignmentQuestionSchema = z.object({
+	questionText: z.string().min(1),
+	questionType: z.enum(["multiple_choice", "free_response", "codebusters"]),
+	options: z.array(z.string()).optional(),
+	correctAnswer: z.string().optional(),
+	points: z.number().int().min(1).optional(),
+	imageData: z.string().optional().nullable(),
+	difficulty: z.number().optional(),
+});
+
 export const teamsRouter = router({
+	assignments: protectedProcedure
+		.input(z.object({ teamSlug: z.string() }))
+		.query(async ({ ctx, input }) => {
+			return listAssignments(input.teamSlug, ctx.user.id);
+		}),
+
+	createAssignment: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string(),
+				title: z.string().min(1),
+				description: z.string().optional().nullable(),
+				assignmentType: z.enum(["task", "quiz", "exam"]).optional(),
+				dueDate: z.string().optional().nullable(),
+				eventName: z.string().optional().nullable(),
+				timeLimitMinutes: z.number().int().optional().nullable(),
+				questions: z.array(assignmentQuestionSchema).optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			return createAssignment(input.teamSlug, ctx.user.id, input);
+		}),
+
+	deleteAssignment: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string(),
+				assignmentId: z.string().uuid(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			return deleteAssignment(input.teamSlug, input.assignmentId, ctx.user.id);
+		}),
+
 	listUserTeams: protectedProcedure.query(async ({ ctx }) => {
 		try {
 			console.log("[TRPC listUserTeams] Request:", { userId: ctx.user.id });
@@ -114,20 +172,71 @@ export const teamsRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const created = await createTeamWithDefaultSubteam({
+			logger.dev.structured("info", "[TRPC createTeam] Request", {
+				userId: ctx.user.id,
 				school: input.school,
 				division: input.division,
-				createdBy: ctx.user.id,
-				supabaseUser: ctx.user,
 			});
-			return created;
+
+			try {
+				const created = await createTeamWithDefaultSubteam({
+					school: input.school,
+					division: input.division,
+					createdBy: ctx.user.id,
+					supabaseUser: ctx.user,
+				});
+
+				logger.dev.structured("info", "[TRPC createTeam] Success", {
+					teamId: created.id,
+					slug: created.slug,
+				});
+
+				return created;
+			} catch (error) {
+				logger.dev.error(
+					"[TRPC createTeam] Error",
+					error instanceof Error ? error : new Error(String(error)),
+					{
+						userId: ctx.user.id,
+						school: input.school,
+						division: input.division,
+					},
+				);
+				logger.error("[TRPC createTeam] Error", error);
+				throw error;
+			}
 		}),
 
 	joinTeam: protectedProcedure
 		.input(z.object({ code: z.string().min(2) }))
 		.mutation(async ({ ctx, input }) => {
-			const joined = await joinTeamByCode(input.code, ctx.user.id);
-			return joined;
+			logger.dev.structured("info", "[TRPC joinTeam] Request", {
+				userId: ctx.user.id,
+				code: input.code,
+			});
+
+			try {
+				const joined = await joinTeamByCode(input.code, ctx.user.id, ctx.user);
+
+				logger.dev.structured("info", "[TRPC joinTeam] Success", {
+					teamId: joined.id,
+					slug: joined.slug,
+					userId: ctx.user.id,
+				});
+
+				return joined;
+			} catch (error) {
+				logger.dev.error(
+					"[TRPC joinTeam] Error",
+					error instanceof Error ? error : new Error(String(error)),
+					{
+						userId: ctx.user.id,
+						code: input.code,
+					},
+				);
+				logger.error("[TRPC joinTeam] Error", error);
+				throw error;
+			}
 		}),
 
 	acceptInvite: protectedProcedure
@@ -531,5 +640,130 @@ export const teamsRouter = router({
 				console.error("[TRPC cancelLinkInvite] Error:", error);
 				throw error;
 			}
+		}),
+
+	getStream: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				subteamId: z.string().uuid(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			return getStreamPosts(input.teamSlug, input.subteamId, ctx.user.id);
+		}),
+
+	createPost: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				subteamId: z.string().uuid(),
+				content: z.string().min(1),
+				showTournamentTimer: z.boolean().optional(),
+				tournamentId: z.string().uuid().optional().nullable(),
+				attachmentUrl: z.string().url().optional().nullable(),
+				attachmentTitle: z.string().optional().nullable(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			return createStreamPost(input.teamSlug, input, ctx.user.id);
+		}),
+
+	updatePost: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				postId: z.string().uuid(),
+				content: z.string().min(1),
+				attachmentUrl: z.string().url().optional().nullable(),
+				attachmentTitle: z.string().optional().nullable(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			return updateStreamPost(input.teamSlug, input, ctx.user.id);
+		}),
+
+	deletePost: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				postId: z.string().uuid(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			return deleteStreamPost(input.teamSlug, input.postId, ctx.user.id);
+		}),
+
+	addComment: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				postId: z.string().uuid(),
+				content: z.string().min(1),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			return addComment(input.teamSlug, input, ctx.user.id);
+		}),
+
+	deleteComment: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				commentId: z.string().uuid(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			return deleteComment(input.teamSlug, input.commentId, ctx.user.id);
+		}),
+
+	getTimers: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				subteamId: z.string().uuid(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			return getActiveTimers(input.teamSlug, input.subteamId, ctx.user.id);
+		}),
+
+	getTournaments: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				subteamId: z.string().uuid(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			return getUpcomingTournaments(
+				input.teamSlug,
+				input.subteamId,
+				ctx.user.id,
+			);
+		}),
+
+	addTimer: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				subteamId: z.string().uuid(),
+				eventId: z.string().min(1),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			return addTimer(input.teamSlug, input, ctx.user.id);
+		}),
+
+	removeTimer: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				subteamId: z.string().uuid(),
+				eventId: z.string().min(1),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			return removeTimer(input.teamSlug, input, ctx.user.id);
 		}),
 });

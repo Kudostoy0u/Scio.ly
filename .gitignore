@@ -41,6 +41,6 @@ yarn-error.log*
 next-env.d.ts
 results
 # IDE
-.cursor
+# allow: .cursor
 .vscode
 .claude

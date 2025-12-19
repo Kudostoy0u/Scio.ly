@@ -3,8 +3,8 @@ import { dbPg } from "@/lib/db";
 import { getServerUser } from "@/lib/supabaseServer";
 import {
 	type TeamAccessResult,
-	getTeamAccessCockroach,
-	hasLeadershipAccessCockroach,
+	getTeamAccess,
+	hasLeadershipAccess,
 } from "@/lib/utils/teams/access";
 import { resolveTeamSlugToUnits } from "@/lib/utils/teams/resolver";
 import type { User } from "@supabase/supabase-js";
@@ -20,8 +20,8 @@ vi.mock("@/lib/supabaseServer", () => ({
 }));
 
 vi.mock("@/lib/utils/teams/access", () => ({
-	getTeamAccessCockroach: vi.fn(),
-	hasLeadershipAccessCockroach: vi.fn(),
+	getTeamAccess: vi.fn(),
+	hasLeadershipAccess: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -44,10 +44,8 @@ vi.mock("@/lib/utils/teams/resolver", () => ({
 }));
 
 const mockGetServerUser = vi.mocked(getServerUser);
-const mockGetTeamAccessCockroach = vi.mocked(getTeamAccessCockroach);
-const mockHasLeadershipAccessCockroach = vi.mocked(
-	hasLeadershipAccessCockroach,
-);
+const mockGetTeamAccess = vi.mocked(getTeamAccess);
+const mockHasLeadershipAccess = vi.mocked(hasLeadershipAccess);
 const mockDbPg = vi.mocked(dbPg) as typeof dbPg & {
 	select: ReturnType<typeof vi.fn>;
 	insert: ReturnType<typeof vi.fn>;
@@ -76,8 +74,8 @@ describe("/api/teams/[teamId]/timers", () => {
 
 		// Default mock for resolveTeamSlugToUnits
 		mockResolveTeamSlugToUnits.mockResolvedValue({
-			groupId: mockGroupId,
-			teamUnitIds: [mockSubteamId],
+			teamId: mockGroupId,
+			subteamIds: [mockSubteamId],
 		});
 
 		// Reset dbPg mocks
@@ -142,13 +140,11 @@ describe("/api/teams/[teamId]/timers", () => {
 
 		it("should return 403 when user has no access", async () => {
 			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
-			mockGetTeamAccessCockroach.mockResolvedValue({
+			mockGetTeamAccess.mockResolvedValue({
 				hasAccess: false,
 				isCreator: false,
-				hasSubteamMembership: false,
 				hasRosterEntries: false,
-				subteamMemberships: [],
-				rosterSubteams: [],
+				memberships: [],
 			} as TeamAccessResult);
 
 			const request = new NextRequest(
@@ -165,14 +161,11 @@ describe("/api/teams/[teamId]/timers", () => {
 
 		it("should return timers when user has access", async () => {
 			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
-			mockGetTeamAccessCockroach.mockResolvedValue({
+			mockGetTeamAccess.mockResolvedValue({
 				hasAccess: true,
 				isCreator: false,
-				hasSubteamMembership: true,
 				hasRosterEntries: false,
-				subteamRole: "captain",
-				subteamMemberships: [],
-				rosterSubteams: [],
+				memberships: [],
 			});
 
 			// Mock Drizzle ORM chain for timers query
@@ -215,14 +208,11 @@ describe("/api/teams/[teamId]/timers", () => {
 
 		it("should return empty array when no timers exist", async () => {
 			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
-			mockGetTeamAccessCockroach.mockResolvedValue({
+			mockGetTeamAccess.mockResolvedValue({
 				hasAccess: true,
 				isCreator: false,
-				hasSubteamMembership: true,
 				hasRosterEntries: false,
-				subteamRole: "captain",
-				subteamMemberships: [],
-				rosterSubteams: [],
+				memberships: [],
 			});
 
 			// Mock empty timers query
@@ -276,7 +266,7 @@ describe("/api/teams/[teamId]/timers", () => {
 
 		it("should return 403 when user has no leadership access", async () => {
 			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
-			mockHasLeadershipAccessCockroach.mockResolvedValue(false);
+			mockHasLeadershipAccess.mockResolvedValue(false);
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/timers`,
@@ -301,7 +291,7 @@ describe("/api/teams/[teamId]/timers", () => {
 
 		it("should create timer when user has leadership access", async () => {
 			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
-			mockHasLeadershipAccessCockroach.mockResolvedValue(true);
+			mockHasLeadershipAccess.mockResolvedValue(true);
 
 			// Mock Drizzle ORM queries in sequence:
 			// 1. Subteam lookup
@@ -379,7 +369,7 @@ describe("/api/teams/[teamId]/timers", () => {
 
 		it("should handle missing required fields", async () => {
 			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
-			mockHasLeadershipAccessCockroach.mockResolvedValue(true);
+			mockHasLeadershipAccess.mockResolvedValue(true);
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/timers`,
@@ -433,7 +423,7 @@ describe("/api/teams/[teamId]/timers", () => {
 
 		it("should return 403 when user has no leadership access", async () => {
 			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
-			mockHasLeadershipAccessCockroach.mockResolvedValue(false);
+			mockHasLeadershipAccess.mockResolvedValue(false);
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/timers`,
@@ -458,7 +448,7 @@ describe("/api/teams/[teamId]/timers", () => {
 
 		it("should delete timer when user has leadership access", async () => {
 			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
-			mockHasLeadershipAccessCockroach.mockResolvedValue(true);
+			mockHasLeadershipAccess.mockResolvedValue(true);
 
 			// Mock Drizzle ORM delete query
 			mockDbPg.delete.mockReturnValue({
@@ -488,7 +478,7 @@ describe("/api/teams/[teamId]/timers", () => {
 
 		it("should handle missing required fields", async () => {
 			mockGetServerUser.mockResolvedValue({ id: mockUserId } as User);
-			mockHasLeadershipAccessCockroach.mockResolvedValue(true);
+			mockHasLeadershipAccess.mockResolvedValue(true);
 
 			const request = new NextRequest(
 				`http://localhost:3000/api/teams/${mockTeamId}/timers`,

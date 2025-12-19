@@ -29,13 +29,13 @@ export default async function TeamsPage(ctx: {
     // Double-check that the team actually exists in the new system
     try {
       const { dbPg } = await import("@/lib/db");
-      const { newTeamGroups } = await import("@/lib/db/schema");
+      const { teams } = await import("@/lib/db/schema");
       const { eq } = await import("drizzle-orm");
 
       const groupResult = await dbPg
-        .select({ id: newTeamGroups.id })
-        .from(newTeamGroups)
-        .where(eq(newTeamGroups.slug, auto.slug));
+        .select({ id: teams.id })
+        .from(teams)
+        .where(eq(teams.slug, auto.slug));
 
       if (groupResult.length > 0) {
         redirect(`/teams/${auto.slug}`);

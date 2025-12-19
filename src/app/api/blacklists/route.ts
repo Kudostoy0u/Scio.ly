@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { questions as questionsTable } from "@/lib/db/schema";
-import { blacklists as blacklistsTable } from "@/lib/db/schema/core";
+import { blacklists as blacklistsTable } from "@/lib/db/schema";
 import type { ApiResponse, BlacklistRequest } from "@/lib/types/api";
 import { desc, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";

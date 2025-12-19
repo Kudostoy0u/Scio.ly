@@ -36,8 +36,8 @@ describe("/api/teams/calendar/events", () => {
 		it("should resolve team slug to team unit IDs and fetch events", async () => {
 			const mockUser = { id: "user-123" } as User;
 			const mockTeamInfo = {
-				groupId: "group-123",
-				teamUnitIds: ["unit-1", "unit-2"],
+				teamId: "group-123",
+				subteamIds: ["unit-1", "unit-2"],
 			};
 			const mockEvents = [
 				{
@@ -107,8 +107,8 @@ describe("/api/teams/calendar/events", () => {
 		it("should return empty events when no team units found", async () => {
 			const mockUser = { id: "user-123" } as User;
 			const mockTeamInfo = {
-				groupId: "group-123",
-				teamUnitIds: [],
+				teamId: "group-123",
+				subteamIds: [],
 			};
 
 			mockGetServerUser.mockResolvedValue(mockUser);
@@ -143,8 +143,8 @@ describe("/api/teams/calendar/events", () => {
 		it("should resolve team slug to UUID when creating event", async () => {
 			const mockUser = { id: "user-123" } as User;
 			const mockTeamInfo = {
-				groupId: "group-123",
-				teamUnitIds: ["unit-1", "unit-2"],
+				teamId: "group-123",
+				subteamIds: ["unit-1", "unit-2"],
 			};
 
 			mockGetServerUser.mockResolvedValue(mockUser);

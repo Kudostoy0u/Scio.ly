@@ -66,10 +66,6 @@ export interface StreamPost {
 	attachment_url: string | null;
 	attachment_title: string | null;
 	comments: StreamComment[];
-	// Legacy fields for backward compatibility
-	author?: string;
-	title?: string;
-	type?: string;
 }
 
 export interface Assignment {

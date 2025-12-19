@@ -30,11 +30,9 @@ export function createTestTeam(
 	const userCode = overrides?.userCode || `USER-${uniqueSuffix}`;
 	const school = overrides?.school || "Test School";
 	const division = overrides?.division || "C";
-	const teamIdString = overrides?.slug
-		? `${overrides.slug}-team`
-		: `team-${uniqueSuffix}`;
 	const groupId = overrides?.groupId ?? nextId();
 	const subteamId = overrides?.subteamId ?? nextId();
+	const teamIdString = overrides?.teamId ?? groupId;
 
 	mockDb.teamGroups.set(groupId, {
 		id: groupId,
@@ -46,8 +44,8 @@ export function createTestTeam(
 
 	mockDb.teamUnits.set(subteamId, {
 		id: subteamId,
-		groupId,
-		teamId: teamIdString,
+		teamId: groupId,
+		name: "A",
 		description: overrides?.description ?? "Test Subteam",
 		captainCode,
 		userCode,
@@ -63,6 +61,7 @@ export function createTestTeam(
 
 	return {
 		groupId,
+		teamId: teamIdString,
 		subteamId,
 		slug,
 		captainCode,
@@ -89,30 +88,43 @@ const rosterKey = (teamUnitId: string, eventName: string, slotIndex: number) =>
 	`${teamUnitId}:${eventName}:${slotIndex}`;
 
 export function createRosterEntry(
-	teamUnitId: string,
+	subteamId: string,
 	eventName: string,
 	slotIndex: number,
 	studentName: string,
 	userId?: string,
 ): void {
-	mockDb.rosterEntries.set(rosterKey(teamUnitId, eventName, slotIndex), {
-		teamUnitId,
+	const id = nextId();
+	// Resolve teamId from subteamId
+	const subteam = mockDb.teamUnits.get(subteamId);
+	const teamId = subteam?.teamId ?? subteamId;
+
+	mockDb.rosterEntries.set(rosterKey(subteamId, eventName, slotIndex), {
+		id,
+		teamId,
+		subteamId,
 		eventName,
 		slotIndex,
 		studentName,
+		displayName: studentName,
 		userId: userId ?? null,
 	});
 }
 
 export function createStreamPost(
-	teamUnitId: string,
+	subteamId: string,
 	authorId: string,
 	content: string,
 ): string {
 	const postId = nextId("post");
+	// Resolve teamId from subteamId
+	const subteam = mockDb.teamUnits.get(subteamId);
+	const teamId = subteam?.teamId ?? subteamId;
+
 	mockDb.streamPosts.set(postId, {
 		id: postId,
-		teamUnitId,
+		teamId,
+		subteamId,
 		authorId,
 		content,
 	});

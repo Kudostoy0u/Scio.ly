@@ -1,7 +1,7 @@
 import type {
 	TeamFullData,
 	TeamMember as V2TeamMember,
-} from "@/lib/server/teams-v2";
+} from "@/lib/server/teams";
 import type { TeamMember, TeamStoreActions, TeamStoreState } from "../../types";
 import { CACHE_DURATIONS } from "../../types";
 import { fetchWithDeduplication, handleApiError } from "../../utils";
@@ -41,7 +41,9 @@ export const createFetchMembersAction = (
 				const full = (await loadFullTeam(teamSlug)) as TeamFullData;
 				const filtered =
 					subteamId && subteamId !== "all"
-						? full.members.filter((m) => m.subteamId === subteamId)
+						? full.members.filter(
+								(m: V2TeamMember) => m.subteamId === subteamId,
+							)
 						: full.members;
 				return filtered.map(
 					(member: V2TeamMember): TeamMember => ({

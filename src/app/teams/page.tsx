@@ -21,27 +21,25 @@ async function getAutoLinkSelection() {
 		}
 
 		const { dbPg } = await import("@/lib/db");
-		const { teamsMembership, teamsTeam } = await import(
-			"@/lib/db/schema/teams_v2"
-		);
+		const { teamMemberships, teams } = await import("@/lib/db/schema");
 		const { and, desc, eq } = await import("drizzle-orm");
 
 		const primaryMembership = await dbPg
 			.select({
-				teamId: teamsTeam.id,
-				school: teamsTeam.school,
-				division: teamsTeam.division,
-				slug: teamsTeam.slug,
+				teamId: teams.id,
+				school: teams.school,
+				division: teams.division,
+				slug: teams.slug,
 			})
-			.from(teamsMembership)
-			.innerJoin(teamsTeam, eq(teamsMembership.teamId, teamsTeam.id))
+			.from(teamMemberships)
+			.innerJoin(teams, eq(teamMemberships.teamId, teams.id))
 			.where(
 				and(
-					eq(teamsMembership.userId, user.id),
-					eq(teamsMembership.status, "active"),
+					eq(teamMemberships.userId, user.id),
+					eq(teamMemberships.status, "active"),
 				),
 			)
-			.orderBy(desc(teamsMembership.joinedAt))
+			.orderBy(desc(teamMemberships.joinedAt))
 			.limit(1);
 
 		return primaryMembership[0] ?? null;
