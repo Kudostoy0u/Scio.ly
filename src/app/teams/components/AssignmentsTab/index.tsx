@@ -1,16 +1,15 @@
 "use client";
 
 import { useTheme } from "@/app/contexts/ThemeContext";
-import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { trpc } from "@/lib/trpc/client";
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import AssignmentViewerModal from "../AssignmentViewerModal";
-import CreateAssignmentModal from "./CreateAssignmentModal";
+import EnhancedAssignmentCreator from "../EnhancedAssignmentCreator";
 import { AssignmentCard } from "./AssignmentCard";
 import type { Assignment, AssignmentsTabProps } from "./types";
-import { clearAssignmentData, hasAssignmentProgress } from "./utils";
+import { hasAssignmentProgress } from "./utils";
 
 export default function AssignmentsTab({
 	teamSlug,
@@ -35,9 +34,43 @@ export default function AssignmentsTab({
 		data: assignments = [],
 		isLoading: loading,
 		error,
-	} = trpc.teams.assignments.useQuery({ teamSlug });
+	} = trpc.teams.assignments.useQuery(
+		{ teamSlug },
+		{
+			refetchOnMount: true,
+			refetchOnWindowFocus: true,
+		},
+	);
 
 	const deleteAssignmentMutation = trpc.teams.deleteAssignment.useMutation();
+
+	// Listen for assignment submission events to invalidate cache
+	useEffect(() => {
+		const handleAssignmentSubmitted = (event: Event) => {
+			const customEvent = event as CustomEvent<{
+				teamSlug: string;
+				assignmentId?: string;
+			}>;
+			if (customEvent.detail?.teamSlug === teamSlug) {
+				// Invalidate assignments list
+				utils.teams.assignments.invalidate({ teamSlug });
+				// Invalidate assignment analytics if assignmentId is provided
+				if (customEvent.detail.assignmentId) {
+					utils.teams.getAssignmentAnalytics.invalidate({
+						assignmentId: customEvent.detail.assignmentId,
+					});
+				}
+			}
+		};
+
+		window.addEventListener("assignmentSubmitted", handleAssignmentSubmitted);
+		return () => {
+			window.removeEventListener(
+				"assignmentSubmitted",
+				handleAssignmentSubmitted,
+			);
+		};
+	}, [teamSlug, utils]);
 
 	const handleDeleteAssignment = async (assignmentId: string) => {
 		try {
@@ -59,43 +92,11 @@ export default function AssignmentsTab({
 	};
 
 	const handleStartAssignment = (assignmentId: string) => {
-		window.location.href = `/assign-new/${assignmentId}`;
+		window.location.href = `/test?assignmentId=${assignmentId}`;
 	};
 
 	const handleViewAssignment = (assignmentId: string) => {
 		window.location.href = `/test?assignmentId=${assignmentId}&viewResults=true`;
-	};
-
-	const handleDeclineAssignment = async (assignmentId: string) => {
-		try {
-			// TODO: Add decline assignment tRPC procedure
-			const response = await fetch(
-				`/api/teams/${teamSlug}/assignments/${assignmentId}/decline`,
-				{
-					method: "POST",
-				},
-			);
-
-			if (response.ok) {
-				clearAssignmentData(assignmentId);
-
-				const currentAssignmentId = SyncLocalStorage.getItem(
-					"currentAssignmentId",
-				);
-				if (currentAssignmentId === assignmentId) {
-					SyncLocalStorage.removeItem("currentAssignmentId");
-				}
-
-				utils.teams.assignments.invalidate({ teamSlug });
-				toast.success("Assignment declined");
-			} else {
-				const errorData = await response.json();
-				const errorMessage = errorData.error || "Failed to decline assignment";
-				toast.error(errorMessage);
-			}
-		} catch (_error) {
-			toast.error("Failed to decline assignment");
-		}
 	};
 
 	if (loading) {
@@ -185,9 +186,6 @@ export default function AssignmentsTab({
 								onViewAssignment={() =>
 									handleViewAssignment(assignmentTyped.id)
 								}
-								onDeclineAssignment={() =>
-									handleDeclineAssignment(assignmentTyped.id)
-								}
 								onViewAnalytics={() =>
 									setSelectedAssignmentId(assignmentTyped.id)
 								}
@@ -214,11 +212,15 @@ export default function AssignmentsTab({
 			)}
 
 			{showCreateModal && (
-				<CreateAssignmentModal
-					isOpen={showCreateModal}
-					onClose={() => setShowCreateModal(false)}
-					teamSlug={teamSlug}
-					activeSubteamId={activeSubteamId}
+				<EnhancedAssignmentCreator
+					teamId={teamSlug}
+					subteamId={activeSubteamId || undefined}
+					onAssignmentCreated={() => {
+						utils.teams.assignments.invalidate({ teamSlug });
+						setShowCreateModal(false);
+					}}
+					onCancel={() => setShowCreateModal(false)}
+					darkMode={darkMode}
 				/>
 			)}
 		</div>

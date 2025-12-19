@@ -16,6 +16,7 @@ export interface RosterMember {
 	isLinked: boolean;
 	userEmail?: string;
 	username?: string;
+	roster_entry_id?: string; // For unique identification of roster entries
 }
 
 export interface AssignmentCreatorProps {
@@ -30,7 +31,6 @@ export interface AssignmentCreatorProps {
 export interface AssignmentDetails {
 	title: string;
 	description: string;
-	assignmentType: "homework" | "project" | "study" | "other";
 	dueDate: string;
 	points: number;
 	timeLimitMinutes: number;
@@ -65,7 +65,6 @@ export interface AssignmentStepProps {
 export interface AssignmentDetailsStepProps extends AssignmentStepProps {
 	details: AssignmentDetails;
 	onDetailsChange: (details: Partial<AssignmentDetails>) => void;
-	prefillEventName?: string;
 	availableEvents: string[];
 }
 

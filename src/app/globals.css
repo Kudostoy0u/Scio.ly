@@ -134,6 +134,11 @@ body {
 	color: var(--foreground);
 	background: var(--background);
 	font-family: "Poppins", sans-serif !important;
+	overflow-x: hidden;
+}
+
+html {
+	overflow-x: hidden;
 }
 
 /* Keyframes for the Background Wave Animation */

@@ -122,9 +122,15 @@ export default function RosterSelectionStep({
 				</div>
 			) : (
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
-					{rosterMembers.map((member) => (
+					{rosterMembers.map((member, index) => (
 						<button
-							key={member.student_name}
+							key={
+								member.user_id
+									? `user_${member.user_id}`
+									: member.roster_entry_id
+										? `roster_${member.roster_entry_id}`
+										: `unlinked_${member.student_name}_${index}`
+							}
 							type="button"
 							className={`p-3 border rounded-lg transition-colors text-left w-full ${
 								member.isLinked

@@ -29,7 +29,7 @@ export const DifficultySchema = z
 
 // Base question schema
 export const BaseQuestionSchema = z.object({
-	id: z.string().uuid().optional(),
+	id: z.uuid().optional(),
 	question: z.string().min(1, "Question text is required"),
 	type: z.enum(["mcq", "frq", "codebusters"]),
 	answers: z

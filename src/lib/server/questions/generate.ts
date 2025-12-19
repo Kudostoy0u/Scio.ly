@@ -4,11 +4,11 @@
  * Server-side implementation that directly calls API endpoints
  */
 
-import logger from "@/lib/utils/logging/logger";
+import { buildAbsoluteUrl } from "@/app/test/utils/questionMedia";
 import type { Question } from "@/app/utils/geminiService";
 import { difficultyRanges } from "@/app/utils/questionUtils";
 import { getMappedEventNameForApi } from "@/lib/utils/assessments/eventConfig";
-import { buildAbsoluteUrl } from "@/app/test/utils/questionMedia";
+import logger from "@/lib/utils/logging/logger";
 
 export interface QuestionGenerationParams {
 	eventName: string;
@@ -36,7 +36,7 @@ function buildServerApiParams(
 	const params = new URLSearchParams();
 	params.set("event", eventName);
 	params.set("limit", String(count));
-	
+
 	if (types === "multiple-choice") {
 		params.set("question_type", "mcq");
 	} else if (types === "free-response") {
@@ -44,17 +44,21 @@ function buildServerApiParams(
 	} else if (types === "both") {
 		// For "both", don't set question_type - API will return both
 	}
-	
+
 	if (division && division !== "any") {
 		params.set("division", division);
 	}
-	
+
 	if (subtopics && subtopics.length > 0) {
 		params.set("subtopics", subtopics.join(","));
 	}
-	
+
 	// Handle difficulties
-	if (difficulties && difficulties.length > 0 && !difficulties.includes("any")) {
+	if (
+		difficulties &&
+		difficulties.length > 0 &&
+		!difficulties.includes("any")
+	) {
 		const allRanges = difficulties
 			.map((d: string) => {
 				if (d in difficultyRanges) {
@@ -69,7 +73,7 @@ function buildServerApiParams(
 				return undefined;
 			})
 			.filter((r): r is { min: number; max: number } => r !== undefined);
-		
+
 		if (allRanges.length > 0) {
 			const minValue = Math.min(...allRanges.map((r) => r.min));
 			const maxValue = Math.max(...allRanges.map((r) => r.max));
@@ -77,7 +81,7 @@ function buildServerApiParams(
 			params.set("difficulty_max", maxValue.toFixed(2));
 		}
 	}
-	
+
 	return params;
 }
 
@@ -95,32 +99,43 @@ async function fetchBaseQuestionsServer(
 ): Promise<Question[]> {
 	// Apply event name mapping for API calls
 	const mappedEventName = getMappedEventNameForApi(eventName);
-	const params = buildServerApiParams(mappedEventName, count, types, division, difficulties, subtopics);
+	const params = buildServerApiParams(
+		mappedEventName,
+		count,
+		types,
+		division,
+		difficulties,
+		subtopics,
+	);
 	const apiUrl = `${origin}/api/questions?${params.toString()}`;
-	
+
 	logger.dev.structured("debug", "[fetchBaseQuestionsServer] Fetching", {
 		apiUrl,
 		eventName,
 		count,
 		types,
 	});
-	
+
 	const response = await fetch(apiUrl, {
 		cache: "no-store",
 	});
-	
+
 	if (!response.ok) {
-		throw new Error(`Failed to fetch questions: ${response.status} ${response.statusText}`);
+		throw new Error(
+			`Failed to fetch questions: ${response.status} ${response.statusText}`,
+		);
 	}
-	
+
 	const apiResponse = await response.json();
 	logger.dev.structured("debug", "[fetchBaseQuestionsServer] API response", {
 		responseKeys: Object.keys(apiResponse),
 		hasData: "data" in apiResponse,
-		dataLength: Array.isArray(apiResponse.data) ? apiResponse.data.length : "not array",
+		dataLength: Array.isArray(apiResponse.data)
+			? apiResponse.data.length
+			: "not array",
 		fullResponse: JSON.stringify(apiResponse).substring(0, 500),
 	});
-	
+
 	// Handle different response structures
 	let rawQuestions: unknown[] = [];
 	if (Array.isArray(apiResponse.data)) {
@@ -130,38 +145,48 @@ async function fetchBaseQuestionsServer(
 	} else if (Array.isArray(apiResponse.questions)) {
 		rawQuestions = apiResponse.questions;
 	}
-	
+
 	// Convert raw questions to Question format, extracting images
 	const questions: Question[] = rawQuestions.map((row) => {
 		const rowRecord = row as Record<string, unknown>;
 		// Extract image from images array if present
 		let imageData: string | undefined;
 		if (Array.isArray(rowRecord.images) && rowRecord.images.length > 0) {
-			const imageUrl = String(rowRecord.images[Math.floor(Math.random() * rowRecord.images.length)]);
+			const imageUrl = String(
+				rowRecord.images[Math.floor(Math.random() * rowRecord.images.length)],
+			);
 			imageData = buildAbsoluteUrl(imageUrl, origin);
 		} else if (rowRecord.imageData && typeof rowRecord.imageData === "string") {
 			imageData = buildAbsoluteUrl(rowRecord.imageData, origin);
 		} else if (rowRecord.imageUrl && typeof rowRecord.imageUrl === "string") {
 			imageData = buildAbsoluteUrl(rowRecord.imageUrl, origin);
 		}
-		
+
 		return {
 			id: typeof rowRecord.id === "string" ? rowRecord.id : undefined,
-			question: typeof rowRecord.question === "string" ? rowRecord.question : "",
-			options: Array.isArray(rowRecord.options) ? (rowRecord.options as string[]) : [],
-			answers: Array.isArray(rowRecord.answers) ? (rowRecord.answers as (number | string)[]) : [],
-			difficulty: typeof rowRecord.difficulty === "number" ? rowRecord.difficulty : 0.5,
+			question:
+				typeof rowRecord.question === "string" ? rowRecord.question : "",
+			options: Array.isArray(rowRecord.options)
+				? (rowRecord.options as string[])
+				: [],
+			answers: Array.isArray(rowRecord.answers)
+				? (rowRecord.answers as (number | string)[])
+				: [],
+			difficulty:
+				typeof rowRecord.difficulty === "number" ? rowRecord.difficulty : 0.5,
 			event: typeof rowRecord.event === "string" ? rowRecord.event : undefined,
-			subtopics: Array.isArray(rowRecord.subtopics) ? (rowRecord.subtopics as string[]) : [],
+			subtopics: Array.isArray(rowRecord.subtopics)
+				? (rowRecord.subtopics as string[])
+				: [],
 			imageData,
 		} as Question;
 	});
-	
+
 	logger.dev.structured("debug", "[fetchBaseQuestionsServer] Fetched", {
 		count: questions.length,
 		requested: count,
 	});
-	
+
 	return questions;
 }
 
@@ -183,28 +208,32 @@ async function fetchIdQuestionsServer(
 	const params = new URLSearchParams();
 	params.set("event", mappedEventName);
 	params.set("limit", String(count));
-	
+
 	if (types === "multiple-choice") {
 		params.set("question_type", "mcq");
 	} else if (types === "free-response") {
 		params.set("question_type", "frq");
 	}
-	
+
 	if (division && division !== "any") {
 		params.set("division", division);
 	}
-	
+
 	if (pureIdOnly) {
 		params.set("pure_id_only", "true");
 	}
-	
+
 	// Add rm_type filter for Rocks and Minerals if specified
 	if (rmTypeFilter && (rmTypeFilter === "rock" || rmTypeFilter === "mineral")) {
 		params.set("rm_type", rmTypeFilter);
 	}
-	
+
 	// Handle difficulties
-	if (difficulties && difficulties.length > 0 && !difficulties.includes("any")) {
+	if (
+		difficulties &&
+		difficulties.length > 0 &&
+		!difficulties.includes("any")
+	) {
 		const allRanges = difficulties
 			.map((d: string) => {
 				if (d in difficultyRanges) {
@@ -219,7 +248,7 @@ async function fetchIdQuestionsServer(
 				return undefined;
 			})
 			.filter((r): r is { min: number; max: number } => r !== undefined);
-		
+
 		if (allRanges.length > 0) {
 			const minValue = Math.min(...allRanges.map((r) => r.min));
 			const maxValue = Math.max(...allRanges.map((r) => r.max));
@@ -227,9 +256,9 @@ async function fetchIdQuestionsServer(
 			params.set("difficulty_max", maxValue.toFixed(2));
 		}
 	}
-	
+
 	const apiUrl = `${origin}/api/id-questions?${params.toString()}`;
-	
+
 	logger.dev.structured("debug", "[fetchIdQuestionsServer] Fetching", {
 		apiUrl,
 		eventName,
@@ -237,49 +266,61 @@ async function fetchIdQuestionsServer(
 		pureIdOnly,
 		rmTypeFilter,
 	});
-	
+
 	const response = await fetch(apiUrl, {
 		cache: "no-store",
 	});
-	
+
 	if (!response.ok) {
-		throw new Error(`Failed to fetch ID questions: ${response.status} ${response.statusText}`);
+		throw new Error(
+			`Failed to fetch ID questions: ${response.status} ${response.statusText}`,
+		);
 	}
-	
+
 	const apiResponse = await response.json();
 	const apiData = apiResponse as { data?: unknown[] };
 	const rawQuestions = apiData.data || [];
-	
+
 	// Convert raw questions to Question format, extracting images
 	const questions: Question[] = rawQuestions.map((row) => {
 		const rowRecord = row as Record<string, unknown>;
 		// Extract image from images array if present
 		let imageData: string | undefined;
 		if (Array.isArray(rowRecord.images) && rowRecord.images.length > 0) {
-			const imageUrl = String(rowRecord.images[Math.floor(Math.random() * rowRecord.images.length)]);
+			const imageUrl = String(
+				rowRecord.images[Math.floor(Math.random() * rowRecord.images.length)],
+			);
 			imageData = buildAbsoluteUrl(imageUrl, origin);
 		} else if (rowRecord.imageData && typeof rowRecord.imageData === "string") {
 			imageData = buildAbsoluteUrl(rowRecord.imageData, origin);
 		} else if (rowRecord.imageUrl && typeof rowRecord.imageUrl === "string") {
 			imageData = buildAbsoluteUrl(rowRecord.imageUrl, origin);
 		}
-		
+
 		return {
 			id: typeof rowRecord.id === "string" ? rowRecord.id : undefined,
-			question: typeof rowRecord.question === "string" ? rowRecord.question : "",
-			options: Array.isArray(rowRecord.options) ? (rowRecord.options as string[]) : [],
-			answers: Array.isArray(rowRecord.answers) ? (rowRecord.answers as (number | string)[]) : [],
-			difficulty: typeof rowRecord.difficulty === "number" ? rowRecord.difficulty : 0.5,
+			question:
+				typeof rowRecord.question === "string" ? rowRecord.question : "",
+			options: Array.isArray(rowRecord.options)
+				? (rowRecord.options as string[])
+				: [],
+			answers: Array.isArray(rowRecord.answers)
+				? (rowRecord.answers as (number | string)[])
+				: [],
+			difficulty:
+				typeof rowRecord.difficulty === "number" ? rowRecord.difficulty : 0.5,
 			event: typeof rowRecord.event === "string" ? rowRecord.event : undefined,
-			subtopics: Array.isArray(rowRecord.subtopics) ? (rowRecord.subtopics as string[]) : [],
+			subtopics: Array.isArray(rowRecord.subtopics)
+				? (rowRecord.subtopics as string[])
+				: [],
 			imageData,
 		} as Question;
 	});
-	
+
 	logger.dev.structured("debug", "[fetchIdQuestionsServer] Fetched", {
 		count: questions.length,
 	});
-	
+
 	return questions;
 }
 
@@ -321,7 +362,7 @@ export async function generateQuestionsForAssignment(
 ): Promise<Question[]> {
 	const startTime = Date.now();
 	const origin = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-	
+
 	logger.dev.structured("info", "[generateQuestionsForAssignment] Starting", {
 		eventName: params.eventName,
 		questionCount: params.questionCount,
@@ -334,19 +375,24 @@ export async function generateQuestionsForAssignment(
 	});
 
 	try {
-		const types = params.questionType === "both" ? "both" : params.questionType === "mcq" ? "multiple-choice" : "free-response";
+		const types =
+			params.questionType === "both"
+				? "both"
+				: params.questionType === "mcq"
+					? "multiple-choice"
+					: "free-response";
 		const division = params.division || "any";
 		const difficulties = params.difficulties || ["any"];
 		const idPercentage = params.idPercentage || 0;
 		const pureIdOnly = params.pureIdOnly || false;
 		const rmTypeFilter = params.rmTypeFilter;
 		const subtopics = params.subtopics;
-		
+
 		// Special handling for Anatomy & Physiology - split into thirds
 		const isAnatomyMain = params.eventName === "Anatomy & Physiology";
-		
+
 		let questions: Question[] = [];
-		
+
 		// Handle Anatomy & Physiology splitting
 		if (isAnatomyMain && !pureIdOnly) {
 			const countTarget = params.questionCount;
@@ -357,24 +403,28 @@ export async function generateQuestionsForAssignment(
 				perThird + (extra > 1 ? 1 : 0),
 				perThird,
 			];
-			
-			const anatomyEvents: [string, string, string] = [
+
+			const [anatomyEventEndo, anatomyEventNerv, anatomyEventSense] = [
 				"Anatomy - Endocrine",
 				"Anatomy - Nervous",
 				"Anatomy - Sense Organs",
-			];
-			
-			logger.dev.structured("info", "[generateQuestionsForAssignment] Splitting Anatomy & Physiology", {
-				totalCount: countTarget,
-				perThird,
-				extra,
-				wants,
-			});
-			
+			] as const;
+
+			logger.dev.structured(
+				"info",
+				"[generateQuestionsForAssignment] Splitting Anatomy & Physiology",
+				{
+					totalCount: countTarget,
+					perThird,
+					extra,
+					wants,
+				},
+			);
+
 			// Fetch questions from all three anatomy events
 			const [poolEndo, poolNerv, poolSense] = await Promise.all([
 				fetchBaseQuestionsServer(
-					anatomyEvents[0]!,
+					anatomyEventEndo,
 					perThird * 2, // Request more to ensure we have enough
 					types,
 					division,
@@ -383,7 +433,7 @@ export async function generateQuestionsForAssignment(
 					subtopics,
 				),
 				fetchBaseQuestionsServer(
-					anatomyEvents[1]!,
+					anatomyEventNerv,
 					perThird * 2,
 					types,
 					division,
@@ -392,7 +442,7 @@ export async function generateQuestionsForAssignment(
 					subtopics,
 				),
 				fetchBaseQuestionsServer(
-					anatomyEvents[2]!,
+					anatomyEventSense,
 					perThird * 2,
 					types,
 					division,
@@ -401,16 +451,22 @@ export async function generateQuestionsForAssignment(
 					subtopics,
 				),
 			]);
-			
+
 			// Deduplicate by question text and pick from each pool
 			const seen = new Set<string>();
-			const takeUniqueByText = (pool: Question[], count: number): Question[] => {
+			const takeUniqueByText = (
+				pool: Question[],
+				count: number,
+			): Question[] => {
 				const out: Question[] = [];
 				for (const q of pool) {
 					if (out.length >= count) {
 						break;
 					}
-					const text = typeof q.question === "string" ? q.question.trim().toLowerCase() : "";
+					const text =
+						typeof q.question === "string"
+							? q.question.trim().toLowerCase()
+							: "";
 					if (!text || seen.has(text)) {
 						continue;
 					}
@@ -419,24 +475,27 @@ export async function generateQuestionsForAssignment(
 				}
 				return out;
 			};
-			
+
 			const pickedEndo = takeUniqueByText(poolEndo, wants[0] || 0);
 			const pickedNerv = takeUniqueByText(poolNerv, wants[1] || 0);
 			const pickedSense = takeUniqueByText(poolSense, wants[2] || 0);
 			let pickedAll = pickedEndo.concat(pickedNerv).concat(pickedSense);
-			
+
 			// If we don't have enough, fill from leftovers
 			if (pickedAll.length < countTarget) {
 				const deficit = countTarget - pickedAll.length;
 				const leftovers = poolEndo.concat(poolNerv, poolSense).filter((q) => {
-					const text = typeof q.question === "string" ? q.question.trim().toLowerCase() : "";
+					const text =
+						typeof q.question === "string"
+							? q.question.trim().toLowerCase()
+							: "";
 					return text && !seen.has(text);
 				});
 				pickedAll = pickedAll.concat(leftovers.slice(0, deficit));
 			}
-			
+
 			questions = pickedAll.slice(0, countTarget);
-			
+
 			// Handle ID questions if needed
 			if (idPercentage > 0 && supportsIdEvent(params.eventName)) {
 				const idCount = Math.round((idPercentage / 100) * params.questionCount);
@@ -449,10 +508,10 @@ export async function generateQuestionsForAssignment(
 						idPerThird + (idExtra > 1 ? 1 : 0),
 						idPerThird,
 					];
-					
+
 					const [idEndo, idNerv, idSense] = await Promise.all([
 						fetchIdQuestionsServer(
-							anatomyEvents[0]!,
+							anatomyEventEndo,
 							idPerThird * 2,
 							types,
 							division,
@@ -462,7 +521,7 @@ export async function generateQuestionsForAssignment(
 							rmTypeFilter,
 						),
 						fetchIdQuestionsServer(
-							anatomyEvents[1]!,
+							anatomyEventNerv,
 							idPerThird * 2,
 							types,
 							division,
@@ -472,7 +531,7 @@ export async function generateQuestionsForAssignment(
 							rmTypeFilter,
 						),
 						fetchIdQuestionsServer(
-							anatomyEvents[2]!,
+							anatomyEventSense,
 							idPerThird * 2,
 							types,
 							division,
@@ -482,16 +541,22 @@ export async function generateQuestionsForAssignment(
 							rmTypeFilter,
 						),
 					]);
-					
+
 					// Deduplicate ID questions
 					const idSeen = new Set<string>();
-					const takeUniqueId = (pool: Question[], count: number): Question[] => {
+					const takeUniqueId = (
+						pool: Question[],
+						count: number,
+					): Question[] => {
 						const out: Question[] = [];
 						for (const q of pool) {
 							if (out.length >= count) {
 								break;
 							}
-							const text = typeof q.question === "string" ? q.question.trim().toLowerCase() : "";
+							const text =
+								typeof q.question === "string"
+									? q.question.trim().toLowerCase()
+									: "";
 							if (!text || idSeen.has(text)) {
 								continue;
 							}
@@ -500,14 +565,16 @@ export async function generateQuestionsForAssignment(
 						}
 						return out;
 					};
-					
+
 					const pickedIdEndo = takeUniqueId(idEndo, idWants[0] || 0);
 					const pickedIdNerv = takeUniqueId(idNerv, idWants[1] || 0);
 					const pickedIdSense = takeUniqueId(idSense, idWants[2] || 0);
-					const pickedIdAll = pickedIdEndo.concat(pickedIdNerv).concat(pickedIdSense);
-					
+					const pickedIdAll = pickedIdEndo
+						.concat(pickedIdNerv)
+						.concat(pickedIdSense);
+
 					questions = questions.concat(pickedIdAll.slice(0, idCount));
-					
+
 					// Shuffle combined questions
 					for (let i = questions.length - 1; i > 0; i--) {
 						const j = Math.floor(Math.random() * (i + 1));
@@ -537,7 +604,7 @@ export async function generateQuestionsForAssignment(
 			// Mixed questions
 			const idCount = Math.round((idPercentage / 100) * params.questionCount);
 			const regularCount = params.questionCount - idCount;
-			
+
 			const [regularQuestions, idQuestions] = await Promise.all([
 				regularCount > 0
 					? fetchBaseQuestionsServer(
@@ -563,7 +630,7 @@ export async function generateQuestionsForAssignment(
 						)
 					: Promise.resolve([]),
 			]);
-			
+
 			// Combine and shuffle
 			questions = [...regularQuestions, ...idQuestions];
 			// Simple shuffle
@@ -588,15 +655,19 @@ export async function generateQuestionsForAssignment(
 				origin,
 				subtopics,
 			);
-			
+
 			// If we got 0 questions, try fetching without type filter first
 			// This handles cases where the question_type filter is too restrictive
 			if (questions.length === 0 && types !== "both") {
-				logger.dev.structured("warn", "[generateQuestionsForAssignment] Got 0 questions, trying without type filter", {
-					eventName: params.eventName,
-					types,
-				});
-				
+				logger.dev.structured(
+					"warn",
+					"[generateQuestionsForAssignment] Got 0 questions, trying without type filter",
+					{
+						eventName: params.eventName,
+						types,
+					},
+				);
+
 				// Try fetching both types and filter client-side
 				const bothTypesQuestions = await fetchBaseQuestionsServer(
 					params.eventName,
@@ -607,42 +678,63 @@ export async function generateQuestionsForAssignment(
 					origin,
 					subtopics,
 				);
-				
-				logger.dev.structured("debug", "[generateQuestionsForAssignment] Fetched both types", {
-					count: bothTypesQuestions.length,
-				});
-				
+
+				logger.dev.structured(
+					"debug",
+					"[generateQuestionsForAssignment] Fetched both types",
+					{
+						count: bothTypesQuestions.length,
+					},
+				);
+
 				// Filter by type client-side
 				const filteredByType = bothTypesQuestions.filter((q) => {
 					const isMcq = Array.isArray(q.options) && q.options.length > 0;
 					if (types === "multiple-choice") {
 						return isMcq;
-					} else if (types === "free-response") {
+					}
+					if (types === "free-response") {
 						return !isMcq;
 					}
 					return true;
 				});
-				
-				logger.dev.structured("debug", "[generateQuestionsForAssignment] Filtered by type", {
-					beforeFilter: bothTypesQuestions.length,
-					afterFilter: filteredByType.length,
-					requestedType: types,
-				});
-				
+
+				logger.dev.structured(
+					"debug",
+					"[generateQuestionsForAssignment] Filtered by type",
+					{
+						beforeFilter: bothTypesQuestions.length,
+						afterFilter: filteredByType.length,
+						requestedType: types,
+					},
+				);
+
 				questions = filteredByType.slice(0, params.questionCount);
-				
-				logger.dev.structured("info", "[generateQuestionsForAssignment] After retry without type filter", {
-					finalCount: questions.length,
-					requested: params.questionCount,
-				});
-			} else if (questions.length > 0 && questions.length < params.questionCount && types !== "both") {
+
+				logger.dev.structured(
+					"info",
+					"[generateQuestionsForAssignment] After retry without type filter",
+					{
+						finalCount: questions.length,
+						requested: params.questionCount,
+					},
+				);
+			} else if (
+				questions.length > 0 &&
+				questions.length < params.questionCount &&
+				types !== "both"
+			) {
 				// If we got some but not enough, try to get more
-				logger.dev.structured("warn", "[generateQuestionsForAssignment] Got fewer questions than requested, trying to get more", {
-					got: questions.length,
-					requested: params.questionCount,
-					types,
-				});
-				
+				logger.dev.structured(
+					"warn",
+					"[generateQuestionsForAssignment] Got fewer questions than requested, trying to get more",
+					{
+						got: questions.length,
+						requested: params.questionCount,
+						types,
+					},
+				);
+
 				// Try fetching both types and filter client-side
 				const bothTypesQuestions = await fetchBaseQuestionsServer(
 					params.eventName,
@@ -653,33 +745,43 @@ export async function generateQuestionsForAssignment(
 					origin,
 					subtopics,
 				);
-				
+
 				// Filter by type client-side
 				const filteredByType = bothTypesQuestions.filter((q) => {
 					const isMcq = Array.isArray(q.options) && q.options.length > 0;
 					if (types === "multiple-choice") {
 						return isMcq;
-					} else if (types === "free-response") {
+					}
+					if (types === "free-response") {
 						return !isMcq;
 					}
 					return true;
 				});
-				
+
 				// Deduplicate by question text and combine
-				const existingTexts = new Set(questions.map(q => q.question?.trim().toLowerCase() || ""));
-				const uniqueAdditional = filteredByType.filter(
-					q => !existingTexts.has(q.question?.trim().toLowerCase() || "")
+				const existingTexts = new Set(
+					questions.map((q) => q.question?.trim().toLowerCase() || ""),
 				);
-				
-				questions = [...questions, ...uniqueAdditional].slice(0, params.questionCount);
-				
-				logger.dev.structured("info", "[generateQuestionsForAssignment] After retry to get more", {
-					finalCount: questions.length,
-					requested: params.questionCount,
-				});
+				const uniqueAdditional = filteredByType.filter(
+					(q) => !existingTexts.has(q.question?.trim().toLowerCase() || ""),
+				);
+
+				questions = [...questions, ...uniqueAdditional].slice(
+					0,
+					params.questionCount,
+				);
+
+				logger.dev.structured(
+					"info",
+					"[generateQuestionsForAssignment] After retry to get more",
+					{
+						finalCount: questions.length,
+						requested: params.questionCount,
+					},
+				);
 			}
 		}
-		
+
 		const duration = Date.now() - startTime;
 		logger.dev.structured("info", "[generateQuestionsForAssignment] Success", {
 			questionCount: questions.length,
@@ -705,4 +807,3 @@ export async function generateQuestionsForAssignment(
 		throw error;
 	}
 }
-

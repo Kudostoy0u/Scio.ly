@@ -2,8 +2,8 @@ import { generateQuestionsForAssignment } from "@/lib/server/questions/generate"
 import { assertCaptainAccess } from "@/lib/server/teams/shared";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import logger from "@/lib/utils/logging/logger";
-import { z } from "zod";
 import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 const QuestionGenerationRequestSchema = z.object({
 	event_name: z.string().min(1),
@@ -24,7 +24,10 @@ export async function POST(
 ) {
 	const startTime = Date.now();
 	try {
-		logger.dev.structured("info", "[POST /api/teams/[teamId]/assignments/generate-questions] Request started");
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Request started",
+		);
 
 		const supabase = await createSupabaseServerClient();
 		const {
@@ -33,30 +36,46 @@ export async function POST(
 		} = await supabase.auth.getUser();
 
 		if (authError || !user) {
-			logger.dev.structured("warn", "[POST /api/teams/[teamId]/assignments/generate-questions] Unauthorized", {
-				authError: authError?.message,
-			});
+			logger.dev.structured(
+				"warn",
+				"[POST /api/teams/[teamId]/assignments/generate-questions] Unauthorized",
+				{
+					authError: authError?.message,
+				},
+			);
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 		}
 
 		const { teamId } = await params; // This is actually a slug
-		logger.dev.structured("info", "[POST /api/teams/[teamId]/assignments/generate-questions] Parsing request", {
-			teamId,
-			userId: user.id,
-		});
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Parsing request",
+			{
+				teamId,
+				userId: user.id,
+			},
+		);
 
 		const body = await request.json();
-		logger.dev.structured("debug", "[POST /api/teams/[teamId]/assignments/generate-questions] Request body", {
-			body: JSON.stringify(body),
-		});
+		logger.dev.structured(
+			"debug",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Request body",
+			{
+				body: JSON.stringify(body),
+			},
+		);
 
 		// Validate request body
 		const validatedRequest = QuestionGenerationRequestSchema.parse(body);
-		logger.dev.structured("info", "[POST /api/teams/[teamId]/assignments/generate-questions] Request validated", {
-			event_name: validatedRequest.event_name,
-			question_count: validatedRequest.question_count,
-			question_types: validatedRequest.question_types,
-		});
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Request validated",
+			{
+				event_name: validatedRequest.event_name,
+				question_count: validatedRequest.question_count,
+				question_types: validatedRequest.question_types,
+			},
+		);
 
 		const {
 			event_name,
@@ -71,12 +90,19 @@ export async function POST(
 		} = validatedRequest;
 
 		// Verify user is captain/admin
-		logger.dev.structured("info", "[POST /api/teams/[teamId]/assignments/generate-questions] Verifying captain access", {
-			teamId,
-			userId: user.id,
-		});
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Verifying captain access",
+			{
+				teamId,
+				userId: user.id,
+			},
+		);
 		await assertCaptainAccess(teamId, user.id);
-		logger.dev.structured("info", "[POST /api/teams/[teamId]/assignments/generate-questions] Captain access verified");
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Captain access verified",
+		);
 
 		// Convert question_types array to single type for practice logic
 		const questionType: "mcq" | "frq" | "both" =
@@ -86,15 +112,19 @@ export async function POST(
 					? "mcq"
 					: "frq";
 
-		logger.dev.structured("info", "[POST /api/teams/[teamId]/assignments/generate-questions] Generating questions", {
-			eventName: event_name,
-			questionCount: question_count,
-			questionType,
-			division: division || "any",
-			idPercentage: idPercentage || 0,
-			pureIdOnly: pureIdOnly || false,
-			difficulties: difficulties || ["any"],
-		});
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Generating questions",
+			{
+				eventName: event_name,
+				questionCount: question_count,
+				questionType,
+				division: division || "any",
+				idPercentage: idPercentage || 0,
+				pureIdOnly: pureIdOnly || false,
+				difficulties: difficulties || ["any"],
+			},
+		);
 
 		// Use the same logic as practice feature
 		const questions = await generateQuestionsForAssignment({
@@ -109,12 +139,19 @@ export async function POST(
 			subtopics: subtopics,
 		});
 
-		logger.dev.structured("info", "[POST /api/teams/[teamId]/assignments/generate-questions] Questions generated", {
-			count: questions.length,
-		});
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Questions generated",
+			{
+				count: questions.length,
+			},
+		);
 
 		// Format questions for assignment (convert from practice format to assignment format)
-		logger.dev.structured("info", "[POST /api/teams/[teamId]/assignments/generate-questions] Formatting questions");
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Formatting questions",
+		);
 		const formattedQuestions = questions.map((q, index) => {
 			const isMcq = Array.isArray(q.options) && q.options.length > 0;
 			const answers = Array.isArray(q.answers) ? q.answers : [];
@@ -131,14 +168,22 @@ export async function POST(
 			};
 		});
 
-		logger.dev.structured("info", "[POST /api/teams/[teamId]/assignments/generate-questions] Questions formatted", {
-			formattedCount: formattedQuestions.length,
-		});
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Questions formatted",
+			{
+				formattedCount: formattedQuestions.length,
+			},
+		);
 
 		if (formattedQuestions.length === 0) {
-			logger.dev.structured("warn", "[POST /api/teams/[teamId]/assignments/generate-questions] No questions found", {
-				eventName: event_name,
-			});
+			logger.dev.structured(
+				"warn",
+				"[POST /api/teams/[teamId]/assignments/generate-questions] No questions found",
+				{
+					eventName: event_name,
+				},
+			);
 			return NextResponse.json(
 				{
 					error: "No valid questions found for this event",
@@ -153,10 +198,14 @@ export async function POST(
 		}
 
 		const duration = Date.now() - startTime;
-		logger.dev.structured("info", "[POST /api/teams/[teamId]/assignments/generate-questions] Success", {
-			questionCount: formattedQuestions.length,
-			duration: `${duration}ms`,
-		});
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Success",
+			{
+				questionCount: formattedQuestions.length,
+				duration: `${duration}ms`,
+			},
+		);
 
 		return NextResponse.json({
 			questions: formattedQuestions,
@@ -168,13 +217,17 @@ export async function POST(
 		});
 	} catch (error) {
 		const duration = Date.now() - startTime;
-		
+
 		if (error instanceof z.ZodError) {
 			const zodErrors = error.issues || [];
-			logger.dev.structured("warn", "[POST /api/teams/[teamId]/assignments/generate-questions] Validation error", {
-				errors: zodErrors,
-				duration: `${duration}ms`,
-			});
+			logger.dev.structured(
+				"warn",
+				"[POST /api/teams/[teamId]/assignments/generate-questions] Validation error",
+				{
+					errors: zodErrors,
+					duration: `${duration}ms`,
+				},
+			);
 			return NextResponse.json(
 				{
 					error: "Invalid request",
@@ -185,10 +238,14 @@ export async function POST(
 		}
 
 		if (error instanceof Error && error.message.includes("Only captains")) {
-			logger.dev.structured("warn", "[POST /api/teams/[teamId]/assignments/generate-questions] Forbidden", {
-				error: error.message,
-				duration: `${duration}ms`,
-			});
+			logger.dev.structured(
+				"warn",
+				"[POST /api/teams/[teamId]/assignments/generate-questions] Forbidden",
+				{
+					error: error.message,
+					duration: `${duration}ms`,
+				},
+			);
 			return NextResponse.json(
 				{ error: "Only captains can generate questions" },
 				{ status: 403 },
@@ -204,7 +261,10 @@ export async function POST(
 				errorStack: error instanceof Error ? error.stack : undefined,
 			},
 		);
-		logger.error("[POST /api/teams/[teamId]/assignments/generate-questions] Error", error);
+		logger.error(
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Error",
+			error,
+		);
 
 		return NextResponse.json(
 			{

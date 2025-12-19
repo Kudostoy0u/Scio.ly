@@ -48,7 +48,7 @@ const rosterEntrySchema = z.object({
 	eventName: z.string().min(1),
 	slotIndex: z.number().int().nonnegative().optional(),
 	displayName: z.string().min(1),
-	userId: z.string().uuid().optional().nullable(),
+	userId: z.uuid().optional().nullable(),
 });
 
 const assignmentQuestionSchema = z.object({
@@ -59,6 +59,12 @@ const assignmentQuestionSchema = z.object({
 	points: z.number().int().min(1).optional(),
 	imageData: z.string().optional().nullable(),
 	difficulty: z.number().optional(),
+});
+
+const assignmentRosterMemberSchema = z.object({
+	studentName: z.string().min(1),
+	userId: z.uuid().nullable().optional(),
+	displayName: z.string().min(1),
 });
 
 export const teamsRouter = router({
@@ -74,11 +80,15 @@ export const teamsRouter = router({
 				teamSlug: z.string(),
 				title: z.string().min(1),
 				description: z.string().optional().nullable(),
-				assignmentType: z.enum(["task", "quiz", "exam"]).optional(),
 				dueDate: z.string().optional().nullable(),
 				eventName: z.string().optional().nullable(),
 				timeLimitMinutes: z.number().int().optional().nullable(),
+				points: z.number().int().optional().nullable(),
+				isRequired: z.boolean().optional().nullable(),
+				maxAttempts: z.number().int().optional().nullable(),
+				subteamId: z.uuid().optional().nullable(),
 				questions: z.array(assignmentQuestionSchema).optional(),
+				rosterMembers: z.array(assignmentRosterMemberSchema).optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -89,7 +99,7 @@ export const teamsRouter = router({
 		.input(
 			z.object({
 				teamSlug: z.string(),
-				assignmentId: z.string().uuid(),
+				assignmentId: z.uuid(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -97,15 +107,45 @@ export const teamsRouter = router({
 		}),
 
 	getAssignmentDetails: protectedProcedure
-		.input(z.object({ assignmentId: z.string().uuid() }))
+		.input(z.object({ assignmentId: z.uuid() }))
 		.query(async ({ ctx, input }) => {
 			return getAssignmentDetails(input.assignmentId, ctx.user.id);
 		}),
 
 	getAssignmentAnalytics: protectedProcedure
-		.input(z.object({ assignmentId: z.string().uuid() }))
+		.input(z.object({ assignmentId: z.uuid() }))
 		.query(async ({ ctx, input }) => {
 			return getAssignmentAnalytics(input.assignmentId, ctx.user.id);
+		}),
+
+	submitAssignment: protectedProcedure
+		.input(
+			z.object({
+				assignmentId: z.uuid(),
+				answers: z.record(z.string(), z.unknown()).optional(),
+				score: z.number().optional(),
+				totalPoints: z.number().optional(),
+				timeSpent: z.number().optional(),
+				submittedAt: z.string().optional(),
+				isDynamicCodebusters: z.boolean().optional(),
+				codebustersPoints: z
+					.object({
+						totalPointsAttempted: z.number().optional(),
+						totalPointsEarned: z.number().optional(),
+					})
+					.optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { submitAssignment: submitAssignmentFn } = await import(
+				"@/lib/server/teams/assignments"
+			);
+			return submitAssignmentFn(
+				input.assignmentId,
+				ctx.user.id,
+				ctx.user.email,
+				input,
+			);
 		}),
 
 	listUserTeams: protectedProcedure.query(async ({ ctx }) => {
@@ -287,7 +327,7 @@ export const teamsRouter = router({
 		.input(
 			z.object({
 				teamSlug: z.string().min(1),
-				subteamId: z.string().uuid(),
+				subteamId: z.uuid(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -310,7 +350,7 @@ export const teamsRouter = router({
 		.input(
 			z.object({
 				teamSlug: z.string().min(1),
-				subteamId: z.string().uuid(),
+				subteamId: z.uuid(),
 				newName: z.string().min(1),
 			}),
 		)
@@ -330,7 +370,7 @@ export const teamsRouter = router({
 		}),
 
 	kickMember: protectedProcedure
-		.input(z.object({ teamSlug: z.string().min(1), userId: z.string().uuid() }))
+		.input(z.object({ teamSlug: z.string().min(1), userId: z.uuid() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
 				console.log("[TRPC kickMember] Request:", {
@@ -361,7 +401,7 @@ export const teamsRouter = router({
 		.input(
 			z.object({
 				teamSlug: z.string().min(1),
-				subteamId: z.string().uuid(),
+				subteamId: z.uuid(),
 				entries: z.array(rosterEntrySchema),
 			}),
 		)
@@ -400,7 +440,7 @@ export const teamsRouter = router({
 		.input(
 			z.object({
 				teamSlug: z.string().min(1),
-				subteamId: z.string().uuid().nullable(),
+				subteamId: z.uuid().nullable(),
 				entry: rosterEntrySchema,
 			}),
 		)
@@ -444,12 +484,12 @@ export const teamsRouter = router({
 		.input(
 			z.object({
 				teamSlug: z.string().min(1),
-				subteamId: z.string().uuid().nullable(),
+				subteamId: z.uuid().nullable(),
 				eventName: z.string().min(1).optional(),
 				slotIndex: z.number().int().nonnegative().default(0),
 				removeAllOccurrences: z.boolean().optional(),
 				displayName: z.string().min(1).optional(),
-				userId: z.string().uuid().optional(),
+				userId: z.uuid().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -521,7 +561,7 @@ export const teamsRouter = router({
 		.input(
 			z.object({
 				teamSlug: z.string().min(1),
-				userId: z.string().uuid(),
+				userId: z.uuid(),
 				newRole: z.enum(["admin", "captain", "member"]),
 			}),
 		)
@@ -590,7 +630,7 @@ export const teamsRouter = router({
 	}),
 
 	acceptLinkInvite: protectedProcedure
-		.input(z.object({ linkInviteId: z.string().uuid() }))
+		.input(z.object({ linkInviteId: z.uuid() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
 				console.log("[TRPC acceptLinkInvite] Request:", {
@@ -610,7 +650,7 @@ export const teamsRouter = router({
 		}),
 
 	declineLinkInvite: protectedProcedure
-		.input(z.object({ linkInviteId: z.string().uuid() }))
+		.input(z.object({ linkInviteId: z.uuid() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
 				console.log("[TRPC declineLinkInvite] Request:", {
@@ -660,7 +700,7 @@ export const teamsRouter = router({
 		.input(
 			z.object({
 				teamSlug: z.string().min(1),
-				subteamId: z.string().uuid(),
+				subteamId: z.uuid(),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -671,10 +711,10 @@ export const teamsRouter = router({
 		.input(
 			z.object({
 				teamSlug: z.string().min(1),
-				subteamId: z.string().uuid(),
+				subteamId: z.uuid(),
 				content: z.string().min(1),
 				showTournamentTimer: z.boolean().optional(),
-				tournamentId: z.string().uuid().optional().nullable(),
+				tournamentId: z.uuid().optional().nullable(),
 				attachmentUrl: z.string().url().optional().nullable(),
 				attachmentTitle: z.string().optional().nullable(),
 			}),
@@ -687,7 +727,7 @@ export const teamsRouter = router({
 		.input(
 			z.object({
 				teamSlug: z.string().min(1),
-				postId: z.string().uuid(),
+				postId: z.uuid(),
 				content: z.string().min(1),
 				attachmentUrl: z.string().url().optional().nullable(),
 				attachmentTitle: z.string().optional().nullable(),
@@ -701,7 +741,7 @@ export const teamsRouter = router({
 		.input(
 			z.object({
 				teamSlug: z.string().min(1),
-				postId: z.string().uuid(),
+				postId: z.uuid(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -712,7 +752,7 @@ export const teamsRouter = router({
 		.input(
 			z.object({
 				teamSlug: z.string().min(1),
-				postId: z.string().uuid(),
+				postId: z.uuid(),
 				content: z.string().min(1),
 			}),
 		)
@@ -724,7 +764,7 @@ export const teamsRouter = router({
 		.input(
 			z.object({
 				teamSlug: z.string().min(1),
-				commentId: z.string().uuid(),
+				commentId: z.uuid(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -735,7 +775,7 @@ export const teamsRouter = router({
 		.input(
 			z.object({
 				teamSlug: z.string().min(1),
-				subteamId: z.string().uuid(),
+				subteamId: z.uuid(),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -746,7 +786,7 @@ export const teamsRouter = router({
 		.input(
 			z.object({
 				teamSlug: z.string().min(1),
-				subteamId: z.string().uuid(),
+				subteamId: z.uuid(),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -761,7 +801,7 @@ export const teamsRouter = router({
 		.input(
 			z.object({
 				teamSlug: z.string().min(1),
-				subteamId: z.string().uuid(),
+				subteamId: z.uuid(),
 				eventId: z.string().min(1),
 			}),
 		)
@@ -773,7 +813,7 @@ export const teamsRouter = router({
 		.input(
 			z.object({
 				teamSlug: z.string().min(1),
-				subteamId: z.string().uuid(),
+				subteamId: z.uuid(),
 				eventId: z.string().min(1),
 			}),
 		)

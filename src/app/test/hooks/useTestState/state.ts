@@ -20,12 +20,8 @@ import { useTestBookmarks } from "../useTestBookmarks";
 import { useTestEdit } from "../useTestEdit";
 import { useTestGrading } from "../useTestGrading";
 import { useTestTimer } from "../useTestTimer";
-import {
-	useCountdown,
-	usePauseOnUnmount,
-	useResumeOnMount,
-	useSetupVisibility,
-} from "../utils/timeHooks";
+// Removed duplicate hooks (useCountdown, usePauseOnUnmount, useResumeOnMount, useSetupVisibility)
+// - useTestTimer already handles these
 import {
 	useInitLoadEffect,
 	useMountRestoreEffect,
@@ -198,12 +194,8 @@ export function useTestState({
 		handleSubmitRef.current = handleSubmit;
 	}, [handleSubmit]);
 
-	useCountdown(timeLeft, isSubmitted, setTimeLeft, () =>
-		handleSubmitRef.current?.(),
-	);
-	usePauseOnUnmount();
-	useResumeOnMount();
-	useSetupVisibility();
+	// Note: useCountdown, usePauseOnUnmount, useResumeOnMount, and useSetupVisibility
+	// are already called in useTestTimer, so we don't need to call them here again
 
 	const reloadQuestions = useMemo(
 		() =>

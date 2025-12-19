@@ -19,11 +19,11 @@ describe("QuestionGenerationStep", () => {
 			difficulties: ["any"],
 		} as QuestionGenerationSettings,
 		onSettingsChange: vi.fn(),
-		availableSubtopics: ["Subtopic 1", "Subtopic 2", "Subtopic 3"],
 		supportsPictureQuestions: true,
 		supportsIdentificationOnly: true,
 		onGenerateQuestions: vi.fn(),
 		generatingQuestions: false,
+		eventName: "Test Event",
 	};
 
 	beforeEach(() => {
@@ -57,7 +57,12 @@ describe("QuestionGenerationStep", () => {
 		});
 
 		it("shows no subtopics message when none available", () => {
-			render(<QuestionGenerationStep {...mockProps} availableSubtopics={[]} />);
+			render(
+				<QuestionGenerationStep
+					{...mockProps}
+					eventName="Non-existing Event"
+				/>,
+			);
 
 			expect(
 				screen.getByText("No subtopics available for this event"),

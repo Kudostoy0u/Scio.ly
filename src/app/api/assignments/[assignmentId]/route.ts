@@ -222,6 +222,7 @@ interface AssignmentRow {
 	points: number;
 	isRequired: boolean;
 	maxAttempts: number | null;
+	timeLimitMinutes: number | null;
 	createdAt: string;
 	updatedAt: string;
 	creatorEmail: string;
@@ -286,6 +287,7 @@ export async function GET(
 				points: teamAssignments.points,
 				isRequired: teamAssignments.isRequired,
 				maxAttempts: teamAssignments.maxAttempts,
+				timeLimitMinutes: teamAssignments.timeLimitMinutes,
 				createdAt: teamAssignments.createdAt,
 				updatedAt: teamAssignments.updatedAt,
 				creatorEmail: users.email,
@@ -319,6 +321,7 @@ export async function GET(
 			points: assignmentRow.points ?? 0,
 			isRequired: assignmentRow.isRequired ?? true,
 			maxAttempts: assignmentRow.maxAttempts ?? null,
+			timeLimitMinutes: assignmentRow.timeLimitMinutes ?? null,
 			createdAt: assignmentRow.createdAt
 				? String(assignmentRow.createdAt)
 				: new Date().toISOString(),

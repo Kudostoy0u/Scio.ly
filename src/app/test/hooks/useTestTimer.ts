@@ -37,15 +37,7 @@ export function useTestTimer({
 		}
 	}, []);
 
-	// Time warnings
-	useEffect(() => {
-		if (timeLeft === 30) {
-			toast.warning("Warning: Thirty seconds left");
-		}
-		if (timeLeft === 60) {
-			toast.warning("Warning: One minute left");
-		}
-	}, [timeLeft]);
+	// Time warnings removed - now handled by useWarningToastEffect in effects.ts
 
 	// Use countdown hook
 	useCountdown(timeLeft, isSubmitted, setTimeLeft, onTimeUp);

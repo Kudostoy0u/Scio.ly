@@ -8,6 +8,7 @@ import {
 	teamSubmissions,
 } from "@/lib/db/schema";
 import { getServerUser } from "@/lib/supabaseServer";
+import logger from "@/lib/utils/logging/logger";
 import { and, desc, eq, or } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 
@@ -139,8 +140,15 @@ export async function POST(
 	request: NextRequest,
 	{ params }: { params: Promise<{ assignmentId: string }> },
 ) {
+	const startTime = Date.now();
+	let assignmentId: string | undefined;
+	let userId: string | undefined;
+
 	try {
 		if (!process.env.DATABASE_URL) {
+			logger.error("[Assignment Submit] Database configuration error", {
+				error: "DATABASE_URL environment variable is missing",
+			});
 			return NextResponse.json(
 				{
 					error: "Database configuration error",
@@ -152,10 +160,23 @@ export async function POST(
 
 		const user = await getServerUser();
 		if (!user?.id) {
+			logger.warn("[Assignment Submit] Unauthorized request", {
+				hasUser: !!user,
+				userId: user?.id,
+			});
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 		}
 
-		const { assignmentId } = await params;
+		userId = user.id;
+		const { assignmentId: resolvedAssignmentId } = await params;
+		assignmentId = resolvedAssignmentId;
+
+		logger.info("[Assignment Submit] Request received", {
+			assignmentId,
+			userId,
+			timestamp: new Date().toISOString(),
+		});
+
 		const body = await request.json();
 		const {
 			answers,
@@ -166,7 +187,23 @@ export async function POST(
 			isDynamicCodebusters,
 		} = body;
 
+		logger.info("[Assignment Submit] Request body parsed", {
+			assignmentId,
+			userId,
+			hasAnswers: !!answers,
+			answersCount: answers ? Object.keys(answers).length : 0,
+			score,
+			totalPoints,
+			timeSpent,
+			isDynamicCodebusters,
+		});
+
 		// Verify assignment exists and user is assigned
+		logger.info("[Assignment Submit] Verifying assignment and user access", {
+			assignmentId,
+			userId,
+		});
+
 		const assignmentResult = await dbPg
 			.select({
 				id: teamAssignments.id,
@@ -190,6 +227,13 @@ export async function POST(
 			.limit(1);
 
 		if (assignmentResult.length === 0) {
+			logger.warn(
+				"[Assignment Submit] Assignment not found or user not assigned",
+				{
+					assignmentId,
+					userId,
+				},
+			);
 			return NextResponse.json(
 				{ error: "Assignment not found or not assigned" },
 				{ status: 404 },
@@ -198,11 +242,23 @@ export async function POST(
 
 		const assignmentRow = assignmentResult[0];
 		if (!assignmentRow) {
+			logger.error("[Assignment Submit] Assignment row is null after query", {
+				assignmentId,
+				userId,
+				resultLength: assignmentResult.length,
+			});
 			return NextResponse.json(
 				{ error: "Assignment not found" },
 				{ status: 404 },
 			);
 		}
+
+		logger.info("[Assignment Submit] Assignment verified", {
+			assignmentId,
+			userId,
+			assignmentTitle: assignmentRow.title,
+			maxPoints: assignmentRow.maxPoints,
+		});
 
 		const assignment: AssignmentRow = {
 			id: String(assignmentRow.id),
@@ -211,6 +267,11 @@ export async function POST(
 		};
 
 		// Check if user has already submitted - prevent multiple submissions
+		logger.info("[Assignment Submit] Checking for existing submission", {
+			assignmentId,
+			userId,
+		});
+
 		const existingSubmissionResult = await dbPg
 			.select({
 				id: teamSubmissions.id,
@@ -231,6 +292,13 @@ export async function POST(
 
 		// Prevent multiple submissions to the same assignment
 		if (existingSubmission) {
+			logger.warn("[Assignment Submit] Duplicate submission attempt", {
+				assignmentId,
+				userId,
+				existingSubmissionId: existingSubmission.id,
+				existingAttemptNumber: existingSubmission.attemptNumber,
+				existingStatus: existingSubmission.status,
+			});
 			return NextResponse.json(
 				{
 					error: "Assignment already submitted",
@@ -242,6 +310,14 @@ export async function POST(
 		}
 
 		const attemptNumber = 1;
+
+		logger.info("[Assignment Submit] Creating submission record", {
+			assignmentId,
+			userId,
+			attemptNumber,
+			score,
+			submittedAt: submittedAt || new Date().toISOString(),
+		});
 
 		// Create submission record
 		const [submissionRow] = await dbPg
@@ -262,11 +338,22 @@ export async function POST(
 			});
 
 		if (!submissionRow) {
+			logger.error("[Assignment Submit] Failed to create submission record", {
+				assignmentId,
+				userId,
+				attemptNumber,
+			});
 			return NextResponse.json(
 				{ error: "Failed to create submission" },
 				{ status: 500 },
 			);
 		}
+
+		logger.info("[Assignment Submit] Submission record created", {
+			assignmentId,
+			userId,
+			submissionId: submissionRow.id,
+		});
 
 		const submission: NewSubmissionRow = {
 			id: String(submissionRow.id),
@@ -277,7 +364,25 @@ export async function POST(
 
 		// Store individual question responses (skip for dynamic Codebusters assignments)
 		if (answers && typeof answers === "object" && !isDynamicCodebusters) {
+			logger.info("[Assignment Submit] Processing question responses", {
+				assignmentId,
+				userId,
+				submissionId: submission.id,
+				answersCount: Object.keys(answers).length,
+			});
 			await processQuestionResponses(submission.id, answers);
+			logger.info("[Assignment Submit] Question responses processed", {
+				assignmentId,
+				userId,
+				submissionId: submission.id,
+			});
+		} else {
+			logger.info("[Assignment Submit] Skipping question responses", {
+				assignmentId,
+				userId,
+				hasAnswers: !!answers,
+				isDynamicCodebusters,
+			});
 		}
 
 		// Calculate points using the same method as Codebusters test summary
@@ -294,6 +399,14 @@ export async function POST(
 		);
 
 		// Create analytics record (delete existing first, then insert)
+		logger.info("[Assignment Submit] Creating analytics record", {
+			assignmentId,
+			userId,
+			calculatedTotalPoints,
+			calculatedEarnedPoints,
+			calculatedCorrectAnswers,
+		});
+
 		await dbPg
 			.delete(teamAssignmentAnalytics)
 			.where(
@@ -317,6 +430,14 @@ export async function POST(
 				: new Date().toISOString(),
 		});
 
+		const duration = Date.now() - startTime;
+		logger.info("[Assignment Submit] Success", {
+			assignmentId,
+			userId,
+			submissionId: submission.id,
+			durationMs: duration,
+		});
+
 		return NextResponse.json({
 			submission: {
 				id: submission.id,
@@ -328,10 +449,27 @@ export async function POST(
 			},
 		});
 	} catch (error) {
+		const duration = Date.now() - startTime;
+		const errorMessage =
+			error instanceof Error ? error.message : "Unknown error";
+		const errorStack = error instanceof Error ? error.stack : undefined;
+
+		logger.error(
+			"[Assignment Submit] Error",
+			error instanceof Error ? error : new Error(errorMessage),
+			{
+				assignmentId,
+				userId,
+				durationMs: duration,
+				errorMessage,
+				errorStack,
+			},
+		);
+
 		return NextResponse.json(
 			{
 				error: "Internal server error",
-				details: error instanceof Error ? error.message : "Unknown error",
+				details: errorMessage,
 			},
 			{ status: 500 },
 		);

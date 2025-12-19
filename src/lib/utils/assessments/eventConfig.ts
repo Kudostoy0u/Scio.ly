@@ -63,7 +63,7 @@ export function getMappedEventNameForApi(eventName: string): string {
  * Handles both base names and mapped names
  */
 export function supportsIdentificationOnly(eventName: string): boolean {
-	const base = eventName.split(" - ")[0];
+	const base = eventName.split(" - ")[0] ?? eventName;
 	const candidates = [
 		"Rocks and Minerals",
 		"Entomology",
@@ -83,7 +83,7 @@ export function supportsIdEvent(eventName?: string): boolean {
 	if (!eventName) {
 		return false;
 	}
-	const base = eventName.split(" - ")[0];
+	const base = eventName.split(" - ")[0] ?? eventName;
 	const supportedEvents = new Set([
 		"Rocks and Minerals",
 		"Entomology",
@@ -103,9 +103,7 @@ export function supportsIdEvent(eventName?: string): boolean {
 	if (base === "Anatomy") {
 		return supportedEvents.has("Anatomy & Physiology");
 	}
-	return (
-		supportedEvents.has(eventName) || supportedEvents.has(base)
-	);
+	return supportedEvents.has(eventName) || supportedEvents.has(base);
 }
 
 /**
@@ -121,17 +119,23 @@ export function isCodebustersEvent(eventName: string): boolean {
  */
 export function getEventCapabilities(eventName: string): EventCapabilities {
 	const isCodebusters = isCodebustersEvent(eventName);
-	const isRocksAndMinerals = eventName === "Rocks and Minerals" || eventName.split(" - ")[0] === "Rocks and Minerals";
-	
+	const isRocksAndMinerals =
+		eventName === "Rocks and Minerals" ||
+		eventName.split(" - ")[0] === "Rocks and Minerals";
+
 	// For capability detection, check both the original and mapped name
 	// This ensures "Water Quality" is detected as supporting ID questions
 	const mappedName = getMappedEventNameForApi(eventName);
-	const checkName = eventName === "Water Quality" || eventName === "Dynamic Planet" ? mappedName : eventName;
 
 	return {
-		supportsPictureQuestions: supportsPictureQuestions(eventName) || supportsPictureQuestions(mappedName),
-		supportsIdentificationOnly: supportsIdentificationOnly(eventName) || supportsIdentificationOnly(mappedName),
-		supportsIdQuestions: supportsIdEvent(eventName) || supportsIdEvent(mappedName), // Use shared logic
+		supportsPictureQuestions:
+			supportsPictureQuestions(eventName) ||
+			supportsPictureQuestions(mappedName),
+		supportsIdentificationOnly:
+			supportsIdentificationOnly(eventName) ||
+			supportsIdentificationOnly(mappedName),
+		supportsIdQuestions:
+			supportsIdEvent(eventName) || supportsIdEvent(mappedName), // Use shared logic
 		availableDivisions: ["B", "C"], // Most events support both divisions
 		maxQuestions: isCodebusters ? 10 : 50, // Codebusters typically has fewer questions
 		defaultTimeLimit: isCodebusters ? 15 : 30, // Codebusters has shorter time limits

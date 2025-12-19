@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { getEventSubtopics } from "@/lib/constants/subtopics";
 import type { QuestionGenerationStepProps } from "./assignmentTypes";
-import { getEventSubtopics } from "../assignment/assignmentUtils";
-import { getEventCapabilities } from "@/lib/utils/assessments/eventConfig";
 
 export default function QuestionGenerationStep({
 	darkMode,
@@ -21,21 +20,16 @@ export default function QuestionGenerationStep({
 }: QuestionGenerationStepProps) {
 	const [availableSubtopics, setAvailableSubtopics] = useState<string[]>([]);
 	const [loadingSubtopics, setLoadingSubtopics] = useState(false);
-	const isRocksAndMinerals = eventName === "Rocks and Minerals" || eventName?.split(" - ")[0] === "Rocks and Minerals";
+	const isRocksAndMinerals =
+		eventName === "Rocks and Minerals" ||
+		eventName?.split(" - ")[0] === "Rocks and Minerals";
 
-	// Load subtopics when event name changes
+	// Load subtopics when event name changes (now synchronous, no API call)
 	useEffect(() => {
 		if (eventName) {
-			setLoadingSubtopics(true);
-			getEventSubtopics(eventName)
-				.then((subtopics) => {
+			setLoadingSubtopics(false); // No loading needed since it's synchronous
+			const subtopics = getEventSubtopics(eventName);
 					setAvailableSubtopics(subtopics);
-					setLoadingSubtopics(false);
-				})
-				.catch(() => {
-					setAvailableSubtopics([]);
-					setLoadingSubtopics(false);
-				});
 		} else {
 			setAvailableSubtopics([]);
 		}
@@ -127,6 +121,8 @@ export default function QuestionGenerationStep({
 				</div>
 			</div>
 
+			{/* Question Type and Difficulty on same row for desktop */}
+			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 			<div>
 				<label
 					htmlFor="question-type-mcq"
@@ -149,7 +145,11 @@ export default function QuestionGenerationStep({
 								checked={settings.questionType === type.value}
 								onChange={(e) => {
 									const value = e.target.value;
-									if (value === "mcq" || value === "frq" || value === "both") {
+										if (
+											value === "mcq" ||
+											value === "frq" ||
+											value === "both"
+										) {
 										onSettingsChange({
 											questionType: value as "mcq" | "frq" | "both",
 										});
@@ -221,8 +221,8 @@ export default function QuestionGenerationStep({
 						Please select at least one difficulty level
 					</p>
 				)}
+				</div>
 			</div>
-
 
 			{/* Picture Questions slider for events with image ID */}
 			{supportsPictureQuestions && (
@@ -289,7 +289,9 @@ export default function QuestionGenerationStep({
 						value={settings.rmTypeFilter || ""}
 						onChange={(e) =>
 							onSettingsChange({
-								rmTypeFilter: e.target.value ? (e.target.value as "rock" | "mineral") : undefined,
+								rmTypeFilter: e.target.value
+									? (e.target.value as "rock" | "mineral")
+									: undefined,
 							})
 						}
 						className={`w-full px-3 py-2 border rounded-lg ${
@@ -328,13 +330,17 @@ export default function QuestionGenerationStep({
 											});
 										} else {
 											onSettingsChange({
-												subtopics: currentSubtopics.filter((s) => s !== subtopic),
+												subtopics: currentSubtopics.filter(
+													(s) => s !== subtopic,
+												),
 											});
 										}
 									}}
 									className="mr-2"
 								/>
-								<span className={`text-sm ${darkMode ? "text-white" : "text-gray-900"}`}>
+								<span
+									className={`text-sm ${darkMode ? "text-white" : "text-gray-900"}`}
+								>
 									{subtopic}
 								</span>
 							</label>

@@ -1,5 +1,6 @@
 "use client";
 
+import { trpc } from "@/lib/trpc/client";
 import {
 	CheckCircle,
 	ChevronDown,
@@ -10,42 +11,6 @@ import {
 	X,
 } from "lucide-react";
 import { useState } from "react";
-import { trpc } from "@/lib/trpc/client";
-
-interface Question {
-	id: string;
-	question_text: string;
-	question_type: "multiple_choice" | "free_response" | "codebusters";
-	options?: Array<{ id: string; text: string; isCorrect: boolean }>;
-	correct_answer?: string;
-	points: number;
-	order_index: number;
-}
-
-interface RosterMember {
-	id: string;
-	student_name: string;
-	user_id: string | null;
-	subteam_id: string | null;
-	assigned_at: string;
-	email: string | null;
-	display_name: string | null;
-	submission?: {
-		id: string;
-		status: string;
-		grade: number | null;
-		attempt_number: number;
-		submitted_at: string;
-	};
-	analytics?: {
-		total_questions: number;
-		correct_answers: number;
-		total_points: number;
-		earned_points: number;
-		completion_time_seconds: number | null;
-		submitted_at: string;
-	};
-}
 
 // Assignment type is now inferred from tRPC response
 
@@ -75,7 +40,11 @@ export default function AssignmentViewerModal({
 		error: queryError,
 	} = trpc.teams.getAssignmentAnalytics.useQuery(
 		{ assignmentId },
-		{ enabled: isCaptain },
+		{
+			enabled: isCaptain,
+			refetchOnMount: true,
+			refetchOnWindowFocus: true,
+		},
 	);
 
 	const error = queryError ? queryError.message : null;
@@ -198,9 +167,14 @@ export default function AssignmentViewerModal({
 		<div
 			className="fixed inset-0 flex items-center justify-center z-50"
 			style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+			onClick={onClose}
 		>
 			<div
 				className={`max-w-4xl w-full mx-2 md:mx-4 max-h-[90vh] overflow-y-auto rounded-lg ${darkMode ? "bg-gray-800" : "bg-white"}`}
+				onClick={(e) => {
+					// Prevent clicks inside modal from closing it
+					e.stopPropagation();
+				}}
 			>
 				<div className="p-4 md:p-6">
 					<div className="flex justify-between items-start mb-4 md:mb-6">
@@ -237,7 +211,7 @@ export default function AssignmentViewerModal({
 								<span
 									className={`text-xs md:text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
 								>
-									{assignment.questionsCount ||
+									{assignment.questions_count ||
 										assignment.questions?.length ||
 										0}{" "}
 									questions
@@ -391,13 +365,7 @@ export default function AssignmentViewerModal({
 																		</span>
 																	</div>
 																</div>
-															) : (
-																<div
-																	className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}
-																>
-																	Not started
-																</div>
-															)}
+															) : null}
 														</div>
 													</div>
 												</div>
@@ -441,18 +409,6 @@ export default function AssignmentViewerModal({
 							</button>
 							{!collapsedSections.assignmentDetails && (
 								<div className="space-y-3 mt-4">
-									<div className="flex flex-col md:flex-row md:justify-between space-y-1 md:space-y-0">
-										<span
-											className={`${darkMode ? "text-gray-300" : "text-gray-600"}`}
-										>
-											Type:
-										</span>
-										<span
-											className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}
-										>
-											{assignment.assignmentType || "standard"}
-										</span>
-									</div>
 									{assignment.dueDate && (
 										<div className="flex flex-col md:flex-row md:justify-between space-y-1 md:space-y-0">
 											<span

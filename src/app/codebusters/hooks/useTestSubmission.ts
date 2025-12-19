@@ -142,27 +142,50 @@ export function useTestSubmission({
 					codebustersPoints: codebustersPoints,
 				};
 
-				const response = await fetch(
-					`/api/assignments/${assignmentId}/submit`,
-					{
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
+				const { getTRPCProxyClient } = await import("@/lib/trpc/client");
+				const client = getTRPCProxyClient();
+				const result = await client.teams.submitAssignment.mutate({
+					assignmentId,
+					answers: submissionData.answers.reduce(
+						(acc, answer) => {
+							if (answer.questionId) {
+								acc[answer.questionId] = answer.answer;
+							}
+							return acc;
 						},
-						body: JSON.stringify(submissionData),
+						{} as Record<string, unknown>,
+					),
+					score: submissionData.totalScore,
+					timeSpent: submissionData.timeSpent,
+					submittedAt: submissionData.submittedAt,
+					isDynamicCodebusters: submissionData.isDynamicCodebusters,
+					codebustersPoints: {
+						totalPointsAttempted:
+							submissionData.codebustersPoints.totalPointsAttempted,
+						totalPointsEarned:
+							submissionData.codebustersPoints.totalPointsEarned,
 					},
-				);
+				});
 
-				if (response.ok) {
+				// Dispatch event to invalidate assignments cache
+				if (result.teamSlug && typeof window !== "undefined") {
+					window.dispatchEvent(
+						new CustomEvent("assignmentSubmitted", {
+							detail: { teamSlug: result.teamSlug, assignmentId },
+						}),
+					);
+				}
+
 					toast.success("Assignment submitted successfully!");
 					const url = new URL(window.location.href);
 					url.searchParams.delete("assignment");
 					window.history.replaceState({}, "", url.pathname + url.search);
-				} else {
-					toast.error("Failed to submit assignment");
-				}
-			} catch (_error) {
-				toast.error("Error submitting assignment");
+			} catch (error) {
+				const errorMessage =
+					error instanceof Error
+						? error.message
+						: "Error submitting assignment";
+				toast.error(errorMessage);
 			}
 		},
 		[checkQuoteCorrectness, calculateQuoteProgress],

@@ -1,114 +1,18 @@
 import { EVENTS_2026 } from "@/lib/constants/events2026";
+import { getEventSubtopics as getEventSubtopicsFromModule } from "@/lib/constants/subtopics";
 import { getEventCapabilities } from "@/lib/utils/assessments/eventConfig";
 import type { Question, RosterMember } from "./assignmentTypes";
-
-// Event name mapping for special cases (same as backend)
-const eventNameMapping: Record<string, string> = {
-	"Dynamic Planet": "Dynamic Planet - Oceanography",
-	"Water Quality": "Water Quality - Freshwater",
-	"Materials Science": "Materials Science - Nanomaterials",
-};
-
-// Handle Anatomy & Physiology distribution
-const anatomyEvents = [
-	"Anatomy - Endocrine",
-	"Anatomy - Nervous",
-	"Anatomy - Sense Organs",
-];
-
-// Get the mapped event name for subtopic fetching
-const getMappedEventName = (eventName: string): string => {
-	if (eventNameMapping[eventName]) {
-		return eventNameMapping[eventName];
-	}
-	return eventName;
-};
 
 export const getAvailableEvents = (): string[] => {
 	return EVENTS_2026.map((event) => event.name);
 };
 
+// Re-export getEventSubtopics from the constants module for backwards compatibility
 export const getEventSubtopics = async (
 	eventName: string,
 ): Promise<string[]> => {
-	try {
-		// Get the mapped event name for subtopic fetching
-		const mappedEventName = getMappedEventName(eventName);
-
-		// For Anatomy & Physiology, combine subtopics from all three events
-		if (eventName === "Anatomy & Physiology") {
-			const allSubtopics: string[] = [];
-
-			for (const anatomyEvent of anatomyEvents) {
-				try {
-					// Try API first
-					const response = await fetch(
-						`/api/meta/subtopics?event=${encodeURIComponent(anatomyEvent)}`,
-					);
-					if (response.ok) {
-						const data = await response.json();
-						if (data.success && Array.isArray(data.data)) {
-							allSubtopics.push(
-								...data.data.filter(
-									(subtopic: string) => subtopic && subtopic !== "unknown",
-								),
-							);
-							continue;
-						}
-					}
-
-					// Fallback to static data
-					const staticResponse = await fetch("/subtopics.json");
-					if (staticResponse.ok) {
-						const staticData = await staticResponse.json();
-						const subtopics = staticData[anatomyEvent];
-						if (Array.isArray(subtopics)) {
-							allSubtopics.push(
-								...subtopics.filter(
-									(subtopic) => subtopic && subtopic !== "unknown",
-								),
-							);
-						}
-					}
-				} catch (_error) {
-					// Ignore errors
-				}
-			}
-
-			// Remove duplicates and return
-			return [...new Set(allSubtopics)];
-		}
-
-		// For other events, use the mapped event name
-		// First try to fetch from the API
-		const response = await fetch(
-			`/api/meta/subtopics?event=${encodeURIComponent(mappedEventName)}`,
-		);
-		if (response.ok) {
-			const data = await response.json();
-			if (data.success && Array.isArray(data.data)) {
-				return data.data.filter(
-					(subtopic: string) => subtopic && subtopic !== "unknown",
-				);
-			}
-		}
-
-		// Fallback to static data from subtopics.json
-		const staticResponse = await fetch("/subtopics.json");
-		if (staticResponse.ok) {
-			const staticData = await staticResponse.json();
-			const subtopics = staticData[mappedEventName];
-			if (Array.isArray(subtopics)) {
-				return subtopics.filter(
-					(subtopic) => subtopic && subtopic !== "unknown",
-				);
-			}
-		}
-
-		return [];
-	} catch (_error) {
-		return [];
-	}
+	// Use the synchronous function from the constants module
+	return getEventSubtopicsFromModule(eventName);
 };
 
 export const getEventCapabilitiesForEvent = (eventName: string) => {
@@ -203,7 +107,7 @@ export const createAssignment = async (
 	assignmentData: {
 		title: string;
 		description: string;
-		assignment_type: string;
+		assignment_type?: string;
 		due_date: string;
 		points: number;
 		time_limit_minutes: number;
@@ -252,7 +156,7 @@ export const createCodebustersAssignment = async (
 	assignmentData: {
 		title: string;
 		description: string;
-		assignment_type: string;
+		assignment_type?: string;
 		due_date: string;
 		points: number;
 		time_limit_minutes: number;

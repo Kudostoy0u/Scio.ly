@@ -129,7 +129,7 @@ async function assertSubteamBelongsToTeam(teamId: string, subteamId: string) {
 	return subteam ?? null;
 }
 
-const uuidSchema = z.string().uuid();
+const uuidSchema = z.uuid();
 
 // GET /api/teams/[teamId]/removed-events?subteamId=...
 export async function GET(

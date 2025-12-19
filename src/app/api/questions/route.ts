@@ -189,9 +189,11 @@ const transformDatabaseResult = (result: DatabaseQuestion): Question => {
 	const core = encodeBase52Local(hashIdToInt(result.id));
 	const base52Code = `${core}S`;
 	logger.dev.structured("info", "Transforming database result", result);
-	
+
 	// Helper function to convert Date or string to ISO string
-	const toISOString = (value: Date | string | null | undefined): string | undefined => {
+	const toISOString = (
+		value: Date | string | null | undefined,
+	): string | undefined => {
 		if (!value) return undefined;
 		if (value instanceof Date) return value.toISOString();
 		if (typeof value === "string") {
@@ -204,7 +206,7 @@ const transformDatabaseResult = (result: DatabaseQuestion): Question => {
 		}
 		return undefined;
 	};
-	
+
 	return {
 		id: result.id,
 		question: result.question,

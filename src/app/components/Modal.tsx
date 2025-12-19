@@ -10,7 +10,7 @@ interface ModalProps {
 	onClose: () => void;
 	title?: string;
 	children: React.ReactNode;
-	maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl";
+	maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "4xl";
 	showCloseButton?: boolean;
 }
 
@@ -55,6 +55,7 @@ export default function Modal({
 		lg: "max-w-lg",
 		xl: "max-w-xl",
 		"2xl": "max-w-2xl",
+		"4xl": "max-w-4xl",
 	};
 
 	if (!isOpen || typeof document === "undefined") {
@@ -75,6 +76,14 @@ export default function Modal({
 				style={{ margin: 0, padding: 0, border: "none" }}
 				aria-modal="true"
 				aria-labelledby={title ? "modal-title" : undefined}
+				onClick={(e) => {
+					// Prevent clicks inside dialog from closing modal
+					e.stopPropagation();
+				}}
+				onKeyDown={(e) => {
+					// Prevent keyboard events from bubbling to overlay
+					e.stopPropagation();
+				}}
 			>
 				{(title || showCloseButton) && (
 					<div

@@ -37,7 +37,6 @@ export default function CodebustersAssignmentCreator({
 	const [details, setDetails] = useState<AssignmentDetails>({
 		title: "",
 		description: "",
-		assignmentType: "homework",
 		dueDate: "",
 		points: 100,
 		timeLimitMinutes: 15,
@@ -216,7 +215,7 @@ export default function CodebustersAssignmentCreator({
 			const assignment = await createAssignment(teamId, subteamId, {
 				title: details.title,
 				description: details.description,
-				assignment_type: details.assignmentType,
+				assignment_type: "standard",
 				due_date: details.dueDate,
 				points: details.points ?? 100,
 				time_limit_minutes: details.timeLimitMinutes,

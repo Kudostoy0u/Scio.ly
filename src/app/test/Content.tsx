@@ -10,6 +10,7 @@ import Header from "@/app/components/Header";
 import ShareModal from "@/app/components/ShareModal";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { toast } from "react-toastify";
+import { default as FloatingTimer } from "./components/FloatingTimer";
 import { default as ProgressBar } from "./components/ProgressBar";
 import { default as TestFooter } from "./components/TestFooter";
 import { default as TestHeader } from "./components/TestHeader";
@@ -225,6 +226,11 @@ export default function TestContent({
 	return (
 		<>
 			<Header />
+			<FloatingTimer
+				timeLeft={timeLeft}
+				darkMode={darkMode}
+				isSubmitted={isSubmitted}
+			/>
 			<TestLayout darkMode={darkMode}>
 				<div className="pt-20">
 					<TestHeader

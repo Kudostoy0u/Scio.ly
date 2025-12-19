@@ -1,9 +1,13 @@
 "use client";
 
+import Modal from "@/app/components/Modal";
 import { useTeamFull } from "@/lib/hooks/useTeam";
-import { getEventCapabilities, isCodebustersEvent } from "@/lib/utils/assessments/eventConfig";
-import { useMemo } from "react";
-import { useEffect, useState } from "react";
+import { trpc } from "@/lib/trpc/client";
+import {
+	getEventCapabilities,
+	isCodebustersEvent,
+} from "@/lib/utils/assessments/eventConfig";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import AssignmentDetailsStep from "./assignment/AssignmentDetailsStep";
 import CodebustersAssignmentCreator from "./assignment/CodebustersAssignmentCreator";
@@ -18,10 +22,8 @@ import type {
 	RosterMember,
 } from "./assignment/assignmentTypes";
 import {
-	createAssignment,
 	generateQuestions,
 	getAvailableEvents,
-	getEventCapabilitiesForEvent,
 } from "./assignment/assignmentUtils";
 
 export default function EnhancedAssignmentCreator({
@@ -38,11 +40,10 @@ export default function EnhancedAssignmentCreator({
 
 	// Assignment details
 	const [details, setDetails] = useState<AssignmentDetails>({
-		title: "",
+		title: "Scio.ly Assignment",
 		description: "",
-		assignmentType: "homework",
 		dueDate: "",
-		points: 100,
+		points: 0,
 		timeLimitMinutes: 30,
 		eventName: prefillEventName,
 	});
@@ -58,9 +59,10 @@ export default function EnhancedAssignmentCreator({
 		subtopics: [],
 		rmTypeFilter: undefined,
 	});
-	
+
 	// Store the calculated ID percentage for replace operations
-	const [idPercentageForReplace, setIdPercentageForReplace] = useState<number>(0);
+	const [idPercentageForReplace, setIdPercentageForReplace] =
+		useState<number>(0);
 
 	// Generated questions and roster
 	const [generatedQuestions, setGeneratedQuestions] = useState<Question[]>([]);
@@ -87,6 +89,8 @@ export default function EnhancedAssignmentCreator({
 				username: string | null;
 			}
 		>();
+		const seenUserIds = new Set<string>();
+		const seenRosterEntries = new Set<string>(); // Track roster entries by userId + displayName
 
 		// Build member map from team members
 		for (const member of teamData.members) {
@@ -100,13 +104,34 @@ export default function EnhancedAssignmentCreator({
 			}
 		}
 
-		// Add roster entries
+		// Add roster entries, deduplicating by userId (if linked) or roster entry ID (if unlinked)
 		for (const rosterEntry of teamData.rosterEntries) {
 			if (rosterEntry.subteamId === subteamId) {
 				const member = rosterEntry.userId
 					? memberMap.get(rosterEntry.userId)
 					: null;
 				const displayName = rosterEntry.displayName || "";
+
+				// For linked entries, skip if we've already added this user
+				// (one user can have multiple roster entries for different events)
+				if (rosterEntry.userId && seenUserIds.has(rosterEntry.userId)) {
+					continue; // Skip duplicate linked entries - user already added
+				}
+
+				// For unlinked entries, use the roster entry ID to ensure uniqueness
+				const entryKey = rosterEntry.userId
+					? `user_${rosterEntry.userId}`
+					: `roster_${rosterEntry.id}`;
+
+				// Skip if we've already seen this exact entry
+				if (seenRosterEntries.has(entryKey)) {
+					continue;
+				}
+
+				seenRosterEntries.add(entryKey);
+				if (rosterEntry.userId) {
+					seenUserIds.add(rosterEntry.userId);
+				}
 
 				members.push({
 					student_name: displayName,
@@ -115,6 +140,7 @@ export default function EnhancedAssignmentCreator({
 					isLinked: !!rosterEntry.userId,
 					userEmail: member?.email || undefined,
 					username: member?.username || undefined,
+					roster_entry_id: rosterEntry.id,
 				});
 			}
 		}
@@ -122,8 +148,8 @@ export default function EnhancedAssignmentCreator({
 		// Add team members who aren't in roster yet
 		for (const member of teamData.members) {
 			if (member.subteamId === subteamId) {
-				// Check if already added from roster
-				if (!members.some((m) => m.user_id === member.id)) {
+				// Check if already added from roster (by userId)
+				if (!seenUserIds.has(member.id)) {
 					members.push({
 						student_name: member.name,
 						user_id: member.id,
@@ -132,6 +158,7 @@ export default function EnhancedAssignmentCreator({
 						userEmail: member.email || undefined,
 						username: member.username || undefined,
 					});
+					seenUserIds.add(member.id);
 				}
 			}
 		}
@@ -139,8 +166,33 @@ export default function EnhancedAssignmentCreator({
 		return members;
 	}, [teamData, subteamId]);
 
-	// Available events
-	const [availableEvents] = useState<string[]>(getAvailableEvents());
+	// Get all available events - start with all events from EVENTS_2026, then add any from roster
+	const availableEvents = useMemo(() => {
+		const eventSet = new Set<string>();
+
+		// Start with all events from the events list
+		const allEvents = getAvailableEvents();
+		for (const event of allEvents) {
+			eventSet.add(event);
+		}
+
+		// Also add any events from roster entries (in case there are custom events)
+		if (teamData?.rosterEntries) {
+			for (const entry of teamData.rosterEntries) {
+				if (entry.eventName) {
+					eventSet.add(entry.eventName);
+				}
+			}
+		}
+
+		// Always include prefillEventName if set (even if not in events list or roster)
+		if (prefillEventName) {
+			eventSet.add(prefillEventName);
+		}
+
+		return Array.from(eventSet).sort();
+	}, [teamData?.rosterEntries, prefillEventName]);
+
 	const [eventCapabilities, setEventCapabilities] = useState({
 		supportsPictureQuestions: false,
 		supportsIdentificationOnly: false,
@@ -188,10 +240,11 @@ export default function EnhancedAssignmentCreator({
 
 		try {
 			// Calculate the ID percentage for this generation
-			const calculatedIdPercentage = settings.questionCount > 0
-				? Math.round((settings.idPercentage / settings.questionCount) * 100)
-				: 0;
-			
+			const calculatedIdPercentage =
+				settings.questionCount > 0
+					? Math.round((settings.idPercentage / settings.questionCount) * 100)
+					: 0;
+
 			// Store it for replace operations
 			setIdPercentageForReplace(calculatedIdPercentage);
 
@@ -221,15 +274,16 @@ export default function EnhancedAssignmentCreator({
 		try {
 			// When replacing, use the stored percentage instead of recalculating from raw count
 			// This prevents the percentage from being > 100 when questionCount is 1
-			const idPercentageToUse = idPercentageForReplace > 0 
-				? idPercentageForReplace 
-				: (settings.questionCount > 0 
-					? Math.round((settings.idPercentage / settings.questionCount) * 100) 
-					: 0);
-			
+			const idPercentageToUse =
+				idPercentageForReplace > 0
+					? idPercentageForReplace
+					: settings.questionCount > 0
+						? Math.round((settings.idPercentage / settings.questionCount) * 100)
+						: 0;
+
 			// Convert percentage back to raw count for 1 question
 			const idCountForOne = Math.round((idPercentageToUse / 100) * 1);
-			
+
 			const newQuestion = await generateQuestions(
 				details.eventName,
 				1,
@@ -254,33 +308,89 @@ export default function EnhancedAssignmentCreator({
 		}
 	};
 
+	// tRPC mutation for creating assignments
+	const createAssignmentMutation = trpc.teams.createAssignment.useMutation();
+
 	const handleCreateAssignment = async () => {
 		setLoading(true);
 		setError(null);
 
 		try {
-			const assignmentData = {
-				title: details.title,
-				description: details.description,
-				assignment_type: details.assignmentType,
-				due_date: details.dueDate,
-				points: details.points ?? 0,
-				time_limit_minutes: details.timeLimitMinutes,
-				event_name: details.eventName,
-				questions: generatedQuestions,
-				roster_members: selectedRoster,
-			};
+			// Format questions for the API
+			const formattedQuestions = generatedQuestions.map((q) => {
+				// Extract correct answer from answers array
+				// The API expects: MCQ answers as letter (A, B, C) or index string, FRQ as text
+				let correctAnswer: string | undefined;
+				if (q.question_type === "multiple_choice" && q.options) {
+					// For MCQ, answers are indices - convert to letter (A, B, C, etc.)
+					if (Array.isArray(q.answers) && q.answers.length > 0) {
+						const answerIndex =
+							typeof q.answers[0] === "number"
+								? q.answers[0]
+								: Number.parseInt(String(q.answers[0]));
+						if (
+							!Number.isNaN(answerIndex) &&
+							answerIndex >= 0 &&
+							answerIndex < 26
+						) {
+							// Convert index to letter (0 -> A, 1 -> B, etc.)
+							correctAnswer = String.fromCharCode(65 + answerIndex); // 65 is 'A'
+						} else {
+							// Fallback to index as string
+							correctAnswer = String(answerIndex);
+						}
+					}
+				} else if (q.question_type === "free_response") {
+					// For FRQ, answers are strings - join if array
+					correctAnswer = Array.isArray(q.answers)
+						? q.answers.join(", ")
+						: String(q.answers || "");
+				}
 
-			const assignment = await createAssignment(
-				teamId,
-				subteamId,
-				assignmentData,
-			);
+				return {
+					questionText: q.question_text,
+					questionType: q.question_type,
+					options: q.options?.map((opt) =>
+						typeof opt === "string" ? opt : opt.text || "",
+					),
+					correctAnswer,
+					points: 1,
+					imageData: q.imageData || null,
+					difficulty: q.difficulty,
+				};
+			});
+
+			// Get roster member details for selected members
+			const rosterMemberDetails = selectedRoster.map((memberName) => {
+				const member = rosterMembers.find((m) => m.student_name === memberName);
+				return {
+					studentName: memberName,
+					userId: member?.user_id || null,
+					displayName: memberName,
+				};
+			});
+
+			const assignment = await createAssignmentMutation.mutateAsync({
+				teamSlug: teamId,
+				title: details.title,
+				description: details.description || null,
+				dueDate: details.dueDate || null,
+				eventName: details.eventName || null,
+				timeLimitMinutes: details.timeLimitMinutes || null,
+				points: 0,
+				isRequired: false,
+				maxAttempts: 1,
+				subteamId: subteamId || null,
+				questions: formattedQuestions,
+				rosterMembers: rosterMemberDetails,
+			});
 
 			toast.success("Assignment created successfully!");
-			onAssignmentCreated(assignment);
-		} catch (_error) {
+			onAssignmentCreated({ id: assignment.id, title: assignment.title });
+		} catch (error) {
+			console.error("Failed to create assignment:", error);
 			setError("Failed to create assignment. Please try again.");
+			toast.error("Failed to create assignment. Please try again.");
 		} finally {
 			setLoading(false);
 		}
@@ -322,44 +432,13 @@ export default function EnhancedAssignmentCreator({
 	};
 
 	return (
-		<div
-			className="fixed inset-0 flex items-center justify-center z-50"
-			style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
-		>
-			<div
-				className={`max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto rounded-lg ${darkMode ? "bg-gray-800" : "bg-white"}`}
-			>
-				<div className="p-6">
-					<div className="flex justify-between items-center mb-6">
-						<h2
-							className={`text-2xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}
+		<Modal
+			isOpen={true}
+			onClose={onCancel}
+			title="Create Assignment"
+			maxWidth="4xl"
 						>
-							Create Assignment
-						</h2>
-						<button
-							type="button"
-							onClick={onCancel}
-							className={`p-2 rounded-lg hover:bg-opacity-20 transition-colors ${
-								darkMode ? "hover:bg-gray-600" : "hover:bg-gray-200"
-							}`}
-						>
-							<svg
-								className="w-5 h-5"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<title>Close</title>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M6 18L18 6M6 6l12 12"
-								/>
-							</svg>
-						</button>
-					</div>
-
+			<div className="max-h-[80vh] overflow-y-auto">
 					{/* Progress indicator */}
 					<div className="mb-6">
 						<div className="flex items-center justify-between">
@@ -421,7 +500,6 @@ export default function EnhancedAssignmentCreator({
 							onError={handleError}
 							details={details}
 							onDetailsChange={handleDetailsChange}
-							prefillEventName={prefillEventName}
 							availableEvents={availableEvents}
 						/>
 					)}
@@ -476,7 +554,6 @@ export default function EnhancedAssignmentCreator({
 						/>
 					)}
 				</div>
-			</div>
-		</div>
+		</Modal>
 	);
 }

@@ -1,14 +1,17 @@
 import { dbPg } from "@/lib/db";
 import {
 	teamAssignmentAnalytics,
+	teamAssignmentQuestionResponses,
 	teamAssignmentQuestions,
 	teamAssignmentRoster,
 	teamAssignments,
+	teams,
 	teamSubmissions,
 	users,
 } from "@/lib/db/schema";
+import logger from "@/lib/utils/logging/logger";
 import { TRPCError } from "@trpc/server";
-import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { assertCaptainAccess, assertTeamAccess } from "./shared";
 
 export type AssignmentQuestion = {
@@ -22,7 +25,7 @@ export type AssignmentQuestion = {
 };
 
 export async function listAssignments(teamSlug: string, userId: string) {
-	const { team } = await assertTeamAccess(teamSlug, userId);
+	const { team, membership } = await assertTeamAccess(teamSlug, userId);
 
 	// Get assignments with creator info
 	const assignments = await dbPg
@@ -33,6 +36,7 @@ export async function listAssignments(teamSlug: string, userId: string) {
 			dueDate: teamAssignments.dueDate,
 			status: teamAssignments.status,
 			createdAt: teamAssignments.createdAt,
+			updatedAt: teamAssignments.updatedAt,
 			createdBy: teamAssignments.createdBy,
 			assignmentType: teamAssignments.assignmentType,
 			points: teamAssignments.points,
@@ -114,8 +118,19 @@ export async function listAssignments(teamSlug: string, userId: string) {
 		userSubmissions.map((s) => [s.assignmentId, s]),
 	);
 
-	// Get roster for assignments where user is assigned
-	const userRoster = await dbPg
+	// Check if user is captain/admin to determine if we should show all roster members
+	const isCaptain =
+		membership.role === "captain" || membership.role === "admin";
+
+	// Get roster for assignments - all members for captains, just user's own for members
+	const rosterWhereConditions = isCaptain
+		? inArray(teamAssignmentRoster.assignmentId, assignmentIds)
+		: and(
+				inArray(teamAssignmentRoster.assignmentId, assignmentIds),
+				eq(teamAssignmentRoster.userId, userId),
+			);
+
+	const allRoster = await dbPg
 		.select({
 			assignmentId: teamAssignmentRoster.assignmentId,
 			displayName: teamAssignmentRoster.displayName,
@@ -123,31 +138,30 @@ export async function listAssignments(teamSlug: string, userId: string) {
 			userId: teamAssignmentRoster.userId,
 		})
 		.from(teamAssignmentRoster)
-		.where(
-			and(
-				inArray(teamAssignmentRoster.assignmentId, assignmentIds),
-				eq(teamAssignmentRoster.userId, userId),
-			),
-		);
-
-	const userRosterMap = new Map(userRoster.map((r) => [r.assignmentId, r]));
+		.where(rosterWhereConditions);
+	const rosterByAssignment = new Map<string, typeof allRoster>();
+	for (const entry of allRoster) {
+		if (!rosterByAssignment.has(entry.assignmentId)) {
+			rosterByAssignment.set(entry.assignmentId, []);
+		}
+		rosterByAssignment.get(entry.assignmentId)?.push(entry);
+	}
 
 	return assignments.map((a) => {
 		const userSubmission = userSubmissionsMap.get(a.id);
-		const userRosterEntry = userRosterMap.get(a.id);
+		const assignmentRoster = rosterByAssignment.get(a.id) || [];
 
 		return {
 			id: a.id,
 			title: a.title,
 			description: a.description || "",
-			assignment_type: a.assignmentType || "standard",
 			due_date: a.dueDate || "",
 			points: a.points || 0,
 			is_required: a.isRequired || false,
 			max_attempts: a.maxAttempts || 1,
 			time_limit_minutes: a.timeLimitMinutes || null,
 			created_at: a.createdAt || "",
-			updated_at: a.createdAt || "",
+			updated_at: a.updatedAt || a.createdAt || "",
 			creator_email: a.creatorEmail || "",
 			creator_name: a.creatorName || "",
 			questions_count: questionCountsMap.get(a.id) || 0,
@@ -162,15 +176,14 @@ export async function listAssignments(teamSlug: string, userId: string) {
 						attempt_number: userSubmission.attemptNumber || 1,
 					}
 				: undefined,
-			roster: userRosterEntry
-				? [
-						{
-							student_name: userRosterEntry.studentName || "",
-							user_id: userRosterEntry.userId || null,
+			roster:
+				assignmentRoster.length > 0
+					? assignmentRoster.map((r) => ({
+							student_name: r.studentName || "",
+							user_id: r.userId || null,
 							email: null,
-							display_name: userRosterEntry.displayName || null,
-						},
-					]
+							display_name: r.displayName || null,
+						}))
 				: undefined,
 		};
 	});
@@ -182,7 +195,6 @@ export async function createAssignment(
 	payload: {
 		title: string;
 		description?: string | null;
-		assignmentType?: "task" | "quiz" | "exam" | "standard";
 		dueDate?: string | null;
 		eventName?: string | null;
 		timeLimitMinutes?: number | null;
@@ -191,6 +203,11 @@ export async function createAssignment(
 		maxAttempts?: number | null;
 		subteamId?: string | null;
 		questions?: AssignmentQuestion[];
+		rosterMembers?: Array<{
+			studentName: string;
+			userId?: string | null;
+			displayName: string;
+		}>;
 	},
 ) {
 	const { team } = await assertCaptainAccess(teamSlug, userId);
@@ -205,7 +222,7 @@ export async function createAssignment(
 			dueDate: payload.dueDate || null,
 			createdBy: userId,
 			status: "active",
-			assignmentType: payload.assignmentType || "standard",
+			assignmentType: "standard",
 			points: payload.points || 0,
 			isRequired: payload.isRequired ?? false,
 			maxAttempts: payload.maxAttempts || 1,
@@ -236,6 +253,27 @@ export async function createAssignment(
 				difficulty: q.difficulty?.toString() || null,
 			})),
 		);
+	}
+
+	// Insert roster members if provided
+	// Filter out members without userId since schema requires it
+	if (payload.rosterMembers && payload.rosterMembers.length > 0) {
+		const membersWithUserId = payload.rosterMembers.filter(
+			(member): member is typeof member & { userId: string } =>
+				member.userId !== null && member.userId !== undefined,
+		);
+		if (membersWithUserId.length > 0) {
+		await dbPg.insert(teamAssignmentRoster).values(
+				membersWithUserId.map((member) => ({
+				assignmentId: assignment.id,
+					userId: member.userId,
+				subteamId: payload.subteamId || null,
+				displayName: member.displayName,
+				studentName: member.studentName,
+				status: "assigned",
+			})),
+		);
+		}
 	}
 
 	return assignment;
@@ -475,5 +513,508 @@ export async function getAssignmentAnalytics(
 		roster_count: roster.length,
 		submitted_count: submissions.length,
 		graded_count: submissions.filter((s) => s.status === "graded").length,
+	};
+}
+
+function calculatePoints(
+	isDynamicCodebusters: boolean,
+	answers: Record<string, unknown> | undefined,
+	body: {
+		codebustersPoints?: {
+			totalPointsAttempted?: number;
+			totalPointsEarned?: number;
+		};
+		score?: number;
+	},
+	totalPoints: number | undefined,
+	assignmentMaxPoints: number,
+): {
+	calculatedTotalPoints: number;
+	calculatedEarnedPoints: number;
+	calculatedCorrectAnswers: number;
+} {
+	if (isDynamicCodebusters && answers) {
+		const { codebustersPoints } = body;
+
+		if (codebustersPoints) {
+			return {
+				calculatedTotalPoints: codebustersPoints.totalPointsAttempted || 0,
+				calculatedEarnedPoints: codebustersPoints.totalPointsEarned || 0,
+				calculatedCorrectAnswers: codebustersPoints.totalPointsEarned || 0,
+			};
+		}
+
+		return {
+			calculatedTotalPoints: Object.keys(answers || {}).length * 10,
+			calculatedEarnedPoints: body.score || 0,
+			calculatedCorrectAnswers: Math.round(body.score || 0),
+		};
+	}
+
+	const calcTotalPoints = totalPoints || assignmentMaxPoints || 0;
+	const calcEarnedPoints = body.score || 0;
+	const calcCorrectAnswers =
+		Math.round(
+			(calcEarnedPoints / Math.max(1, calcTotalPoints)) *
+				Object.keys(answers || {}).length,
+		) || 0;
+
+	return {
+		calculatedTotalPoints: calcTotalPoints,
+		calculatedEarnedPoints: calcEarnedPoints,
+		calculatedCorrectAnswers: calcCorrectAnswers,
+	};
+}
+
+function normalizeAnswerForStorage(answer: unknown): string {
+	if (answer === null || answer === undefined) {
+		return "";
+	}
+	if (typeof answer === "string") {
+		return answer;
+	}
+	if (Array.isArray(answer)) {
+		// If array has single element, return it as string; otherwise JSON stringify
+		if (answer.length === 1 && typeof answer[0] === "string") {
+			return answer[0];
+		}
+		return JSON.stringify(answer);
+	}
+	// For other types (numbers, booleans, objects), JSON stringify
+	return JSON.stringify(answer);
+}
+
+function normalizeAnswerForComparison(
+	answer: unknown,
+): string | number | (string | number)[] {
+	if (answer === null || answer === undefined) {
+		return "";
+	}
+	if (typeof answer === "string" || typeof answer === "number") {
+		return answer;
+	}
+	if (Array.isArray(answer)) {
+		// Return array as-is for comparison
+		return answer as (string | number)[];
+	}
+	// For objects, try to extract a meaningful value
+	if (typeof answer === "object") {
+		return JSON.stringify(answer);
+	}
+	return String(answer);
+}
+
+async function processQuestionResponses(
+	submissionId: string,
+	answers: Record<string, unknown>,
+): Promise<void> {
+	logger.info("[processQuestionResponses] Starting", {
+		submissionId,
+		answersCount: Object.keys(answers).length,
+	});
+
+	for (const [questionId, answer] of Object.entries(answers)) {
+		if (answer === null || answer === undefined) {
+			logger.debug(
+				"[processQuestionResponses] Skipping null/undefined answer",
+				{
+					questionId,
+				},
+			);
+			continue;
+		}
+
+		logger.debug("[processQuestionResponses] Processing answer", {
+			questionId,
+			answerType: typeof answer,
+			isArray: Array.isArray(answer),
+			answerValue: Array.isArray(answer) ? answer : answer,
+		});
+
+		const [questionRow] = await dbPg
+			.select({
+				correctAnswer: teamAssignmentQuestions.correctAnswer,
+				points: teamAssignmentQuestions.points,
+			})
+			.from(teamAssignmentQuestions)
+			.where(eq(teamAssignmentQuestions.id, questionId))
+			.limit(1);
+
+		if (!questionRow) {
+			logger.warn("[processQuestionResponses] Question not found", {
+				questionId,
+			});
+			continue;
+		}
+
+		// Normalize answer for comparison
+		const normalizedAnswer = normalizeAnswerForComparison(answer);
+		const correctAnswer = questionRow.correctAnswer;
+
+		// Compare answers - handle arrays, strings, and other types
+		let isCorrect = false;
+		if (Array.isArray(normalizedAnswer) && Array.isArray(correctAnswer)) {
+			// Compare arrays
+			isCorrect =
+				normalizedAnswer.length === correctAnswer.length &&
+				normalizedAnswer.every((val, idx) => val === correctAnswer[idx]);
+		} else if (
+			Array.isArray(normalizedAnswer) &&
+			normalizedAnswer.length === 1
+		) {
+			// Single element array vs string/number
+			isCorrect = normalizedAnswer[0] === correctAnswer;
+		} else {
+			// Direct comparison
+			isCorrect = normalizedAnswer === correctAnswer;
+		}
+
+		const pointsEarned = isCorrect ? (questionRow.points ?? 1) : 0;
+
+		// Normalize answer for storage (must be string)
+		const responseString = normalizeAnswerForStorage(answer);
+		const responseTextString = normalizeAnswerForStorage(answer);
+
+		// Ensure values are strings (explicit type assertion for Drizzle)
+		const responseValue: string = String(responseString);
+		const responseTextValue: string = String(responseTextString);
+
+		logger.debug("[processQuestionResponses] Inserting response", {
+			questionId,
+			submissionId,
+			responseValue,
+			responseValueType: typeof responseValue,
+			isArray: Array.isArray(responseValue),
+			originalAnswer: answer,
+			originalAnswerType: typeof answer,
+			isCorrect,
+			pointsEarned,
+			correctAnswer,
+		});
+
+		try {
+			// Check if response already exists
+			const existingResponse = await dbPg
+				.select({
+					id: teamAssignmentQuestionResponses.id,
+				})
+				.from(teamAssignmentQuestionResponses)
+				.where(
+					and(
+						eq(teamAssignmentQuestionResponses.submissionId, submissionId),
+						eq(teamAssignmentQuestionResponses.questionId, questionId),
+					),
+				)
+				.limit(1);
+
+			if (existingResponse.length > 0 && existingResponse[0]) {
+				// Update existing response
+				await dbPg
+					.update(teamAssignmentQuestionResponses)
+					.set({
+						response: responseValue,
+						responseText: responseTextValue,
+						isCorrect,
+						pointsEarned,
+					})
+					.where(
+						and(
+							eq(teamAssignmentQuestionResponses.submissionId, submissionId),
+							eq(teamAssignmentQuestionResponses.questionId, questionId),
+						),
+					);
+
+				logger.debug("[processQuestionResponses] Updated existing response", {
+					questionId,
+					submissionId,
+				});
+			} else {
+				// Insert new response
+				await dbPg.insert(teamAssignmentQuestionResponses).values({
+					submissionId,
+					questionId,
+					response: responseValue,
+					responseText: responseTextValue,
+					isCorrect,
+					pointsEarned,
+				});
+
+				logger.debug("[processQuestionResponses] Inserted new response", {
+					questionId,
+					submissionId,
+				});
+			}
+
+			logger.debug(
+				"[processQuestionResponses] Successfully inserted response",
+				{
+					questionId,
+				},
+			);
+		} catch (error) {
+			logger.error(
+				"[processQuestionResponses] Failed to insert response",
+				error instanceof Error ? error : new Error(String(error)),
+				{
+					questionId,
+					submissionId,
+					responseString,
+					responseType: typeof responseString,
+					errorMessage: error instanceof Error ? error.message : String(error),
+				},
+			);
+			throw error;
+		}
+	}
+
+	logger.info("[processQuestionResponses] Completed", {
+		submissionId,
+		processedCount: Object.keys(answers).length,
+	});
+}
+
+export async function submitAssignment(
+	assignmentId: string,
+	userId: string,
+	userEmail: string | null | undefined,
+	payload: {
+		answers?: Record<string, unknown>;
+		score?: number;
+		totalPoints?: number;
+		timeSpent?: number;
+		submittedAt?: string;
+		isDynamicCodebusters?: boolean;
+		codebustersPoints?: {
+			totalPointsAttempted?: number;
+			totalPointsEarned?: number;
+		};
+	},
+) {
+	const {
+		answers,
+		score,
+		totalPoints,
+		timeSpent,
+		submittedAt,
+		isDynamicCodebusters,
+		codebustersPoints,
+	} = payload;
+
+	logger.info("[submitAssignment] Verifying assignment and user access", {
+		assignmentId,
+		userId,
+	});
+
+	// Verify assignment exists and user is assigned, also get team slug for cache invalidation
+	const assignmentResult = await dbPg
+		.select({
+			id: teamAssignments.id,
+			title: teamAssignments.title,
+			maxPoints: teamAssignments.points,
+			teamId: teamAssignments.teamId,
+			teamSlug: teams.slug,
+		})
+		.from(teamAssignments)
+		.innerJoin(
+			teamAssignmentRoster,
+			eq(teamAssignments.id, teamAssignmentRoster.assignmentId),
+		)
+		.innerJoin(teams, eq(teamAssignments.teamId, teams.id))
+		.where(
+			and(
+				eq(teamAssignments.id, assignmentId),
+				or(
+					eq(teamAssignmentRoster.userId, userId),
+					eq(teamAssignmentRoster.displayName, userEmail ?? ""),
+				),
+			),
+		)
+		.limit(1);
+
+	if (assignmentResult.length === 0) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "Assignment not found or not assigned",
+		});
+	}
+
+	const assignmentRow = assignmentResult[0];
+	if (!assignmentRow) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "Assignment not found",
+		});
+	}
+
+	const assignmentMaxPoints = assignmentRow.maxPoints ?? 0;
+
+	// Check if user has already submitted - prevent multiple submissions
+	logger.info("[submitAssignment] Checking for existing submission", {
+		assignmentId,
+		userId,
+	});
+
+	const existingSubmissionResult = await dbPg
+		.select({
+			id: teamSubmissions.id,
+			attemptNumber: teamSubmissions.attemptNumber,
+			status: teamSubmissions.status,
+		})
+		.from(teamSubmissions)
+		.where(
+			and(
+				eq(teamSubmissions.assignmentId, assignmentId),
+				eq(teamSubmissions.userId, userId),
+			),
+		)
+		.orderBy(desc(teamSubmissions.attemptNumber))
+		.limit(1);
+
+	const existingSubmission = existingSubmissionResult[0];
+
+	// Prevent multiple submissions to the same assignment
+	if (existingSubmission) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: "Assignment already submitted",
+		});
+	}
+
+	const attemptNumber = 1;
+
+	// Create submission record
+	const [submissionRow] = await dbPg
+		.insert(teamSubmissions)
+		.values({
+			assignmentId,
+			userId,
+			status: "submitted",
+			grade: score ?? 0,
+			attemptNumber,
+			submittedAt: submittedAt
+				? new Date(submittedAt).toISOString()
+				: new Date().toISOString(),
+		} as typeof teamSubmissions.$inferInsert)
+		.returning({
+			id: teamSubmissions.id,
+			submittedAt: teamSubmissions.submittedAt,
+		});
+
+	if (!submissionRow) {
+		logger.error("[submitAssignment] Failed to create submission record", {
+			assignmentId,
+			userId,
+			attemptNumber,
+		});
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: "Failed to create submission",
+		});
+	}
+
+	logger.info("[submitAssignment] Submission record created", {
+		assignmentId,
+		userId,
+		submissionId: submissionRow.id,
+	});
+
+	const submissionId = String(submissionRow.id);
+
+	// Update assignment's updatedAt timestamp when submission is created
+	await dbPg
+		.update(teamAssignments)
+		.set({
+			updatedAt: new Date().toISOString(),
+		})
+		.where(eq(teamAssignments.id, assignmentId));
+
+	logger.info("[submitAssignment] Updated assignment updatedAt", {
+		assignmentId,
+		userId,
+	});
+
+	// Store individual question responses (skip for dynamic Codebusters assignments)
+	if (answers && typeof answers === "object" && !isDynamicCodebusters) {
+		logger.info("[submitAssignment] Processing question responses", {
+			assignmentId,
+			userId,
+			submissionId,
+			answersCount: Object.keys(answers).length,
+		});
+		await processQuestionResponses(submissionId, answers);
+		logger.info("[submitAssignment] Question responses processed", {
+			assignmentId,
+			userId,
+			submissionId,
+		});
+	} else {
+		logger.info("[submitAssignment] Skipping question responses", {
+			assignmentId,
+			userId,
+			hasAnswers: !!answers,
+			isDynamicCodebusters,
+		});
+	}
+
+	// Calculate points using the same method as Codebusters test summary
+	const {
+		calculatedTotalPoints,
+		calculatedEarnedPoints,
+		calculatedCorrectAnswers,
+	} = calculatePoints(
+		isDynamicCodebusters ?? false,
+		answers,
+		{ codebustersPoints, score },
+		totalPoints,
+		assignmentMaxPoints,
+	);
+
+	// Create analytics record (delete existing first, then insert)
+	await dbPg
+		.delete(teamAssignmentAnalytics)
+		.where(
+			and(
+				eq(teamAssignmentAnalytics.assignmentId, assignmentId),
+				eq(teamAssignmentAnalytics.userId, userId),
+			),
+		);
+
+	await dbPg.insert(teamAssignmentAnalytics).values({
+		assignmentId,
+		studentName: userEmail || userId,
+		userId,
+		totalQuestions: Object.keys(answers || {}).length,
+		correctAnswers: calculatedCorrectAnswers,
+		totalPoints: calculatedTotalPoints,
+		earnedPoints: calculatedEarnedPoints,
+		completionTimeSeconds: timeSpent || 0,
+		submittedAt: submittedAt
+			? new Date(submittedAt).toISOString()
+			: new Date().toISOString(),
+	});
+
+	logger.info("[submitAssignment] Success", {
+		assignmentId,
+		userId,
+		submissionId,
+		teamSlug: assignmentRow.teamSlug
+			? String(assignmentRow.teamSlug)
+			: undefined,
+	});
+
+	return {
+		submission: {
+			id: submissionId,
+			assignmentId,
+			score: score ?? 0,
+			totalPoints: totalPoints || assignmentMaxPoints || 0,
+			attemptNumber,
+			submittedAt: submissionRow.submittedAt
+				? new Date(submissionRow.submittedAt).toISOString()
+				: new Date().toISOString(),
+		},
+		teamSlug: assignmentRow.teamSlug
+			? String(assignmentRow.teamSlug)
+			: undefined,
 	};
 }
