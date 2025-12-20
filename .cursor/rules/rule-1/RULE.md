@@ -4,6 +4,7 @@ alwaysApply: true
 Welcome to our codebase, Scio.ly. This project uses Next.JS with Typescript, with Drizzle ORM + CockroachDB, Dexie.js with sessionstorage, and localstorage for caching (the former for our teams feature, the rest for everything else), and zod validation on everything. 
 
 Here are some EXTREMELY IMPORTANT rules you must follow while making changes in this codebase:
+* Always use camelCase for file naming
 * Constantly think about what is bad practice. TS ignores, biome ignores, a quick fix to a config file to suppress errors that you don't like? Refrain from doing this, you need a robust, non-hacky codebase. Legacy code should always be purged, it is a sign of code smell. 
 * Never use any types, and refrain from using unknown types. Use pnpm run lint and always make sure that it returns a code of 0 before ending.
 * use and import the logger function instead of using console.log
