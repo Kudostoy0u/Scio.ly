@@ -48,7 +48,7 @@ export const NihilistDisplay = ({
 	// Split by triple-or-more spaces to detect explicit block boundaries
 	const blocks = text.trim().split(TRIPLE_OR_MORE_SPACES_REGEX);
 	const numberGroups: string[] = [];
-	const blockBoundaries: number[] = [];
+	const blockBoundaries: Set<number> = new Set();
 
 	blocks.forEach((block, blockIndex) => {
 		const pairs = block
@@ -57,8 +57,8 @@ export const NihilistDisplay = ({
 			.filter((group) => group.length > 0);
 		numberGroups.push(...pairs);
 
-		if (blockIndex < blocks.length - 1) {
-			blockBoundaries.push(numberGroups.length - 1);
+		if (blockIndex < blocks.length - 1 && numberGroups.length > 0) {
+			blockBoundaries.add(numberGroups.length - 1);
 		}
 	});
 
@@ -187,90 +187,127 @@ export const NihilistDisplay = ({
 			<div className="mb-4 flex flex-col md:flex-row md:gap-6 items-start">
 				{/* Left: inputs */}
 				<div className="md:flex-[4] md:min-w-0">
-					<div className="flex flex-wrap gap-2">
-						{numberGroups.map((group, index) => (
-							<React.Fragment key={`${index}-${group}`}>
-								<div className="flex flex-col items-center">
-									<div
-										className={`text-xs mb-1 ${darkMode ? "text-gray-400" : "text-gray-600"}`}
-									>
-										{group}
-									</div>
-									<input
-										type="text"
-										maxLength={1}
-										value={solution?.[index] || ""}
-										onChange={(e) =>
-											onSolutionChange(
-												quoteIndex,
-												index,
-												e.target.value.toUpperCase(),
-											)
-										}
-										autoComplete="off"
-										disabled={isTestSubmitted}
-										className={`w-8 h-8 text-center border rounded text-sm ${
-											isTestSubmitted
-												? (
-														() => {
-															const quote = quotes[quoteIndex];
-															const isHinted = Boolean(
-																quote?.nihilistHinted?.[index],
-															);
-															if (isHinted) {
-																return "bg-transparent border-yellow-500";
-															}
-															return (solution?.[index] || "").toUpperCase() ===
-																(correctMapping[index] || "")
-																? "border-green-500 text-green-800 bg-transparent"
-																: "border-red-500 text-red-800 bg-transparent";
-														}
-													)()
-												: darkMode
-													? "bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500"
-													: "bg-white border-gray-300 text-gray-900 focus:border-blue-500"
-										}`}
-									/>
-									{isTestSubmitted && (
+					{/* Group inputs into blocks to prevent blocks from breaking across lines */}
+					{(() => {
+						const inputBlocks: Array<Array<{ group: string; index: number }>> =
+							[];
+						let currentBlock: Array<{ group: string; index: number }> = [];
+						for (let i = 0; i < numberGroups.length; i++) {
+							currentBlock.push({ group: numberGroups[i] ?? "", index: i });
+							// If this is the end of a block (or last input), finalize the block
+							if (blockBoundaries.has(i) || i === numberGroups.length - 1) {
+								inputBlocks.push(currentBlock);
+								currentBlock = [];
+							}
+						}
+						if (currentBlock.length > 0) {
+							inputBlocks.push(currentBlock);
+						}
+
+						return (
+							<div className="flex flex-wrap gap-2">
+								{inputBlocks.map((block) => {
+									const firstIndex = block[0]?.index ?? 0;
+									return (
 										<div
-											className={`mt-1 text-[10px] ${(() => {
-												const quote = quotes[quoteIndex];
-												const isHinted = Boolean(
-													quote?.nihilistHinted?.[index],
-												);
-												const val = (solution?.[index] || "").toUpperCase();
-												const exp = correctMapping[index] || "";
-												if (isHinted) {
-													return "text-transparent";
-												}
-												if (!val || val !== exp) {
-													return "text-red-600";
-												}
-												return "text-transparent";
-											})()}`}
+											key={`block-${firstIndex}`}
+											className={`flex gap-2 flex-nowrap ${inputBlocks.indexOf(block) < inputBlocks.length - 1 ? "mr-4 md:mr-8" : ""}`}
+											style={{ flexShrink: 0 }}
 										>
-											{(() => {
-												const quote = quotes[quoteIndex];
-												const isHinted = Boolean(
-													quote?.nihilistHinted?.[index],
-												);
-												const val = (solution?.[index] || "").toUpperCase();
-												const exp = correctMapping[index] || "";
-												if (isHinted) {
-													return ".";
-												}
-												if (!val || val !== exp) {
-													return exp.toUpperCase();
-												}
-												return ".";
-											})()}
+											{block.map(({ group, index }) => (
+												<div
+													key={`${index}-${group}`}
+													className="flex flex-col items-center"
+												>
+													<div
+														className={`text-xs mb-1 ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+													>
+														{group}
+													</div>
+													<input
+														type="text"
+														maxLength={1}
+														value={solution?.[index] || ""}
+														onChange={(e) =>
+															onSolutionChange(
+																quoteIndex,
+																index,
+																e.target.value.toUpperCase(),
+															)
+														}
+														autoComplete="off"
+														disabled={isTestSubmitted}
+														className={`w-8 h-8 text-center border rounded text-sm ${
+															isTestSubmitted
+																? (
+																		() => {
+																			const quote = quotes[quoteIndex];
+																			const isHinted = Boolean(
+																				quote?.nihilistHinted?.[index],
+																			);
+																			if (isHinted) {
+																				return "bg-transparent border-yellow-500";
+																			}
+																			return (
+																				solution?.[index] || ""
+																			).toUpperCase() ===
+																				(correctMapping[index] || "")
+																				? "border-green-500 text-green-800 bg-transparent"
+																				: "border-red-500 text-red-800 bg-transparent";
+																		}
+																	)()
+																: darkMode
+																	? "bg-gray-800 border-gray-600 text-gray-300 focus:border-blue-500"
+																	: "bg-white border-gray-300 text-gray-900 focus:border-blue-500"
+														}`}
+													/>
+													{isTestSubmitted && (
+														<div
+															className={`mt-1 text-[10px] ${(() => {
+																const quote = quotes[quoteIndex];
+																const isHinted = Boolean(
+																	quote?.nihilistHinted?.[index],
+																);
+																const val = (
+																	solution?.[index] || ""
+																).toUpperCase();
+																const exp = correctMapping[index] || "";
+																if (isHinted) {
+																	return "text-transparent";
+																}
+																if (!val || val !== exp) {
+																	return "text-red-600";
+																}
+																return "text-transparent";
+															})()}`}
+														>
+															{(() => {
+																const quote = quotes[quoteIndex];
+																const isHinted = Boolean(
+																	quote?.nihilistHinted?.[index],
+																);
+																const val = (
+																	solution?.[index] || ""
+																).toUpperCase();
+																const exp = correctMapping[index] || "";
+																if (isHinted) {
+																	return ".";
+																}
+																if (!val || val !== exp) {
+																	return exp.toUpperCase();
+																}
+																return ".";
+															})()}
+														</div>
+													)}
+												</div>
+											))}
 										</div>
-									)}
-								</div>
-								{blockBoundaries.includes(index) && <div className="w-6 h-8" />}
-							</React.Fragment>
-						))}
-					</div>
+									);
+								})}
+							</div>
+						);
+					})()}
 				</div>
 				{/* Right: helper 5x5 grid for Polybius mapping */}
 				<div

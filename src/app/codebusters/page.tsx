@@ -31,6 +31,7 @@ import {
 	ActionButtons,
 	CodebustersSummary,
 	EmptyState,
+	FloatingTimer,
 	Header,
 	LoadingState,
 	PDFModal,
@@ -385,6 +386,11 @@ export default function CodeBusters() {
 
 				{/* Page Content */}
 				<div className="relative flex flex-col items-center p-3 md:p-6 pt-24 md:pt-24">
+					<FloatingTimer
+						timeLeft={timeLeft}
+						darkMode={darkMode}
+						isSubmitted={isTestSubmitted}
+					/>
 					<Header
 						darkMode={darkMode}
 						timeLeft={timeLeft}

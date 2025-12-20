@@ -321,36 +321,80 @@ export const ColumnarTranspositionDisplay = ({
 			</div>
 
 			{/* Per-character layout identical to Substitution/Hill */}
-			<div className="flex flex-wrap gap-y-8 text-sm sm:text-base break-words whitespace-pre-wrap">
-				{displayChars.map((char, displayIndex) => {
-					const charData = getCharacterData(
-						char,
-						displayIndex,
-						displayToOriginalIndex,
-						solution,
-						isTestSubmitted,
-						correctMapping,
-						paddingPositions,
-					);
+			{/* Group characters into blocks (consecutive letters without spaces) */}
+			{(() => {
+				const blocks: Array<Array<{ char: string; displayIndex: number }>> = [];
+				let currentBlock: Array<{ char: string; displayIndex: number }> = [];
 
-					return (
-						<CharacterDisplay
-							key={`${displayIndex}-${char}-${charData.originalIndex}`}
-							char={char}
-							displayIndex={displayIndex}
-							originalIndex={charData.originalIndex}
-							value={charData.value}
-							correctLetter={charData.correctLetter}
-							isCorrect={charData.isCorrect}
-							isPadding={charData.isPadding}
-							quoteIndex={quoteIndex}
-							darkMode={darkMode}
-							isTestSubmitted={isTestSubmitted}
-							onSolutionChange={onSolutionChange}
-						/>
-					);
-				})}
-			</div>
+				for (
+					let displayIndex = 0;
+					displayIndex < displayChars.length;
+					displayIndex++
+				) {
+					const char = displayChars[displayIndex] ?? "";
+					const isSpace = char === " " || char === "\n" || char === "\t";
+
+					if (isSpace) {
+						// If we have a current block, finalize it
+						if (currentBlock.length > 0) {
+							blocks.push(currentBlock);
+							currentBlock = [];
+						}
+						// Skip space blocks - they cause indentation issues when wrapping
+						// Spaces will be handled by natural spacing between blocks
+					} else {
+						currentBlock.push({ char, displayIndex });
+					}
+				}
+				// Add any remaining characters as a final block
+				if (currentBlock.length > 0) {
+					blocks.push(currentBlock);
+				}
+
+				return (
+					<div className="flex flex-wrap gap-y-8 gap-x-2 text-sm sm:text-base break-words whitespace-pre-wrap">
+						{blocks.map((block) => {
+							const firstDisplayIndex = block[0]?.displayIndex ?? 0;
+							return (
+								<div
+									key={`block-${firstDisplayIndex}`}
+									className="flex gap-0 flex-nowrap"
+									style={{ flexShrink: 0 }}
+								>
+									{block.map(({ char, displayIndex }) => {
+										const charData = getCharacterData(
+											char,
+											displayIndex,
+											displayToOriginalIndex,
+											solution,
+											isTestSubmitted,
+											correctMapping,
+											paddingPositions,
+										);
+
+										return (
+											<CharacterDisplay
+												key={`${displayIndex}-${char}-${charData.originalIndex}`}
+												char={char}
+												displayIndex={displayIndex}
+												originalIndex={charData.originalIndex}
+												value={charData.value}
+												correctLetter={charData.correctLetter}
+												isCorrect={charData.isCorrect}
+												isPadding={charData.isPadding}
+												quoteIndex={quoteIndex}
+												darkMode={darkMode}
+												isTestSubmitted={isTestSubmitted}
+												onSolutionChange={onSolutionChange}
+											/>
+										);
+									})}
+								</div>
+							);
+						})}
+					</div>
+				);
+			})()}
 
 			{/* Show encoding key and original quote after submission */}
 			{isTestSubmitted && (

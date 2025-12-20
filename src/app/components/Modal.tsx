@@ -39,7 +39,7 @@ export default function Modal({
 
 	useEffect(() => {
 		if (!isOpen) return;
-		const onKeyDown = (e: KeyboardEvent) => {
+		const onKeyDown = (e: globalThis.KeyboardEvent) => {
 			if (e.key === "Escape") {
 				e.preventDefault();
 				onClose();

@@ -1,8 +1,8 @@
 "use client";
 
+import { getEventSubtopics } from "@/lib/constants/subtopics";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { getEventSubtopics } from "@/lib/constants/subtopics";
 import type { QuestionGenerationStepProps } from "./assignmentTypes";
 
 export default function QuestionGenerationStep({
@@ -29,7 +29,7 @@ export default function QuestionGenerationStep({
 		if (eventName) {
 			setLoadingSubtopics(false); // No loading needed since it's synchronous
 			const subtopics = getEventSubtopics(eventName);
-					setAvailableSubtopics(subtopics);
+			setAvailableSubtopics(subtopics);
 		} else {
 			setAvailableSubtopics([]);
 		}
@@ -123,104 +123,104 @@ export default function QuestionGenerationStep({
 
 			{/* Question Type and Difficulty on same row for desktop */}
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-			<div>
-				<label
-					htmlFor="question-type-mcq"
-					className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-				>
-					Question Type
-				</label>
-				<div className="flex gap-4">
-					{[
-						{ value: "mcq", label: "MCQ" },
-						{ value: "both", label: "Both" },
-						{ value: "frq", label: "FRQ" },
-					].map((type) => (
-						<label key={type.value} className="flex items-center">
-							<input
-								id={type.value === "mcq" ? "question-type-mcq" : undefined}
-								type="radio"
-								name="questionType"
-								value={type.value}
-								checked={settings.questionType === type.value}
-								onChange={(e) => {
-									const value = e.target.value;
+				<div>
+					<label
+						htmlFor="question-type-mcq"
+						className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+					>
+						Question Type
+					</label>
+					<div className="flex gap-4">
+						{[
+							{ value: "mcq", label: "MCQ" },
+							{ value: "both", label: "Both" },
+							{ value: "frq", label: "FRQ" },
+						].map((type) => (
+							<label key={type.value} className="flex items-center">
+								<input
+									id={type.value === "mcq" ? "question-type-mcq" : undefined}
+									type="radio"
+									name="questionType"
+									value={type.value}
+									checked={settings.questionType === type.value}
+									onChange={(e) => {
+										const value = e.target.value;
 										if (
 											value === "mcq" ||
 											value === "frq" ||
 											value === "both"
 										) {
-										onSettingsChange({
-											questionType: value as "mcq" | "frq" | "both",
-										});
-									}
-								}}
-								className="mr-2"
-							/>
-							<span className={darkMode ? "text-white" : "text-gray-900"}>
-								{type.label}
-							</span>
-						</label>
-					))}
-				</div>
-			</div>
-
-			<div>
-				<label
-					htmlFor="difficulty-any"
-					className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-				>
-					Difficulty Levels
-				</label>
-				<div className="flex gap-4">
-					{[
-						{ value: "any", label: "Any" },
-						{ value: "easy", label: "Easy" },
-						{ value: "medium", label: "Medium" },
-						{ value: "hard", label: "Hard" },
-					].map((difficulty) => (
-						<label key={difficulty.value} className="flex items-center">
-							<input
-								id={difficulty.value === "any" ? "difficulty-any" : undefined}
-								type="checkbox"
-								checked={settings.difficulties.includes(difficulty.value)}
-								onChange={(e) => {
-									if (e.target.checked) {
-										if (difficulty.value === "any") {
-											// If "Any" is selected, clear all other selections
-											onSettingsChange({ difficulties: ["any"] });
-										} else {
-											// If a specific difficulty is selected, remove "any" and add the difficulty
-											const newDifficulties = settings.difficulties.filter(
-												(d) => d !== "any",
-											);
 											onSettingsChange({
-												difficulties: [...newDifficulties, difficulty.value],
+												questionType: value as "mcq" | "frq" | "both",
 											});
 										}
-									} else {
-										onSettingsChange({
-											difficulties: settings.difficulties.filter(
-												(d) => d !== difficulty.value,
-											),
-										});
-									}
-								}}
-								className="mr-2"
-							/>
-							<span className={darkMode ? "text-white" : "text-gray-900"}>
-								{difficulty.label}
-							</span>
-						</label>
-					))}
+									}}
+									className="mr-2"
+								/>
+								<span className={darkMode ? "text-white" : "text-gray-900"}>
+									{type.label}
+								</span>
+							</label>
+						))}
+					</div>
 				</div>
-				{settings.difficulties.length === 0 && (
-					<p
-						className={`text-sm mt-1 ${darkMode ? "text-yellow-400" : "text-yellow-600"}`}
+
+				<div>
+					<label
+						htmlFor="difficulty-any"
+						className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
 					>
-						Please select at least one difficulty level
-					</p>
-				)}
+						Difficulty Levels
+					</label>
+					<div className="flex gap-4">
+						{[
+							{ value: "any", label: "Any" },
+							{ value: "easy", label: "Easy" },
+							{ value: "medium", label: "Medium" },
+							{ value: "hard", label: "Hard" },
+						].map((difficulty) => (
+							<label key={difficulty.value} className="flex items-center">
+								<input
+									id={difficulty.value === "any" ? "difficulty-any" : undefined}
+									type="checkbox"
+									checked={settings.difficulties.includes(difficulty.value)}
+									onChange={(e) => {
+										if (e.target.checked) {
+											if (difficulty.value === "any") {
+												// If "Any" is selected, clear all other selections
+												onSettingsChange({ difficulties: ["any"] });
+											} else {
+												// If a specific difficulty is selected, remove "any" and add the difficulty
+												const newDifficulties = settings.difficulties.filter(
+													(d) => d !== "any",
+												);
+												onSettingsChange({
+													difficulties: [...newDifficulties, difficulty.value],
+												});
+											}
+										} else {
+											onSettingsChange({
+												difficulties: settings.difficulties.filter(
+													(d) => d !== difficulty.value,
+												),
+											});
+										}
+									}}
+									className="mr-2"
+								/>
+								<span className={darkMode ? "text-white" : "text-gray-900"}>
+									{difficulty.label}
+								</span>
+							</label>
+						))}
+					</div>
+					{settings.difficulties.length === 0 && (
+						<p
+							className={`text-sm mt-1 ${darkMode ? "text-yellow-400" : "text-yellow-600"}`}
+						>
+							Please select at least one difficulty level
+						</p>
+					)}
 				</div>
 			</div>
 

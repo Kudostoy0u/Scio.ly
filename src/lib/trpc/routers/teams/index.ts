@@ -21,6 +21,7 @@ import {
 	getAssignmentAnalytics,
 	getAssignmentDetails,
 	getStreamPosts,
+	getTeamCacheManifest,
 	getTeamFullBySlug,
 	getTeamMetaBySlug,
 	getUpcomingTournaments,
@@ -68,6 +69,12 @@ const assignmentRosterMemberSchema = z.object({
 });
 
 export const teamsRouter = router({
+	cacheManifest: protectedProcedure
+		.input(z.object({ teamSlug: z.string().min(1) }))
+		.query(async ({ ctx, input }) => {
+			return getTeamCacheManifest(input.teamSlug, ctx.user.id);
+		}),
+
 	assignments: protectedProcedure
 		.input(z.object({ teamSlug: z.string() }))
 		.query(async ({ ctx, input }) => {

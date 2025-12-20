@@ -7,3 +7,4 @@ export * from "./link-invitations";
 export * from "./stream";
 export * from "./timers";
 export * from "./assignments";
+export * from "./cache-manifest";

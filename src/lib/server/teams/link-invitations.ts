@@ -7,6 +7,7 @@ import {
 	teams,
 } from "@/lib/db/schema";
 import { and, eq, ilike, isNull } from "drizzle-orm";
+import { touchTeamCacheManifest } from "./cache-manifest";
 import { assertCaptainAccess, bumpTeamVersion } from "./shared";
 
 export async function createLinkInvitation(input: {
@@ -45,6 +46,7 @@ export async function createLinkInvitation(input: {
 	});
 
 	await bumpTeamVersion(team.id);
+	await touchTeamCacheManifest(team.id, { full: true });
 
 	return { ok: true };
 }
@@ -201,6 +203,11 @@ export async function acceptLinkInvitation(
 			.where(eq(teamLinkInvitations.id, linkInviteId));
 
 		await bumpTeamVersion(linkInvite.teamId, tx);
+		await touchTeamCacheManifest(
+			linkInvite.teamId,
+			{ roster: true, members: true, full: true },
+			tx,
+		);
 	});
 
 	return { ok: true };
@@ -258,6 +265,7 @@ export async function declineLinkInvitation(
 			.where(eq(teamLinkInvitations.id, linkInviteId));
 
 		await bumpTeamVersion(linkInvite.teamId, tx);
+		await touchTeamCacheManifest(linkInvite.teamId, { full: true }, tx);
 	});
 
 	return { ok: true };
@@ -296,6 +304,7 @@ export async function cancelLinkInvitation(input: {
 			.where(eq(teamLinkInvitations.id, linkInvite.id));
 
 		await bumpTeamVersion(linkInvite.teamId, tx);
+		await touchTeamCacheManifest(linkInvite.teamId, { full: true }, tx);
 	});
 
 	return { ok: true };

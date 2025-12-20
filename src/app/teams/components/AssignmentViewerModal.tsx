@@ -164,15 +164,21 @@ export default function AssignmentViewerModal({
 			: 0;
 
 	return (
-		<div
-			className="fixed inset-0 flex items-center justify-center z-50"
-			style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
-			onClick={onClose}
-		>
+		<div className="fixed inset-0 flex items-center justify-center z-50">
+			<button
+				type="button"
+				className="absolute inset-0 bg-black/50"
+				aria-label="Close modal"
+				onClick={onClose}
+			/>
 			<div
-				className={`max-w-4xl w-full mx-2 md:mx-4 max-h-[90vh] overflow-y-auto rounded-lg ${darkMode ? "bg-gray-800" : "bg-white"}`}
+				className={`relative max-w-4xl w-full mx-2 md:mx-4 max-h-[90vh] overflow-y-auto rounded-lg ${darkMode ? "bg-gray-800" : "bg-white"}`}
 				onClick={(e) => {
 					// Prevent clicks inside modal from closing it
+					e.stopPropagation();
+				}}
+				onKeyDown={(e) => {
+					// Prevent keyboard events inside modal from closing it
 					e.stopPropagation();
 				}}
 			>

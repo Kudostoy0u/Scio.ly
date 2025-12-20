@@ -3,6 +3,7 @@ import { users } from "@/lib/db/schema";
 import { teamMemberships, teamRoster } from "@/lib/db/schema";
 import logger from "@/lib/utils/logging/logger";
 import { and, eq, isNull, sql } from "drizzle-orm";
+import { touchTeamCacheManifest } from "./cache-manifest";
 import { getMembershipForUser } from "./shared";
 
 export async function replaceRosterEntries(
@@ -139,6 +140,8 @@ export async function replaceRosterEntries(
 		await tx.insert(teamRoster).values(resolvedEntries);
 	});
 
+	await touchTeamCacheManifest(teamId, { roster: true, full: true });
+
 	return { conflicts: Array.from(conflicts), rosterEntries: insertedEntries };
 }
 
@@ -265,6 +268,8 @@ export async function upsertRosterEntry(
 				});
 		});
 
+		await touchTeamCacheManifest(teamId, { roster: true, full: true });
+
 		logger.info("[upsertRosterEntry] Success");
 	} catch (error) {
 		logger.error("[upsertRosterEntry] Error", {
@@ -333,6 +338,7 @@ export async function removeRosterEntry(
 		}
 
 		await Promise.all(deletions);
+		await touchTeamCacheManifest(teamId, { roster: true, full: true });
 		return;
 	}
 
@@ -363,6 +369,7 @@ export async function removeRosterEntry(
 						: sql`TRUE`,
 				),
 			);
+		await touchTeamCacheManifest(teamId, { roster: true, full: true });
 		return;
 	}
 
@@ -372,4 +379,5 @@ export async function removeRosterEntry(
 		.where(
 			and(...predicates, eq(teamRoster.slotIndex, options.slotIndex ?? 0)),
 		);
+	await touchTeamCacheManifest(teamId, { roster: true, full: true });
 }

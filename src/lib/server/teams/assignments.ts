@@ -5,13 +5,14 @@ import {
 	teamAssignmentQuestions,
 	teamAssignmentRoster,
 	teamAssignments,
-	teams,
 	teamSubmissions,
+	teams,
 	users,
 } from "@/lib/db/schema";
 import logger from "@/lib/utils/logging/logger";
 import { TRPCError } from "@trpc/server";
 import { and, asc, count, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { touchTeamCacheManifest } from "./cache-manifest";
 import { assertCaptainAccess, assertTeamAccess } from "./shared";
 
 export type AssignmentQuestion = {
@@ -184,7 +185,7 @@ export async function listAssignments(teamSlug: string, userId: string) {
 							email: null,
 							display_name: r.displayName || null,
 						}))
-				: undefined,
+					: undefined,
 		};
 	});
 }
@@ -263,18 +264,23 @@ export async function createAssignment(
 				member.userId !== null && member.userId !== undefined,
 		);
 		if (membersWithUserId.length > 0) {
-		await dbPg.insert(teamAssignmentRoster).values(
+			await dbPg.insert(teamAssignmentRoster).values(
 				membersWithUserId.map((member) => ({
-				assignmentId: assignment.id,
+					assignmentId: assignment.id,
 					userId: member.userId,
-				subteamId: payload.subteamId || null,
-				displayName: member.displayName,
-				studentName: member.studentName,
-				status: "assigned",
-			})),
-		);
+					subteamId: payload.subteamId || null,
+					displayName: member.displayName,
+					studentName: member.studentName,
+					status: "assigned",
+				})),
+			);
 		}
 	}
+
+	await touchTeamCacheManifest(team.id, {
+		assignments: true,
+		full: true,
+	});
 
 	return assignment;
 }
@@ -294,6 +300,11 @@ export async function deleteAssignment(
 				eq(teamAssignments.teamId, team.id),
 			),
 		);
+
+	await touchTeamCacheManifest(team.id, {
+		assignments: true,
+		full: true,
+	});
 
 	return { success: true };
 }
@@ -613,32 +624,70 @@ async function processQuestionResponses(
 		answersCount: Object.keys(answers).length,
 	});
 
-	for (const [questionId, answer] of Object.entries(answers)) {
-		if (answer === null || answer === undefined) {
-			logger.debug(
-				"[processQuestionResponses] Skipping null/undefined answer",
-				{
-					questionId,
-				},
-			);
-			continue;
-		}
+	// Filter out null/undefined answers and get question IDs
+	const validAnswers = Object.entries(answers).filter(
+		([, answer]) => answer !== null && answer !== undefined,
+	);
 
-		logger.debug("[processQuestionResponses] Processing answer", {
-			questionId,
-			answerType: typeof answer,
-			isArray: Array.isArray(answer),
-			answerValue: Array.isArray(answer) ? answer : answer,
+	if (validAnswers.length === 0) {
+		logger.info("[processQuestionResponses] No valid answers to process", {
+			submissionId,
 		});
+		return;
+	}
 
-		const [questionRow] = await dbPg
-			.select({
-				correctAnswer: teamAssignmentQuestions.correctAnswer,
-				points: teamAssignmentQuestions.points,
-			})
-			.from(teamAssignmentQuestions)
-			.where(eq(teamAssignmentQuestions.id, questionId))
-			.limit(1);
+	const questionIds = validAnswers.map(([questionId]) => questionId);
+
+	// Batch fetch all questions in one query
+	const questions = await dbPg
+		.select({
+			id: teamAssignmentQuestions.id,
+			correctAnswer: teamAssignmentQuestions.correctAnswer,
+			points: teamAssignmentQuestions.points,
+		})
+		.from(teamAssignmentQuestions)
+		.where(inArray(teamAssignmentQuestions.id, questionIds));
+
+	const questionMap = new Map(questions.map((q) => [q.id, q]));
+
+	// Batch fetch all existing responses in one query
+	const existingResponses = await dbPg
+		.select({
+			id: teamAssignmentQuestionResponses.id,
+			questionId: teamAssignmentQuestionResponses.questionId,
+		})
+		.from(teamAssignmentQuestionResponses)
+		.where(
+			and(
+				eq(teamAssignmentQuestionResponses.submissionId, submissionId),
+				inArray(teamAssignmentQuestionResponses.questionId, questionIds),
+			),
+		);
+
+	const existingResponseMap = new Map(
+		existingResponses.map((r) => [r.questionId, r.id]),
+	);
+
+	// Process all answers in memory
+	const responsesToInsert: Array<{
+		submissionId: string;
+		questionId: string;
+		response: string;
+		responseText: string;
+		isCorrect: boolean;
+		pointsEarned: number;
+	}> = [];
+
+	const responsesToUpdate: Array<{
+		questionId: string;
+		response: string;
+		responseText: string;
+		isCorrect: boolean;
+		pointsEarned: number;
+	}> = [];
+
+	for (const [questionId, answer] of validAnswers) {
+		const questionRow = questionMap.get(questionId);
 
 		if (!questionRow) {
 			logger.warn("[processQuestionResponses] Question not found", {
@@ -679,87 +728,95 @@ async function processQuestionResponses(
 		const responseValue: string = String(responseString);
 		const responseTextValue: string = String(responseTextString);
 
-		logger.debug("[processQuestionResponses] Inserting response", {
+		logger.debug("[processQuestionResponses] Processing answer", {
 			questionId,
 			submissionId,
 			responseValue,
-			responseValueType: typeof responseValue,
-			isArray: Array.isArray(responseValue),
-			originalAnswer: answer,
-			originalAnswerType: typeof answer,
 			isCorrect,
 			pointsEarned,
-			correctAnswer,
 		});
 
+		if (existingResponseMap.has(questionId)) {
+			// Queue for update
+			responsesToUpdate.push({
+				questionId,
+				response: responseValue,
+				responseText: responseTextValue,
+				isCorrect,
+				pointsEarned,
+			});
+		} else {
+			// Queue for insert
+			responsesToInsert.push({
+				submissionId,
+				questionId,
+				response: responseValue,
+				responseText: responseTextValue,
+				isCorrect,
+				pointsEarned,
+			});
+		}
+	}
+
+	// Batch insert new responses
+	if (responsesToInsert.length > 0) {
 		try {
-			// Check if response already exists
-			const existingResponse = await dbPg
-				.select({
-					id: teamAssignmentQuestionResponses.id,
-				})
-				.from(teamAssignmentQuestionResponses)
-				.where(
-					and(
-						eq(teamAssignmentQuestionResponses.submissionId, submissionId),
-						eq(teamAssignmentQuestionResponses.questionId, questionId),
-					),
-				)
-				.limit(1);
-
-			if (existingResponse.length > 0 && existingResponse[0]) {
-				// Update existing response
-				await dbPg
-					.update(teamAssignmentQuestionResponses)
-					.set({
-						response: responseValue,
-						responseText: responseTextValue,
-						isCorrect,
-						pointsEarned,
-					})
-					.where(
-						and(
-							eq(teamAssignmentQuestionResponses.submissionId, submissionId),
-							eq(teamAssignmentQuestionResponses.questionId, questionId),
-						),
-					);
-
-				logger.debug("[processQuestionResponses] Updated existing response", {
-					questionId,
-					submissionId,
-				});
-			} else {
-				// Insert new response
-				await dbPg.insert(teamAssignmentQuestionResponses).values({
-					submissionId,
-					questionId,
-					response: responseValue,
-					responseText: responseTextValue,
-					isCorrect,
-					pointsEarned,
-				});
-
-				logger.debug("[processQuestionResponses] Inserted new response", {
-					questionId,
-					submissionId,
-				});
-			}
-
-			logger.debug(
-				"[processQuestionResponses] Successfully inserted response",
-				{
-					questionId,
-				},
-			);
+			await dbPg
+				.insert(teamAssignmentQuestionResponses)
+				.values(responsesToInsert);
+			logger.debug("[processQuestionResponses] Batch inserted responses", {
+				count: responsesToInsert.length,
+			});
 		} catch (error) {
 			logger.error(
-				"[processQuestionResponses] Failed to insert response",
+				"[processQuestionResponses] Failed to batch insert responses",
 				error instanceof Error ? error : new Error(String(error)),
 				{
-					questionId,
 					submissionId,
-					responseString,
-					responseType: typeof responseString,
+					count: responsesToInsert.length,
+					errorMessage: error instanceof Error ? error.message : String(error),
+				},
+			);
+			throw error;
+		}
+	}
+
+	// Batch update existing responses
+	if (responsesToUpdate.length > 0) {
+		try {
+			// Note: Drizzle doesn't support batch updates directly, so we need to update individually
+			// However, we can use Promise.all to parallelize them
+			await Promise.all(
+				responsesToUpdate.map((response) =>
+					dbPg
+						.update(teamAssignmentQuestionResponses)
+						.set({
+							response: response.response,
+							responseText: response.responseText,
+							isCorrect: response.isCorrect,
+							pointsEarned: response.pointsEarned,
+						})
+						.where(
+							and(
+								eq(teamAssignmentQuestionResponses.submissionId, submissionId),
+								eq(
+									teamAssignmentQuestionResponses.questionId,
+									response.questionId,
+								),
+							),
+						),
+				),
+			);
+			logger.debug("[processQuestionResponses] Batch updated responses", {
+				count: responsesToUpdate.length,
+			});
+		} catch (error) {
+			logger.error(
+				"[processQuestionResponses] Failed to batch update responses",
+				error instanceof Error ? error : new Error(String(error)),
+				{
+					submissionId,
+					count: responsesToUpdate.length,
 					errorMessage: error instanceof Error ? error.message : String(error),
 				},
 			);
@@ -769,7 +826,9 @@ async function processQuestionResponses(
 
 	logger.info("[processQuestionResponses] Completed", {
 		submissionId,
-		processedCount: Object.keys(answers).length,
+		processedCount: validAnswers.length,
+		insertedCount: responsesToInsert.length,
+		updatedCount: responsesToUpdate.length,
 	});
 }
 
@@ -1000,6 +1059,11 @@ export async function submitAssignment(
 		teamSlug: assignmentRow.teamSlug
 			? String(assignmentRow.teamSlug)
 			: undefined,
+	});
+
+	await touchTeamCacheManifest(assignmentRow.teamId, {
+		assignments: true,
+		full: true,
 	});
 
 	return {

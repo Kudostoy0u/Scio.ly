@@ -18,7 +18,7 @@ export default function TestHeader({
 }: TestHeaderProps) {
 	return (
 		<>
-			<header className="w-full max-w-[90vw] md:max-w-3xl flex justify-between items-center pt-3">
+			<header className="w-full max-w-3xl flex justify-between items-center pt-3">
 				<div className="flex items-center flex-1 min-w-0">
 					<h1
 						className={`text-lg md:text-xl lg:text-3xl font-extrabold break-words ${darkMode ? "text-blue-400" : "text-blue-600"}`}

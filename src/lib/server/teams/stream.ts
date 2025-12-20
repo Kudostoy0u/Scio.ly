@@ -7,6 +7,7 @@ import {
 } from "@/lib/db/schema";
 import { TRPCError } from "@trpc/server";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { touchSubteamCacheManifest } from "./cache-manifest";
 import { assertCaptainAccess, assertTeamAccess } from "./shared";
 
 export async function getStreamPosts(
@@ -112,6 +113,8 @@ export async function createStreamPost(
 		})
 		.returning({ id: teamStreamPosts.id });
 
+	await touchSubteamCacheManifest(team.id, input.subteamId, { stream: true });
+
 	return post;
 }
 
@@ -128,7 +131,7 @@ export async function updateStreamPost(
 	const { team } = await assertCaptainAccess(teamSlug, userId);
 
 	const [post] = await dbPg
-		.select({ id: teamStreamPosts.id })
+		.select({ id: teamStreamPosts.id, subteamId: teamStreamPosts.subteamId })
 		.from(teamStreamPosts)
 		.innerJoin(teamSubteams, eq(teamStreamPosts.subteamId, teamSubteams.id))
 		.where(
@@ -153,6 +156,10 @@ export async function updateStreamPost(
 		})
 		.where(eq(teamStreamPosts.id, input.postId));
 
+	if (post.subteamId) {
+		await touchSubteamCacheManifest(team.id, post.subteamId, { stream: true });
+	}
+
 	return { success: true };
 }
 
@@ -165,7 +172,7 @@ export async function deleteStreamPost(
 
 	// Verify post belongs to one of the team's subteams
 	const post = await dbPg
-		.select({ id: teamStreamPosts.id })
+		.select({ id: teamStreamPosts.id, subteamId: teamStreamPosts.subteamId })
 		.from(teamStreamPosts)
 		.innerJoin(teamSubteams, eq(teamStreamPosts.subteamId, teamSubteams.id))
 		.where(
@@ -178,6 +185,11 @@ export async function deleteStreamPost(
 	}
 
 	await dbPg.delete(teamStreamPosts).where(eq(teamStreamPosts.id, postId));
+
+	const subteamId = post[0]?.subteamId;
+	if (subteamId) {
+		await touchSubteamCacheManifest(team.id, subteamId, { stream: true });
+	}
 	return { success: true };
 }
 
@@ -189,7 +201,7 @@ export async function addComment(
 	const { team } = await assertTeamAccess(teamSlug, userId);
 
 	const post = await dbPg
-		.select({ id: teamStreamPosts.id })
+		.select({ id: teamStreamPosts.id, subteamId: teamStreamPosts.subteamId })
 		.from(teamStreamPosts)
 		.innerJoin(teamSubteams, eq(teamStreamPosts.subteamId, teamSubteams.id))
 		.where(
@@ -213,6 +225,11 @@ export async function addComment(
 		})
 		.returning({ id: teamStreamComments.id });
 
+	const subteamId = post[0]?.subteamId;
+	if (subteamId) {
+		await touchSubteamCacheManifest(team.id, subteamId, { stream: true });
+	}
+
 	return comment;
 }
 
@@ -224,7 +241,10 @@ export async function deleteComment(
 	const { team } = await assertCaptainAccess(teamSlug, userId);
 
 	const comment = await dbPg
-		.select({ id: teamStreamComments.id })
+		.select({
+			id: teamStreamComments.id,
+			subteamId: teamStreamPosts.subteamId,
+		})
 		.from(teamStreamComments)
 		.innerJoin(
 			teamStreamPosts,
@@ -246,5 +266,10 @@ export async function deleteComment(
 	await dbPg
 		.delete(teamStreamComments)
 		.where(eq(teamStreamComments.id, commentId));
+
+	const subteamId = comment[0]?.subteamId;
+	if (subteamId) {
+		await touchSubteamCacheManifest(team.id, subteamId, { stream: true });
+	}
 	return { success: true };
 }

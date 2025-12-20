@@ -417,18 +417,18 @@ export const updateMetrics = async (
 					};
 
 					const retryResult = await withAuthRetry(async () => {
-			const query = (await supabase
-				.from("user_stats")
+						const query = (await supabase
+							.from("user_stats")
 							.upsert([freshUpdatedStats] as unknown as never[], {
 								onConflict: "user_id,date",
 							})
-				.select()
-				.single()) as {
-				data: Database["public"]["Tables"]["user_stats"]["Row"] | null;
+							.select()
+							.single()) as {
+							data: Database["public"]["Tables"]["user_stats"]["Row"] | null;
 							error: unknown;
-			};
-			return query;
-		}, "updateMetrics");
+						};
+						return query;
+					}, "updateMetrics");
 
 					data = retryResult.data;
 					error = retryResult.error

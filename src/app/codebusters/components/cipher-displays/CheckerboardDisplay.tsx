@@ -131,6 +131,25 @@ export const CheckerboardDisplay = ({
 		tokensWithPositions.push({ tok: tokens[i] ?? "", position: i });
 	}
 
+	// Group tokens into blocks to prevent blocks from breaking across lines
+	const tokenBlocks: Array<Array<{ tok: string; position: number }>> = [];
+	let currentBlock: Array<{ tok: string; position: number }> = [];
+	for (let i = 0; i < tokensWithPositions.length; i++) {
+		const token = tokensWithPositions[i];
+		if (token) {
+			currentBlock.push(token);
+			// If this is the end of a block (or last token), finalize the block
+			if (blockEnd.has(i) || i === tokensWithPositions.length - 1) {
+				tokenBlocks.push(currentBlock);
+				currentBlock = [];
+			}
+		}
+	}
+	// Add any remaining tokens as a final block
+	if (currentBlock.length > 0) {
+		tokenBlocks.push(currentBlock);
+	}
+
 	return (
 		<div className={`mt-4 ${darkMode ? "text-gray-300" : "text-gray-900"}`}>
 			{/* Parameters (hide row/column keys before submission) */}
@@ -156,29 +175,42 @@ export const CheckerboardDisplay = ({
 				{/* Left: token inputs (approx 80%) */}
 				<div className="md:flex-[4] md:min-w-0">
 					<div className="flex flex-wrap gap-2">
-						{tokensWithPositions.map(({ tok, position }) => {
-							const isHinted = Boolean(quote?.checkerboardHinted?.[position]);
-							const isCorrect =
-								correctMapping[position] ===
-								(solution?.[position] || "").toUpperCase();
+						{tokenBlocks.map((block) => {
+							const firstPosition = block[0]?.position ?? 0;
 							return (
-								<TokenInput
-									key={`token-${tok}-${position}`}
-									tok={tok}
-									idx={position}
-									value={solution?.[position] || ""}
-									isHinted={isHinted}
-									isCorrect={isCorrect}
-									focusedToken={focusedToken}
-									blockEnd={blockEnd}
-									quoteIndex={quoteIndex}
-									onSolutionChange={onSolutionChange}
-									applyTokenToGrid={applyTokenToGrid}
-									setFocusedToken={setFocusedToken}
-									isTestSubmitted={isTestSubmitted}
-									darkMode={darkMode}
-									correctMapping={correctMapping}
-								/>
+								<div
+									key={`block-${firstPosition}`}
+									className={`flex gap-2 flex-nowrap ${tokenBlocks.indexOf(block) < tokenBlocks.length - 1 ? "mr-4 md:mr-8" : ""}`}
+									style={{ flexShrink: 0 }}
+								>
+									{block.map(({ tok, position }) => {
+										const isHinted = Boolean(
+											quote?.checkerboardHinted?.[position],
+										);
+										const isCorrect =
+											correctMapping[position] ===
+											(solution?.[position] || "").toUpperCase();
+										return (
+											<TokenInput
+												key={`token-${tok}-${position}`}
+												tok={tok}
+												idx={position}
+												value={solution?.[position] || ""}
+												isHinted={isHinted}
+												isCorrect={isCorrect}
+												focusedToken={focusedToken}
+												blockEnd={blockEnd}
+												quoteIndex={quoteIndex}
+												onSolutionChange={onSolutionChange}
+												applyTokenToGrid={applyTokenToGrid}
+												setFocusedToken={setFocusedToken}
+												isTestSubmitted={isTestSubmitted}
+												darkMode={darkMode}
+												correctMapping={correctMapping}
+											/>
+										);
+									})}
+								</div>
 							);
 						})}
 					</div>

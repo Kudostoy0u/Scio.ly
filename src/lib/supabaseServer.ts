@@ -18,7 +18,7 @@ const SUPABASE_TIMEOUT_MS = Number(
 );
 
 function createTimeoutFetch(timeoutMs: number) {
-	return async (input: RequestInfo | URL, init?: RequestInit) => {
+	return async (input: globalThis.RequestInfo | URL, init?: RequestInit) => {
 		const controller = new AbortController();
 		const timer = setTimeout(() => controller.abort(), timeoutMs);
 		try {

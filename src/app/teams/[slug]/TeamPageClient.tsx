@@ -12,6 +12,7 @@ import Modal from "@/app/components/Modal";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import {
 	useInvalidateTeam,
+	useTeamCacheInvalidation,
 	useTeamFull,
 	useTeamSubteams,
 } from "@/lib/hooks/useTeam";
@@ -50,6 +51,8 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 	const [layoutTab, setLayoutTab] = useState<"home" | "upcoming" | "settings">(
 		"home",
 	);
+
+	useTeamCacheInvalidation(teamSlug);
 
 	const { data: teamData, isLoading, error } = useTeamFull(teamSlug);
 	const { data: subteams } = useTeamSubteams(teamSlug);
@@ -530,7 +533,7 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 													teamData.meta.memberCode,
 												);
 												toast.success("Member code copied to clipboard!");
-											} catch (error) {
+											} catch (_error) {
 												toast.error("Failed to copy code");
 											}
 										}}
@@ -571,7 +574,7 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 														teamData.meta.captainCode ?? "",
 													);
 													toast.success("Captain code copied to clipboard!");
-												} catch (error) {
+												} catch (_error) {
 													toast.error("Failed to copy code");
 												}
 											}}

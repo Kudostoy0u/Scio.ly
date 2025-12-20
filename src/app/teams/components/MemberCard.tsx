@@ -22,6 +22,44 @@ import LinkStatus from "./LinkStatus";
 import MemberBadges from "./MemberBadges";
 import SubteamDropdown from "./SubteamDropdown";
 
+interface RoleIconProps {
+	label: string;
+	children: React.ReactNode;
+	darkMode: boolean;
+}
+
+function RoleIcon({ label, children, darkMode }: RoleIconProps) {
+	return (
+		<div className="relative group">
+			<span
+				className={`inline-flex items-center justify-center p-1 rounded-md transition-all duration-200 ${
+					darkMode
+						? "hover:bg-gray-700 text-gray-300"
+						: "hover:bg-gray-100 text-gray-600"
+				}`}
+				aria-label={label}
+				title={label}
+			>
+				{children}
+			</span>
+			<div
+				className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${
+					darkMode
+						? "bg-gray-800 text-white border border-gray-700"
+						: "bg-white text-gray-900 border border-gray-200 shadow-lg"
+				}`}
+			>
+				{label}
+				<div
+					className={`absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent ${
+						darkMode ? "border-t-gray-800" : "border-t-white"
+					}`}
+				/>
+			</div>
+		</div>
+	);
+}
+
 interface MemberCardProps {
 	member: Member;
 	index: number;
@@ -96,42 +134,6 @@ export default function MemberCard({
 	const { user } = useAuth();
 
 	const isShowingLinkInvite = linkInviteStates[getDisplayName(member)] === true;
-
-	const RoleIcon = ({
-		label,
-		children,
-	}: {
-		label: string;
-		children: React.ReactNode;
-	}) => (
-		<div className="relative group">
-			<span
-				className={`inline-flex items-center justify-center p-1 rounded-md transition-all duration-200 ${
-					darkMode
-						? "hover:bg-gray-700 text-gray-300"
-						: "hover:bg-gray-100 text-gray-600"
-				}`}
-				aria-label={label}
-				title={label}
-			>
-				{children}
-			</span>
-			<div
-				className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${
-					darkMode
-						? "bg-gray-800 text-white border border-gray-700"
-						: "bg-white text-gray-900 border border-gray-200 shadow-lg"
-				}`}
-			>
-				{label}
-				<div
-					className={`absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent ${
-						darkMode ? "border-t-gray-800" : "border-t-white"
-					}`}
-				/>
-			</div>
-		</div>
-	);
 
 	return (
 		<div
@@ -318,11 +320,11 @@ export default function MemberCard({
 									)}
 								</div>
 								{member.role === "admin" ? (
-									<RoleIcon label="Admin">
+									<RoleIcon label="Admin" darkMode={darkMode}>
 										<UserStar className="w-4 h-4 text-orange-400" />
 									</RoleIcon>
 								) : member.role === "captain" ? (
-									<RoleIcon label="Captain">
+									<RoleIcon label="Captain" darkMode={darkMode}>
 										<Crown className="w-4 h-4 text-yellow-500" />
 									</RoleIcon>
 								) : null}

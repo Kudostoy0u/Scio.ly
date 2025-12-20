@@ -176,10 +176,10 @@ export function useTestSubmission({
 					);
 				}
 
-					toast.success("Assignment submitted successfully!");
-					const url = new URL(window.location.href);
-					url.searchParams.delete("assignment");
-					window.history.replaceState({}, "", url.pathname + url.search);
+				toast.success("Assignment submitted successfully!");
+				const url = new URL(window.location.href);
+				url.searchParams.delete("assignment");
+				window.history.replaceState({}, "", url.pathname + url.search);
 			} catch (error) {
 				const errorMessage =
 					error instanceof Error

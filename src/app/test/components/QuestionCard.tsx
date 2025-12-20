@@ -325,7 +325,7 @@ export default function QuestionCard({
 						return optionTexts;
 					})().map((option) => (
 						<label
-							key={option}
+							key={`${index}-option-${option}`}
 							className={`block p-2 rounded-md ${getOptionClassName({
 								isSubmitted,
 								darkMode,

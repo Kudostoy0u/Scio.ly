@@ -27,7 +27,7 @@ export function useEventLoader(viewMode: "current" | "all") {
 				// Load subtopics from module (single source of truth)
 				try {
 					const eventSubtopics = getAllSubtopics();
-						window.eventSubtopicsMapping = eventSubtopics;
+					window.eventSubtopicsMapping = eventSubtopics;
 				} catch (err) {
 					logger.error("Error loading subtopics:", err);
 					window.eventSubtopicsMapping = {};
@@ -68,7 +68,7 @@ export function useEventLoader(viewMode: "current" | "all") {
 				setEvents(mapped);
 
 				// Load subtopics from module (single source of truth)
-					try {
+				try {
 					const eventSubtopics = getAllSubtopics();
 					window.eventSubtopicsMapping = eventSubtopics;
 				} catch (err) {

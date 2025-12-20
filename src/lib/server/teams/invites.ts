@@ -3,6 +3,7 @@ import { users } from "@/lib/db/schema";
 import { teamInvitations, teamMemberships, teams } from "@/lib/db/schema";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { and, eq, or } from "drizzle-orm";
+import { touchTeamCacheManifest } from "./cache-manifest";
 import {
 	assertAdminAccess,
 	assertCaptainAccess,
@@ -200,6 +201,7 @@ export async function acceptPendingInvite(teamSlug: string, userId: string) {
 		}
 
 		await bumpTeamVersion(team.id, tx);
+		await touchTeamCacheManifest(team.id, { members: true, full: true }, tx);
 	});
 
 	return { slug: team.slug };
@@ -268,6 +270,7 @@ export async function declineInvite(teamSlug: string, userId: string) {
 			);
 
 		await bumpTeamVersion(team.id, tx);
+		await touchTeamCacheManifest(team.id, { members: true, full: true }, tx);
 	});
 
 	return { ok: true };
@@ -351,6 +354,7 @@ export async function createInvitation(input: {
 		});
 
 		await bumpTeamVersion(team.id, tx);
+		await touchTeamCacheManifest(team.id, { members: true, full: true }, tx);
 	});
 
 	return {
@@ -431,6 +435,7 @@ export async function promoteToRole(input: {
 			);
 
 		await bumpTeamVersion(team.id, tx);
+		await touchTeamCacheManifest(team.id, { members: true, full: true }, tx);
 	});
 
 	return { ok: true, newRole: input.newRole };

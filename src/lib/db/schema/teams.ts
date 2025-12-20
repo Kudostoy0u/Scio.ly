@@ -85,6 +85,86 @@ export const teamSubteams = cockroachTable(
 	],
 );
 
+export const teamCacheManifests = cockroachTable("team_cache_manifests", {
+	teamId: uuid("team_id")
+		.notNull()
+		.references(() => teams.id, { onDelete: "cascade" })
+		.primaryKey(),
+	fullUpdatedAt: timestamp("full_updated_at", {
+		mode: "string",
+		withTimezone: true,
+	})
+		.defaultNow()
+		.notNull(),
+	assignmentsUpdatedAt: timestamp("assignments_updated_at", {
+		mode: "string",
+		withTimezone: true,
+	})
+		.defaultNow()
+		.notNull(),
+	rosterUpdatedAt: timestamp("roster_updated_at", {
+		mode: "string",
+		withTimezone: true,
+	})
+		.defaultNow()
+		.notNull(),
+	membersUpdatedAt: timestamp("members_updated_at", {
+		mode: "string",
+		withTimezone: true,
+	})
+		.defaultNow()
+		.notNull(),
+	subteamsUpdatedAt: timestamp("subteams_updated_at", {
+		mode: "string",
+		withTimezone: true,
+	})
+		.defaultNow()
+		.notNull(),
+	updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+		.defaultNow()
+		.notNull(),
+});
+
+export const teamSubteamCacheManifests = cockroachTable(
+	"team_subteam_cache_manifests",
+	{
+		id: uuid().defaultRandom().primaryKey(),
+		teamId: uuid("team_id")
+			.notNull()
+			.references(() => teams.id, { onDelete: "cascade" }),
+		subteamId: uuid("subteam_id")
+			.notNull()
+			.references(() => teamSubteams.id, { onDelete: "cascade" }),
+		streamUpdatedAt: timestamp("stream_updated_at", {
+			mode: "string",
+			withTimezone: true,
+		})
+			.defaultNow()
+			.notNull(),
+		timersUpdatedAt: timestamp("timers_updated_at", {
+			mode: "string",
+			withTimezone: true,
+		})
+			.defaultNow()
+			.notNull(),
+		tournamentsUpdatedAt: timestamp("tournaments_updated_at", {
+			mode: "string",
+			withTimezone: true,
+		})
+			.defaultNow()
+			.notNull(),
+		updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("team_subteam_cache_manifest_unique").on(
+			table.teamId,
+			table.subteamId,
+		),
+	],
+);
+
 export const teamMemberships = cockroachTable(
 	"team_memberships",
 	{

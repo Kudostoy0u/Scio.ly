@@ -399,24 +399,20 @@ export default function StreamTab({
 	);
 
 	// Transform timers to match Event interface
-	const activeTimers = useMemo(
-		() =>
-			rawTimers.map((timer) => ({
-				id: timer.id,
-				title: timer.title,
-				start_time: timer.start_time,
-				location: timer.location,
-				event_type: timer.event_type as
-					| "practice"
-					| "tournament"
-					| "meeting"
-					| "deadline"
-					| "personal"
-					| "other",
-				has_timer: true,
-			})),
-		[rawTimers],
-	);
+	const activeTimers = rawTimers.map((timer) => ({
+		id: timer.id,
+		title: timer.title,
+		start_time: timer.start_time,
+		location: timer.location,
+		event_type: timer.event_type as
+			| "practice"
+			| "tournament"
+			| "meeting"
+			| "deadline"
+			| "personal"
+			| "other",
+		has_timer: true,
+	}));
 
 	if (rawPosts.length === 0) {
 		// Only show loading if we really have no data yet

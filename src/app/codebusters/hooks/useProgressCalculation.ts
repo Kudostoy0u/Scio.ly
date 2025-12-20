@@ -113,12 +113,64 @@ const calculateFractionatedMorseProgress = (quote: QuoteData): number => {
 
 // Helper function to calculate progress for Cryptarithm
 const calculateCryptarithmProgress = (quote: QuoteData): number => {
-	const totalPositions = quote.cryptarithmData?.digitGroups.length || 0;
-	const filledPositions = quote.cryptarithmSolution
-		? Object.values(quote.cryptarithmSolution).filter(
-				(value) => value && value.trim() !== "",
-			).length
-		: 0;
+	if (!quote.cryptarithmData?.digitGroups || !quote.cryptarithmData.equation) {
+		return 0;
+	}
+
+	// Identify equation words to exclude from "Values to decode for solution"
+	const EQUATION_SPLIT_REGEX = /\s*[+\-=]\s*/;
+	const equationWordsSet = new Set<string>();
+	const parts = quote.cryptarithmData.equation
+		.split(EQUATION_SPLIT_REGEX)
+		.filter(Boolean);
+	if (parts.length === 3) {
+		const [w1, w2, w3] = parts;
+		if (w1 && w2 && w3) {
+			equationWordsSet.add(w1.toUpperCase());
+			equationWordsSet.add(w2.toUpperCase());
+			equationWordsSet.add(w3.toUpperCase());
+		}
+	}
+
+	// Filter out equation words from digitGroups to get only solution words
+	const solutionGroups = quote.cryptarithmData.digitGroups.filter((group) => {
+		const wordUpper = group.word.replace(/\s/g, "").toUpperCase();
+		return !equationWordsSet.has(wordUpper);
+	});
+
+	// Count total input boxes in solution words (not equation words)
+	let totalPositions = 0;
+	for (const group of solutionGroups) {
+		const digits = group.digits.split(" ").filter(Boolean);
+		totalPositions += digits.length;
+	}
+
+	// Count filled positions in solution words only
+	// First, calculate the offset (number of positions in equation words)
+	let positionOffset = 0;
+	for (const group of quote.cryptarithmData.digitGroups) {
+		const wordUpper = group.word.replace(/\s/g, "").toUpperCase();
+		if (equationWordsSet.has(wordUpper)) {
+			const digits = group.digits.split(" ").filter(Boolean);
+			positionOffset += digits.length;
+		} else {
+			// Once we hit a solution word, stop counting
+			break;
+		}
+	}
+
+	// Count filled positions that are in solution words (starting from positionOffset)
+	let filledPositions = 0;
+	if (quote.cryptarithmSolution) {
+		// Count filled positions starting from positionOffset
+		for (let i = positionOffset; i < positionOffset + totalPositions; i++) {
+			const value = quote.cryptarithmSolution[i];
+			if (value && value.trim() !== "") {
+				filledPositions++;
+			}
+		}
+	}
+
 	return calculatePositionBasedProgress(totalPositions, filledPositions);
 };
 

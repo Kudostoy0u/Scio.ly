@@ -241,13 +241,13 @@ async function handleEnhancedAssignmentSubmission(
 		const client = getTRPCProxyClient();
 		const result = await client.teams.submitAssignment.mutate({
 			assignmentId,
-				answers: formattedAnswers,
-				score: mcqScore,
-				totalPoints: mcqTotal,
-				timeSpent: routerData.timeLimit
-					? Number.parseInt(routerData.timeLimit) * 60 - (timeLeft || 0)
-					: 0,
-				submittedAt: new Date().toISOString(),
+			answers: formattedAnswers,
+			score: mcqScore,
+			totalPoints: mcqTotal,
+			timeSpent: routerData.timeLimit
+				? Number.parseInt(routerData.timeLimit) * 60 - (timeLeft || 0)
+				: 0,
+			submittedAt: new Date().toISOString(),
 		});
 
 		// Dispatch event to invalidate assignments cache
@@ -259,18 +259,18 @@ async function handleEnhancedAssignmentSubmission(
 			);
 		}
 
-			try {
-				(await import("react-toastify")).toast.success(
-					"Assignment submitted successfully!",
-				);
-				const url = new URL(window.location.href);
-				url.searchParams.delete("assignment");
-				window.history.replaceState({}, "", url.pathname + url.search);
-			} catch {
-				// Ignore errors
-			}
+		try {
+			(await import("react-toastify")).toast.success(
+				"Assignment submitted successfully!",
+			);
+			const url = new URL(window.location.href);
+			url.searchParams.delete("assignment");
+			window.history.replaceState({}, "", url.pathname + url.search);
+		} catch {
+			// Ignore errors
+		}
 	} catch (error) {
-			try {
+		try {
 			const errorMessage =
 				error instanceof Error ? error.message : "Failed to submit assignment";
 			(await import("react-toastify")).toast.error(errorMessage);

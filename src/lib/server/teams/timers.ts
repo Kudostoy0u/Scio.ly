@@ -2,6 +2,7 @@ import { dbPg } from "@/lib/db";
 import { teamActiveTimers, teamSubteams } from "@/lib/db/schema";
 import { TRPCError } from "@trpc/server";
 import { and, asc, eq, sql } from "drizzle-orm";
+import { touchSubteamCacheManifest } from "./cache-manifest";
 import { assertCaptainAccess, assertTeamAccess } from "./shared";
 
 export async function getActiveTimers(
@@ -90,6 +91,8 @@ export async function addTimer(
 		})
 		.returning({ id: teamActiveTimers.id });
 
+	await touchSubteamCacheManifest(team.id, input.subteamId, { timers: true });
+
 	return { timerId: timer?.id };
 }
 
@@ -126,6 +129,8 @@ export async function removeTimer(
 				eq(teamActiveTimers.eventId, input.eventId),
 			),
 		);
+
+	await touchSubteamCacheManifest(team.id, input.subteamId, { timers: true });
 
 	return { success: true };
 }

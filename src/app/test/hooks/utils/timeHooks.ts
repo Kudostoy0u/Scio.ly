@@ -125,10 +125,10 @@ export function useCountdown(
 			}
 
 			// Update session state (source of truth)
-				updateTimeLeft(newTimeLeft);
+			updateTimeLeft(newTimeLeft);
 
 			// Update component state to trigger re-render
-				setTimeLeft(newTimeLeft);
+			setTimeLeft(newTimeLeft);
 
 			// Save to Dexie if this is an assignment
 			if (assignmentIdRef.current && newTimeLeft > 0) {

@@ -11,6 +11,12 @@ import logger from "@/lib/utils/logging/logger";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { and, eq, or, sql } from "drizzle-orm";
 import {
+	deleteSubteamCacheManifest,
+	ensureSubteamCacheManifest,
+	ensureTeamCacheManifest,
+	touchTeamCacheManifest,
+} from "./cache-manifest";
+import {
 	assertAdminAccess,
 	assertCaptainAccess,
 	assertTeamAccess,
@@ -64,6 +70,12 @@ export async function leaveTeam(teamSlug: string, userId: string) {
 			.where(
 				and(eq(teamRoster.teamId, team.id), eq(teamRoster.userId, userId)),
 			);
+	});
+
+	await touchTeamCacheManifest(team.id, {
+		members: true,
+		roster: true,
+		full: true,
 	});
 
 	return { ok: true };
@@ -151,6 +163,11 @@ export async function kickMemberFromTeam(input: {
 			);
 
 		await bumpTeamVersion(team.id, tx);
+		await touchTeamCacheManifest(
+			team.id,
+			{ members: true, roster: true, full: true },
+			tx,
+		);
 	});
 
 	return { ok: true };
@@ -313,6 +330,9 @@ export async function createTeamWithDefaultSubteam(input: {
 				metadata: {},
 				permissions: {},
 			});
+
+			await ensureTeamCacheManifest(teamId, tx);
+			await ensureSubteamCacheManifest(teamId, subteamId, tx);
 		});
 
 		logger.dev.structured("info", "Team created successfully", {
@@ -517,6 +537,11 @@ export async function joinTeamByCode(
 			});
 		}
 
+		await touchTeamCacheManifest(team.id, {
+			members: true,
+			full: true,
+		});
+
 		// Ensure Supabase link (if not already done)
 		if (!supabaseUser) {
 			logger.dev.structured("debug", "Ensuring Supabase link", { userId });
@@ -591,6 +616,9 @@ export async function createSubteam(input: {
 		createdBy: input.userId,
 	});
 
+	await ensureSubteamCacheManifest(team.id, subteamId);
+	await touchTeamCacheManifest(team.id, { subteams: true, full: true });
+
 	return {
 		id: subteamId,
 		teamId: team.id,
@@ -614,6 +642,8 @@ export async function deleteSubteam(input: {
 				eq(teamSubteams.teamId, team.id),
 			),
 		);
+	await deleteSubteamCacheManifest(team.id, input.subteamId);
+	await touchTeamCacheManifest(team.id, { subteams: true, full: true });
 	return { ok: true };
 }
 
@@ -646,6 +676,8 @@ export async function renameSubteam(input: {
 		.update(teamSubteams)
 		.set({ name: input.newName, updatedAt: new Date().toISOString() })
 		.where(eq(teamSubteams.id, input.subteamId));
+
+	await touchTeamCacheManifest(team.id, { subteams: true, full: true });
 
 	return { id: input.subteamId, name: input.newName };
 }

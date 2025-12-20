@@ -437,123 +437,123 @@ export default function EnhancedAssignmentCreator({
 			onClose={onCancel}
 			title="Create Assignment"
 			maxWidth="4xl"
-						>
+		>
 			<div className="max-h-[80vh] overflow-y-auto">
-					{/* Progress indicator */}
-					<div className="mb-6">
-						<div className="flex items-center justify-between">
-							{[1, 2, 3, 4].map((stepNumber) => (
-								<div key={stepNumber} className="flex items-center">
-									<div
-										className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-											step >= stepNumber
-												? "bg-blue-600 text-white"
-												: darkMode
-													? "bg-gray-600 text-gray-300"
-													: "bg-gray-200 text-gray-600"
-										}`}
-									>
-										{stepNumber}
-									</div>
-									{stepNumber < 4 && (
-										<div
-											className={`w-12 h-1 mx-2 ${
-												step > stepNumber
-													? "bg-blue-600"
-													: darkMode
-														? "bg-gray-600"
-														: "bg-gray-200"
-											}`}
-										/>
-									)}
+				{/* Progress indicator */}
+				<div className="mb-6">
+					<div className="flex items-center justify-between">
+						{[1, 2, 3, 4].map((stepNumber) => (
+							<div key={stepNumber} className="flex items-center">
+								<div
+									className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+										step >= stepNumber
+											? "bg-blue-600 text-white"
+											: darkMode
+												? "bg-gray-600 text-gray-300"
+												: "bg-gray-200 text-gray-600"
+									}`}
+								>
+									{stepNumber}
 								</div>
-							))}
-						</div>
-						<div className="flex justify-between mt-2 text-xs">
-							<span className={darkMode ? "text-gray-400" : "text-gray-500"}>
-								Details
-							</span>
-							<span className={darkMode ? "text-gray-400" : "text-gray-500"}>
-								Questions
-							</span>
-							<span className={darkMode ? "text-gray-400" : "text-gray-500"}>
-								Preview
-							</span>
-							<span className={darkMode ? "text-gray-400" : "text-gray-500"}>
-								Roster
-							</span>
-						</div>
+								{stepNumber < 4 && (
+									<div
+										className={`w-12 h-1 mx-2 ${
+											step > stepNumber
+												? "bg-blue-600"
+												: darkMode
+													? "bg-gray-600"
+													: "bg-gray-200"
+										}`}
+									/>
+								)}
+							</div>
+						))}
 					</div>
-
-					{error && (
-						<div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-							{error}
-						</div>
-					)}
-
-					{/* Step 1: Assignment Details */}
-					{step === 1 && (
-						<AssignmentDetailsStep
-							darkMode={darkMode}
-							onNext={handleNext}
-							onBack={onCancel}
-							onError={handleError}
-							details={details}
-							onDetailsChange={handleDetailsChange}
-							availableEvents={availableEvents}
-						/>
-					)}
-
-					{/* Step 2: Question Generation */}
-					{step === 2 && (
-						<QuestionGenerationStep
-							darkMode={darkMode}
-							onNext={handleQuestionGenerationNext}
-							onBack={handleBack}
-							onError={handleError}
-							settings={settings}
-							onSettingsChange={handleSettingsChange}
-							supportsPictureQuestions={
-								eventCapabilities.supportsPictureQuestions
-							}
-							supportsIdentificationOnly={
-								eventCapabilities.supportsIdentificationOnly
-							}
-							onGenerateQuestions={handleGenerateQuestions}
-							generatingQuestions={generatingQuestions}
-							eventName={details.eventName}
-						/>
-					)}
-
-					{/* Step 3: Question Preview */}
-					{step === 3 && (
-						<QuestionPreviewStep
-							onNext={handleNext}
-							onBack={handleBack}
-							onError={handleError}
-							questions={generatedQuestions}
-							showAnswers={showAnswers}
-							onShowAnswersChange={setShowAnswers}
-							onReplaceQuestion={replaceQuestion}
-						/>
-					)}
-
-					{/* Step 4: Roster Selection */}
-					{step === 4 && (
-						<RosterSelectionStep
-							darkMode={darkMode}
-							onNext={handleNext}
-							onBack={handleBack}
-							onError={handleError}
-							rosterMembers={rosterMembers}
-							selectedRoster={selectedRoster}
-							onRosterChange={setSelectedRoster}
-							loadingRoster={loadingRoster}
-							onCreateAssignment={handleCreateAssignment}
-							creating={loading}
-						/>
-					)}
+					<div className="flex justify-between mt-2 text-xs">
+						<span className={darkMode ? "text-gray-400" : "text-gray-500"}>
+							Details
+						</span>
+						<span className={darkMode ? "text-gray-400" : "text-gray-500"}>
+							Questions
+						</span>
+						<span className={darkMode ? "text-gray-400" : "text-gray-500"}>
+							Preview
+						</span>
+						<span className={darkMode ? "text-gray-400" : "text-gray-500"}>
+							Roster
+						</span>
+					</div>
 				</div>
+
+				{error && (
+					<div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+						{error}
+					</div>
+				)}
+
+				{/* Step 1: Assignment Details */}
+				{step === 1 && (
+					<AssignmentDetailsStep
+						darkMode={darkMode}
+						onNext={handleNext}
+						onBack={onCancel}
+						onError={handleError}
+						details={details}
+						onDetailsChange={handleDetailsChange}
+						availableEvents={availableEvents}
+					/>
+				)}
+
+				{/* Step 2: Question Generation */}
+				{step === 2 && (
+					<QuestionGenerationStep
+						darkMode={darkMode}
+						onNext={handleQuestionGenerationNext}
+						onBack={handleBack}
+						onError={handleError}
+						settings={settings}
+						onSettingsChange={handleSettingsChange}
+						supportsPictureQuestions={
+							eventCapabilities.supportsPictureQuestions
+						}
+						supportsIdentificationOnly={
+							eventCapabilities.supportsIdentificationOnly
+						}
+						onGenerateQuestions={handleGenerateQuestions}
+						generatingQuestions={generatingQuestions}
+						eventName={details.eventName}
+					/>
+				)}
+
+				{/* Step 3: Question Preview */}
+				{step === 3 && (
+					<QuestionPreviewStep
+						onNext={handleNext}
+						onBack={handleBack}
+						onError={handleError}
+						questions={generatedQuestions}
+						showAnswers={showAnswers}
+						onShowAnswersChange={setShowAnswers}
+						onReplaceQuestion={replaceQuestion}
+					/>
+				)}
+
+				{/* Step 4: Roster Selection */}
+				{step === 4 && (
+					<RosterSelectionStep
+						darkMode={darkMode}
+						onNext={handleNext}
+						onBack={handleBack}
+						onError={handleError}
+						rosterMembers={rosterMembers}
+						selectedRoster={selectedRoster}
+						onRosterChange={setSelectedRoster}
+						loadingRoster={loadingRoster}
+						onCreateAssignment={handleCreateAssignment}
+						creating={loading}
+					/>
+				)}
+			</div>
 		</Modal>
 	);
 }

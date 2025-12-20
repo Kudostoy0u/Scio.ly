@@ -73,6 +73,7 @@ export interface TeamAssignment {
 	dueDate: string | null;
 	createdBy: string;
 	createdAt: string;
+	updatedAt: string;
 }
 
 export interface TeamFullData {
@@ -270,6 +271,7 @@ export async function getTeamFullData(
 				dueDate: sql<string | null>`${teamAssignments.dueDate}::text`,
 				createdBy: teamAssignments.createdBy,
 				createdAt: sql<string>`${teamAssignments.createdAt}::text`,
+				updatedAt: sql<string>`COALESCE(${teamAssignments.updatedAt}, ${teamAssignments.createdAt})::text`,
 			})
 			.from(teamAssignments)
 			.where(inArray(teamAssignments.teamId, unitIds))
@@ -407,6 +409,7 @@ export async function getTeamFullData(
 			dueDate: a.dueDate,
 			createdBy: a.createdBy,
 			createdAt: a.createdAt,
+			updatedAt: a.updatedAt,
 		})),
 	};
 }

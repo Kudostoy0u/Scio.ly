@@ -37,8 +37,8 @@ export default function AssignmentsTab({
 	} = trpc.teams.assignments.useQuery(
 		{ teamSlug },
 		{
-			refetchOnMount: true,
-			refetchOnWindowFocus: true,
+			refetchOnMount: false,
+			refetchOnWindowFocus: false,
 		},
 	);
 

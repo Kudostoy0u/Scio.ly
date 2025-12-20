@@ -8,7 +8,7 @@ interface TestLayoutProps {
 
 export default function TestLayout({ children, darkMode }: TestLayoutProps) {
 	return (
-		<div className="relative min-h-screen">
+		<div className="relative min-h-screen max-w-full overflow-x-hidden">
 			{/* Background */}
 			<div
 				className={`absolute inset-0 ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}
@@ -17,7 +17,7 @@ export default function TestLayout({ children, darkMode }: TestLayoutProps) {
 			{/* Global scrollbar theme is centralized in globals.css */}
 
 			{/* Page Content */}
-			<div className="relative flex flex-col items-center p-3 md:p-6">
+			<div className="relative flex flex-col items-center px-3 md:px-6 w-full">
 				{children}
 			</div>
 		</div>
