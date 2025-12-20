@@ -423,9 +423,11 @@ export default function CodeBusters() {
 						</div>
 					) : (
 						<div
-							className={
-								"sticky top-4 z-[9999] w-full max-w-[90vw] md:max-w-6xl bg-white border-2 border-gray-300 rounded-full h-5 mb-6 shadow-lg"
-							}
+							className={`sticky top-4 z-[9999] w-full max-w-[90vw] md:max-w-6xl border-2 rounded-full h-5 mb-6 shadow-lg ${
+								darkMode
+									? "bg-gray-700 border-gray-600"
+									: "bg-white border-gray-300"
+							}`}
 						>
 							<div
 								className="bg-blue-500 h-4 rounded-full transition-[width] duration-700 ease-in-out shadow-md"

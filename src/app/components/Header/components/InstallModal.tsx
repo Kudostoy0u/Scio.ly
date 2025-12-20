@@ -155,19 +155,22 @@ export function InstallModal({
 	};
 
 	return (
-		<dialog
-			open={true}
-			className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-transparent backdrop:bg-[rgba(0,0,0,0.5)]"
+		<div
+			className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
 			onClick={onClose}
 			onKeyDown={(e) => {
 				if (e.key === "Escape") {
 					onClose();
 				}
 			}}
-			aria-label="Install app instructions"
 		>
-			<div
-				className={`${darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"} rounded-xl shadow-xl w-full max-w-md overflow-hidden`}
+			<div className="absolute inset-0 bg-black/50" aria-hidden="true" />
+			<dialog
+				open
+				className={`relative ${darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"} rounded-xl shadow-xl w-full max-w-md overflow-hidden border-0 bg-transparent p-0`}
+				style={{ margin: 0, padding: 0, border: "none" }}
+				aria-label="Install app instructions"
+				aria-modal="true"
 				onClick={(e) => e.stopPropagation()}
 				onKeyDown={(e) => {
 					if (e.key === "Escape") {
@@ -203,7 +206,7 @@ export function InstallModal({
 					)}
 					{renderInstallModalContent()}
 				</div>
-			</div>
-		</dialog>
+			</dialog>
+		</div>
 	);
 }

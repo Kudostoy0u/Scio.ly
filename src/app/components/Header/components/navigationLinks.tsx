@@ -20,9 +20,7 @@ export function DesktopNavLinks({
 	const getLinkStyles = (path: string) => {
 		// For teams, check if pathname starts with /teams to include all team pages
 		const isActive =
-			path === "/teams"
-				? pathname.startsWith("/teams")
-				: pathname === path;
+			path === "/teams" ? pathname.startsWith("/teams") : pathname === path;
 		const baseStyles =
 			"px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200";
 		const activeStyles = isActive
@@ -140,9 +138,7 @@ export function MobileNavLinks({
 	const mobileLinkStyles = (path: string) => {
 		// For teams, check if pathname starts with /teams to include all team pages
 		const isActive =
-			path === "/teams"
-				? pathname.startsWith("/teams")
-				: pathname === path;
+			path === "/teams" ? pathname.startsWith("/teams") : pathname === path;
 		const baseMobile = "block px-4 py-2 text-sm ";
 		const activeStyles = isActive
 			? darkMode

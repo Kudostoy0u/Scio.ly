@@ -71,6 +71,7 @@ export default function Header({
 		pathname?.startsWith("/test") ||
 		pathname?.startsWith("/codebusters") ||
 		pathname?.startsWith("/unlimited");
+	const isTeamsPage = pathname?.startsWith("/teams");
 
 	// const [bannerVisible, setBannerVisible] = useState<boolean | null>(null);
 	const bannerVisible = false;
@@ -295,7 +296,9 @@ export default function Header({
 				}}
 			>
 				<div className="w-full">
-					<div className="container mx-auto flex justify-between items-center h-16 px-4">
+					<div
+						className={`${isTeamsPage ? "flex justify-between items-center h-16 pl-28 pr-5" : "container mx-auto flex justify-between items-center h-16 pl-5"}`}
+					>
 						<div className="flex items-center gap-2">
 							{leftAddon}
 							<div className={logoOffsetClassName ?? ""}>

@@ -70,15 +70,34 @@ const formatQuestionsForPrint = (
 };
 
 const createAnswerKey = (data: Question[]) => {
-	let answerKeyHtml = '<div class="answer-key"><h2>Answer Key</h2>';
+	let answerKeyHtml = '<div class="answer-key-section">';
+	answerKeyHtml += '<div class="answer-key-header">ANSWER KEY</div>';
+	answerKeyHtml += '<div class="answer-key-content">';
 
-	for (const [index, question] of data.entries()) {
-		if (question.answers && question.answers.length > 0) {
-			answerKeyHtml += `<div class="answer-item">${index + 1}. ${question.answers.join(", ")}</div>`;
+	const totalQuestions = data.length;
+	const columns = Math.min(5, Math.ceil(totalQuestions / 20)); // 20 questions per column max
+	const questionsPerColumn = Math.ceil(totalQuestions / columns);
+
+	for (let col = 0; col < columns; col++) {
+		answerKeyHtml += '<div class="answer-column">';
+
+		for (
+			let i = col * questionsPerColumn;
+			i < Math.min((col + 1) * questionsPerColumn, totalQuestions);
+			i++
+		) {
+			const question = data[i];
+			if (question?.answers && question.answers.length > 0) {
+				answerKeyHtml += `<div class="answer-item">${i + 1}. ${question.answers.join(", ")}</div>`;
+			}
 		}
+
+		answerKeyHtml += "</div>";
 	}
 
 	answerKeyHtml += "</div>";
+	answerKeyHtml += "</div>";
+
 	return answerKeyHtml;
 };
 
